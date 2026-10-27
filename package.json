@@ -1,0 +1,20 @@
+{
+  "name": "dev-tool",
+  "version": "0.2.0",
+  "description": "Read-only, agent-friendly tools for a microservice environment: Postgres/ES/Kafka/Consul index with usages, service passports, logs, PRs. OpenAPI + MCP + admin UI.",
+  "bin": {
+    "dt": "cli.js"
+  },
+  "scripts": {
+    "serve": "node cli.js serve",
+    "sync": "node cli.js sync",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "postgres": "^3.4.5"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  }
+}

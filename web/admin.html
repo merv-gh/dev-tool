@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dt admin</title>
+<link rel="stylesheet" href="/static/ui.css">
+<style>
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin: 4px 0 14px; overflow-x: auto; }
+  .tabs button { border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; padding: 7px 12px; color: var(--muted); }
+  .tabs button.on { color: var(--fg); border-bottom-color: var(--accent); font-weight: 600; }
+  .tabs button .n { font-size: 11px; margin-left: 4px; color: var(--muted); }
+  section[hidden] { display: none; }
+  .src td { vertical-align: middle; }
+  .src tr.group td { background: var(--soft); font-weight: 600; }
+  .src tr.off td { color: var(--muted); }
+  .st { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .st .dot { background: var(--lv-other); } .st.ok .dot { background: var(--good); } .st.err .dot { background: var(--lv-error); } .st.old .dot { background: var(--lv-warn); } .st.run .dot { background: var(--accent); animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity: .3; } }
+  .err-text { color: var(--bad); font-size: 12px; max-width: 520px; word-break: break-word; }
+  button.small { padding: 2px 8px; font-size: 12px; }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button:disabled { opacity: .5; cursor: default; }
+  .grid2 { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(0, 2fr); gap: 14px; align-items: start; }
+  @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
+  .lines { max-height: 70vh; overflow: auto; }
+  .line { padding: 6px 10px; border-bottom: 1px solid var(--line); cursor: pointer; font-family: ui-monospace, Menlo, monospace; font-size: 12px; word-break: break-word; }
+  .line:hover, .line.on { background: var(--accent-soft); }
+  .line .k { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--accent); margin-right: 6px; }
+  .line .used { color: var(--muted); }
+  .detail { padding: 12px 14px; }
+  .detail h3 { margin: 0 0 4px; font-size: 15px; font-family: ui-monospace, Menlo, monospace; word-break: break-all; }
+  .kv { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+  pre.code { background: var(--soft); padding: 10px; border-radius: 6px; overflow: auto; max-height: 360px; margin: 6px 0; white-space: pre; }
+  .role { font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 9px; background: var(--soft); white-space: nowrap; }
+  .role.write, .role.owner, .role.trigger, .role.executes { background: var(--warn-bg); color: var(--warn); }
+  .role.read, .role.selects, .role.entity, .role.repository { background: var(--good-bg); color: var(--good); }
+  .role.calls { background: var(--accent-soft); color: var(--accent); }
+  td.where { font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: var(--muted); max-width: 260px; word-break: break-all; }
+  td.det { font-size: 12px; color: var(--muted); max-width: 420px; word-break: break-word; }
+  textarea { width: 100%; font: 12px/1.45 ui-monospace, Menlo, monospace; padding: 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--fg); }
+  .joblog { background: var(--soft); font: 12px/1.45 ui-monospace, Menlo, monospace; padding: 10px; border-radius: 6px; max-height: 420px; overflow: auto; white-space: pre-wrap; margin: 0; }
+  .state { font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 9px; text-transform: uppercase; }
+  .state.running { background: var(--accent-soft); color: var(--accent); } .state.done { background: var(--good-bg); color: var(--good); }
+  .state.failed, .state.interrupted { background: var(--bad-bg); color: var(--bad); }
+  .running-bar { position: sticky; top: 0; z-index: 5; background: var(--accent-soft); color: var(--accent); padding: 6px 12px; border-radius: 6px; margin-bottom: 10px; font-size: 12px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .running-bar[hidden] { display: none; }
+  .form { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 10px 12px; }
+  .form input { min-width: 180px; }
+  .hint { font-size: 12px; color: var(--muted); margin: 6px 0; }
+  #jobs tr.on td { background: var(--accent-soft); }
+  details summary { cursor: pointer; color: var(--muted); font-size: 12px; margin: 8px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1>dt admin</h1>
+    <span class="badge" id="version"></span>
+    <select id="env" title="Environment"></select>
+    <span class="muted" id="authInfo"></span>
+    <span class="spacer"></span>
+    <a href="/view" target="_blank" rel="noopener">Results</a>
+    <a href="/openapi.json" target="_blank" rel="noopener">OpenAPI</a>
+  </div>
+  <div class="running-bar" id="running" hidden></div>
+  <nav class="tabs" id="tabs">
+    <button data-tab="index" class="on">Index</button>
+    <button data-tab="explore">Explore</button>
+    <button data-tab="passports">Passports<span class="n" id="nPassports"></span></button>
+    <button data-tab="jobs">Jobs<span class="n" id="nJobs"></span></button>
+    <button data-tab="config">Config</button>
+  </nav>
+
+  <section id="tab-index">
+    <div class="row" style="margin-bottom:10px">
+      <button class="primary" data-refresh="all">Refresh everything</button>
+      <button data-refresh="index" title="Rebuild catalog.txt and the usage index from the cache, no network">Rebuild index only</button>
+      <span class="muted" id="indexSummary"></span>
+    </div>
+    <div class="card scroll"><table class="src"><thead><tr><th>Source</th><th>Status</th><th>Where</th><th class="num">Objects</th><th>Synced</th><th class="num">Took</th><th></th></tr></thead><tbody id="sources"></tbody></table></div>
+    <p class="hint">Live syncs are rate limited (one request per second per system and env). A job that is already running is joined, not started twice.</p>
+  </section>
+
+  <section id="tab-explore" hidden>
+    <div class="row" style="margin-bottom:10px">
+      <input id="q" class="filter" placeholder="table, column, function, topic, service…  (prefix pg: pgfn: es: kafka: svc:)" style="width:480px">
+      <span class="muted" id="qCount"></span>
+    </div>
+    <div class="grid2">
+      <div class="card lines" id="lines"><div class="empty">Search the catalog. Click a Postgres line for columns, arguments and who uses it.</div></div>
+      <div class="card" id="detail"><div class="empty">Nothing selected.</div></div>
+    </div>
+  </section>
+
+  <section id="tab-passports" hidden>
+    <div class="card form">
+      <b>Build a passport</b>
+      <input id="ppService" placeholder="service name">
+      <input id="ppRepo" placeholder="PROJECT/repo (optional)">
+      <button class="primary" id="ppBuild">Build</button>
+      <span class="spacer"></span>
+      <button id="ppAll">Rebuild all</button>
+    </div>
+    <p class="hint">A rebuild uses the same target as before: the commit deployed in its env, or its branch. Setting a repo saves the service → repo mapping (passports/_repos.json).</p>
+    <div class="card scroll"><table><thead><tr><th>Service</th><th>Repo</th><th>Ref</th><th>Built</th><th class="num">Endpoints</th><th>Consumes</th><th>Produces</th><th class="num">Tables</th><th></th></tr></thead><tbody id="passports"></tbody></table></div>
+  </section>
+
+  <section id="tab-jobs" hidden>
+    <div class="grid2">
+      <div class="card scroll"><table><thead><tr><th>Job</th><th>State</th><th>Started</th><th class="num">Took</th></tr></thead><tbody id="jobs"></tbody></table></div>
+      <div class="card detail" id="job"><div class="empty">Select a job to see its log.</div></div>
+    </div>
+  </section>
+
+  <section id="tab-config" hidden>
+    <h2>envs.json <span class="muted" id="cfgFile"></span></h2>
+    <p class="hint">Databases and endpoints per environment. Secrets stay in <code>.env.&lt;env&gt;</code>; this file names the variables. Without envs.json every <code>.env.&lt;name&gt;</code> is an env and every <code>DATABASE_URL_&lt;NAME&gt;</code> in it a database.</p>
+    <textarea id="cfg" rows="22" spellcheck="false"></textarea>
+    <div class="row" style="margin:8px 0"><button class="primary" id="cfgSave">Save</button><button id="cfgReset">Reload</button><span id="cfgMsg" class="muted"></span></div>
+    <details><summary>Example with every option</summary><pre class="code" id="cfgExample"></pre></details>
+    <h2>Integrations</h2>
+    <div class="card scroll"><table><tbody id="integrations"></tbody></table></div>
+    <h2>Tools <span class="muted">DT_TOOLS selects groups, e.g. <code>all,-confluence</code></span></h2>
+    <div class="card scroll"><table><thead><tr><th>Group</th><th>Tools</th></tr></thead><tbody id="toolGroups"></tbody></table></div>
+  </section>
+</div>
+<script src="/static/ui.js"></script>
+<script>
+let S = null, tab = 'index', selectedJob = null, timer = null;
+const api = async (p, body) => {
+  const r = await fetch(p, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {});
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+  return j;
+};
+const env = () => $('env').value;
+const ago = (t) => {
+  if (!t) return '<span class="muted">never</span>';
+  const s = (Date.now() - Date.parse(t)) / 1000;
+  const txt = s < 60 ? `${Math.round(s)}s ago` : s < 3600 ? `${Math.round(s / 60)}m ago` : s < 86400 ? `${Math.round(s / 3600)}h ago` : `${Math.round(s / 86400)}d ago`;
+  return `<span title="${esc(fmtDate(t))}">${txt}</span>`;
+};
+const dur = (ms) => ms == null ? '' : ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
+const runningKeys = () => new Set((S?.jobs || []).filter(j => j.state === 'running').map(j => j.key));
+
+function statusOf(x, key) {
+  if (runningKeys().has(key)) return '<span class="st run"><span class="dot"></span>syncing</span>';
+  if (x.configured === false) return '<span class="st"><span class="dot"></span>not configured</span>';
+  if (x.error) return '<span class="st err"><span class="dot"></span>error</span>';
+  if (!x.syncedAt) return '<span class="st"><span class="dot"></span>not synced</span>';
+  const old = Date.now() - Date.parse(x.syncedAt) > 7 * 864e5;
+  return `<span class="st ${old ? 'old' : 'ok'}"><span class="dot"></span>${old ? 'stale' : 'ok'}</span>`;
+}
+
+function renderSources() {
+  const e = S.envs.find(x => x.env === env());
+  if (!e) return;
+  if (e.error) { $('sources').innerHTML = `<tr><td colspan="7" class="err-text">${esc(e.error)}</td></tr>`; return; }
+  const k = (what, only) => `${e.env}:${what}:${only || ''}`;
+  const btn = (what, only, label = 'Refresh', disabled) => `<button class="small" data-refresh="${what}" ${only ? `data-only="${esc(only)}"` : ''} ${disabled ? 'disabled' : ''}>${label}</button>`;
+  const rows = [];
+  const pgOk = e.pg.filter(d => d.configured);
+  rows.push(`<tr class="group"><td>Postgres <span class="muted">${pgOk.length}/${e.pg.length} databases</span></td><td></td><td class="muted">${esc(e.envFile)}${e.envFileFound ? '' : ' (missing)'}</td><td class="num">${pgOk.reduce((s, d) => s + (d.tables || 0), 0)} tables · ${pgOk.reduce((s, d) => s + (d.functions || 0), 0)} fn</td><td></td><td></td><td>${btn('pg', '', 'Refresh all', !pgOk.length)}</td></tr>`);
+  if (!e.pg.length) rows.push(`<tr class="off"><td colspan="7">No databases: add DATABASE_URL_&lt;NAME&gt; to ${esc(e.envFile)} or a pg map to envs.json.</td></tr>`);
+  for (const d of e.pg) {
+    rows.push(`<tr class="${d.configured ? '' : 'off'}"><td>&nbsp;&nbsp;<a href="#" data-explore="pg: ${esc(d.db)} ">${esc(d.db)}</a></td><td>${statusOf(d, k('pg', d.db))}${d.error ? `<div class="err-text">${esc(d.error)}</div>` : ''}</td>
+      <td class="mono muted">${esc(d.host || '')}</td><td class="num">${d.tables != null ? `${d.tables} tables · ${d.functions ?? 0} fn · ${d.triggers ?? 0} trg` : ''}</td><td>${d.configured ? ago(d.syncedAt) : ''}</td><td class="num">${dur(d.ms)}</td>
+      <td>${d.configured ? btn('pg', d.db) : ''}</td></tr>`);
+  }
+  for (const [what, label, unit] of [['es', 'Elasticsearch', 'indices'], ['kafka', 'Kafka', 'topics'], ['consul', 'Consul', 'services']]) {
+    const x = e[what];
+    rows.push(`<tr class="group ${x.configured ? '' : 'off'}"><td>${label}</td><td>${statusOf(x, k(what))}${x.error ? `<div class="err-text">${esc(x.error)}</div>` : ''}</td><td></td>
+      <td class="num">${x.count != null ? `${x.count} ${unit}` : ''}</td><td>${x.configured ? ago(x.syncedAt) : ''}</td><td class="num">${dur(x.ms)}</td><td>${x.configured ? btn(what) : ''}</td></tr>`);
+  }
+  rows.push(`<tr class="group ${e.logs.configured ? '' : 'off'}"><td>Logs (ELK)</td><td>${e.logs.configured ? '<span class="st ok"><span class="dot"></span>live</span>' : '<span class="st"><span class="dot"></span>not configured</span>'}</td><td class="mono muted">${esc(e.logs.index)}</td><td class="num muted">queried live</td><td></td><td></td><td></td></tr>`);
+  const ix = e.index;
+  rows.push(`<tr class="group"><td>Catalog + usage index</td><td>${statusOf({ syncedAt: ix.builtAt }, k('index'))}</td><td class="muted">find, pg_usage, who_uses</td>
+    <td class="num">${ix.catalogLines} lines · ${ix.usageEdges} usages</td><td>${ago(ix.builtAt)}</td><td></td><td>${btn('index', '', 'Rebuild')}</td></tr>`);
+  $('sources').innerHTML = rows.join('');
+  $('indexSummary').textContent = `${ix.catalogLines} catalog lines, ${ix.usageEdges} usage edges`;
+}
+
+function renderPassports() {
+  const ps = S.passports;
+  $('nPassports').textContent = ps.length || '';
+  const running = runningKeys();
+  $('passports').innerHTML = ps.length ? ps.map(p => `<tr>
+    <td>${p.builtAt ? `<a href="/passport/${encodeURIComponent(p.service)}" target="_blank" rel="noopener">${esc(p.service)}</a>` : esc(p.service)}</td>
+    <td class="mono">${esc(p.repo || p.mapped || '')}</td><td class="mono">${esc(p.ref || '')}${p.sha ? ` <span class="muted">${esc(p.sha.slice(0, 10))}</span>` : ''}${p.env ? ` <span class="pill">${esc(p.env)}</span>` : ''}</td>
+    <td>${p.builtAt ? ago(p.builtAt) : '<span class="muted">mapped, not built</span>'}${p.changed ? ' <span class="pill" title="changed since the previous build">changed</span>' : ''}</td>
+    <td class="num">${p.endpoints ?? ''}</td><td class="mono">${esc((p.consumes || []).slice(0, 4).join(', '))}${(p.consumes || []).length > 4 ? '…' : ''}</td><td class="mono">${esc((p.produces || []).slice(0, 4).join(', '))}${(p.produces || []).length > 4 ? '…' : ''}</td>
+    <td class="num"><a href="#" data-explore="pg: ${esc(p.service)}">${(p.tables || []).length}</a></td>
+    <td><button class="small" data-refresh="passports" data-only="${esc(p.service)}" ${running.has(`passports:${p.service}`) ? 'disabled' : ''}>${running.has(`passports:${p.service}`) ? 'Building…' : 'Rebuild'}</button></td></tr>`).join('')
+    : '<tr><td colspan="9" class="empty">No passports yet. Build one above, or ask the agent for "passport of &lt;service&gt;".</td></tr>';
+}
+
+function renderJobs() {
+  const js = S.jobs;
+  const run = js.filter(j => j.state === 'running');
+  $('nJobs').textContent = run.length ? `${run.length} running` : '';
+  $('running').hidden = !run.length;
+  $('running').innerHTML = run.map(j => `<span><b>${esc(j.title)}</b> · ${esc(j.log[j.log.length - 1] || 'starting')}</span>`).join('');
+  $('jobs').innerHTML = js.length ? js.map(j => `<tr class="${j.id === selectedJob ? 'on' : ''}" style="cursor:pointer" data-job="${j.id}">
+    <td>${esc(j.title)}</td><td><span class="state ${j.state}">${j.state}</span></td><td>${ago(j.startedAt)}</td><td class="num">${dur(j.ms)}</td></tr>`).join('')
+    : '<tr><td colspan="4" class="empty">No jobs yet.</td></tr>';
+  if (selectedJob) showJob(selectedJob, true);
+}
+
+async function showJob(id, quiet) {
+  selectedJob = id;
+  try {
+    const j = await api(`/api/admin/job/${id}`);
+    const box = $('job');
+    const atBottom = box.querySelector('.joblog') ? box.querySelector('.joblog').scrollTop + box.querySelector('.joblog').clientHeight >= box.querySelector('.joblog').scrollHeight - 20 : true;
+    box.innerHTML = `<div class="row"><b>${esc(j.title)}</b><span class="state ${j.state}">${j.state}</span><span class="muted">${fmtDate(j.startedAt)} · ${dur(j.ms)}</span><span class="spacer"></span><button class="small" id="copyLog">Copy log</button></div>
+      ${j.error ? `<div class="err-text" style="margin:6px 0">${esc(j.error)}</div>` : ''}
+      <pre class="joblog">${esc(j.log.join('\n'))}</pre>
+      ${j.result ? `<details><summary>Result</summary><pre class="code">${esc(JSON.stringify(j.result, null, 2))}</pre></details>` : ''}`;
+    const log = box.querySelector('.joblog');
+    if (atBottom) log.scrollTop = log.scrollHeight;
+    $('copyLog').onclick = () => copy(j.log.join('\n'), 'log');
+  } catch (e) { if (!quiet) toast(e.message); }
+}
+
+function renderConfig() {
+  $('integrations').innerHTML = [
+    ['Bitbucket', S.integrations.bitbucket || 'not configured (BITBUCKET_URL + BITBUCKET_HTTP_TOKEN in .env.personal)'],
+    ['Confluence', S.integrations.confluence || 'not configured'],
+    ['Code graph', S.integrations.graph || 'not configured (GRAPH_URL)'],
+    ['Internal library groups', S.integrations.internalGroups.join(', ') || '(own group prefix of each service)'],
+    ['Config folder', S.config.dir],
+    ['Notes', `${S.config.notes} (notes.json)`],
+    ['Access', S.auth.apiKey ? 'API key required (DT_API_KEY)' + (S.auth.trustNetwork ? ', and the network is trusted (DT_TRUST_NETWORK=1)' : '') : S.auth.trustNetwork ? 'trusted network (DT_TRUST_NETWORK=1)' : 'this machine only'],
+  ].map(([k, v]) => `<tr><th style="width:220px">${esc(k)}</th><td class="mono">${esc(v)}</td></tr>`).join('');
+  $('toolGroups').innerHTML = S.tools.map(g => `<tr><td><b>${esc(g.group)}</b></td><td>${g.tools.map(t => `<span class="chip ${t.enabled ? 'good' : ''}" title="${t.enabled ? 'enabled' : 'disabled by DT_TOOLS'}${t.plugin ? ` · plugin ${esc(t.plugin)}` : ''}">${esc(t.name)}</span>`).join(' ')}</td></tr>`).join('');
+}
+
+async function loadConfig() {
+  const c = await api('/api/admin/config');
+  $('cfg').value = c.text; $('cfgFile').textContent = c.exists ? c.file : `${c.file} (not created yet: showing what is in effect)`;
+  $('cfgExample').textContent = c.example; $('cfgMsg').textContent = '';
+}
+
+async function refresh() {
+  try {
+    S = await api('/api/admin/status');
+    let cur = env();
+    try { cur = cur || localStorage.getItem('dt-admin-env'); } catch {}
+    $('env').innerHTML = S.envs.map(e => `<option ${e.env === cur ? 'selected' : ''}>${esc(e.env)}</option>`).join('');
+    $('version').textContent = `v${S.version}`;
+    $('authInfo').textContent = S.auth.apiKey ? 'API key' : S.auth.trustNetwork ? 'trusted network' : 'local only';
+    renderSources(); renderPassports(); renderJobs(); renderConfig();
+  } catch (e) { toast(e.message); }
+  clearTimeout(timer);
+  timer = setTimeout(refresh, (S?.jobs || []).some(j => j.state === 'running') ? 1500 : 15000);
+}
+
+async function startRefresh(what, only) {
+  try {
+    const j = await api('/api/admin/refresh', { env: env(), what, only: only || undefined });
+    toast(`Started: ${what}${only ? ` ${only}` : ''}`);
+    selectedJob = j.id;
+    await refresh();
+  } catch (e) { toast(e.message); }
+}
+
+// ── explore ──
+let qTimer;
+async function search() {
+  const q = $('q').value.trim();
+  if (!q) { $('lines').innerHTML = '<div class="empty">Search the catalog.</div>'; $('qCount').textContent = ''; return; }
+  try {
+    const lines = await api(`/api/find?env=${encodeURIComponent(env())}&q=${encodeURIComponent(q)}&limit=300`);
+    $('qCount').textContent = `${lines.length}${lines.length >= 300 ? '+' : ''} lines`;
+    $('lines').innerHTML = lines.length ? lines.map((l, i) => {
+      const [kind, ...rest] = l.split(' ');
+      const text = rest.join(' ');
+      const cut = text.indexOf(' | used by: ');
+      const main = cut >= 0 ? text.slice(0, cut) : text, used = cut >= 0 ? text.slice(cut) : '';
+      return `<div class="line" data-i="${i}" data-kind="${esc(kind)}" data-name="${esc(objectName(kind, rest))}"><span class="k">${esc(kind)}</span>${esc(main)}<span class="used">${esc(used)}</span></div>`;
+    }).join('') : '<div class="empty">No match. Fewer or shorter words, or refresh the index.</div>';
+  } catch (e) { $('lines').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+// "pg <db> <schema.table> ..." -> "db:schema.table"; "pgfn <db> <schema.fn>(...)" -> "db:schema.fn"
+function objectName(kind, rest) {
+  if (kind === 'pg') return `${rest[0]}:${rest[1]}`;
+  if (kind === 'pgfn') return `${rest[0]}:${rest[1].split('(')[0]}`;
+  return rest[0];
+}
+
+const roleCell = (r) => `<span class="role ${esc(r)}">${esc(r)}</span>`;
+function usageTable(rows, userSide) {
+  if (!rows.length) return '<div class="empty">none found</div>';
+  return `<div class="scroll"><table><thead><tr><th>${userSide ? 'Used by' : 'Uses'}</th><th>Kind</th><th>Role</th><th>Where</th><th>Detail</th></tr></thead><tbody>${rows.map(u => {
+    const name = userSide ? u.user : u.target, kind = userSide ? u.userKind : u.targetKind;
+    const link = kind === 'service' ? `<a href="/passport/${encodeURIComponent(name)}" target="_blank" rel="noopener">${esc(name)}</a>` : `<a href="#" data-open="${esc((u.db ? u.db + ':' : '') + name)}">${esc(name)}</a>`;
+    return `<tr><td class="mono">${link}${u.source && u.source !== 'db' && u.source !== 'code' ? ` <span class="muted">via ${esc(u.source)}</span>` : ''}${u.ambiguous ? ' <span class="pill" title="unqualified name; several schemas have it">ambiguous</span>' : ''}${u.known === false ? ' <span class="pill">not in db</span>' : ''}</td>
+      <td>${esc(kind)}</td><td>${roleCell(u.role)}</td><td class="where">${esc(u.where || '')}</td><td class="det">${esc((u.detail || '').slice(0, 300))}</td></tr>`;
+  }).join('')}</tbody></table></div>`;
+}
+
+async function openObject(name) {
+  $('detail').innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const r = await api(`/api/admin/object?env=${encodeURIComponent(env())}&name=${encodeURIComponent(name)}`);
+    if (!r.objects.length) {
+      $('detail').innerHTML = `<div class="detail"><h3>${esc(name)}</h3><p class="muted">Not a Postgres object. Catalog lines:</p>${r.lines.map(l => `<div class="mono" style="padding:3px 0">${esc(l)}</div>`).join('') || '<div class="empty">none</div>'}${noteEditor(name, r.note)}</div>`;
+      bindNote(); return;
+    }
+    $('detail').innerHTML = r.objects.map(o => {
+      const isFn = ['function', 'procedure', 'aggregate', 'window'].includes(o.kind);
+      const head = `<h3>${esc(o.object)}${isFn ? `(${esc(o.signature || o.args || '')})` : ''}</h3>
+        <div class="kv"><span>db <b>${esc(o.db || '?')}</b></span><span>${esc(o.kind)}</span>${isFn ? `<span>returns <b class="mono">${esc(o.returns || 'void')}</b></span><span>${esc(o.lang)}</span><span>${esc(o.volatility)}</span>${o.security_definer ? '<span>security definer</span>' : ''}` : `<span>~${Number(o.est_rows || 0).toLocaleString()} rows</span>`}${o.comment ? `<span>“${esc(o.comment)}”</span>` : ''}
+          <span class="spacer"></span><button class="small" data-copy="${esc(o.object)}">Copy name</button></div>`;
+      let body = '';
+      if (isFn) {
+        body += o.arg_list?.length ? `<table><thead><tr><th>Argument</th><th>Type</th><th>Mode</th></tr></thead><tbody>${o.arg_list.map(a => `<tr><td class="mono">${esc(a.name || '(unnamed)')}</td><td class="mono">${esc(a.type)}</td><td>${esc(a.mode)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">No arguments.</p>';
+        if (o.body) body += `<details><summary>Body (${o.body.split('\n').length} lines)</summary><pre class="code">${esc(o.body)}</pre></details>`;
+      } else {
+        body += `<div class="scroll"><table><thead><tr><th>Column</th><th>Type</th><th>Null</th><th>Default</th><th>Comment</th></tr></thead><tbody>${(o.columns || []).map(c => `<tr><td class="mono">${esc(c.name)}</td><td class="mono">${esc(c.type)}</td><td>${c.nullable ? '' : 'not null'}</td><td class="mono muted">${esc(c.default || '')}</td><td class="muted">${esc(c.comment || '')}</td></tr>`).join('')}</tbody></table></div>`;
+        if ((o.constraints || []).length) body += `<h2>Constraints</h2>${o.constraints.map(c => `<div class="mono" style="padding:2px 0">${esc(c.name)} <span class="muted">${esc(c.def)}</span></div>`).join('')}`;
+        if ((o.indexes || []).length) body += `<h2>Indexes</h2>${o.indexes.map(i => `<div class="mono muted" style="padding:2px 0">${esc(i)}</div>`).join('')}`;
+        if ((o.triggers || []).length) body += `<h2>Triggers</h2>${o.triggers.map(t => `<div class="mono muted" style="padding:2px 0">${esc(t.def)}</div>`).join('')}`;
+        if (o.definition) body += `<details><summary>View definition</summary><pre class="code">${esc(o.definition)}</pre></details>`;
+      }
+      const by = {};
+      for (const u of o.usedBy) by[u.userKind] = (by[u.userKind] || 0) + 1;
+      return `<div class="detail">${head}${body}
+        <h2>Used by <span class="muted">${o.usedBy.length} ${Object.entries(by).map(([k, n]) => `· ${n} ${k}`).join(' ')}</span></h2>${usageTable(o.usedBy, true)}
+        ${o.uses.length ? `<h2>Uses</h2>${usageTable(o.uses, false)}` : ''}
+        ${noteEditor(o.db ? `${o.object}` : o.object, o.note)}</div>`;
+    }).join('<hr style="border:0;border-top:1px solid var(--line)">');
+    bindNote();
+  } catch (e) { $('detail').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+const noteEditor = (name, note) => `<h2>Note <span class="muted">shown to the agent in find and details</span></h2>
+  <textarea rows="2" data-note="${esc(name)}" placeholder="e.g. deprecated, use … / owned by team …">${esc(note || '')}</textarea>
+  <div class="row" style="margin-top:6px"><button class="small" data-save-note="${esc(name)}">Save note</button></div>`;
+function bindNote() {
+  document.querySelectorAll('[data-save-note]').forEach(b => b.onclick = async () => {
+    const name = b.dataset.saveNote;
+    const text = document.querySelector(`textarea[data-note="${CSS.escape(name)}"]`).value;
+    try { await api('/api/admin/notes', { name, note: text }); toast('Note saved'); refresh(); } catch (e) { toast(e.message); }
+  });
+}
+
+function show(t) {
+  tab = t;
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  document.querySelectorAll('section[id^=tab-]').forEach(s => s.hidden = s.id !== `tab-${t}`);
+  history.replaceState(null, '', `#${t}`);
+  if (t === 'config') loadConfig().catch(e => toast(e.message));
+}
+
+document.addEventListener('click', (ev) => {
+  const el = ev.target.closest('[data-refresh],[data-explore],[data-open],[data-job],[data-copy],.line,#tabs button');
+  if (!el) return;
+  if (el.matches('#tabs button')) return show(el.dataset.tab);
+  ev.preventDefault();
+  if (el.dataset.refresh) return startRefresh(el.dataset.refresh, el.dataset.only);
+  if (el.dataset.explore) { show('explore'); $('q').value = el.dataset.explore; return search(); }
+  if (el.dataset.open) { show('explore'); return openObject(el.dataset.open); }
+  if (el.dataset.job) { showJob(el.dataset.job); document.querySelectorAll('#jobs tr').forEach(r => r.classList.toggle('on', r.dataset.job === el.dataset.job)); return; }
+  if (el.dataset.copy) return copy(el.dataset.copy, 'name');
+  if (el.classList.contains('line')) {
+    document.querySelectorAll('.line.on').forEach(x => x.classList.remove('on')); el.classList.add('on');
+    openObject(el.dataset.name);
+  }
+});
+$('q').addEventListener('input', () => { clearTimeout(qTimer); qTimer = setTimeout(search, 250); });
+$('env').addEventListener('change', () => { try { localStorage.setItem('dt-admin-env', env()); } catch {} renderSources(); if ($('q').value) search(); });
+$('ppBuild').onclick = async () => {
+  const service = $('ppService').value.trim(), repo = $('ppRepo').value.trim();
+  if (!service) return toast('Service name first');
+  try { if (repo) await api('/api/admin/repos', { service, repo }); await startRefresh('passports', service); $('ppService').value = ''; $('ppRepo').value = ''; } catch (e) { toast(e.message); }
+};
+$('ppAll').onclick = () => startRefresh('passports');
+$('cfgSave').onclick = async () => {
+  try { const r = await api('/api/admin/config', { text: $('cfg').value }); $('cfgMsg').textContent = `Saved ${r.saved}. Envs: ${r.envs.join(', ')}. ${r.note}`; refresh(); }
+  catch (e) { $('cfgMsg').innerHTML = `<span class="err-text">${esc(e.message)}</span>`; }
+};
+$('cfgReset').onclick = () => loadConfig();
+show((location.hash || '#index').slice(1));
+refresh();
+</script>
+</body>
+</html>

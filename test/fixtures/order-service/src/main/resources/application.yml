@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: order-service
+  datasource:
+    url: jdbc:postgresql://db-host:5432/orders?currentSchema=sales
+    username: app
+  cloud:
+    stream:
+      bindings:
+        audit-out-0:
+          destination: audit_events
+        payment-in-0:
+          destination: payment_results   # consumed via functional binding
+          group: order-svc
+server:
+  port: 8081
+app:
+  kafka:
+    topics:
+      orders: order_created
+      status: ${STATUS_TOPIC:order_status}
+      partitions: 6
+  missing: ${NOT_DEFINED_ANYWHERE}
+payments:
+  url: http://payment-service/api
+search:
+  index-name: orders-v2
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+app:
+  kafka:
+    topics:
+      orders: order_created_dev

@@ -1,0 +1,13 @@
+.env.*
+envs.json
+envs.json.bak
+notes.json
+cache
+.git
+.code-review-graph
+node_modules
+repos
+passports
+plugins/*.js
+dist
+test

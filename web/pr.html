@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dt pull request</title>
+<link rel="stylesheet" href="/static/ui.css">
+<style>
+  .desc { white-space: pre-wrap; padding: 10px 12px; margin: 8px 0; max-height: 220px; overflow: auto; }
+  .files td { white-space: nowrap; }
+  .bar { display: inline-flex; width: 60px; height: 8px; border-radius: 2px; overflow: hidden; background: var(--soft); vertical-align: middle; }
+  .bar i { display: block; height: 100%; } .bar .a { background: var(--good); } .bar .d { background: var(--lv-error); }
+  .file { margin: 10px 0; overflow: hidden; }
+  .file > .head { display: flex; gap: 8px; align-items: center; padding: 6px 10px; background: var(--soft); border-bottom: 1px solid var(--line); cursor: pointer; position: sticky; top: 0; }
+  .file.closed > .body { display: none; }
+  .diff { width: 100%; border-collapse: collapse; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  .diff td { padding: 0 8px; border: 0; white-space: pre; vertical-align: top; }
+  .diff td.n { width: 1%; color: var(--muted); text-align: right; user-select: none; }
+  .diff tr.add td { background: var(--add-bg); } .diff tr.add td.c { color: var(--add-fg); }
+  .diff tr.del td { background: var(--del-bg); } .diff tr.del td.c { color: var(--del-fg); }
+  .diff tr.hunk td { background: var(--hunk-bg); color: var(--muted); padding: 3px 8px; }
+  .diff tr:hover td { filter: brightness(.97); }
+  .comment { padding: 8px 12px; border-bottom: 1px solid var(--line); }
+  .comment:last-child { border-bottom: 0; }
+  .comment .who { font-weight: 600; }
+  .comment .text { white-space: pre-wrap; margin-top: 3px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <span class="badge">PR</span>
+    <h1 id="title"></h1>
+    <span class="spacer"></span>
+    <a id="bb" target="_blank" rel="noopener">Bitbucket ↗</a>
+    <a id="openfull" target="_blank" rel="noopener" class="only-embed">Open full view ↗</a>
+  </div>
+  <div class="row" id="meta"></div>
+  <div class="card desc" id="desc"></div>
+  <h2>Files <span class="muted" id="fcount"></span></h2>
+  <div class="card scroll"><table class="files"><thead><tr><th>file</th><th class="num">+</th><th class="num">−</th><th></th></tr></thead><tbody id="files"></tbody></table></div>
+  <div class="row" style="margin-top:12px">
+    <h2 style="margin:0">Diff</h2><span class="spacer"></span>
+    <button id="expand">Expand all</button><button id="collapse">Collapse all</button><button id="cpDiff">Copy diff</button>
+  </div>
+  <div id="diff"></div>
+  <h2>Comments <span class="muted" id="ccount"></span></h2>
+  <div class="card" id="comments"></div>
+</div>
+<script src="/static/ui.js"></script>
+<script>
+let pr;
+// unified text -> [{path, lines:[{t:'add'|'del'|'ctx'|'hunk', o, n, s}]}]
+function parse(text) {
+  const files = []; let f = null, o = 0, n = 0;
+  for (const line of (text || '').split('\n')) {
+    if (line.startsWith('diff --git ')) { f = { path: line.replace(/^diff --git a\/.* b\//, ''), lines: [] }; files.push(f); continue; }
+    if (!f || line.startsWith('--- ') || line.startsWith('+++ ')) continue;
+    const h = line.match(/^@@ -(\d+),?\d* \+(\d+),?\d* @@(.*)$/);
+    if (h) { o = +h[1]; n = +h[2]; f.lines.push({ t: 'hunk', s: line }); continue; }
+    if (line.startsWith('+')) f.lines.push({ t: 'add', n: n++, s: line.slice(1) });
+    else if (line.startsWith('-')) f.lines.push({ t: 'del', o: o++, s: line.slice(1) });
+    else f.lines.push({ t: 'ctx', o: o++, n: n++, s: line.slice(1) });
+  }
+  return files;
+}
+function render() {
+  $('title').textContent = `${pr.project}/${pr.repo} #${pr.id} · ${pr.title}`;
+  if (pr.link) $('bb').href = pr.link; else $('bb').style.display = 'none';
+  $('openfull').href = location.pathname;
+  const tone = { APPROVED: 'good', NEEDS_WORK: 'bad', UNAPPROVED: '' };
+  $('meta').innerHTML = [
+    `<span class="chip ${pr.state === 'OPEN' ? 'warn' : pr.state === 'MERGED' ? 'good' : ''}">${esc(pr.state)}</span>`,
+    `<span class="chip">${esc(pr.author)}</span>`,
+    `<span class="chip mono">${esc(pr.from)} → ${esc(pr.to)}</span>`,
+    ...pr.reviewers.map(r => `<span class="chip ${tone[r.status] || ''}">${esc(r.name)} · ${esc(r.status.toLowerCase().replace('_', ' '))}</span>`),
+    `<span class="muted">updated ${fmtDate(pr.updated)}</span>`,
+  ].join('');
+  $('desc').textContent = pr.description || '(no description)';
+  const max = Math.max(1, ...pr.files.map(f => f.add + f.del));
+  $('fcount').textContent = `${pr.files.length} · +${pr.files.reduce((s, f) => s + f.add, 0)} −${pr.files.reduce((s, f) => s + f.del, 0)}`;
+  $('files').innerHTML = pr.files.map((f, i) => `<tr><td class="mono"><a href="#f${i}" data-go="${i}">${esc(f.path)}</a></td><td class="num" style="color:var(--good)">${f.add}</td><td class="num" style="color:var(--lv-error)">${f.del}</td><td><span class="bar"><i class="a" style="width:${f.add / max * 60}px"></i><i class="d" style="width:${f.del / max * 60}px"></i></span></td></tr>`).join('');
+  const files = parse(pr.diff);
+  const closeAll = embed || files.length > 8;
+  $('diff').innerHTML = files.map((f, i) => `<div class="card file ${closeAll ? 'closed' : ''}" id="f${i}"><div class="head" data-toggle="${i}"><span class="mono">${esc(f.path)}</span><span class="spacer"></span><span class="muted">${f.lines.filter(l => l.t === 'add').length}+ ${f.lines.filter(l => l.t === 'del').length}−</span></div>
+    <div class="body scroll"><table class="diff">${f.lines.map(l => l.t === 'hunk' ? `<tr class="hunk"><td colspan="3">${esc(l.s)}</td></tr>` :
+      `<tr class="${l.t}"><td class="n">${l.o ?? ''}</td><td class="n">${l.n ?? ''}</td><td class="c">${l.t === 'add' ? '+' : l.t === 'del' ? '−' : ' '} ${esc(l.s)}</td></tr>`).join('')}</table></div></div>`).join('') || `<div class="empty">${esc(pr.diffError || 'No diff')}</div>`;
+  $('ccount').textContent = pr.comments.length;
+  $('comments').innerHTML = pr.comments.map(c => `<div class="comment"><span class="who">${esc(c.author)}</span> <span class="muted">${fmtDate(c.at)}${c.file ? ` · ${esc(c.file)}${c.line ? ':' + c.line : ''}` : ''}</span><div class="text">${esc(c.text)}</div></div>`).join('') || '<div class="empty">No comments.</div>';
+  postHeight();
+}
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-toggle]');
+  if (t) { $(`f${t.dataset.toggle}`).classList.toggle('closed'); postHeight(); }
+  const g = e.target.closest('[data-go]');
+  if (g) { e.preventDefault(); const el = $(`f${g.dataset.go}`); el.classList.remove('closed'); el.scrollIntoView({ block: 'start' }); postHeight(); }
+});
+$('expand').onclick = () => { document.querySelectorAll('.file').forEach(f => f.classList.remove('closed')); postHeight(); };
+$('collapse').onclick = () => { document.querySelectorAll('.file').forEach(f => f.classList.add('closed')); postHeight(); };
+$('cpDiff').onclick = () => copy(pr.diff, 'diff');
+loadResult().then(d => { pr = d.pr; render(); }).catch(fail);
+</script>
+</body>
+</html>

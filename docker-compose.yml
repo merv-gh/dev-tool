@@ -1,0 +1,122 @@
+# dt: the tool server (always). Tools over OpenAPI (Open WebUI) and MCP (/mcp), result pages, /admin.
+#                                                          -> http://127.0.0.1:4000/admin
+# Optional parts, picked with COMPOSE_PROFILES (in .env.personal; run.sh defaults to all three):
+#   webui:   Open WebUI chat + one-shot setup              -> http://127.0.0.1:3000
+#   browser: Playwright MCP (headless Chromium); logins use secrets from .env.browser
+#   graph:   code-review-graph over repos/ (fetched by passports / repo_fetch), via mcpo as OpenAPI
+# Only the tool server, for an Open WebUI or MCP client you already run:  COMPOSE_PROFILES= ./run.sh up -d
+name: dev-tool
+
+services:
+  dt:
+    build: .
+    image: dev-tool:latest
+    user: "${DT_UID:-1000}:${DT_GID:-1000}"
+    environment:
+      DT_TRUST_NETWORK: ${DT_TRUST_NETWORK:-1}             # trust the compose network; the port is published on DT_BIND only
+      DT_API_KEY: ${DT_API_KEY:-}                          # if set, required from anything not trusted (Bearer or /admin?key=)
+      DT_PUBLIC_URL: ${DT_PUBLIC_URL:-http://127.0.0.1:${DT_PORT:-4000}}   # base of result links/embeds as the chat user's browser sees it
+      DT_RATE_PER_SEC: ${DT_RATE_PER_SEC:-1}               # live queries per second per system+env; 0 = off
+      DT_TOOLS: ${DT_TOOLS:-all}                           # tool groups, e.g. all,-confluence
+      GRAPH_URL: ${GRAPH_URL:-http://graph:8000}
+      HOME: /tmp                                           # git needs a writable home; the uid may not exist in the image
+    volumes:
+      - ./:/app                 # code, config (.env.*, envs.json, notes.json), cache/, repos/, passports/, plugins/
+      - /app/node_modules       # keep the image's node_modules
+    ports:
+      - "${DT_BIND:-127.0.0.1}:${DT_PORT:-4000}:4000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+    restart: unless-stopped
+
+  browser:
+    profiles: [browser]
+    image: mcr.microsoft.com/playwright/mcp:${PLAYWRIGHT_MCP_VERSION:-v0.0.83}
+    command: ["--port", "8931", "--host", "0.0.0.0", "--allowed-hosts", "*", "--isolated",
+              "--secrets", "/secrets/browser.env", "--viewport-size", "1366,900",
+              "--output-dir", "/tmp/playwright", "--image-responses", "allow"]
+    volumes:
+      - ./.env.browser:/secrets/browser.env:ro              # only this container sees the site credentials
+    restart: unless-stopped
+
+  graph:
+    profiles: [graph]
+    build:
+      args:
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        ARG PIP_INDEX_URL
+        RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
+        RUN pip install --no-cache-dir --index-url "$$PIP_INDEX_URL" code-review-graph==2.3.9 mcpo==0.0.20 fastapi==0.133.1   # mcpo 0.0.20 breaks on newer FastAPI
+        RUN mkdir -p /repos && git config --system --add safe.directory '*'
+    image: dev-tool-graph:latest
+    command: ["mcpo", "--host", "0.0.0.0", "--port", "8000", "--", "code-review-graph", "serve", "--repo", "/repos"]
+    user: "${DT_UID:-1000}:${DT_GID:-1000}"
+    environment:
+      HOME: /tmp
+    volumes:
+      - ./repos:/repos          # graph data is written next to each repo (.code-review-graph/)
+    restart: unless-stopped
+
+  webui:
+    profiles: [webui]
+    image: ghcr.io/open-webui/open-webui:${OPEN_WEBUI_VERSION:-v0.12.4}
+    environment:
+      OPENAI_API_BASE_URL: ${LLM_BASE_URL:-}                # set LLM_BASE_URL in .env.personal
+      OPENAI_API_KEY: ${LLM_API_KEY:-none}
+      DEFAULT_MODELS: ${LLM_MODEL:-}
+      ENABLE_OLLAMA_API: "false"
+      WEBUI_AUTH: "false"                                  # single local user (admin)
+      ENABLE_PERSISTENT_CONFIG: "false"                    # this file stays the source of truth on every start
+      ENABLE_TOOL_SERVERS: "true"
+      # ~80 tools (Open WebUI built-ins + dt + browser) would crowd the model's context.
+      # Keep the everyday ones loaded; the rest stay reachable through Open WebUI's search_tools.
+      ENABLE_TOOL_SEARCH: "true"
+      TOOL_SEARCH_DEFER_THRESHOLD: "0"
+      TOOL_SEARCH_ALWAYS_LOADED: >-
+        find,catalog_sync,pg_table,pg_function,pg_usage,pg_query,es_search,kafka_topic,kafka_last,kafka_lag,health,es_health,overview,consul_service,
+        logs_search,logs_trace,passport,who_uses,bitbucket_pr,browser_sites,
+        browser_browser_navigate,browser_browser_snapshot,browser_browser_click,browser_browser_type,browser_browser_fill_form,
+        browser_browser_press_key,browser_browser_take_screenshot,browser_browser_wait_for
+      # dt over OpenAPI so results can embed the viewer/dashboard in the chat; browser over MCP.
+      TOOL_SERVER_CONNECTIONS: >-
+        [{"type":"openapi","url":"http://dt:4000","path":"openapi.json","auth_type":"none","key":"",
+          "config":{"enable":true},
+          "info":{"id":"dt","name":"dt","description":"Postgres, Elasticsearch, Kafka, Consul, logs, Bitbucket, service passports (read-only)"}},
+         {"type":"mcp","url":"http://browser:8931/mcp","path":"","auth_type":"none","key":"",
+          "config":{"enable":true},
+          "info":{"id":"browser","name":"browser","description":"Headless browser: open URLs, click, type, screenshot"}},
+         {"type":"openapi","url":"http://graph:8000","path":"openapi.json","auth_type":"none","key":"",
+          "config":{"enable":true},
+          "info":{"id":"graph","name":"code graph","description":"code-review-graph over fetched repos (/repos/<PROJECT>/<repo>): callers, impact, review context"}}]
+    volumes:
+      - webui-data:/app/backend/data
+    ports:
+      - "127.0.0.1:${WEBUI_PORT:-3000}:8080"
+    depends_on:
+      dt: { condition: service_started }
+      browser: { condition: service_started, required: false }
+      graph: { condition: service_started, required: false }
+    restart: unless-stopped
+
+  # One-shot: after Open WebUI is up, give each model the agent prompt (lib/agent-prompt.md) and
+  # turn on the dt / browser / graph tools by default. Safe to rerun: ./run.sh up setup
+  setup:
+    profiles: [webui]
+    image: dev-tool:latest
+    command: ["node", "cli.js", "webui-setup"]
+    user: "${DT_UID:-1000}:${DT_GID:-1000}"
+    environment:
+      WEBUI_URL: http://webui:8080
+      LLM_MODEL: ${LLM_MODEL:-}
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    depends_on: [webui]
+    restart: "no"
+
+volumes:
+  webui-data: {}

@@ -1,0 +1,14 @@
+# your config and data (never committed)
+.env.*
+!.env.example
+!.env.personal.example
+!.env.browser.example
+envs.json
+envs.json.bak
+notes.json
+cache/
+repos/
+passports/
+plugins/*.js
+dist/
+node_modules/
