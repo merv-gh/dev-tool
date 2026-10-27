@@ -322,6 +322,15 @@ var require_config = __commonJS({
       const c = resolved("files");
       return Object.fromEntries(Object.entries(c).map(([name, x]) => [name, { name, ...x, type: x.type || (x.host ? "sftp" : "local"), write: x.write === true }]));
     }
+    function getTimeouts() {
+      const c = resolved("timeouts"), e = process.env;
+      const n = (env, cfg, def) => Number(e[env] || cfg || def);
+      return {
+        pgQueryMs: n("DT_PG_QUERY_TIMEOUT_MS", c.pgQueryMs, 6e4),
+        pgIndexMs: n("DT_PG_INDEX_TIMEOUT_MS", c.pgIndexMs, 12e4),
+        catalogSyncWaitMs: n("DT_CATALOG_SYNC_WAIT_MS", c.catalogSyncWaitMs, 5e4)
+      };
+    }
     function getServer() {
       const c = resolved("server");
       const e = process.env;
@@ -353,6 +362,7 @@ var require_config = __commonJS({
       siteUrl,
       getScripts,
       getFiles,
+      getTimeouts,
       getServer,
       endpoint,
       reload,
@@ -530,7 +540,8 @@ var require_jobs = __commonJS({
       const j = all().find((x) => x.id === id);
       return j ? view(j) : null;
     };
-    module2.exports = { start, list, get };
+    var find = (id) => all().find((x) => x.id === id) || null;
+    module2.exports = { start, list, get, find };
   }
 });
 
@@ -2732,7 +2743,7 @@ var require_pg = __commonJS({
   "lib/pg.js"(exports2, module2) {
     var path2 = require("path");
     var postgres = require_src();
-    var { getEnv: getEnv2 } = require_config();
+    var { getEnv: getEnv2, getTimeouts } = require_config();
     var { CACHE: CACHE2, pool, writeJson, readJson } = require_util();
     var conns = /* @__PURE__ */ new Map();
     function connect(url) {
@@ -2745,12 +2756,23 @@ var require_pg = __commonJS({
           },
           connection: {
             application_name: "dev-tool",
-            statement_timeout: 6e4,
+            statement_timeout: getTimeouts().pgQueryMs,
             default_transaction_read_only: "on"
           }
         }));
       }
       return conns.get(url);
+    }
+    async function guarded(sql, ms, kind, run) {
+      try {
+        return await sql.begin("read only", async (t) => {
+          await t.unsafe(`set local statement_timeout = ${Math.max(1e3, Math.floor(ms))}`);
+          return run(t);
+        });
+      } catch (e) {
+        if (e.code === "57014") e.message = `${e.message} (the ${kind} limit is ${Math.round(ms / 1e3)} s: raise timeouts.${kind === "index" ? "pgIndexMs" : "pgQueryMs"} in config.json, or DT_PG_${kind === "index" ? "INDEX" : "QUERY"}_TIMEOUT_MS)`;
+        throw e;
+      }
     }
     async function closeAll() {
       await Promise.all([...conns.values()].map((c) => c.end({ timeout: 2 })));
@@ -2788,7 +2810,7 @@ var require_pg = __commonJS({
       const url = env.pg[target.db];
       if (!url) throw new Error(`No URL for db "${target.db}" (${env.envFile} missing or incomplete)`);
       const started = Date.now();
-      const rows = await connect(url).unsafe(sql, params || []);
+      const rows = await guarded(connect(url), getTimeouts().pgQueryMs, "query", (t) => t.unsafe(sql, params || []));
       return { env: envName, db: target.db, route: target.reason, ms: Date.now() - started, rowCount: rows.count ?? rows.length, rows: [...rows] };
     }
     var CATALOG_SQL = `
@@ -2864,12 +2886,14 @@ order by 1, 2`;
     async function syncDb(envName, { name, url }) {
       const sql = connect(url);
       const started = Date.now();
+      const ms = getTimeouts().pgIndexMs;
+      const q = (text) => guarded(sql, ms, "index", (t) => t.unsafe(text));
       const [tables, functions, viewDeps, triggers, [meta]] = await Promise.all([
-        sql.unsafe(CATALOG_SQL),
-        sql.unsafe(FUNCTIONS_SQL),
-        sql.unsafe(VIEW_DEPS_SQL),
-        sql.unsafe(TRIGGERS_SQL),
-        sql`select current_database() as database, version() as version`
+        q(CATALOG_SQL),
+        q(FUNCTIONS_SQL),
+        q(VIEW_DEPS_SQL),
+        q(TRIGGERS_SQL),
+        q("select current_database() as database, version() as version")
       ]);
       writeJson(dbFile(envName, name), {
         db: name,
@@ -27037,11 +27061,23 @@ var require_tools = __commonJS({
       {
         name: "catalog_sync",
         group: "catalog",
-        description: 'Refresh the cached catalog of an environment from the live systems: Postgres schemas, functions, views, triggers (all databases), ES mappings, Kafka topics + schemas + last messages, Consul services; then the usage index. "passports" rebuilds the cached service passports, "index" only rebuilds catalog + usage from the cache. Takes seconds to minutes; run when find says the catalog is empty or something is missing.',
-        input: { env, what: { type: "string", enum: require_indexer().WHAT, default: "all" }, only: str("Comma list to limit: db names for pg, name parts for es/kafka, services for passports") },
+        description: 'Refresh the cached catalog of an environment from the live systems: Postgres schemas, functions, views, triggers (all databases), ES mappings, Kafka topics + schemas + last messages, Consul services; then the usage index. "passports" rebuilds the cached service passports, "index" only rebuilds catalog + usage from the cache. Takes seconds to minutes; if it answers "running", call it again with that job id. Run it when find says the catalog is empty or something is missing.',
+        input: { env, what: { type: "string", enum: require_indexer().WHAT, default: "all" }, only: str("Comma list to limit: db names for pg, name parts for es/kafka, services for passports"), job: str('A job id from an earlier "running" answer: wait for that job instead of starting a sync') },
         run: async (a) => {
-          const job = require_indexer().refresh({ env: a.env, what: a.what, only: a.only });
-          const done = await job.promise;
+          const J = require_jobs();
+          const job = a.job ? J.find(a.job) : require_indexer().refresh({ env: a.env, what: a.what, only: a.only });
+          if (!job) throw new Error(`no job ${a.job} (jobs are kept for the latest 100)`);
+          if (job.state !== "running") {
+            const v = J.get(job.id);
+            return { job: v.id, state: v.state, ms: v.ms, ...v.error ? { error: v.error } : v.result };
+          }
+          const wait = require_config().getTimeouts().catalogSyncWaitMs;
+          let timer;
+          const done = await Promise.race([job.promise, new Promise((r) => {
+            timer = setTimeout(() => r(null), wait);
+          })]);
+          clearTimeout(timer);
+          if (!done) return { job: job.id, state: "running", log: (J.get(job.id).log || []).slice(-3), note: `Still running after ${Math.round(wait / 1e3)} s. In a minute call catalog_sync with job="${job.id}" to wait for it (or get its result). Progress is on /admin (Jobs).` };
           return { job: done.id, state: done.state, ms: done.ms, ...done.error ? { error: done.error } : done.result };
         }
       },

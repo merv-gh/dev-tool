@@ -41,3 +41,21 @@ test('sync a real database: functions with arguments, view deps, triggers, FKs -
   assert.deepEqual(idx.usages('live', 'shop.order_total').map(e => e.user).sort(), ['shop.big_orders', 'shop.close_order']);
   await pg.closeAll();
 });
+
+test('timeouts: queries and the index have their own limits, set per transaction; a cancel names the setting', { skip: !URL_ && 'set DT_TEST_PG_URL' }, async () => {
+  const pg = require('../lib/pg');
+  const cfg = require('../lib/config');
+  process.env.DT_PG_QUERY_TIMEOUT_MS = '1500';
+  process.env.DT_PG_INDEX_TIMEOUT_MS = '4000';
+  try {
+    const t = await pg.query('live', 'select current_setting($1) as v, current_setting($2) as ro', { db: 'shop', params: ['statement_timeout', 'transaction_read_only'] });
+    assert.deepEqual([t.rows[0].v, t.rows[0].ro], ['1500ms', 'on']);
+    await assert.rejects(pg.query('live', 'select pg_sleep(3)', { db: 'shop' }), /statement timeout.*the query limit is 2 s: raise timeouts\.pgQueryMs/);
+    const [r] = await pg.sync('live', { log: () => {} });
+    assert.ok(!r.error, r.error);
+    assert.ok(cfg.getTimeouts().pgIndexMs === 4000);
+  } finally {
+    delete process.env.DT_PG_QUERY_TIMEOUT_MS; delete process.env.DT_PG_INDEX_TIMEOUT_MS;
+    await pg.closeAll();
+  }
+});

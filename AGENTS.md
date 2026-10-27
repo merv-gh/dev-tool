@@ -44,7 +44,7 @@ Browser steps need the Playwright MCP (`DT_BROWSER_MCP`, set by compose). `test/
     node cli.js es orders-v2 "status==open" --size 5
     node cli.js kafka order_created --n 5
     node cli.js tool health '{"only_unhealthy":true}'       # every Consul service in one call
-Postgres sessions are read-only with a 60s timeout; the db is picked from the schema in the SQL (or `--db`).
+Postgres statements are read-only with a 60s timeout (indexing: 2 min; `timeouts` in config.json); the db is picked from the schema in the SQL (or `--db`).
 Live calls are rate limited to 1/s per system+env (`DT_RATE_PER_SEC`).
 
 ## Refresh

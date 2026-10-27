@@ -129,6 +129,9 @@ Saving `config.json` (on `/admin`, or in an editor) applies it without a restart
 | `DT_PUBLIC_URL` | `server.publicUrl` | Base URL of result links and embeds, as the user's browser sees it |
 | `DT_TOOLS` | `tools.enable`/`disable` | Override as a list, e.g. `all,-confluence,-browser` |
 | `DT_RATE_PER_SEC` | `server.ratePerSec` = 1 | Live requests per second per system and env; `0` turns it off |
+| `DT_PG_QUERY_TIMEOUT_MS` | `timeouts.pgQueryMs` = 60000 | Per statement for `pg_query` and SQL tools |
+| `DT_PG_INDEX_TIMEOUT_MS` | `timeouts.pgIndexMs` = 120000 | Per catalog query when indexing a database (big databases need minutes) |
+| `DT_CATALOG_SYNC_WAIT_MS` | `timeouts.catalogSyncWaitMs` = 50000 | How long `catalog_sync` waits before answering "running" with a job id |
 | `DT_BROWSER_MCP` | `browser.mcp` (compose: `http://browser:8931/mcp`) | Playwright MCP that dt drives for scripts and route discovery |
 | `COMPOSE_PROFILES`, `DT_BIND`, `DT_PORT`, `WEBUI_PORT`, `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` | | compose settings |
 
@@ -408,7 +411,7 @@ Every picture comes from the bundled demo, a fake environment with real Postgres
 - Views run in sandboxed pages without network access (`connect-src 'none'`); their data is in the page.
 - Script JavaScript runs sandboxed (no files, no secrets, time and memory limits); `scripts.js: false` turns it off.
 - Writing is limited to file stores marked `"write": true` (never overwriting unless asked) and script `http` steps to the prefixes in `scripts.http.allow`.
-- Postgres sessions are read-only (`default_transaction_read_only`) with a 60s statement timeout; the other sources are only read.
+- Postgres statements run in read-only transactions with their own `statement_timeout` (`SET LOCAL`, so it also holds behind PgBouncer): 60 s for queries, 2 min for indexing (`timeouts`); the other sources are only read.
 - Ports are published on 127.0.0.1 unless you change `DT_BIND`. Set `DT_API_KEY` before exposing dt.
 - Result pages load their data by unguessable ids or signed tokens, so embeds in a sandboxed chat iframe work. Everything else needs a trusted client.
 - The Bitbucket token is passed only as a per-command git header; it is never written to `.git/config`.
@@ -416,6 +419,8 @@ Every picture comes from the bundled demo, a fake environment with real Postgres
 ## Troubleshooting
 
 **Passports: `could not set 'core.filemode' to 'false'` / `not a git repository`.** git cannot manage its files in `repos/`. That happens when the config folder is on a drive that does not allow changing file permissions (a Windows drive under WSL such as `/mnt/c/...`, a network share, some Docker/Colima mounts), or when the containers run as another user. `run.sh` runs them as you (`DT_UID`/`DT_GID` from `id -u`/`id -g`; set them in `.env` to override). Where git still cannot chmod, dt keeps the git data in the container (`DT_GIT_DIR`, default `/tmp/dt-git`) and checks the files out into `repos/` as before; a half-made `.git` from an earlier failure is replaced. Fastest of all: put the config folder on the local disk (in WSL, under `~`, not `/mnt/c`).
+
+**Indexing a big database is cancelled (`canceling statement due to statement timeout`).** Each catalog query may take `timeouts.pgIndexMs` (2 minutes by default); raise it in `config.json` (or `DT_PG_INDEX_TIMEOUT_MS`). In the chat, `catalog_sync` answers "running" with a job id after ~50 s instead of making the client time out; asking again with that id returns the result.
 
 ## Development
 ```bash
