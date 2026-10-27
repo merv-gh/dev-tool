@@ -413,6 +413,10 @@ Every picture comes from the bundled demo, a fake environment with real Postgres
 - Result pages load their data by unguessable ids or signed tokens, so embeds in a sandboxed chat iframe work. Everything else needs a trusted client.
 - The Bitbucket token is passed only as a per-command git header; it is never written to `.git/config`.
 
+## Troubleshooting
+
+**Passports: `could not set 'core.filemode' to 'false'` / `not a git repository`.** git cannot manage its files in `repos/`. That happens when the config folder is on a drive that does not allow changing file permissions (a Windows drive under WSL such as `/mnt/c/...`, a network share, some Docker/Colima mounts), or when the containers run as another user. `run.sh` runs them as you (`DT_UID`/`DT_GID` from `id -u`/`id -g`; set them in `.env` to override). Where git still cannot chmod, dt keeps the git data in the container (`DT_GIT_DIR`, default `/tmp/dt-git`) and checks the files out into `repos/` as before; a half-made `.git` from an earlier failure is replaced. Fastest of all: put the config folder on the local disk (in WSL, under `~`, not `/mnt/c`).
+
 ## Development
 ```bash
 npm test                                                     # node:test, no network

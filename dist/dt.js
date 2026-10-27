@@ -3916,13 +3916,15 @@ var require_atlassian = __commonJS({
 var require_git = __commonJS({
   "lib/git.js"(exports2, module2) {
     var fs2 = require("fs");
+    var os = require("os");
     var path2 = require("path");
     var { execFile } = require("child_process");
     var { getPersonal } = require_config();
     var REPOS = require_config().PATHS.repos;
+    var LOCAL_GIT = process.env.DT_GIT_DIR || path2.join(os.tmpdir(), "dt-git");
     function git(args, cwd, extra = []) {
       return new Promise((resolve, reject) => {
-        execFile("git", [...extra, ...args], { cwd, env: { ...process.env, GIT_TERMINAL_PROMPT: "0" }, maxBuffer: 64 << 20, timeout: 6e5 }, (err, stdout, stderr) => {
+        execFile("git", ["-c", "safe.directory=*", ...extra, ...args], { cwd, env: { ...process.env, GIT_TERMINAL_PROMPT: "0" }, maxBuffer: 64 << 20, timeout: 6e5 }, (err, stdout, stderr) => {
           if (err) reject(new Error(`git ${args[0]}: ${(stderr || err.message).trim().split("\n").slice(-3).join(" | ")}`));
           else resolve(stdout.trim());
         });
@@ -3943,12 +3945,7 @@ var require_git = __commonJS({
       const url = opts.url || remote(project, repo);
       const auth = authArgs(url);
       fs2.mkdirSync(dir, { recursive: true });
-      if (!fs2.existsSync(path2.join(dir, ".git"))) {
-        await git(["init", "-q"], dir);
-        await git(["remote", "add", "origin", url], dir);
-      } else {
-        await git(["remote", "set-url", "origin", url], dir);
-      }
+      await ensureRepo(dir, url, project, repo);
       const want = ref || "HEAD";
       let fallback = null;
       try {
@@ -3968,8 +3965,39 @@ var require_git = __commonJS({
       const sha = await git(["rev-parse", "HEAD"], dir);
       const date = await git(["log", "-1", "--format=%cI"], dir).catch(() => null);
       const info = { project: project.toUpperCase(), repo, ref: want, sha, commitDate: date, fetchedAt: (/* @__PURE__ */ new Date()).toISOString(), path: dir, fallback };
-      fs2.writeFileSync(path2.join(dir, ".git", "dt-ref.json"), JSON.stringify(info, null, 2));
+      fs2.writeFileSync(path2.join(await git(["rev-parse", "--absolute-git-dir"], dir), "dt-ref.json"), JSON.stringify(info, null, 2));
       return info;
+    }
+    var NO_CHMOD = /core\.filemode|operation not permitted|chmod on|permission denied|could not (lock|write|set)|unable to (create|write)/i;
+    async function ensureRepo(dir, url, project, repo) {
+      const dotgit = path2.join(dir, ".git");
+      if (fs2.existsSync(dotgit)) {
+        try {
+          if (await git(["rev-parse", "--show-toplevel"], dir).then((t) => path2.resolve(t) === path2.resolve(fs2.realpathSync(dir)))) {
+            await git(["remote", "set-url", "origin", url], dir).catch(() => git(["remote", "add", "origin", url], dir));
+            return;
+          }
+        } catch {
+        }
+        fs2.rmSync(dotgit, { recursive: true, force: true });
+      }
+      try {
+        await git(["init", "-q"], dir);
+        await git(["remote", "add", "origin", url], dir);
+      } catch (e) {
+        if (!NO_CHMOD.test(e.message)) throw e;
+        fs2.rmSync(dotgit, { recursive: true, force: true });
+        const gitDir = path2.join(LOCAL_GIT, project.toUpperCase(), repo);
+        fs2.rmSync(gitDir, { recursive: true, force: true });
+        fs2.mkdirSync(path2.dirname(gitDir), { recursive: true });
+        try {
+          await git(["init", "-q", `--separate-git-dir=${gitDir}`], dir);
+          await git(["config", "core.filemode", "false"], dir);
+          await git(["remote", "add", "origin", url], dir);
+        } catch (e2) {
+          throw new Error(`${e.message}; also with the git dir in ${gitDir}: ${e2.message}. git cannot write in ${dir}: run the containers as your user (run.sh sets DT_UID/DT_GID) or put the config folder on a local disk`);
+        }
+      }
     }
     async function fetchFirst(project, repo, refs, opts = {}) {
       let last;

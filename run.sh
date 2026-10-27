@@ -36,6 +36,9 @@ mkdir -p "$HOME_DIR/cache" "$HOME_DIR/repos" "$HOME_DIR/passports" "$HOME_DIR/pl
 [ -f "$HOME_DIR/cache/browser.env" ] || : > "$HOME_DIR/cache/browser.env"
 
 export DT_HOME_DIR="$HOME_DIR"
+# run the containers as you, so files in the config folder (repos/, cache/) are yours and git can manage them
+[ -n "${DT_UID:-}" ] || grep -q '^DT_UID=' "$ENV_FILE" || export DT_UID=$(id -u)
+[ -n "${DT_GID:-}" ] || grep -q '^DT_GID=' "$ENV_FILE" || export DT_GID=$(id -g)
 if [ -n "$TOOLS_ONLY" ]; then export COMPOSE_PROFILES=
 elif [ -z "${COMPOSE_PROFILES+set}" ] && ! grep -q '^COMPOSE_PROFILES=' "$ENV_FILE"; then export COMPOSE_PROFILES=webui,browser,graph
 fi
