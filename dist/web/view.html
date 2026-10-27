@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dt result</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1b; --muted:#6b6b66; --line:#e4e3df; --panel:#fff; --soft:#f2f1ee; --hover:#f6f5f2; --accent:#2457c5; --accent-soft:#e8eefb; --null:#a3a29c; --num:#7a3e9d; --str:#1d1d1b; --ok:#2f7d32; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#141413; --fg:#e8e7e3; --muted:#9a9993; --line:#2b2b29; --panel:#1b1b1a; --soft:#232321; --hover:#20201f; --accent:#7ea2f0; --accent-soft:#1f2a44; --null:#66655f; --num:#c9a2e6; --str:#e8e7e3; --ok:#7cc47f; } }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 13px/1.4 ui-sans-serif, system-ui, sans-serif; display: flex; flex-direction: column; }
+  .mono, code, pre, td, input.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  header { padding: 12px 16px 8px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  .title { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .badge { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; padding: 2px 7px; border-radius: 4px; background: var(--accent-soft); color: var(--accent); }
+  .muted { color: var(--muted); }
+  .query { margin: 8px 0 0; display: flex; gap: 8px; align-items: flex-start; }
+  .query pre { flex: 1; margin: 0; max-height: 96px; overflow: auto; background: var(--soft); padding: 6px 9px; border-radius: 5px; white-space: pre-wrap; word-break: break-word; }
+  .bar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding: 8px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  .bar .sep { width: 1px; height: 20px; background: var(--line); margin: 0 4px; }
+  input, select { font: inherit; padding: 5px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--fg); }
+  #filter { width: 260px; max-width: 100%; }
+  button { font: inherit; padding: 5px 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--fg); cursor: pointer; white-space: nowrap; }
+  button:hover { border-color: var(--accent); }
+  button:disabled { opacity: .45; cursor: default; border-color: var(--line); }
+  button.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .spacer { flex: 1; }
+  main { flex: 1; overflow: auto; position: relative; }
+  table { border-collapse: separate; border-spacing: 0; min-width: 100%; }
+  th, td { padding: 5px 10px; border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); text-align: left; vertical-align: top; max-width: 420px; }
+  th { position: sticky; top: 0; z-index: 2; background: var(--soft); font-weight: 600; font-size: 12px; cursor: pointer; user-select: none; white-space: nowrap; }
+  th .dir { color: var(--accent); margin-left: 4px; }
+  th.rn, td.rn { position: sticky; left: 0; z-index: 1; background: var(--soft); color: var(--muted); text-align: right; cursor: pointer; min-width: 44px; }
+  th.rn { z-index: 3; cursor: default; }
+  td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: copy; background: var(--panel); }
+  tr:hover td { background: var(--hover); }
+  td.null { color: var(--null); font-style: italic; }
+  td.num { color: var(--num); text-align: right; }
+  td.json { color: var(--muted); }
+  td mark { background: #ffe58a; color: #1d1d1b; border-radius: 2px; }
+  .empty { padding: 40px; text-align: center; color: var(--muted); }
+  aside { position: fixed; top: 0; right: 0; bottom: 0; width: min(640px, 100%); background: var(--panel); border-left: 1px solid var(--line); box-shadow: -8px 0 24px rgba(0,0,0,.12); display: none; flex-direction: column; z-index: 10; }
+  aside.open { display: flex; }
+  aside header { display: flex; gap: 8px; align-items: center; }
+  aside pre { flex: 1; margin: 0; padding: 12px 16px; overflow: auto; white-space: pre-wrap; word-break: break-word; }
+  .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 7px 14px; border-radius: 6px; opacity: 0; transition: opacity .15s; pointer-events: none; z-index: 20; }
+  .toast.show { opacity: 1; }
+  .list a { color: var(--accent); text-decoration: none; }
+  kbd { font-family: inherit; font-size: 11px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; }
+  td a { color: var(--accent); text-decoration: none; } td a:hover { text-decoration: underline; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .chip { font-size: 12px; padding: 2px 8px; border-radius: 10px; background: var(--soft); }
+  .chip b { font-weight: 600; }
+  .chip.bad { background: #fde2df; color: #8c1d13; } .chip.warn { background: #fdf0d5; color: #7a4a00; } .chip.good { background: #e3f1e4; color: #1f5f22; }
+  @media (prefers-color-scheme: dark) { .chip.bad { background: #4a1d19; color: #f6b8b1; } .chip.warn { background: #43330f; color: #f0cf8a; } .chip.good { background: #1d3a1f; color: #a8dcaa; } }
+  td.st-down, td.st-red, td.st-critical { color: var(--err, #b3261e); font-weight: 600; }
+  td.st-degraded, td.st-yellow, td.st-warning { color: #a15c00; font-weight: 600; }
+  td.st-healthy, td.st-green, td.st-passing { color: var(--ok); }
+  /* embedded in a chat: size to content, the chat scrolls */
+  body.embed { height: auto; display: block; }
+  body.embed main { overflow-x: auto; overflow-y: visible; }
+  body.embed header { padding: 8px 12px 6px; }
+  body.embed .bar { padding: 6px 12px; }
+  body.embed .query pre { max-height: 48px; }
+  body.embed .hide-embed { display: none; }
+  body:not(.embed) .only-embed { display: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class="title">
+    <span class="badge" id="kind"></span>
+    <strong id="target"></strong>
+    <span class="muted" id="meta"></span>
+    <span class="spacer"></span>
+    <a href="/view" class="muted hide-embed">recent results</a>
+    <a href="" id="openfull" target="_blank" rel="noopener" class="only-embed">Open full view ↗</a>
+  </div>
+  <div class="chips" id="chips"></div>
+  <div class="query" id="qwrap"><pre id="query"></pre><button id="copyq" title="Copy query">Copy</button></div>
+</header>
+<div class="bar">
+  <input id="filter" placeholder="Filter rows…  ( / )" autocomplete="off">
+  <button id="flat" title="Show nested fields as their own columns">Flatten</button>
+  <span class="sep"></span>
+  <button id="prev" title="Previous page (←)">‹</button>
+  <span class="mono" id="page"></span>
+  <button id="next" title="Next page (→)">›</button>
+  <select id="size" title="Rows per page"><option>10</option><option>25</option><option selected>50</option><option>100</option><option>500</option></select>
+  <span class="spacer"></span>
+  <span class="muted">Copy</span>
+  <button data-copy="tsv" title="Tab-separated: pastes into Excel / Sheets">TSV</button>
+  <button data-copy="csv">CSV</button>
+  <button data-copy="json">JSON</button>
+  <button data-copy="md" title="Markdown table">MD</button>
+  <span class="sep"></span>
+  <button data-dl="csv">⤓ CSV</button>
+  <button data-dl="json">⤓ JSON</button>
+</div>
+<main id="main"></main>
+<aside id="side"><header><strong id="sidetitle"></strong><span class="spacer"></span><button id="sidecopy">Copy</button><button id="sideclose" title="Close (Esc)">✕</button></header><pre id="sidebody"></pre></aside>
+<div class="toast" id="toast"></div>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const id = location.pathname.split('/').filter(Boolean)[1];
+const embed = new URLSearchParams(location.search).has('embed');
+if (embed) { document.body.classList.add('embed'); document.documentElement.style.height = 'auto'; $('size').value = '10'; }
+
+// Tell the chat (Open WebUI) how tall the embedded frame should be. Measure the body, not the
+// viewport, and only report changes, or the frame and the page grow each other forever.
+let lastHeight = 0;
+function postHeight() {
+  if (!embed || parent === window) return;
+  const h = Math.ceil(document.body.getBoundingClientRect().height);
+  if (h !== lastHeight) { lastHeight = h; parent.postMessage({ type: 'iframe:height', height: h }, '*'); }
+}
+new ResizeObserver(postHeight).observe(document.body);
+
+let data, cols = [], rows = [], view = [], page = 0, sortCol = null, sortDir = 1, flat = false, sideText = '';
+
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 1300); }
+async function copy(text, what) {
+  try { await navigator.clipboard.writeText(text); }
+  catch { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+  toast(`Copied ${what}`);
+}
+
+const isObj = (v) => v !== null && typeof v === 'object';
+function flatten(o, prefix = '', out = {}) {
+  for (const [k, v] of Object.entries(o)) {
+    const key = prefix ? `${prefix}.${k}` : k;
+    if (isObj(v) && !Array.isArray(v) && Object.keys(v).length) flatten(v, key, out); else out[key] = v;
+  }
+  return out;
+}
+const text = (v) => v === null || v === undefined ? '' : isObj(v) ? JSON.stringify(v) : String(v);
+
+function build() {
+  rows = data.rows.map(r => (isObj(r) ? (flat ? flatten(r) : r) : { value: r }));
+  const seen = new Set(); cols = [];
+  for (const r of rows) for (const k of Object.keys(r)) if (!seen.has(k)) { seen.add(k); cols.push(k); }
+  // link targets (e.g. Consul / kafka-ui pages) become anchors on their column, not columns
+  const linkFields = Object.values(data.links || {});
+  cols = cols.filter(c => !linkFields.includes(c));
+  apply();
+}
+
+function apply() {
+  const q = $('filter').value.trim().toLowerCase();
+  view = rows.map((r, i) => ({ r, i })).filter(({ r }) => !q || cols.some(c => text(r[c]).toLowerCase().includes(q)));
+  if (sortCol !== null) {
+    view.sort((a, b) => {
+      const x = a.r[sortCol], y = b.r[sortCol];
+      if (x === y) return 0;
+      if (x === null || x === undefined) return 1;
+      if (y === null || y === undefined) return -1;
+      const nx = Number(x), ny = Number(y);
+      if (!isNaN(nx) && !isNaN(ny) && text(x) !== '' && text(y) !== '') return (nx - ny) * sortDir;
+      return text(x).localeCompare(text(y)) * sortDir;
+    });
+  }
+  page = Math.min(page, Math.max(0, Math.ceil(view.length / size()) - 1));
+  render();
+}
+
+const size = () => Number($('size').value);
+
+function render() {
+  const q = $('filter').value.trim();
+  const pages = Math.max(1, Math.ceil(view.length / size()));
+  const from = page * size(), slice = view.slice(from, from + size());
+  $('page').textContent = view.length ? `${from + 1}–${from + slice.length} of ${view.length}${view.length !== rows.length ? ` (filtered from ${rows.length})` : ''}` : '0 rows';
+  $('prev').disabled = page === 0; $('next').disabled = page >= pages - 1;
+  if (!rows.length) { $('main').innerHTML = '<div class="empty">No rows.</div>'; return; }
+  const mark = (s) => {
+    let h = esc(s.length > 300 ? s.slice(0, 300) + '…' : s);
+    if (q) h = h.replace(new RegExp(esc(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), m => `<mark>${m}</mark>`);
+    return h;
+  };
+  const head = `<tr><th class="rn">#</th>${cols.map(c => `<th data-col="${esc(c)}" title="Sort by ${esc(c)}">${esc(c)}${sortCol === c ? `<span class="dir">${sortDir > 0 ? '▲' : '▼'}</span>` : ''}</th>`).join('')}</tr>`;
+  const body = slice.map(({ r, i }) => `<tr><td class="rn" data-row="${i}" title="Show row">${i + 1}</td>${cols.map(c => {
+    const v = r[c];
+    if (v === null || v === undefined) return `<td class="null" data-row="${i}" data-col="${esc(c)}">${v === null ? 'null' : ''}</td>`;
+    let cls = isObj(v) ? 'json' : typeof v === 'number' || (/^-?\d+(\.\d+)?$/.test(v) && String(v).length < 20) ? 'num' : '';
+    if (/^(status|health|state)$/.test(c) && typeof v === 'string') cls += ` st-${v.toLowerCase().replace(/\s+/g, '-')}`;
+    const href = data.links && data.links[c] && r[data.links[c]];
+    const content = href && /^https?:\/\//.test(href) ? `<a href="${esc(href)}" target="_blank" rel="noopener">${mark(text(v))}</a>` : mark(text(v));
+    return `<td class="${cls}" data-row="${i}" data-col="${esc(c)}" title="Click: copy · Alt+click: open">${content}</td>`;
+  }).join('')}</tr>`).join('');
+  $('main').innerHTML = `<table><thead>${head}</thead><tbody>${body}</tbody></table>`;
+  postHeight();
+}
+
+function openSide(title, value) {
+  sideText = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+  // JSON stored as a string (kafka payloads, jsonb as text): pretty-print it too
+  if (typeof value === 'string' && /^\s*[[{]/.test(value)) { try { sideText = JSON.stringify(JSON.parse(value), null, 2); } catch {} }
+  $('sidetitle').textContent = title; $('sidebody').textContent = sideText; $('side').classList.add('open');
+}
+
+$('main').addEventListener('click', (e) => {
+  const th = e.target.closest('th[data-col]');
+  if (th) { const c = th.dataset.col; sortDir = sortCol === c ? -sortDir : 1; sortCol = c; apply(); return; }
+  const td = e.target.closest('td[data-row]');
+  if (!td || e.target.closest('a')) return;
+  const r = rows[Number(td.dataset.row)];
+  if (td.classList.contains('rn')) return openSide(`Row ${Number(td.dataset.row) + 1}`, data.rows[Number(td.dataset.row)]);
+  const v = r[td.dataset.col];
+  if (e.altKey || isObj(v) || text(v).length > 300) return openSide(td.dataset.col, v);
+  copy(text(v), td.dataset.col);
+});
+
+// Export always covers all filtered + sorted rows, not just the current page.
+function exportAs(fmt) {
+  const list = view.map(x => x.r);
+  if (fmt === 'json') return JSON.stringify(list, null, 2);
+  if (fmt === 'tsv') return [cols.join('\t'), ...list.map(r => cols.map(c => text(r[c]).replace(/[\t\n\r]+/g, ' ')).join('\t'))].join('\n');
+  if (fmt === 'csv') {
+    const q = (s) => /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    return [cols.map(q).join(','), ...list.map(r => cols.map(c => q(text(r[c]))).join(','))].join('\r\n');
+  }
+  if (fmt === 'md') {
+    const cell = (s) => s.replace(/\|/g, '\\|').replace(/[\n\r]+/g, ' ');
+    return [`| ${cols.map(cell).join(' | ')} |`, `|${cols.map(() => ' --- ').join('|')}|`, ...list.map(r => `| ${cols.map(c => cell(text(r[c]))).join(' | ')} |`)].join('\n');
+  }
+}
+document.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => copy(exportAs(b.dataset.copy), `${view.length} rows as ${b.dataset.copy.toUpperCase()}`));
+document.querySelectorAll('[data-dl]').forEach(b => b.onclick = () => {
+  const fmt = b.dataset.dl;
+  const blob = new Blob([exportAs(fmt)], { type: fmt === 'csv' ? 'text/csv' : 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `${data.kind}-${(data.db || data.index || data.topic || 'result')}-${data.id}.${fmt}`; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+
+let ft;
+$('filter').oninput = () => { clearTimeout(ft); ft = setTimeout(() => { page = 0; apply(); }, 120); };
+$('size').onchange = () => { page = 0; render(); };
+$('prev').onclick = () => { page--; render(); };
+$('next').onclick = () => { page++; render(); };
+$('flat').onclick = () => { flat = !flat; $('flat').classList.toggle('on', flat); sortCol = null; build(); };
+$('copyq').onclick = () => copy(data.query || '', 'query');
+$('sideclose').onclick = () => $('side').classList.remove('open');
+$('sidecopy').onclick = () => copy(sideText, 'value');
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { $('side').classList.remove('open'); if (document.activeElement === $('filter')) $('filter').blur(); }
+  if (document.activeElement.tagName === 'INPUT') return;
+  if (e.key === '/') { e.preventDefault(); $('filter').focus(); }
+  if (e.key === 'ArrowRight' && !$('next').disabled) $('next').click();
+  if (e.key === 'ArrowLeft' && !$('prev').disabled) $('prev').click();
+});
+
+async function showList() {
+  document.title = 'dt results';
+  $('kind').textContent = 'results'; $('target').textContent = 'Recent tool results'; $('qwrap').style.display = 'none';
+  document.querySelector('.bar').style.display = 'none';
+  const list = await fetch('/api/results').then(r => r.json());
+  $('main').innerHTML = list.length ? `<table class="list"><thead><tr><th>when</th><th>kind</th><th>env</th><th>target</th><th>rows</th><th>query</th></tr></thead><tbody>${list.map(r =>
+    `<tr><td><a href="/view/${esc(r.id)}">${esc(r.at.slice(5, 19).replace('T', ' '))}</a></td><td>${esc(r.kind)}</td><td>${esc(r.env || '')}</td><td>${esc(r.target || '')}</td><td class="num">${r.total}</td><td>${esc(r.query)}</td></tr>`).join('')}</tbody></table>`
+    : '<div class="empty">No results yet. They appear here when pg_query, es_search or kafka_last run.</div>';
+}
+
+async function load() {
+  if (!id) return showList();
+  const res = await fetch(`/api/result/${encodeURIComponent(id)}`);
+  if (!res.ok) { $('main').innerHTML = `<div class="empty">${esc((await res.json()).error || 'Not found')}. Results are kept for the latest 500 runs.</div>`; return; }
+  data = await res.json();
+  const target = data.db || data.index || data.topic || '';
+  document.title = `${data.kind} ${target}`;
+  $('kind').textContent = data.kind; $('target').textContent = target;
+  $('meta').textContent = [data.env, `${data.total} rows${data.truncated ? ' (stored first 10000)' : ''}`, data.totalHits !== undefined ? `${data.totalHits} hits total` : '', data.ms !== undefined ? `${data.ms} ms` : '', new Date(data.at).toLocaleString()].filter(Boolean).join(' · ');
+  $('openfull').href = `/view/${encodeURIComponent(id)}`;
+  const tone = (k, v) => (typeof v !== 'number' && typeof v !== 'string') ? '' :
+    /^(down|critical|notGreen|unassignedShards|lagging|notStable)$/.test(k) ? (Number(v) > 0 ? 'bad' : 'good') :
+    /^(degraded|warning|noChecks)$/.test(k) ? (Number(v) > 0 ? 'warn' : '') :
+    k === 'status' ? ({ green: 'good', yellow: 'warn', red: 'bad' }[v] || '') : k === 'healthy' ? 'good' : '';
+  $('chips').innerHTML = Object.entries(data.summary || {}).map(([k, v]) => `<span class="chip ${tone(k, v)}">${esc(k)} <b>${esc(v)}</b></span>`).join('');
+  $('query').textContent = data.query || '';
+  if (!data.query) $('qwrap').style.display = 'none';
+  // ES hits and Kafka payloads are nested; start flattened for ES so fields become columns.
+  flat = data.kind === 'es'; $('flat').classList.toggle('on', flat);
+  build();
+}
+load();
+</script>
+</body>
+</html>

@@ -68,6 +68,8 @@
     <button data-tab="index" class="on">Index</button>
     <button data-tab="explore">Explore</button>
     <button data-tab="passports">Passports<span class="n" id="nPassports"></span></button>
+    <button data-tab="scripts">Scripts<span class="n" id="nScripts"></span></button>
+    <button data-tab="api">API &amp; sites</button>
     <button data-tab="jobs">Jobs<span class="n" id="nJobs"></span></button>
     <button data-tab="config">Config</button>
   </nav>
@@ -84,7 +86,7 @@
 
   <section id="tab-explore" hidden>
     <div class="row" style="margin-bottom:10px">
-      <input id="q" class="filter" placeholder="table, column, function, topic, service…  (prefix pg: pgfn: es: kafka: svc:)" style="width:480px">
+      <input id="q" class="filter" placeholder="table, column, function, topic, service…  (prefix pg: pgfn: es: kafka: svc: api: site:)" style="width:480px">
       <span class="muted" id="qCount"></span>
     </div>
     <div class="grid2">
@@ -104,6 +106,29 @@
     </div>
     <p class="hint">A rebuild uses the same target as before: the commit deployed in its env, or its branch. Setting a repo saves the service → repo mapping (passports/_repos.json).</p>
     <div class="card scroll"><table><thead><tr><th>Service</th><th>Repo</th><th>Ref</th><th>Built</th><th class="num">Endpoints</th><th>Consumes</th><th>Produces</th><th class="num">Tables</th><th></th></tr></thead><tbody id="passports"></tbody></table></div>
+  </section>
+
+  <section id="tab-scripts" hidden>
+    <p class="hint">Repeatable actions, saved by you or the agent (script_save) as JSON in <code>scripts/</code>; folders are collections. Steps call dt tools, other scripts, site links (<code>{"open": "site.link"}</code>) or browser tools; <code>{{name}}</code> inserts a param or an earlier step's result.</p>
+    <div class="grid2">
+      <div class="card lines" id="scriptList"><div class="empty">No scripts yet.</div></div>
+      <div class="card detail">
+        <div class="row" style="margin-bottom:6px"><input id="scId" placeholder="collection/name" style="flex:1;min-width:200px"><button id="scNew" class="small">New</button></div>
+        <textarea id="scDef" rows="16" spellcheck="false"></textarea>
+        <div class="row" style="margin:8px 0"><button class="primary" id="scSave">Save</button><button id="scDelete">Delete</button><span class="spacer"></span><input id="scParams" placeholder='params, e.g. {"orderId": "123"}' style="min-width:220px"><button id="scRun">Run</button></div>
+        <div id="scOut"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-api" hidden>
+    <h2>API routes <span class="muted" id="rtCount"></span></h2>
+    <p class="hint">Endpoints from code (passports) merged with routes seen in the browser (saved scripts, routes_discover, or routes_learn from the chat). Ids show as <code>&lt;id&gt;</code>.</p>
+    <div class="row" style="margin-bottom:8px"><input id="rtQ" class="filter" placeholder="path, service, handler, host…" style="width:360px"></div>
+    <div class="card scroll"><table><thead><tr><th>Service</th><th>Method</th><th>Path</th><th>Host / site</th><th class="num">Seen</th><th>Status</th><th>Handler</th><th>Source</th></tr></thead><tbody id="routes"></tbody></table></div>
+    <h2>Site map</h2>
+    <p class="hint">browser.sites.*.links in config.json: short direct URLs the model opens instead of clicking through menus; <code>&lt;param&gt;</code> parts are filled per call.</p>
+    <div class="card scroll"><table><thead><tr><th>Site</th><th>Link</th><th>URL</th><th>Description</th><th></th></tr></thead><tbody id="sitemap"></tbody></table></div>
   </section>
 
   <section id="tab-jobs" hidden>
@@ -356,16 +381,56 @@ function bindNote() {
   });
 }
 
+// ── scripts ──
+const SCRIPT_TEMPLATE = { description: 'What it does and when to use it', params: { env: { default: 'dev' } }, steps: [{ tool: 'overview', args: { env: '{{env}}' }, as: 'overview' }] };
+async function loadScripts(select) {
+  const r = await api('/api/admin/scripts');
+  $('nScripts').textContent = r.scripts.length || '';
+  let last = null;
+  $('scriptList').innerHTML = r.scripts.length ? r.scripts.map(x => {
+    const col = x.id.includes('/') ? x.id.slice(0, x.id.lastIndexOf('/')) : '';
+    const head = col !== last ? `<div class="line" style="cursor:default;background:var(--soft)"><span class="k">collection</span>${esc(col || '(top)')}</div>` : '';
+    last = col;
+    return `${head}<div class="line ${x.id === select ? 'on' : ''}" data-script="${esc(x.id)}"><b>${esc(x.id.split('/').pop())}</b> <span class="used">${x.error ? esc(x.error) : `${esc(x.description)} · ${x.steps} steps${x.params.length ? ` · ${esc(x.params.join(', '))}` : ''}${x.browser ? ' · browser' : ''}`}</span></div>`;
+  }).join('') : '<div class="empty">No scripts yet. Write one on the right, or ask the agent to save what it just did.</div>';
+}
+async function openScript(id) {
+  try {
+    const { id: _, savedAt, ...def } = await api(`/api/admin/script?id=${encodeURIComponent(id)}`);
+    $('scId').value = id; $('scDef').value = JSON.stringify(def, null, 2); $('scOut').innerHTML = '';
+    document.querySelectorAll('[data-script]').forEach(x => x.classList.toggle('on', x.dataset.script === id));
+  } catch (e) { toast(e.message); }
+}
+const scriptDef = () => { try { return JSON.parse($('scDef').value); } catch (e) { throw new Error(`script JSON: ${e.message}`); } };
+function renderRun(r) {
+  $('scOut').innerHTML = `<div class="row" style="margin:6px 0"><span class="state ${r.ok ? 'done' : 'failed'}">${r.ok ? 'ok' : 'failed'}</span>${r.error ? `<span class="err-text">${esc(r.error)}</span>` : ''}${r.routes ? `<span class="muted">routes: ${esc(r.routes.error || `${r.routes.api} api requests, ${r.routes.added} new`)}</span>` : ''}</div>
+    <table><thead><tr><th>#</th><th>Step</th><th class="num">Took</th><th>Result</th></tr></thead><tbody>${r.steps.map(x => `<tr><td>${esc(x.script === r.script ? String(x.step) : `${x.script} ${x.step}`)}</td><td class="mono">${esc(x.do)}</td><td class="num">${dur(x.ms)}</td><td class="det">${x.ok === false ? `<span class="err-text">${esc(x.error)}</span>` : `<pre class="code" style="max-height:160px">${esc(typeof x.result === 'string' ? x.result : JSON.stringify(x.result, null, 2))}</pre>`}</td></tr>`).join('')}</tbody></table>`;
+}
+
+// ── API routes + site map ──
+let rtTimer;
+async function loadRoutes() {
+  const r = await api(`/api/admin/routes?q=${encodeURIComponent($('rtQ').value.trim())}`);
+  $('rtCount').textContent = `${r.routes.length}`;
+  $('routes').innerHTML = r.routes.length ? r.routes.slice(0, 500).map(x => `<tr><td>${esc(x.service || '')}</td><td class="mono">${esc(x.method)}</td><td class="mono">${esc(x.path)}${x.query ? `<span class="muted">?${esc(x.query)}</span>` : ''}</td><td class="mono">${esc(x.site || x.host || '')}</td><td class="num">${x.seen || ''}</td><td class="mono">${esc(x.statuses)}</td><td class="where">${esc(x.handler)}${x.where ? `<br>${esc(x.where)}` : ''}</td><td class="det">${esc(x.source)}</td></tr>`).join('')
+    : '<tr><td colspan="8" class="empty">No routes yet: build passports, run a script with browser steps, or ask the agent to discover a page\'s routes.</td></tr>';
+  const links = r.sites.flatMap(s => [{ site: s.site, link: '', url: s.url, description: s.description || `start page${s.secrets ? ` · ${s.secrets} secrets` : ''}` }, ...s.links.map(l => ({ site: s.site, ...l }))]);
+  $('sitemap').innerHTML = links.length ? links.map(l => `<tr><td>${esc(l.site)}</td><td class="mono">${esc(l.link || '—')}</td><td class="mono">${esc(l.url)}</td><td class="det">${esc(l.description || '')}</td><td>${l.params && l.params.length ? '' : `<a href="${esc(l.url)}" target="_blank" rel="noopener">open</a>`}</td></tr>`).join('')
+    : '<tr><td colspan="5" class="empty">No sites. Add browser.sites (with links) in Config.</td></tr>';
+}
+
 function show(t) {
   tab = t;
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   document.querySelectorAll('section[id^=tab-]').forEach(s => s.hidden = s.id !== `tab-${t}`);
   history.replaceState(null, '', `#${t}`);
   if (t === 'config') loadConfig().catch(e => toast(e.message));
+  if (t === 'scripts') loadScripts($('scId').value).catch(e => toast(e.message));
+  if (t === 'api') loadRoutes().catch(e => toast(e.message));
 }
 
 document.addEventListener('click', (ev) => {
-  const el = ev.target.closest('[data-refresh],[data-explore],[data-open],[data-job],[data-copy],.line,#tabs button');
+  const el = ev.target.closest('[data-refresh],[data-explore],[data-open],[data-job],[data-copy],[data-script],.line,#tabs button');
   if (!el) return;
   if (el.matches('#tabs button')) return show(el.dataset.tab);
   ev.preventDefault();
@@ -374,6 +439,8 @@ document.addEventListener('click', (ev) => {
   if (el.dataset.open) { show('explore'); return openObject(el.dataset.open); }
   if (el.dataset.job) { showJob(el.dataset.job); document.querySelectorAll('#jobs tr').forEach(r => r.classList.toggle('on', r.dataset.job === el.dataset.job)); return; }
   if (el.dataset.copy) return copy(el.dataset.copy, 'name');
+  if (el.dataset.script) return openScript(el.dataset.script);
+  if (el.closest('#scriptList')) return;
   if (el.classList.contains('line')) {
     document.querySelectorAll('.line.on').forEach(x => x.classList.remove('on')); el.classList.add('on');
     openObject(el.dataset.name);
@@ -392,12 +459,30 @@ $('cfgSave').onclick = async () => {
   catch (e) { $('cfgMsg').innerHTML = `<span class="err-text">${esc(e.message)}</span>`; }
 };
 $('cfgReset').onclick = () => loadConfig();
+$('scNew').onclick = () => { $('scId').value = ''; $('scDef').value = JSON.stringify(SCRIPT_TEMPLATE, null, 2); $('scOut').innerHTML = ''; $('scId').focus(); };
+$('scSave').onclick = async () => {
+  try { const r = await api('/api/admin/script', { id: $('scId').value.trim(), script: scriptDef() }); toast(r.replaced ? 'Saved' : 'Created'); loadScripts(r.id); } catch (e) { toast(e.message); }
+};
+$('scDelete').onclick = async () => {
+  const id = $('scId').value.trim();
+  if (!id || !confirm(`Delete script ${id}?`)) return;
+  try { await api('/api/admin/script/delete', { id }); toast('Deleted'); $('scId').value = ''; $('scDef').value = ''; loadScripts(); } catch (e) { toast(e.message); }
+};
+$('scRun').onclick = async () => {
+  let params = {};
+  try { params = $('scParams').value.trim() ? JSON.parse($('scParams').value) : {}; } catch (e) { return toast(`params JSON: ${e.message}`); }
+  $('scRun').disabled = true; $('scOut').innerHTML = '<div class="muted">Running…</div>';
+  try { renderRun(await api('/api/admin/script/run', { id: $('scId').value.trim(), params })); } catch (e) { $('scOut').innerHTML = `<div class="err-text">${esc(e.message)}</div>`; }
+  $('scRun').disabled = false;
+};
+$('rtQ').addEventListener('input', () => { clearTimeout(rtTimer); rtTimer = setTimeout(() => loadRoutes().catch(e => toast(e.message)), 250); });
 const toolsReload = async (update) => {
   try { const r = await api('/api/admin/tools/reload', { update }); toast(`${r.tools} tools${r.errors.length ? `, ${r.errors.length} errors` : ''}`); refresh(); } catch (e) { toast(e.message); }
 };
 $('toolsReload').onclick = () => toolsReload(false);
 $('toolsUpdate').onclick = () => toolsReload(true);
 show((location.hash || '#index').slice(1));
+window.addEventListener('hashchange', () => { const t = location.hash.slice(1); if (t && t !== tab && $(`tab-${t}`)) show(t); });
 refresh();
 </script>
 </body>

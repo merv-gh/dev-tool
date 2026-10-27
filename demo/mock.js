@@ -144,6 +144,8 @@ const PR_ACTS = { values: [
   { action: 'COMMENTED', user: { displayName: 'Ann Lee' }, createdDate: now - 4 * 3600e3, comment: { text: 'Good point, will add a where status = \'paid\'.' } },
 ] };
 
+const html = (res, body) => { res.setHeader('content-type', 'text/html; charset=utf-8'); res.end(`<!doctype html><meta charset=utf-8><title>shop</title><body style="font:14px system-ui;margin:24px">${body}`); };
+
 http.createServer((req, res) => {
   const u = new URL(req.url, 'http://x'), p = u.pathname;
   const chunks = [];
@@ -211,6 +213,17 @@ http.createServer((req, res) => {
     if (p === '/rest/api/1.0/projects/SHOP/repos/payment-service/pull-requests/42') return j(PR);
     if (p === '/rest/api/1.0/projects/SHOP/repos/payment-service/pull-requests/42/diff') return j(PR_DIFF);
     if (p === '/rest/api/1.0/projects/SHOP/repos/payment-service/pull-requests/42/activities') return j(PR_ACTS);
+    // A tiny back office UI (browser site "shop"): pages call the order and payment APIs, as a real UI would
+    if (p === '/shop' || p === '/shop/login') return html(res, `<h1>Back office</h1><form onsubmit="location='/shop/orders/1042';return false"><input name=user placeholder=user><input name=password type=password placeholder=password><button>Sign in</button></form>`);
+    if ((m = p.match(/^\/shop\/orders\/(\d+)$/))) return html(res, `<h1>Order ${m[1]}</h1><pre id=o>loading</pre><pre id=p></pre><script>
+      fetch('/api/orders/${m[1]}?expand=items').then(r => r.json()).then(o => { document.getElementById('o').textContent = JSON.stringify(o, null, 2); return fetch('/api/payments/${m[1]}'); })
+        .then(r => r.json()).then(x => { document.getElementById('p').textContent = 'payment: ' + x.status; });
+      fetch('/api/customers/7/tickets?status=open');</script>`);
+    if (p === '/shop/customers') return html(res, `<h1>Customers</h1><ul id=c></ul><script>fetch('/api/customers?page=1&size=20').then(r => r.json()).then(cs => { document.getElementById('c').innerHTML = cs.map(c => '<li>' + c.name).join(''); });</script>`);
+    if ((m = p.match(/^\/api\/orders\/(\d+)$/))) return j({ id: Number(m[1]), status: 'paid', total: 129.9, items: [{ sku: 'KB-01', qty: 1 }] });
+    if ((m = p.match(/^\/api\/payments\/(\d+)$/))) return j({ orderId: Number(m[1]), status: 'captured' });
+    if (p === '/api/customers') return j([{ id: 7, name: 'Ada Shop' }, { id: 8, name: 'Bo Store' }]);
+    if (/^\/api\/customers\/\d+\/tickets$/.test(p)) return j([]);
     if (p.startsWith('/scm/')) {
       const rest = p.replace(/^\/scm\/[^/]+/, '');
       const cgi = spawn(GIT_BACKEND, [], { env: { GIT_PROJECT_ROOT: path.join(GIT, 'bare'), GIT_HTTP_EXPORT_ALL: '1', PATH_INFO: rest, REQUEST_METHOD: req.method, QUERY_STRING: u.search.slice(1), CONTENT_TYPE: req.headers['content-type'] || '', REMOTE_ADDR: '127.0.0.1', GIT_PROTOCOL: req.headers['git-protocol'] || '' } });

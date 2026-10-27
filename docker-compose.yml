@@ -5,14 +5,15 @@
 #   browser: Playwright MCP (headless Chromium); logins use secrets from .env.browser
 #   graph:   code-review-graph over repos/ (fetched by passports / repo_fetch), via mcpo as OpenAPI
 # Config and data live in one folder (DT_HOME_DIR, set by run.sh --home; default: this folder):
-#   config.json, .env, notes.json, plugins/, cache/, repos/, passports/
+#   config.json, .env, notes.json, plugins/, scripts/, cache/, repos/, passports/
 # Only the tool server, for an Open WebUI or MCP client you already run:  ./run.sh --tools-only up -d
 name: dev-tool
 
 services:
   dt:
-    build: .
-    image: dev-tool:latest
+    # No image to build: a stock node image (with git, for passports) runs the bundled dist/dt.js.
+    image: ${DT_NODE_IMAGE:-node:22-bookworm}
+    command: ["node", "/app/dt.js", "start"]
     user: "${DT_UID:-1000}:${DT_GID:-1000}"
     environment:
       DT_TRUST_NETWORK: ${DT_TRUST_NETWORK:-1}             # trust the compose network; the port is published on DT_BIND only
@@ -23,12 +24,14 @@ services:
       DT_RATE_PER_SEC: ${DT_RATE_PER_SEC:-}
       DT_TOOLS: ${DT_TOOLS:-}
       GRAPH_URL: ${GRAPH_URL:-http://graph:8000}
+      DT_BROWSER_MCP: ${DT_BROWSER_MCP:-http://browser:8931/mcp}  # dt drives the browser for saved scripts / route discovery
       DT_HOME: /dt
+      PORT: 4000
+      NODE_ENV: production
       HOME: /tmp                                           # git needs a writable home; the uid may not exist in the image
     volumes:
-      - ./:/app                 # the code; a restart picks up edits
-      - /app/node_modules       # keep the image's node_modules
-      - ${DT_HOME_DIR:-.}:/dt   # config.json, .env, notes, plugins, cache/, repos/, passports/
+      - ./dist:/app:ro          # the code: bundle + web pages (npm run build); a restart picks up a rebuild
+      - ${DT_HOME_DIR:-.}:/dt   # config.json, .env, notes, plugins, scripts/, cache/, repos/, passports/
     ports:
       - "${DT_BIND:-127.0.0.1}:${DT_PORT:-4000}:4000"
     healthcheck:
@@ -90,7 +93,7 @@ services:
       TOOL_SEARCH_DEFER_THRESHOLD: "0"
       TOOL_SEARCH_ALWAYS_LOADED: >-
         find,catalog_sync,pg_table,pg_function,pg_usage,pg_query,es_search,kafka_topic,kafka_last,kafka_lag,health,es_health,overview,consul_service,
-        logs_search,logs_trace,passport,who_uses,bitbucket_pr,browser_sites,
+        logs_search,logs_trace,passport,who_uses,bitbucket_pr,browser_sites,site_url,api_routes,routes_learn,script_list,script_run,
         browser_browser_navigate,browser_browser_snapshot,browser_browser_click,browser_browser_type,browser_browser_fill_form,
         browser_browser_press_key,browser_browser_take_screenshot,browser_browser_wait_for
       # dt over OpenAPI so results can embed the viewer/dashboard in the chat; browser over MCP.
@@ -118,16 +121,15 @@ services:
   # turn on the dt / browser / graph tools by default. Safe to rerun: ./run.sh up setup
   setup:
     profiles: [webui]
-    image: dev-tool:latest
-    command: ["node", "cli.js", "webui-setup"]
+    image: ${DT_NODE_IMAGE:-node:22-bookworm}
+    command: ["node", "/app/dt.js", "webui-setup"]
     user: "${DT_UID:-1000}:${DT_GID:-1000}"
     environment:
       WEBUI_URL: http://webui:8080
       LLM_MODEL: ${LLM_MODEL:-}
       DT_HOME: /dt
     volumes:
-      - ./:/app
-      - /app/node_modules
+      - ./dist:/app:ro
       - ${DT_HOME_DIR:-.}:/dt
     depends_on: [webui]
     restart: "no"

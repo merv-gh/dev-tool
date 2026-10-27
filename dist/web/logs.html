@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dt logs</title>
+<link rel="stylesheet" href="/static/ui.css">
+<style>
+  .chart { position: relative; padding: 8px 10px 4px; margin-bottom: 10px; }
+  .chart svg { width: 100%; height: 120px; display: block; }
+  .chart .axis { font-size: 10px; fill: var(--muted); }
+  .chart .tip { position: absolute; pointer-events: none; background: var(--fg); color: var(--bg); font-size: 11px; padding: 4px 7px; border-radius: 4px; white-space: pre; display: none; z-index: 5; }
+  .facets { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
+  .lines td { white-space: nowrap; }
+  table.lines { table-layout: fixed; }
+  .lines td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lines td.msg { cursor: pointer; }
+  .lines tr.open td.msg { white-space: pre-wrap; word-break: break-word; }
+  .lines tr.detail td { background: var(--soft); white-space: normal; }
+  .lines tr.detail pre { margin: 0; max-height: 360px; overflow: auto; white-space: pre-wrap; word-break: break-word; }
+  .lv { font-weight: 600; font-size: 11px; }
+  .lv.error { color: var(--lv-error); } .lv.warn { color: var(--lv-warn); } .lv.info { color: var(--lv-info); } .lv.debug, .lv.other { color: var(--muted); }
+  tr.error td:first-child { box-shadow: inset 3px 0 var(--lv-error); } tr.warn td:first-child { box-shadow: inset 3px 0 var(--lv-warn); }
+  .lanes { padding: 8px 10px; margin-bottom: 10px; }
+  .lanes svg { width: 100%; display: block; }
+  .lanes .name { font-size: 11px; fill: var(--fg); }
+  .trace-link { cursor: pointer; color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <span class="badge" id="kind">logs</span>
+    <h1 id="title"></h1>
+    <span class="muted" id="meta"></span>
+    <span class="spacer"></span>
+    <a id="kibana" target="_blank" rel="noopener" style="display:none">Kibana ↗</a>
+    <a id="openfull" target="_blank" rel="noopener" class="only-embed">Open full view ↗</a>
+  </div>
+  <div class="card chart" id="chartbox"><div class="tip" id="tip"></div><svg id="chart" preserveAspectRatio="none"></svg></div>
+  <div class="card lanes" id="lanes" style="display:none"></div>
+  <div class="facets" id="levels"></div>
+  <div class="facets" id="services"></div>
+  <div class="row" style="margin:8px 0">
+    <input class="filter" id="filter" placeholder="Filter lines…  ( / )">
+    <span class="muted" id="count"></span>
+    <span class="spacer"></span>
+    <button id="cpTsv">Copy TSV</button><button id="cpJson">Copy JSON</button><button id="dl">⤓ JSON</button>
+  </div>
+  <div class="card scroll"><table class="lines"><colgroup><col style="width:112px"><col style="width:76px"><col style="width:170px"><col><col style="width:120px"></colgroup><thead><tr><th>time</th><th>level</th><th>service</th><th>message</th><th>trace</th></tr></thead><tbody id="rows"></tbody></table></div>
+  <div class="row" style="margin-top:8px"><button id="more" style="display:none">Show more</button></div>
+</div>
+<script src="/static/ui.js"></script>
+<script>
+let data, lines = [], shown = 0, sel = { level: null, service: null, trace: null };
+const PAGE = embed ? 25 : 200;
+const LEVELS = ['error', 'warn', 'info', 'debug', 'other'];
+const color = (lv) => getComputedStyle(document.documentElement).getPropertyValue(`--lv-${lv}`).trim();
+
+function chart() {
+  const svg = $('chart'), tl = data.timeline || [];
+  if (!tl.length) { $('chartbox').style.display = 'none'; return; }
+  const W = 1000, H = 120, pad = 18, max = Math.max(1, ...tl.map(b => b.total));
+  const bw = W / tl.length;
+  let out = '';
+  tl.forEach((b, i) => {
+    const parts = LEVELS.map(lv => [lv, Object.entries(b.levels || {}).filter(([k]) => levelVar(k) === lv).reduce((s, [, n]) => s + n, 0)]);
+    const known = parts.reduce((s, [, n]) => s + n, 0);
+    if (b.total > known) parts[4][1] += b.total - known;
+    let y = H - pad;
+    for (const [lv, n] of parts) {
+      if (!n) continue;
+      const h = (n / max) * (H - pad - 6);
+      out += `<rect x="${i * bw + 0.5}" y="${y - h}" width="${Math.max(1, bw - 1)}" height="${h}" fill="${color(lv)}" data-i="${i}"/>`;
+      y -= h;
+    }
+    out += `<rect x="${i * bw}" y="0" width="${bw}" height="${H - pad}" fill="transparent" data-i="${i}"/>`;
+  });
+  const ticks = 5;
+  for (let k = 0; k <= ticks; k++) {
+    const i = Math.min(tl.length - 1, Math.round(k * (tl.length - 1) / ticks));
+    out += `<text class="axis" x="${Math.min(W - 40, i * bw)}" y="${H - 4}">${fmtTime(tl[i].t, false)}</text>`;
+  }
+  out += `<text class="axis" x="2" y="10">${max}</text>`;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.innerHTML = out;
+  svg.onmousemove = (e) => {
+    const i = e.target.dataset?.i;
+    if (i === undefined) { $('tip').style.display = 'none'; return; }
+    const b = tl[i];
+    $('tip').textContent = `${fmtDate(b.t)}\n${b.total} lines` + Object.entries(b.levels || {}).map(([k, n]) => `\n${k}: ${n}`).join('');
+    const r = $('chartbox').getBoundingClientRect();
+    $('tip').style.left = Math.min(e.clientX - r.left + 10, r.width - 140) + 'px'; $('tip').style.top = (e.clientY - r.top + 10) + 'px'; $('tip').style.display = 'block';
+  };
+  svg.onmouseleave = () => { $('tip').style.display = 'none'; };
+}
+
+// Trace: one lane per service, a mark per line, so the hop order is visible at a glance.
+function lanes() {
+  if (data.kind !== 'trace' || !lines.length) return;
+  const hops = data.hops || [];
+  const t0 = Math.min(...lines.map(l => +new Date(l.time))), t1 = Math.max(...lines.map(l => +new Date(l.time)));
+  const W = 1000, L = 210, rowH = 22, H = hops.length * rowH + 22, span = Math.max(1, t1 - t0);
+  const x = (t) => L + ((+new Date(t) - t0) / span) * (W - L - 12);
+  let out = '';
+  hops.forEach((h, r) => {
+    const y = r * rowH + 12;
+    out += `<text class="name" x="4" y="${y + 4}">${esc(String(h.service ?? '(none)').slice(0, 30))}</text>`;
+    out += `<line x1="${x(h.first)}" x2="${x(h.last)}" y1="${y}" y2="${y}" stroke="var(--line)" stroke-width="6" stroke-linecap="round"/>`;
+  });
+  const idx = Object.fromEntries(hops.map((h, i) => [h.service, i]));
+  for (const l of lines) out += `<circle cx="${x(l.time)}" cy="${idx[l.service] * rowH + 12}" r="3.5" fill="${color(levelVar(l.level))}"><title>${esc(fmtTime(l.time))} ${esc(l.level || '')} ${esc(String(l.message || '').slice(0, 160))}</title></circle>`;
+  out += `<text class="axis" x="${L}" y="${H - 2}" style="font-size:10px;fill:var(--muted)">${fmtTime(t0)}</text><text class="axis" x="${W - 90}" y="${H - 2}" style="font-size:10px;fill:var(--muted)">+${((t1 - t0) / 1000).toFixed(3)}s</text>`;
+  $('lanes').innerHTML = `<svg viewBox="0 0 ${W} ${H}">${out}</svg>`;
+  $('lanes').style.display = '';
+}
+
+function facets() {
+  const lv = data.levels?.length ? data.levels : Object.entries(lines.reduce((m, l) => (m[l.level || '-'] = (m[l.level || '-'] || 0) + 1, m), {})).map(([key, count]) => ({ key, count }));
+  $('levels').innerHTML = lv.map(l => `<span class="chip click ${sel.level === l.key ? 'on' : ''}" data-level="${esc(l.key)}"><span class="dot" style="background:${color(levelVar(l.key))}"></span>${esc(l.key)} <b>${l.count}</b></span>`).join('');
+  const sv = data.services?.length ? data.services : Object.entries(lines.reduce((m, l) => (m[l.service || '-'] = (m[l.service || '-'] || 0) + 1, m), {})).map(([key, count]) => ({ key, count })).sort((a, b) => b.count - a.count);
+  $('services').innerHTML = sv.slice(0, embed ? 8 : 25).map(s => `<span class="chip click ${sel.service === s.key ? 'on' : ''}" data-service="${esc(s.key)}">${esc(s.key)} <b>${s.count}</b></span>`).join('');
+}
+
+function filtered() {
+  const q = $('filter').value.trim().toLowerCase();
+  return lines.filter(l => (!sel.level || l.level === sel.level) && (!sel.service || l.service === sel.service) && (!sel.trace || l.trace === sel.trace)
+    && (!q || `${l.message} ${l.service} ${l.trace} ${l.level}`.toLowerCase().includes(q)));
+}
+
+function render(reset = true) {
+  const f = filtered();
+  if (reset) { shown = 0; $('rows').innerHTML = ''; }
+  const q = $('filter').value.trim();
+  const mark = (s) => { let h = esc(s); if (q) h = h.replace(new RegExp(esc(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), m => `<mark>${m}</mark>`); return h; };
+  const next = f.slice(shown, shown + PAGE);
+  $('rows').insertAdjacentHTML('beforeend', next.map((l, k) => {
+    const i = lines.indexOf(l), lv = levelVar(l.level);
+    return `<tr class="${lv}" data-i="${i}"><td class="mono">${fmtTime(l.time)}</td><td><span class="lv ${lv}">${esc(l.level || '')}</span></td><td class="mono">${esc(l.service || '')}</td><td class="mono msg" title="Click to expand">${mark(String(l.message ?? ''))}</td><td class="mono">${l.trace ? `<span class="trace-link" data-trace="${esc(l.trace)}" title="Show only this trace">${esc(String(l.trace).slice(0, 16))}</span>` : ''}</td></tr>`;
+  }).join(''));
+  shown += next.length;
+  $('count').textContent = `${f.length} of ${lines.length} lines${(data.matched ?? data.total) > lines.length ? ` (${data.matched ?? data.total} matched in total)` : ''}${sel.trace ? ` · trace ${sel.trace}` : ''}`;
+  $('more').style.display = shown < f.length ? '' : 'none';
+  if (!lines.length) $('rows').innerHTML = '<tr><td colspan="5" class="empty">No log lines in this window.</td></tr>';
+  postHeight();
+}
+
+document.addEventListener('click', (e) => {
+  const lvl = e.target.closest('[data-level]'), svc = e.target.closest('[data-service]'), tr = e.target.closest('[data-trace]');
+  if (lvl) { sel.level = sel.level === lvl.dataset.level ? null : lvl.dataset.level; facets(); render(); return; }
+  if (svc) { sel.service = sel.service === svc.dataset.service ? null : svc.dataset.service; facets(); render(); return; }
+  if (tr) { sel.trace = sel.trace === tr.dataset.trace ? null : tr.dataset.trace; render(); return; }
+  const cell = e.target.closest('td.msg');
+  if (cell) {
+    const row = cell.parentElement, l = lines[row.dataset.i];
+    if (row.classList.toggle('open')) {
+      row.insertAdjacentHTML('afterend', `<tr class="detail"><td colspan="5"><div class="row" style="margin-bottom:6px"><button data-copy="${row.dataset.i}">Copy message</button><button data-copysrc="${row.dataset.i}">Copy JSON</button><span class="muted mono">${esc(l._index)} / ${esc(l._id)}</span></div><pre>${esc(JSON.stringify(l.source, null, 2))}</pre></td></tr>`);
+    } else if (row.nextElementSibling?.classList.contains('detail')) row.nextElementSibling.remove();
+    postHeight();
+  }
+  if (e.target.dataset.copy) copy(String(lines[e.target.dataset.copy].message ?? ''), 'message');
+  if (e.target.dataset.copysrc) copy(JSON.stringify(lines[e.target.dataset.copysrc].source, null, 2), 'log JSON');
+});
+let ft; $('filter').oninput = () => { clearTimeout(ft); ft = setTimeout(render, 120); };
+$('more').onclick = () => render(false);
+const plain = (l) => ({ time: l.time, level: l.level, service: l.service, trace: l.trace, message: l.message });
+$('cpTsv').onclick = () => { const f = filtered(); copy(['time\tlevel\tservice\ttrace\tmessage', ...f.map(l => [l.time, l.level, l.service, l.trace, String(l.message ?? '').replace(/[\t\r\n]+/g, ' ')].join('\t'))].join('\n'), `${f.length} lines as TSV`); };
+$('cpJson').onclick = () => { const f = filtered(); copy(JSON.stringify(f.map(plain), null, 2), `${f.length} lines as JSON`); };
+$('dl').onclick = () => download(`logs-${data.env}-${data.id}.json`, JSON.stringify(filtered().map(l => l.source), null, 2), 'application/json');
+document.addEventListener('keydown', (e) => { if (e.key === '/' && document.activeElement.tagName !== 'INPUT') { e.preventDefault(); $('filter').focus(); } });
+
+loadResult().then(d => {
+  data = d; lines = d.rows || [];
+  $('kind').textContent = d.kind === 'trace' ? 'trace' : 'logs';
+  $('title').textContent = d.kind === 'trace' ? (d.traceId || d.query) : (d.query || '*');
+  $('meta').textContent = [d.env, d.range && `${fmtDate(d.range.from)} → ${fmtDate(d.range.to)}`, `${d.matched ?? d.total} matched`, d.interval && `bucket ${d.interval}`, d.ms !== undefined && `${d.ms} ms`].filter(Boolean).join(' · ');
+  if (d.kibana) { $('kibana').href = d.kibana; $('kibana').style.display = ''; }
+  $('openfull').href = location.pathname;
+  if (d.kind === 'trace') $('chartbox').style.display = 'none'; else chart();
+  lanes(); facets(); render();
+}).catch(fail);
+</script>
+</body>
+</html>

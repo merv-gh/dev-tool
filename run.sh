@@ -1,7 +1,7 @@
 #!/bin/sh
 # docker compose for dt, with config and data in one folder.
 #   ./run.sh [--home DIR] [--tools-only] <compose args>
-#   ./run.sh --home ~/dt up -d --build        full stack (profiles from COMPOSE_PROFILES in DIR/.env)
+#   ./run.sh --home ~/dt up -d        full stack (profiles from COMPOSE_PROFILES in DIR/.env)
 #   ./run.sh --home ~/dt --tools-only up -d   only the dt tool server (for an Open WebUI / MCP client you already run)
 #   ./run.sh --home ~/dt logs -f dt           ./run.sh --home ~/dt down
 # DIR defaults to $DT_HOME, else this folder. It holds config.json + .env (or the older .env.<env> files).

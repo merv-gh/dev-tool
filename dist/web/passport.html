@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dt passport</title>
+<link rel="stylesheet" href="/static/ui.css">
+<style>
+  .flow { padding: 6px; margin: 10px 0; }
+  .flow svg { width: 100%; display: block; }
+  .flow .lbl { font-size: 12px; fill: var(--fg); }
+  .flow .cap { font-size: 10px; fill: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .flow .node { cursor: pointer; }
+  .flow .node:hover rect { stroke: var(--accent); }
+  .acc { font-size: 11px; padding: 0 6px; border-radius: 8px; margin-right: 3px; background: var(--soft); white-space: nowrap; }
+  .acc.write, .acc.owner { background: var(--warn-bg); color: var(--warn); } .acc.read, .acc.function { background: var(--good-bg); color: var(--good); }
+  .acc.entity, .acc.repository { background: var(--accent-soft); color: var(--accent); }
+  .src { font-size: 11px; color: var(--muted); }
+  section { margin-top: 4px; }
+  td a.loc { color: var(--muted); } td a.loc:hover { color: var(--accent); }
+  .changes li { margin: 2px 0; }
+  .add { color: var(--good); } .rem { color: var(--lv-error); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <span class="badge">passport</span>
+    <h1 id="title"></h1>
+    <span class="muted" id="meta"></span>
+    <span class="spacer"></span>
+    <input class="filter hide-embed" id="filter" placeholder="Filter everything…  ( / )">
+    <a id="openfull" target="_blank" rel="noopener" class="only-embed">Open full view ↗</a>
+  </div>
+  <div class="row" id="chips"></div>
+  <div class="card flow" id="flow"></div>
+  <div id="sections"></div>
+</div>
+<script src="/static/ui.js"></script>
+<script>
+let p;
+const service = decodeURIComponent(location.pathname.split('/').filter(Boolean)[1]);
+const COLORS = { http: 'var(--lv-info)', kafka: 'var(--lv-warn)', db: 'var(--good)', es: '#8a4fbf', lib: 'var(--muted)' };
+
+function repoOf(item) {
+  if (item.source) { const l = p.libraries.find(x => x.artifactId === item.source); if (l && l.repo) { const [pr, r] = l.repo.split('/'); return { project: pr, repo: r, sha: l.sha }; } }
+  return { project: p.repo.project, repo: p.repo.repo, sha: p.repo.sha };
+}
+function loc(item) {
+  if (item.file === 'config') return `<span class="muted">config ${esc(item.key || '')}</span>`;
+  const r = repoOf(item);
+  const label = `${item.file.split('/').pop()}:${item.line}`;
+  if (!p.bitbucketUrl) return `<span class="muted" title="${esc(item.file)}">${esc(label)}</span>`;
+  const href = `${p.bitbucketUrl}/projects/${r.project}/repos/${r.repo}/browse/${item.file.split('/').map(encodeURIComponent).join('/')}?at=${r.sha}#${item.line}`;
+  return `<a class="loc mono" target="_blank" rel="noopener" href="${esc(href)}" title="${esc(item.file)}">${esc(label)}</a>`;
+}
+const src = (x) => x.source ? ` <span class="src">lib ${esc(x.source)}</span>` : '';
+const uniq = (arr, key) => { const s = new Set(); return arr.filter(x => { const k = key(x); if (s.has(k)) return false; s.add(k); return true; }); };
+
+// Inputs on the left, outputs on the right, data stores below, libraries above.
+function flow() {
+  const e = p.effective;
+  const cap = (arr, n) => arr.length > n ? [...arr.slice(0, n - 1), { label: `+${arr.length - n + 1} more`, more: true, kind: arr[0].kind }] : arr;
+  const left = cap([
+    ...(e.endpoints.length ? [{ label: `HTTP · ${uniq(e.endpoints, x => x.method + x.path).length} endpoints`, kind: 'http', go: 'endpoints' }] : []),
+    ...[...new Set(e.consumes.map(c => c.topic))].map(t => ({ label: t, kind: 'kafka', go: 'consumes' })),
+  ], 12);
+  const right = cap([
+    ...[...new Set(e.produces.map(c => c.topic))].map(t => ({ label: t, kind: 'kafka', go: 'produces' })),
+    ...[...new Set([...e.calls.map(c => c.client), ...p.http.map(h => h.target).filter(Boolean)])].map(t => ({ label: t, kind: 'http', go: 'calls' })),
+  ], 12);
+  const stores = cap([
+    ...p.db.datasources.map(d => ({ label: `db ${d.db}`, kind: 'db', go: 'tables' })),
+    ...Object.entries(p.summary.tables).filter(([, a]) => a.some(x => x === 'write' || x === 'owner')).map(([t]) => ({ label: `${t} ✎`, kind: 'db', go: 'tables' })),
+    ...[...new Set((e.dbCalls || []).map(c => c.name))].map(n => ({ label: `fn ${n}()`, kind: 'db', go: 'dbcalls' })),
+    ...[...new Set(p.es.map(x => x.index))].map(i => ({ label: `es ${i}`, kind: 'es', go: 'es' })),
+  ], 15);
+  const libs = p.libraries.slice(0, 8).map(l => ({ label: `${l.artifactId}@${l.version || '?'}`, kind: 'lib', go: 'libraries', bad: !!l.error }));
+  const W = 1000, rowH = 26, colW = 250;
+  const topH = libs.length ? 44 : 10, mid = Math.max(left.length, right.length, 3) * rowH;
+  const perRow = 5, storeRows = Math.ceil(stores.length / perRow);
+  const H = topH + mid + (stores.length ? 45 + storeRows * 28 : 10) + 20;
+  const cx = W / 2, cy = topH + mid / 2;
+  let s = '';
+  const node = (x, y, w, n, anchor) => {
+    const max = Math.floor((w - 28) / 6.6);
+    const t = String(n.label).length > max ? String(n.label).slice(0, max - 1) + '…' : n.label;
+    return `<g class="node" data-go="${n.go}"><rect x="${x}" y="${y - 10}" width="${w}" height="20" rx="10" fill="var(--panel)" stroke="${n.bad ? 'var(--lv-error)' : 'var(--line)'}"/><circle cx="${x + 10}" cy="${y}" r="4" fill="${COLORS[n.kind]}"/><text class="lbl" x="${x + 20}" y="${y + 4}"${n.more ? ' style="fill:var(--muted)"' : ''}>${esc(t)}<title>${esc(n.label)}</title></text></g>`;
+  };
+  const curve = (x1, y1, x2, y2, c) => `<path d="M${x1},${y1} C${(x1 + x2) / 2},${y1} ${(x1 + x2) / 2},${y2} ${x2},${y2}" fill="none" stroke="${c}" stroke-opacity=".45" stroke-width="1.5"/>`;
+  left.forEach((n, i) => { const y = topH + (mid - left.length * rowH) / 2 + i * rowH + rowH / 2; s += curve(20 + colW, y, cx - 110, cy, COLORS[n.kind]) + node(20, y, colW, n); });
+  right.forEach((n, i) => { const y = topH + (mid - right.length * rowH) / 2 + i * rowH + rowH / 2; s += curve(cx + 110, cy, W - 20 - colW, y, COLORS[n.kind]) + node(W - 20 - colW, y, colW, n); });
+  const sw = (W - 40) / Math.min(perRow, Math.max(1, stores.length)) - 8;
+  stores.forEach((n, i) => {
+    const r = Math.floor(i / perRow), x = 20 + (i % perRow) * (sw + 8), y = topH + mid + 45 + r * 28;
+    // only the first row gets curves; the rows below are the same kind of thing
+    s += (r === 0 ? curve(cx, cy + 22, x + sw / 2, y - 10, COLORS[n.kind]) : '') + node(x, y, sw, n);
+  });
+  const lw = Math.min(170, (W - 40) / Math.max(1, libs.length) - 8);
+  libs.forEach((n, i) => { const x = 20 + i * (lw + 8); s += node(x, 18, lw, n); });
+  if (libs.length) s += `<text class="cap" x="20" y="6">internal libraries</text>`;
+  s += `<text class="cap" x="20" y="${topH - 2}">in</text><text class="cap" x="${W - 20 - colW}" y="${topH - 2}">out</text>`;
+  s += `<g class="node" data-go="top"><rect x="${cx - 110}" y="${cy - 22}" width="220" height="44" rx="8" fill="var(--accent-soft)" stroke="var(--accent)"/><text class="lbl" x="${cx}" y="${cy - 3}" text-anchor="middle" style="font-weight:600">${esc(p.service)}</text><text class="cap" x="${cx}" y="${cy + 13}" text-anchor="middle">${esc(p.repo.sha.slice(0, 10))} · boot ${esc(p.app.springBoot || '?')}</text></g>`;
+  $('flow').innerHTML = `<svg viewBox="0 -12 ${W} ${H + 12}">${s}</svg>`;
+}
+
+function section(id, title, rows, head, cell) {
+  return `<section id="sec-${id}"><h2>${esc(title)} <span class="muted">${rows.length}</span></h2>${rows.length ? `<div class="card scroll"><table><thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${cell(r).map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>` : '<div class="empty card">none found</div>'}</section>`;
+}
+
+function render() {
+  const e = p.effective;
+  $('title').textContent = p.service;
+  const bbRepo = p.bitbucketUrl ? `${p.bitbucketUrl}/projects/${p.repo.project}/repos/${p.repo.repo}/browse?at=${p.repo.sha}` : null;
+  $('meta').innerHTML = [bbRepo ? `<a href="${esc(bbRepo)}" target="_blank" rel="noopener">${esc(p.repo.project)}/${esc(p.repo.repo)}</a>` : esc(`${p.repo.project}/${p.repo.repo}`),
+    `<span class="mono">${esc(p.repo.ref)} ${esc(p.repo.sha.slice(0, 12))}</span>`, p.deployed ? `deployed in ${esc(p.env)} (${esc(p.deployed.instance)})` : '', `built ${fmtDate(p.builtAt)}`].filter(Boolean).join(' · ');
+  $('openfull').href = location.pathname + location.search.replace(/[?&]embed=1/, '');
+  const ch = p.changes;
+  $('chips').innerHTML = [
+    `<span class="chip">endpoints <b>${p.summary.endpoints}</b></span>`, `<span class="chip">consumes <b>${p.summary.consumes.length}</b></span>`,
+    `<span class="chip">produces <b>${p.summary.produces.length}</b></span>`, `<span class="chip">tables <b>${Object.keys(p.summary.tables).length}</b></span>`,
+    `<span class="chip">calls <b>${p.summary.calls.length}</b></span>`, `<span class="chip">libraries <b>${p.libraries.length}</b></span>`,
+    p.repo.fallback ? `<span class="chip warn" title="${esc(p.repo.fallback)}">ref fallback</span>` : '',
+    p.summary.unresolved ? `<span class="chip warn">${p.summary.unresolved} unresolved placeholders</span>` : '',
+    ch ? (ch.none ? '<span class="chip good">no changes since last passport</span>' : '<a class="chip warn" href="#sec-changes">changed since last passport</a>') : '',
+  ].join('');
+  flow();
+  const S = [];
+  if (ch && !ch.none) {
+    S.push(`<section id="sec-changes"><h2>Changes ${esc((ch.fromSha || '').slice(0, 10))} → ${esc((ch.toSha || '').slice(0, 10))}</h2><div class="card" style="padding:8px 14px"><ul class="changes">${Object.entries(ch).filter(([, v]) => v && v.added).map(([k, v]) =>
+      `<li><b>${esc(k)}</b>: ${v.added.map(a => `<span class="add">+ ${esc(a)}</span>`).join(', ')} ${v.removed.map(a => `<span class="rem">− ${esc(a)}</span>`).join(', ')}</li>`).join('')}</ul></div></section>`);
+  }
+  S.push(section('endpoints', 'HTTP endpoints', uniq(e.endpoints, x => x.method + x.path).sort((a, b) => a.path.localeCompare(b.path)), ['method', 'path', 'handler', 'where'],
+    x => [`<span class="pill ${esc(x.method)}">${esc(x.method)}</span>`, `<span class="mono">${esc(x.path)}</span>`, `<span class="mono">${esc(x.handler)}</span>${src(x)}`, loc(x)]));
+  S.push(section('consumes', 'Kafka · consumes', e.consumes, ['topic', 'group', 'handler', 'via', 'where'],
+    x => [`<span class="mono">${esc(x.topic)}</span>`, `<span class="mono">${esc(x.group || '')}</span>`, `<span class="mono">${esc(x.handler || x.binding || '')}</span>${src(x)}`, esc(x.via), loc(x)]));
+  S.push(section('produces', 'Kafka · produces', e.produces, ['topic', 'via', 'where'],
+    x => [`<span class="mono">${esc(x.topic)}</span>`, `${esc(x.via)}${x.binding ? ` <span class="muted">(${esc(x.binding)})</span>` : ''}${src(x)}`, loc(x)]));
+  S.push(section('calls', 'Outbound calls', [...e.calls.map(c => ({ ...c, kind: 'feign' })), ...p.http.map(h => ({ ...h, kind: h.via }))], ['target', 'method / url', 'handler / key', 'where'],
+    x => x.kind === 'feign' ? [`<b>${esc(x.client)}</b>`, `<span class="pill ${esc(x.method)}">${esc(x.method)}</span> <span class="mono">${esc(x.path)}</span>`, `<span class="mono">${esc(x.handler)}</span>${src(x)}`, loc(x)]
+      : [`<b>${esc(x.target || '')}</b>`, `<span class="mono">${esc(x.url)}</span>`, `<span class="mono">${esc(x.key || '')}</span>`, loc(x)]));
+  const tables = Object.entries(p.summary.tables).sort(([a], [b]) => a.localeCompare(b));
+  S.push(`<section id="sec-tables"><h2>Database <span class="muted">${p.db.datasources.length} datasources · ${tables.length} tables</span></h2>
+    ${p.db.datasources.length ? `<div class="card scroll" style="margin-bottom:8px"><table><thead><tr><th>datasource key</th><th>kind</th><th>host</th><th>database</th></tr></thead><tbody>${p.db.datasources.map(d => `<tr><td class="mono">${esc(d.key)}</td><td>${esc(d.kind)}</td><td class="mono">${esc(d.host || '')}</td><td class="mono"><b>${esc(d.db || '')}</b></td></tr>`).join('')}</tbody></table></div>` : ''}
+    ${section('tables-detail', 'Tables', e.tables, ['table', 'access', 'via', 'where'], x => [`<span class="mono">${esc(x.table)}</span>`, `<span class="acc ${esc(x.access)}">${esc(x.access)}</span>`, `${esc(x.via)}${x.sql ? `<div class="mono muted" style="white-space:normal;max-width:560px">${esc(x.sql)}</div>` : ''}${src(x)}`, loc(x)]).replace('<h2>', '<h2 style="display:none">')}</section>`);
+  S.push(section('dbcalls', 'Database functions called', e.dbCalls || [], ['function', 'via', 'where'], x => [`<span class="mono">${esc(x.name)}</span>`, `${esc(x.via)}${x.sql ? `<div class="mono muted" style="white-space:normal;max-width:560px">${esc(x.sql)}</div>` : ''}${src(x)}`, loc(x)]));
+  S.push(section('es', 'Elasticsearch indices', p.es, ['index', 'via', 'where'], x => [`<span class="mono">${esc(x.index)}</span>`, esc(x.via), loc(x)]));
+  S.push(section('libraries', 'Internal libraries', p.libraries, ['library', 'version', 'repo @ ref', 'provides', 'note'],
+    l => [`<b>${esc(l.artifactId)}</b><div class="muted">${esc(l.groupId)}${l.via ? ` · via ${esc(l.via)}` : ''}</div>`, `<span class="mono">${esc(l.version || '?')}</span>`,
+      l.repo ? `<span class="mono">${esc(l.repo)} @ ${esc(l.ref)} ${esc((l.sha || '').slice(0, 10))}</span>` : '',
+      l.provides ? Object.entries(l.provides).filter(([, n]) => n).map(([k, n]) => `<span class="acc">${n} ${esc(k)}</span>`).join('') : '',
+      l.error ? `<span style="color:var(--lv-error)">${esc(l.error)}</span>` : l.exactVersion === false ? '<span class="muted">default branch: no tag for this version</span>' : '']));
+  S.push(section('external', 'External dependencies', p.dependencies.external, ['group', 'artifact', 'version', 'scope'], d => [esc(d.groupId), `<b>${esc(d.artifactId)}</b>`, `<span class="mono">${esc(d.version || 'managed')}</span>`, esc(d.scope || '')]));
+  if (p.config.unresolved.length) S.push(`<section><h2>Unresolved config placeholders <span class="muted">${p.config.unresolved.length}</span></h2><div class="card" style="padding:8px 12px">${p.config.unresolved.map(u => `<span class="chip mono" style="margin:2px">${esc(u)}</span>`).join('')}</div></section>`);
+  $('sections').innerHTML = S.join('');
+  postHeight();
+}
+
+document.addEventListener('click', (ev) => {
+  const n = ev.target.closest('[data-go]');
+  if (!n) return;
+  const el = n.dataset.go === 'top' ? document.body : document.getElementById(`sec-${n.dataset.go}`) || document.getElementById(`sec-${n.dataset.go}-detail`);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+let ft; $('filter').oninput = () => { clearTimeout(ft); ft = setTimeout(() => {
+  const q = $('filter').value.trim().toLowerCase();
+  document.querySelectorAll('#sections tbody tr').forEach(tr => { tr.style.display = !q || tr.textContent.toLowerCase().includes(q) ? '' : 'none'; });
+}, 120); };
+document.addEventListener('keydown', (e) => { if (e.key === '/' && document.activeElement.tagName !== 'INPUT') { e.preventDefault(); $('filter').focus(); } });
+
+fetch(`/api/passport/${encodeURIComponent(service)}?t=${encodeURIComponent(qs.get('t') || '')}`)
+  .then(r => r.ok ? r.json() : r.json().then(j => Promise.reject(new Error(j.error))))
+  .then(d => { p = d; render(); }).catch(fail);
+</script>
+</body>
+</html>

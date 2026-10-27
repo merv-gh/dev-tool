@@ -40,7 +40,7 @@ FRESH=
 [ -f "$HOME_DIR/.env" ] || [ -f "$HOME_DIR/.env.personal" ] || { cp "$CODE/.env.example" "$HOME_DIR/.env"; chmod 600 "$HOME_DIR/.env"; FRESH=1; }
 
 if [ -n "$START" ]; then
-  "$CODE/run.sh" --home "$HOME_DIR" $RUN_ARGS up -d --build
+  "$CODE/run.sh" --home "$HOME_DIR" $RUN_ARGS up -d
   printf 'waiting for dt'
   i=0; until curl -fsS -o /dev/null http://127.0.0.1:${DT_PORT:-4000}/health 2>/dev/null; do i=$((i+1)); [ $i -gt 60 ] && break; printf .; sleep 2; done; echo
 fi

@@ -61,8 +61,18 @@
 
   "browser": {
     "sites": {
-      "crm": { "url": "https://crm.dev.example.com/login", "secrets": ["CRM_USER", "CRM_PASSWORD"] }
-    }
+      "crm": {
+        "url": "https://crm.dev.example.com/login", "secrets": ["CRM_USER", "CRM_PASSWORD"],
+        "description": "Back office: customers, orders, refunds",
+        "links": {
+          "customers": "/customers",
+          "customer": { "path": "/customers/<customerId>", "description": "One customer: profile, orders, tickets" },
+          "order": "/orders/<orderId>",
+          "search": "/search?q=<q>"
+        }
+      }
+    },
+    "mcp": "${DT_BROWSER_MCP:-}"
   },
 
   "server": { "publicUrl": "http://127.0.0.1:4000", "apiKey": "${DT_API_KEY}", "ratePerSec": 1 }

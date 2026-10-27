@@ -189,6 +189,25 @@ const routes = [
     try { const b = await readJsonBody(req); send(res, 200, admin.setRepo(b.service, b.repo)); } catch (e) { send(res, 400, { error: e.message }); }
   }],
 
+  // saved scripts and API routes
+  ['GET', '/api/admin/scripts', true, (req, res) => send(res, 200, require('./lib/scripts').list())],
+  ['GET', '/api/admin/script', true, (req, res, url) => {
+    try { send(res, 200, require('./lib/scripts').get(url.searchParams.get('id'))); } catch (e) { send(res, 404, { error: e.message }); }
+  }],
+  ['POST', '/api/admin/script', true, async (req, res) => {
+    try { const b = await readJsonBody(req); send(res, 200, require('./lib/scripts').save(b.id, b.script)); } catch (e) { send(res, 400, { error: e.message }); }
+  }],
+  ['POST', '/api/admin/script/run', true, async (req, res) => {
+    try { const b = await readJsonBody(req); send(res, 200, await require('./lib/scripts').run(b.id, b.params || {})); } catch (e) { send(res, 400, { error: e.message }); }
+  }],
+  ['POST', '/api/admin/script/delete', true, async (req, res) => {
+    try { send(res, 200, require('./lib/scripts').remove((await readJsonBody(req)).id)); } catch (e) { send(res, 400, { error: e.message }); }
+  }],
+  ['GET', '/api/admin/routes', true, (req, res, url) => send(res, 200, {
+    routes: require('./lib/routes').list({ q: url.searchParams.get('q') || '', service: url.searchParams.get('service') || '' }),
+    sites: require('./lib/config').getBrowser().sites.map(({ secrets, ...s }) => ({ ...s, secrets: secrets.length })),
+  })],
+
   ['GET', '/dash', false, page('dash.html')],
   ['GET', '/api/dash', false, async (req, res, url) => {
     const env = url.searchParams.get('env') || envNames()[0];

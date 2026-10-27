@@ -11,7 +11,10 @@ cache/
 repos/
 passports/
 plugins/*.js
+scripts/
 demo/.home/
 .code-review-graph/
-dist/
+dist/*.tar.gz
+dist/*.zip
+dist/envs.json
 node_modules/

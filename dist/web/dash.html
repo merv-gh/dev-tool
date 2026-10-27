@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dt dashboard</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1b; --muted:#6b6b66; --line:#e4e3df; --panel:#fff; --soft:#f2f1ee; --accent:#2457c5;
+          --good:#2f7d32; --good-bg:#e3f1e4; --warn:#8a5300; --warn-bg:#fdf0d5; --bad:#a3231a; --bad-bg:#fde2df; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#141413; --fg:#e8e7e3; --muted:#9a9993; --line:#2b2b29; --panel:#1b1b1a; --soft:#232321; --accent:#7ea2f0;
+          --good:#8fd092; --good-bg:#1d3a1f; --warn:#f0cf8a; --warn-bg:#43330f; --bad:#f6b8b1; --bad-bg:#4a1d19; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 13px/1.4 ui-sans-serif, system-ui, sans-serif; }
+  .wrap { padding: 14px 16px 18px; }
+  body.embed .wrap { padding: 10px 12px 12px; }
+  .top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .top h1 { font-size: 15px; margin: 0; }
+  .muted { color: var(--muted); } .spacer { flex: 1; }
+  a { color: var(--accent); text-decoration: none; } a:hover { text-decoration: underline; }
+  button, select { font: inherit; padding: 4px 9px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--fg); cursor: pointer; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--good); }
+  .dot.paused { background: var(--muted); } .dot.err { background: var(--bad); }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .tile { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .tile .k { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  .tile .v { font-size: 22px; font-weight: 600; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .tile .s { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .tile.good { border-left: 4px solid var(--good); } .tile.warn { border-left: 4px solid #d9a03a; } .tile.bad { border-left: 4px solid var(--bad); }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 14px 0 6px; display: flex; gap: 8px; align-items: baseline; }
+  table { border-collapse: collapse; width: 100%; background: var(--panel); border: 1px solid var(--line); }
+  th, td { text-align: left; padding: 5px 9px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: var(--soft); font-size: 12px; font-weight: 600; }
+  td { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.wrap { white-space: normal; word-break: break-word; max-width: 520px; color: var(--muted); }
+  .scroll { overflow-x: auto; }
+  .pill { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 9px; }
+  .pill.good { background: var(--good-bg); color: var(--good); } .pill.warn { background: var(--warn-bg); color: var(--warn); } .pill.bad { background: var(--bad-bg); color: var(--bad); }
+  .ok { padding: 10px; color: var(--good); background: var(--panel); border: 1px solid var(--line); }
+  .error { padding: 10px; color: var(--bad); background: var(--bad-bg); border-radius: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1 id="title">Environment</h1>
+    <span class="dot" id="dot"></span>
+    <span class="muted" id="updated"></span>
+    <span class="spacer"></span>
+    <select id="every" title="Refresh interval"><option value="15">every 15s</option><option value="30" selected>every 30s</option><option value="60">every 60s</option><option value="0">paused</option></select>
+    <button id="refresh">Refresh</button>
+    <a href="" id="openfull" target="_blank" rel="noopener">Open ↗</a>
+  </div>
+  <div class="tiles" id="tiles"></div>
+  <div id="sections"></div>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const qs = new URLSearchParams(location.search);
+const env = qs.get('env') || 'dev';
+const embed = qs.has('embed');
+if (embed) document.body.classList.add('embed');
+$('title').textContent = `${env} overview`;
+const token = qs.get('t') || '';
+$('openfull').href = `/dash?env=${encodeURIComponent(env)}&t=${encodeURIComponent(token)}`;
+if (!embed) $('openfull').style.display = 'none';
+
+let lastHeight = 0;
+function postHeight() {
+  if (!embed || parent === window) return;
+  const h = Math.ceil(document.body.getBoundingClientRect().height);
+  if (h !== lastHeight) { lastHeight = h; parent.postMessage({ type: 'iframe:height', height: h }, '*'); }
+}
+new ResizeObserver(postHeight).observe(document.body);
+
+const pill = (v) => {
+  const t = { healthy: 'good', green: 'good', STABLE: 'good', degraded: 'warn', yellow: 'warn', 'no checks': 'warn', down: 'bad', red: 'bad' }[v] || (v ? 'warn' : '');
+  return `<span class="pill ${t}">${esc(v)}</span>`;
+};
+const link = (text, href) => href ? `<a href="${esc(href)}" target="_blank" rel="noopener">${esc(text)}</a>` : esc(text);
+const tile = (k, v, s, tone) => `<div class="tile ${tone}"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div><div class="s">${s}</div></div>`;
+
+function render(d) {
+  const h = d.health, es = d.es, k = d.kafka;
+  const tiles = [];
+  if (h.error) tiles.push(tile('Services', '—', esc(h.error), 'bad'));
+  else tiles.push(tile('Services', `${h.summary.healthy}/${h.summary.services}`, `${h.summary.down} down · ${h.summary.degraded} degraded`, h.summary.down ? 'bad' : h.summary.degraded ? 'warn' : 'good'));
+  if (es.error) tiles.push(tile('Elasticsearch', '—', esc(es.error), 'bad'));
+  else tiles.push(tile('Elasticsearch', es.summary.status, `${es.summary.nodes} nodes · ${es.summary.notGreen} indices not green · ${es.summary.unassignedShards} unassigned`, { green: 'good', yellow: 'warn', red: 'bad' }[es.summary.status] || ''));
+  if (k.error) tiles.push(tile('Kafka consumers', '—', esc(k.error), 'bad'));
+  else tiles.push(tile('Kafka consumers', k.summary.lagging, `lagging of ${k.summary.groups} · max lag ${k.summary.maxLag} · ${k.summary.notStable} not stable`, k.summary.notStable ? 'bad' : k.summary.lagging ? 'warn' : 'good'));
+  $('tiles').innerHTML = tiles.join('');
+
+  const sec = [];
+  sec.push(`<h2>Services not healthy <span class="muted">${h.rows ? h.rows.length : ''}</span></h2>`);
+  sec.push(h.error ? `<div class="error">${esc(h.error)}</div>` : !h.rows.length ? '<div class="ok">All services healthy.</div>' :
+    `<div class="scroll"><table><tr><th>status</th><th>service</th><th>passing</th><th>failing checks</th></tr>${h.rows.map(r =>
+      `<tr><td>${pill(r.status)}</td><td>${link(r.service, r.link)}</td><td class="num">${r.passing}/${r.instances}</td><td class="wrap">${esc(r.failing || '')}</td></tr>`).join('')}</table></div>`);
+  sec.push(`<h2>Elasticsearch indices not green <span class="muted">${es.rows ? es.rows.length : ''}</span></h2>`);
+  sec.push(es.error ? `<div class="error">${esc(es.error)}</div>` : !es.rows.length ? '<div class="ok">All indices green.</div>' :
+    `<div class="scroll"><table><tr><th>health</th><th>index</th><th>status</th><th>docs</th><th>size</th></tr>${es.rows.map(r =>
+      `<tr><td>${pill(r.health)}</td><td>${esc(r.index)}</td><td>${esc(r.status)}</td><td class="num">${esc(r.docs)}</td><td class="num">${esc(r.size)}</td></tr>`).join('')}</table></div>`);
+  sec.push(`<h2>Kafka consumer groups lagging or not stable <span class="muted">${k.rows ? k.rows.length : ''}</span></h2>`);
+  sec.push(k.error ? `<div class="error">${esc(k.error)}</div>` : !k.rows.length ? '<div class="ok">No consumer lag.</div>' :
+    `<div class="scroll"><table><tr><th>group</th><th>lag</th><th>state</th><th>members</th><th>topics</th></tr>${k.rows.map(r =>
+      `<tr><td>${link(r.group, r.link)}</td><td class="num">${esc(r.lag)}</td><td>${pill(r.state)}</td><td class="num">${esc(r.members)}</td><td class="num">${esc(r.topics)}</td></tr>`).join('')}</table></div>`);
+  $('sections').innerHTML = sec.join('');
+  $('updated').textContent = `updated ${new Date(d.at).toLocaleTimeString()}`;
+  postHeight();
+}
+
+let timer;
+async function load() {
+  clearTimeout(timer);
+  try {
+    const d = await fetch(`/api/dash?env=${encodeURIComponent(env)}&t=${encodeURIComponent(token)}`).then(r => r.json());
+    render(d); $('dot').className = 'dot';
+  } catch (e) { $('dot').className = 'dot err'; $('updated').textContent = `refresh failed: ${e.message}`; }
+  schedule();
+}
+function schedule() {
+  const s = Number($('every').value);
+  $('dot').classList.toggle('paused', !s);
+  if (s && !document.hidden) timer = setTimeout(load, s * 1000);
+}
+$('every').onchange = () => { clearTimeout(timer); schedule(); };
+$('refresh').onclick = load;
+document.addEventListener('visibilitychange', () => { clearTimeout(timer); if (!document.hidden) load(); });
+load();
+</script>
+</body>
+</html>

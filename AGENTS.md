@@ -23,9 +23,19 @@ Catalog line formats (`cache/<env>/catalog.txt`):
     kafka <topic> <messages> schema:<type>v<n>: field.path, ...
     consul <service> <passing>/<total>: host:port, ...
     svc <service> <PROJECT/repo>@<sha>: consumes ...; produces ...; tables ...; calls ...; endpoints N
+    api <service|site|host> <METHOD> <path>?<query keys> [code | seen N 200×n] <host> -> <handler>
+    site <site>[.<link>] <url with <params>>  # description
 
 Details per object: `cache/<env>/pg/<db>.json` (tables, functions with bodies, view deps, triggers),
-`pg/_usage.json` (usage edges), `es/<index>.json`, `kafka/<topic>.json`, `consul.json`, `passports/<service>/passport.json`.
+`pg/_usage.json` (usage edges), `es/<index>.json`, `kafka/<topic>.json`, `consul.json`, `passports/<service>/passport.json`,
+`cache/routes.json` (API routes seen in the browser), `scripts/<collection>/<name>.json` (saved scripts).
+
+## Scripts and routes
+    node cli.js tool script_list '{}'
+    node cli.js tool script_run '{"id":"shop/order-check","params":{"orderId":42}}'
+    node cli.js tool routes_discover '{"site":"shop","link":"order","params":{"orderId":1042}}'
+    node cli.js tool api_routes '{"q":"orders"}'
+Browser steps need the Playwright MCP (`DT_BROWSER_MCP`, set by compose).
 
 ## Live queries
     node cli.js pg "select * from sales.orders where id = 42" --pretty
@@ -48,7 +58,9 @@ Or use http://127.0.0.1:4000/admin.
 - `lib/indexer.js`: every refresh, run as a job (`lib/jobs.js`).
 - `lib/pgindex.js`: the usage index.
 - `lib/passport/`: static analysis of repos.
+- `lib/scripts.js`, `lib/browser-mcp.js`, `lib/routes.js`: saved scripts, dt's Playwright MCP client, API routes (code + wire).
 - `server.js`: HTTP routes and auth.
 - `web/`: pages (admin, view, dash, logs, pr, passport).
 - `demo/`: a fake environment plus the screenshot scripts.
+- `build.js` -> `dist/` (bundled dt.js + web pages), which docker compose runs. Run `npm run build` after changing sources; `test/dist.test.js` fails while dist/ is stale.
 - `npm test` runs the tests. Use `DT_TEST_PG_URL` for the live Postgres test.

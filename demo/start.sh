@@ -37,15 +37,32 @@ cat > "$H/config.json" <<JSON
       "params": { "status": { "required": true, "enum": ["new", "paid", "shipped", "closed", "payment_failed"] }, "limit": { "type": "integer", "default": 50 } }
     }]
   },
+  "browser": {
+    "sites": {
+      "shop": {
+        "url": "http://\${DEMO_SHOP_HOST:-127.0.0.1}:$MOCK/shop/login", "secrets": ["SHOP_PASSWORD"], "description": "Back office",
+        "links": { "order": { "path": "/shop/orders/<orderId>", "description": "One order with its payment" }, "customers": "/shop/customers" }
+      }
+    }
+  },
   "server": { "publicUrl": "http://127.0.0.1:$DT", "ratePerSec": 0 }
 }
 JSON
-printf 'DEMO_ORDERS_DB=postgres://postgres:demo@127.0.0.1:%s/orders\nDEMO_BB_TOKEN=demo\n' "$PGP" > "$H/.env"
+printf 'DEMO_ORDERS_DB=postgres://postgres:demo@127.0.0.1:%s/orders\nDEMO_BB_TOKEN=demo\nSHOP_PASSWORD=demo\n' "$PGP" > "$H/.env"
+mkdir -p "$H/scripts" && cp -R demo/scripts/. "$H/scripts/"   # example saved scripts
 echo '{ "sales.order_audit": "Written only by the orders_status_audit trigger. Kept 90 days." }' > "$H/notes.json"
 
 pkill -f "demo/mock.js" 2>/dev/null || true; pkill -f "cli.js serve --port $DT" 2>/dev/null || true
 nohup node demo/mock.js "$MOCK" > "$H/mock.log" 2>&1 &
 sleep 1
+# browser steps (scripts, routes_discover) use a Playwright MCP container when DEMO_BROWSER=1
+if [ "${DEMO_BROWSER:-0}" = 1 ]; then
+  docker rm -f dt-demo-browser >/dev/null 2>&1 || true
+  docker run -d --name dt-demo-browser -p 127.0.0.1:${DEMO_BROWSER_PORT:-8931}:8931 mcr.microsoft.com/playwright/mcp:v0.0.83 \
+    --port 8931 --host 0.0.0.0 --allowed-hosts '*' --isolated >/dev/null
+  export DT_BROWSER_MCP=http://127.0.0.1:${DEMO_BROWSER_PORT:-8931}/mcp
+  echo DEMO_SHOP_HOST=host.docker.internal >> "$H/.env"   # the browser container reaches the mock on the host
+fi
 DT_HOME=$H nohup node cli.js serve --port "$DT" > "$H/dt.log" 2>&1 &
 until curl -fsS -o /dev/null "http://127.0.0.1:$DT/health" 2>/dev/null; do sleep 0.5; done
 DT_HOME=$H node cli.js sync all > /dev/null 2>"$H/sync.log"

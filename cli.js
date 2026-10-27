@@ -12,7 +12,7 @@ dt — read-only dev environment toolkit (JSON output; add --pretty for tables)
 Index (cached, no network to query)
   dt sync [all|pg|es|kafka|consul|passports|index] [--only a,b]
                                            refresh the index; "index" rebuilds catalog + usage from the cache
-  dt find <words...>                       search the catalog (prefix kind: pg: pgfn: es: kafka: consul: svc:)
+  dt find <words...>                       search the catalog (prefix kind: pg: pgfn: es: kafka: consul: svc: api: site:)
   dt usage <schema.table|schema.fn>        who uses it: services, functions, triggers, views, FKs
   dt usage <name> --uses                   what a function / view / service uses
   dt describe <schema.table|schema.fn>     definition + usages

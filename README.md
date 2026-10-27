@@ -32,7 +32,7 @@ curl -fsSL https://raw.githubusercontent.com/merv-gh/dev-tool/main/install.sh | 
 
 | Option | Default | |
 | --- | --- | --- |
-| `--home DIR` | `~/dt` | config and data: `config.json`, `.env`, `notes.json`, `plugins/`, `cache/`, `repos/`, `passports/` |
+| `--home DIR` | `~/dt` | config and data: `config.json`, `.env`, `notes.json`, `plugins/`, `scripts/`, `cache/`, `repos/`, `passports/` |
 | `--tools-only` | off | only the dt tool server, for an Open WebUI or MCP client you already run |
 | `--dir DIR` | `~/.dev-tool` | where the code goes |
 | `--ref REF`, `--no-start` | `main` | branch or tag; install without starting |
@@ -41,27 +41,29 @@ Run it again to update. The config folder is never overwritten. After the first 
 
 Day to day:
 ```bash
-~/.dev-tool/run.sh --home ~/dt up -d --build      # start or update (add --tools-only for just dt)
+~/.dev-tool/run.sh --home ~/dt up -d      # start or update (add --tools-only for just dt)
 ~/.dev-tool/run.sh --home ~/dt logs -f dt
 ~/.dev-tool/run.sh --home ~/dt down
 ```
 
 ### What runs
+Nothing is built: dt runs the bundled `dist/dt.js` (code and its one dependency, checked in) in the stock `node:22-bookworm` image, with `dist/` mounted read-only. Updating is `git pull` plus a restart. Pick another image with `DT_NODE_IMAGE` (it needs `git` for passports).
+
 `COMPOSE_PROFILES` in `.env` picks the optional parts (all three by default; `--tools-only` turns them off):
 
 | Service | Profile | What |
 | --- | --- | --- |
 | `dt` | always | the tool server: OpenAPI `/openapi.json`, MCP `/mcp`, result pages, `/admin` |
 | `webui` + `setup` | `webui` | Open WebUI, with the agent prompt and tools set on every model |
-| `browser` | `browser` | Playwright MCP: open pages, click, type, screenshot. Logins come from `browser.sites` |
+| `browser` | `browser` | Playwright MCP: open pages, click, type, screenshot. Logins come from `browser.sites`. dt also drives it for saved scripts and route discovery |
 | `graph` | `graph` | [code-review-graph](https://pypi.org/project/code-review-graph/) over the fetched repos |
 
 ### Without Docker
 ```bash
-npm ci
-DT_HOME=~/dt node cli.js sync      # index the first env
-DT_HOME=~/dt node cli.js serve     # http://127.0.0.1:4000 (add --lan to listen on all interfaces)
+DT_HOME=~/dt node dist/dt.js sync      # index the first env (Node 22+, nothing to install)
+DT_HOME=~/dt node dist/dt.js serve     # http://127.0.0.1:4000 (add --lan to listen on all interfaces)
 ```
+From the sources instead: `npm ci`, then `node cli.js …`. After changing them, `npm run build` rebuilds `dist/` (a test fails while it is stale).
 
 ## Plug it in
 
@@ -105,7 +107,8 @@ Two files in the config folder:
   "bitbucket": { "url": "https://bitbucket.example.com", "token": "${BITBUCKET_TOKEN}" },
   "passports": { "internalGroups": ["com.example.libs"] },
   "tools": { "disable": ["confluence"], "plugins": [], "custom": [] },
-  "browser": { "sites": { "crm": { "url": "https://crm.dev.example.com/login", "secrets": ["CRM_USER", "CRM_PASSWORD"] } } },
+  "browser": { "sites": { "crm": { "url": "https://crm.dev.example.com/login", "secrets": ["CRM_USER", "CRM_PASSWORD"],
+                               "links": { "order": "/orders/<orderId>", "customer": { "path": "/customers/<id>", "description": "profile, orders, tickets" } } } } },
   "server": { "publicUrl": "http://127.0.0.1:4000", "apiKey": "${DT_API_KEY}" }
 }
 ```
@@ -113,6 +116,8 @@ Two files in the config folder:
 Saving `config.json` (on `/admin`, or in an editor) applies it without a restart. Each `logs.fields` entry maps a field name, with ECS names as the defaults.
 
 **Browser logins.** List the secret names under `browser.sites`, with their values in `.env`. dt writes only those names and values to `cache/browser.env`, and only the browser container mounts that file. The model types the name (`CRM_PASSWORD`), Playwright fills in the value, and it shows up as `<secret>CRM_PASSWORD</secret>` in everything returned.
+
+**Site map.** `links` under a site are short direct URLs (relative to the site URL, or absolute), with `<param>` placeholders. The model gets them from `browser_sites` and `find "site:"`, and opens `/orders/<orderId>` straight away instead of clicking through menus; `site_url` fills in the params.
 
 **Coming from the older layout** (`envs.json` + `.env.<env>` + `.env.personal` + `.env.browser`)? It still works. `node cli.js migrate-config` writes `config.json` + `.env` from it, with per-env secrets prefixed (`DEV_DATABASE_URL_ORDERS`) and plain values inlined; check both files, then delete the old ones.
 
@@ -124,6 +129,7 @@ Saving `config.json` (on `/admin`, or in an editor) applies it without a restart
 | `DT_PUBLIC_URL` | `server.publicUrl` | Base URL of result links and embeds, as the user's browser sees it |
 | `DT_TOOLS` | `tools.enable`/`disable` | Override as a list, e.g. `all,-confluence,-browser` |
 | `DT_RATE_PER_SEC` | `server.ratePerSec` = 1 | Live requests per second per system and env; `0` turns it off |
+| `DT_BROWSER_MCP` | `browser.mcp` (compose: `http://browser:8931/mcp`) | Playwright MCP that dt drives for scripts and route discovery |
 | `COMPOSE_PROFILES`, `DT_BIND`, `DT_PORT`, `WEBUI_PORT`, `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` | | compose settings |
 
 ## Add tools at runtime
@@ -204,6 +210,34 @@ svc order-service SHOP/order-service@a1b2c3d4e5: consumes payment_results; produ
 
 All of this is regex-level analysis of SQL text and code, with evidence for every finding. Dynamic SQL built at runtime is not seen.
 
+## Saved scripts
+
+Repeatable actions, saved as JSON in `scripts/` of the config folder; folders are collections (`scripts/orders/support/refund-check.json` is `orders/support/refund-check`). The agent saves one with `script_save` after doing a task by hand, finds it with `script_list`, and runs it with `script_run`; people edit and run them on `/admin`.
+
+```json
+{
+  "description": "Open an order in the back office and check its payment",
+  "params": { "orderId": { "required": true }, "env": { "default": "dev" } },
+  "steps": [
+    { "tool": "pg_query", "args": { "env": "{{env}}", "sql": "select status from sales.orders where id = {{orderId}}" }, "as": "order" },
+    { "script": "crm/login" },
+    { "open": "crm.order" },
+    { "browser": "snapshot", "as": "page" },
+    { "browser": "click", "args": { "element": "Payments tab", "ref": "e12" }, "optional": true }
+  ]
+}
+```
+
+A step is a dt tool, another script (nested up to 5 deep), a site link to open (`<orderId>` comes from the params), any Playwright MCP tool (`click`, `type`, `snapshot`, …), or a `wait`. `{{name}}` inserts a param or an earlier result (`{{order.rows.0.status}}`), `{{link:crm.order}}` a link URL. Browser steps run in dt's own browser session, separate from the chat's.
+
+## API routes
+
+`api_routes` lists each service's HTTP routes from two sides:
+- **from code**: the passports' Spring mappings, with the handler and file:line;
+- **from the wire**: requests seen in the browser, with ids folded to `<id>`, how often, the status codes and the query keys.
+
+The wire side fills up by itself: every script with browser steps records what the pages called, `routes_discover` opens a site link (after an optional login script) just to record it, and in the chat the model passes `browser_network_requests` output to `routes_learn`. Observed routes are matched to the code endpoint that serves them, even behind a gateway prefix, so `GET /api/orders/<id>` on the back office is attributed to `order-service` `OrderController.getOrder`. Routes are also in `find` (`api:`). They are kept in `cache/routes.json`.
+
 ## Admin (`/admin`)
 
 | Tab | What |
@@ -211,6 +245,8 @@ All of this is regex-level analysis of SQL text and code, with evidence for ever
 | **Index** | Every source per env: configured or not, last sync, size, time taken, last error, and a refresh button for each database, ES, Kafka, Consul, the whole env, or just the index |
 | **Explore** | Search the catalog; open a table or function to see its columns or arguments, constraints, triggers, body, "used by" and "uses"; attach a note |
 | **Passports** | Build one for a service (optionally mapping it to a repo), rebuild one or all |
+| **Scripts** | Saved scripts by collection: view, edit, run with params (each step's result), delete |
+| **API & sites** | API routes from code and from the browser, filtered as you type; the site map |
 | **Jobs** | Every refresh with a live log. A refresh that is already running is joined, not started twice |
 | **Config** | Edit `config.json` (validated, applied at once, previous version kept as `config.json.bak`). Shows integrations, every tool with its origin, plugin hashes, load errors; reload tools or update plugins |
 
@@ -229,7 +265,9 @@ Secrets (`.env`) are never shown or edited there.
 | bitbucket | `bitbucket_repos`, `bitbucket_files`, `bitbucket_file`, `bitbucket_prs`, `bitbucket_pr`, `bitbucket_my_prs`, `repo_fetch` |
 | confluence | `confluence_search`, `confluence_page` |
 | passport | `passport`, `passports`, `who_uses` |
-| browser | `browser_sites` (plus the Playwright MCP tools when the `browser` profile runs) |
+| browser | `browser_sites`, `site_url` (plus the Playwright MCP tools when the `browser` profile runs) |
+| api | `api_routes`, `routes_learn`, `routes_discover` |
+| scripts | `script_list`, `script_get`, `script_save`, `script_run` |
 | custom, plugin | yours: from `tools.custom` and `tools.plugins` |
 
 Results shaped like tables return a preview plus a `view` link to the full result (`/view/<id>`), which Open WebUI embeds in the chat.
@@ -247,6 +285,7 @@ Every picture comes from the bundled demo, a fake environment with real Postgres
 | ![logs](docs/screenshots/logs.png) **Logs** · timeline by level, facets, lines | ![trace](docs/screenshots/trace.png) **Trace** · one request across services |
 | ![pull request](docs/screenshots/pull-request.png) **Pull request** · files, diff, comments | ![dashboard](docs/screenshots/dashboard.png) **Dashboard** · health, ES, consumer lag |
 | ![health](docs/screenshots/health.png) **health** · every Consul service in one call | ![kafka](docs/screenshots/kafka-last.png) **kafka_last** · latest messages |
+| ![admin: scripts](docs/screenshots/admin-scripts.png) **Scripts** · a saved script run step by step, with the browser | ![admin: api](docs/screenshots/admin-api.png) **API & sites** · routes from code and from the browser, the site map |
 | ![dark: explore](docs/screenshots/admin-explore-table-dark.png) Dark mode | ![dark: passport](docs/screenshots/passport-dark.png) Dark mode |
 
 ## Safety
@@ -260,13 +299,15 @@ Every picture comes from the bundled demo, a fake environment with real Postgres
 npm test                                                     # node:test, no network
 docker run -d --name dt-pg -e POSTGRES_PASSWORD=pw -p 127.0.0.1:55432:5432 postgres:16-alpine
 DT_TEST_PG_URL=postgres://postgres:pw@127.0.0.1:55432/postgres npm test   # also against a real Postgres
-sh demo/start.sh                                             # the demo on http://127.0.0.1:4800/admin
+sh demo/start.sh                                             # the demo on http://127.0.0.1:4800/admin (DEMO_BROWSER=1: with a browser)
+npm run build                                                # rebuild dist/ after changing the sources
 ```
 
 **Layout:**
 - `lib/` holds the sources (`pg`, `es`, `kafka`, `consul`, `logs`, `atlassian`, `git`).
 - The index lives in `lib/` too: `catalog`, `pgindex`, `indexer`, `jobs`, `notes`.
-- Also in `lib/`: `passport/`, `config` and `migrate`, `tools` (the registry, custom tools and plugins), `browser`, `admin` and `webui`.
+- Also in `lib/`: `passport/`, `config` and `migrate`, `tools` (the registry, custom tools and plugins), `browser` and `browser-mcp` (dt's Playwright client), `scripts`, `routes`, `admin` and `webui`.
+- `build.js` bundles everything into `dist/` (esbuild), which compose runs.
 - `server.js` and `web/` are the HTTP side, and `cli.js` is the CLI.
 
 Notes for coding agents are in [AGENTS.md](AGENTS.md).
