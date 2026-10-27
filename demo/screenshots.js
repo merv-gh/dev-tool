@@ -27,9 +27,11 @@ const tool = async (name, args) => {
     ['admin-passports', `${BASE}/admin#passports`],
     ['admin-jobs', `${BASE}/admin#jobs`, async (p) => { await p.waitForSelector('#jobs tr[data-job]'); await p.click('#jobs tr[data-job]'); await p.waitForSelector('.joblog'); }],
     ['admin-scripts', `${BASE}/admin#scripts`, async (p) => {
-      await p.click('[data-script="shop/support/order-check"]'); await p.waitForFunction(() => document.getElementById('scDef').value);
-      await p.fill('#scParams', '{"orderId": 1042}'); await p.click('#scRun'); await p.waitForSelector('#scOut table', { timeout: 60000 });
+      for (const f of ['shop', 'shop/support']) { await p.click(`[data-folder="${f}"] > .tr`); }
+      await p.click('[data-sid="shop/support/order-check"] > .tr'); await p.waitForSelector('#pmBody .step');
+      await p.fill('[data-run="orderId"]', '1042'); await p.click('#pmRun'); await p.waitForSelector('#pmOut table', { timeout: 60000 });
     }],
+    ['admin-sites', `${BASE}/admin#sites`, async (p) => { await p.click('[data-site="shop"] .tr'); await p.waitForSelector('#stLinks tr'); }],
     ['admin-api', `${BASE}/admin#api`, async (p) => { await p.waitForSelector('#routes tr td'); }],
     ['admin-config', `${BASE}/admin#config`, async (p) => { await p.waitForSelector('#toolGroups tr'); }],
     ['pg-usage', (await tool('pg_usage', { env, name: 'sales.orders' })).view],
@@ -56,7 +58,7 @@ const tool = async (name, args) => {
       await p.waitForTimeout(400);
       const h = Math.ceil(await p.evaluate(() => Math.max(...[...document.querySelectorAll('td, th, button, p, h1, h2, pre, svg, .chip, .tile, .line, textarea, .empty')].filter(e => e.offsetParent !== null).map(e => e.getBoundingClientRect().bottom + scrollY)))) + 16;
       const file = path.join(OUT, `${name}${scheme === 'dark' ? '-dark' : ''}.png`);
-      await p.screenshot({ path: file, fullPage: true, clip: { x: 0, y: 0, width: 1280, height: Math.min(h, /^admin-(explore|config|scripts)/.test(name) ? 2000 : 1300) } });
+      await p.screenshot({ path: file, fullPage: true, clip: { x: 0, y: 0, width: 1280, height: Math.min(h, /^admin-(explore|config|scripts)/.test(name) ? 2200 : 1300) } });
       console.log(path.relative(process.cwd(), file));
       await p.close();
     }

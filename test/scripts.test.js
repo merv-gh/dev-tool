@@ -185,10 +185,47 @@ test('routes_learn from pasted network text; routes_discover opens a link', asyn
   assert.ok(Object.values(routes).some(x => x.sources.includes('discover:shop.order')));
 });
 
-test('scripts: remove deletes the file and empty collections', () => {
+test('scripts: collections are folders: create, move, rename, copy, delete', () => {
   const S = require('../lib/scripts');
+  S.mkdir('ops/empty');
+  assert.ok(S.list().collections.some(c => c.collection === 'ops/empty' && c.scripts === 0), 'empty collections are listed');
   S.remove('shop/common/sites');
-  assert.ok(!fs.existsSync(path.join(home, 'scripts', 'shop', 'common')));
-  assert.ok(fs.existsSync(path.join(home, 'scripts', 'shop', 'order-check.json')));
+  assert.ok(fs.existsSync(path.join(home, 'scripts', 'shop', 'common')), 'deleting a script keeps its collection');
   assert.throws(() => S.remove('shop/common/sites'), /no script/);
+  assert.equal(S.move('shop/order-check', 'ops/empty/order-check').kind, 'script');
+  assert.equal(S.get('ops/empty/order-check').steps.length, 5);
+  assert.equal(S.move('ops/empty', 'ops/support').kind, 'collection');
+  assert.ok(S.get('ops/support/order-check'));
+  assert.throws(() => S.move('ops', 'ops/support/inner'), /into itself/);
+  S.copy('ops/support/order-check', 'ops/support/order-check-2');
+  assert.throws(() => S.copy('ops/support/order-check', 'ops/support/order-check-2'), /already exists/);
+  assert.throws(() => S.move('ops/support/order-check', 'ops/support/order-check-2'), /already exists/);
+  assert.deepEqual(S.removeFolder('ops'), { collection: 'ops', deleted: true, scripts: 2 });
+  assert.ok(!S.list().scripts.some(s => s.id.startsWith('ops/')));
+  assert.throws(() => S.mkdir('../x'), /bad script id/);
+});
+
+test('admin: sites are edited one at a time in config.json', async () => {
+  const admin = require('../lib/admin');
+  const before = admin.sites();
+  assert.equal(before.editable, true);
+  assert.deepEqual(before.sites[0].secrets, [{ name: 'SHOP_PASSWORD', set: true }]);
+  assert.equal(before.sites[0].links.find(l => l.link === 'search').description, 'find anything');
+  await assert.rejects(admin.saveSite('', { name: 'bad name', url: 'http://x' }), /site name/);
+  await assert.rejects(admin.saveSite('', { name: 'crm', url: 'ftp://x' }), /url must start/);
+  await assert.rejects(admin.saveSite('', { name: 'crm', url: 'http://x', secrets: ['lower'] }), /\.env name/);
+  await assert.rejects(admin.saveSite('', { name: 'shop', url: 'http://x' }), /already exists/);
+  const r = await admin.saveSite('', { name: 'crm', url: '${CRM_URL:-http://crm.local}', secrets: [{ name: 'CRM_PASSWORD' }], links: [{ link: 'customer', path: '/c/<id>', description: 'one' }, { link: '', path: '' }] });
+  assert.match(r.note, /Restart the browser container/);
+  const crm = require('../lib/config').getBrowser().sites.find(s => s.site === 'crm');
+  assert.equal(crm.links[0].url, 'http://crm.local/c/<id>');
+  const raw = JSON.parse(fs.readFileSync(path.join(home, 'config.json'), 'utf8'));
+  assert.equal(raw.browser.sites.crm.url, '${CRM_URL:-http://crm.local}', 'references stay references');
+  assert.equal(raw.browser.mcp, `${shop}/mcp`, 'the rest of config.json is kept');
+  assert.ok((await require('../lib/tools').call('find', { q: 'site: crm.customer', env: 'dev' })).some(l => l.startsWith('site crm.customer http://crm.local/c/<id>')), 'find sees the saved site at once');
+  await admin.saveSite('crm', { name: 'backoffice', url: 'http://bo.local', links: [{ link: 'home', path: '/' }] });
+  assert.deepEqual(Object.keys(JSON.parse(fs.readFileSync(path.join(home, 'config.json'), 'utf8')).browser.sites), ['shop', 'backoffice'], 'renamed in place');
+  await admin.saveSite('backoffice', null);
+  assert.deepEqual(admin.sites().sites.map(s => s.name), ['shop']);
+  await assert.rejects(admin.saveSite('nope', null), /no site/);
 });

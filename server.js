@@ -203,6 +203,22 @@ const routes = [
   ['POST', '/api/admin/script/delete', true, async (req, res) => {
     try { send(res, 200, require('./lib/scripts').remove((await readJsonBody(req)).id)); } catch (e) { send(res, 400, { error: e.message }); }
   }],
+  ['POST', '/api/admin/scripts/folder', true, async (req, res) => {
+    try { send(res, 200, require('./lib/scripts').mkdir((await readJsonBody(req)).path)); } catch (e) { send(res, 400, { error: e.message }); }
+  }],
+  ['POST', '/api/admin/scripts/folder/delete', true, async (req, res) => {
+    try { send(res, 200, require('./lib/scripts').removeFolder((await readJsonBody(req)).path)); } catch (e) { send(res, 400, { error: e.message }); }
+  }],
+  ['POST', '/api/admin/scripts/move', true, async (req, res) => {
+    try { const b = await readJsonBody(req); send(res, 200, require('./lib/scripts').move(b.from, b.to)); } catch (e) { send(res, 400, { error: e.message }); }
+  }],
+  ['POST', '/api/admin/scripts/copy', true, async (req, res) => {
+    try { const b = await readJsonBody(req); send(res, 200, require('./lib/scripts').copy(b.from, b.to)); } catch (e) { send(res, 400, { error: e.message }); }
+  }],
+  ['GET', '/api/admin/sites', true, (req, res) => send(res, 200, admin.sites())],
+  ['POST', '/api/admin/sites', true, async (req, res) => {
+    try { const b = await readJsonBody(req); send(res, 200, await admin.saveSite(b.was || '', b.site === undefined ? null : b.site)); } catch (e) { send(res, 400, { error: e.message }); }
+  }],
   ['GET', '/api/admin/routes', true, (req, res, url) => send(res, 200, {
     routes: require('./lib/routes').list({ q: url.searchParams.get('q') || '', service: url.searchParams.get('service') || '' }),
     sites: require('./lib/config').getBrowser().sites.map(({ secrets, ...s }) => ({ ...s, secrets: secrets.length })),

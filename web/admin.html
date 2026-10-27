@@ -49,6 +49,48 @@
   .form input { min-width: 180px; }
   .hint { font-size: 12px; color: var(--muted); margin: 6px 0; }
   #jobs tr.on td { background: var(--accent-soft); }
+  /* collections / sites: sidebar tree + editor, Postman style */
+  .pm { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 14px; align-items: start; }
+  @media (max-width: 900px) { .pm { grid-template-columns: 1fr; } }
+  .pm-side { padding: 0 0 8px; position: sticky; top: 8px; max-height: calc(100vh - 24px); display: flex; flex-direction: column; }
+  .pm-head { display: flex; align-items: center; gap: 6px; padding: 10px 10px 6px; }
+  .pm-side > .filter { margin: 0 10px 6px; width: auto; }
+  .pm-tree { overflow: auto; flex: 1; min-height: 60px; padding: 2px 0 8px; }
+  .pm-tree.drop-on, .tn.drop-on > .tr { outline: 2px dashed var(--accent); outline-offset: -2px; }
+  .tr { display: flex; align-items: center; gap: 6px; padding: 4px 8px; cursor: pointer; font-size: 13px; border-radius: 4px; margin: 0 4px; user-select: none; }
+  .tr:hover { background: var(--soft); } .tr.on { background: var(--accent-soft); }
+  .tr .tw { width: 12px; color: var(--muted); font-size: 10px; flex: none; text-align: center; }
+  .tr .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tr .cnt { color: var(--muted); font-size: 11px; }
+  .tr .acts { display: none; gap: 2px; } .tr:hover .acts, .tr.on .acts { display: flex; }
+  .tr .acts button, button.icon { border: 0; background: none; padding: 1px 5px; font-size: 12px; color: var(--muted); border-radius: 4px; }
+  .tr .acts button:hover, button.icon:hover { background: var(--line); color: var(--fg); }
+  .badge-k { font: 700 9px/1 ui-sans-serif, system-ui, sans-serif; padding: 3px 4px; border-radius: 3px; min-width: 30px; text-align: center; letter-spacing: .02em; flex: none; }
+  .badge-k.tool { background: var(--good-bg); color: var(--good); } .badge-k.web { background: var(--accent-soft); color: var(--accent); } .badge-k.mix { background: var(--warn-bg); color: var(--warn); }
+  .pm-main { padding: 14px 16px; min-height: 300px; }
+  .crumb { color: var(--muted); font-size: 12px; margin-bottom: 2px; }
+  .titlebar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .titlebar input.title { font-size: 17px; font-weight: 600; border: 1px solid transparent; background: none; padding: 3px 6px; flex: 1; min-width: 160px; color: var(--fg); }
+  .titlebar input.title:hover, .titlebar input.title:focus { border-color: var(--line); background: var(--panel); }
+  .dirty { color: var(--warn); font-size: 12px; }
+  .subtabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin: 10px 0; }
+  .subtabs button { border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; padding: 5px 10px; color: var(--muted); font-size: 13px; }
+  .subtabs button.on { color: var(--fg); border-bottom-color: var(--accent); }
+  .step { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; background: var(--panel); }
+  .step .sh { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .step .no { font-weight: 700; color: var(--muted); width: 20px; }
+  .step select, .step input { font-size: 12px; }
+  .step .target { flex: 1; min-width: 180px; font-family: ui-monospace, Menlo, monospace; }
+  .step textarea { margin-top: 6px; font-size: 12px; }
+  .step label { font-size: 12px; color: var(--muted); display: inline-flex; gap: 4px; align-items: center; }
+  .grid-form { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 8px 12px; align-items: center; margin: 10px 0; }
+  .grid-form label { color: var(--muted); font-size: 12px; }
+  table.edit td { padding: 3px 4px; vertical-align: middle; } table.edit input { width: 100%; font-size: 12px; }
+  .secret { display: inline-flex; gap: 4px; align-items: center; font-family: ui-monospace, Menlo, monospace; font-size: 12px; padding: 2px 4px 2px 8px; border-radius: 10px; background: var(--soft); margin: 2px 4px 2px 0; }
+  .secret.missing { background: var(--warn-bg); color: var(--warn); }
+  .secret button { border: 0; background: none; padding: 0 3px; color: inherit; }
+  .runbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 10px; background: var(--soft); border-radius: 6px; margin-top: 12px; }
+  .runbar input { min-width: 140px; }
   details summary { cursor: pointer; color: var(--muted); font-size: 12px; margin: 8px 0; }
 </style>
 </head>
@@ -69,7 +111,8 @@
     <button data-tab="explore">Explore</button>
     <button data-tab="passports">Passports<span class="n" id="nPassports"></span></button>
     <button data-tab="scripts">Scripts<span class="n" id="nScripts"></span></button>
-    <button data-tab="api">API &amp; sites</button>
+    <button data-tab="sites">Sites<span class="n" id="nSites"></span></button>
+    <button data-tab="api">API routes</button>
     <button data-tab="jobs">Jobs<span class="n" id="nJobs"></span></button>
     <button data-tab="config">Config</button>
   </nav>
@@ -109,15 +152,28 @@
   </section>
 
   <section id="tab-scripts" hidden>
-    <p class="hint">Repeatable actions, saved by you or the agent (script_save) as JSON in <code>scripts/</code>; folders are collections. Steps call dt tools, other scripts, site links (<code>{"open": "site.link"}</code>) or browser tools; <code>{{name}}</code> inserts a param or an earlier step's result.</p>
-    <div class="grid2">
-      <div class="card lines" id="scriptList"><div class="empty">No scripts yet.</div></div>
-      <div class="card detail">
-        <div class="row" style="margin-bottom:6px"><input id="scId" placeholder="collection/name" style="flex:1;min-width:200px"><button id="scNew" class="small">New</button></div>
-        <textarea id="scDef" rows="16" spellcheck="false"></textarea>
-        <div class="row" style="margin:8px 0"><button class="primary" id="scSave">Save</button><button id="scDelete">Delete</button><span class="spacer"></span><input id="scParams" placeholder='params, e.g. {"orderId": "123"}' style="min-width:220px"><button id="scRun">Run</button></div>
-        <div id="scOut"></div>
+    <div class="pm">
+      <aside class="pm-side card">
+        <div class="pm-head"><b>Collections</b><span class="spacer"></span>
+          <button class="icon" id="pmNewFolder" title="New collection">+&#x1F4C1;</button><button class="icon" id="pmNewScript" title="New script">+ Script</button></div>
+        <input id="pmFilter" class="filter" placeholder="Filter scripts">
+        <div id="pmTree" class="pm-tree" data-drop=""></div>
+        <p class="hint" style="padding:0 10px">Drag scripts and collections to move them. Saved as JSON in <code>scripts/</code>, by you or the agent (script_save).</p>
+      </aside>
+      <div class="pm-main card" id="pmMain">
+        <div class="empty">Open a script on the left, or create one with <b>+ Script</b>.</div>
       </div>
+    </div>
+  </section>
+
+  <section id="tab-sites" hidden>
+    <p class="hint">Sites the browser tools work with (<code>browser.sites</code> in config.json). <b>Links</b> are the site map: short direct URLs the model opens instead of clicking through menus, with <code>&lt;param&gt;</code> parts filled per call. Secret <i>names</i> live here, their values in <code>.env</code>.</p>
+    <div class="pm">
+      <aside class="pm-side card">
+        <div class="pm-head"><b>Sites</b><span class="spacer"></span><button class="icon" id="stNew">+ Site</button></div>
+        <div id="stList" class="pm-tree"></div>
+      </aside>
+      <div class="pm-main card" id="stMain"><div class="empty">Pick a site, or add one.</div></div>
     </div>
   </section>
 
@@ -126,9 +182,6 @@
     <p class="hint">Endpoints from code (passports) merged with routes seen in the browser (saved scripts, routes_discover, or routes_learn from the chat). Ids show as <code>&lt;id&gt;</code>.</p>
     <div class="row" style="margin-bottom:8px"><input id="rtQ" class="filter" placeholder="path, service, handler, host…" style="width:360px"></div>
     <div class="card scroll"><table><thead><tr><th>Service</th><th>Method</th><th>Path</th><th>Host / site</th><th class="num">Seen</th><th>Status</th><th>Handler</th><th>Source</th></tr></thead><tbody id="routes"></tbody></table></div>
-    <h2>Site map</h2>
-    <p class="hint">browser.sites.*.links in config.json: short direct URLs the model opens instead of clicking through menus; <code>&lt;param&gt;</code> parts are filled per call.</p>
-    <div class="card scroll"><table><thead><tr><th>Site</th><th>Link</th><th>URL</th><th>Description</th><th></th></tr></thead><tbody id="sitemap"></tbody></table></div>
   </section>
 
   <section id="tab-jobs" hidden>
@@ -155,6 +208,7 @@
   </section>
 </div>
 <script src="/static/ui.js"></script>
+<script src="/static/admin-scripts.js"></script>
 <script>
 let S = null, tab = 'index', selectedJob = null, timer = null;
 const api = async (p, body) => {
@@ -286,6 +340,7 @@ async function refresh() {
     $('env').innerHTML = S.envs.map(e => `<option ${e.env === cur ? 'selected' : ''}>${esc(e.env)}</option>`).join('');
     $('version').textContent = `v${S.version}`;
     $('authInfo').textContent = S.auth.apiKey ? 'API key' : S.auth.trustNetwork ? 'trusted network' : 'local only';
+    $('nScripts').textContent = S.config.scripts || ''; $('nSites').textContent = S.config.browserSites.length || '';
     renderSources(); renderPassports(); renderJobs(); renderConfig();
   } catch (e) { toast(e.message); }
   clearTimeout(timer);
@@ -381,42 +436,13 @@ function bindNote() {
   });
 }
 
-// ── scripts ──
-const SCRIPT_TEMPLATE = { description: 'What it does and when to use it', params: { env: { default: 'dev' } }, steps: [{ tool: 'overview', args: { env: '{{env}}' }, as: 'overview' }] };
-async function loadScripts(select) {
-  const r = await api('/api/admin/scripts');
-  $('nScripts').textContent = r.scripts.length || '';
-  let last = null;
-  $('scriptList').innerHTML = r.scripts.length ? r.scripts.map(x => {
-    const col = x.id.includes('/') ? x.id.slice(0, x.id.lastIndexOf('/')) : '';
-    const head = col !== last ? `<div class="line" style="cursor:default;background:var(--soft)"><span class="k">collection</span>${esc(col || '(top)')}</div>` : '';
-    last = col;
-    return `${head}<div class="line ${x.id === select ? 'on' : ''}" data-script="${esc(x.id)}"><b>${esc(x.id.split('/').pop())}</b> <span class="used">${x.error ? esc(x.error) : `${esc(x.description)} · ${x.steps} steps${x.params.length ? ` · ${esc(x.params.join(', '))}` : ''}${x.browser ? ' · browser' : ''}`}</span></div>`;
-  }).join('') : '<div class="empty">No scripts yet. Write one on the right, or ask the agent to save what it just did.</div>';
-}
-async function openScript(id) {
-  try {
-    const { id: _, savedAt, ...def } = await api(`/api/admin/script?id=${encodeURIComponent(id)}`);
-    $('scId').value = id; $('scDef').value = JSON.stringify(def, null, 2); $('scOut').innerHTML = '';
-    document.querySelectorAll('[data-script]').forEach(x => x.classList.toggle('on', x.dataset.script === id));
-  } catch (e) { toast(e.message); }
-}
-const scriptDef = () => { try { return JSON.parse($('scDef').value); } catch (e) { throw new Error(`script JSON: ${e.message}`); } };
-function renderRun(r) {
-  $('scOut').innerHTML = `<div class="row" style="margin:6px 0"><span class="state ${r.ok ? 'done' : 'failed'}">${r.ok ? 'ok' : 'failed'}</span>${r.error ? `<span class="err-text">${esc(r.error)}</span>` : ''}${r.routes ? `<span class="muted">routes: ${esc(r.routes.error || `${r.routes.api} api requests, ${r.routes.added} new`)}</span>` : ''}</div>
-    <table><thead><tr><th>#</th><th>Step</th><th class="num">Took</th><th>Result</th></tr></thead><tbody>${r.steps.map(x => `<tr><td>${esc(x.script === r.script ? String(x.step) : `${x.script} ${x.step}`)}</td><td class="mono">${esc(x.do)}</td><td class="num">${dur(x.ms)}</td><td class="det">${x.ok === false ? `<span class="err-text">${esc(x.error)}</span>` : `<pre class="code" style="max-height:160px">${esc(typeof x.result === 'string' ? x.result : JSON.stringify(x.result, null, 2))}</pre>`}</td></tr>`).join('')}</tbody></table>`;
-}
-
-// ── API routes + site map ──
+// ── API routes ──
 let rtTimer;
 async function loadRoutes() {
   const r = await api(`/api/admin/routes?q=${encodeURIComponent($('rtQ').value.trim())}`);
   $('rtCount').textContent = `${r.routes.length}`;
   $('routes').innerHTML = r.routes.length ? r.routes.slice(0, 500).map(x => `<tr><td>${esc(x.service || '')}</td><td class="mono">${esc(x.method)}</td><td class="mono">${esc(x.path)}${x.query ? `<span class="muted">?${esc(x.query)}</span>` : ''}</td><td class="mono">${esc(x.site || x.host || '')}</td><td class="num">${x.seen || ''}</td><td class="mono">${esc(x.statuses)}</td><td class="where">${esc(x.handler)}${x.where ? `<br>${esc(x.where)}` : ''}</td><td class="det">${esc(x.source)}</td></tr>`).join('')
     : '<tr><td colspan="8" class="empty">No routes yet: build passports, run a script with browser steps, or ask the agent to discover a page\'s routes.</td></tr>';
-  const links = r.sites.flatMap(s => [{ site: s.site, link: '', url: s.url, description: s.description || `start page${s.secrets ? ` · ${s.secrets} secrets` : ''}` }, ...s.links.map(l => ({ site: s.site, ...l }))]);
-  $('sitemap').innerHTML = links.length ? links.map(l => `<tr><td>${esc(l.site)}</td><td class="mono">${esc(l.link || '—')}</td><td class="mono">${esc(l.url)}</td><td class="det">${esc(l.description || '')}</td><td>${l.params && l.params.length ? '' : `<a href="${esc(l.url)}" target="_blank" rel="noopener">open</a>`}</td></tr>`).join('')
-    : '<tr><td colspan="5" class="empty">No sites. Add browser.sites (with links) in Config.</td></tr>';
 }
 
 function show(t) {
@@ -425,12 +451,13 @@ function show(t) {
   document.querySelectorAll('section[id^=tab-]').forEach(s => s.hidden = s.id !== `tab-${t}`);
   history.replaceState(null, '', `#${t}`);
   if (t === 'config') loadConfig().catch(e => toast(e.message));
-  if (t === 'scripts') loadScripts($('scId').value).catch(e => toast(e.message));
+  if (t === 'scripts') loadScripts().catch(e => toast(e.message));
+  if (t === 'sites') loadSites().catch(e => toast(e.message));
   if (t === 'api') loadRoutes().catch(e => toast(e.message));
 }
 
 document.addEventListener('click', (ev) => {
-  const el = ev.target.closest('[data-refresh],[data-explore],[data-open],[data-job],[data-copy],[data-script],.line,#tabs button');
+  const el = ev.target.closest('[data-refresh],[data-explore],[data-open],[data-job],[data-copy],.line,#tabs button');
   if (!el) return;
   if (el.matches('#tabs button')) return show(el.dataset.tab);
   ev.preventDefault();
@@ -439,8 +466,6 @@ document.addEventListener('click', (ev) => {
   if (el.dataset.open) { show('explore'); return openObject(el.dataset.open); }
   if (el.dataset.job) { showJob(el.dataset.job); document.querySelectorAll('#jobs tr').forEach(r => r.classList.toggle('on', r.dataset.job === el.dataset.job)); return; }
   if (el.dataset.copy) return copy(el.dataset.copy, 'name');
-  if (el.dataset.script) return openScript(el.dataset.script);
-  if (el.closest('#scriptList')) return;
   if (el.classList.contains('line')) {
     document.querySelectorAll('.line.on').forEach(x => x.classList.remove('on')); el.classList.add('on');
     openObject(el.dataset.name);
@@ -459,22 +484,6 @@ $('cfgSave').onclick = async () => {
   catch (e) { $('cfgMsg').innerHTML = `<span class="err-text">${esc(e.message)}</span>`; }
 };
 $('cfgReset').onclick = () => loadConfig();
-$('scNew').onclick = () => { $('scId').value = ''; $('scDef').value = JSON.stringify(SCRIPT_TEMPLATE, null, 2); $('scOut').innerHTML = ''; $('scId').focus(); };
-$('scSave').onclick = async () => {
-  try { const r = await api('/api/admin/script', { id: $('scId').value.trim(), script: scriptDef() }); toast(r.replaced ? 'Saved' : 'Created'); loadScripts(r.id); } catch (e) { toast(e.message); }
-};
-$('scDelete').onclick = async () => {
-  const id = $('scId').value.trim();
-  if (!id || !confirm(`Delete script ${id}?`)) return;
-  try { await api('/api/admin/script/delete', { id }); toast('Deleted'); $('scId').value = ''; $('scDef').value = ''; loadScripts(); } catch (e) { toast(e.message); }
-};
-$('scRun').onclick = async () => {
-  let params = {};
-  try { params = $('scParams').value.trim() ? JSON.parse($('scParams').value) : {}; } catch (e) { return toast(`params JSON: ${e.message}`); }
-  $('scRun').disabled = true; $('scOut').innerHTML = '<div class="muted">Running…</div>';
-  try { renderRun(await api('/api/admin/script/run', { id: $('scId').value.trim(), params })); } catch (e) { $('scOut').innerHTML = `<div class="err-text">${esc(e.message)}</div>`; }
-  $('scRun').disabled = false;
-};
 $('rtQ').addEventListener('input', () => { clearTimeout(rtTimer); rtTimer = setTimeout(() => loadRoutes().catch(e => toast(e.message)), 250); });
 const toolsReload = async (update) => {
   try { const r = await api('/api/admin/tools/reload', { update }); toast(`${r.tools} tools${r.errors.length ? `, ${r.errors.length} errors` : ''}`); refresh(); } catch (e) { toast(e.message); }

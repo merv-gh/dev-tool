@@ -212,7 +212,7 @@ All of this is regex-level analysis of SQL text and code, with evidence for ever
 
 ## Saved scripts
 
-Repeatable actions, saved as JSON in `scripts/` of the config folder; folders are collections (`scripts/orders/support/refund-check.json` is `orders/support/refund-check`). The agent saves one with `script_save` after doing a task by hand, finds it with `script_list`, and runs it with `script_run`; people edit and run them on `/admin`.
+Repeatable actions, saved as JSON in `scripts/` of the config folder; folders are collections (`scripts/orders/support/refund-check.json` is `orders/support/refund-check`). The agent saves one with `script_save` after doing a task by hand, finds it with `script_list`, and runs it with `script_run`; people organize, edit and run them on `/admin` (**Scripts**).
 
 ```json
 {
@@ -245,8 +245,9 @@ The wire side fills up by itself: every script with browser steps records what t
 | **Index** | Every source per env: configured or not, last sync, size, time taken, last error, and a refresh button for each database, ES, Kafka, Consul, the whole env, or just the index |
 | **Explore** | Search the catalog; open a table or function to see its columns or arguments, constraints, triggers, body, "used by" and "uses"; attach a note |
 | **Passports** | Build one for a service (optionally mapping it to a repo), rebuild one or all |
-| **Scripts** | Saved scripts by collection: view, edit, run with params (each step's result), delete |
-| **API & sites** | API routes from code and from the browser, filtered as you type; the site map |
+| **Scripts** | Collections as nested folders, Postman style: create, rename inline, drag to move, duplicate, delete. Each script has a step editor (kind, target with suggestions, args, "save as", optional, reorder), params, a JSON view, and Run with a field per param showing each step's result. Ctrl/⌘+S saves |
+| **Sites** | Edit `browser.sites` one site at a time: start URL (`${VAR}` allowed), description, login secret names (marked when `.env` has no value), and the links with a live preview of the URL each opens |
+| **API routes** | API routes from code and from the browser, filtered as you type |
 | **Jobs** | Every refresh with a live log. A refresh that is already running is joined, not started twice |
 | **Config** | Edit `config.json` (validated, applied at once, previous version kept as `config.json.bak`). Shows integrations, every tool with its origin, plugin hashes, load errors; reload tools or update plugins |
 
@@ -285,7 +286,8 @@ Every picture comes from the bundled demo, a fake environment with real Postgres
 | ![logs](docs/screenshots/logs.png) **Logs** · timeline by level, facets, lines | ![trace](docs/screenshots/trace.png) **Trace** · one request across services |
 | ![pull request](docs/screenshots/pull-request.png) **Pull request** · files, diff, comments | ![dashboard](docs/screenshots/dashboard.png) **Dashboard** · health, ES, consumer lag |
 | ![health](docs/screenshots/health.png) **health** · every Consul service in one call | ![kafka](docs/screenshots/kafka-last.png) **kafka_last** · latest messages |
-| ![admin: scripts](docs/screenshots/admin-scripts.png) **Scripts** · a saved script run step by step, with the browser | ![admin: api](docs/screenshots/admin-api.png) **API & sites** · routes from code and from the browser, the site map |
+| ![admin: scripts](docs/screenshots/admin-scripts.png) **Scripts** · collections, the step editor, a run | ![admin: sites](docs/screenshots/admin-sites.png) **Sites** · a site, its login secrets and link map |
+| ![admin: api](docs/screenshots/admin-api.png) **API routes** · from code and from the browser | |
 | ![dark: explore](docs/screenshots/admin-explore-table-dark.png) Dark mode | ![dark: passport](docs/screenshots/passport-dark.png) Dark mode |
 
 ## Safety

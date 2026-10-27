@@ -5475,7 +5475,7 @@ var require_scripts = __commonJS({
         throw new Error(`script ${id}: ${e.message}`);
       }
     }
-    function walk(dir, prefix = "") {
+    function walk(dir, prefix = "", folders = []) {
       let ents;
       try {
         ents = fs2.readdirSync(dir, { withFileTypes: true });
@@ -5484,13 +5484,17 @@ var require_scripts = __commonJS({
       }
       return ents.sort((a, b) => a.name.localeCompare(b.name)).flatMap((e) => {
         if (e.name.startsWith(".") || e.name.startsWith("_")) return [];
-        if (e.isDirectory()) return walk(path2.join(dir, e.name), `${prefix}${e.name}/`);
+        if (e.isDirectory()) {
+          folders.push(`${prefix}${e.name}`);
+          return walk(path2.join(dir, e.name), `${prefix}${e.name}/`, folders);
+        }
         return e.name.endsWith(".json") ? [`${prefix}${e.name.slice(0, -5)}`] : [];
       });
     }
     function list(collection = "") {
       const pre = collection ? collection.replace(/\/+$/, "") + "/" : "";
-      const ids = walk(DIR).filter((id) => !pre || id.startsWith(pre));
+      const folders = [];
+      const ids = walk(DIR, "", folders).filter((id) => !pre || id.startsWith(pre));
       const scripts = ids.map((id) => {
         try {
           const s = get(id);
@@ -5499,15 +5503,46 @@ var require_scripts = __commonJS({
           return { id, error: e.message };
         }
       });
-      const collections = {};
-      for (const id of ids) {
-        const parts = id.split("/").slice(0, -1);
-        for (let i = 1; i <= parts.length; i++) {
-          const c = parts.slice(0, i).join("/");
-          collections[c] = (collections[c] || 0) + 1;
-        }
-      }
-      return { collection: collection || "", collections: Object.entries(collections).map(([c, n]) => ({ collection: c, scripts: n })), scripts };
+      const collections = folders.filter((c) => !pre || `${c}/`.startsWith(pre)).map((c) => ({ collection: c, scripts: ids.filter((id) => id.startsWith(`${c}/`)).length }));
+      return { collection: collection || "", collections, scripts };
+    }
+    function folder(p) {
+      const id = String(p || "").replace(/^\/+|\/+$/g, "");
+      file(id || "x");
+      return { id, dir: path2.join(DIR, id) };
+    }
+    function mkdir(p) {
+      const f = folder(p);
+      if (!f.id) throw new Error("collection name required");
+      fs2.mkdirSync(f.dir, { recursive: true });
+      return { collection: f.id, created: true };
+    }
+    function move(from, to) {
+      const src = String(from || "").replace(/\/+$/, ""), dst = String(to || "").replace(/\/+$/, "");
+      if (!src || !dst) throw new Error("from and to required");
+      if (src === dst) return { from: src, to: dst, moved: false };
+      const isScript = fs2.existsSync(file(src));
+      const a = isScript ? file(src) : folder(src).dir;
+      const b = isScript ? file(dst) : folder(dst).dir;
+      if (!isScript && !fs2.existsSync(a)) throw new Error(`no script or collection "${src}"`);
+      if (!isScript && (dst + "/").startsWith(src + "/")) throw new Error("cannot move a collection into itself");
+      if (fs2.existsSync(b)) throw new Error(`"${dst}" already exists`);
+      fs2.mkdirSync(path2.dirname(b), { recursive: true });
+      fs2.renameSync(a, b);
+      return { from: src, to: dst, kind: isScript ? "script" : "collection", moved: true };
+    }
+    function removeFolder(p) {
+      const f = folder(p);
+      if (!f.id || !fs2.existsSync(f.dir)) throw new Error(`no collection "${p}"`);
+      const n = walk(f.dir).length;
+      fs2.rmSync(f.dir, { recursive: true });
+      return { collection: f.id, deleted: true, scripts: n };
+    }
+    function copy(from, to) {
+      const s = get(from);
+      const { id, savedAt, ...def } = s;
+      if (fs2.existsSync(file(to))) throw new Error(`"${to}" already exists`);
+      return save(to, def);
     }
     var KINDS = ["tool", "script", "browser", "open", "wait"];
     function validate(def) {
@@ -5535,13 +5570,6 @@ var require_scripts = __commonJS({
       const f = file(id);
       if (!fs2.existsSync(f)) throw new Error(`no script "${id}"`);
       fs2.unlinkSync(f);
-      for (let d = path2.dirname(f); d.startsWith(DIR + path2.sep); d = path2.dirname(d)) {
-        try {
-          fs2.rmdirSync(d);
-        } catch {
-          break;
-        }
-      }
       return { id, deleted: true };
     }
     var dig = (o, keys) => keys.reduce((v, k) => v == null ? void 0 : v[k], o);
@@ -5643,7 +5671,7 @@ var require_scripts = __commonJS({
       const results = Object.fromEntries(Object.entries(scope).filter(([k]) => !keys.has(k)).map(([k, v]) => [k, brief(v, 6e3)]));
       return { script: def.id, ok: !error, ...error ? { error } : {}, steps: st.log, results, ...routes ? { routes } : {} };
     }
-    module2.exports = { list, get, save, remove, run, fill, validate, DIR };
+    module2.exports = { list, get, save, remove, run, fill, validate, mkdir, move, copy, removeFolder, DIR };
   }
 });
 
@@ -6542,7 +6570,7 @@ var require_admin = __commonJS({
       return {
         version: require_package().version,
         auth: { apiKey: !!config.getServer().apiKey, trustNetwork: config.getServer().trustNetwork },
-        config: { dir: config.HOME, format: config.load().format, notes: Object.keys(require_notes().all()).length, browserSites: config.getBrowser().sites.map((s) => s.site) },
+        config: { dir: config.HOME, format: config.load().format, notes: Object.keys(require_notes().all()).length, browserSites: config.getBrowser().sites.map((s) => s.site), scripts: require_scripts().list().scripts.length },
         integrations: {
           bitbucket: p.bitbucket.url && p.bitbucket.token ? p.bitbucket.url : null,
           confluence: p.confluence.url && p.confluence.token ? p.confluence.url : null,
@@ -6601,7 +6629,67 @@ var require_admin = __commonJS({
       fs2.writeFileSync(file, JSON.stringify(parsed, null, 2) + "\n");
       config.reload();
       const tools = await require_tools().reload();
+      for (const e of config.envNames()) try {
+        require_catalog().build(e);
+      } catch {
+      }
       return { saved: file, envs: config.envNames(), tools, note: "Applied. Open WebUI shows new tools when it next loads the tool list; restart the browser container after changing browser sites." };
+    }
+    function sites() {
+      const s = config.load();
+      const raw = (s.raw.browser || {}).sites || {};
+      const resolved = Object.fromEntries(config.getBrowser().sites.map((x) => [x.site, x]));
+      const set = new Set(Object.keys(config.getBrowser().secretValues()));
+      return {
+        editable: s.format === "config.json",
+        sites: Object.entries(raw).map(([name, x]) => ({
+          name,
+          url: x.url || "",
+          description: x.description || "",
+          secrets: [].concat(x.secrets || []).map((k) => ({ name: k, set: set.has(k) })),
+          links: Object.entries(x.links || {}).map(([link, l]) => typeof l === "string" ? { link, path: l, description: "" } : { link, path: l.path || l.url || "", description: l.description || "" }),
+          resolved: resolved[name] ? { url: resolved[name].url, links: resolved[name].links } : null
+        }))
+      };
+    }
+    function siteDef(def) {
+      if (!def || typeof def !== "object") throw new Error("site must be an object");
+      const name = String(def.name || "").trim();
+      if (!/^[a-z0-9][\w-]*$/i.test(name)) throw new Error("site name: letters, digits, _ and -");
+      const url = String(def.url || "").trim();
+      if (!/^(https?:\/\/|\$\{)/.test(url)) throw new Error(`${name}: url must start with http(s):// or a \${VAR}`);
+      const secrets = [].concat(def.secrets || []).map((x) => String(typeof x === "object" ? x.name : x).trim()).filter(Boolean);
+      for (const k of secrets) if (!/^[A-Z_][A-Z0-9_]*$/.test(k)) throw new Error(`${name}: secret "${k}" must be an .env name like CRM_PASSWORD`);
+      const links = {};
+      for (const l of [].concat(def.links || [])) {
+        const ln = String(l.link || "").trim(), lp = String(l.path || "").trim();
+        if (!ln && !lp) continue;
+        if (!/^[a-z0-9][\w-]*$/i.test(ln)) throw new Error(`${name}: link name "${ln}": letters, digits, _ and -`);
+        if (!lp) throw new Error(`${name}.${ln}: path required`);
+        if (links[ln]) throw new Error(`${name}: link "${ln}" twice`);
+        links[ln] = l.description ? { path: lp, description: String(l.description).trim() } : lp;
+      }
+      return { name, body: { url, ...def.description ? { description: String(def.description).trim() } : {}, secrets, ...Object.keys(links).length ? { links } : {} } };
+    }
+    async function saveSite(was, def) {
+      if (config.load().format !== "config.json") throw new Error('sites are edited in config.json; run "dt migrate-config" first');
+      const raw = JSON.parse(fs2.readFileSync(config.CONFIG_FILE, "utf8"));
+      raw.browser = raw.browser || {};
+      const old = raw.browser.sites || {};
+      const next = {};
+      const d = def ? siteDef(def) : null;
+      if (d && d.name !== was && old[d.name]) throw new Error(`site ${d.name} already exists`);
+      for (const [k, v] of Object.entries(old)) {
+        if (k === was) {
+          if (d) next[d.name] = d.body;
+        } else next[k] = v;
+      }
+      if (d && !(was in old)) next[d.name] = d.body;
+      if (!d && !(was in old)) throw new Error(`no site "${was}"`);
+      raw.browser.sites = next;
+      const secretsChanged = JSON.stringify((old[was] || {}).secrets || []) !== JSON.stringify(d ? d.body.secrets : []);
+      const r = await writeConfig(JSON.stringify(raw));
+      return { site: d ? d.name : null, deleted: !d, ...r, note: secretsChanged ? "Saved. Restart the browser container to give it the changed secrets: ./run.sh restart browser" : "Saved." };
     }
     function setNote(name, note) {
       const r = require_notes().set(name, note);
@@ -6625,7 +6713,7 @@ var require_admin = __commonJS({
       writeJson(f, m);
       return { service, repo: m[service] || null };
     }
-    module2.exports = { status, object, readConfig, writeConfig, setNote, setRepo };
+    module2.exports = { status, object, readConfig, writeConfig, sites, saveSite, setNote, setRepo };
   }
 });
 
@@ -6870,6 +6958,45 @@ var require_server = __commonJS({
       ["POST", "/api/admin/script/delete", true, async (req, res) => {
         try {
           send(res, 200, require_scripts().remove((await readJsonBody(req)).id));
+        } catch (e) {
+          send(res, 400, { error: e.message });
+        }
+      }],
+      ["POST", "/api/admin/scripts/folder", true, async (req, res) => {
+        try {
+          send(res, 200, require_scripts().mkdir((await readJsonBody(req)).path));
+        } catch (e) {
+          send(res, 400, { error: e.message });
+        }
+      }],
+      ["POST", "/api/admin/scripts/folder/delete", true, async (req, res) => {
+        try {
+          send(res, 200, require_scripts().removeFolder((await readJsonBody(req)).path));
+        } catch (e) {
+          send(res, 400, { error: e.message });
+        }
+      }],
+      ["POST", "/api/admin/scripts/move", true, async (req, res) => {
+        try {
+          const b = await readJsonBody(req);
+          send(res, 200, require_scripts().move(b.from, b.to));
+        } catch (e) {
+          send(res, 400, { error: e.message });
+        }
+      }],
+      ["POST", "/api/admin/scripts/copy", true, async (req, res) => {
+        try {
+          const b = await readJsonBody(req);
+          send(res, 200, require_scripts().copy(b.from, b.to));
+        } catch (e) {
+          send(res, 400, { error: e.message });
+        }
+      }],
+      ["GET", "/api/admin/sites", true, (req, res) => send(res, 200, admin.sites())],
+      ["POST", "/api/admin/sites", true, async (req, res) => {
+        try {
+          const b = await readJsonBody(req);
+          send(res, 200, await admin.saveSite(b.was || "", b.site === void 0 ? null : b.site));
         } catch (e) {
           send(res, 400, { error: e.message });
         }
