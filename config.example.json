@@ -27,7 +27,7 @@
 
   "bitbucket": { "url": "https://bitbucket.example.com", "token": "${BITBUCKET_TOKEN}" },
   "confluence": { "url": "https://confluence.example.com", "user": "${CONFLUENCE_USER}", "token": "${CONFLUENCE_TOKEN}" },
-  "passports": { "internalGroups": ["com.example.libs"] },
+  "passports": { "internalGroups": ["com.example.libs"], "libraryRepos": { "example-starter-*": "LIB/example-starters" } },
   "graph": { "url": "${GRAPH_URL:-http://graph:8000}" },
 
   "tools": {

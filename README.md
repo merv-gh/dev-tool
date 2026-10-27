@@ -422,6 +422,10 @@ Every picture comes from the bundled demo, a fake environment with real Postgres
 
 **Indexing a big database is cancelled (`canceling statement due to statement timeout`).** Each catalog query may take `timeouts.pgIndexMs` (2 minutes by default); raise it in `config.json` (or `DT_PG_INDEX_TIMEOUT_MS`). In the chat, `catalog_sync` answers "running" with a job id after ~50 s instead of making the client time out; asking again with that id returns the result.
 
+**Kibana (or another link) opened from an embedded view fails: `Failed to read the 'sessionStorage' property … document is sandboxed and lacks the 'allow-same-origin' flag`.** Open WebUI embeds tool results in a sandboxed iframe, and a tab opened from it inherits that sandbox. The link itself is fine. Open it from the chat answer instead (the agent puts Kibana links there) or with **Copy Kibana link** on the logs view. If you want links in embeds to work directly, turn on Open WebUI's *Settings → Interface → iframe Sandbox Allow Same Origin* (as admin, also the default for everyone under *Admin → Settings → Interface*). That is your call: it lets embedded pages use their own origin (dt's, which differs from Open WebUI's), so they can keep storage and open working tabs. dt's custom views stay sandboxed either way (`/show/…` sends its own CSP sandbox).
+
+**A library of a passport has `error: no Bitbucket repo for …`.** dt looks for the library's repo by its artifactId, shorter forms of it (`acme-starter-kafka` → `acme-starter`, for a module of a bigger repo), the name without suffixes like `-starter`/`-core`, and the end of its groupId; in the repo it reads only the module that declares the artifact. When the repo is named otherwise, map it: `"passports": { "libraryRepos": { "acme-starter-*": "LIB/platform-starters" } }` (artifactId or `groupId:artifactId` globs). Gradle versions may come from `gradle.properties`, `ext { }` / `ext.x`, `def`/`val`, `extra[...]`, and maps like `$versions.kafka`.
+
 ## Development
 ```bash
 npm test                                                     # node:test, no network

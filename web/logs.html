@@ -35,6 +35,7 @@
     <span class="muted" id="meta"></span>
     <span class="spacer"></span>
     <a id="kibana" target="_blank" rel="noopener" style="display:none">Kibana ↗</a>
+    <button id="kibanaCopy" class="small only-embed" style="display:none" title="In a chat, a tab opened from here may be sandboxed and Kibana will not load: copy the link and open it yourself">Copy Kibana link</button>
     <a id="openfull" target="_blank" rel="noopener" class="only-embed">Open full view ↗</a>
   </div>
   <div class="card chart" id="chartbox"><div class="tip" id="tip"></div><svg id="chart" preserveAspectRatio="none"></svg></div>
@@ -174,7 +175,10 @@ loadResult().then(d => {
   $('kind').textContent = d.kind === 'trace' ? 'trace' : 'logs';
   $('title').textContent = d.kind === 'trace' ? (d.traceId || d.query) : (d.query || '*');
   $('meta').textContent = [d.env, d.range && `${fmtDate(d.range.from)} → ${fmtDate(d.range.to)}`, `${d.matched ?? d.total} matched`, d.interval && `bucket ${d.interval}`, d.ms !== undefined && `${d.ms} ms`].filter(Boolean).join(' · ');
-  if (d.kibana) { $('kibana').href = d.kibana; $('kibana').style.display = ''; }
+  if (d.kibana) {
+    $('kibana').href = d.kibana; $('kibana').style.display = '';
+    $('kibanaCopy').style.display = ''; $('kibanaCopy').onclick = () => copy(d.kibana, 'Kibana link');
+  }
   $('openfull').href = location.pathname;
   if (d.kind === 'trace') $('chartbox').style.display = 'none'; else chart();
   lanes(); facets(); render();

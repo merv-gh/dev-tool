@@ -264,6 +264,8 @@ var require_config = __commonJS({
         llm: { baseUrl: trimUrl(v("LLM_BASE_URL")) || "", key: v("LLM_API_KEY"), model: v("LLM_MODEL") },
         // Maven/Gradle group prefixes of your own libraries, for passports
         internalGroups: list(pp.internalGroups),
+        // artifactId (glob) or groupId:artifactId (glob) -> "PROJECT/repo", for libraries that are modules of a bigger repo
+        libraryRepos: pp.libraryRepos && typeof pp.libraryRepos === "object" ? pp.libraryRepos : {},
         graphUrl: trimUrl(g.url)
       };
     }
@@ -3577,14 +3579,83 @@ var require_extract = __commonJS({
       }
       return { self: self2, parent, deps, props };
     }
+    function gradleVars(text) {
+      const out2 = {};
+      const t = text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'])\/\/[^\n]*/g, "$1");
+      const str = (v) => {
+        const m = String(v).trim().match(/^(["'])((?:(?!\1).)*)\1/);
+        return m ? m[2] : null;
+      };
+      const put = (k, raw) => {
+        const v = String(raw).trim();
+        const map = v.match(/^\[([\s\S]*)\]$/) || v.match(/^mapOf\(([\s\S]*)\)$/);
+        if (map) {
+          for (const m of map[1].matchAll(/["']?([\w.-]+)["']?\s*(?::|to)\s*(["'][^"']*["'])/g)) out2[`${k}.${m[1]}`] = str(m[2]);
+          return;
+        }
+        const s = str(v);
+        if (s !== null) out2[k] = s;
+        else if (/^[\d.]+$/.test(v)) out2[k] = v;
+        else if (/^[\w.]+$/.test(v)) out2[k] = `\${${v}}`;
+      };
+      for (const m of t.matchAll(/\b(?:project\.)?ext\s*\{/g)) {
+        let depth = 1, i = m.index + m[0].length;
+        const start = i;
+        for (; i < t.length && depth; i++) {
+          if (t[i] === "{") depth++;
+          else if (t[i] === "}") depth--;
+        }
+        const body = t.slice(start, i - 1);
+        for (const a of body.matchAll(/^\s*(?:set\s*\(\s*["'](\w+)["']\s*,\s*([^)\n]+)\)|(\w+)\s*=\s*(\[[\s\S]*?\]|[^\n]+))/gm)) put(a[1] || a[3], (a[2] || a[4]).replace(/[;,]\s*$/, ""));
+      }
+      const line = [
+        /\b(?:project\.)?ext\.(\w+)\s*=\s*(\[[\s\S]*?\]|[^\n;]+)/g,
+        /\bext\s*\[\s*["'](\w+)["']\s*\]\s*=\s*([^\n;]+)/g,
+        /\b(?:project\.)?ext\.set\s*\(\s*["'](\w+)["']\s*,\s*([^)\n]+)\)/g,
+        /\bextra\s*\[\s*["'](\w+)["']\s*\]\s*=\s*([^\n;]+)/g,
+        /\bextra\.set\s*\(\s*["'](\w+)["']\s*,\s*([^)\n]+)\)/g,
+        /\bval\s+(\w+)(?:\s*:\s*String)?\s+by\s+extra\s*\(\s*([^)\n]+)\)/g,
+        /^\s*(?:def|val|var)\s+(\w+)(?:\s*:\s*String)?\s*=\s*(mapOf\([\s\S]*?\)|\[[\s\S]*?\]|[^\n;]+)/gm
+      ];
+      for (const re of line) for (const m of t.matchAll(re)) put(m[1], m[2]);
+      return out2;
+    }
+    function gradleResolve(v, props) {
+      if (v == null) return v;
+      let out2 = String(v);
+      for (let i = 0; i < 5 && /\$/.test(out2); i++) {
+        const next = out2.replace(/\$\{([\w.]+)\}|\$([A-Za-z_]\w*(?:\.\w+)*)/g, (a, k1, k2) => {
+          const k = k1 || k2;
+          if (props[k] !== void 0) return props[k];
+          const parts = k.split(".");
+          for (let n = parts.length - 1; n > 0; n--) {
+            const head = parts.slice(0, n).join(".");
+            if (props[head] !== void 0) return props[head] + "." + parts.slice(n).join(".");
+          }
+          return a;
+        });
+        if (next === out2) break;
+        out2 = next;
+      }
+      return out2;
+    }
     function parseGradle(text, props = {}) {
       const deps = [];
-      const res = (v) => v && v.replace(/\$\{?(\w+)\}?/g, (a, k) => props[k] ?? a);
-      const re = /\b(implementation|api|compile|compileOnly|runtimeOnly|annotationProcessor|kapt|testImplementation)\s*\(?\s*(?:platform\s*\(\s*)?["']([^:"'\s]+):([^:"'\s]+)(?::([^"'\s]+))?["']/g;
+      const all = { ...props, ...gradleVars(text) };
+      const res = (v) => v ? gradleResolve(v, all) : v;
+      const conf = "implementation|api|compile|compileOnly|runtimeOnly|annotationProcessor|kapt|testImplementation";
+      const re = new RegExp(`\\b(${conf})\\s*\\(?\\s*(?:(?:platform|enforcedPlatform)\\s*\\(\\s*)?["']([^:"'\\s]+):([^:"'\\s]+)(?::([^"'\\s]+))?["']`, "g");
       for (const m of text.matchAll(re)) if (m[1] !== "testImplementation") deps.push({ groupId: m[2], artifactId: m[3], version: res(m[4]) || null, scope: m[1] });
+      const mapRe = new RegExp(`\\b(${conf})\\s*\\(?\\s*group\\s*[:=]\\s*["']([^"']+)["']\\s*,\\s*name\\s*[:=]\\s*["']([^"']+)["'](?:\\s*,\\s*version\\s*[:=]\\s*(["'][^"']*["']|[\\w.]+))?`, "g");
+      for (const m of text.matchAll(mapRe)) {
+        if (m[1] === "testImplementation") continue;
+        const v = m[4] ? /^["']/.test(m[4]) ? m[4].slice(1, -1) : `\${${m[4]}}` : null;
+        deps.push({ groupId: m[2], artifactId: m[3], version: res(v) || null, scope: m[1] });
+      }
       const group = text.match(/^\s*group\s*=\s*["']([^"']+)["']/m);
       const boot = text.match(/id\s*\(?\s*["']org\.springframework\.boot["']\s*\)?\s*version\s*["']([^"']+)["']/);
-      return { deps, group: group && group[1], bootVersion: boot && boot[1] };
+      for (const d of deps) if (d.version && /\$/.test(d.version)) d.unresolvedVersion = true;
+      return { deps, group: group && group[1], bootVersion: boot && boot[1], vars: all };
     }
     function extract(root, { internalGroups = [] } = {}) {
       const started = Date.now();
@@ -3749,6 +3820,8 @@ var require_extract = __commonJS({
       let self2 = null, bootVersion = null;
       const gradleProps = {};
       for (const f of files) if (/gradle\.properties$/.test(f.path)) Object.assign(gradleProps, parseProperties(f.text));
+      const scripts = files.filter((f) => /(build|settings)\.gradle(\.kts)?$/.test(f.path)).sort((a, b) => a.path.split("/").length - b.path.split("/").length);
+      for (const f of scripts) for (const [k, v] of Object.entries(gradleVars(f.text))) if (gradleProps[k] === void 0) gradleProps[k] = v;
       const modules = /* @__PURE__ */ new Set();
       for (const f of files) {
         if (path2.basename(f.path) === "pom.xml") {
@@ -3759,7 +3832,7 @@ var require_extract = __commonJS({
           for (const d of p.deps) deps.push({ ...d, from: f.path });
         } else if (/build\.gradle(\.kts)?$/.test(f.path)) {
           const g = parseGradle(f.text, gradleProps);
-          if (g.group && !self2) self2 = { groupId: g.group, artifactId: path2.basename(root), version: gradleProps.version || null };
+          if (g.group && !self2) self2 = { groupId: g.group, artifactId: path2.basename(root), version: gradleResolve(gradleProps.version, gradleProps) || null };
           bootVersion = bootVersion || g.bootVersion;
           for (const d of g.deps) deps.push({ ...d, from: f.path });
         }
@@ -3797,7 +3870,7 @@ var require_extract = __commonJS({
         stats: { files: files.length, sourceFiles: code.length, ms: Date.now() - started }
       };
     }
-    module2.exports = { extract, parseYaml, parseProperties, parsePom, parseGradle, sqlRefs, sqlCalls, stripComments, annoArgs, methodAfter, stringLiterals, loadConfig, resolver };
+    module2.exports = { extract, parseYaml, parseProperties, parsePom, parseGradle, gradleVars, gradleResolve, sqlRefs, sqlCalls, stripComments, annoArgs, methodAfter, stringLiterals, loadConfig, resolver };
   }
 });
 
@@ -4621,23 +4694,118 @@ var require_passport = __commonJS({
         return true;
       });
     };
-    async function fetchLibrary(dep, git) {
+    var SUFFIXES = /-(spring-boot-starter|boot-starter|starter|autoconfigure|auto-configure|core|api|client|common|commons|lib|library|module|parent|bom)$/;
+    function libraryRepoNames(dep) {
+      const a = dep.artifactId;
+      const names = [a];
+      const parts = a.split("-");
+      for (let n = parts.length - 1; n >= 1; n--) {
+        const x = parts.slice(0, n).join("-");
+        if (x.length >= 3) names.push(x);
+      }
+      let stripped = a;
+      while (SUFFIXES.test(stripped)) {
+        stripped = stripped.replace(SUFFIXES, "");
+        names.push(stripped);
+      }
+      const g = String(dep.groupId || "").split(".");
+      if (g.length >= 3) names.push(g.slice(-1)[0], g.slice(-2).join("-"));
+      return [...new Set(names.filter((x) => x && x.length >= 3))];
+    }
+    function mappedRepo(dep) {
+      const map = getPersonal().libraryRepos || {};
+      const glob = (g) => new RegExp(`^${String(g).split("*").map((x) => x.replace(/[.+?^${}()|[\]\\]/g, "\\$&")).join(".*")}$`);
+      for (const [pat, repo] of Object.entries(map)) {
+        const hit = pat.includes(":") ? glob(pat).test(`${dep.groupId}:${dep.artifactId}`) : glob(pat).test(dep.artifactId);
+        if (hit) {
+          const [project, slug] = String(repo).split("/");
+          if (project && slug) return { project: project.toUpperCase(), repo: slug, via: `passports.libraryRepos "${pat}"` };
+        }
+      }
+      return null;
+    }
+    async function findLibraryRepo(dep, searches) {
+      const mapped = mappedRepo(dep);
+      if (mapped) return mapped;
       const atl = require_atlassian();
-      const found = await bb(() => atl.repos(dep.artifactId));
-      const repo = found.find((r) => r.repo === dep.artifactId) || found.find((r) => r.repo.replace(/[-_]/g, "") === dep.artifactId.replace(/[-_]/g, "")) || (found.length === 1 ? found[0] : null);
-      if (!repo) return { ...dep, error: `no Bitbucket repo named like ${dep.artifactId}`, candidates: found.slice(0, 5).map((r) => `${r.project}/${r.repo}`) };
-      const v = dep.version && !/\$\{/.test(dep.version) ? dep.version : null;
-      const refs = v ? [`v${v}`, v, `${dep.artifactId}-${v}`, `release/${v}`, void 0] : [void 0];
+      const norm = (x) => x.toLowerCase().replace(/[-_.]/g, "");
+      const tried = [];
+      for (const name of libraryRepoNames(dep)) {
+        if (!searches.has(name)) searches.set(name, await bb(() => atl.repos(name)));
+        const found = searches.get(name);
+        tried.push(name);
+        const hit = found.find((r) => r.repo === name) || found.find((r) => norm(r.repo) === norm(name));
+        if (hit) return { project: hit.project, repo: hit.repo, via: name === dep.artifactId ? "same name" : `repo "${hit.repo}" (module of a bigger repo?)` };
+      }
+      const candidates = [...new Set(tried.flatMap((n) => searches.get(n) || []).map((r) => `${r.project}/${r.repo}`))].slice(0, 8);
+      const err = new Error(`no Bitbucket repo for ${dep.artifactId} (tried ${tried.join(", ")})${candidates.length ? `; similar: ${candidates.join(", ")}` : ""}. Map it in config.json: passports.libraryRepos { "${dep.artifactId}": "PROJECT/repo" }`);
+      err.candidates = candidates;
+      throw err;
+    }
+    function findModule(root, artifactId, repoName) {
+      const short = repoName && artifactId.startsWith(`${repoName}-`) ? artifactId.slice(repoName.length + 1) : null;
+      const hits = [];
+      const visit = (dir, depth) => {
+        let ents;
+        try {
+          ents = fs2.readdirSync(dir, { withFileTypes: true });
+        } catch {
+          return;
+        }
+        const names = new Set(ents.map((e) => e.name));
+        const rel = path2.relative(root, dir).split(path2.sep).join("/");
+        if (names.has("pom.xml")) {
+          const self2 = require_extract().parsePom(fs2.readFileSync(path2.join(dir, "pom.xml"), "utf8")).self;
+          if (self2.artifactId === artifactId) hits.push({ dir: rel, score: 3 });
+        }
+        const gradle = ["build.gradle", "build.gradle.kts"].find((n) => names.has(n));
+        if (gradle) {
+          const text = fs2.readFileSync(path2.join(dir, gradle), "utf8");
+          const named = text.match(/archivesBaseName\s*=\s*["']([^"']+)["']|archivesName(?:\.set\()?\s*[=(]?\s*["']([^"']+)["']/);
+          if (named && (named[1] || named[2]) === artifactId) hits.push({ dir: rel, score: 3 });
+          else if (rel && path2.basename(dir) === artifactId) hits.push({ dir: rel, score: 2 });
+          else if (rel && short && path2.basename(dir) === short) hits.push({ dir: rel, score: 1 });
+        }
+        if (depth < 4) {
+          for (const e of ents) if (e.isDirectory() && !e.name.startsWith(".") && !["src", "target", "build", "node_modules", "gradle", "out"].includes(e.name)) visit(path2.join(dir, e.name), depth + 1);
+        }
+      };
+      visit(root, 0);
+      hits.sort((a, b) => b.score - a.score || a.dir.length - b.dir.length);
+      return hits.length ? hits[0].dir : null;
+    }
+    function underModule(x, mod) {
+      if (!mod) return x;
+      if (Array.isArray(x)) return x.map((v) => underModule(v, mod));
+      if (x && typeof x === "object") return Object.fromEntries(Object.entries(x).map(([k, v]) => [k, k === "file" && typeof v === "string" && v !== "config" ? `${mod}/${v}` : underModule(v, mod)]));
+      return x;
+    }
+    async function fetchLibrary(dep, git, searches = /* @__PURE__ */ new Map()) {
+      let repo;
+      try {
+        repo = await findLibraryRepo(dep, searches);
+      } catch (e) {
+        return { ...dep, error: e.message, candidates: e.candidates || [] };
+      }
+      const v = dep.version && !/\$/.test(dep.version) ? dep.version : null;
+      const refs = v ? [`v${v}`, v, `${dep.artifactId}-${v}`, `${repo.repo}-${v}`, `release/${v}`, void 0] : [void 0];
       await limit.take("bitbucket");
       const info = await git.fetchFirst(repo.project, repo.repo, refs);
-      const ex = extract(info.path, { internalGroups: getPersonal().internalGroups });
+      const mod = findModule(info.path, dep.artifactId, repo.repo);
+      const notes = [];
+      if (!mod && repo.repo !== dep.artifactId) notes.push(`no module declaring ${dep.artifactId} found in ${repo.repo}: read the whole repo`);
+      if (dep.version && /\$/.test(dep.version)) notes.push(`version ${dep.version} could not be resolved: used the default branch`);
+      const ex = underModule(extract(mod ? path2.join(info.path, mod) : info.path, { internalGroups: getPersonal().internalGroups }), mod);
       return {
         ...dep,
         repo: `${repo.project}/${repo.repo}`,
+        ...mod ? { module: mod } : {},
+        found: repo.via,
         ref: info.ref,
         sha: info.sha,
         exactVersion: !!v && info.ref !== "HEAD",
-        path: path2.relative(ROOT, info.path),
+        path: path2.relative(ROOT, mod ? path2.join(info.path, mod) : info.path),
+        ...notes.length ? { note: notes.join("; ") } : {},
         endpoints: ex.endpoints,
         feign: ex.feign,
         consumes: ex.kafka.consumes,
@@ -4664,13 +4832,14 @@ var require_passport = __commonJS({
       if (libraries) {
         const queue = [...ex.dependencies.internal];
         const seen = /* @__PURE__ */ new Set();
+        const searches = /* @__PURE__ */ new Map();
         while (queue.length && libs.length < MAX_LIBS) {
           const d = queue.shift();
           const k = `${d.groupId}:${d.artifactId}`;
           if (seen.has(k)) continue;
           seen.add(k);
           try {
-            const lib = await fetchLibrary(d, git);
+            const lib = await fetchLibrary(d, git, searches);
             libs.push(lib);
             for (const sub of lib.internal || []) queue.push({ ...sub, via: d.artifactId });
           } catch (e) {
@@ -4811,7 +4980,7 @@ var require_passport = __commonJS({
       }
       return rows;
     }
-    module2.exports = { build, load, list, whoUses, resolveRepo, deployedSha, diff, markdown, graphBuild, DIR };
+    module2.exports = { build, load, list, whoUses, libraryRepoNames, findModule, resolveRepo, deployedSha, diff, markdown, graphBuild, DIR };
   }
 });
 
@@ -27280,7 +27449,7 @@ var require_tools = __commonJS({
       },
       {
         name: "logs_search",
-        description: "Search application logs (ELK) of an environment: free text / Lucene query, optionally by service and level, over a time window. Shown to the user as a log explorer (timeline by level, facets, log lines); returns counts, top services/levels and a preview. Use for errors, exceptions, request ids.",
+        description: "Search application logs (ELK) of an environment: free text / Lucene query, optionally by service and level, over a time window. Shown to the user as a log explorer (timeline by level, facets, log lines); returns counts, top services/levels and a preview. Use for errors, exceptions, request ids. When there is a kibana link, put it in your answer as a markdown link: links inside the embedded view may open in a sandboxed tab where Kibana does not work.",
         input: {
           env,
           query: str('Lucene/text query, e.g. "NullPointerException" or "order_id:123" (optional)'),
@@ -27308,7 +27477,7 @@ var require_tools = __commonJS({
           const r = await require_logs().trace(a.env, a.trace, { from: a.from || "24h" });
           const { rows, ...meta } = r;
           const view = require_results().save("trace", rows, { env: a.env, query: `trace ${a.trace}`, ...meta, matched: r.total });
-          return { total: r.total, hops: r.hops, preview: rows.slice(0, 10).map(({ source, ...x }) => x), view };
+          return { total: r.total, hops: r.hops, kibana: r.kibana, preview: rows.slice(0, 10).map(({ source, ...x }) => x), view };
         }
       },
       {
