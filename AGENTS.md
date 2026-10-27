@@ -61,6 +61,7 @@ Or use http://127.0.0.1:4000/admin.
 - `lib/pgindex.js`: the usage index.
 - `lib/passport/`: static analysis of repos.
 - `lib/scripts.js`, `lib/browser-mcp.js`, `lib/routes.js`: saved scripts (fuzzy names, scripts/collections as tools, set/transform/http steps), dt's Playwright MCP client, API routes (code + wire).
+- `lib/js.js`: the JS sandbox for js steps and hooks (node --permission child process, empty env).
 - `lib/files.js`: file stores (local, SFTP via ssh2); `lib/calls.js`: the call log (`cache/_calls.jsonl`) and repeated-work patterns.
 - `server.js`: HTTP routes and auth.
 - `web/`: pages (admin, view, dash, logs, pr, passport).

@@ -32,8 +32,11 @@ const api = http.createServer((req, res) => {
 });
 
 let sftp, apiUrl;
+const clientKey = require('crypto').generateKeyPairSync('rsa', { modulusLength: 2048, privateKeyEncoding: { type: 'pkcs1', format: 'pem' }, publicKeyEncoding: { type: 'pkcs1', format: 'pem' } }).privateKey;
+fs.mkdirSync(path.join(home, 'keys'), { recursive: true });
+fs.writeFileSync(path.join(home, 'keys', 'archive'), clientKey);
 test.before(async () => {
-  sftp = await require('./sftp-server').start({ root: sftpRoot });
+  sftp = await require('./sftp-server').start({ root: sftpRoot, clientKey });
   await new Promise(r => api.listen(0, '127.0.0.1', r));
   apiUrl = `http://127.0.0.1:${api.address().port}`;
   fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({
@@ -41,6 +44,9 @@ test.before(async () => {
     files: {
       templates: { type: 'local', path: 'files/templates' },
       partner: { type: 'sftp', host: '127.0.0.1', port: sftp.port, user: 'dt', password: '${PARTNER_PW}', root: '/upload', write: true },
+      archive: { type: 'sftp', host: '127.0.0.1', port: sftp.port, user: 'dt', privateKeyFile: 'keys/archive', hostKey: sftp.hostFingerprint, root: '/upload' },
+      pinned_wrong: { type: 'sftp', host: '127.0.0.1', port: sftp.port, user: 'dt', password: 'pw', hostKey: 'SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' },
+      bad_key: { type: 'sftp', host: '127.0.0.1', port: sftp.port, user: 'dt', privateKeyFile: 'keys/missing' },
     },
     scripts: { http: { allow: [`${apiUrl}/imports`] } },
   }));
@@ -52,7 +58,7 @@ const tools = () => require('../lib/tools');
 
 test('files: local and SFTP stores list, search, read, write, copy; read-only and path checks', async () => {
   const T = tools();
-  assert.deepEqual((await T.call('files_stores', {})).map(s => [s.store, s.type, s.write]), [['templates', 'local', false], ['partner', 'sftp', true]]);
+  assert.deepEqual((await T.call('files_stores', {})).map(s => [s.store, s.type, s.write]).slice(0, 3), [['templates', 'local', false], ['partner', 'sftp', true], ['archive', 'sftp', false]]);
   const l = await T.call('files_list', { store: 'templates', recursive: true });
   assert.deepEqual(l.rows.map(r => r.path), ['orders', 'orders/order-basic.json', 'readme.txt']);
   const s = await T.call('files_search', { store: 'templates', text: 'c-77' });
@@ -70,6 +76,15 @@ test('files: local and SFTP stores list, search, read, write, copy; read-only an
   await T.call('files_copy', { from_store: 'templates', from: 'readme.txt', to_store: 'partner', to: 'probe/readme.txt' });
   assert.deepEqual((await T.call('files_list', { store: 'partner', dir: 'probe' })).rows.map(r => r.path), ['probe/a.txt', 'probe/readme.txt']);
   assert.equal((await T.call('files_search', { store: 'partner', pattern: '*.txt' })).total, 2);
+});
+
+test('files: SFTP login with a key file and a pinned host key; wrong pins and missing keys fail', async () => {
+  const T = tools();
+  const l = await T.call('files_list', { store: 'archive', dir: 'probe' });
+  assert.deepEqual(l.rows.map(r => r.path), ['probe/a.txt', 'probe/readme.txt']);
+  await assert.rejects(T.call('files_write', { store: 'archive', path: 'x.txt', content: 'x' }), /read-only/);
+  await assert.rejects(T.call('files_list', { store: 'pinned_wrong' }), /sftp 127\.0\.0\.1/);
+  await assert.rejects(T.call('files_list', { store: 'bad_key' }), /privateKeyFile keys\/missing: ENOENT/);
 });
 
 test('transform: replacements are consistent per match, JSON paths, generators', () => {

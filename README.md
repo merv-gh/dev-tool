@@ -243,6 +243,27 @@ A step is one of:
 
 `{{name}}` inserts a param or an earlier result (`{{order.rows.0.status}}`), `{{link:crm.order}}` a link URL. Generators: `{{uuid}}`, `{{now}}`, `{{date:YYYYMMDD-HHmmss}}`, `{{rand:6}}` (digits), `{{hex:8}}`. Add `"as": "name"` to keep a result and `"optional": true` to go on after a failure. Browser steps run in dt's own browser session, separate from the chat's.
 
+**JavaScript, Postman/Bruno style.** When the built-in steps are not enough, write a little JS:
+
+| Where | Sees | What it does |
+| --- | --- | --- |
+| `{"js": "…"}` step | `vars`, `result` (previous step) | anything; its return value is the step's result |
+| step `"before"` | `vars`, `args` (the step's input) | change what the step sends (`args.body.requestId = uuid()`), or return new args |
+| step `"capture"` | the result | `{"jobId": "json.id", "sku": "json.items[0].sku"}` copies values into `vars` |
+| step `"after"` | `vars`, `result` | check it (`test('201', () => expect(result.status).toBe(201))`), keep values, or return a new result |
+| script / collection `"vars"`, `"before"`, `"after"` | `vars`, `result` (last step) | defaults and setup for every step; checks at the end. Collections apply to everything below them, outermost first |
+
+Helpers: `uuid()`, `now()`, `date('YYYYMMDD')`, `rand(6)`, `hex(8)`, `log(…)`, `test(name, fn)`, `expect(x).toBe / toEqual / toMatch / toContain / toBeTruthy / toBeGreaterThan / toHaveProperty` (and `.not`), `assert(ok, msg)`. A failing test fails the run; the run shows every test and log line.
+
+```json
+{ "http": "POST {{apiBase}}/imports", "body": { "folder": "/upload/{{folder}}" },
+  "before": "args.body.lines = JSON.parse(vars.order).items.length;",
+  "capture": { "importId": "json.importId" },
+  "after": "test('accepted', () => expect(result.status).toBe(202));\nreturn { importId: result.json.importId };" }
+```
+
+The code runs in a separate node process with Node's permission model on: no file system, no child processes, an empty environment (no secrets), 128 MB, and 5 seconds per piece (`scripts.jsTimeoutMs`). One process serves one run. Turn it off with `"scripts": { "js": false }`. The agent can try a snippet with `js_run` before saving it. [demo/scripts/partner/send-order-js.json](demo/scripts/partner/send-order-js.json) is the upload example with the document rewritten in JS.
+
 **Calling them.** `script_run` takes the id, the name, or a close name (`"send order"` finds `partner/send-order`; an ambiguous name lists the candidates). `"tool": true` (or a tool name) on a script makes it a tool of its own, with its params as arguments. A collection can be one tool too (⚙ on `/admin`, or `script_collection`): its description lists the scripts with their params, and it runs one by name. Both appear in Open WebUI and MCP clients like any other tool, and update when the scripts change.
 
 **The example, end to end** ([demo/scripts/partner/send-order.json](demo/scripts/partner/send-order.json)): find an order template in a local folder, read it, make a new folder name and order id, rewrite the document (the order id everywhere it appears, a new uuid per line item, the customer from a param, the timestamp), upload it to that folder on SFTP, and POST the folder to the partner's import API. It is one call afterwards: `partner {"script": "send order", "params": {"customerId": "C-42"}}`.
@@ -255,11 +276,13 @@ Local folders and SFTP servers, under `files` in `config.json`:
 "files": {
   "templates": { "type": "local", "path": "files/templates" },
   "partner":   { "type": "sftp", "host": "sftp.dev.example.com", "user": "dt", "password": "${PARTNER_SFTP_PASSWORD}",
-                 "root": "/upload", "write": true }
+                 "root": "/upload", "write": true },
+  "archive":   { "type": "sftp", "host": "files.dev.example.com", "user": "dt-reader", "privateKeyFile": "keys/archive_ed25519",
+                 "passphrase": "${ARCHIVE_SFTP_KEY_PASSPHRASE:-}", "hostKey": "SHA256:…", "root": "/exports" }
 }
 ```
 
-Tools: `files_stores`, `files_list` (glob, recursive), `files_search` (by name glob and/or text inside, with the matching line), `files_read`, `files_write`, `files_copy` (between stores). Paths are relative to the store root and cannot leave it. Local paths are relative to the config folder (in Docker, `/dt`). SFTP takes a password or `privateKey` (+ `passphrase`); `hostKey` (`SHA256:…`) pins the server key.
+Tools: `files_stores`, `files_list` (glob, recursive), `files_search` (by name glob and/or text inside, with the matching line), `files_read`, `files_write`, `files_copy` (between stores). Paths are relative to the store root and cannot leave it. Local paths are relative to the config folder (in Docker, `/dt`). SFTP logs in with a `password`, or a key: `privateKeyFile` (a path in the config folder, e.g. `keys/id_ed25519`) or `privateKey` (the key text; `\n` for line breaks), with an optional `passphrase`. `hostKey` (`SHA256:…`, as `ssh-keygen -lf` prints it) pins the server key. [config.example.json](config.example.json) has both kinds.
 
 **Writes are opt-in.** A store is read-only unless it has `"write": true`, and a write never replaces a file unless `overwrite` is set. Script `http` steps only reach URL prefixes listed in `scripts.http.allow`. Everything else in dt stays read-only.
 
@@ -311,7 +334,7 @@ Secrets (`.env`) are never shown or edited there.
 | passport | `passport`, `passports`, `who_uses` |
 | browser | `browser_sites`, `site_url` (plus the Playwright MCP tools when the `browser` profile runs) |
 | api | `api_routes`, `routes_learn`, `routes_discover` |
-| scripts | `script_list`, `script_get`, `script_save`, `script_run`, `script_collection`, plus each script or collection exposed as a tool |
+| scripts | `script_list`, `script_get`, `script_save`, `script_run`, `script_collection`, `js_run`, plus each script or collection exposed as a tool |
 | files | `files_stores`, `files_list`, `files_search`, `files_read`, `files_write`, `files_copy` |
 | history | `call_history`, `call_patterns` |
 | custom, plugin | yours: from `tools.custom` and `tools.plugins` |
@@ -333,10 +356,12 @@ Every picture comes from the bundled demo, a fake environment with real Postgres
 | ![health](docs/screenshots/health.png) **health** · every Consul service in one call | ![kafka](docs/screenshots/kafka-last.png) **kafka_last** · latest messages |
 | ![admin: scripts](docs/screenshots/admin-scripts.png) **Scripts** · collections, the step editor, a run | ![admin: sites](docs/screenshots/admin-sites.png) **Sites** · a site, its login secrets and link map |
 | ![admin: files script](docs/screenshots/admin-script-files.png) **The example** · template → new ids → SFTP → import API, one run | ![admin: history](docs/screenshots/admin-history.png) **History** · repeated work, each a ready script |
+| ![admin: js script](docs/screenshots/admin-script-js.png) **JavaScript** · a js step, before/capture/after hooks, tests and log | |
 | ![admin: api](docs/screenshots/admin-api.png) **API routes** · from code and from the browser | |
 | ![dark: explore](docs/screenshots/admin-explore-table-dark.png) Dark mode | ![dark: passport](docs/screenshots/passport-dark.png) Dark mode |
 
 ## Safety
+- Script JavaScript runs sandboxed (no files, no secrets, time and memory limits); `scripts.js: false` turns it off.
 - Writing is limited to file stores marked `"write": true` (never overwriting unless asked) and script `http` steps to the prefixes in `scripts.http.allow`.
 - Postgres sessions are read-only (`default_transaction_read_only`) with a 60s statement timeout; the other sources are only read.
 - Ports are published on 127.0.0.1 unless you change `DT_BIND`. Set `DT_API_KEY` before exposing dt.

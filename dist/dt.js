@@ -315,7 +315,7 @@ var require_config = __commonJS({
     }
     function getScripts() {
       const c = resolved("scripts");
-      return { httpAllow: [].concat((c.http || {}).allow || []).filter(Boolean).map(String) };
+      return { httpAllow: [].concat((c.http || {}).allow || []).filter(Boolean).map(String), js: c.js !== false, jsTimeoutMs: Number(c.jsTimeoutMs) || 5e3 };
     }
     function getFiles() {
       const c = resolved("files");
@@ -5376,6 +5376,171 @@ var require_logs = __commonJS({
   }
 });
 
+// lib/js.js
+var require_js = __commonJS({
+  "lib/js.js"(exports2, module2) {
+    var { spawn, spawnSync } = require("child_process");
+    var flag;
+    var permissionFlag = () => {
+      if (flag === void 0) {
+        flag = ["--permission", "--experimental-permission"].find((f) => spawnSync(process.execPath, [f, "-e", "0"], { env: {}, stdio: "ignore" }).status === 0) || null;
+      }
+      return flag;
+    };
+    var RUNNER = String.raw`
+const fmt = (v) => (typeof v === 'string' ? v : (() => { try { return JSON.stringify(v); } catch { return String(v); } })());
+const pad = (n, w = 2) => String(n).padStart(w, '0');
+const date = (f = 'YYYY-MM-DD', d = new Date()) => f.replace(/YYYY|MM|DD|HH|mm|ss|SSS/g, (t) => ({ YYYY: d.getFullYear(), MM: pad(d.getMonth() + 1), DD: pad(d.getDate()), HH: pad(d.getHours()), mm: pad(d.getMinutes()), ss: pad(d.getSeconds()), SSS: pad(d.getMilliseconds(), 3) }[t]));
+const rand = (n = 6) => Array.from(crypto.getRandomValues(new Uint8Array(n)), b => b % 10).join('').replace(/^0/, '1');
+const hex = (n = 8) => Array.from(crypto.getRandomValues(new Uint8Array(Math.ceil(n / 2))), b => b.toString(16).padStart(2, '0')).join('').slice(0, n);
+const logs = [], tests = [], pending = [];
+const check = (ok, msg) => { if (!ok) throw new Error(msg); };
+function expect(v) {
+  const m = (neg) => ({
+    toBe: (x) => check((v === x) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to be ' + fmt(x)),
+    toEqual: (x) => check((JSON.stringify(v) === JSON.stringify(x)) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to equal ' + fmt(x)),
+    toMatch: (re) => check(new RegExp(re).test(String(v)) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to match ' + re),
+    toContain: (x) => check((v != null && v.includes(x)) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to contain ' + fmt(x)),
+    toBeTruthy: () => check(!!v !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to be truthy'),
+    toBeGreaterThan: (x) => check((v > x) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to be greater than ' + fmt(x)),
+    toHaveProperty: (k) => check((v != null && k.split('.').reduce((o, p) => (o == null ? undefined : o[p]), v) !== undefined) !== neg, 'expected ' + fmt(v).slice(0, 200) + (neg ? ' not' : '') + ' to have ' + k),
+  });
+  return Object.assign(m(false), { not: m(true) });
+}
+const helpers = {
+  uuid: () => crypto.randomUUID(), now: () => new Date().toISOString(), date, rand, hex,
+  log: (...a) => { logs.push(a.map(fmt).join(' ').slice(0, 2000)); },
+  assert: (ok, msg) => check(ok, msg || 'assertion failed'),
+  expect,
+  test: (name, fn) => {
+    const done = (error) => tests.push(error ? { name, ok: false, error: error.message || String(error) } : { name, ok: true });
+    try { const r = fn(); if (r && typeof r.then === 'function') pending.push(r.then(() => done(), done)); else done(); } catch (e) { done(e); }
+  },
+};
+// one JSON request per line, one JSON answer per line
+let buf = '';
+process.stdin.setEncoding('utf8');
+let queue = Promise.resolve();
+process.stdin.on('data', (c) => {
+  buf += c;
+  let i;
+  while ((i = buf.indexOf('\n')) >= 0) {
+    const line = buf.slice(0, i); buf = buf.slice(i + 1);
+    queue = queue.then(() => handle(line));
+  }
+});
+async function handle(line) {
+  const input = JSON.parse(line);
+  logs.length = 0; tests.length = 0; pending.length = 0;
+  const out = { vars: input.vars, args: input.args, result: input.result, logs, tests };
+  try {
+    const AsyncFunction = (async () => {}).constructor;
+    const fn = new AsyncFunction('vars', 'args', 'result', ...Object.keys(helpers), input.code);
+    const r = await fn(out.vars, out.args, out.result, ...Object.values(helpers));
+    await Promise.all(pending);
+    if (r !== undefined) { out.returned = r; out.hasReturn = true; }
+  } catch (e) { out.error = (e && e.message) || String(e); }
+  let text;
+  try { text = JSON.stringify(out); } catch (e) { text = JSON.stringify({ logs, tests, error: 'result is not JSON: ' + e.message }); }
+  process.stdout.write(text + '\n');
+}
+`;
+    function enabled() {
+      const c = require_config().getScripts();
+      if (c.js === false) throw new Error("JavaScript in scripts is turned off (scripts.js: false in config.json)");
+      return c;
+    }
+    var Session = class {
+      constructor() {
+        this.child = null;
+        this.wait = null;
+      }
+      start() {
+        const pf = permissionFlag();
+        if (!pf) throw new Error(`JavaScript needs Node 20+ with the permission model (this is ${process.version})`);
+        const child = spawn(process.execPath, [pf, "--max-old-space-size=128", "-e", RUNNER], { env: {}, stdio: ["pipe", "pipe", "pipe"] });
+        let out2 = "", err = "";
+        child.stdout.on("data", (d) => {
+          out2 += d;
+          let i;
+          while ((i = out2.indexOf("\n")) >= 0) {
+            const line = out2.slice(0, i);
+            out2 = out2.slice(i + 1);
+            if (this.wait) this.wait.done(line);
+          }
+          if (out2.length > 2e7) this.kill("more than 20 MB of output");
+        });
+        child.stderr.on("data", (d) => {
+          err = (err + d).slice(-4e3);
+        });
+        child.on("close", () => {
+          if (this.child === child) this.child = null;
+          if (this.wait) this.wait.fail(new Error(`js: ${(err.split("\n").find((l) => /Error/.test(l)) || err || "the sandbox stopped").trim().slice(0, 500)}`));
+        });
+        child.stdin.on("error", () => {
+        });
+        this.child = child;
+      }
+      kill(why) {
+        const w = this.wait;
+        this.wait = null;
+        if (this.child) {
+          this.child.kill("SIGKILL");
+          this.child = null;
+        }
+        if (w) w.fail(new Error(`js: ${why}`));
+      }
+      // -> { vars, args, result, returned, hasReturn, logs, tests, error }
+      run(code, { vars = {}, args, result } = {}) {
+        const c = enabled();
+        if (!this.child) this.start();
+        let line;
+        try {
+          line = JSON.stringify({ code: String(code), vars, args, result });
+        } catch (e) {
+          return Promise.reject(new Error(`js: data is not JSON: ${e.message}`));
+        }
+        return new Promise((resolve, reject) => {
+          const t = setTimeout(() => this.kill(`stopped after ${c.jsTimeoutMs}ms`), c.jsTimeoutMs);
+          this.wait = {
+            done: (text) => {
+              clearTimeout(t);
+              this.wait = null;
+              try {
+                resolve(JSON.parse(text));
+              } catch (e) {
+                reject(new Error(`js: bad answer: ${e.message}`));
+              }
+            },
+            fail: (e) => {
+              clearTimeout(t);
+              this.wait = null;
+              reject(e);
+            }
+          };
+          this.child.stdin.write(line + "\n");
+        });
+      }
+      close() {
+        if (this.child) {
+          this.child.stdin.end();
+          this.child.kill();
+          this.child = null;
+        }
+      }
+    };
+    async function run(code, data) {
+      const s = new Session();
+      try {
+        return await s.run(code, data);
+      } finally {
+        s.close();
+      }
+    }
+    module2.exports = { run, Session, permissionFlag };
+  }
+});
+
 // lib/browser-mcp.js
 var require_browser_mcp = __commonJS({
   "lib/browser-mcp.js"(exports2, module2) {
@@ -5545,7 +5710,7 @@ var require_scripts = __commonJS({
       const scripts = ids.map((id) => {
         try {
           const s = get(id);
-          return { id, description: s.description || "", params: Object.keys(s.params || {}), steps: (s.steps || []).length, browser: (s.steps || []).some((x) => x.browser || x.open), tool: s.tool ? toolName(s.tool, id) : null };
+          return { id, description: s.description || "", params: Object.keys(s.params || {}), steps: (s.steps || []).length, browser: (s.steps || []).some((x) => x.browser || x.open), js: !!(s.before || s.after || (s.steps || []).some((x) => x.js !== void 0 || x.before || x.after)), tool: s.tool ? toolName(s.tool, id) : null };
         } catch (e) {
           return { id, error: e.message };
         }
@@ -5595,13 +5760,16 @@ var require_scripts = __commonJS({
         meta = JSON.parse(fs2.readFileSync(path2.join(f.dir, META), "utf8"));
       } catch {
       }
-      return { collection: f.id, description: meta.description || "", tool: meta.tool || false, toolName: meta.tool ? toolName(meta.tool, f.id) : null, scripts: walk(f.dir).map((x) => `${f.id}/${x}`) };
+      return { collection: f.id, description: meta.description || "", tool: meta.tool || false, toolName: meta.tool ? toolName(meta.tool, f.id) : null, vars: meta.vars || {}, before: meta.before || "", after: meta.after || "", scripts: walk(f.dir).map((x) => `${f.id}/${x}`) };
     }
-    function setCollection(p, { description = "", tool = false } = {}) {
+    function setCollection(p, { description = "", tool = false, vars = {}, before = "", after = "" } = {}) {
       const f = folder(p);
       if (!f.id || !fs2.existsSync(f.dir)) throw new Error(`no collection "${p}"`);
       if (tool && !/^[a-z][a-z0-9_]{1,63}$/.test(toolName(tool, f.id))) throw new Error(`tool name "${toolName(tool, f.id)}": lowercase letters, digits and _`);
-      fs2.writeFileSync(path2.join(f.dir, META), JSON.stringify({ description: String(description || "").trim(), tool: tool || false }, null, 2) + "\n");
+      if (vars && (typeof vars !== "object" || Array.isArray(vars))) throw new Error('vars must be { "name": value }');
+      for (const [h, v] of [["before", before], ["after", after]]) if (v && ![].concat(v).every((x) => typeof x === "string")) throw new Error(`${h} must be JavaScript`);
+      const meta = { description: String(description || "").trim(), tool: tool || false, ...vars && Object.keys(vars).length ? { vars } : {}, ...before ? { before } : {}, ...after ? { after } : {} };
+      fs2.writeFileSync(path2.join(f.dir, META), JSON.stringify(meta, null, 2) + "\n");
       return getCollection(f.id);
     }
     var PARAM_TYPES = /* @__PURE__ */ new Set(["string", "integer", "number", "boolean"]);
@@ -5686,7 +5854,7 @@ ${lines.join("\n") || "(empty)"}`,
       if (fs2.existsSync(file(to))) throw new Error(`"${to}" already exists`);
       return save(to, def);
     }
-    var KINDS = ["tool", "script", "browser", "open", "wait", "set", "transform", "http"];
+    var KINDS = ["tool", "script", "browser", "open", "wait", "set", "transform", "http", "js"];
     function validate(def) {
       if (!def || typeof def !== "object") throw new Error("script must be an object");
       if (!def.description) throw new Error("description required (say what it does and when to use it)");
@@ -5699,8 +5867,12 @@ ${lines.join("\n") || "(empty)"}`,
         if (s.set !== void 0 && (!s.set || typeof s.set !== "object" || Array.isArray(s.set))) throw new Error(`step ${i + 1}: set must be { "name": value }`);
         if (s.transform !== void 0 && s.replace !== void 0 && !Array.isArray(s.replace)) throw new Error(`step ${i + 1}: replace must be a list of { find, with }`);
         if (s.http !== void 0 && !/^(GET|POST|PUT|PATCH|DELETE)\s+\S+$/i.test(String(s.http))) throw new Error(`step ${i + 1}: http must be "METHOD url"`);
+        for (const h of ["before", "after", "js"]) if (s[h] !== void 0 && ![].concat(s[h]).every((x) => typeof x === "string")) throw new Error(`step ${i + 1}: ${h} must be JavaScript (a string, or a list of lines)`);
+        if (s.capture !== void 0 && (typeof s.capture !== "object" || Array.isArray(s.capture) || !Object.entries(s.capture).every(([k, v]) => /^[a-z_]\w*$/i.test(k) && typeof v === "string"))) throw new Error(`step ${i + 1}: capture must be { "name": "path.in.result" }`);
       });
       for (const [k, p] of Object.entries(def.params || {})) if (!/^\w+$/.test(k) || p && typeof p !== "object") throw new Error(`param ${k}: use { "description", "default", "required" }`);
+      for (const h of ["before", "after"]) if (def[h] !== void 0 && ![].concat(def[h]).every((x) => typeof x === "string")) throw new Error(`${h} must be JavaScript (a string, or a list of lines)`);
+      if (def.vars !== void 0 && (typeof def.vars !== "object" || Array.isArray(def.vars))) throw new Error('vars must be { "name": value }');
       if (def.tool && typeof def.tool === "string" && !/^[a-z][a-z0-9_]{1,63}$/.test(def.tool)) throw new Error(`tool name "${def.tool}": lowercase letters, digits and _`);
     }
     function save(id, def) {
@@ -5766,52 +5938,125 @@ ${lines.join("\n") || "(empty)"}`,
       return s && s.length > n ? `${s.slice(0, n)} ... [${s.length - n} more chars]` : v;
     };
     var browserTool = (name) => name.startsWith("browser_") ? name : `browser_${name}`;
+    function stepInput(step, scope) {
+      if (step.tool) return fill(step.args || {}, scope);
+      if (step.browser) return fill(step.args || {}, scope);
+      if (step.script) return fill(step.params || step.args || {}, scope);
+      if (step.open) return { url: /^https?:\/\//.test(step.open) ? fill(step.open, scope) : require_config().siteUrl(fill(step.open, scope), scope) };
+      if (step.http) {
+        const [, method, url] = String(step.http).match(/^(\w+)\s+(\S+)$/);
+        return { method: method.toUpperCase(), url: fill(url, scope), headers: fill(step.headers || {}, scope), ...step.body !== void 0 ? { body: fill(step.body, scope) } : {} };
+      }
+      if (step.set) return fill(step.set, scope);
+      if (step.transform !== void 0) return { text: fill(step.transform, scope) };
+      if (step.wait !== void 0) return { wait: fill(step.wait, scope) };
+      return {};
+    }
+    var kindOf = (step) => KINDS.find((k) => step[k] !== void 0);
+    var label = (step) => step.tool ? `tool ${step.tool}` : step.script ? `script ${step.script}` : step.browser ? `browser ${browserTool(step.browser)}` : step.open ? `open ${step.open}` : step.set ? `set ${Object.keys(step.set).join(", ")}` : step.transform !== void 0 ? "transform" : step.http ? `http ${String(step.http).split(/\s+/)[0].toUpperCase()}` : step.js !== void 0 ? "js" : `wait ${step.wait}`;
+    var capturePath = (v, p) => !p || p === "." || p === "$" ? v : dig(v, String(p).replace(/^\$\.?/, "").replace(/\[(\d+)\]/g, ".$1").split(".").filter(Boolean));
+    async function hook(code, st, where, { scope, args, result }) {
+      if (!st.js) st.js = new (require_js()).Session();
+      const r = await st.js.run([].concat(code).join("\n"), { vars: scope, args, result });
+      if (r.vars && typeof r.vars === "object") {
+        for (const k of Object.keys(scope)) if (!(k in r.vars)) delete scope[k];
+        Object.assign(scope, r.vars);
+      }
+      for (const msg of r.logs || []) st.logs.push({ ...where, msg });
+      for (const t of r.tests || []) st.tests.push({ ...where, ...t });
+      if (r.error) throw new Error(`${where.hook}: ${r.error}`);
+      return r;
+    }
     async function runSteps(def, scope, st) {
       for (const [i, step] of def.steps.entries()) {
         const started = Date.now();
-        const label = step.tool ? `tool ${step.tool}` : step.script ? `script ${step.script}` : step.browser ? `browser ${browserTool(step.browser)}` : step.open ? `open ${step.open}` : step.set ? `set ${Object.keys(step.set).join(", ")}` : step.transform !== void 0 ? "transform" : step.http ? `http ${String(step.http).split(/\s+/)[0].toUpperCase()}` : `wait ${step.wait}`;
-        const rec = { script: def.id, step: i + 1, do: label };
+        const rec = { script: def.id, step: i + 1, do: label(step) };
+        const where = { script: def.id, step: i + 1 };
         st.log.push(rec);
         try {
+          let input = stepInput(step, scope);
+          if (step.before) {
+            const r = await hook(step.before, st, { ...where, hook: "before" }, { scope, args: input });
+            input = r.hasReturn && r.returned && typeof r.returned === "object" ? r.returned : r.args;
+            input = fill(input, scope);
+          }
           let result;
-          if (step.tool) {
+          const k = kindOf(step);
+          if (k === "tool") {
             if (step.tool.startsWith("script_")) throw new Error('use a "script" step to run another script');
-            result = await require_tools().call(step.tool, fill(step.args || {}, scope), { source: `script:${def.id}` });
-          } else if (step.set) {
-            result = fill(step.set, scope);
+            result = await require_tools().call(step.tool, input, { source: `script:${def.id}` });
+          } else if (k === "set") {
+            result = input;
             Object.assign(scope, result);
-          } else if (step.transform !== void 0) {
-            const t = transform(fill(step.transform, scope), step, scope);
+          } else if (k === "transform") {
+            const t = transform(input.text, step, scope);
             result = t.text;
             rec.detail = { replaced: t.replaced, map: t.map };
-          } else if (step.http) {
-            result = await httpStep(step, scope);
-          } else if (step.script) {
+          } else if (k === "http") {
+            result = await httpStep(input, step);
+          } else if (k === "js") {
+            const r = await hook(step.js, st, { ...where, hook: "js" }, { scope, result: st.last });
+            result = r.hasReturn ? r.returned : null;
+          } else if (k === "script") {
             if (st.depth >= MAX_DEPTH) throw new Error(`scripts nest deeper than ${MAX_DEPTH}`);
             const sub = get(step.script);
             st.depth++;
             try {
-              result = await runSteps(sub, params(sub, fill(step.params || step.args || {}, scope)), st);
+              result = await runScript(sub, params(sub, input), st);
             } finally {
               st.depth--;
             }
-          } else if (step.wait !== void 0) {
-            const w = fill(step.wait, scope);
+          } else if (k === "wait") {
+            const w = input.wait;
             result = (await browser(st).call("browser_wait_for", typeof w === "number" ? { time: w } : { text: String(w) })).text;
           } else {
-            const b = browser(st);
-            const [name, args] = step.open ? ["browser_navigate", { url: /^https?:\/\//.test(step.open) ? fill(step.open, scope) : require_config().siteUrl(fill(step.open, scope), scope) }] : [browserTool(step.browser), fill(step.args || {}, scope)];
+            const [name, args] = k === "open" ? ["browser_navigate", input] : [browserTool(step.browser), input];
             if (name === "browser_navigate") st.pages.add(args.url);
-            result = (await b.call(name, args)).text;
+            result = (await browser(st).call(name, args)).text;
+          }
+          for (const [name, p] of Object.entries(step.capture || {})) {
+            const v = capturePath(result, p);
+            if (v === void 0) throw new Error(`capture ${name}: no "${p}" in the result`);
+            scope[name] = v;
+          }
+          if (step.after) {
+            const r = await hook(step.after, st, { ...where, hook: "after" }, { scope, result });
+            if (r.hasReturn) result = r.returned;
           }
           if (step.as) scope[step.as] = result;
+          st.last = result;
           Object.assign(rec, { ok: true, ms: Date.now() - started, result: rec.detail ? { ...rec.detail, text: brief(result, 1500) } : brief(result) });
           delete rec.detail;
         } catch (e) {
           Object.assign(rec, { ok: false, ms: Date.now() - started, error: e.message });
+          delete rec.detail;
           if (!step.optional) throw Object.assign(e, { scriptStep: rec });
         }
       }
+      return scope;
+    }
+    function chain(id) {
+      const parts = String(id || "").split("/").slice(0, -1);
+      const out2 = [];
+      for (let n = 1; n <= parts.length; n++) {
+        try {
+          const m = JSON.parse(fs2.readFileSync(path2.join(DIR, ...parts.slice(0, n), META), "utf8"));
+          out2.push({ collection: parts.slice(0, n).join("/"), ...m });
+        } catch {
+        }
+      }
+      return out2;
+    }
+    async function runScript(def, scope, st) {
+      const cols = chain(def.id);
+      for (const c of cols) for (const [k, v] of Object.entries(c.vars || {})) if (scope[k] === void 0) scope[k] = fill(v, scope);
+      for (const [k, v] of Object.entries(def.vars || {})) if (scope[k] === void 0) scope[k] = fill(v, scope);
+      const where = { script: def.id, step: 0 };
+      for (const c of cols) if (c.before) await hook(c.before, st, { ...where, hook: `before (${c.collection})` }, { scope });
+      if (def.before) await hook(def.before, st, { ...where, hook: "before" }, { scope });
+      await runSteps(def, scope, st);
+      if (def.after) await hook(def.after, st, { ...where, step: def.steps.length + 1, hook: "after" }, { scope, result: st.last });
+      for (const c of [...cols].reverse()) if (c.after) await hook(c.after, st, { ...where, step: def.steps.length + 1, hook: `after (${c.collection})` }, { scope, result: st.last });
       return scope;
     }
     function transform(input, step, scope) {
@@ -5866,19 +6111,17 @@ ${lines.join("\n") || "(empty)"}`,
       }
       return n;
     }
-    async function httpStep(step, scope) {
-      const [, method, rawUrl] = String(step.http).match(/^(\w+)\s+(\S+)$/);
-      const url = fill(rawUrl, scope);
+    async function httpStep(input, step) {
+      const { method, url, headers = {} } = input;
       const allow = require_config().getScripts().httpAllow;
       if (!allow.some((a) => url.startsWith(a))) throw new Error(`http to ${url} is not allowed: add its URL prefix to scripts.http.allow in config.json${allow.length ? ` (allowed: ${allow.join(", ")})` : ""}`);
       await require_limit().take(`http:${new URL(url).host}`);
-      const headers = fill(step.headers || {}, scope);
-      let body = step.body === void 0 ? void 0 : fill(step.body, scope);
+      let body = input.body;
       if (body !== void 0 && typeof body !== "string") {
         body = JSON.stringify(body);
         if (!Object.keys(headers).some((h) => h.toLowerCase() === "content-type")) headers["content-type"] = "application/json";
       }
-      const res = await fetch(url, { method: method.toUpperCase(), headers, body, signal: AbortSignal.timeout(step.timeoutMs || 3e4) });
+      const res = await fetch(url, { method, headers, body, signal: AbortSignal.timeout(step.timeoutMs || 3e4) });
       const text = await res.text();
       let json;
       try {
@@ -5886,7 +6129,7 @@ ${lines.join("\n") || "(empty)"}`,
       } catch {
       }
       const out2 = { status: res.status, ...json !== void 0 ? { json } : { text: text.slice(0, 2e4) } };
-      if (!res.ok) throw new Error(`HTTP ${res.status} from ${method.toUpperCase()} ${url}: ${text.slice(0, 300)}`);
+      if (!res.ok && !step.allowErrors) throw new Error(`HTTP ${res.status} from ${method} ${url}: ${text.slice(0, 300)}`);
       return out2;
     }
     function browser(st) {
@@ -5895,15 +6138,16 @@ ${lines.join("\n") || "(empty)"}`,
     }
     async function run(idOrDef, given = {}, { source } = {}) {
       const def = typeof idOrDef === "string" ? get(idOrDef) : { id: "(inline)", ...idOrDef };
-      const st = { log: [], depth: 0, browser: null, pages: /* @__PURE__ */ new Set() };
+      const st = { log: [], logs: [], tests: [], depth: 0, browser: null, pages: /* @__PURE__ */ new Set(), last: void 0 };
       const scope = params(def, given);
       const keys = new Set(Object.keys(scope));
       let error = null;
       try {
-        await runSteps(def, scope, st);
+        await runScript(def, scope, st);
       } catch (e) {
         error = e.message;
       }
+      if (st.js) st.js.close();
       let routes;
       if (st.browser) {
         try {
@@ -5914,8 +6158,19 @@ ${lines.join("\n") || "(empty)"}`,
         }
         await st.browser.close();
       }
+      const failed = st.tests.filter((t) => !t.ok);
+      if (!error && failed.length) error = `${failed.length} of ${st.tests.length} tests failed: ${failed.map((t) => t.name).join(", ")}`;
       const results = Object.fromEntries(Object.entries(scope).filter(([k]) => !keys.has(k)).map(([k, v]) => [k, brief(v, 6e3)]));
-      return { script: def.id, ok: !error, ...error ? { error } : {}, steps: st.log, results, ...routes ? { routes } : {} };
+      return {
+        script: def.id,
+        ok: !error,
+        ...error ? { error } : {},
+        steps: st.log,
+        results,
+        ...st.tests.length ? { tests: { passed: st.tests.length - failed.length, failed: failed.length, list: st.tests } } : {},
+        ...st.logs.length ? { logs: st.logs } : {},
+        ...routes ? { routes } : {}
+      };
     }
     module2.exports = { list, get, save, remove, run, fill, validate, mkdir, move, copy, removeFolder, resolve, getCollection, setCollection, exposed, signature, transform, generate, DIR };
   }
@@ -26263,7 +26518,17 @@ var require_files = __commonJS({
           clearTimeout(t);
           reject(new Error(`sftp ${s.host}: ${e.message}`));
         });
-        conn.connect({ host: s.host, port: Number(s.port || 22), username: s.user || s.username, password: s.password || void 0, privateKey: s.privateKey || void 0, passphrase: s.passphrase || void 0, readyTimeout: s.timeoutMs || 2e4, ...s.hostKey ? { hostVerifier: (key) => require("crypto").createHash("sha256").update(key).digest("base64") === String(s.hostKey).replace(/^SHA256:/, "") } : {} });
+        let privateKey = s.privateKey ? String(s.privateKey).replace(/\\n/g, "\n") : void 0;
+        if (s.privateKeyFile) {
+          const f = path2.resolve(require_config().HOME, s.privateKeyFile);
+          try {
+            privateKey = fs2.readFileSync(f);
+          } catch (e) {
+            clearTimeout(t);
+            return reject(new Error(`sftp ${s.host}: privateKeyFile ${s.privateKeyFile}: ${e.code || e.message}`));
+          }
+        }
+        conn.connect({ host: s.host, port: Number(s.port || 22), username: s.user || s.username, password: s.password || void 0, privateKey, passphrase: s.passphrase || void 0, readyTimeout: s.timeoutMs || 2e4, ...s.hostKey ? { hostVerifier: (key) => require("crypto").createHash("sha256").update(key).digest("base64").replace(/=+$/, "") === String(s.hostKey).replace(/^SHA256:/, "").replace(/=+$/, "") } : {} });
       });
       const call = (fn, ...a) => new Promise((resolve, reject) => sf[fn](...a, (err, r) => err ? reject(new Error(`${fn} ${a[0]}: ${err.message}`)) : resolve(r)));
       const exists = async (p) => {
@@ -26871,7 +27136,7 @@ var require_tools = __commonJS({
       {
         name: "script_save",
         group: "scripts",
-        description: 'Save (or replace) a script so a repeatable action runs in one call next time. id is "collection/sub/name". steps run in order; each is one of: {"tool": "<dt tool>", "args": {...}}, {"script": "<other script id>", "params": {...}}, {"open": "site.link"} (a site map link; its <params> come from the script params), {"browser": "<browser tool, e.g. click, type, snapshot>", "args": {...}}, {"wait": seconds or "text"}. Add "as": "name" to keep a result, "optional": true to continue on failure. "{{name}}" in args inserts a param or an earlier result ({{order.rows.0.id}}); "{{link:site.link}}" a site link URL. More step kinds: {"set": {"folder": "out/{{date:YYYYMMDD}}/{{uuid}}"}} computes values; {"transform": "{{doc.text}}", "replace": [{"find": "ORD-\\\\d+", "regex": true, "with": "ORD-{{rand:6}}"}], "json": {"order.id": "{{uuid}}"}, "as": "copy"} rewrites a document (each distinct match gets one new value); {"http": "POST https://\u2026", "body": {...}} calls an API allowed in config (scripts.http.allow). Generators: {{uuid}}, {{now}}, {{date:YYYYMMDD}}, {{rand:6}}, {{hex:8}}. "tool": true (or a name) makes the script a tool of its own. Save only after the steps worked by hand.',
+        description: `Save (or replace) a script so a repeatable action runs in one call next time. id is "collection/sub/name". steps run in order; each is one of: {"tool": "<dt tool>", "args": {...}}, {"script": "<other script id>", "params": {...}}, {"open": "site.link"} (a site map link; its <params> come from the script params), {"browser": "<browser tool, e.g. click, type, snapshot>", "args": {...}}, {"wait": seconds or "text"}. Add "as": "name" to keep a result, "optional": true to continue on failure. "{{name}}" in args inserts a param or an earlier result ({{order.rows.0.id}}); "{{link:site.link}}" a site link URL. More step kinds: {"set": {"folder": "out/{{date:YYYYMMDD}}/{{uuid}}"}} computes values; {"transform": "{{doc.text}}", "replace": [{"find": "ORD-\\\\d+", "regex": true, "with": "ORD-{{rand:6}}"}], "json": {"order.id": "{{uuid}}"}, "as": "copy"} rewrites a document (each distinct match gets one new value); {"http": "POST https://\u2026", "body": {...}} calls an API allowed in config (scripts.http.allow). Generators: {{uuid}}, {{now}}, {{date:YYYYMMDD}}, {{rand:6}}, {{hex:8}}. JavaScript (sandboxed, like Postman/Bruno): {"js": "return vars.doc.items.length"} is a step; on any step "before": "args.body.ts = now()" changes its args, "capture": {"jobId": "json.id"} copies from the result into vars, "after": "test('201', () => expect(result.status).toBe(201)); vars.n = result.json.items.length" checks and post-processes (return a value to replace the result). The script itself can have "vars", "before" and "after"; failing tests fail the run. Try code with js_run first. "tool": true (or a name) makes the script a tool of its own. Save only after the steps worked by hand.`,
         input: {
           id: str('collection/name, e.g. "orders/support/refund-check"'),
           description: str("What it does and when to use it"),
@@ -26889,6 +27154,17 @@ var require_tools = __commonJS({
         input: { id: str("Script id, name or a close name"), params: { type: "object", description: "Param values", additionalProperties: true } },
         required: ["id"],
         run: (a) => require_scripts().run(a.id, a.params || {})
+      },
+      {
+        name: "js_run",
+        group: "scripts",
+        description: "Run a small piece of JavaScript in the script sandbox (no files, no secrets, 5s) to try a transform, a capture or a hook before saving it in a script. It sees vars, args and result (pass them in), and the helpers uuid() now() date(fmt) rand(n) hex(n) log() test(name, fn) expect(x).toBe/toEqual/toMatch/toContain/toBeTruthy/toBeGreaterThan/toHaveProperty assert(). Returns what the code returns, the changed vars, logs and tests.",
+        input: { code: str('JavaScript, e.g. "return result.items.map(i => i.id)"'), vars: { type: "object", additionalProperties: true, description: "vars" }, args: { type: "object", additionalProperties: true, description: "args" }, result: { description: "result (any JSON)" } },
+        required: ["code"],
+        run: async (a) => {
+          const r = await require_js().run(a.code, { vars: a.vars || {}, args: a.args, result: a.result });
+          return { ...r.error ? { error: r.error } : { returned: r.hasReturn ? r.returned : null }, vars: r.vars, ...r.logs.length ? { logs: r.logs } : {}, ...r.tests.length ? { tests: r.tests } : {} };
+        }
       },
       {
         name: "call_history",

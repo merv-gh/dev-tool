@@ -8,6 +8,8 @@ const { chromium } = require('playwright');
 
 const BASE = process.argv[2] || 'http://127.0.0.1:4800';
 const OUT = path.join(__dirname, '..', 'docs', 'screenshots');
+// expand collections in the tree (their open state is remembered between pages)
+const expand = async (p, ...folders) => { for (const f of folders) if (await p.$(`[data-folder="${f}"] > .tr .tw`).then(e => e.textContent()) !== '▾') await p.click(`[data-folder="${f}"] > .tr`); };
 const tool = async (name, args) => {
   const r = await fetch(`${BASE}/api/tool/${name}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(args) });
   const j = await r.json();
@@ -30,14 +32,19 @@ const tool = async (name, args) => {
     ['admin-passports', `${BASE}/admin#passports`],
     ['admin-jobs', `${BASE}/admin#jobs`, async (p) => { await p.waitForSelector('#jobs tr[data-job]'); await p.click('#jobs tr[data-job]'); await p.waitForSelector('.joblog'); }],
     ['admin-scripts', `${BASE}/admin#scripts`, async (p) => {
-      for (const f of ['shop', 'shop/support']) { await p.click(`[data-folder="${f}"] > .tr`); }
+      await expand(p, 'shop', 'shop/support');
       await p.click('[data-sid="shop/support/order-check"] > .tr'); await p.waitForSelector('#pmBody .step');
       await p.fill('[data-run="orderId"]', '1042'); await p.click('#pmRun'); await p.waitForSelector('#pmOut table', { timeout: 60000 });
     }],
     ['admin-script-files', `${BASE}/admin#scripts`, async (p) => {
-      await p.click('[data-folder="partner"] > .tr');
+      await expand(p, 'partner');
       await p.click('[data-sid="partner/send-order"] > .tr'); await p.waitForSelector('#pmBody .step');
       await p.fill('[data-run="customerId"]', 'C-42'); await p.click('#pmRun'); await p.waitForSelector('#pmOut table', { timeout: 60000 });
+    }],
+    ['admin-script-js', `${BASE}/admin#scripts`, async (p) => {
+      await expand(p, 'partner');
+      await p.click('[data-sid="partner/send-order-js"] > .tr'); await p.waitForSelector('#pmBody .step');
+      await p.click('#pmRun'); await p.waitForSelector('#pmOut table', { timeout: 60000 });
     }],
     ['admin-history', `${BASE}/admin#history`, async (p) => { await p.waitForSelector('#patterns .step'); }],
     ['admin-sites', `${BASE}/admin#sites`, async (p) => { await p.click('[data-site="shop"] .tr'); await p.waitForSelector('#stLinks tr'); }],

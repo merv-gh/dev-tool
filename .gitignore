@@ -12,6 +12,8 @@ repos/
 passports/
 plugins/*.js
 scripts/
+files/
+keys/
 demo/.home/
 .code-review-graph/
 dist/*.tar.gz

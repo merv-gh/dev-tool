@@ -2,13 +2,24 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { Server, utils: { sftp: { STATUS_CODE, OPEN_MODE } } } = require('ssh2');
+const { Server, utils: { parseKey, sftp: { STATUS_CODE, OPEN_MODE } } } = require('ssh2');
 
-function start({ root, user = 'dt', password = 'pw', port = 0 }) {
+// clientKey: a private key (PEM) whose public half may log in, besides the password
+function start({ root, user = 'dt', password = 'pw', port = 0, clientKey }) {
   const hostKey = crypto.generateKeyPairSync('rsa', { modulusLength: 2048, privateKeyEncoding: { type: 'pkcs1', format: 'pem' }, publicKeyEncoding: { type: 'pkcs1', format: 'pem' } }).privateKey;
+  const allowed = clientKey ? parseKey(clientKey) : null;
+  const hostFingerprint = 'SHA256:' + crypto.createHash('sha256').update(parseKey(hostKey).getPublicSSH()).digest('base64').replace(/=+$/, '');
   const writes = [];
   const srv = new Server({ hostKeys: [hostKey] }, (client) => {
-    client.on('authentication', (ctx) => (ctx.method === 'password' && ctx.username === user && ctx.password === password ? ctx.accept() : ctx.reject(['password'])));
+    client.on('authentication', (ctx) => {
+      if (ctx.username !== user) return ctx.reject();
+      if (ctx.method === 'password' && ctx.password === password) return ctx.accept();
+      if (ctx.method === 'publickey' && allowed && ctx.key.algo === allowed.type && ctx.key.data.equals(allowed.getPublicSSH())) {
+        if (!ctx.signature) return ctx.accept(); // the client asks whether this key would do
+        if (allowed.verify(ctx.blob, ctx.signature, ctx.hashAlgo) === true) return ctx.accept();
+      }
+      ctx.reject(['password', 'publickey']);
+    });
     client.on('ready', () => client.on('session', (accept) => accept().on('sftp', (acc) => {
       const sf = acc();
       const handles = new Map();
@@ -48,7 +59,7 @@ function start({ root, user = 'dt', password = 'pw', port = 0 }) {
     })));
     client.on('error', () => {});
   });
-  return new Promise(r => srv.listen(port, '127.0.0.1', () => r({ port: srv.address().port, close: () => srv.close(), writes })));
+  return new Promise(r => srv.listen(port, '127.0.0.1', () => r({ port: srv.address().port, close: () => srv.close(), writes, hostFingerprint })));
 }
 
 module.exports = { start };

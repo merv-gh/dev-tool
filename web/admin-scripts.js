@@ -5,8 +5,33 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
 };
 const BROWSER_TOOLS = ['navigate', 'snapshot', 'click', 'type', 'fill_form', 'press_key', 'select_option', 'hover', 'wait_for', 'take_screenshot', 'network_requests', 'navigate_back', 'evaluate'];
-const KINDS = { tool: 'dt tool', script: 'script', open: 'open link', browser: 'browser', wait: 'wait', set: 'set values', transform: 'transform', http: 'http request' };
-const TARGET_HINT = { tool: 'tool name, e.g. pg_query', script: 'collection/name', open: 'site.link, e.g. crm.order', browser: 'click, type, snapshot…', wait: 'seconds, or text to wait for', transform: 'text to rewrite, e.g. {{doc.text}}', http: 'POST https://api…/imports/{{id}}' };
+const KINDS = { tool: 'dt tool', script: 'script', open: 'open link', browser: 'browser', wait: 'wait', set: 'set values', transform: 'transform', http: 'http request', js: 'javascript' };
+const JS_HELP = `<details class="cheat"><summary>JavaScript: what the code sees, with examples</summary><pre class="code">vars     params, collection vars, results saved with "save as", captures (changes are kept)
+args     a step's input, in its before hook (change it, or return a new one)
+result   a step's result, in its after hook (return a value to replace it); the previous result in a js step
+uuid() now() date('YYYYMMDD') rand(6) hex(8)  log(...)  test(name, fn)  expect(x).toBe / toEqual / toMatch / toContain / toBeTruthy / toBeGreaterThan / toHaveProperty / .not  assert(ok, msg)
+
+// before (a step): change what it sends
+args.body.requestId = uuid();
+args.headers['x-run'] = vars.runId;
+
+// capture (a step): result paths into vars
+{ "orderId": "json.id", "firstSku": "json.items[0].sku" }
+
+// after (a step): check it, keep values, reshape it
+test('created', () => expect(result.status).toBe(201));
+vars.total = result.json.items.reduce((n, i) => n + i.qty, 0);
+return result.json.items.map(i => i.sku);   // the step's result is now ['KB-01', 'MS-02']
+
+// a javascript step: the return value is its result ("save as")
+const doc = JSON.parse(vars.doc.text);
+doc.items.forEach(i => { i.id = uuid(); });
+return JSON.stringify(doc, null, 2);
+
+// script / collection before: set up vars for every step
+vars.runId = 'run-' + hex(6);
+vars.today = date('YYYY-MM-DD');</pre><div class="hint">Runs in a sandbox: no files, no secrets, 5 seconds per piece. Failing tests fail the run. The agent can try code with js_run.</div></details>`;
+const TARGET_HINT = { js: '', tool: 'tool name, e.g. pg_query', script: 'collection/name', open: 'site.link, e.g. crm.order', browser: 'click, type, snapshot…', wait: 'seconds, or text to wait for', transform: 'text to rewrite, e.g. {{doc.text}}', http: 'POST https://api…/imports/{{id}}' };
 const ARGS_HINT = {
   tool: 'args JSON, e.g. {"env": "{{env}}", "sql": "select …"}', browser: 'args JSON, e.g. {"element": "Save button", "ref": "e12"}', script: 'params JSON, e.g. {"orderId": "{{orderId}}"}',
   set: 'values JSON, e.g. {"folder": "out/{{date:YYYYMMDD}}/{{uuid}}", "orderId": "ORD-{{rand:6}}"}',
@@ -61,7 +86,7 @@ function renderTree() {
         <span class="acts"><button data-act="new-script" title="New script here">+</button><button data-act="new-folder" title="New collection inside">+📁</button><button data-act="settings" title="Description, tool">⚙</button><button data-act="rename" title="Rename">✎</button><button data-act="delete" title="Delete">✕</button></span></div>${isOpen ? html(x, d + 1) : ''}</div>`;
     }),
     ...f.scripts.filter(hit).sort((a, b) => a.id.localeCompare(b.id)).map(s => `<div class="tn" data-sid="${esc(s.id)}" draggable="true"><div class="tr ${cur && cur.id === s.id ? 'on' : ''}" ${pad(d)} title="${esc(s.error || s.description || '')}"><span class="tw"></span>
-      <span class="badge-k ${s.error ? 'mix' : s.browser ? 'web' : 'tool'}">${s.error ? 'ERR' : s.browser ? 'WEB' : 'TOOL'}</span><span class="nm">${esc(base(s.id))}</span>${s.tool ? `<span class="cnt" title="exposed as tool ${esc(s.tool)}">⚒</span>` : ''}
+      <span class="badge-k ${s.error ? 'mix' : s.browser ? 'web' : s.js ? 'mix' : 'tool'}" title="${s.error ? 'cannot be read' : s.browser ? 'uses the browser' : s.js ? 'has JavaScript' : 'tools only'}">${s.error ? 'ERR' : s.browser ? 'WEB' : s.js ? 'JS' : 'RUN'}</span><span class="nm">${esc(base(s.id))}</span>${s.tool ? `<span class="cnt" title="exposed as tool ${esc(s.tool)}">⚒</span>` : ''}
       <span class="acts"><button data-act="dup" title="Duplicate">⧉</button><button data-act="rename" title="Rename">✎</button><button data-act="delete" title="Delete">✕</button></span></div></div>`),
   ].join('');
   const t = buildTree();
@@ -218,11 +243,17 @@ async function openCollection(p) {
       <div class="grid-form"><label>Description</label><input id="colDesc" value="${esc(c.description)}" placeholder="What the scripts in it are for (the agent reads this)">
         <label>As a tool</label><div><label class="muted" style="display:inline-flex;gap:5px;align-items:center;font-size:12px"><input type="checkbox" id="colTool" ${c.tool ? 'checked' : ''}>Expose the collection as one tool</label>
           <input id="colToolName" value="${esc(typeof c.tool === 'string' ? c.tool : '')}" placeholder="${esc(defaultToolName(c.collection))}" style="width:200px;font-size:12px;margin-left:8px" spellcheck="false">
-          <div class="hint">The tool lists its scripts with their descriptions and params, and runs one by name; a close name is enough.</div></div></div>
+          <div class="hint">The tool lists its scripts with their descriptions and params, and runs one by name; a close name is enough.</div></div>
+        <label>vars</label><textarea id="colVars" rows="${Math.max(2, jsonText(c.vars).split('\n').length)}" spellcheck="false" placeholder='{ "tenant": "t1", "baseUrl": "https://api.dev.example.com" }'>${esc(jsonText(c.vars))}</textarea>
+        <label>before</label><textarea id="colBefore" rows="${Math.max(2, code(c.before).split('\n').length)}" spellcheck="false" placeholder="vars.runId = 'run-' + hex(6);">${esc(code(c.before))}</textarea>
+        <label>after</label><textarea id="colAfter" rows="${Math.max(2, code(c.after).split('\n').length)}" spellcheck="false" placeholder="test('no errors', () => expect(vars.errors || []).toEqual([]));">${esc(code(c.after))}</textarea></div>
+      <p class="hint">For every script in this collection and below: vars are defaults (outer collections first; a script's own vars and params win), before runs before its steps, after at the end.</p>${JS_HELP}
       <h2>Scripts <span class="muted">${c.scripts.length}</span></h2>
       <div class="card scroll"><table><tbody>${c.scripts.map(id => { const x = SC.scripts.find(s => s.id === id) || {}; return `<tr><td class="mono"><a href="#" data-goto="${esc(id)}">${esc(id.slice(c.collection.length + 1))}</a></td><td class="det">${esc(x.description || '')}</td><td class="mono muted">${esc((x.params || []).join(', '))}</td></tr>`; }).join('') || '<tr><td class="empty">Empty.</td></tr>'}</tbody></table></div>`;
     $('colSave').onclick = async () => {
-      try { const r = await api('/api/admin/collection', { path: c.collection, description: $('colDesc').value, tool: $('colTool').checked ? $('colToolName').value.trim() || true : false }); toast(r.toolName ? `Saved: tool ${r.toolName}` : 'Saved'); } catch (e) { toast(e.message); }
+      let vars = {};
+      try { vars = $('colVars').value.trim() ? JSON.parse($('colVars').value) : {}; } catch (e) { return toast(`vars JSON: ${e.message}`); }
+      try { const r = await api('/api/admin/collection', { path: c.collection, description: $('colDesc').value, tool: $('colTool').checked ? $('colToolName').value.trim() || true : false, vars, before: $('colBefore').value, after: $('colAfter').value }); toast(r.toolName ? `Saved: tool ${r.toolName}` : 'Saved'); } catch (e) { toast(e.message); }
     };
     $('pmMain').querySelectorAll('[data-goto]').forEach(a => a.onclick = (ev) => { ev.preventDefault(); openScript(a.dataset.goto); });
   } catch (e) { toast(e.message); }
@@ -263,8 +294,8 @@ function renderEditor() {
     <div class="row" style="margin-top:6px;font-size:12px"><label class="muted" style="display:inline-flex;gap:5px;align-items:center"><input type="checkbox" id="pmTool" ${d.tool ? 'checked' : ''}>Expose as a tool of its own</label>
       <input id="pmToolName" value="${esc(typeof d.tool === 'string' ? d.tool : '')}" placeholder="${esc(defaultToolName(join(cur.folder, cur.name)))}" style="width:200px;font-size:12px" ${d.tool ? '' : 'hidden'} spellcheck="false">
       <span class="muted">${d.tool ? 'the agent calls it directly, with the params as arguments' : 'otherwise the agent runs it with script_run (by name or a close name)'}</span></div>
-    <div class="subtabs" id="pmSub">${[['steps', `Steps <span class="n">${nSteps}</span>`], ['params', `Params <span class="n">${nParams || ''}</span>`], ['json', 'JSON']].map(([k, l]) => `<button data-sub="${k}" class="${subtab === k ? 'on' : ''}">${l}</button>`).join('')}</div>
-    <div id="pmBody">${subtab === 'steps' ? stepsHtml(d) : subtab === 'params' ? paramsHtml(d) : `<textarea id="pmJson" rows="22" spellcheck="false">${esc(JSON.stringify(d, null, 2))}</textarea><div class="hint" id="pmJsonErr"></div>`}</div>
+    <div class="subtabs" id="pmSub">${[['steps', `Steps <span class="n">${nSteps}</span>`], ['params', `Params <span class="n">${nParams || ''}</span>`], ['scripts', `Vars &amp; scripts${d.before || d.after || (d.vars && Object.keys(d.vars).length) ? ' <span class="n">●</span>' : ''}`], ['json', 'JSON']].map(([k, l]) => `<button data-sub="${k}" class="${subtab === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+    <div id="pmBody">${subtab === 'steps' ? stepsHtml(d) : subtab === 'params' ? paramsHtml(d) : subtab === 'scripts' ? scriptsHtml(d) : `<textarea id="pmJson" rows="22" spellcheck="false">${esc(JSON.stringify(d, null, 2))}</textarea><div class="hint" id="pmJsonErr"></div>`}</div>
     <div class="runbar">${Object.entries(d.params || {}).map(([k, p]) => `<label class="muted" style="font-size:12px">${esc(k)}${p && p.required ? '*' : ''}<input data-run="${esc(k)}" placeholder="${esc(p && p.default !== undefined ? String(p.default) : '')}" value="${esc(cur.runParams?.[k] ?? '')}"></label>`).join('')}
       <span class="spacer"></span><button class="primary" id="pmRun">▶ Run</button></div>
     <div id="pmOut">${cur.lastRun ? runHtml(cur.lastRun) : ''}</div>`;
@@ -276,12 +307,33 @@ function stepsHtml(d) {
     const args = stepArgs(s, k);
     return `<div class="step" data-i="${i}"><div class="sh"><span class="no">${i + 1}</span>
       <select data-f="kind">${Object.entries(KINDS).map(([v, l]) => `<option value="${v}" ${v === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
-      ${k === 'set' ? '<span class="target muted" style="font-size:12px">values below are computed once and usable as {{name}}</span>' : `<input class="target" data-f="target" list="dl-${k}" value="${esc(s[k] ?? '')}" placeholder="${esc(TARGET_HINT[k])}" spellcheck="false">`}
+      ${k === 'set' ? '<span class="target muted" style="font-size:12px">values below are computed once and usable as {{name}}</span>' : k === 'js' ? '<span class="target muted" style="font-size:12px">code below; it returns the step\'s result</span>' : `<input class="target" data-f="target" list="dl-${k}" value="${esc(s[k] ?? '')}" placeholder="${esc(TARGET_HINT[k])}" spellcheck="false">`}
       <input data-f="as" value="${esc(s.as || '')}" placeholder="save as" style="width:110px" spellcheck="false">
       <label title="A failure does not stop the run"><input type="checkbox" data-f="optional" ${s.optional ? 'checked' : ''}>optional</label>
       <button class="icon" data-move="-1" title="Up" ${i ? '' : 'disabled'}>↑</button><button class="icon" data-move="1" title="Down" ${i < d.steps.length - 1 ? '' : 'disabled'}>↓</button><button class="icon" data-remove title="Remove">✕</button></div>
-      ${ARGS_HINT[k] ? `<textarea data-f="args" rows="${Math.min(8, Math.max(2, jsonText(args).split('\n').length))}" spellcheck="false" placeholder="${esc(ARGS_HINT[k])}">${esc(jsonText(args))}</textarea>` : ''}</div>`;
+      ${ARGS_HINT[k] ? `<textarea data-f="args" rows="${Math.min(8, Math.max(2, jsonText(args).split('\n').length))}" spellcheck="false" placeholder="${esc(ARGS_HINT[k])}">${esc(jsonText(args))}</textarea>` : ''}
+      ${k === 'js' ? `<textarea data-f="code" rows="${Math.min(14, Math.max(3, code(s.js).split('\n').length + 1))}" spellcheck="false" placeholder="const doc = JSON.parse(vars.doc.text);&#10;doc.items.forEach(i => { i.id = uuid(); });&#10;return JSON.stringify(doc, null, 2);">${esc(code(s.js))}</textarea>` : ''}
+      ${hooksHtml(s, i)}</div>`;
   }).join('') + `<div class="row"><button id="pmAddStep">+ Add step</button><span class="hint">{{name}} inserts a param or a result saved with "save as" ({{order.rows.0.id}}); {{link:site.link}} a site link URL.</span></div>`;
+}
+
+const code = (c) => [].concat(c || []).join('\n');
+const hooksSet = (s) => [s.before && 'before', s.capture && Object.keys(s.capture).length && 'capture', s.after && 'after'].filter(Boolean);
+function hooksHtml(s, i) {
+  const set = hooksSet(s);
+  const open = set.length || (cur.openHooks && cur.openHooks.has(i));
+  return `<details class="hooks" data-hooks="${i}" ${open ? 'open' : ''}><summary>before · capture · after${set.length ? ` <span class="badge-k mix">${set.join(' · ')}</span>` : ''}</summary>
+    <div class="hook-grid"><label>before</label><textarea data-f="before" rows="${Math.max(2, code(s.before).split('\n').length)}" spellcheck="false" placeholder="args.body.requestId = uuid();">${esc(code(s.before))}</textarea>
+    <label>capture</label><textarea data-f="capture" rows="${Math.max(1, jsonText(s.capture).split('\n').length)}" spellcheck="false" placeholder='{ "orderId": "json.id", "firstSku": "json.items[0].sku" }'>${esc(jsonText(s.capture))}</textarea>
+    <label>after</label><textarea data-f="after" rows="${Math.max(2, code(s.after).split('\n').length)}" spellcheck="false" placeholder="test('ok', () => expect(result.status).toBe(200));&#10;vars.total = result.json.total;">${esc(code(s.after))}</textarea></div></details>`;
+}
+
+function scriptsHtml(d) {
+  return `<div class="hook-grid">
+    <label>vars</label><textarea id="pmVars" rows="${Math.max(2, jsonText(d.vars).split('\n').length)}" spellcheck="false" placeholder='{ "region": "eu", "batch": "B-{{date:YYYYMMDD}}" }'>${esc(jsonText(d.vars))}</textarea>
+    <label>before</label><textarea id="pmBefore" rows="${Math.max(3, code(d.before).split('\n').length)}" spellcheck="false" placeholder="vars.runId = 'run-' + hex(6);">${esc(code(d.before))}</textarea>
+    <label>after</label><textarea id="pmAfter" rows="${Math.max(3, code(d.after).split('\n').length)}" spellcheck="false" placeholder="test('job finished', () => expect(vars.status).toBe('done'));">${esc(code(d.after))}</textarea></div>
+    <p class="hint">vars are defaults for this script (params win; collection vars come first). before runs once before the steps, after once at the end, with the last result as <code>result</code>. Collections have their own vars and hooks (⚙ on a folder).</p>${JS_HELP}`;
 }
 
 function paramsHtml(d) {
@@ -312,10 +364,20 @@ function readForm() {
         else if (ARGS_FIELDS[k] && v && typeof v === 'object') Object.assign(step, v);
         else step[k === 'script' ? 'params' : 'args'] = v;
       }
+      if (k === 'js') step.js = f('code').value;
+      if (f('before').value.trim()) step.before = f('before').value;
+      if (f('capture').value.trim()) {
+        try { step.capture = JSON.parse(f('capture').value); f('capture').style.borderColor = ''; } catch { step.capture = f('capture').value; f('capture').style.borderColor = 'var(--bad)'; }
+      }
+      if (f('after').value.trim()) step.after = f('after').value;
       if (f('as').value.trim()) step.as = f('as').value.trim();
       if (f('optional').checked) step.optional = true;
       return step;
     });
+  } else if (subtab === 'scripts') {
+    const v = $('pmVars').value.trim();
+    if (v) { try { cur.def.vars = JSON.parse(v); $('pmVars').style.borderColor = ''; } catch { $('pmVars').style.borderColor = 'var(--bad)'; } } else delete cur.def.vars;
+    for (const [id, key] of [['pmBefore', 'before'], ['pmAfter', 'after']]) { if ($(id).value.trim()) cur.def[key] = $(id).value; else delete cur.def[key]; }
   } else if (subtab === 'params') {
     const params = {};
     for (const tr of document.querySelectorAll('#pmParams tr')) {
@@ -343,14 +405,20 @@ $('pmMain').addEventListener('input', (ev) => {
   if (!cur || ev.target.dataset.run !== undefined) { if (cur) readForm(); return; }
   readForm(); touch();
 });
+$('pmMain').addEventListener('toggle', (ev) => {
+  const d = ev.target;
+  if (!cur || !d.dataset || d.dataset.hooks === undefined) return;
+  cur.openHooks = cur.openHooks || new Set();
+  d.open ? cur.openHooks.add(Number(d.dataset.hooks)) : cur.openHooks.delete(Number(d.dataset.hooks));
+}, true);
 $('pmMain').addEventListener('change', (ev) => {
   if (!cur) return;
   if (ev.target.dataset.f === 'kind') {
     readForm();
     const i = Number(ev.target.closest('.step').dataset.i);
     const old = cur.def.steps[i], k = ev.target.value;
-    const keep = Object.fromEntries(Object.entries(old).filter(([x]) => ['as', 'optional'].includes(x)));
-    cur.def.steps[i] = { ...(k === 'set' ? { set: {} } : { [k]: k === 'wait' ? 2 : '' }), ...(['tool', 'browser'].includes(k) ? { args: {} } : k === 'script' ? { params: {} } : {}), ...keep };
+    const keep = Object.fromEntries(Object.entries(old).filter(([x]) => ['as', 'optional', 'before', 'after', 'capture'].includes(x)));
+    cur.def.steps[i] = { ...(k === 'set' ? { set: {} } : k === 'js' ? { js: 'return result;' } : { [k]: k === 'wait' ? 2 : '' }), ...(['tool', 'browser'].includes(k) ? { args: {} } : k === 'script' ? { params: {} } : {}), ...keep };
     touch(); renderEditor();
   }
 });
@@ -404,6 +472,9 @@ async function runScript() {
 
 function runHtml(r) {
   return `<div class="row" style="margin:10px 0 6px"><span class="state ${r.ok ? 'done' : 'failed'}">${r.ok ? 'ok' : 'failed'}</span>${r.error ? `<span class="err-text">${esc(r.error)}</span>` : ''}${r.routes ? `<span class="muted">routes: ${esc(r.routes.error || `${r.routes.api} api requests, ${r.routes.added} new`)}</span>` : ''}</div>
+    ${r.tests ? `<div class="row" style="margin:6px 0;font-size:12px"><b>Tests</b><span class="state done">${r.tests.passed} passed</span>${r.tests.failed ? `<span class="state failed">${r.tests.failed} failed</span>` : ''}</div>
+      <table style="margin-bottom:8px"><tbody>${r.tests.list.map(t => `<tr><td style="width:24px">${t.ok ? '✅' : '❌'}</td><td>${esc(t.name)}</td><td class="mono muted">${t.step ? `step ${t.step}` : 'script'} ${esc(t.hook || '')}</td><td class="err-text">${esc(t.error || '')}</td></tr>`).join('')}</tbody></table>` : ''}
+    ${r.logs ? `<details open><summary>Log (${r.logs.length})</summary><pre class="code" style="max-height:200px">${esc(r.logs.map(l => `${l.step ? `[${l.step}${l.hook ? ` ${l.hook}` : ''}] ` : ''}${l.msg}`).join('\n'))}</pre></details>` : ''}
     ${r.steps.length ? `<table><thead><tr><th>#</th><th>Step</th><th class="num">Took</th><th>Result</th></tr></thead><tbody>${r.steps.map(x => `<tr><td>${esc(x.script === r.script ? String(x.step) : `${x.script} ${x.step}`)}</td><td class="mono">${esc(x.do)}</td><td class="num">${dur(x.ms)}</td><td class="det">${x.ok === false ? `<span class="err-text">${esc(x.error)}</span>` : `<pre class="code" style="max-height:160px">${esc(typeof x.result === 'string' ? x.result : JSON.stringify(x.result, null, 2))}</pre>`}</td></tr>`).join('')}</tbody></table>` : ''}`;
 }
 

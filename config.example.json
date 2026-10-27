@@ -77,10 +77,19 @@
 
   "files": {
     "templates": { "type": "local", "path": "files/templates" },
-    "partner": { "type": "sftp", "host": "sftp.dev.example.com", "port": 22, "user": "dt", "password": "${PARTNER_SFTP_PASSWORD}", "root": "/upload", "write": true }
+    "partner": {
+      "type": "sftp", "host": "sftp.dev.example.com", "port": 22, "user": "dt", "password": "${PARTNER_SFTP_PASSWORD}",
+      "root": "/upload", "write": true
+    },
+    "archive": {
+      "type": "sftp", "host": "files.dev.example.com", "user": "dt-reader",
+      "privateKeyFile": "keys/archive_ed25519", "passphrase": "${ARCHIVE_SFTP_KEY_PASSPHRASE:-}",
+      "hostKey": "SHA256:AAAAC3NzaC1lZDI1NTE5AAAAIExampleHostKeyFingerprint00",
+      "root": "/exports"
+    }
   },
 
-  "scripts": { "http": { "allow": ["https://partner-api.dev.example.com/imports"] } },
+  "scripts": { "http": { "allow": ["https://partner-api.dev.example.com/imports"] }, "js": true, "jsTimeoutMs": 5000 },
 
   "server": { "publicUrl": "http://127.0.0.1:4000", "apiKey": "${DT_API_KEY}", "ratePerSec": 1 }
 }
