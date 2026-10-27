@@ -33,10 +33,7 @@
   "tools": {
     "enable": ["all"],
     "disable": ["confluence"],
-    "plugins": [
-      "plugins/pg_activity.js",
-      { "url": "github:you/dt-plugins/jira.js@v1.2.0", "sha256": "<sha256 of the file, shown on /admin after the first download>" }
-    ],
+    "plugins": [],
     "custom": [
       {
         "name": "orders_by_status",

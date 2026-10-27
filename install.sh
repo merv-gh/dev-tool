@@ -1,12 +1,12 @@
 #!/bin/sh
 # Install and start dt in one go:
-#   curl -fsSL https://raw.githubusercontent.com/<owner>/dev-tool/main/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/merv-gh/dev-tool/main/install.sh | sh
 #   curl -fsSL .../install.sh | sh -s -- --home ~/work/dt --tools-only
 # Options: --home DIR (config + data, default ~/dt)   --dir DIR (code, default ~/.dev-tool)
 #          --tools-only (no Open WebUI/browser/graph)   --ref BRANCH|TAG   --no-start
 # Run it again to update the code and restart; your config folder is never overwritten.
 set -e
-REPO=${DT_REPO:-https://github.com/<owner>/dev-tool.git}
+REPO=${DT_REPO:-https://github.com/merv-gh/dev-tool.git}
 REF=${DT_REF:-main}
 CODE=${DT_CODE_DIR:-$HOME/.dev-tool}
 HOME_DIR=${DT_HOME:-$HOME/dt}

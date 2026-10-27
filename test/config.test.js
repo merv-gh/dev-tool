@@ -179,3 +179,15 @@ test('migrate-config: the older layout becomes config.json + .env with the same 
   assert.doesNotMatch(JSON.stringify(cfg), /postgres:\/\/|tok"|"pw"/, 'no secret values in config.json');
   fs.rmSync(old, { recursive: true, force: true });
 });
+
+test('edits to .env and config.json apply without a restart', async () => {
+  const cfg = require('../lib/config');
+  fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ envs: { dev: { postgres: { orders: '${LIVE_DB}' } } } }));
+  fs.writeFileSync(path.join(home, '.env'), 'LIVE_DB=postgres://a/one\n');
+  cfg.reload();
+  assert.equal(cfg.getEnv('dev').pg.orders, 'postgres://a/one');
+  await new Promise(r => setTimeout(r, 1100));
+  fs.writeFileSync(path.join(home, '.env'), 'LIVE_DB=postgres://a/two\n');
+  const t = new Date(Date.now() + 5000); fs.utimesSync(path.join(home, '.env'), t, t);
+  assert.equal(cfg.getEnv('dev').pg.orders, 'postgres://a/two');
+});

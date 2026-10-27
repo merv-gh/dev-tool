@@ -23,11 +23,11 @@ client ──(OpenAPI / MCP)──> dt :4000 ──read-only──> Postgres, El
 One command clones dt to `~/.dev-tool`, creates a config folder at `~/dt` from the examples, and starts it:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/<owner>/dev-tool/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/merv-gh/dev-tool/main/install.sh | sh
 ```
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/<owner>/dev-tool/main/install.sh | sh -s -- --home ~/work/dt --tools-only
+curl -fsSL https://raw.githubusercontent.com/merv-gh/dev-tool/main/install.sh | sh -s -- --home ~/work/dt --tools-only
 ```
 
 | Option | Default | |
