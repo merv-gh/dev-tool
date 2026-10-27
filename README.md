@@ -286,12 +286,29 @@ Tools: `files_stores`, `files_list` (glob, recursive), `files_search` (by name g
 
 **Writes are opt-in.** A store is read-only unless it has `"write": true`, and a write never replaces a file unless `overwrite` is set. Script `http` steps only reach URL prefixes listed in `scripts.http.allow`. Everything else in dt stays read-only.
 
+## Code mode
+
+To compute something, the agent can write a little JavaScript instead of making many tool calls: the `code` tool runs it with every dt tool at hand, and the chat shows the code and its output.
+
+```js
+const r = await tools.pg_query({ env: 'demo', sql: 'select status, total from sales.orders', all: true });
+const by = {};
+for (const o of r.rows) (by[o.status] ||= []).push(Number(o.total));
+for (const [s, xs] of Object.entries(by)) text(s, xs.length, (xs.reduce((a, b) => a + b, 0) / xs.length).toFixed(2));
+```
+
+- `await tools.<any tool>(args)` (or `tools.call(name, args)`; `await tools.list()` lists them); a failing tool throws, so `try`/`catch` works. `text(...)` prints (objects as pretty JSON); a returned value is shown too. The same helpers as in scripts (`uuid`, `date`, `diffLists`, …).
+- It runs in the script sandbox (no files, no network, no secrets), for up to 60 s (`scripts.codeTimeoutMs`). Tool calls go back to dt over the sandbox's pipe and run as normal calls: same rate limits, same read-only rules, logged as source `code`.
+- The answer has the output for the model and a `code` view for the user (code, output, the tools it called, links to their views).
+- Script `js` steps and hooks can call tools the same way.
+
 ## Views: how results are shown
 
 Every result can be shown in the chat (Open WebUI embeds it) or on its own page. Tables use the result viewer; everything else uses **views**:
 
 | View | Shows | DATA |
 | --- | --- | --- |
+| `code` | JavaScript that ran, its output, the tools it called | from the `code` tool |
 | `json` | a collapsible tree, raw text, copy | any JSON |
 | `xml` | re-indented, highlighted | the XML text |
 | `table` | rows | an array of objects |
@@ -356,7 +373,7 @@ Secrets (`.env`) are never shown or edited there.
 | passport | `passport`, `passports`, `who_uses` |
 | browser | `browser_sites`, `site_url` (plus the Playwright MCP tools when the `browser` profile runs) |
 | api | `api_routes`, `routes_learn`, `routes_discover` |
-| scripts | `script_list`, `script_get`, `script_save`, `script_run`, `script_collection`, `js_run`, plus each script or collection exposed as a tool |
+| scripts | `code`, `script_list`, `script_get`, `script_save`, `script_run`, `script_collection`, `js_run`, plus each script or collection exposed as a tool |
 | files | `files_stores`, `files_list`, `files_search`, `files_read`, `files_write`, `files_copy`, `files_browse`, `files_show` |
 | views | `show`, `diff`, `view_list`, `view_get`, `view_save` |
 | history | `call_history`, `call_patterns` |
@@ -373,6 +390,7 @@ Every picture comes from the bundled demo, a fake environment with real Postgres
 | ![admin: index status](docs/screenshots/admin-index.png) **/admin** · what is indexed, refresh all or one source | ![admin: table usages](docs/screenshots/admin-explore-table.png) **Explore** · a table: columns, constraints, triggers, who uses it |
 | ![admin: function](docs/screenshots/admin-explore-function.png) **Explore** · a function: arguments, callers in code and in the db | ![admin: jobs](docs/screenshots/admin-jobs.png) **Jobs** · every refresh with its log |
 | ![chat: reconcile](docs/screenshots/chat-reconcile.png) **In the chat** · shipped orders vs the partner's settlement file on SFTP | ![chat: file](docs/screenshots/chat-file.png) **In the chat** · "show me the order file from the inbox" |
+| ![chat: code](docs/screenshots/chat-code.png) **Code mode** · "compute the average order total per status" in one call | |
 | ![chat: files](docs/screenshots/chat-files.png) **In the chat** · the SFTP as a tree | ![files](docs/screenshots/files.png) **Files** · nested folders, JSON preview |
 | ![text diff](docs/screenshots/view-text-diff.png) **text-diff** · the template vs what was sent | ![admin: views](docs/screenshots/admin-views.png) **Views** · edit a view next to its live preview |
 | ![chat: overview](docs/screenshots/chat-overview.png) **In the chat** · live environment dashboard | ![chat: logs](docs/screenshots/chat-logs.png) **In the chat** · log search with timeline |

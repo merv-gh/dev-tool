@@ -10,6 +10,25 @@ const ctx = (r) => (Array.isArray(r) && r[0] === 'embed' ? r[1] : r); // OpenAPI
 
 const SCENARIOS = [
   {
+    match: /(compute|calculate|average|per status)/i,
+    steps: [{ tool: 'code', args: { title: 'Average order total per status', code: [
+      "const r = await tools.pg_query({ env: 'demo', sql: 'select status, total from sales.orders', all: true });",
+      'const by = {};',
+      'for (const o of r.rows) (by[o.status] ||= []).push(Number(o.total));',
+      'const rows = Object.entries(by).map(([status, xs]) => ({ status, orders: xs.length, avg: xs.reduce((a, b) => a + b, 0) / xs.length }))',
+      '  .sort((a, b) => b.avg - a.avg);',
+      "for (const x of rows) text(x.status.padEnd(15), String(x.orders).padStart(4), x.avg.toFixed(2));",
+      "return { highest: rows[0].status, lowest: rows.at(-1).status };",
+    ].join('\n') } }],
+    answer: (rs) => {
+      const r = ctx(rs[0]) || {};
+      const lines = String(r.output || '').split('\n').filter(Boolean);
+      return `Computed from all ${lines.reduce((n, l) => n + Number(l.trim().split(/\s+/)[1] || 0), 0)} orders in one \`code\` call (one query, the rest in JavaScript):\n\n` +
+        lines.map(l => { const [s, n, avg] = l.trim().split(/\s+/); return `- **${s}**: ${n} orders, average **${avg}**`; }).join('\n') +
+        `\n\nHighest average: **${(r.returned || {}).highest}**, lowest: **${(r.returned || {}).lowest}**. The spread is small, so status does not drive order size here.`;
+    },
+  },
+  {
     match: /settlement|reconcil|shipped orders/i,
     steps: [{ tool: 'reconcile', args: { script: 'shipped settlement', params: { month: '2026/10' } } }],
     answer: (rs) => {

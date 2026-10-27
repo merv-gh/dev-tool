@@ -13,6 +13,7 @@ const QUESTIONS = [
   ['chat-reconcile', 'Compare our shipped orders with the partner settlement report for October'],
   ['chat-files', 'Browse the partner sftp'],
   ['chat-file', 'Show me the order file from the partner inbox'],
+  ['chat-code', 'Compute the average order total per status'],
 ].filter(([name]) => !process.env.ONLY || process.env.ONLY.split(',').includes(name));
 
 (async () => {

@@ -62,7 +62,7 @@ Or use http://127.0.0.1:4000/admin.
 - `lib/passport/`: static analysis of repos.
 - `lib/scripts.js`, `lib/browser-mcp.js`, `lib/routes.js`: saved scripts (fuzzy names, scripts/collections as tools, set/transform/http steps), dt's Playwright MCP client, API routes (code + wire).
 - `lib/views.js`, `web/views/`: views (built-in `*.html`, `_helpers.js` = `dt`, `_views.css`), rendered sandboxed at `/show/<id>`; custom ones in `views/` of the config folder. `lib/diff.js`: diffLists/diffLines, shared with views and the JS sandbox. `web/files.html`: the file browser (`/files/<id>`).
-- `lib/js.js`: the JS sandbox for js steps and hooks (node --permission child process, empty env).
+- `lib/js.js`: the JS sandbox for js steps, hooks and the `code` tool (node --permission child process, empty env); code calls dt tools over its stdin/stdout (Session onTool).
 - `lib/files.js`: file stores (local, SFTP via ssh2); `lib/calls.js`: the call log (`cache/_calls.jsonl`) and repeated-work patterns.
 - `server.js`: HTTP routes and auth.
 - `web/`: pages (admin, view, dash, logs, pr, passport).

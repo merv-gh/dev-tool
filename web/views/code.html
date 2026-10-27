@@ -1,0 +1,45 @@
+<!-- {"description": "Code mode: JavaScript that was run, its output, the dt tools it called. DATA: { code, output, returned, error, logs, calls, views, ms, title }", "sample": {"title": "Average order total per status", "code": "const r = await tools.pg_query({ env: 'demo', sql: 'select status, total from sales.orders', all: true });\nconst by = {};\nfor (const o of r.rows) (by[o.status] ||= []).push(Number(o.total));\nfor (const [s, xs] of Object.entries(by)) text(s.padEnd(15), xs.length, (xs.reduce((a, b) => a + b, 0) / xs.length).toFixed(2));\nreturn Object.keys(by).length;", "output": "new             80 170.00\npaid            80 171.75\nshipped         80 165.50", "returned": 3, "calls": [{"tool": "pg_query", "ms": 12, "ok": true}], "ms": 90}} -->
+<style>
+  .cm { display: grid; gap: 10px; }
+  .cm-head { display: flex; gap: 8px; align-items: baseline; color: var(--muted); font-size: 13px; }
+  .cm-head b { color: var(--fg); font-size: 14px; }
+  .cm-box { background: var(--soft); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .cm-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; font-weight: 600; font-size: 13px; }
+  .cm-bar .ic { color: var(--muted); font-family: ui-monospace, Menlo, monospace; }
+  .cm-bar .sp { flex: 1; }
+  .cm-bar button { border: 0; background: none; color: var(--muted); padding: 2px 6px; border-radius: 6px; font-size: 12px; }
+  .cm-bar button:hover, .cm-bar button.on { background: var(--line); color: var(--fg); }
+  .cm-box pre { margin: 0; padding: 4px 14px 12px; font: 12.5px/1.6 ui-monospace, Menlo, monospace; overflow: auto; max-height: 420px; white-space: pre; }
+  .cm-box pre.wrap { white-space: pre-wrap; word-break: break-word; }
+  .k { color: #8e44ad; } .s { color: var(--good); } .n { color: #b5651d; } .c { color: var(--muted); font-style: italic; } .f { color: var(--accent); }
+  .cm-err { color: var(--bad); }
+  .cm-calls { display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px; }
+</style>
+<div class="cm">
+  <div class="cm-head"><b data-title></b><span id="ms"></span></div>
+  <div class="cm-box"><div class="cm-bar"><span class="ic">&lt;/&gt;</span>JavaScript<span class="sp"></span><button data-wrap="code" title="Wrap lines">⏎</button><button data-copy="code">Copy</button></div><pre id="code"></pre></div>
+  <div class="cm-box"><div class="cm-bar"><span class="ic">&lt;/&gt;</span>Output<span class="sp"></span><button data-wrap="out" title="Wrap lines">⏎</button><button data-copy="out">Copy</button></div><pre id="out"></pre></div>
+  <div class="cm-calls" id="calls"></div>
+</div>
+<script>
+  const KW = /\b(const|let|var|await|async|function|return|if|else|for|of|in|while|new|try|catch|throw|true|false|null|undefined|typeof)\b/g;
+  const hl = (src) => dt.esc(src).replace(/(\/\/[^\n]*)|("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`)|\b(\d+(?:\.\d+)?)\b|\b(tools|text|log)\b(?=[.(])/g,
+    (m, c, str, num, fn) => c ? `<span class="c">${c}</span>` : str ? `<span class="s">${str}</span>` : num ? `<span class="n">${num}</span>` : `<span class="f">${fn}</span>`)
+    .replace(/(^|[^\w"'>])(const|let|var|await|async|function|return|if|else|for|of|in|while|new|try|catch|throw|true|false|null|undefined|typeof)\b(?![^<]*<\/span>)/g, '$1<span class="k">$2</span>');
+  dt.title(DATA.title || 'Ran JavaScript');
+  dt.$('#ms').textContent = DATA.ms != null ? `${DATA.ms} ms` : '';
+  dt.$('#code').innerHTML = hl(DATA.code || '');
+  const parts = [];
+  if (DATA.output) parts.push(dt.esc(DATA.output));
+  if (DATA.returned !== undefined && DATA.returned !== null) parts.push(`<span class="c">returned</span> ${dt.esc(typeof DATA.returned === 'string' ? DATA.returned : JSON.stringify(DATA.returned, null, 2))}`);
+  if ((DATA.logs || []).length) parts.push(`<span class="c">${dt.esc(DATA.logs.join('\n'))}</span>`);
+  if (DATA.error) parts.push(`<span class="cm-err">Error: ${dt.esc(DATA.error)}</span>`);
+  dt.$('#out').innerHTML = (DATA.error ? '' : '<span class="c">Script completed</span>\n') + (parts.join('\n') || '<span class="c">(no output: use text(...) or return a value)</span>');
+  dt.$('#calls').innerHTML = (DATA.calls || []).map(c => `<span class="chip ${c.ok ? 'good' : 'bad'}" title="${dt.esc(JSON.stringify(c.args || {}))}">${dt.esc(c.tool)} · ${c.ms} ms</span>`).join('')
+    + (DATA.views || []).map(v => `<a class="chip" href="${dt.esc(v.view)}" target="_blank" rel="noopener">${dt.esc(v.tool)} view ↗</a>`).join('');
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.copy) dt.copy(b.dataset.copy === 'code' ? DATA.code : [DATA.output, DATA.returned !== undefined ? JSON.stringify(DATA.returned) : ''].filter(Boolean).join('\n'), b);
+    if (b.dataset.wrap) { const p = dt.$('#' + b.dataset.wrap); p.classList.toggle('wrap'); b.classList.toggle('on'); }
+  });
+</script>

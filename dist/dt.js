@@ -316,7 +316,7 @@ var require_config = __commonJS({
     }
     function getScripts() {
       const c = resolved("scripts");
-      return { httpAllow: [].concat((c.http || {}).allow || []).filter(Boolean).map(String), js: c.js !== false, jsTimeoutMs: Number(c.jsTimeoutMs) || 5e3 };
+      return { httpAllow: [].concat((c.http || {}).allow || []).filter(Boolean).map(String), js: c.js !== false, jsTimeoutMs: Number(c.jsTimeoutMs) || 5e3, codeTimeoutMs: Number(c.codeTimeoutMs) || 6e4 };
     }
     function getFiles() {
       const c = resolved("files");
@@ -5498,7 +5498,22 @@ const pad = (n, w = 2) => String(n).padStart(w, '0');
 const date = (f = 'YYYY-MM-DD', d = new Date()) => f.replace(/YYYY|MM|DD|HH|mm|ss|SSS/g, (t) => ({ YYYY: d.getFullYear(), MM: pad(d.getMonth() + 1), DD: pad(d.getDate()), HH: pad(d.getHours()), mm: pad(d.getMinutes()), ss: pad(d.getSeconds()), SSS: pad(d.getMilliseconds(), 3) }[t]));
 const rand = (n = 6) => Array.from(crypto.getRandomValues(new Uint8Array(n)), b => b % 10).join('').replace(/^0/, '1');
 const hex = (n = 8) => Array.from(crypto.getRandomValues(new Uint8Array(Math.ceil(n / 2))), b => b.toString(16).padStart(2, '0')).join('').slice(0, n);
-const logs = [], tests = [], pending = [];
+const logs = [], tests = [], pending = [], output = [];
+// tool calls go to dt over stdout; answers come back on stdin
+let rpcSeq = 0;
+const rpcWait = new Map();
+const rpc = (tool, args) => new Promise((resolve, reject) => {
+  const id = ++rpcSeq;
+  rpcWait.set(id, { resolve, reject });
+  process.stdout.write(JSON.stringify({ rpc: id, tool, args: args === undefined ? {} : args }) + '\n');
+});
+const tools = new Proxy({}, { get: (_, name) => {
+  if (typeof name !== 'string' || name === 'then') return undefined;
+  if (name === 'call') return (tool, args) => rpc(tool, args);
+  if (name === 'list') return () => rpc('__list', {});
+  return (args) => rpc(name, args);
+} });
+const pretty = (v) => (typeof v === 'string' ? v : (() => { try { return JSON.stringify(v, null, 2); } catch { return String(v); } })());
 const check = (ok, msg) => { if (!ok) throw new Error(msg); };
 function expect(v) {
   const m = (neg) => ({
@@ -5515,6 +5530,8 @@ function expect(v) {
 const helpers = {
   uuid: () => crypto.randomUUID(), now: () => new Date().toISOString(), date, rand, hex, diffLists, diffLines,
   log: (...a) => { logs.push(a.map(fmt).join(' ').slice(0, 2000)); },
+  text: (...a) => { output.push(a.map(pretty).join(' ')); },
+  tools,
   assert: (ok, msg) => check(ok, msg || 'assertion failed'),
   expect,
   test: (name, fn) => {
@@ -5531,13 +5548,17 @@ process.stdin.on('data', (c) => {
   let i;
   while ((i = buf.indexOf('\n')) >= 0) {
     const line = buf.slice(0, i); buf = buf.slice(i + 1);
-    queue = queue.then(() => handle(line));
+    const msg = JSON.parse(line);
+    if (msg.rpcResult !== undefined) {
+      const w = rpcWait.get(msg.rpcResult);
+      rpcWait.delete(msg.rpcResult);
+      if (w) msg.error ? w.reject(new Error(msg.error)) : w.resolve(msg.result);
+    } else queue = queue.then(() => handle(msg));
   }
 });
-async function handle(line) {
-  const input = JSON.parse(line);
-  logs.length = 0; tests.length = 0; pending.length = 0;
-  const out = { vars: input.vars, args: input.args, result: input.result, logs, tests };
+async function handle(input) {
+  logs.length = 0; tests.length = 0; pending.length = 0; output.length = 0;
+  const out = { vars: input.vars, args: input.args, result: input.result, logs, tests, output };
   try {
     const AsyncFunction = (async () => {}).constructor;
     const fn = new AsyncFunction('vars', 'args', 'result', ...Object.keys(helpers), input.code);
@@ -5546,7 +5567,7 @@ async function handle(line) {
     if (r !== undefined) { out.returned = r; out.hasReturn = true; }
   } catch (e) { out.error = (e && e.message) || String(e); }
   let text;
-  try { text = JSON.stringify(out); } catch (e) { text = JSON.stringify({ logs, tests, error: 'result is not JSON: ' + e.message }); }
+  try { text = JSON.stringify(out); } catch (e) { text = JSON.stringify({ logs, tests, output, error: 'result is not JSON: ' + e.message }); }
   process.stdout.write(text + '\n');
 }
 `;
@@ -5571,7 +5592,13 @@ async function handle(line) {
           while ((i = out2.indexOf("\n")) >= 0) {
             const line = out2.slice(0, i);
             out2 = out2.slice(i + 1);
-            if (this.wait) this.wait.done(line);
+            let msg = null;
+            try {
+              msg = JSON.parse(line);
+            } catch {
+            }
+            if (msg && msg.rpc !== void 0) this.tool(child, msg);
+            else if (this.wait) this.wait.done(line);
           }
           if (out2.length > 2e7) this.kill("more than 20 MB of output");
         });
@@ -5586,6 +5613,23 @@ async function handle(line) {
         });
         this.child = child;
       }
+      // a tool call from the code: run it through onTool (or refuse), answer on stdin
+      async tool(child, { rpc, tool, args }) {
+        let reply;
+        try {
+          if (!this.onTool) throw new Error("dt tools are not available here");
+          reply = { rpcResult: rpc, result: await this.onTool(tool, args) };
+        } catch (e) {
+          reply = { rpcResult: rpc, error: e.message };
+        }
+        let line;
+        try {
+          line = JSON.stringify(reply);
+        } catch (e) {
+          line = JSON.stringify({ rpcResult: rpc, error: `result is not JSON: ${e.message}` });
+        }
+        if (this.child === child) child.stdin.write(line + "\n");
+      }
       kill(why) {
         const w = this.wait;
         this.wait = null;
@@ -5595,9 +5639,12 @@ async function handle(line) {
         }
         if (w) w.fail(new Error(`js: ${why}`));
       }
-      // -> { vars, args, result, returned, hasReturn, logs, tests, error }
-      run(code, { vars = {}, args, result } = {}) {
+      // -> { vars, args, result, returned, hasReturn, logs, tests, output, error }
+      // onTool(name, args): lets the code call dt tools; timeoutMs: instead of scripts.jsTimeoutMs
+      run(code, { vars = {}, args, result } = {}, { onTool, timeoutMs } = {}) {
         const c = enabled();
+        this.onTool = onTool || this.onTool;
+        const limitMs = timeoutMs || c.jsTimeoutMs;
         if (!this.child) this.start();
         let line;
         try {
@@ -5606,7 +5653,7 @@ async function handle(line) {
           return Promise.reject(new Error(`js: data is not JSON: ${e.message}`));
         }
         return new Promise((resolve, reject) => {
-          const t = setTimeout(() => this.kill(`stopped after ${c.jsTimeoutMs}ms`), c.jsTimeoutMs);
+          const t = setTimeout(() => this.kill(`stopped after ${limitMs}ms`), limitMs);
           this.wait = {
             done: (text) => {
               clearTimeout(t);
@@ -5634,10 +5681,10 @@ async function handle(line) {
         }
       }
     };
-    async function run(code, data) {
+    async function run(code, data, opts) {
       const s = new Session();
       try {
-        return await s.run(code, data);
+        return await s.run(code, data, opts);
       } finally {
         s.close();
       }
@@ -6062,7 +6109,11 @@ ${lines.join("\n") || "(empty)"}`,
     var capturePath = (v, p) => !p || p === "." || p === "$" ? v : dig(v, String(p).replace(/^\$\.?/, "").replace(/\[(\d+)\]/g, ".$1").split(".").filter(Boolean));
     async function hook(code, st, where, { scope, args, result }) {
       if (!st.js) st.js = new (require_js()).Session();
-      const r = await st.js.run([].concat(code).join("\n"), { vars: scope, args, result });
+      const onTool = (name, a) => {
+        if (name === "__list") return require_tools().schemas().then((ts) => ts.map((t) => ({ name: t.name, description: t.description.split(". ")[0] })));
+        return require_tools().call(name, a, { source: `script:${where.script}` });
+      };
+      const r = await st.js.run([].concat(code).join("\n"), { vars: scope, args, result }, { onTool, timeoutMs: [].concat(code).join("\n").includes("tools.") ? require_config().getScripts().codeTimeoutMs : void 0 });
       if (r.vars && typeof r.vars === "object") {
         for (const k of Object.keys(scope)) if (!(k in r.vars)) delete scope[k];
         Object.assign(scope, r.vars);
@@ -27382,6 +27433,56 @@ var require_tools = __commonJS({
         input: { id: str("Script id, name or a close name"), params: { type: "object", description: "Param values", additionalProperties: true } },
         required: ["id"],
         run: (a) => require_scripts().run(a.id, a.params || {})
+      },
+      {
+        name: "code",
+        group: "scripts",
+        description: 'Code mode: compute something with a little JavaScript that can call any dt tool, instead of many separate tool calls. `await tools.pg_query({ env, sql, all: true })` (any tool by name; tools.call(name, args); await tools.list()), then work with the results in plain JS and print with text(...) (objects as pretty JSON); return a value too. Helpers: uuid now date rand hex diffLists diffLines log. Sandboxed (no files, no network except dt tools, 60 s). The user sees the code and its output (embedded). Example: const r = await tools.pg_query({ env: "dev", sql: "select status, total from sales.orders", all: true }); const by = {}; for (const o of r.rows) (by[o.status] ||= []).push(Number(o.total)); for (const [s, xs] of Object.entries(by)) text(s, xs.length, (xs.reduce((a, b) => a + b, 0) / xs.length).toFixed(2));',
+        input: { code: str("JavaScript (top-level await works)"), title: str("What it computes (shown above the code)") },
+        required: ["code"],
+        run: async (a) => {
+          const started = Date.now();
+          const calls = [], views = [];
+          const s = new (require_js()).Session();
+          let r;
+          try {
+            r = await s.run(a.code, {}, {
+              timeoutMs: require_config().getScripts().codeTimeoutMs,
+              onTool: async (name, args) => {
+                if (name === "__list") return (await ready()).active.filter((t) => t.name !== "code").map((t) => ({ name: t.name, description: t.description.split(". ")[0] }));
+                if (name === "code") throw new Error("code cannot call itself");
+                const t0 = Date.now();
+                try {
+                  const res = await call(name, args, { source: "code" });
+                  calls.push({ tool: name, args, ms: Date.now() - t0, ok: true });
+                  if (res && typeof res === "object" && typeof res.view === "string") views.push({ tool: name, view: res.view });
+                  return res;
+                } catch (e) {
+                  calls.push({ tool: name, args, ms: Date.now() - t0, ok: false, error: e.message });
+                  throw e;
+                }
+              }
+            });
+          } catch (e) {
+            r = { error: e.message, output: [], logs: [] };
+          } finally {
+            s.close();
+          }
+          const output = (r.output || []).join("\n");
+          const ms = Date.now() - started;
+          const shown = { code: a.code, title: a.title || "", output, returned: r.hasReturn ? r.returned : void 0, error: r.error, logs: r.logs, calls, views, ms };
+          return {
+            ok: !r.error,
+            ms,
+            ...r.error ? { error: r.error } : {},
+            output: clip(output, 2e4),
+            ...r.hasReturn ? { returned: r.returned } : {},
+            ...r.logs && r.logs.length ? { logs: r.logs } : {},
+            calls: calls.map((c) => `${c.tool}${c.ok ? "" : " (failed)"} ${c.ms}ms`),
+            ...views.length ? { views: views.map((v) => v.view) } : {},
+            view: require_results().saveView("code", shown, { title: a.title || "Ran JavaScript" })
+          };
+        }
       },
       {
         name: "js_run",
