@@ -4,7 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 const httpMod = require('http');
 const fs = require('fs');
-const { envNames, getEnv, getPersonal } = require('./lib/config');
+const { envNames, getEnv, getPersonal, getServer } = require('./lib/config');
 const { CACHE, readJson } = require('./lib/util');
 const catalog = require('./lib/catalog');
 const tools = require('./lib/tools');
@@ -33,12 +33,12 @@ function sameSecret(a, b) {
   return x.length === y.length && crypto.timingSafeEqual(x, y);
 }
 function trusted(req) {
-  const key = process.env.DT_API_KEY;
+  const { apiKey: key, trustNetwork } = getServer();
   if (key) {
     const bearer = (String(req.headers.authorization || '').match(/^Bearer\s+(.+)$/i) || [])[1];
     if (sameSecret(bearer, key) || sameSecret(decodeURIComponent(cookie(req, 'dt_key') || ''), key)) return true;
   }
-  if (process.env.DT_TRUST_NETWORK === '1') return true;
+  if (trustNetwork) return true;
   const a = req.socket.remoteAddress || '';
   return a === '127.0.0.1' || a === '::1' || a === '::ffff:127.0.0.1';
 }
@@ -74,7 +74,7 @@ async function mcpHandle(msg) {
         instructions: require('./lib/webui').prompt(),
       });
     case 'ping': return reply({});
-    case 'tools/list': return reply({ tools: tools.schemas() });
+    case 'tools/list': return reply({ tools: await tools.schemas() });
     case 'tools/call': {
       const started = Date.now();
       try {
@@ -110,9 +110,9 @@ const viewPage = page('view.html');
 // Open WebUI embeds a tool result as an iframe when the response carries
 // `Content-Disposition: inline` + `Location`, and gives the model the second element of a
 // two-element JSON array body. So table results show up as the live viewer inside the chat.
-function openapi() {
+async function openapi() {
   const paths = {};
-  for (const t of tools.schemas()) {
+  for (const t of await tools.schemas()) {
     paths[`/oapi/${t.name}`] = {
       post: {
         operationId: t.name,
@@ -150,25 +150,26 @@ const routes = [
   ['GET', '/api/status', false, (req, res) => send(res, 200, { trusted: trusted(req), ...status() })],
   ['GET', '/api/prompt', false, (req, res) => { res.writeHead(200, { 'content-type': 'text/markdown; charset=utf-8' }); res.end(require('./lib/webui').prompt()); }],
   ['GET', '/api/find', true, (req, res, url) => send(res, 200, catalog.find(url.searchParams.get('env') || envNames()[0], url.searchParams.get('q') || '', { limit: Number(url.searchParams.get('limit')) || 300 }))],
-  ['GET', '/api/tools', false, (req, res) => send(res, 200, tools.schemas())],
+  ['GET', '/api/tools', false, async (req, res) => send(res, 200, await tools.schemas())],
   ['POST', '/api/tool/*', true, async (req, res, url) => {
     try { send(res, 200, { result: await tools.call(url.pathname.split('/').pop(), await readJsonBody(req)) }); }
     catch (e) { send(res, 400, { error: e.message }); }
   }],
-  ['GET', '/openapi.json', false, (req, res) => send(res, 200, openapi())],
+  ['GET', '/openapi.json', false, async (req, res) => send(res, 200, await openapi())],
   ['POST', '/oapi/*', true, oapi],
 
   // admin: watch, edit and refresh the index
   ['GET', '/admin', false, (req, res, url) => {
     const key = url.searchParams.get('key');
-    if (key && process.env.DT_API_KEY && sameSecret(key, process.env.DT_API_KEY)) {
+    if (key && getServer().apiKey && sameSecret(key, getServer().apiKey)) {
       res.writeHead(302, { location: '/admin', 'set-cookie': `dt_key=${encodeURIComponent(key)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=2592000` });
       return res.end();
     }
     if (!trusted(req)) { res.writeHead(401, { 'content-type': 'text/html; charset=utf-8' }); return res.end('<p style="font:14px system-ui;margin:40px">Open <code>/admin?key=&lt;DT_API_KEY&gt;</code> once to sign in.</p>'); }
     page('admin.html')(req, res);
   }],
-  ['GET', '/api/admin/status', true, (req, res) => send(res, 200, admin.status())],
+  ['GET', '/api/admin/status', true, async (req, res) => send(res, 200, await admin.status())],
+  ['POST', '/api/admin/tools/reload', true, async (req, res) => send(res, 200, await tools.reload(await readJsonBody(req)))],
   ['POST', '/api/admin/refresh', true, async (req, res) => {
     try { const job = require('./lib/indexer').refresh(await readJsonBody(req)); send(res, 202, { id: job.id, key: job.key, state: job.state }); }
     catch (e) { send(res, 400, { error: e.message }); }
@@ -178,7 +179,7 @@ const routes = [
   ['GET', '/api/admin/object', true, (req, res, url) => send(res, 200, admin.object(url.searchParams.get('env') || envNames()[0], url.searchParams.get('name') || ''))],
   ['GET', '/api/admin/config', true, (req, res) => send(res, 200, admin.readConfig())],
   ['POST', '/api/admin/config', true, async (req, res) => {
-    try { send(res, 200, admin.writeConfig((await readJsonBody(req)).text)); } catch (e) { send(res, 400, { error: e.message }); }
+    try { send(res, 200, await admin.writeConfig((await readJsonBody(req)).text)); } catch (e) { send(res, 400, { error: e.message }); }
   }],
   ['GET', '/api/admin/notes', true, (req, res) => send(res, 200, require('./lib/notes').all())],
   ['POST', '/api/admin/notes', true, async (req, res) => {
@@ -236,7 +237,10 @@ function start({ port = 4000, host = '127.0.0.1' } = {}) {
       if (!res.headersSent) send(res, 500, { error: e.message }); else res.end();
     }
   });
-  server.listen(port, host, () => console.error(`dt serve: http://${host}:${port}  (mcp: /mcp)`));
+  // the browser container starts after dt is healthy and reads these secrets once
+  try { require('./lib/browser').writeSecrets(); } catch (e) { console.error(`browser secrets: ${e.message}`); }
+  tools.ready().catch(e => console.error(`tools: ${e.message}`));
+  server.listen(port, host, () => console.error(`dt serve: http://${host}:${port}  (mcp: /mcp, admin: /admin)`));
   return server;
 }
 

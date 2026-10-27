@@ -2,6 +2,7 @@
 
 Read-only access to a microservice environment (Postgres, Elasticsearch, Kafka, Consul, ELK, Bitbucket).
 Everything prints JSON to stdout; logs go to stderr. Default env is the first one configured; pass `--env <name>`.
+Config lives in one folder (`DT_HOME`, default this repo): `config.json` (structure, `${VAR}` references) + `.env` (values).
 
 ## Look before you query
 Search the cached index first. It's cheap and needs no network:
@@ -42,10 +43,12 @@ Live calls are rate limited to 1/s per system+env (`DT_RATE_PER_SEC`).
 Or use http://127.0.0.1:4000/admin.
 
 ## Code map
-- `lib/tools.js`: the tool registry, shared by MCP, OpenAPI, `/api/tool` and the CLI. Plugins come from `plugins/*.js`.
+- `lib/config.js`: config.json + .env (and the older layout); `lib/migrate.js` converts the old one.
+- `lib/tools.js`: the tool registry, shared by MCP, OpenAPI, `/api/tool` and the CLI. It also builds custom sql/http tools from `tools.custom` and loads plugins from `plugins/*.js` and `tools.plugins` (paths, URLs, github:). It rebuilds itself when config.json changes.
 - `lib/indexer.js`: every refresh, run as a job (`lib/jobs.js`).
 - `lib/pgindex.js`: the usage index.
 - `lib/passport/`: static analysis of repos.
 - `server.js`: HTTP routes and auth.
 - `web/`: pages (admin, view, dash, logs, pr, passport).
+- `demo/`: a fake environment plus the screenshot scripts.
 - `npm test` runs the tests. Use `DT_TEST_PG_URL` for the live Postgres test.

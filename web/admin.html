@@ -114,15 +114,19 @@
   </section>
 
   <section id="tab-config" hidden>
-    <h2>envs.json <span class="muted" id="cfgFile"></span></h2>
-    <p class="hint">Databases and endpoints per environment. Secrets stay in <code>.env.&lt;env&gt;</code>; this file names the variables. Without envs.json every <code>.env.&lt;name&gt;</code> is an env and every <code>DATABASE_URL_&lt;NAME&gt;</code> in it a database.</p>
+    <h2><span id="cfgName">config.json</span> <span class="muted" id="cfgFile"></span></h2>
+    <p class="hint" id="cfgHint">Environments, integrations, tools and browser sites. Secrets stay in <code>.env</code>; write <code>${NAME}</code> here to use one. Saving applies at once: tools reload without a restart.</p>
     <textarea id="cfg" rows="22" spellcheck="false"></textarea>
     <div class="row" style="margin:8px 0"><button class="primary" id="cfgSave">Save</button><button id="cfgReset">Reload</button><span id="cfgMsg" class="muted"></span></div>
     <details><summary>Example with every option</summary><pre class="code" id="cfgExample"></pre></details>
     <h2>Integrations</h2>
     <div class="card scroll"><table><tbody id="integrations"></tbody></table></div>
-    <h2>Tools <span class="muted">DT_TOOLS selects groups, e.g. <code>all,-confluence</code></span></h2>
+    <h2>Tools <span class="muted">tools.enable / tools.disable / tools.custom / tools.plugins in config.json</span></h2>
+    <div class="row" style="margin-bottom:8px"><button id="toolsReload">Reload tools</button><button id="toolsUpdate" title="Download remote plugins again">Update plugins</button><span class="muted" id="toolsInfo"></span></div>
+    <div id="toolErrors"></div>
     <div class="card scroll"><table><thead><tr><th>Group</th><th>Tools</th></tr></thead><tbody id="toolGroups"></tbody></table></div>
+    <h2>Plugins</h2>
+    <div class="card scroll"><table><thead><tr><th>Source</th><th>sha256</th><th>Downloaded</th><th>Pinned</th></tr></thead><tbody id="plugins"></tbody></table></div>
   </section>
 </div>
 <script src="/static/ui.js"></script>
@@ -162,7 +166,7 @@ function renderSources() {
   const rows = [];
   const pgOk = e.pg.filter(d => d.configured);
   rows.push(`<tr class="group"><td>Postgres <span class="muted">${pgOk.length}/${e.pg.length} databases</span></td><td></td><td class="muted">${esc(e.envFile)}${e.envFileFound ? '' : ' (missing)'}</td><td class="num">${pgOk.reduce((s, d) => s + (d.tables || 0), 0)} tables · ${pgOk.reduce((s, d) => s + (d.functions || 0), 0)} fn</td><td></td><td></td><td>${btn('pg', '', 'Refresh all', !pgOk.length)}</td></tr>`);
-  if (!e.pg.length) rows.push(`<tr class="off"><td colspan="7">No databases: add DATABASE_URL_&lt;NAME&gt; to ${esc(e.envFile)} or a pg map to envs.json.</td></tr>`);
+  if (!e.pg.length) rows.push(`<tr class="off"><td colspan="7">No databases: add envs.${esc(e.env)}.postgres to config.json (values from .env).</td></tr>`);
   for (const d of e.pg) {
     rows.push(`<tr class="${d.configured ? '' : 'off'}"><td>&nbsp;&nbsp;<a href="#" data-explore="pg: ${esc(d.db)} ">${esc(d.db)}</a></td><td>${statusOf(d, k('pg', d.db))}${d.error ? `<div class="err-text">${esc(d.error)}</div>` : ''}</td>
       <td class="mono muted">${esc(d.host || '')}</td><td class="num">${d.tables != null ? `${d.tables} tables · ${d.functions ?? 0} fn · ${d.triggers ?? 0} trg` : ''}</td><td>${d.configured ? ago(d.syncedAt) : ''}</td><td class="num">${dur(d.ms)}</td>
@@ -185,7 +189,7 @@ function renderPassports() {
   const ps = S.passports;
   $('nPassports').textContent = ps.length || '';
   const running = runningKeys();
-  $('passports').innerHTML = ps.length ? ps.map(p => `<tr>
+  $('passports').innerHTML = ps.length ? ps.map(p => `<tr style="white-space:nowrap">
     <td>${p.builtAt ? `<a href="/passport/${encodeURIComponent(p.service)}" target="_blank" rel="noopener">${esc(p.service)}</a>` : esc(p.service)}</td>
     <td class="mono">${esc(p.repo || p.mapped || '')}</td><td class="mono">${esc(p.ref || '')}${p.sha ? ` <span class="muted">${esc(p.sha.slice(0, 10))}</span>` : ''}${p.env ? ` <span class="pill">${esc(p.env)}</span>` : ''}</td>
     <td>${p.builtAt ? ago(p.builtAt) : '<span class="muted">mapped, not built</span>'}${p.changed ? ' <span class="pill" title="changed since the previous build">changed</span>' : ''}</td>
@@ -229,16 +233,23 @@ function renderConfig() {
     ['Confluence', S.integrations.confluence || 'not configured'],
     ['Code graph', S.integrations.graph || 'not configured (GRAPH_URL)'],
     ['Internal library groups', S.integrations.internalGroups.join(', ') || '(own group prefix of each service)'],
-    ['Config folder', S.config.dir],
+    ['Config folder', `${S.config.dir} (${S.config.format === 'config.json' ? 'config.json + .env' : 'older layout: run "dt migrate-config"'})`],
+    ['Browser sites', S.config.browserSites.join(', ') || 'none (browser.sites)'],
     ['Notes', `${S.config.notes} (notes.json)`],
     ['Access', S.auth.apiKey ? 'API key required (DT_API_KEY)' + (S.auth.trustNetwork ? ', and the network is trusted (DT_TRUST_NETWORK=1)' : '') : S.auth.trustNetwork ? 'trusted network (DT_TRUST_NETWORK=1)' : 'this machine only'],
   ].map(([k, v]) => `<tr><th style="width:220px">${esc(k)}</th><td class="mono">${esc(v)}</td></tr>`).join('');
-  $('toolGroups').innerHTML = S.tools.map(g => `<tr><td><b>${esc(g.group)}</b></td><td>${g.tools.map(t => `<span class="chip ${t.enabled ? 'good' : ''}" title="${t.enabled ? 'enabled' : 'disabled by DT_TOOLS'}${t.plugin ? ` · plugin ${esc(t.plugin)}` : ''}">${esc(t.name)}</span>`).join(' ')}</td></tr>`).join('');
+  const T = S.tools;
+  $('toolsInfo').textContent = `${T.groups.reduce((n, g) => n + g.tools.filter(t => t.enabled).length, 0)} enabled · loaded ${fmtDate(T.builtAt)}`;
+  $('toolErrors').innerHTML = T.errors.map(e => `<div class="err-text" style="margin:4px 0">${esc(e.source)}: ${esc(e.error)}</div>`).join('');
+  $('toolGroups').innerHTML = T.groups.map(g => `<tr><td><b>${esc(g.group)}</b></td><td>${g.tools.map(t => `<span class="chip ${t.enabled ? 'good' : ''}" title="${t.enabled ? 'enabled' : 'disabled in config'} · ${esc(t.origin)}">${esc(t.name)}</span>`).join(' ')}</td></tr>`).join('');
+  $('plugins').innerHTML = T.plugins.length ? T.plugins.map(p => `<tr><td class="mono">${esc(p.source)}${p.error ? `<div class="err-text">${esc(p.error)}</div>` : ''}</td><td class="mono muted">${p.remote ? esc((p.sha256 || '').slice(0, 16)) + (p.sha256 ? '…' : 'not downloaded') : 'local file'}</td><td>${p.fetchedAt ? ago(p.fetchedAt) : ''}</td><td>${p.pinned ? (p.present ? '<span class="chip good">pinned</span>' : '<span class="chip bad">pin mismatch</span>') : ''}</td></tr>`).join('') : '<tr><td colspan="4" class="empty">None. Files in plugins/ load automatically; add URLs (or github:owner/repo/file.js@ref) to tools.plugins.</td></tr>';
 }
 
 async function loadConfig() {
   const c = await api('/api/admin/config');
   $('cfg').value = c.text; $('cfgFile').textContent = c.exists ? c.file : `${c.file} (not created yet: showing what is in effect)`;
+  $('cfgName').textContent = c.format === 'config.json' ? 'config.json' : 'envs.json';
+  if (c.format !== 'config.json') $('cfgHint').innerHTML = 'Older layout (envs.json + .env.&lt;env&gt;). Run <code>node cli.js migrate-config</code> to switch to config.json + .env.';
   $('cfgExample').textContent = c.example; $('cfgMsg').textContent = '';
 }
 
@@ -318,7 +329,7 @@ async function openObject(name) {
         body += o.arg_list?.length ? `<table><thead><tr><th>Argument</th><th>Type</th><th>Mode</th></tr></thead><tbody>${o.arg_list.map(a => `<tr><td class="mono">${esc(a.name || '(unnamed)')}</td><td class="mono">${esc(a.type)}</td><td>${esc(a.mode)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">No arguments.</p>';
         if (o.body) body += `<details><summary>Body (${o.body.split('\n').length} lines)</summary><pre class="code">${esc(o.body)}</pre></details>`;
       } else {
-        body += `<div class="scroll"><table><thead><tr><th>Column</th><th>Type</th><th>Null</th><th>Default</th><th>Comment</th></tr></thead><tbody>${(o.columns || []).map(c => `<tr><td class="mono">${esc(c.name)}</td><td class="mono">${esc(c.type)}</td><td>${c.nullable ? '' : 'not null'}</td><td class="mono muted">${esc(c.default || '')}</td><td class="muted">${esc(c.comment || '')}</td></tr>`).join('')}</tbody></table></div>`;
+        body += `<div class="scroll"><table><thead><tr><th>Column</th><th>Type</th><th>Null</th><th>Default</th><th>Comment</th></tr></thead><tbody>${(o.columns || []).map(c => `<tr><td class="mono">${esc(c.name)}</td><td class="mono">${esc(c.type)}</td><td style="white-space:nowrap">${c.nullable ? '' : 'not null'}</td><td class="mono muted">${esc(c.default || '')}</td><td class="muted">${esc(c.comment || '')}</td></tr>`).join('')}</tbody></table></div>`;
         if ((o.constraints || []).length) body += `<h2>Constraints</h2>${o.constraints.map(c => `<div class="mono" style="padding:2px 0">${esc(c.name)} <span class="muted">${esc(c.def)}</span></div>`).join('')}`;
         if ((o.indexes || []).length) body += `<h2>Indexes</h2>${o.indexes.map(i => `<div class="mono muted" style="padding:2px 0">${esc(i)}</div>`).join('')}`;
         if ((o.triggers || []).length) body += `<h2>Triggers</h2>${o.triggers.map(t => `<div class="mono muted" style="padding:2px 0">${esc(t.def)}</div>`).join('')}`;
@@ -377,10 +388,15 @@ $('ppBuild').onclick = async () => {
 };
 $('ppAll').onclick = () => startRefresh('passports');
 $('cfgSave').onclick = async () => {
-  try { const r = await api('/api/admin/config', { text: $('cfg').value }); $('cfgMsg').textContent = `Saved ${r.saved}. Envs: ${r.envs.join(', ')}. ${r.note}`; refresh(); }
+  try { const r = await api('/api/admin/config', { text: $('cfg').value }); $('cfgMsg').textContent = `Saved. Envs: ${r.envs.join(', ')}; ${r.tools.tools} tools${r.tools.errors.length ? ` (${r.tools.errors.length} errors below)` : ''}. ${r.note}`; refresh(); }
   catch (e) { $('cfgMsg').innerHTML = `<span class="err-text">${esc(e.message)}</span>`; }
 };
 $('cfgReset').onclick = () => loadConfig();
+const toolsReload = async (update) => {
+  try { const r = await api('/api/admin/tools/reload', { update }); toast(`${r.tools} tools${r.errors.length ? `, ${r.errors.length} errors` : ''}`); refresh(); } catch (e) { toast(e.message); }
+};
+$('toolsReload').onclick = () => toolsReload(false);
+$('toolsUpdate').onclick = () => toolsReload(true);
 show((location.hash || '#index').slice(1));
 refresh();
 </script>

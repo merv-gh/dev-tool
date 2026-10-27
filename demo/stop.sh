@@ -1,0 +1,2 @@
+#!/bin/sh
+pkill -f "demo/mock.js" 2>/dev/null; pkill -f "cli.js serve --port ${DT_DEMO_PORT:-4800}" 2>/dev/null; docker rm -f dt-demo-pg >/dev/null 2>&1; echo stopped

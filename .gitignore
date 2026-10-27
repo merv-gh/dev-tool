@@ -12,3 +12,4 @@ passports/
 plugins/*.js
 dist/
 node_modules/
+demo/.home/

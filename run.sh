@@ -1,12 +1,42 @@
 #!/bin/sh
-# docker compose with settings from .env.personal (COMPOSE_PROFILES, LLM_*, DT_API_KEY).
-#   ./run.sh up -d --build     ./run.sh logs -f dt     ./run.sh down
-#   COMPOSE_PROFILES= ./run.sh up -d        only the dt tool server
-cd "$(dirname "$0")" || exit 1
-[ -f .env.personal ] || { echo "missing .env.personal: cp .env.personal.example .env.personal" >&2; exit 1; }
-ls .env.* 2>/dev/null | grep -qvE '\.env\.(personal|browser|example)|\.example$' || echo "note: no .env.<env> file yet (cp .env.example .env.dev); dt starts, but has nothing to index" >&2
-mkdir -p cache repos passports plugins   # bind mounts: create them as you, not as root
-[ -f .env.browser ] || : > .env.browser   # browser container mounts it; empty = no sites
-# COMPOSE_PROFILES: from the environment, else .env.personal, else everything
-if [ -z "${COMPOSE_PROFILES+set}" ] && ! grep -q '^COMPOSE_PROFILES=' .env.personal; then export COMPOSE_PROFILES=webui,browser,graph; fi
-exec docker compose --env-file .env.personal "$@"
+# docker compose for dt, with config and data in one folder.
+#   ./run.sh [--home DIR] [--tools-only] <compose args>
+#   ./run.sh --home ~/dt up -d --build        full stack (profiles from COMPOSE_PROFILES in DIR/.env)
+#   ./run.sh --home ~/dt --tools-only up -d   only the dt tool server (for an Open WebUI / MCP client you already run)
+#   ./run.sh --home ~/dt logs -f dt           ./run.sh --home ~/dt down
+# DIR defaults to $DT_HOME, else this folder. It holds config.json + .env (or the older .env.<env> files).
+set -e
+cd "$(dirname "$0")"
+CODE=$(pwd)
+HOME_DIR=${DT_HOME:-$CODE}
+TOOLS_ONLY=
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --home) HOME_DIR=$2; shift 2 ;;
+    --home=*) HOME_DIR=${1#--home=}; shift ;;
+    --tools-only) TOOLS_ONLY=1; shift ;;
+    *) break ;;
+  esac
+done
+mkdir -p "$HOME_DIR"
+HOME_DIR=$(cd "$HOME_DIR" && pwd)
+
+if [ -f "$HOME_DIR/.env" ]; then ENV_FILE=$HOME_DIR/.env
+elif [ -f "$HOME_DIR/.env.personal" ]; then ENV_FILE=$HOME_DIR/.env.personal   # older layout
+else
+  echo "no $HOME_DIR/.env yet. Start from the examples:" >&2
+  echo "  cp $CODE/.env.example $HOME_DIR/.env && cp $CODE/config.example.json $HOME_DIR/config.json" >&2
+  exit 1
+fi
+[ -f "$HOME_DIR/config.json" ] || [ -f "$HOME_DIR/envs.json" ] || ls "$HOME_DIR"/.env.* >/dev/null 2>&1 ||
+  echo "note: no config.json in $HOME_DIR; dt starts, but has no environments to index" >&2
+
+# bind mounts: create them as you, not as root
+mkdir -p "$HOME_DIR/cache" "$HOME_DIR/repos" "$HOME_DIR/passports" "$HOME_DIR/plugins"
+[ -f "$HOME_DIR/cache/browser.env" ] || : > "$HOME_DIR/cache/browser.env"
+
+export DT_HOME_DIR="$HOME_DIR"
+if [ -n "$TOOLS_ONLY" ]; then export COMPOSE_PROFILES=
+elif [ -z "${COMPOSE_PROFILES+set}" ] && ! grep -q '^COMPOSE_PROFILES=' "$ENV_FILE"; then export COMPOSE_PROFILES=webui,browser,graph
+fi
+exec docker compose --project-directory "$CODE" -f "$CODE/docker-compose.yml" --env-file "$ENV_FILE" "$@"

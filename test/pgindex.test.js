@@ -163,14 +163,16 @@ test('indexer: index-only refresh runs as a job, a second request joins it, stat
   assert.throws(() => indexer.refresh({ env: 'test', what: 'bogus' }), /what must be one of/);
 });
 
-test('plugins load, broken ones are skipped; DT_TOOLS selects groups', async () => {
+test('plugins in plugins/ load, broken ones are reported; enable/disable select groups and names', async () => {
   assert.deepEqual(await tools.call('hello', { who: 'x' }), { hi: 'x', has: 'function' });
-  assert.ok(tools.groups().some(g => g.group === 'demo'));
-  const on = tools.enabled('catalog,pg,-pg_query');
+  const g = await tools.groups();
+  assert.ok(g.groups.some(x => x.group === 'demo'));
+  assert.ok(g.errors.some(e => /broken\.js/.test(e.source)));
+  const on = tools.enabled({ enable: ['catalog', 'pg'], disable: ['pg_query'] });
   assert.equal(on({ name: 'find', group: 'catalog' }), true);
   assert.equal(on({ name: 'pg_query', group: 'pg' }), false);
   assert.equal(on({ name: 'logs_search', group: 'logs' }), false);
-  assert.equal(tools.enabled('all,-browser')({ name: 'browser_sites', group: 'browser' }), false);
+  assert.equal(tools.enabled({ enable: ['all'], disable: ['browser'] })({ name: 'browser_sites', group: 'browser' }), false);
 });
 
 test('config: env auto-discovered from .env.test, databases from DATABASE_URL_*', () => {

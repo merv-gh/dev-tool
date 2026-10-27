@@ -12,7 +12,9 @@
   .chart .tip { position: absolute; pointer-events: none; background: var(--fg); color: var(--bg); font-size: 11px; padding: 4px 7px; border-radius: 4px; white-space: pre; display: none; z-index: 5; }
   .facets { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
   .lines td { white-space: nowrap; }
-  .lines td.msg { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 900px; cursor: pointer; }
+  table.lines { table-layout: fixed; }
+  .lines td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lines td.msg { cursor: pointer; }
   .lines tr.open td.msg { white-space: pre-wrap; word-break: break-word; }
   .lines tr.detail td { background: var(--soft); white-space: normal; }
   .lines tr.detail pre { margin: 0; max-height: 360px; overflow: auto; white-space: pre-wrap; word-break: break-word; }
@@ -45,7 +47,7 @@
     <span class="spacer"></span>
     <button id="cpTsv">Copy TSV</button><button id="cpJson">Copy JSON</button><button id="dl">⤓ JSON</button>
   </div>
-  <div class="card scroll"><table class="lines"><thead><tr><th>time</th><th>level</th><th>service</th><th>message</th><th>trace</th></tr></thead><tbody id="rows"></tbody></table></div>
+  <div class="card scroll"><table class="lines"><colgroup><col style="width:112px"><col style="width:76px"><col style="width:170px"><col><col style="width:120px"></colgroup><thead><tr><th>time</th><th>level</th><th>service</th><th>message</th><th>trace</th></tr></thead><tbody id="rows"></tbody></table></div>
   <div class="row" style="margin-top:8px"><button id="more" style="display:none">Show more</button></div>
 </div>
 <script src="/static/ui.js"></script>
@@ -137,7 +139,7 @@ function render(reset = true) {
     return `<tr class="${lv}" data-i="${i}"><td class="mono">${fmtTime(l.time)}</td><td><span class="lv ${lv}">${esc(l.level || '')}</span></td><td class="mono">${esc(l.service || '')}</td><td class="mono msg" title="Click to expand">${mark(String(l.message ?? ''))}</td><td class="mono">${l.trace ? `<span class="trace-link" data-trace="${esc(l.trace)}" title="Show only this trace">${esc(String(l.trace).slice(0, 16))}</span>` : ''}</td></tr>`;
   }).join(''));
   shown += next.length;
-  $('count').textContent = `${f.length} of ${lines.length} lines${data.total > lines.length ? ` (${data.total} matched in total)` : ''}${sel.trace ? ` · trace ${sel.trace}` : ''}`;
+  $('count').textContent = `${f.length} of ${lines.length} lines${(data.matched ?? data.total) > lines.length ? ` (${data.matched ?? data.total} matched in total)` : ''}${sel.trace ? ` · trace ${sel.trace}` : ''}`;
   $('more').style.display = shown < f.length ? '' : 'none';
   if (!lines.length) $('rows').innerHTML = '<tr><td colspan="5" class="empty">No log lines in this window.</td></tr>';
   postHeight();
@@ -171,7 +173,7 @@ loadResult().then(d => {
   data = d; lines = d.rows || [];
   $('kind').textContent = d.kind === 'trace' ? 'trace' : 'logs';
   $('title').textContent = d.kind === 'trace' ? (d.traceId || d.query) : (d.query || '*');
-  $('meta').textContent = [d.env, d.range && `${fmtDate(d.range.from)} → ${fmtDate(d.range.to)}`, `${d.total} matched`, d.interval && `bucket ${d.interval}`, d.ms !== undefined && `${d.ms} ms`].filter(Boolean).join(' · ');
+  $('meta').textContent = [d.env, d.range && `${fmtDate(d.range.from)} → ${fmtDate(d.range.to)}`, `${d.matched ?? d.total} matched`, d.interval && `bucket ${d.interval}`, d.ms !== undefined && `${d.ms} ms`].filter(Boolean).join(' · ');
   if (d.kibana) { $('kibana').href = d.kibana; $('kibana').style.display = ''; }
   $('openfull').href = location.pathname;
   if (d.kind === 'trace') $('chartbox').style.display = 'none'; else chart();

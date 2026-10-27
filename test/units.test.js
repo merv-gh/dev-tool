@@ -139,3 +139,11 @@ test('index first: find hints and pg schema guard', async () => {
 });
 
 test.after(() => fs.rmSync(tmp, { recursive: true, force: true }));
+
+test('logs result keeps the ES hit total next to the stored lines', async () => {
+  const results = require('../lib/results');
+  const id = results.save('logs', [{ a: 1 }], { total: 99, matched: 99 }).split('/').pop();
+  const r = results.load(id);
+  assert.equal(r.total, 1);
+  assert.equal(r.matched, 99);
+});

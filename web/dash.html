@@ -101,7 +101,7 @@ function render(d) {
   sec.push(es.error ? `<div class="error">${esc(es.error)}</div>` : !es.rows.length ? '<div class="ok">All indices green.</div>' :
     `<div class="scroll"><table><tr><th>health</th><th>index</th><th>status</th><th>docs</th><th>size</th></tr>${es.rows.map(r =>
       `<tr><td>${pill(r.health)}</td><td>${esc(r.index)}</td><td>${esc(r.status)}</td><td class="num">${esc(r.docs)}</td><td class="num">${esc(r.size)}</td></tr>`).join('')}</table></div>`);
-  sec.push(`<h2>Kafka consumer groups lagging <span class="muted">${k.rows ? k.rows.length : ''}</span></h2>`);
+  sec.push(`<h2>Kafka consumer groups lagging or not stable <span class="muted">${k.rows ? k.rows.length : ''}</span></h2>`);
   sec.push(k.error ? `<div class="error">${esc(k.error)}</div>` : !k.rows.length ? '<div class="ok">No consumer lag.</div>' :
     `<div class="scroll"><table><tr><th>group</th><th>lag</th><th>state</th><th>members</th><th>topics</th></tr>${k.rows.map(r =>
       `<tr><td>${link(r.group, r.link)}</td><td class="num">${esc(r.lag)}</td><td>${pill(r.state)}</td><td class="num">${esc(r.members)}</td><td class="num">${esc(r.topics)}</td></tr>`).join('')}</table></div>`);

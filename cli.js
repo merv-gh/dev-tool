@@ -31,11 +31,13 @@ Serve
   dt webui-setup [--url http://host:3000] [--key <open-webui-api-key>] [--dt-url http://dt-host:4000] [--model a,b]
                                            agent prompt + tools on Open WebUI models; --dt-url also registers dt as a tool server
   dt envs                                  configured envs and what is set
+  dt migrate-config [--dry-run]            envs.json + .env.<env> + .env.personal + .env.browser -> config.json + .env
+  dt tools-reload [--update]               re-read config.json and plugins (--update re-downloads remote plugins)
 
-Global: --env <name> (default: first env), --pretty
+Global: --env <name> (default: first env), --pretty.  Config folder: DT_HOME (default: this folder)
 `.trim();
 
-const BOOL_FLAGS = new Set(['pretty', 'compact', 'lan', 'help', 'uses']);
+const BOOL_FLAGS = new Set(['pretty', 'compact', 'lan', 'help', 'uses', 'dry-run', 'update']);
 
 function parseArgs(argv) {
   const opts = { _: [] };
@@ -99,6 +101,16 @@ const commands = {
     return done.result;
   },
 
+  async 'migrate-config'(opts) {
+    const m = require('./lib/migrate');
+    if (opts['dry-run']) { const p = m.plan(); return { config: p.config, secrets: Object.keys(p.secrets) }; }
+    return m.migrate();
+  },
+
+  async 'tools-reload'(opts) {
+    return require('./lib/tools').reload({ update: !!opts.update });
+  },
+
   async usage(opts) {
     const idx = require('./lib/pgindex');
     const rows = opts.uses ? idx.uses(opts.env, opts._.join(' ')) : idx.usages(opts.env, opts._.join(' '));
@@ -147,7 +159,7 @@ const commands = {
 
   async tool(opts) {
     const [name, json] = opts._;
-    if (!name) return require('./lib/tools').schemas().map(t => `${t.name}: ${t.description}`);
+    if (!name) return (await require('./lib/tools').schemas()).map(t => `${t.name}: ${t.description}`);
     try { return await require('./lib/tools').call(name, json ? JSON.parse(json) : {}); }
     finally { await require('./lib/pg').closeAll(); }
   },

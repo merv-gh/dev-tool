@@ -72,29 +72,36 @@ function flow() {
   const stores = cap([
     ...p.db.datasources.map(d => ({ label: `db ${d.db}`, kind: 'db', go: 'tables' })),
     ...Object.entries(p.summary.tables).filter(([, a]) => a.some(x => x === 'write' || x === 'owner')).map(([t]) => ({ label: `${t} ✎`, kind: 'db', go: 'tables' })),
+    ...[...new Set((e.dbCalls || []).map(c => c.name))].map(n => ({ label: `fn ${n}()`, kind: 'db', go: 'dbcalls' })),
     ...[...new Set(p.es.map(x => x.index))].map(i => ({ label: `es ${i}`, kind: 'es', go: 'es' })),
-  ], 10);
+  ], 15);
   const libs = p.libraries.slice(0, 8).map(l => ({ label: `${l.artifactId}@${l.version || '?'}`, kind: 'lib', go: 'libraries', bad: !!l.error }));
   const W = 1000, rowH = 26, colW = 250;
   const topH = libs.length ? 44 : 10, mid = Math.max(left.length, right.length, 3) * rowH;
-  const H = topH + mid + (stores.length ? 70 : 10) + 20;
+  const perRow = 5, storeRows = Math.ceil(stores.length / perRow);
+  const H = topH + mid + (stores.length ? 45 + storeRows * 28 : 10) + 20;
   const cx = W / 2, cy = topH + mid / 2;
   let s = '';
   const node = (x, y, w, n, anchor) => {
-    const t = String(n.label).length > 34 ? String(n.label).slice(0, 33) + '…' : n.label;
+    const max = Math.floor((w - 28) / 6.6);
+    const t = String(n.label).length > max ? String(n.label).slice(0, max - 1) + '…' : n.label;
     return `<g class="node" data-go="${n.go}"><rect x="${x}" y="${y - 10}" width="${w}" height="20" rx="10" fill="var(--panel)" stroke="${n.bad ? 'var(--lv-error)' : 'var(--line)'}"/><circle cx="${x + 10}" cy="${y}" r="4" fill="${COLORS[n.kind]}"/><text class="lbl" x="${x + 20}" y="${y + 4}"${n.more ? ' style="fill:var(--muted)"' : ''}>${esc(t)}<title>${esc(n.label)}</title></text></g>`;
   };
   const curve = (x1, y1, x2, y2, c) => `<path d="M${x1},${y1} C${(x1 + x2) / 2},${y1} ${(x1 + x2) / 2},${y2} ${x2},${y2}" fill="none" stroke="${c}" stroke-opacity=".45" stroke-width="1.5"/>`;
   left.forEach((n, i) => { const y = topH + (mid - left.length * rowH) / 2 + i * rowH + rowH / 2; s += curve(20 + colW, y, cx - 110, cy, COLORS[n.kind]) + node(20, y, colW, n); });
   right.forEach((n, i) => { const y = topH + (mid - right.length * rowH) / 2 + i * rowH + rowH / 2; s += curve(cx + 110, cy, W - 20 - colW, y, COLORS[n.kind]) + node(W - 20 - colW, y, colW, n); });
-  const sw = Math.min(190, (W - 40) / Math.max(1, stores.length) - 8);
-  stores.forEach((n, i) => { const x = 20 + i * (sw + 8), y = topH + mid + 45; s += curve(cx, cy + 22, x + sw / 2, y - 10, COLORS[n.kind]).replace('C', 'C') + node(x, y, sw, n); });
+  const sw = (W - 40) / Math.min(perRow, Math.max(1, stores.length)) - 8;
+  stores.forEach((n, i) => {
+    const r = Math.floor(i / perRow), x = 20 + (i % perRow) * (sw + 8), y = topH + mid + 45 + r * 28;
+    // only the first row gets curves; the rows below are the same kind of thing
+    s += (r === 0 ? curve(cx, cy + 22, x + sw / 2, y - 10, COLORS[n.kind]) : '') + node(x, y, sw, n);
+  });
   const lw = Math.min(170, (W - 40) / Math.max(1, libs.length) - 8);
   libs.forEach((n, i) => { const x = 20 + i * (lw + 8); s += node(x, 18, lw, n); });
   if (libs.length) s += `<text class="cap" x="20" y="6">internal libraries</text>`;
   s += `<text class="cap" x="20" y="${topH - 2}">in</text><text class="cap" x="${W - 20 - colW}" y="${topH - 2}">out</text>`;
   s += `<g class="node" data-go="top"><rect x="${cx - 110}" y="${cy - 22}" width="220" height="44" rx="8" fill="var(--accent-soft)" stroke="var(--accent)"/><text class="lbl" x="${cx}" y="${cy - 3}" text-anchor="middle" style="font-weight:600">${esc(p.service)}</text><text class="cap" x="${cx}" y="${cy + 13}" text-anchor="middle">${esc(p.repo.sha.slice(0, 10))} · boot ${esc(p.app.springBoot || '?')}</text></g>`;
-  $('flow').innerHTML = `<svg viewBox="0 0 ${W} ${H}">${s}</svg>`;
+  $('flow').innerHTML = `<svg viewBox="0 -12 ${W} ${H + 12}">${s}</svg>`;
 }
 
 function section(id, title, rows, head, cell) {
@@ -136,6 +143,7 @@ function render() {
   S.push(`<section id="sec-tables"><h2>Database <span class="muted">${p.db.datasources.length} datasources · ${tables.length} tables</span></h2>
     ${p.db.datasources.length ? `<div class="card scroll" style="margin-bottom:8px"><table><thead><tr><th>datasource key</th><th>kind</th><th>host</th><th>database</th></tr></thead><tbody>${p.db.datasources.map(d => `<tr><td class="mono">${esc(d.key)}</td><td>${esc(d.kind)}</td><td class="mono">${esc(d.host || '')}</td><td class="mono"><b>${esc(d.db || '')}</b></td></tr>`).join('')}</tbody></table></div>` : ''}
     ${section('tables-detail', 'Tables', e.tables, ['table', 'access', 'via', 'where'], x => [`<span class="mono">${esc(x.table)}</span>`, `<span class="acc ${esc(x.access)}">${esc(x.access)}</span>`, `${esc(x.via)}${x.sql ? `<div class="mono muted" style="white-space:normal;max-width:560px">${esc(x.sql)}</div>` : ''}${src(x)}`, loc(x)]).replace('<h2>', '<h2 style="display:none">')}</section>`);
+  S.push(section('dbcalls', 'Database functions called', e.dbCalls || [], ['function', 'via', 'where'], x => [`<span class="mono">${esc(x.name)}</span>`, `${esc(x.via)}${x.sql ? `<div class="mono muted" style="white-space:normal;max-width:560px">${esc(x.sql)}</div>` : ''}${src(x)}`, loc(x)]));
   S.push(section('es', 'Elasticsearch indices', p.es, ['index', 'via', 'where'], x => [`<span class="mono">${esc(x.index)}</span>`, esc(x.via), loc(x)]));
   S.push(section('libraries', 'Internal libraries', p.libraries, ['library', 'version', 'repo @ ref', 'provides', 'note'],
     l => [`<b>${esc(l.artifactId)}</b><div class="muted">${esc(l.groupId)}${l.via ? ` · via ${esc(l.via)}` : ''}</div>`, `<span class="mono">${esc(l.version || '?')}</span>`,

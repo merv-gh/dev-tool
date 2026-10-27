@@ -1,0 +1,72 @@
+{
+  "envs": {
+    "dev": {
+      "postgres": {
+        "orders": "${DEV_ORDERS_DB_URL}",
+        "billing": "${DEV_BILLING_DB_URL}"
+      },
+      "defaultDb": "orders",
+      "elasticsearch": { "hosts": ["http://es-dev:9200"], "user": "${DEV_ES_USER}", "password": "${DEV_ES_PASSWORD}" },
+      "kafkaUi": "http://kafka-ui-dev:8080",
+      "schemaRegistry": "http://schema-registry-dev:8081",
+      "consul": "http://consul-dev:8500",
+      "logs": {
+        "hosts": ["http://elk-dev:9200"],
+        "user": "${DEV_LOGS_USER}",
+        "password": "${DEV_LOGS_PASSWORD}",
+        "index": "logs-*",
+        "fields": { "time": "@timestamp", "message": "message", "service": "service.name", "level": "log.level", "trace": "trace.id" },
+        "kibana": "http://kibana-dev:5601"
+      }
+    },
+    "uat": {
+      "postgres": { "orders": "${UAT_ORDERS_DB_URL}" },
+      "consul": "http://consul-uat:8500"
+    }
+  },
+
+  "bitbucket": { "url": "https://bitbucket.example.com", "token": "${BITBUCKET_TOKEN}" },
+  "confluence": { "url": "https://confluence.example.com", "user": "${CONFLUENCE_USER}", "token": "${CONFLUENCE_TOKEN}" },
+  "passports": { "internalGroups": ["com.example.libs"] },
+  "graph": { "url": "${GRAPH_URL:-http://graph:8000}" },
+
+  "tools": {
+    "enable": ["all"],
+    "disable": ["confluence"],
+    "plugins": [
+      "plugins/pg_activity.js",
+      { "url": "github:you/dt-plugins/jira.js@v1.2.0", "sha256": "<sha256 of the file, shown on /admin after the first download>" }
+    ],
+    "custom": [
+      {
+        "name": "orders_by_status",
+        "type": "sql",
+        "description": "Latest orders with a given status in dev (id, customer, total, created).",
+        "env": "dev",
+        "db": "orders",
+        "sql": "select id, customer_id, total, created_at from sales.orders where status = :status order by created_at desc limit :limit",
+        "params": {
+          "status": { "type": "string", "required": true, "enum": ["new", "paid", "shipped", "closed"] },
+          "limit": { "type": "integer", "default": 50 }
+        }
+      },
+      {
+        "name": "ci_builds",
+        "type": "http",
+        "description": "Recent CI builds of a service (status, branch, commit).",
+        "url": "https://ci.example.com/api/projects/{service}/builds",
+        "headers": { "authorization": "Bearer ${CI_TOKEN}" },
+        "params": { "service": { "type": "string", "required": true }, "branch": { "type": "string" } },
+        "rows": "builds"
+      }
+    ]
+  },
+
+  "browser": {
+    "sites": {
+      "crm": { "url": "https://crm.dev.example.com/login", "secrets": ["CRM_USER", "CRM_PASSWORD"] }
+    }
+  },
+
+  "server": { "publicUrl": "http://127.0.0.1:4000", "apiKey": "${DT_API_KEY}", "ratePerSec": 1 }
+}

@@ -83,7 +83,7 @@ test('admin: page, status, refresh job, config validation, notes, repo mapping',
   assert.equal(page.status, 200);
   assert.match(await page.text(), /dt admin/);
   const s = await (await fetch(`${base}/api/admin/status`)).json();
-  assert.ok(Array.isArray(s.envs) && Array.isArray(s.jobs) && s.tools.length);
+  assert.ok(Array.isArray(s.envs) && Array.isArray(s.jobs) && s.tools.groups.length);
   const job = await (await post('/api/admin/refresh', { what: 'index' })).json();
   assert.ok(job.id);
   let j;
