@@ -18,7 +18,10 @@ const bundle = esbuild.buildSync({
 }).outputFiles[0].text.replace(/^#!.*\n(?=#!)/, ''); // cli.js has its own shebang
 
 const files = { 'dt.js': bundle };
-for (const f of fs.readdirSync(path.join(ROOT, 'web'))) files[`web/${f}`] = fs.readFileSync(path.join(ROOT, 'web', f));
+for (const f of fs.readdirSync(path.join(ROOT, 'web'), { recursive: true })) {
+  const p = path.join(ROOT, 'web', f);
+  if (fs.statSync(p).isFile()) files[`web/${f.split(path.sep).join('/')}`] = fs.readFileSync(p);
+}
 files['agent-prompt.md'] = fs.readFileSync(path.join(ROOT, 'lib', 'agent-prompt.md'));
 files['config.example.json'] = fs.readFileSync(path.join(ROOT, 'config.example.json'));
 

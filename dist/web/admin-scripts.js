@@ -484,7 +484,7 @@ document.addEventListener('keydown', (ev) => {
     if (tab === 'sites' && site) { ev.preventDefault(); saveSite(); }
   }
 });
-window.addEventListener('beforeunload', (ev) => { if ((cur && cur.dirty) || (site && site.dirty)) ev.preventDefault(); });
+window.addEventListener('beforeunload', (ev) => { if ((cur && cur.dirty) || (site && site.dirty) || (vw && vw.dirty)) ev.preventDefault(); });
 
 // ── sites ──
 let site = null; // { was, name, url, description, secrets: [{name, set}], links: [{link, path, description}], dirty }
@@ -610,3 +610,62 @@ $('patterns').addEventListener('click', (ev) => {
 });
 $('hsQ').addEventListener('input', () => { clearTimeout(hsTimer); hsTimer = setTimeout(() => loadHistory().catch(e => toast(e.message)), 250); });
 $('hsSource').addEventListener('change', () => loadHistory().catch(e => toast(e.message)));
+
+// ── views: built-in and custom, edited with a live preview on sample data ──
+let VW = [], vw = null, vwTimer;
+async function loadViews() {
+  VW = await api('/api/admin/views');
+  $('nViews').textContent = VW.length || '';
+  $('vwList').innerHTML = VW.map(v => `<div class="tn" data-view="${esc(v.name)}"><div class="tr ${vw && vw.name === v.name ? 'on' : ''}" title="${esc(v.description)}"><span class="badge-k ${v.builtin ? 'tool' : 'web'}">${v.builtin ? 'BUILT' : v.overrides ? 'OVER' : 'MINE'}</span><span class="nm">${esc(v.name)}</span></div></div>`).join('');
+  if (!vw) renderView();
+}
+async function openView(name, copyAs) {
+  if (vw && vw.dirty && !confirm('Discard unsaved changes?')) return;
+  try {
+    const v = await api(`/api/admin/view?name=${encodeURIComponent(name)}`);
+    vw = { name: copyAs || v.name, builtin: copyAs ? false : v.builtin, description: v.description, html: v.html, sample: v.sample, dirty: !!copyAs, saved: !copyAs };
+    renderView(); loadViews();
+  } catch (e) { toast(e.message); }
+}
+function renderView() {
+  const box = $('vwMain');
+  if (!vw) { box.innerHTML = '<div class="empty">Pick a view to see it with its sample data.</div>'; return; }
+  const ro = vw.builtin;
+  box.innerHTML = `<div class="titlebar"><input class="title" id="vwName" value="${esc(vw.name)}" ${ro ? 'readonly' : ''} spellcheck="false"><span class="dirty" id="vwDirty">${vw.dirty ? '● unsaved' : ''}</span><span class="spacer"></span>
+      ${ro ? '<button class="primary" id="vwCopy">Copy to a new view</button><button id="vwOverride" title="Save your own version under the same name">Override</button>' : `<button class="primary" id="vwSave">Save</button><button id="vwCopy">Duplicate</button>${vw.saved ? '<button id="vwDel">Delete</button>' : ''}`}</div>
+    <input id="vwDesc" value="${esc(vw.description)}" placeholder="What it shows and the DATA it expects (the agent reads this)" style="width:100%;margin:6px 0" ${ro ? 'readonly' : ''}>
+    <div class="vw-grid">
+      <div><div class="hint">HTML + script (reads <code>DATA</code>, <code>META</code>; helpers <code>dt.json dt.table dt.prettyXml dt.highlightXml dt.diffLists dt.diffLines dt.copy dt.esc</code>)</div>
+        <textarea id="vwHtml" rows="22" spellcheck="false" ${ro ? 'readonly' : ''}>${esc(vw.html)}</textarea>
+        <div class="hint" style="margin-top:6px">Sample DATA (JSON)</div><textarea id="vwSample" rows="8" spellcheck="false" ${ro ? 'readonly' : ''}>${esc(vw.sample === undefined ? '' : JSON.stringify(vw.sample, null, 2))}</textarea></div>
+      <div><div class="hint">Preview with the sample <span id="vwErr" class="err-text"></span></div><iframe class="vw-prev" id="vwPrev" sandbox="allow-scripts"></iframe></div>
+    </div>`;
+  preview();
+}
+async function preview() {
+  let sample;
+  const t = $('vwSample').value.trim();
+  try { sample = t ? JSON.parse(t) : null; $('vwErr').textContent = ''; } catch (e) { $('vwErr').textContent = `sample: ${e.message}`; return; }
+  try { const r = await api('/api/admin/view/preview', { name: vw.name, html: $('vwHtml').value, sample }); $('vwPrev').srcdoc = r.html; } catch (e) { $('vwErr').textContent = e.message; }
+}
+function readView() {
+  vw.name = $('vwName').value.trim(); vw.description = $('vwDesc').value; vw.html = $('vwHtml').value;
+  try { vw.sample = $('vwSample').value.trim() ? JSON.parse($('vwSample').value) : undefined; } catch {}
+}
+$('vwList').addEventListener('click', (ev) => { const t = ev.target.closest('[data-view]'); if (t) openView(t.dataset.view); });
+$('vwNew').onclick = () => openView('json', 'my-view');
+$('vwMain').addEventListener('input', () => { if (!vw || vw.builtin) return; readView(); vw.dirty = true; $('vwDirty').textContent = '● unsaved'; clearTimeout(vwTimer); vwTimer = setTimeout(preview, 400); });
+$('vwMain').addEventListener('click', async (ev) => {
+  const b = ev.target.closest('button');
+  if (!b || !vw) return;
+  if (b.id === 'vwCopy') { const n = prompt('Name for the new view (lowercase, -)', `${vw.name}-copy`); if (n) { const src = vw.name; vw.dirty = false; openView(src, n); } return; }
+  if (b.id === 'vwOverride') { vw.builtin = false; vw.dirty = true; vw.saved = false; return renderView(); }
+  if (b.id === 'vwSave') {
+    readView();
+    try { const r = await api('/api/admin/view', { name: vw.name, description: vw.description, html: vw.html, sample: vw.sample }); vw.dirty = false; vw.saved = true; toast(r.replaced ? 'Saved' : 'Created'); loadViews(); renderView(); } catch (e) { toast(e.message); }
+  }
+  if (b.id === 'vwDel') {
+    if (!confirm(`Delete view ${vw.name}?`)) return;
+    try { await api('/api/admin/view/delete', { name: vw.name }); vw = null; toast('Deleted'); loadViews(); } catch (e) { toast(e.message); }
+  }
+});

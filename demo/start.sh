@@ -60,6 +60,8 @@ echo '{ "sales.order_audit": "Written only by the orders_status_audit trigger. K
 pkill -f "demo/mock.js" 2>/dev/null || true; pkill -f "cli.js serve --port $DT" 2>/dev/null || true
 nohup node demo/mock.js "$MOCK" > "$H/mock.log" 2>&1 &
 pkill -f "demo/sftp.js" 2>/dev/null || true
+mkdir -p "$H/sftp" && find "$H/sftp" -mindepth 1 -delete   # a fresh SFTP folder each start
+mkdir -p "$H/sftp/upload" && cp -R demo/sftp/. "$H/sftp/upload/"   # nested demo folders and files
 nohup node demo/sftp.js "$SFTP" "$H/sftp" > "$H/sftp.log" 2>&1 &
 sleep 1
 # browser steps (scripts, routes_discover) use a Playwright MCP container when DEMO_BROWSER=1

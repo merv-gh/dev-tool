@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>files</title>
+<link rel="stylesheet" href="/static/ui.css">
+<link rel="stylesheet" href="/static/views/_views.css">
+<style>
+  .fb { display: grid; grid-template-columns: minmax(220px, 320px) minmax(0, 1fr); gap: 12px; align-items: start; }
+  @media (max-width: 760px) { .fb { grid-template-columns: 1fr; } }
+  .tree { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); max-height: 70vh; overflow: auto; padding: 4px 0; }
+  body.embed .tree { max-height: 460px; }
+  .tr { display: flex; align-items: center; gap: 6px; padding: 3px 8px; cursor: pointer; font-size: 13px; white-space: nowrap; }
+  .tr:hover { background: var(--soft); } .tr.on { background: var(--accent-soft); }
+  .tr .tw { width: 10px; font-size: 10px; color: var(--muted); }
+  .tr .nm { overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+  .tr .sz { color: var(--muted); font-size: 11px; }
+  .pv { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); min-height: 200px; overflow: hidden; }
+  .pv .ph { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+  .pv .ph b { font-family: ui-monospace, Menlo, monospace; font-size: 13px; word-break: break-all; }
+  .pv .body { padding: 10px 12px; max-height: 70vh; overflow: auto; }
+  body.embed .pv .body { max-height: 460px; }
+  .pv pre.src { background: none; padding: 0; }
+  .pv img { max-width: 100%; }
+  mark { background: var(--warn-bg); color: inherit; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="vhead"><h1 id="title">files</h1><span class="muted" id="info"></span><span class="spacer"></span><input id="q" placeholder="filter by name" style="width:170px"></div>
+  <div class="fb">
+    <div class="tree" id="tree"></div>
+    <div class="pv" id="pv"><div class="empty">Pick a file to preview it.</div></div>
+  </div>
+</div>
+<script src="/static/ui.js"></script>
+<script src="/static/views/_helpers.js"></script>
+<script>
+const id = location.pathname.split('/').filter(Boolean)[1];
+let R = null, sel = null;
+const open = new Set();
+const size = (n) => (n == null ? '' : n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(1)} MB`);
+const parentOf = (p) => (p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : '');
+
+function tree() {
+  const root = { path: R.data.dir || '', dirs: {}, files: [] };
+  const node = (p) => {
+    if (p === root.path) return root;
+    const parent = node(parentOf(p));
+    return parent.dirs[p] = parent.dirs[p] || { path: p, dirs: {}, files: [] };
+  };
+  for (const e of R.data.entries) {
+    if (e.dir) node(e.path);
+    else node(parentOf(e.path)).files.push(e);
+  }
+  return root;
+}
+
+function draw() {
+  const q = $('q').value.trim().toLowerCase();
+  const hit = (e) => !q || e.path.toLowerCase().includes(q);
+  const count = (n) => n.files.filter(hit).length + Object.values(n.dirs).reduce((k, d) => k + count(d), 0);
+  const html = (n, d) => [
+    ...Object.values(n.dirs).sort((a, b) => a.path.localeCompare(b.path)).filter(x => !q || count(x)).map(x => {
+      const isOpen = q || open.has(x.path);
+      return `<div class="tr" data-dir="${esc(x.path)}" style="padding-left:${8 + d * 14}px"><span class="tw">${isOpen ? '▾' : '▸'}</span>📁<span class="nm">${esc(x.path.split('/').pop())}</span><span class="sz">${count(x)}</span></div>${isOpen ? html(x, d + 1) : ''}`;
+    }),
+    ...n.files.filter(hit).sort((a, b) => a.path.localeCompare(b.path)).map(f => `<div class="tr ${f.path === sel ? 'on' : ''}" data-file="${esc(f.path)}" style="padding-left:${8 + d * 14}px" title="${esc(fmtDate(f.mtime))}"><span class="tw"></span>📄<span class="nm">${esc(f.path.split('/').pop())}</span><span class="sz">${size(f.size)}</span></div>`),
+  ].join('');
+  $('tree').innerHTML = html(tree(), 0) || '<div class="empty">Empty.</div>';
+}
+
+async function preview(p) {
+  sel = p;
+  for (let d = parentOf(p); d && d !== R.data.dir; d = parentOf(d)) open.add(d);
+  draw();
+  const f = R.data.entries.find(e => e.path === p) || {};
+  $('pv').innerHTML = `<div class="ph"><b>${esc(p)}</b><span class="muted">${size(f.size)} · ${esc(fmtDate(f.mtime))}</span><span class="spacer"></span><span id="btns"></span></div><div class="body" id="body"><div class="muted">Loading…</div></div>`;
+  let r;
+  try {
+    const res = await fetch(`/api/files/${id}?path=${encodeURIComponent(p)}`);
+    r = await res.json();
+    if (!res.ok) throw new Error(r.error || res.status);
+  } catch (e) { $('body').innerHTML = `<div class="err-text">${esc(e.message)}</div>`; return; }
+  const body = $('body');
+  if (r.image) { body.innerHTML = `<img src="${r.image}" alt="">`; return; }
+  if (r.binary) { body.innerHTML = `<div class="muted" style="margin-bottom:6px">binary, first 512 bytes:</div><pre class="src">${esc(r.hex)}</pre>`; return; }
+  const ext = r.ext || '', text = r.text;
+  let parsed = null;
+  if (ext === 'json' || /^\s*[{[]/.test(text)) { try { parsed = JSON.parse(text); } catch {} }
+  const raw = () => { body.innerHTML = `<pre class="src">${esc(text)}</pre>`; };
+  const pretty = () => {
+    if (parsed !== null) return dt.json(body, parsed, { open: 3 });
+    if (ext === 'xml' || /^\s*<(\?xml|[a-zA-Z])/.test(text)) { body.innerHTML = `<pre class="src">${dt.highlightXml(dt.prettyXml(text))}</pre>`; return; }
+    if (ext === 'csv' || ext === 'tsv') {
+      const sep = ext === 'tsv' ? '\t' : (text.split('\n')[0].match(/[;,|\t]/) || [','])[0];
+      const lines = text.split(/\r?\n/).filter(Boolean), head = lines[0].split(sep);
+      dt.table(body, lines.slice(1).map(l => Object.fromEntries(l.split(sep).map((v, i) => [head[i] || `col${i + 1}`, v]))));
+      return;
+    }
+    raw();
+  };
+  pretty();
+  const fancy = parsed !== null || ['xml', 'csv', 'tsv'].includes(ext) || /^\s*<(\?xml|[a-zA-Z])/.test(text);
+  $('btns').innerHTML = `${fancy ? '<button class="small" id="mode">Raw</button> ' : ''}<button class="small" id="cp">Copy</button>${r.clipped ? ' <span class="muted">first 1 MB</span>' : ''}`;
+  if (fancy) $('mode').onclick = (e) => { const toRaw = e.target.textContent === 'Raw'; toRaw ? raw() : pretty(); e.target.textContent = toRaw ? 'Pretty' : 'Raw'; };
+  $('cp').onclick = (e) => dt.copy(text, e.target);
+}
+
+(async () => {
+  try {
+    const res = await fetch(`/api/files/${id}`);
+    R = await res.json();
+    if (!res.ok) throw new Error(R.error || res.status);
+  } catch (e) { return fail(e); }
+  const files = R.data.entries.filter(e => !e.dir);
+  $('title').textContent = R.title || R.data.store;
+  document.title = R.title || 'files';
+  $('info').textContent = `${R.data.entries.length - files.length} folders · ${files.length} files${R.data.truncated ? ' (first 5000 entries)' : ''}`;
+  // open the first levels; or the folders down to the file to show
+  for (const e of R.data.entries) if (e.dir && (e.path.split('/').length - (R.data.dir ? R.data.dir.split('/').length : 0)) <= 1) open.add(e.path);
+  draw();
+  const want = qs.get('open') || R.data.select;
+  if (want) preview(want);
+})();
+$('q').oninput = draw;
+$('tree').onclick = (ev) => {
+  const t = ev.target.closest('.tr');
+  if (!t) return;
+  if (t.dataset.dir !== undefined) { open.has(t.dataset.dir) ? open.delete(t.dataset.dir) : open.add(t.dataset.dir); return draw(); }
+  preview(t.dataset.file);
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+{
+  "description": "Open an order in the back office: db status, page, payment",
+  "params": {
+    "orderId": {
+      "required": true,
+      "description": "order id"
+    }
+  },
+  "steps": [
+    {
+      "tool": "pg_query",
+      "args": {
+        "env": "demo",
+        "sql": "select id, status, total from sales.orders where id = {{orderId}}"
+      },
+      "as": "order"
+    },
+    {
+      "open": "shop.order"
+    },
+    {
+      "wait": 1
+    },
+    {
+      "browser": "snapshot",
+      "as": "page"
+    }
+  ]
+}

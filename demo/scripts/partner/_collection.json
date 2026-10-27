@@ -1,0 +1,8 @@
+{
+  "description": "Test data for the partner integration: orders and files sent over SFTP",
+  "tool": true,
+  "vars": {
+    "apiBase": "http://127.0.0.1:4900/partner/api"
+  },
+  "before": "vars.runId = 'run-' + hex(6);\nlog('partner run', vars.runId);"
+}

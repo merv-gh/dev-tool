@@ -286,6 +286,27 @@ Tools: `files_stores`, `files_list` (glob, recursive), `files_search` (by name g
 
 **Writes are opt-in.** A store is read-only unless it has `"write": true`, and a write never replaces a file unless `overwrite` is set. Script `http` steps only reach URL prefixes listed in `scripts.http.allow`. Everything else in dt stays read-only.
 
+## Views: how results are shown
+
+Every result can be shown in the chat (Open WebUI embeds it) or on its own page. Tables use the result viewer; everything else uses **views**:
+
+| View | Shows | DATA |
+| --- | --- | --- |
+| `json` | a collapsible tree, raw text, copy | any JSON |
+| `xml` | re-indented, highlighted | the XML text |
+| `table` | rows | an array of objects |
+| `list-diff` | only in first · in both · only in last, with counts, filter, copy, duplicates | `{ first, last, labels }` |
+| `text-diff` | line diff with context | `{ first, last, labels, format: "json" \| "xml" }` |
+
+- `show(view, data, title)` shows any data with any view; `diff(first, last, labels)` compares two lists (or `mode: "text"`, two texts) and shows the result. Both are plain tools, so scripts use them as steps, and a script run carries the last view a step made: in the chat, running the script shows its diff.
+- **Custom views** are added on `/admin` (**Views**: copy a built-in, edit the HTML next to a live preview on sample data) or by the agent with `view_save`. A view is HTML plus a script that reads `DATA`, with helpers: `dt.json`, `dt.table`, `dt.prettyXml`, `dt.highlightXml`, `dt.diffLists`, `dt.diffLines`, `dt.copy`. It may load chart libraries from jsDelivr, cdnjs or unpkg. They live in `views/` in the config folder; one with a built-in's name replaces it.
+- **Sandboxed.** View pages are served with a CSP sandbox (no same origin) and `connect-src 'none'`: the data is written into the page, and the page cannot call dt or send anything anywhere. So a view written by the agent can only draw.
+- `diffLists` and `diffLines` are also helpers in script JavaScript.
+
+**Files.** `files_browse(store, dir)` shows a store as a tree of nested folders; clicking a file previews it (JSON as a tree, XML highlighted, CSV as a table, text, images, a hex head for binaries). `files_show(store, path)` opens one file with its folder, for "show me the file from that panel". Previews only work for the files of that listing.
+
+**The example** ([demo/scripts/reconcile/shipped-vs-settlement.json](demo/scripts/reconcile/shipped-vs-settlement.json)): the ids of shipped orders from Postgres vs the order ids in the partner's monthly settlement CSV on SFTP. One step queries the column (`pg_query` with `all: true`), one reads the file and keeps the first column (an `after` hook), one runs `diff`. In the chat: "compare our shipped orders with the settlement report" → the `reconcile` collection tool → the three columns, embedded, and the model lists what is missing on each side.
+
 ## Call history and shortcuts
 
 Every tool call is logged: MCP, OpenAPI (Open WebUI), the HTTP API, the CLI, and calls made by scripts (marked with their script). The newest ~5000 are kept in `cache/_calls.jsonl`. `call_patterns` (and **History** on `/admin`) finds the repeated work in it:
@@ -311,6 +332,7 @@ The wire side fills up by itself: every script with browser steps records what t
 | **Explore** | Search the catalog; open a table or function to see its columns or arguments, constraints, triggers, body, "used by" and "uses"; attach a note |
 | **Passports** | Build one for a service (optionally mapping it to a repo), rebuild one or all |
 | **Scripts** | Collections as nested folders, Postman style: create, rename inline, drag to move, duplicate, delete. Each script has a step editor (kind, target with suggestions, args, "save as", optional, reorder), params, a JSON view, and Run with a field per param showing each step's result. Ctrl/⌘+S saves |
+| **Views** | Built-in and custom views; edit HTML and sample data with a live (sandboxed) preview, copy or override built-ins |
 | **History** | Repeated calls and sequences from the call log, each with **Save as script…**; the calls themselves, filtered by words and source |
 | **Sites** | Edit `browser.sites` one site at a time: start URL (`${VAR}` allowed), description, login secret names (marked when `.env` has no value), and the links with a live preview of the URL each opens |
 | **API routes** | API routes from code and from the browser, filtered as you type |
@@ -335,7 +357,8 @@ Secrets (`.env`) are never shown or edited there.
 | browser | `browser_sites`, `site_url` (plus the Playwright MCP tools when the `browser` profile runs) |
 | api | `api_routes`, `routes_learn`, `routes_discover` |
 | scripts | `script_list`, `script_get`, `script_save`, `script_run`, `script_collection`, `js_run`, plus each script or collection exposed as a tool |
-| files | `files_stores`, `files_list`, `files_search`, `files_read`, `files_write`, `files_copy` |
+| files | `files_stores`, `files_list`, `files_search`, `files_read`, `files_write`, `files_copy`, `files_browse`, `files_show` |
+| views | `show`, `diff`, `view_list`, `view_get`, `view_save` |
 | history | `call_history`, `call_patterns` |
 | custom, plugin | yours: from `tools.custom` and `tools.plugins` |
 
@@ -349,6 +372,9 @@ Every picture comes from the bundled demo, a fake environment with real Postgres
 | --- | --- |
 | ![admin: index status](docs/screenshots/admin-index.png) **/admin** · what is indexed, refresh all or one source | ![admin: table usages](docs/screenshots/admin-explore-table.png) **Explore** · a table: columns, constraints, triggers, who uses it |
 | ![admin: function](docs/screenshots/admin-explore-function.png) **Explore** · a function: arguments, callers in code and in the db | ![admin: jobs](docs/screenshots/admin-jobs.png) **Jobs** · every refresh with its log |
+| ![chat: reconcile](docs/screenshots/chat-reconcile.png) **In the chat** · shipped orders vs the partner's settlement file on SFTP | ![chat: file](docs/screenshots/chat-file.png) **In the chat** · "show me the order file from the inbox" |
+| ![chat: files](docs/screenshots/chat-files.png) **In the chat** · the SFTP as a tree | ![files](docs/screenshots/files.png) **Files** · nested folders, JSON preview |
+| ![text diff](docs/screenshots/view-text-diff.png) **text-diff** · the template vs what was sent | ![admin: views](docs/screenshots/admin-views.png) **Views** · edit a view next to its live preview |
 | ![chat: overview](docs/screenshots/chat-overview.png) **In the chat** · live environment dashboard | ![chat: logs](docs/screenshots/chat-logs.png) **In the chat** · log search with timeline |
 | ![pg usage](docs/screenshots/pg-usage.png) **pg_usage** · who uses `sales.orders` | ![passport](docs/screenshots/passport.png) **Passport** · a service from its code |
 | ![logs](docs/screenshots/logs.png) **Logs** · timeline by level, facets, lines | ![trace](docs/screenshots/trace.png) **Trace** · one request across services |
@@ -361,6 +387,7 @@ Every picture comes from the bundled demo, a fake environment with real Postgres
 | ![dark: explore](docs/screenshots/admin-explore-table-dark.png) Dark mode | ![dark: passport](docs/screenshots/passport-dark.png) Dark mode |
 
 ## Safety
+- Views run in sandboxed pages without network access (`connect-src 'none'`); their data is in the page.
 - Script JavaScript runs sandboxed (no files, no secrets, time and memory limits); `scripts.js: false` turns it off.
 - Writing is limited to file stores marked `"write": true` (never overwriting unless asked) and script `http` steps to the prefixes in `scripts.http.allow`.
 - Postgres sessions are read-only (`default_transaction_read_only`) with a 60s statement timeout; the other sources are only read.

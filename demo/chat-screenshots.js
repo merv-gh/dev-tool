@@ -10,7 +10,10 @@ const QUESTIONS = [
   ['chat-usage', 'Who writes sales.orders?'],
   ['chat-overview', 'How is demo doing? Anything broken?'],
   ['chat-logs', 'Any errors in the last hour?'],
-];
+  ['chat-reconcile', 'Compare our shipped orders with the partner settlement report for October'],
+  ['chat-files', 'Browse the partner sftp'],
+  ['chat-file', 'Show me the order file from the partner inbox'],
+].filter(([name]) => !process.env.ONLY || process.env.ONLY.split(',').includes(name));
 
 (async () => {
   const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});

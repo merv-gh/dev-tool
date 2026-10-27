@@ -22,7 +22,8 @@ var require_config = __commonJS({
       repos: path2.resolve(process.env.DT_REPOS_DIR || path2.join(HOME, "repos")),
       passports: path2.resolve(process.env.DT_PASSPORTS_DIR || path2.join(HOME, "passports")),
       plugins: path2.resolve(process.env.DT_PLUGINS_DIR || path2.join(HOME, "plugins")),
-      scripts: path2.resolve(process.env.DT_SCRIPTS_DIR || path2.join(HOME, "scripts"))
+      scripts: path2.resolve(process.env.DT_SCRIPTS_DIR || path2.join(HOME, "scripts")),
+      views: path2.resolve(process.env.DT_VIEWS_DIR || path2.join(HOME, "views"))
     };
     var LOG_FIELDS = { time: "@timestamp", message: "message", service: "service.name", level: "log.level", trace: "trace.id" };
     function parseEnvFile(file) {
@@ -5043,6 +5044,18 @@ var require_results = __commonJS({
       }
       return `${publicUrl()}/${PAGES[kind] || "view"}/${id}`;
     }
+    function saveView(view, data, meta = {}, { page = "show" } = {}) {
+      fs2.mkdirSync(DIR, { recursive: true });
+      const id = Date.now().toString(36) + crypto.randomBytes(9).toString("hex");
+      const text = JSON.stringify({ id, kind: "view", view, at: (/* @__PURE__ */ new Date()).toISOString(), ...meta, data });
+      if (text.length > 2e7) throw new Error(`too much data to show (${Math.round(text.length / 1e6)} MB; max 20)`);
+      fs2.writeFileSync(path2.join(DIR, `${id}.json`), text);
+      try {
+        prune();
+      } catch {
+      }
+      return `${publicUrl()}/${page}/${id}`;
+    }
     function load(id) {
       if (!/^[a-z0-9]+$/.test(id)) return null;
       return readJson(path2.join(DIR, `${id}.json`));
@@ -5051,7 +5064,7 @@ var require_results = __commonJS({
       try {
         return fs2.readdirSync(DIR).filter((f) => f.endsWith(".json")).sort().reverse().slice(0, limit).map((f) => {
           const r = readJson(path2.join(DIR, f)) || {};
-          return { id: r.id, kind: r.kind, at: r.at, env: r.env, target: r.db || r.index || r.topic, query: String(r.query || "").slice(0, 160), total: r.total };
+          return { id: r.id, kind: r.kind === "view" ? `view:${r.view}` : r.kind, at: r.at, env: r.env, target: r.db || r.index || r.topic || r.store, query: String(r.query || r.title || "").slice(0, 160), total: r.total };
         });
       } catch {
         return [];
@@ -5072,7 +5085,7 @@ var require_results = __commonJS({
       return crypto.createHmac("sha256", secret).update(String(value)).digest("hex").slice(0, 32);
     }
     var verify = (value, token) => typeof token === "string" && token.length === 32 && crypto.timingSafeEqual(Buffer.from(sign(value)), Buffer.from(token));
-    module2.exports = { save, load, list, publicUrl, sign, verify };
+    module2.exports = { save, saveView, load, list, publicUrl, sign, verify };
   }
 });
 
@@ -5376,6 +5389,95 @@ var require_logs = __commonJS({
   }
 });
 
+// lib/diff.js
+var require_diff = __commonJS({
+  "lib/diff.js"(exports2, module2) {
+    function diffLists(first, last, opts) {
+      const o = opts || {};
+      const toList = (x) => (Array.isArray(x) ? x : x == null ? [] : String(x).split(/[\r\n,;\t]+/)).map((v) => v && typeof v === "object" ? JSON.stringify(v) : String(v).trim()).filter((v) => v !== "");
+      const key = (v) => {
+        let k = o.ignoreCase ? v.toLowerCase() : v;
+        if (o.numeric !== false && /^[+-]?\d+(\.\d+)?$/.test(k)) k = String(Number(k));
+        return k;
+      };
+      const a = toList(first), b = toList(last);
+      const inB = /* @__PURE__ */ new Map(), inA = /* @__PURE__ */ new Map();
+      for (const v of b) inB.set(key(v), (inB.get(key(v)) || 0) + 1);
+      for (const v of a) inA.set(key(v), (inA.get(key(v)) || 0) + 1);
+      const seen = /* @__PURE__ */ new Set();
+      const onlyFirst = [], common = [], onlyLast = [], dupFirst = [], dupLast = [];
+      for (const v of a) {
+        const k = key(v);
+        if (seen.has("a" + k)) {
+          dupFirst.push(v);
+          continue;
+        }
+        seen.add("a" + k);
+        (inB.has(k) ? common : onlyFirst).push(v);
+      }
+      for (const v of b) {
+        const k = key(v);
+        if (seen.has("b" + k)) {
+          dupLast.push(v);
+          continue;
+        }
+        seen.add("b" + k);
+        if (!inA.has(k)) onlyLast.push(v);
+      }
+      return {
+        counts: { first: a.length, last: b.length, onlyFirst: onlyFirst.length, common: common.length, onlyLast: onlyLast.length, duplicatesFirst: dupFirst.length, duplicatesLast: dupLast.length },
+        onlyFirst,
+        common,
+        onlyLast,
+        duplicatesFirst: dupFirst,
+        duplicatesLast: dupLast,
+        same: onlyFirst.length === 0 && onlyLast.length === 0
+      };
+    }
+    function diffLines(first, last, opts) {
+      const o = opts || {};
+      const split = (t) => t == null ? [] : String(t).replace(/\r\n/g, "\n").split("\n");
+      const A = split(first), B = split(last);
+      const eq = (x, y) => o.ignoreWhitespace ? x.replace(/\s+/g, " ").trim() === y.replace(/\s+/g, " ").trim() : x === y;
+      let s = 0;
+      while (s < A.length && s < B.length && eq(A[s], B[s])) s++;
+      let ea = A.length, eb = B.length;
+      while (ea > s && eb > s && eq(A[ea - 1], B[eb - 1])) {
+        ea--;
+        eb--;
+      }
+      const ops = [];
+      for (let i = 0; i < s; i++) ops.push({ op: " ", text: A[i], a: i + 1, b: i + 1 });
+      const n = ea - s, m = eb - s;
+      if (n * m > 4e6) {
+        for (let i = s; i < ea; i++) ops.push({ op: "-", text: A[i], a: i + 1 });
+        for (let j = s; j < eb; j++) ops.push({ op: "+", text: B[j], b: j + 1 });
+      } else {
+        const L = Array.from({ length: n + 1 }, () => new Uint32Array(m + 1));
+        for (let i2 = n - 1; i2 >= 0; i2--) for (let j2 = m - 1; j2 >= 0; j2--) L[i2][j2] = eq(A[s + i2], B[s + j2]) ? L[i2 + 1][j2 + 1] + 1 : Math.max(L[i2 + 1][j2], L[i2][j2 + 1]);
+        let i = 0, j = 0;
+        while (i < n || j < m) {
+          if (i < n && j < m && eq(A[s + i], B[s + j])) {
+            ops.push({ op: " ", text: A[s + i], a: s + i + 1, b: s + j + 1 });
+            i++;
+            j++;
+          } else if (i < n && (j === m || L[i + 1][j] >= L[i][j + 1])) {
+            ops.push({ op: "-", text: A[s + i], a: s + i + 1 });
+            i++;
+          } else {
+            ops.push({ op: "+", text: B[s + j], b: s + j + 1 });
+            j++;
+          }
+        }
+      }
+      for (let i = ea, j = eb; i < A.length; i++, j++) ops.push({ op: " ", text: A[i], a: i + 1, b: j + 1 });
+      const added = ops.filter((x) => x.op === "+").length, removed = ops.filter((x) => x.op === "-").length;
+      return { ops, counts: { first: A.length, last: B.length, added, removed, same: ops.length - added - removed }, same: added === 0 && removed === 0 };
+    }
+    module2.exports = { diffLists, diffLines };
+  }
+});
+
 // lib/js.js
 var require_js = __commonJS({
   "lib/js.js"(exports2, module2) {
@@ -5387,7 +5489,10 @@ var require_js = __commonJS({
       }
       return flag;
     };
+    var { diffLists, diffLines } = require_diff();
     var RUNNER = String.raw`
+${diffLists.toString()}
+${diffLines.toString()}
 const fmt = (v) => (typeof v === 'string' ? v : (() => { try { return JSON.stringify(v); } catch { return String(v); } })());
 const pad = (n, w = 2) => String(n).padStart(w, '0');
 const date = (f = 'YYYY-MM-DD', d = new Date()) => f.replace(/YYYY|MM|DD|HH|mm|ss|SSS/g, (t) => ({ YYYY: d.getFullYear(), MM: pad(d.getMonth() + 1), DD: pad(d.getDate()), HH: pad(d.getHours()), mm: pad(d.getMinutes()), ss: pad(d.getSeconds()), SSS: pad(d.getMilliseconds(), 3) }[t]));
@@ -5408,7 +5513,7 @@ function expect(v) {
   return Object.assign(m(false), { not: m(true) });
 }
 const helpers = {
-  uuid: () => crypto.randomUUID(), now: () => new Date().toISOString(), date, rand, hex,
+  uuid: () => crypto.randomUUID(), now: () => new Date().toISOString(), date, rand, hex, diffLists, diffLines,
   log: (...a) => { logs.push(a.map(fmt).join(' ').slice(0, 2000)); },
   assert: (ok, msg) => check(ok, msg || 'assertion failed'),
   expect,
@@ -6025,6 +6130,7 @@ ${lines.join("\n") || "(empty)"}`,
           }
           if (step.as) scope[step.as] = result;
           st.last = result;
+          if (result && typeof result === "object" && typeof result.view === "string" && /^https?:/.test(result.view)) st.lastView = result.view;
           Object.assign(rec, { ok: true, ms: Date.now() - started, result: rec.detail ? { ...rec.detail, text: brief(result, 1500) } : brief(result) });
           delete rec.detail;
         } catch (e) {
@@ -6165,6 +6271,8 @@ ${lines.join("\n") || "(empty)"}`,
         script: def.id,
         ok: !error,
         ...error ? { error } : {},
+        ...st.lastView ? { view: st.lastView } : {},
+        // the last view a step made, embedded in the chat
         steps: st.log,
         results,
         ...st.tests.length ? { tests: { passed: st.tests.length - failed.length, failed: failed.length, list: st.tests } } : {},
@@ -6176,177 +6284,111 @@ ${lines.join("\n") || "(empty)"}`,
   }
 });
 
-// lib/calls.js
-var require_calls = __commonJS({
-  "lib/calls.js"(exports2, module2) {
+// lib/views.js
+var require_views = __commonJS({
+  "lib/views.js"(exports2, module2) {
     var fs2 = require("fs");
     var path2 = require("path");
-    var { CACHE: CACHE2 } = require_util();
-    var FILE = path2.join(CACHE2, "_calls.jsonl");
-    var KEEP = 5e3;
-    var SKIP = /* @__PURE__ */ new Set(["call_history", "call_patterns", "script_list", "script_get", "script_save"]);
-    var appended = 0;
-    var clipArgs = (v, n = 600) => {
-      if (typeof v === "string") return v.length > n ? `${v.slice(0, n)}\u2026` : v;
-      if (Array.isArray(v)) return v.slice(0, 50).map((x) => clipArgs(x, n));
-      if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).slice(0, 50).map(([k, x]) => [k, clipArgs(x, n)]));
-      return v;
-    };
-    function record({ tool, args, source, ok, ms, error, size }) {
-      if (SKIP.has(tool)) return;
-      const line = JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), tool, source: source || "api", args: clipArgs(args || {}), ok, ms, ...error ? { error: String(error).slice(0, 300) } : {}, ...size ? { size } : {} });
-      try {
-        fs2.mkdirSync(path2.dirname(FILE), { recursive: true });
-        fs2.appendFileSync(FILE, line + "\n");
-        if (++appended % 200 === 0) trim();
-      } catch {
+    var { PATHS, ROOT } = require_config();
+    var BUILTIN = path2.join(__dirname, path2.basename(__dirname) === "lib" ? "../web/views" : "web/views");
+    var DIR = PATHS.views;
+    var NAME = /^[a-z][a-z0-9-]{1,40}$/;
+    var CSP = [
+      "sandbox allow-scripts allow-popups allow-downloads",
+      "default-src 'none'",
+      "script-src 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com",
+      "style-src 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com",
+      "font-src https://fonts.gstatic.com data:",
+      "img-src data: blob:",
+      "connect-src 'none'",
+      "form-action 'none'",
+      "base-uri 'none'",
+      "frame-ancestors *"
+    ].join("; ");
+    function parse(text) {
+      const m = text.match(/^\s*<!--\s*(\{[\s\S]*?\})\s*-->\s*/);
+      let meta = {};
+      if (m) {
+        try {
+          meta = JSON.parse(m[1]);
+        } catch (e) {
+          meta = { error: `first-line comment is not JSON: ${e.message}` };
+        }
       }
+      return { meta, html: m ? text.slice(m[0].length) : text };
     }
-    function trim() {
-      const lines = fs2.readFileSync(FILE, "utf8").split("\n").filter(Boolean);
-      if (lines.length > KEEP) fs2.writeFileSync(FILE, lines.slice(-Math.floor(KEEP * 0.8)).join("\n") + "\n");
-    }
-    function all() {
-      let text = "";
+    function files(dir) {
       try {
-        text = fs2.readFileSync(FILE, "utf8");
+        return fs2.readdirSync(dir).filter((f) => f.endsWith(".html") && !f.startsWith("_")).map((f) => f.slice(0, -5));
       } catch {
         return [];
       }
-      return text.split("\n").filter(Boolean).map((l) => {
-        try {
-          return JSON.parse(l);
-        } catch {
-          return null;
-        }
-      }).filter(Boolean);
     }
-    function history({ q, tool, source, limit = 200 } = {}) {
-      const words = String(q || "").toLowerCase().split(/\s+/).filter(Boolean);
-      return all().reverse().filter((c) => (!tool || c.tool === tool) && (!source || c.source === source || source === "direct" && !c.source.startsWith("script:"))).filter((c) => !words.length || words.every((w) => `${c.tool} ${c.source} ${JSON.stringify(c.args)}`.toLowerCase().includes(w))).slice(0, limit);
+    function get(name) {
+      if (!NAME.test(name || "")) throw new Error(`bad view name "${name}": lowercase letters, digits and -`);
+      for (const [dir, builtin] of [[DIR, false], [BUILTIN, true]]) {
+        const f = path2.join(dir, `${name}.html`);
+        if (fs2.existsSync(f)) {
+          const text = fs2.readFileSync(f, "utf8");
+          const { meta, html } = parse(text);
+          return { name, builtin, overrides: !builtin && fs2.existsSync(path2.join(BUILTIN, `${name}.html`)), description: meta.description || "", sample: meta.sample, error: meta.error, html, text };
+        }
+      }
+      throw new Error(`no view "${name}"; views: ${list().map((v) => v.name).join(", ")}`);
     }
-    var SLOT = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|'[^']*'|\b\d+\b/gi;
-    var shape = (v) => typeof v === "string" ? v.replace(SLOT, "\0") : JSON.stringify(v);
-    var slots = (v) => typeof v === "string" ? v.match(SLOT) || [] : [];
-    var unquote = (x) => /^'.*'$/.test(x) ? x.slice(1, -1) : x;
-    var same = (xs) => xs.every((x) => JSON.stringify(x) === JSON.stringify(xs[0]));
-    function generalize(calls, prefix = "") {
-      const keys = [...new Set(calls.flatMap((c) => Object.keys(c.args || {})))].sort();
-      const args = {}, params = {};
-      const name = (k, i) => `${prefix}${k}${i ? i + 1 : ""}`.replace(/[^\w]/g, "_");
-      for (const k of keys) {
-        const vals = calls.map((c) => (c.args || {})[k]);
-        if (vals.some((v) => v === void 0)) {
-          params[name(k)] = { description: `${k} (not always given)`, examples: [...new Set(vals.filter((v) => v !== void 0).map(String))].slice(0, 3) };
-          args[k] = `{{${name(k)}}}`;
-          continue;
-        }
-        if (same(vals)) {
-          args[k] = vals[0];
-          continue;
-        }
-        if (vals.every((v) => typeof v === "string") && same(vals.map(shape)) && slots(vals[0]).length) {
-          const per = vals.map(slots);
-          let i = 0;
-          const tpl = vals[0].replace(SLOT, (lit, off, whole) => {
-            const j = i++;
-            const at = per.map((p2) => p2[j]);
-            if (same(at)) return lit;
-            const near = (whole.slice(0, off).match(/([a-z_][\w.]*)["'`]?\s*(?:=|<>|!=|>=|<=|>|<|:|\blike|\bin\s*\()\s*$/i) || [])[1];
-            const nk = near && near.split(".").pop().replace(/[^\w]/g, "_");
-            const p = nk && !params[nk] && !keys.includes(nk) ? nk : name(k, j);
-            params[p] = { description: `${k}: changing value`, examples: [...new Set(at.map(unquote))].slice(0, 3) };
-            return /^'/.test(lit) ? `'{{${p}}}'` : `{{${p}}}`;
-          });
-          args[k] = tpl;
-          continue;
-        }
-        params[name(k)] = { description: k, examples: [...new Set(vals.map((v) => typeof v === "string" ? v : JSON.stringify(v)))].slice(0, 3) };
-        args[k] = `{{${name(k)}}}`;
-      }
-      return { args, params };
+    function list() {
+      const names = [.../* @__PURE__ */ new Set([...files(DIR), ...files(BUILTIN)])].sort();
+      return names.map((n) => {
+        const v = get(n);
+        return { name: n, builtin: v.builtin, overrides: v.overrides, description: v.description, hasSample: v.sample !== void 0, ...v.error ? { error: v.error } : {} };
+      });
     }
-    var direct = (cs) => cs.filter((c) => c.ok !== false && !String(c.source).startsWith("script:") && !String(c.tool).startsWith("script_"));
-    function sessions(cs) {
-      const out2 = [];
-      let cur = [];
-      for (const c of cs) {
-        const last = cur[cur.length - 1];
-        if (last && (Date.parse(c.at) - Date.parse(last.at) > 15 * 6e4 || last.source !== c.source)) {
-          out2.push(cur);
-          cur = [];
-        }
-        cur.push(c);
-      }
-      if (cur.length) out2.push(cur);
-      return out2;
+    function save(name, { html, description = "", sample }) {
+      if (!NAME.test(name || "")) throw new Error(`bad view name "${name}": lowercase letters, digits and -`);
+      if (typeof html !== "string" || !html.trim()) throw new Error("html required: the page body, with a <script> that reads DATA");
+      const body = parse(html).html;
+      const meta = JSON.stringify({ description: String(description || "").trim(), ...sample !== void 0 ? { sample } : {} });
+      fs2.mkdirSync(DIR, { recursive: true });
+      const f = path2.join(DIR, `${name}.html`);
+      const existed = fs2.existsSync(f);
+      fs2.writeFileSync(f, `<!-- ${meta} -->
+${body.replace(/^\s+/, "")}`);
+      return { view: name, saved: true, replaced: existed, overridesBuiltin: fs2.existsSync(path2.join(BUILTIN, `${name}.html`)) };
     }
-    function patterns({ min = 3, limit = 20 } = {}) {
-      const cs = direct(all());
-      const out2 = [];
-      const groups = /* @__PURE__ */ new Map();
-      for (const c of cs) {
-        const k = `${c.tool}|${Object.keys(c.args || {}).sort().join(",")}`;
-        if (!groups.has(k)) groups.set(k, []);
-        groups.get(k).push(c);
-      }
-      for (const g of groups.values()) {
-        if (g.length < min) continue;
-        const { args, params } = generalize(g);
-        out2.push({
-          kind: "repeat",
-          count: g.length,
-          last: g[g.length - 1].at,
-          tools: [g[0].tool],
-          summary: `${g[0].tool} called ${g.length}\xD7${Object.keys(params).length ? `, changing only ${Object.keys(params).join(", ")}` : " with the same arguments"}`,
-          script: { description: `${g[0].tool} ${describe(args)}`.slice(0, 200), params: paramDefs(params), steps: [{ tool: g[0].tool, args, as: "result" }] }
-        });
-      }
-      const seqs = /* @__PURE__ */ new Map();
-      for (const s of sessions(cs)) {
-        for (let n = 5; n >= 2; n--) {
-          for (let i = 0; i + n <= s.length; i++) {
-            const part = s.slice(i, i + n);
-            if (part.some((c, j) => j && c.tool === part[j - 1].tool)) continue;
-            const k = part.map((c) => c.tool).join(" \u2192 ");
-            if (!seqs.has(k)) seqs.set(k, []);
-            const list = seqs.get(k);
-            const prev = list[list.length - 1];
-            if (prev && prev.s === s && prev.i + n > i) continue;
-            list.push({ s, i, part });
-          }
-        }
-      }
-      const seqOut = [];
-      for (const [k, occ] of seqs) {
-        if (occ.length < 2) continue;
-        const n = occ[0].part.length;
-        const steps = [], params = {};
-        for (let j = 0; j < n; j++) {
-          const g = generalize(occ.map((o) => o.part[j]), `s${j + 1}_`);
-          Object.assign(params, g.params);
-          steps.push({ tool: occ[0].part[j].tool, args: g.args, as: `step${j + 1}` });
-        }
-        seqOut.push({
-          kind: "sequence",
-          count: occ.length,
-          last: occ[occ.length - 1].part[n - 1].at,
-          tools: k.split(" \u2192 "),
-          summary: `${k}: done ${occ.length}\xD7 in a row`,
-          script: { description: `Runs ${k}`, params: paramDefs(params), steps }
-        });
-      }
-      const key = (x) => ` ${x.tools.join(" ")} `;
-      for (const p of seqOut) {
-        if (seqOut.some((q) => q !== p && q.tools.length > p.tools.length && q.count >= p.count && key(q).includes(key(p)))) continue;
-        if (seqOut.some((q) => q !== p && q.count >= p.count && ` ${[...q.tools, ...q.tools].join(" ")} `.includes(key(p)) && key(p) !== key(q))) continue;
-        out2.push(p);
-      }
-      return out2.sort((a, b) => b.count * b.tools.length - a.count * a.tools.length || b.last.localeCompare(a.last)).slice(0, limit);
+    function remove(name) {
+      if (!NAME.test(name || "")) throw new Error("bad view name");
+      const f = path2.join(DIR, `${name}.html`);
+      if (!fs2.existsSync(f)) throw new Error(`no custom view "${name}" (built-in views cannot be deleted)`);
+      fs2.unlinkSync(f);
+      return { view: name, deleted: true };
     }
-    var describe = (args) => Object.entries(args).filter(([, v]) => typeof v !== "object").map(([k, v]) => `${k}=${String(v).slice(0, 40)}`).join(" ");
-    var paramDefs = (params) => Object.fromEntries(Object.entries(params).map(([k, p]) => [k, { description: `${p.description}${p.examples.length ? `, e.g. ${p.examples.join(" / ")}` : ""}`.slice(0, 200), required: true }]));
-    module2.exports = { record, history, patterns, generalize, FILE };
+    var safeJson = (v) => JSON.stringify(v === void 0 ? null : v).replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
+    var shared;
+    function assets() {
+      if (!shared) {
+        const web = path2.join(BUILTIN, "..");
+        const { diffLists, diffLines } = require_diff();
+        shared = {
+          css: fs2.readFileSync(path2.join(web, "ui.css"), "utf8") + "\n" + fs2.readFileSync(path2.join(BUILTIN, "_views.css"), "utf8"),
+          js: fs2.readFileSync(path2.join(BUILTIN, "_helpers.js"), "utf8") + `
+dt.diffLists = ${diffLists.toString()};
+dt.diffLines = ${diffLines.toString()};
+`
+        };
+      }
+      return shared;
+    }
+    function render(name, data, meta = {}, { embed = false, html, metaCsp = false } = {}) {
+      const v = html !== void 0 ? { name, html: parse(html).html } : get(name);
+      const a = assets();
+      const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+      return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(meta.title || name)}</title>${metaCsp ? `<meta http-equiv="Content-Security-Policy" content="${esc(CSP.split("; ").filter((d) => !/^(sandbox|frame-ancestors)/.test(d)).join("; "))}">` : ""}
+<style>${a.css}</style>
+<script>window.DATA = ${safeJson(data)}; window.META = ${safeJson({ view: name, ...meta })};</script>
+<script>${a.js}</script></head>
+<body class="${embed ? "embed" : ""}"><div class="wrap">${v.html}</div></body></html>`;
+    }
+    module2.exports = { list, get, save, remove, render, CSP, BUILTIN, DIR };
   }
 });
 
@@ -26640,6 +26682,18 @@ var require_files = __commonJS({
         return { store: name, path: rel(p), size: buf.length, ...encoding === "base64" || binary ? { base64: buf.toString("base64") } : { text: buf.toString("utf8") } };
       });
     }
+    var IMG = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp", svg: "image/svg+xml" };
+    async function preview(name, p) {
+      return withStore(name, async (b) => {
+        const buf = await b.read(rel(p));
+        const ext = (p.match(/\.(\w+)$/) || [])[1]?.toLowerCase() || "";
+        if (IMG[ext] && buf.length <= 3e6) return { path: rel(p), size: buf.length, image: `data:${IMG[ext]};base64,${buf.toString("base64")}` };
+        const binary = buf.subarray(0, 8e3).includes(0);
+        if (binary) return { path: rel(p), size: buf.length, binary: true, hex: buf.subarray(0, 512).toString("hex").match(/.{1,32}/g).join("\n") };
+        const text = buf.toString("utf8");
+        return { path: rel(p), size: buf.length, ext, text: text.slice(0, 1e6), clipped: text.length > 1e6 };
+      });
+    }
     async function write(name, p, content, { base64 = false, overwrite = false } = {}) {
       return withStore(name, async (b, s) => {
         mustWrite(s);
@@ -26659,7 +26713,181 @@ var require_files = __commonJS({
       const src = await read(from, fromPath, { encoding: "base64" });
       return { from: `${from}:${src.path}`, ...await write(to, toPath, src.base64, { base64: true, overwrite }) };
     }
-    module2.exports = { stores, list, search, read, write, mkdir, copy, rel, glob };
+    module2.exports = { stores, list, search, read, write, mkdir, copy, preview, rel, glob };
+  }
+});
+
+// lib/calls.js
+var require_calls = __commonJS({
+  "lib/calls.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var { CACHE: CACHE2 } = require_util();
+    var FILE = path2.join(CACHE2, "_calls.jsonl");
+    var KEEP = 5e3;
+    var SKIP = /* @__PURE__ */ new Set(["call_history", "call_patterns", "script_list", "script_get", "script_save"]);
+    var appended = 0;
+    var clipArgs = (v, n = 600) => {
+      if (typeof v === "string") return v.length > n ? `${v.slice(0, n)}\u2026` : v;
+      if (Array.isArray(v)) return v.slice(0, 50).map((x) => clipArgs(x, n));
+      if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).slice(0, 50).map(([k, x]) => [k, clipArgs(x, n)]));
+      return v;
+    };
+    function record({ tool, args, source, ok, ms, error, size }) {
+      if (SKIP.has(tool)) return;
+      const line = JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), tool, source: source || "api", args: clipArgs(args || {}), ok, ms, ...error ? { error: String(error).slice(0, 300) } : {}, ...size ? { size } : {} });
+      try {
+        fs2.mkdirSync(path2.dirname(FILE), { recursive: true });
+        fs2.appendFileSync(FILE, line + "\n");
+        if (++appended % 200 === 0) trim();
+      } catch {
+      }
+    }
+    function trim() {
+      const lines = fs2.readFileSync(FILE, "utf8").split("\n").filter(Boolean);
+      if (lines.length > KEEP) fs2.writeFileSync(FILE, lines.slice(-Math.floor(KEEP * 0.8)).join("\n") + "\n");
+    }
+    function all() {
+      let text = "";
+      try {
+        text = fs2.readFileSync(FILE, "utf8");
+      } catch {
+        return [];
+      }
+      return text.split("\n").filter(Boolean).map((l) => {
+        try {
+          return JSON.parse(l);
+        } catch {
+          return null;
+        }
+      }).filter(Boolean);
+    }
+    function history({ q, tool, source, limit = 200 } = {}) {
+      const words = String(q || "").toLowerCase().split(/\s+/).filter(Boolean);
+      return all().reverse().filter((c) => (!tool || c.tool === tool) && (!source || c.source === source || source === "direct" && !c.source.startsWith("script:"))).filter((c) => !words.length || words.every((w) => `${c.tool} ${c.source} ${JSON.stringify(c.args)}`.toLowerCase().includes(w))).slice(0, limit);
+    }
+    var SLOT = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|'[^']*'|\b\d+\b/gi;
+    var shape = (v) => typeof v === "string" ? v.replace(SLOT, "\0") : JSON.stringify(v);
+    var slots = (v) => typeof v === "string" ? v.match(SLOT) || [] : [];
+    var unquote = (x) => /^'.*'$/.test(x) ? x.slice(1, -1) : x;
+    var same = (xs) => xs.every((x) => JSON.stringify(x) === JSON.stringify(xs[0]));
+    function generalize(calls, prefix = "") {
+      const keys = [...new Set(calls.flatMap((c) => Object.keys(c.args || {})))].sort();
+      const args = {}, params = {};
+      const name = (k, i) => `${prefix}${k}${i ? i + 1 : ""}`.replace(/[^\w]/g, "_");
+      for (const k of keys) {
+        const vals = calls.map((c) => (c.args || {})[k]);
+        if (vals.some((v) => v === void 0)) {
+          params[name(k)] = { description: `${k} (not always given)`, examples: [...new Set(vals.filter((v) => v !== void 0).map(String))].slice(0, 3) };
+          args[k] = `{{${name(k)}}}`;
+          continue;
+        }
+        if (same(vals)) {
+          args[k] = vals[0];
+          continue;
+        }
+        if (vals.every((v) => typeof v === "string") && same(vals.map(shape)) && slots(vals[0]).length) {
+          const per = vals.map(slots);
+          let i = 0;
+          const tpl = vals[0].replace(SLOT, (lit, off, whole) => {
+            const j = i++;
+            const at = per.map((p2) => p2[j]);
+            if (same(at)) return lit;
+            const near = (whole.slice(0, off).match(/([a-z_][\w.]*)["'`]?\s*(?:=|<>|!=|>=|<=|>|<|:|\blike|\bin\s*\()\s*$/i) || [])[1];
+            const nk = near && near.split(".").pop().replace(/[^\w]/g, "_");
+            const p = nk && !params[nk] && !keys.includes(nk) ? nk : name(k, j);
+            params[p] = { description: `${k}: changing value`, examples: [...new Set(at.map(unquote))].slice(0, 3) };
+            return /^'/.test(lit) ? `'{{${p}}}'` : `{{${p}}}`;
+          });
+          args[k] = tpl;
+          continue;
+        }
+        params[name(k)] = { description: k, examples: [...new Set(vals.map((v) => typeof v === "string" ? v : JSON.stringify(v)))].slice(0, 3) };
+        args[k] = `{{${name(k)}}}`;
+      }
+      return { args, params };
+    }
+    var direct = (cs) => cs.filter((c) => c.ok !== false && !String(c.source).startsWith("script:") && !String(c.tool).startsWith("script_"));
+    function sessions(cs) {
+      const out2 = [];
+      let cur = [];
+      for (const c of cs) {
+        const last = cur[cur.length - 1];
+        if (last && (Date.parse(c.at) - Date.parse(last.at) > 15 * 6e4 || last.source !== c.source)) {
+          out2.push(cur);
+          cur = [];
+        }
+        cur.push(c);
+      }
+      if (cur.length) out2.push(cur);
+      return out2;
+    }
+    function patterns({ min = 3, limit = 20 } = {}) {
+      const cs = direct(all());
+      const out2 = [];
+      const groups = /* @__PURE__ */ new Map();
+      for (const c of cs) {
+        const k = `${c.tool}|${Object.keys(c.args || {}).sort().join(",")}`;
+        if (!groups.has(k)) groups.set(k, []);
+        groups.get(k).push(c);
+      }
+      for (const g of groups.values()) {
+        if (g.length < min) continue;
+        const { args, params } = generalize(g);
+        out2.push({
+          kind: "repeat",
+          count: g.length,
+          last: g[g.length - 1].at,
+          tools: [g[0].tool],
+          summary: `${g[0].tool} called ${g.length}\xD7${Object.keys(params).length ? `, changing only ${Object.keys(params).join(", ")}` : " with the same arguments"}`,
+          script: { description: `${g[0].tool} ${describe(args)}`.slice(0, 200), params: paramDefs(params), steps: [{ tool: g[0].tool, args, as: "result" }] }
+        });
+      }
+      const seqs = /* @__PURE__ */ new Map();
+      for (const s of sessions(cs)) {
+        for (let n = 5; n >= 2; n--) {
+          for (let i = 0; i + n <= s.length; i++) {
+            const part = s.slice(i, i + n);
+            if (part.some((c, j) => j && c.tool === part[j - 1].tool)) continue;
+            const k = part.map((c) => c.tool).join(" \u2192 ");
+            if (!seqs.has(k)) seqs.set(k, []);
+            const list = seqs.get(k);
+            const prev = list[list.length - 1];
+            if (prev && prev.s === s && prev.i + n > i) continue;
+            list.push({ s, i, part });
+          }
+        }
+      }
+      const seqOut = [];
+      for (const [k, occ] of seqs) {
+        if (occ.length < 2) continue;
+        const n = occ[0].part.length;
+        const steps = [], params = {};
+        for (let j = 0; j < n; j++) {
+          const g = generalize(occ.map((o) => o.part[j]), `s${j + 1}_`);
+          Object.assign(params, g.params);
+          steps.push({ tool: occ[0].part[j].tool, args: g.args, as: `step${j + 1}` });
+        }
+        seqOut.push({
+          kind: "sequence",
+          count: occ.length,
+          last: occ[occ.length - 1].part[n - 1].at,
+          tools: k.split(" \u2192 "),
+          summary: `${k}: done ${occ.length}\xD7 in a row`,
+          script: { description: `Runs ${k}`, params: paramDefs(params), steps }
+        });
+      }
+      const key = (x) => ` ${x.tools.join(" ")} `;
+      for (const p of seqOut) {
+        if (seqOut.some((q) => q !== p && q.tools.length > p.tools.length && q.count >= p.count && key(q).includes(key(p)))) continue;
+        if (seqOut.some((q) => q !== p && q.count >= p.count && ` ${[...q.tools, ...q.tools].join(" ")} `.includes(key(p)) && key(p) !== key(q))) continue;
+        out2.push(p);
+      }
+      return out2.sort((a, b) => b.count * b.tools.length - a.count * a.tools.length || b.last.localeCompare(a.last)).slice(0, limit);
+    }
+    var describe = (args) => Object.entries(args).filter(([, v]) => typeof v !== "object").map(([k, v]) => `${k}=${String(v).slice(0, 40)}`).join(" ");
+    var paramDefs = (params) => Object.fromEntries(Object.entries(params).map(([k, p]) => [k, { description: `${p.description}${p.examples.length ? `, e.g. ${p.examples.join(" / ")}` : ""}`.slice(0, 200), required: true }]));
+    module2.exports = { record, history, patterns, generalize, FILE };
   }
 });
 
@@ -26781,7 +27009,7 @@ var require_tools = __commonJS({
       {
         name: "pg_query",
         description: "Run read-only SQL. The database is chosen from the schema in the query (or pass db). Always use WHERE and LIMIT." + VIEW_NOTE,
-        input: { sql: str("SQL"), env, db: str("Database name from envs.json (optional)"), limit: int("Rows in the preview", PREVIEW) },
+        input: { sql: str("SQL"), env, db: str("Database name from envs.json (optional)"), limit: int("Rows in the preview", PREVIEW), all: { type: "boolean", default: false, description: "Return every row (up to 10000) instead of a preview: for scripts that compare or process them" } },
         required: ["sql"],
         limit: (a) => `pg:${a.env}`,
         run: async (a) => {
@@ -26792,7 +27020,7 @@ var require_tools = __commonJS({
             if (missing.length) throw new Error(`schema ${missing.join(", ")} is not in the ${a.env} catalog. Use find to get the exact schema.table (or catalog_sync if it is new).`);
           }
           const r = await require_pg().query(a.env, a.sql, { db: a.db });
-          return { db: r.db, route: r.route, ms: r.ms, ...tabular("pg", r.rows, { env: a.env, db: r.db, query: a.sql, ms: r.ms }, { preview: Math.min(a.limit || PREVIEW, 200) }) };
+          return { db: r.db, route: r.route, ms: r.ms, ...tabular("pg", r.rows, { env: a.env, db: r.db, query: a.sql, ms: r.ms }, { preview: a.all ? 1e4 : Math.min(a.limit || PREVIEW, 200) }) };
         }
       },
       {
@@ -27164,6 +27392,113 @@ var require_tools = __commonJS({
         run: async (a) => {
           const r = await require_js().run(a.code, { vars: a.vars || {}, args: a.args, result: a.result });
           return { ...r.error ? { error: r.error } : { returned: r.hasReturn ? r.returned : null }, vars: r.vars, ...r.logs.length ? { logs: r.logs } : {}, ...r.tests.length ? { tests: r.tests } : {} };
+        }
+      },
+      {
+        name: "show",
+        group: "views",
+        description: 'Show data to the user with a view (embedded in the chat): "json" (collapsible tree), "xml" (pretty), "table" (rows), "list-diff" ({first, last, labels}), "text-diff" ({first, last, labels, format}), or a custom view (view_list). Returns the link; mention it.',
+        input: { view: str('View name, e.g. "json"'), data: { description: "The data the view shows (any JSON)" }, title: str("Title") },
+        required: ["view", "data"],
+        run: (a) => {
+          require_views().get(a.view);
+          return { view: require_results().saveView(a.view, a.data, { title: a.title || "" }), shown: a.view };
+        }
+      },
+      {
+        name: "diff",
+        group: "views",
+        description: 'Compare two lists (ids, names, numbers: arrays, or text with one per line / comma separated) into only in first, in both, only in last; or two texts line by line (mode="text"; format="json"|"xml" re-indents both first). Shows the diff to the user (embedded) and returns the counts and the differences.',
+        input: {
+          first: { description: "First list (array) or text" },
+          last: { description: "Last list (array) or text" },
+          labels: { type: "array", items: { type: "string" }, description: 'Names of the two sides, e.g. ["database", "sftp file"]' },
+          mode: { type: "string", enum: ["lists", "text"], default: "lists" },
+          format: { type: "string", enum: ["", "json", "xml"], default: "", description: "text mode: re-indent first" },
+          ignore_case: { type: "boolean", default: false },
+          title: str("Title")
+        },
+        required: ["first", "last"],
+        run: (a) => {
+          const D = require_diff(), R = require_results();
+          const labels = a.labels && a.labels.length === 2 ? a.labels : ["first", "last"];
+          if (a.mode === "text") {
+            const pre = (t) => {
+              const v = typeof t === "string" ? t : JSON.stringify(t, null, 2);
+              if (a.format === "json") {
+                try {
+                  return JSON.stringify(JSON.parse(v), null, 2);
+                } catch {
+                }
+              }
+              return v;
+            };
+            const d2 = D.diffLines(pre(a.first), pre(a.last));
+            return { same: d2.same, counts: d2.counts, changes: d2.ops.filter((o) => o.op !== " ").slice(0, 40), view: R.saveView("text-diff", { first: a.first, last: a.last, labels, format: a.format || "" }, { title: a.title || "" }) };
+          }
+          const d = D.diffLists(a.first, a.last, { ignoreCase: a.ignore_case });
+          const cut = (xs) => xs.length > 50 ? [...xs.slice(0, 50), `\u2026 ${xs.length - 50} more`] : xs;
+          return { same: d.same, labels, counts: d.counts, onlyFirst: cut(d.onlyFirst), onlyLast: cut(d.onlyLast), view: R.saveView("list-diff", { ...d, labels }, { title: a.title || "" }) };
+        }
+      },
+      {
+        name: "view_list",
+        group: "views",
+        description: "Views that show results: built-in ones and custom ones saved with view_save, each with a description of the data it expects.",
+        input: {},
+        run: () => require_views().list()
+      },
+      {
+        name: "view_get",
+        group: "views",
+        description: "A view's HTML and sample data: start a new view from a similar one.",
+        input: { name: str("View name") },
+        required: ["name"],
+        run: (a) => {
+          const v = require_views().get(a.name);
+          return { name: v.name, builtin: v.builtin, description: v.description, sample: v.sample, html: v.html };
+        }
+      },
+      {
+        name: "view_save",
+        group: "views",
+        description: "Save a custom view (a new way to show results, e.g. a chart or a domain-specific card). html is the page body: markup plus a <script> that reads DATA (the shown data) and META (title), and may use helpers: dt.esc, dt.$, dt.json(el, value), dt.table(el, rows), dt.prettyJson, dt.prettyXml, dt.highlightXml, dt.diffLists(a, b), dt.diffLines(a, b), dt.copy(text, btn), dt.title(). Styles from the dt pages apply (card, muted, chip, table). Scripts may load libraries from cdn.jsdelivr.net, cdnjs or unpkg. The page cannot fetch anything: put all it needs in the data. Then show data with show(view=name).",
+        input: { name: str('Lowercase name with -, e.g. "order-card"'), description: str("What it shows and the DATA shape it expects"), html: str("Body HTML with a <script>"), sample: { description: "Sample DATA, for the preview on /admin" } },
+        required: ["name", "description", "html"],
+        run: (a) => require_views().save(a.name, { html: a.html, description: a.description, sample: a.sample })
+      },
+      {
+        name: "files_browse",
+        group: "files",
+        description: "Show a store directory to the user as a browsable tree (nested folders, sizes, dates) where clicking a file previews it (JSON/XML pretty, text, images). Returns the counts and the link.",
+        input: { store: str("Store name"), dir: str("Directory (default: the root)"), pattern: str("Only files matching this name glob"), depth: int("Levels of subfolders", 6) },
+        required: ["store"],
+        run: async (a) => {
+          const F = require_files();
+          const all = await F.list(a.store, a.dir || "", { recursive: true, limit: 5e3 });
+          const re = a.pattern ? F.glob(a.pattern) : null;
+          const base = F.rel(a.dir || "");
+          const depthOf = (p) => (base ? p.slice(base.length + 1) : p).split("/").length - 1;
+          const entries = all.filter((e) => depthOf(e.path) <= (a.depth ?? 6)).filter((e) => e.dir || !re || re.test(e.path.split("/").pop()));
+          const view = require_results().saveView("files", { store: a.store, dir: base, entries, truncated: all.length >= 5e3 }, { title: `${a.store}:/${base}`, store: a.store }, { page: "files" });
+          return { store: a.store, dir: base || "/", folders: entries.filter((e) => e.dir).length, files: entries.filter((e) => !e.dir).length, view };
+        }
+      },
+      {
+        name: "files_show",
+        group: "files",
+        description: "Show one file to the user (embedded): its preview (JSON and XML pretty-printed, text, images), with its folder next to it. Use it when the user asks to see a file, e.g. one listed by files_search or in an earlier panel.",
+        input: { store: str("Store name"), path: str("File path") },
+        required: ["store", "path"],
+        run: async (a) => {
+          const F = require_files();
+          const p = F.rel(a.path);
+          const dir = p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "";
+          const entries = await F.list(a.store, dir, { limit: 500 });
+          if (!entries.some((e) => e.path === p && !e.dir)) throw new Error(`no file ${p} in ${a.store}`);
+          const f = entries.find((e) => e.path === p);
+          const view = require_results().saveView("files", { store: a.store, dir, entries, select: p }, { title: `${a.store}:/${p}`, store: a.store }, { page: "files" });
+          return { store: a.store, path: p, size: f.size, mtime: f.mtime, view: `${view}?open=${encodeURIComponent(p)}` };
         }
       },
       {
@@ -28131,6 +28466,37 @@ var require_server2 = __commonJS({
       }],
       ["GET", "/api/admin/calls", true, (req, res, url) => send(res, 200, require_calls().history({ q: url.searchParams.get("q") || "", source: url.searchParams.get("source") || "", limit: 300 }))],
       ["GET", "/api/admin/patterns", true, (req, res) => send(res, 200, require_calls().patterns({ limit: 30 }))],
+      ["GET", "/api/admin/views", true, (req, res) => send(res, 200, require_views().list())],
+      ["GET", "/api/admin/view", true, (req, res, url) => {
+        try {
+          send(res, 200, require_views().get(url.searchParams.get("name")));
+        } catch (e) {
+          send(res, 404, { error: e.message });
+        }
+      }],
+      ["POST", "/api/admin/view", true, async (req, res) => {
+        try {
+          const b = await readJsonBody(req);
+          send(res, 200, require_views().save(b.name, b));
+        } catch (e) {
+          send(res, 400, { error: e.message });
+        }
+      }],
+      ["POST", "/api/admin/view/delete", true, async (req, res) => {
+        try {
+          send(res, 200, require_views().remove((await readJsonBody(req)).name));
+        } catch (e) {
+          send(res, 400, { error: e.message });
+        }
+      }],
+      ["POST", "/api/admin/view/preview", true, async (req, res) => {
+        try {
+          const b = await readJsonBody(req);
+          send(res, 200, { html: require_views().render(b.name || "preview", b.sample, { title: b.title || `${b.name || "view"} (sample data)` }, { html: b.html, metaCsp: true, embed: true }) });
+        } catch (e) {
+          send(res, 400, { error: e.message });
+        }
+      }],
       ["GET", "/api/admin/sites", true, (req, res) => send(res, 200, admin.sites())],
       ["POST", "/api/admin/sites", true, async (req, res) => {
         try {
@@ -28152,9 +28518,9 @@ var require_server2 = __commonJS({
         send(res, 200, await require_dashboard().overview(env), ok ? CORS : {});
       }],
       ["GET", "/static/*", false, (req, res, url) => {
-        const name = path2.basename(url.pathname);
+        const name = url.pathname.slice("/static/".length);
         const type = { ".css": "text/css", ".js": "text/javascript" }[path2.extname(name)];
-        if (!type || !fs2.existsSync(path2.join(__dirname, "web", name))) return send(res, 404, { error: "not found" });
+        if (!type || !/^(views\/)?[\w.-]+$/.test(name) || !fs2.existsSync(path2.join(__dirname, "web", name))) return send(res, 404, { error: "not found" });
         res.writeHead(200, { "content-type": `${type}; charset=utf-8`, "cache-control": "no-cache", ...CORS });
         res.end(fs2.readFileSync(path2.join(__dirname, "web", name)));
       }],
@@ -28170,6 +28536,42 @@ var require_server2 = __commonJS({
       }],
       ["GET", "/view", true, viewPage],
       ["GET", "/view/*", false, viewPage],
+      // views: sandboxed pages with their data inside; ?view=<name> shows the same data another way
+      ["GET", "/show/*", false, (req, res, url) => {
+        const r = results.load(url.pathname.split("/").pop());
+        if (!r) return send(res, 404, { error: "No such result (results are kept for the latest 500 runs)" });
+        const data = r.kind === "view" ? r.data : r.rows;
+        const view = url.searchParams.get("view") || (r.kind === "view" ? r.view : "table");
+        let html;
+        try {
+          html = require_views().render(view, data, { title: r.title || r.query || "", at: r.at, id: r.id }, { embed: url.searchParams.has("embed") });
+        } catch (e) {
+          return send(res, 404, { error: e.message });
+        }
+        res.writeHead(200, { "content-type": "text/html; charset=utf-8", "content-security-policy": require_views().CSP, "cache-control": "no-cache", "x-content-type-options": "nosniff" });
+        res.end(html);
+      }],
+      // the file browser: a stored listing of one store directory; previews only inside it
+      ["GET", "/files/*", false, page("files.html")],
+      ["GET", "/api/files/*", false, async (req, res, url) => {
+        const r = results.load(url.pathname.split("/").pop());
+        if (!r || r.kind !== "view" || r.view !== "files") return send(res, 404, { error: "No such file listing" }, CORS);
+        const p = url.searchParams.get("path");
+        if (p === null) return send(res, 200, r, CORS);
+        const F = require_files();
+        let rel;
+        try {
+          rel = F.rel(p);
+        } catch (e) {
+          return send(res, 400, { error: e.message }, CORS);
+        }
+        if (!r.data.entries.some((e) => !e.dir && e.path === rel)) return send(res, 403, { error: "not a file of this listing" }, CORS);
+        try {
+          send(res, 200, await F.preview(r.data.store, rel), CORS);
+        } catch (e) {
+          send(res, 400, { error: e.message }, CORS);
+        }
+      }],
       ["GET", "/api/results", true, (req, res) => send(res, 200, results.list())],
       ["GET", "/api/result/*", false, (req, res, url) => {
         const r = results.load(url.pathname.split("/").pop());

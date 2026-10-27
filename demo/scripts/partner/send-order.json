@@ -1,0 +1,81 @@
+{
+  "description": "Send a test order to the partner: copy an order template, give it new ids, upload it to a new SFTP folder, announce the folder to the import API",
+  "params": {
+    "customerId": {
+      "default": "C-500",
+      "description": "Customer the order is for"
+    },
+    "template": {
+      "default": "order-basic",
+      "description": "Template name in templates/orders"
+    }
+  },
+  "steps": [
+    {
+      "tool": "files_search",
+      "args": {
+        "store": "templates",
+        "dir": "orders",
+        "pattern": "{{template}}*.json"
+      },
+      "as": "found"
+    },
+    {
+      "tool": "files_read",
+      "args": {
+        "store": "templates",
+        "path": "{{found.rows.0.path}}"
+      },
+      "as": "doc"
+    },
+    {
+      "set": {
+        "folder": "in/{{date:YYYYMMDD}}-{{hex:8}}",
+        "orderId": "ORD-{{rand:6}}"
+      }
+    },
+    {
+      "transform": "{{doc.text}}",
+      "replace": [
+        {
+          "find": "ORD-\\d+",
+          "regex": true,
+          "with": "{{orderId}}"
+        }
+      ],
+      "json": {
+        "customer.id": "{{customerId}}",
+        "items.*.id": "{{uuid}}",
+        "createdAt": "{{now}}"
+      },
+      "as": "order"
+    },
+    {
+      "tool": "files_write",
+      "args": {
+        "store": "partner",
+        "path": "{{folder}}/order.json",
+        "content": "{{order}}"
+      }
+    },
+    {
+      "http": "POST {{apiBase}}/imports",
+      "body": {
+        "folder": "/upload/{{folder}}",
+        "files": [
+          "order.json"
+        ],
+        "orderId": "{{orderId}}"
+      },
+      "as": "import",
+      "headers": {
+        "x-run": "{{runId}}"
+      },
+      "capture": {
+        "importId": "json.importId"
+      },
+      "after": "test('import accepted', () => expect(result.status).toBe(202));\ntest('same folder', () => expect(result.json.folder).toBe('/upload/' + vars.folder));"
+    }
+  ],
+  "after": "test('got an import id', () => expect(vars.importId).toMatch(/^imp-/));"
+}

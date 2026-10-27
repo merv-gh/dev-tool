@@ -1,0 +1,15 @@
+<!-- {"description": "Any JSON value as a collapsible tree, with the raw text and a copy button", "sample": {"order": {"id": "ORD-1001", "items": [{"sku": "KB-01", "qty": 1}, {"sku": "MS-02", "qty": 2}], "paid": true, "note": null}}} -->
+<div class="vhead"><h1 data-title></h1><span class="muted" id="info"></span><span class="spacer"></span>
+  <button id="mode">Raw</button><button id="cp">Copy</button></div>
+<div id="tree" class="card" style="padding:10px 12px"></div>
+<pre class="src" id="raw" hidden></pre>
+<script>
+  const value = typeof DATA === 'string' ? (() => { try { return JSON.parse(DATA); } catch { return DATA; } })() : DATA;
+  dt.title();
+  dt.json(dt.$('#tree'), value, { open: 3 });
+  const text = JSON.stringify(value, null, 2);
+  dt.$('#raw').textContent = text;
+  dt.$('#info').textContent = `${text.length.toLocaleString()} chars`;
+  dt.$('#mode').onclick = (e) => { const raw = dt.$('#raw').hidden; dt.$('#raw').hidden = !raw; dt.$('#tree').hidden = raw; e.target.textContent = raw ? 'Tree' : 'Raw'; };
+  dt.$('#cp').onclick = (e) => dt.copy(text, e.target);
+</script>

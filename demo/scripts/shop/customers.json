@@ -1,0 +1,13 @@
+{
+  "description": "Customer list page",
+  "params": {},
+  "steps": [
+    {
+      "open": "shop.customers"
+    },
+    {
+      "browser": "snapshot",
+      "as": "page"
+    }
+  ]
+}

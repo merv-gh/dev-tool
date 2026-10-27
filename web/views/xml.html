@@ -1,0 +1,11 @@
+<!-- {"description": "XML, re-indented and highlighted. DATA is the XML text (or { xml })", "sample": "<order id=\"ORD-1001\"><customer id=\"C-77\">Ada Shop</customer><items><item sku=\"KB-01\" qty=\"1\"/><item sku=\"MS-02\" qty=\"2\"/></items><!-- test data --></order>"} -->
+<div class="vhead"><h1 data-title></h1><span class="muted" id="info"></span><span class="spacer"></span><button id="cp">Copy</button></div>
+<pre class="src" id="x"></pre>
+<script>
+  const xml = typeof DATA === 'string' ? DATA : DATA.xml || DATA.text || '';
+  const pretty = dt.prettyXml(xml);
+  dt.title();
+  dt.$('#x').innerHTML = dt.highlightXml(pretty);
+  dt.$('#info').textContent = `${pretty.split('\n').length} lines`;
+  dt.$('#cp').onclick = (e) => dt.copy(pretty, e.target);
+</script>

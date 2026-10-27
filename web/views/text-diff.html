@@ -1,0 +1,25 @@
+<!-- {"description": "Two texts compared line by line (unified, with context). DATA: { first, last, labels: [a, b], format: 'json' | 'xml' (re-indent both first) }", "sample": {"labels": ["template", "sent"], "format": "json", "first": "{\"orderId\": \"ORD-1001\", \"customer\": {\"id\": \"C-77\"}, \"qty\": 1}", "last": "{\"orderId\": \"ORD-978827\", \"customer\": {\"id\": \"C-42\"}, \"qty\": 1}"}} -->
+<div class="vhead"><h1 data-title></h1><span class="muted" id="info"></span><span class="spacer"></span>
+  <label class="muted" style="font-size:12px"><input type="checkbox" id="all"> all lines</label></div>
+<div class="card scroll"><table class="diff" id="t"></table></div>
+<script>
+  const labels = DATA.labels || ['first', 'last'];
+  const norm = (t) => (DATA.format === 'json' ? dt.prettyJson(t) : DATA.format === 'xml' ? dt.prettyXml(t) : typeof t === 'string' ? t : JSON.stringify(t, null, 2));
+  const d = dt.diffLines(norm(DATA.first), norm(DATA.last), DATA.options);
+  dt.title(META.title || `${labels[0]} → ${labels[1]}`);
+  dt.$('#info').innerHTML = d.same ? 'the same' : `<span style="color:var(--bad)">−${d.counts.removed}</span> <span style="color:var(--good)">+${d.counts.added}</span> lines · ${dt.esc(labels[0])} → ${dt.esc(labels[1])}`;
+  const row = (o) => `<tr class="${o.op === '-' ? 'del' : o.op === '+' ? 'add' : ''}"><td class="ln">${o.a || ''}</td><td class="ln">${o.b || ''}</td><td class="sg">${o.op}</td><td class="tx">${dt.esc(o.text)}</td></tr>`;
+  const draw = () => {
+    const all = dt.$('#all').checked, ctx = 3, out = [];
+    const near = d.ops.map((o, i) => o.op !== ' ');
+    let gap = 0;
+    d.ops.forEach((o, i) => {
+      const keep = all || near.slice(Math.max(0, i - ctx), i + ctx + 1).some(Boolean);
+      if (keep) { if (gap) out.push(`<tr class="gap"><td colspan="4">… ${gap} same lines</td></tr>`); gap = 0; out.push(row(o)); } else gap++;
+    });
+    if (gap) out.push(`<tr class="gap"><td colspan="4">… ${gap} same lines</td></tr>`);
+    dt.$('#t').innerHTML = out.join('');
+  };
+  draw();
+  dt.$('#all').onchange = draw;
+</script>

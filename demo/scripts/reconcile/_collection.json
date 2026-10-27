@@ -1,0 +1,4 @@
+{
+  "description": "Compare what the database says with what partners report (files on SFTP)",
+  "tool": true
+}

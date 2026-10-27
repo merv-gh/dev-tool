@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<order id="ORD-1042" xmlns="urn:acme:orders:v2"><customer id="C-77"><name>Ada Shop</name><email>ada@example.com</email></customer><items><item sku="KB-01" qty="1" price="49.90"/><item sku="MS-02" qty="2" price="19.90"/></items><delivery method="express"><address country="DE" city="Berlin">Alexanderplatz 1</address></delivery><!-- sent by the partner at 06:00 --></order>

@@ -1,0 +1,47 @@
+{
+  "description": "Same as send-order, with the document rewritten in JavaScript instead of a transform step",
+  "params": {
+    "customerId": {
+      "default": "C-500",
+      "description": "Customer the order is for"
+    }
+  },
+  "steps": [
+    {
+      "tool": "files_read",
+      "args": {
+        "store": "templates",
+        "path": "orders/order-basic.json"
+      },
+      "as": "doc"
+    },
+    {
+      "js": "const doc = JSON.parse(vars.doc.text);\nvars.orderId = 'ORD-' + rand(6);\nvars.folder = `in/${date('YYYYMMDD')}-${hex(8)}`;\ndoc.orderId = vars.orderId;\ndoc.customer.id = vars.customerId;\ndoc.items.forEach(i => { i.id = uuid(); i.order = vars.orderId; });\ndoc.createdAt = now();\nlog('items', doc.items.length);\nreturn JSON.stringify(doc, null, 2);",
+      "as": "order"
+    },
+    {
+      "tool": "files_write",
+      "args": {
+        "store": "partner",
+        "path": "{{folder}}/order.json",
+        "content": "{{order}}"
+      },
+      "after": "test('written', () => expect(result.written).toBe(true));"
+    },
+    {
+      "http": "POST {{apiBase}}/imports",
+      "body": {
+        "folder": "/upload/{{folder}}",
+        "files": [
+          "order.json"
+        ]
+      },
+      "before": "args.body.orderId = vars.orderId;\nargs.body.lines = JSON.parse(vars.order).items.length;",
+      "capture": {
+        "importId": "json.importId"
+      },
+      "after": "test('import accepted', () => expect(result.status).toBe(202));\nreturn { importId: result.json.importId, folder: result.json.folder };",
+      "as": "import"
+    }
+  ]
+}

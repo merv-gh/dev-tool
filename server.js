@@ -223,6 +223,18 @@ const routes = [
   }],
   ['GET', '/api/admin/calls', true, (req, res, url) => send(res, 200, require('./lib/calls').history({ q: url.searchParams.get('q') || '', source: url.searchParams.get('source') || '', limit: 300 }))],
   ['GET', '/api/admin/patterns', true, (req, res) => send(res, 200, require('./lib/calls').patterns({ limit: 30 }))],
+  ['GET', '/api/admin/views', true, (req, res) => send(res, 200, require('./lib/views').list())],
+  ['GET', '/api/admin/view', true, (req, res, url) => { try { send(res, 200, require('./lib/views').get(url.searchParams.get('name'))); } catch (e) { send(res, 404, { error: e.message }); } }],
+  ['POST', '/api/admin/view', true, async (req, res) => {
+    try { const b = await readJsonBody(req); send(res, 200, require('./lib/views').save(b.name, b)); } catch (e) { send(res, 400, { error: e.message }); }
+  }],
+  ['POST', '/api/admin/view/delete', true, async (req, res) => {
+    try { send(res, 200, require('./lib/views').remove((await readJsonBody(req)).name)); } catch (e) { send(res, 400, { error: e.message }); }
+  }],
+  ['POST', '/api/admin/view/preview', true, async (req, res) => {
+    try { const b = await readJsonBody(req); send(res, 200, { html: require('./lib/views').render(b.name || 'preview', b.sample, { title: b.title || `${b.name || 'view'} (sample data)` }, { html: b.html, metaCsp: true, embed: true }) }); }
+    catch (e) { send(res, 400, { error: e.message }); }
+  }],
   ['GET', '/api/admin/sites', true, (req, res) => send(res, 200, admin.sites())],
   ['POST', '/api/admin/sites', true, async (req, res) => {
     try { const b = await readJsonBody(req); send(res, 200, await admin.saveSite(b.was || '', b.site === undefined ? null : b.site)); } catch (e) { send(res, 400, { error: e.message }); }
@@ -240,9 +252,9 @@ const routes = [
     send(res, 200, await require('./lib/dashboard').overview(env), ok ? CORS : {});
   }],
   ['GET', '/static/*', false, (req, res, url) => {
-    const name = path.basename(url.pathname);
+    const name = url.pathname.slice('/static/'.length);
     const type = { '.css': 'text/css', '.js': 'text/javascript' }[path.extname(name)];
-    if (!type || !fs.existsSync(path.join(__dirname, 'web', name))) return send(res, 404, { error: 'not found' });
+    if (!type || !/^(views\/)?[\w.-]+$/.test(name) || !fs.existsSync(path.join(__dirname, 'web', name))) return send(res, 404, { error: 'not found' });
     res.writeHead(200, { 'content-type': `${type}; charset=utf-8`, 'cache-control': 'no-cache', ...CORS });
     res.end(fs.readFileSync(path.join(__dirname, 'web', name)));
   }],
@@ -258,6 +270,31 @@ const routes = [
   }],
   ['GET', '/view', true, viewPage],
   ['GET', '/view/*', false, viewPage],
+  // views: sandboxed pages with their data inside; ?view=<name> shows the same data another way
+  ['GET', '/show/*', false, (req, res, url) => {
+    const r = results.load(url.pathname.split('/').pop());
+    if (!r) return send(res, 404, { error: 'No such result (results are kept for the latest 500 runs)' });
+    const data = r.kind === 'view' ? r.data : r.rows;
+    const view = url.searchParams.get('view') || (r.kind === 'view' ? r.view : 'table');
+    let html;
+    try { html = require('./lib/views').render(view, data, { title: r.title || r.query || '', at: r.at, id: r.id }, { embed: url.searchParams.has('embed') }); }
+    catch (e) { return send(res, 404, { error: e.message }); }
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'content-security-policy': require('./lib/views').CSP, 'cache-control': 'no-cache', 'x-content-type-options': 'nosniff' });
+    res.end(html);
+  }],
+  // the file browser: a stored listing of one store directory; previews only inside it
+  ['GET', '/files/*', false, page('files.html')],
+  ['GET', '/api/files/*', false, async (req, res, url) => {
+    const r = results.load(url.pathname.split('/').pop());
+    if (!r || r.kind !== 'view' || r.view !== 'files') return send(res, 404, { error: 'No such file listing' }, CORS);
+    const p = url.searchParams.get('path');
+    if (p === null) return send(res, 200, r, CORS);
+    const F = require('./lib/files');
+    let rel;
+    try { rel = F.rel(p); } catch (e) { return send(res, 400, { error: e.message }, CORS); }
+    if (!r.data.entries.some(e => !e.dir && e.path === rel)) return send(res, 403, { error: 'not a file of this listing' }, CORS);
+    try { send(res, 200, await F.preview(r.data.store, rel), CORS); } catch (e) { send(res, 400, { error: e.message }, CORS); }
+  }],
   ['GET', '/api/results', true, (req, res) => send(res, 200, results.list())],
   ['GET', '/api/result/*', false, (req, res, url) => {
     const r = results.load(url.pathname.split('/').pop());

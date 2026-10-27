@@ -1,0 +1,25 @@
+{
+  "description": "Orders with a status in the database vs the order ids in the partner's monthly settlement report on SFTP; shows only-in-db, in both, only-in-report",
+  "params": {
+    "month": { "default": "2026/10", "description": "Report month folder, YYYY/MM" },
+    "status": { "default": "shipped", "description": "Order status in the database" }
+  },
+  "steps": [
+    {
+      "tool": "pg_query", "args": { "env": "demo", "sql": "select id from sales.orders where status = '{{status}}' order by id", "all": true },
+      "after": "test('orders found', () => expect(result.total).toBeGreaterThan(0));\nreturn result.rows.map(r => r.id);",
+      "as": "dbIds"
+    },
+    {
+      "tool": "files_read", "args": { "store": "partner", "path": "reports/{{month}}/settlement-orders.csv" },
+      "after": "const lines = result.text.split(/\\r?\\n/).filter(Boolean);\ntest('csv header', () => expect(lines[0]).toMatch(/^order_id,/));\nreturn lines.slice(1).map(l => l.split(',')[0]);",
+      "as": "fileIds"
+    },
+    {
+      "tool": "diff",
+      "args": { "first": "{{dbIds}}", "last": "{{fileIds}}", "labels": ["{{status}} in the database", "settlement {{month}} (sftp)"], "title": "Shipped orders vs settlement {{month}}" },
+      "after": "log(`${result.counts.onlyFirst} not settled, ${result.counts.onlyLast} unknown to us, ${result.counts.duplicatesLast} duplicates in the report`);",
+      "as": "diff"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+<!-- {"description": "An array of objects as a table (DATA: rows, or { rows })", "sample": [{"id": 1001, "status": "paid", "total": 129.9}, {"id": 1002, "status": "new", "total": 15}]} -->
+<div class="vhead"><h1 data-title></h1><span class="muted" id="info"></span></div>
+<div id="t"></div>
+<script>
+  const rows = Array.isArray(DATA) ? DATA : DATA.rows || [];
+  dt.title();
+  dt.$('#info').textContent = `${rows.length} rows`;
+  dt.table(dt.$('#t'), rows);
+</script>

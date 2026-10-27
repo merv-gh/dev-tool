@@ -10,6 +10,32 @@ const ctx = (r) => (Array.isArray(r) && r[0] === 'embed' ? r[1] : r); // OpenAPI
 
 const SCENARIOS = [
   {
+    match: /settlement|reconcil|shipped orders/i,
+    steps: [{ tool: 'reconcile', args: { script: 'shipped settlement', params: { month: '2026/10' } } }],
+    answer: (rs) => {
+      const r = ctx(rs[0]) || {};
+      const d = (r.results || {}).diff || {};
+      const c = d.counts || {};
+      return `Compared the **${c.first} shipped orders** in the database with the **${c.last} lines** of the partner's settlement report for 2026/10 (\`reports/2026/10/settlement-orders.csv\` on SFTP):\n\n` +
+        `- **${c.onlyFirst} shipped but not settled:** ${(d.onlyFirst || []).join(', ')}. Ask the partner about these.\n` +
+        `- **${c.onlyLast} settled but unknown to us:** ${(d.onlyLast || []).join(', ')}. Those ids do not exist as shipped orders.\n` +
+        `- ${c.duplicatesLast} id is listed twice in the report; ${c.common} match.\n\nThe three columns above show them all.`;
+    },
+  },
+  {
+    match: /(browse|look at|what.s on).*(sftp|partner)/i,
+    steps: [{ tool: 'files_browse', args: { store: 'partner' } }],
+    answer: (rs) => { const r = ctx(rs[0]) || {}; return `The partner SFTP has **${r.folders} folders and ${r.files} files**: monthly settlement reports under \`reports/\`, the orders the partner sent under \`partner/inbox\`, processed batches in \`partner/archive\`. Click a file above to preview it.`; },
+  },
+  {
+    match: /(show|open).*(order|file).*(inbox|1042)/i,
+    steps: [
+      { tool: 'files_search', args: { store: 'partner', pattern: 'order-1042*' } },
+      { tool: 'files_show', args: (rs) => ({ store: 'partner', path: (((ctx(rs[0]) || {}).rows || [])[0] || {}).path || 'partner/inbox/order-1042.xml' }) },
+    ],
+    answer: (rs) => { const r = ctx(rs[1]) || {}; return `Here is \`${r.path}\` (${r.size} bytes), the order **ORD-1042** the partner sent: customer C-77 (Ada Shop), two items (KB-01 ×1, MS-02 ×2), express delivery to Berlin. The XML is pretty-printed above; the folder is on the left.`; },
+  },
+  {
     match: /who (writes|uses|touches).*orders|sales\.orders/i,
     steps: [{ tool: 'find', args: { env: 'demo', q: 'pg: sales.orders' } }, { tool: 'pg_usage', args: { env: 'demo', name: 'sales.orders' } }],
     answer: (rs) => {
@@ -54,13 +80,14 @@ http.createServer((req, res) => {
     const done = user ? msgs.slice(msgs.indexOf(user)).filter(m => m.role === 'tool').length : 0;
     const step = s && s.steps[done];
     const fn = step && tools.find(t => t === step.tool || t.endsWith(`_${step.tool}`));
+    const args = step && (typeof step.args === 'function' ? step.args(results(msgs.slice(msgs.indexOf(user)))) : step.args);
     const chunk = (delta, finish) => res.write('data: ' + JSON.stringify({ id: 'demo', object: 'chat.completion.chunk', created: Math.floor(Date.now() / 1000), model: b.model, choices: [{ index: 0, delta, finish_reason: finish || null }] }) + '\n\n');
     res.writeHead(200, { 'content-type': 'text/event-stream' });
     if (fn) {
-      chunk({ role: 'assistant', tool_calls: [{ index: 0, id: `call_${done}`, type: 'function', function: { name: fn, arguments: JSON.stringify(step.args) } }] });
+      chunk({ role: 'assistant', tool_calls: [{ index: 0, id: `call_${done}`, type: 'function', function: { name: fn, arguments: JSON.stringify(args) } }] });
       chunk({}, 'tool_calls');
     } else {
-      const answer = s ? s.answer(results(msgs.slice(msgs.indexOf(user)))) : 'Ask "who writes sales.orders?", "how is demo doing?" or "any errors in the last hour?"';
+      const answer = s ? s.answer(results(msgs.slice(msgs.indexOf(user)))) : 'Ask "who writes sales.orders?", "how is demo doing?", "any errors in the last hour?", "compare shipped orders with the settlement report", "browse the partner sftp" or "show me the order file from the inbox"';
       for (const part of answer.match(/[\s\S]{1,40}/g)) chunk({ role: 'assistant', content: part });
       chunk({}, 'stop');
     }
