@@ -35,7 +35,9 @@ Details per object: `cache/<env>/pg/<db>.json` (tables, functions with bodies, v
     node cli.js tool script_run '{"id":"shop/order-check","params":{"orderId":42}}'
     node cli.js tool routes_discover '{"site":"shop","link":"order","params":{"orderId":1042}}'
     node cli.js tool api_routes '{"q":"orders"}'
-Browser steps need the Playwright MCP (`DT_BROWSER_MCP`, set by compose).
+    node cli.js tool partner '{"script":"send order","params":{"customerId":"C-42"}}'   # a collection exposed as a tool
+    node cli.js tool call_patterns '{}'
+Browser steps need the Playwright MCP (`DT_BROWSER_MCP`, set by compose). `test/sftp-server.js` is an in-process SFTP server for tests.
 
 ## Live queries
     node cli.js pg "select * from sales.orders where id = 42" --pretty
@@ -58,7 +60,8 @@ Or use http://127.0.0.1:4000/admin.
 - `lib/indexer.js`: every refresh, run as a job (`lib/jobs.js`).
 - `lib/pgindex.js`: the usage index.
 - `lib/passport/`: static analysis of repos.
-- `lib/scripts.js`, `lib/browser-mcp.js`, `lib/routes.js`: saved scripts, dt's Playwright MCP client, API routes (code + wire).
+- `lib/scripts.js`, `lib/browser-mcp.js`, `lib/routes.js`: saved scripts (fuzzy names, scripts/collections as tools, set/transform/http steps), dt's Playwright MCP client, API routes (code + wire).
+- `lib/files.js`: file stores (local, SFTP via ssh2); `lib/calls.js`: the call log (`cache/_calls.jsonl`) and repeated-work patterns.
 - `server.js`: HTTP routes and auth.
 - `web/`: pages (admin, view, dash, logs, pr, passport).
 - `demo/`: a fake environment plus the screenshot scripts.

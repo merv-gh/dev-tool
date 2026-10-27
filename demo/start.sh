@@ -5,7 +5,7 @@
 set -e
 cd "$(dirname "$0")/.."
 H=$(pwd)/demo/.home
-MOCK=${MOCK_PORT:-4900}; DT=${DT_DEMO_PORT:-4800}; PGP=${DEMO_PG_PORT:-55433}
+MOCK=${MOCK_PORT:-4900}; DT=${DT_DEMO_PORT:-4800}; PGP=${DEMO_PG_PORT:-55433}; SFTP=${DEMO_SFTP_PORT:-4922}
 mkdir -p "$H"
 if ! docker ps --format '{{.Names}}' | grep -qx dt-demo-pg; then
   docker rm -f dt-demo-pg >/dev/null 2>&1 || true
@@ -45,15 +45,22 @@ cat > "$H/config.json" <<JSON
       }
     }
   },
+  "files": {
+    "templates": { "type": "local", "path": "files/templates" },
+    "partner": { "type": "sftp", "host": "127.0.0.1", "port": $SFTP, "user": "demo", "password": "\${DEMO_SFTP_PASSWORD}", "root": "/upload", "write": true }
+  },
+  "scripts": { "http": { "allow": ["http://127.0.0.1:$MOCK/partner/api/"] } },
   "server": { "publicUrl": "http://127.0.0.1:$DT", "ratePerSec": 0 }
 }
 JSON
-printf 'DEMO_ORDERS_DB=postgres://postgres:demo@127.0.0.1:%s/orders\nDEMO_BB_TOKEN=demo\nSHOP_PASSWORD=demo\n' "$PGP" > "$H/.env"
-mkdir -p "$H/scripts" && cp -R demo/scripts/. "$H/scripts/"   # example saved scripts
+printf 'DEMO_ORDERS_DB=postgres://postgres:demo@127.0.0.1:%s/orders\nDEMO_BB_TOKEN=demo\nSHOP_PASSWORD=demo\nDEMO_SFTP_PASSWORD=demo\n' "$PGP" > "$H/.env"
+mkdir -p "$H/scripts" "$H/files" && cp -R demo/scripts/. "$H/scripts/" && cp -R demo/files/. "$H/files/"   # example scripts and file templates
 echo '{ "sales.order_audit": "Written only by the orders_status_audit trigger. Kept 90 days." }' > "$H/notes.json"
 
 pkill -f "demo/mock.js" 2>/dev/null || true; pkill -f "cli.js serve --port $DT" 2>/dev/null || true
 nohup node demo/mock.js "$MOCK" > "$H/mock.log" 2>&1 &
+pkill -f "demo/sftp.js" 2>/dev/null || true
+nohup node demo/sftp.js "$SFTP" "$H/sftp" > "$H/sftp.log" 2>&1 &
 sleep 1
 # browser steps (scripts, routes_discover) use a Playwright MCP container when DEMO_BROWSER=1
 if [ "${DEMO_BROWSER:-0}" = 1 ]; then

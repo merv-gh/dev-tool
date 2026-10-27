@@ -75,5 +75,12 @@
     "mcp": "${DT_BROWSER_MCP:-}"
   },
 
+  "files": {
+    "templates": { "type": "local", "path": "files/templates" },
+    "partner": { "type": "sftp", "host": "sftp.dev.example.com", "port": 22, "user": "dt", "password": "${PARTNER_SFTP_PASSWORD}", "root": "/upload", "write": true }
+  },
+
+  "scripts": { "http": { "allow": ["https://partner-api.dev.example.com/imports"] } },
+
   "server": { "publicUrl": "http://127.0.0.1:4000", "apiKey": "${DT_API_KEY}", "ratePerSec": 1 }
 }

@@ -93,7 +93,7 @@ services:
       TOOL_SEARCH_DEFER_THRESHOLD: "0"
       TOOL_SEARCH_ALWAYS_LOADED: >-
         find,catalog_sync,pg_table,pg_function,pg_usage,pg_query,es_search,kafka_topic,kafka_last,kafka_lag,health,es_health,overview,consul_service,
-        logs_search,logs_trace,passport,who_uses,bitbucket_pr,browser_sites,site_url,api_routes,routes_learn,script_list,script_run,
+        logs_search,logs_trace,passport,who_uses,bitbucket_pr,browser_sites,site_url,api_routes,routes_learn,script_list,script_run,call_patterns,files_stores,files_search,files_read,
         browser_browser_navigate,browser_browser_snapshot,browser_browser_click,browser_browser_type,browser_browser_fill_form,
         browser_browser_press_key,browser_browser_take_screenshot,browser_browser_wait_for
       # dt over OpenAPI so results can embed the viewer/dashboard in the chat; browser over MCP.

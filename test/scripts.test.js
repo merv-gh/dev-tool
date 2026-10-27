@@ -130,7 +130,7 @@ test('scripts: save into nested collections, list, get, validate', async () => {
     { tool: 'site_url', args: { site: 'shop', link: 'search', params: { q: 'order {{orderId}} on {{cfg.sites.sites.0.site}}' } }, as: 'search' },
   ] });
   const l = await tools.call('script_list', {});
-  assert.deepEqual(l.collections, [{ collection: 'shop', scripts: 2 }, { collection: 'shop/common', scripts: 1 }]);
+  assert.deepEqual(l.collections.map(c => [c.collection, c.scripts, c.tool]), [['shop', 2, null], ['shop/common', 1, null]]);
   assert.deepEqual(l.scripts.map(s => [s.id, s.steps, s.browser]), [['shop/common/sites', 1, false], ['shop/order-check', 5, true]]);
   assert.equal((await tools.call('script_list', { collection: 'shop/common' })).scripts.length, 1);
   assert.equal((await tools.call('script_get', { id: 'shop/order-check' })).params.orderId.required, true);

@@ -78,7 +78,7 @@ async function mcpHandle(msg) {
     case 'tools/call': {
       const started = Date.now();
       try {
-        const result = await tools.call(msg.params.name, msg.params.arguments || {});
+        const result = await tools.call(msg.params.name, msg.params.arguments || {}, { source: 'mcp' });
         console.error(`mcp ${msg.params.name} ${Date.now() - started}ms`);
         return reply({ content: [{ type: 'text', text: typeof result === 'string' ? result : JSON.stringify(result) }] });
       } catch (e) {
@@ -129,7 +129,7 @@ async function openapi() {
 async function oapi(req, res, url) {
   const name = url.pathname.split('/').pop();
   let result;
-  try { result = await tools.call(name, await readJsonBody(req)); }
+  try { result = await tools.call(name, await readJsonBody(req), { source: 'openapi' }); }
   catch (e) { return send(res, 400, { error: e.message }); }
   const target = result && typeof result === 'object' && (result.view || result.dashboard);
   const embed = typeof target === 'string' ? target + (target.includes('?') ? '&' : '?') + 'embed=1' : null;
@@ -152,7 +152,7 @@ const routes = [
   ['GET', '/api/find', true, (req, res, url) => send(res, 200, catalog.find(url.searchParams.get('env') || envNames()[0], url.searchParams.get('q') || '', { limit: Number(url.searchParams.get('limit')) || 300 }))],
   ['GET', '/api/tools', false, async (req, res) => send(res, 200, await tools.schemas())],
   ['POST', '/api/tool/*', true, async (req, res, url) => {
-    try { send(res, 200, { result: await tools.call(url.pathname.split('/').pop(), await readJsonBody(req)) }); }
+    try { send(res, 200, { result: await tools.call(url.pathname.split('/').pop(), await readJsonBody(req), { source: 'api' }) }); }
     catch (e) { send(res, 400, { error: e.message }); }
   }],
   ['GET', '/openapi.json', false, async (req, res) => send(res, 200, await openapi())],
@@ -215,6 +215,14 @@ const routes = [
   ['POST', '/api/admin/scripts/copy', true, async (req, res) => {
     try { const b = await readJsonBody(req); send(res, 200, require('./lib/scripts').copy(b.from, b.to)); } catch (e) { send(res, 400, { error: e.message }); }
   }],
+  ['GET', '/api/admin/collection', true, (req, res, url) => {
+    try { send(res, 200, require('./lib/scripts').getCollection(url.searchParams.get('path'))); } catch (e) { send(res, 404, { error: e.message }); }
+  }],
+  ['POST', '/api/admin/collection', true, async (req, res) => {
+    try { const b = await readJsonBody(req); send(res, 200, require('./lib/scripts').setCollection(b.path, b)); } catch (e) { send(res, 400, { error: e.message }); }
+  }],
+  ['GET', '/api/admin/calls', true, (req, res, url) => send(res, 200, require('./lib/calls').history({ q: url.searchParams.get('q') || '', source: url.searchParams.get('source') || '', limit: 300 }))],
+  ['GET', '/api/admin/patterns', true, (req, res) => send(res, 200, require('./lib/calls').patterns({ limit: 30 }))],
   ['GET', '/api/admin/sites', true, (req, res) => send(res, 200, admin.sites())],
   ['POST', '/api/admin/sites', true, async (req, res) => {
     try { const b = await readJsonBody(req); send(res, 200, await admin.saveSite(b.was || '', b.site === undefined ? null : b.site)); } catch (e) { send(res, 400, { error: e.message }); }

@@ -228,7 +228,49 @@ Repeatable actions, saved as JSON in `scripts/` of the config folder; folders ar
 }
 ```
 
-A step is a dt tool, another script (nested up to 5 deep), a site link to open (`<orderId>` comes from the params), any Playwright MCP tool (`click`, `type`, `snapshot`, …), or a `wait`. `{{name}}` inserts a param or an earlier result (`{{order.rows.0.status}}`), `{{link:crm.order}}` a link URL. Browser steps run in dt's own browser session, separate from the chat's.
+A step is one of:
+
+| Step | |
+| --- | --- |
+| `{"tool": "pg_query", "args": {…}}` | any dt tool |
+| `{"script": "crm/login", "params": {…}}` | another script, nested up to 5 deep |
+| `{"open": "crm.order"}` | a site link; its `<orderId>` comes from the params |
+| `{"browser": "click", "args": {…}}` | any Playwright MCP tool (`click`, `type`, `snapshot`, …) |
+| `{"wait": 2}` | seconds, or a text to wait for |
+| `{"set": {"folder": "in/{{date:YYYYMMDD}}-{{hex:8}}"}}` | compute values once, use them as `{{folder}}` |
+| `{"transform": "{{doc.text}}", "replace": [{"find": "ORD-\\d+", "regex": true, "with": "ORD-{{rand:6}}"}], "json": {"items.*.id": "{{uuid}}"}}` | rewrite a document; each distinct match gets one new value, so an id that appears five times is replaced the same way five times |
+| `{"http": "POST https://…/imports", "body": {…}}` | call an API, only under a prefix in `scripts.http.allow` |
+
+`{{name}}` inserts a param or an earlier result (`{{order.rows.0.status}}`), `{{link:crm.order}}` a link URL. Generators: `{{uuid}}`, `{{now}}`, `{{date:YYYYMMDD-HHmmss}}`, `{{rand:6}}` (digits), `{{hex:8}}`. Add `"as": "name"` to keep a result and `"optional": true` to go on after a failure. Browser steps run in dt's own browser session, separate from the chat's.
+
+**Calling them.** `script_run` takes the id, the name, or a close name (`"send order"` finds `partner/send-order`; an ambiguous name lists the candidates). `"tool": true` (or a tool name) on a script makes it a tool of its own, with its params as arguments. A collection can be one tool too (⚙ on `/admin`, or `script_collection`): its description lists the scripts with their params, and it runs one by name. Both appear in Open WebUI and MCP clients like any other tool, and update when the scripts change.
+
+**The example, end to end** ([demo/scripts/partner/send-order.json](demo/scripts/partner/send-order.json)): find an order template in a local folder, read it, make a new folder name and order id, rewrite the document (the order id everywhere it appears, a new uuid per line item, the customer from a param, the timestamp), upload it to that folder on SFTP, and POST the folder to the partner's import API. It is one call afterwards: `partner {"script": "send order", "params": {"customerId": "C-42"}}`.
+
+## File stores
+
+Local folders and SFTP servers, under `files` in `config.json`:
+
+```json
+"files": {
+  "templates": { "type": "local", "path": "files/templates" },
+  "partner":   { "type": "sftp", "host": "sftp.dev.example.com", "user": "dt", "password": "${PARTNER_SFTP_PASSWORD}",
+                 "root": "/upload", "write": true }
+}
+```
+
+Tools: `files_stores`, `files_list` (glob, recursive), `files_search` (by name glob and/or text inside, with the matching line), `files_read`, `files_write`, `files_copy` (between stores). Paths are relative to the store root and cannot leave it. Local paths are relative to the config folder (in Docker, `/dt`). SFTP takes a password or `privateKey` (+ `passphrase`); `hostKey` (`SHA256:…`) pins the server key.
+
+**Writes are opt-in.** A store is read-only unless it has `"write": true`, and a write never replaces a file unless `overwrite` is set. Script `http` steps only reach URL prefixes listed in `scripts.http.allow`. Everything else in dt stays read-only.
+
+## Call history and shortcuts
+
+Every tool call is logged: MCP, OpenAPI (Open WebUI), the HTTP API, the CLI, and calls made by scripts (marked with their script). The newest ~5000 are kept in `cache/_calls.jsonl`. `call_patterns` (and **History** on `/admin`) finds the repeated work in it:
+
+- **Repeats.** The same tool called 3+ times where only some values change. A number or quoted value inside a text becomes a param named after what it is compared to: three `select … where id = 1001/1002/1003` turn into one step with `{{id}}`.
+- **Sequences.** The same tools in the same order, 2+ times: `find → pg_usage` becomes a two-step script.
+
+Each pattern comes as a ready script. **Save as script…** opens it in the editor; the agent can save one with `script_save`. Calls already made by scripts are not suggested again.
 
 ## API routes
 
@@ -246,6 +288,7 @@ The wire side fills up by itself: every script with browser steps records what t
 | **Explore** | Search the catalog; open a table or function to see its columns or arguments, constraints, triggers, body, "used by" and "uses"; attach a note |
 | **Passports** | Build one for a service (optionally mapping it to a repo), rebuild one or all |
 | **Scripts** | Collections as nested folders, Postman style: create, rename inline, drag to move, duplicate, delete. Each script has a step editor (kind, target with suggestions, args, "save as", optional, reorder), params, a JSON view, and Run with a field per param showing each step's result. Ctrl/⌘+S saves |
+| **History** | Repeated calls and sequences from the call log, each with **Save as script…**; the calls themselves, filtered by words and source |
 | **Sites** | Edit `browser.sites` one site at a time: start URL (`${VAR}` allowed), description, login secret names (marked when `.env` has no value), and the links with a live preview of the URL each opens |
 | **API routes** | API routes from code and from the browser, filtered as you type |
 | **Jobs** | Every refresh with a live log. A refresh that is already running is joined, not started twice |
@@ -268,7 +311,9 @@ Secrets (`.env`) are never shown or edited there.
 | passport | `passport`, `passports`, `who_uses` |
 | browser | `browser_sites`, `site_url` (plus the Playwright MCP tools when the `browser` profile runs) |
 | api | `api_routes`, `routes_learn`, `routes_discover` |
-| scripts | `script_list`, `script_get`, `script_save`, `script_run` |
+| scripts | `script_list`, `script_get`, `script_save`, `script_run`, `script_collection`, plus each script or collection exposed as a tool |
+| files | `files_stores`, `files_list`, `files_search`, `files_read`, `files_write`, `files_copy` |
+| history | `call_history`, `call_patterns` |
 | custom, plugin | yours: from `tools.custom` and `tools.plugins` |
 
 Results shaped like tables return a preview plus a `view` link to the full result (`/view/<id>`), which Open WebUI embeds in the chat.
@@ -287,10 +332,12 @@ Every picture comes from the bundled demo, a fake environment with real Postgres
 | ![pull request](docs/screenshots/pull-request.png) **Pull request** · files, diff, comments | ![dashboard](docs/screenshots/dashboard.png) **Dashboard** · health, ES, consumer lag |
 | ![health](docs/screenshots/health.png) **health** · every Consul service in one call | ![kafka](docs/screenshots/kafka-last.png) **kafka_last** · latest messages |
 | ![admin: scripts](docs/screenshots/admin-scripts.png) **Scripts** · collections, the step editor, a run | ![admin: sites](docs/screenshots/admin-sites.png) **Sites** · a site, its login secrets and link map |
+| ![admin: files script](docs/screenshots/admin-script-files.png) **The example** · template → new ids → SFTP → import API, one run | ![admin: history](docs/screenshots/admin-history.png) **History** · repeated work, each a ready script |
 | ![admin: api](docs/screenshots/admin-api.png) **API routes** · from code and from the browser | |
 | ![dark: explore](docs/screenshots/admin-explore-table-dark.png) Dark mode | ![dark: passport](docs/screenshots/passport-dark.png) Dark mode |
 
 ## Safety
+- Writing is limited to file stores marked `"write": true` (never overwriting unless asked) and script `http` steps to the prefixes in `scripts.http.allow`.
 - Postgres sessions are read-only (`default_transaction_read_only`) with a 60s statement timeout; the other sources are only read.
 - Ports are published on 127.0.0.1 unless you change `DT_BIND`. Set `DT_API_KEY` before exposing dt.
 - Result pages load their data by unguessable ids or signed tokens, so embeds in a sandboxed chat iframe work. Everything else needs a trusted client.
@@ -301,7 +348,7 @@ Every picture comes from the bundled demo, a fake environment with real Postgres
 npm test                                                     # node:test, no network
 docker run -d --name dt-pg -e POSTGRES_PASSWORD=pw -p 127.0.0.1:55432:5432 postgres:16-alpine
 DT_TEST_PG_URL=postgres://postgres:pw@127.0.0.1:55432/postgres npm test   # also against a real Postgres
-sh demo/start.sh                                             # the demo on http://127.0.0.1:4800/admin (DEMO_BROWSER=1: with a browser)
+sh demo/start.sh                                             # the demo on http://127.0.0.1:4800/admin (DEMO_BROWSER=1: with a browser); includes an SFTP server
 npm run build                                                # rebuild dist/ after changing the sources
 ```
 
@@ -309,7 +356,8 @@ npm run build                                                # rebuild dist/ aft
 - `lib/` holds the sources (`pg`, `es`, `kafka`, `consul`, `logs`, `atlassian`, `git`).
 - The index lives in `lib/` too: `catalog`, `pgindex`, `indexer`, `jobs`, `notes`.
 - Also in `lib/`: `passport/`, `config` and `migrate`, `tools` (the registry, custom tools and plugins), `browser` and `browser-mcp` (dt's Playwright client), `scripts`, `routes`, `admin` and `webui`.
-- `build.js` bundles everything into `dist/` (esbuild), which compose runs.
+- `build.js` bundles everything into `dist/` (esbuild), which compose runs. Dependencies: `postgres` and `ssh2` (its optional native add-ons are left out; it runs on plain JS).
+- Also: `files` (stores), `calls` (call log and patterns).
 - `server.js` and `web/` are the HTTP side, and `cli.js` is the CLI.
 
 Notes for coding agents are in [AGENTS.md](AGENTS.md).

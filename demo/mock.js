@@ -222,6 +222,8 @@ http.createServer((req, res) => {
     if (p === '/shop/customers') return html(res, `<h1>Customers</h1><ul id=c></ul><script>fetch('/api/customers?page=1&size=20').then(r => r.json()).then(cs => { document.getElementById('c').innerHTML = cs.map(c => '<li>' + c.name).join(''); });</script>`);
     if ((m = p.match(/^\/api\/orders\/(\d+)$/))) return j({ id: Number(m[1]), status: 'paid', total: 129.9, items: [{ sku: 'KB-01', qty: 1 }] });
     if ((m = p.match(/^\/api\/payments\/(\d+)$/))) return j({ orderId: Number(m[1]), status: 'captured' });
+    // partner import API: announces an uploaded folder (the files example)
+    if (p === '/partner/api/imports' && req.method === 'POST') { let b = {}; try { b = JSON.parse(body); } catch {} res.statusCode = 202; return j({ accepted: true, importId: `imp-${Date.now().toString(36)}`, folder: b.folder || null, files: b.files || [] }); }
     if (p === '/api/customers') return j([{ id: 7, name: 'Ada Shop' }, { id: 8, name: 'Bo Store' }]);
     if (/^\/api\/customers\/\d+\/tickets$/.test(p)) return j([]);
     if (p.startsWith('/scm/')) {

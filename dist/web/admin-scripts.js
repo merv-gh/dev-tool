@@ -5,10 +5,19 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
 };
 const BROWSER_TOOLS = ['navigate', 'snapshot', 'click', 'type', 'fill_form', 'press_key', 'select_option', 'hover', 'wait_for', 'take_screenshot', 'network_requests', 'navigate_back', 'evaluate'];
-const KINDS = { tool: 'dt tool', script: 'script', open: 'open link', browser: 'browser', wait: 'wait' };
-const TARGET_HINT = { tool: 'tool name, e.g. pg_query', script: 'collection/name', open: 'site.link, e.g. crm.order', browser: 'click, type, snapshot…', wait: 'seconds, or text to wait for' };
-const ARGS_HINT = { tool: 'args JSON, e.g. {"env": "{{env}}", "sql": "select …"}', browser: 'args JSON, e.g. {"element": "Save button", "ref": "e12"}', script: 'params JSON, e.g. {"orderId": "{{orderId}}"}' };
+const KINDS = { tool: 'dt tool', script: 'script', open: 'open link', browser: 'browser', wait: 'wait', set: 'set values', transform: 'transform', http: 'http request' };
+const TARGET_HINT = { tool: 'tool name, e.g. pg_query', script: 'collection/name', open: 'site.link, e.g. crm.order', browser: 'click, type, snapshot…', wait: 'seconds, or text to wait for', transform: 'text to rewrite, e.g. {{doc.text}}', http: 'POST https://api…/imports/{{id}}' };
+const ARGS_HINT = {
+  tool: 'args JSON, e.g. {"env": "{{env}}", "sql": "select …"}', browser: 'args JSON, e.g. {"element": "Save button", "ref": "e12"}', script: 'params JSON, e.g. {"orderId": "{{orderId}}"}',
+  set: 'values JSON, e.g. {"folder": "out/{{date:YYYYMMDD}}/{{uuid}}", "orderId": "ORD-{{rand:6}}"}',
+  transform: 'JSON: {"replace": [{"find": "ORD-\\\\d+", "regex": true, "with": "ORD-{{rand:6}}"}], "json": {"order.id": "{{uuid}}"}}',
+  http: 'JSON: {"body": {"folder": "{{folder}}"}, "headers": {"authorization": "Bearer …"}}',
+};
+// where each kind keeps the JSON of its textarea
+const ARGS_FIELDS = { transform: ['replace', 'json', 'consistent'], http: ['body', 'headers', 'timeoutMs'] };
+const stepArgs = (s, k) => (k === 'script' ? s.params || s.args : k === 'set' ? s.set : ARGS_FIELDS[k] ? Object.fromEntries(ARGS_FIELDS[k].filter(f => s[f] !== undefined).map(f => [f, s[f]])) : s.args);
 const base = (id) => id.split('/').pop();
+const defaultToolName = (id) => String(id).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 const parentOf = (id) => (id.includes('/') ? id.slice(0, id.lastIndexOf('/')) : '');
 const join = (folder, name) => (folder ? `${folder}/${name}` : name);
 
@@ -49,10 +58,10 @@ function renderTree() {
     ...Object.values(f.folders).sort((a, b) => a.name.localeCompare(b.name)).filter(x => !q || count(x)).map(x => {
       const isOpen = q ? true : openFolders.has(x.path);
       return `<div class="tn" data-folder="${esc(x.path)}" draggable="true"><div class="tr" ${pad(d)}><span class="tw">${isOpen ? '▾' : '▸'}</span><span>📁</span><span class="nm">${esc(x.name)}</span><span class="cnt">${count(x) || ''}</span>
-        <span class="acts"><button data-act="new-script" title="New script here">+</button><button data-act="new-folder" title="New collection inside">+📁</button><button data-act="rename" title="Rename">✎</button><button data-act="delete" title="Delete">✕</button></span></div>${isOpen ? html(x, d + 1) : ''}</div>`;
+        <span class="acts"><button data-act="new-script" title="New script here">+</button><button data-act="new-folder" title="New collection inside">+📁</button><button data-act="settings" title="Description, tool">⚙</button><button data-act="rename" title="Rename">✎</button><button data-act="delete" title="Delete">✕</button></span></div>${isOpen ? html(x, d + 1) : ''}</div>`;
     }),
     ...f.scripts.filter(hit).sort((a, b) => a.id.localeCompare(b.id)).map(s => `<div class="tn" data-sid="${esc(s.id)}" draggable="true"><div class="tr ${cur && cur.id === s.id ? 'on' : ''}" ${pad(d)} title="${esc(s.error || s.description || '')}"><span class="tw"></span>
-      <span class="badge-k ${s.error ? 'mix' : s.browser ? 'web' : 'tool'}">${s.error ? 'ERR' : s.browser ? 'WEB' : 'TOOL'}</span><span class="nm">${esc(base(s.id))}</span>
+      <span class="badge-k ${s.error ? 'mix' : s.browser ? 'web' : 'tool'}">${s.error ? 'ERR' : s.browser ? 'WEB' : 'TOOL'}</span><span class="nm">${esc(base(s.id))}</span>${s.tool ? `<span class="cnt" title="exposed as tool ${esc(s.tool)}">⚒</span>` : ''}
       <span class="acts"><button data-act="dup" title="Duplicate">⧉</button><button data-act="rename" title="Rename">✎</button><button data-act="delete" title="Delete">✕</button></span></div></div>`),
   ].join('');
   const t = buildTree();
@@ -121,6 +130,7 @@ $('pmTree').addEventListener('click', async (ev) => {
     if (folder !== undefined) {
       if (act === 'new-script') return newScript(folder);
       if (act === 'new-folder') return newFolder(folder);
+      if (act === 'settings') return openCollection(folder);
       if (act === 'rename') return inlineName(row, base(folder), async (v) => {
         const to = join(parentOf(folder), v);
         await api('/api/admin/scripts/move', { from: folder, to });
@@ -198,6 +208,35 @@ $('pmFilter').addEventListener('input', renderTree);
 $('pmNewFolder').onclick = () => newFolder('').catch(e => toast(e.message));
 $('pmNewScript').onclick = () => newScript('');
 
+// ── collection settings: description, and the collection as a tool ──
+async function openCollection(p) {
+  if (!confirmDiscard()) return;
+  try {
+    const c = await api(`/api/admin/collection?path=${encodeURIComponent(p)}`);
+    cur = null; renderTree();
+    $('pmMain').innerHTML = `<div class="crumb">collection</div><div class="titlebar"><span class="title" style="font-size:17px;font-weight:600;padding:3px 6px">📁 ${esc(c.collection)}</span><span class="spacer"></span><button class="primary" id="colSave">Save</button></div>
+      <div class="grid-form"><label>Description</label><input id="colDesc" value="${esc(c.description)}" placeholder="What the scripts in it are for (the agent reads this)">
+        <label>As a tool</label><div><label class="muted" style="display:inline-flex;gap:5px;align-items:center;font-size:12px"><input type="checkbox" id="colTool" ${c.tool ? 'checked' : ''}>Expose the collection as one tool</label>
+          <input id="colToolName" value="${esc(typeof c.tool === 'string' ? c.tool : '')}" placeholder="${esc(defaultToolName(c.collection))}" style="width:200px;font-size:12px;margin-left:8px" spellcheck="false">
+          <div class="hint">The tool lists its scripts with their descriptions and params, and runs one by name; a close name is enough.</div></div></div>
+      <h2>Scripts <span class="muted">${c.scripts.length}</span></h2>
+      <div class="card scroll"><table><tbody>${c.scripts.map(id => { const x = SC.scripts.find(s => s.id === id) || {}; return `<tr><td class="mono"><a href="#" data-goto="${esc(id)}">${esc(id.slice(c.collection.length + 1))}</a></td><td class="det">${esc(x.description || '')}</td><td class="mono muted">${esc((x.params || []).join(', '))}</td></tr>`; }).join('') || '<tr><td class="empty">Empty.</td></tr>'}</tbody></table></div>`;
+    $('colSave').onclick = async () => {
+      try { const r = await api('/api/admin/collection', { path: c.collection, description: $('colDesc').value, tool: $('colTool').checked ? $('colToolName').value.trim() || true : false }); toast(r.toolName ? `Saved: tool ${r.toolName}` : 'Saved'); } catch (e) { toast(e.message); }
+    };
+    $('pmMain').querySelectorAll('[data-goto]').forEach(a => a.onclick = (ev) => { ev.preventDefault(); openScript(a.dataset.goto); });
+  } catch (e) { toast(e.message); }
+}
+
+// From the History tab: a suggested script, opened unsaved in the editor.
+function newScriptFrom(def, name) {
+  if (!confirmDiscard()) return;
+  cur = { id: null, folder: 'suggested', name: name || 'shortcut', def: { description: def.description || '', params: def.params || {}, steps: def.steps || [] }, dirty: true };
+  subtab = 'steps';
+  show('scripts');
+  renderTree(); renderEditor();
+}
+
 // ── scripts: editor ──
 const stepKind = (s) => Object.keys(KINDS).find(k => s[k] !== undefined) || 'tool';
 const jsonText = (v) => (v && Object.keys(v).length ? JSON.stringify(v, null, 2) : '');
@@ -221,6 +260,9 @@ function renderEditor() {
     <div class="titlebar"><input class="title" id="pmName" value="${esc(cur.name)}" spellcheck="false"><span class="dirty" id="pmDirty">${cur.dirty ? '● unsaved' : ''}</span>
       <button class="primary" id="pmSave" title="Ctrl/⌘+S">Save</button>${cur.id ? '<button id="pmDup">Duplicate</button><button id="pmDel">Delete</button>' : ''}</div>
     <input id="pmDesc" value="${esc(d.description || '')}" placeholder="Description: what it does and when to use it (the agent reads this)" style="width:100%;margin-top:6px">
+    <div class="row" style="margin-top:6px;font-size:12px"><label class="muted" style="display:inline-flex;gap:5px;align-items:center"><input type="checkbox" id="pmTool" ${d.tool ? 'checked' : ''}>Expose as a tool of its own</label>
+      <input id="pmToolName" value="${esc(typeof d.tool === 'string' ? d.tool : '')}" placeholder="${esc(defaultToolName(join(cur.folder, cur.name)))}" style="width:200px;font-size:12px" ${d.tool ? '' : 'hidden'} spellcheck="false">
+      <span class="muted">${d.tool ? 'the agent calls it directly, with the params as arguments' : 'otherwise the agent runs it with script_run (by name or a close name)'}</span></div>
     <div class="subtabs" id="pmSub">${[['steps', `Steps <span class="n">${nSteps}</span>`], ['params', `Params <span class="n">${nParams || ''}</span>`], ['json', 'JSON']].map(([k, l]) => `<button data-sub="${k}" class="${subtab === k ? 'on' : ''}">${l}</button>`).join('')}</div>
     <div id="pmBody">${subtab === 'steps' ? stepsHtml(d) : subtab === 'params' ? paramsHtml(d) : `<textarea id="pmJson" rows="22" spellcheck="false">${esc(JSON.stringify(d, null, 2))}</textarea><div class="hint" id="pmJsonErr"></div>`}</div>
     <div class="runbar">${Object.entries(d.params || {}).map(([k, p]) => `<label class="muted" style="font-size:12px">${esc(k)}${p && p.required ? '*' : ''}<input data-run="${esc(k)}" placeholder="${esc(p && p.default !== undefined ? String(p.default) : '')}" value="${esc(cur.runParams?.[k] ?? '')}"></label>`).join('')}
@@ -231,10 +273,10 @@ function renderEditor() {
 function stepsHtml(d) {
   return (d.steps || []).map((s, i) => {
     const k = stepKind(s);
-    const args = k === 'script' ? s.params || s.args : s.args;
+    const args = stepArgs(s, k);
     return `<div class="step" data-i="${i}"><div class="sh"><span class="no">${i + 1}</span>
       <select data-f="kind">${Object.entries(KINDS).map(([v, l]) => `<option value="${v}" ${v === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
-      <input class="target" data-f="target" list="dl-${k}" value="${esc(s[k] ?? '')}" placeholder="${esc(TARGET_HINT[k])}" spellcheck="false">
+      ${k === 'set' ? '<span class="target muted" style="font-size:12px">values below are computed once and usable as {{name}}</span>' : `<input class="target" data-f="target" list="dl-${k}" value="${esc(s[k] ?? '')}" placeholder="${esc(TARGET_HINT[k])}" spellcheck="false">`}
       <input data-f="as" value="${esc(s.as || '')}" placeholder="save as" style="width:110px" spellcheck="false">
       <label title="A failure does not stop the run"><input type="checkbox" data-f="optional" ${s.optional ? 'checked' : ''}>optional</label>
       <button class="icon" data-move="-1" title="Up" ${i ? '' : 'disabled'}>↑</button><button class="icon" data-move="1" title="Down" ${i < d.steps.length - 1 ? '' : 'disabled'}>↓</button><button class="icon" data-remove title="Remove">✕</button></div>
@@ -253,17 +295,22 @@ function paramsHtml(d) {
 function readForm() {
   cur.name = $('pmName').value.trim();
   cur.def.description = $('pmDesc').value;
+  if ($('pmTool').checked) cur.def.tool = $('pmToolName').value.trim() || true; else delete cur.def.tool;
+  $('pmToolName').hidden = !$('pmTool').checked;
   if (subtab === 'steps') {
     cur.def.steps = [...document.querySelectorAll('#pmBody .step')].map(el => {
       const f = (n) => el.querySelector(`[data-f="${n}"]`);
       const k = f('kind').value;
-      let target = f('target').value.trim();
+      let target = f('target') ? f('target').value.trim() : '';
       if (k === 'wait' && /^\d+(\.\d+)?$/.test(target)) target = Number(target);
-      const step = { [k]: target };
+      const step = k === 'set' ? { set: {} } : { [k]: target };
       const a = f('args');
       if (a && a.value.trim()) {
-        try { step[k === 'script' ? 'params' : 'args'] = JSON.parse(a.value); a.style.borderColor = ''; }
-        catch { step[k === 'script' ? 'params' : 'args'] = a.value; a.style.borderColor = 'var(--bad)'; }
+        let v;
+        try { v = JSON.parse(a.value); a.style.borderColor = ''; } catch { v = a.value; a.style.borderColor = 'var(--bad)'; }
+        if (k === 'set') step.set = v;
+        else if (ARGS_FIELDS[k] && v && typeof v === 'object') Object.assign(step, v);
+        else step[k === 'script' ? 'params' : 'args'] = v;
       }
       if (f('as').value.trim()) step.as = f('as').value.trim();
       if (f('optional').checked) step.optional = true;
@@ -303,7 +350,7 @@ $('pmMain').addEventListener('change', (ev) => {
     const i = Number(ev.target.closest('.step').dataset.i);
     const old = cur.def.steps[i], k = ev.target.value;
     const keep = Object.fromEntries(Object.entries(old).filter(([x]) => ['as', 'optional'].includes(x)));
-    cur.def.steps[i] = { [k]: k === 'wait' ? 2 : '', ...(ARGS_HINT[k] ? { [k === 'script' ? 'params' : 'args']: {} } : {}), ...keep };
+    cur.def.steps[i] = { ...(k === 'set' ? { set: {} } : { [k]: k === 'wait' ? 2 : '' }), ...(['tool', 'browser'].includes(k) ? { args: {} } : k === 'script' ? { params: {} } : {}), ...keep };
     touch(); renderEditor();
   }
 });
@@ -467,3 +514,28 @@ $('stMain').addEventListener('click', async (ev) => {
     try { await api('/api/admin/sites', { was: site.was }); site = null; toast('Deleted'); loadSites(); } catch (e) { toast(e.message); }
   }
 });
+
+// ── history: the call log and the repeated work in it ──
+let PT = [], hsTimer;
+async function loadHistory() {
+  const q = encodeURIComponent($('hsQ').value.trim()), src = encodeURIComponent($('hsSource').value);
+  const [calls, pats] = await Promise.all([api(`/api/admin/calls?q=${q}&source=${src}`), api('/api/admin/patterns')]);
+  PT = pats;
+  $('ptCount').textContent = pats.length || '';
+  $('patterns').innerHTML = pats.length ? pats.map((p, i) => `<div class="step"><div class="sh"><span class="badge-k ${p.kind === 'sequence' ? 'web' : 'tool'}">${p.kind === 'sequence' ? 'SEQ' : 'REP'}</span>
+      <b>${esc(p.summary)}</b><span class="muted" style="font-size:12px">last ${esc(fmtDate(p.last))}</span><span class="spacer"></span><button class="primary small" data-pt="${i}">Save as script…</button></div>
+      <div class="hint">${p.script.steps.map((s, j) => `${j + 1}. <code>${esc(s.tool)}</code> ${esc(JSON.stringify(s.args))}`).join('<br>')}${Object.keys(p.script.params).length ? `<br>params: ${Object.entries(p.script.params).map(([k, x]) => `<code>${esc(k)}</code> <span class="muted">${esc(x.description)}</span>`).join(' · ')}` : ''}</div></div>`).join('')
+    : '<div class="empty">Nothing repeated yet. Patterns show up after the same call (3×) or the same sequence of tools (2×).</div>';
+  $('hsCount').textContent = calls.length >= 300 ? '300+' : calls.length;
+  $('calls').innerHTML = calls.length ? calls.map(c => `<tr><td style="white-space:nowrap">${esc(fmtDate(c.at))}</td><td class="mono">${esc(c.source)}</td><td class="mono">${esc(c.tool)}</td>
+      <td class="det mono" style="max-width:560px">${esc(JSON.stringify(c.args).slice(0, 300))}${c.error ? `<div class="err-text">${esc(c.error)}</div>` : ''}</td><td class="num">${dur(c.ms)}</td><td><span class="state ${c.ok ? 'done' : 'failed'}">${c.ok ? 'ok' : 'failed'}</span></td></tr>`).join('')
+    : '<tr><td colspan="6" class="empty">No calls logged yet.</td></tr>';
+}
+$('patterns').addEventListener('click', (ev) => {
+  const b = ev.target.closest('[data-pt]');
+  if (!b) return;
+  const p = PT[Number(b.dataset.pt)];
+  newScriptFrom(p.script, p.tools.join('-then-').replace(/_/g, '-').slice(0, 60));
+});
+$('hsQ').addEventListener('input', () => { clearTimeout(hsTimer); hsTimer = setTimeout(() => loadHistory().catch(e => toast(e.message)), 250); });
+$('hsSource').addEventListener('change', () => loadHistory().catch(e => toast(e.message)));

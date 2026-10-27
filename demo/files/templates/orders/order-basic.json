@@ -1,0 +1,9 @@
+{
+  "orderId": "ORD-1001",
+  "customer": { "id": "C-77", "name": "Ada Shop" },
+  "items": [
+    { "id": "L-1", "sku": "KB-01", "qty": 1, "order": "ORD-1001" },
+    { "id": "L-2", "sku": "MS-02", "qty": 2, "order": "ORD-1001" }
+  ],
+  "createdAt": "2026-01-01T10:00:00Z"
+}

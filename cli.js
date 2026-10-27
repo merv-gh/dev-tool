@@ -160,7 +160,7 @@ const commands = {
   async tool(opts) {
     const [name, json] = opts._;
     if (!name) return (await require('./lib/tools').schemas()).map(t => `${t.name}: ${t.description}`);
-    try { return await require('./lib/tools').call(name, json ? JSON.parse(json) : {}); }
+    try { return await require('./lib/tools').call(name, json ? JSON.parse(json) : {}, { source: 'cli' }); }
     finally { await require('./lib/pg').closeAll(); }
   },
 

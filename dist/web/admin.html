@@ -113,6 +113,7 @@
     <button data-tab="scripts">Scripts<span class="n" id="nScripts"></span></button>
     <button data-tab="sites">Sites<span class="n" id="nSites"></span></button>
     <button data-tab="api">API routes</button>
+    <button data-tab="history">History</button>
     <button data-tab="jobs">Jobs<span class="n" id="nJobs"></span></button>
     <button data-tab="config">Config</button>
   </nav>
@@ -182,6 +183,16 @@
     <p class="hint">Endpoints from code (passports) merged with routes seen in the browser (saved scripts, routes_discover, or routes_learn from the chat). Ids show as <code>&lt;id&gt;</code>.</p>
     <div class="row" style="margin-bottom:8px"><input id="rtQ" class="filter" placeholder="path, service, handler, host…" style="width:360px"></div>
     <div class="card scroll"><table><thead><tr><th>Service</th><th>Method</th><th>Path</th><th>Host / site</th><th class="num">Seen</th><th>Status</th><th>Handler</th><th>Source</th></tr></thead><tbody id="routes"></tbody></table></div>
+  </section>
+
+  <section id="tab-history" hidden>
+    <h2>Repeated work <span class="muted" id="ptCount"></span></h2>
+    <p class="hint">From the call log: the same call made again and again (only some values changing), and the same tools done in the same order. Each one is a ready script; save the useful ones, and next time it is one call.</p>
+    <div id="patterns"></div>
+    <h2>Calls <span class="muted" id="hsCount"></span></h2>
+    <div class="row" style="margin-bottom:8px"><input id="hsQ" class="filter" placeholder="tool, args…" style="width:300px">
+      <select id="hsSource"><option value="">all sources</option><option value="direct">direct (not from scripts)</option><option>mcp</option><option>openapi</option><option>api</option><option>cli</option><option>tool</option></select></div>
+    <div class="card scroll"><table><thead><tr><th>When</th><th>Source</th><th>Tool</th><th>Args</th><th class="num">Took</th><th></th></tr></thead><tbody id="calls"></tbody></table></div>
   </section>
 
   <section id="tab-jobs" hidden>
@@ -454,6 +465,7 @@ function show(t) {
   if (t === 'scripts') loadScripts().catch(e => toast(e.message));
   if (t === 'sites') loadSites().catch(e => toast(e.message));
   if (t === 'api') loadRoutes().catch(e => toast(e.message));
+  if (t === 'history') loadHistory().catch(e => toast(e.message));
 }
 
 document.addEventListener('click', (ev) => {

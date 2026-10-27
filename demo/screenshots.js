@@ -18,6 +18,9 @@ const tool = async (name, args) => {
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
   const env = 'demo';
+  // some repeated work for the History tab
+  for (const n of [1001, 1002, 1003]) await tool('pg_query', { env, sql: `select id, status, total from sales.orders where id = ${n}` });
+  for (const t of ['sales.orders', 'sales.payments']) { await tool('find', { env, q: `pg: ${t}` }); await tool('pg_usage', { env, name: t }); }
   const logs = await tool('logs_search', { env, from: '1h' });
   const trace = await tool('logs_trace', { env, trace: 'tr-51842' });
   const shots = [
@@ -31,6 +34,12 @@ const tool = async (name, args) => {
       await p.click('[data-sid="shop/support/order-check"] > .tr'); await p.waitForSelector('#pmBody .step');
       await p.fill('[data-run="orderId"]', '1042'); await p.click('#pmRun'); await p.waitForSelector('#pmOut table', { timeout: 60000 });
     }],
+    ['admin-script-files', `${BASE}/admin#scripts`, async (p) => {
+      await p.click('[data-folder="partner"] > .tr');
+      await p.click('[data-sid="partner/send-order"] > .tr'); await p.waitForSelector('#pmBody .step');
+      await p.fill('[data-run="customerId"]', 'C-42'); await p.click('#pmRun'); await p.waitForSelector('#pmOut table', { timeout: 60000 });
+    }],
+    ['admin-history', `${BASE}/admin#history`, async (p) => { await p.waitForSelector('#patterns .step'); }],
     ['admin-sites', `${BASE}/admin#sites`, async (p) => { await p.click('[data-site="shop"] .tr'); await p.waitForSelector('#stLinks tr'); }],
     ['admin-api', `${BASE}/admin#api`, async (p) => { await p.waitForSelector('#routes tr td'); }],
     ['admin-config', `${BASE}/admin#config`, async (p) => { await p.waitForSelector('#toolGroups tr'); }],
@@ -54,11 +63,12 @@ const tool = async (name, args) => {
       if (scheme === 'dark' && !['admin-explore-table', 'dashboard', 'logs', 'passport'].includes(name)) continue;
       const p = await ctx.newPage();
       await p.goto(url, { waitUntil: 'networkidle' });
+      await p.addStyleTag({ content: '.pm-side { position: static !important; }' }); // sticky sidebars look misplaced in full-page shots
       if (act) await act(p);
       await p.waitForTimeout(400);
       const h = Math.ceil(await p.evaluate(() => Math.max(...[...document.querySelectorAll('td, th, button, p, h1, h2, pre, svg, .chip, .tile, .line, textarea, .empty')].filter(e => e.offsetParent !== null).map(e => e.getBoundingClientRect().bottom + scrollY)))) + 16;
       const file = path.join(OUT, `${name}${scheme === 'dark' ? '-dark' : ''}.png`);
-      await p.screenshot({ path: file, fullPage: true, clip: { x: 0, y: 0, width: 1280, height: Math.min(h, /^admin-(explore|config|scripts)/.test(name) ? 2200 : 1300) } });
+      await p.screenshot({ path: file, fullPage: true, clip: { x: 0, y: 0, width: 1280, height: Math.min(h, /^admin-(explore|config|script)/.test(name) ? 2200 : 1300) } });
       console.log(path.relative(process.cwd(), file));
       await p.close();
     }
