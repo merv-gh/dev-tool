@@ -1,0 +1,260 @@
+{
+  "protocol": "dt.impact-readiness/v1",
+  "revision": "4b6dc31ebc085fd0852db986a23ed66840d0632f",
+  "generatedAt": "2026-10-28T21:42:36.191Z",
+  "isolatedLocalFixtures": true,
+  "networkUsed": false,
+  "ready": false,
+  "gaps": 5,
+  "results": [
+    {
+      "id": "database-scope",
+      "required": "Identical schema.table names in different logical databases remain separate; an unscoped request reports ambiguity and an exact database-scoped request selects only its users.",
+      "observed": {
+        "unscoped": {
+          "resolved": [
+            "table:public.orders"
+          ],
+          "services": [
+            "alpha-reader",
+            "beta-reader"
+          ],
+          "hasAmbiguity": false
+        },
+        "scoped": {
+          "resolved": [
+            "table:alpha:public.orders"
+          ],
+          "services": [],
+          "nearest": []
+        },
+        "inputHasDb": false
+      },
+      "gap": true,
+      "proof": "executed-tool-probe",
+      "calls": [
+        {
+          "name": "impact",
+          "arguments": {
+            "target": "public.orders",
+            "env": "dev"
+          },
+          "ms": 70.106,
+          "outputBytes": 389
+        },
+        {
+          "name": "impact",
+          "arguments": {
+            "target": "table:alpha:public.orders",
+            "env": "dev"
+          },
+          "ms": 8.519,
+          "outputBytes": 268
+        }
+      ]
+    },
+    {
+      "id": "symbol-identity",
+      "required": "Repository/revision and overload parameter signatures distinguish method identities; selecting one version/overload cannot silently overwrite another.",
+      "observed": {
+        "declaredMethods": [
+          {
+            "repo": "LIB/v1",
+            "id": "fixture.MoneyMath#round",
+            "signature": "int"
+          },
+          {
+            "repo": "LIB/v1",
+            "id": "fixture.MoneyMath#round",
+            "signature": "long"
+          },
+          {
+            "repo": "LIB/v2",
+            "id": "fixture.MoneyMath#round",
+            "signature": "int"
+          },
+          {
+            "repo": "LIB/v2",
+            "id": "fixture.MoneyMath#round",
+            "signature": "long"
+          }
+        ],
+        "uniquePublicIds": 1,
+        "impactMethodNodes": [
+          {
+            "id": "fixture.MoneyMath#round",
+            "repo": "LIB/v2"
+          }
+        ],
+        "signatureSelection": [],
+        "facadeRows": 4
+      },
+      "gap": true,
+      "proof": "executed-tool-probe",
+      "calls": [
+        {
+          "name": "code_symbols",
+          "arguments": {
+            "q": "MoneyMath round",
+            "kind": "method"
+          },
+          "ms": 23.774,
+          "outputBytes": 711
+        },
+        {
+          "name": "impact",
+          "arguments": {
+            "target": "MoneyMath#round(int)",
+            "env": "dev"
+          },
+          "ms": 7.871,
+          "outputBytes": 177
+        }
+      ]
+    },
+    {
+      "id": "passport-edges",
+      "required": "The stored effective.consumes/calls passport contract contributes edges for unindexed services; a passport from staging is not presented as a dev deployment.",
+      "observed": {
+        "kafkaServices": [],
+        "httpServices": [],
+        "otherEnvironmentServices": [
+          "staging-only"
+        ],
+        "otherEnvironmentLabel": null
+      },
+      "gap": true,
+      "proof": "executed-tool-probe",
+      "calls": [
+        {
+          "name": "impact",
+          "arguments": {
+            "target": "topic:orders.paid",
+            "env": "dev"
+          },
+          "ms": 56.518,
+          "outputBytes": 252
+        },
+        {
+          "name": "impact",
+          "arguments": {
+            "target": "GET /billing/42",
+            "env": "dev"
+          },
+          "ms": 6.392,
+          "outputBytes": 150
+        },
+        {
+          "name": "impact",
+          "arguments": {
+            "target": "GET /stage-only",
+            "env": "dev"
+          },
+          "ms": 6.471,
+          "outputBytes": 338
+        }
+      ]
+    },
+    {
+      "id": "passport-refresh",
+      "required": "Updating an existing passport invalidates impact cache even when the top-level passports directory mtime is unchanged.",
+      "observed": {
+        "parentDirectoryUnchanged": true,
+        "newEndpoint": [],
+        "oldEndpoint": [
+          "endpoint:GET /before"
+        ],
+        "afterExplicitParentRefresh": [
+          "endpoint:GET /after"
+        ]
+      },
+      "gap": true,
+      "proof": "executed-tool-probe",
+      "calls": [
+        {
+          "name": "impact",
+          "arguments": {
+            "target": "GET /before",
+            "env": "dev"
+          },
+          "ms": 90.898,
+          "outputBytes": 318
+        },
+        {
+          "name": "impact",
+          "arguments": {
+            "target": "GET /after",
+            "env": "dev"
+          },
+          "ms": 8.014,
+          "outputBytes": 140
+        },
+        {
+          "name": "impact",
+          "arguments": {
+            "target": "GET /before",
+            "env": "dev"
+          },
+          "ms": 6.404,
+          "outputBytes": 318
+        },
+        {
+          "name": "impact",
+          "arguments": {
+            "target": "GET /after",
+            "env": "dev"
+          },
+          "ms": 5.832,
+          "outputBytes": 315
+        }
+      ]
+    },
+    {
+      "id": "traversal-boundary",
+      "required": "A depth- or work-budget cut reports an incomplete frontier, independently from returned-item truncation; a bounded result cannot imply no more callers.",
+      "observed": {
+        "shallowNearest": [
+          "1 method Chain#step1 (src/main/java/fixture/Subject.java:4) <- calls Chain#step0",
+          "2 method Chain#step2 (src/main/java/fixture/Subject.java:5) <- calls Chain#step1"
+        ],
+        "deepNearest": [
+          "1 method Chain#step1 (src/main/java/fixture/Subject.java:4) <- calls Chain#step0",
+          "2 method Chain#step2 (src/main/java/fixture/Subject.java:5) <- calls Chain#step1"
+        ],
+        "shallowCounts": {
+          "method": 2
+        },
+        "deepCounts": {
+          "method": 7
+        },
+        "shallowTruncated": null,
+        "complete": null,
+        "gaps": null
+      },
+      "gap": true,
+      "proof": "executed-tool-probe",
+      "calls": [
+        {
+          "name": "impact",
+          "arguments": {
+            "target": "Chain#step0",
+            "env": "dev",
+            "depth": 2
+          },
+          "ms": 50.109,
+          "outputBytes": 423
+        },
+        {
+          "name": "impact",
+          "arguments": {
+            "target": "Chain#step0",
+            "env": "dev",
+            "depth": 8
+          },
+          "ms": 7.634,
+          "outputBytes": 423
+        }
+      ]
+    }
+  ]
+}
