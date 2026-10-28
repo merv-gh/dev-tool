@@ -289,5 +289,60 @@
     "businessOracle": "Frozen and hashed before solver handoff; unchanged in dev/challenge-oracle-v1.json",
     "graderImplementation": "Completed during solver work and published only after all8 initial submissions froze",
     "qualification": "Independent authored experiment with precommitted business requirements; not a fully sealed benchmark with grader code frozen before solving"
+  },
+  "publishedGraderRerun": {
+    "allEightPassed": true,
+    "artifactSha256": "746141f8bad9d72f495eae88a74e6357ebdc2e3d2500706b685411dfa4a26027",
+    "prerequisites": "Explicit Maven, JDK and isolated scratch PostgreSQL supplied via documented environment variables",
+    "counts": [
+      {
+        "case": "C01",
+        "tests": 2,
+        "passed": 2,
+        "failed": 0
+      },
+      {
+        "case": "C02",
+        "tests": 2,
+        "passed": 2,
+        "failed": 0
+      },
+      {
+        "case": "C03",
+        "tests": 2,
+        "passed": 2,
+        "failed": 0
+      },
+      {
+        "case": "C04",
+        "tests": 2,
+        "passed": 2,
+        "failed": 0
+      },
+      {
+        "case": "C05",
+        "tests": 2,
+        "passed": 2,
+        "failed": 0
+      },
+      {
+        "case": "C06",
+        "tests": 4,
+        "passed": 4,
+        "failed": 0
+      },
+      {
+        "case": "C07",
+        "tests": 2,
+        "passed": 2,
+        "failed": 0
+      },
+      {
+        "case": "C08",
+        "tests": 2,
+        "passed": 2,
+        "failed": 0
+      }
+    ]
   }
 }

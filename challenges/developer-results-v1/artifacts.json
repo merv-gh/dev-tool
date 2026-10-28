@@ -3,5 +3,8 @@
   "dev/challenge-oracle-v1.json": "fcb0ebc9cae781bbce0e05d36556d895f736955605fea71158497fb71cca8b9a",
   "dev/challenge-mutations.cjs": "9ed51df96ec3bd28d758d13d974f889eb922d06599f8af421e1b2fa209b931f3",
   "dev/challenge-assemble.cjs": "01fd7e755150c2eb2e8722bc1d97aac38d929b62fe4476224fe3dd7404f97e25",
-  "test/challenges.test.js": "384501bbd1f2f10b0cd2c24762ec55e255a59f328920dd8ff6cae7791e3005c3"
+  "test/challenges.test.js": "384501bbd1f2f10b0cd2c24762ec55e255a59f328920dd8ff6cae7791e3005c3",
+  "dev/challenge-s03-grade.cjs": "2a78b5793cfaf4a24934b8bfd3e70528159e26b2d0e823ce5ed8d6df43f7ee1e",
+  "dev/challenge-s03/S03Acceptance.java": "48b9314cb3f0acfc7552784ffb32ed75b8f29e9e9aed48232b3226503503b9df",
+  "dev/challenge-s03/JdbcFunctions.java": "b1e532e320a1e5000c080dff316db4d9d321e45eb94499d5be5761e9cd7176d3"
 }

@@ -1,0 +1,44 @@
+{
+  "kind": "post-freeze-independent-S03-differential",
+  "passed": true,
+  "notes": [
+    "Baseline and candidate consumers compile separately with unchanged setup JDBC adapter",
+    "No source writes; DT_FUNCTIONS_* must bind a SELECT-only role",
+    "Local execution reading a source environment is not remote dev execution",
+    "Acceptance authored after candidate froze; no pre-frozen supplemental oracle claim"
+  ],
+  "results": [
+    {
+      "name": "baseline",
+      "sourceSha256": "85cb749976f97ed774d4d6a2462c68dcdeb953f3b2bb00722138ff6607c1f171",
+      "fake": {
+        "exit": 0,
+        "stdout": "PASS 4 independent differential inputs\n",
+        "stderr": ""
+      },
+      "sourceReadOnly": {
+        "env": "fixture",
+        "execution": "local JVM",
+        "exit": 0,
+        "stdout": "11:420:{accountLabel=ACTIVE, account_id=7, amount=17.000001, order_id=420, releaseLabel=STANDARD, status=PAID, tenant_id=11}\n22:420:{accountLabel=ACTIVE, account_id=7, amount=100.000001, order_id=420, releaseLabel=MANUAL_REVIEW, status=PAID, tenant_id=22}\n22:999:null\n",
+        "stderr": ""
+      }
+    },
+    {
+      "name": "candidate",
+      "sourceSha256": "c0a7df0ff07c69c49786ecb7ee31d900411abda752dc3ada079fd8a1fd6c0af6",
+      "fake": {
+        "exit": 0,
+        "stdout": "PASS 4 independent differential inputs\n",
+        "stderr": ""
+      },
+      "sourceReadOnly": {
+        "env": "fixture",
+        "execution": "local JVM",
+        "exit": 0,
+        "stdout": "11:420:{accountLabel=ACTIVE, account_id=7, amount=17.000001, order_id=420, releaseLabel=STANDARD, status=PAID, tenant_id=11}\n22:420:{accountLabel=ACTIVE, account_id=7, amount=100.000001, order_id=420, releaseLabel=MANUAL_REVIEW, status=PAID, tenant_id=22}\n22:999:null\n",
+        "stderr": ""
+      }
+    }
+  ]
+}
