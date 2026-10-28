@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:dt:api-request:1",
+  "title": "Prepared reusable API request v1",
+  "description": "The request and params are the executable public contract. script is a normal dt script for reuse and collection hooks. Replay rebuilds from request, never executes arbitrary supplied script fields.",
+  "type": "object", "required": ["schema", "version", "request", "params", "script", "mutation"],
+  "properties": {
+    "schema": {"const": "dt.api-request"}, "version": {"const": 1},
+    "request": {"$ref": "urn:dt:api-exchange:1#/$defs/request"},
+    "params": {"type": "object", "additionalProperties": {"type": "object", "properties": {"type": {"enum": ["string", "number", "integer", "boolean", "object", "array"]}, "required": {"type": "boolean"}, "secret": {"type": "boolean"}, "description": {"type": "string"}, "default": {}}}},
+    "script": {"type": "object", "required": ["description", "params", "steps", "provenance"], "properties": {"description": {"type": "string"}, "params": {"type": "object"}, "steps": {"type": "array", "minItems": 1}, "provenance": {"type": "object"}}},
+    "mutation": {"type": "boolean"}, "exchange": {"type": "string"}, "route": {"type": "object"}
+  }
+}
