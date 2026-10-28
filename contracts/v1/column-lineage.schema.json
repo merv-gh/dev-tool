@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "urn:dev-tool:column-lineage:v1", "title": "Column access evidence",
+  "type": "object", "required": ["protocol", "hits", "gaps", "coverage"],
+  "properties": {
+    "protocol": {"const": "dt.column-lineage/v1"},
+    "hits": {"type": "array", "items": {"type": "object", "required": ["table", "column", "access", "line"], "properties": {"table": {"type": "string"}, "column": {"type": "string"}, "access": {"enum": ["read", "write", "read-write", "predicate", "unknown"]}, "line": {"type": "integer", "minimum": 1}, "syntax": {"type": "string"}}}},
+    "gaps": {"type": "array", "items": {"type": "object"}},
+    "coverage": {"type": "object", "required": ["parser", "exhaustive"], "properties": {"parser": {"type": "string"}, "exhaustive": {"type": "boolean"}, "supported": {"type": "array", "items": {"type": "string"}}, "unsupported": {"type": "array", "items": {"type": "string"}}}}
+  }
+}

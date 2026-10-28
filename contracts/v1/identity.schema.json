@@ -1,0 +1,5 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "urn:dev-tool:identity:v1", "title": "Scoped semantic identity",
+  "description": "dt.identity/v1 canonical string. Code: code:<URI-encoded repository>@<URI-encoded revision>:<FQN>#<method>(<types>); working revisions include a source digest. PG: table|column|pgfn:<URI-encoded env>:<URI-encoded logical database>:<SQL-qualified object>. Quoted PostgreSQL names retain case. PG overloads include signature candidates. Legacy aliases require explicit disambiguation; never use display names as storage keys.",
+  "type": "string", "minLength": 1, "maxLength": 8192, "pattern": "^(code|table|column|pgfn):"
+}
