@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:dev-tool:postgres-template:v1",
+  "title": "Dev-tool PostgreSQL template and lease protocol v1",
+  "description": "Language-neutral public descriptors. Transport is the existing tool registry; no JavaScript closures are serialized. Native templates are cluster-local acceleration; hashed SQL fixtures remain the portable source.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/template"
+    },
+    {
+      "$ref": "#/$defs/lease"
+    }
+  ],
+  "$defs": {
+    "binding": {
+      "type": "object",
+      "required": [
+        "database",
+        "jdbcUrl",
+        "user",
+        "password",
+        "errors"
+      ],
+      "properties": {
+        "database": {
+          "type": "string"
+        },
+        "jdbcUrl": {
+          "type": "string",
+          "pattern": "^jdbc:postgresql:"
+        },
+        "user": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string",
+          "description": "Ephemeral scratch credential. Excluded from inspection, list and view artifacts."
+        },
+        "errors": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "endpoint": {
+          "type": "object",
+          "description": "Driver-neutral connection coordinates; credentials are separate.",
+          "required": [
+            "host",
+            "port",
+            "database"
+          ],
+          "properties": {
+            "host": {
+              "type": "string"
+            },
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            },
+            "database": {
+              "type": "string"
+            },
+            "parameters": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "template": {
+      "type": "object",
+      "required": [
+        "version",
+        "id",
+        "state",
+        "databases"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "state": {
+          "enum": [
+            "building",
+            "ready",
+            "invalid",
+            "failed"
+          ]
+        },
+        "databases": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "database"
+            ],
+            "properties": {
+              "database": {
+                "type": "string"
+              },
+              "fingerprint": {
+                "type": "string"
+              },
+              "bytes": {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              },
+              "tables": {
+                "type": "array"
+              }
+            }
+          }
+        },
+        "mode": {
+          "enum": [
+            "snapshot",
+            "migrations-empty",
+            "upgrade"
+          ]
+        },
+        "reused": {
+          "type": "boolean"
+        },
+        "timings": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": true
+    },
+    "lease": {
+      "type": "object",
+      "required": [
+        "version",
+        "lease",
+        "template",
+        "databases",
+        "expiresAt"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "lease": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        },
+        "template": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "databases": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "$ref": "#/$defs/binding"
+          }
+        },
+        "timings": {
+          "type": "object",
+          "properties": {
+            "cloneMs": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

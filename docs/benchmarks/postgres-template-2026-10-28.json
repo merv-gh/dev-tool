@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "benchmark": "postgres-fixture-cold-vs-warm",
+  "at": "2026-10-28T20:56:33.099Z",
+  "hardware": {
+    "platform": "darwin",
+    "arch": "x64",
+    "cpus": 16,
+    "totalMemoryBytes": 68719476736
+  },
+  "concurrency": 1,
+  "databasesPerIteration": 2,
+  "iterations": 3,
+  "tiers": [
+    {
+      "rowsPerDatabase": 100,
+      "statementsPerDatabase": 101,
+      "templateBuildMs": 1140,
+      "coldLoadMs": {
+        "n": 3,
+        "p50": 867,
+        "p95": 1416,
+        "samples": [
+          1416,
+          867,
+          613
+        ]
+      },
+      "warmCloneMs": {
+        "n": 3,
+        "p50": 294,
+        "p95": 320,
+        "samples": [
+          294,
+          320,
+          293
+        ]
+      },
+      "resetIncludingOldDropMs": {
+        "n": 3,
+        "p50": 1004,
+        "p95": 1369,
+        "samples": [
+          1004,
+          1369,
+          633
+        ]
+      },
+      "bytes": 15483934
+    },
+    {
+      "rowsPerDatabase": 1000,
+      "statementsPerDatabase": 1001,
+      "templateBuildMs": 6221,
+      "coldLoadMs": {
+        "n": 3,
+        "p50": 4629,
+        "p95": 4732,
+        "samples": [
+          4127,
+          4629,
+          4732
+        ]
+      },
+      "warmCloneMs": {
+        "n": 3,
+        "p50": 357,
+        "p95": 365,
+        "samples": [
+          365,
+          357,
+          338
+        ]
+      },
+      "resetIncludingOldDropMs": {
+        "n": 3,
+        "p50": 714,
+        "p95": 1464,
+        "samples": [
+          1464,
+          701,
+          714
+        ]
+      },
+      "bytes": 15827998
+    }
+  ],
+  "postgresql": {
+    "version": "PostgreSQL 16.15 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+    "versionnumber": "160015",
+    "sharedbuffers": "128MB",
+    "fsync": "on"
+  }
+}
