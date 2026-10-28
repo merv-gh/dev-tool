@@ -126,7 +126,8 @@ test('a private repository: credentials from gradle.properties in the config fol
   const lib = path.join(home, 'greeting');
   fs.mkdirSync(path.join(lib, 'com', 'acme', 'libs'), { recursive: true });
   fs.writeFileSync(path.join(lib, 'com', 'acme', 'libs', 'Greeting.java'), 'package com.acme.libs;\npublic final class Greeting {\n    public static String hello(String name) { return "hello, " + name; }\n}\n');
-  const bin = (t) => (process.env.JAVA_HOME ? path.join(process.env.JAVA_HOME, 'bin', t) : t);
+  const jh = process.env.JAVA_HOME || process.env.DT_JAVA_HOME;
+  const bin = (t) => (jh ? path.join(jh, 'bin', t) : t);
   execFileSync(bin('javac'), ['--release', '17', '-d', path.join(lib, 'out'), path.join(lib, 'com', 'acme', 'libs', 'Greeting.java')]);
   const art = path.join(repoDir, 'com', 'acme', 'libs', 'greeting', '1.0.0');
   fs.mkdirSync(art, { recursive: true });

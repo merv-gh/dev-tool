@@ -95,3 +95,17 @@ test('a branch rewritten on the remote (force-push): the stale local copy is dro
   assert.notEqual(again.sha, first.sha);
   assert.equal(again.sha, g(['rev-parse', 'HEAD'], src2));
 });
+
+test('a local copy whose git data is gone is not used (git would walk up to a parent repo): fetched from the remote', async () => {
+  const git = require('../lib/git');
+  // dt's own folder is a git repo; inside it a checkout whose .git points at git data that is gone
+  const outer = path.join(tmp, 'outer');
+  fs.mkdirSync(path.join(outer, 'repos', 'SHOP', 'svc'), { recursive: true });
+  g(['init', '-q', '-b', 'main'], outer);
+  fs.writeFileSync(path.join(outer, 'README'), 'dt home\n'); g(['add', '.'], outer); g(['commit', '-q', '-m', 'home'], outer);
+  const stale = path.join(outer, 'repos', 'SHOP', 'svc');
+  fs.writeFileSync(path.join(stale, '.git'), `gitdir: ${path.join(tmp, 'gone', 'SHOP', 'svc')}\n`);
+  const info = await git.fetchReusing('SHOP', 'svc', 'main', { url: `file://${src}`, dir: path.join(tmp, 'ws-from-stale'), gitKey: 'work/ws-from-stale', sources: [stale] });
+  assert.equal(info.sha, g(['rev-parse', 'HEAD'], src));
+  assert.equal(info.reusedFrom, undefined, 'the stale copy was not used');
+});

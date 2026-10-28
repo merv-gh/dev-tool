@@ -698,6 +698,17 @@ dt runs it once at start and prints the problems to the log.
 
 ## Troubleshooting
 
+**Docker Desktop on Windows (or macOS): Gradle hangs, `could not write cache value … daemon … registry.bin`, builds slow.** The config folder is a bind mount of a Windows (or macOS) folder. Those mounts (`9p`, `drvfs`, `fakeowner`, SMB) have no reliable file locks or memory-mapped files, and Gradle's daemon registry, its caches and each project's `.gradle` folder need both. In compose these live on Docker volumes, which are real Linux filesystems inside Docker's VM and much faster too:
+- workspaces: `DT_WORK_DIR=/var/dt-work`;
+- Gradle home and Maven repository: `/var/dt-build`;
+- git data: `/var/dt-git`.
+
+`doctor` shows which folder is on which filesystem. A Gradle run that times out or is cancelled also stops its daemon, so it doesn't keep holding locks. Your `gradle.properties` (repository credentials) is in your Windows user folder (`%USERPROFILE%\.gradle\gradle.properties`), which the container doesn't see: copy it into dt's config folder.
+
+**`Picked up JAVA_TOOL_OPTIONS` in Gradle runs.** dt sets the Byte Buddy flag only for Maven, and only on JDK 22+ (`tests.javaToolOptions`); `tests.javaToolOptionsGradle: true` also sets it for Gradle. If dt's own environment has `JAVA_TOOL_OPTIONS`, Gradle runs don't get it.
+
+**`git fetch` from a local copy: `Could not read from remote repository … correct access rights`.** That was dt copying a commit from an earlier checkout whose git data was gone (`/tmp` of an old container). dt now uses a local copy only if it's a repo of its own with the same remote, and fetches from Bitbucket when a copy can't be read.
+
 **Workspaces or test runs fail and you don't know why.** Run `doctor` (with `repo=PROJECT/slug`), then `call_history failed=true` or `dt_log failed=true`: the failed step and its error are there.
 
 **Passports: `git cannot chmod` / `could not set 'core.filemode' to 'false'` / `not a git repository`.** dt checks once per folder whether git can change file modes there. Where it can't, dt keeps git's data in `DT_GIT_DIR` from the start, notes it once in the log, and checks the files out into `repos/` and `work/` as usual. In compose, `DT_GIT_DIR` is the `dt-git` volume (a one-shot `init` service hands it to dt's user), so the git data survives restarts. Elsewhere, set it to a lasting folder; `doctor` warns when it's in `/tmp`. Background: git cannot manage its files in `repos/`. That happens when the config folder is on a drive that does not allow changing file permissions (a Windows drive under WSL such as `/mnt/c/...`, a network share, some Docker/Colima mounts), or when the containers run as another user. `run.sh` runs them as you (`DT_UID`/`DT_GID` from `id -u`/`id -g`; set them in `.env` to override). Where git still cannot chmod, dt keeps the git data in the container (`DT_GIT_DIR`, default `/tmp/dt-git`) and checks the files out into `repos/` as before; a half-made `.git` from an earlier failure is replaced. Fastest of all: put the config folder on the local disk (in WSL, under `~`, not `/mnt/c`).

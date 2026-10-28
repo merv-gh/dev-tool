@@ -361,6 +361,7 @@ var require_config = __commonJS({
         waitMs: Number(e.DT_TESTS_WAIT_MS || c.waitMs || 5e4),
         pgUrl: c.pgUrl || e.DT_TEST_DB_URL || null,
         javaToolOptions: c.javaToolOptions !== void 0 ? c.javaToolOptions : "-Dnet.bytebuddy.experimental=true",
+        javaToolOptionsGradle: c.javaToolOptionsGradle === true,
         args: [].concat(c.args || [])
       };
     }
@@ -5511,7 +5512,8 @@ var require_git = __commonJS({
     function git(args, cwd, extra = []) {
       return new Promise((resolve, reject) => {
         require_trace().child(execFile("git", ["-c", "safe.directory=*", ...extra, ...args], { cwd, env: { ...process.env, GIT_TERMINAL_PROMPT: "0" }, maxBuffer: 64 << 20, timeout: 6e5 }, (err, stdout, stderr) => {
-          if (err) reject(new Error(`git ${args[0]}: ${(stderr || err.message).trim().split("\n").slice(-3).join(" | ")}`));
+          const cmd = args.find((a, i) => !a.startsWith("-") && args[i - 1] !== "-c") || args[0];
+          if (err) reject(new Error(`git ${cmd}: ${(stderr || err.message).trim().split("\n").slice(-3).join(" | ")}`));
           else resolve(stdout.trim());
         }));
       });
@@ -5640,7 +5642,18 @@ var require_git = __commonJS({
       if (!hit) throw new Error(`git ls-remote: no ${ref || "HEAD"} in ${url.replace(/\/\/[^@/]*@/, "//***@")}`);
       return hit[0];
     }
-    var headOf = (dir) => git(["rev-parse", "HEAD"], dir).catch(() => null);
+    async function headOf(dir, url) {
+      try {
+        const top = await git(["rev-parse", "--show-toplevel"], dir);
+        if (path2.resolve(top) !== path2.resolve(fs2.realpathSync(dir))) return null;
+        const origin = await git(["remote", "get-url", "origin"], dir).catch(() => "");
+        const same = (u) => String(u).replace(/\/\/[^@/]*@/, "//").replace(/\.git$/, "").replace(/\/+$/, "").toLowerCase();
+        if (url && origin && same(origin) !== same(url)) return null;
+        return await git(["rev-parse", "HEAD"], dir);
+      } catch {
+        return null;
+      }
+    }
     async function fetchReusing(project, repo, ref, opts = {}) {
       const T = require_trace();
       const url = opts.url || remote(project, repo);
@@ -5654,7 +5667,7 @@ var require_git = __commonJS({
       }
       let source = null;
       for (const d of sources) {
-        const h = await headOf(d);
+        const h = await headOf(d, url);
         if (h && (want ? h === want : true)) {
           source = { dir: d, sha: h };
           break;
@@ -5669,8 +5682,14 @@ var require_git = __commonJS({
       const dir = opts.dir || repoDir(project, repo);
       fs2.mkdirSync(dir, { recursive: true });
       await T.step("git init", () => ensureRepo(dir, url, opts.gitKey || `${project.toUpperCase()}/${repo}`), dir);
-      await T.step("git fetch (local)", () => git(["-c", "protocol.file.allow=always", "fetch", "-q", "--depth", "1", "--no-tags", path2.resolve(source.dir), "HEAD"], dir), source.dir);
-      await T.step("git checkout", () => git(["checkout", "-q", "--detach", "--force", "FETCH_HEAD"], dir));
+      try {
+        await T.step("git fetch (local)", () => git(["-c", "protocol.file.allow=always", "fetch", "-q", "--depth", "1", "--no-tags", path2.resolve(source.dir), "HEAD"], dir), source.dir);
+        await T.step("git checkout", () => git(["checkout", "-q", "--detach", "--force", "FETCH_HEAD"], dir));
+      } catch (e) {
+        if (offline) throw new Error(`Bitbucket did not answer (${offline.message.slice(0, 200)}) and the local copy in ${source.dir} cannot be read (${e.message.slice(0, 200)})`);
+        T.note(`the local copy in ${source.dir} cannot be read (${e.message.slice(0, 160)}): fetching from Bitbucket`);
+        return fetchRef(project, repo, ref, opts);
+      }
       const sha = await git(["rev-parse", "HEAD"], dir);
       const date = await git(["log", "-1", "--format=%cI"], dir).catch(() => null);
       const info = { project: project.toUpperCase(), repo, ref: ref || "HEAD", sha, commitDate: date, fetchedAt: (/* @__PURE__ */ new Date()).toISOString(), path: dir, fallback: offline ? `Bitbucket unreachable: local copy ${source.dir}` : null, reusedFrom: source.dir };
@@ -29444,6 +29463,25 @@ var require_doctor = __commonJS({
         return { ok: false, error: e.message };
       }
     }
+    var SHARED = /^(9p|drvfs|cifs|smb3?|smbfs|fakeowner|grpcfuse|fuse\.grpcfuse|virtiofs|osxfs|fuse\.osxfs|vboxsf|nfs4?|fuse\.sshfs|fuse)$/;
+    function mountOf(dir) {
+      let lines;
+      try {
+        lines = fs2.readFileSync("/proc/self/mountinfo", "utf8").split("\n");
+      } catch {
+        return null;
+      }
+      let best = null;
+      const target = path2.resolve(dir);
+      for (const l of lines) {
+        const parts = l.split(" ");
+        const dash = parts.indexOf("-");
+        if (dash < 0) continue;
+        const point = parts[4].replace(/\\040/g, " "), type = parts[dash + 1], source = parts[dash + 2];
+        if ((target === point || target.startsWith(point.endsWith("/") ? point : `${point}/`)) && (!best || point.length > best.point.length)) best = { point, type, source };
+      }
+      return best;
+    }
     async function check({ repo, deep = false } = {}) {
       const cfg = require_config();
       const t = cfg.getTests();
@@ -29453,6 +29491,12 @@ var require_doctor = __commonJS({
         const w = writable(dir);
         if (!w.ok) add("folders", name, "fail", `${dir}: ${w.error}`, "run dt as the owner of the folder (run.sh sets DT_UID/DT_GID), or point DT_HOME_DIR at a writable folder");
         else add("folders", name, w.chmod ? "ok" : "warn", `${dir}${w.chmod ? "" : ": no chmod here (a Windows drive, SMB, some mounts): git keeps its data in DT_GIT_DIR"}`);
+      }
+      for (const [name, dir, what] of [["workspaces", cfg.PATHS.work, "DT_WORK_DIR=/var/dt-work"], ["Gradle home", cfg.getTests().gradleHome, "DT_GRADLE_USER_HOME=/var/dt-build/gradle"], ["Maven repository", cfg.getTests().mavenRepo, "DT_MAVEN_REPO=/var/dt-build/m2"], ["git data", process.env.DT_GIT_DIR || path2.join(os.tmpdir(), "dt-git"), "DT_GIT_DIR=/var/dt-git"]].filter(([, d]) => d)) {
+        const m = mountOf(dir);
+        if (!m) continue;
+        const shared = SHARED.test(m.type);
+        add("folders", `${name} filesystem`, shared ? name === "git data" ? "warn" : "fail" : "ok", `${dir} is on ${m.type} (${m.point}${m.source && m.source !== "none" ? ` from ${m.source}` : ""})${shared ? ": a host-shared mount: file locks and memory-mapped files do not work right there (Gradle's daemon hangs on its registry, builds slow down)" : ""}`, shared ? `put it on a Docker volume (compose does: ${what}) or a local disk` : null);
       }
       const gd = process.env.DT_GIT_DIR || path2.join(os.tmpdir(), "dt-git");
       if (path2.resolve(gd).startsWith(path2.resolve(os.tmpdir()))) add("folders", "git data lasts", "warn", `${gd} is in the temporary folder: after a restart every repo is fetched again`, "set DT_GIT_DIR to a lasting folder git can chmod in (compose: the dt-git volume)");
@@ -29535,7 +29579,7 @@ var require_doctor = __commonJS({
           const r = await head(url[1], { auth: user && pass ? `Basic ${Buffer.from(`${user}:${pass}`).toString("base64")}` : null });
           add("repository", `${url[0]} (${url[1]})`, r.status && r.status < 400 ? "ok" : r.status === 401 || r.status === 403 ? "fail" : r.status ? "ok" : "fail", r.error || `HTTP ${r.status} with the credentials`, r.status === 401 || r.status === 403 ? "the user/password in gradle.properties are refused" : r.error ? "not reachable from here" : null);
         }
-      } else add("repository", "gradle.properties", "warn", "none: builds that read nexusUrl/mavenUser/mavenPassword fail", "put gradle.properties in the config folder (values may be ${VAR} from .env)");
+      } else add("repository", "gradle.properties", "warn", `none found (looked in ${require_buildenv().gradleFiles({ ...t, gradleProperties: t.gradleProperties }).length ? "" : [...(t.gradleProperties || []).map((f) => path2.resolve(cfg.HOME, f)), path2.join(cfg.HOME, "gradle.properties"), ...t.gradleHome ? [path2.join(t.gradleHome, "gradle.properties")] : []].join(", ")}): builds that read nexusUrl/mavenUser/mavenPassword fail`, "copy the gradle.properties of your machine (Windows: %USERPROFILE%\\.gradle\\gradle.properties) into dt's config folder; passwords may be ${VAR} from .env");
       if (t.pgUrl) {
         try {
           const postgres = require_src();
@@ -30644,6 +30688,15 @@ var require_testrun = __commonJS({
       if (!m) throw new Error("no Maven: the repo has no mvnw, and mvn is not on PATH (set tests.maven in config.json, or run with the compose jdk profile)");
       return [m, []];
     }
+    var jdkSeen = null;
+    function jdkMajor(cfg) {
+      const key = cfg.javaHome || "PATH";
+      if (jdkSeen && jdkSeen.key === key) return jdkSeen.major;
+      const r = require("child_process").spawnSync(cfg.javaHome ? path2.join(cfg.javaHome, "bin", "java") : "java", ["-version"], { encoding: "utf8", timeout: 15e3, env: { ...process.env, JAVA_TOOL_OPTIONS: "" } });
+      const major = Number((`${r.stderr || ""}${r.stdout || ""}`.match(/version "(?:1\.)?(\d+)/) || [])[1] || 0);
+      jdkSeen = { key, major };
+      return major;
+    }
     var KEEP_ENV = /^(PATH|HOME|USER|LOGNAME|SHELL|TMPDIR|TMP|TEMP|LANG|LANGUAGE|LC_\w+|TZ|TERM|JAVA_HOME|MAVEN_HOME|M2_HOME|MAVEN_OPTS|GRADLE_OPTS|GRADLE_USER_HOME|JAVA_TOOL_OPTIONS|(HTTPS?|NO|ALL)_PROXY|(https?|no|all)_proxy|SSL_CERT_FILE|SSL_CERT_DIR|NODE_EXTRA_CA_CERTS|DOCKER_HOST|TESTCONTAINERS_\w+)$/;
     function cleanEnv(cfg) {
       const out2 = {};
@@ -30682,7 +30735,7 @@ var require_testrun = __commonJS({
         if (!gr[0]) throw new Error("no Gradle: the repo has no gradlew, and gradle is not on PATH (set tests.gradle in config.json)");
         const task = p.module === "." ? "test" : `:${p.module.split("/").join(":")}:test`;
         const fq = p.selectors || sel;
-        const args = [...gr[1], "--console=plain", "-q", "--warning-mode=none", ...cfg.gradleBuildCache ? ["--build-cache"] : [], task, ...fq.flatMap((t) => ["--tests", t.includes("#") ? t.replace("#", ".") : t.includes(".") ? t : `*.${t}`])];
+        const args = [...gr[1], "--console=plain", "-q", "--warning-mode=none", "--no-watch-fs", ...cfg.gradleBuildCache ? ["--build-cache"] : [], task, ...fq.flatMap((t) => ["--tests", t.includes("#") ? t.replace("#", ".") : t.includes(".") ? t : `*.${t}`])];
         if (cfg.offline) args.push("--offline");
         return { cmd: gr[0], args: [...args, ...cfg.args], cwd: root };
       }
@@ -30830,7 +30883,9 @@ ${e.message}`, ms: Date.now() - started });
         env.PATH = `${path2.join(cfg.javaHome, "bin")}${path2.delimiter}${env.PATH}`;
       }
       if (cfg.gradleHome) env.GRADLE_USER_HOME = cfg.gradleHome;
-      if (cfg.javaToolOptions) env.JAVA_TOOL_OPTIONS = [process.env.JAVA_TOOL_OPTIONS, cfg.javaToolOptions].filter(Boolean).join(" ");
+      const javaMajor = jdkMajor(cfg);
+      if (cfg.javaToolOptions && javaMajor >= 22 && (p.tool !== "gradle" || cfg.javaToolOptionsGradle)) env.JAVA_TOOL_OPTIONS = [process.env.JAVA_TOOL_OPTIONS, cfg.javaToolOptions].filter(Boolean).join(" ");
+      else if (p.tool === "gradle") delete env.JAVA_TOOL_OPTIONS;
       let database = null;
       const runId = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
       if (db) {
@@ -30856,6 +30911,11 @@ ${e.message}`, ms: Date.now() - started });
         for (const d of reportDirs) fs2.rmSync(d, { recursive: true, force: true });
         log(`${p.tool}: ${path2.basename(c.cmd)} ${c.args.filter((a) => !/^-Dmaven\.repo\.local|^-s$/.test(a)).join(" ")}`);
         r = await require_trace().step(`${p.tool} test`, () => exec(c.cmd, c.args, { cwd: c.cwd, env, timeoutMs: cfg.timeoutMs, log: (l) => log(hide(l)) }), `${p.module} ${tests.join(",")}`);
+        if (p.tool === "gradle" && (r.killed || r.code === null)) {
+          require_trace().note("the Gradle run was stopped: stopping its daemon (gradle --stop)");
+          await exec(c.cmd, [...c.args.filter((a, i) => i < c.args.indexOf("--console=plain") && !/^-D/.test(a)), "--stop"], { cwd: c.cwd, env, timeoutMs: 6e4 }).catch(() => {
+          });
+        }
         if (r.code !== 0 && !r.out.trim()) require_trace().note(`${p.tool} exited ${r.code} with no output: is ${c.cmd} runnable here?`);
         cases = parseReports(reportDirs, started);
       }
@@ -30898,6 +30958,8 @@ ${e.message}`, ms: Date.now() - started });
       for (const k of cases) for (const pt of k.parts || []) if (!parts.some((x) => x.file === pt.file && x.line === pt.line)) parts.push({ file: pt.file, line: pt.line, method: pt.method, test: pt.test, why: `${k.class.split(".").pop()}.${k.name}: ${((k.message || k.type || "").split("\n").find((l) => l.trim()) || "").trim().slice(0, 200)}`, snippet: pt.snippet });
       const hints = [];
       if (/Mockito cannot mock this class|Java \d+ \(\d+\) is not supported by the current version of Byte Buddy/.test(r.out + cases.map((k) => k.message).join("\n"))) hints.push('Mockito/Byte Buddy of this project does not support the JDK the tests ran on: point tests.javaHome at the JDK the project builds with (17 or 21), or keep tests.javaToolOptions = "-Dnet.bytebuddy.experimental=true".');
+      if (/registry\.bin|Timeout waiting to lock|Could not (write|read) cache value|could not acquire lock|Gradle could not start your build|Unable to lock|DaemonRegistry/i.test(r.out)) hints.push(`Gradle cannot lock its files in ${cfg.gradleHome || "~/.gradle"} or the workspace: that folder is on a mount without working file locks (a Windows drive, SMB, some Docker Desktop mounts). Keep the Gradle home and the workspaces on a local disk or a Docker volume (compose: DT_GRADLE_USER_HOME=/var/dt-build/gradle, DT_WORK_DIR=/var/dt-work); doctor shows which folders are on such mounts.`);
+      if (/Picked up JAVA_TOOL_OPTIONS/.test(r.out) && p.tool === "gradle" && r.code !== 0) hints.push(`JAVA_TOOL_OPTIONS is set in dt's environment and every JVM prints it; Gradle may choke on that: unset it for dt, or set tests.javaToolOptions to "".`);
       if (/Could not get unknown property '(\w+)'|Could not resolve all (files|dependencies)|Received status code 401|status code 401|Unauthorized/.test(r.out)) hints.push(`The build needs settings of this machine (a private repository and its credentials): put them in gradle.properties in dt's config folder (or tests.gradleProperties; values may be \${VAR} from .env), or tests.env for environment variables${p.tool === "maven" ? "; for Maven, maven-settings.xml in the config folder (or tests.mavenSettings)" : ""}.`);
       if (/Failed to determine a suitable driver class|Connection to .* refused|password authentication failed/.test(r.out)) hints.push("The tests wanted a database: run with db (env + db) so test_run loads the DDL snapshot into a throwaway database.");
       const ok = r.code === 0 && counts.failed === 0 && counts.errors === 0 && !compile.length && counts.tests > 0;
@@ -31010,7 +31072,7 @@ ${e.message}`, ms: Date.now() - started });
       if (cur.trim()) out2.push(cur.trim());
       return out2;
     }
-    module2.exports = { run, cleanEnv, proof, testName, fingerprint, plan, parseReports, compileErrors, codeParts, splitSql };
+    module2.exports = { run, jdkMajor, cleanEnv, proof, testName, fingerprint, plan, parseReports, compileErrors, codeParts, splitSql };
   }
 });
 

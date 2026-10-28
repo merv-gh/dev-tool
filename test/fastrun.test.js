@@ -86,3 +86,8 @@ test('context: bodies of what the method calls; parameterized boundaries for pur
   assert.match(fee.skeleton, /\/\/ @CsvSource\(\{ "0\.00, \?", "0\.01, \?", "1\.00, \?", "12\.345, \?", "-1\.00, \?" \}\)/);
   assert.match(fee.skeleton, /\/\/ void feeCases\(String amount, String expected\)/);
 });
+
+test('the JDK version is read (java -version writes to stderr): it decides the Byte Buddy flag', { skip: require('child_process').spawnSync('java', ['-version']).error && 'no java' }, () => {
+  const major = require('../lib/testrun').jdkMajor({ javaHome: null });
+  assert.ok(major >= 8, `major ${major}`);
+});

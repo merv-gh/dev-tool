@@ -30,11 +30,14 @@ services:
       DT_HOME: /dt
       # git's data: a volume (the config folder may be a mount where git cannot chmod; /tmp is lost on restart)
       DT_GIT_DIR: ${DT_GIT_DIR:-/var/dt-git}
-      # test_run: the jdk profile's JDK + Maven (used when present), caches kept in the home folder
+      # test_run: the jdk profile's JDK + Maven (used when present). Workspaces, the Gradle home and the Maven
+      # repository live on volumes, not in the config folder: builds need file locks and memory-mapped files,
+      # which a Windows / SMB / some macOS bind mounts do not do right (Gradle's daemon registry hangs there)
       DT_JAVA_HOME: ${DT_JAVA_HOME:-/opt/jdk/java}
       DT_MAVEN: ${DT_MAVEN:-/opt/jdk/maven/bin/mvn}
-      DT_MAVEN_REPO: ${DT_MAVEN_REPO:-/dt/cache/m2}
-      DT_GRADLE_USER_HOME: ${DT_GRADLE_USER_HOME:-/dt/cache/gradle}
+      DT_WORK_DIR: ${DT_WORK_DIR:-/var/dt-work}
+      DT_MAVEN_REPO: ${DT_MAVEN_REPO:-/var/dt-build/m2}
+      DT_GRADLE_USER_HOME: ${DT_GRADLE_USER_HOME:-/var/dt-build/gradle}
       DT_TEST_DB_URL: ${DT_TEST_DB_URL:-postgres://dt:dt@testdb:5432/postgres}
       PORT: 4000
       NODE_ENV: production
@@ -44,6 +47,8 @@ services:
       - ${DT_HOME_DIR:-.}:/dt   # config.json, .env, notes, plugins, scripts/, cache/, repos/, passports/, work/
       - jdk:/opt/jdk:ro         # filled by the jdk profile; empty otherwise
       - dt-git:/var/dt-git      # git data of fetched repos and workspaces
+      - dt-work:/var/dt-work    # workspaces (checkouts where tests are written and run)
+      - dt-build:/var/dt-build  # Gradle home (caches, daemon, build cache) and Maven repository
     depends_on:
       jdk: { condition: service_completed_successfully, required: false }
       init: { condition: service_completed_successfully }
@@ -91,13 +96,15 @@ services:
       - ${DT_HOME_DIR:-.}/repos:/repos   # graph data is written next to each repo (.code-review-graph/)
     restart: unless-stopped
 
-  # One-shot: the git data volume belongs to dt's user (a new volume belongs to root)
+  # One-shot: the volumes belong to dt's user (a new volume belongs to root)
   init:
     image: ${DT_NODE_IMAGE:-node:22-bookworm}
     user: "0:0"
-    command: ["sh", "-c", "chown ${DT_UID:-1000}:${DT_GID:-1000} /var/dt-git"]
+    command: ["sh", "-c", "mkdir -p /var/dt-build/gradle /var/dt-build/m2 && chown ${DT_UID:-1000}:${DT_GID:-1000} /var/dt-git /var/dt-work /var/dt-build /var/dt-build/gradle /var/dt-build/m2"]
     volumes:
       - dt-git:/var/dt-git
+      - dt-work:/var/dt-work
+      - dt-build:/var/dt-build
     restart: "no"
 
   # One-shot: copy the JDK and Maven of the official image into the jdk volume (again when the image changes).
@@ -194,3 +201,5 @@ volumes:
   webui-data: {}
   jdk: {}
   dt-git: {}
+  dt-work: {}
+  dt-build: {}
