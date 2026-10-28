@@ -114,7 +114,8 @@ test('durable history, independent check, JUnit and default views through shared
   assert.equal((await T.call('collection_check',{run:r.run})).ok,false);
   const history=await T.call('collection_history',{collection:'registry'}); assert.equal(history[0].run,r.run);
   const report=await T.call('collection_report',{run:r.run,format:'junit'}); assert.match(report.xml,/failures="1"/); assert.equal(report.ok,false);
-  assert.equal((await T.call('collection_report',{run:r.run,format:'json'})).definitions['registry/a'].steps[0].js,'test("business",()=>expect(2).toBe(3));');
+  const retained = (await T.call('collection_report',{run:r.run,format:'json'})).definitions['registry/a'];
+  assert.equal(retained.steps[0].kind,'js'); assert.equal(retained.steps[0].js,undefined); assert.match(retained.revision,/^[a-f0-9]{64}$/);
   assert.ok((await T.call('collection_report',{run:r.run})).view.includes('/show/'));
 });
 
@@ -140,7 +141,41 @@ test('source edits during a case cannot change later nested script or inherited 
   script('snapshot/root',{steps:[{tool:'find',args:{q:'change'}},{script:'snapshot/child'}]});
   C.save('snapshot',{before:'test("snapshot hook",()=>expect(1).toBe(1));',suite:{order:['root']}});
   const r=await C.run('snapshot',{}, {schemas:[{name:'find'}],call:async()=>{ S.save('snapshot/child',{description:'changed',steps:[{js:'throw new Error("changed child");'}]}); C.save('snapshot',{before:'throw new Error("changed hook");'}); return {}; }});
-  assert.equal(r.ok,true,JSON.stringify(r)); assert.ok(r.definitions['snapshot/child'].steps[0].js.includes('snapshot child'));
+  assert.equal(r.ok,true,JSON.stringify(r)); assert.equal(r.definitions['snapshot/child'].steps[0].kind,'js');
+  assert.equal(r.definitions['snapshot/child'].steps[0].js,undefined); assert.ok(r.cases[0].result.tests.passed >= 2);
+});
+
+test('durable, returned and visualized reports omit inputs by default and redact credentials everywhere', async () => {
+  const credential = 'BOUND-CREDENTIAL-7E', hookSecret='HOOK-CREDENTIAL-3E', customer='CUSTOMER-INPUT-4E', configured='CONFIG-CREDENTIAL-8E';
+  fs.writeFileSync(path.join(home,'.env'),`REVIEW_API_TOKEN=${configured}\n`);
+  script('privacy/a',{params:{secret:{required:true},customerId:{required:true}},steps:[{js:`test("execution sees original bindings",()=>expect(vars.secret).toBe("${credential}")); test("hook credentials remain executable",()=>expect(vars.runtimeToken).toBe("${hookSecret}")); log(vars.secret); log(vars.runtimeToken); log("${configured}"); return {token:vars.secret,echo:vars.secret};`}],finally:'throw new Error("cleanup echoed "+vars.secret);'});
+  C.save('privacy',{suite:{params:{customerId:customer},before:`vars.runtimeToken="${hookSecret}";`,matrix:{tenant:['MATRIX-INPUT-5E']}}});
+  let during;
+  const run=await C.run('privacy',{params:{secret:credential},evidence:false,onStart:id=>{during=C.get(id);}});
+  assert.equal(run.cases[0].result.tests.passed,2,'redaction must not alter execution');
+  const saved=C.get(run.run), view=require('../lib/results').load(run.view.split('/').pop());
+  for(const [kind,artifact] of [['running',during],['returned',run],['stored',saved],['view',view]]) {
+    const json=JSON.stringify(artifact);
+    for(const hidden of [credential,hookSecret,configured,customer,'MATRIX-INPUT-5E']) assert.equal(json.includes(hidden),false,`${kind} leaked ${hidden}`);
+  }
+  assert.equal(saved.retention.inputs,'omitted'); assert.equal(saved.cases[0].params,undefined); assert.equal(saved.cases[0].overrides,undefined);
+  assert.deepEqual(saved.cases[0].matrix,{}); assert.deepEqual(saved.plan.scopes[0].params,{});
+  assert.equal(saved.plan.collectionChains,undefined); assert.equal(saved.definitions['privacy/a'].steps[0].js,undefined);
+  const xml=C.junit(run); assert.ok(!xml.includes(credential)); assert.match(xml,/redacted/);
+  const T=require('../lib/tools');
+  assert.ok(!JSON.stringify(await T.call('collection_report',{run:run.run,format:'json'})).includes(credential));
+  assert.ok(!(await T.call('collection_report',{run:run.run,format:'junit'})).xml.includes(credential));
+  fs.unlinkSync(path.join(home,'.env'));
+});
+
+test('evidence opt-in preserves nonsecret expanded bindings while scrubbing secret echoes and source', async () => {
+  script('privacy-opt/a',{params:{accessToken:{required:true}},steps:[{js:'return {authorization:vars.accessToken,echo:vars.accessToken};'}]});
+  const run=await C.run('privacy-opt',{params:{accessToken:'OPTED-CREDENTIAL-1E',customerId:'customer-visible'},matrix:{region:['north']},evidence:true,visualize:false});
+  assert.equal(run.ok,true,JSON.stringify(run)); assert.equal(run.retention.inputs,'included');
+  assert.equal(run.cases[0].params.customerId,'customer-visible'); assert.equal(run.cases[0].params.accessToken,'[redacted]');
+  assert.equal(run.plan.scopes[0].params.customerId,'customer-visible'); assert.deepEqual(run.cases[0].matrix,{region:'north'});
+  assert.match(JSON.stringify(run.cases[0].result),/redacted/);
+  assert.equal(JSON.stringify(C.get(run.run)).includes('OPTED-CREDENTIAL-1E'),false);
 });
 
 test('suite setup values reach cases and caller params override stored defaults', async () => {
