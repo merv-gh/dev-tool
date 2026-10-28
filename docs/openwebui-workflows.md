@@ -18,6 +18,7 @@ can also be selected per connection:
 | `openapi/testing.json` | Fixtures, scenarios, collections, scratch databases and tests |
 | `openapi/develop.json` | Code/workspaces, compile checks and focused tests |
 | `openapi/knowledge.json` | Source-neutral knowledge and optional cached documentation |
+| `openapi/api.json` | UI/network capture, route discovery, API editing and reusable collections |
 | `openapi/all.json` | Every enabled operation |
 
 Start a compact chat with `find` for system names and `tool_search` for capabilities.
@@ -50,10 +51,15 @@ custom Pipe functions must preserve embeds instead of discarding them.
 [Open WebUI rich UI](https://docs.openwebui.com/features/extensibility/plugin/development/rich-ui/).
 
 Knowledge maps, architecture diagrams, reproduction explorers, scenario runs and
-collection reports use dt's sandboxed result-view mechanism. A view is an inspectable
+collection reports and API exchanges use dt's sandboxed result-view mechanism. A view is an inspectable
 snapshot with no live fetch capability. Changing a knowledge backend does not
 change the graph presenter or disable its view. Keep interactive execution in an
 explicit trusted tool/client workflow rather than hiding API mutations in a chart.
+
+The API tools also return a separate `client` URL. Link it directly outside the
+chat iframe to open `/api-client`, edit a request, explicitly send it, and save a
+parameterized script/collection step. Browser capture and API replay share route
+evidence, without copying browser cookies. See [the complete workflow](browser-api-workbench.md).
 
 ## Knowledge without a required Confluence mirror
 

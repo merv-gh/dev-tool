@@ -49,6 +49,19 @@ test('profiles never resurrect disabled tools and dispatcher cannot recurse', as
   await assert.rejects(T.call('tool_execute', { name: 'tool_execute', arguments: {} }), /directly/);
   config();
 });
+test('Open WebUI updates retain user instructions and expose the selected API profile', async () => {
+  const W = require('../lib/webui');
+  const prior = 'Use the staging environment and cite every claim.';
+  const once = W.modelPrompt(prior), twice = W.modelPrompt(once);
+  assert.ok(once.startsWith(prior)); assert.equal(twice, once);
+  assert.equal((twice.match(/<dt-tools-instructions>/g) || []).length, 1);
+  assert.equal(W.dtConnection('http://dt:4000/', 'key', { profile: 'api' }).path, 'openapi/api.json');
+  assert.ok((await T.schemas({ profile: 'api' })).some(t => t.name === 'api_request_save'));
+  for (const name of ['api-exchange', 'api-request']) {
+    const response = await fetch(base + `/contracts/v1/${name}.schema.json`);
+    assert.equal(response.status, 200); assert.ok((await response.json()).$id);
+  }
+});
 test('nested JSON constraints fail before network and report the same code through direct/MCP/OpenAPI', async () => {
   const before = hits;
   await assert.rejects(T.call('pg_query', { sql: 17 }), e => e.code === 'DT_ARGUMENT_INVALID' && e.issues[0].path === '$.sql');
@@ -105,4 +118,15 @@ test('HTTP input body budget is enforced before parsing or backend execution', a
   config({ maxInputBytes: 100 });
   const before = hits, r = await post('/oapi/tool_search', { query: 'x'.repeat(150) });
   assert.equal(r.status, 413); assert.equal((await r.json()).code, 'DT_ARGUMENT_INVALID'); assert.equal(hits, before); config();
+});
+test('declared argument evidence policy runs before tracing, including discovery dispatch', async () => {
+  fs.mkdirSync(path.join(home, 'plugins'), { recursive: true });
+  fs.writeFileSync(path.join(home, 'plugins/private.js'), `module.exports=[{name:'private_exchange',description:'Test evidence policy',input:{id:{type:'string'},payload:{type:'string'},har:{type:'object'},fail:{type:'boolean'}},logArgs:['id'],run:a=>{if(a.fail)throw new Error('rejected '+a.har.request.headers[0].value+' '+JSON.parse(a.har.request.postData.text).password);return{executionReceivedOriginal:a.payload==='opaque-business-input'}}}];`);
+  await T.reload();
+  const args = { id: 'exchange-42', payload: 'opaque-business-input', har: { request: { headers: [{ name: 'Cookie', value: 'session=one-use-cookie' }], postData: { text: '{"password":"one-use-post-password"}' } } } };
+  assert.equal((await T.call('tool_execute', { name: 'private_exchange', arguments: args })).executionReceivedOriginal, true);
+  await assert.rejects(T.call('tool_execute', { name: 'private_exchange', arguments: { ...args, fail: true } }), /rejected/);
+  const evidence = JSON.stringify({ trace: require('../lib/trace').tail(), history: require('../lib/calls').history({ limit: 100 }) });
+  for (const value of ['opaque-business-input', 'session=one-use-cookie', 'one-use-post-password']) assert.ok(!evidence.includes(value), value);
+  assert.match(evidence, /exchange-42/); assert.match(evidence, /argumentsOmitted/);
 });

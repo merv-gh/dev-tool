@@ -16,6 +16,7 @@ vector index or a remote service.
 | Retrieve | `knowledge_search` adapter result shown by `tool_describe` | Text search, RAG, vector/relational/document database | Exact source excerpts/citations; retrieval is not runtime verification |
 | Query graph | `contracts/v1/knowledge-graph.schema.json` | Local cache or independent graph backend | Typed entities, directional relationships and classified evidence |
 | Present | Stored result plus `view` | Sandboxed HTML view | Presentation works independently of the query backend; no live network calls from a view |
+| Capture/reuse HTTP | API exchange/request v1 and normal script JSON | Playwright adapter, HAR importer, evidence store, HTTP executor | Explicit send, credential placeholders, bounded capture, route ambiguity and provenance |
 | Arrange tests | Versioned fixtures and PostgreSQL template descriptors | Fresh SQL loading, immutable bases/clones | Source isolation, integrity, explicit leases and cleanup |
 | Act/observe/check | Portable scenario and collection contracts | Project tests or isolated runtime adapters | Observations checked independently; proof levels remain distinct |
 

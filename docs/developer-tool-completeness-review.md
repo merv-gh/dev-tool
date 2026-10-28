@@ -2,6 +2,8 @@
 
 Review date: 2026-10-28. Scope: the existing repository plus the in-progress `codex/dev-tooling-reproduction` worktree and the separately implemented `codex/confluence-knowledge` worktree. This is an independent code review and proposed backlog, not a claim that the backlog is implemented. Source line references identify the reviewed implementation and may move as the branches evolve. I did not operate against a customer environment or rerun the implementation team's tests for this review.
 
+Implementation follow-up: [the platform status](platform-implementation-status.md) records the integrated work, verification and remaining boundaries as of 2026-10-29. The review below remains the original 143-item inventory; its observations describe that earlier snapshot.
+
 The strongest next investment is a **real-service scenario harness backed by reusable, prefilled PostgreSQL templates**. The repository already has most of the discovery, capture, editing, execution and inspection primitives. The remaining work is largely about connecting them into a deterministic, inspectable workflow and making the lifecycle reliable.
 
 “Nothing more needed” is a useful completion target only for an agreed scope. Here that scope is Java/Kotlin Spring services, PostgreSQL, Kafka, HTTP dependencies, Elasticsearch, configuration, files and explicitly modeled cache/queue edges. New infrastructure, protocols and business rules will still create new requirements. The optional extensions below should not delay a complete experience for this stack.

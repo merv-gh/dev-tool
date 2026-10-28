@@ -135,7 +135,11 @@ test('the example: copy a template, new ids, upload to a new SFTP folder, POST t
   const post = posts.at(-1);
   assert.equal(post.type, 'application/json');
   assert.deepEqual(JSON.parse(post.body), { folder: `/upload/${folder}`, files: ['order.json'], orderId: sent.orderId });
-  assert.deepEqual(r.results.res, { status: 202, json: { accepted: true, id: 'imp-1' } });
+  assert.equal(r.results.res.status, 202);
+  assert.deepEqual(r.results.res.json, { accepted: true, id: 'imp-1' });
+  assert.equal(r.results.res.headers['content-type'], 'application/json');
+  assert.ok(r.results.res.ms >= 0);
+  assert.equal(r.results.res.truncated, false);
   assert.equal(r.steps[3].result.replaced, 6);
 
   // http only to allowed prefixes

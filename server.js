@@ -146,6 +146,7 @@ const CORS = { 'access-control-allow-origin': '*' };
 // Pages are plain HTML; their data comes from trusted endpoints, or from ones keyed by an unguessable
 // result id / signed token (embeds in Open WebUI load them from a sandboxed, cross-origin iframe).
 const routes = [
+  ['GET', '/api-client', true, page('api-client.html')],
   ['GET', '/', false, (req, res) => send(res, 200, { name: 'dt', mcp: '/mcp', openapi: '/openapi.json', tools: '/api/tools', status: '/api/status', admin: '/admin', results: '/view', prompt: '/api/prompt' })],
   ['GET', '/health', false, (req, res) => send(res, 200, { ok: true, version: VERSION })],
   ['GET', '/api/status', false, (req, res) => send(res, 200, { trusted: trusted(req), ...status() })],
