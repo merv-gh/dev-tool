@@ -84,7 +84,7 @@ class FeeCalculatorTest {
   const failed = await run({ workspace: ws.id, tests: ['FeeCalculatorTest'] });
   assert.equal(failed.outcome, 'failed', JSON.stringify(failed, null, 2));
   assert.deepEqual([failed.counts.tests, failed.counts.passed, failed.counts.failed], [3, 2, 1]);
-  assert.match(failed.failures[0].message, /0\.67/);
+  assert.deepEqual([failed.failures[0].expected, failed.failures[0].actual], ['0.67', '0.66']);
   assert.ok(failed.parts.some(p => p.file === 'src/test/java/com/acme/pay/FeeCalculatorTest.java'), 'the failing assertion is a part');
 
   await T.call('workspace_write', { workspace: ws.id, path: 'src/main/java/com/acme/pay/FeeCalculator.java', edits: [{ find: 'RoundingMode.DOWN', replace: 'RoundingMode.HALF_UP' }] });

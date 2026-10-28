@@ -29297,6 +29297,23 @@ import org.junit.platform.launcher.core.*;
 
 // dt fast runs: runs the selected tests, writes [{class, name, status, ms, message, type, stack}] as JSON
 public class DtLauncher {
+    // each test's own console output (tests run one after another)
+    static volatile ByteArrayOutputStream current;
+    static PrintStream tee(PrintStream to) {
+        return new PrintStream(new OutputStream() {
+            public void write(int b) { to.write(b); ByteArrayOutputStream c = current; if (c != null && c.size() < 200000) c.write(b); }
+            public void write(byte[] b, int off, int len) { to.write(b, off, len); ByteArrayOutputStream c = current; if (c != null && c.size() < 200000) c.write(b, off, len); }
+        }, true);
+    }
+    // expected / actual of an opentest4j AssertionFailedError (JUnit, AssertJ), without depending on it
+    static String val(Throwable t, String which) {
+        try {
+            if (!(Boolean) t.getClass().getMethod("is" + which + "Defined").invoke(t)) return null;
+            Object w = t.getClass().getMethod("get" + which).invoke(t);
+            return w == null ? null : String.valueOf(w.getClass().getMethod("getStringRepresentation").invoke(w));
+        } catch (Exception e) { return null; }
+    }
+
     static String q(String s) {
         if (s == null) return "null";
         StringBuilder b = new StringBuilder("\\"");
@@ -29315,6 +29332,8 @@ public class DtLauncher {
             sel.add(a.contains("#") ? DiscoverySelectors.selectMethod(a) : DiscoverySelectors.selectClass(a));
         }
         List<String> out = Collections.synchronizedList(new ArrayList<>());
+        System.setOut(tee(System.out));
+        System.setErr(tee(System.err));
         Map<String, Long> started = new HashMap<>();
         TestExecutionListener l = new TestExecutionListener() {
             String[] where(TestIdentifier id) {
@@ -29325,7 +29344,7 @@ public class DtLauncher {
                 }
                 return new String[] { id.getLegacyReportingName(), id.getDisplayName() };
             }
-            public void executionStarted(TestIdentifier id) { started.put(id.getUniqueId(), System.nanoTime()); }
+            public void executionStarted(TestIdentifier id) { started.put(id.getUniqueId(), System.nanoTime()); if (id.isTest()) current = new ByteArrayOutputStream(); }
             public void executionSkipped(TestIdentifier id, String reason) {
                 if (!id.isTest()) return;
                 String[] w = where(id);
@@ -29339,8 +29358,11 @@ public class DtLauncher {
                 String status = r.getStatus() == TestExecutionResult.Status.SUCCESSFUL ? "passed" : (t instanceof AssertionError ? "failed" : "error");
                 String stack = null;
                 if (t != null) { StringWriter sw = new StringWriter(); t.printStackTrace(new PrintWriter(sw)); stack = sw.toString(); }
+                String output = null;
+                if (id.isTest() && current != null) { output = current.toString(StandardCharsets.UTF_8); current = null; }
                 out.add("{\\"class\\":" + q(w[0]) + ",\\"name\\":" + q(id.isTest() ? w[1] : "(" + id.getDisplayName() + ")") + ",\\"status\\":" + q(status) + ",\\"ms\\":" + ms
-                    + ",\\"message\\":" + q(t == null ? null : String.valueOf(t.getMessage())) + ",\\"type\\":" + q(t == null ? null : t.getClass().getName()) + ",\\"stack\\":" + q(stack) + "}");
+                    + ",\\"message\\":" + q(t == null ? null : String.valueOf(t.getMessage())) + ",\\"type\\":" + q(t == null ? null : t.getClass().getName()) + ",\\"stack\\":" + q(stack)
+                    + ",\\"expected\\":" + q(t == null ? null : val(t, "Expected")) + ",\\"actual\\":" + q(t == null ? null : val(t, "Actual")) + ",\\"output\\":" + q(output == null || output.isEmpty() ? null : output.length() > 20000 ? output.substring(output.length() - 20000) : output) + "}");
             }
         };
         LauncherDiscoveryRequest req = LauncherDiscoveryRequestBuilder.request().selectors(sel).build();
@@ -29466,7 +29488,7 @@ ${e.message}`, ms: Date.now() - started });
         launcherJar = findJar(cfg, "org.junit.platform", "junit-platform-launcher", v);
         if (!launcherJar) return { error: { code: 1, out: `could not get org.junit.platform:junit-platform-launcher:${v}`, ms: r.ms } };
       }
-      const ldir = path2.join(CACHE2, "fastrun", `launcher-${v}`);
+      const ldir = path2.join(CACHE2, "fastrun", `launcher-${v}-${hash(LAUNCHER)}`);
       if (!fs2.existsSync(path2.join(ldir, "DtLauncher.class"))) {
         fs2.mkdirSync(ldir, { recursive: true });
         fs2.writeFileSync(path2.join(ldir, "DtLauncher.java"), LAUNCHER);
@@ -29634,6 +29656,128 @@ var require_testdb = __commonJS({
   }
 });
 
+// lib/testout.js
+var require_testout = __commonJS({
+  "lib/testout.js"(exports2, module2) {
+    var FRAME = /^\s*at (?:[\w.$-]+(?:@[\w.-]+)?\/\/?)?([\w$.]+)\.([\w$<>]+)\(([^)]*)\)\s*$/;
+    var LIB = /^(jdk\.internal|java\.lang\.reflect|java\.base|sun\.|org\.assertj|org\.opentest4j|org\.junit\.(jupiter\.api|Assert)|junit\.framework|org\.hamcrest|org\.mockito|org\.springframework\.test\.util|org\.springframework\.test\.web\.servlet)/;
+    function compactStack(stack, repo, { maxLines = 30, keepTop = 2, messageLines = 8 } = {}) {
+      if (!stack) return null;
+      const out2 = [];
+      let folded = [], blockFrames = 0, msgLines = 0, inHeader = true, seenRepo = false;
+      const flush = () => {
+        if (!folded.length) return;
+        const all = [...new Set(folded.map((c) => c.split(".").slice(0, -1).slice(0, 3).join(".")))];
+        out2.push(`	... ${folded.length} frame${folded.length > 1 ? "s" : ""}: ${all.slice(0, 3).join(", ")}${all.length > 3 ? ", \u2026" : ""}`);
+        folded = [];
+      };
+      for (const line of String(stack).split("\n")) {
+        const f = line.match(FRAME);
+        if (f) {
+          inHeader = false;
+          const cls = f[1].replace(/\$.*$/, "");
+          const own = repo(cls);
+          const top = !own && !seenRepo && blockFrames < keepTop && !LIB.test(f[1]);
+          if (own || top) {
+            flush();
+            out2.push(`	at ${f[1]}.${f[2]}(${f[3]})`);
+            if (top) blockFrames++;
+            if (own) seenRepo = true;
+          } else folded.push(f[1]);
+          continue;
+        }
+        if (/^\s*\.\.\. \d+ more\s*$/.test(line)) {
+          flush();
+          out2.push(line.replace(/^\s*/, "	"));
+          continue;
+        }
+        if (/^(Caused by|Suppressed):/.test(line.trim())) {
+          flush();
+          blockFrames = 0;
+          msgLines = 0;
+          inHeader = true;
+          seenRepo = false;
+          out2.push(line.trim());
+          continue;
+        }
+        if (!line.trim()) continue;
+        if (inHeader && msgLines++ < messageLines) out2.push(line);
+        else if (inHeader && msgLines === messageLines + 1) out2.push("	(message cut)");
+      }
+      flush();
+      if (out2.length > maxLines) {
+        const last = out2.map((l, i) => /^Caused by:/.test(l) ? i : -1).filter((i) => i >= 0).pop();
+        const head = out2.slice(0, Math.floor(maxLines / 2));
+        const tail = last !== void 0 && last > maxLines / 2 ? out2.slice(last, last + Math.ceil(maxLines / 2)) : out2.slice(-Math.ceil(maxLines / 2));
+        return [...head, `	... ${out2.length - head.length - tail.length} lines`, ...tail].join("\n");
+      }
+      return out2.join("\n");
+    }
+    var NOISE = [
+      /^\[INFO\]/,
+      /^\[WARNING\]/,
+      /Download(ing|ed) from/,
+      /^Progress \(/,
+      /^> Task /,
+      /^> Configure project/,
+      /^BUILD SUCCESSFUL/,
+      /Deprecated Gradle features/,
+      /--warning-mode/,
+      /^For more on this/,
+      /docs\.gradle\.org/,
+      /^WARNING: (A terminally|sun\.misc|Please consider|.*will be removed|A Java agent|If a serviceability|Dynamic loading)/,
+      /^Picked up JAVA_TOOL_OPTIONS/,
+      /^OpenJDK 64-Bit Server VM warning/,
+      /Mockito is currently self-attaching/,
+      /inline-mock-maker/,
+      /-javaagent/,
+      /^\s+\.\s+____|^\s+\/\\\\|^\s+\\\\\/|^ =+\|_|^\s+'\s+\|____|:: Spring Boot ::/,
+      /^\d{4}-\d{2}-\d{2}[T ][\d:.]+.*\b(INFO|DEBUG|TRACE)\b/,
+      /^\d\d:\d\d:\d\d\.\d+ \[.*\] (INFO|DEBUG|TRACE)/,
+      /^\s*at [\w$.]+\(/,
+      /^\s*\.\.\. \d+ more$/,
+      /^Starting a Gradle Daemon|^Daemon will be stopped/
+    ];
+    var SIGNAL = /\b(ERROR|FAIL(ED|URE)?|Exception|error:|What went wrong|Execution failed|Could not|Tests run:|tests completed|No tests found|Unresolved reference|cannot find symbol|BUILD FAILURE)\b|^e: |^\* (What|Where)/;
+    function compactLog(out2, { max = 40 } = {}) {
+      const lines = String(out2 || "").split("\n").map((l) => l.replace(/\s+$/, "")).filter((l) => l.trim());
+      const kept = lines.filter((l) => !NOISE.some((re) => re.test(l)));
+      const signal = kept.filter((l) => SIGNAL.test(l));
+      const pick = signal.length ? kept.filter((l, i) => SIGNAL.test(l) || i > 0 && SIGNAL.test(kept[i - 1])) : kept;
+      const seen = /* @__PURE__ */ new Set();
+      const uniq = pick.filter((l) => {
+        if (seen.has(l)) return false;
+        seen.add(l);
+        return true;
+      });
+      const res = uniq.length ? uniq : lines.slice(-15);
+      return res.length > max ? [`... ${res.length - max} lines`, ...res.slice(-max)].join("\n") : res.join("\n");
+    }
+    function expectedActual(message) {
+      const m = String(message || "");
+      let x;
+      if (x = m.match(/expected:\s*<([\s\S]*?)>\s*but was:\s*<([\s\S]*?)>\s*$/)) return { expected: x[1], actual: x[2] };
+      if (x = m.match(/expected:\s*([\s\S]*?)\n\s*but was:\s*([\s\S]*?)\s*$/)) return { expected: x[1].trim(), actual: x[2].trim() };
+      if (x = m.match(/Expecting actual:\s*\n([\s\S]*?)\nto be equal to:\s*\n([\s\S]*?)(\nwhen comparing|\nbut was not|$)/)) return { expected: x[2].trim(), actual: x[1].trim() };
+      if (x = m.match(/Expecting actual:\s*\n([\s\S]*?)\nto (contain|be|have|start with|end with|match)([\s\S]*?):?\s*\n([\s\S]*?)(\n(but|when)[\s\S]*)?$/)) return { expected: `${x[2]}${x[3]} ${x[4].trim()}`, actual: x[1].trim() };
+      if (x = m.match(/Expected:\s*([\s\S]*?)\n\s*but:\s*([\s\S]*?)\s*$/)) return { expected: x[1].trim(), actual: x[2].trim() };
+      if (x = m.match(/Wanted but not invoked:\s*\n([\s\S]*?)\n->[^\n]*\n[\s\S]*?interactions? with this mock:\s*\n([\s\S]*?)\s*$/)) return { expected: x[1].trim(), actual: x[2].replace(/\n->[^\n]*/g, "").trim() };
+      if (x = m.match(/Wanted:\s*\n([\s\S]*?)\n->[^\n]*\nActual invocations? ha(?:ve|s) different arguments[^\n]*:\s*\n([\s\S]*?)(\n->|$)/)) return { expected: x[1].trim(), actual: x[2].trim() };
+      return null;
+    }
+    function compactMessage(message, { lines = 6, chars = 600 } = {}) {
+      if (!message) return null;
+      const ls = String(message).split("\n").map((l) => l.replace(/\s+$/, "")).filter((l) => l.trim());
+      let t = ls.slice(0, lines).join("\n");
+      if (ls.length > lines) t += `
+(${ls.length - lines} more lines)`;
+      return t.length > chars ? `${t.slice(0, chars)}\u2026` : t;
+    }
+    var framesOnly = (stack) => String(stack || "").split("\n").filter((l) => /^\s*(at |\.\.\. |Caused by:|Suppressed:)/.test(l)).join("\n");
+    module2.exports = { framesOnly, compactStack, compactLog, expectedActual, compactMessage };
+  }
+});
+
 // lib/testrun.js
 var require_testrun = __commonJS({
   "lib/testrun.js"(exports2, module2) {
@@ -29708,7 +29852,8 @@ var require_testrun = __commonJS({
         const gr = wrapper || [cfg.gradle || which("gradle", javaBin), []];
         if (!gr[0]) throw new Error("no Gradle: the repo has no gradlew, and gradle is not on PATH (set tests.gradle in config.json)");
         const task = p.module === "." ? "test" : `:${p.module.split("/").join(":")}:test`;
-        const args = [...gr[1], "--console=plain", task, ...sel.flatMap((t) => ["--tests", t.includes("#") ? t.replace("#", ".") : t.includes(".") ? t : `*${t}`])];
+        const fq = p.selectors || sel;
+        const args = [...gr[1], "--console=plain", "-q", "--warning-mode=none", task, ...fq.flatMap((t) => ["--tests", t.includes("#") ? t.replace("#", ".") : t.includes(".") ? t : `*.${t}`])];
         if (cfg.offline) args.push("--offline");
         return { cmd: gr[0], args: [...args, ...cfg.args], cwd: root };
       }
@@ -29764,7 +29909,7 @@ var require_testrun = __commonJS({
     function codeParts(root, g, stack, max = 3) {
       const byClass = new Map(g.classes.map((c) => [c.id, c.file]));
       const parts = [];
-      for (const m of String(stack || "").matchAll(/at ([\w$.]+)\.([\w$<>]+)\(([\w$]+\.(?:java|kt)):(\d+)\)/g)) {
+      for (const m of String(stack || "").matchAll(/at (?:[\w.$-]+(?:@[\w.-]+)?\/\/?)?([\w$.]+)\.([\w$<>]+)\(([\w$]+\.(?:java|kt)):(\d+)\)/g)) {
         const cls = m[1].replace(/\$.*$/, "");
         const file = byClass.get(cls) || byClass.get(m[1].replace(/\$/g, "."));
         if (!file) continue;
@@ -29774,6 +29919,13 @@ var require_testrun = __commonJS({
         if (parts.length >= max) break;
       }
       return parts;
+    }
+    function partsOf(root, g, k) {
+      if (!/org\.mockito\.exceptions\.verification/.test(k.type || "") && !/^(Wanted but not invoked|Argument\(s\) are different|Never wanted here|Too (many|few) actual invocations)/m.test(k.message || "")) return codeParts(root, g, k.stack);
+      const after = String(k.message || "").split(/\n(?=However|Actual invocations?|But (was|invoked))/).slice(1).join("\n");
+      const calls = codeParts(root, g, after.replace(/-> at /g, "	at "));
+      const tests = codeParts(root, g, String(k.stack || "").split("\n").filter((l) => /^\s*at /.test(l)).join("\n"), 6).filter((p) => p.test);
+      return [...tests.slice(0, 1), ...calls].slice(0, 3);
     }
     function snippet(root, file, line, around = 4) {
       try {
@@ -29832,7 +29984,13 @@ ${e.message}`, ms: Date.now() - started });
       const cfg = getTests();
       const fast = require_fastrun();
       const why = mode === "build" ? "mode=build" : fast.supported(root, p, files);
-      if (mode === "fast" && why) throw new Error(`no fast run here: ${why} (use mode="build")`);
+      if (mode === "fast" && why && p.tool !== "gradle") throw new Error(`no fast run here: ${why} (use mode="build")`);
+      p.selectors = tests.map((t, i) => {
+        const meth = t.split("#")[1];
+        const k = g.classes.find((x) => x.test && x.file === files[i]);
+        const fq = k ? k.id : t.split("#")[0];
+        return meth ? `${fq}#${meth}` : fq;
+      });
       const c = why ? command(root, p, tests, cfg) : null;
       const env = { ...process.env, MAVEN_OPTS: process.env.MAVEN_OPTS || "-Xmx1g", CI: "true" };
       if (cfg.javaHome) {
@@ -29857,12 +30015,7 @@ ${e.message}`, ms: Date.now() - started });
       const started = Date.now();
       let r, cases, fastInfo = null;
       if (!why) {
-        const selectors = tests.map((t, i) => {
-          const [cls, meth] = t.split("#");
-          const k = g.classes.find((x) => x.test && x.file === files[i]);
-          const fq = k ? k.id : cls;
-          return meth ? `${fq}#${meth}` : fq;
-        });
+        const selectors = p.selectors;
         log(`fast: ${selectors.join(" ")}`);
         r = await fast.run({ id, root, plan: p, cfg, env, mvn: { cmd: mavenCmd(root, cfg)[0], args: mavenCmd(root, cfg)[1] }, selectors, graph: g, log });
         cases = r.cases;
@@ -29881,8 +30034,31 @@ ${e.message}`, ms: Date.now() - started });
         }
       }
       for (const k of cases) k.name = testName(k.name);
+      const O = require_testout();
+      const pkgs = /* @__PURE__ */ new Set(), ids = /* @__PURE__ */ new Set();
+      for (const key of (() => {
+        try {
+          return W.keys(id);
+        } catch {
+          return [`work/${id}`];
+        }
+      })()) {
+        for (const c2 of require_codeindex().load(key)?.graph_().classes || []) {
+          ids.add(c2.id);
+          pkgs.add(c2.id.slice(0, c2.id.length - c2.name.length - 1));
+        }
+      }
+      const repo = (cls) => ids.has(cls) || ids.has(cls.replace(/\$/g, ".")) || pkgs.has(cls.slice(0, cls.lastIndexOf(".")));
+      for (const k of cases) {
+        if (k.status !== "failed" && k.status !== "error") continue;
+        const ea = k.expected != null || k.actual != null ? { expected: k.expected, actual: k.actual } : O.expectedActual(k.message);
+        if (ea) Object.assign(k, ea);
+        k.stackShort = O.compactStack(k.stack, repo);
+        if (k.stack && k.stack.length > 3e4) k.stack = `${k.stack.slice(0, 3e4)}
+... (cut)`;
+      }
       const compile = cases.length ? [] : compileErrors(r.out, root);
-      for (const k of cases) if (k.status === "failed" || k.status === "error") k.parts = codeParts(root, g, k.stack);
+      for (const k of cases) if (k.status === "failed" || k.status === "error") k.parts = partsOf(root, g, k);
       const counts = { tests: cases.length, passed: cases.filter((k) => k.status === "passed").length, failed: cases.filter((k) => k.status === "failed").length, errors: cases.filter((k) => k.status === "error").length, skipped: cases.filter((k) => k.status === "skipped").length };
       const parts = [];
       for (const e of compile) parts.push({ file: e.file, line: e.line, why: `compile: ${e.message}`, snippet: snippet(root, e.file, e.line) });
@@ -29896,8 +30072,8 @@ ${e.message}`, ms: Date.now() - started });
       return {
         workspace: id,
         tool: p.tool,
-        mode: why ? "build" : "fast",
-        ...why && mode !== "build" ? { buildBecause: why } : {},
+        mode: why ? p.tool === "gradle" ? "gradle" : "build" : "fast",
+        ...why && mode !== "build" && p.tool !== "gradle" ? { buildBecause: why } : {},
         ...fastInfo ? { fast: fastInfo } : {},
         written: written.length ? written.map((w) => w.path) : void 0,
         module: p.module,
@@ -29911,7 +30087,8 @@ ${e.message}`, ms: Date.now() - started });
         parts,
         hints,
         database: database ? { name: database.database, failedStatements: database.errors } : null,
-        tail: r.out.split("\n").filter((l) => l.trim()).slice(-60).join("\n")
+        tail: require_testout().compactLog(r.out),
+        history: history(id, cases)
       };
     }
     var testName = (n) => String(n || "").replace(/\s*\[(\d+)\].*$/, "[$1]").replace(/\([^)]*\)(?=\[|$)/, "");
@@ -29943,6 +30120,14 @@ ${e.message}`, ms: Date.now() - started });
       const fp = fingerprint(root), at = (/* @__PURE__ */ new Date()).toISOString();
       for (const k of cases) runs.push({ test: `${k.class}#${k.name}`, status: k.status, fp, at, mode });
       writeJson(runsFile(id), runs.slice(-2e3));
+    }
+    function history(id, cases) {
+      const runs = require_util().readJson(runsFile(id), []);
+      const want = new Set(cases.map((k) => `${k.class}#${k.name}`));
+      const out2 = {};
+      for (const r of runs) if (want.has(r.test)) (out2[r.test] ||= []).push({ status: r.status, mode: r.mode, at: r.at });
+      for (const k of Object.keys(out2)) out2[k] = out2[k].slice(-12);
+      return out2;
     }
     function proof(id) {
       const runs = require_util().readJson(runsFile(id), []);
@@ -30835,12 +31020,28 @@ var require_tools_code = __commonJS({
                   ...r.fast ? { compiled: r.fast.compiled, prepared: r.fast.prepared || void 0 } : {},
                   written: r.written,
                   command: r.command,
-                  failures: failing.slice(0, 10).map((c) => ({ test: `${c.class.split(".").pop()}#${c.name}`, status: c.status, message: (c.message || c.type || "").slice(0, 500), at: (c.parts || []).map((p) => `${p.file}:${p.line}`) })),
-                  compile: r.compile.slice(0, 10),
-                  parts: r.parts.slice(0, 8).map((p) => ({ file: p.file, line: p.line, why: p.why, code: p.snippet?.text })),
-                  database: r.database,
+                  // compact for the model: the message's first lines, expected/actual, the repo's frames; the view has the rest
+                  failures: failing.slice(0, 10).map((c) => {
+                    const O = require_testout();
+                    const cut = (v) => v == null ? void 0 : String(v).length > 300 ? `${String(v).slice(0, 300)}\u2026` : String(v);
+                    return {
+                      test: `${c.class.split(".").pop()}#${c.name}`,
+                      status: c.status,
+                      message: c.expected != null ? void 0 : O.compactMessage(c.message || c.type),
+                      expected: cut(c.expected),
+                      actual: cut(c.actual),
+                      ...c.expected == null && c.message ? {} : { type: c.type ? c.type.split(".").pop() : void 0 },
+                      stack: c.stackShort ? O.framesOnly(c.stackShort).split("\n").slice(0, 12).join("\n") || void 0 : void 0
+                    };
+                  }),
+                  ...failing.length > 10 ? { moreFailures: failing.length - 10 } : {},
+                  compile: r.compile.length ? r.compile.slice(0, 10) : void 0,
+                  parts: r.parts.slice(0, 4).map((p) => ({ file: p.file, line: p.line, why: p.why, code: p.snippet?.text.split("\n").filter((l, i, a2) => Math.abs(i - a2.findIndex((x) => x.startsWith(">"))) <= 3).join("\n") })),
+                  ...r.parts.length > 4 ? { moreParts: r.parts.length - 4 } : {},
+                  database: r.database || void 0,
                   hints: r.hints.length ? r.hints : void 0,
-                  tail: r.outcome === "passed" ? void 0 : clip(r.tail.split("\n").slice(-25).join("\n"), 3e3),
+                  // the build log only when it is the answer: no test results, or the build itself failed
+                  tail: r.outcome === "passed" || r.cases.length && !r.compile.length ? void 0 : r.tail,
                   view,
                   next: r.outcome === "passed" ? r.mode === "fast" ? `before the patch: test_run mode="build" once (the project's own build), then workspace_patch` : "workspace_patch to take the changes" : "fix the test or the code at parts (test_run files=[{path, edits}] writes and runs in one call)"
                 };

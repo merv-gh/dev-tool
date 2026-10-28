@@ -1,0 +1,27 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.acme.ledger'
+version = '1.0.0'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    implementation platform('org.springframework.boot:spring-boot-dependencies:3.3.5')
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    testImplementation platform('org.springframework.boot:spring-boot-dependencies:3.3.5')
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

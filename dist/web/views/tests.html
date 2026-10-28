@@ -1,47 +1,146 @@
-<!-- {"description": "Test run of a workspace: outcome, counts, each test with status and time, failures with message, stack and the code parts to work on (lines around the failing frames), compile errors, output tail. DATA: the test_run result { outcome, counts, cases[{class,name,status,ms,message,stack,parts}], compile, parts[{file,line,why,snippet}], command, tail }", "sample": {"workspace": "payments-service-main-1a2b", "outcome": "failed", "ms": 14200, "command": "mvn -B -ntp test -Dtest=FeeCalculatorTest", "counts": {"tests": 2, "passed": 1, "failed": 1, "errors": 0, "skipped": 0}, "cases": [{"class": "com.acme.pay.FeeCalculatorTest", "name": "roundsHalfUp", "status": "failed", "ms": 12, "message": "expected: 0.59 but was: 0.58", "stack": "org.opentest4j.AssertionFailedError: expected: 0.59 but was: 0.58\n\tat com.acme.pay.FeeCalculatorTest.roundsHalfUp(FeeCalculatorTest.java:14)"}, {"class": "com.acme.pay.FeeCalculatorTest", "name": "minimumFee", "status": "passed", "ms": 3}], "compile": [], "parts": [{"file": "src/main/java/com/acme/pay/FeeCalculator.java", "line": 18, "why": "FeeCalculatorTest.roundsHalfUp: expected: 0.59 but was: 0.58", "snippet": {"from": 16, "to": 20, "text": "   16          }\n>  18          BigDecimal fee = amount.multiply(RATE).add(FIXED).setScale(2, RoundingMode.DOWN);\n   19          return fee.max(MIN);"}}], "tail": "[INFO] BUILD FAILURE"}} -->
+<!-- {"description": "A test run, IntelliJ style: a red/green bar, a tree of classes, methods and parameterized cases with times and filters, and for the selected test its message, expected vs actual with the difference marked, the code to work on, a short stack (full on demand), its output and the results of earlier tries. DATA: the test_run result { outcome, mode, ms, counts, cases[{class,name,status,ms,message,expected,actual,stack,stackShort,output,parts}], parts, compile, history{test:[{status}]}, command, tail }", "sample": {"workspace": "payments-service-main-1a2b", "outcome": "failed", "mode": "fast", "ms": 1440, "command": "javac (1 changed) + JUnit launcher", "counts": {"tests": 4, "passed": 3, "failed": 1, "errors": 0, "skipped": 0}, "cases": [{"class": "com.acme.pay.FeeCalculatorTest", "name": "feeIsRoundedHalfUp[1]", "status": "failed", "ms": 14, "message": "\nexpected: 0.67\n but was: 0.66", "expected": "0.67", "actual": "0.66", "stackShort": "org.opentest4j.AssertionFailedError: \nexpected: 0.67\n but was: 0.66\n\tat com.acme.pay.FeeCalculatorTest.feeIsRoundedHalfUp(FeeCalculatorTest.java:15)\n\t... 70 frames: org.junit.platform, org.junit.jupiter, java.base", "stack": "org.opentest4j.AssertionFailedError: \nexpected: 0.67\n but was: 0.66\n\tat com.acme.pay.FeeCalculatorTest.feeIsRoundedHalfUp(FeeCalculatorTest.java:15)", "parts": [{"file": "src/test/java/com/acme/pay/FeeCalculatorTest.java", "line": 15, "snippet": {"from": 13, "to": 16, "text": "   13      @CsvSource({ \"12.70, 0.67\", \"1.00, 0.50\" })\n   14      void feeIsRoundedHalfUp(String amount, String fee) {\n>  15          assertThat(fees.fee(new BigDecimal(amount))).isEqualByComparingTo(fee);\n   16      }"}}]}, {"class": "com.acme.pay.FeeCalculatorTest", "name": "feeIsRoundedHalfUp[2]", "status": "passed", "ms": 1}, {"class": "com.acme.pay.FeeCalculatorTest", "name": "feeIsRoundedHalfUp[3]", "status": "passed", "ms": 1}, {"class": "com.acme.pay.PaymentControllerTest", "name": "settleCallsTheService", "status": "passed", "ms": 212, "output": "2026-10-28 INFO Started PaymentControllerTest in 1.2 seconds"}], "parts": [], "compile": [], "history": {"com.acme.pay.FeeCalculatorTest#feeIsRoundedHalfUp[1]": [{"status": "failed"}, {"status": "failed"}]}, "tail": ""}} -->
 <style>
-  .tr { display: grid; gap: 10px; }
+  .tr { display: grid; gap: 8px; }
   .tr-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .tr-head b { font-size: 15px; }
-  .big { font-weight: 700; padding: 3px 10px; border-radius: 999px; font-size: 13px; }
-  .big.passed { background: color-mix(in srgb, var(--good) 18%, transparent); color: var(--good); }
-  .big.bad { background: color-mix(in srgb, var(--bad) 16%, transparent); color: var(--bad); }
-  .cmd { font: 12px ui-monospace, Menlo, monospace; color: var(--muted); word-break: break-all; }
-  .case { display: flex; gap: 8px; align-items: baseline; padding: 5px 10px; border-top: 1px solid var(--line); font-size: 13px; }
-  .case:first-child { border-top: 0; }
-  .case .st { width: 16px; text-align: center; font-weight: 700; }
-  .case .passed { color: var(--good); } .case .failed, .case .error { color: var(--bad); } .case .skipped { color: var(--muted); }
-  .case .nm { flex: 1; } .case .ms { color: var(--muted); font-size: 12px; }
-  .msg { margin: 2px 10px 8px 34px; font: 12px/1.5 ui-monospace, Menlo, monospace; color: var(--bad); white-space: pre-wrap; word-break: break-word; }
-  details.stack { margin: 0 10px 8px 34px; } details.stack pre { max-height: 240px; }
-  .part h4 { margin: 0 0 4px; font-size: 13px; } .part .why { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+  .pill { font-weight: 700; padding: 2px 10px; border-radius: 999px; font-size: 12.5px; }
+  .pill.ok { background: color-mix(in srgb, var(--good) 18%, transparent); color: var(--good); }
+  .pill.bad { background: color-mix(in srgb, var(--bad) 16%, transparent); color: var(--bad); }
+  .bar { height: 6px; border-radius: 3px; display: flex; overflow: hidden; background: var(--line); }
+  .bar i { display: block; height: 100%; }
+  .bar .p { background: var(--good); } .bar .f { background: var(--bad); } .bar .s { background: var(--muted); }
+  .filt { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .filt button.on { background: var(--accent); color: #fff; }
+  .split { display: grid; grid-template-columns: minmax(220px, 34%) minmax(0, 1fr); gap: 10px; align-items: start; }
+  @media (max-width: 720px) { .split { grid-template-columns: 1fr; } }
+  .tree { font-size: 13px; padding: 4px 0; max-height: 640px; overflow: auto; }
+  .row { display: flex; gap: 6px; align-items: baseline; padding: 3px 10px; cursor: pointer; white-space: nowrap; }
+  .row:hover { background: var(--soft); } .row.sel { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+  .row .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; } .row .ms { color: var(--muted); font-size: 11.5px; }
+  .row.cls { font-weight: 600; } .row.m { padding-left: 24px; } .row.inv { padding-left: 40px; }
+  .ic { width: 14px; text-align: center; font-weight: 700; }
+  .passed { color: var(--good); } .failed, .error { color: var(--bad); } .skipped { color: var(--muted); }
+  .det h3 { margin: 0 0 6px; font-size: 14px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .msg { font: 12.5px/1.5 ui-monospace, Menlo, monospace; color: var(--bad); white-space: pre-wrap; word-break: break-word; margin: 6px 0; }
+  .ea { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; }
+  @media (max-width: 520px) { .ea { grid-template-columns: 1fr; } }
+  .ea > div { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .ea h4 { margin: 0; padding: 4px 8px; font-size: 12px; background: var(--soft); border-bottom: 1px solid var(--line); }
+  .ea pre { margin: 0; padding: 6px 8px; font: 12.5px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; word-break: break-word; max-height: 300px; overflow: auto; }
+  .ea .d-e { background: color-mix(in srgb, var(--good) 28%, transparent); } .ea .d-a { background: color-mix(in srgb, var(--bad) 26%, transparent); }
+  .ln-add { background: color-mix(in srgb, var(--good) 15%, transparent); display: block; } .ln-del { background: color-mix(in srgb, var(--bad) 13%, transparent); display: block; }
   pre.src .hl { background: color-mix(in srgb, var(--bad) 14%, transparent); display: inline-block; width: 100%; }
+  pre.stack { font: 12px/1.5 ui-monospace, Menlo, monospace; background: var(--soft); padding: 8px 10px; border-radius: 6px; overflow: auto; max-height: 360px; margin: 0; white-space: pre; }
+  pre.stack .own { font-weight: 700; color: var(--fg); } pre.stack .fold { color: var(--muted); }
+  .hist { display: inline-flex; gap: 3px; align-items: center; } .hist i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .hist .passed { background: var(--good); } .hist .failed, .hist .error { background: var(--bad); } .hist .skipped { background: var(--muted); }
+  .sect { margin-top: 10px; } .sect > summary, .sect > b { font-size: 12.5px; color: var(--muted); cursor: pointer; }
+  .tools { display: flex; gap: 6px; margin: 4px 0; }
 </style>
 <div class="tr">
-  <div class="tr-head"><b data-title></b><span id="outcome"></span><span id="counts" class="muted"></span><span class="spacer"></span><span class="muted" id="ms"></span></div>
-  <div class="cmd" id="cmd"></div>
-  <div class="card" id="parts-card"><h3 style="margin:0 0 8px;font-size:14px">Code to work on</h3><div id="parts"></div></div>
-  <div class="card" style="padding:0" id="cases"></div>
-  <details class="card"><summary>Build output (last lines)</summary><pre class="src" id="tail"></pre></details>
+  <div class="tr-head"><b data-title></b><span id="pill"></span><span id="sum" class="muted"></span><span class="spacer" style="flex:1"></span><span class="chip" id="mode"></span><span class="muted" id="ms"></span></div>
+  <div class="bar" id="bar"></div>
+  <div class="filt" id="filt"></div>
+  <div id="compile"></div>
+  <div class="split">
+    <div class="card tree" id="tree" style="padding:0"></div>
+    <div class="card det" id="det"></div>
+  </div>
+  <details class="card sect" id="log-card"><summary>Build output (compact)</summary><pre class="stack" id="tail"></pre></details>
+  <div class="muted" id="cmd" style="font: 11.5px ui-monospace, Menlo, monospace; word-break: break-all"></div>
 </div>
 <script>
-  const D = DATA, icon = { passed: '✓', failed: '✗', error: '!', skipped: '–' };
+  const D = DATA, cases = D.cases || [], c = D.counts || {};
+  const icon = { passed: '✓', failed: '✗', error: '!', skipped: '⊘' };
+  const bad = (k) => k.status === 'failed' || k.status === 'error';
   dt.title(META.title || 'Test run');
-  const bad = D.outcome !== 'passed';
-  dt.$('#outcome').innerHTML = `<span class="big ${bad ? 'bad' : 'passed'}">${dt.esc(D.outcome)}</span>`;
-  const c = D.counts || {};
-  dt.$('#counts').textContent = `${c.tests || 0} tests: ${c.passed || 0} passed${c.failed ? `, ${c.failed} failed` : ''}${c.errors ? `, ${c.errors} errors` : ''}${c.skipped ? `, ${c.skipped} skipped` : ''}`;
-  dt.$('#ms').textContent = D.ms ? `${(D.ms / 1000).toFixed(1)} s` : '';
+  dt.$('#pill').innerHTML = `<span class="pill ${D.outcome === 'passed' ? 'ok' : 'bad'}">${dt.esc(D.outcome === 'passed' ? 'Tests passed' : D.outcome === 'compile-error' ? 'Compilation failed' : D.outcome === 'failed' ? 'Tests failed' : D.outcome)}</span>`;
+  dt.$('#sum').textContent = `${c.passed || 0} of ${c.tests || 0} passed${c.failed ? ` · ${c.failed} failed` : ''}${c.errors ? ` · ${c.errors} errors` : ''}${c.skipped ? ` · ${c.skipped} skipped` : ''}`;
+  dt.$('#mode').textContent = D.mode === 'fast' ? 'fast run' : D.mode === 'gradle' ? 'Gradle' : 'full build';
+  dt.$('#ms').textContent = D.ms != null ? `${(D.ms / 1000).toFixed(1)} s` : '';
   dt.$('#cmd').textContent = D.command || '';
-  const src = (s) => !s ? '' : `<pre class="src">${s.text.split('\n').map(l => l.startsWith('>') ? `<span class="hl">${dt.esc(l)}</span>` : dt.esc(l)).join('\n')}</pre>`;
-  const parts = D.parts || [];
-  dt.$('#parts').innerHTML = parts.length ? parts.map(p => `<div class="part" style="margin-bottom:10px"><h4>${dt.esc(p.file)}:${p.line}${p.test ? ' <span class="chip">test</span>' : ''}</h4><div class="why">${dt.esc(p.why || '')}</div>${src(p.snippet)}</div>`).join('') : '<span class="muted">Nothing failed.</span>';
-  if (!parts.length && !bad) dt.$('#parts-card').style.display = 'none';
-  const cases = (D.cases || []).slice().sort((a, b) => (a.status === 'passed') - (b.status === 'passed'));
-  dt.$('#cases').innerHTML = cases.map(k => `<div class="case"><span class="st ${k.status}">${icon[k.status] || '?'}</span><span class="nm">${dt.esc(k.class.split('.').pop())}.<b>${dt.esc(k.name)}</b></span><span class="ms">${k.ms} ms</span></div>`
-    + (k.message ? `<div class="msg">${dt.esc(k.message.slice(0, 2000))}</div>` : '')
-    + (k.stack ? `<details class="stack"><summary class="muted">stack</summary><pre class="src">${dt.esc(k.stack.slice(0, 8000))}</pre></details>` : '')).join('')
-    || (D.compile || []).map(e => `<div class="case"><span class="st error">!</span><span class="nm">${dt.esc(e.file)}:${e.line} ${dt.esc(e.message)}</span></div>`).join('')
-    || '<div class="case muted">No test reports (see the build output).</div>';
+  const tot = Math.max(1, cases.length);
+  dt.$('#bar').innerHTML = `<i class="p" style="width:${(c.passed || 0) / tot * 100}%"></i><i class="f" style="width:${((c.failed || 0) + (c.errors || 0)) / tot * 100}%"></i><i class="s" style="width:${(c.skipped || 0) / tot * 100}%"></i>`;
+  if (!cases.length) dt.$('#bar').innerHTML = `<i class="f" style="width:100%"></i>`;
   dt.$('#tail').textContent = D.tail || '';
+  if (!D.tail) dt.$('#log-card').style.display = 'none'; else if (!cases.length) dt.$('#log-card').open = true;
+
+  // compile errors first: nothing ran
+  if ((D.compile || []).length) {
+    dt.$('#compile').innerHTML = `<div class="card"><b class="failed">Compilation failed</b>${(D.parts || []).filter(p => /^compile:/.test(p.why)).map(p => `<div style="margin-top:8px"><div style="font: 12.5px ui-monospace, Menlo, monospace">${dt.esc(p.file)}:${p.line}</div><div class="msg">${dt.esc(p.why.replace(/^compile: /, ''))}</div>${src(p.snippet)}</div>`).join('')}</div>`;
+  }
+
+  // tree: class -> method -> invocations ("name[1]")
+  const tree = new Map();
+  for (const k of cases) {
+    const cls = k.class, base = k.name.replace(/\[\d+\]$/, '');
+    if (!tree.has(cls)) tree.set(cls, new Map());
+    const ms = tree.get(cls);
+    if (!ms.has(base)) ms.set(base, []);
+    ms.get(base).push(k);
+  }
+  const worst = (ks) => (ks.some(bad) ? (ks.some(k => k.status === 'error') && !ks.some(k => k.status === 'failed') ? 'error' : 'failed') : ks.every(k => k.status === 'skipped') ? 'skipped' : 'passed');
+  const sum = (ks) => ks.reduce((n, k) => n + (k.ms || 0), 0);
+  let filter = 'all', selected = cases.find(bad) || cases[0];
+  const show = (k) => filter === 'all' || (filter === 'failed' ? bad(k) : k.status === filter);
+  function drawTree() {
+    const rows = [];
+    for (const [cls, ms] of tree) {
+      const all = [...ms.values()].flat().filter(show);
+      if (!all.length) continue;
+      rows.push(`<div class="row cls"><span class="ic ${worst(all)}">${icon[worst(all)]}</span><span class="nm" title="${dt.esc(cls)}">${dt.esc(cls.split('.').pop())}</span><span class="ms">${all.filter(k => k.status === 'passed').length}/${all.length} · ${sum(all)} ms</span></div>`);
+      for (const [m, ks] of ms) {
+        const vis = ks.filter(show);
+        if (!vis.length) continue;
+        const single = ks.length === 1 && !/\[\d+\]$/.test(ks[0].name);
+        rows.push(`<div class="row m ${single && ks[0] === selected ? 'sel' : ''}" data-i="${single ? cases.indexOf(ks[0]) : ''}"><span class="ic ${worst(vis)}">${icon[worst(vis)]}</span><span class="nm">${dt.esc(m)}</span><span class="ms">${sum(vis)} ms</span></div>`);
+        if (!single) for (const k of vis) rows.push(`<div class="row inv ${k === selected ? 'sel' : ''}" data-i="${cases.indexOf(k)}"><span class="ic ${k.status}">${icon[k.status]}</span><span class="nm">${dt.esc(k.name.match(/\[\d+\]$/)?.[0] || k.name)}</span><span class="ms">${k.ms} ms</span></div>`);
+      }
+    }
+    dt.$('#tree').innerHTML = rows.join('') || '<div class="row muted">No tests ran.</div>';
+  }
+  function src(s) { return !s ? '' : `<pre class="src">${s.text.split('\n').map(l => l.startsWith('>') ? `<span class="hl">${dt.esc(l)}</span>` : dt.esc(l)).join('\n')}</pre>`; }
+  // expected vs actual: one line -> the differing middle marked; several lines -> a line diff
+  function ea(k) {
+    if (k.expected == null && k.actual == null) return '';
+    const e = String(k.expected ?? ''), a = String(k.actual ?? '');
+    if (!e.includes('\n') && !a.includes('\n')) {
+      let p = 0; while (p < e.length && p < a.length && e[p] === a[p]) p++;
+      let s = 0; while (s < e.length - p && s < a.length - p && e[e.length - 1 - s] === a[a.length - 1 - s]) s++;
+      const mark = (x, cls) => `${dt.esc(x.slice(0, p))}<span class="${cls}">${dt.esc(x.slice(p, x.length - s))}</span>${dt.esc(x.slice(x.length - s))}`;
+      return `<div class="ea"><div><h4>Expected</h4><pre>${mark(e, 'd-e')}</pre></div><div><h4>Actual</h4><pre>${mark(a, 'd-a')}</pre></div></div>`;
+    }
+    const d = dt.diffLines(e, a);
+    return `<div class="ea" style="grid-template-columns:1fr"><div><h4>Expected vs actual (lines that differ)</h4><pre>${d.ops.map(o => `<span class="${o.op === '-' ? 'ln-add' : o.op === '+' ? 'ln-del' : ''}">${o.op === '-' ? 'expected' : o.op === '+' ? 'actual  ' : '        '} ${dt.esc(o.text)}</span>`).join('')}</pre></div></div>`;
+  }
+  function stackHtml(t) {
+    return dt.esc(t || '').split('\n').map(l => (/^\s*\.\.\. \d+ (frames?|lines|more)/.test(l) ? `<span class="fold">${l}</span>` : /^\s*at /.test(l) && !/^\s*at (org\.(junit|springframework|mockito|assertj|opentest4j|apache)|java\.|jdk\.|sun\.)/.test(l) ? `<span class="own">${l}</span>` : l)).join('\n');
+  }
+  function drawDet() {
+    const k = selected;
+    if (!k) { dt.$('#det').innerHTML = '<span class="muted">No tests ran.</span>'; return; }
+    const hist = (D.history || {})[`${k.class}#${k.name}`] || [];
+    const parts = (k.parts || []);
+    let full = false;
+    const body = [
+      `<h3><span class="${k.status}">${icon[k.status]}</span>${dt.esc(k.class.split('.').pop())}.${dt.esc(k.name)}<span class="muted" style="font-weight:400;font-size:12px">${k.ms} ms</span>${hist.length > 1 ? `<span class="hist" title="this test in the tries of this workspace, oldest first">${hist.map(h => `<i class="${h.status}" title="${h.status} (${h.mode})"></i>`).join('')}</span>` : ''}</h3>`,
+      k.status === 'passed' ? '<div class="passed">Passed</div>' : '',
+      k.expected == null && k.message ? `<div class="msg">${dt.esc(k.message.trim().slice(0, 4000))}</div>` : (k.message && bad(k) ? `<div class="msg">${dt.esc(k.message.trim().split('\n')[0].slice(0, 300))}</div>` : ''),
+      ea(k),
+      parts.length ? `<div class="sect"><b>Code to work on</b>${parts.map(p => `<div style="margin-top:4px;font: 12px ui-monospace, Menlo, monospace">${dt.esc(p.file)}:${p.line}${p.test ? ' <span class="chip">test</span>' : ''}</div>${src(p.snippet)}`).join('')}</div>` : '',
+      k.stack ? `<div class="sect"><div class="tools"><b>Stack</b><span style="flex:1"></span>${k.stackShort && k.stackShort !== k.stack ? '<button class="small" id="full">Full stack</button>' : ''}<button class="small" id="copy">Copy</button></div><pre class="stack" id="stack">${stackHtml(k.stackShort || k.stack)}</pre></div>` : '',
+      k.output ? `<details class="sect"><summary>Output (${k.output.split('\n').length} lines)</summary><pre class="stack">${dt.esc(k.output.split('\n').slice(-300).join('\n'))}</pre></details>` : '',
+    ];
+    dt.$('#det').innerHTML = body.join('');
+    const fb = dt.$('#full');
+    if (fb) fb.onclick = () => { full = !full; dt.$('#stack').innerHTML = stackHtml(full ? k.stack : k.stackShort); fb.textContent = full ? 'Short stack' : 'Full stack'; };
+    const cb = dt.$('#copy');
+    if (cb) cb.onclick = (e) => dt.copy(k.stack, e.target);
+  }
+  const n = (f) => cases.filter(k => (f === 'failed' ? bad(k) : k.status === f)).length;
+  dt.$('#filt').innerHTML = [['all', `All ${cases.length}`], ['failed', `Failed ${n('failed')}`], ['passed', `Passed ${n('passed')}`], ...(n('skipped') ? [['skipped', `Skipped ${n('skipped')}`]] : [])]
+    .map(([f, l]) => `<button class="small ${f === 'all' ? 'on' : ''}" data-f="${f}">${l}</button>`).join('');
+  dt.$('#filt').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; filter = b.dataset.f; for (const x of dt.$('#filt').children) x.classList.toggle('on', x === b); drawTree(); };
+  dt.$('#tree').onclick = (e) => { const r = e.target.closest('.row[data-i]'); if (!r || r.dataset.i === '') return; selected = cases[Number(r.dataset.i)]; drawTree(); drawDet(); };
+  drawTree(); drawDet();
 </script>
