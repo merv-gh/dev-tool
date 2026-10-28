@@ -48,7 +48,7 @@ test('capture adapter executes bounded instrumentation and drains asynchronous b
   handlers.requestfinished(request(origin+'/api/image','image/png',100,'must-not-be-read'));
   const read=vm.runInNewContext('('+C().captureRead+')',{setTimeout,Promise});const batch=await read(page);
   assert.equal(bodyReads,1);assert.equal(batch.entries.length,4);assert.equal(batch.entries[0].response.body,'{"id":42,"status":"paid"}');assert.equal(batch.entries[1].response.body.kind,'unavailable');assert.equal(batch.entries[2].response.body.kind,'unavailable');assert.equal(batch.entries[3].response.body.kind,'unsupported');assert.equal((await read(page)).entries.length,0);
-  for(let i=0;i<105;i++)handlers.requestfinished(request(origin+'/api/orders/'+i,'application/json',2,'{}'));
+  for(let i=0;i<105;i++){handlers.requestfinished(request(origin+'/api/orders/'+i,'application/json',2,'{}'));await Promise.allSettled([...page.__dtApiCapture.pending]);}
   await Promise.allSettled([...page.__dtApiCapture.pending]);const overflow=await read(page);assert.equal(overflow.entries.length,100);assert.equal(overflow.dropped,5);assert.equal(overflow.pending,0);
 });
 test('reviewed text and form request contracts remain reusable without importing unknown raw text',()=>{
@@ -88,4 +88,60 @@ test('current native MCP adapter uses detail bodies and maps ref from advertised
   await new Promise(r=>native.listen(0,'127.0.0.1',r));const prior=process.env.DT_BROWSER_MCP;process.env.DT_BROWSER_MCP=`http://127.0.0.1:${native.address().port}/mcp`;let session;
   try{const opened=await C().browserOpen({url:origin+'/orders'});session=opened.session;assert.equal(opened.adapter,'native-network');assert.equal(opened.mode,'exchanges');const schema=await C().browserAction({session,action:'click',describe:true});assert.deepEqual(schema.inputSchema.required,['target']);await C().browserAction({session,action:'click',args:{ref:'e2'}});assert.equal(clicked,'e2');const capture=await C().browserCapture({session});assert.equal(capture.count,1);assert.equal(capture.exchanges[0].response.body.kind,'json');assert.equal(capture.exchanges[0].response.body.value.status,'paid');assert.equal((await C().browserCapture({session})).count,0);}
   finally{if(session)await C().browserClose({session});if(prior===undefined)delete process.env.DT_BROWSER_MCP;else process.env.DT_BROWSER_MCP=prior;await new Promise(r=>native.close(r));}
+});
+
+test('saved no-body GET/HEAD remain executable and prepared behavior survives without repeated fields',async()=>{
+  for(const method of ['GET','HEAD']){
+    const e=C().importExchanges([{request:{method,url:origin+'/api/orders/42',body:{kind:'none'}},response:{status:200}}]).exchanges[0];
+    const p=C().prepare({exchange:e.id,assertions:[{name:'status persisted from prepare',path:'status',op:'equal',value:200}],capture:{statusCode:'status'},before:'args.headers["x-prepared"]="kept";',after:'test("prepared hook",()=>expect(result.status).toBe(200));',finally:'log("prepared cleanup");'});
+    fs.unlinkSync(path.join(C().DIR,e.id+'.json'));
+    const saved=C().save({id:'review/'+method.toLowerCase(),prepared:JSON.parse(JSON.stringify(p))});
+    const def=require('../lib/scripts').get(saved.id);assert.equal(Object.hasOwn(def.steps[0],'body'),false);assert.equal(def.provenance.exchange,e.id);assert.deepEqual(def.provenance.route,e.route);
+    const result=await require('../lib/scripts').run(saved.id);assert.equal(result.ok,true,JSON.stringify(result));assert.equal(result.tests.passed,2);assert.equal(result.results.statusCode,200);assert.ok(result.logs.some(l=>l.msg==='prepared cleanup'));assert.equal(hits.at(-1).headers['x-prepared'],'kept');
+  }
+  const p=C().prepare({request:{method:'GET',url:origin+'/api/orders',body:{kind:'none'}},assertions:[{name:'independent failure',path:'status',op:'equal',value:418}]});
+  C().save({id:'review/failed-assertion',prepared:p});assert.equal((await require('../lib/scripts').run('review/failed-assertion')).ok,false);
+});
+
+test('header bindings are case insensitive and malformed or duplicate headers fail before sending',async()=>{
+  const p=C().prepare({request:{method:'GET',url:origin+'/api/orders',headers:{Authorization:'Bearer captured-old','X-Count':'1'},body:{kind:'none'}},bindings:{auth:{in:'header',key:'AUTHORIZATION',secret:true}}});
+  assert.deepEqual(Object.keys(p.request.headers).sort(),['authorization','x-count']);assert.equal(p.request.headers.authorization,'{{auth}}');
+  await C().replay({prepared:p,params:{auth:'Bearer changed-runtime'}});assert.equal(hits.at(-1).headers.authorization,'Bearer changed-runtime');
+  for(const headers of [{'X-Foo':'1','x-foo':'2'},{'bad header':'x'},{'x-foo':'a\r\nb'},{'x-foo':42}])assert.throws(()=>C().prepare({request:{method:'GET',url:origin+'/api/orders',headers,body:{kind:'none'}}}),/header/);
+});
+
+test('known captured secrets are scrubbed from differently named echoes without destroying placeholders',()=>{
+  const e=C().normalize({request:{method:'POST',url:origin+'/api/orders?token=QUERY-SECRET-4E',headers:{authorization:'Bearer HEADER-SECRET-4E',cookie:'sid=COOKIE-SECRET-4E'},body:{password:'BODY-SECRET-4E'}},response:{status:200,body:{message:'echo HEADER-SECRET-4E QUERY-SECRET-4E BODY-SECRET-4E COOKIE-SECRET-4E'}}});
+  assert.doesNotMatch(JSON.stringify(e),/(HEADER|QUERY|BODY|COOKIE)-SECRET-4E/);assert.match(e.request.headers.authorization,/\{\{authorization\}\}/);assert.equal(e.request.body.value.password,'{{password}}');assert.ok(e.params.password.required);
+  const form=C().normalize({request:{method:'POST',url:origin+'/api/orders',postData:{mimeType:'application/x-www-form-urlencoded',text:'token=first-private&token=second-private&sku=A&sku=B'}}});
+  assert.equal(new URLSearchParams(form.request.body.value).getAll('token').length,2);assert.equal(Object.keys(form.params).length,2);
+  assert.throws(()=>C().prepare({request:{method:'GET',url:origin+'/api/orders',headers:{},body:{kind:'none'}},bindings:{constructor:{in:'header',key:'x-value'}}}),/invalid parameter/);
+});
+
+test('unavailable and unsupported adapter bodies remain explicit gaps in stored evidence',()=>{
+  for(const kind of ['unavailable','unsupported','binary']){
+    const e=C().normalize({request:{url:origin+'/api/orders'},response:{status:200,body:{kind,reason:'Adapter omitted body',bytes:'not-a-number'}}});
+    assert.ok(e.gaps.some(g=>g.location==='response/body'));assert.equal(e.response.body.bytes,undefined);
+  }
+});
+
+test('capture errors and response concurrency use the same finite buffer and compressed bodies are omitted',async()=>{
+  const vm=require('vm'),handlers={},page={on:(event,fn)=>handlers[event]=fn};
+  await vm.runInNewContext('('+C().captureInstall+')',{setTimeout,Promise})(page);
+  const read=vm.runInNewContext('('+C().captureRead+')',{setTimeout,Promise});
+  const failed=()=>({method:()=> 'GET',url:()=>origin+'/api/failure',response:async()=>{throw new Error('raw credential must not enter buffer');}});
+  for(let i=0;i<105;i++){handlers.requestfinished(failed());await Promise.allSettled([...page.__dtApiCapture.pending]);}
+  const errors=await read(page);assert.equal(errors.entries.length,100);assert.equal(errors.dropped,5);assert.ok(page.__dtApiCapture.bytes<=3*1048576);assert.doesNotMatch(JSON.stringify(errors),/raw credential/);
+  let release;const paused=new Promise(r=>release=r);
+  for(let i=0;i<1000;i++)handlers.requestfinished({...failed(),response:async()=>{await paused;throw new Error('late failure');}});
+  assert.equal(page.__dtApiCapture.pending.size,16);release();await Promise.allSettled([...page.__dtApiCapture.pending]);
+  const burst=await read(page);assert.equal(burst.entries.length,16);assert.equal(burst.dropped,984);assert.equal(burst.pending,0);
+  let bodyRead=false;
+  handlers.requestfinished({method:()=> 'GET',url:()=>origin+'/api/compressed',postData:()=>null,allHeaders:async()=>({}),timing:()=>({responseEnd:2}),response:async()=>({allHeaders:async()=>({'content-type':'application/json','content-length':'20','content-encoding':'gzip'}),status:()=>200,statusText:()=>'OK',text:async()=>{bodyRead=true;return 'x'.repeat(9000000);}})});
+  await Promise.allSettled([...page.__dtApiCapture.pending]);const compressed=await read(page);assert.equal(bodyRead,false);assert.equal(compressed.entries[0].response.body.kind,'unavailable');
+});
+
+test('subsequent browser navigation enforces the same HTTP and inline credential boundary as open',async()=>{
+  const opened=await C().browserOpen({url:origin+'/orders'});
+  try{for(const url of ['file:///etc/passwd','javascript:alert(1)','https://user:password@example.test'])await assert.rejects(C().browserAction({session:opened.session,action:'navigate',args:{url}}),/http\(s\)/);}finally{await C().browserClose({session:opened.session});}
 });
