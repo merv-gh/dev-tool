@@ -36,7 +36,7 @@
   "graph": { "url": "${GRAPH_URL:-http://graph:8000}" },
 
   "tools": {
-    "profile": "compact",
+    "profile": "lean-find",
     "profiles": {},
     "backends": {},
     "enable": ["all"],

@@ -53,3 +53,10 @@ The next distinct implementation units are below; each has an acceptance target 
 Implement each adapter behind the existing stage/tool contract, expose its capability and preflight separately, and add a real positive/negative integration test before upgrading a proof or completeness label. The platform can be useful across architectures while reporting unsupported parts honestly.
 
 With the repository's default enabled sources, the measured initial catalog is 159 tools / 114,229 JSON characters versus 11 tools / 6,991 characters for `compact` (about 94% less schema text). Counts vary with configured systems/plugins and future tools. The `api` profile exposes the combined browser, request and collection workflow; compact discovery can still find and execute those same enabled operations.
+
+
+## Independent developer-challenge follow-up
+
+The subsequent [28-scenario verification](developer-scenarios.md) includes eight independently authored/graded cases and the four exact column/state/refactor/dev-test questions. All eight fixes/test submissions pass acceptance; native tool-only execution is proven for the Java case, while seven Node cases expose a test-runner gap. The additional enrichment refactor has native local/source-JDBC differential evidence, with remote-dev execution still unsupported in the evaluated setup.
+
+The new [production readiness plan](production-readiness-plan.md) records reproducible impact identity/cache/coverage gaps, column read/write lineage, mixed ES/Kafka/PG recreation, conflicting test job identity and discovery limits. Two text-search defects found by the solver were repaired separately. The latest rebuilt suite passes 376/420 tests with zero failures and 44 opt-in skips; those results do not override the failing readiness gates. New bundled Open WebUI connections start with five `lean-find` definitions, while configured profiles remain selectable. No actual 27B model was evaluated.

@@ -285,6 +285,7 @@ var require_config = __commonJS({
         custom: [].concat(t.custom || []),
         profile: process.env.DT_TOOL_PROFILE || t.profile || "all",
         profiles: t.profiles && typeof t.profiles === "object" ? t.profiles : {},
+        discoveryRanker: t.discoveryRanker === "bm25" ? "bm25" : "legacy",
         backends: t.backends && typeof t.backends === "object" ? t.backends : {},
         maxInputBytes: Number.isInteger(t.maxInputBytes) && t.maxInputBytes > 0 && t.maxInputBytes <= 50 * 1024 * 1024 ? t.maxInputBytes : 2 * 1024 * 1024
       };
@@ -5258,7 +5259,7 @@ var require_codeindex = __commonJS({
     var { CACHE: CACHE2, readJson, writeJson, fileStamp } = require_util();
     var DIR = path2.join(CACHE2, "code");
     var SKIP_DIRS = /* @__PURE__ */ new Set([".git", "target", "build", "node_modules", ".gradle", ".idea", "out", ".mvn", "dist", ".next", "coverage", "__pycache__"]);
-    var TEXT = /\.(java|kt|kts|groovy|scala|ya?ml|properties|xml|sql|gradle|toml|json|md|txt|conf|ts|js|tsx|jsx|py|go|sh|html|css|proto|avsc|graphql|feature|csv|env|ftl|vm|mustache|j2|tf)$|(^|\/)(Dockerfile|Jenkinsfile|Makefile|mvnw|gradlew)$/i;
+    var TEXT = /\.(java|kt|kts|groovy|scala|ya?ml|properties|xml|sql|gradle|toml|json|md|txt|conf|[cm]?ts|[cm]?js|tsx|jsx|py|go|sh|html|css|proto|avsc|graphql|feature|csv|env|ftl|vm|mustache|j2|tf)$|(^|\/)(Dockerfile|Jenkinsfile|Makefile|mvnw|gradlew)$/i;
     var MAX_FILE = 1 << 20;
     var keyDir = (key) => path2.join(DIR, ...key.split("/").map((s) => s.replace(/[^\w.@-]/g, "_")));
     function walk(root) {
@@ -5617,7 +5618,25 @@ var require_codeindex = __commonJS({
       }
       return out2;
     }
-    var globRe = (g) => new RegExp("(^|/)" + g.split(",").map((x) => x.trim()).filter(Boolean).map((x) => x.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*\*\//g, "(.*/)?").replace(/\*\*/g, ".*").replace(/\*/g, "[^/]*").replace(/\?/g, "[^/]")).join("|") + "$");
+    function globRe(glob) {
+      const patterns = String(glob).split(",").map((x) => x.trim()).filter(Boolean).map((pattern) => {
+        let out2 = "";
+        for (let i = 0; i < pattern.length; i++) {
+          const c = pattern[i];
+          if (c === "*" && pattern[i + 1] === "*") {
+            i++;
+            if (pattern[i + 1] === "/") {
+              out2 += "(?:.*/)?";
+              i++;
+            } else out2 += ".*";
+          } else if (c === "*") out2 += "[^/]*";
+          else if (c === "?") out2 += "[^/]";
+          else out2 += c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        }
+        return out2;
+      });
+      return new RegExp("(?:^|/)(?:" + (patterns.join("|") || "(?!)") + ")$");
+    }
     function grep(keys, pattern, { regex = false, ignoreCase = true, glob, context = 0, limit = 200, perFile = 20, tests = true } = {}) {
       if (!pattern) throw new Error("pattern is empty");
       const flags = ignoreCase ? "i" : "";
@@ -39728,8 +39747,11 @@ var require_contracts = __commonJS({
 var require_tool_profiles = __commonJS({
   "lib/tool-profiles.js"(exports2, module2) {
     var CORE = ["find", "tool_search", "tool_describe", "tool_execute", "tool_profiles", "tool_contracts", "knowledge_graph", "knowledge_search", "job_cancel", "call_history", "doctor"];
+    var DISCOVERY = ["tool_search", "tool_describe", "tool_execute", "tool_profiles"];
     var PROFILES = {
       compact: { description: "Small starting set; discover an exact tool then execute it with validated arguments.", names: CORE },
+      lean: { description: "Four discovery tools. Search the catalog capability, describe it, then execute; expand profiles on request.", includeCore: false, names: DISCOVERY },
+      "lean-find": { description: "Five tools: cached catalog search plus discovery; expand capabilities on request.", includeCore: false, names: [...DISCOVERY, "find"] },
       investigate: { description: "Find services and data, inspect evidence, follow logs and visualize dependencies.", names: [...CORE, "passport", "passports", "pg_query", "pg_usage", "es_search", "kafka_last", "logs_search", "logs_trace", "health", "overview", "impact", "code_search", "feature", "experiment_list", "experiment_run"] },
       testing: { description: "Build reproducible fixtures, scenario contracts, collections and isolated test runs.", prefixes: ["fixture_", "scenario_", "collection_", "testdb_", "test_"], names: [...CORE, "workspace_open", "workspace_read", "workspace_write", "workspace_patch", "script_list", "script_get", "script_run"] },
       develop: { description: "Inspect code, make a workspace change, compile and verify its behavior.", prefixes: ["workspace_", "code_", "test_"], names: [...CORE, "passport", "repo_fetch", "impact", "experiment_save", "experiment_run", "experiment_compare"] },
@@ -39744,13 +39766,65 @@ var require_tool_profiles = __commonJS({
       const profile = definitions()[name];
       if (!profile) throw Object.assign(new Error(`Unknown tool profile ${name}`), { code: "DT_PROFILE_UNKNOWN" });
       if (name === "all") return tools;
-      const names = /* @__PURE__ */ new Set([...CORE, ...profile.names || []]);
+      const names = /* @__PURE__ */ new Set([...profile.includeCore === false ? [] : CORE, ...profile.names || []]);
       return tools.filter((t) => names.has(t.name) || (profile.groups || []).includes(t.group) || (profile.prefixes || []).some((p) => t.name.startsWith(p)));
     }
     function list(tools) {
       return Object.entries(definitions()).map(([name, x]) => ({ name, description: x.description || "", tools: select(tools, name).map((t) => t.name), count: select(tools, name).length }));
     }
     module2.exports = { select, list };
+  }
+});
+
+// lib/tool-search.js
+var require_tool_search = __commonJS({
+  "lib/tool-search.js"(exports2, module2) {
+    var STOP = new Set("a an and are as at be before but by can do does every for from get how i if in into is it its me my of on or our show that the their then these this through to use was we what when where which who why with without you your".split(" "));
+    var cache = /* @__PURE__ */ new Map();
+    function terms(text) {
+      return String(text || "").toLowerCase().match(/[\p{L}\p{N}]+/gu)?.filter((w) => !STOP.has(w)).map((w) => w.length > 4 && w.endsWith("ies") ? w.slice(0, -3) + "y" : w.length > 4 && w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w) || [];
+    }
+    function legacyRank(tools, query, group) {
+      const words = query.toLowerCase().split(/[\s_:-]+/).filter(Boolean);
+      return tools.filter((t) => !group || t.group === group).map((t) => {
+        const name = t.name.toLowerCase(), text = `${name.replace(/_/g, " ")} ${t.group} ${t.description}`.toLowerCase();
+        return { t, score: (name === query.toLowerCase() ? 1e3 : 0) + words.reduce((n, w) => n + (text.includes(w) ? 20 : 0) + (name.includes(w) ? 3 : 0), 0) };
+      }).filter((x) => x.score > 0).sort((a, b) => b.score - a.score || a.t.name.localeCompare(b.t.name));
+    }
+    function search(tools, query, group, ranker = "bm25") {
+      const activeNames = new Set(tools.map((t) => t.name));
+      for (const name of cache.keys()) if (!activeNames.has(name)) cache.delete(name);
+      const selected = tools.filter((t) => !group || t.group === group);
+      const words = [...new Set(terms(query))];
+      const docs = selected.map((t) => {
+        let saved = cache.get(t.name);
+        if (!saved || saved.description !== t.description || saved.group !== t.group) {
+          const text = terms(`${t.name} ${t.group} ${t.description}`), frequencies = /* @__PURE__ */ new Map();
+          for (const word of text) frequencies.set(word, (frequencies.get(word) || 0) + 1);
+          saved = { description: t.description, group: t.group, frequencies, length: text.length };
+          cache.set(t.name, saved);
+        }
+        return { t, ...saved };
+      });
+      const df = new Map(words.map((w) => [w, docs.filter((d) => d.frequencies.has(w)).length]));
+      const avgLength = docs.reduce((n, d) => n + d.length, 0) / (docs.length || 1);
+      const matches = ranker === "legacy" ? legacyRank(tools, query, group) : docs.map((d) => {
+        const exact = d.t.name.toLowerCase() === query.trim().toLowerCase();
+        let score = exact ? 1e3 : 0;
+        for (const word of words) {
+          const tf = d.frequencies.get(word) || 0;
+          if (!tf) continue;
+          const frequency = df.get(word), idf = Math.log(1 + (docs.length - frequency + 0.5) / (frequency + 0.5));
+          score += idf * (tf * 2.2) / (tf + 1.2 * (0.25 + 0.75 * d.length / (avgLength || 1)));
+        }
+        return { t: d.t, score };
+      }).filter((x) => x.score > 0).sort((a, b) => b.score - a.score || a.t.name.localeCompare(b.t.name));
+      const matched = words.filter((w) => df.get(w) > 0), unmatched = words.filter((w) => !df.get(w));
+      const bounded = (xs) => xs.slice(0, 12).map((w) => w.slice(0, 80));
+      return { matches, lexical: { mode: "normalized-keywords", ranker, matchedTerms: bounded(matched), unmatchedTerms: bounded(unmatched), truncated: matched.length > 12 || unmatched.length > 12 || words.some((w) => w.length > 80) } };
+    }
+    var rank = (...args) => search(...args).matches;
+    module2.exports = { rank, search, legacyRank, terms };
   }
 });
 
@@ -39769,16 +39843,12 @@ var require_tools_discovery = __commonJS({
       {
         name: "tool_search",
         group: "catalog",
-        description: "Find the enabled tool for a task before calling it. Searches names, semantic descriptions and groups, with required arguments and effect hints. Results are bounded; use tool_describe for the exact schema, then tool_execute.",
+        description: "Find enabled capabilities by name, description and group keywords. For symptoms, first identify evidence needed: environment, logs, code, health or data. Matched/unmatched keywords show retrieval limits. Use tool_describe for exact arguments, then tool_execute.",
         input: { query: str("Task or tool name, e.g. clone test database or inspect Kafka"), group: str("Optional exact group"), limit: { ...int("Max matches", 8), minimum: 1, maximum: 30 } },
         required: ["query"],
         run: async (a) => {
-          const words = a.query.toLowerCase().split(/[\s_:-]+/).filter(Boolean), tools = await registry();
-          const matches = tools.filter((t) => !a.group || t.group === a.group).map((t) => {
-            const name = t.name.toLowerCase(), text = `${name.replace(/_/g, " ")} ${t.group} ${t.description}`.toLowerCase();
-            return { t, score: (name === a.query.toLowerCase() ? 1e3 : 0) + words.reduce((n, w) => n + (text.includes(w) ? 20 : 0) + (name.includes(w) ? 3 : 0), 0) };
-          }).filter((x) => x.score > 0).sort((a2, b) => b.score - a2.score || a2.t.name.localeCompare(b.t.name));
-          return { total: matches.length, tools: matches.slice(0, a.limit).map(({ t }) => ({ name: t.name, group: t.group, description: t.description.slice(0, 450), required: t.inputSchema.required, next: { tool: "tool_describe", args: { name: t.name } } })) };
+          const { matches, lexical } = require_tool_search().search(await registry(), a.query, a.group, require_config().getTools().discoveryRanker);
+          return { total: matches.length, tools: matches.slice(0, a.limit).map(({ t }) => ({ name: t.name, group: t.group, description: t.description.slice(0, 450), required: t.inputSchema.required, next: { tool: "tool_describe", args: { name: t.name } } })), lexical };
         }
       },
       { name: "tool_describe", group: "catalog", description: "Read the exact input schema and guidance for one enabled tool. Inspect required fields and defaults before tool_execute; discoverability does not grant additional permissions.", input: { name: str("Exact tool name") }, required: ["name"], run: async (a) => {
@@ -42703,7 +42773,7 @@ var require_tools = __commonJS({
       },
       {
         name: "consul_service",
-        description: "Live: instances of ONE service registered in Consul with health and /version. Fuzzy name match. For all services use health.",
+        description: "Live instances of one deployed service in an environment: Consul registration, health and /version payload (version or commit when reported by the service). Fuzzy name match. For all services use health.",
         input: { name: str("Service name or part of it"), env },
         required: ["name"],
         limit: (a) => `consul:${a.env}`,
