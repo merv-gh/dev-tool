@@ -93,7 +93,9 @@
 
   "timeouts": { "pgQueryMs": 60000, "pgIndexMs": 120000, "catalogSyncWaitMs": 50000 },
 
-  "tests": { "mavenSettings": "", "gradleProperties": [], "env": {}, "pgUrl": "${DT_TEST_DB_URL:-}", "offline": false, "timeoutMs": 900000 },
+  "tests": { "mavenSettings": "", "gradleProperties": [], "env": {}, "passEnv": [], "pgUrl": "${DT_TEST_DB_URL:-}", "offline": false, "timeoutMs": 900000, "workspaceDays": 7 },
+  "log": { "maxMb": 50, "files": 3 },
+  "results": { "maxMb": 500 },
 
   "server": { "publicUrl": "http://127.0.0.1:4000", "apiKey": "${DT_API_KEY}", "ratePerSec": 1 }
 }

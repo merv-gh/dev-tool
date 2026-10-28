@@ -76,13 +76,10 @@ async function mcpHandle(msg) {
     case 'ping': return reply({});
     case 'tools/list': return reply({ tools: await tools.schemas() });
     case 'tools/call': {
-      const started = Date.now();
       try {
         const result = await tools.call(msg.params.name, msg.params.arguments || {}, { source: 'mcp' });
-        console.error(`mcp ${msg.params.name} ${Date.now() - started}ms`);
         return reply({ content: [{ type: 'text', text: typeof result === 'string' ? result : JSON.stringify(result) }] });
       } catch (e) {
-        console.error(`mcp ${msg.params.name} ERROR ${e.message}`);
         return reply({ content: [{ type: 'text', text: `Error: ${e.message}` }], isError: true });
       }
     }
@@ -129,7 +126,9 @@ async function openapi() {
 async function oapi(req, res, url) {
   const name = url.pathname.split('/').pop();
   let result;
-  try { result = await tools.call(name, await readJsonBody(req), { source: 'openapi' }); }
+  // Open WebUI says which chat a call comes from when ENABLE_FORWARD_USER_INFO_HEADERS is on
+  const session = req.headers['x-openwebui-chat-id'] || req.headers['x-chat-id'] || null;
+  try { result = await tools.call(name, await readJsonBody(req), { source: 'openapi', session }); }
   catch (e) { return send(res, 400, { error: e.message }); }
   const target = result && typeof result === 'object' && (result.view || result.dashboard);
   const embed = typeof target === 'string' ? target + (target.includes('?') ? '&' : '?') + 'embed=1' : null;
@@ -169,6 +168,9 @@ const routes = [
     page('admin.html')(req, res);
   }],
   ['GET', '/api/admin/status', true, async (req, res) => send(res, 200, await admin.status())],
+  ['POST', '/api/admin/job/*/cancel', true, (req, res, url) => {
+    try { send(res, 200, require('./lib/jobs').cancel(url.pathname.split('/').slice(-2)[0], 'cancelled from /admin')); } catch (e) { send(res, 404, { error: e.message }); }
+  }],
   ['POST', '/api/admin/tools/reload', true, async (req, res) => send(res, 200, await tools.reload(await readJsonBody(req)))],
   ['POST', '/api/admin/refresh', true, async (req, res) => {
     try { const job = require('./lib/indexer').refresh(await readJsonBody(req)); send(res, 202, { id: job.id, key: job.key, state: job.state }); }
@@ -328,6 +330,16 @@ function start({ port = 4000, host = '127.0.0.1' } = {}) {
   // the browser container starts after dt is healthy and reads these secrets once
   try { require('./lib/browser').writeSecrets(); } catch (e) { console.error(`browser secrets: ${e.message}`); }
   tools.ready().catch(e => console.error(`tools: ${e.message}`));
+  // what fetching and tests need, once at start: problems go to the log (dt doctor for the full list)
+  if (!process.env.DT_NO_DOCTOR && !process.env.NODE_TEST_CONTEXT) setTimeout(() => require('./lib/doctor').check().then(d => {
+    const bad = d.checks.filter(c => c.status !== 'ok');
+    console.error(`doctor: ${d.counts.ok} ok, ${d.counts.warn} warnings, ${d.counts.fail} failing`);
+    for (const c of bad) console.error(`doctor: ${c.status.toUpperCase()} ${c.check}: ${c.detail}${c.fix ? ` (fix: ${c.fix})` : ''}`);
+  }).catch(e => console.error(`doctor: ${e.message}`)), 2000).unref();
+  // workspaces nobody used for tests.workspaceDays
+  const sweep = () => { try { require('./lib/workspace').sweep().then(r => { if (r.length) console.error(`workspaces removed (unused ${require('./lib/config').getTests().workspaceDays} days): ${r.join(', ')}`); }); } catch {} };
+  setTimeout(sweep, 5000).unref();
+  setInterval(sweep, 6 * 3600e3).unref();
   server.listen(port, host, () => console.error(`dt serve: http://${host}:${port}  (mcp: /mcp, admin: /admin)`));
   return server;
 }

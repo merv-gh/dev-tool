@@ -327,13 +327,14 @@ async function showJob(id, quiet) {
     const j = await api(`/api/admin/job/${id}`);
     const box = $('job');
     const atBottom = box.querySelector('.joblog') ? box.querySelector('.joblog').scrollTop + box.querySelector('.joblog').clientHeight >= box.querySelector('.joblog').scrollHeight - 20 : true;
-    box.innerHTML = `<div class="row"><b>${esc(j.title)}</b><span class="state ${j.state}">${j.state}</span><span class="muted">${fmtDate(j.startedAt)} · ${dur(j.ms)}</span><span class="spacer"></span><button class="small" id="copyLog">Copy log</button></div>
+    box.innerHTML = `<div class="row"><b>${esc(j.title)}</b><span class="state ${j.state}">${j.state}</span><span class="muted">${fmtDate(j.startedAt)} · ${dur(j.ms)}</span><span class="spacer"></span>${j.state === 'running' ? '<button class="small" id="cancelJob">Cancel</button>' : ''}<button class="small" id="copyLog">Copy log</button></div>
       ${j.error ? `<div class="err-text" style="margin:6px 0">${esc(j.error)}</div>` : ''}
       <pre class="joblog">${esc(j.log.join('\n'))}</pre>
       ${j.result ? `<details><summary>Result</summary><pre class="code">${esc(JSON.stringify(j.result, null, 2))}</pre></details>` : ''}`;
     const log = box.querySelector('.joblog');
     if (atBottom) log.scrollTop = log.scrollHeight;
     $('copyLog').onclick = () => copy(j.log.join('\n'), 'log');
+    if ($('cancelJob')) $('cancelJob').onclick = async () => { await fetch(`/api/admin/job/${id}/cancel`, { method: 'POST' }); refresh(); };
   } catch (e) { if (!quiet) toast(e.message); }
 }
 

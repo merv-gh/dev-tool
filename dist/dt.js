@@ -351,6 +351,10 @@ var require_config = __commonJS({
         mavenSettings: at(c.mavenSettings || e.DT_MAVEN_SETTINGS) || (fs2.existsSync(path2.join(HOME, "maven-settings.xml")) ? path2.join(HOME, "maven-settings.xml") : null),
         gradleProperties: [].concat(c.gradleProperties || []),
         env: c.env && typeof c.env === "object" ? c.env : {},
+        // environment variables of dt passed to builds besides PATH, HOME, locale, proxies and JAVA_HOME
+        passEnv: [].concat(c.passEnv || []),
+        workspaceDays: Number(e.DT_WORKSPACE_DAYS || c.workspaceDays || 7),
+        gradleBuildCache: c.gradleBuildCache !== false,
         gradleHome: at(c.gradleUserHome || e.DT_GRADLE_USER_HOME),
         offline: String(e.DT_TESTS_OFFLINE || c.offline || "") === "true" || c.offline === true,
         timeoutMs: Number(e.DT_TESTS_TIMEOUT_MS || c.timeoutMs || 9e5),
@@ -518,6 +522,180 @@ var require_limit = __commonJS({
   }
 });
 
+// lib/trace.js
+var require_trace = __commonJS({
+  "lib/trace.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var { AsyncLocalStorage } = require("async_hooks");
+    var als = new AsyncLocalStorage();
+    var running = /* @__PURE__ */ new Map();
+    var seq = 0;
+    var level = () => process.env.DT_LOG || "steps";
+    var secs = (ms) => ms >= 1e3 ? `${(ms / 1e3).toFixed(1)}s` : `${ms}ms`;
+    var clock = () => (/* @__PURE__ */ new Date()).toISOString().slice(11, 19);
+    function limits() {
+      let c = {};
+      try {
+        c = require_config().load().raw.log || {};
+      } catch {
+      }
+      return { maxBytes: Math.max(1, Number(process.env.DT_LOG_MAX_MB || c.maxMb || 50)) * 1048576, files: Math.max(1, Number(c.files || 3)) };
+    }
+    var logFile = () => path2.join(require_util().CACHE, "logs", "dt.log");
+    var written = 0;
+    function append(file, line, { maxBytes, files }) {
+      fs2.mkdirSync(path2.dirname(file), { recursive: true });
+      fs2.appendFileSync(file, line + "\n");
+      written += line.length;
+      if (written < 1048576) return;
+      written = 0;
+      if (fs2.statSync(file).size < maxBytes) return;
+      for (let i = files - 1; i >= 1; i--) {
+        const a = `${file}.${i}`, b = `${file}.${i + 1}`;
+        if (fs2.existsSync(a)) {
+          if (i + 1 > files - 1) fs2.rmSync(a, { force: true });
+          else fs2.renameSync(a, b);
+        }
+      }
+      if (files > 1) fs2.renameSync(file, `${file}.1`);
+      else fs2.rmSync(file, { force: true });
+    }
+    function write(event) {
+      try {
+        append(logFile(), JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), ...event }), limits());
+      } catch {
+      }
+    }
+    function say(text) {
+      if (level() !== "quiet") process.stderr.write(`${clock()} dt ${text}
+`);
+    }
+    var short = (args) => {
+      const s = JSON.stringify(args || {});
+      return s.length > 160 ? `${s.slice(0, 160)}\u2026}` : s;
+    };
+    async function call(tool, args, { source, session, kind = "call" } = {}, fn) {
+      const c = { id: `${(++seq).toString(36)}${Date.now().toString(36).slice(-3)}`, kind, tool, source: source || "api", session: session || null, args, startedAt: Date.now(), steps: [], current: null, depth: 0, notes: [] };
+      running.set(c.id, c);
+      say(`${kind} ${tool}#${c.id} start ${short(args)} (${c.source})`);
+      write({ event: "start", kind, id: c.id, tool, source: c.source, session: c.session, args });
+      try {
+        const r = await als.run(c, fn);
+        finish(c, { ok: true });
+        return r;
+      } catch (e) {
+        finish(c, { ok: false, error: e.message });
+        throw e;
+      } finally {
+        running.delete(c.id);
+      }
+    }
+    function finish(c, { ok, error }) {
+      c.ms = Date.now() - c.startedAt;
+      const slow = c.steps.filter((s) => s.depth === 0).map((s) => `${s.name} ${secs(s.ms)}${s.ok ? "" : " FAILED"}`).join(" \xB7 ");
+      const failedStep = c.steps.filter((s) => !s.ok).pop();
+      if (ok) say(`${c.kind} ${c.tool}#${c.id} ok ${secs(c.ms)}${slow ? `  ${slow}` : ""}`);
+      else say(`${c.kind} ${c.tool}#${c.id} FAILED ${secs(c.ms)}${failedStep ? ` in ${failedStep.name}` : ""}: ${String(error).split("\n")[0].slice(0, 300)}`);
+      write({ event: ok ? "ok" : "failed", kind: c.kind, id: c.id, tool: c.tool, ms: c.ms, steps: c.steps, notes: c.notes, ...error ? { error: String(error).slice(0, 4e3) } : {} });
+    }
+    async function step(name, fn, detail) {
+      const c = als.getStore();
+      if (!c) return fn();
+      const t0 = Date.now(), depth = c.depth, prev = c.current;
+      c.current = name;
+      c.depth++;
+      try {
+        const r = await fn();
+        done(true);
+        return r;
+      } catch (e) {
+        done(false, e);
+        throw e;
+      }
+      function done(ok, e) {
+        c.depth = depth;
+        c.current = prev;
+        const s = { name, ms: Date.now() - t0, ok, depth, ...detail ? { detail: String(detail).slice(0, 200) } : {}, ...e ? { error: String(e.message).split("\n")[0].slice(0, 300) } : {} };
+        if (c.steps.length < 200) c.steps.push(s);
+        if (level() === "steps" && (!ok || s.ms >= 1e3)) say(`  ${c.tool}#${c.id} ${"\xB7 ".repeat(depth)}${name}${detail ? ` (${String(detail).slice(0, 80)})` : ""} ${ok ? secs(s.ms) : `FAILED after ${secs(s.ms)}: ${s.error}`}`);
+        write({ event: "step", id: c.id, tool: c.tool, ...s });
+      }
+    }
+    function child(proc) {
+      const c = als.getStore();
+      if (!c || !proc) return proc;
+      (c.children ||= /* @__PURE__ */ new Set()).add(proc);
+      proc.once("exit", () => c.children.delete(proc));
+      return proc;
+    }
+    function kill(id, why = "cancelled") {
+      const c = running.get(id);
+      if (!c) return 0;
+      c.cancelled = why;
+      let n = 0;
+      for (const p of c.children || []) {
+        try {
+          p.kill("SIGTERM");
+          n++;
+          setTimeout(() => {
+            try {
+              p.kill("SIGKILL");
+            } catch {
+            }
+          }, 5e3).unref();
+        } catch {
+        }
+      }
+      say(`${c.kind} ${c.tool}#${c.id} ${why}: ${n} process${n === 1 ? "" : "es"} stopped`);
+      write({ event: "cancel", id, tool: c.tool, why, processes: n });
+      return n;
+    }
+    function note(text) {
+      const c = als.getStore();
+      const t = String(text).slice(0, 300);
+      if (c) {
+        c.notes.push(t);
+        if (level() !== "quiet") say(`  ${c.tool}#${c.id} note: ${t}`);
+        write({ event: "note", id: c.id, tool: c.tool, text: t });
+      } else say(`note: ${t}`);
+    }
+    var current = () => als.getStore() || null;
+    function list() {
+      return [...running.values()].map((c) => ({ id: c.id, kind: c.kind, tool: c.tool, source: c.source, startedAt: new Date(c.startedAt).toISOString(), runningMs: Date.now() - c.startedAt, step: c.current, steps: c.steps.filter((s) => s.depth === 0).map((s) => `${s.name} ${secs(s.ms)}${s.ok ? "" : " FAILED"}`).join(", ") }));
+    }
+    function tail({ lines = 200, failed = false, tool, q } = {}) {
+      const out2 = [];
+      const words = String(q || "").toLowerCase().split(/\s+/).filter(Boolean);
+      for (const f of [logFile(), `${logFile()}.1`]) {
+        let text = "";
+        try {
+          text = fs2.readFileSync(f, "utf8");
+        } catch {
+          continue;
+        }
+        const ls = text.split("\n").filter(Boolean).reverse();
+        for (const l of ls) {
+          let e;
+          try {
+            e = JSON.parse(l);
+          } catch {
+            continue;
+          }
+          if (failed && e.event !== "failed" && !(e.event === "step" && !e.ok)) continue;
+          if (tool && e.tool !== tool) continue;
+          if (words.length && !words.every((w) => l.toLowerCase().includes(w))) continue;
+          out2.push(e);
+          if (out2.length >= lines) break;
+        }
+        if (out2.length >= lines) break;
+      }
+      return out2.reverse();
+    }
+    module2.exports = { call, step, note, child, kill, current, list, tail, secs, append, logFile };
+  }
+});
+
 // lib/jobs.js
 var require_jobs = __commonJS({
   "lib/jobs.js"(exports2, module2) {
@@ -550,12 +728,23 @@ var require_jobs = __commonJS({
       };
       all().unshift(job);
       if (jobs.length > KEEP) jobs.length = KEEP;
-      job.promise = Promise.resolve().then(() => run(log)).then((r) => {
-        job.state = "done";
-        job.result = r;
+      const T = require_trace();
+      const session = T.current()?.session;
+      job.promise = Promise.resolve().then(() => T.call(title, { job: job.id }, { kind: "job", source: "job", session }, () => {
+        job.traceId = T.current().id;
+        return run((line) => {
+          log(line);
+        });
+      })).then((r) => {
+        if (job.state === "running") {
+          job.state = "done";
+          job.result = r;
+        }
       }, (e) => {
-        job.state = "failed";
-        job.error = e.message;
+        if (job.state === "running") {
+          job.state = "failed";
+          job.error = e.message;
+        }
         log(`ERROR ${e.message}`);
       }).finally(() => {
         job.endedAt = (/* @__PURE__ */ new Date()).toISOString();
@@ -565,13 +754,26 @@ var require_jobs = __commonJS({
       persist();
       return job;
     }
+    function cancel(id, why = "cancelled") {
+      const job = all().find((x) => x.id === id);
+      if (!job) throw new Error(`no job ${id}`);
+      if (job.state !== "running") return { ...view(job), note: `already ${job.state}` };
+      job.state = "cancelled";
+      job.error = why;
+      job.endedAt = (/* @__PURE__ */ new Date()).toISOString();
+      job.ms = Date.parse(job.endedAt) - Date.parse(job.startedAt);
+      const n = job.traceId ? require_trace().kill(job.traceId, why) : 0;
+      job.log.push(`${(/* @__PURE__ */ new Date()).toISOString().slice(11, 19)} ${why}${n ? ` (${n} process${n === 1 ? "" : "es"} stopped)` : ""}`);
+      persist();
+      return { ...view(job), stopped: n };
+    }
     var list = (limit = 30) => all().slice(0, limit).map((j) => ({ ...view(j), log: j.log.slice(-3) }));
     var get = (id) => {
       const j = all().find((x) => x.id === id);
       return j ? view(j) : null;
     };
     var find = (id) => all().find((x) => x.id === id) || null;
-    module2.exports = { start, list, get, find };
+    module2.exports = { start, cancel, list, get, find };
   }
 });
 
@@ -4964,7 +5166,21 @@ var require_codeindex = __commonJS({
       }
       return [];
     }
-    function build(root, key, meta = {}, { extracted } = {}) {
+    function build(root, key, meta = {}, opts = {}) {
+      const T = require_trace();
+      const c = T.current();
+      const t0 = Date.now();
+      try {
+        const r = buildIndex(root, key, meta, opts);
+        if (c) c.steps.push({ name: "code index", ms: Date.now() - t0, ok: true, depth: c.depth, detail: `${key}: ${r.files} files, ${r.classes} classes` });
+        if (Date.now() - t0 > 1e3 && c) T.note(`code index of ${key}: ${r.files} files in ${T.secs(Date.now() - t0)}`);
+        return r;
+      } catch (e) {
+        if (c) c.steps.push({ name: "code index", ms: Date.now() - t0, ok: false, depth: c.depth, error: e.message });
+        throw e;
+      }
+    }
+    function buildIndex(root, key, meta = {}, { extracted } = {}) {
       const started = Date.now();
       const files = walk(root);
       const postings = /* @__PURE__ */ new Map(), seen = /* @__PURE__ */ new Map();
@@ -5268,10 +5484,10 @@ var require_git = __commonJS({
     var LOCAL_GIT = process.env.DT_GIT_DIR || path2.join(os.tmpdir(), "dt-git");
     function git(args, cwd, extra = []) {
       return new Promise((resolve, reject) => {
-        execFile("git", ["-c", "safe.directory=*", ...extra, ...args], { cwd, env: { ...process.env, GIT_TERMINAL_PROMPT: "0" }, maxBuffer: 64 << 20, timeout: 6e5 }, (err, stdout, stderr) => {
+        require_trace().child(execFile("git", ["-c", "safe.directory=*", ...extra, ...args], { cwd, env: { ...process.env, GIT_TERMINAL_PROMPT: "0" }, maxBuffer: 64 << 20, timeout: 6e5 }, (err, stdout, stderr) => {
           if (err) reject(new Error(`git ${args[0]}: ${(stderr || err.message).trim().split("\n").slice(-3).join(" | ")}`));
           else resolve(stdout.trim());
-        });
+        }));
       });
     }
     var isSha = (ref) => /^[0-9a-f]{7,40}$/i.test(ref || "");
@@ -5285,25 +5501,30 @@ var require_git = __commonJS({
       return token && /^https?:/.test(remoteUrl) ? ["-c", `http.extraHeader=Authorization: Bearer ${token}`] : [];
     }
     async function fetchRef(project, repo, ref, opts = {}) {
+      const T = require_trace();
       const dir = opts.dir || repoDir(project, repo);
       const url = opts.url || remote(project, repo);
       const auth = authArgs(url);
+      const where = `${project}/${repo}@${ref || "default branch"}`;
+      if (/^https?:/.test(url) && !auth.length) T.note(`no Bitbucket token: fetching ${url} without one`);
       fs2.mkdirSync(dir, { recursive: true });
-      await ensureRepo(dir, url, opts.gitKey || `${project.toUpperCase()}/${repo}`);
+      await T.step("git init", () => ensureRepo(dir, url, opts.gitKey || `${project.toUpperCase()}/${repo}`), dir);
       const want = ref || "HEAD";
       let fallback = null;
       try {
-        await git(["fetch", "-q", "--depth", "1", "--no-tags", "origin", want], dir, auth);
-        await git(["checkout", "-q", "--detach", "--force", "FETCH_HEAD"], dir);
+        await T.step("git fetch", () => git(["fetch", "-q", "--depth", "1", "--no-tags", "origin", want], dir, auth), where);
+        await T.step("git checkout", () => git(["checkout", "-q", "--detach", "--force", "FETCH_HEAD"], dir));
       } catch (e) {
-        if (!isSha(want)) throw e;
-        await git(["fetch", "-q", "--depth", "300", "--no-tags", "origin", "HEAD"], dir, auth);
+        if (!isSha(want)) throw new Error(`${e.message} (${where} from ${url.replace(/\/\/[^@/]*@/, "//***@")})`);
+        T.note(`fetching ${want} by sha was refused: looking for it in the last 300 commits of the default branch`);
+        await T.step("git fetch (300 commits)", () => git(["fetch", "-q", "--depth", "300", "--no-tags", "origin", "HEAD"], dir, auth), where);
         try {
           await git(["checkout", "-q", "--detach", "--force", want], dir);
           fallback = "found in last 300 commits of default branch";
         } catch {
           await git(["checkout", "-q", "--detach", "--force", "FETCH_HEAD"], dir);
           fallback = `sha ${want} not fetchable; using default branch head`;
+          T.note(fallback);
         }
       }
       const sha = await git(["rev-parse", "HEAD"], dir);
@@ -5323,6 +5544,7 @@ var require_git = __commonJS({
           }
         } catch {
         }
+        require_trace().note(`${dir}: a broken .git was replaced`);
         fs2.rmSync(dotgit, { recursive: true, force: true });
       }
       try {
@@ -5330,6 +5552,7 @@ var require_git = __commonJS({
         await git(["remote", "add", "origin", url], dir);
       } catch (e) {
         if (!NO_CHMOD.test(e.message)) throw e;
+        require_trace().note(`git cannot chmod in ${dir} (${e.message.slice(0, 120)}): its git data goes to ${LOCAL_GIT}`);
         fs2.rmSync(dotgit, { recursive: true, force: true });
         const gitDir = path2.join(LOCAL_GIT, ...gitKey.split("/"));
         fs2.rmSync(gitDir, { recursive: true, force: true });
@@ -5343,6 +5566,51 @@ var require_git = __commonJS({
         }
       }
     }
+    async function remoteSha(url, ref) {
+      if (isSha(ref)) return ref;
+      const out2 = await git(["ls-remote", url, ref || "HEAD"], process.cwd(), authArgs(url));
+      const lines = out2.split("\n").filter(Boolean).map((l) => l.split("	"));
+      const hit = lines.find(([, r]) => r === (ref ? `refs/heads/${ref}` : "HEAD")) || lines.find(([, r]) => r === `refs/tags/${ref}^{}`) || lines.find(([, r]) => r === `refs/tags/${ref}`) || lines[0];
+      if (!hit) throw new Error(`git ls-remote: no ${ref || "HEAD"} in ${url.replace(/\/\/[^@/]*@/, "//***@")}`);
+      return hit[0];
+    }
+    var headOf = (dir) => git(["rev-parse", "HEAD"], dir).catch(() => null);
+    async function fetchReusing(project, repo, ref, opts = {}) {
+      const T = require_trace();
+      const url = opts.url || remote(project, repo);
+      const sources = (opts.sources || []).filter((d) => d && d !== opts.dir && fs2.existsSync(d));
+      if (!sources.length) return fetchRef(project, repo, ref, opts);
+      let want = null, offline = null;
+      try {
+        want = await T.step("git ls-remote", () => remoteSha(url, ref), `${project}/${repo}@${ref || "default branch"}`);
+      } catch (e) {
+        offline = e;
+      }
+      let source = null;
+      for (const d of sources) {
+        const h = await headOf(d);
+        if (h && (want ? h === want : true)) {
+          source = { dir: d, sha: h };
+          break;
+        }
+      }
+      if (!source) {
+        if (offline) throw offline;
+        return fetchRef(project, repo, ref, opts);
+      }
+      if (offline) T.note(`Bitbucket did not answer (${offline.message.slice(0, 160)}): using the copy in ${source.dir} (${source.sha.slice(0, 10)}), which may be behind`);
+      else T.note(`reusing ${source.sha.slice(0, 10)} from ${source.dir}: nothing downloaded`);
+      const dir = opts.dir || repoDir(project, repo);
+      fs2.mkdirSync(dir, { recursive: true });
+      await T.step("git init", () => ensureRepo(dir, url, opts.gitKey || `${project.toUpperCase()}/${repo}`), dir);
+      await T.step("git fetch (local)", () => git(["-c", "protocol.file.allow=always", "fetch", "-q", "--depth", "1", "--no-tags", path2.resolve(source.dir), "HEAD"], dir), source.dir);
+      await T.step("git checkout", () => git(["checkout", "-q", "--detach", "--force", "FETCH_HEAD"], dir));
+      const sha = await git(["rev-parse", "HEAD"], dir);
+      const date = await git(["log", "-1", "--format=%cI"], dir).catch(() => null);
+      const info = { project: project.toUpperCase(), repo, ref: ref || "HEAD", sha, commitDate: date, fetchedAt: (/* @__PURE__ */ new Date()).toISOString(), path: dir, fallback: offline ? `Bitbucket unreachable: local copy ${source.dir}` : null, reusedFrom: source.dir };
+      fs2.writeFileSync(path2.join(await git(["rev-parse", "--absolute-git-dir"], dir), "dt-ref.json"), JSON.stringify(info, null, 2));
+      return info;
+    }
     async function fetchFirst(project, repo, refs, opts = {}) {
       let last;
       for (const ref of refs) {
@@ -5354,7 +5622,7 @@ var require_git = __commonJS({
       }
       throw last;
     }
-    module2.exports = { fetchRef, fetchFirst, repoDir, REPOS, isSha, git };
+    module2.exports = { fetchRef, fetchReusing, remoteSha, fetchFirst, repoDir, REPOS, isSha, git };
   }
 });
 
@@ -6553,7 +6821,7 @@ var require_passport = __commonJS({
         if (seen.has(k)) continue;
         seen.add(k);
         try {
-          const lib = await fetchLibrary(d, git, searches);
+          const lib = await require_trace().step(`library ${d.artifactId}`, () => fetchLibrary(d, git, searches), d.version || "");
           libs.push(lib);
           for (const sub of lib.internal || []) queue.push({ ...sub, via: d.artifactId });
         } catch (e) {
@@ -6564,18 +6832,20 @@ var require_passport = __commonJS({
     }
     async function build(service, { repo, ref, env, libraries = true, graph = false, gitImpl, rebuildCatalog = true } = {}) {
       const git = gitImpl || require_git();
+      const T = require_trace();
       const started = Date.now();
-      const target = await resolveRepo(service, repo);
+      const target = await T.step("resolve repo", () => resolveRepo(service, repo), service);
       let deployed = null;
       if (!ref && env) {
-        deployed = await deployedSha(env, service);
+        deployed = await T.step("deployed commit", () => deployedSha(env, service), env);
         ref = deployed.sha;
       }
       await limit.take("bitbucket");
       const info = await git.fetchRef(target.project, target.repo, ref);
       rememberRepo(service, target.project, target.repo);
-      const ex = extract(info.path, { internalGroups: getPersonal().internalGroups });
-      const libs = libraries ? await fetchLibraries(ex.dependencies.internal, git) : [];
+      const ex = await T.step("extract", async () => extract(info.path, { internalGroups: getPersonal().internalGroups }), `${target.project}/${target.repo}`);
+      const libs = libraries ? await T.step("libraries", () => fetchLibraries(ex.dependencies.internal, git), ex.dependencies.internal.map((d) => d.artifactId).join(", ") || "none") : [];
+      for (const l of libs) if (l.error) T.note(`library ${l.artifactId}: ${String(l.error).slice(0, 200)}`);
       const from = (lib) => (x) => ({ ...x, source: lib.artifactId });
       const effective = {
         endpoints: [...ex.endpoints, ...libs.flatMap((l) => (l.endpoints || []).map(from(l)))],
@@ -6620,7 +6890,7 @@ var require_passport = __commonJS({
       }
       try {
         const F = require_flows();
-        passport.flows = F.flows([key, ...libs.filter((l) => l.index).map((l) => l.index)], { config: F.serviceConfig(info.path) }).map(flowSummary);
+        passport.flows = await T.step("flows", async () => F.flows([key, ...libs.filter((l) => l.index).map((l) => l.index)], { config: F.serviceConfig(info.path) }).map(flowSummary));
       } catch (e) {
         passport.flows = { error: e.message };
       }
@@ -7006,6 +7276,18 @@ var require_results = __commonJS({
     function prune() {
       const files = fs2.readdirSync(DIR).filter((f) => f.endsWith(".json")).sort();
       for (const f of files.slice(0, Math.max(0, files.length - KEEP))) fs2.unlinkSync(path2.join(DIR, f));
+      let maxMb = 500;
+      try {
+        maxMb = Number(process.env.DT_RESULTS_MAX_MB || require_config().load().raw.results?.maxMb || 500);
+      } catch {
+      }
+      const kept = files.slice(Math.max(0, files.length - KEEP)).map((f) => ({ f, size: fs2.statSync(path2.join(DIR, f)).size }));
+      let total = kept.reduce((n, x) => n + x.size, 0);
+      for (const x of kept) {
+        if (total <= maxMb * 1048576) break;
+        fs2.unlinkSync(path2.join(DIR, x.f));
+        total -= x.size;
+      }
     }
     var PAGES = { logs: "logs", trace: "logs", pr: "pr" };
     function save(kind, rows, meta) {
@@ -28759,26 +29041,41 @@ var require_calls = __commonJS({
     var FILE = path2.join(CACHE2, "_calls.jsonl");
     var KEEP = 5e3;
     var SKIP = /* @__PURE__ */ new Set(["call_history", "call_patterns", "script_list", "script_get", "script_save"]);
-    var appended = 0;
+    var appendedLines = 0;
+    var appendedBytes = 0;
     var clipArgs = (v, n = 600) => {
       if (typeof v === "string") return v.length > n ? `${v.slice(0, n)}\u2026` : v;
       if (Array.isArray(v)) return v.slice(0, 50).map((x) => clipArgs(x, n));
       if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).slice(0, 50).map(([k, x]) => [k, clipArgs(x, n)]));
       return v;
     };
-    function record({ tool, args, source, ok, ms, error, size }) {
+    function record({ tool, args, source, ok, ms, error, size, steps }) {
       if (SKIP.has(tool)) return;
-      const line = JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), tool, source: source || "api", args: clipArgs(args || {}), ok, ms, ...error ? { error: String(error).slice(0, 300) } : {}, ...size ? { size } : {} });
+      const st = (steps || []).filter((x) => x.depth === 0 || !x.ok).slice(0, 30).map((x) => ({ name: x.name, ms: x.ms, ...x.ok ? {} : { error: x.error } }));
+      const line = JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), tool, source: source || "api", args: clipArgs(args || {}), ok, ms, ...error ? { error: String(error).slice(0, 600) } : {}, ...size ? { size } : {}, ...st.length ? { steps: st } : {} });
       try {
         fs2.mkdirSync(path2.dirname(FILE), { recursive: true });
         fs2.appendFileSync(FILE, line + "\n");
-        if (++appended % 200 === 0) trim();
+        appendedBytes += line.length;
+        if (++appendedLines >= 200 || appendedBytes > 1048576) {
+          appendedLines = 0;
+          appendedBytes = 0;
+          trim();
+        }
       } catch {
       }
     }
     function trim() {
+      let maxMb = 50;
+      try {
+        maxMb = Number(process.env.DT_LOG_MAX_MB || require_config().load().raw.log?.maxMb || 50);
+      } catch {
+      }
+      const size = fs2.statSync(FILE).size;
       const lines = fs2.readFileSync(FILE, "utf8").split("\n").filter(Boolean);
-      if (lines.length > KEEP) fs2.writeFileSync(FILE, lines.slice(-Math.floor(KEEP * 0.8)).join("\n") + "\n");
+      let keep = lines.length > KEEP ? Math.floor(KEEP * 0.8) : lines.length;
+      if (size > maxMb * 1048576) keep = Math.min(keep, Math.floor(lines.length * (maxMb * 1048576 * 0.8) / size));
+      if (keep < lines.length) fs2.writeFileSync(FILE, lines.slice(-keep).join("\n") + "\n");
     }
     function all() {
       let text = "";
@@ -28924,6 +29221,218 @@ var require_calls = __commonJS({
   }
 });
 
+// lib/buildenv.js
+var require_buildenv = __commonJS({
+  "lib/buildenv.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var os = require("os");
+    var path2 = require("path");
+    function gradleFiles(cfg) {
+      const { HOME } = require_config();
+      const files = [...(cfg.gradleProperties || []).map((f) => path2.resolve(HOME, f)), path2.join(HOME, "gradle.properties")];
+      const userHome = path2.join(os.homedir(), ".gradle", "gradle.properties");
+      if (cfg.gradleHome && path2.resolve(cfg.gradleHome) !== path2.dirname(userHome)) files.push(userHome);
+      return [...new Set(files)].filter((f) => fs2.existsSync(f));
+    }
+    function gradleProperties(cfg) {
+      const { parseProperties } = require_extract();
+      const { load, interpolate } = require_config();
+      const lookup = load().lookup();
+      const props = {}, from = {};
+      for (const f of gradleFiles(cfg)) {
+        for (const [k, v] of Object.entries(parseProperties(fs2.readFileSync(f, "utf8")))) {
+          if (k in props) continue;
+          props[k] = String(interpolate(v, lookup));
+          from[k] = f;
+        }
+      }
+      return { props, from };
+    }
+    function forBuild(cfg, tool) {
+      const env = {}, args = [], secrets = [];
+      for (const [k, v] of Object.entries(cfg.env || {})) {
+        env[k] = String(v);
+        secrets.push(String(v));
+      }
+      const sources = [];
+      if (tool === "gradle") {
+        const { props, from } = gradleProperties(cfg);
+        for (const [k, v] of Object.entries(props)) {
+          if (k.startsWith("systemProp.")) args.push(`-D${k.slice(11)}=${v}`);
+          else if (k.startsWith("org.gradle.")) args.push(`-D${k}=${v}`);
+          else env[`ORG_GRADLE_PROJECT_${k}`] = v;
+          if (/pass|secret|token|key|user|cred|auth/i.test(k)) secrets.push(v);
+        }
+        sources.push(...new Set(Object.values(from)));
+      }
+      return { env, args, secrets: secrets.filter((s) => s && s.length >= 3), sources };
+    }
+    var mask = (text, secrets) => {
+      let t = String(text ?? "");
+      for (const s of [...secrets].sort((a, b) => b.length - a.length)) t = t.split(s).join("***");
+      return t;
+    };
+    module2.exports = { forBuild, gradleProperties, gradleFiles, mask };
+  }
+});
+
+// lib/doctor.js
+var require_doctor = __commonJS({
+  "lib/doctor.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var os = require("os");
+    var path2 = require("path");
+    var { execFile } = require("child_process");
+    var run = (cmd, args, { timeout = 2e4, env, cwd } = {}) => new Promise((resolve) => {
+      const t0 = Date.now();
+      execFile(cmd, args, { timeout, env: env || process.env, cwd, maxBuffer: 8 << 20 }, (err, stdout, stderr) => resolve({ ok: !err, code: err?.code, out: `${stdout || ""}${stderr || ""}`.trim(), ms: Date.now() - t0, error: err?.message }));
+    });
+    async function head(url, { auth, timeout = 8e3 } = {}) {
+      const t0 = Date.now();
+      try {
+        const res = await fetch(url, { method: "GET", headers: auth ? { authorization: auth } : {}, signal: AbortSignal.timeout(timeout), redirect: "manual" });
+        return { status: res.status, ms: Date.now() - t0 };
+      } catch (e) {
+        return { error: e.cause?.code || e.cause?.message || e.message, ms: Date.now() - t0 };
+      }
+    }
+    function writable(dir) {
+      try {
+        fs2.mkdirSync(dir, { recursive: true });
+        const f = path2.join(dir, `.dt-doctor-${process.pid}`);
+        fs2.writeFileSync(f, "x");
+        let chmod = true;
+        try {
+          fs2.chmodSync(f, 384);
+        } catch {
+          chmod = false;
+        }
+        fs2.rmSync(f, { force: true });
+        return { ok: true, chmod };
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    }
+    async function check({ repo, deep = false } = {}) {
+      const cfg = require_config();
+      const t = cfg.getTests();
+      const out2 = [];
+      const add = (group, name, status, detail, fix) => out2.push({ group, check: name, status, detail: String(detail ?? "").slice(0, 400), ...fix ? { fix } : {} });
+      for (const [name, dir] of [["config folder", cfg.HOME], ["repos", cfg.PATHS.repos], ["workspaces", cfg.PATHS.work], ["cache", cfg.PATHS.cache], ["git data (DT_GIT_DIR)", process.env.DT_GIT_DIR || path2.join(os.tmpdir(), "dt-git")]]) {
+        const w = writable(dir);
+        if (!w.ok) add("folders", name, "fail", `${dir}: ${w.error}`, "run dt as the owner of the folder (run.sh sets DT_UID/DT_GID), or point DT_HOME_DIR at a writable folder");
+        else add("folders", name, w.chmod ? "ok" : "warn", `${dir}${w.chmod ? "" : ": no chmod here (a Windows drive, SMB, some mounts): git keeps its data in DT_GIT_DIR"}`);
+      }
+      try {
+        const st = fs2.statfsSync(cfg.PATHS.work.replace(/\/work$/, "") || cfg.HOME);
+        const free = st.bavail * st.bsize / 1e9;
+        add("folders", "free disk", free < 2 ? "fail" : free < 10 ? "warn" : "ok", `${free.toFixed(1)} GB free`, free < 10 ? "workspaces, Maven/Gradle caches and indexes need room: workspace_drop old workspaces" : null);
+      } catch {
+      }
+      const g = await run("git", ["--version"]);
+      add("git", "git", g.ok ? "ok" : "fail", g.ok ? g.out : g.error, g.ok ? null : "install git in the image (node:22-bookworm has it)");
+      const bb = cfg.getPersonal().bitbucket;
+      if (!bb.url) add("bitbucket", "Bitbucket URL", "fail", "not set", "bitbucket.url in config.json");
+      else {
+        add("bitbucket", "token", bb.token ? "ok" : "fail", bb.token ? `set (${bb.token.length} chars)` : "missing", bb.token ? null : "BITBUCKET_HTTP_TOKEN in .env (a personal access token with repository read)");
+        const api = await head(`${bb.url}/rest/api/1.0/repos?limit=1`, { auth: bb.token ? `Bearer ${bb.token}` : null });
+        add("bitbucket", "REST API", api.status === 200 ? "ok" : "fail", api.error ? `${bb.url}: ${api.error}` : `HTTP ${api.status} in ${api.ms} ms`, api.status === 401 ? "the token is wrong or expired" : api.error ? "dt cannot reach Bitbucket: DNS, proxy (HTTPS_PROXY), or the network of the container" : null);
+      }
+      if (repo) {
+        const [project, slug] = String(repo).split("/");
+        const G = require_git();
+        const url = `${bb.url}/scm/${String(project).toLowerCase()}/${slug}.git`;
+        const ls = await run("git", ["-c", `http.extraHeader=Authorization: Bearer ${bb.token || ""}`, "ls-remote", url, "HEAD"], { timeout: 3e4, env: { ...process.env, GIT_TERMINAL_PROMPT: "0" } });
+        add("bitbucket", `git ls-remote ${repo}`, ls.ok ? "ok" : "fail", ls.ok ? `${ls.out.slice(0, 12)} in ${ls.ms} ms` : ls.out.replace(bb.token || "\0", "***").slice(0, 300), ls.ok ? null : /401|403|Authentication/.test(ls.out) ? "the token cannot read this repo" : /Could not resolve|unable to access|timed out/i.test(ls.out) ? "git cannot reach Bitbucket from here (proxy: git uses HTTPS_PROXY / http.proxy)" : "check the project key and repo slug");
+        if (ls.ok && deep) {
+          const dir = fs2.mkdtempSync(path2.join(os.tmpdir(), "dt-doctor-"));
+          const t0 = Date.now();
+          try {
+            const info = await G.fetchRef(project, slug, "", { dir, gitKey: `doctor/${path2.basename(dir)}` });
+            add("bitbucket", `fetch ${repo}`, "ok", `${info.sha.slice(0, 10)} in ${Date.now() - t0} ms${info.fallback ? `; ${info.fallback}` : ""}`);
+          } catch (e) {
+            add("bitbucket", `fetch ${repo}`, "fail", e.message, "the fetch itself fails: see the message (disk, permissions, proxy)");
+          } finally {
+            fs2.rmSync(dir, { recursive: true, force: true });
+          }
+        }
+      }
+      const bin = (tool) => t.javaHome ? path2.join(t.javaHome, "bin", tool) : tool;
+      const java = await run(bin("java"), ["-version"]);
+      const javac = await run(bin("javac"), ["-version"]);
+      add("tests", "java", java.ok ? "ok" : "fail", java.ok ? `${java.out.split("\n")[0]}${t.javaHome ? ` (${t.javaHome})` : " (PATH)"}` : `${bin("java")}: ${java.error}`, java.ok ? null : "add jdk to COMPOSE_PROFILES (run.sh does by default) or set tests.javaHome");
+      add("tests", "javac (a JDK, not a JRE)", javac.ok ? "ok" : "fail", javac.ok ? javac.out : `${bin("javac")}: ${javac.error}`, javac.ok ? null : "tests need a JDK: the jdk compose profile, or tests.javaHome pointing at a JDK");
+      const mvn = t.maven || "mvn";
+      const mv = await run(mvn, ["-v"], { env: { ...process.env, ...t.javaHome ? { JAVA_HOME: t.javaHome } : {} } });
+      add("tests", "Maven", mv.ok ? "ok" : "warn", mv.ok ? mv.out.split("\n")[0] : `${mvn}: ${mv.error}`, mv.ok ? null : "Maven projects without mvnw need it: the jdk compose profile, or tests.maven");
+      if (t.gradle) {
+        const gr = await run(t.gradle, ["-v"], { timeout: 6e4 });
+        add("tests", "Gradle", gr.ok ? "ok" : "warn", gr.ok ? (gr.out.match(/Gradle [\d.]+/) || [gr.out])[0] : gr.error);
+      }
+      for (const [name, dir] of [["Maven repository", t.mavenRepo], ["Gradle home", t.gradleHome]].filter(([, d]) => d)) {
+        const w = writable(dir);
+        add("tests", name, w.ok ? "ok" : "fail", w.ok ? dir : `${dir}: ${w.error}`, w.ok ? null : "must be writable by dt's user");
+      }
+      const proxy = process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy;
+      add("network", "proxy", "ok", proxy ? `${proxy.replace(/\/\/[^@/]*@/, "//***@")} (git, Maven and Gradle read it differently: Maven from settings.xml <proxies>, Gradle from systemProp.https.proxyHost)` : "none set");
+      if (!t.offline) {
+        const central = await head("https://repo.maven.apache.org/maven2/");
+        add("network", "Maven Central", central.status && central.status < 400 ? "ok" : "warn", central.error ? central.error : `HTTP ${central.status} in ${central.ms} ms`, central.status && central.status < 400 ? null : "not reachable: builds need your company repository (maven-settings.xml / gradle.properties) or a proxy");
+        const wrapper = await head("https://services.gradle.org/distributions/");
+        add("network", "Gradle distributions (gradlew)", wrapper.status && wrapper.status < 400 ? "ok" : "warn", wrapper.error || `HTTP ${wrapper.status}`, wrapper.status && wrapper.status < 400 ? null : "gradlew downloads Gradle from here on first use: point distributionUrl at your mirror");
+      }
+      if (t.mavenSettings) {
+        let text = "";
+        try {
+          text = fs2.readFileSync(t.mavenSettings, "utf8");
+        } catch (e) {
+          add("repository", "maven settings", "fail", `${t.mavenSettings}: ${e.message}`);
+        }
+        for (const m of text.matchAll(/<url>\s*([^<]+?)\s*<\/url>/g)) {
+          const r = await head(m[1]);
+          add("repository", `Maven repository ${m[1]}`, r.status && r.status < 500 ? "ok" : "fail", r.error || `HTTP ${r.status} (401 without credentials is normal)`);
+        }
+      }
+      const { props, from } = require_buildenv().gradleProperties(t);
+      if (Object.keys(props).length) {
+        add("repository", "gradle.properties", "ok", `${Object.keys(props).length} properties from ${[...new Set(Object.values(from))].join(", ")}: ${Object.keys(props).map((k) => /pass|secret|token|key/i.test(k) ? `${k}=***` : k).join(", ")}`);
+        const url = Object.entries(props).find(([k, v]) => /url/i.test(k) && /^https?:/.test(v));
+        if (url) {
+          const user = Object.entries(props).find(([k]) => /user/i.test(k))?.[1], pass = Object.entries(props).find(([k]) => /pass|token/i.test(k))?.[1];
+          const r = await head(url[1], { auth: user && pass ? `Basic ${Buffer.from(`${user}:${pass}`).toString("base64")}` : null });
+          add("repository", `${url[0]} (${url[1]})`, r.status && r.status < 400 ? "ok" : r.status === 401 || r.status === 403 ? "fail" : r.status ? "ok" : "fail", r.error || `HTTP ${r.status} with the credentials`, r.status === 401 || r.status === 403 ? "the user/password in gradle.properties are refused" : r.error ? "not reachable from here" : null);
+        }
+      } else add("repository", "gradle.properties", "warn", "none: builds that read nexusUrl/mavenUser/mavenPassword fail", "put gradle.properties in the config folder (values may be ${VAR} from .env)");
+      if (t.pgUrl) {
+        try {
+          const postgres = require_src();
+          const sql = postgres(t.pgUrl, { max: 1, connect_timeout: 5, onnotice: () => {
+          } });
+          const t0 = Date.now();
+          await sql`select 1`;
+          await sql.end({ timeout: 2 });
+          add("tests", "test database", "ok", `${new URL(t.pgUrl).host} in ${Date.now() - t0} ms`);
+        } catch (e) {
+          add("tests", "test database", "warn", `${(() => {
+            try {
+              return new URL(t.pgUrl).host;
+            } catch {
+              return t.pgUrl;
+            }
+          })()}: ${e.code || e.message}`, "needed only for DB tests: the testdb compose profile, or tests.pgUrl");
+        }
+      } else add("tests", "test database", "warn", "not set", "needed only for DB tests: the testdb compose profile, or tests.pgUrl");
+      for (const j of require_jobs().list(100).filter((x) => x.state === "running")) {
+        const ms = Date.now() - Date.parse(j.startedAt);
+        if (ms > t.timeoutMs) add("jobs", `job ${j.id}`, "warn", `${j.title}: running for ${Math.round(ms / 6e4)} min`, `job_cancel job="${j.id}"`);
+      }
+      const counts = { ok: out2.filter((x) => x.status === "ok").length, warn: out2.filter((x) => x.status === "warn").length, fail: out2.filter((x) => x.status === "fail").length };
+      return { counts, checks: out2 };
+    }
+    module2.exports = { check };
+  }
+});
+
 // lib/workspace.js
 var require_workspace = __commonJS({
   "lib/workspace.js"(exports2, module2) {
@@ -28943,20 +29452,38 @@ var require_workspace = __commonJS({
       if (!m) throw new Error(`no workspace "${id}" (workspace_list shows them)`);
       return m;
     }
-    async function open({ service, project, repo, ref, env, url, libraries = true, git } = {}) {
+    async function open({ service, project, repo, ref, env, url, libraries = true, git, fresh = false } = {}) {
+      const T = require_trace();
       if (service && !(project && repo)) {
         const pp = require_passport();
-        const r = await pp.resolveRepo(service, project && repo ? `${project}/${repo}` : void 0);
+        const r = await T.step("resolve repo", () => pp.resolveRepo(service, project && repo ? `${project}/${repo}` : void 0), service);
         project = r.project;
         repo = r.repo;
-        if (env && !ref) ref = await pp.deployedSha(env, service);
+        if (env && !ref) ref = await T.step("deployed commit", async () => (await pp.deployedSha(env, service)).sha, env);
       }
       if (!project || !repo) throw new Error("give service, or project and repo");
+      const session = T.current()?.session;
+      if (session && !fresh) {
+        const mine = list().map((w) => readJson(metaFile(w.id))).find((w) => w && w.session === session && w.project === project.toUpperCase() && w.repo === repo && (w.ref || null) === (ref || null) && fs2.existsSync(w.path));
+        if (mine) {
+          T.note(`reusing workspace ${mine.id} opened earlier in this chat (fresh=true for a new checkout)`);
+          touch(mine.id);
+          const index3 = W().index(mine.id);
+          return { ...mine, reused: true, path: path2.relative(require_config().HOME, mine.path), files: index3.files, classes: index3.classes, build: buildFiles(mine.path) };
+        }
+      }
       const slug = String(ref || "default").replace(/[^\w.-]+/g, "-").slice(0, 40);
       const id = `${repo}-${slug}-${crypto.randomBytes(2).toString("hex")}`;
       const dir = path2.join(WORK, id);
       fs2.mkdirSync(dir, { recursive: true });
-      const info = await G.fetchRef(project, repo, ref, { dir, url, gitKey: `work/${id}` });
+      const sources = [G.repoDir(project, repo), ...list().map((w) => readJson(metaFile(w.id))).filter((w) => w && w.project === project.toUpperCase() && w.repo === repo && fs2.existsSync(w.path)).map((w) => w.path)];
+      let info;
+      try {
+        info = await G.fetchReusing(project, repo, ref, { dir, url, gitKey: `work/${id}`, sources });
+      } catch (e) {
+        fs2.rmSync(dir, { recursive: true, force: true });
+        throw e;
+      }
       try {
         const gitDir = await G.git(["rev-parse", "--absolute-git-dir"], dir);
         fs2.mkdirSync(path2.join(gitDir, "info"), { recursive: true });
@@ -28966,11 +29493,12 @@ ${BUILD_OUTPUT.join("\n")}
 `);
       } catch {
       }
-      const meta = { id, project: info.project, repo, ref: ref || null, sha: info.sha, commitDate: info.commitDate, service: service || null, env: env || null, path: dir, createdAt: (/* @__PURE__ */ new Date()).toISOString(), fallback: info.fallback || void 0 };
+      const meta = { id, project: info.project, repo, ref: ref || null, sha: info.sha, commitDate: info.commitDate, service: service || null, env: env || null, path: dir, createdAt: (/* @__PURE__ */ new Date()).toISOString(), usedAt: (/* @__PURE__ */ new Date()).toISOString(), session: session || null, fallback: info.fallback || void 0, reusedFrom: info.reusedFrom ? path2.relative(require_config().HOME, info.reusedFrom) : void 0 };
       meta.libs = [];
       if (libraries) {
         const ex = require_extract().extract(dir, { internalGroups: require_config().getPersonal().internalGroups });
-        const libs = await require_passport().fetchLibraries(ex.dependencies.internal, git || G);
+        const libs = await T.step("libraries", () => require_passport().fetchLibraries(ex.dependencies.internal, git || G), ex.dependencies.internal.map((d) => d.artifactId).join(", ") || "none");
+        for (const l of libs) if (l.error) T.note(`library ${l.artifactId}: ${l.error.slice(0, 200)}`);
         meta.libs = libs.map((l) => ({ artifactId: l.artifactId, version: l.version || null, repo: l.repo || null, module: l.module || null, ref: l.ref || null, index: l.index || null, found: l.found, error: l.error }));
       }
       writeJson(metaFile(id), meta);
@@ -28995,13 +29523,21 @@ ${BUILD_OUTPUT.join("\n")}
       index(id);
       return [`work/${id}`, ...(m.libs || []).map((l) => l.index).filter(Boolean)];
     }
+    var W = () => module2.exports;
+    function touch(id) {
+      const m = readJson(metaFile(id));
+      if (m) {
+        m.usedAt = (/* @__PURE__ */ new Date()).toISOString();
+        writeJson(metaFile(id), m);
+      }
+    }
     function list() {
       let files = [];
       try {
-        files = fs2.readdirSync(META).filter((f) => f.endsWith(".json"));
+        files = fs2.readdirSync(META).filter((f) => f.endsWith(".json") && !/\.(fast|runs|results-[\w]+)\.json$/.test(f));
       } catch {
       }
-      return files.map((f) => readJson(path2.join(META, f))).filter(Boolean).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((m) => ({ id: m.id, repo: `${m.project}/${m.repo}`, ref: m.ref, sha: m.sha?.slice(0, 12), service: m.service, createdAt: m.createdAt, exists: fs2.existsSync(m.path) }));
+      return files.map((f) => readJson(path2.join(META, f))).filter((m) => m && m.id && m.createdAt).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((m) => ({ id: m.id, repo: `${m.project}/${m.repo}`, ref: m.ref, sha: m.sha?.slice(0, 12), service: m.service, createdAt: m.createdAt, exists: fs2.existsSync(m.path) }));
     }
     function resolvePath(m, rel) {
       const r = String(rel || "").replace(/^\/+/, "");
@@ -29037,6 +29573,7 @@ ${BUILD_OUTPUT.join("\n")}
       fs2.mkdirSync(path2.dirname(full), { recursive: true });
       fs2.writeFileSync(full, text);
       m.dirty = true;
+      m.usedAt = (/* @__PURE__ */ new Date()).toISOString();
       writeJson(metaFile(id), m);
       return { id, path: r, created: !existed, bytes: Buffer.byteLength(text), lines: text.split("\n").length };
     }
@@ -29083,7 +29620,22 @@ new file mode`) ? "added" : "modified";
       })(dir, 0);
       return out2.sort();
     }
-    module2.exports = { open, keys, list, read, write, patch, drop, reindex, index, checkId, resolvePath, buildFiles, WORK };
+    async function sweep() {
+      const days = require_config().getTests().workspaceDays;
+      const out2 = [];
+      for (const w of list()) {
+        const m = readJson(metaFile(w.id));
+        if (!m) continue;
+        const used = Date.parse(m.usedAt || m.createdAt);
+        if (Date.now() - used > days * 864e5) {
+          await drop(m.id).catch(() => {
+          });
+          out2.push(m.id);
+        }
+      }
+      return out2;
+    }
+    module2.exports = { open, sweep, touch, keys, list, read, write, patch, drop, reindex, index, checkId, resolvePath, buildFiles, WORK };
   }
 });
 
@@ -29102,7 +29654,7 @@ var require_showcase = __commonJS({
         return { version: null, commit: sha || null, branch: null };
       }
     }
-    async function run({ service, target, envs, ref, test, log = () => {
+    async function run({ service, target, envs, ref, test, refreshPassport = false, log = () => {
     } } = {}) {
       const cfg = require_config();
       envs = (Array.isArray(envs) ? envs : String(envs || "").split(",")).map((s) => s.trim()).filter(Boolean);
@@ -29152,8 +29704,10 @@ var require_showcase = __commonJS({
         return { view, builds, same: distinct.size <= 1, summary: distinct.size <= 1 ? `the same build everywhere (${[...distinct][0] || "unknown"})` : Object.entries(builds).map(([e, b]) => `${e} ${b.join("/")}`).join(" vs ") };
       });
       const pp = await step("passport", `Passport of ${service}`, async () => {
-        const p = await T().call("passport", { service, refresh: true }, { source: "showcase" });
-        return { view: p.view, repo: p.repo, summary: `${p.summary.endpoints} endpoints, consumes ${p.summary.consumes.join(", ") || "-"}, produces ${p.summary.produces.join(", ") || "-"}, ${Object.keys(p.summary.tables).length} tables, ${(p.flows || []).length} flows`, flows: (p.flows || []).slice(0, 8) };
+        const cached = require_passport().load(service);
+        const indexed = cached && require_codeindex().load(`${cached.repo.project}/${cached.repo.repo}`);
+        const p = await T().call("passport", { service, refresh: !!refreshPassport || !cached || !indexed }, { source: "showcase" });
+        return { view: p.view, repo: p.repo, cached: p.cached, summary: `${p.cached ? `as built ${String(p.builtAt).slice(0, 16).replace("T", " ")}: ` : ""}${p.summary.endpoints} endpoints, consumes ${p.summary.consumes.join(", ") || "-"}, produces ${p.summary.produces.join(", ") || "-"}, ${Object.keys(p.summary.tables).length} tables, ${(p.flows || []).length} flows`, flows: (p.flows || []).slice(0, 8) };
       });
       if (target) {
         await step("impact", `Impact of ${target}`, async () => {
@@ -29505,7 +30059,7 @@ public class DtLauncher {
     function exec(cmd, args, { cwd, env, timeoutMs = 9e5, log } = {}) {
       return new Promise((resolve) => {
         const started = Date.now();
-        const p = spawn(cmd, args, { cwd, env, stdio: ["ignore", "pipe", "pipe"] });
+        const p = require_trace().child(spawn(cmd, args, { cwd, env, stdio: ["ignore", "pipe", "pipe"] }));
         let out2 = "", killed = false;
         const keep = (b) => {
           out2 += b.toString();
@@ -29604,7 +30158,8 @@ ${e.message}`, ms: Date.now() - started });
       const multi = plan.module !== "." && fs2.existsSync(path2.join(root, "pom.xml"));
       const args = [...mvn.args, ...mavenArgs(cfg), "test-compile", "dependency:build-classpath", `-Dmdep.outputFile=${cpFile}`, "-Dmdep.includeScope=test", ...multi ? ["-pl", plan.module, "-am"] : []];
       log(`fast: preparing ${key} with Maven (compile + classpath, once)`);
-      const r = await exec(mvn.cmd, args, { cwd: multi ? root : plan.modDir, env, log });
+      const T = require_trace();
+      const r = await T.step("maven prepare", () => exec(mvn.cmd, args, { cwd: multi ? root : plan.modDir, env, log }), "test-compile + dependency:build-classpath, once per workspace");
       if (r.code !== 0) return { error: r };
       const classpath = fs2.readFileSync(cpFile, "utf8").trim().split(path2.delimiter).filter(Boolean);
       const engine = classpath.map((j) => path2.basename(j).match(/^junit-platform-engine-(.+)\.jar$/)).find(Boolean);
@@ -29686,10 +30241,11 @@ ${e.message}`, ms: Date.now() - started });
         fs2.mkdirSync(path2.dirname(path2.join(st.testClasses, r2.rel)), { recursive: true });
         fs2.copyFileSync(r2.from, path2.join(st.testClasses, r2.rel));
       }
-      const cm = await javac(st, ch.mainChanged, st.classes, [st.classes], cfg, env);
+      const T = require_trace();
+      const cm = await T.step("javac main", () => javac(st, ch.mainChanged, st.classes, [st.classes], cfg, env), `${ch.mainChanged.length} files`);
       out2 += cm.out;
       if (cm.code !== 0) return { code: cm.code, out: out2, ms: Date.now() - started, cases: [], phase: "compile", compiled: ch.mainChanged.length };
-      const ct = await javac(st, ch.testChanged, st.testClasses, [st.testClasses, st.classes], cfg, env);
+      const ct = await T.step("javac tests", () => javac(st, ch.testChanged, st.testClasses, [st.testClasses, st.classes], cfg, env), `${ch.testChanged.length} files`);
       out2 += ct.out;
       if (ct.code !== 0) return { code: ct.code, out: out2, ms: Date.now() - started, cases: [], phase: "compile", compiled: ch.mainChanged.length + ch.testChanged.length };
       const all = readJson(stateFile(id), {});
@@ -29699,7 +30255,7 @@ ${e.message}`, ms: Date.now() - started });
       }
       const results = path2.join(CACHE2, "work", `${id}.results-${Date.now().toString(36)}.json`);
       const cp = [st.testClasses, st.classes, ...st.classpath, st.launcherJar, st.launcherDir].join(path2.delimiter);
-      const r = await exec(javaBin(cfg, "java"), ["-cp", cp, "DtLauncher", results, ...selectors], { cwd: plan.modDir, env, timeoutMs: cfg.timeoutMs, log });
+      const r = await T.step("run tests", () => exec(javaBin(cfg, "java"), ["-cp", cp, "DtLauncher", results, ...selectors], { cwd: plan.modDir, env, timeoutMs: cfg.timeoutMs, log }), selectors.join(" "));
       out2 += r.out;
       let cases = [];
       try {
@@ -29710,61 +30266,6 @@ ${e.message}`, ms: Date.now() - started });
       return { code: r.code, out: out2, killed: r.killed, ms: Date.now() - started, cases, compiled: ch.mainChanged.length + ch.testChanged.length, prepared: p.prepared, prepareMs: p.ms };
     }
     module2.exports = { run, supported, prepare, changed, LAUNCHER };
-  }
-});
-
-// lib/buildenv.js
-var require_buildenv = __commonJS({
-  "lib/buildenv.js"(exports2, module2) {
-    var fs2 = require("fs");
-    var os = require("os");
-    var path2 = require("path");
-    function gradleFiles(cfg) {
-      const { HOME } = require_config();
-      const files = [...(cfg.gradleProperties || []).map((f) => path2.resolve(HOME, f)), path2.join(HOME, "gradle.properties")];
-      const userHome = path2.join(os.homedir(), ".gradle", "gradle.properties");
-      if (cfg.gradleHome && path2.resolve(cfg.gradleHome) !== path2.dirname(userHome)) files.push(userHome);
-      return [...new Set(files)].filter((f) => fs2.existsSync(f));
-    }
-    function gradleProperties(cfg) {
-      const { parseProperties } = require_extract();
-      const { load, interpolate } = require_config();
-      const lookup = load().lookup();
-      const props = {}, from = {};
-      for (const f of gradleFiles(cfg)) {
-        for (const [k, v] of Object.entries(parseProperties(fs2.readFileSync(f, "utf8")))) {
-          if (k in props) continue;
-          props[k] = String(interpolate(v, lookup));
-          from[k] = f;
-        }
-      }
-      return { props, from };
-    }
-    function forBuild(cfg, tool) {
-      const env = {}, args = [], secrets = [];
-      for (const [k, v] of Object.entries(cfg.env || {})) {
-        env[k] = String(v);
-        secrets.push(String(v));
-      }
-      const sources = [];
-      if (tool === "gradle") {
-        const { props, from } = gradleProperties(cfg);
-        for (const [k, v] of Object.entries(props)) {
-          if (k.startsWith("systemProp.")) args.push(`-D${k.slice(11)}=${v}`);
-          else if (k.startsWith("org.gradle.")) args.push(`-D${k}=${v}`);
-          else env[`ORG_GRADLE_PROJECT_${k}`] = v;
-          if (/pass|secret|token|key|user|cred|auth/i.test(k)) secrets.push(v);
-        }
-        sources.push(...new Set(Object.values(from)));
-      }
-      return { env, args, secrets: secrets.filter((s) => s && s.length >= 3), sources };
-    }
-    var mask = (text, secrets) => {
-      let t = String(text ?? "");
-      for (const s of [...secrets].sort((a, b) => b.length - a.length)) t = t.split(s).join("***");
-      return t;
-    };
-    module2.exports = { forBuild, gradleProperties, gradleFiles, mask };
   }
 });
 
@@ -30004,6 +30505,12 @@ var require_testrun = __commonJS({
       if (!m) throw new Error("no Maven: the repo has no mvnw, and mvn is not on PATH (set tests.maven in config.json, or run with the compose jdk profile)");
       return [m, []];
     }
+    var KEEP_ENV = /^(PATH|HOME|USER|LOGNAME|SHELL|TMPDIR|TMP|TEMP|LANG|LANGUAGE|LC_\w+|TZ|TERM|JAVA_HOME|MAVEN_HOME|M2_HOME|MAVEN_OPTS|GRADLE_OPTS|GRADLE_USER_HOME|JAVA_TOOL_OPTIONS|(HTTPS?|NO|ALL)_PROXY|(https?|no|all)_proxy|SSL_CERT_FILE|SSL_CERT_DIR|NODE_EXTRA_CA_CERTS|DOCKER_HOST|TESTCONTAINERS_\w+)$/;
+    function cleanEnv(cfg) {
+      const out2 = {};
+      for (const [k, v] of Object.entries(process.env)) if (KEEP_ENV.test(k) || cfg.passEnv.includes(k)) out2[k] = v;
+      return out2;
+    }
     function command(root, p, tests, cfg) {
       const javaBin = cfg.javaHome ? [path2.join(cfg.javaHome, "bin")] : [];
       const sel = tests.map((t) => t.replace(/\.(java|kt)$/, "").split("/").pop());
@@ -30036,7 +30543,7 @@ var require_testrun = __commonJS({
         if (!gr[0]) throw new Error("no Gradle: the repo has no gradlew, and gradle is not on PATH (set tests.gradle in config.json)");
         const task = p.module === "." ? "test" : `:${p.module.split("/").join(":")}:test`;
         const fq = p.selectors || sel;
-        const args = [...gr[1], "--console=plain", "-q", "--warning-mode=none", task, ...fq.flatMap((t) => ["--tests", t.includes("#") ? t.replace("#", ".") : t.includes(".") ? t : `*.${t}`])];
+        const args = [...gr[1], "--console=plain", "-q", "--warning-mode=none", ...cfg.gradleBuildCache ? ["--build-cache"] : [], task, ...fq.flatMap((t) => ["--tests", t.includes("#") ? t.replace("#", ".") : t.includes(".") ? t : `*.${t}`])];
         if (cfg.offline) args.push("--offline");
         return { cmd: gr[0], args: [...args, ...cfg.args], cwd: root };
       }
@@ -30122,7 +30629,7 @@ var require_testrun = __commonJS({
     function exec(cmd, args, { cwd, env, timeoutMs, log }) {
       return new Promise((resolve) => {
         const started = Date.now();
-        const p = spawn(cmd, args, { cwd, env, stdio: ["ignore", "pipe", "pipe"] });
+        const p = require_trace().child(spawn(cmd, args, { cwd, env, stdio: ["ignore", "pipe", "pipe"] }));
         let out2 = "", killed = false;
         const keep = (b) => {
           out2 += b.toString();
@@ -30176,7 +30683,7 @@ ${e.message}`, ms: Date.now() - started });
       });
       const c = why ? command(root, p, tests, cfg) : null;
       const B = require_buildenv().forBuild(cfg, p.tool);
-      const env = { ...process.env, MAVEN_OPTS: process.env.MAVEN_OPTS || "-Xmx1g", CI: "true", ...B.env };
+      const env = { ...cleanEnv(cfg), MAVEN_OPTS: process.env.MAVEN_OPTS || "-Xmx1g", CI: "true", ...B.env };
       if (c) c.args.splice(c.args.indexOf("--console=plain") + 1 || 0, 0, ...p.tool === "gradle" ? B.args : []);
       const hide = (t) => require_buildenv().mask(t, B.secrets);
       if (cfg.javaHome) {
@@ -30193,7 +30700,7 @@ ${e.message}`, ms: Date.now() - started });
         if (db.ddlPath) statements = splitSql(fs2.readFileSync(W.resolvePath(m, db.ddlPath).full, "utf8"));
         else statements = require_ddl().snapshot(db.env, db.db, opts).statements;
         log(`test db: loading ${statements.length} statements`);
-        database = await require_testdb().create(runId, statements);
+        database = await require_trace().step("test database", () => require_testdb().create(runId, statements), `${statements.length} statements`);
         if (database.errors.length) log(`test db: ${database.errors.length} statements failed`);
         Object.assign(env, { SPRING_DATASOURCE_URL: database.jdbcUrl, SPRING_DATASOURCE_USERNAME: database.user, SPRING_DATASOURCE_PASSWORD: database.password, SPRING_JPA_HIBERNATE_DDL_AUTO: "none", SPRING_SQL_INIT_MODE: "never", SPRING_FLYWAY_ENABLED: "false", SPRING_LIQUIBASE_ENABLED: "false" });
       }
@@ -30203,13 +30710,14 @@ ${e.message}`, ms: Date.now() - started });
       if (!why) {
         const selectors = p.selectors;
         log(`fast: ${selectors.join(" ")}`);
-        r = await fast.run({ id, root, plan: p, cfg, env, mvn: { cmd: mavenCmd(root, cfg)[0], args: mavenCmd(root, cfg)[1] }, selectors, graph: g, log });
+        r = await fast.run({ id, root, plan: p, cfg, env, mvn: { cmd: mavenCmd(root, cfg)[0], args: mavenCmd(root, cfg)[1] }, selectors, graph: g, log: (l) => log(hide(l)) });
         cases = r.cases;
         fastInfo = { compiled: r.compiled, prepared: !!r.prepared, prepareMs: r.prepareMs, phase: r.phase };
       } else {
         for (const d of reportDirs) fs2.rmSync(d, { recursive: true, force: true });
         log(`${p.tool}: ${path2.basename(c.cmd)} ${c.args.filter((a) => !/^-Dmaven\.repo\.local|^-s$/.test(a)).join(" ")}`);
-        r = await exec(c.cmd, c.args, { cwd: c.cwd, env, timeoutMs: cfg.timeoutMs, log });
+        r = await require_trace().step(`${p.tool} test`, () => exec(c.cmd, c.args, { cwd: c.cwd, env, timeoutMs: cfg.timeoutMs, log: (l) => log(hide(l)) }), `${p.module} ${tests.join(",")}`);
+        if (r.code !== 0 && !r.out.trim()) require_trace().note(`${p.tool} exited ${r.code} with no output: is ${c.cmd} runnable here?`);
         cases = parseReports(reportDirs, started);
       }
       if (database) {
@@ -30363,7 +30871,7 @@ ${e.message}`, ms: Date.now() - started });
       if (cur.trim()) out2.push(cur.trim());
       return out2;
     }
-    module2.exports = { run, proof, testName, fingerprint, plan, parseReports, compileErrors, codeParts, splitSql };
+    module2.exports = { run, cleanEnv, proof, testName, fingerprint, plan, parseReports, compileErrors, codeParts, splitSql };
   }
 });
 
@@ -31003,7 +31511,7 @@ var require_tools_code = __commonJS({
           name: "showcase",
           group: "showcase",
           description: `Everything about one service on one page (and a check that all of dt works): health of every service and the dashboard in each environment, this service's instances with the version and commit deployed (and whether the environments run the same build), its passport, the impact of a code part, then a workspace on master (or ref) where an isolated test of that code part is written (the test_context skeleton, or test= with your own) and run, and its patch. Use it for "show everything for service X and test Class.method". Shown as one page with every view embedded; if it answers "running", call it again with the job id.`,
-          input: { service: str("Service name"), target: str("Code part to test: Class#method or Class"), envs: str("Environments, comma separated (default: all)"), ref: str("Branch, tag or sha for the workspace (default: the default branch)"), test: str("Test source to run instead of the skeleton"), job: str('A job id from an earlier "running" answer') },
+          input: { service: str("Service name"), target: str("Code part to test: Class#method or Class"), refresh_passport: { type: "boolean", default: false, description: "Build the passport again (default: the existing one)" }, envs: str("Environments, comma separated (default: all)"), ref: str("Branch, tag or sha for the workspace (default: the default branch)"), test: str("Test source to run instead of the skeleton"), job: str('A job id from an earlier "running" answer') },
           required: [],
           run: async (a) => {
             const J = require_jobs();
@@ -31013,7 +31521,7 @@ var require_tools_code = __commonJS({
               if (!a.service) throw new Error("service: which service to show");
               job = J.start(`showcase:${a.service}:${a.target || ""}`, `showcase ${a.service}${a.target ? ` ${a.target}` : ""}`, async (log) => {
                 const S = require_showcase();
-                return S.summary(await S.run({ service: a.service, target: a.target, envs: a.envs, ref: a.ref, test: a.test, log }));
+                return S.summary(await S.run({ service: a.service, target: a.target, envs: a.envs, ref: a.ref, test: a.test, refreshPassport: a.refresh_passport, log }));
               });
             }
             return waitJob(job, require_config().getTests().waitMs, "showcase");
@@ -31047,6 +31555,7 @@ var require_tools_code = __commonJS({
             const keys = keysOf(a.repos);
             if (!keys.length) return { hits: [], note: a.repos ? `no index matches "${a.repos}" (code_index lists them)` : "nothing indexed yet: code_index, passport or workspace_open fetch and index repos" };
             const r = CI.grep(keys, a.pattern, { regex: a.regex, ignoreCase: a.ignore_case !== false, glob: a.glob, context: Math.min(a.context || 0, 10), limit: Math.min(a.limit || 100, 2e3), tests: a.tests !== false });
+            if (r.ms > 1e3) require_trace().note(`grep over ${keys.length} indexes: ${r.candidates} candidate files, ${r.scanned} read, ${r.ms} ms (prefilter: ${r.plan})`);
             const t = tabular("code-search", r.hits.map((h) => ({ repo: h.repo, file: `${h.path}:${h.line}`, text: h.text, ...h.context ? { context: h.context } : {} })), { query: `${a.regex ? "/" + a.pattern + "/" : a.pattern}${a.glob ? ` in ${a.glob}` : ""}` }, { preview: 30 });
             return { ...t, files: r.files, repos: keys.length, scanned: r.scanned, candidates: r.candidates, truncated: r.truncated || void 0, ms: r.ms, prefilter: r.plan };
           }
@@ -31125,10 +31634,24 @@ var require_tools_code = __commonJS({
         {
           name: "workspace_open",
           group: "code",
-          description: "Check out a repo at master/main, a branch, tag or commit (or what is deployed in env) into a new writable workspace, indexed for code_search, impact and test_context. Write tests and fixes there with workspace_write, run them with test_run, take the result with workspace_patch. Nothing is committed or pushed.",
-          input: { service: str("Service (resolved like passport)"), project: str("Project key"), repo: str("Repo slug"), ref: str("Branch, tag or sha (default branch if empty)"), env: str("Check out the commit deployed in this env (with service)") },
-          limit: () => "bitbucket",
-          run: async (a) => require_workspace().open({ service: a.service, project: a.project, repo: a.repo, ref: a.ref, env: a.env })
+          description: "Check out a repo at master/main, a branch, tag or commit (or what is deployed in env) into a writable workspace (a commit already fetched by a passport or another workspace is reused, nothing downloaded; the same repo and ref in the same chat gives back that workspace), indexed for code_search, impact and test_context. Write tests and fixes there with workspace_write, run them with test_run, take the result with workspace_patch. Nothing is committed or pushed.",
+          input: { service: str("Service (resolved like passport)"), project: str("Project key"), repo: str("Repo slug"), ref: str("Branch, tag or sha (default branch if empty)"), env: str("Check out the commit deployed in this env (with service)"), fresh: { type: "boolean", default: false, description: "A new checkout even if this chat opened the same repo and ref" }, libraries: { type: "boolean", default: true, description: "Also fetch and index its internal libraries (flows through them)" }, job: str('A job id from an earlier "running" answer') },
+          limit: (a) => a.job ? null : "bitbucket",
+          // a job: a big repo and its libraries can take longer than the chat client waits
+          run: async (a) => {
+            const J = require_jobs();
+            let job = a.job ? J.find(a.job) : null;
+            if (a.job && !job) throw new Error(`no job ${a.job}`);
+            if (!job) {
+              if (!a.service && !(a.project && a.repo)) throw new Error("give service, or project and repo");
+              job = J.start(`workspace:${a.service || `${a.project}/${a.repo}`}:${a.ref || ""}:${Date.now()}`, `workspace_open ${a.service || `${a.project}/${a.repo}`}${a.ref ? `@${a.ref}` : ""}`, async () => {
+                const w = await require_workspace().open({ service: a.service, project: a.project, repo: a.repo, ref: a.ref, env: a.env, fresh: a.fresh, libraries: a.libraries !== false });
+                const notes = require_trace().current()?.notes || [];
+                return { ...w, libs: (w.libs || []).map((l) => l.error ? `${l.artifactId}: ${String(l.error).slice(0, 160)}` : `${l.artifactId} ${l.repo}${l.module ? "/" + l.module : ""}`), ...notes.length ? { notes } : {} };
+              });
+            }
+            return waitJob(job, require_config().getTests().waitMs, "workspace_open");
+          }
         },
         {
           name: "workspace_list",
@@ -31641,7 +32164,7 @@ var require_tools = __commonJS({
             summary: p.summary,
             changes: p.changes,
             graph: p.graph,
-            flows: Array.isArray(p.flows) ? p.flows.map((f) => ({ entry: f.entry, via: f.via.map((v) => v.split(" ")[0]).join(" -> "), out: Object.fromEntries(Object.entries(f.out).map(([k, v]) => [k, v.map((x) => x.topic || x.call || x.table && `${x.table} ${x.access}` || x.function || x.index || `${x.kind} ${x.type}.${x.call}`)])), mocks: f.mocks.map((m) => m.split(":")[0]) })) : p.flows,
+            flows: Array.isArray(p.flows) ? p.flows.map((f) => ({ entry: f.entry, via: f.via.map((v) => v.split(" ")[0]).join(" -> "), out: Object.fromEntries(Object.entries(f.out).map(([k, v]) => [k, v.map((x) => x.type ? `${x.kind} ${x.type}.${x.call}` : x.topic || x.call || x.table && `${x.table} ${x.access}` || x.function || x.index)])), mocks: f.mocks.map((m) => m.split(":")[0]) })) : p.flows,
             view: `${r.publicUrl()}/passport/${encodeURIComponent(p.service)}?t=${r.sign(`passport:${p.service}`)}`
           };
         }
@@ -31940,9 +32463,41 @@ var require_tools = __commonJS({
       {
         name: "call_history",
         group: "history",
-        description: 'Recent tool calls (all clients and scripts), newest first: tool, args, ok, time taken. Filter by words, tool or source ("direct" leaves out calls made by scripts).',
-        input: { q: str("Words to match in tool, source or args"), tool: str("Only this tool"), source: str('mcp, openapi, api, cli, tool, script:<id>, or "direct"'), limit: int("Max calls", 50) },
-        run: (a) => tabular("calls", require_calls().history({ ...a, limit: Math.min(a.limit || 50, 500) }).map((c) => ({ at: c.at, tool: c.tool, source: c.source, ok: c.ok, ms: c.ms, args: JSON.stringify(c.args), error: c.error || "" })), { query: "call history" }, { preview: 20 })
+        description: "Tool calls and jobs: the ones running now (with the step they are in and how long), then recent ones newest first: tool, args, ok, time taken, the steps with their times (git fetch, index, Maven prepare, compile, run...) and the error with the step it failed in. Use it to see whether something is slow or failed, and where.",
+        input: { q: str("Words to match in tool, source or args"), tool: str("Only this tool"), source: str('mcp, openapi, api, cli, tool, script:<id>, or "direct"'), failed: { type: "boolean", default: false, description: "Only calls that failed" }, limit: int("Max calls", 50) },
+        run: (a) => {
+          const T = require_trace();
+          const running = T.list().filter((c) => !a.tool || c.tool === a.tool).map((c) => ({ at: c.startedAt, tool: c.tool, source: c.source, ok: "running", ms: c.runningMs, steps: `${c.steps}${c.step ? `${c.steps ? ", " : ""}now: ${c.step}` : ""}`, args: "", error: "" }));
+          const done = require_calls().history({ ...a, limit: Math.min(a.limit || 50, 500) }).filter((c) => !a.failed || !c.ok).map((c) => ({ at: c.at, tool: c.tool, source: c.source, ok: c.ok, ms: c.ms, steps: (c.steps || []).map((x) => `${x.name} ${T.secs(x.ms)}${x.error ? " FAILED" : ""}`).join(", "), args: JSON.stringify(c.args), error: c.error || "" }));
+          return tabular("calls", [...running, ...done], { query: "call history" }, { preview: 20 });
+        }
+      },
+      {
+        name: "dt_log",
+        group: "history",
+        description: `dt's own log (cache/logs/dt.log): each call's start, steps with times, notes (fallbacks taken: a broken .git replaced, a sha not fetchable, Bitbucket not answering, a reused checkout) and its end with the error. failed=true: only failures. For "why did it fail / why is it slow".`,
+        input: { failed: { type: "boolean", default: false, description: "Only failed calls and steps" }, tool: str("Only this tool"), q: str("Words to match"), lines: int("Max events", 100) },
+        run: (a) => require_trace().tail({ lines: Math.min(a.lines || 100, 1e3), failed: a.failed, tool: a.tool, q: a.q }).map((e) => `${e.at.slice(11, 19)} ${e.event} ${e.tool || ""}${e.id ? `#${e.id}` : ""}${e.name ? ` ${e.name}` : ""}${e.ms != null ? ` ${e.ms}ms` : ""}${e.ok === false ? " FAILED" : ""}${e.text ? `: ${e.text}` : ""}${e.error ? `: ${String(e.error).split("\n")[0].slice(0, 300)}` : ""}${e.event === "start" ? ` ${JSON.stringify(e.args).slice(0, 200)}` : ""}`)
+      },
+      {
+        name: "doctor",
+        group: "history",
+        description: "Why fetching repos or running tests fails here: folders writable (and chmod), disk, git, Bitbucket (token, API, a repo's refs; deep=true also fetches it), JDK (java and javac), Maven, Gradle and its wrapper download, the company repository with the credentials from maven-settings.xml / gradle.properties, Maven Central, proxy, the test database, stuck jobs. Each problem says how to fix it. Shown as a table.",
+        input: { repo: str("Also check this repo: PROJECT/slug"), deep: { type: "boolean", default: false, description: "Also fetch the repo into a scratch folder" } },
+        run: async (a) => {
+          const d = await require_doctor().check({ repo: a.repo, deep: a.deep });
+          const order = { fail: 0, warn: 1, ok: 2 };
+          const rows = d.checks.sort((x, y) => order[x.status] - order[y.status]);
+          return tabular("doctor", rows, { query: `doctor: ${d.counts.fail} failing, ${d.counts.warn} warnings` }, { preview: rows.filter((r) => r.status !== "ok").length || 5, summary: d.counts });
+        }
+      },
+      {
+        name: "job_cancel",
+        group: "history",
+        description: "Stop a running job (test_run, workspace_open, showcase, catalog_sync...): its builds and git processes are killed and it is marked cancelled. call_history shows what runs and in which step.",
+        input: { job: str('Job id (from a "running" answer, call_history or /admin Jobs)') },
+        required: ["job"],
+        run: (a) => require_jobs().cancel(a.job, "cancelled by request")
       },
       {
         name: "call_patterns",
@@ -32280,11 +32835,19 @@ var require_tools = __commonJS({
         inputSchema: { type: "object", properties: props(t.input), required: t.required || [] }
       }));
     }
-    async function call(name, args = {}, { source } = {}) {
+    async function call(name, args = {}, { source, session } = {}) {
+      const T = require_trace();
+      const parent = T.current();
       const started = Date.now();
-      let ok = false, error, size;
+      let ok = false, error, size, steps;
       try {
-        const r = await callTool(name, args);
+        const r = await T.call(name, args, { source, session: session || parent?.session }, async () => {
+          try {
+            return await callTool(name, args);
+          } finally {
+            steps = T.current()?.steps;
+          }
+        });
         ok = true;
         try {
           size = JSON.stringify(r).length;
@@ -32295,7 +32858,7 @@ var require_tools = __commonJS({
         error = e.message;
         throw e;
       } finally {
-        require_calls().record({ tool: name, args, source, ok, ms: Date.now() - started, error, size });
+        require_calls().record({ tool: name, args, source, ok, ms: Date.now() - started, error, size, steps });
       }
     }
     async function callTool(name, args = {}) {
@@ -32693,13 +33256,10 @@ var require_server2 = __commonJS({
         case "tools/list":
           return reply({ tools: await tools.schemas() });
         case "tools/call": {
-          const started = Date.now();
           try {
             const result = await tools.call(msg.params.name, msg.params.arguments || {}, { source: "mcp" });
-            console.error(`mcp ${msg.params.name} ${Date.now() - started}ms`);
             return reply({ content: [{ type: "text", text: typeof result === "string" ? result : JSON.stringify(result) }] });
           } catch (e) {
-            console.error(`mcp ${msg.params.name} ERROR ${e.message}`);
             return reply({ content: [{ type: "text", text: `Error: ${e.message}` }], isError: true });
           }
         }
@@ -32738,8 +33298,9 @@ var require_server2 = __commonJS({
     async function oapi(req, res, url) {
       const name = url.pathname.split("/").pop();
       let result;
+      const session = req.headers["x-openwebui-chat-id"] || req.headers["x-chat-id"] || null;
       try {
-        result = await tools.call(name, await readJsonBody(req), { source: "openapi" });
+        result = await tools.call(name, await readJsonBody(req), { source: "openapi", session });
       } catch (e) {
         return send(res, 400, { error: e.message });
       }
@@ -32784,6 +33345,13 @@ var require_server2 = __commonJS({
         page("admin.html")(req, res);
       }],
       ["GET", "/api/admin/status", true, async (req, res) => send(res, 200, await admin.status())],
+      ["POST", "/api/admin/job/*/cancel", true, (req, res, url) => {
+        try {
+          send(res, 200, require_jobs().cancel(url.pathname.split("/").slice(-2)[0], "cancelled from /admin"));
+        } catch (e) {
+          send(res, 404, { error: e.message });
+        }
+      }],
       ["POST", "/api/admin/tools/reload", true, async (req, res) => send(res, 200, await tools.reload(await readJsonBody(req)))],
       ["POST", "/api/admin/refresh", true, async (req, res) => {
         try {
@@ -33045,6 +33613,21 @@ var require_server2 = __commonJS({
         console.error(`browser secrets: ${e.message}`);
       }
       tools.ready().catch((e) => console.error(`tools: ${e.message}`));
+      if (!process.env.DT_NO_DOCTOR && !process.env.NODE_TEST_CONTEXT) setTimeout(() => require_doctor().check().then((d) => {
+        const bad = d.checks.filter((c) => c.status !== "ok");
+        console.error(`doctor: ${d.counts.ok} ok, ${d.counts.warn} warnings, ${d.counts.fail} failing`);
+        for (const c of bad) console.error(`doctor: ${c.status.toUpperCase()} ${c.check}: ${c.detail}${c.fix ? ` (fix: ${c.fix})` : ""}`);
+      }).catch((e) => console.error(`doctor: ${e.message}`)), 2e3).unref();
+      const sweep = () => {
+        try {
+          require_workspace().sweep().then((r) => {
+            if (r.length) console.error(`workspaces removed (unused ${require_config().getTests().workspaceDays} days): ${r.join(", ")}`);
+          });
+        } catch {
+        }
+      };
+      setTimeout(sweep, 5e3).unref();
+      setInterval(sweep, 6 * 36e5).unref();
       server.listen(port, host, () => console.error(`dt serve: http://${host}:${port}  (mcp: /mcp, admin: /admin)`));
       return server;
     }
@@ -33075,6 +33658,7 @@ Live
   dt kafka <topic> [--n 5]                 last n messages
   dt consul [service]                      services, or instances + /version
   dt tool [name] ['{"json":"args"}']        call any agent tool (list without name)
+  dt doctor [--repo PROJECT/slug] [--deep]  why fetching repos or running tests fails here, with fixes
   dt showcase <service> [Class#method] [--envs a,b] [--ref branch] [--test-file Test.java]
                                            health, versions, passport, impact, a test run on master: one page
 
@@ -33089,7 +33673,7 @@ Serve
 
 Global: --env <name> (default: first env), --pretty.  Config folder: DT_HOME (default: this folder)
 `.trim();
-var BOOL_FLAGS = /* @__PURE__ */ new Set(["pretty", "compact", "lan", "help", "uses", "dry-run", "update"]);
+var BOOL_FLAGS = /* @__PURE__ */ new Set(["pretty", "compact", "lan", "help", "uses", "dry-run", "update", "deep"]);
 function parseArgs(argv) {
   const opts = { _: [] };
   for (let i = 0; i < argv.length; i++) {
@@ -33212,6 +33796,14 @@ var commands = {
     if (opts._[0]) return consul.service(opts.env, opts._[0]);
     const base = require_config().endpoint(opts.env, "consul");
     return Object.keys(await http(`${base}/v1/catalog/services`));
+  },
+  // dt doctor [--repo PROJECT/slug] [--deep]: what fetching and test runs need, checked
+  async doctor(opts) {
+    const d = await require_doctor().check({ repo: opts.repo, deep: !!opts.deep });
+    for (const c of d.checks) console.log(`${{ ok: "ok  ", warn: "WARN", fail: "FAIL" }[c.status]}  ${c.group.padEnd(10)} ${c.check}: ${c.detail}${c.fix ? `
+      fix: ${c.fix}` : ""}`);
+    if (d.counts.fail) process.exitCode = 1;
+    return d.counts;
   },
   // dt showcase <service> [Class#method] [--envs dev,uat] [--ref master]: every view of one service, one page
   async showcase(opts) {

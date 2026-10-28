@@ -129,13 +129,14 @@ services:
       WEBUI_AUTH: "false"                                  # single local user (admin)
       ENABLE_PERSISTENT_CONFIG: "false"                    # this file stays the source of truth on every start
       ENABLE_TOOL_SERVERS: "true"
+      ENABLE_FORWARD_USER_INFO_HEADERS: "true"           # tool calls say which chat they come from: dt reuses that chat's workspace
       # ~80 tools (Open WebUI built-ins + dt + browser) would crowd the model's context.
       # Keep the everyday ones loaded; the rest stay reachable through Open WebUI's search_tools.
       ENABLE_TOOL_SEARCH: "true"
       TOOL_SEARCH_DEFER_THRESHOLD: "0"
       TOOL_SEARCH_ALWAYS_LOADED: >-
         find,catalog_sync,pg_table,pg_function,pg_usage,pg_query,es_search,kafka_topic,kafka_last,kafka_lag,health,es_health,overview,consul_service,
-        logs_search,logs_trace,passport,who_uses,bitbucket_pr,code_search,impact,workspace_open,test_context,test_run,workspace_write,workspace_patch,browser_sites,site_url,api_routes,routes_learn,script_list,script_run,call_patterns,files_stores,files_search,files_read,files_show,files_browse,show,diff,code,
+        logs_search,logs_trace,passport,who_uses,bitbucket_pr,code_search,impact,workspace_open,test_context,test_run,workspace_write,workspace_patch,showcase,call_history,dt_log,doctor,job_cancel,browser_sites,site_url,api_routes,routes_learn,script_list,script_run,call_patterns,files_stores,files_search,files_read,files_show,files_browse,show,diff,code,
         browser_browser_navigate,browser_browser_snapshot,browser_browser_click,browser_browser_type,browser_browser_fill_form,
         browser_browser_press_key,browser_browser_take_screenshot,browser_browser_wait_for
       # dt over OpenAPI so results can embed the viewer/dashboard in the chat; browser over MCP.

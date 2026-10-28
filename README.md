@@ -635,7 +635,54 @@ Every picture comes from the bundled demo, a fake environment with real Postgres
 - Result pages load their data by unguessable ids or signed tokens, so embeds in a sandboxed chat iframe work. Everything else needs a trusted client.
 - The Bitbucket token is passed only as a per-command git header; it is never written to `.git/config`.
 
+## What dt is doing: logs, call history, doctor
+
+Every tool call and every job is traced, in `docker logs dt` and in `cache/logs/dt.log`:
+
+```
+11:28:38 dt job workspace_open payments-service#axqa start {"job":"mvs16xq79de372"} (job)
+11:28:38 dt   workspace_open payments-service#axqa note: reusing 5147f01d64 from …/repos/SHOP/payments-service: nothing downloaded
+11:28:39 dt job workspace_open payments-service#axqa ok 732ms  git ls-remote 185ms · git init 68ms · git fetch (local) 220ms · git checkout 43ms · code index 39ms
+11:28:47 dt   tests PaymentServiceTest in …#dyb5 maven prepare (test-compile + dependency:build-classpath, once per workspace) 8.5s
+11:28:51 dt job tests PaymentServiceTest in …#dyb5 ok 12.4s  maven prepare 8.5s · javac main 0ms · javac tests 0ms · run tests 3.5s
+```
+
+- **Each call:** a start line with its arguments, every step that takes a second or fails, notes, and the end: ok with the time per step, or `FAILED in <step>: <error>`.
+- **Notes** say when dt took a fallback: a broken `.git` replaced, git unable to chmod (git data moved to `DT_GIT_DIR`), a sha not fetchable, Bitbucket not answering (local copy used), a checkout reused.
+- `DT_LOG=calls` leaves out the steps, `DT_LOG=quiet` everything.
+
+In the chat:
+- `call_history`: what runs now and in which step, then recent calls with their steps and errors (`failed=true` for failures only).
+- `dt_log`: the log's events.
+- `job_cancel`: stops a running job and kills its builds and git processes. /admin → Jobs has a Cancel button too.
+
+**`doctor`** (`dt doctor --repo PROJECT/slug [--deep]`, or the tool in the chat) checks what fetching and test runs need, each with a fix:
+
+- folders writable (and whether git can chmod there), and free disk;
+- git, and Bitbucket: the token, the API, and `git ls-remote` of the repo (`--deep` also fetches it);
+- `java` *and* `javac`, Maven, Gradle, and the Gradle wrapper's download;
+- the Maven repository and Gradle home, writable;
+- the company repository, reached with the credentials from `maven-settings.xml` / `gradle.properties`;
+- Maven Central, the proxy, the test database, and jobs running longer than `tests.timeoutMs`.
+
+dt runs it once at start and prints the problems to the log.
+
+**Sizes:**
+- the log rotates at `log.maxMb` (50) MB and keeps `log.files` (3) files;
+- the call history keeps 5,000 calls and at most `log.maxMb` (50) MB;
+- stored results: the newest 500, at most `results.maxMb` (500) MB;
+- workspaces unused for `tests.workspaceDays` (7) days are removed.
+
+**Workspaces and builds:**
+- `workspace_open` asks Bitbucket which commit the ref points to. If the passport's checkout or another workspace has that commit, it takes it from there and downloads nothing.
+- In the same chat (Open WebUI forwards the chat id, `ENABLE_FORWARD_USER_INFO_HEADERS`, on in compose), the same repo and ref give back that chat's workspace, with its changes and its prepared build. `fresh=true` gets a new checkout.
+- It runs as a job, so a big repo answers "running" instead of hitting the chat client's timeout.
+- Builds run with a clean environment: PATH, HOME, locale, proxies and JAVA_HOME, plus `tests.passEnv`, `tests.env` and the repository settings. Build scripts and tests can't read dt's API key or tokens.
+- Gradle uses its build cache (`--build-cache`), shared by all workspaces through the Gradle home.
+
 ## Troubleshooting
+
+**Workspaces or test runs fail and you don't know why.** Run `doctor` (with `repo=PROJECT/slug`), then `call_history failed=true` or `dt_log failed=true`: the failed step and its error are there.
 
 **Passports: `could not set 'core.filemode' to 'false'` / `not a git repository`.** git cannot manage its files in `repos/`. That happens when the config folder is on a drive that does not allow changing file permissions (a Windows drive under WSL such as `/mnt/c/...`, a network share, some Docker/Colima mounts), or when the containers run as another user. `run.sh` runs them as you (`DT_UID`/`DT_GID` from `id -u`/`id -g`; set them in `.env` to override). Where git still cannot chmod, dt keeps the git data in the container (`DT_GIT_DIR`, default `/tmp/dt-git`) and checks the files out into `repos/` as before; a half-made `.git` from an earlier failure is replaced. Fastest of all: put the config folder on the local disk (in WSL, under `~`, not `/mnt/c`).
 

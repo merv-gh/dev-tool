@@ -18,7 +18,11 @@
   .src { font-size: 11px; color: var(--muted); }
   section { margin-top: 4px; }
   td a.loc { color: var(--muted); } td a.loc:hover { color: var(--accent); }
-  .changes li { margin: 2px 0; }
+  details.acc-sec > summary { cursor: pointer; list-style: none; }
+  details.acc-sec > summary::-webkit-details-marker { display: none; }
+  details.acc-sec > summary h2 { display: inline-flex; gap: 6px; align-items: baseline; margin: 10px 0 6px; }
+  details.acc-sec > summary h2::before { content: '▸'; color: var(--muted); font-size: 12px; }
+  details.acc-sec[open] > summary h2::before { content: '▾'; }
   .add { color: var(--good); } .rem { color: var(--lv-error); }
 </style>
 </head>
@@ -104,8 +108,10 @@ function flow() {
   $('flow').innerHTML = `<svg viewBox="0 -12 ${W} ${H + 12}">${s}</svg>`;
 }
 
+// every list is an accordion, closed: in a chat the page stays short; the filter opens the ones that match
+const acc = (id, title, count, body) => `<section id="sec-${id}"><details class="acc-sec"><summary><h2>${esc(title)} <span class="muted">${count}</span></h2></summary>${body}</details></section>`;
 function section(id, title, rows, head, cell) {
-  return `<section id="sec-${id}"><h2>${esc(title)} <span class="muted">${rows.length}</span></h2>${rows.length ? `<div class="card scroll"><table><thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${cell(r).map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>` : '<div class="empty card">none found</div>'}</section>`;
+  return acc(id, title, rows.length, rows.length ? `<div class="card scroll"><table><thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${cell(r).map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>` : '<div class="empty card">none found</div>');
 }
 
 function render() {
@@ -115,21 +121,19 @@ function render() {
   $('meta').innerHTML = [bbRepo ? `<a href="${esc(bbRepo)}" target="_blank" rel="noopener">${esc(p.repo.project)}/${esc(p.repo.repo)}</a>` : esc(`${p.repo.project}/${p.repo.repo}`),
     `<span class="mono">${esc(p.repo.ref)} ${esc(p.repo.sha.slice(0, 12))}</span>`, p.deployed ? `deployed in ${esc(p.env)} (${esc(p.deployed.instance)})` : '', `built ${fmtDate(p.builtAt)}`].filter(Boolean).join(' · ');
   $('openfull').href = location.pathname + location.search.replace(/[?&]embed=1/, '');
-  const ch = p.changes;
   $('chips').innerHTML = [
     `<span class="chip">endpoints <b>${p.summary.endpoints}</b></span>`, `<span class="chip">consumes <b>${p.summary.consumes.length}</b></span>`,
     `<span class="chip">produces <b>${p.summary.produces.length}</b></span>`, `<span class="chip">tables <b>${Object.keys(p.summary.tables).length}</b></span>`,
     `<span class="chip">calls <b>${p.summary.calls.length}</b></span>`, `<span class="chip">libraries <b>${p.libraries.length}</b></span>`,
     p.repo.fallback ? `<span class="chip warn" title="${esc(p.repo.fallback)}">ref fallback</span>` : '',
     p.summary.unresolved ? `<span class="chip warn">${p.summary.unresolved} unresolved placeholders</span>` : '',
-    ch ? (ch.none ? '<span class="chip good">no changes since last passport</span>' : '<a class="chip warn" href="#sec-changes">changed since last passport</a>') : '',
   ].join('');
   flow();
   const S = [];
-  if (ch && !ch.none) {
-    S.push(`<section id="sec-changes"><h2>Changes ${esc((ch.fromSha || '').slice(0, 10))} → ${esc((ch.toSha || '').slice(0, 10))}</h2><div class="card" style="padding:8px 14px"><ul class="changes">${Object.entries(ch).filter(([, v]) => v && v.added).map(([k, v]) =>
-      `<li><b>${esc(k)}</b>: ${v.added.map(a => `<span class="add">+ ${esc(a)}</span>`).join(', ')} ${v.removed.map(a => `<span class="rem">− ${esc(a)}</span>`).join(', ')}</li>`).join('')}</ul></div></section>`);
-  }
+  if (Array.isArray(p.flows) && p.flows.length) S.push(section('flows', 'Flows (entry → chain → what leaves)', p.flows, ['entry', 'through', 'leaves', 'a flow test mocks'],
+    f => [`<span class="mono">${esc(f.entry)}</span>`, `<span class="muted">${f.via.map(v => esc(v.split(' ')[0])).join(' → ')}</span>`,
+      Object.entries(f.out || {}).map(([k, v]) => v.map(x => `<span class="acc">${esc(k)} ${esc(x.type ? `${x.type}.${x.call}` : x.topic || x.call || (x.table ? `${x.table} ${x.access}` : '') || x.function || x.index || '')}</span>`).join('')).join(''),
+      `<span class="muted">${(f.mocks || []).map(m => esc(m.split(':')[0])).join(', ')}</span>`]));
   S.push(section('endpoints', 'HTTP endpoints', uniq(e.endpoints, x => x.method + x.path).sort((a, b) => a.path.localeCompare(b.path)), ['method', 'path', 'handler', 'where'],
     x => [`<span class="pill ${esc(x.method)}">${esc(x.method)}</span>`, `<span class="mono">${esc(x.path)}</span>`, `<span class="mono">${esc(x.handler)}</span>${src(x)}`, loc(x)]));
   S.push(section('consumes', 'Kafka · consumes', e.consumes, ['topic', 'group', 'handler', 'via', 'where'],
@@ -140,9 +144,9 @@ function render() {
     x => x.kind === 'feign' ? [`<b>${esc(x.client)}</b>`, `<span class="pill ${esc(x.method)}">${esc(x.method)}</span> <span class="mono">${esc(x.path)}</span>`, `<span class="mono">${esc(x.handler)}</span>${src(x)}`, loc(x)]
       : [`<b>${esc(x.target || '')}</b>`, `<span class="mono">${esc(x.url)}</span>`, `<span class="mono">${esc(x.key || '')}</span>`, loc(x)]));
   const tables = Object.entries(p.summary.tables).sort(([a], [b]) => a.localeCompare(b));
-  S.push(`<section id="sec-tables"><h2>Database <span class="muted">${p.db.datasources.length} datasources · ${tables.length} tables</span></h2>
+  S.push(`<section id="sec-tables"><details class="acc-sec"><summary><h2>Database <span class="muted">${p.db.datasources.length} datasources · ${tables.length} tables</span></h2></summary>
     ${p.db.datasources.length ? `<div class="card scroll" style="margin-bottom:8px"><table><thead><tr><th>datasource key</th><th>kind</th><th>host</th><th>database</th></tr></thead><tbody>${p.db.datasources.map(d => `<tr><td class="mono">${esc(d.key)}</td><td>${esc(d.kind)}</td><td class="mono">${esc(d.host || '')}</td><td class="mono"><b>${esc(d.db || '')}</b></td></tr>`).join('')}</tbody></table></div>` : ''}
-    ${section('tables-detail', 'Tables', e.tables, ['table', 'access', 'via', 'where'], x => [`<span class="mono">${esc(x.table)}</span>`, `<span class="acc ${esc(x.access)}">${esc(x.access)}</span>`, `${esc(x.via)}${x.sql ? `<div class="mono muted" style="white-space:normal;max-width:560px">${esc(x.sql)}</div>` : ''}${src(x)}`, loc(x)]).replace('<h2>', '<h2 style="display:none">')}</section>`);
+    ${section('tables-detail', 'Tables', e.tables, ['table', 'access', 'via', 'where'], x => [`<span class="mono">${esc(x.table)}</span>`, `<span class="acc ${esc(x.access)}">${esc(x.access)}</span>`, `${esc(x.via)}${x.sql ? `<div class="mono muted" style="white-space:normal;max-width:560px">${esc(x.sql)}</div>` : ''}${src(x)}`, loc(x)]).replace(/<details class="acc-sec">/, '<details class="acc-sec" open>').replace(/<summary><h2>/, '<summary style="display:none"><h2>')}</details></section>`);
   S.push(section('dbcalls', 'Database functions called', e.dbCalls || [], ['function', 'via', 'where'], x => [`<span class="mono">${esc(x.name)}</span>`, `${esc(x.via)}${x.sql ? `<div class="mono muted" style="white-space:normal;max-width:560px">${esc(x.sql)}</div>` : ''}${src(x)}`, loc(x)]));
   S.push(section('es', 'Elasticsearch indices', p.es, ['index', 'via', 'where'], x => [`<span class="mono">${esc(x.index)}</span>`, esc(x.via), loc(x)]));
   S.push(section('libraries', 'Internal libraries', p.libraries, ['library', 'version', 'repo @ ref', 'provides', 'note'],
@@ -151,8 +155,9 @@ function render() {
       l.provides ? Object.entries(l.provides).filter(([, n]) => n).map(([k, n]) => `<span class="acc">${n} ${esc(k)}</span>`).join('') : '',
       l.error ? `<span style="color:var(--lv-error)">${esc(l.error)}</span>` : l.exactVersion === false ? '<span class="muted">default branch: no tag for this version</span>' : '']));
   S.push(section('external', 'External dependencies', p.dependencies.external, ['group', 'artifact', 'version', 'scope'], d => [esc(d.groupId), `<b>${esc(d.artifactId)}</b>`, `<span class="mono">${esc(d.version || 'managed')}</span>`, esc(d.scope || '')]));
-  if (p.config.unresolved.length) S.push(`<section><h2>Unresolved config placeholders <span class="muted">${p.config.unresolved.length}</span></h2><div class="card" style="padding:8px 12px">${p.config.unresolved.map(u => `<span class="chip mono" style="margin:2px">${esc(u)}</span>`).join('')}</div></section>`);
+  if (p.config.unresolved.length) S.push(acc('unresolved', 'Unresolved config placeholders', p.config.unresolved.length, `<div class="card" style="padding:8px 12px">${p.config.unresolved.map(u => `<span class="chip mono" style="margin:2px">${esc(u)}</span>`).join('')}</div>`));
   $('sections').innerHTML = S.join('');
+  document.querySelectorAll('#sections details').forEach(d => d.addEventListener('toggle', () => postHeight()));
   postHeight();
 }
 
@@ -160,11 +165,13 @@ document.addEventListener('click', (ev) => {
   const n = ev.target.closest('[data-go]');
   if (!n) return;
   const el = n.dataset.go === 'top' ? document.body : document.getElementById(`sec-${n.dataset.go}`) || document.getElementById(`sec-${n.dataset.go}-detail`);
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (el) { el.querySelectorAll('details.acc-sec').forEach(d => { d.open = true; }); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 });
 let ft; $('filter').oninput = () => { clearTimeout(ft); ft = setTimeout(() => {
   const q = $('filter').value.trim().toLowerCase();
   document.querySelectorAll('#sections tbody tr').forEach(tr => { tr.style.display = !q || tr.textContent.toLowerCase().includes(q) ? '' : 'none'; });
+  if (q) document.querySelectorAll('#sections details.acc-sec').forEach(d => { d.open = [...d.querySelectorAll('tbody tr')].some(tr => tr.style.display !== 'none'); });
+  postHeight();
 }, 120); };
 document.addEventListener('keydown', (e) => { if (e.key === '/' && document.activeElement.tagName !== 'INPUT') { e.preventDefault(); $('filter').focus(); } });
 

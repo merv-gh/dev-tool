@@ -24,6 +24,7 @@ Live
   dt kafka <topic> [--n 5]                 last n messages
   dt consul [service]                      services, or instances + /version
   dt tool [name] ['{"json":"args"}']        call any agent tool (list without name)
+  dt doctor [--repo PROJECT/slug] [--deep]  why fetching repos or running tests fails here, with fixes
   dt showcase <service> [Class#method] [--envs a,b] [--ref branch] [--test-file Test.java]
                                            health, versions, passport, impact, a test run on master: one page
 
@@ -39,7 +40,7 @@ Serve
 Global: --env <name> (default: first env), --pretty.  Config folder: DT_HOME (default: this folder)
 `.trim();
 
-const BOOL_FLAGS = new Set(['pretty', 'compact', 'lan', 'help', 'uses', 'dry-run', 'update']);
+const BOOL_FLAGS = new Set(['pretty', 'compact', 'lan', 'help', 'uses', 'dry-run', 'update', 'deep']);
 
 function parseArgs(argv) {
   const opts = { _: [] };
@@ -159,6 +160,13 @@ const commands = {
     return Object.keys(await http(`${base}/v1/catalog/services`));
   },
 
+  // dt doctor [--repo PROJECT/slug] [--deep]: what fetching and test runs need, checked
+  async doctor(opts) {
+    const d = await require('./lib/doctor').check({ repo: opts.repo, deep: !!opts.deep });
+    for (const c of d.checks) console.log(`${{ ok: 'ok  ', warn: 'WARN', fail: 'FAIL' }[c.status]}  ${c.group.padEnd(10)} ${c.check}: ${c.detail}${c.fix ? `\n      fix: ${c.fix}` : ''}`);
+    if (d.counts.fail) process.exitCode = 1;
+    return d.counts;
+  },
   // dt showcase <service> [Class#method] [--envs dev,uat] [--ref master]: every view of one service, one page
   async showcase(opts) {
     const [service, target] = opts._;
