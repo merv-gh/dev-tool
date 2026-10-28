@@ -1,0 +1,138 @@
+{
+  "started": "2026-10-28T22:01:39.429Z",
+  "ended": "2026-10-28T22:01:39.666Z",
+  "durationMs": 237,
+  "tool": "code_search",
+  "args": {
+    "pattern": "sales.orders",
+    "repos": "c06-main-a358",
+    "limit": 20
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 4560,
+  "stderrBytes": 150,
+  "stdout": "{\n  \"total\": 20,\n  \"rows\": [\n    {\n      \"repo\": \"work/c06-main-a358\",\n      \"file\": \"INCIDENT.md:3\",\n      \"text\": \"Tenant 22 order 420 cannot release even though its own enabled account has approved credit. A different tenant uses the same account and order IDs. Release only the selected tenant/order when sales.orders is PAID, sales.accounts is enabled, risk.accounts is APPROVED with enough credit, and pay.payme\"\n    },\n    {\n      \"repo\": \"work/c06-main-a358\",\n      \"file\": \"fixture.json:5\",\n      \"text\": \"\\\"create table sales.orders(tenant_id bigint,id bigint,account_id bigint,status text,amount numeric(20,6),primary key(tenant_id,id),foreign key(tenant_id,account_id) references sales.accounts(tenant_id,id))\\\",\"\n    },\n    {\n      \"repo\": \"work/c06-main-a358\",\n      \"file\": \"fixture.json:7\",\n      \"text\": \"\\\"insert into sales.orders values(11,420,7,'PAID',17.000001),(22,420,7,'PAID',100.000001)\\\"\"\n    },\n    {\n      \"repo\": \"work/c06-main-a358\",\n      \"file\": \"src/test/resources/dt-fixtures/tenant-release/manifest.json:9\",\n      \"text\": \"\\\"table\\\": \\\"sales.orders\\\",\"\n    },\n    {\n      \"repo\": \"work/c06-main-a358\",\n      \"file\": \"src/test/resources/dt-fixtures/tenant-release/manifest.json:19\",\n      \"text\": \"\\\"table\\\": \\\"sales.orders\\\",\"\n    },\n    {\n      \"repo\": \"work/c06-main-a358\",\n      \"file\": \"src/test/resources/dt-fixtures/tenant-release/manifest.json:40\",\n      \"text\": \"\\\"table\\\": \\\"sales.orders\\\",\"\n    },\n    {\n      \"repo\": \"work/c06-main-a358\",\n      \"file\": \"src/test/resources/dt-fixtures/tenant-release/manifest.json:61\",\n      \"text\": \"\\\"table\\\": \\\"sales.orders\\\",\"\n    },\n    {\n      \"repo\": \"work/c06-main-a358\",\n      \"file\": \"src/test/resources/dt-fixtures/tenant-release/manifest.json:130\",\n      \"text\": \"\\\"table\\\": \\\"sales.orders\\\",\"\n    },\n    {\n      \"repo\": \"work/c06-main-a358\",\n      \"file\": \"src/test/resources/dt-fixtures/tenant-release/manifest.json:148\",\n      \"text\": \"\\\"table\\\": \\\"sales.orders\\\",\"\n    },\n    {\n      \"repo\": \"work/c06-main-a358\",\n      \"file\": \"src/test/resources/dt-fixtures/tenant-release/manifest.json:191\",\n      \"text\": \"\\\"table\\\": \\\"sales.orders\\\",\"\n    },\n    {\n      \"repo\": \"work/c06-main-a358\",\n      \"file\": \"src/test/resources/dt-fixtures/tenant-release/manifest.json:227\",\n      \"text\": \"\\\"table\\\": \\\"sales.orders\\\",\"\n    },\n    {\n      \"repo\": \"work/c06-main-a358\",\n      \"file\": \"src/test/resources/dt-fixtures/tenant-release/manifest.json:253\",\n      \"text\": \"\\\"id\\\": \\\"orders:sales.orders\\\",\"\n    },\n    {\n      \"repo\": \"work/c06-main-a358\",\n      \"file\": \"src/test/resources/dt-fixtures/tenant-release/manifest.json:255\",\n      \"text\": \"\\\"table\\\": \\\"sales.orders\\\",\"\n    },\n    {\n      \"repo\": \"work/c06-main-a358\",\n      \"file\": \"src/test/resources/dt-fixtures/tenant-release/manifest.json:484\",\n      \"text\": \"\\\"orders:sales.orders\\\": [\"\n    },\n    {\n      \"repo\": \"work/c06-main-a358\",\n      \"file\": \"src/test/resources/dt-fixtures/tenant-release/manifest.json:543\",\n      \"text\": \"\\\"orders:sales.orders\\\": [\"\n    },\n    {\n      \"repo\": \"work/c06-main-a358\",\n      \"file\": \"src/test/resources/dt-fixtures/tenant-release/manifest.json:656\",\n      \"text\": \"\\\"create table sales.orders (\\\\n  tenant_id bigint not null,\\\\n  id bigint not null,\\\\n  account_id bigint,\\\\n  status text,\\\\n  amount numeric(20,6),\\\\n  constraint orders_pkey PRIMARY KEY (tenant_id, id)\\\\n)\\\"\"\n    },\n    {\n      \"repo\": \"work/c06-main-a358\",\n      \"file\": \"src/test/resources/dt-fixtures/tenant-release/manifest.json:666\",\n      \"text\": \"\\\"alter table sales.orders add constraint orders_tenant_id_account_id_fkey FOREIGN KEY (tenant_id, account_id) REFERENCES sales.accounts(tenant_id, id)\\\"\"\n    },\n    {\n      \"repo\": \"work/c06-main-a358\",\n      \"file\": \"src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/constraints.sql:1\",\n      \"text\": \"alter table sales.orders add constraint orders_tenant_id_account_id_fkey FOREIGN KEY (tenant_id, account_id) REFERENCES sales.accounts(tenant_id, id);\"\n    },\n    {\n      \"repo\": \"work/c06-main-a358\",\n      \"file\": \"src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/rows.json:2\",\n      \"text\": \"\\\"orders:sales.orders\\\": [\"\n    },\n    {\n      \"repo\": \"work/c06-main-a358\",\n      \"file\": \"src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/schema.json:3\",\n      \"text\": \"\\\"id\\\": \\\"orders:sales.orders\\\",\"\n    }\n  ],\n  \"view\": \"http://127.0.0.1:4000/view/mvsnszzc8faeecec0aeba86a31\",\n  \"files\": 6,\n  \"repos\": 1,\n  \"scanned\": 6,\n  \"candidates\": 7,\n  \"truncated\": true,\n  \"ms\": 4,\n  \"prefilter\": \"sales.orders\"\n}\n",
+  "stderr": "22:01:39 dt call code_search#1zxz start {\"pattern\":\"sales.orders\",\"repos\":\"c06-main-a358\",\"limit\":20} (cli)\n22:01:39 dt call code_search#1zxz ok 49ms\n",
+  "result": {
+    "total": 20,
+    "rows": [
+      {
+        "repo": "work/c06-main-a358",
+        "file": "INCIDENT.md:3",
+        "text": "Tenant 22 order 420 cannot release even though its own enabled account has approved credit. A different tenant uses the same account and order IDs. Release only the selected tenant/order when sales.orders is PAID, sales.accounts is enabled, risk.accounts is APPROVED with enough credit, and pay.payme"
+      },
+      {
+        "repo": "work/c06-main-a358",
+        "file": "fixture.json:5",
+        "text": "\"create table sales.orders(tenant_id bigint,id bigint,account_id bigint,status text,amount numeric(20,6),primary key(tenant_id,id),foreign key(tenant_id,account_id) references sales.accounts(tenant_id,id))\","
+      },
+      {
+        "repo": "work/c06-main-a358",
+        "file": "fixture.json:7",
+        "text": "\"insert into sales.orders values(11,420,7,'PAID',17.000001),(22,420,7,'PAID',100.000001)\""
+      },
+      {
+        "repo": "work/c06-main-a358",
+        "file": "src/test/resources/dt-fixtures/tenant-release/manifest.json:9",
+        "text": "\"table\": \"sales.orders\","
+      },
+      {
+        "repo": "work/c06-main-a358",
+        "file": "src/test/resources/dt-fixtures/tenant-release/manifest.json:19",
+        "text": "\"table\": \"sales.orders\","
+      },
+      {
+        "repo": "work/c06-main-a358",
+        "file": "src/test/resources/dt-fixtures/tenant-release/manifest.json:40",
+        "text": "\"table\": \"sales.orders\","
+      },
+      {
+        "repo": "work/c06-main-a358",
+        "file": "src/test/resources/dt-fixtures/tenant-release/manifest.json:61",
+        "text": "\"table\": \"sales.orders\","
+      },
+      {
+        "repo": "work/c06-main-a358",
+        "file": "src/test/resources/dt-fixtures/tenant-release/manifest.json:130",
+        "text": "\"table\": \"sales.orders\","
+      },
+      {
+        "repo": "work/c06-main-a358",
+        "file": "src/test/resources/dt-fixtures/tenant-release/manifest.json:148",
+        "text": "\"table\": \"sales.orders\","
+      },
+      {
+        "repo": "work/c06-main-a358",
+        "file": "src/test/resources/dt-fixtures/tenant-release/manifest.json:191",
+        "text": "\"table\": \"sales.orders\","
+      },
+      {
+        "repo": "work/c06-main-a358",
+        "file": "src/test/resources/dt-fixtures/tenant-release/manifest.json:227",
+        "text": "\"table\": \"sales.orders\","
+      },
+      {
+        "repo": "work/c06-main-a358",
+        "file": "src/test/resources/dt-fixtures/tenant-release/manifest.json:253",
+        "text": "\"id\": \"orders:sales.orders\","
+      },
+      {
+        "repo": "work/c06-main-a358",
+        "file": "src/test/resources/dt-fixtures/tenant-release/manifest.json:255",
+        "text": "\"table\": \"sales.orders\","
+      },
+      {
+        "repo": "work/c06-main-a358",
+        "file": "src/test/resources/dt-fixtures/tenant-release/manifest.json:484",
+        "text": "\"orders:sales.orders\": ["
+      },
+      {
+        "repo": "work/c06-main-a358",
+        "file": "src/test/resources/dt-fixtures/tenant-release/manifest.json:543",
+        "text": "\"orders:sales.orders\": ["
+      },
+      {
+        "repo": "work/c06-main-a358",
+        "file": "src/test/resources/dt-fixtures/tenant-release/manifest.json:656",
+        "text": "\"create table sales.orders (\\n  tenant_id bigint not null,\\n  id bigint not null,\\n  account_id bigint,\\n  status text,\\n  amount numeric(20,6),\\n  constraint orders_pkey PRIMARY KEY (tenant_id, id)\\n)\""
+      },
+      {
+        "repo": "work/c06-main-a358",
+        "file": "src/test/resources/dt-fixtures/tenant-release/manifest.json:666",
+        "text": "\"alter table sales.orders add constraint orders_tenant_id_account_id_fkey FOREIGN KEY (tenant_id, account_id) REFERENCES sales.accounts(tenant_id, id)\""
+      },
+      {
+        "repo": "work/c06-main-a358",
+        "file": "src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/constraints.sql:1",
+        "text": "alter table sales.orders add constraint orders_tenant_id_account_id_fkey FOREIGN KEY (tenant_id, account_id) REFERENCES sales.accounts(tenant_id, id);"
+      },
+      {
+        "repo": "work/c06-main-a358",
+        "file": "src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/rows.json:2",
+        "text": "\"orders:sales.orders\": ["
+      },
+      {
+        "repo": "work/c06-main-a358",
+        "file": "src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/schema.json:3",
+        "text": "\"id\": \"orders:sales.orders\","
+      }
+    ],
+    "view": "http://127.0.0.1:4000/view/mvsnszzc8faeecec0aeba86a31",
+    "files": 6,
+    "repos": 1,
+    "scanned": 6,
+    "candidates": 7,
+    "truncated": true,
+    "ms": 4,
+    "prefilter": "sales.orders"
+  },
+  "requestSha256": "34bb6f9bac645fb65827a3ff80b0fe54d2eb7aaf7bc5ed3886be16d92bb3f9c3",
+  "stdoutSha256": "d5c4c705331d0ca9b34f6aa625a86f17b8889630dd7a7578af7bf858bb2d622b",
+  "stderrSha256": "6e9465e7d19258c460585b1c09aaf5a0b85e775c44909e2debcfc90cd4b776c7"
+}

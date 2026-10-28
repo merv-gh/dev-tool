@@ -1,0 +1,34 @@
+{
+  "started": "2026-10-28T22:03:16.081Z",
+  "ended": "2026-10-28T22:03:16.333Z",
+  "durationMs": 252,
+  "tool": "workspace_read",
+  "args": {
+    "workspace": "c06-main-a358",
+    "path": "src/test/resources/dt-fixtures/tenant-release/README.txt",
+    "from": 1,
+    "to": 400
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 960,
+  "stderrBytes": 208,
+  "stdout": "{\n  \"id\": \"c06-main-a358\",\n  \"path\": \"src/test/resources/dt-fixtures/tenant-release/README.txt\",\n  \"from\": 1,\n  \"to\": 11,\n  \"lines\": 11,\n  \"text\": \"    1  Fixture tenant-release\\n    2  \\n    3  Load each database's schema.sql, data.sql, constraints.sql in that order.\\n    4  The fixture_replay tool validates hashes and loads isolated scratch databases, dropping them on error.\\n    5  For test_run give fixture_path and (for multiple datasources) fixture_bindings.\\n    6  Kafka messages.jsonl preserves key, value, headers, partition, source offset and timestamp.\\n    7  Use the service's test producer to publish them to its test Kafka; no live publish tool is provided.\\n    8  Capture window: 2026-10-28T21:48:35.226Z .. 2026-10-28T21:48:38.253Z\\n    9  Independent read-only statements across databases and Kafka; observation window and offsets are recorded, not a distributed snapshot.\\n   10  Complete: true; gaps: 0. See manifest.json.\\n   11  \"\n}\n",
+  "stderr": "22:03:16 dt call workspace_read#12k8 start {\"workspace\":\"c06-main-a358\",\"path\":\"src/test/resources/dt-fixtures/tenant-release/README.txt\",\"from\":1,\"to\":400} (cli)\n22:03:16 dt call workspace_read#12k8 ok 17ms\n",
+  "result": {
+    "id": "c06-main-a358",
+    "path": "src/test/resources/dt-fixtures/tenant-release/README.txt",
+    "from": 1,
+    "to": 11,
+    "lines": 11,
+    "text": "    1  Fixture tenant-release\n    2  \n    3  Load each database's schema.sql, data.sql, constraints.sql in that order.\n    4  The fixture_replay tool validates hashes and loads isolated scratch databases, dropping them on error.\n    5  For test_run give fixture_path and (for multiple datasources) fixture_bindings.\n    6  Kafka messages.jsonl preserves key, value, headers, partition, source offset and timestamp.\n    7  Use the service's test producer to publish them to its test Kafka; no live publish tool is provided.\n    8  Capture window: 2026-10-28T21:48:35.226Z .. 2026-10-28T21:48:38.253Z\n    9  Independent read-only statements across databases and Kafka; observation window and offsets are recorded, not a distributed snapshot.\n   10  Complete: true; gaps: 0. See manifest.json.\n   11  "
+  },
+  "requestSha256": "90acfdf1fb63d4aad8b1c0510a15fe1e1708da9cf79bd7df0e2909ddebfb716f",
+  "stdoutSha256": "17a8fbfdd764a0c34ef996b5a1893f11a2e30d6a9e3566e1b1bc40f482fadb08",
+  "stderrSha256": "37a44b6c1705ae1a91e09eac18c0bfee783cad44d5c1b47607ecd76ef3e4889b"
+}

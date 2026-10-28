@@ -1,0 +1,102 @@
+{
+  "started": "2026-10-28T21:54:09.106Z",
+  "ended": "2026-10-28T21:54:09.395Z",
+  "durationMs": 289,
+  "tool": "pg_usage",
+  "args": {
+    "name": "orders:sales.orders",
+    "env": "fixture"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 1724,
+  "stderrBytes": 129,
+  "stdout": "{\n  \"summary\": {\n    \"function:write\": 1,\n    \"function:trigger\": 1,\n    \"function:read\": 3,\n    \"view:selects\": 1\n  },\n  \"total\": 6,\n  \"rows\": [\n    {\n      \"user\": \"sales.adjust_amount\",\n      \"user_kind\": \"function\",\n      \"role\": \"write\",\n      \"where\": \"\",\n      \"detail\": \"\",\n      \"object\": \"sales.orders\",\n      \"kind\": \"table\",\n      \"db\": \"orders\",\n      \"source\": \"db\"\n    },\n    {\n      \"user\": \"sales.audit_amount\",\n      \"user_kind\": \"function\",\n      \"role\": \"trigger\",\n      \"where\": \"order_amount_audit\",\n      \"detail\": \"order_amount_audit AFTER UPDATE OF amount\",\n      \"object\": \"sales.orders\",\n      \"kind\": \"table\",\n      \"db\": \"orders\",\n      \"source\": \"db\"\n    },\n    {\n      \"user\": \"sales.inspect_dynamic\",\n      \"user_kind\": \"function\",\n      \"role\": \"read\",\n      \"where\": \"\",\n      \"detail\": \"\",\n      \"object\": \"sales.orders\",\n      \"kind\": \"table\",\n      \"db\": \"orders\",\n      \"source\": \"db\"\n    },\n    {\n      \"user\": \"sales.order_projection\",\n      \"user_kind\": \"function\",\n      \"role\": \"read\",\n      \"where\": \"\",\n      \"detail\": \"\",\n      \"object\": \"sales.orders\",\n      \"kind\": \"table\",\n      \"db\": \"orders\",\n      \"source\": \"db\"\n    },\n    {\n      \"user\": \"sales.release_label\",\n      \"user_kind\": \"function\",\n      \"role\": \"read\",\n      \"where\": \"\",\n      \"detail\": \"\",\n      \"object\": \"sales.orders\",\n      \"kind\": \"table\",\n      \"db\": \"orders\",\n      \"source\": \"db\"\n    },\n    {\n      \"user\": \"sales.order_amounts\",\n      \"user_kind\": \"view\",\n      \"role\": \"selects\",\n      \"where\": \"\",\n      \"detail\": \"\",\n      \"object\": \"sales.orders\",\n      \"kind\": \"table\",\n      \"db\": \"orders\",\n      \"source\": \"db\"\n    }\n  ],\n  \"view\": \"http://127.0.0.1:4000/view/mvsnjcjib3253bf5cedc0cf093\"\n}\n",
+  "stderr": "21:54:09 dt call pg_usage#1ci9 start {\"name\":\"orders:sales.orders\",\"env\":\"fixture\"} (cli)\n21:54:09 dt call pg_usage#1ci9 ok 45ms\n",
+  "result": {
+    "summary": {
+      "function:write": 1,
+      "function:trigger": 1,
+      "function:read": 3,
+      "view:selects": 1
+    },
+    "total": 6,
+    "rows": [
+      {
+        "user": "sales.adjust_amount",
+        "user_kind": "function",
+        "role": "write",
+        "where": "",
+        "detail": "",
+        "object": "sales.orders",
+        "kind": "table",
+        "db": "orders",
+        "source": "db"
+      },
+      {
+        "user": "sales.audit_amount",
+        "user_kind": "function",
+        "role": "trigger",
+        "where": "order_amount_audit",
+        "detail": "order_amount_audit AFTER UPDATE OF amount",
+        "object": "sales.orders",
+        "kind": "table",
+        "db": "orders",
+        "source": "db"
+      },
+      {
+        "user": "sales.inspect_dynamic",
+        "user_kind": "function",
+        "role": "read",
+        "where": "",
+        "detail": "",
+        "object": "sales.orders",
+        "kind": "table",
+        "db": "orders",
+        "source": "db"
+      },
+      {
+        "user": "sales.order_projection",
+        "user_kind": "function",
+        "role": "read",
+        "where": "",
+        "detail": "",
+        "object": "sales.orders",
+        "kind": "table",
+        "db": "orders",
+        "source": "db"
+      },
+      {
+        "user": "sales.release_label",
+        "user_kind": "function",
+        "role": "read",
+        "where": "",
+        "detail": "",
+        "object": "sales.orders",
+        "kind": "table",
+        "db": "orders",
+        "source": "db"
+      },
+      {
+        "user": "sales.order_amounts",
+        "user_kind": "view",
+        "role": "selects",
+        "where": "",
+        "detail": "",
+        "object": "sales.orders",
+        "kind": "table",
+        "db": "orders",
+        "source": "db"
+      }
+    ],
+    "view": "http://127.0.0.1:4000/view/mvsnjcjib3253bf5cedc0cf093"
+  },
+  "requestSha256": "07e48214e400daa2fadb5656af8521bca891c06887b681b17a747c9b544499df",
+  "stdoutSha256": "62b35c1397ecdcc4d2e8b40469d2a3353ee49b08669b6de9768f5be0160f4d8f",
+  "stderrSha256": "3e1424412873ed078ced30da877945cd9ef9b1656fd2d2997925093bc6c68bf6"
+}

@@ -1,0 +1,63 @@
+{
+  "started": "2026-10-28T21:54:28.103Z",
+  "ended": "2026-10-28T21:54:28.364Z",
+  "durationMs": 261,
+  "tool": "tool_describe",
+  "args": {
+    "name": "es_search"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 972,
+  "stderrBytes": 113,
+  "stdout": "{\n  \"name\": \"es_search\",\n  \"description\": \"Search an Elasticsearch index. Query is \\\"field==value && other~text\\\" (== term, ~ match) or raw JSON DSL. Returns a preview plus `view`, a link to the full result as an interactive table (shown to the user inline). Mention the link.\",\n  \"group\": \"es\",\n  \"origin\": \"built-in\",\n  \"execution\": {\n    \"protocol\": \"dt.tool/v1\",\n    \"transport\": \"in-process\"\n  },\n  \"inputSchema\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"index\": {\n        \"type\": \"string\",\n        \"description\": \"Index or alias\"\n      },\n      \"query\": {\n        \"type\": \"string\",\n        \"description\": \"Query\"\n      },\n      \"env\": {\n        \"type\": \"string\",\n        \"enum\": [\n          \"dev\",\n          \"fixture\"\n        ],\n        \"default\": \"dev\",\n        \"description\": \"Environment\"\n      },\n      \"size\": {\n        \"type\": \"integer\",\n        \"description\": \"Hits\",\n        \"default\": 20\n      }\n    },\n    \"required\": [\n      \"index\"\n    ]\n  }\n}\n",
+  "stderr": "21:54:28 dt call tool_describe#1r5v start {\"name\":\"es_search\"} (cli)\n21:54:28 dt call tool_describe#1r5v ok 20ms\n",
+  "result": {
+    "name": "es_search",
+    "description": "Search an Elasticsearch index. Query is \"field==value && other~text\" (== term, ~ match) or raw JSON DSL. Returns a preview plus `view`, a link to the full result as an interactive table (shown to the user inline). Mention the link.",
+    "group": "es",
+    "origin": "built-in",
+    "execution": {
+      "protocol": "dt.tool/v1",
+      "transport": "in-process"
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "index": {
+          "type": "string",
+          "description": "Index or alias"
+        },
+        "query": {
+          "type": "string",
+          "description": "Query"
+        },
+        "env": {
+          "type": "string",
+          "enum": [
+            "dev",
+            "fixture"
+          ],
+          "default": "dev",
+          "description": "Environment"
+        },
+        "size": {
+          "type": "integer",
+          "description": "Hits",
+          "default": 20
+        }
+      },
+      "required": [
+        "index"
+      ]
+    }
+  },
+  "requestSha256": "14c3a6d6bb80589a0ab4458bae3cd7f2dc3c9a1c0ccf76a266dade63d0e1efff",
+  "stdoutSha256": "1fc6dbf7ceb9a06bbcb0287e7cdcc6a323c2da7541284da260ef4429795394c8",
+  "stderrSha256": "2922e8e6bc55d8b1e07f8d94a4a06e2e013601039f074ce8941ea32726f003d2"
+}

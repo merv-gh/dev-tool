@@ -1,0 +1,141 @@
+{
+  "started": "2026-10-28T22:00:48.909Z",
+  "ended": "2026-10-28T22:00:49.115Z",
+  "durationMs": 206,
+  "tool": "tool_describe",
+  "args": {
+    "name": "test_run"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 4361,
+  "stderrBytes": 112,
+  "stdout": "{\n  \"name\": \"test_run\",\n  \"description\": \"Run tests of a workspace. Fast by default on Maven projects: after one Maven prepare per workspace, only changed sources are compiled and the tests run in one JVM (seconds); mode=\\\"build\\\" runs the project's Maven/Gradle (the final check). files=[{path, content|edits}] writes before running, so a try is one call. Every result is kept per test, so workspace_patch can show which tests failed before the fix and pass after it (red-green). The answer has: each test, its status and time, failures with message and the code parts to work on (the repo frames of the stack trace with the lines around them), compile errors with their lines, and the output tail. With env + db (or ddl_path), the run gets a throwaway Postgres database loaded with the DDL snapshot, passed to Spring as SPRING_DATASOURCE_*. Shown as a view. Takes a while: if it answers \\\"running\\\", call it again with that job id.\",\n  \"group\": \"code\",\n  \"origin\": \"built-in\",\n  \"execution\": {\n    \"protocol\": \"dt.tool/v1\",\n    \"transport\": \"in-process\"\n  },\n  \"inputSchema\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"workspace\": {\n        \"type\": \"string\",\n        \"description\": \"Workspace id\"\n      },\n      \"tests\": {\n        \"type\": \"array\",\n        \"items\": {\n          \"type\": \"string\"\n        },\n        \"description\": \"Test classes (FooTest) or Class#method\"\n      },\n      \"files\": {\n        \"type\": \"array\",\n        \"items\": {\n          \"type\": \"object\",\n          \"properties\": {\n            \"path\": {\n              \"type\": \"string\"\n            },\n            \"content\": {\n              \"type\": \"string\"\n            },\n            \"edits\": {\n              \"type\": \"array\",\n              \"items\": {\n                \"type\": \"object\",\n                \"properties\": {\n                  \"find\": {\n                    \"type\": \"string\"\n                  },\n                  \"replace\": {\n                    \"type\": \"string\"\n                  }\n                }\n              }\n            }\n          },\n          \"required\": [\n            \"path\"\n          ]\n        },\n        \"description\": \"Write these first (like workspace_write), then run: one call per try\"\n      },\n      \"mode\": {\n        \"type\": \"string\",\n        \"enum\": [\n          \"auto\",\n          \"fast\",\n          \"build\"\n        ],\n        \"default\": \"auto\",\n        \"description\": \"fast: compile only what changed and run in one JVM (Maven projects; a few seconds); build: the project's Maven/Gradle (the final check before the patch); auto: fast where it fits\"\n      },\n      \"env\": {\n        \"type\": \"string\",\n        \"description\": \"With db: the environment of the DDL snapshot\"\n      },\n      \"db\": {\n        \"type\": \"string\",\n        \"description\": \"Database to snapshot into the throwaway test database\"\n      },\n      \"ddl_path\": {\n        \"type\": \"string\",\n        \"description\": \"Or: a DDL file in the workspace to load (e.g. src/test/resources/dt-schema/pay.sql)\"\n      },\n      \"fixture_path\": {\n        \"type\": \"string\",\n        \"description\": \"Saved src/test/resources/dt-fixtures/<name>; replay its PG databases on scratch Postgres and expose Kafka files as DT_FIXTURE_PATH\"\n      },\n      \"fixture_template\": {\n        \"type\": \"boolean\",\n        \"default\": false,\n        \"description\": \"Reuse a verified immutable prefilled PostgreSQL template and allocate private leased clones\"\n      },\n      \"fixture_bindings\": {\n        \"type\": \"object\",\n        \"additionalProperties\": {\n          \"type\": \"string\"\n        },\n        \"description\": \"For multiple databases: {orders:\\\"SPRING_DATASOURCE\\\",billing:\\\"BILLING_DATASOURCE\\\"}; each prefix gets _URL, _USERNAME, _PASSWORD\"\n      },\n      \"allow_incomplete\": {\n        \"type\": \"boolean\",\n        \"default\": false,\n        \"description\": \"Replay a fixture with reported gaps (review fixture explorer first)\"\n      },\n      \"job\": {\n        \"type\": \"string\",\n        \"description\": \"A job id from an earlier \\\"running\\\" answer\"\n      },\n      \"check\": {\n        \"type\": \"boolean\",\n        \"default\": true,\n        \"description\": \"Compile the written Java files right away\"\n      },\n      \"fix\": {\n        \"type\": \"boolean\",\n        \"default\": true,\n        \"description\": \"Apply the clear compile fixes to the files (false: offer them as suggestions)\"\n      }\n    },\n    \"required\": [\n      \"workspace\"\n    ]\n  }\n}\n",
+  "stderr": "22:00:49 dt call tool_describe#1wym start {\"name\":\"test_run\"} (cli)\n22:00:49 dt call tool_describe#1wym ok 17ms\n",
+  "result": {
+    "name": "test_run",
+    "description": "Run tests of a workspace. Fast by default on Maven projects: after one Maven prepare per workspace, only changed sources are compiled and the tests run in one JVM (seconds); mode=\"build\" runs the project's Maven/Gradle (the final check). files=[{path, content|edits}] writes before running, so a try is one call. Every result is kept per test, so workspace_patch can show which tests failed before the fix and pass after it (red-green). The answer has: each test, its status and time, failures with message and the code parts to work on (the repo frames of the stack trace with the lines around them), compile errors with their lines, and the output tail. With env + db (or ddl_path), the run gets a throwaway Postgres database loaded with the DDL snapshot, passed to Spring as SPRING_DATASOURCE_*. Shown as a view. Takes a while: if it answers \"running\", call it again with that job id.",
+    "group": "code",
+    "origin": "built-in",
+    "execution": {
+      "protocol": "dt.tool/v1",
+      "transport": "in-process"
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "workspace": {
+          "type": "string",
+          "description": "Workspace id"
+        },
+        "tests": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Test classes (FooTest) or Class#method"
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "content": {
+                "type": "string"
+              },
+              "edits": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "find": {
+                      "type": "string"
+                    },
+                    "replace": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "required": [
+              "path"
+            ]
+          },
+          "description": "Write these first (like workspace_write), then run: one call per try"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "fast",
+            "build"
+          ],
+          "default": "auto",
+          "description": "fast: compile only what changed and run in one JVM (Maven projects; a few seconds); build: the project's Maven/Gradle (the final check before the patch); auto: fast where it fits"
+        },
+        "env": {
+          "type": "string",
+          "description": "With db: the environment of the DDL snapshot"
+        },
+        "db": {
+          "type": "string",
+          "description": "Database to snapshot into the throwaway test database"
+        },
+        "ddl_path": {
+          "type": "string",
+          "description": "Or: a DDL file in the workspace to load (e.g. src/test/resources/dt-schema/pay.sql)"
+        },
+        "fixture_path": {
+          "type": "string",
+          "description": "Saved src/test/resources/dt-fixtures/<name>; replay its PG databases on scratch Postgres and expose Kafka files as DT_FIXTURE_PATH"
+        },
+        "fixture_template": {
+          "type": "boolean",
+          "default": false,
+          "description": "Reuse a verified immutable prefilled PostgreSQL template and allocate private leased clones"
+        },
+        "fixture_bindings": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "For multiple databases: {orders:\"SPRING_DATASOURCE\",billing:\"BILLING_DATASOURCE\"}; each prefix gets _URL, _USERNAME, _PASSWORD"
+        },
+        "allow_incomplete": {
+          "type": "boolean",
+          "default": false,
+          "description": "Replay a fixture with reported gaps (review fixture explorer first)"
+        },
+        "job": {
+          "type": "string",
+          "description": "A job id from an earlier \"running\" answer"
+        },
+        "check": {
+          "type": "boolean",
+          "default": true,
+          "description": "Compile the written Java files right away"
+        },
+        "fix": {
+          "type": "boolean",
+          "default": true,
+          "description": "Apply the clear compile fixes to the files (false: offer them as suggestions)"
+        }
+      },
+      "required": [
+        "workspace"
+      ]
+    }
+  },
+  "requestSha256": "a94c8fbcdea3a18a53f171a1329967724f6b7b9de9f4f712227cda8ca5a39a1d",
+  "stdoutSha256": "dc420c6984d1815d6e743aed18048df1286b44cedd2fef5e2466141cb72702bd",
+  "stderrSha256": "82308ae9607a9cbc83313917e5bdeaeaea8129dc954ba09f7e3c715fd3c36069"
+}

@@ -1,0 +1,34 @@
+{
+  "started": "2026-10-28T22:03:19.353Z",
+  "ended": "2026-10-28T22:03:19.557Z",
+  "durationMs": 204,
+  "tool": "workspace_read",
+  "args": {
+    "workspace": "c06-main-a358",
+    "path": "src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/rows.json",
+    "from": 1,
+    "to": 400
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 968,
+  "stderrBytes": 223,
+  "stdout": "{\n  \"id\": \"c06-main-a358\",\n  \"path\": \"src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/rows.json\",\n  \"from\": 1,\n  \"to\": 31,\n  \"lines\": 31,\n  \"text\": \"    1  {\\n    2    \\\"orders:sales.orders\\\": [\\n    3      {\\n    4        \\\"tenant_id\\\": \\\"11\\\",\\n    5        \\\"id\\\": \\\"420\\\",\\n    6        \\\"account_id\\\": \\\"7\\\",\\n    7        \\\"status\\\": \\\"PAID\\\",\\n    8        \\\"amount\\\": \\\"17.000001\\\"\\n    9      },\\n   10      {\\n   11        \\\"tenant_id\\\": \\\"22\\\",\\n   12        \\\"id\\\": \\\"420\\\",\\n   13        \\\"account_id\\\": \\\"7\\\",\\n   14        \\\"status\\\": \\\"PAID\\\",\\n   15        \\\"amount\\\": \\\"100.000001\\\"\\n   16      }\\n   17    ],\\n   18    \\\"orders:sales.accounts\\\": [\\n   19      {\\n   20        \\\"tenant_id\\\": \\\"11\\\",\\n   21        \\\"id\\\": \\\"7\\\",\\n   22        \\\"enabled\\\": true\\n   23      },\\n   24      {\\n   25        \\\"tenant_id\\\": \\\"22\\\",\\n   26        \\\"id\\\": \\\"7\\\",\\n   27        \\\"enabled\\\": true\\n   28      }\\n   29    ]\\n   30  }\\n   31  \"\n}\n",
+  "stderr": "22:03:19 dt call workspace_read#151i start {\"workspace\":\"c06-main-a358\",\"path\":\"src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/rows.json\",\"from\":1,\"to\":400} (cli)\n22:03:19 dt call workspace_read#151i ok 13ms\n",
+  "result": {
+    "id": "c06-main-a358",
+    "path": "src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/rows.json",
+    "from": 1,
+    "to": 31,
+    "lines": 31,
+    "text": "    1  {\n    2    \"orders:sales.orders\": [\n    3      {\n    4        \"tenant_id\": \"11\",\n    5        \"id\": \"420\",\n    6        \"account_id\": \"7\",\n    7        \"status\": \"PAID\",\n    8        \"amount\": \"17.000001\"\n    9      },\n   10      {\n   11        \"tenant_id\": \"22\",\n   12        \"id\": \"420\",\n   13        \"account_id\": \"7\",\n   14        \"status\": \"PAID\",\n   15        \"amount\": \"100.000001\"\n   16      }\n   17    ],\n   18    \"orders:sales.accounts\": [\n   19      {\n   20        \"tenant_id\": \"11\",\n   21        \"id\": \"7\",\n   22        \"enabled\": true\n   23      },\n   24      {\n   25        \"tenant_id\": \"22\",\n   26        \"id\": \"7\",\n   27        \"enabled\": true\n   28      }\n   29    ]\n   30  }\n   31  "
+  },
+  "requestSha256": "b0d0c8f6d5c3b839f6153037bec35d260e91a305d2c82c4219613fb1002e2a7f",
+  "stdoutSha256": "e12a37470a5d0e652abde4a51247e509a868b44ca34c18e86e05112986bfabc3",
+  "stderrSha256": "af477314129af0bb737713f776d2c34305de990776019d43ea5f29c23360ff81"
+}

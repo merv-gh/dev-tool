@@ -1,0 +1,36 @@
+{
+  "started": "2026-10-28T22:01:46.961Z",
+  "ended": "2026-10-28T22:01:47.180Z",
+  "durationMs": 219,
+  "tool": "code_search",
+  "args": {
+    "pattern": "exports.release",
+    "repos": "c06-main-a358",
+    "limit": 100
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 206,
+  "stderrBytes": 154,
+  "stdout": "{\n  \"total\": 0,\n  \"rows\": [],\n  \"view\": \"http://127.0.0.1:4000/view/mvsnt5s66f2e8d3fdf5d797eb0\",\n  \"files\": 0,\n  \"repos\": 1,\n  \"scanned\": 0,\n  \"candidates\": 0,\n  \"ms\": 1,\n  \"prefilter\": \"exports.release\"\n}\n",
+  "stderr": "22:01:47 dt call code_search#15r0 start {\"pattern\":\"exports.release\",\"repos\":\"c06-main-a358\",\"limit\":100} (cli)\n22:01:47 dt call code_search#15r0 ok 42ms\n",
+  "result": {
+    "total": 0,
+    "rows": [],
+    "view": "http://127.0.0.1:4000/view/mvsnt5s66f2e8d3fdf5d797eb0",
+    "files": 0,
+    "repos": 1,
+    "scanned": 0,
+    "candidates": 0,
+    "ms": 1,
+    "prefilter": "exports.release"
+  },
+  "requestSha256": "9b8622a13629161408cc10b739852de3e523f4a6fb9dfde08ae59b6a3347e322",
+  "stdoutSha256": "09fdf56761e56354ba31d00442c160f3699571db0afe8cc59e038471d78c1e59",
+  "stderrSha256": "a584246a6c01de64ed328d38aab4c86797dd24d83ec4b0dd1887d8e68eb4cbed"
+}

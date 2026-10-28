@@ -1,0 +1,69 @@
+{
+  "started": "2026-10-28T21:54:09.113Z",
+  "ended": "2026-10-28T21:54:09.354Z",
+  "durationMs": 241,
+  "tool": "pg_function",
+  "args": {
+    "name": "sales.inspect_dynamic",
+    "env": "fixture"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 1066,
+  "stderrBytes": 137,
+  "stdout": "[\n  {\n    \"db\": \"orders\",\n    \"object\": \"sales.inspect_dynamic\",\n    \"schema\": \"sales\",\n    \"name\": \"inspect_dynamic\",\n    \"kind\": \"function\",\n    \"args\": \"p_column text, p_tenant bigint\",\n    \"signature\": \"p_column text, p_tenant bigint\",\n    \"returns\": \"SETOF text\",\n    \"arg_list\": [\n      {\n        \"name\": \"p_column\",\n        \"type\": \"text\",\n        \"mode\": \"in\"\n      },\n      {\n        \"name\": \"p_tenant\",\n        \"type\": \"bigint\",\n        \"mode\": \"in\"\n      }\n    ],\n    \"lang\": \"plpgsql\",\n    \"volatility\": \"stable\",\n    \"security_definer\": false,\n    \"comment\": null,\n    \"usedBy\": [],\n    \"uses\": [\n      {\n        \"db\": \"orders\",\n        \"source\": \"db\",\n        \"where\": \"\",\n        \"detail\": \"\",\n        \"target\": \"sales.orders\",\n        \"targetKind\": \"table\",\n        \"user\": \"sales.inspect_dynamic\",\n        \"userKind\": \"function\",\n        \"role\": \"read\"\n      }\n    ],\n    \"body\": \" BEGIN RETURN QUERY EXECUTE format('select %I::text from sales.orders where tenant_id=$1',p_column) USING p_tenant; END \",\n    \"usedByTotal\": 0,\n    \"note\": null\n  }\n]\n",
+  "stderr": "21:54:09 dt call pg_function#1ci0 start {\"name\":\"sales.inspect_dynamic\",\"env\":\"fixture\"} (cli)\n21:54:09 dt call pg_function#1ci0 ok 37ms\n",
+  "result": [
+    {
+      "db": "orders",
+      "object": "sales.inspect_dynamic",
+      "schema": "sales",
+      "name": "inspect_dynamic",
+      "kind": "function",
+      "args": "p_column text, p_tenant bigint",
+      "signature": "p_column text, p_tenant bigint",
+      "returns": "SETOF text",
+      "arg_list": [
+        {
+          "name": "p_column",
+          "type": "text",
+          "mode": "in"
+        },
+        {
+          "name": "p_tenant",
+          "type": "bigint",
+          "mode": "in"
+        }
+      ],
+      "lang": "plpgsql",
+      "volatility": "stable",
+      "security_definer": false,
+      "comment": null,
+      "usedBy": [],
+      "uses": [
+        {
+          "db": "orders",
+          "source": "db",
+          "where": "",
+          "detail": "",
+          "target": "sales.orders",
+          "targetKind": "table",
+          "user": "sales.inspect_dynamic",
+          "userKind": "function",
+          "role": "read"
+        }
+      ],
+      "body": " BEGIN RETURN QUERY EXECUTE format('select %I::text from sales.orders where tenant_id=$1',p_column) USING p_tenant; END ",
+      "usedByTotal": 0,
+      "note": null
+    }
+  ],
+  "requestSha256": "d4b57703bbaf863c33cbc8f1cc45a9a031bc41e793cf589957bfa9e72cd5c67f",
+  "stdoutSha256": "3fe73d8a30d3400db7c1ef8d7adabe3b05ac5d2d0f5644f20baf9f2cd67209a8",
+  "stderrSha256": "2cbc76e00e22bd158873ccb3d593ba82b46665028bded471e98aaabe378ab9bd"
+}

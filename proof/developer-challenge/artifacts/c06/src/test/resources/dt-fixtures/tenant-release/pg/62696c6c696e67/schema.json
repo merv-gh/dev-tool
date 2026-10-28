@@ -1,0 +1,112 @@
+[
+  {
+    "id": "billing:risk.accounts",
+    "db": "billing",
+    "table": "risk.accounts",
+    "columns": [
+      {
+        "name": "tenant_id",
+        "type": "bigint",
+        "nullable": false,
+        "default": null,
+        "identity": null,
+        "generated": null,
+        "comment": null
+      },
+      {
+        "name": "id",
+        "type": "bigint",
+        "nullable": false,
+        "default": null,
+        "identity": null,
+        "generated": null,
+        "comment": null
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "nullable": true,
+        "default": null,
+        "identity": null,
+        "generated": null,
+        "comment": null
+      },
+      {
+        "name": "credit_limit",
+        "type": "numeric(20,6)",
+        "nullable": true,
+        "default": null,
+        "identity": null,
+        "generated": null,
+        "comment": null
+      }
+    ],
+    "constraints": [
+      {
+        "name": "accounts_pkey",
+        "type": "p",
+        "def": "PRIMARY KEY (tenant_id, id)",
+        "ref": null
+      }
+    ],
+    "primaryKey": [
+      "tenant_id",
+      "id"
+    ]
+  },
+  {
+    "id": "billing:pay.payments",
+    "db": "billing",
+    "table": "pay.payments",
+    "columns": [
+      {
+        "name": "tenant_id",
+        "type": "bigint",
+        "nullable": false,
+        "default": null,
+        "identity": null,
+        "generated": null,
+        "comment": null
+      },
+      {
+        "name": "order_id",
+        "type": "bigint",
+        "nullable": false,
+        "default": null,
+        "identity": null,
+        "generated": null,
+        "comment": null
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "nullable": true,
+        "default": null,
+        "identity": null,
+        "generated": null,
+        "comment": null
+      },
+      {
+        "name": "amount",
+        "type": "numeric(20,6)",
+        "nullable": true,
+        "default": null,
+        "identity": null,
+        "generated": null,
+        "comment": null
+      }
+    ],
+    "constraints": [
+      {
+        "name": "payments_pkey",
+        "type": "p",
+        "def": "PRIMARY KEY (tenant_id, order_id)",
+        "ref": null
+      }
+    ],
+    "primaryKey": [
+      "tenant_id",
+      "order_id"
+    ]
+  }
+]

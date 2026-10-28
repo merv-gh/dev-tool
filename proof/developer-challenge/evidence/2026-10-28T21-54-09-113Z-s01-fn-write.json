@@ -1,0 +1,74 @@
+{
+  "started": "2026-10-28T21:54:09.113Z",
+  "ended": "2026-10-28T21:54:09.358Z",
+  "durationMs": 245,
+  "tool": "pg_function",
+  "args": {
+    "name": "sales.adjust_amount",
+    "env": "fixture"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 1134,
+  "stderrBytes": 135,
+  "stdout": "[\n  {\n    \"db\": \"orders\",\n    \"object\": \"sales.adjust_amount\",\n    \"schema\": \"sales\",\n    \"name\": \"adjust_amount\",\n    \"kind\": \"function\",\n    \"args\": \"p_tenant bigint, p_id bigint, p_amount numeric\",\n    \"signature\": \"p_tenant bigint, p_id bigint, p_amount numeric\",\n    \"returns\": \"void\",\n    \"arg_list\": [\n      {\n        \"name\": \"p_tenant\",\n        \"type\": \"bigint\",\n        \"mode\": \"in\"\n      },\n      {\n        \"name\": \"p_id\",\n        \"type\": \"bigint\",\n        \"mode\": \"in\"\n      },\n      {\n        \"name\": \"p_amount\",\n        \"type\": \"numeric\",\n        \"mode\": \"in\"\n      }\n    ],\n    \"lang\": \"sql\",\n    \"volatility\": \"volatile\",\n    \"security_definer\": false,\n    \"comment\": null,\n    \"usedBy\": [],\n    \"uses\": [\n      {\n        \"db\": \"orders\",\n        \"source\": \"db\",\n        \"where\": \"\",\n        \"detail\": \"\",\n        \"target\": \"sales.orders\",\n        \"targetKind\": \"table\",\n        \"user\": \"sales.adjust_amount\",\n        \"userKind\": \"function\",\n        \"role\": \"write\"\n      }\n    ],\n    \"body\": \" UPDATE sales.orders SET amount=p_amount WHERE tenant_id=p_tenant AND id=p_id \",\n    \"usedByTotal\": 0,\n    \"note\": null\n  }\n]\n",
+  "stderr": "21:54:09 dt call pg_function#1ci3 start {\"name\":\"sales.adjust_amount\",\"env\":\"fixture\"} (cli)\n21:54:09 dt call pg_function#1ci3 ok 38ms\n",
+  "result": [
+    {
+      "db": "orders",
+      "object": "sales.adjust_amount",
+      "schema": "sales",
+      "name": "adjust_amount",
+      "kind": "function",
+      "args": "p_tenant bigint, p_id bigint, p_amount numeric",
+      "signature": "p_tenant bigint, p_id bigint, p_amount numeric",
+      "returns": "void",
+      "arg_list": [
+        {
+          "name": "p_tenant",
+          "type": "bigint",
+          "mode": "in"
+        },
+        {
+          "name": "p_id",
+          "type": "bigint",
+          "mode": "in"
+        },
+        {
+          "name": "p_amount",
+          "type": "numeric",
+          "mode": "in"
+        }
+      ],
+      "lang": "sql",
+      "volatility": "volatile",
+      "security_definer": false,
+      "comment": null,
+      "usedBy": [],
+      "uses": [
+        {
+          "db": "orders",
+          "source": "db",
+          "where": "",
+          "detail": "",
+          "target": "sales.orders",
+          "targetKind": "table",
+          "user": "sales.adjust_amount",
+          "userKind": "function",
+          "role": "write"
+        }
+      ],
+      "body": " UPDATE sales.orders SET amount=p_amount WHERE tenant_id=p_tenant AND id=p_id ",
+      "usedByTotal": 0,
+      "note": null
+    }
+  ],
+  "requestSha256": "e32fdd6d8717ad0968dbfc39fe336b5629058691cdb68717c4099dfcc3a2ada7",
+  "stdoutSha256": "01eb4f66282ff98b341fff118957243b5a426b7d4d1174e19d63c41d457b59fa",
+  "stderrSha256": "3e751452cbfa3e14c79c7f876c6d1e7d4aaaa2e47eea768b0b4f5438cd9c7c2b"
+}

@@ -1,0 +1,27 @@
+{
+  "started": "2026-10-28T21:53:41.001Z",
+  "ended": "2026-10-28T21:53:41.429Z",
+  "durationMs": 428,
+  "tool": "find",
+  "args": {
+    "q": "release_limit",
+    "env": "fixture"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 131,
+  "stderrBytes": 112,
+  "stdout": "[\n  \"(no match for \\\"release_limit\\\" in fixture: try fewer or shorter words, a kind prefix, or catalog_sync if it should exist)\"\n]\n",
+  "stderr": "21:53:41 dt call find#1quk start {\"q\":\"release_limit\",\"env\":\"fixture\"} (cli)\n21:53:41 dt call find#1quk ok 22ms\n",
+  "result": [
+    "(no match for \"release_limit\" in fixture: try fewer or shorter words, a kind prefix, or catalog_sync if it should exist)"
+  ],
+  "requestSha256": "acc69d21656dd91ac4c964b9e97d733937bb497ad6f1189b88f8be33fb08959d",
+  "stdoutSha256": "5fcdfe1e84fa0f4fac0d6f790ca2a12a7f80ae7176c2e63e8be3337f2004594f",
+  "stderrSha256": "64453269d8ce99420744c3a6e1c94c13e3aa794417f5367c736f9e38fc29b02f"
+}

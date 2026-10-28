@@ -1,0 +1,34 @@
+{
+  "started": "2026-10-28T22:03:17.761Z",
+  "ended": "2026-10-28T22:03:17.956Z",
+  "durationMs": 195,
+  "tool": "workspace_read",
+  "args": {
+    "workspace": "c06-main-a358",
+    "path": "src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/rows.json",
+    "from": 1,
+    "to": 400
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 1025,
+  "stderrBytes": 225,
+  "stdout": "{\n  \"id\": \"c06-main-a358\",\n  \"path\": \"src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/rows.json\",\n  \"from\": 1,\n  \"to\": 31,\n  \"lines\": 31,\n  \"text\": \"    1  {\\n    2    \\\"billing:risk.accounts\\\": [\\n    3      {\\n    4        \\\"tenant_id\\\": \\\"11\\\",\\n    5        \\\"id\\\": \\\"7\\\",\\n    6        \\\"status\\\": \\\"BLOCKED\\\",\\n    7        \\\"credit_limit\\\": \\\"1000.000000\\\"\\n    8      },\\n    9      {\\n   10        \\\"tenant_id\\\": \\\"22\\\",\\n   11        \\\"id\\\": \\\"7\\\",\\n   12        \\\"status\\\": \\\"APPROVED\\\",\\n   13        \\\"credit_limit\\\": \\\"150.000001\\\"\\n   14      }\\n   15    ],\\n   16    \\\"billing:pay.payments\\\": [\\n   17      {\\n   18        \\\"tenant_id\\\": \\\"11\\\",\\n   19        \\\"order_id\\\": \\\"420\\\",\\n   20        \\\"status\\\": \\\"PENDING\\\",\\n   21        \\\"amount\\\": \\\"17.000001\\\"\\n   22      },\\n   23      {\\n   24        \\\"tenant_id\\\": \\\"22\\\",\\n   25        \\\"order_id\\\": \\\"420\\\",\\n   26        \\\"status\\\": \\\"PENDING\\\",\\n   27        \\\"amount\\\": \\\"100.000001\\\"\\n   28      }\\n   29    ]\\n   30  }\\n   31  \"\n}\n",
+  "stderr": "22:03:17 dt call workspace_read#13tg start {\"workspace\":\"c06-main-a358\",\"path\":\"src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/rows.json\",\"from\":1,\"to\":400} (cli)\n22:03:17 dt call workspace_read#13tg ok 13ms\n",
+  "result": {
+    "id": "c06-main-a358",
+    "path": "src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/rows.json",
+    "from": 1,
+    "to": 31,
+    "lines": 31,
+    "text": "    1  {\n    2    \"billing:risk.accounts\": [\n    3      {\n    4        \"tenant_id\": \"11\",\n    5        \"id\": \"7\",\n    6        \"status\": \"BLOCKED\",\n    7        \"credit_limit\": \"1000.000000\"\n    8      },\n    9      {\n   10        \"tenant_id\": \"22\",\n   11        \"id\": \"7\",\n   12        \"status\": \"APPROVED\",\n   13        \"credit_limit\": \"150.000001\"\n   14      }\n   15    ],\n   16    \"billing:pay.payments\": [\n   17      {\n   18        \"tenant_id\": \"11\",\n   19        \"order_id\": \"420\",\n   20        \"status\": \"PENDING\",\n   21        \"amount\": \"17.000001\"\n   22      },\n   23      {\n   24        \"tenant_id\": \"22\",\n   25        \"order_id\": \"420\",\n   26        \"status\": \"PENDING\",\n   27        \"amount\": \"100.000001\"\n   28      }\n   29    ]\n   30  }\n   31  "
+  },
+  "requestSha256": "8cd8fa48b88737f1420975d652ea6db4345cece8f58254c1511c51c0be6db824",
+  "stdoutSha256": "dccc3d4595f927489813829d4310de4a4663cd16c077813d7d34165ad124c71f",
+  "stderrSha256": "552ffd6f6858394f7fcc6d66c8fa68fd3aaa890e1b32276159dd48b9ad63f9ec"
+}

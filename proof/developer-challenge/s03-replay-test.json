@@ -1,0 +1,9 @@
+{
+ "workspace":"order-projection-main-073e",
+ "path":"src/test/java/com/lumen/orders/OrderProjectionContractTest.java",
+ "edits":[
+  {"find":"import org.junit.jupiter.api.Test;","replace":"import org.junit.jupiter.api.Test;\nimport org.junit.jupiter.api.BeforeAll;\nimport java.sql.*;\nimport java.nio.file.*;"},
+  {"find":"class OrderProjectionContractTest {","replace":"class OrderProjectionContractTest {\n static JdbcFunctions functions(){String url=System.getenv(\"SPRING_DATASOURCE_URL\");return url==null?JdbcFunctions.fromEnvironment():new JdbcFunctions(url,System.getenv(\"SPRING_DATASOURCE_USERNAME\"),System.getenv(\"SPRING_DATASOURCE_PASSWORD\"));}\n @BeforeAll static void loadCapturedRowsOnlyIntoScratch() throws Exception {\n  String url=System.getenv(\"SPRING_DATASOURCE_URL\");if(url==null)return;\n  if(!url.contains(\"/dt_test_\"))throw new IllegalStateException(\"refuse writes outside dt scratch\");\n  try(Connection c=DriverManager.getConnection(url,System.getenv(\"SPRING_DATASOURCE_USERNAME\"),System.getenv(\"SPRING_DATASOURCE_PASSWORD\"));Statement s=c.createStatement()){s.execute(Files.readString(Path.of(\"src/test/resources/dt-fixtures/projection-baseline/pg/6f7264657273/data.sql\")));}\n }"},
+  {"find":"new OrderProjectionService(JdbcFunctions.fromEnvironment())","replace":"new OrderProjectionService(functions())"}
+ ]
+}

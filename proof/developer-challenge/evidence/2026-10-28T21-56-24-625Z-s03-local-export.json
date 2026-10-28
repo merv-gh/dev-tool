@@ -1,0 +1,45 @@
+{
+  "started": "2026-10-28T21:56:24.625Z",
+  "ended": "2026-10-28T21:56:24.918Z",
+  "durationMs": 293,
+  "tool": "fixture_export",
+  "args": {
+    "workspace": "order-projection-main-073e",
+    "capture": "5bce4642df932d1e54b73f2b",
+    "name": "projection-baseline"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 445,
+  "stderrBytes": 203,
+  "stdout": "{\n  \"workspace\": \"order-projection-main-073e\",\n  \"path\": \"src/test/resources/dt-fixtures/projection-baseline\",\n  \"files\": [\n    \"pg/6f7264657273/schema.sql\",\n    \"pg/6f7264657273/data.sql\",\n    \"pg/6f7264657273/constraints.sql\",\n    \"pg/6f7264657273/schema.json\",\n    \"pg/6f7264657273/rows.json\",\n    \"README.txt\",\n    \"manifest.json\"\n  ],\n  \"counts\": {\n    \"rows\": 4,\n    \"queries\": 2,\n    \"messages\": 0\n  },\n  \"complete\": true,\n  \"gaps\": []\n}\n",
+  "stderr": "21:56:24 dt call fixture_export#192n start {\"workspace\":\"order-projection-main-073e\",\"capture\":\"5bce4642df932d1e54b73f2b\",\"name\":\"projection-baseline\"} (cli)\n21:56:24 dt call fixture_export#192n ok 67ms\n",
+  "result": {
+    "workspace": "order-projection-main-073e",
+    "path": "src/test/resources/dt-fixtures/projection-baseline",
+    "files": [
+      "pg/6f7264657273/schema.sql",
+      "pg/6f7264657273/data.sql",
+      "pg/6f7264657273/constraints.sql",
+      "pg/6f7264657273/schema.json",
+      "pg/6f7264657273/rows.json",
+      "README.txt",
+      "manifest.json"
+    ],
+    "counts": {
+      "rows": 4,
+      "queries": 2,
+      "messages": 0
+    },
+    "complete": true,
+    "gaps": []
+  },
+  "requestSha256": "14b939e023ddd5793b7b9aadebce844974e7c65d338b69ed6b3777bfa27d68e1",
+  "stdoutSha256": "d5e280efd7ab2e042380eee3cde4403eff0520b057dbc198c666b89b261b5cfc",
+  "stderrSha256": "0f97e1a30dad405b39e7961ef10a833f58085c9267337f1a88e84c788563c147"
+}

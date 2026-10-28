@@ -1,0 +1,37 @@
+{
+  "started": "2026-10-28T21:53:57.875Z",
+  "ended": "2026-10-28T21:53:58.105Z",
+  "durationMs": 230,
+  "tool": "find",
+  "args": {
+    "q": "amount",
+    "env": "fixture",
+    "limit": 30
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 1365,
+  "stderrBytes": 116,
+  "stdout": "[\n  \"pg orders sales.order_amounts [view] ~0: tenant_id bigint, id bigint, amount numeric(20,6)\",\n  \"pg orders sales.order_audit ~0: tenant_id bigint, order_id bigint, old_amount numeric(20,6), new_amount numeric(20,6) | used by: fn sales.audit_amount(write)\",\n  \"pg orders sales.orders ~0: tenant_id bigint, id bigint, account_id bigint, status text, amount numeric(20,6) | used by: view sales.order_amounts(selects); fn sales.audit_amount(trigger); fn sales.adjust_amount(write); fn sales.inspect_dynamic(read); fn sales.order_projection(read); fn sales.release_label(read)\",\n  \"pgfn orders sales.adjust_amount(p_tenant bigint, p_id bigint, p_amount numeric) -> void [function sql]\",\n  \"pgfn orders sales.audit_amount() -> trigger [function plpgsql] | used by: trigger sales.orders(executes)\",\n  \"pgfn orders sales.order_projection(p_tenant bigint, p_id bigint) -> TABLE(tenant_id bigint, order_id bigint, account_id bigint, status text, amount numeric) [function sql]\",\n  \"pg billing pay.payments ~0: tenant_id bigint, order_id bigint, status text, amount numeric(20,6)\",\n  \"es orders-read-model 2: tenantId keyword, orderId keyword, status keyword, amount keyword\",\n  \"kafka orders.paid ? schema:JSONvundefined: tenantId, orderId, type, amount\",\n  \"repo LIB/common-primitives com.lumen.money:primitives-parent: modules decimal (ledger-amounts); dirs decimal\"\n]\n",
+  "stderr": "21:53:58 dt call find#13tq start {\"q\":\"amount\",\"env\":\"fixture\",\"limit\":30} (cli)\n21:53:58 dt call find#13tq ok 15ms\n",
+  "result": [
+    "pg orders sales.order_amounts [view] ~0: tenant_id bigint, id bigint, amount numeric(20,6)",
+    "pg orders sales.order_audit ~0: tenant_id bigint, order_id bigint, old_amount numeric(20,6), new_amount numeric(20,6) | used by: fn sales.audit_amount(write)",
+    "pg orders sales.orders ~0: tenant_id bigint, id bigint, account_id bigint, status text, amount numeric(20,6) | used by: view sales.order_amounts(selects); fn sales.audit_amount(trigger); fn sales.adjust_amount(write); fn sales.inspect_dynamic(read); fn sales.order_projection(read); fn sales.release_label(read)",
+    "pgfn orders sales.adjust_amount(p_tenant bigint, p_id bigint, p_amount numeric) -> void [function sql]",
+    "pgfn orders sales.audit_amount() -> trigger [function plpgsql] | used by: trigger sales.orders(executes)",
+    "pgfn orders sales.order_projection(p_tenant bigint, p_id bigint) -> TABLE(tenant_id bigint, order_id bigint, account_id bigint, status text, amount numeric) [function sql]",
+    "pg billing pay.payments ~0: tenant_id bigint, order_id bigint, status text, amount numeric(20,6)",
+    "es orders-read-model 2: tenantId keyword, orderId keyword, status keyword, amount keyword",
+    "kafka orders.paid ? schema:JSONvundefined: tenantId, orderId, type, amount",
+    "repo LIB/common-primitives com.lumen.money:primitives-parent: modules decimal (ledger-amounts); dirs decimal"
+  ],
+  "requestSha256": "c62cc934a269ab1bb5f7bc536899255769ec6c840f36527aa1649c037df9d8c3",
+  "stdoutSha256": "6d99a44595be65d2cbdda768974bcbb429298f29dae4cbfd167d7e5e00a413e8",
+  "stderrSha256": "fe94d77b93ca6a31047d097bf15f2a5e1dc5322405e47d4bf001f41e418c8749"
+}

@@ -1,0 +1,45 @@
+{
+  "started": "2026-10-28T21:58:51.657Z",
+  "ended": "2026-10-28T21:58:51.884Z",
+  "durationMs": 227,
+  "tool": "workspace_write",
+  "args": {
+    "workspace": "order-projection-main-073e",
+    "path": "src/test/java/com/lumen/orders/OrderProjectionContractTest.java",
+    "edits": [
+      {
+        "find": "import org.junit.jupiter.api.Test;",
+        "replace": "import org.junit.jupiter.api.Test;\nimport org.junit.jupiter.api.BeforeAll;\nimport java.sql.*;\nimport java.nio.file.*;"
+      },
+      {
+        "find": "class OrderProjectionContractTest {",
+        "replace": "class OrderProjectionContractTest {\n static JdbcFunctions functions(){String url=System.getenv(\"SPRING_DATASOURCE_URL\");return url==null?JdbcFunctions.fromEnvironment():new JdbcFunctions(url,System.getenv(\"SPRING_DATASOURCE_USERNAME\"),System.getenv(\"SPRING_DATASOURCE_PASSWORD\"));}\n @BeforeAll static void loadCapturedRowsOnlyIntoScratch() throws Exception {\n  String url=System.getenv(\"SPRING_DATASOURCE_URL\");if(url==null)return;\n  if(!url.contains(\"/dt_test_\"))throw new IllegalStateException(\"refuse writes outside dt scratch\");\n  try(Connection c=DriverManager.getConnection(url,System.getenv(\"SPRING_DATASOURCE_USERNAME\"),System.getenv(\"SPRING_DATASOURCE_PASSWORD\"));Statement s=c.createStatement()){s.execute(Files.readString(Path.of(\"src/test/resources/dt-fixtures/projection-baseline/pg/6f7264657273/data.sql\")));}\n }"
+      },
+      {
+        "find": "new OrderProjectionService(JdbcFunctions.fromEnvironment())",
+        "replace": "new OrderProjectionService(functions())"
+      }
+    ]
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 170,
+  "stderrBytes": 261,
+  "stdout": "{\n  \"id\": \"order-projection-main-073e\",\n  \"path\": \"src/test/java/com/lumen/orders/OrderProjectionContractTest.java\",\n  \"created\": false,\n  \"bytes\": 3274,\n  \"lines\": 38\n}\n",
+  "stderr": "21:58:51 dt call workspace_write#1ei3 start {\"workspace\":\"order-projection-main-073e\",\"path\":\"src/test/java/com/lumen/orders/OrderProjectionContractTest.java\",\"edits\":[{\"find\":\"import org.junit.jupiter.ap…} (cli)\n21:58:51 dt call workspace_write#1ei3 ok 23ms\n",
+  "result": {
+    "id": "order-projection-main-073e",
+    "path": "src/test/java/com/lumen/orders/OrderProjectionContractTest.java",
+    "created": false,
+    "bytes": 3274,
+    "lines": 38
+  },
+  "requestSha256": "58bb704b82badd6f3be8600646ecefefb0a5f87b2286b99fddc6e6d8bec46a7e",
+  "stdoutSha256": "7f1eb9ab8e8b315ae4f39eb26516b6af40021d7557eb223e2281e19a8afa2548",
+  "stderrSha256": "753a883f01f6bf193ba2374d54c8adb0108a0b7f7d0bdc657fcfcf63ae9f217d"
+}

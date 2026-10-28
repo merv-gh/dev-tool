@@ -1,0 +1,34 @@
+{
+  "started": "2026-10-28T22:03:18.408Z",
+  "ended": "2026-10-28T22:03:18.597Z",
+  "durationMs": 190,
+  "tool": "workspace_read",
+  "args": {
+    "workspace": "c06-main-a358",
+    "path": "src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/schema.sql",
+    "from": 1,
+    "to": 400
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 822,
+  "stderrBytes": 226,
+  "stdout": "{\n  \"id\": \"c06-main-a358\",\n  \"path\": \"src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/schema.sql\",\n  \"from\": 1,\n  \"to\": 22,\n  \"lines\": 22,\n  \"text\": \"    1  set check_function_bodies = false;\\n    2  \\n    3  create schema if not exists pay;\\n    4  \\n    5  create schema if not exists risk;\\n    6  \\n    7  create table pay.payments (\\n    8    tenant_id bigint not null,\\n    9    order_id bigint not null,\\n   10    status text,\\n   11    amount numeric(20,6),\\n   12    constraint payments_pkey PRIMARY KEY (tenant_id, order_id)\\n   13  );\\n   14  \\n   15  create table risk.accounts (\\n   16    tenant_id bigint not null,\\n   17    id bigint not null,\\n   18    status text,\\n   19    credit_limit numeric(20,6),\\n   20    constraint accounts_pkey PRIMARY KEY (tenant_id, id)\\n   21  );\\n   22  \"\n}\n",
+  "stderr": "22:03:18 dt call workspace_read#14b7 start {\"workspace\":\"c06-main-a358\",\"path\":\"src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/schema.sql\",\"from\":1,\"to\":400} (cli)\n22:03:18 dt call workspace_read#14b7 ok 13ms\n",
+  "result": {
+    "id": "c06-main-a358",
+    "path": "src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/schema.sql",
+    "from": 1,
+    "to": 22,
+    "lines": 22,
+    "text": "    1  set check_function_bodies = false;\n    2  \n    3  create schema if not exists pay;\n    4  \n    5  create schema if not exists risk;\n    6  \n    7  create table pay.payments (\n    8    tenant_id bigint not null,\n    9    order_id bigint not null,\n   10    status text,\n   11    amount numeric(20,6),\n   12    constraint payments_pkey PRIMARY KEY (tenant_id, order_id)\n   13  );\n   14  \n   15  create table risk.accounts (\n   16    tenant_id bigint not null,\n   17    id bigint not null,\n   18    status text,\n   19    credit_limit numeric(20,6),\n   20    constraint accounts_pkey PRIMARY KEY (tenant_id, id)\n   21  );\n   22  "
+  },
+  "requestSha256": "1bf8de52edb7e785e5ca529d42410967677adde4481343a082d917a6e3f83357",
+  "stdoutSha256": "980dc91ed49bd98f8e422d1df4bc5cf5d1e71661d11473dd7202d7725c925622",
+  "stderrSha256": "ca5915207bfdc89ceb0570449890b10e622226e76738f1e4b86672d676cd3b5a"
+}

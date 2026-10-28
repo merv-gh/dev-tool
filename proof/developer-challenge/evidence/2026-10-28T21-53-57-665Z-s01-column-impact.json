@@ -1,0 +1,42 @@
+{
+  "started": "2026-10-28T21:53:57.665Z",
+  "ended": "2026-10-28T21:53:57.947Z",
+  "durationMs": 282,
+  "tool": "impact",
+  "args": {
+    "target": "orders:sales.orders.amount",
+    "env": "fixture"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 405,
+  "stderrBytes": 134,
+  "stdout": "{\n  \"target\": \"orders:sales.orders.amount\",\n  \"resolved\": [],\n  \"note\": \"nothing named \\\"orders:sales.orders.amount\\\" in 10 indexed repos or the fixture catalog\",\n  \"candidates\": [],\n  \"repos\": [\n    \"CASES/c01\",\n    \"CASES/c02\",\n    \"CASES/c04\",\n    \"CASES/c05\",\n    \"CASES/c06\",\n    \"CASES/c07\",\n    \"CASES/c08\",\n    \"CASES/order-projection\",\n    \"FIN/ledger-service\",\n    \"LIB/common-primitives\"\n  ]\n}\n",
+  "stderr": "21:53:57 dt call impact#13o3 start {\"target\":\"orders:sales.orders.amount\",\"env\":\"fixture\"} (cli)\n21:53:57 dt call impact#13o3 ok 83ms\n",
+  "result": {
+    "target": "orders:sales.orders.amount",
+    "resolved": [],
+    "note": "nothing named \"orders:sales.orders.amount\" in 10 indexed repos or the fixture catalog",
+    "candidates": [],
+    "repos": [
+      "CASES/c01",
+      "CASES/c02",
+      "CASES/c04",
+      "CASES/c05",
+      "CASES/c06",
+      "CASES/c07",
+      "CASES/c08",
+      "CASES/order-projection",
+      "FIN/ledger-service",
+      "LIB/common-primitives"
+    ]
+  },
+  "requestSha256": "0ce4285951ad5ed013c0c9f56c536bbfc528cff3acda56729a5d4f3be6c45338",
+  "stdoutSha256": "31ef080c1f120afcdfcc0a5f746139e4e643ded94923fe5c078899d89fb61086",
+  "stderrSha256": "2771025e183ecc3bc7b8a7eaf831296b3d8b55924a73c0d4b56df2ac37a71b84"
+}

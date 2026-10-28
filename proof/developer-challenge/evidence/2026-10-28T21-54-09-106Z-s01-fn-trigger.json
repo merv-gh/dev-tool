@@ -1,0 +1,81 @@
+{
+  "started": "2026-10-28T21:54:09.106Z",
+  "ended": "2026-10-28T21:54:09.367Z",
+  "durationMs": 261,
+  "tool": "pg_function",
+  "args": {
+    "name": "sales.audit_amount",
+    "env": "fixture"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 1530,
+  "stderrBytes": 134,
+  "stdout": "[\n  {\n    \"db\": \"orders\",\n    \"object\": \"sales.audit_amount\",\n    \"schema\": \"sales\",\n    \"name\": \"audit_amount\",\n    \"kind\": \"function\",\n    \"args\": \"\",\n    \"signature\": \"\",\n    \"returns\": \"trigger\",\n    \"arg_list\": [],\n    \"lang\": \"plpgsql\",\n    \"volatility\": \"volatile\",\n    \"security_definer\": false,\n    \"comment\": null,\n    \"usedBy\": [\n      {\n        \"db\": \"orders\",\n        \"source\": \"db\",\n        \"where\": \"order_amount_audit\",\n        \"detail\": \"order_amount_audit AFTER UPDATE OF amount\",\n        \"target\": \"sales.audit_amount\",\n        \"targetKind\": \"function\",\n        \"user\": \"sales.orders\",\n        \"userKind\": \"trigger\",\n        \"role\": \"executes\"\n      }\n    ],\n    \"uses\": [\n      {\n        \"db\": \"orders\",\n        \"source\": \"db\",\n        \"where\": \"order_amount_audit\",\n        \"detail\": \"order_amount_audit AFTER UPDATE OF amount\",\n        \"target\": \"sales.orders\",\n        \"targetKind\": \"table\",\n        \"user\": \"sales.audit_amount\",\n        \"userKind\": \"function\",\n        \"role\": \"trigger\"\n      },\n      {\n        \"db\": \"orders\",\n        \"source\": \"db\",\n        \"where\": \"\",\n        \"detail\": \"\",\n        \"target\": \"sales.order_audit\",\n        \"targetKind\": \"table\",\n        \"user\": \"sales.audit_amount\",\n        \"userKind\": \"function\",\n        \"role\": \"write\"\n      }\n    ],\n    \"body\": \"\\nBEGIN\\n IF OLD.amount IS DISTINCT FROM NEW.amount THEN\\n  INSERT INTO sales.order_audit VALUES(NEW.tenant_id,NEW.id,OLD.amount,NEW.amount);\\n END IF;\\n RETURN NEW;\\nEND \",\n    \"usedByTotal\": 1,\n    \"note\": null\n  }\n]\n",
+  "stderr": "21:54:09 dt call pg_function#1ci9 start {\"name\":\"sales.audit_amount\",\"env\":\"fixture\"} (cli)\n21:54:09 dt call pg_function#1ci9 ok 39ms\n",
+  "result": [
+    {
+      "db": "orders",
+      "object": "sales.audit_amount",
+      "schema": "sales",
+      "name": "audit_amount",
+      "kind": "function",
+      "args": "",
+      "signature": "",
+      "returns": "trigger",
+      "arg_list": [],
+      "lang": "plpgsql",
+      "volatility": "volatile",
+      "security_definer": false,
+      "comment": null,
+      "usedBy": [
+        {
+          "db": "orders",
+          "source": "db",
+          "where": "order_amount_audit",
+          "detail": "order_amount_audit AFTER UPDATE OF amount",
+          "target": "sales.audit_amount",
+          "targetKind": "function",
+          "user": "sales.orders",
+          "userKind": "trigger",
+          "role": "executes"
+        }
+      ],
+      "uses": [
+        {
+          "db": "orders",
+          "source": "db",
+          "where": "order_amount_audit",
+          "detail": "order_amount_audit AFTER UPDATE OF amount",
+          "target": "sales.orders",
+          "targetKind": "table",
+          "user": "sales.audit_amount",
+          "userKind": "function",
+          "role": "trigger"
+        },
+        {
+          "db": "orders",
+          "source": "db",
+          "where": "",
+          "detail": "",
+          "target": "sales.order_audit",
+          "targetKind": "table",
+          "user": "sales.audit_amount",
+          "userKind": "function",
+          "role": "write"
+        }
+      ],
+      "body": "\nBEGIN\n IF OLD.amount IS DISTINCT FROM NEW.amount THEN\n  INSERT INTO sales.order_audit VALUES(NEW.tenant_id,NEW.id,OLD.amount,NEW.amount);\n END IF;\n RETURN NEW;\nEND ",
+      "usedByTotal": 1,
+      "note": null
+    }
+  ],
+  "requestSha256": "6b3a11c63895470d73d4e582a9c1ff37d7094f54cd8ba37382dd6d918a17f779",
+  "stdoutSha256": "23a445e77cd5a42b620a6718f3b69cc3cb0ed5d498cc9d3557233958a483aef4",
+  "stderrSha256": "80581c79483be134afbd6574b7e2b49ac6a49675222aeb2a3af3716153a6734d"
+}

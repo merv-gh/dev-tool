@@ -1,0 +1,34 @@
+{
+  "started": "2026-10-28T22:03:17.147Z",
+  "ended": "2026-10-28T22:03:17.332Z",
+  "durationMs": 185,
+  "tool": "workspace_read",
+  "args": {
+    "workspace": "c06-main-a358",
+    "path": "src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/constraints.sql",
+    "from": 1,
+    "to": 400
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 189,
+  "stderrBytes": 231,
+  "stdout": "{\n  \"id\": \"c06-main-a358\",\n  \"path\": \"src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/constraints.sql\",\n  \"from\": 1,\n  \"to\": 2,\n  \"lines\": 2,\n  \"text\": \"    1  \\n    2  \"\n}\n",
+  "stderr": "22:03:17 dt call workspace_read#13c4 start {\"workspace\":\"c06-main-a358\",\"path\":\"src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/constraints.sql\",\"from\":1,\"to\":400} (cli)\n22:03:17 dt call workspace_read#13c4 ok 13ms\n",
+  "result": {
+    "id": "c06-main-a358",
+    "path": "src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/constraints.sql",
+    "from": 1,
+    "to": 2,
+    "lines": 2,
+    "text": "    1  \n    2  "
+  },
+  "requestSha256": "56a2be776aa508f84ae4916d6d18867e56a2cca67ede290c4d2b83fa8aad50df",
+  "stdoutSha256": "44bf1943ea849a7a420cba18cf5238d17de0364dd47c8a434ceabfd97ebf30f3",
+  "stderrSha256": "5dab62b45adea6cfd960e9e7e5f843d56d9f69f265b014a9f7a169cff36d54e8"
+}

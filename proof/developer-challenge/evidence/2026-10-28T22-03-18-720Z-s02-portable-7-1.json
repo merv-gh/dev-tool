@@ -1,0 +1,34 @@
+{
+  "started": "2026-10-28T22:03:18.720Z",
+  "ended": "2026-10-28T22:03:18.915Z",
+  "durationMs": 195,
+  "tool": "workspace_read",
+  "args": {
+    "workspace": "c06-main-a358",
+    "path": "src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/constraints.sql",
+    "from": 1,
+    "to": 400
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 337,
+  "stderrBytes": 229,
+  "stdout": "{\n  \"id\": \"c06-main-a358\",\n  \"path\": \"src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/constraints.sql\",\n  \"from\": 1,\n  \"to\": 2,\n  \"lines\": 2,\n  \"text\": \"    1  alter table sales.orders add constraint orders_tenant_id_account_id_fkey FOREIGN KEY (tenant_id, account_id) REFERENCES sales.accounts(tenant_id, id);\\n    2  \"\n}\n",
+  "stderr": "22:03:18 dt call workspace_read#14k2 start {\"workspace\":\"c06-main-a358\",\"path\":\"src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/constraints.sql\",\"from\":1,\"to\":400} (cli)\n22:03:18 dt call workspace_read#14k2 ok 13ms\n",
+  "result": {
+    "id": "c06-main-a358",
+    "path": "src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/constraints.sql",
+    "from": 1,
+    "to": 2,
+    "lines": 2,
+    "text": "    1  alter table sales.orders add constraint orders_tenant_id_account_id_fkey FOREIGN KEY (tenant_id, account_id) REFERENCES sales.accounts(tenant_id, id);\n    2  "
+  },
+  "requestSha256": "4c7216026ffffe0eb1a76826a3d184a753f1945eb48787f560016777791e4731",
+  "stdoutSha256": "7e21812a9514e21e149c64c64f9363751b18a5b597bb21eaa1073ff9bbae1b9f",
+  "stderrSha256": "c32040257c64d4aecb299713811dd44fbe330bdf6758f3406fd6583fbb1d1698"
+}

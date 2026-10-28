@@ -1,0 +1,118 @@
+[
+  {
+    "id": "orders:sales.orders",
+    "db": "orders",
+    "table": "sales.orders",
+    "columns": [
+      {
+        "name": "tenant_id",
+        "type": "bigint",
+        "nullable": false,
+        "default": null,
+        "identity": null,
+        "generated": null,
+        "comment": null
+      },
+      {
+        "name": "id",
+        "type": "bigint",
+        "nullable": false,
+        "default": null,
+        "identity": null,
+        "generated": null,
+        "comment": null
+      },
+      {
+        "name": "account_id",
+        "type": "bigint",
+        "nullable": true,
+        "default": null,
+        "identity": null,
+        "generated": null,
+        "comment": null
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "nullable": true,
+        "default": null,
+        "identity": null,
+        "generated": null,
+        "comment": null
+      },
+      {
+        "name": "amount",
+        "type": "numeric(20,6)",
+        "nullable": true,
+        "default": null,
+        "identity": null,
+        "generated": null,
+        "comment": null
+      }
+    ],
+    "constraints": [
+      {
+        "name": "orders_pkey",
+        "type": "p",
+        "def": "PRIMARY KEY (tenant_id, id)",
+        "ref": null
+      },
+      {
+        "name": "orders_tenant_id_account_id_fkey",
+        "type": "f",
+        "def": "FOREIGN KEY (tenant_id, account_id) REFERENCES sales.accounts(tenant_id, id)",
+        "ref": "sales.accounts"
+      }
+    ],
+    "primaryKey": [
+      "tenant_id",
+      "id"
+    ]
+  },
+  {
+    "id": "orders:sales.accounts",
+    "db": "orders",
+    "table": "sales.accounts",
+    "columns": [
+      {
+        "name": "tenant_id",
+        "type": "bigint",
+        "nullable": false,
+        "default": null,
+        "identity": null,
+        "generated": null,
+        "comment": null
+      },
+      {
+        "name": "id",
+        "type": "bigint",
+        "nullable": false,
+        "default": null,
+        "identity": null,
+        "generated": null,
+        "comment": null
+      },
+      {
+        "name": "enabled",
+        "type": "boolean",
+        "nullable": false,
+        "default": null,
+        "identity": null,
+        "generated": null,
+        "comment": null
+      }
+    ],
+    "constraints": [
+      {
+        "name": "accounts_pkey",
+        "type": "p",
+        "def": "PRIMARY KEY (tenant_id, id)",
+        "ref": null
+      }
+    ],
+    "primaryKey": [
+      "tenant_id",
+      "id"
+    ]
+  }
+]

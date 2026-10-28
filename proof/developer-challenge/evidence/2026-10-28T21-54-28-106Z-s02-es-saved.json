@@ -1,0 +1,32 @@
+{
+  "started": "2026-10-28T21:54:28.106Z",
+  "ended": "2026-10-28T21:54:28.405Z",
+  "durationMs": 299,
+  "tool": "code_read",
+  "args": {
+    "repo": "CASES/order-projection",
+    "path": "es/orders-read-model.json"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 1055,
+  "stderrBytes": 153,
+  "stdout": "{\n  \"repo\": \"CASES/order-projection\",\n  \"path\": \"es/orders-read-model.json\",\n  \"from\": 1,\n  \"to\": 31,\n  \"lines\": 31,\n  \"text\": \"    1  {\\n    2    \\\"index\\\": \\\"orders-read-model\\\",\\n    3    \\\"provenance\\\": \\\"saved synthetic public incident evidence; not a live ES capture\\\",\\n    4    \\\"mapping\\\": {\\n    5      \\\"tenantId\\\": \\\"keyword\\\",\\n    6      \\\"orderId\\\": \\\"keyword\\\",\\n    7      \\\"status\\\": \\\"keyword\\\",\\n    8      \\\"amount\\\": \\\"keyword\\\"\\n    9    },\\n   10    \\\"documents\\\": [\\n   11      {\\n   12        \\\"_id\\\": \\\"22:420\\\",\\n   13        \\\"_source\\\": {\\n   14          \\\"tenantId\\\": \\\"22\\\",\\n   15          \\\"orderId\\\": \\\"420\\\",\\n   16          \\\"status\\\": \\\"PAID\\\",\\n   17          \\\"amount\\\": \\\"100.000001\\\"\\n   18        }\\n   19      },\\n   20      {\\n   21        \\\"_id\\\": \\\"11:420\\\",\\n   22        \\\"_source\\\": {\\n   23          \\\"tenantId\\\": \\\"11\\\",\\n   24          \\\"orderId\\\": \\\"420\\\",\\n   25          \\\"status\\\": \\\"PAID\\\",\\n   26          \\\"amount\\\": \\\"17.000001\\\"\\n   27        }\\n   28      }\\n   29    ]\\n   30  }\\n   31  \"\n}\n",
+  "stderr": "21:54:28 dt call code_read#1r69 start {\"repo\":\"CASES/order-projection\",\"path\":\"es/orders-read-model.json\"} (cli)\n21:54:28 dt call code_read#1r69 ok 43ms\n",
+  "result": {
+    "repo": "CASES/order-projection",
+    "path": "es/orders-read-model.json",
+    "from": 1,
+    "to": 31,
+    "lines": 31,
+    "text": "    1  {\n    2    \"index\": \"orders-read-model\",\n    3    \"provenance\": \"saved synthetic public incident evidence; not a live ES capture\",\n    4    \"mapping\": {\n    5      \"tenantId\": \"keyword\",\n    6      \"orderId\": \"keyword\",\n    7      \"status\": \"keyword\",\n    8      \"amount\": \"keyword\"\n    9    },\n   10    \"documents\": [\n   11      {\n   12        \"_id\": \"22:420\",\n   13        \"_source\": {\n   14          \"tenantId\": \"22\",\n   15          \"orderId\": \"420\",\n   16          \"status\": \"PAID\",\n   17          \"amount\": \"100.000001\"\n   18        }\n   19      },\n   20      {\n   21        \"_id\": \"11:420\",\n   22        \"_source\": {\n   23          \"tenantId\": \"11\",\n   24          \"orderId\": \"420\",\n   25          \"status\": \"PAID\",\n   26          \"amount\": \"17.000001\"\n   27        }\n   28      }\n   29    ]\n   30  }\n   31  "
+  },
+  "requestSha256": "8bb3d83c6c29b29fbc01807615f74612d0dd072731d12b6e393d9ef2004c19f1",
+  "stdoutSha256": "242e2e890b52dd4172384211ea2a2d39d26ffb1049535f294ffb416b2704b1b4",
+  "stderrSha256": "a7bdb8dd52daae909583f7ba2e59e367f233b2ec39006fd5db9013980d8bb759"
+}

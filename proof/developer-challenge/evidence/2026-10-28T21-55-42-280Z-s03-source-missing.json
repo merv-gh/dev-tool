@@ -1,0 +1,38 @@
+{
+  "started": "2026-10-28T21:55:42.280Z",
+  "ended": "2026-10-28T21:55:42.709Z",
+  "durationMs": 429,
+  "tool": "pg_query",
+  "args": {
+    "env": "fixture",
+    "db": "orders",
+    "sql": "select * from sales.order_projection($1::bigint,$2::bigint) limit 5",
+    "params": [
+      "22",
+      "999"
+    ],
+    "all": true
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 151,
+  "stderrBytes": 224,
+  "stdout": "{\n  \"db\": \"orders\",\n  \"route\": \"explicit\",\n  \"ms\": 62,\n  \"total\": 0,\n  \"rows\": [],\n  \"view\": \"http://127.0.0.1:4000/view/mvsnlcjj8d6f3c0b0b0ddd44d2\"\n}\n",
+  "stderr": "21:55:42 dt call pg_query#1cge start {\"env\":\"fixture\",\"db\":\"orders\",\"sql\":\"select * from sales.order_projection($1::bigint,$2::bigint) limit 5\",\"params\":[\"22\",\"999\"],\"all\":true} (cli)\n21:55:42 dt call pg_query#1cge ok 115ms\n",
+  "result": {
+    "db": "orders",
+    "route": "explicit",
+    "ms": 62,
+    "total": 0,
+    "rows": [],
+    "view": "http://127.0.0.1:4000/view/mvsnlcjj8d6f3c0b0b0ddd44d2"
+  },
+  "requestSha256": "0a215018a6a6228e8fc1d3fc20e5e8a63e13765f2be349b218695b0ffdf2c6b9",
+  "stdoutSha256": "71cd2242e2b389677061a4b088ec6b4bfc7da22ae050f4819b8929902d13465a",
+  "stderrSha256": "2de9effd1c0da803ca52bdcf0194b6395b9b096a5282632a3f0f57bcc9656676"
+}

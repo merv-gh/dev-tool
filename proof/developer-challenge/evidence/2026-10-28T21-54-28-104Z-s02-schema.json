@@ -1,0 +1,126 @@
+{
+  "started": "2026-10-28T21:54:28.104Z",
+  "ended": "2026-10-28T21:54:28.391Z",
+  "durationMs": 287,
+  "tool": "fixture_schema",
+  "args": {
+    "env": "fixture",
+    "topic": "orders.paid"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 1634,
+  "stderrBytes": 134,
+  "stdout": "{\n  \"env\": \"fixture\",\n  \"topic\": \"orders.paid\",\n  \"paths\": [\n    {\n      \"path\": \"key\",\n      \"types\": [\n        \"object\"\n      ],\n      \"sources\": [\n        \"json-schema\"\n      ],\n      \"evidence\": [\n        \"json-schema: key\"\n      ]\n    },\n    {\n      \"path\": \"key.orderId\",\n      \"types\": [\n        \"string\"\n      ],\n      \"sources\": [\n        \"json-schema\"\n      ],\n      \"evidence\": [\n        \"json-schema: key.orderId\"\n      ]\n    },\n    {\n      \"path\": \"key.tenantId\",\n      \"types\": [\n        \"string\"\n      ],\n      \"sources\": [\n        \"json-schema\"\n      ],\n      \"evidence\": [\n        \"json-schema: key.tenantId\"\n      ]\n    },\n    {\n      \"path\": \"value\",\n      \"types\": [\n        \"object\"\n      ],\n      \"sources\": [\n        \"json-schema\"\n      ],\n      \"evidence\": [\n        \"json-schema: value\"\n      ]\n    },\n    {\n      \"path\": \"value.amount\",\n      \"types\": [\n        \"string\"\n      ],\n      \"sources\": [\n        \"json-schema\"\n      ],\n      \"evidence\": [\n        \"json-schema: value.amount\"\n      ]\n    },\n    {\n      \"path\": \"value.orderId\",\n      \"types\": [\n        \"string\"\n      ],\n      \"sources\": [\n        \"json-schema\"\n      ],\n      \"evidence\": [\n        \"json-schema: value.orderId\"\n      ]\n    },\n    {\n      \"path\": \"value.tenantId\",\n      \"types\": [\n        \"string\"\n      ],\n      \"sources\": [\n        \"json-schema\"\n      ],\n      \"evidence\": [\n        \"json-schema: value.tenantId\"\n      ]\n    },\n    {\n      \"path\": \"value.type\",\n      \"types\": [\n        \"string\"\n      ],\n      \"sources\": [\n        \"json-schema\"\n      ],\n      \"evidence\": [\n        \"json-schema: value.type\"\n      ]\n    }\n  ]\n}\n",
+  "stderr": "21:54:28 dt call fixture_schema#1r5w start {\"env\":\"fixture\",\"topic\":\"orders.paid\"} (cli)\n21:54:28 dt call fixture_schema#1r5w ok 41ms\n",
+  "result": {
+    "env": "fixture",
+    "topic": "orders.paid",
+    "paths": [
+      {
+        "path": "key",
+        "types": [
+          "object"
+        ],
+        "sources": [
+          "json-schema"
+        ],
+        "evidence": [
+          "json-schema: key"
+        ]
+      },
+      {
+        "path": "key.orderId",
+        "types": [
+          "string"
+        ],
+        "sources": [
+          "json-schema"
+        ],
+        "evidence": [
+          "json-schema: key.orderId"
+        ]
+      },
+      {
+        "path": "key.tenantId",
+        "types": [
+          "string"
+        ],
+        "sources": [
+          "json-schema"
+        ],
+        "evidence": [
+          "json-schema: key.tenantId"
+        ]
+      },
+      {
+        "path": "value",
+        "types": [
+          "object"
+        ],
+        "sources": [
+          "json-schema"
+        ],
+        "evidence": [
+          "json-schema: value"
+        ]
+      },
+      {
+        "path": "value.amount",
+        "types": [
+          "string"
+        ],
+        "sources": [
+          "json-schema"
+        ],
+        "evidence": [
+          "json-schema: value.amount"
+        ]
+      },
+      {
+        "path": "value.orderId",
+        "types": [
+          "string"
+        ],
+        "sources": [
+          "json-schema"
+        ],
+        "evidence": [
+          "json-schema: value.orderId"
+        ]
+      },
+      {
+        "path": "value.tenantId",
+        "types": [
+          "string"
+        ],
+        "sources": [
+          "json-schema"
+        ],
+        "evidence": [
+          "json-schema: value.tenantId"
+        ]
+      },
+      {
+        "path": "value.type",
+        "types": [
+          "string"
+        ],
+        "sources": [
+          "json-schema"
+        ],
+        "evidence": [
+          "json-schema: value.type"
+        ]
+      }
+    ]
+  },
+  "requestSha256": "d7ded65c9d61a6f8f111782b7da3699cba88febc48d84011aa1c4bc4d57d263a",
+  "stdoutSha256": "71a006936b7a3108df90557a9dc5fe93dd707d2e51b1af630f1059d02fa8103c",
+  "stderrSha256": "cc3638b968e8b03e1deefa1edcef96efe00ea8efaf269d992775435eba62945f"
+}

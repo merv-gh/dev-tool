@@ -1,0 +1,80 @@
+{
+  "started": "2026-10-28T21:56:46.496Z",
+  "ended": "2026-10-28T21:56:46.742Z",
+  "durationMs": 246,
+  "tool": "tool_describe",
+  "args": {
+    "name": "ddl_snapshot"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 1673,
+  "stderrBytes": 116,
+  "stdout": "{\n  \"name\": \"ddl_snapshot\",\n  \"description\": \"DDL of a synced database (schemas, extensions, enum/domain types, sequences, tables with defaults, identity, constraints, indexes, comments, functions, procedures, views in order, triggers) for tests: all of it, or only some tables, functions or what a service uses, closed over what they need (FK targets, trigger functions, called functions and their tables). With workspace, written to <module>/src/test/resources/dt-schema/<db>.sql (or path).\",\n  \"group\": \"code\",\n  \"origin\": \"built-in\",\n  \"execution\": {\n    \"protocol\": \"dt.tool/v1\",\n    \"transport\": \"in-process\"\n  },\n  \"inputSchema\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"env\": {\n        \"type\": \"string\",\n        \"enum\": [\n          \"dev\",\n          \"fixture\"\n        ],\n        \"default\": \"dev\",\n        \"description\": \"Environment\"\n      },\n      \"db\": {\n        \"type\": \"string\",\n        \"description\": \"Database name from the env\"\n      },\n      \"tables\": {\n        \"type\": \"array\",\n        \"items\": {\n          \"type\": \"string\"\n        },\n        \"description\": \"Tables (schema.name or name)\"\n      },\n      \"functions\": {\n        \"type\": \"array\",\n        \"items\": {\n          \"type\": \"string\"\n        },\n        \"description\": \"Functions/procedures\"\n      },\n      \"service\": {\n        \"type\": \"string\",\n        \"description\": \"A service: the objects its passport uses in this db\"\n      },\n      \"workspace\": {\n        \"type\": \"string\",\n        \"description\": \"Write it into this workspace\"\n      },\n      \"path\": {\n        \"type\": \"string\",\n        \"description\": \"File path in the workspace\"\n      }\n    },\n    \"required\": [\n      \"db\"\n    ]\n  }\n}\n",
+  "stderr": "21:56:46 dt call tool_describe#1pxo start {\"name\":\"ddl_snapshot\"} (cli)\n21:56:46 dt call tool_describe#1pxo ok 18ms\n",
+  "result": {
+    "name": "ddl_snapshot",
+    "description": "DDL of a synced database (schemas, extensions, enum/domain types, sequences, tables with defaults, identity, constraints, indexes, comments, functions, procedures, views in order, triggers) for tests: all of it, or only some tables, functions or what a service uses, closed over what they need (FK targets, trigger functions, called functions and their tables). With workspace, written to <module>/src/test/resources/dt-schema/<db>.sql (or path).",
+    "group": "code",
+    "origin": "built-in",
+    "execution": {
+      "protocol": "dt.tool/v1",
+      "transport": "in-process"
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "env": {
+          "type": "string",
+          "enum": [
+            "dev",
+            "fixture"
+          ],
+          "default": "dev",
+          "description": "Environment"
+        },
+        "db": {
+          "type": "string",
+          "description": "Database name from the env"
+        },
+        "tables": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Tables (schema.name or name)"
+        },
+        "functions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Functions/procedures"
+        },
+        "service": {
+          "type": "string",
+          "description": "A service: the objects its passport uses in this db"
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Write it into this workspace"
+        },
+        "path": {
+          "type": "string",
+          "description": "File path in the workspace"
+        }
+      },
+      "required": [
+        "db"
+      ]
+    }
+  },
+  "requestSha256": "86de6f3b37dca15a36e754f0d119287fb00111c857b09df4dda08a451e84e761",
+  "stdoutSha256": "c33f00e5700487ad8f51f5eb6fcb13e357ec9b771afc4ef4240b6af0e0d355c2",
+  "stderrSha256": "6f7d17f697611eea5c3f369dd5fca9ff01eed2b86c17b514f04f8802782d8990"
+}

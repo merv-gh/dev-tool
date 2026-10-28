@@ -1,0 +1,34 @@
+{
+  "started": "2026-10-28T22:00:49.251Z",
+  "ended": "2026-10-28T22:00:49.684Z",
+  "durationMs": 433,
+  "tool": "test_run",
+  "args": {
+    "workspace": "order-projection-main-073e",
+    "tests": [
+      "OrderProjectionContractTest"
+    ],
+    "mode": "build",
+    "env": "dev",
+    "db": "orders"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 147,
+  "stderrBytes": 508,
+  "stdout": "{\n  \"job\": \"mvsnrx8y18a524\",\n  \"state\": \"failed\",\n  \"error\": \"no synced catalog for db \\\"orders\\\" in dev: call catalog_sync what=pg only=orders\"\n}\n",
+  "stderr": "22:00:49 dt call test_run#1x8j start {\"workspace\":\"order-projection-main-073e\",\"tests\":[\"OrderProjectionContractTest\"],\"mode\":\"build\",\"env\":\"dev\",\"db\":\"orders\"} (cli)\n22:00:49 dt job tests OrderProjectionContractTest in order-projection-main-073e#2x90 start {\"job\":\"mvsnrx8y18a524\"} (job)\n22:00:49 dt job tests OrderProjectionContractTest in order-projection-main-073e#2x90 FAILED 234ms: no synced catalog for db \"orders\" in dev: call catalog_sync what=pg only=orders\n22:00:49 dt call test_run#1x8j ok 252ms\n",
+  "result": {
+    "job": "mvsnrx8y18a524",
+    "state": "failed",
+    "error": "no synced catalog for db \"orders\" in dev: call catalog_sync what=pg only=orders"
+  },
+  "requestSha256": "02d8c59d13b55a0abfa3b23f79b56f2e390aa8f4605a0fe5a2835771a9e1e124",
+  "stdoutSha256": "2a00745569f2a0525619e3443cdbc464bfea1a5233ebebb5e42cab6c30febf0a",
+  "stderrSha256": "cce01e3e0c0d69fe4fc6180f2b3fad16eff3456c85d1e1bb89b98abd95b7aae5"
+}

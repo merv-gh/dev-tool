@@ -1,0 +1,32 @@
+{
+  "started": "2026-10-28T21:56:25.065Z",
+  "ended": "2026-10-28T21:56:25.391Z",
+  "durationMs": 326,
+  "tool": "workspace_read",
+  "args": {
+    "workspace": "order-projection-main-073e",
+    "path": "src/test/resources/dt-fixtures/projection-baseline/pg/6f7264657273/schema.sql"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 1300,
+  "stderrBytes": 224,
+  "stdout": "{\n  \"id\": \"order-projection-main-073e\",\n  \"path\": \"src/test/resources/dt-fixtures/projection-baseline/pg/6f7264657273/schema.sql\",\n  \"from\": 1,\n  \"to\": 35,\n  \"lines\": 35,\n  \"text\": \"    1  set check_function_bodies = false;\\n    2  \\n    3  create schema if not exists sales;\\n    4  \\n    5  create table sales.accounts (\\n    6    tenant_id bigint not null,\\n    7    id bigint not null,\\n    8    enabled boolean not null,\\n    9    constraint accounts_pkey PRIMARY KEY (tenant_id, id)\\n   10  );\\n   11  \\n   12  create table sales.order_audit (\\n   13    tenant_id bigint,\\n   14    order_id bigint,\\n   15    old_amount numeric(20,6),\\n   16    new_amount numeric(20,6)\\n   17  );\\n   18  \\n   19  create table sales.orders (\\n   20    tenant_id bigint not null,\\n   21    id bigint not null,\\n   22    account_id bigint,\\n   23    status text,\\n   24    amount numeric(20,6),\\n   25    constraint orders_pkey PRIMARY KEY (tenant_id, id)\\n   26  );\\n   27  \\n   28  create or replace function sales.audit_amount() returns trigger language plpgsql volatile as $fn$\\n   29  BEGIN\\n   30   IF OLD.amount IS DISTINCT FROM NEW.amount THEN\\n   31    INSERT INTO sales.order_audit VALUES(NEW.tenant_id,NEW.id,OLD.amount,NEW.amount);\\n   32   END IF;\\n   33   RETURN NEW;\\n   34  END $fn$;\\n   35  \"\n}\n",
+  "stderr": "21:56:25 dt call workspace_read#19fa start {\"workspace\":\"order-projection-main-073e\",\"path\":\"src/test/resources/dt-fixtures/projection-baseline/pg/6f7264657273/schema.sql\"} (cli)\n21:56:25 dt call workspace_read#19fa ok 35ms\n",
+  "result": {
+    "id": "order-projection-main-073e",
+    "path": "src/test/resources/dt-fixtures/projection-baseline/pg/6f7264657273/schema.sql",
+    "from": 1,
+    "to": 35,
+    "lines": 35,
+    "text": "    1  set check_function_bodies = false;\n    2  \n    3  create schema if not exists sales;\n    4  \n    5  create table sales.accounts (\n    6    tenant_id bigint not null,\n    7    id bigint not null,\n    8    enabled boolean not null,\n    9    constraint accounts_pkey PRIMARY KEY (tenant_id, id)\n   10  );\n   11  \n   12  create table sales.order_audit (\n   13    tenant_id bigint,\n   14    order_id bigint,\n   15    old_amount numeric(20,6),\n   16    new_amount numeric(20,6)\n   17  );\n   18  \n   19  create table sales.orders (\n   20    tenant_id bigint not null,\n   21    id bigint not null,\n   22    account_id bigint,\n   23    status text,\n   24    amount numeric(20,6),\n   25    constraint orders_pkey PRIMARY KEY (tenant_id, id)\n   26  );\n   27  \n   28  create or replace function sales.audit_amount() returns trigger language plpgsql volatile as $fn$\n   29  BEGIN\n   30   IF OLD.amount IS DISTINCT FROM NEW.amount THEN\n   31    INSERT INTO sales.order_audit VALUES(NEW.tenant_id,NEW.id,OLD.amount,NEW.amount);\n   32   END IF;\n   33   RETURN NEW;\n   34  END $fn$;\n   35  "
+  },
+  "requestSha256": "3fef9922cf6e501249fca9c45540753fe2652e413745bb0f508fc6522c7b9b1a",
+  "stdoutSha256": "74a4768c46ef121a0997a00738b64f5353fbe48787013936ecbbfe41b9ae2a34",
+  "stderrSha256": "dfe26fea3ba8b2b04e3ae8d7df9b62d4f1f1200fd4d587c5c9016ec9544a924c"
+}

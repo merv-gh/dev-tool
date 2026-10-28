@@ -1,0 +1,61 @@
+{
+  "started": "2026-10-28T21:58:52.020Z",
+  "ended": "2026-10-28T21:58:52.255Z",
+  "durationMs": 235,
+  "tool": "ddl_snapshot",
+  "args": {
+    "workspace": "order-projection-main-073e",
+    "env": "fixture",
+    "db": "orders",
+    "functions": [
+      "sales.order_projection",
+      "sales.account_label",
+      "sales.release_label"
+    ]
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 592,
+  "stderrBytes": 246,
+  "stdout": "{\n  \"env\": \"fixture\",\n  \"db\": \"orders\",\n  \"syncedAt\": \"2026-10-28T21:53:04.687Z\",\n  \"counts\": {\n    \"tables\": 3,\n    \"views\": 0,\n    \"functions\": 4,\n    \"types\": 0,\n    \"sequences\": 0\n  },\n  \"tables\": [\n    \"sales.accounts\",\n    \"sales.order_audit\",\n    \"sales.orders\"\n  ],\n  \"views\": [],\n  \"functions\": [\n    \"sales.account_label\",\n    \"sales.audit_amount\",\n    \"sales.order_projection\",\n    \"sales.release_label\"\n  ],\n  \"written\": {\n    \"id\": \"order-projection-main-073e\",\n    \"path\": \"src/test/resources/dt-schema/orders.sql\",\n    \"created\": true,\n    \"bytes\": 2316,\n    \"lines\": 50\n  }\n}\n",
+  "stderr": "21:58:52 dt call ddl_snapshot#1esg start {\"workspace\":\"order-projection-main-073e\",\"env\":\"fixture\",\"db\":\"orders\",\"functions\":[\"sales.order_projection\",\"sales.account_label\",\"sales.release_label\"]} (cli)\n21:58:52 dt call ddl_snapshot#1esg ok 44ms\n",
+  "result": {
+    "env": "fixture",
+    "db": "orders",
+    "syncedAt": "2026-10-28T21:53:04.687Z",
+    "counts": {
+      "tables": 3,
+      "views": 0,
+      "functions": 4,
+      "types": 0,
+      "sequences": 0
+    },
+    "tables": [
+      "sales.accounts",
+      "sales.order_audit",
+      "sales.orders"
+    ],
+    "views": [],
+    "functions": [
+      "sales.account_label",
+      "sales.audit_amount",
+      "sales.order_projection",
+      "sales.release_label"
+    ],
+    "written": {
+      "id": "order-projection-main-073e",
+      "path": "src/test/resources/dt-schema/orders.sql",
+      "created": true,
+      "bytes": 2316,
+      "lines": 50
+    }
+  },
+  "requestSha256": "5450960b474a21aba0c8db7851ab3c0d129746e46dc6b70e311f6d3ec3876743",
+  "stdoutSha256": "4ae61ba656da05212674e3ba3716fea52aed55b49f05afa2456681c36b445f33",
+  "stderrSha256": "d6f5d5a15ebd02dcafd350be6c671a2e4358f4a797b11f0001d574909fa18282"
+}

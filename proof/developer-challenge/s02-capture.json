@@ -1,0 +1,12 @@
+{
+ "plan":{
+  "env":"fixture",
+  "seeds":[{"db":"orders","table":"sales.orders","where":{"tenant_id":"22","id":"420"}}],
+  "relations":[
+   {"from":{"db":"orders","table":"sales.orders","columns":["tenant_id","account_id"]},"to":{"db":"billing","table":"risk.accounts","columns":["tenant_id","id"]},"required":true,"evidence":"C06 release.cjs:7 tenant/account contract"},
+   {"from":{"db":"orders","table":"sales.orders","columns":["tenant_id","id"]},"to":{"db":"billing","table":"pay.payments","columns":["tenant_id","order_id"]},"required":true,"evidence":"C06 release.cjs:9 tenant/order contract"}
+  ],
+  "topics":[{"topic":"orders.paid","matches":[{"path":"value.tenantId","from":{"db":"orders","table":"sales.orders","column":"tenant_id"}},{"path":"value.orderId","from":{"db":"orders","table":"sales.orders","column":"id"}}],"match":"all"}],
+  "limits":{"depth":4,"rowsPerTable":20,"totalRows":100,"queries":20,"messagesPerTopic":10,"totalMessages":10}
+ }
+}

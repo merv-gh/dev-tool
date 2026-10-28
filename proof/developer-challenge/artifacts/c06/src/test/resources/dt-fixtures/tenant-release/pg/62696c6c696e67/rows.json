@@ -1,0 +1,30 @@
+{
+  "billing:risk.accounts": [
+    {
+      "tenant_id": "11",
+      "id": "7",
+      "status": "BLOCKED",
+      "credit_limit": "1000.000000"
+    },
+    {
+      "tenant_id": "22",
+      "id": "7",
+      "status": "APPROVED",
+      "credit_limit": "150.000001"
+    }
+  ],
+  "billing:pay.payments": [
+    {
+      "tenant_id": "11",
+      "order_id": "420",
+      "status": "PENDING",
+      "amount": "17.000001"
+    },
+    {
+      "tenant_id": "22",
+      "order_id": "420",
+      "status": "PENDING",
+      "amount": "100.000001"
+    }
+  ]
+}

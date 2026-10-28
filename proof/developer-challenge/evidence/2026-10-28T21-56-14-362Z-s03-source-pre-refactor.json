@@ -1,0 +1,48 @@
+{
+  "started": "2026-10-28T21:56:14.362Z",
+  "ended": "2026-10-28T21:56:24.808Z",
+  "durationMs": 10446,
+  "tool": "test_run",
+  "args": {
+    "workspace": "order-projection-main-073e",
+    "tests": [
+      "OrderProjectionContractTest"
+    ],
+    "mode": "build",
+    "env": "fixture"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 659,
+  "stderrBytes": 580,
+  "stdout": "{\n  \"job\": \"mvsnm163a9ed05\",\n  \"state\": \"done\",\n  \"workspace\": \"order-projection-main-073e\",\n  \"outcome\": \"passed\",\n  \"counts\": {\n    \"tests\": 3,\n    \"passed\": 3,\n    \"failed\": 0,\n    \"errors\": 0,\n    \"skipped\": 0\n  },\n  \"ms\": 9782,\n  \"mode\": \"build\",\n  \"command\": \"mvn -B -ntp test -Dtest=OrderProjectionContractTest -Dsurefire.failIfNoSpecifiedTests=false -DfailIfNoTests=false -Djacoco.skip=true -Dcheckstyle.skip=true -Dspotless.check.skip=true -Denforcer.skip=true -Dpmd.skip=true -Dspotbugs.skip=true\",\n  \"failures\": [],\n  \"parts\": [],\n  \"view\": \"http://127.0.0.1:4000/show/mvsnm90y1d91e110f51ee268d9\",\n  \"next\": \"workspace_patch to take the changes\"\n}\n",
+  "stderr": "21:56:14 dt call test_run#115o start {\"workspace\":\"order-projection-main-073e\",\"tests\":[\"OrderProjectionContractTest\"],\"mode\":\"build\",\"env\":\"fixture\"} (cli)\n21:56:14 dt job tests OrderProjectionContractTest in order-projection-main-073e#2165 start {\"job\":\"mvsnm163a9ed05\"} (job)\n21:56:24 dt   tests OrderProjectionContractTest in order-projection-main-073e#2165 maven test (. OrderProjectionContractTest) 9.8s\n21:56:24 dt job tests OrderProjectionContractTest in order-projection-main-073e#2165 ok 10.2s  code index 61ms · maven test 9.8s\n21:56:24 dt call test_run#115o ok 10.2s\n",
+  "result": {
+    "job": "mvsnm163a9ed05",
+    "state": "done",
+    "workspace": "order-projection-main-073e",
+    "outcome": "passed",
+    "counts": {
+      "tests": 3,
+      "passed": 3,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "ms": 9782,
+    "mode": "build",
+    "command": "mvn -B -ntp test -Dtest=OrderProjectionContractTest -Dsurefire.failIfNoSpecifiedTests=false -DfailIfNoTests=false -Djacoco.skip=true -Dcheckstyle.skip=true -Dspotless.check.skip=true -Denforcer.skip=true -Dpmd.skip=true -Dspotbugs.skip=true",
+    "failures": [],
+    "parts": [],
+    "view": "http://127.0.0.1:4000/show/mvsnm90y1d91e110f51ee268d9",
+    "next": "workspace_patch to take the changes"
+  },
+  "requestSha256": "6ce2edb4d38c8e32d85689e7a98ca1febeaea79857f947b9453d8980f352b743",
+  "stdoutSha256": "09ac531d7b80aedebf1413428ce1e59812d7a28be7d591d4ac40d80c07a6952c",
+  "stderrSha256": "782a7ce7f49dee65bfd325faf5bf190884a66d6c9816f000a0f85a513467f74f"
+}

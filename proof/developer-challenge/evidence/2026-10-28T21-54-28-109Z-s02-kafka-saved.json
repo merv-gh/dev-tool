@@ -1,0 +1,32 @@
+{
+  "started": "2026-10-28T21:54:28.109Z",
+  "ended": "2026-10-28T21:54:28.401Z",
+  "durationMs": 292,
+  "tool": "code_read",
+  "args": {
+    "repo": "CASES/order-projection",
+    "path": "kafka/orders.paid.jsonl"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 606,
+  "stderrBytes": 151,
+  "stdout": "{\n  \"repo\": \"CASES/order-projection\",\n  \"path\": \"kafka/orders.paid.jsonl\",\n  \"from\": 1,\n  \"to\": 3,\n  \"lines\": 3,\n  \"text\": \"    1  {\\\"topic\\\": \\\"orders.paid\\\", \\\"partition\\\": 0, \\\"offset\\\": \\\"100\\\", \\\"key\\\": {\\\"tenantId\\\": \\\"11\\\", \\\"orderId\\\": \\\"420\\\"}, \\\"value\\\": {\\\"tenantId\\\": \\\"11\\\", \\\"orderId\\\": \\\"420\\\", \\\"type\\\": \\\"PAID\\\", \\\"amount\\\": \\\"17.000001\\\"}}\\n    2  {\\\"topic\\\": \\\"orders.paid\\\", \\\"partition\\\": 0, \\\"offset\\\": \\\"101\\\", \\\"key\\\": {\\\"tenantId\\\": \\\"22\\\", \\\"orderId\\\": \\\"420\\\"}, \\\"value\\\": {\\\"tenantId\\\": \\\"22\\\", \\\"orderId\\\": \\\"420\\\", \\\"type\\\": \\\"PAID\\\", \\\"amount\\\": \\\"100.000001\\\"}}\\n    3  \"\n}\n",
+  "stderr": "21:54:28 dt call code_read#1r5x start {\"repo\":\"CASES/order-projection\",\"path\":\"kafka/orders.paid.jsonl\"} (cli)\n21:54:28 dt call code_read#1r5x ok 49ms\n",
+  "result": {
+    "repo": "CASES/order-projection",
+    "path": "kafka/orders.paid.jsonl",
+    "from": 1,
+    "to": 3,
+    "lines": 3,
+    "text": "    1  {\"topic\": \"orders.paid\", \"partition\": 0, \"offset\": \"100\", \"key\": {\"tenantId\": \"11\", \"orderId\": \"420\"}, \"value\": {\"tenantId\": \"11\", \"orderId\": \"420\", \"type\": \"PAID\", \"amount\": \"17.000001\"}}\n    2  {\"topic\": \"orders.paid\", \"partition\": 0, \"offset\": \"101\", \"key\": {\"tenantId\": \"22\", \"orderId\": \"420\"}, \"value\": {\"tenantId\": \"22\", \"orderId\": \"420\", \"type\": \"PAID\", \"amount\": \"100.000001\"}}\n    3  "
+  },
+  "requestSha256": "55d2c229adeddd908717a577d5409331fd3fd8f40d5fea003375b38378d09550",
+  "stdoutSha256": "d04a6ae3732ed9457dcadd78753bf9d2b07c86437bbf8f3df4313a747162fd5a",
+  "stderrSha256": "81d4651c5f8e7af50dab9f40eb7b1ac8aaa7f9e269ee2618622e4f250a371d75"
+}

@@ -1,0 +1,59 @@
+{
+  "started": "2026-10-28T21:54:28.107Z",
+  "ended": "2026-10-28T21:54:28.367Z",
+  "durationMs": 260,
+  "tool": "tool_describe",
+  "args": {
+    "name": "kafka_last"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 841,
+  "stderrBytes": 114,
+  "stdout": "{\n  \"name\": \"kafka_last\",\n  \"description\": \"Live: the last n messages of a Kafka topic (newest first). Returns a preview plus `view`, a link to the full result as an interactive table (shown to the user inline). Mention the link.\",\n  \"group\": \"kafka\",\n  \"origin\": \"built-in\",\n  \"execution\": {\n    \"protocol\": \"dt.tool/v1\",\n    \"transport\": \"in-process\"\n  },\n  \"inputSchema\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"topic\": {\n        \"type\": \"string\",\n        \"description\": \"Topic name\"\n      },\n      \"env\": {\n        \"type\": \"string\",\n        \"enum\": [\n          \"dev\",\n          \"fixture\"\n        ],\n        \"default\": \"dev\",\n        \"description\": \"Environment\"\n      },\n      \"n\": {\n        \"type\": \"integer\",\n        \"description\": \"Messages\",\n        \"default\": 5\n      }\n    },\n    \"required\": [\n      \"topic\"\n    ]\n  }\n}\n",
+  "stderr": "21:54:28 dt call tool_describe#1r61 start {\"name\":\"kafka_last\"} (cli)\n21:54:28 dt call tool_describe#1r61 ok 18ms\n",
+  "result": {
+    "name": "kafka_last",
+    "description": "Live: the last n messages of a Kafka topic (newest first). Returns a preview plus `view`, a link to the full result as an interactive table (shown to the user inline). Mention the link.",
+    "group": "kafka",
+    "origin": "built-in",
+    "execution": {
+      "protocol": "dt.tool/v1",
+      "transport": "in-process"
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
+          "description": "Topic name"
+        },
+        "env": {
+          "type": "string",
+          "enum": [
+            "dev",
+            "fixture"
+          ],
+          "default": "dev",
+          "description": "Environment"
+        },
+        "n": {
+          "type": "integer",
+          "description": "Messages",
+          "default": 5
+        }
+      },
+      "required": [
+        "topic"
+      ]
+    }
+  },
+  "requestSha256": "387bf2e3a96c320af8dedcc912c47c6c3726e537290135ac5e2ba4af48127d72",
+  "stdoutSha256": "842d34a9da7f0f5609227f0a89fabca3db67c0723027fd82542ca42f564e58da",
+  "stderrSha256": "f8d2ad52d5718838e14270e7224e604db6f0506bbc01472b335f8d2edceffa63"
+}

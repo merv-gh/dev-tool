@@ -1,0 +1,32 @@
+{
+  "started": "2026-10-28T21:53:57.672Z",
+  "ended": "2026-10-28T21:53:57.941Z",
+  "durationMs": 269,
+  "tool": "code_read",
+  "args": {
+    "repo": "CASES/order-projection",
+    "path": "src/main/java/com/lumen/orders/OrderProjectionService.java"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 1402,
+  "stderrBytes": 186,
+  "stdout": "{\n  \"repo\": \"CASES/order-projection\",\n  \"path\": \"src/main/java/com/lumen/orders/OrderProjectionService.java\",\n  \"from\": 1,\n  \"to\": 23,\n  \"lines\": 23,\n  \"text\": \"    1  package com.lumen.orders;\\n    2  import java.util.Map;\\n    3  import java.util.LinkedHashMap;\\n    4  public final class OrderProjectionService {\\n    5    public interface Functions {\\n    6      Map<String,String> projection(String tenant,String orderId);\\n    7      String accountLabel(String tenant,String accountId);\\n    8      String releaseLabel(String tenant,String orderId);\\n    9    }\\n   10    private final Functions functions;\\n   11    public OrderProjectionService(Functions functions){this.functions=functions;}\\n   12    public Map<String,String> load(String tenant,String orderId){\\n   13      Map<String,String> row=functions.projection(tenant,orderId);\\n   14      if(row==null)return null;\\n   15      Map<String,String> result=new LinkedHashMap<>(row);\\n   16      result.put(\\\"accountLabel\\\",functions.accountLabel(tenant,row.get(\\\"account_id\\\")));\\n   17      result.put(\\\"releaseLabel\\\",functions.releaseLabel(tenant,orderId));\\n   18      return result;\\n   19    }\\n   20    public static final String FIND=\\\"select amount from sales.orders where tenant_id=? and id=?\\\";\\n   21    public static final String UPDATE=\\\"update sales.orders set amount=? where tenant_id=? and id=?\\\";\\n   22  }\\n   23  \"\n}\n",
+  "stderr": "21:53:57 dt call code_read#13ny start {\"repo\":\"CASES/order-projection\",\"path\":\"src/main/java/com/lumen/orders/OrderProjectionService.java\"} (cli)\n21:53:57 dt call code_read#13ny ok 49ms\n",
+  "result": {
+    "repo": "CASES/order-projection",
+    "path": "src/main/java/com/lumen/orders/OrderProjectionService.java",
+    "from": 1,
+    "to": 23,
+    "lines": 23,
+    "text": "    1  package com.lumen.orders;\n    2  import java.util.Map;\n    3  import java.util.LinkedHashMap;\n    4  public final class OrderProjectionService {\n    5    public interface Functions {\n    6      Map<String,String> projection(String tenant,String orderId);\n    7      String accountLabel(String tenant,String accountId);\n    8      String releaseLabel(String tenant,String orderId);\n    9    }\n   10    private final Functions functions;\n   11    public OrderProjectionService(Functions functions){this.functions=functions;}\n   12    public Map<String,String> load(String tenant,String orderId){\n   13      Map<String,String> row=functions.projection(tenant,orderId);\n   14      if(row==null)return null;\n   15      Map<String,String> result=new LinkedHashMap<>(row);\n   16      result.put(\"accountLabel\",functions.accountLabel(tenant,row.get(\"account_id\")));\n   17      result.put(\"releaseLabel\",functions.releaseLabel(tenant,orderId));\n   18      return result;\n   19    }\n   20    public static final String FIND=\"select amount from sales.orders where tenant_id=? and id=?\";\n   21    public static final String UPDATE=\"update sales.orders set amount=? where tenant_id=? and id=?\";\n   22  }\n   23  "
+  },
+  "requestSha256": "a501e461a6fbdc35b7a35e471dcf4a40fb82264208e27643ea954aeca5f00df2",
+  "stdoutSha256": "082286940e981b51698ed6fc32679c121af1dbfcb2f02c383108bc42c0dcd4e1",
+  "stderrSha256": "3c7a97c473dba5299e562c7eaa04e4f65a6eae58e9509c7b4484b45ae654bf36"
+}

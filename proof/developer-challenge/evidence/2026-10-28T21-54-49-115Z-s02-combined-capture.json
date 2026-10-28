@@ -1,0 +1,115 @@
+{
+  "started": "2026-10-28T21:54:49.115Z",
+  "ended": "2026-10-28T21:54:52.410Z",
+  "durationMs": 3295,
+  "tool": "fixture_capture",
+  "args": {
+    "plan": {
+      "env": "fixture",
+      "seeds": [
+        {
+          "db": "orders",
+          "table": "sales.orders",
+          "where": {
+            "tenant_id": "22",
+            "id": "420"
+          }
+        }
+      ],
+      "relations": [
+        {
+          "from": {
+            "db": "orders",
+            "table": "sales.orders",
+            "columns": [
+              "tenant_id",
+              "account_id"
+            ]
+          },
+          "to": {
+            "db": "billing",
+            "table": "risk.accounts",
+            "columns": [
+              "tenant_id",
+              "id"
+            ]
+          },
+          "required": true,
+          "evidence": "C06 release.cjs:7 tenant/account contract"
+        },
+        {
+          "from": {
+            "db": "orders",
+            "table": "sales.orders",
+            "columns": [
+              "tenant_id",
+              "id"
+            ]
+          },
+          "to": {
+            "db": "billing",
+            "table": "pay.payments",
+            "columns": [
+              "tenant_id",
+              "order_id"
+            ]
+          },
+          "required": true,
+          "evidence": "C06 release.cjs:9 tenant/order contract"
+        }
+      ],
+      "topics": [
+        {
+          "topic": "orders.paid",
+          "matches": [
+            {
+              "path": "value.tenantId",
+              "from": {
+                "db": "orders",
+                "table": "sales.orders",
+                "column": "tenant_id"
+              }
+            },
+            {
+              "path": "value.orderId",
+              "from": {
+                "db": "orders",
+                "table": "sales.orders",
+                "column": "id"
+              }
+            }
+          ],
+          "match": "all"
+        }
+      ],
+      "limits": {
+        "depth": 4,
+        "rowsPerTable": 20,
+        "totalRows": 100,
+        "queries": 20,
+        "messagesPerTopic": 10,
+        "totalMessages": 10
+      }
+    }
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 143,
+  "stderrBytes": 465,
+  "stdout": "{\n  \"job\": \"mvsnk7dvab3ec7\",\n  \"state\": \"failed\",\n  \"ms\": 3073,\n  \"error\": \"kafka-ui URL not set for fixture (KAFKA_MANAGER in config.json)\"\n}\n",
+  "stderr": "21:54:49 dt call fixture_capture#17di start {\"plan\":{\"env\":\"fixture\",\"seeds\":[{\"db\":\"orders\",\"table\":\"sales.orders\",\"where\":{\"tenant_id\":\"22\",\"id\":\"420\"}}],\"relations\":[{\"from\":{\"db\":\"orders\",\"table\":\"sal…} (cli)\n21:54:49 dt job fixture capture fixture#27dx start {\"job\":\"mvsnk7dvab3ec7\"} (job)\n21:54:52 dt job fixture capture fixture#27dx FAILED 3.1s: kafka-ui URL not set for fixture (KAFKA_MANAGER in config.json)\n21:54:52 dt call fixture_capture#17di ok 3.1s\n",
+  "result": {
+    "job": "mvsnk7dvab3ec7",
+    "state": "failed",
+    "ms": 3073,
+    "error": "kafka-ui URL not set for fixture (KAFKA_MANAGER in config.json)"
+  },
+  "requestSha256": "9cebe053de1f4737c9a83e3074bc4da334799adc42965ff680ff4c3405f32f21",
+  "stdoutSha256": "16256930a370a3766becf527537755d5227ddcd3fc2be65b02bf2afe96bb8366",
+  "stderrSha256": "6b8860ccf6039203fa1329c68c5013a0bcaaddc07a83ff70947c0b41ab0871c9"
+}

@@ -1,0 +1,26 @@
+{
+  "started": "2026-10-28T21:54:49.118Z",
+  "ended": "2026-10-28T21:54:49.362Z",
+  "durationMs": 244,
+  "tool": "es_search",
+  "args": {
+    "env": "fixture",
+    "index": "orders-read-model",
+    "query": "tenantId==22 && orderId==420",
+    "size": 5
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 1,
+  "stdoutBytes": 0,
+  "stderrBytes": 258,
+  "stdout": "",
+  "stderr": "21:54:49 dt call es_search#17dj start {\"env\":\"fixture\",\"index\":\"orders-read-model\",\"query\":\"tenantId==22 && orderId==420\",\"size\":5} (cli)\n21:54:49 dt call es_search#17dj FAILED 12ms: No Elasticsearch hosts configured\nERROR: No Elasticsearch hosts configured\n",
+  "requestSha256": "a5ac6403431cd0fc0ce65f715148c275aedf1db65cf19893badd9c7bb83d9594",
+  "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderrSha256": "b27c9f8c330acdcfe52125846b97f66448a1f12bcb55ab67ce3fd374fc8ea5d6"
+}

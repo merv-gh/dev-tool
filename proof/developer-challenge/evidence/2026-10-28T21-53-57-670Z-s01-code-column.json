@@ -1,0 +1,127 @@
+{
+  "started": "2026-10-28T21:53:57.670Z",
+  "ended": "2026-10-28T21:53:57.946Z",
+  "durationMs": 276,
+  "tool": "code_search",
+  "args": {
+    "pattern": "sales.orders",
+    "context": 2,
+    "limit": 30
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 10116,
+  "stderrBytes": 138,
+  "stdout": "{\n  \"total\": 15,\n  \"rows\": [\n    {\n      \"repo\": \"CASES/c06\",\n      \"file\": \"INCIDENT.md:3\",\n      \"text\": \"Tenant 22 order 420 cannot release even though its own enabled account has approved credit. A different tenant uses the same account and order IDs. Release only the selected tenant/order when sales.orders is PAID, sales.accounts is enabled, risk.accounts is APPROVED with enough credit, and pay.payme\",\n      \"context\": \"# Release eligibility changes when another tenant is onboarded\\n\\nTenant 22 order 420 cannot release even though its own enabled account has approved credit. A different tenant uses the same account and order IDs. Release only the selected tenant/order when sales.orders is PAID, sales.accounts is enabled, risk.accounts is APPROVED with enough credit, and pay.payments is PENDING with matching amount. All identity checks use tenant plus local ID; exact decimal amounts are preserved. A rejected release must leave both databases unchanged. A successful release changes only that order to RELEASED and that payment to CAPTURED. Retry of an already released order is rejected without writes. Diagnose using the real two-database fixture, fix the application code and add multi-state tests.\\n\"\n    },\n    {\n      \"repo\": \"CASES/c06\",\n      \"file\": \"fixture.json:5\",\n      \"text\": \"\\\"create table sales.orders(tenant_id bigint,id bigint,account_id bigint,status text,amount numeric(20,6),primary key(tenant_id,id),foreign key(tenant_id,account_id) references sales.accounts(tenant_id,id))\\\",\",\n      \"context\": \"    \\\"create schema sales\\\",\\n    \\\"create table sales.accounts(tenant_id bigint,id bigint,enabled boolean not null,primary key(tenant_id,id))\\\",\\n    \\\"create table sales.orders(tenant_id bigint,id bigint,account_id bigint,status text,amount numeric(20,6),primary key(tenant_id,id),foreign key(tenant_id,account_id) references sales.accounts(tenant_id,id))\\\",\\n    \\\"insert into sales.accounts values(11,7,true),(22,7,true)\\\",\\n    \\\"insert into sales.orders values(11,420,7,'PAID',17.000001),(22,420,7,'PAID',100.000001)\\\"\"\n    },\n    {\n      \"repo\": \"CASES/c06\",\n      \"file\": \"fixture.json:7\",\n      \"text\": \"\\\"insert into sales.orders values(11,420,7,'PAID',17.000001),(22,420,7,'PAID',100.000001)\\\"\",\n      \"context\": \"    \\\"create table sales.orders(tenant_id bigint,id bigint,account_id bigint,status text,amount numeric(20,6),primary key(tenant_id,id),foreign key(tenant_id,account_id) references sales.accounts(tenant_id,id))\\\",\\n    \\\"insert into sales.accounts values(11,7,true),(22,7,true)\\\",\\n    \\\"insert into sales.orders values(11,420,7,'PAID',17.000001),(22,420,7,'PAID',100.000001)\\\"\\n  ],\\n  \\\"billing\\\": [\"\n    },\n    {\n      \"repo\": \"CASES/order-projection\",\n      \"file\": \"scenarios.json:6\",\n      \"text\": \"\\\"column\\\": \\\"sales.orders.amount\\\",\",\n      \"context\": \"    \\\"prompt\\\": \\\"find all places across functions and repositories, where this column gets read and gets written\\\",\\n    \\\"setup\\\": {\\n      \\\"column\\\": \\\"sales.orders.amount\\\",\\n      \\\"env\\\": \\\"fixture\\\",\\n      \\\"database\\\": \\\"orders\\\",\"\n    },\n    {\n      \"repo\": \"CASES/order-projection\",\n      \"file\": \"scenarios.json:14\",\n      \"text\": \"\\\"task\\\": \\\"Inventory evidenced read and write usage of sales.orders.amount. Include PostgreSQL functions, trigger functions, views and source repositories. Report direct/indirect usage and unresolved dynamic SQL separately; every claimed result needs object or repository/file/line evidence.\\\",\",\n      \"context\": \"      ]\\n    },\\n    \\\"task\\\": \\\"Inventory evidenced read and write usage of sales.orders.amount. Include PostgreSQL functions, trigger functions, views and source repositories. Report direct/indirect usage and unresolved dynamic SQL separately; every claimed result needs object or repository/file/line evidence.\\\",\\n    \\\"tools\\\": [\\n      \\\"find\\\",\"\n    },\n    {\n      \"repo\": \"CASES/order-projection\",\n      \"file\": \"scenarios.json:41\",\n      \"text\": \"\\\"table\\\": \\\"sales.orders\\\",\",\n      \"context\": \"      \\\"seed\\\": {\\n        \\\"db\\\": \\\"orders\\\",\\n        \\\"table\\\": \\\"sales.orders\\\",\\n        \\\"where\\\": {\\n          \\\"tenant_id\\\": \\\"22\\\",\"\n    },\n    {\n      \"repo\": \"CASES/order-projection\",\n      \"file\": \"source.sql:4\",\n      \"text\": \"LANGUAGE sql STABLE AS $$ SELECT tenant_id,id,account_id,status,amount FROM sales.orders WHERE tenant_id=p_tenant AND id=p_id $$;\",\n      \"context\": \"CREATE OR REPLACE FUNCTION sales.order_projection(p_tenant bigint,p_id bigint)\\nRETURNS TABLE(tenant_id bigint,order_id bigint,account_id bigint,status text,amount numeric(20,6))\\nLANGUAGE sql STABLE AS $$ SELECT tenant_id,id,account_id,status,amount FROM sales.orders WHERE tenant_id=p_tenant AND id=p_id $$;\\nCREATE OR REPLACE FUNCTION sales.account_label(p_tenant bigint,p_account bigint) RETURNS text\\nLANGUAGE sql STABLE AS $$ SELECT CASE WHEN enabled THEN 'ACTIVE' ELSE NULL END FROM sales.accounts WHERE tenant_id=p_tenant AND id=p_account $$;\"\n    },\n    {\n      \"repo\": \"CASES/order-projection\",\n      \"file\": \"source.sql:8\",\n      \"text\": \"LANGUAGE sql STABLE AS $$ SELECT CASE WHEN amount>=100 THEN 'MANUAL_REVIEW' ELSE 'STANDARD' END FROM sales.orders WHERE tenant_id=p_tenant AND id=p_id $$;\",\n      \"context\": \"LANGUAGE sql STABLE AS $$ SELECT CASE WHEN enabled THEN 'ACTIVE' ELSE NULL END FROM sales.accounts WHERE tenant_id=p_tenant AND id=p_account $$;\\nCREATE OR REPLACE FUNCTION sales.release_label(p_tenant bigint,p_id bigint) RETURNS text\\nLANGUAGE sql STABLE AS $$ SELECT CASE WHEN amount>=100 THEN 'MANUAL_REVIEW' ELSE 'STANDARD' END FROM sales.orders WHERE tenant_id=p_tenant AND id=p_id $$;\\nCREATE OR REPLACE FUNCTION sales.adjust_amount(p_tenant bigint,p_id bigint,p_amount numeric) RETURNS void\\nLANGUAGE sql AS $$ UPDATE sales.orders SET amount=p_amount WHERE tenant_id=p_tenant AND id=p_id $$;\"\n    },\n    {\n      \"repo\": \"CASES/order-projection\",\n      \"file\": \"source.sql:10\",\n      \"text\": \"LANGUAGE sql AS $$ UPDATE sales.orders SET amount=p_amount WHERE tenant_id=p_tenant AND id=p_id $$;\",\n      \"context\": \"LANGUAGE sql STABLE AS $$ SELECT CASE WHEN amount>=100 THEN 'MANUAL_REVIEW' ELSE 'STANDARD' END FROM sales.orders WHERE tenant_id=p_tenant AND id=p_id $$;\\nCREATE OR REPLACE FUNCTION sales.adjust_amount(p_tenant bigint,p_id bigint,p_amount numeric) RETURNS void\\nLANGUAGE sql AS $$ UPDATE sales.orders SET amount=p_amount WHERE tenant_id=p_tenant AND id=p_id $$;\\nCREATE OR REPLACE FUNCTION sales.audit_amount() RETURNS trigger LANGUAGE plpgsql AS $$\\nBEGIN\"\n    },\n    {\n      \"repo\": \"CASES/order-projection\",\n      \"file\": \"source.sql:18\",\n      \"text\": \"DROP TRIGGER IF EXISTS order_amount_audit ON sales.orders;\",\n      \"context\": \" RETURN NEW;\\nEND $$;\\nDROP TRIGGER IF EXISTS order_amount_audit ON sales.orders;\\nCREATE TRIGGER order_amount_audit AFTER UPDATE OF amount ON sales.orders FOR EACH ROW EXECUTE FUNCTION sales.audit_amount();\\nCREATE OR REPLACE VIEW sales.order_amounts AS SELECT tenant_id,id,amount FROM sales.orders;\"\n    },\n    {\n      \"repo\": \"CASES/order-projection\",\n      \"file\": \"source.sql:19\",\n      \"text\": \"CREATE TRIGGER order_amount_audit AFTER UPDATE OF amount ON sales.orders FOR EACH ROW EXECUTE FUNCTION sales.audit_amount();\",\n      \"context\": \"END $$;\\nDROP TRIGGER IF EXISTS order_amount_audit ON sales.orders;\\nCREATE TRIGGER order_amount_audit AFTER UPDATE OF amount ON sales.orders FOR EACH ROW EXECUTE FUNCTION sales.audit_amount();\\nCREATE OR REPLACE VIEW sales.order_amounts AS SELECT tenant_id,id,amount FROM sales.orders;\\nCREATE OR REPLACE FUNCTION sales.inspect_dynamic(p_column text,p_tenant bigint) RETURNS SETOF text\"\n    },\n    {\n      \"repo\": \"CASES/order-projection\",\n      \"file\": \"source.sql:20\",\n      \"text\": \"CREATE OR REPLACE VIEW sales.order_amounts AS SELECT tenant_id,id,amount FROM sales.orders;\",\n      \"context\": \"DROP TRIGGER IF EXISTS order_amount_audit ON sales.orders;\\nCREATE TRIGGER order_amount_audit AFTER UPDATE OF amount ON sales.orders FOR EACH ROW EXECUTE FUNCTION sales.audit_amount();\\nCREATE OR REPLACE VIEW sales.order_amounts AS SELECT tenant_id,id,amount FROM sales.orders;\\nCREATE OR REPLACE FUNCTION sales.inspect_dynamic(p_column text,p_tenant bigint) RETURNS SETOF text\\nLANGUAGE plpgsql STABLE AS $$ BEGIN RETURN QUERY EXECUTE format('select %I::text from sales.orders where tenant_id=$1',p_column) USING p_tenant; END $$;\"\n    },\n    {\n      \"repo\": \"CASES/order-projection\",\n      \"file\": \"source.sql:22\",\n      \"text\": \"LANGUAGE plpgsql STABLE AS $$ BEGIN RETURN QUERY EXECUTE format('select %I::text from sales.orders where tenant_id=$1',p_column) USING p_tenant; END $$;\",\n      \"context\": \"CREATE OR REPLACE VIEW sales.order_amounts AS SELECT tenant_id,id,amount FROM sales.orders;\\nCREATE OR REPLACE FUNCTION sales.inspect_dynamic(p_column text,p_tenant bigint) RETURNS SETOF text\\nLANGUAGE plpgsql STABLE AS $$ BEGIN RETURN QUERY EXECUTE format('select %I::text from sales.orders where tenant_id=$1',p_column) USING p_tenant; END $$;\\n\"\n    },\n    {\n      \"repo\": \"CASES/order-projection\",\n      \"file\": \"src/main/java/com/lumen/orders/OrderProjectionService.java:20\",\n      \"text\": \"public static final String FIND=\\\"select amount from sales.orders where tenant_id=? and id=?\\\";\",\n      \"context\": \"    return result;\\n  }\\n  public static final String FIND=\\\"select amount from sales.orders where tenant_id=? and id=?\\\";\\n  public static final String UPDATE=\\\"update sales.orders set amount=? where tenant_id=? and id=?\\\";\\n}\"\n    },\n    {\n      \"repo\": \"CASES/order-projection\",\n      \"file\": \"src/main/java/com/lumen/orders/OrderProjectionService.java:21\",\n      \"text\": \"public static final String UPDATE=\\\"update sales.orders set amount=? where tenant_id=? and id=?\\\";\",\n      \"context\": \"  }\\n  public static final String FIND=\\\"select amount from sales.orders where tenant_id=? and id=?\\\";\\n  public static final String UPDATE=\\\"update sales.orders set amount=? where tenant_id=? and id=?\\\";\\n}\\n\"\n    }\n  ],\n  \"view\": \"http://127.0.0.1:4000/view/mvsnj3pga0354b4c6e9c3cc4a6\",\n  \"files\": 5,\n  \"repos\": 10,\n  \"scanned\": 5,\n  \"candidates\": 5,\n  \"ms\": 4,\n  \"prefilter\": \"sales.orders\"\n}\n",
+  "stderr": "21:53:57 dt call code_search#13ny start {\"pattern\":\"sales.orders\",\"context\":2,\"limit\":30} (cli)\n21:53:57 dt call code_search#13ny ok 56ms\n",
+  "result": {
+    "total": 15,
+    "rows": [
+      {
+        "repo": "CASES/c06",
+        "file": "INCIDENT.md:3",
+        "text": "Tenant 22 order 420 cannot release even though its own enabled account has approved credit. A different tenant uses the same account and order IDs. Release only the selected tenant/order when sales.orders is PAID, sales.accounts is enabled, risk.accounts is APPROVED with enough credit, and pay.payme",
+        "context": "# Release eligibility changes when another tenant is onboarded\n\nTenant 22 order 420 cannot release even though its own enabled account has approved credit. A different tenant uses the same account and order IDs. Release only the selected tenant/order when sales.orders is PAID, sales.accounts is enabled, risk.accounts is APPROVED with enough credit, and pay.payments is PENDING with matching amount. All identity checks use tenant plus local ID; exact decimal amounts are preserved. A rejected release must leave both databases unchanged. A successful release changes only that order to RELEASED and that payment to CAPTURED. Retry of an already released order is rejected without writes. Diagnose using the real two-database fixture, fix the application code and add multi-state tests.\n"
+      },
+      {
+        "repo": "CASES/c06",
+        "file": "fixture.json:5",
+        "text": "\"create table sales.orders(tenant_id bigint,id bigint,account_id bigint,status text,amount numeric(20,6),primary key(tenant_id,id),foreign key(tenant_id,account_id) references sales.accounts(tenant_id,id))\",",
+        "context": "    \"create schema sales\",\n    \"create table sales.accounts(tenant_id bigint,id bigint,enabled boolean not null,primary key(tenant_id,id))\",\n    \"create table sales.orders(tenant_id bigint,id bigint,account_id bigint,status text,amount numeric(20,6),primary key(tenant_id,id),foreign key(tenant_id,account_id) references sales.accounts(tenant_id,id))\",\n    \"insert into sales.accounts values(11,7,true),(22,7,true)\",\n    \"insert into sales.orders values(11,420,7,'PAID',17.000001),(22,420,7,'PAID',100.000001)\""
+      },
+      {
+        "repo": "CASES/c06",
+        "file": "fixture.json:7",
+        "text": "\"insert into sales.orders values(11,420,7,'PAID',17.000001),(22,420,7,'PAID',100.000001)\"",
+        "context": "    \"create table sales.orders(tenant_id bigint,id bigint,account_id bigint,status text,amount numeric(20,6),primary key(tenant_id,id),foreign key(tenant_id,account_id) references sales.accounts(tenant_id,id))\",\n    \"insert into sales.accounts values(11,7,true),(22,7,true)\",\n    \"insert into sales.orders values(11,420,7,'PAID',17.000001),(22,420,7,'PAID',100.000001)\"\n  ],\n  \"billing\": ["
+      },
+      {
+        "repo": "CASES/order-projection",
+        "file": "scenarios.json:6",
+        "text": "\"column\": \"sales.orders.amount\",",
+        "context": "    \"prompt\": \"find all places across functions and repositories, where this column gets read and gets written\",\n    \"setup\": {\n      \"column\": \"sales.orders.amount\",\n      \"env\": \"fixture\",\n      \"database\": \"orders\","
+      },
+      {
+        "repo": "CASES/order-projection",
+        "file": "scenarios.json:14",
+        "text": "\"task\": \"Inventory evidenced read and write usage of sales.orders.amount. Include PostgreSQL functions, trigger functions, views and source repositories. Report direct/indirect usage and unresolved dynamic SQL separately; every claimed result needs object or repository/file/line evidence.\",",
+        "context": "      ]\n    },\n    \"task\": \"Inventory evidenced read and write usage of sales.orders.amount. Include PostgreSQL functions, trigger functions, views and source repositories. Report direct/indirect usage and unresolved dynamic SQL separately; every claimed result needs object or repository/file/line evidence.\",\n    \"tools\": [\n      \"find\","
+      },
+      {
+        "repo": "CASES/order-projection",
+        "file": "scenarios.json:41",
+        "text": "\"table\": \"sales.orders\",",
+        "context": "      \"seed\": {\n        \"db\": \"orders\",\n        \"table\": \"sales.orders\",\n        \"where\": {\n          \"tenant_id\": \"22\","
+      },
+      {
+        "repo": "CASES/order-projection",
+        "file": "source.sql:4",
+        "text": "LANGUAGE sql STABLE AS $$ SELECT tenant_id,id,account_id,status,amount FROM sales.orders WHERE tenant_id=p_tenant AND id=p_id $$;",
+        "context": "CREATE OR REPLACE FUNCTION sales.order_projection(p_tenant bigint,p_id bigint)\nRETURNS TABLE(tenant_id bigint,order_id bigint,account_id bigint,status text,amount numeric(20,6))\nLANGUAGE sql STABLE AS $$ SELECT tenant_id,id,account_id,status,amount FROM sales.orders WHERE tenant_id=p_tenant AND id=p_id $$;\nCREATE OR REPLACE FUNCTION sales.account_label(p_tenant bigint,p_account bigint) RETURNS text\nLANGUAGE sql STABLE AS $$ SELECT CASE WHEN enabled THEN 'ACTIVE' ELSE NULL END FROM sales.accounts WHERE tenant_id=p_tenant AND id=p_account $$;"
+      },
+      {
+        "repo": "CASES/order-projection",
+        "file": "source.sql:8",
+        "text": "LANGUAGE sql STABLE AS $$ SELECT CASE WHEN amount>=100 THEN 'MANUAL_REVIEW' ELSE 'STANDARD' END FROM sales.orders WHERE tenant_id=p_tenant AND id=p_id $$;",
+        "context": "LANGUAGE sql STABLE AS $$ SELECT CASE WHEN enabled THEN 'ACTIVE' ELSE NULL END FROM sales.accounts WHERE tenant_id=p_tenant AND id=p_account $$;\nCREATE OR REPLACE FUNCTION sales.release_label(p_tenant bigint,p_id bigint) RETURNS text\nLANGUAGE sql STABLE AS $$ SELECT CASE WHEN amount>=100 THEN 'MANUAL_REVIEW' ELSE 'STANDARD' END FROM sales.orders WHERE tenant_id=p_tenant AND id=p_id $$;\nCREATE OR REPLACE FUNCTION sales.adjust_amount(p_tenant bigint,p_id bigint,p_amount numeric) RETURNS void\nLANGUAGE sql AS $$ UPDATE sales.orders SET amount=p_amount WHERE tenant_id=p_tenant AND id=p_id $$;"
+      },
+      {
+        "repo": "CASES/order-projection",
+        "file": "source.sql:10",
+        "text": "LANGUAGE sql AS $$ UPDATE sales.orders SET amount=p_amount WHERE tenant_id=p_tenant AND id=p_id $$;",
+        "context": "LANGUAGE sql STABLE AS $$ SELECT CASE WHEN amount>=100 THEN 'MANUAL_REVIEW' ELSE 'STANDARD' END FROM sales.orders WHERE tenant_id=p_tenant AND id=p_id $$;\nCREATE OR REPLACE FUNCTION sales.adjust_amount(p_tenant bigint,p_id bigint,p_amount numeric) RETURNS void\nLANGUAGE sql AS $$ UPDATE sales.orders SET amount=p_amount WHERE tenant_id=p_tenant AND id=p_id $$;\nCREATE OR REPLACE FUNCTION sales.audit_amount() RETURNS trigger LANGUAGE plpgsql AS $$\nBEGIN"
+      },
+      {
+        "repo": "CASES/order-projection",
+        "file": "source.sql:18",
+        "text": "DROP TRIGGER IF EXISTS order_amount_audit ON sales.orders;",
+        "context": " RETURN NEW;\nEND $$;\nDROP TRIGGER IF EXISTS order_amount_audit ON sales.orders;\nCREATE TRIGGER order_amount_audit AFTER UPDATE OF amount ON sales.orders FOR EACH ROW EXECUTE FUNCTION sales.audit_amount();\nCREATE OR REPLACE VIEW sales.order_amounts AS SELECT tenant_id,id,amount FROM sales.orders;"
+      },
+      {
+        "repo": "CASES/order-projection",
+        "file": "source.sql:19",
+        "text": "CREATE TRIGGER order_amount_audit AFTER UPDATE OF amount ON sales.orders FOR EACH ROW EXECUTE FUNCTION sales.audit_amount();",
+        "context": "END $$;\nDROP TRIGGER IF EXISTS order_amount_audit ON sales.orders;\nCREATE TRIGGER order_amount_audit AFTER UPDATE OF amount ON sales.orders FOR EACH ROW EXECUTE FUNCTION sales.audit_amount();\nCREATE OR REPLACE VIEW sales.order_amounts AS SELECT tenant_id,id,amount FROM sales.orders;\nCREATE OR REPLACE FUNCTION sales.inspect_dynamic(p_column text,p_tenant bigint) RETURNS SETOF text"
+      },
+      {
+        "repo": "CASES/order-projection",
+        "file": "source.sql:20",
+        "text": "CREATE OR REPLACE VIEW sales.order_amounts AS SELECT tenant_id,id,amount FROM sales.orders;",
+        "context": "DROP TRIGGER IF EXISTS order_amount_audit ON sales.orders;\nCREATE TRIGGER order_amount_audit AFTER UPDATE OF amount ON sales.orders FOR EACH ROW EXECUTE FUNCTION sales.audit_amount();\nCREATE OR REPLACE VIEW sales.order_amounts AS SELECT tenant_id,id,amount FROM sales.orders;\nCREATE OR REPLACE FUNCTION sales.inspect_dynamic(p_column text,p_tenant bigint) RETURNS SETOF text\nLANGUAGE plpgsql STABLE AS $$ BEGIN RETURN QUERY EXECUTE format('select %I::text from sales.orders where tenant_id=$1',p_column) USING p_tenant; END $$;"
+      },
+      {
+        "repo": "CASES/order-projection",
+        "file": "source.sql:22",
+        "text": "LANGUAGE plpgsql STABLE AS $$ BEGIN RETURN QUERY EXECUTE format('select %I::text from sales.orders where tenant_id=$1',p_column) USING p_tenant; END $$;",
+        "context": "CREATE OR REPLACE VIEW sales.order_amounts AS SELECT tenant_id,id,amount FROM sales.orders;\nCREATE OR REPLACE FUNCTION sales.inspect_dynamic(p_column text,p_tenant bigint) RETURNS SETOF text\nLANGUAGE plpgsql STABLE AS $$ BEGIN RETURN QUERY EXECUTE format('select %I::text from sales.orders where tenant_id=$1',p_column) USING p_tenant; END $$;\n"
+      },
+      {
+        "repo": "CASES/order-projection",
+        "file": "src/main/java/com/lumen/orders/OrderProjectionService.java:20",
+        "text": "public static final String FIND=\"select amount from sales.orders where tenant_id=? and id=?\";",
+        "context": "    return result;\n  }\n  public static final String FIND=\"select amount from sales.orders where tenant_id=? and id=?\";\n  public static final String UPDATE=\"update sales.orders set amount=? where tenant_id=? and id=?\";\n}"
+      },
+      {
+        "repo": "CASES/order-projection",
+        "file": "src/main/java/com/lumen/orders/OrderProjectionService.java:21",
+        "text": "public static final String UPDATE=\"update sales.orders set amount=? where tenant_id=? and id=?\";",
+        "context": "  }\n  public static final String FIND=\"select amount from sales.orders where tenant_id=? and id=?\";\n  public static final String UPDATE=\"update sales.orders set amount=? where tenant_id=? and id=?\";\n}\n"
+      }
+    ],
+    "view": "http://127.0.0.1:4000/view/mvsnj3pga0354b4c6e9c3cc4a6",
+    "files": 5,
+    "repos": 10,
+    "scanned": 5,
+    "candidates": 5,
+    "ms": 4,
+    "prefilter": "sales.orders"
+  },
+  "requestSha256": "a679e1b3292446140778a51d8443a4210ce29789c986d117ff27eb2f05b8b789",
+  "stdoutSha256": "a67cab8dcb9575f0aabdf58d1d4695af281b5002f3e09eac0aafea64f652fac5",
+  "stderrSha256": "2d21845d701a35bd1c6c064fd6a34b4f3a5a8b52dc43503288939d1f54aaef87"
+}

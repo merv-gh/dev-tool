@@ -1,0 +1,14 @@
+{
+  "toolBase": "4b6dc31ebc085fd0852db986a23ed66840d0632f",
+  "dtHome": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+  "sourceEnvironments": [
+    "dev",
+    "fixture"
+  ],
+  "maven": "/Users/user/.m2/wrapper/dists/apache-maven-3.9.11/a2d47e15/bin/mvn",
+  "javaHome": "/Users/user/Library/Java/JavaVirtualMachines/temurin-21.0.11/Contents/Home",
+  "configuredRunner": false,
+  "scratchHost": "127.0.0.1:55487",
+  "sourceCredentials": "omitted; dedicated SELECT-only role",
+  "evidencePurpose": "Actual build process is local CLI/Maven; env parameter selects DDL source, not remote execution"
+}

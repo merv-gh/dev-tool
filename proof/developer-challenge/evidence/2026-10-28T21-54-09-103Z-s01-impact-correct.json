@@ -1,0 +1,66 @@
+{
+  "started": "2026-10-28T21:54:09.103Z",
+  "ended": "2026-10-28T21:54:09.413Z",
+  "durationMs": 310,
+  "tool": "impact",
+  "args": {
+    "target": "sales.orders.amount",
+    "env": "fixture"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 2604,
+  "stderrBytes": 128,
+  "stdout": "{\n  \"target\": \"sales.orders.amount\",\n  \"resolved\": [\n    \"column:sales.orders.amount\"\n  ],\n  \"counts\": {\n    \"pgfn\": 3,\n    \"table\": 1\n  },\n  \"endpoints\": [],\n  \"topics\": [],\n  \"tables\": [\n    \"sales.order_amounts\"\n  ],\n  \"functions\": [\n    \"sales.adjust_amount\",\n    \"sales.order_projection\",\n    \"sales.release_label\"\n  ],\n  \"services\": [],\n  \"tests\": [],\n  \"db\": [],\n  \"nearest\": [\n    \"1 pgfn pgfn:sales.adjust_amount <- body column:sales.orders.amount\",\n    \"1 pgfn pgfn:sales.order_projection <- body column:sales.orders.amount\",\n    \"1 pgfn pgfn:sales.release_label <- body column:sales.orders.amount\",\n    \"1 table table:sales.order_amounts <- view column:sales.orders.amount\"\n  ],\n  \"mentions\": [\n    \"CASES/c02 INCIDENT.md:1 # Reservation authorized for the wrong amount\",\n    \"CASES/c02 INCIDENT.md:3 Checkout 12.50 EUR appears in reservation history as 0.12 EUR. The reservations API contract is POST /reservations {orderId:string, amountCents:nonnegative-safe-integer, currency:three-uppercase-letters}. Checkout accepts {id:string,total:string,currency:string}; total is an exact decimal amount in \",\n    \"CASES/c06 INCIDENT.md:3 Tenant 22 order 420 cannot release even though its own enabled account has approved credit. A different tenant uses the same account and order IDs. Release only the selected tenant/order when sales.orders is PAID, sales.accounts is enabled, risk.accounts is APPROVED with enough credit, and pay.payme\",\n    \"CASES/c06 fixture.json:5 \\\"create table sales.orders(tenant_id bigint,id bigint,account_id bigint,status text,amount numeric(20,6),primary key(tenant_id,id),foreign key(tenant_id,account_id) references sales.accounts(tenant_id,id))\\\",\",\n    \"CASES/c06 fixture.json:13 \\\"create table pay.payments(tenant_id bigint,order_id bigint,status text,amount numeric(20,6),primary key(tenant_id,order_id))\\\",\",\n    \"CASES/order-projection README.md:3 These four prompts extend the frozen v1 corpus without changing it. scenarios.json preserves the user's wording and gives concrete setup, tool mappings, evidence requirements and known limits. The SQL is environment provisioning for owned disposable C06 source databases only; read-only investigation\",\n    \"CASES/order-projection es/orders-read-model.json:8 \\\"amount\\\": \\\"keyword\\\"\",\n    \"CASES/order-projection es/orders-read-model.json:17 \\\"amount\\\": \\\"100.000001\\\"\",\n    \"CASES/order-projection es/orders-read-model.json:26 \\\"amount\\\": \\\"17.000001\\\"\",\n    \"CASES/order-projection scenarios.json:6 \\\"column\\\": \\\"sales.orders.amount\\\",\"\n  ],\n  \"view\": \"http://127.0.0.1:4000/show/mvsnjckw672ff1c212c31e669b\"\n}\n",
+  "stderr": "21:54:09 dt call impact#1chz start {\"target\":\"sales.orders.amount\",\"env\":\"fixture\"} (cli)\n21:54:09 dt call impact#1chz ok 105ms\n",
+  "result": {
+    "target": "sales.orders.amount",
+    "resolved": [
+      "column:sales.orders.amount"
+    ],
+    "counts": {
+      "pgfn": 3,
+      "table": 1
+    },
+    "endpoints": [],
+    "topics": [],
+    "tables": [
+      "sales.order_amounts"
+    ],
+    "functions": [
+      "sales.adjust_amount",
+      "sales.order_projection",
+      "sales.release_label"
+    ],
+    "services": [],
+    "tests": [],
+    "db": [],
+    "nearest": [
+      "1 pgfn pgfn:sales.adjust_amount <- body column:sales.orders.amount",
+      "1 pgfn pgfn:sales.order_projection <- body column:sales.orders.amount",
+      "1 pgfn pgfn:sales.release_label <- body column:sales.orders.amount",
+      "1 table table:sales.order_amounts <- view column:sales.orders.amount"
+    ],
+    "mentions": [
+      "CASES/c02 INCIDENT.md:1 # Reservation authorized for the wrong amount",
+      "CASES/c02 INCIDENT.md:3 Checkout 12.50 EUR appears in reservation history as 0.12 EUR. The reservations API contract is POST /reservations {orderId:string, amountCents:nonnegative-safe-integer, currency:three-uppercase-letters}. Checkout accepts {id:string,total:string,currency:string}; total is an exact decimal amount in ",
+      "CASES/c06 INCIDENT.md:3 Tenant 22 order 420 cannot release even though its own enabled account has approved credit. A different tenant uses the same account and order IDs. Release only the selected tenant/order when sales.orders is PAID, sales.accounts is enabled, risk.accounts is APPROVED with enough credit, and pay.payme",
+      "CASES/c06 fixture.json:5 \"create table sales.orders(tenant_id bigint,id bigint,account_id bigint,status text,amount numeric(20,6),primary key(tenant_id,id),foreign key(tenant_id,account_id) references sales.accounts(tenant_id,id))\",",
+      "CASES/c06 fixture.json:13 \"create table pay.payments(tenant_id bigint,order_id bigint,status text,amount numeric(20,6),primary key(tenant_id,order_id))\",",
+      "CASES/order-projection README.md:3 These four prompts extend the frozen v1 corpus without changing it. scenarios.json preserves the user's wording and gives concrete setup, tool mappings, evidence requirements and known limits. The SQL is environment provisioning for owned disposable C06 source databases only; read-only investigation",
+      "CASES/order-projection es/orders-read-model.json:8 \"amount\": \"keyword\"",
+      "CASES/order-projection es/orders-read-model.json:17 \"amount\": \"100.000001\"",
+      "CASES/order-projection es/orders-read-model.json:26 \"amount\": \"17.000001\"",
+      "CASES/order-projection scenarios.json:6 \"column\": \"sales.orders.amount\","
+    ],
+    "view": "http://127.0.0.1:4000/show/mvsnjckw672ff1c212c31e669b"
+  },
+  "requestSha256": "9f746d0d94900f569de9aefa6ce02f86b12037c6a01473108a7dca2a6b99c175",
+  "stdoutSha256": "889ba1a34c53832fdadf637bda36e741d1fb813a01a0eea6278a95796d17e322",
+  "stderrSha256": "173956a521efc4d9213446143bd3812a9aa997f2c65c8889b47c99c4daaec72a"
+}

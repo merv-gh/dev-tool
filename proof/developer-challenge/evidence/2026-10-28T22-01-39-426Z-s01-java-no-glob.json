@@ -1,0 +1,47 @@
+{
+  "started": "2026-10-28T22:01:39.426Z",
+  "ended": "2026-10-28T22:01:39.653Z",
+  "durationMs": 227,
+  "tool": "code_search",
+  "args": {
+    "pattern": "sales.orders",
+    "repos": "CASES/order-projection",
+    "limit": 20
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 696,
+  "stderrBytes": 159,
+  "stdout": "{\n  \"total\": 2,\n  \"rows\": [\n    {\n      \"repo\": \"CASES/order-projection\",\n      \"file\": \"src/main/java/com/lumen/orders/OrderProjectionService.java:20\",\n      \"text\": \"public static final String FIND=\\\"select amount from sales.orders where tenant_id=? and id=?\\\";\"\n    },\n    {\n      \"repo\": \"CASES/order-projection\",\n      \"file\": \"src/main/java/com/lumen/orders/OrderProjectionService.java:21\",\n      \"text\": \"public static final String UPDATE=\\\"update sales.orders set amount=? where tenant_id=? and id=?\\\";\"\n    }\n  ],\n  \"view\": \"http://127.0.0.1:4000/view/mvsnszyzb05d0658f6888f8ec0\",\n  \"files\": 1,\n  \"repos\": 1,\n  \"scanned\": 2,\n  \"candidates\": 2,\n  \"ms\": 2,\n  \"prefilter\": \"sales.orders\"\n}\n",
+  "stderr": "22:01:39 dt call code_search#1zxq start {\"pattern\":\"sales.orders\",\"repos\":\"CASES/order-projection\",\"limit\":20} (cli)\n22:01:39 dt call code_search#1zxq ok 46ms\n",
+  "result": {
+    "total": 2,
+    "rows": [
+      {
+        "repo": "CASES/order-projection",
+        "file": "src/main/java/com/lumen/orders/OrderProjectionService.java:20",
+        "text": "public static final String FIND=\"select amount from sales.orders where tenant_id=? and id=?\";"
+      },
+      {
+        "repo": "CASES/order-projection",
+        "file": "src/main/java/com/lumen/orders/OrderProjectionService.java:21",
+        "text": "public static final String UPDATE=\"update sales.orders set amount=? where tenant_id=? and id=?\";"
+      }
+    ],
+    "view": "http://127.0.0.1:4000/view/mvsnszyzb05d0658f6888f8ec0",
+    "files": 1,
+    "repos": 1,
+    "scanned": 2,
+    "candidates": 2,
+    "ms": 2,
+    "prefilter": "sales.orders"
+  },
+  "requestSha256": "43d15a549acbba8a11f04658b80c109ba3a04bcb98286a5759f25fc3c6989766",
+  "stdoutSha256": "aa188111bc53960d2439ca256fc358ecf6fa2ee9c5b5466c2ed395ee2370a0df",
+  "stderrSha256": "90d8f23c4b95a28b0943d28297490994d93ce666cca55ab2cc02136f7e527d69"
+}

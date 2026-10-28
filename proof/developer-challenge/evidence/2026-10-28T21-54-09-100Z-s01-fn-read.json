@@ -1,0 +1,94 @@
+{
+  "started": "2026-10-28T21:54:09.100Z",
+  "ended": "2026-10-28T21:54:09.349Z",
+  "durationMs": 249,
+  "tool": "pg_function",
+  "args": {
+    "name": "sales.order_projection",
+    "env": "fixture"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 1591,
+  "stderrBytes": 138,
+  "stdout": "[\n  {\n    \"db\": \"orders\",\n    \"object\": \"sales.order_projection\",\n    \"schema\": \"sales\",\n    \"name\": \"order_projection\",\n    \"kind\": \"function\",\n    \"args\": \"p_tenant bigint, p_id bigint\",\n    \"signature\": \"p_tenant bigint, p_id bigint\",\n    \"returns\": \"TABLE(tenant_id bigint, order_id bigint, account_id bigint, status text, amount numeric)\",\n    \"arg_list\": [\n      {\n        \"name\": \"p_tenant\",\n        \"type\": \"bigint\",\n        \"mode\": \"in\"\n      },\n      {\n        \"name\": \"p_id\",\n        \"type\": \"bigint\",\n        \"mode\": \"in\"\n      },\n      {\n        \"name\": \"tenant_id\",\n        \"type\": \"bigint\",\n        \"mode\": \"table\"\n      },\n      {\n        \"name\": \"order_id\",\n        \"type\": \"bigint\",\n        \"mode\": \"table\"\n      },\n      {\n        \"name\": \"account_id\",\n        \"type\": \"bigint\",\n        \"mode\": \"table\"\n      },\n      {\n        \"name\": \"status\",\n        \"type\": \"text\",\n        \"mode\": \"table\"\n      },\n      {\n        \"name\": \"amount\",\n        \"type\": \"numeric\",\n        \"mode\": \"table\"\n      }\n    ],\n    \"lang\": \"sql\",\n    \"volatility\": \"stable\",\n    \"security_definer\": false,\n    \"comment\": null,\n    \"usedBy\": [],\n    \"uses\": [\n      {\n        \"db\": \"orders\",\n        \"source\": \"db\",\n        \"where\": \"\",\n        \"detail\": \"\",\n        \"target\": \"sales.orders\",\n        \"targetKind\": \"table\",\n        \"user\": \"sales.order_projection\",\n        \"userKind\": \"function\",\n        \"role\": \"read\"\n      }\n    ],\n    \"body\": \" SELECT tenant_id,id,account_id,status,amount FROM sales.orders WHERE tenant_id=p_tenant AND id=p_id \",\n    \"usedByTotal\": 0,\n    \"note\": null\n  }\n]\n",
+  "stderr": "21:54:09 dt call pg_function#1chz start {\"name\":\"sales.order_projection\",\"env\":\"fixture\"} (cli)\n21:54:09 dt call pg_function#1chz ok 38ms\n",
+  "result": [
+    {
+      "db": "orders",
+      "object": "sales.order_projection",
+      "schema": "sales",
+      "name": "order_projection",
+      "kind": "function",
+      "args": "p_tenant bigint, p_id bigint",
+      "signature": "p_tenant bigint, p_id bigint",
+      "returns": "TABLE(tenant_id bigint, order_id bigint, account_id bigint, status text, amount numeric)",
+      "arg_list": [
+        {
+          "name": "p_tenant",
+          "type": "bigint",
+          "mode": "in"
+        },
+        {
+          "name": "p_id",
+          "type": "bigint",
+          "mode": "in"
+        },
+        {
+          "name": "tenant_id",
+          "type": "bigint",
+          "mode": "table"
+        },
+        {
+          "name": "order_id",
+          "type": "bigint",
+          "mode": "table"
+        },
+        {
+          "name": "account_id",
+          "type": "bigint",
+          "mode": "table"
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "mode": "table"
+        },
+        {
+          "name": "amount",
+          "type": "numeric",
+          "mode": "table"
+        }
+      ],
+      "lang": "sql",
+      "volatility": "stable",
+      "security_definer": false,
+      "comment": null,
+      "usedBy": [],
+      "uses": [
+        {
+          "db": "orders",
+          "source": "db",
+          "where": "",
+          "detail": "",
+          "target": "sales.orders",
+          "targetKind": "table",
+          "user": "sales.order_projection",
+          "userKind": "function",
+          "role": "read"
+        }
+      ],
+      "body": " SELECT tenant_id,id,account_id,status,amount FROM sales.orders WHERE tenant_id=p_tenant AND id=p_id ",
+      "usedByTotal": 0,
+      "note": null
+    }
+  ],
+  "requestSha256": "f6c8311e9b045795b4cfe3b0fd286817450df6e510c3a695e6b0ede6357678f5",
+  "stdoutSha256": "482af9ac5365e5a8112ad0bb8e198500c91e3773e983b524ae7d6c08f5f2a18a",
+  "stderrSha256": "bb0d3a0c653871bf298d16e78de8749b14a28e0bf788f1bc5486f85e57efd2d9"
+}

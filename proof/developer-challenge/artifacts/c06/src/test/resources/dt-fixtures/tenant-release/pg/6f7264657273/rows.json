@@ -1,0 +1,30 @@
+{
+  "orders:sales.orders": [
+    {
+      "tenant_id": "11",
+      "id": "420",
+      "account_id": "7",
+      "status": "PAID",
+      "amount": "17.000001"
+    },
+    {
+      "tenant_id": "22",
+      "id": "420",
+      "account_id": "7",
+      "status": "PAID",
+      "amount": "100.000001"
+    }
+  ],
+  "orders:sales.accounts": [
+    {
+      "tenant_id": "11",
+      "id": "7",
+      "enabled": true
+    },
+    {
+      "tenant_id": "22",
+      "id": "7",
+      "enabled": true
+    }
+  ]
+}

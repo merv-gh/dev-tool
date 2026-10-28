@@ -1,0 +1,48 @@
+{
+  "started": "2026-10-28T21:54:49.128Z",
+  "ended": "2026-10-28T21:54:49.412Z",
+  "durationMs": 284,
+  "tool": "pg_query",
+  "args": {
+    "env": "fixture",
+    "db": "orders",
+    "sql": "select p.tenant_id::text,p.order_id::text,p.account_id::text,p.status,p.amount::text,sales.account_label(p.tenant_id,p.account_id) as account_label,sales.release_label(p.tenant_id,p.order_id) as release_label from sales.order_projection($1::bigint,$2::bigint) p limit 5",
+    "params": [
+      "22",
+      "420"
+    ],
+    "all": true
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 367,
+  "stderrBytes": 247,
+  "stdout": "{\n  \"db\": \"orders\",\n  \"route\": \"explicit\",\n  \"ms\": 41,\n  \"total\": 1,\n  \"rows\": [\n    {\n      \"tenant_id\": \"22\",\n      \"order_id\": \"420\",\n      \"account_id\": \"7\",\n      \"status\": \"PAID\",\n      \"amount\": \"100.000001\",\n      \"account_label\": \"ACTIVE\",\n      \"release_label\": \"MANUAL_REVIEW\"\n    }\n  ],\n  \"view\": \"http://127.0.0.1:4000/view/mvsnk7fqb5381c5567ffbe37de\"\n}\n",
+  "stderr": "21:54:49 dt call pg_query#17dn start {\"env\":\"fixture\",\"db\":\"orders\",\"sql\":\"select p.tenant_id::text,p.order_id::text,p.account_id::text,p.status,p.amount::text,sales.account_label(p.tenant_id,p.acc…} (cli)\n21:54:49 dt call pg_query#17dn ok 77ms\n",
+  "result": {
+    "db": "orders",
+    "route": "explicit",
+    "ms": 41,
+    "total": 1,
+    "rows": [
+      {
+        "tenant_id": "22",
+        "order_id": "420",
+        "account_id": "7",
+        "status": "PAID",
+        "amount": "100.000001",
+        "account_label": "ACTIVE",
+        "release_label": "MANUAL_REVIEW"
+      }
+    ],
+    "view": "http://127.0.0.1:4000/view/mvsnk7fqb5381c5567ffbe37de"
+  },
+  "requestSha256": "1e242b6c420c8bc317fb2c3024e92f417c85afd5bb985ef57886804ca95bded0",
+  "stdoutSha256": "41dcda0f438017304ced5395cac940976ffdca93c9f57b6df5a95ed2f3643d5d",
+  "stderrSha256": "796c4ad9f5b437b083bf5097187ac64b0f4337a262806c6e531b9573eaa8e61b"
+}

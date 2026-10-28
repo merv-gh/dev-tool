@@ -1,0 +1,47 @@
+{
+  "started": "2026-10-28T21:55:22.877Z",
+  "ended": "2026-10-28T21:55:23.505Z",
+  "durationMs": 628,
+  "tool": "workspace_open",
+  "args": {
+    "project": "CASES",
+    "repo": "order-projection",
+    "ref": "main"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 511,
+  "stderrBytes": 402,
+  "stdout": "{\n  \"job\": \"mvsnkxeu135776\",\n  \"state\": \"done\",\n  \"id\": \"order-projection-main-073e\",\n  \"project\": \"CASES\",\n  \"repo\": \"order-projection\",\n  \"ref\": \"main\",\n  \"sha\": \"6e48183692ef8f4da53f00958d5db78fcaa007e4\",\n  \"commitDate\": \"2026-10-29T00:54:54+03:00\",\n  \"service\": null,\n  \"env\": null,\n  \"path\": \"work/order-projection-main-073e\",\n  \"createdAt\": \"2026-10-28T21:55:23.413Z\",\n  \"usedAt\": \"2026-10-28T21:55:23.413Z\",\n  \"session\": null,\n  \"libs\": [],\n  \"files\": 3,\n  \"classes\": 3,\n  \"build\": [\n    \"pom.xml\"\n  ]\n}\n",
+  "stderr": "21:55:23 dt call workspace_open#1xej start {\"project\":\"CASES\",\"repo\":\"order-projection\",\"ref\":\"main\"} (cli)\n21:55:23 dt job workspace_open CASES/order-projection@main#2xex start {\"job\":\"mvsnkxeu135776\"} (job)\n21:55:23 dt job workspace_open CASES/order-projection@main#2xex ok 415ms  git init 59ms · git fetch 171ms · git checkout 30ms · code index 38ms\n21:55:23 dt call workspace_open#1xej ok 430ms\n",
+  "result": {
+    "job": "mvsnkxeu135776",
+    "state": "done",
+    "id": "order-projection-main-073e",
+    "project": "CASES",
+    "repo": "order-projection",
+    "ref": "main",
+    "sha": "6e48183692ef8f4da53f00958d5db78fcaa007e4",
+    "commitDate": "2026-10-29T00:54:54+03:00",
+    "service": null,
+    "env": null,
+    "path": "work/order-projection-main-073e",
+    "createdAt": "2026-10-28T21:55:23.413Z",
+    "usedAt": "2026-10-28T21:55:23.413Z",
+    "session": null,
+    "libs": [],
+    "files": 3,
+    "classes": 3,
+    "build": [
+      "pom.xml"
+    ]
+  },
+  "requestSha256": "d84206a78b72323f261271468ce081ba59a582f532a9d28af9b279200c6601da",
+  "stdoutSha256": "279eb789f2621e09ad8176c21273aae92988409d4e339debb5532580da7d997a",
+  "stderrSha256": "aba0414a534d353ccfc5e143fc0560039041540eeabad40ebd507b39c39c705b"
+}

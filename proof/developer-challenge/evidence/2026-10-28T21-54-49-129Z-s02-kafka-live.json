@@ -1,0 +1,25 @@
+{
+  "started": "2026-10-28T21:54:49.129Z",
+  "ended": "2026-10-28T21:54:49.363Z",
+  "durationMs": 234,
+  "tool": "kafka_last",
+  "args": {
+    "env": "fixture",
+    "topic": "orders.paid",
+    "n": 5
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 1,
+  "stdoutBytes": 0,
+  "stderrBytes": 272,
+  "stdout": "",
+  "stderr": "21:54:49 dt call kafka_last#17dh start {\"env\":\"fixture\",\"topic\":\"orders.paid\",\"n\":5} (cli)\n21:54:49 dt call kafka_last#17dh FAILED 12ms: kafka-ui URL not set for fixture (KAFKA_MANAGER in config.json)\nERROR: kafka-ui URL not set for fixture (KAFKA_MANAGER in config.json)\n",
+  "requestSha256": "1cd2ebfadfdf905c6008d92d559c7dc88b23ef24a0b50b5a832bf87ccd30b7d4",
+  "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderrSha256": "01c7615bf4810ff25f15a5fe7e6b7d9103ae3134dc31b6521c22633127f9e7f0"
+}

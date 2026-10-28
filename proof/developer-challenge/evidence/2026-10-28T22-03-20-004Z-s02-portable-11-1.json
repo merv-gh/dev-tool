@@ -1,0 +1,34 @@
+{
+  "started": "2026-10-28T22:03:20.004Z",
+  "ended": "2026-10-28T22:03:20.191Z",
+  "durationMs": 187,
+  "tool": "workspace_read",
+  "args": {
+    "workspace": "c06-main-a358",
+    "path": "src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/schema.sql",
+    "from": 1,
+    "to": 400
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 762,
+  "stderrBytes": 224,
+  "stdout": "{\n  \"id\": \"c06-main-a358\",\n  \"path\": \"src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/schema.sql\",\n  \"from\": 1,\n  \"to\": 20,\n  \"lines\": 20,\n  \"text\": \"    1  set check_function_bodies = false;\\n    2  \\n    3  create schema if not exists sales;\\n    4  \\n    5  create table sales.accounts (\\n    6    tenant_id bigint not null,\\n    7    id bigint not null,\\n    8    enabled boolean not null,\\n    9    constraint accounts_pkey PRIMARY KEY (tenant_id, id)\\n   10  );\\n   11  \\n   12  create table sales.orders (\\n   13    tenant_id bigint not null,\\n   14    id bigint not null,\\n   15    account_id bigint,\\n   16    status text,\\n   17    amount numeric(20,6),\\n   18    constraint orders_pkey PRIMARY KEY (tenant_id, id)\\n   19  );\\n   20  \"\n}\n",
+  "stderr": "22:03:20 dt call workspace_read#15jh start {\"workspace\":\"c06-main-a358\",\"path\":\"src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/schema.sql\",\"from\":1,\"to\":400} (cli)\n22:03:20 dt call workspace_read#15jh ok 13ms\n",
+  "result": {
+    "id": "c06-main-a358",
+    "path": "src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/schema.sql",
+    "from": 1,
+    "to": 20,
+    "lines": 20,
+    "text": "    1  set check_function_bodies = false;\n    2  \n    3  create schema if not exists sales;\n    4  \n    5  create table sales.accounts (\n    6    tenant_id bigint not null,\n    7    id bigint not null,\n    8    enabled boolean not null,\n    9    constraint accounts_pkey PRIMARY KEY (tenant_id, id)\n   10  );\n   11  \n   12  create table sales.orders (\n   13    tenant_id bigint not null,\n   14    id bigint not null,\n   15    account_id bigint,\n   16    status text,\n   17    amount numeric(20,6),\n   18    constraint orders_pkey PRIMARY KEY (tenant_id, id)\n   19  );\n   20  "
+  },
+  "requestSha256": "ddd911be78c6d0357bbd7d6212754a62cf54fe775084bde2add569e4ba5eff29",
+  "stdoutSha256": "74f624f99cab565fe9e72c3f1fa40adaf91105e6fbba77afcbf36d004b9977b3",
+  "stderrSha256": "0c3442f2305479adddacc2f2e32b5e62c63f27d2dae87c81e43c4d324b36b9be"
+}

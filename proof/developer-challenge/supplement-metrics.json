@@ -1,0 +1,44 @@
+{
+  "all": {
+    "calls": 65,
+    "durationSumMs": 71709,
+    "stdoutBytes": 110332,
+    "stderrBytes": 15224,
+    "started": "2026-10-28T21:53:41.001Z",
+    "ended": "2026-10-28T22:03:21.063Z"
+  },
+  "scenarios": {
+    "S01": {
+      "calls": 17,
+      "durationSumMs": 4494,
+      "stdoutBytes": 28678,
+      "stderrBytes": 2473,
+      "started": "2026-10-28T21:53:41.001Z",
+      "ended": "2026-10-28T22:01:47.180Z"
+    },
+    "S02": {
+      "calls": 23,
+      "durationSumMs": 8351,
+      "stdoutBytes": 49329,
+      "stderrBytes": 4992,
+      "started": "2026-10-28T21:54:28.103Z",
+      "ended": "2026-10-28T22:03:21.063Z"
+    },
+    "S03": {
+      "calls": 21,
+      "durationSumMs": 45979,
+      "stdoutBytes": 26095,
+      "stderrBytes": 6425,
+      "started": "2026-10-28T21:53:57.672Z",
+      "ended": "2026-10-28T22:02:12.857Z"
+    },
+    "S04": {
+      "calls": 4,
+      "durationSumMs": 12885,
+      "stdoutBytes": 6230,
+      "stderrBytes": 1334,
+      "started": "2026-10-28T21:56:46.494Z",
+      "ended": "2026-10-28T22:00:58.611Z"
+    }
+  }
+}

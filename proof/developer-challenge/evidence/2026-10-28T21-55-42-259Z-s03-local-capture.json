@@ -1,0 +1,54 @@
+{
+  "started": "2026-10-28T21:55:42.259Z",
+  "ended": "2026-10-28T21:55:43.700Z",
+  "durationMs": 1441,
+  "tool": "fixture_capture",
+  "args": {
+    "plan": {
+      "env": "fixture",
+      "seeds": [
+        {
+          "db": "orders",
+          "table": "sales.orders",
+          "where": {
+            "id": "420"
+          }
+        }
+      ],
+      "limits": {
+        "depth": 4,
+        "rowsPerTable": 20,
+        "totalRows": 100,
+        "queries": 20
+      }
+    }
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 275,
+  "stderrBytes": 396,
+  "stdout": "{\n  \"job\": \"mvsnlcggcf95cd\",\n  \"state\": \"done\",\n  \"ms\": 1113,\n  \"capture\": \"5bce4642df932d1e54b73f2b\",\n  \"counts\": {\n    \"rows\": 4,\n    \"queries\": 2,\n    \"messages\": 0\n  },\n  \"complete\": true,\n  \"gaps\": [],\n  \"view\": \"http://127.0.0.1:4000/show/mvsnldb8b04fd0040782b8fd9c\"\n}\n",
+  "stderr": "21:55:42 dt call fixture_capture#1cfv start {\"plan\":{\"env\":\"fixture\",\"seeds\":[{\"db\":\"orders\",\"table\":\"sales.orders\",\"where\":{\"id\":\"420\"}}],\"limits\":{\"depth\":4,\"rowsPerTable\":20,\"totalRows\":100,\"queries\":2…} (cli)\n21:55:42 dt job fixture capture fixture#2cgl start {\"job\":\"mvsnlcggcf95cd\"} (job)\n21:55:43 dt job fixture capture fixture#2cgl ok 1.1s\n21:55:43 dt call fixture_capture#1cfv ok 1.1s\n",
+  "result": {
+    "job": "mvsnlcggcf95cd",
+    "state": "done",
+    "ms": 1113,
+    "capture": "5bce4642df932d1e54b73f2b",
+    "counts": {
+      "rows": 4,
+      "queries": 2,
+      "messages": 0
+    },
+    "complete": true,
+    "gaps": [],
+    "view": "http://127.0.0.1:4000/show/mvsnldb8b04fd0040782b8fd9c"
+  },
+  "requestSha256": "38877e087a8ad1a18a3e468d94081f7f887dc52378531f7bf75fba770b34e027",
+  "stdoutSha256": "99453dbab056c9045da148fcc14f96b9dc7f21d4e83af2deefdc5a8ec9d38682",
+  "stderrSha256": "3d5444f779a77c2de823a3718ccbc76c9b1b3edfffe85555d44845b5ff35f6f2"
+}

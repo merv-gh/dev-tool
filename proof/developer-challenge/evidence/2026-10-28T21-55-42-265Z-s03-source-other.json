@@ -1,0 +1,48 @@
+{
+  "started": "2026-10-28T21:55:42.265Z",
+  "ended": "2026-10-28T21:55:42.693Z",
+  "durationMs": 428,
+  "tool": "pg_query",
+  "args": {
+    "env": "fixture",
+    "db": "orders",
+    "sql": "select p.tenant_id::text,p.order_id::text,p.account_id::text,p.status,p.amount::text,sales.account_label(p.tenant_id,p.account_id) as account_label,sales.release_label(p.tenant_id,p.order_id) as release_label from sales.order_projection($1::bigint,$2::bigint) p limit 5",
+    "params": [
+      "11",
+      "420"
+    ],
+    "all": true
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 361,
+  "stderrBytes": 248,
+  "stdout": "{\n  \"db\": \"orders\",\n  \"route\": \"explicit\",\n  \"ms\": 63,\n  \"total\": 1,\n  \"rows\": [\n    {\n      \"tenant_id\": \"11\",\n      \"order_id\": \"420\",\n      \"account_id\": \"7\",\n      \"status\": \"PAID\",\n      \"amount\": \"17.000001\",\n      \"account_label\": \"ACTIVE\",\n      \"release_label\": \"STANDARD\"\n    }\n  ],\n  \"view\": \"http://127.0.0.1:4000/view/mvsnlcj3289883ec108b8d26d4\"\n}\n",
+  "stderr": "21:55:42 dt call pg_query#1cfz start {\"env\":\"fixture\",\"db\":\"orders\",\"sql\":\"select p.tenant_id::text,p.order_id::text,p.account_id::text,p.status,p.amount::text,sales.account_label(p.tenant_id,p.acc…} (cli)\n21:55:42 dt call pg_query#1cfz ok 114ms\n",
+  "result": {
+    "db": "orders",
+    "route": "explicit",
+    "ms": 63,
+    "total": 1,
+    "rows": [
+      {
+        "tenant_id": "11",
+        "order_id": "420",
+        "account_id": "7",
+        "status": "PAID",
+        "amount": "17.000001",
+        "account_label": "ACTIVE",
+        "release_label": "STANDARD"
+      }
+    ],
+    "view": "http://127.0.0.1:4000/view/mvsnlcj3289883ec108b8d26d4"
+  },
+  "requestSha256": "57fce7d0781b6456084df814f7ce7ac69ec34109db1fc5eebd4888b2f02cc8f6",
+  "stdoutSha256": "e392f381c82d742e7952d8820a288bafcfdfd49c231d175456a3949ac15f5c0e",
+  "stderrSha256": "c77e91892c9d6c85e99f6cab3584f6b29b6cbd015282bcbe2f12ed0c038fa6e7"
+}

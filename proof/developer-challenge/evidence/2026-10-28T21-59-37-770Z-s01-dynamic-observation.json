@@ -1,0 +1,42 @@
+{
+  "started": "2026-10-28T21:59:37.770Z",
+  "ended": "2026-10-28T21:59:38.006Z",
+  "durationMs": 236,
+  "tool": "pg_query",
+  "args": {
+    "env": "fixture",
+    "db": "orders",
+    "sql": "select sales.inspect_dynamic($1,$2::bigint) as amount limit 5",
+    "params": [
+      "amount",
+      "22"
+    ],
+    "all": true
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 195,
+  "stderrBytes": 220,
+  "stdout": "{\n  \"db\": \"orders\",\n  \"route\": \"explicit\",\n  \"ms\": 32,\n  \"total\": 1,\n  \"rows\": [\n    {\n      \"amount\": \"100.000001\"\n    }\n  ],\n  \"view\": \"http://127.0.0.1:4000/view/mvsnqe4df971dd6d63e122a866\"\n}\n",
+  "stderr": "21:59:37 dt call pg_query#1e2m start {\"env\":\"fixture\",\"db\":\"orders\",\"sql\":\"select sales.inspect_dynamic($1,$2::bigint) as amount limit 5\",\"params\":[\"amount\",\"22\"],\"all\":true} (cli)\n21:59:37 dt call pg_query#1e2m ok 63ms\n",
+  "result": {
+    "db": "orders",
+    "route": "explicit",
+    "ms": 32,
+    "total": 1,
+    "rows": [
+      {
+        "amount": "100.000001"
+      }
+    ],
+    "view": "http://127.0.0.1:4000/view/mvsnqe4df971dd6d63e122a866"
+  },
+  "requestSha256": "b8f88eeae1839c011cc1f2e568a9d012bd7c61d70f53451d90cee962a1ee8a2f",
+  "stdoutSha256": "854bb482b0a17e5501378936e7c0ede0c4e42b94115c031ea1cd33adf1a0fb09",
+  "stderrSha256": "effc6db1b42b092b6068da21db93dcfed6b03f09719f1b50c1fa9742d8cd5c1e"
+}

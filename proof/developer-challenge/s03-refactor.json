@@ -1,0 +1,5 @@
+{
+ "workspace":"order-projection-main-073e",
+ "path":"src/main/java/com/lumen/orders/OrderProjectionService.java",
+ "edits":[{"find":"    Map<String,String> result=new LinkedHashMap<>(row);","replace":"    return enrich(tenant,orderId,row);\n  }\n  private Map<String,String> enrich(String tenant,String orderId,Map<String,String> row){\n    Map<String,String> result=new LinkedHashMap<>(row);"}]
+}

@@ -1,0 +1,46 @@
+{
+  "started": "2026-10-28T21:56:46.494Z",
+  "ended": "2026-10-28T21:56:49.947Z",
+  "durationMs": 3453,
+  "tool": "doctor",
+  "args": {},
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 963,
+  "stderrBytes": 81,
+  "stdout": "{\n  \"summary\": {\n    \"ok\": 17,\n    \"warn\": 2,\n    \"fail\": 0\n  },\n  \"total\": 19,\n  \"rows\": [\n    {\n      \"group\": \"folders\",\n      \"check\": \"git data lasts\",\n      \"status\": \"warn\",\n      \"detail\": \"/var/folders/45/h2f0gc4n25dcmbn0yq3rnvsm0000gn/T/dt-git is in the temporary folder: after a restart every repo is fetched again\",\n      \"fix\": \"set DT_GIT_DIR to a lasting folder git can chmod in (compose: the dt-git volume)\"\n    },\n    {\n      \"group\": \"repository\",\n      \"check\": \"gradle.properties\",\n      \"status\": \"warn\",\n      \"detail\": \"none found (looked in /Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home/gradle.properties): builds that read nexusUrl/mavenUser/mavenPassword fail\",\n      \"fix\": \"copy the gradle.properties of your machine (Windows: %USERPROFILE%\\\\.gradle\\\\gradle.properties) into dt's config folder; passwords may be ${VAR} from .env\"\n    }\n  ],\n  \"view\": \"http://127.0.0.1:4000/view/mvsnmsf66668727ffd9a58eb21\"\n}\n",
+  "stderr": "21:56:46 dt call doctor#1pxf start {} (cli)\n21:56:49 dt call doctor#1pxf ok 3.2s\n",
+  "result": {
+    "summary": {
+      "ok": 17,
+      "warn": 2,
+      "fail": 0
+    },
+    "total": 19,
+    "rows": [
+      {
+        "group": "folders",
+        "check": "git data lasts",
+        "status": "warn",
+        "detail": "/var/folders/45/h2f0gc4n25dcmbn0yq3rnvsm0000gn/T/dt-git is in the temporary folder: after a restart every repo is fetched again",
+        "fix": "set DT_GIT_DIR to a lasting folder git can chmod in (compose: the dt-git volume)"
+      },
+      {
+        "group": "repository",
+        "check": "gradle.properties",
+        "status": "warn",
+        "detail": "none found (looked in /Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home/gradle.properties): builds that read nexusUrl/mavenUser/mavenPassword fail",
+        "fix": "copy the gradle.properties of your machine (Windows: %USERPROFILE%\\.gradle\\gradle.properties) into dt's config folder; passwords may be ${VAR} from .env"
+      }
+    ],
+    "view": "http://127.0.0.1:4000/view/mvsnmsf66668727ffd9a58eb21"
+  },
+  "requestSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+  "stdoutSha256": "4fc744cf8a9fcabbda446589aaafb650ba135ec42564a92b8c58c6901515ef3a",
+  "stderrSha256": "18aa4a68abae2162377a0f258b7c17108385b62de2c02ab99cc3af2c42df5e57"
+}

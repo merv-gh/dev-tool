@@ -1,0 +1,32 @@
+{
+  "started": "2026-10-28T21:56:46.494Z",
+  "ended": "2026-10-28T21:56:46.719Z",
+  "durationMs": 225,
+  "tool": "workspace_read",
+  "args": {
+    "workspace": "order-projection-main-073e",
+    "path": "src/test/resources/dt-fixtures/projection-baseline/pg/6f7264657273/data.sql"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 888,
+  "stderrBytes": 222,
+  "stdout": "{\n  \"id\": \"order-projection-main-073e\",\n  \"path\": \"src/test/resources/dt-fixtures/projection-baseline/pg/6f7264657273/data.sql\",\n  \"from\": 1,\n  \"to\": 10,\n  \"lines\": 10,\n  \"text\": \"    1  set standard_conforming_strings = on;\\n    2  \\n    3  insert into \\\"sales\\\".\\\"accounts\\\" (\\\"tenant_id\\\", \\\"id\\\", \\\"enabled\\\") overriding system value values ('11', '7', true);\\n    4  \\n    5  insert into \\\"sales\\\".\\\"accounts\\\" (\\\"tenant_id\\\", \\\"id\\\", \\\"enabled\\\") overriding system value values ('22', '7', true);\\n    6  \\n    7  insert into \\\"sales\\\".\\\"orders\\\" (\\\"tenant_id\\\", \\\"id\\\", \\\"account_id\\\", \\\"status\\\", \\\"amount\\\") overriding system value values ('11', '420', '7', 'PAID', '17.000001');\\n    8  \\n    9  insert into \\\"sales\\\".\\\"orders\\\" (\\\"tenant_id\\\", \\\"id\\\", \\\"account_id\\\", \\\"status\\\", \\\"amount\\\") overriding system value values ('22', '420', '7', 'PAID', '100.000001');\\n   10  \"\n}\n",
+  "stderr": "21:56:46 dt call workspace_read#1pxg start {\"workspace\":\"order-projection-main-073e\",\"path\":\"src/test/resources/dt-fixtures/projection-baseline/pg/6f7264657273/data.sql\"} (cli)\n21:56:46 dt call workspace_read#1pxg ok 13ms\n",
+  "result": {
+    "id": "order-projection-main-073e",
+    "path": "src/test/resources/dt-fixtures/projection-baseline/pg/6f7264657273/data.sql",
+    "from": 1,
+    "to": 10,
+    "lines": 10,
+    "text": "    1  set standard_conforming_strings = on;\n    2  \n    3  insert into \"sales\".\"accounts\" (\"tenant_id\", \"id\", \"enabled\") overriding system value values ('11', '7', true);\n    4  \n    5  insert into \"sales\".\"accounts\" (\"tenant_id\", \"id\", \"enabled\") overriding system value values ('22', '7', true);\n    6  \n    7  insert into \"sales\".\"orders\" (\"tenant_id\", \"id\", \"account_id\", \"status\", \"amount\") overriding system value values ('11', '420', '7', 'PAID', '17.000001');\n    8  \n    9  insert into \"sales\".\"orders\" (\"tenant_id\", \"id\", \"account_id\", \"status\", \"amount\") overriding system value values ('22', '420', '7', 'PAID', '100.000001');\n   10  "
+  },
+  "requestSha256": "417ab32aa204a49aaec285527d8ff59c5d549cbb58813cf9509c6b55518bf2b0",
+  "stdoutSha256": "2db011ef5b409715257fdbd0d4995809210264ef1189455d89d8a9fff814fbe9",
+  "stderrSha256": "a1abbd445e2c791e3512c08bbb7645eb4fafae86e7bbd1c126901d5aa506892e"
+}

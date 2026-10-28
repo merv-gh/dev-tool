@@ -1,0 +1,37 @@
+{
+  "started": "2026-10-28T22:01:32.914Z",
+  "ended": "2026-10-28T22:01:33.186Z",
+  "durationMs": 272,
+  "tool": "code_search",
+  "args": {
+    "pattern": "sales.orders",
+    "repos": "c06-main-a358",
+    "glob": "src/**",
+    "limit": 20
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 203,
+  "stderrBytes": 182,
+  "stdout": "{\n  \"total\": 0,\n  \"rows\": [],\n  \"view\": \"http://127.0.0.1:4000/view/mvsnsuzc2095744ef9eef8edcd\",\n  \"files\": 0,\n  \"repos\": 1,\n  \"scanned\": 0,\n  \"candidates\": 7,\n  \"ms\": 2,\n  \"prefilter\": \"sales.orders\"\n}\n",
+  "stderr": "22:01:33 dt call code_search#1uxg start {\"pattern\":\"sales.orders\",\"repos\":\"c06-main-a358\",\"glob\":\"src/**\",\"limit\":20} (cli)\n22:01:33 dt call code_search#1uxg ok 67ms  code index 6ms\n",
+  "result": {
+    "total": 0,
+    "rows": [],
+    "view": "http://127.0.0.1:4000/view/mvsnsuzc2095744ef9eef8edcd",
+    "files": 0,
+    "repos": 1,
+    "scanned": 0,
+    "candidates": 7,
+    "ms": 2,
+    "prefilter": "sales.orders"
+  },
+  "requestSha256": "ee03b95b485f377809b0f8f2519d0b64d4f719698e024cd75f795fb80bce6ade",
+  "stdoutSha256": "84860c0713855b6c8f98ac442f03d02cc8018b588efb198e2250797f1825b551",
+  "stderrSha256": "ec61384a49e0287bc4283c46b3be8655ccf1f8bcbb550ac46164de181e28d56c"
+}

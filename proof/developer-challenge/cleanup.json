@@ -1,0 +1,8 @@
+{
+  "sourceFixtureCleanup": {"helper":"developer-support-v1.1/c06-source.cjs cleanup","prepared":"/Users/user/.codex/worktrees/developer-challenge-proof/prepared","result":{"cleaned":true}},
+  "postgresContainer": {"name":"dt-challenge-solver-pg","port":55487,"stopped":true,"autoRemove":true},
+  "fakeBitbucketHarness": {"session":10397,"stopped":true,"exitCode":130},
+  "existingUserContainersTouched":false,
+  "portableFixtureFilesHashVerified":11,
+  "liveResourcesRequiredForEvidenceReview":false
+}

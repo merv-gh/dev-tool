@@ -1,0 +1,34 @@
+{
+  "started": "2026-10-28T22:03:17.456Z",
+  "ended": "2026-10-28T22:03:17.642Z",
+  "durationMs": 186,
+  "tool": "workspace_read",
+  "args": {
+    "workspace": "c06-main-a358",
+    "path": "src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/data.sql",
+    "from": 1,
+    "to": 400
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 920,
+  "stderrBytes": 224,
+  "stdout": "{\n  \"id\": \"c06-main-a358\",\n  \"path\": \"src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/data.sql\",\n  \"from\": 1,\n  \"to\": 10,\n  \"lines\": 10,\n  \"text\": \"    1  set standard_conforming_strings = on;\\n    2  \\n    3  insert into \\\"pay\\\".\\\"payments\\\" (\\\"tenant_id\\\", \\\"order_id\\\", \\\"status\\\", \\\"amount\\\") overriding system value values ('11', '420', 'PENDING', '17.000001');\\n    4  \\n    5  insert into \\\"pay\\\".\\\"payments\\\" (\\\"tenant_id\\\", \\\"order_id\\\", \\\"status\\\", \\\"amount\\\") overriding system value values ('22', '420', 'PENDING', '100.000001');\\n    6  \\n    7  insert into \\\"risk\\\".\\\"accounts\\\" (\\\"tenant_id\\\", \\\"id\\\", \\\"status\\\", \\\"credit_limit\\\") overriding system value values ('11', '7', 'BLOCKED', '1000.000000');\\n    8  \\n    9  insert into \\\"risk\\\".\\\"accounts\\\" (\\\"tenant_id\\\", \\\"id\\\", \\\"status\\\", \\\"credit_limit\\\") overriding system value values ('22', '7', 'APPROVED', '150.000001');\\n   10  \"\n}\n",
+  "stderr": "22:03:17 dt call workspace_read#13kq start {\"workspace\":\"c06-main-a358\",\"path\":\"src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/data.sql\",\"from\":1,\"to\":400} (cli)\n22:03:17 dt call workspace_read#13kq ok 12ms\n",
+  "result": {
+    "id": "c06-main-a358",
+    "path": "src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/data.sql",
+    "from": 1,
+    "to": 10,
+    "lines": 10,
+    "text": "    1  set standard_conforming_strings = on;\n    2  \n    3  insert into \"pay\".\"payments\" (\"tenant_id\", \"order_id\", \"status\", \"amount\") overriding system value values ('11', '420', 'PENDING', '17.000001');\n    4  \n    5  insert into \"pay\".\"payments\" (\"tenant_id\", \"order_id\", \"status\", \"amount\") overriding system value values ('22', '420', 'PENDING', '100.000001');\n    6  \n    7  insert into \"risk\".\"accounts\" (\"tenant_id\", \"id\", \"status\", \"credit_limit\") overriding system value values ('11', '7', 'BLOCKED', '1000.000000');\n    8  \n    9  insert into \"risk\".\"accounts\" (\"tenant_id\", \"id\", \"status\", \"credit_limit\") overriding system value values ('22', '7', 'APPROVED', '150.000001');\n   10  "
+  },
+  "requestSha256": "58eb3782388fa5f88438dc3453700cc1bbb6f8341abf4a5415416a2577722f1c",
+  "stdoutSha256": "bb3756432168f0b44bd7b781f084a790b20ae24cd8d192492c0294fd08ba9c93",
+  "stderrSha256": "4d1d1dc19c5fa0f8aff90f0f1235c632eb8a646451b412509b7d9e99540d795e"
+}

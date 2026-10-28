@@ -1,0 +1,104 @@
+{
+  "started": "2026-10-28T22:02:12.521Z",
+  "ended": "2026-10-28T22:02:12.857Z",
+  "durationMs": 336,
+  "tool": "workspace_patch",
+  "args": {
+    "workspace": "order-projection-main-073e"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 9172,
+  "stderrBytes": 140,
+  "stdout": "{\n  \"workspace\": \"order-projection-main-073e\",\n  \"repo\": \"CASES/order-projection\",\n  \"base\": \"6e48183692ef8f4da53f00958d5db78fcaa007e4\",\n  \"files\": [\n    {\n      \"path\": \"src/main/java/com/lumen/orders/OrderProjectionService.java\",\n      \"added\": 3,\n      \"removed\": 0,\n      \"status\": \"modified\"\n    },\n    {\n      \"path\": \"src/test/java/com/lumen/orders/OrderProjectionContractTest.java\",\n      \"added\": 37,\n      \"removed\": 0,\n      \"status\": \"added\"\n    },\n    {\n      \"path\": \"src/test/resources/dt-fixtures/projection-baseline/README.txt\",\n      \"added\": 10,\n      \"removed\": 0,\n      \"status\": \"added\"\n    },\n    {\n      \"path\": \"src/test/resources/dt-fixtures/projection-baseline/manifest.json\",\n      \"added\": 482,\n      \"removed\": 0,\n      \"status\": \"added\"\n    },\n    {\n      \"path\": \"src/test/resources/dt-fixtures/projection-baseline/pg/6f7264657273/constraints.sql\",\n      \"added\": 3,\n      \"removed\": 0,\n      \"status\": \"added\"\n    },\n    {\n      \"path\": \"src/test/resources/dt-fixtures/projection-baseline/pg/6f7264657273/data.sql\",\n      \"added\": 9,\n      \"removed\": 0,\n      \"status\": \"added\"\n    },\n    {\n      \"path\": \"src/test/resources/dt-fixtures/projection-baseline/pg/6f7264657273/rows.json\",\n      \"added\": 30,\n      \"removed\": 0,\n      \"status\": \"added\"\n    },\n    {\n      \"path\": \"src/test/resources/dt-fixtures/projection-baseline/pg/6f7264657273/schema.json\",\n      \"added\": 118,\n      \"removed\": 0,\n      \"status\": \"added\"\n    },\n    {\n      \"path\": \"src/test/resources/dt-fixtures/projection-baseline/pg/6f7264657273/schema.sql\",\n      \"added\": 34,\n      \"removed\": 0,\n      \"status\": \"added\"\n    },\n    {\n      \"path\": \"src/test/resources/dt-schema/orders.sql\",\n      \"added\": 49,\n      \"removed\": 0,\n      \"status\": \"added\"\n    }\n  ],\n  \"tests\": [\n    \"green-only: OrderProjectionContractTest#observedPostgresFunctionResultsRemainIdentical\",\n    \"green-only: OrderProjectionContractTest#missingProjectionDoesNotCallEnrichment\",\n    \"green-only: OrderProjectionContractTest#enrichmentPreservesTenantIdentityNullLabelsAndSourceRow\"\n  ],\n  \"notes\": [\n    \"com.lumen.orders.OrderProjectionContractTest#observedPostgresFunctionResultsRemainIdentical never failed: it may not test the bug (fine for a test of behaviour that already worked)\",\n    \"com.lumen.orders.OrderProjectionContractTest#missingProjectionDoesNotCallEnrichment never failed: it may not test the bug (fine for a test of behaviour that already worked)\",\n    \"com.lumen.orders.OrderProjectionContractTest#enrichmentPreservesTenantIdentityNullLabelsAndSourceRow never failed: it may not test the bug (fine for a test of behaviour that already worked)\"\n  ],\n  \"apply\": \"git checkout 6e48183692ef && git apply --index order-projection-main-073e.patch\",\n  \"view\": \"http://127.0.0.1:4000/show/mvsntpl684b5b298ee09ae3502\",\n  \"download\": \"http://127.0.0.1:4000/patch/mvsntpl684b5b298ee09ae3502.patch\",\n  \"patch\": \"diff --git a/src/main/java/com/lumen/orders/OrderProjectionService.java b/src/main/java/com/lumen/orders/OrderProjectionService.java\\nindex 800083d..f003d83 100644\\n--- a/src/main/java/com/lumen/orders/OrderProjectionService.java\\n+++ b/src/main/java/com/lumen/orders/OrderProjectionService.java\\n@@ -12,6 +12,9 @@ public final class OrderProjectionService {\\n   public Map<String,String> load(String tenant,String orderId){\\n     Map<String,String> row=functions.projection(tenant,orderId);\\n     if(row==null)return null;\\n+    return enrich(tenant,orderId,row);\\n+  }\\n+  private Map<String,String> enrich(String tenant,String orderId,Map<String,String> row){\\n     Map<String,String> result=new LinkedHashMap<>(row);\\n     result.put(\\\"accountLabel\\\",functions.accountLabel(tenant,row.get(\\\"account_id\\\")));\\n     result.put(\\\"releaseLabel\\\",functions.releaseLabel(tenant,orderId));\\ndiff --git a/src/test/java/com/lumen/orders/OrderProjectionContractTest.java b/src/test/java/com/lumen/orders/OrderProjectionContractTest.java\\nnew file mode 100644\\nindex 0000000..12d1f53\\n--- /dev/null\\n+++ b/src/test/java/com/lumen/orders/OrderProjectionContractTest.java\\n@@ -0,0 +1,37 @@\\n+package com.lumen.orders;\\n+import java.util.*;\\n+import org.junit.jupiter.api.Test;\\n+import org.junit.jupiter.api.BeforeAll;\\n+import java.sql.*;\\n+import java.nio.file.*;\\n+import static org.junit.jupiter.api.Assertions.*;\\n+class OrderProjectionContractTest {\\n+ static JdbcFunctions functions(){String url=System.getenv(\\\"SPRING_DATASOURCE_URL\\\");return url==null?JdbcFunctions.fromEnvironment():new JdbcFunctions(url,System.getenv(\\\"SPRING_DATASOURCE_USERNAME\\\"),System.getenv(\\\"SPRING_DATASOURCE_PASSWORD\\\"));}\\n+ @BeforeAll static void loadCapturedRowsOnlyIntoScratch() throws Exception {\\n+  String url=System.getenv(\\\"SPRING_DATASOURCE_URL\\\");if(url==null)return;\\n+  if(!url.contains(\\\"/dt_test_\\\"))throw new IllegalStateException(\\\"refuse writes outside dt scratch\\\");\\n+  try(Connection c=DriverManager.getConnection(url,System.getenv(\\\"SPRING_DATASOURCE_USERNAME\\\"),System.getenv(\\\"SPRING_DATASOURCE_PASSWORD\\\"));Statement s=c.createStatement()){s.execute(Files.readString(Path.of(\\\"src/test/resources/dt-fixtures/projection-baseline/pg/6f7264657273/data.sql\\\")));}\\n+ }\\n+ @Test void observedPostgresFunctionResultsRemainIdentical(){\\n+  var service=new OrderProjectionService(functions());\\n+  for(String tenant:List.of(\\\"11\\\",\\\"22\\\")){\\n+   var expected=new LinkedHashMap<String,String>();expected.put(\\\"tenant_id\\\",tenant);expected.put(\\\"order_id\\\",\\\"420\\\");expected.put(\\\"account_id\\\",\\\"7\\\");expected.put(\\\"status\\\",\\\"PAID\\\");expected.put(\\\"amount\\\",tenant.equals(\\\"11\\\")?\\\"17.000001\\\":\\\"100.000001\\\");expected.put(\\\"accountLabel\\\",\\\"ACTIVE\\\");expected.put(\\\"releaseLabel\\\",tenant.equals(\\\"11\\\")?\\\"STANDARD\\\":\\\"MANUAL_REVIEW\\\");\\n+   assertEquals(expected,service.load(tenant,\\\"420\\\"));\\n+  }\\n+  assertNull(service.load(\\\"22\\\",\\\"999\\\"));\\n+  System.out.println(\\\"bindingLocalScratch=\\\"+System.getenv(\\\"DT_FUNCTIONS_URL\\\").contains(\\\"/dt_test_\\\"));\\n+ }\\n+ @Test void enrichmentPreservesTenantIdentityNullLabelsAndSourceRow(){\\n+  var calls=new ArrayList<String>();var row=new LinkedHashMap<String,String>();row.put(\\\"account_id\\\",\\\"7\\\");row.put(\\\"amount\\\",\\\"100.000001\\\");var before=new LinkedHashMap<>(row);\\n+  var functions=new OrderProjectionService.Functions(){\\n+   public Map<String,String> projection(String t,String o){calls.add(\\\"projection:\\\"+t+\\\":\\\"+o);return row;}\\n+   public String accountLabel(String t,String a){calls.add(\\\"account:\\\"+t+\\\":\\\"+a);return null;}\\n+   public String releaseLabel(String t,String o){calls.add(\\\"release:\\\"+t+\\\":\\\"+o);return null;}\\n+  };\\n+  var result=new OrderProjectionService(functions).load(\\\"22\\\",\\\"9007199254740993\\\");\\n+  assertEquals(List.of(\\\"projection:22:9007199254740993\\\",\\\"account:22:7\\\",\\\"release:22:9007199254740993\\\"),calls);assertEquals(before,row);assertNotSame(row,result);assertEquals(\\\"100.000001\\\",result.get(\\\"amount\\\"));assertTrue(result.containsKey(\\\"accountLabel\\\"));assertNull(result.get(\\\"accountLabel\\\"));assertTrue(result.containsKey(\\\"releaseLabel\\\"));assertNull(result.get(\\\"releaseLabel\\\"));\\n+ }\\n+ @Test void missingProjectionDoesNotCallEnrichment(){\\n+  var functions=new OrderProjectionService.Functions(){public Map<String,String> projection(String t,String o){return null;}public String accountLabel(String t,String a){throw new AssertionError(\\\"unexpected account read\\\");}public String releaseLabel(String t,String o){throw new AssertionError(\\\"unexpected release read\\\");}};assertNull(new OrderProjectionService(functions).load(\\\"22\\\",\\\"999\\\"));\\n+ }\\n+}\\ndiff --git a/src/test/resources/dt-fixtures/projection-baseline/README.txt b/src/test/resources/dt-fixtures/projection-baseline/README.txt\\nnew file mode 100644\\nindex 0000000..c10baab\\n--- /dev/null\\n+++ b/src/test/resources/dt-fixtures/projection-baseline/README.txt\\n@@ -0,0 +1,10 @@\\n+Fixture projection-baseline\\n+\\n+Load each database's schema.sql, data.sql, constraints.sql in that order.\\n+The fixture_replay tool validates hashes and loads isolated scratch databases, dropping them on error.\\n+For test_run give fixture_path and (for multiple datasources) fixture_bindings.\\n+Kafka messages.jsonl preserves key, value, headers, partition, source offset and timestamp.\\n+Use the service's test producer to publish them to its test Kafka; no live publish tool is provided.\\n+Capture window: 2026-10-28T21:55:42.628Z .. 2026-10-28T21:55:43.647Z\\n+Independent read-only statements across databases and Kafka; observation window and offsets are recorded, not a distributed snapshot.\\n+Complete: true; gaps: 0. See manifest.json.\\ndiff --git a/src/test/resources/dt-fixtures/projection-baseline/manifest.json b/src/test/resources/dt-fixtures/projection-baseline/manifest.json\\nnew file mode 100644\\nindex 0000000..41f3960\\n--- /dev/null\\n+++ b/src/test/resources/dt-fixtures/projection-baseline/manifest.json\\n@@ -0,0 +1,482 @@\\n+{\\n+  \\\"version\\\": 1,\\n+  \\\"plan\\\": {\\n+    \\\"version\\\": 1,\\n+    \\\"env\\\": \\\"fixture\\\",\\n+    \\\"seeds\\\": [\\n+      {\\n+        \\\"db\\\": \\\"orders\\\",\\n+        \\\"table\\\": \\\"sales.orders\\\",\\n+        \\\"where\\\": {\\n+          \\\"id\\\": \\\"420\\\"\\n+        }\\n+      }\\n+\\n... [23418 more chars]\"\n}\n",
+  "stderr": "22:02:12 dt call workspace_patch#1phd start {\"workspace\":\"order-projection-main-073e\"} (cli)\n22:02:12 dt call workspace_patch#1phd ok 138ms\n",
+  "result": {
+    "workspace": "order-projection-main-073e",
+    "repo": "CASES/order-projection",
+    "base": "6e48183692ef8f4da53f00958d5db78fcaa007e4",
+    "files": [
+      {
+        "path": "src/main/java/com/lumen/orders/OrderProjectionService.java",
+        "added": 3,
+        "removed": 0,
+        "status": "modified"
+      },
+      {
+        "path": "src/test/java/com/lumen/orders/OrderProjectionContractTest.java",
+        "added": 37,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/projection-baseline/README.txt",
+        "added": 10,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/projection-baseline/manifest.json",
+        "added": 482,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/projection-baseline/pg/6f7264657273/constraints.sql",
+        "added": 3,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/projection-baseline/pg/6f7264657273/data.sql",
+        "added": 9,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/projection-baseline/pg/6f7264657273/rows.json",
+        "added": 30,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/projection-baseline/pg/6f7264657273/schema.json",
+        "added": 118,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/projection-baseline/pg/6f7264657273/schema.sql",
+        "added": 34,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-schema/orders.sql",
+        "added": 49,
+        "removed": 0,
+        "status": "added"
+      }
+    ],
+    "tests": [
+      "green-only: OrderProjectionContractTest#observedPostgresFunctionResultsRemainIdentical",
+      "green-only: OrderProjectionContractTest#missingProjectionDoesNotCallEnrichment",
+      "green-only: OrderProjectionContractTest#enrichmentPreservesTenantIdentityNullLabelsAndSourceRow"
+    ],
+    "notes": [
+      "com.lumen.orders.OrderProjectionContractTest#observedPostgresFunctionResultsRemainIdentical never failed: it may not test the bug (fine for a test of behaviour that already worked)",
+      "com.lumen.orders.OrderProjectionContractTest#missingProjectionDoesNotCallEnrichment never failed: it may not test the bug (fine for a test of behaviour that already worked)",
+      "com.lumen.orders.OrderProjectionContractTest#enrichmentPreservesTenantIdentityNullLabelsAndSourceRow never failed: it may not test the bug (fine for a test of behaviour that already worked)"
+    ],
+    "apply": "git checkout 6e48183692ef && git apply --index order-projection-main-073e.patch",
+    "view": "http://127.0.0.1:4000/show/mvsntpl684b5b298ee09ae3502",
+    "download": "http://127.0.0.1:4000/patch/mvsntpl684b5b298ee09ae3502.patch",
+    "patch": "diff --git a/src/main/java/com/lumen/orders/OrderProjectionService.java b/src/main/java/com/lumen/orders/OrderProjectionService.java\nindex 800083d..f003d83 100644\n--- a/src/main/java/com/lumen/orders/OrderProjectionService.java\n+++ b/src/main/java/com/lumen/orders/OrderProjectionService.java\n@@ -12,6 +12,9 @@ public final class OrderProjectionService {\n   public Map<String,String> load(String tenant,String orderId){\n     Map<String,String> row=functions.projection(tenant,orderId);\n     if(row==null)return null;\n+    return enrich(tenant,orderId,row);\n+  }\n+  private Map<String,String> enrich(String tenant,String orderId,Map<String,String> row){\n     Map<String,String> result=new LinkedHashMap<>(row);\n     result.put(\"accountLabel\",functions.accountLabel(tenant,row.get(\"account_id\")));\n     result.put(\"releaseLabel\",functions.releaseLabel(tenant,orderId));\ndiff --git a/src/test/java/com/lumen/orders/OrderProjectionContractTest.java b/src/test/java/com/lumen/orders/OrderProjectionContractTest.java\nnew file mode 100644\nindex 0000000..12d1f53\n--- /dev/null\n+++ b/src/test/java/com/lumen/orders/OrderProjectionContractTest.java\n@@ -0,0 +1,37 @@\n+package com.lumen.orders;\n+import java.util.*;\n+import org.junit.jupiter.api.Test;\n+import org.junit.jupiter.api.BeforeAll;\n+import java.sql.*;\n+import java.nio.file.*;\n+import static org.junit.jupiter.api.Assertions.*;\n+class OrderProjectionContractTest {\n+ static JdbcFunctions functions(){String url=System.getenv(\"SPRING_DATASOURCE_URL\");return url==null?JdbcFunctions.fromEnvironment():new JdbcFunctions(url,System.getenv(\"SPRING_DATASOURCE_USERNAME\"),System.getenv(\"SPRING_DATASOURCE_PASSWORD\"));}\n+ @BeforeAll static void loadCapturedRowsOnlyIntoScratch() throws Exception {\n+  String url=System.getenv(\"SPRING_DATASOURCE_URL\");if(url==null)return;\n+  if(!url.contains(\"/dt_test_\"))throw new IllegalStateException(\"refuse writes outside dt scratch\");\n+  try(Connection c=DriverManager.getConnection(url,System.getenv(\"SPRING_DATASOURCE_USERNAME\"),System.getenv(\"SPRING_DATASOURCE_PASSWORD\"));Statement s=c.createStatement()){s.execute(Files.readString(Path.of(\"src/test/resources/dt-fixtures/projection-baseline/pg/6f7264657273/data.sql\")));}\n+ }\n+ @Test void observedPostgresFunctionResultsRemainIdentical(){\n+  var service=new OrderProjectionService(functions());\n+  for(String tenant:List.of(\"11\",\"22\")){\n+   var expected=new LinkedHashMap<String,String>();expected.put(\"tenant_id\",tenant);expected.put(\"order_id\",\"420\");expected.put(\"account_id\",\"7\");expected.put(\"status\",\"PAID\");expected.put(\"amount\",tenant.equals(\"11\")?\"17.000001\":\"100.000001\");expected.put(\"accountLabel\",\"ACTIVE\");expected.put(\"releaseLabel\",tenant.equals(\"11\")?\"STANDARD\":\"MANUAL_REVIEW\");\n+   assertEquals(expected,service.load(tenant,\"420\"));\n+  }\n+  assertNull(service.load(\"22\",\"999\"));\n+  System.out.println(\"bindingLocalScratch=\"+System.getenv(\"DT_FUNCTIONS_URL\").contains(\"/dt_test_\"));\n+ }\n+ @Test void enrichmentPreservesTenantIdentityNullLabelsAndSourceRow(){\n+  var calls=new ArrayList<String>();var row=new LinkedHashMap<String,String>();row.put(\"account_id\",\"7\");row.put(\"amount\",\"100.000001\");var before=new LinkedHashMap<>(row);\n+  var functions=new OrderProjectionService.Functions(){\n+   public Map<String,String> projection(String t,String o){calls.add(\"projection:\"+t+\":\"+o);return row;}\n+   public String accountLabel(String t,String a){calls.add(\"account:\"+t+\":\"+a);return null;}\n+   public String releaseLabel(String t,String o){calls.add(\"release:\"+t+\":\"+o);return null;}\n+  };\n+  var result=new OrderProjectionService(functions).load(\"22\",\"9007199254740993\");\n+  assertEquals(List.of(\"projection:22:9007199254740993\",\"account:22:7\",\"release:22:9007199254740993\"),calls);assertEquals(before,row);assertNotSame(row,result);assertEquals(\"100.000001\",result.get(\"amount\"));assertTrue(result.containsKey(\"accountLabel\"));assertNull(result.get(\"accountLabel\"));assertTrue(result.containsKey(\"releaseLabel\"));assertNull(result.get(\"releaseLabel\"));\n+ }\n+ @Test void missingProjectionDoesNotCallEnrichment(){\n+  var functions=new OrderProjectionService.Functions(){public Map<String,String> projection(String t,String o){return null;}public String accountLabel(String t,String a){throw new AssertionError(\"unexpected account read\");}public String releaseLabel(String t,String o){throw new AssertionError(\"unexpected release read\");}};assertNull(new OrderProjectionService(functions).load(\"22\",\"999\"));\n+ }\n+}\ndiff --git a/src/test/resources/dt-fixtures/projection-baseline/README.txt b/src/test/resources/dt-fixtures/projection-baseline/README.txt\nnew file mode 100644\nindex 0000000..c10baab\n--- /dev/null\n+++ b/src/test/resources/dt-fixtures/projection-baseline/README.txt\n@@ -0,0 +1,10 @@\n+Fixture projection-baseline\n+\n+Load each database's schema.sql, data.sql, constraints.sql in that order.\n+The fixture_replay tool validates hashes and loads isolated scratch databases, dropping them on error.\n+For test_run give fixture_path and (for multiple datasources) fixture_bindings.\n+Kafka messages.jsonl preserves key, value, headers, partition, source offset and timestamp.\n+Use the service's test producer to publish them to its test Kafka; no live publish tool is provided.\n+Capture window: 2026-10-28T21:55:42.628Z .. 2026-10-28T21:55:43.647Z\n+Independent read-only statements across databases and Kafka; observation window and offsets are recorded, not a distributed snapshot.\n+Complete: true; gaps: 0. See manifest.json.\ndiff --git a/src/test/resources/dt-fixtures/projection-baseline/manifest.json b/src/test/resources/dt-fixtures/projection-baseline/manifest.json\nnew file mode 100644\nindex 0000000..41f3960\n--- /dev/null\n+++ b/src/test/resources/dt-fixtures/projection-baseline/manifest.json\n@@ -0,0 +1,482 @@\n+{\n+  \"version\": 1,\n+  \"plan\": {\n+    \"version\": 1,\n+    \"env\": \"fixture\",\n+    \"seeds\": [\n+      {\n+        \"db\": \"orders\",\n+        \"table\": \"sales.orders\",\n+        \"where\": {\n+          \"id\": \"420\"\n+        }\n+      }\n+\n... [23418 more chars]"
+  },
+  "requestSha256": "bfdbcb9b49fe02455fc05ae6b36f3923bb6bcbf3f52fc5f82df6f85352435327",
+  "stdoutSha256": "84133aaffede1e627813bfba1db31ad20b9e5847f565073e9db1ca39015a7880",
+  "stderrSha256": "8833364002ba0347cf1aceb79c34122d665683b2e178c8f65cfd15aae2dd1c70"
+}

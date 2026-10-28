@@ -1,0 +1,59 @@
+{
+  "started": "2026-10-28T21:53:57.670Z",
+  "ended": "2026-10-28T21:53:57.926Z",
+  "durationMs": 256,
+  "tool": "tool_describe",
+  "args": {
+    "name": "pg_function"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 949,
+  "stderrBytes": 115,
+  "stdout": "{\n  \"name\": \"pg_function\",\n  \"description\": \"Cached Postgres function or procedure: arguments (name, type, mode, defaults), result, language, volatility, body (clipped), what it reads/writes/calls, and what touches it: services calling it (file:line), other functions, triggers executing it, views. Name as schema.fn or fn.\",\n  \"group\": \"pg\",\n  \"origin\": \"built-in\",\n  \"execution\": {\n    \"protocol\": \"dt.tool/v1\",\n    \"transport\": \"in-process\"\n  },\n  \"inputSchema\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"name\": {\n        \"type\": \"string\",\n        \"description\": \"schema.function\"\n      },\n      \"env\": {\n        \"type\": \"string\",\n        \"enum\": [\n          \"dev\",\n          \"fixture\"\n        ],\n        \"default\": \"dev\",\n        \"description\": \"Environment\"\n      },\n      \"body\": {\n        \"type\": \"boolean\",\n        \"default\": true,\n        \"description\": \"Include the body\"\n      }\n    },\n    \"required\": [\n      \"name\"\n    ]\n  }\n}\n",
+  "stderr": "21:53:57 dt call tool_describe#13of start {\"name\":\"pg_function\"} (cli)\n21:53:57 dt call tool_describe#13of ok 18ms\n",
+  "result": {
+    "name": "pg_function",
+    "description": "Cached Postgres function or procedure: arguments (name, type, mode, defaults), result, language, volatility, body (clipped), what it reads/writes/calls, and what touches it: services calling it (file:line), other functions, triggers executing it, views. Name as schema.fn or fn.",
+    "group": "pg",
+    "origin": "built-in",
+    "execution": {
+      "protocol": "dt.tool/v1",
+      "transport": "in-process"
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "schema.function"
+        },
+        "env": {
+          "type": "string",
+          "enum": [
+            "dev",
+            "fixture"
+          ],
+          "default": "dev",
+          "description": "Environment"
+        },
+        "body": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include the body"
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  "requestSha256": "1574364f22e10b595de2d58ec0c10158688ec7d7bb975fea222d6be91697a982",
+  "stdoutSha256": "456c378d8aa4b23f4ed11b56327eb91311b11964d14b32a0eab7b98d3d2cd72c",
+  "stderrSha256": "1e5875de640e20bb71f33ff15df87a03831ec21921120c9eb9e0f8cba4aa8628"
+}
