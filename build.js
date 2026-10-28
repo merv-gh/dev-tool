@@ -18,6 +18,8 @@ const bundle = esbuild.buildSync({
 }).outputFiles[0].text.replace(/^#!.*\n(?=#!)/, ''); // cli.js has its own shebang
 
 const files = { 'dt.js': bundle };
+// Spawned protocol workers are runtime assets, not imports reachable by esbuild.
+files['differential-worker.js'] = fs.readFileSync(path.join(ROOT, 'lib', 'differential-worker.js'));
 for (const f of fs.readdirSync(path.join(ROOT, 'web'), { recursive: true })) {
   const p = path.join(ROOT, 'web', f);
   if (fs.statSync(p).isFile()) files[`web/${f.split(path.sep).join('/')}`] = fs.readFileSync(p);

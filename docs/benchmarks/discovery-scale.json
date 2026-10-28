@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "kind": "synthetic-discovery-scale",
+  "observedAt": "2026-10-28T22:24:03.477Z",
+  "provenance": {
+    "node": "v24.22.0",
+    "platform": "darwin",
+    "architecture": "x64",
+    "cpu": "Intel(R) Core(TM) i9-9980HK CPU @ 2.40GHz",
+    "cpus": 16,
+    "memoryBytes": 68719476736,
+    "sourceRevision": "2a2f0dead19bd6e4ed3b79398453c0f930a67e82",
+    "fixtureSha256": "1f8e667b8ec08cd3901967ed950d9f2a82972496aa1088d375652cef3d21a8f8"
+  },
+  "fixture": {
+    "additionalTools": 1000,
+    "enabledTools": 1163,
+    "samples": 100,
+    "ranker": "legacy",
+    "initialTools": 5,
+    "initialSchemaBytes": 2989
+  },
+  "timing": {
+    "coldSearchMs": 161.57254500000002,
+    "coldTotalMs": 220.45675500000002,
+    "warmP50Ms": 15.84026300000005,
+    "warmP95Ms": 33.69918400000006,
+    "warmMaxMs": 120.29256999999984
+  },
+  "output": {
+    "maxBytes": 2207,
+    "budgetBytes": 4096,
+    "exactNameHits": 100
+  },
+  "memory": {
+    "rssBytes": 100614144,
+    "peakRssBytes": 100618240
+  },
+  "gates": {
+    "warmP95Under250ms": true,
+    "outputBounded": true,
+    "exactNameResolution": true,
+    "smallInitialProfile": true
+  },
+  "limits": "Synthetic capability metadata only; no network/inference. Impact scale is measured separately. Hardware/load affect latency; no guarantee for unmeasured plugins or models."
+}

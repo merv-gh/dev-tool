@@ -15,7 +15,10 @@
         { "id": "inventory", "goal": "Inventory every known read and action from the selected service/passport", "tools": ["scenario_inventory", "passport"] },
         { "id": "plan", "goal": "Bind scoped relational tuples and explicit PG/ES/Kafka obligations, schemas and windows", "tools": ["fixture_plan", "scenario_state_plan"] },
         { "id": "capture", "goal": "Capture read-only source state and inspect completeness, precision, hashes and consistency", "tools": ["fixture_capture", "fixture_inspect", "scenario_state_capture"] },
-        { "id": "replay", "goal": "Export resources, replay into owned isolated dependencies and independently observe effects", "tools": ["fixture_export", "fixture_replay", "scenario_run", "test_run"] }
+        { "id": "export", "goal": "Export hashed test resources and independently verify SQL constraints", "tools": ["fixture_export", "fixture_replay"] },
+        { "id": "replay", "goal": "Preflight reviewed native dependency adapters, start isolated replay and inspect connection bindings", "tools": ["fixture_runtime_preflight", "fixture_runtime_start", "fixture_runtime_bindings"] },
+        { "id": "effects", "goal": "Freeze independent effects, execute actual application tests, then observe and check writes or rejected-action no-writes", "tools": ["fixture_runtime_arm", "test_run", "fixture_runtime_observe", "fixture_runtime_check", "scenario_run"] },
+        { "id": "cleanup", "goal": "Stop only owned resources and retain cleanup failures", "tools": ["fixture_runtime_stop", "fixture_runtime_cleanup"] }
       ], "boundaries": ["Separate per-source snapshots do not establish a distributed atomic snapshot or exactly-once delivery.", "Truncated windows, missing schemas/codecs or unbound reads must remain gaps."]
     },
     {
