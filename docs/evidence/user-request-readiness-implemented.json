@@ -1,6 +1,6 @@
 {
   "protocol": "dt.user-request-readiness/v1",
-  "generatedAt": "2026-10-28T22:56:42.188Z",
+  "generatedAt": "2026-10-28T22:59:16.654Z",
   "networkUsed": false,
   "observations": {
     "columnAccess": {
@@ -77,8 +77,8 @@
     "concurrentTestIdentity": {
       "proof": "argument-routing-with-stubbed-project-runner",
       "realProjectExecuted": false,
-      "firstJob": "mvsprs829cd0b0",
-      "secondJob": "mvsprs8gcea815",
+      "firstJob": "mvspv3e7f6c362",
+      "secondJob": "mvspv3ev950d4d",
       "executionsForDifferentEnvironments": 2,
       "firstForwardedDb": {
         "env": "dev",
@@ -98,7 +98,7 @@
         "name": "orders:public.orders.status",
         "env": "dev"
       },
-      "ms": 97.25,
+      "ms": 106.315,
       "outputBytes": 1579
     },
     {
@@ -107,7 +107,7 @@
         "name": "orders:public.orders",
         "env": "dev"
       },
-      "ms": 55.731,
+      "ms": 63.586,
       "outputBytes": 607
     },
     {
@@ -116,7 +116,7 @@
         "target": "public.orders.status",
         "env": "dev"
       },
-      "ms": 31.505,
+      "ms": 28.564,
       "outputBytes": 1099
     },
     {
@@ -148,7 +148,7 @@
           }
         ]
       },
-      "ms": 49.09,
+      "ms": 39.237,
       "outputBytes": 1365
     },
     {
@@ -161,7 +161,7 @@
         "env": "dev",
         "db": "orders"
       },
-      "ms": 18.098,
+      "ms": 29.304,
       "outputBytes": 143
     },
     {
@@ -174,7 +174,7 @@
         "env": "staging",
         "db": "another-database"
       },
-      "ms": 11.764,
+      "ms": 20.21,
       "outputBytes": 143
     },
     {
@@ -186,7 +186,7 @@
         ],
         "env": "dev"
       },
-      "ms": 15.286,
+      "ms": 18.293,
       "outputBytes": 143
     }
   ]

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "kind": "synthetic-discovery-scale",
-  "observedAt": "2026-10-28T22:24:03.477Z",
+  "observedAt": "2026-10-28T22:59:20.437Z",
   "provenance": {
     "node": "v24.22.0",
     "platform": "darwin",
@@ -9,23 +9,23 @@
     "cpu": "Intel(R) Core(TM) i9-9980HK CPU @ 2.40GHz",
     "cpus": 16,
     "memoryBytes": 68719476736,
-    "sourceRevision": "2a2f0dead19bd6e4ed3b79398453c0f930a67e82",
+    "sourceRevision": "82d14228751007d77bfc5f4b6f944d02097c35f0",
     "fixtureSha256": "1f8e667b8ec08cd3901967ed950d9f2a82972496aa1088d375652cef3d21a8f8"
   },
   "fixture": {
     "additionalTools": 1000,
-    "enabledTools": 1163,
+    "enabledTools": 1172,
     "samples": 100,
     "ranker": "legacy",
     "initialTools": 5,
     "initialSchemaBytes": 2989
   },
   "timing": {
-    "coldSearchMs": 161.57254500000002,
-    "coldTotalMs": 220.45675500000002,
-    "warmP50Ms": 15.84026300000005,
-    "warmP95Ms": 33.69918400000006,
-    "warmMaxMs": 120.29256999999984
+    "coldSearchMs": 332.955596,
+    "coldTotalMs": 470.760111,
+    "warmP50Ms": 36.86948700000016,
+    "warmP95Ms": 63.84020399999997,
+    "warmMaxMs": 157.39745799999946
   },
   "output": {
     "maxBytes": 2207,
@@ -33,8 +33,8 @@
     "exactNameHits": 100
   },
   "memory": {
-    "rssBytes": 100614144,
-    "peakRssBytes": 100618240
+    "rssBytes": 98607104,
+    "peakRssBytes": 98615296
   },
   "gates": {
     "warmP95Under250ms": true,

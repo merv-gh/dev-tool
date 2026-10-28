@@ -17,7 +17,7 @@
         { "id": "capture", "goal": "Capture read-only source state and inspect completeness, precision, hashes and consistency", "tools": ["fixture_capture", "fixture_validate", "scenario_state_capture"] },
         { "id": "export", "goal": "Export hashed test resources and independently verify SQL constraints", "tools": ["fixture_export", "fixture_replay"] },
         { "id": "replay", "goal": "Preflight reviewed native dependency adapters, start isolated replay and inspect connection bindings", "tools": ["fixture_runtime_preflight", "fixture_runtime_start", "fixture_runtime_bindings"] },
-        { "id": "effects", "goal": "Freeze independent effects, execute actual application tests, then observe and check writes or rejected-action no-writes", "tools": ["fixture_runtime_arm", "test_run", "fixture_runtime_observe", "fixture_runtime_check", "scenario_run"] },
+        { "id": "effects", "goal": "Freeze independent effects; execute actual application tests with fixture_runtime and explicit datasource bindings, or publish a declared owned broker action; then independently observe and check writes or rejected-action no-writes", "tools": ["fixture_runtime_arm", "test_run", "fixture_runtime_publish", "fixture_runtime_observe", "fixture_runtime_check", "scenario_run"] },
         { "id": "cleanup", "goal": "Stop only owned resources and retain cleanup failures", "tools": ["fixture_runtime_stop", "fixture_runtime_cleanup"] }
       ], "boundaries": ["Separate per-source snapshots do not establish a distributed atomic snapshot or exactly-once delivery.", "Truncated windows, missing schemas/codecs or unbound reads must remain gaps."]
     },

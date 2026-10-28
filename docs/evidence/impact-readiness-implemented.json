@@ -1,7 +1,7 @@
 {
   "protocol": "dt.impact-readiness/v1",
-  "revision": "250abfa6ecf475f0e6c7b526e48f1714bf3fa52f",
-  "generatedAt": "2026-10-28T22:33:20.176Z",
+  "revision": "82d14228751007d77bfc5f4b6f944d02097c35f0",
+  "generatedAt": "2026-10-28T22:59:19.709Z",
   "isolatedLocalFixtures": true,
   "networkUsed": false,
   "ready": true,
@@ -37,7 +37,7 @@
             "target": "public.orders",
             "env": "dev"
           },
-          "ms": 84.795,
+          "ms": 163.449,
           "outputBytes": 761
         },
         {
@@ -46,7 +46,7 @@
             "target": "table:alpha:public.orders",
             "env": "dev"
           },
-          "ms": 13.766,
+          "ms": 59.483,
           "outputBytes": 934
         }
       ]
@@ -116,7 +116,7 @@
             "q": "MoneyMath round",
             "kind": "method"
           },
-          "ms": 36.058,
+          "ms": 72.511,
           "outputBytes": 1085
         },
         {
@@ -125,7 +125,7 @@
             "target": "MoneyMath#round(int)",
             "env": "dev"
           },
-          "ms": 12.759,
+          "ms": 30.24,
           "outputBytes": 820
         },
         {
@@ -134,7 +134,7 @@
             "target": "code:LIB%2Fv1@version-one:fixture.MoneyMath#round(int)",
             "env": "dev"
           },
-          "ms": 15.173,
+          "ms": 35.895,
           "outputBytes": 1277
         }
       ]
@@ -161,7 +161,7 @@
             "target": "topic:orders.paid",
             "env": "dev"
           },
-          "ms": 120.973,
+          "ms": 166.766,
           "outputBytes": 894
         },
         {
@@ -170,7 +170,7 @@
             "target": "GET /billing/42",
             "env": "dev"
           },
-          "ms": 12.484,
+          "ms": 20.355,
           "outputBytes": 908
         },
         {
@@ -179,7 +179,7 @@
             "target": "GET /stage-only",
             "env": "dev"
           },
-          "ms": 8.553,
+          "ms": 13.408,
           "outputBytes": 651
         }
       ]
@@ -206,7 +206,7 @@
             "target": "GET /before",
             "env": "dev"
           },
-          "ms": 114.34,
+          "ms": 240.567,
           "outputBytes": 897
         },
         {
@@ -215,7 +215,7 @@
             "target": "GET /after",
             "env": "dev"
           },
-          "ms": 12.351,
+          "ms": 22.033,
           "outputBytes": 894
         },
         {
@@ -224,7 +224,7 @@
             "target": "GET /before",
             "env": "dev"
           },
-          "ms": 7.13,
+          "ms": 19.88,
           "outputBytes": 647
         },
         {
@@ -233,7 +233,7 @@
             "target": "GET /after",
             "env": "dev"
           },
-          "ms": 11.083,
+          "ms": 15.039,
           "outputBytes": 894
         }
       ]
@@ -277,7 +277,7 @@
             "env": "dev",
             "depth": 2
           },
-          "ms": 91.818,
+          "ms": 210.898,
           "outputBytes": 1465
         },
         {
@@ -287,7 +287,7 @@
             "env": "dev",
             "depth": 8
           },
-          "ms": 17.558,
+          "ms": 29.389,
           "outputBytes": 1301
         }
       ]
