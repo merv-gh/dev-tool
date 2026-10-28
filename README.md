@@ -69,6 +69,8 @@ From the sources instead: `npm ci`, then `node cli.js …`. After changing them,
 
 The development loop has `npm run test:local`, `npm run test:changed -- --list`, targeted `npm run test:files -- lib/fastrun.js`, and `npm run bench:dev`. Final verification stays `npm run build && npm test`. See the [performance plan and measurements](docs/dev-performance-plan.md), or run `node demo/reproduction.js` for an isolated related-data example.
 
+The independent [developer/tester completeness review](docs/developer-tool-completeness-review.md) lists remaining work and acceptance tests, including real-service scenario orchestration, richer collection suites and prefilled PostgreSQL template clones.
+
 ## Plug it in
 
 ### Your own Open WebUI
