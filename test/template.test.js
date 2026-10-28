@@ -41,6 +41,7 @@ test('all PostgreSQL lifecycle stages are independently exposed with semantic de
   for (const name of ['testdb_capabilities','testdb_template_pin','testdb_template_plan','testdb_lease_inspect','testdb_initialize','testdb_resources','testdb_template_build','testdb_template_list','testdb_template_inspect','testdb_template_verify','testdb_template_invalidate','testdb_clone','testdb_lease_renew','testdb_reset','testdb_release','testdb_gc']) {
     assert.equal(tools.filter(t => t.name === name).length, 1);
     assert.ok(tools.find(t => t.name === name).description.length > 60);
+    if(name === 'testdb_template_build'){assert.deepEqual(tools.find(t=>t.name===name).input.mode.enum,['snapshot','migrations-empty','upgrade']);assert.equal(tools.find(t=>t.name===name).input.sanity.type,'array');}
   }
 });
 

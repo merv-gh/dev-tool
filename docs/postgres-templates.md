@@ -65,11 +65,11 @@ finally { await T.release(run.lease); }
 
 The internal convenience `cleanup()` function is never part of a tool response or persisted manifest. Call `release(lease)` across transport/language boundaries.
 
-Preparation also supports explicit SQL modes through the programmatic adapter:
+Preparation also supports explicit SQL modes through the tool inputs and programmatic adapter:
 
 - `snapshot`: load exact verified fixture SQL, the existing test runner's mode.
-- `migrations-empty`: run caller-supplied ordered migration SQL from an empty database; the mode changes the content identity.
-- `upgrade`: use a verified immutable `base` key, apply caller-supplied ordered migration SQL to a private copy, then validate and freeze a new base. The old base remains unchanged.
+- `migrations-empty`: run caller-supplied ordered migration SQL (in verified fixture SQL files for the tools) from an empty database; the mode changes the content identity.
+- `upgrade`: use a verified immutable `base` key, apply caller-supplied ordered migration SQL (in verified fixture SQL files for the tools) to a private copy, then validate and freeze a new base. The old base remains unchanged.
 
 These modes do not discover or execute Flyway/Liquibase engines. Use the existing full project build for migration-engine proof; source snapshots must not be reported as that proof.
 
