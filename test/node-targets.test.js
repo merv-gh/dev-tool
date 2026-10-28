@@ -79,7 +79,7 @@ test('unsupported return encoding cannot masquerade as equivalent errors and spa
   W.write('before', 'src/projection.cjs', { content: 'exports.load=()=>Array(1)' });
   W.write('after', 'src/projection.cjs', { content: 'exports.load=()=>[null]' });
   assert.equal((await run()).outcome, 'different');
-  assert.ok((await require('../lib/tools').call('test_targets', {})).targets.find(t => t.id === 'captured').required.includes('fixture_path'));
+  assert.ok((await require('../lib/tools').call('test_targets', {})).targets.find(t => t.id === 'captured').requiredOneOf.includes('fixture_path'));
 });
 test('differential byte views and regexp state are exact; opaque or hidden state requires an adapter', async () => {
   const run = () => call('differential_check', { profile: 'projection', baseline: 'before', candidate: 'after', inputs: [{ id: 'types', args: [] }] });
