@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dt:contracts:fixture-runtime:v1",
+  "title": "Reviewed native fixture runtime profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "adapter"],
+  "properties": {
+    "version": { "const": 1 },
+    "adapter": { "const": "native-containers" },
+    "images": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "pg": { "type": "string", "description": "Existing PostgreSQL Docker image" },
+        "es": { "type": "string", "description": "Existing Elasticsearch Docker image" },
+        "kafka": { "type": "string", "description": "Existing Redpanda image with rpk" }
+      }
+    },
+    "ttlMs": { "type": "integer", "minimum": 1000, "maximum": 3600000 },
+    "readyTimeoutMs": { "type": "integer", "minimum": 1000, "maximum": 300000 },
+    "observationLimit": { "type": "integer", "minimum": 1, "maximum": 10000 },
+    "kafka": {
+      "type": "object", "additionalProperties": false,
+      "properties": { "allowOffsetRemap": { "type": "boolean", "description": "Must be true for Kafka replay. Original offsets/timestamps remain metadata; broker values are independently observed." } }
+    }
+  }
+}

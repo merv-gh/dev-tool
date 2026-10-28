@@ -1,0 +1,208 @@
+{
+  "version": 1,
+  "runAt": "2026-10-28T22:43:36.501Z",
+  "proofType": "real-owned-containers",
+  "preflight": {
+    "version": 1,
+    "ok": true,
+    "gaps": [],
+    "images": {
+      "pg": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+      "es": "sha256:224c75e346bd745ce908f06a1cbad7bf10988961dcdcdfccb22556b3f856b3f0",
+      "kafka": "sha256:04baa40ed34edf86028396f762be802f3b6b0acaab65e9de696a3f15d54c550f"
+    },
+    "profile": "c1ac70c6e80190734c3bfaff99ee07113ada82570326653e681821fd4a1febea",
+    "capabilities": {
+      "postgres": "SQL/constraints, exact numeric strings",
+      "es": "mappings/documents",
+      "kafka": "JSON/string keys/values, headers, partitions; offsets/timestamps remapped",
+      "distributedSnapshot": false
+    }
+  },
+  "assertions": [
+    "two PostgreSQL databases with tenant collisions",
+    "exact bigint and decimal strings",
+    "real ES mappings/documents/PIT",
+    "real Kafka partitions, tombstone and empty-string distinction",
+    "immutable pre-action effects",
+    "protected committed-write journal",
+    "PG and ES update/revert negative controls",
+    "source repeatable-read snapshot under concurrent committed update",
+    "source write rejection",
+    "TRUNCATE statement audit",
+    "exact successful SQL effects",
+    "owned cleanup and repeated stop"
+  ],
+  "applicationExecution": "test harness operations; arbitrary service execution is caller-owned",
+  "runtime": {
+    "version": 1,
+    "adapter": "native-containers/v1",
+    "id": "7e968dbca4d5422d8230a82e",
+    "workspace": "app",
+    "directory": "src/test/resources/dt-fixtures/native-live",
+    "status": "ready",
+    "expiresAt": "2026-10-28T22:53:37.233Z",
+    "proof": {
+      "level": "native-dependencies",
+      "applicationExecuted": false,
+      "runtimeReadsVerified": false,
+      "sourceWrites": false,
+      "network": "owned Docker bridge with loopback publications; outbound network is not blocked",
+      "distributedSnapshot": false,
+      "sourceKafkaOffsetsPreserved": false,
+      "sourceKafkaTimestampsPreserved": false,
+      "imageIds": {
+        "pg": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+        "es": "sha256:224c75e346bd745ce908f06a1cbad7bf10988961dcdcdfccb22556b3f856b3f0",
+        "kafka": "sha256:04baa40ed34edf86028396f762be802f3b6b0acaab65e9de696a3f15d54c550f"
+      }
+    },
+    "sources": {
+      "pg": [
+        "billing",
+        "orders"
+      ],
+      "es": [
+        "order-read"
+      ],
+      "kafka": [
+        "orders.paid",
+        "orders.deleted",
+        "orders.empty"
+      ]
+    },
+    "timings": {
+      "startMs": 177158
+    }
+  },
+  "initialEffectsPassed": true,
+  "capture": {
+    "complete": true,
+    "counts": {
+      "rows": 2,
+      "queries": 2,
+      "messages": 1,
+      "documents": 1
+    },
+    "consistency": {
+      "scope": "per-source",
+      "distributedSnapshot": false,
+      "databases": {
+        "billing": {
+          "version": 1,
+          "adapter": "postgres-snapshot/v1",
+          "database": "billing",
+          "sourceDatabase": "fixture_62696c6c696e67",
+          "snapshot": "751:751:",
+          "isolation": "repeatable read",
+          "readOnly": true,
+          "startedAt": "2026-10-28 22:47:31.764904+00",
+          "finishedAt": "2026-10-28T22:47:36.601Z",
+          "identity": "f86d9cf63f5dd622ca0f152b06f27622ca0ff7f656d60c7fd99ab0545509c695"
+        },
+        "orders": {
+          "version": 1,
+          "adapter": "postgres-snapshot/v1",
+          "database": "orders",
+          "sourceDatabase": "fixture_6f7264657273",
+          "snapshot": "751:751:",
+          "isolation": "repeatable read",
+          "readOnly": true,
+          "startedAt": "2026-10-28 22:47:31.838232+00",
+          "finishedAt": "2026-10-28T22:47:36.601Z",
+          "identity": "32a21e1b27de3fdd9e271191845052f4f7329a82641f25e00da3ca55ef67c52d"
+        }
+      },
+      "mode": "snapshot",
+      "reread": "not requested"
+    },
+    "es": {
+      "version": 1,
+      "adapter": "elasticsearch-pit/v1",
+      "pointInTimeVerified": true,
+      "pitFingerprint": "720dd7274eb8fa32cfd59b8154f16dc805069d5e488f7def231c51ff93e2da0b",
+      "startedAt": "2026-10-28T22:47:36.336Z",
+      "finishedAt": "2026-10-28T22:47:36.563Z",
+      "exactTotal": 1,
+      "mappingFingerprint": "5c62f879d77156197b4f809c70119330ccea4bed0c5ffacae8cf010dc8c45037",
+      "reviewedMappingFingerprint": "a4a845406bbaf245bccce5a58ffd1a7f1950340d2bb90a81bcfd417c7fd09159",
+      "settingsFingerprint": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "reviewedSettingsFingerprint": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    }
+  },
+  "successfulEffects": {
+    "version": 1,
+    "id": "af665346f8b6cd8efc4895dd",
+    "ok": true,
+    "checks": [
+      {
+        "id": "pg:orders:public.orders",
+        "assertion": "rows",
+        "ok": true
+      },
+      {
+        "id": "pg:orders:public.orders",
+        "assertion": "added",
+        "ok": true
+      },
+      {
+        "id": "pg:orders:public.orders",
+        "assertion": "removed",
+        "ok": true
+      },
+      {
+        "id": "pg:billing:public.accounts",
+        "assertion": "no-unlisted-observed-effects",
+        "ok": true
+      },
+      {
+        "assertion": "quiet-window-stable",
+        "ok": true
+      }
+    ],
+    "expectationDigest": "f5c914c3ed63e62dda1973a1ce75b2f5886516d7c6c6836e2ebf600486de7969",
+    "baselineDigest": "e9993c6530d6e0e03bf49c6a73a364ab9dbb4eff1d9f93748b49c67ca55d9da8",
+    "observationDigest": "792590476b369deb14d8586b0bb0f8a59b66623db3637b4de2e1d9936ae4ab38",
+    "changes": {
+      "pg:billing:public.accounts": {
+        "added": [],
+        "removed": []
+      },
+      "pg:orders:public.orders": {
+        "added": [
+          {
+            "account_id": "77",
+            "amount": "12345678901234567890.123456",
+            "id": "9007199254740993",
+            "status": "RELEASED",
+            "tenant_id": "22"
+          }
+        ],
+        "removed": [
+          {
+            "account_id": "77",
+            "amount": "12345678901234567890.123456",
+            "id": "9007199254740993",
+            "status": "PAID",
+            "tenant_id": "22"
+          }
+        ]
+      }
+    },
+    "proof": {
+      "independentOfApplicationReport": true,
+      "snapshotOnly": false,
+      "transientWritesVerified": {
+        "pg": "committed row/statement audit in protected schema",
+        "es": "index identity, operation counters and document sequence metadata during the owned instance lifetime",
+        "kafka": "append-only envelopes within observed topic windows"
+      },
+      "kafkaProducerTransactionsVerified": false,
+      "level": "native-observed-effects",
+      "applicationExecuted": "caller-owned; not inferred",
+      "quietMs": 20
+    }
+  },
+  "passed": true,
+  "cleanupVerified": true
+}
