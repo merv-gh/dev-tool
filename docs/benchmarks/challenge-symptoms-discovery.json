@@ -1,6 +1,8 @@
 {
   "version": 1,
   "kind": "untouched-query-discovery-comparison",
+  "ranker": "bm25",
+  "experimentalOptIn": true,
   "baseline": "4b6dc31 deterministic substring ranking algorithm replay over original built-in descriptions",
   "current": "real tool_search registry calls; temporary synthetic config; no external systems or LLM",
   "corpusSha256": "2282f6098c2dc9ba48e55b6066205c78c8cb12d10c2ddbcd7c2955947cfeda48",
@@ -20,6 +22,7 @@
       ],
       "lexical": {
         "mode": "normalized-keywords",
+        "ranker": "bm25",
         "matchedTerms": [
           "total"
         ],
@@ -50,6 +53,7 @@
       ],
       "lexical": {
         "mode": "normalized-keywords",
+        "ranker": "bm25",
         "matchedTerms": [
           "one",
           "checkout",
@@ -83,6 +87,7 @@
       ],
       "lexical": {
         "mode": "normalized-keywords",
+        "ranker": "bm25",
         "matchedTerms": [
           "library",
           "owned",
@@ -116,6 +121,7 @@
       ],
       "lexical": {
         "mode": "normalized-keywords",
+        "ranker": "bm25",
         "matchedTerms": [
           "only",
           "expire"
@@ -146,6 +152,7 @@
       ],
       "lexical": {
         "mode": "normalized-keywords",
+        "ranker": "bm25",
         "matchedTerms": [
           "replay",
           "one",
@@ -178,6 +185,7 @@
       ],
       "lexical": {
         "mode": "normalized-keywords",
+        "ranker": "bm25",
         "matchedTerms": [
           "release",
           "rows"
@@ -209,6 +217,7 @@
       ],
       "lexical": {
         "mode": "normalized-keywords",
+        "ranker": "bm25",
         "matchedTerms": [
           "implement",
           "cancellation",
@@ -239,6 +248,7 @@
       ],
       "lexical": {
         "mode": "normalized-keywords",
+        "ranker": "bm25",
         "matchedTerms": [
           "write",
           "inventory",
@@ -270,6 +280,7 @@
       ],
       "lexical": {
         "mode": "normalized-keywords",
+        "ranker": "bm25",
         "matchedTerms": [
           "scheduled",
           "order"
@@ -301,6 +312,7 @@
       ],
       "lexical": {
         "mode": "normalized-keywords",
+        "ranker": "bm25",
         "matchedTerms": [
           "endpoint",
           "internal"
@@ -332,6 +344,7 @@
       ],
       "lexical": {
         "mode": "normalized-keywords",
+        "ranker": "bm25",
         "matchedTerms": [
           "shared",
           "change",
@@ -365,6 +378,7 @@
       ],
       "lexical": {
         "mode": "normalized-keywords",
+        "ranker": "bm25",
         "matchedTerms": [
           "database",
           "function",
@@ -396,6 +410,7 @@
       ],
       "lexical": {
         "mode": "normalized-keywords",
+        "ranker": "bm25",
         "matchedTerms": [
           "foreign",
           "key",
@@ -429,6 +444,7 @@
       ],
       "lexical": {
         "mode": "normalized-keywords",
+        "ranker": "bm25",
         "matchedTerms": [
           "cross",
           "database",
@@ -461,6 +477,7 @@
       ],
       "lexical": {
         "mode": "normalized-keywords",
+        "ranker": "bm25",
         "matchedTerms": [
           "inspect",
           "event",
@@ -493,6 +510,7 @@
       ],
       "lexical": {
         "mode": "normalized-keywords",
+        "ranker": "bm25",
         "matchedTerms": [
           "find",
           "api",
@@ -523,6 +541,7 @@
       ],
       "lexical": {
         "mode": "normalized-keywords",
+        "ranker": "bm25",
         "matchedTerms": [
           "repeat",
           "known",
@@ -553,6 +572,7 @@
       ],
       "lexical": {
         "mode": "normalized-keywords",
+        "ranker": "bm25",
         "matchedTerms": [
           "service",
           "unavailable",
@@ -583,6 +603,7 @@
       ],
       "lexical": {
         "mode": "normalized-keywords",
+        "ranker": "bm25",
         "matchedTerms": [
           "open",
           "isolated",
@@ -615,6 +636,7 @@
       ],
       "lexical": {
         "mode": "normalized-keywords",
+        "ranker": "bm25",
         "matchedTerms": [
           "run",
           "jvm",
@@ -647,6 +669,7 @@
       ],
       "lexical": {
         "mode": "normalized-keywords",
+        "ranker": "bm25",
         "matchedTerms": [
           "cancel",
           "long",
@@ -679,6 +702,7 @@
       ],
       "lexical": {
         "mode": "normalized-keywords",
+        "ranker": "bm25",
         "matchedTerms": [
           "run",
           "node",
@@ -710,6 +734,7 @@
       ],
       "lexical": {
         "mode": "normalized-keywords",
+        "ranker": "bm25",
         "matchedTerms": [
           "exactly",
           "once",
@@ -744,6 +769,7 @@
       ],
       "lexical": {
         "mode": "normalized-keywords",
+        "ranker": "bm25",
         "matchedTerms": [
           "commit",
           "across",

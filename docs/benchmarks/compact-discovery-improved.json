@@ -1,6 +1,8 @@
 {
   "version": 1,
   "kind": "deterministic-registry-retrieval",
+  "ranker": "bm25",
+  "experimentalOptIn": true,
   "corpusVersion": 1,
   "corpusSha256": "1a2b1440a4d16192b612bb533e6986aad675e4fa46f92eee1f1e6d4eea987968",
   "registrySha256": "44a7a0932d103a52232b12d3876907b527d9c54deda59ddadbb8bc7ab858bfed",
@@ -66,13 +68,13 @@
   "latencyMs": {
     "kind": "warm in-process real registry calls including local trace/history; no HTTP or model inference",
     "samples": 32,
-    "p50": 5.846925000000056,
-    "p95": 20.43950899999993,
-    "max": 43.065044
+    "p50": 8.215868,
+    "p95": 78.90467699999999,
+    "max": 118.79499899999996
   },
   "context": {
-    "meanSearchBytes": 2457,
-    "maxSearchBytes": 3014,
+    "meanSearchBytes": 2473,
+    "maxSearchBytes": 3030,
     "meanTop3DescriptionBytes": 3060.4375
   },
   "cases": [
@@ -94,8 +96,8 @@
       "recallAt3": 0.6666666666666666,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 2300,
-        "estimatedTokens": 575,
+        "utf8Bytes": 2316,
+        "estimatedTokens": 579,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -120,8 +122,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 2889,
-        "estimatedTokens": 723,
+        "utf8Bytes": 2905,
+        "estimatedTokens": 727,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -146,8 +148,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 2262,
-        "estimatedTokens": 566,
+        "utf8Bytes": 2278,
+        "estimatedTokens": 570,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -172,8 +174,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 2029,
-        "estimatedTokens": 508,
+        "utf8Bytes": 2045,
+        "estimatedTokens": 512,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -198,8 +200,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 2566,
-        "estimatedTokens": 642,
+        "utf8Bytes": 2582,
+        "estimatedTokens": 646,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -224,8 +226,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 2731,
-        "estimatedTokens": 683,
+        "utf8Bytes": 2747,
+        "estimatedTokens": 687,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -250,8 +252,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 2914,
-        "estimatedTokens": 729,
+        "utf8Bytes": 2930,
+        "estimatedTokens": 733,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -277,8 +279,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 2804,
-        "estimatedTokens": 701,
+        "utf8Bytes": 2820,
+        "estimatedTokens": 705,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -304,8 +306,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 2186,
-        "estimatedTokens": 547,
+        "utf8Bytes": 2202,
+        "estimatedTokens": 551,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -330,8 +332,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 2584,
-        "estimatedTokens": 646,
+        "utf8Bytes": 2600,
+        "estimatedTokens": 650,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -356,8 +358,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 2417,
-        "estimatedTokens": 605,
+        "utf8Bytes": 2433,
+        "estimatedTokens": 609,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -382,8 +384,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 2647,
-        "estimatedTokens": 662,
+        "utf8Bytes": 2663,
+        "estimatedTokens": 666,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -408,8 +410,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 2463,
-        "estimatedTokens": 616,
+        "utf8Bytes": 2479,
+        "estimatedTokens": 620,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -434,8 +436,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 2478,
-        "estimatedTokens": 620,
+        "utf8Bytes": 2494,
+        "estimatedTokens": 624,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -460,8 +462,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 2290,
-        "estimatedTokens": 573,
+        "utf8Bytes": 2306,
+        "estimatedTokens": 577,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -486,8 +488,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 2582,
-        "estimatedTokens": 646,
+        "utf8Bytes": 2598,
+        "estimatedTokens": 650,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -513,8 +515,8 @@
       "recallAt3": 0.5,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 2378,
-        "estimatedTokens": 595,
+        "utf8Bytes": 2394,
+        "estimatedTokens": 599,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -539,8 +541,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 2525,
-        "estimatedTokens": 632,
+        "utf8Bytes": 2541,
+        "estimatedTokens": 636,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -565,8 +567,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 2619,
-        "estimatedTokens": 655,
+        "utf8Bytes": 2635,
+        "estimatedTokens": 659,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -591,8 +593,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 3014,
-        "estimatedTokens": 754,
+        "utf8Bytes": 3030,
+        "estimatedTokens": 758,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -617,8 +619,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 2555,
-        "estimatedTokens": 639,
+        "utf8Bytes": 2571,
+        "estimatedTokens": 643,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -643,8 +645,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 2745,
-        "estimatedTokens": 687,
+        "utf8Bytes": 2761,
+        "estimatedTokens": 691,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -669,8 +671,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 2819,
-        "estimatedTokens": 705,
+        "utf8Bytes": 2835,
+        "estimatedTokens": 709,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -695,8 +697,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 2709,
-        "estimatedTokens": 678,
+        "utf8Bytes": 2725,
+        "estimatedTokens": 682,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -722,8 +724,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 1941,
-        "estimatedTokens": 486,
+        "utf8Bytes": 1957,
+        "estimatedTokens": 490,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -748,8 +750,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 1883,
-        "estimatedTokens": 471,
+        "utf8Bytes": 1899,
+        "estimatedTokens": 475,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -774,8 +776,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 2306,
-        "estimatedTokens": 577,
+        "utf8Bytes": 2322,
+        "estimatedTokens": 581,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -800,8 +802,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 2283,
-        "estimatedTokens": 571,
+        "utf8Bytes": 2299,
+        "estimatedTokens": 575,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -826,8 +828,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 2346,
-        "estimatedTokens": 587,
+        "utf8Bytes": 2362,
+        "estimatedTokens": 591,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -853,8 +855,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 2287,
-        "estimatedTokens": 572,
+        "utf8Bytes": 2303,
+        "estimatedTokens": 576,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -880,8 +882,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 2270,
-        "estimatedTokens": 568,
+        "utf8Bytes": 2286,
+        "estimatedTokens": 572,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -906,8 +908,8 @@
       "recallAt3": 1,
       "recallAt5": 1,
       "search": {
-        "utf8Bytes": 1802,
-        "estimatedTokens": 451,
+        "utf8Bytes": 1818,
+        "estimatedTokens": 455,
         "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
       },
       "top3Descriptions": {
@@ -959,9 +961,9 @@
     "httpWorkflowLatencyMs": {
       "kind": "localhost HTTP discovery → describe → execute cached entity; three serial requests; no model inference",
       "samples": 12,
-      "p50": 17.88414899999998,
-      "p95": 119.8175470000001,
-      "first": 119.8175470000001
+      "p50": 25.213512000000264,
+      "p95": 139.5712480000002,
+      "first": 139.5712480000002
     }
   }
 }

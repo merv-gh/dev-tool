@@ -58,6 +58,17 @@ test('lean profiles expose only selected definitions while preserving permission
   assert.ok(!(await T.call('tool_search', { query: 'pg_query' })).tools.some(t => t.name === 'pg_query'));
   config();
 });
+test('legacy discovery ranking remains default and BM25 requires trusted configuration', async () => {
+  config();
+  const legacy = await T.call('tool_search', { query: 'in the', limit: 30, ranker: 'bm25' });
+  assert.equal(legacy.lexical.ranker, 'legacy');
+  const definitions = await T.schemas({ metadata: true });
+  assert.deepEqual(legacy.tools.map(t => t.name), require('../lib/tool-search').legacyRank(definitions, 'in the').slice(0, 30).map(x => x.t.name));
+  config({ discoveryRanker: 'bm25' });
+  const experimental = await T.call('tool_search', { query: 'in the' });
+  assert.equal(experimental.lexical.ranker, 'bm25'); assert.deepEqual(experimental.tools, []);
+  config();
+});
 test('Open WebUI updates retain user instructions and expose the selected API profile', async () => {
   const W = require('../lib/webui');
   const prior = 'Use the staging environment and cite every claim.';

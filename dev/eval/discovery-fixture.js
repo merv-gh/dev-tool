@@ -6,8 +6,8 @@ function put(home, file, value) {
 function configure(home, tools = {}) {
   put(home, 'config.json', { envs: { dev: {}, staging: {}, prod: {} }, tools, server: { ratePerSec: 0 }, knowledge: { sources: [{ id: 'guide', type: 'json', path: 'sources/guide.json' }] } });
 }
-function seed(home) {
-  configure(home);
+function seed(home, tools = {}) {
+  configure(home, tools);
   put(home, 'sources/guide.json', { version: 1, entities: [{ id: 'service:orders', name: 'orders-service', kind: 'service' }], documents: [{ title: 'Synthetic evaluation policy', text: 'Synthetic evaluation requires source revision evidence.' }] });
   for (const environment of ['dev', 'staging', 'prod']) {
     const dbs = environment === 'staging' ? ['orders', 'archive'] : ['orders'];

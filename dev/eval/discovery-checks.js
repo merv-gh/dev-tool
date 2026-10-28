@@ -1,7 +1,7 @@
 const assert = require('assert/strict');
 const { performance } = require('perf_hooks');
 const { configure, put } = require('./discovery-fixture');
-async function checks(T, home) {
+async function checks(T, home, toolSettings = {}) {
   const evidence = {}, K = require('../../lib/semantic-knowledge');
   assert.equal(K.sync('guide').ok, true);
   const discovered = await T.call('tool_search', { query: 'knowledge_entity', limit: 3 });
@@ -27,14 +27,14 @@ async function checks(T, home) {
   const requested = await T.call('find', { q: 'pg: orders', env: 'staging' });
   assert.equal(requested.length, 2);
   evidence.environment = { requested: 'staging', catalogMatches: requested.length };
-  configure(home, { disable: ['knowledge_entity'] }); await T.reload();
+  configure(home, { ...toolSettings, disable: ['knowledge_entity'] }); await T.reload();
   const permissions = await T.call('tool_search', { query: 'knowledge_entity', limit: 30 });
   assert.ok(!permissions.tools.some(t => t.name === 'knowledge_entity'));
   await assert.rejects(T.call('tool_describe', { name: 'knowledge_entity' }), /disabled/);
   await assert.rejects(T.call('tool_execute', { name: 'knowledge_entity', arguments: { id: 'orders' } }), e => e.code === 'DT_TOOL_UNKNOWN');
   await assert.rejects(T.call('tool_execute', { name: 'tool_execute', arguments: {} }), /directly/);
   evidence.permissions = { hiddenFromDiscovery: true, describeDenied: true, executeDenied: true, recursiveDispatcherDenied: true };
-  configure(home); await T.reload();
+  configure(home, toolSettings); await T.reload();
   const server = require('../../server').start({ port: 0, host: '127.0.0.1' });
   await new Promise(resolve => server.on('listening', resolve));
   const base = `http://127.0.0.1:${server.address().port}`, durations = [];

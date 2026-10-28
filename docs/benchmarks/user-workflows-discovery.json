@@ -1,6 +1,8 @@
 {
   "version": 1,
   "kind": "untouched-query-discovery-comparison",
+  "ranker": "bm25",
+  "experimentalOptIn": true,
   "baseline": "4b6dc31 deterministic substring ranking algorithm replay over original built-in descriptions",
   "current": "real tool_search registry calls; temporary synthetic config; no external systems or LLM",
   "corpusSha256": "046802d70137aa24280c1a9389222dd88110c2c325467ffbc376e7b8ded8a19d",
@@ -30,6 +32,7 @@
       ],
       "lexical": {
         "mode": "normalized-keywords",
+        "ranker": "bm25",
         "matchedTerms": [
           "find",
           "all",
@@ -81,6 +84,7 @@
       ],
       "lexical": {
         "mode": "normalized-keywords",
+        "ranker": "bm25",
         "matchedTerms": [
           "find",
           "all",
@@ -136,6 +140,7 @@
       ],
       "lexical": {
         "mode": "normalized-keywords",
+        "ranker": "bm25",
         "matchedTerms": [
           "method",
           "take",
@@ -190,6 +195,7 @@
       ],
       "lexical": {
         "mode": "normalized-keywords",
+        "ranker": "bm25",
         "matchedTerms": [
           "run",
           "test",

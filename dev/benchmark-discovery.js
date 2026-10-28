@@ -15,7 +15,7 @@ async function benchmark() {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'dt-discovery-eval-'));
   for (const key of Object.keys(process.env)) if (/^DT_(HOME|CONFIG_DIR|CACHE_DIR|REPOS_DIR|PASSPORTS_DIR|PLUGINS_DIR|SCRIPTS_DIR|VIEWS_DIR|WORK_DIR|BUILD_DIR|TOOLS)$/.test(key)) delete process.env[key];
   process.env.DT_HOME = home; process.env.DT_LOG = 'quiet'; process.env.DT_RATE_PER_SEC = '0';
-  require('./eval/discovery-fixture').seed(home);
+  require('./eval/discovery-fixture').seed(home, { discoveryRanker: 'bm25' });
   const T = require('../lib/tools');
   try {
     const schemas = await T.schemas({ metadata: true });
@@ -38,7 +38,7 @@ async function benchmark() {
     }
     const mean = field => cases.reduce((n, c) => n + c[field], 0) / cases.length;
     const report = {
-      version: 1, kind: 'deterministic-registry-retrieval', corpusVersion: corpus.version,
+      version: 1, kind: 'deterministic-registry-retrieval', ranker: 'bm25', experimentalOptIn: true, corpusVersion: corpus.version,
       corpusSha256: crypto.createHash('sha256').update(corpusText).digest('hex'),
       registrySha256: crypto.createHash('sha256').update(JSON.stringify(schemas)).digest('hex'),
       runtime: process.version, environment: 'temporary local config; dev/staging/prod; built-in enabled tools only; no remote systems',
@@ -48,7 +48,7 @@ async function benchmark() {
       latencyMs: { kind: 'warm in-process real registry calls including local trace/history; no HTTP or model inference', samples: timings.length, p50: percentile(timings, .5), p95: percentile(timings, .95), max: Math.max(...timings) },
       context: { meanSearchBytes: cases.reduce((n, c) => n + c.search.utf8Bytes, 0) / cases.length, maxSearchBytes: Math.max(...cases.map(c => c.search.utf8Bytes)), meanTop3DescriptionBytes: cases.reduce((n, c) => n + c.top3Descriptions.utf8Bytes, 0) / cases.length },
       cases,
-      contractChecks: await require('./eval/discovery-checks').checks(T, home),
+      contractChecks: await require('./eval/discovery-checks').checks(T, home, { discoveryRanker: 'bm25' }),
     };
     return report;
   } finally { fs.rmSync(home, { recursive: true, force: true }); }

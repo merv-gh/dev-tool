@@ -8,7 +8,7 @@ const text = fs.readFileSync(input, 'utf8'), corpus = JSON.parse(text), cases = 
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'dt-query-comparison-'));
 for (const key of Object.keys(process.env)) if (/^DT_(HOME|CONFIG_DIR|CACHE_DIR|REPOS_DIR|PASSPORTS_DIR|PLUGINS_DIR|SCRIPTS_DIR|VIEWS_DIR|WORK_DIR|BUILD_DIR|TOOLS)$/.test(key)) delete process.env[key];
 process.env.DT_HOME = home; process.env.DT_LOG = 'quiet'; process.env.DT_RATE_PER_SEC = '0';
-require('./eval/discovery-fixture').seed(home);
+require('./eval/discovery-fixture').seed(home, { discoveryRanker: 'bm25' });
 const priorDescription = 'Find the enabled tool for a task before calling it. Searches names, semantic descriptions and groups, with required arguments and effect hints. Results are bounded; use tool_describe for the exact schema, then tool_execute.';
 const priorConsulDescription = 'Live: instances of ONE service registered in Consul with health and /version. Fuzzy name match. For all services use health.';
 async function compare() {
@@ -22,6 +22,6 @@ async function compare() {
   }
   const judged = results.filter(r => r.relevant?.length);
   const aggregate = key => Object.fromEntries(['recallAt3', 'recallAt5'].map(metric => [metric, judged.reduce((n, c) => n + c[key][metric], 0) / judged.length]));
-  return { version: 1, kind: 'untouched-query-discovery-comparison', baseline: '4b6dc31 deterministic substring ranking algorithm replay over original built-in descriptions', current: 'real tool_search registry calls; temporary synthetic config; no external systems or LLM', corpusSha256: crypto.createHash('sha256').update(text).digest('hex'), cases: results, ...(judged.length ? { metrics: { judgedCases: judged.length, baseline: aggregate('baselineMetrics'), improved: aggregate('improvedMetrics') } } : {}), limits: 'Lexical ranking is not symptom diagnosis, semantic recall, permission to act or application proof. No unsupported-operation success is inferred from returned tools.' };
+  return { version: 1, kind: 'untouched-query-discovery-comparison', ranker: 'bm25', experimentalOptIn: true, baseline: '4b6dc31 deterministic substring ranking algorithm replay over original built-in descriptions', current: 'real tool_search registry calls; temporary synthetic config; no external systems or LLM', corpusSha256: crypto.createHash('sha256').update(text).digest('hex'), cases: results, ...(judged.length ? { metrics: { judgedCases: judged.length, baseline: aggregate('baselineMetrics'), improved: aggregate('improvedMetrics') } } : {}), limits: 'Lexical ranking is not symptom diagnosis, semantic recall, permission to act or application proof. No unsupported-operation success is inferred from returned tools.' };
 }
 compare().then(r => process.stdout.write(JSON.stringify(r, null, 2) + '\n')).catch(e => { console.error(e.stack); process.exitCode = 1; }).finally(() => fs.rmSync(home, { recursive: true, force: true }));

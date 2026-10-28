@@ -1,5 +1,5 @@
 const test = require('node:test'), assert = require('node:assert/strict');
-const { rank, search } = require('../lib/tool-search');
+const { rank, search, legacyRank } = require('../lib/tool-search');
 const schema = (name, description, group = 'code') => ({ name, description, group });
 
 test('discovery ranks exact names despite punctuation, common words and verbose decoys', () => {
@@ -28,6 +28,11 @@ test('bounded lexical evidence exposes unsupported symptom words without confide
   const many = search(tools, Array.from({ length: 40 }, (_, i) => 'word' + i).join(' '));
   assert.equal(many.lexical.unmatchedTerms.length, 12);
   assert.equal(many.lexical.truncated, true);
+});
+test('legacy compatibility retains original substring, repeated-word and exact-name scoring', () => {
+  const tools = [schema('thing', 'in testing'), schema('alpha', 'a table'), schema('pg_query', 'Read query data', 'pg')];
+  const reference = (query, group) => { const words = query.toLowerCase().split(/[\s_:-]+/).filter(Boolean); return tools.filter(t => !group || t.group === group).map(t => { const name = t.name.toLowerCase(), text = `${name.replace(/_/g, ' ')} ${t.group} ${t.description}`.toLowerCase(); return { t, score: (name === query.toLowerCase() ? 1000 : 0) + words.reduce((n, w) => n + (text.includes(w) ? 20 : 0) + (name.includes(w) ? 3 : 0), 0) }; }).filter(x => x.score > 0).sort((a, b) => b.score - a.score || a.t.name.localeCompare(b.t.name)); };
+  for (const query of ['in', 'in in', 'PG_QUERY', 'pg:query', 'the', 'table?', 'read query', '  pg_query  ']) for (const group of [undefined, 'pg', 'missing']) assert.deepEqual(legacyRank(tools, query, group), reference(query, group));
 });
 test('offline benchmark exercises real registry discovery, validation recovery and permission guards', async () => {
   const { execFile } = require('child_process');

@@ -1,6 +1,7 @@
 {
   "version": 1,
   "kind": "deterministic-registry-retrieval",
+  "ranker": "legacy",
   "corpusVersion": 1,
   "corpusSha256": "1a2b1440a4d16192b612bb533e6986aad675e4fa46f92eee1f1e6d4eea987968",
   "registrySha256": "19e0679b00594f21ff1d042bf20425d6f9dddb81515b2d63e60cc70cc03ccb28",
