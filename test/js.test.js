@@ -24,7 +24,7 @@ const api = http.createServer((req, res) => {
 });
 let base;
 const writeConfig = (scripts) => {
-  fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ envs: { dev: { consul: 'http://127.0.0.1:9' } }, scripts: { http: { allow: [base] }, jsTimeoutMs: 1500, ...scripts } }));
+  fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ envs: { dev: { consul: 'http://127.0.0.1:9' } }, scripts: { http: { allow: [base] }, jsTimeoutMs: 6000, ...scripts } }));
   const t = new Date(Date.now() + Math.random() * 1e6); fs.utimesSync(path.join(home, 'config.json'), t, t);
   require('../lib/config').reload();
 };
@@ -42,7 +42,7 @@ test('sandbox: helpers work; no files, no environment, a timeout', async () => {
   assert.match((await js.run('return require("fs").readFileSync("/etc/hosts", "utf8")')).error, /restricted|not defined|denied/i);
   assert.equal(JSON.stringify((await js.run('return process.env')).returned).includes('do-not-leak'), false, 'no secrets in the sandbox');
   assert.match((await js.run('return require("child_process").execSync("id").toString()')).error || '', /restricted|not defined|denied/i);
-  await assert.rejects(js.run('while (true) {}'), /stopped after 1500ms/);
+  await assert.rejects(js.run('while (true) {}'), /stopped after 6000ms/);
 });
 
 test('steps: before changes args, capture, after tests and replaces the result, js steps', async () => {

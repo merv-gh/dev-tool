@@ -110,9 +110,11 @@ test('rate limit: per key, queued, rejects when the queue is too long', async ()
   delete require.cache[require.resolve('../lib/limit')];
   const limit = require('../lib/limit');
   const t0 = Date.now();
-  await Promise.all([limit.take('a'), limit.take('a'), limit.take('a'), limit.take('b')]);
+  const waits = await Promise.all([limit.take('a'), limit.take('a'), limit.take('a'), limit.take('b')]);
   const took = Date.now() - t0;
-  assert.ok(took >= 95 && took < 200, `took ${took}`);
+  // three calls on one key wait 0, 50, 100 ms; another key does not wait (a busy machine only adds time)
+  assert.deepEqual(waits.map(w => Math.round(w / 50)), [0, 1, 2, 0], JSON.stringify(waits));
+  assert.ok(took >= 95, `took ${took}`);
   const burst = Array.from({ length: 6 }, () => limit.take('c').then(() => 'ok', e => e.message));
   const res = await Promise.all(burst);
   assert.ok(res.some(r => /rate limit/.test(r)), JSON.stringify(res));
