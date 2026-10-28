@@ -163,6 +163,7 @@ test('partial builds, failed sanity, RLS, privileged functions and compatibility
     await assert.rejects(T.build({ databases: { only: { statements } } }), /preparation failed|unsupported scratch fixture/);
   }
   await assert.rejects(T.build({ databases: { only: { statements: ['create table x(id int)'] } }, sanity: [{ db:'only',sql:'select 1 as a',expected:[{a:2}] }] }), /sanity check failed/);
+  await assert.rejects(T.build({ databases: { only: { statements: ['create domain positive_number as int','create table bad_domain(value positive_number)','insert into bad_domain values(-1)','alter domain positive_number add constraint positive_number_check check(value > 0) not valid'] } } }), /constraint|violated/);
   await assert.rejects(T.build({ ...spec, compatibility: { major: 999 } }), /major mismatch/);
   await assert.rejects(T.build({ ...spec, compatibility: { extensions: { impossible_extension: '1' } } }), /extension compatibility mismatch/);
   assert.equal((await DB.resources()).resources.some(r => r.kind === 'template' && r.state !== 'frozen'), false);
@@ -216,4 +217,12 @@ test('pinning and storage/count pressure preserve leased bases and reclaim only 
  const pinned=await T.build({databases:{pinned:{statements:['create table retained(id int)']}},pin:true});
  const result=await T.gc({templateTtlMs:0,maxBytes:0,maxTemplates:0,dryRun:true});assert.ok(result.retained.some(x=>x.template===pinned.id&&x.reason==='pinned'));assert.ok(!result.templates.includes(pinned.id));
  await T.pin(pinned.id,false);const next=await T.gc({templateTtlMs:0,maxBytes:0,maxTemplates:0,dryRun:true});assert.ok(next.templates.includes(pinned.id));
+});
+
+test('deep verification detects changed domain constraints even when every stored value still passes', {skip},async()=>{
+ const base=await T.build({databases:{one:{statements:['create domain positive as numeric check(value >= 0)','create table d(amount positive)','insert into d values(42)']}}});const db=base.databases.one.database;
+ await DB.withControl(sql=>sql.unsafe(`alter database ${DB.qi(db)} allow_connections true`));
+ await DB.runStatements(db,['alter domain positive drop constraint positive_check','alter domain positive add check(value >= 10)']);
+ await DB.withControl(sql=>sql.unsafe(`alter database ${DB.qi(db)} allow_connections false`));
+ const result=await T.verify(base.id,{deep:true});assert.equal(result.ok,false);assert.ok(result.failures.some(x=>x.kind==='content-drift'));
 });
