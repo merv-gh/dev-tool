@@ -29,6 +29,7 @@ if (fs.existsSync(contracts)) for (const f of fs.readdirSync(contracts, { recurs
   const p = path.join(contracts, f);
   if (fs.statSync(p).isFile()) files[`contracts/${f.split(path.sep).join('/')}`] = fs.readFileSync(p);
 }
+for (const [name, relative] of Object.entries(require('./lib/contracts').aliases)) if (fs.existsSync(path.join(ROOT, relative))) files[`contracts/${name}`] = fs.readFileSync(path.join(ROOT, relative));
 
 const stale = Object.entries(files).filter(([f, data]) => {
   try { return !fs.readFileSync(path.join(DIST, f)).equals(Buffer.from(data)); } catch { return true; }

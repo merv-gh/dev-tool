@@ -158,7 +158,7 @@ const routes = [
   }],
   ['GET', '/openapi.json', false, async (req, res, url) => send(res, 200, await openapi(url.searchParams.get('profile') || undefined))],
   ['GET', '/openapi/*', false, async (req, res, url) => { const name = url.pathname.slice('/openapi/'.length); if (!/^[a-z][\w-]*\.json$/.test(name)) return send(res, 404, { error: 'Unknown profile URL' }); send(res, 200, await openapi(name.slice(0, -5))); }],
-  ['GET', '/contracts/*', false, (req, res, url) => { const file = url.pathname.slice('/contracts/'.length); if (!/^v\d+\/[a-z][a-z0-9-]*\.schema\.json$/.test(file)) return send(res, 404, { error: 'Unknown contract' }); const full = path.join(require('./lib/config').ROOT, 'contracts', file); if (!fs.existsSync(full)) return send(res, 404, { error: 'Unknown contract' }); send(res, 200, fs.readFileSync(full, 'utf8'), CORS); }],
+  ['GET', '/contracts/*', false, (req, res, url) => { const full = require('./lib/contracts').resolve(url.pathname.slice('/contracts/'.length)); if (!full) return send(res, 404, { error: 'Unknown contract' }); send(res, 200, fs.readFileSync(full, 'utf8'), CORS); }],
   ['POST', '/oapi/*', true, oapi],
 
   // admin: watch, edit and refresh the index
