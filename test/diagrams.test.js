@@ -95,10 +95,12 @@ test('SVG reads text and explicit edges without fetching images or executing XML
 test('Mermaid C4 and sequence writers preserve provenance, conflicts, flow selection and enrichment', () => {
   const source = write(model);
   assert.match(source, /^flowchart LR/);
-  assert.match(source, /n1 -->\|"Request refund #91;HTTP#93;"\| n2/);
+  assert.match(source, /n1 -->\|"Request refund \[HTTP\]"\| n2/);
   assert.match(source, /n2 -\.->\|"Publish refund"\| n3/);
   assert.match(source, /n2 -->\|"Write refund"\| n4/);
   assert.match(source, /linkStyle 3 stroke:#b42318/);
+  assert.match(source, /n2 -\.->\|"Check fraud"\| n5/, 'a conflict is documented: dashed, and red');
+  assert.match(write(model, { view: 'sequence:0', model }), /->>/);
   assert.match(source, /Owner#58; Payments/);
   assert.match(source, /Version#58; abc123/);
   assert.match(source, /pay.refunds/);
@@ -272,4 +274,28 @@ test('viewer config disables Mermaid HTML labels globally before rendering multi
   assert.match(ui,/button, select, input\s*\{[^}]*background:\s*var\(--bg\)[^}]*color:\s*var\(--fg\)/);
   const sanitized = sanitizeSvg(malformedHtmlSvg);
   assert.doesNotMatch(sanitized, /foreignObject|<br>|<p>/, 'imported HTML labels cannot survive the server SVG allowlist');
+});
+
+test('diagram view restates the Mermaid line styles its SVG allowlist drops, pins Mermaid and lists quotes and gaps', () => {
+  const html = require('../lib/views').get('diagram').html;
+  assert.match(html, /\.flowchart-link[^{]*\{[^}]*fill:none/, 'edges are lines, not filled shapes');
+  assert.match(html, /\.edge-pattern-dashed[^{]*\{[^}]*stroke-dasharray/, 'docs-only edges stay dashed');
+  assert.match(html, /npm\/mermaid@\d+\.\d+\.\d+\//, 'an exact Mermaid version');
+  assert.match(html, /id="diagram-quotes"/); assert.match(html, /id="diagram-gaps"/);
+  assert.doesNotMatch(html, /innerHTML\s*=/, 'page text is set as text only');
+});
+
+test('views keep reporting their height so a chat that listens late still sizes the frame', () => {
+  const vm = require('node:vm'), posts = [], timers = [], events = {};
+  const window = { addEventListener: (e, f) => { events[e] = f; } };
+  const sandbox = { window, parent: { postMessage: (m) => posts.push(m) }, setTimeout: (f, ms) => timers.push([ms, f]),
+    ResizeObserver: class { constructor(f) { this.f = f; } observe() { this.f(); } },
+    document: { body: { getBoundingClientRect: () => ({ height: 716 }) }, querySelector: () => null } };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../web/views/_helpers.js'), 'utf8'), sandbox);
+  events.DOMContentLoaded();
+  assert.deepEqual(JSON.parse(JSON.stringify(posts)), [{ type: 'iframe:height', height: 716 }]);
+  events.load(); for (const [, f] of timers) f();
+  assert.ok(timers.length >= 3 && timers.some(([ms]) => ms >= 3000), 'repeats for a few seconds');
+  assert.equal(posts.length, 2 + timers.length);
+  assert.ok(posts.every(m => m.height === 716));
 });

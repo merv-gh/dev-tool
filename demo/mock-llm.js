@@ -14,12 +14,14 @@ const SCENARIOS = [
     steps: [{ tool: 'feature', args: { text: 'How do refunds work?', spaces: 'SHOP', env: 'demo' } }],
     answer: rs => {
       const r = ctx(rs[0]) || {}, evidence = (r.evidence || []).filter(q => q.verified).slice(0, 7);
-      const quotes = evidence.map(q => `> ${q.text}\n\n[${q.blockId}](${q.url})`).join('\n\n');
-      const diagram = (r.diagrams || []).find(d => d.format === 'mermaid' && d.name === 'container');
-      const sequence = (r.diagrams || []).find(d => d.format === 'mermaid' && d.name.startsWith('sequence'));
+      const name = id => (r.model?.nodes || []).find(n => n.id === id)?.name || String(id).replace(/^[a-z]+:/, '');
+      const quotes = evidence.map(q => `> ${q.text}\n\n[${q.title} · ${q.blockId}](${q.url})${q.stale ? ' (archived page)' : ''}`).join('\n\n');
+      const diagram = (r.diagrams || []).find(d => d.format === 'mermaid' && d.view === 'container');
+      const sequence = (r.diagrams || []).find(d => d.format === 'mermaid' && /^sequence/.test(d.view));
+      const gaps = (r.gaps || []).filter(g => g.from && g.to).map(g => `- ${name(g.from)} → ${name(g.to)} (${g.relation}): stated in [${g.provenance?.blockId}](${g.provenance?.url}), not found in the cached code`);
       return `Refunds are handled by **payment-service** at \`POST /api/payments/{orderId}/refund\`. The cached documentation provides this exact evidence:\n\n${quotes}\n\n` +
-        (diagram ? `\`\`\`mermaid\n${diagram.source}\n\`\`\`\n\n` : '') + (sequence ? `\`\`\`mermaid\n${sequence.source}\n\`\`\`\n\n` : '') +
-        (r.gaps?.length ? `Documentation gaps: ${r.gaps.map(g => g.message + (g.to ? ` (${g.from} → ${g.to})` : '')).join('; ')}.\n\n` : '') + (r.view ? `[Explore the diagrams and provenance](${r.view})` : '');
+        (diagram ? `**Containers** (solid: verified in code, dashed: docs only, red: conflict)\n\n\`\`\`mermaid\n${diagram.source}\n\`\`\`\n\n` : '') + (sequence ? `**${sequence.name}**\n\n\`\`\`mermaid\n${sequence.source}\n\`\`\`\n\n` : '') +
+        (gaps.length ? `**Docs vs code** (check cache freshness before treating these as contradictions):\n${gaps.join('\n')}\n\n` : '') + (r.view ? `[Explore the diagrams and provenance](${r.view})` : '');
     },
   },
   {

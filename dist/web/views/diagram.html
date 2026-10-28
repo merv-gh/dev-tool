@@ -21,7 +21,10 @@
   .diagram-stage svg .node.database path { fill:var(--good-bg); stroke:var(--good); }
   .diagram-stage svg .node.topic rect { fill:var(--warn-bg); stroke:var(--warn); }
   .diagram-stage svg .cluster rect, .diagram-stage svg .note { fill:var(--soft); stroke:var(--line); }
-  .diagram-stage svg .flowchart-link, .diagram-stage svg .messageLine0, .diagram-stage svg .messageLine1, .diagram-stage svg .actor-line { stroke:var(--muted); }
+  .diagram-stage svg .flowchart-link, .diagram-stage svg .messageLine0, .diagram-stage svg .messageLine1, .diagram-stage svg .actor-line { stroke:var(--muted); fill:none; }
+  /* Mermaid keeps line patterns in its own <style>, which the SVG allowlist drops: restate them here. */
+  .diagram-stage svg .edge-pattern-dashed, .diagram-stage svg .messageLine1 { stroke-dasharray:6 4; }
+  .diagram-stage svg .edge-pattern-dotted { stroke-dasharray:2 3; }
   .diagram-stage svg marker path { fill:var(--muted); stroke:var(--muted); }
   .diagram-stage svg .edgeLabel rect, .diagram-stage svg .labelBkg { fill:var(--panel); }
   .diagram-transform { transform-origin:0 0; position:absolute; top:0; left:0; }
@@ -38,6 +41,12 @@
   .diagram-source { max-height:340px; }
   .diagram-provenance { margin:0; padding-left:20px; max-height:240px; overflow:auto; font-size:12px; }
   .diagram-provenance li { margin:5px 0; overflow-wrap:anywhere; }
+  .diagram-quotes { margin:0; padding:0; list-style:none; display:grid; gap:10px; }
+  .diagram-quotes blockquote { margin:0 0 3px; padding-left:10px; border-left:3px solid var(--accent); }
+  .diagram-quotes .stale blockquote { border-left-color:var(--line); color:var(--muted); }
+  .diagram-quotes small, .diagram-gaps small { color:var(--muted); }
+  .diagram-gaps { margin:0; padding-left:20px; display:grid; gap:6px; }
+  .diagram-gaps li::marker { color:var(--bad); }
   .diagram[data-theme="light"], :root[data-diagram-theme="light"] { --bg:#fbfbfa; --panel:#fff; --fg:#1d1d1b; --muted:#6b6b66; --line:#e4e3df; --soft:#f2f1ee; --accent:#2457c5; --accent-soft:#e8eefb; --good:#2f7d32; --good-bg:#e3f1e4; --warn:#8a5300; --warn-bg:#fdf0d5; --bad:#a3231a; }
   .diagram[data-theme="dark"], :root[data-diagram-theme="dark"] { --bg:#141413; --panel:#1b1b1a; --fg:#e8e7e3; --muted:#a8a79f; --line:#343431; --soft:#232321; --accent:#8eb0f7; --accent-soft:#1f2a44; --good:#8fd092; --good-bg:#1d3a1f; --warn:#f0cf8a; --warn-bg:#43330f; --bad:#f6b8b1; }
   .diagram-stage, .diagram-source { scrollbar-color:var(--muted) var(--soft); }
@@ -55,10 +64,12 @@
   <div class="diagram-stage" id="diagram-stage" tabindex="0" role="tabpanel" aria-label="Architecture diagram. Drag to pan. Use plus and minus to zoom, zero to fit, or arrow keys to pan."><div id="diagram-canvas" class="diagram-transform"></div><div id="diagram-message" class="diagram-message" role="status">Preparing diagram…</div></div>
   <div class="diagram-legend" aria-label="Provenance legend"><span><i></i>Verified in code</span><span><i class="stated"></i>Docs only</span><span><i class="conflict"></i>Conflict</span></div>
   <div id="diagram-status" class="diagram-status" aria-live="polite">Hover over an element to see its source. Drag to pan; use + / − to zoom.</div>
+  <details id="diagram-quote-box" open><summary>Quotes from the documentation</summary><ul id="diagram-quotes" class="diagram-quotes"></ul></details>
+  <details id="diagram-gap-box" open><summary>Gaps between docs and code</summary><ul id="diagram-gaps" class="diagram-gaps"></ul></details>
   <details><summary>Diagram source</summary><pre class="src diagram-source" id="diagram-source"></pre></details>
   <details id="diagram-evidence"><summary>Element provenance</summary><ul id="diagram-provenance" class="diagram-provenance"></ul></details>
 </div>
-<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.min.js"></script>
 <script>
 (() => {
   const D = DATA || {}, model = D.model || (D.nodes ? D : {}), root = dt.$('#diagram'), stage = dt.$('#diagram-stage'), canvas = dt.$('#diagram-canvas');
@@ -96,10 +107,10 @@
       const label = quote(`${r.label || ''}${r.technology ? ` [${r.technology}]` : ''}${r.conflict ? ' [CONFLICT]' : ''}`);
       if (view === 'sequence') {
         if (r.conflict) lines.push('rect rgb(255, 228, 225)');
-        lines.push(`${from}${verified(r) ? '->>' : '-->>'}${to}: ${label}`);
+        lines.push(`${from}${verified(r) && !r.conflict ? '->>' : '-->>'}${to}: ${label}`);
         if (r.conflict) lines.push('end');
       } else {
-        lines.push(`${from} ${verified(r) || r.conflict ? '-->' : '-.->'}|"${label}"| ${to}`);
+        lines.push(`${from} ${verified(r) && !r.conflict ? '-->' : '-.->'}|"${label}"| ${to}`);
         if (r.conflict) lines.push(`linkStyle ${index} stroke:#b42318,stroke-width:3px,color:#b42318`);
       }
     }
@@ -197,7 +208,7 @@
   dt.$('#diagram-theme').onchange = event => { root.dataset.theme = event.target.value; document.documentElement.dataset.diagramTheme = event.target.value; draw(active); };
   root.dataset.theme = 'auto'; document.documentElement.dataset.diagramTheme = 'auto';
   dt.$('#diagram-download-source').onclick = () => { const d = diagrams[active]; if (d) download(d.source || '', 'text/plain;charset=utf-8', ({mermaid:'mmd',plantuml:'puml','c4-plantuml':'puml',structurizr:'dsl'})[d.format] || 'txt'); };
-  svgButton.onclick = () => { if (!currentSvg) return; const svg = currentSvg.cloneNode(true), css = document.createElementNS('http://www.w3.org/2000/svg','style'); css.textContent = 'text:not([fill]),tspan:not([fill]){font-family:system-ui,sans-serif;fill:#1d1d1b}.node rect,.actor,.labelBox{fill:#e8eefb;stroke:#2457c5}.cluster rect,.note{fill:#f2f1ee;stroke:#e4e3df}.flowchart-link,.messageLine0,.messageLine1,.actor-line{stroke:#6b6b66}.edgeLabel rect,.labelBkg{fill:#fff}.node .label text{text-anchor:middle}.node.person text,.node.person tspan,.node.system text,.node.system tspan{fill:#fff}'; svg.prepend(css); download(new XMLSerializer().serializeToString(svg),'image/svg+xml;charset=utf-8','svg'); };
+  svgButton.onclick = () => { if (!currentSvg) return; const svg = currentSvg.cloneNode(true), css = document.createElementNS('http://www.w3.org/2000/svg','style'); css.textContent = 'text:not([fill]),tspan:not([fill]){font-family:system-ui,sans-serif;fill:#1d1d1b}.node rect,.actor,.labelBox{fill:#e8eefb;stroke:#2457c5}.cluster rect,.note{fill:#f2f1ee;stroke:#e4e3df}.flowchart-link,.messageLine0,.messageLine1,.actor-line{stroke:#6b6b66;fill:none}.edge-pattern-dashed,.messageLine1{stroke-dasharray:6 4}.edge-pattern-dotted{stroke-dasharray:2 3}.edgeLabel rect,.labelBkg{fill:#fff}.node .label text{text-anchor:middle}.node.person text,.node.person tspan,.node.system text,.node.system tspan{fill:#fff}'; svg.prepend(css); download(new XMLSerializer().serializeToString(svg),'image/svg+xml;charset=utf-8','svg'); };
   stage.addEventListener('pointerdown', event => { if (event.button !== 0) return; gesture = { id:event.pointerId, x:event.clientX, y:event.clientY, left:panX, top:panY }; stage.setPointerCapture(event.pointerId); stage.classList.add('dragging'); });
   stage.addEventListener('pointermove', event => { if (!gesture || gesture.id !== event.pointerId) return; panX = gesture.left + event.clientX - gesture.x; panY = gesture.top + event.clientY - gesture.y; transform(); });
   const finish = () => { gesture = null; stage.classList.remove('dragging'); }; stage.addEventListener('pointerup', finish); stage.addEventListener('pointercancel', finish);
@@ -207,6 +218,26 @@
   const evidence = nodes.map(n => ({ label:n.name || n.label || n.id, source:provenance(n.provenance) })).filter(n => n.source);
   dt.$('#diagram-provenance').replaceChildren(...evidence.map(n => { const li = document.createElement('li'); li.textContent = `${n.label}: ${n.source.replace(/\n/g,' · ')}`; return li; }));
   dt.$('#diagram-evidence').hidden = !evidence.length; dt.$('#diagram-download-source').disabled = !diagrams.length;
+  // Exact documentation quotes and docs/code gaps (feature results). Page text is data: textContent only, http(s) links only.
+  const link = (url, label) => { const a = document.createElement('a'); a.textContent = label; if (/^https?:\/\//i.test(text(url))) { a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer'; } return a; };
+  const label = id => { const n = nodes.find(n => text(n.id) === text(id)); return n?.name || n?.label || text(id).replace(/^[a-z]+:/, ''); };
+  const quotes = (D.evidence || []).filter(q => q && q.text);
+  dt.$('#diagram-quotes').replaceChildren(...quotes.map(q => {
+    const li = document.createElement('li'), bq = document.createElement('blockquote'), meta = document.createElement('small');
+    if (q.stale) li.className = 'stale';
+    bq.textContent = q.text;
+    meta.append(link(q.url, [q.title, ...(q.path || []).slice(1)].filter(Boolean).join(' › ') || q.blockId), ` · ${q.blockId} · v${q.version ?? '?'} · ${q.verified ? 'verified' : 'not verified'}${q.stale ? ' · archived page' : ''}`);
+    li.append(bq, meta); return li;
+  }));
+  dt.$('#diagram-quote-box').hidden = !quotes.length;
+  const gaps = (D.gaps || []).filter(Boolean);
+  dt.$('#diagram-gaps').replaceChildren(...gaps.map(g => {
+    const li = document.createElement('li'), meta = document.createElement('small');
+    li.textContent = `${g.from && g.to ? `${label(g.from)} → ${label(g.to)}${g.relation ? ` (${g.relation})` : ''}: ` : g.element ? `${g.element}: ` : ''}${g.message || g.kind}`;
+    if (g.provenance?.url) { meta.append(' ', link(g.provenance.url, g.provenance.blockId || 'page')); li.append(meta); }
+    return li;
+  }));
+  dt.$('#diagram-gap-box').hidden = !gaps.length;
   draw(0);
 })();
 </script>

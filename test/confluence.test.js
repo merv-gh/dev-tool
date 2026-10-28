@@ -57,6 +57,10 @@ test('storage parser keeps structure, stable block IDs, source offsets, code, li
   assert.equal(edited.blocks.find(b => b.text === rule.text).id, rule.id, 'unrelated insertion preserves quote ID');
   assert.equal(P.parse({ ...page, storage: '<!DOCTYPE x [<!ENTITY secret SYSTEM "file:///etc/passwd">]><p>&secret;</p>' }).blocks[0].text, '&secret;');
   assert.equal(P.parse({ ...page, storage: '<p>&amp;lt; stays encoded &lt;.</p>' }).blocks[0].text, '&lt; stays encoded <.');
+  const linked = P.parse({ ...page, storage: '<p>See <ac:link><ri:page ri:content-title="Refunds"/><ac:plain-text-link-body>the rules</ac:plain-text-link-body></ac:link>, or <ac:link><ri:page ri:content-title="Payments"/></ac:link>.</p>' });
+  assert.equal(linked.blocks[0].text, 'See the rules, or Payments.', 'a link shows its body once, else its target title');
+  assert.equal(linked.links.length, 2);
+  assert.deepEqual(P.sentences('Inspect sales.payments before v1.2 ships. Then retry!'), ['Inspect sales.payments before v1.2 ships.', 'Then retry!'], 'dots inside names do not end a sentence');
   assert.equal(P.hash(Buffer.from([255, 254])), require('crypto').createHash('sha256').update(Buffer.from([255, 254])).digest('hex'));
 });
 
@@ -182,6 +186,28 @@ test('feature joins exact evidence, cached code/database/Kafka and diagram expor
   assert.ok(r.diagrams.some(d => d.format === 'plantuml' && d.source.includes('@startuml')));
   assert.ok(r.diagrams.some(d => d.format === 'structurizr' && d.source.includes('workspace')));
   assert.ok(r.gaps.some(g => g.to === 'external:fraud-service'));
+  const all = await require('../lib/knowledge').feature('How do refunds work?', { env: 'dev', spaces: 'SHOP' });
+  const kinds = new Map(C.list(['SHOP']).flatMap(p => p.blocks).map(b => [b.id, b.kind]));
+  assert.ok(all.evidence.every(e => !['heading', 'diagram', 'issue'].includes(kinds.get(e.blockId))), 'headings, diagram sources and issue keys are not quotes');
+  assert.ok(!all.evidence.some(e => /^See /.test(e.text)), 'link-only lines are not quotes');
+  // Earlier tests removed the legacy page from the space; put a copy back to check it ranks last and is marked.
+  const legacy = { ...C.list(['SHOP']).find(p => p.title === 'Refunds'), id: '899', title: 'Legacy refunds (archived)' };
+  legacy.blocks = legacy.blocks.map(b => ({ ...b, id: b.id.replace(/^p\d+/, 'p899'), pageId: '899', text: `Formerly, ${b.text}` }));
+  fs.writeFileSync(path.join(C.DIR, 'SHOP', 'pages', '899.json'), JSON.stringify(legacy)); await S.build();
+  const withLegacy = await require('../lib/knowledge').feature('How do refunds work?', { env: 'dev', spaces: 'SHOP' });
+  const firstStale = withLegacy.evidence.findIndex(e => e.stale);
+  assert.ok(firstStale > 0 && withLegacy.evidence.slice(firstStale).every(e => e.stale && e.pageId === '899'), 'archived pages are marked and quoted after current ones');
+  fs.rmSync(path.join(C.DIR, 'SHOP', 'pages', '899.json')); await S.build();
+  assert.ok(all.evidence.some(e => /Refunds over \d+ EUR need a manual approval\./.test(e.text)));
+  assert.ok(all.model.flows.length && all.model.flows.every(f => f.steps.length >= 2), 'no empty sequences');
+  const refund = all.model.flows[0];
+  assert.equal(refund.name, 'POST /api/payments/{orderId}/refund', 'HTTP entry points come first');
+  assert.equal(refund.steps[0].from, 'person:client');
+  assert.equal(new Set(refund.steps.map(r => `${r.from}|${r.to}|${r.kind}|${r.label}`)).size, refund.steps.length, 'no repeated steps');
+  assert.ok(!all.model.nodes.some(n => ['endpoint', 'function', 'database'].includes(n.kind)), 'the model keeps services, topics, tables and externals');
+  assert.equal(new Set(all.model.relations.map(r => `${r.from}|${r.to}|${r.kind}|${r.confidence}`)).size, all.model.relations.length, 'one edge per pair and kind');
+  assert.deepEqual([...new Set(all.diagrams.map(d => d.name))].slice(0, 2), ['Context', 'Container']);
+  assert.ok(all.diagrams.every(d => d.view && d.source));
   const id = r.view.split('/').at(-1), result = require('../lib/results').load(id); assert.equal(result.view, 'diagram');
   const localized = await require('../lib/knowledge').feature('Возврат', { env: 'dev', spaces: 'SHOP', limit: 1 });
   assert.ok(localized.evidence.some(e => e.verified && e.text.includes('Возврат')), 'Unicode evidence is preserved');

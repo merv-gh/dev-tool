@@ -7437,11 +7437,15 @@ var require_docs_parse = __commonJS({
     function text(n) {
       if (n.text !== void 0) return n.text;
       if (n.tag === "br") return "\n";
+      if (n.tag === "ac:link") {
+        const body = (n.children || []).filter((c) => c.tag === "ac:plain-text-link-body" || c.tag === "ac:link-body");
+        if (body.length) return body.map(text).join("");
+      }
       if (n.tag === "ri:page") return n.attrs["ri:content-title"] || "";
       return (n.children || []).map(text).join("");
     }
     function sentences(s) {
-      return s.match(/[^.!?]+(?:[.!?]+(?=\s|$)|$)/g)?.map((x) => x.trim()).filter(Boolean) || (s ? [s] : []);
+      return s.match(/(?:[^.!?]|[.!?]+(?!\s|$))+(?:[.!?]+|$)/g)?.map((x) => x.trim()).filter(Boolean) || (s ? [s] : []);
     }
     function parse(page, previous = []) {
       const source = page.storage || page.body?.storage?.value || "", doc = tree(source), blocks = [], links = [], images = [], headings = [];
@@ -15441,6 +15445,7 @@ var require_diagrams = __commonJS({
     }
     var oneLine = (value) => str(value).replace(/[\u0000-\u001f\u007f\u2028\u2029]/g, " ");
     var mm = (value) => oneLine(value).replace(/[&"<>\[\]{}|;:#\\]/g, (ch) => `#${ch.codePointAt(0)};`);
+    var mmEdge = (value) => oneLine(value).replace(/[&"<>#\\]/g, (ch) => `#${ch.codePointAt(0)};`);
     var pu = (value) => oneLine(value).replace(/&/g, "&amp;").replace(/[<>\[\]]/g, (ch) => `&#${ch.codePointAt(0)};`).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
     var dsl = (value) => JSON.stringify(oneLine(value));
     var isPerson = (n) => /^(person|actor|user)$/.test(n.kind);
@@ -15488,7 +15493,7 @@ var require_diagrams = __commonJS({
         for (const r of flow.steps) {
           const state = provenance(r), text = `${r.label}${r.technology ? ` [${r.technology}]` : ""}${state === "conflict" ? " [CONFLICT]" : ""}`;
           if (state === "conflict") lines2.push("    rect rgb(255, 228, 225)");
-          lines2.push(`    ${alias(r.from)}${state === "stated" ? "-->>" : "->>"}${alias(r.to)}: ${mm(text)}`);
+          lines2.push(`    ${alias(r.from)}${state === "verified" ? "->>" : "-->>"}${alias(r.to)}: ${mm(text)}`);
           if (state === "conflict") lines2.push("    end");
         }
         if (ids.size) lines2.push(`    Note over ${[...ids].slice(0, 2).map(alias).join(",")}: Solid: verified in code. Dashed: docs only. Red: conflict.`);
@@ -15501,8 +15506,8 @@ var require_diagrams = __commonJS({
         lines.push(`    ${n.alias}${kind === "database" ? '[("' : kind === "person" ? '(["' : '["'}${detail}${kind === "database" ? '")]' : kind === "person" ? '"])' : '"]'}:::${kind}`);
       }
       m.relations.forEach((r, i) => {
-        const state = provenance(r), label = mm(`${r.label}${r.technology ? ` [${r.technology}]` : ""}`);
-        lines.push(`    ${alias(r.from)} ${state === "stated" ? "-.->" : "-->"}${label ? `|"${label}"|` : ""} ${alias(r.to)}`);
+        const state = provenance(r), label = mmEdge(`${r.label}${r.technology ? ` [${r.technology}]` : ""}`);
+        lines.push(`    ${alias(r.from)} ${state === "verified" ? "-->" : "-.->"}${label ? `|"${label}"|` : ""} ${alias(r.to)}`);
         if (state === "conflict") lines.push(`    linkStyle ${i} stroke:#b42318,stroke-width:3px,color:#b42318`);
       });
       lines.push("    classDef person fill:#17365d,color:#fff,stroke:#17365d", "    classDef system fill:#2457c5,color:#fff,stroke:#173d8b", "    classDef service fill:#e8eefb,color:#17365d,stroke:#2457c5", "    classDef database fill:#e3f1e4,color:#185c1b,stroke:#2f7d32", "    classDef topic fill:#fdf0d5,color:#7a4a00,stroke:#8a5300", '    subgraph legend["Legend"]', '        legend_code["Verified in code"] --> legend_docs["Docs only"] -.-> legend_conflict["Conflict: red line"]', "    end");
@@ -15515,10 +15520,10 @@ var require_diagrams = __commonJS({
         const flow = selected(m, opts), ids = new Set(flow.steps.flatMap((r) => [r.from, r.to]));
         lines.push(`title ${pu(flow.name)}`, "autonumber");
         for (const n of m.nodes.filter((n2) => ids.has(n2.id))) lines.push(`${isPerson(n) ? "actor" : isDatabase(n) ? "database" : isTopic(n) ? "queue" : "participant"} "${pu(n.label)}" as ${n.alias}`);
-        for (const r of flow.steps) lines.push(`${alias(r.from)} ${provenance(r) === "conflict" ? "-[#b42318]>" : provenance(r) === "stated" ? "-->" : "->"} ${alias(r.to)} : ${pu(r.label)}${r.technology ? ` [${pu(r.technology)}]` : ""}`);
+        for (const r of flow.steps) lines.push(`${alias(r.from)} ${provenance(r) === "conflict" ? "-[#b42318,dashed]>" : provenance(r) === "stated" ? "-->" : "->"} ${alias(r.to)} : ${pu(r.label)}${r.technology ? ` [${pu(r.technology)}]` : ""}`);
       } else {
         const type = opts.view === "context" ? "Context" : opts.view === "dynamic" ? "Dynamic" : "Container";
-        lines.push(`!include <C4/C4_${type}>`, "!pragma layout smetana", `title ${pu(m.title || m.name || "Architecture")}`, "LAYOUT_LEFT_RIGHT()", 'AddRelTag("stated", $lineStyle=DashedLine())', 'AddRelTag("conflict", $lineColor="#b42318", $textColor="#b42318")');
+        lines.push(`!include <C4/C4_${type}>`, "!pragma layout smetana", `title ${pu(m.title || m.name || "Architecture")}`, "LAYOUT_LEFT_RIGHT()", 'AddRelTag("stated", $lineStyle=DashedLine())', 'AddRelTag("conflict", $lineColor="#b42318", $textColor="#b42318", $lineStyle=DashedLine())');
         for (const n of m.nodes) {
           const macro = isPerson(n) ? "Person" : opts.view === "context" ? isSystem(n) && n.kind !== "system" ? "System_Ext" : "System" : isSystem(n) ? "System_Ext" : isDatabase(n) ? "ContainerDb" : isTopic(n) ? "ContainerQueue" : "Container";
           const detail = [n.description, ...metadata(n).filter((value) => value !== n.technology)].filter(Boolean).join("; ");
@@ -17290,38 +17295,70 @@ var require_knowledge = __commonJS({
       limit = Math.max(1, Math.min(Number(limit) || 20, 20));
       const search = await require_docs_search().search(text, { spaces, limit: Math.min(60, Math.max(20, limit * 3)) }), pages = docs.list(spaces);
       const sys = system(env), graph = build(env, { pages, systemModel: sys });
-      const selectedPages = new Set(search.blocks.map((b) => b.pageId));
-      const selected = new Set(graph.mentions.filter((m) => selectedPages.has(m.pageId) && m.entity).map((m) => m.entity));
-      const words = require_docs_search().tokens(text).filter((w) => w.length > 2 && !["how", "does", "work", "the", "and", "with", "what"].includes(w));
+      const words = require_docs_search().tokens(text).filter((w) => w.length > 2 && !["how", "does", "work", "the", "and", "with", "what", "why", "when", "where", "who"].includes(w));
+      const relevant = search.blocks.filter((b) => !words.length || words.some((w) => require_docs_search().tokens(`${b.title} ${b.path.join(" ")} ${b.text}`).includes(w)));
+      const relevantBlocks = new Set(relevant.map((b) => b.id)), selectedPages = new Set(relevant.map((b) => b.pageId));
+      const stale = new Set(pages.filter((p) => /\b(legacy|archived?|deprecated|obsolete|superseded)\b/i.test(`${p.title} ${(p.labels || []).join(" ")}`)).map((p) => p.id));
       let code = { hits: [] };
       try {
         if (words.length) code = require_codeindex().grep(require_codeindex().select(), words.map(escape).join("|"), { regex: true, tests: false, limit: 40, perFile: 3 });
       } catch (e) {
         code.warning = e.message;
       }
-      for (const p of sys.passports) if ((p.effective?.endpoints || []).some((e) => words.some((w) => `${e.method} ${e.path} ${e.handler}`.toLowerCase().includes(w))) || code.hits?.some((h) => h.repo === p.codeIndex)) selected.add(`service:${p.service}`);
-      for (let depth = 0; depth < 3; depth++) {
-        const frontier = new Set(selected);
-        const nodeKinds = new Map(sys.nodes.map((n) => [n.id, n.kind]));
-        for (const r of sys.relations) if (frontier.has(r.from) || frontier.has(r.to) && nodeKinds.get(r.to) !== "database") {
-          selected.add(r.from);
-          selected.add(r.to);
-        }
+      const kindOf = new Map(graph.nodes.map((n) => [n.id, n.kind]));
+      const blockKind = new Map(relevant.map((b) => [b.id, b.kind]));
+      const mentioned = graph.mentions.filter((m) => m.entity && relevantBlocks.has(m.blockId) && kindOf.get(m.entity) !== "database");
+      const seeds = new Set(mentioned.filter((m) => blockKind.get(m.blockId) !== "diagram").map((m) => m.entity));
+      const diagramOnly = new Set(mentioned.map((m) => m.entity).filter((id) => !seeds.has(id)));
+      const endpointMatches = (n) => n.kind === "endpoint" && words.some((w) => n.name.toLowerCase().includes(w));
+      for (const n of sys.nodes.filter(endpointMatches)) {
+        seeds.add(n.id);
+        seeds.add(`service:${n.service}`);
       }
-      for (const r of graph.relations.filter((r2) => ["stated", "inferred"].includes(r2.confidence) && !["contains", "mentions", "links"].includes(r2.kind))) if ((selected.has(r.from) || selected.has(r.to)) && selectedPages.has(r.provenance?.pageId)) {
+      const KEEP = /* @__PURE__ */ new Set(["produces", "consumes", "calls", "read", "write"]);
+      const selected = /* @__PURE__ */ new Set([...seeds, ...diagramOnly]), keep = [];
+      const allowed = (r) => KEEP.has(r.kind) && !["database", "function"].includes(kindOf.get(r.from)) && !["database", "function"].includes(kindOf.get(r.to)) || r.kind === "exposes" && seeds.has(r.to);
+      for (const r of sys.relations) if (allowed(r) && (seeds.has(r.from) && kindOf.get(r.from) === "service" || seeds.has(r.to) && kindOf.get(r.to) === "service")) {
         selected.add(r.from);
         selected.add(r.to);
+        keep.push(r);
       }
-      const modelNodes = graph.nodes.filter((n) => selected.has(n.id) && !["page", "space", "block", "diagram"].includes(n.kind));
-      const modelRelations = graph.relations.filter((r) => selected.has(r.from) && selected.has(r.to) && !["mentions", "contains", "links", "ambiguous-table"].includes(r.kind));
+      for (const r of sys.relations) if (allowed(r) && !keep.includes(r) && kindOf.get(r.from) !== kindOf.get(r.to) && (selected.has(r.from) && kindOf.get(r.from) === "topic" || selected.has(r.to) && kindOf.get(r.to) === "topic")) {
+        selected.add(r.from);
+        selected.add(r.to);
+        keep.push(r);
+      }
+      for (const r of sys.relations) if (allowed(r) && !keep.includes(r) && selected.has(r.from) && selected.has(r.to)) keep.push(r);
+      const documented = graph.relations.filter((r) => ["stated", "inferred"].includes(r.confidence) && !["contains", "mentions", "links"].includes(r.kind) && selectedPages.has(r.provenance?.pageId) && (selected.has(r.from) || selected.has(r.to)));
+      for (const r of documented) {
+        selected.add(r.from);
+        selected.add(r.to);
+        keep.push(r);
+      }
+      const byKey = /* @__PURE__ */ new Map();
+      for (const r of keep) {
+        const k = `${r.from}|${r.to}|${r.kind}|${r.confidence}`;
+        if (!byKey.has(k)) byKey.set(k, r);
+        else if (r.conflict) byKey.get(k).conflict = true;
+      }
+      const entryServices = [...new Set(sys.nodes.filter((n) => selected.has(n.id) && endpointMatches(n)).map((n) => `service:${n.service}`))];
+      const client = entryServices.length ? [{ id: "person:client", name: "Client", kind: "person", provenance: { source: "code", status: "verified", note: "caller of the matching endpoints" } }] : [];
+      const modelNodes = [...client, ...graph.nodes.filter((n) => selected.has(n.id) && !["page", "space", "block", "diagram", "endpoint"].includes(n.kind))];
+      const modelRelations = [
+        ...sys.nodes.filter((n) => selected.has(n.id) && endpointMatches(n)).map((n) => ({ from: "person:client", to: `service:${n.service}`, kind: "calls", label: n.name, technology: "HTTP", confidence: "verified", provenance: n.provenance })),
+        ...[...byKey.values()].filter((r) => r.kind !== "exposes" && selected.has(r.from) && selected.has(r.to))
+      ];
       const evidence = [], seen = /* @__PURE__ */ new Set();
       let evidenceBytes = 0;
-      for (const b of search.blocks) for (const quote of b.quotes || [b.text]) {
+      const quotable = (b) => !["heading", "diagram", "issue"].includes(b.kind);
+      const ranked = [...relevant.filter((b) => !stale.has(b.pageId)), ...relevant.filter((b) => stale.has(b.pageId))].filter(quotable);
+      for (const b of ranked) for (const quote of b.quotes || [b.text]) {
         const norm = quote.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+        if (b.kind !== "table-row" && quote.split(/\s+/).length < 4) continue;
         if (!norm || quote.length > 1800 || evidenceBytes + Buffer.byteLength(quote) > 12e3 || seen.has(norm) || [...seen].some((s) => s.length > 60 && norm.length > 60 && (s.includes(norm) || norm.includes(s)))) continue;
         seen.add(norm);
         evidenceBytes += Buffer.byteLength(quote);
-        evidence.push({ blockId: b.id, pageId: b.pageId, space: b.space, version: b.version, title: b.title, path: b.path, text: quote, url: b.url });
+        evidence.push({ blockId: b.id, pageId: b.pageId, space: b.space, version: b.version, title: b.title, path: b.path, text: quote, url: b.url, ...stale.has(b.pageId) ? { stale: true } : {} });
         if (evidence.length >= Math.min(20, limit)) break;
       }
       evidence.splice(Math.min(20, limit));
@@ -17351,37 +17388,48 @@ var require_knowledge = __commonJS({
             for (const listener of listeners.filter((l) => l.topic === r.to.slice("topic:".length) || l.entry === `kafka ${r.to.slice("topic:".length)}`)) appendOutputs(target, listener, steps, visited, depth + 1);
           }
           if (r.kind === "calls" && r.to.startsWith("service:")) {
-            const target = r.to.slice("service:".length), candidates = serviceFlows.get(target) || [];
-            const route = (value) => String(value).replace(/\{[^}]+\}/g, "{}").replace(/\/$/, "").toLowerCase();
-            for (const next of candidates.filter((next2) => next2.kind === "http" && (route(next2.entry) === route(r.label) || (out2.http || []).some((call) => route(call.call) === route(next2.entry))))) appendOutputs(target, next, steps, visited, depth + 1);
+            const target = r.to.slice("service:".length), candidates2 = serviceFlows.get(target) || [];
+            const route2 = (value) => String(value).replace(/\{[^}]+\}/g, "{}").replace(/\/$/, "").toLowerCase();
+            for (const next of candidates2.filter((next2) => next2.kind === "http" && (route2(next2.entry) === route2(r.label) || (out2.http || []).some((call) => route2(call.call) === route2(next2.entry))))) appendOutputs(target, next, steps, visited, depth + 1);
           }
         }
       }
+      const route = (value) => String(value).replace(/\{[^}]+\}/g, "{}").replace(/\/$/, "").toLowerCase();
+      const candidates = [];
       for (const [service, available] of serviceFlows) for (const f of available) {
-        if (flows.length >= 5 || !words.some((w) => `${f.entry} ${JSON.stringify(f.chain || [])}`.toLowerCase().includes(w))) continue;
-        const endpoint = modelNodes.find((n) => n.kind === "endpoint" && n.service === service && n.name === f.entry), steps = [];
-        if (endpoint) steps.push({ from: endpoint.id, to: "service:" + service, label: f.entry, technology: "HTTP", confidence: "verified", provenance: endpoint.provenance });
+        if (!words.some((w) => `${f.entry} ${JSON.stringify(f.chain || [])}`.toLowerCase().includes(w))) continue;
+        const endpoint = sys.nodes.find((n) => n.kind === "endpoint" && n.service === service && route(n.name) === route(f.entry)), steps = [];
+        if (endpoint) steps.push({ from: client.length ? "person:client" : endpoint.id, to: "service:" + service, label: endpoint.name, technology: "HTTP", confidence: "verified", provenance: endpoint.provenance });
         else if (f.topic) steps.push(...modelRelations.filter((r) => r.from === `topic:${f.topic}` && r.to === "service:" + service && r.kind === "consumes"));
         appendOutputs(service, f, steps);
-        flows.push({ name: f.entry, service, chain: f.chain || f.via || [], steps, source: Array.isArray(f.chain) ? "codegraph" : "passport-flow" });
+        const unique = [...new Map(steps.map((r) => [`${r.from}|${r.to}|${r.kind || ""}|${r.label || ""}`, r])).values()];
+        candidates.push({ name: endpoint?.name || f.entry, service, http: !!endpoint, chain: f.chain || f.via || [], steps: unique, source: Array.isArray(f.chain) ? "codegraph" : "passport-flow" });
       }
-      if (!flows.length) for (const n of modelNodes.filter((n2) => n2.kind === "endpoint" && words.some((w) => n2.name.toLowerCase().includes(w))).slice(0, 5)) flows.push({ name: n.name, steps: [{ from: n.id, to: `service:${n.service}`, label: n.name, technology: "HTTP", provenance: n.provenance }], source: "endpoint-only", note: "No indexed flow is available; refresh the service passport for outputs and method chains." });
+      const signatures = /* @__PURE__ */ new Set();
+      for (const f of candidates.sort((a, b) => b.http - a.http || b.steps.length - a.steps.length)) {
+        const signature = `${f.name}|${f.steps.map((r) => `${r.from}>${r.to}`).join(",")}`;
+        if (flows.length >= 5 || f.steps.length < 2 || signatures.has(signature)) continue;
+        signatures.add(signature);
+        flows.push(f);
+      }
+      if (!flows.length) for (const n of sys.nodes.filter((n2) => n2.kind === "endpoint" && selected.has(`service:${n2.service}`) && endpointMatches(n2)).slice(0, 5)) flows.push({ name: n.name, steps: [{ from: client.length ? "person:client" : n.id, to: `service:${n.service}`, label: n.name, technology: "HTTP", confidence: "verified", provenance: n.provenance }], source: "endpoint-only", note: "No indexed flow is available; refresh the service passport for outputs and method chains." });
       if (!flows.length) {
         for (const p of pages.filter((p2) => selectedPages.has(p2.id))) for (const d of p.diagrams || []) if (/sequenceDiagram|\bparticipant\b/.test(d.source || "") && flows.length < 5) {
-          const steps = modelRelations.filter((r) => r.provenance?.pageId === p.id && r.provenance?.blockId === d.blockId && r.provenance?.source === "docs:diagram");
+          const steps = graph.relations.filter((r) => r.provenance?.pageId === p.id && r.provenance?.blockId === d.blockId && r.provenance?.source === "docs:diagram");
           if (steps.length) flows.push({ name: `Documented: ${p.title}`, steps, source: "docs:diagram", note: "Sequence is stated in documentation; no matching indexed code flow is available." });
         }
       }
       const model = { name: text, env, nodes: modelNodes, relations: modelRelations, flows }, D = require_diagrams();
       const diagrams = [];
-      for (const view2 of ["context", "container", ...flows.map((_, i) => `sequence:${i}`)]) {
+      for (const [view2, name] of [["context", "Context"], ["container", "Container"], ...flows.map((f, i) => [`sequence:${i}`, `Sequence: ${f.name}`])]) {
         for (const format of ["mermaid", "plantuml", "structurizr"]) {
-          const diagram = { name: view2, format, source: D.write(model, { format, view: view2 }) };
+          if (format === "structurizr" && view2 !== "container") continue;
+          const diagram = { name, view: view2, format, source: D.write(model, { format, view: view2 }) };
           if (render && format === "plantuml") {
             try {
               const result = await D.render(model, { ...docs.config().diagrams, format, view: view2 });
               if (typeof result === "string") diagram.svg = result;
-              else Object.assign(diagram, result);
+              else Object.assign(diagram, { ...result, view: view2 });
             } catch (e) {
               diagram.renderError = e.message;
             }

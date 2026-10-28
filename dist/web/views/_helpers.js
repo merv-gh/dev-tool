@@ -54,9 +54,16 @@ const dt = {
   title(t) { const h = document.querySelector('[data-title]'); if (h) h.textContent = t || META.title || META.view; document.title = t || META.title || META.view; },
 };
 
-// size the iframe in a chat (Open WebUI); only report changes
+// size the iframe in a chat (Open WebUI); only report changes. The chat may start listening after the
+// first report (a page whose height never changes would stay at the default 150px), so repeat the
+// current height on load and for a few seconds after.
 window.addEventListener('DOMContentLoaded', () => {
+  if (parent === window) return;
   let last = 0;
-  const post = () => { const h = Math.ceil(document.body.getBoundingClientRect().height); if (h !== last && parent !== window) { last = h; parent.postMessage({ type: 'iframe:height', height: h }, '*'); } };
+  const height = () => Math.ceil(document.body.getBoundingClientRect().height);
+  const send = (h) => parent.postMessage({ type: 'iframe:height', height: h }, '*');
+  const post = () => { const h = height(); if (h !== last) { last = h; send(h); } };
   new ResizeObserver(post).observe(document.body);
+  window.addEventListener('load', () => send(height()));
+  for (const ms of [500, 1500, 3000, 6000]) setTimeout(() => send(height()), ms);
 });
