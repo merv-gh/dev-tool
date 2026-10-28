@@ -14,6 +14,8 @@ can also be selected per connection:
 | OpenAPI path | Starting workflow |
 | --- | --- |
 | `openapi/compact.json` | Find capabilities on demand, then execute exact tools |
+| `openapi/lean.json` | Four discovery tools; request more capabilities when needed |
+| `openapi/lean-find.json` | Five tools: cached catalog search plus discovery |
 | `openapi/investigate.json` | Service/data discovery, health, logs, code and evidence |
 | `openapi/testing.json` | Fixtures, scenarios, collections, scratch databases and tests |
 | `openapi/develop.json` | Code/workspaces, compile checks and focused tests |
@@ -26,7 +28,9 @@ Start a compact chat with `find` for system names and `tool_search` for capabili
 operation with the same validation, tracing and rate limits. Profiles only control
 the definitions initially sent to the model. `tools.enable`/`tools.disable` remain
 the capability controls. Custom profiles can list `names`, `groups` and name
-`prefixes` in `tools.profiles`.
+`prefixes` in `tools.profiles`. Existing profiles retain the eleven core definitions;
+set `includeCore:false` on a custom profile to select only its stated definitions.
+The opt-in `lean` profiles do this without changing `compact` or its permissions.
 
 Register an existing Open WebUI using its normal setup command:
 

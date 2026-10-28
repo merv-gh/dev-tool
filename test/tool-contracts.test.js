@@ -49,6 +49,15 @@ test('profiles never resurrect disabled tools and dispatcher cannot recurse', as
   await assert.rejects(T.call('tool_execute', { name: 'tool_execute', arguments: {} }), /directly/);
   config();
 });
+test('lean profiles expose only selected definitions while preserving permissions and discovery', async () => {
+  assert.deepEqual((await T.schemas({ profile: 'lean' })).map(t => t.name).sort(), ['tool_describe', 'tool_execute', 'tool_profiles', 'tool_search']);
+  assert.equal((await T.schemas({ profile: 'lean-find' })).length, 5);
+  config({ disable: ['tool_describe', 'pg_query'], profiles: { minimal: { includeCore: false, names: ['tool_search', 'pg_query'] } } });
+  assert.equal((await T.schemas({ profile: 'lean' })).length, 3);
+  assert.deepEqual((await T.schemas({ profile: 'minimal' })).map(t => t.name), ['tool_search']);
+  assert.ok(!(await T.call('tool_search', { query: 'pg_query' })).tools.some(t => t.name === 'pg_query'));
+  config();
+});
 test('Open WebUI updates retain user instructions and expose the selected API profile', async () => {
   const W = require('../lib/webui');
   const prior = 'Use the staging environment and cite every claim.';
