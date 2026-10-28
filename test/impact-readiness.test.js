@@ -39,6 +39,20 @@ test('four overloaded/versioned methods retain public identities; typed callers 
  const symbols=await require('../lib/tools').call('code_symbols',{q:'MoneyMath round',kind:'method',repos:'LIB/*'});assert.equal(new Set(symbols.rows.map(r=>r.id)).size,4);assert.ok(symbols.rows.every(r=>r.revision&&r.legacyId));
  assert.throws(()=>I.loadLegacy({repos:'LIB/*'}),/Ambiguous legacy class/);
 });
+test('graph leaf replacements and equal build timestamps cannot reuse stale canonical workspace revisions',()=>{
+ const key='work/cache-leaf';idx(key,{'src/main/java/fixture/CacheLeaf.java':'package fixture; public class CacheLeaf { public int before(){return 1;} }'},{workspace:'cache-leaf'});
+ const first=I.load({repos:key,env:'dev'}),dir=CI.keyDir(key),meta=JSON.parse(fs.readFileSync(path.join(dir,'files.json'))),graph=JSON.parse(fs.readFileSync(path.join(dir,'graph.json')));
+ graph.classes[0].methods[0].name='after';fs.writeFileSync(path.join(dir,'graph.json'),JSON.stringify(graph));
+ const second=I.load({repos:key,env:'dev'});assert.notEqual(second.signature,first.signature);assert.ok([...second.nodes.values()].some(n=>n.signature==='after()'));assert.ok(![...second.nodes.values()].some(n=>n.signature==='before()'));
+ fs.writeFileSync(path.join(home,'sources',key,'src/main/java/fixture/CacheLeaf.java'),'package fixture; public class CacheLeaf { public int third(){return 3;} }');CI.build(path.join(home,'sources',key),key,{repo:'cache-leaf',workspace:'cache-leaf',sha:meta.sha},{force:true});
+ const changed=JSON.parse(fs.readFileSync(path.join(dir,'files.json')));changed.builtAt=meta.builtAt;fs.writeFileSync(path.join(dir,'files.json'),JSON.stringify(changed));
+ const third=I.load({repos:key,env:'dev'});assert.notEqual(third.signature,second.signature);assert.notDeepEqual([...third.nodes.keys()],[...first.nodes.keys()]);assert.ok([...third.nodes.values()].some(n=>n.signature==='third()'));
+});
+test('structurally invalid JSON passports retain labelled last-good evidence instead of dropping edges or throwing',()=>{
+ const f=savePass('structural-refresh',{consumes:[{topic:'structural.before'}]});assert.deepEqual(I.impact('topic:structural.before',{env:'dev',grep:false}).services,['structural-refresh']);
+ fs.writeFileSync(f,JSON.stringify(passport('structural-refresh',{consumes:{topic:'silently-wrong-shape'}})));
+ const r=I.impact('topic:structural.before',{env:'dev',grep:false});assert.deepEqual(r.services,['structural-refresh']);assert.equal(r.complete,false);assert.ok(r.gaps.some(g=>g.kind==='passport-stale-last-good'&&g.retained));
+});
 test('normal stored passport consumes/calls and environment filter; atomic/equal-sized edits invalidate and failed refresh labels last-good',()=>{
  savePass('consumer',{consumes:[{topic:'orders.paid',file:'Listener.java',line:4}],calls:[{method:'GET',path:'/bill/{id}',file:'Client.java',line:6}]});savePass('stage',{endpoints:[{method:'GET',path:'/only-stage'}]},'staging');
  assert.deepEqual(I.impact('topic:orders.paid',{env:'dev',grep:false}).services,['consumer']);assert.deepEqual(I.impact('GET /bill/1',{env:'dev',grep:false}).services,['consumer']);assert.deepEqual(I.impact('GET /only-stage',{env:'dev',grep:false}).resolved,[]);

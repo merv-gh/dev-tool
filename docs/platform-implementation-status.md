@@ -2,6 +2,8 @@
 
 Updated 2026-10-29. The implementation is integrated on `codex/openwebui-dev-platform` in a separate worktree. Confluence, capture/performance, PostgreSQL templates, scenario execution, collection suites, browser/API work and independent reviews were developed in separate worktrees. The original checkout is unchanged.
 
+The latest [readiness repair pass](readiness-implementation.md) supersedes the pre-repair gaps/counts in the historical verification sections below. It adds scoped impact/column lineage, Node execution, explicit targets and differential checks, mixed PG/ES/Kafka native replay/effects, typed retained failures, bounded workflow guides and actual isolated task-evaluator mechanics. External customer-dev and real smaller-model evaluation remain unverified.
+
 The [independent completeness review](developer-tool-completeness-review.md) contains 143 acceptance items, including future adapters. This document records actual implementation; it does not mark that entire inventory complete.
 
 ## Workflows available now

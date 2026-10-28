@@ -2,6 +2,8 @@
 
 Date: 2026-10-29 (Europe/Moscow). Baseline: `4b6dc31ebc085fd0852db986a23ed66840d0632f`.
 
+Implementation follow-up: [readiness repairs and verification](readiness-implementation.md). The observations and baseline reports below describe the frozen pre-repair state. Scoped impact/lineage, Node execution and reviewed targets, native mixed-source replay, typed history, bounded workflow guides and isolated task evaluation have since been implemented. Actual customer dev and real-model release evidence remain separately required.
+
 This extends the [143-item completeness review](developer-tool-completeness-review.md) with executed developer situations. The target is a short, expandable Open WebUI tool list that a smaller tool-calling model can use reliably. Production readiness applies to a named workflow, language, environment and model configuration; neither a large unit-test count nor a scripted discovery benchmark certifies arbitrary architectures or a 27B model.
 
 ## Verification protocol
