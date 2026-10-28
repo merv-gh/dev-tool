@@ -46,7 +46,10 @@ test('flow tests through a library controller run green with Maven', { skip: !MV
       fetchRef: (p, r, ref, o = {}) => realGit.fetchRef(p, r, ref, { ...o, url: `file://${repos[`${p}/${r}`]}` }),
       fetchFirst: (p, r, refs, o = {}) => realGit.fetchFirst(p, r, refs, { ...o, url: `file://${repos[`${p}/${r}`]}` }),
     };
-    const ws = await require('../lib/workspace').open({ project: 'SHOP', repo: 'orders-service', ref: 'main', url: `file://${repos['SHOP/orders-service']}`, git: gitImpl });
+    // the passport indexes the libraries' code; the workspace then fetches none (the build gets the jars)
+    await require('../lib/passport').build('orders-service', { repo: 'SHOP/orders-service', gitImpl });
+    const ws = await require('../lib/workspace').open({ project: 'SHOP', repo: 'orders-service', ref: 'main', url: `file://${repos['SHOP/orders-service']}` });
+    assert.equal(ws.libs.length, 3);
     const T = require('../lib/tools');
     const run = async (args) => { let r = await T.call('test_run', args); while (r.state === 'running') r = await T.call('test_run', { workspace: args.workspace, job: r.job }); return r; };
 

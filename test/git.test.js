@@ -77,3 +77,20 @@ test('a broken .git is replaced on normal disks too', async () => {
   assert.equal(info.sha, g(['rev-parse', 'HEAD'], src));
   assert.ok(fs.statSync(path.join(dir, '.git')).isDirectory());
 });
+
+test('a branch rewritten on the remote (force-push): the stale local copy is dropped and fetched fresh', async () => {
+  const git = require('../lib/git');
+  const src2 = path.join(tmp, 'src', 'rewritten');
+  fs.mkdirSync(src2, { recursive: true });
+  g(['init', '-q', '-b', 'main'], src2);
+  fs.writeFileSync(path.join(src2, 'A.java'), 'class A {}\n'); g(['add', '.'], src2); g(['commit', '-q', '-m', 'one'], src2);
+  fs.writeFileSync(path.join(src2, 'A.java'), 'class A { int v; }\n'); g(['commit', '-qam', 'two'], src2);
+  const first = await git.fetchRef('SHOP', 'rewritten', 'main', { url: `file://${src2}` });
+  // history rewritten: a new root, the old commits gone
+  g(['checkout', '-q', '--orphan', 'fresh'], src2); g(['commit', '-q', '-m', 'rewritten'], src2);
+  g(['branch', '-q', '-D', 'main'], src2); g(['branch', '-q', '-m', 'main'], src2);
+  g(['reflog', 'expire', '--expire=now', '--all'], src2); g(['gc', '-q', '--prune=now'], src2);
+  const again = await git.fetchRef('SHOP', 'rewritten', 'main', { url: `file://${src2}` });
+  assert.notEqual(again.sha, first.sha);
+  assert.equal(again.sha, g(['rev-parse', 'HEAD'], src2));
+});

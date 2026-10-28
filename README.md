@@ -359,7 +359,18 @@ Internal libraries often live in a repo called `commons` or `starter`, and only 
 
 It runs at 8 requests/s (`passports.indexRatePerSec`). Repos indexed in the last 7 days are kept, so later runs only ask Bitbucket for the repo list. The result goes to `cache/bitbucket/_index.json` and to the catalog (`find "repo: acme-audit-core"`).
 
-Passports and workspaces look libraries up there first: a module declaring the artifact, then the repo itself, then a folder with the name. Only after that do they guess by name. A mapping can name a module too: `"acme-audit-core": "LIB/commons/audit"`.
+Passports look libraries up in this order:
+1. a mapping, which can name a module (`"acme-audit-core": "LIB/commons/audit"`);
+2. the index: a module declaring the artifact, then the repo itself, then a folder with the name (or `<repo>-<folder>`);
+3. repos found by searching names, but only as candidates. Each is looked at on Bitbucket (its folders, its root and module poms) and taken only if it declares the artifact or is named like it.
+
+Nothing is fetched on a guess. When no repo declares the artifact, the passport says which repos it looked inside.
+
+For the version, one `git ls-remote` lists the repo's tags and branches. dt fetches the first of `v1.2.0`, `1.2.0`, `<artifact>-1.2.0`, `<repo>-1.2.0`, `release/1.2.0` that exists, otherwise the default branch, and says so. Several libraries in one repo share one fetch.
+
+**Workspaces don't fetch libraries.** The build takes their jars from your repository (Nexus). For flows through library code, a workspace uses the indexes the service's passport built. `libraries=true` fetches the library sources now, for a service without a passport.
+
+A local checkout whose history no longer matches the remote (after a force-push or rebase) is dropped and fetched fresh, with a note in the log.
 
 Each library module a passport or workspace pulls gets its own code index (`cache/code/LIB/commons/audit`). The service's graph and its libraries' graphs join:
 

@@ -227,6 +227,13 @@ const handle = (ENV) => (req, res) => {
       const name = u.searchParams.get('name') || '';
       return j({ isLastPage: true, values: ['order-service', 'payment-service', 'payments-service', 'common-lib'].filter(r => r.includes(name)).map(slug => ({ slug, name: slug, project: { key: 'SHOP' } })) });
     }
+    // browse and raw files of the repos: dt looks inside a repo before taking it as a library's
+    if ((m = p.match(/^\/rest\/api\/1\.0\/projects\/[^/]+\/repos\/([^/]+)\/(browse|raw)(?:\/(.*))?$/))) {
+      const base = path.join(GIT, 'work', m[1]), rel = decodeURIComponent(m[3] || ''), f = path.join(base, rel);
+      if (!fs.existsSync(base) || !f.startsWith(base) || !fs.existsSync(f)) { res.statusCode = 404; return j({ errors: [{ message: 'not found' }] }); }
+      if (m[2] === 'raw') { res.setHeader('content-type', 'text/plain'); return res.end(fs.readFileSync(f)); }
+      return j({ children: { values: fs.readdirSync(f, { withFileTypes: true }).filter(e => e.name !== '.git').map(e => ({ path: { name: e.name }, type: e.isDirectory() ? 'DIRECTORY' : 'FILE' })), isLastPage: true } });
+    }
     if (p === '/rest/api/1.0/dashboard/pull-requests') return j({ values: [PR, { ...PR, id: 41, title: 'Order history migration', reviewers: [{ user: { displayName: 'You' }, status: 'UNAPPROVED' }], toRef: { displayId: 'main', repository: { slug: 'order-service', project: { key: 'SHOP' } } }, updatedDate: now - 864e5 }] });
     if (p === '/rest/api/1.0/projects/SHOP/repos/payment-service/pull-requests/42') return j(PR);
     if (p === '/rest/api/1.0/projects/SHOP/repos/payment-service/pull-requests/42/diff') return j(PR_DIFF);

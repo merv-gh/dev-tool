@@ -4360,6 +4360,31 @@ var require_bbindex = __commonJS({
       log(`bitbucket: ${data.repos.length} repos in the index, ${data.repos.reduce((n, r) => n + (r.modules || []).length, 0)} modules${failed ? `, ${failed} failed` : ""}`);
       return { repos: data.repos.length, indexed: todo.length - failed, failed, modules: data.repos.reduce((n, r) => n + (r.modules || []).length, 0) };
     }
+    async function indexSome(repos, { atl = require_atlassian(), perSec } = {}) {
+      const wait = throttle(perSec || require_config().getPersonal().indexRatePerSec || 8);
+      const prev = load();
+      const byKey = new Map(prev.repos.map((r) => [`${r.project}/${r.repo}`, r]));
+      const out2 = [];
+      for (const r of repos) {
+        const k = `${r.project}/${r.repo}`;
+        const have = byKey.get(k);
+        if (have && !have.error && Date.now() - Date.parse(have.indexedAt) < 7 * 864e5) {
+          out2.push(have);
+          continue;
+        }
+        try {
+          const x = await indexRepo(r, atl, wait);
+          byKey.set(k, x);
+          out2.push(x);
+        } catch (e) {
+          const x = { project: r.project, repo: r.repo, error: e.message, indexedAt: (/* @__PURE__ */ new Date()).toISOString() };
+          byKey.set(k, x);
+          out2.push(x);
+        }
+      }
+      writeJson(FILE, { builtAt: prev.builtAt, partial: !prev.builtAt || void 0, repos: [...byKey.values()].sort((a, b) => `${a.project}/${a.repo}`.localeCompare(`${b.project}/${b.repo}`)) });
+      return out2;
+    }
     function lookup(dep, index = load()) {
       const a = dep.artifactId, na = norm(a);
       const out2 = [];
@@ -4375,6 +4400,7 @@ var require_bbindex = __commonJS({
         if (r.repo === a || norm(r.repo) === na) add(90, null, "same name", r.self?.groupId);
         for (const d of r.dirs || []) {
           if (d === a) add(80, d, `folder ${d}`, r.self?.groupId);
+          else if (a === `${r.repo}-${d}`) add(82, d, `folder ${d} of ${r.repo}`, r.self?.groupId);
           else if (d.length >= 3 && a.endsWith(`-${d}`) && !(r.modules || []).some((m) => m.dir === d && m.artifactId && m.artifactId !== a)) add(50, d, `folder ${d} (${a} without its prefix)`, r.self?.groupId);
         }
       }
@@ -4391,7 +4417,7 @@ var require_bbindex = __commonJS({
         return `repo ${r.project}/${r.repo}${r.self?.artifactId ? ` ${r.self.groupId || ""}:${r.self.artifactId}` : ""}: ${mods.length ? `modules ${mods.join(", ")}; ` : ""}dirs ${(r.dirs || []).join(", ")}`;
       });
     }
-    module2.exports = { build, lookup, load, catalogLines, indexRepo, FILE };
+    module2.exports = { build, indexSome, lookup, load, catalogLines, indexRepo, FILE };
   }
 });
 
@@ -5511,8 +5537,19 @@ var require_git = __commonJS({
       await T.step("git init", () => ensureRepo(dir, url, opts.gitKey || `${project.toUpperCase()}/${repo}`), dir);
       const want = ref || "HEAD";
       let fallback = null;
+      const fetchHead = () => T.step("git fetch", () => git(["fetch", "-q", "--depth", "1", "--no-tags", "origin", want], dir, auth), where);
       try {
-        await T.step("git fetch", () => git(["fetch", "-q", "--depth", "1", "--no-tags", "origin", want], dir, auth), where);
+        try {
+          await fetchHead();
+        } catch (e) {
+          if (/couldn't find remote ref|not our ref|Authentication|403|401|Could not resolve|unable to access|timed out|Connection refused/i.test(e.message)) throw e;
+          T.note(`the local copy of ${project}/${repo} did not match the remote any more (${e.message.split("\n")[0].slice(0, 100)}): fetched fresh`);
+          const gitDir = await git(["rev-parse", "--absolute-git-dir"], dir).catch(() => path2.join(dir, ".git"));
+          fs2.rmSync(gitDir, { recursive: true, force: true });
+          fs2.rmSync(path2.join(dir, ".git"), { recursive: true, force: true });
+          await ensureRepo(dir, url, opts.gitKey || `${project.toUpperCase()}/${repo}`);
+          await fetchHead();
+        }
         await T.step("git checkout", () => git(["checkout", "-q", "--detach", "--force", "FETCH_HEAD"], dir));
       } catch (e) {
         if (!isSha(want)) throw new Error(`${e.message} (${where} from ${url.replace(/\/\/[^@/]*@/, "//***@")})`);
@@ -5611,6 +5648,17 @@ var require_git = __commonJS({
       fs2.writeFileSync(path2.join(await git(["rev-parse", "--absolute-git-dir"], dir), "dt-ref.json"), JSON.stringify(info, null, 2));
       return info;
     }
+    async function remoteRefs(project, repo, opts = {}) {
+      const url = opts.url || remote(project, repo);
+      const out2 = await git(["ls-remote", "--tags", "--heads", url], process.cwd(), authArgs(url));
+      const tags = /* @__PURE__ */ new Set(), heads = /* @__PURE__ */ new Set();
+      for (const l of out2.split("\n")) {
+        const r = (l.split("	")[1] || "").trim();
+        if (r.startsWith("refs/tags/")) tags.add(r.slice(10).replace(/\^\{\}$/, ""));
+        else if (r.startsWith("refs/heads/")) heads.add(r.slice(11));
+      }
+      return { tags, heads };
+    }
     async function fetchFirst(project, repo, refs, opts = {}) {
       let last;
       for (const ref of refs) {
@@ -5622,7 +5670,7 @@ var require_git = __commonJS({
       }
       throw last;
     }
-    module2.exports = { fetchRef, fetchReusing, remoteSha, fetchFirst, repoDir, REPOS, isSha, git };
+    module2.exports = { fetchRef, fetchReusing, remoteSha, remoteRefs, fetchFirst, repoDir, REPOS, isSha, git };
   }
 });
 
@@ -6714,16 +6762,29 @@ var require_passport = __commonJS({
       const atl = require_atlassian();
       const norm = (x) => x.toLowerCase().replace(/[-_.]/g, "");
       const tried = [];
+      const seen = /* @__PURE__ */ new Map();
       for (const name of libraryRepoNames(dep)) {
         if (!searches.has(name)) searches.set(name, await bb(() => atl.repos(name)));
-        const found = searches.get(name);
         tried.push(name);
-        const hit = found.find((r) => r.repo === name) || found.find((r) => norm(r.repo) === norm(name));
-        if (hit) return { project: hit.project, repo: hit.repo, via: name === dep.artifactId ? "same name" : `repo "${hit.repo}" (module of a bigger repo?)` };
+        const found = searches.get(name);
+        for (const r of [...found.filter((x) => x.repo === name || norm(x.repo) === norm(name)), ...found]) if (!seen.has(`${r.project}/${r.repo}`)) seen.set(`${r.project}/${r.repo}`, r);
       }
-      const candidates = [...new Set(tried.flatMap((n) => searches.get(n) || []).map((r) => `${r.project}/${r.repo}`))].slice(0, 8);
+      const cand = [...seen.values()].slice(0, 10);
+      if (cand.length) {
+        const B = require_bbindex();
+        const entries = await require_trace().step("verify library repos", () => B.indexSome(cand), `${dep.artifactId}: ${cand.map((c) => `${c.project}/${c.repo}`).join(", ")}`);
+        const ok = B.lookup(dep, { repos: entries }).filter((h) => h.score >= 80);
+        if (ok.length) return { project: ok[0].project, repo: ok[0].repo, module: ok[0].module, via: `checked on Bitbucket: ${ok[0].why}` };
+        const failed = entries.filter((e) => e.error);
+        if (failed.length === entries.length) {
+          const err2 = new Error(`no verified Bitbucket repo for ${dep.artifactId}: the candidates (${cand.map((c) => `${c.project}/${c.repo}`).join(", ")}) could not be looked at (${failed[0].error.slice(0, 160)}). Map it in config.json: passports.libraryRepos { "${dep.artifactId}": "PROJECT/repo[/module]" }`);
+          err2.candidates = cand.map((c) => `${c.project}/${c.repo}`);
+          throw err2;
+        }
+      }
+      const candidates = [...seen.keys()].slice(0, 8);
       const indexed = require_bbindex().load().builtAt;
-      const err = new Error(`no Bitbucket repo for ${dep.artifactId} (tried ${tried.join(", ")}${indexed ? `, and the folders of every repo indexed ${indexed.slice(0, 10)}` : ""})${candidates.length ? `; similar: ${candidates.join(", ")}` : ""}. ${indexed ? "" : "Index all repos and their folders with catalog_sync what=bitbucket, or map"}${indexed ? "Map" : ""} it in config.json: passports.libraryRepos { "${dep.artifactId}": "PROJECT/repo" }`);
+      const err = new Error(`no Bitbucket repo declares ${dep.artifactId} (searched ${tried.join(", ")}${seen.size ? `; looked inside ${[...seen.keys()].slice(0, 10).join(", ")}: none has a module with that artifactId` : ""}${indexed ? `; and the folders of every repo indexed ${indexed.slice(0, 10)}` : ""}). ${indexed ? "" : "Index all repos and their folders with catalog_sync what=bitbucket, or map"}${indexed ? "Map" : ""} it in config.json: passports.libraryRepos { "${dep.artifactId}": "PROJECT/repo" }`);
       err.candidates = candidates;
       throw err;
     }
@@ -6773,9 +6834,21 @@ var require_passport = __commonJS({
         return { ...dep, error: e.message, candidates: e.candidates || [] };
       }
       const v = dep.version && !/\$/.test(dep.version) ? dep.version : null;
-      const refs = v ? [`v${v}`, v, `${dep.artifactId}-${v}`, `${repo.repo}-${v}`, `release/${v}`, void 0] : [void 0];
+      const names = v ? [`v${v}`, v, `${dep.artifactId}-${v}`, `${repo.repo}-${v}`, `release/${v}`, `release-${v}`] : [];
       await limit.take("bitbucket");
-      const info = await git.fetchFirst(repo.project, repo.repo, refs);
+      const T = require_trace();
+      let info;
+      if (git.remoteRefs) {
+        let ref;
+        if (names.length) {
+          const have = await T.step("git ls-remote", () => git.remoteRefs(repo.project, repo.repo), `${repo.project}/${repo.repo}`);
+          ref = names.find((n) => have.tags.has(n) || have.heads.has(n));
+          if (!ref) T.note(`${dep.artifactId} ${v}: ${repo.project}/${repo.repo} has no tag or branch for it (looked for ${names.join(", ")}): its default branch`);
+        }
+        const key = `fetch:${repo.project}/${repo.repo}@${ref || ""}`;
+        if (!searches.has(key)) searches.set(key, git.fetchRef(repo.project, repo.repo, ref));
+        info = await searches.get(key);
+      } else info = await git.fetchFirst(repo.project, repo.repo, [...names, void 0]);
       const hinted = repo.module && fs2.existsSync(path2.join(info.path, repo.module)) ? repo.module : null;
       const mod = hinted || findModule(info.path, dep.artifactId, repo.repo);
       const notes = [];
@@ -29452,7 +29525,7 @@ var require_workspace = __commonJS({
       if (!m) throw new Error(`no workspace "${id}" (workspace_list shows them)`);
       return m;
     }
-    async function open({ service, project, repo, ref, env, url, libraries = true, git, fresh = false } = {}) {
+    async function open({ service, project, repo, ref, env, url, libraries = false, git, fresh = false } = {}) {
       const T = require_trace();
       if (service && !(project && repo)) {
         const pp = require_passport();
@@ -29495,7 +29568,13 @@ ${BUILD_OUTPUT.join("\n")}
       }
       const meta = { id, project: info.project, repo, ref: ref || null, sha: info.sha, commitDate: info.commitDate, service: service || null, env: env || null, path: dir, createdAt: (/* @__PURE__ */ new Date()).toISOString(), usedAt: (/* @__PURE__ */ new Date()).toISOString(), session: session || null, fallback: info.fallback || void 0, reusedFrom: info.reusedFrom ? path2.relative(require_config().HOME, info.reusedFrom) : void 0 };
       meta.libs = [];
-      if (libraries) {
+      if (!libraries) {
+        const pp = require_passport();
+        const p = service && pp.load(service) || pp.list().map((x) => pp.load(x.service)).find((x) => x && x.repo.project === meta.project && x.repo.repo === repo);
+        const CI = require_codeindex();
+        if (p) meta.libs = (p.libraries || []).filter((l) => l.index && CI.load(l.index)).map((l) => ({ artifactId: l.artifactId, version: l.version || null, repo: l.repo || null, module: l.module || null, ref: l.ref || null, index: l.index, found: `the passport of ${p.service} (built ${String(p.builtAt).slice(0, 10)})` }));
+        if (meta.libs.length) T.note(`library code: ${meta.libs.map((l) => l.artifactId).join(", ")} from the passport of ${p.service}; nothing fetched`);
+      } else {
         const ex = require_extract().extract(dir, { internalGroups: require_config().getPersonal().internalGroups });
         const libs = await T.step("libraries", () => require_passport().fetchLibraries(ex.dependencies.internal, git || G), ex.dependencies.internal.map((d) => d.artifactId).join(", ") || "none");
         for (const l of libs) if (l.error) T.note(`library ${l.artifactId}: ${l.error.slice(0, 200)}`);
@@ -31127,7 +31206,7 @@ ${indent(hint, 4)}` : ""}`);
       if (!found.length) {
         const words = String(target).toLowerCase().split(/[#.\s/]+/).filter(Boolean);
         const cands = g.classes.filter((c2) => words.some((w) => c2.id.toLowerCase().includes(w))).slice(0, 15).map((c2) => c2.id);
-        throw new Error(`no class "${target}" in workspace ${id}${cands.length ? `; similar: ${cands.join(", ")}` : ""}`);
+        throw new Error(`no class "${target}" in workspace ${id}${cands.length ? `; similar: ${cands.join(", ")}` : ""}${(m.libs || []).length ? "" : ". If it is library code: build the service's passport (it indexes its libraries), or workspace_open libraries=true"}`);
       }
       const c = found[0];
       const member = String(target).split(/#|::/)[1];
@@ -31635,7 +31714,7 @@ var require_tools_code = __commonJS({
           name: "workspace_open",
           group: "code",
           description: "Check out a repo at master/main, a branch, tag or commit (or what is deployed in env) into a writable workspace (a commit already fetched by a passport or another workspace is reused, nothing downloaded; the same repo and ref in the same chat gives back that workspace), indexed for code_search, impact and test_context. Write tests and fixes there with workspace_write, run them with test_run, take the result with workspace_patch. Nothing is committed or pushed.",
-          input: { service: str("Service (resolved like passport)"), project: str("Project key"), repo: str("Repo slug"), ref: str("Branch, tag or sha (default branch if empty)"), env: str("Check out the commit deployed in this env (with service)"), fresh: { type: "boolean", default: false, description: "A new checkout even if this chat opened the same repo and ref" }, libraries: { type: "boolean", default: true, description: "Also fetch and index its internal libraries (flows through them)" }, job: str('A job id from an earlier "running" answer') },
+          input: { service: str("Service (resolved like passport)"), project: str("Project key"), repo: str("Repo slug"), ref: str("Branch, tag or sha (default branch if empty)"), env: str("Check out the commit deployed in this env (with service)"), fresh: { type: "boolean", default: false, description: "A new checkout even if this chat opened the same repo and ref" }, libraries: { type: "boolean", default: false, description: "Also fetch and index the sources of its internal libraries now (only for flows through library code when the service has no passport; tests do not need them: the build takes the jars from the company repository)" }, job: str('A job id from an earlier "running" answer') },
           limit: (a) => a.job ? null : "bitbucket",
           // a job: a big repo and its libraries can take longer than the chat client waits
           run: async (a) => {
@@ -31645,7 +31724,7 @@ var require_tools_code = __commonJS({
             if (!job) {
               if (!a.service && !(a.project && a.repo)) throw new Error("give service, or project and repo");
               job = J.start(`workspace:${a.service || `${a.project}/${a.repo}`}:${a.ref || ""}:${Date.now()}`, `workspace_open ${a.service || `${a.project}/${a.repo}`}${a.ref ? `@${a.ref}` : ""}`, async () => {
-                const w = await require_workspace().open({ service: a.service, project: a.project, repo: a.repo, ref: a.ref, env: a.env, fresh: a.fresh, libraries: a.libraries !== false });
+                const w = await require_workspace().open({ service: a.service, project: a.project, repo: a.repo, ref: a.ref, env: a.env, fresh: a.fresh, libraries: a.libraries === true });
                 const notes = require_trace().current()?.notes || [];
                 return { ...w, libs: (w.libs || []).map((l) => l.error ? `${l.artifactId}: ${String(l.error).slice(0, 160)}` : `${l.artifactId} ${l.repo}${l.module ? "/" + l.module : ""}`), ...notes.length ? { notes } : {} };
               });

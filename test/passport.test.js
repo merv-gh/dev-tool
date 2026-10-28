@@ -29,6 +29,10 @@ makeRepo('common-lib', 'common-lib', 'v1.4.2');
 // Bitbucket stand-ins: repo search and git remotes point at the local repos.
 const atl = require('../lib/atlassian');
 atl.repos = async (filter) => ['order-service', 'common-lib'].filter(r => r.includes(filter)).map(repo => ({ project: 'SHOP', repo }));
+// before a repo found by name is used, dt looks at its folders and poms
+const local = (r, p = '') => path.join(tmp, 'src', r, p);
+atl.browse = async (project, r, dir = '') => { if (!fs.existsSync(local(r, dir))) throw new Error('404'); return fs.readdirSync(local(r, dir), { withFileTypes: true }).filter(e => e.name !== '.git').map(e => ({ name: e.name, type: e.isDirectory() ? 'DIRECTORY' : 'FILE' })); };
+atl.file = async (project, r, p) => { if (!fs.existsSync(local(r, p))) throw new Error('404'); return fs.readFileSync(local(r, p), 'utf8'); };
 const realGit = require('../lib/git');
 const gitImpl = {
   fetchRef: (p, r, ref) => realGit.fetchRef(p, r, ref, { url: `file://${path.join(tmp, 'src', r)}` }),

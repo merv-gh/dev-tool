@@ -50,11 +50,18 @@ repo('platform-tools', {
 
 const atl = require('../lib/atlassian');
 const searched = [];
-atl.repos = async (q) => { searched.push(q); return ['billing-service', 'acme-starter', 'platform-tools', 'acme-other'].filter(r => r.includes(q)).map(repo => ({ project: 'LIB', repo })); };
+atl.repos = async (q) => { searched.push(q); return ['billing-service', 'acme-starter', 'platform-tools', 'acme-other', 'acme-tools'].filter(r => r.includes(q)).map(repo => ({ project: 'LIB', repo })); };
+// what dt looks at before taking a repo found by name: its folders and poms
+const local = (r, p = '') => path.join(tmp, 'src', r, p);
+atl.browse = async (project, r, dir = '') => { if (!fs.existsSync(local(r, dir))) throw new Error('404'); return fs.readdirSync(local(r, dir), { withFileTypes: true }).filter(e => e.name !== '.git').map(e => ({ name: e.name, type: e.isDirectory() ? 'DIRECTORY' : 'FILE' })); };
+atl.file = async (project, r, p) => { if (!fs.existsSync(local(r, p))) throw new Error('404'); return fs.readFileSync(local(r, p), 'utf8'); };
+repo('acme-tools', { 'pom.xml': '<project><groupId>com.acme.tools</groupId><artifactId>acme-tools</artifactId><modules><module>cli</module></modules></project>', 'cli/pom.xml': '<project><artifactId>acme-tools-cli</artifactId></project>' });
 const realGit = require('../lib/git');
+const fetched = [];
 const gitImpl = {
-  fetchRef: (p, r, ref) => realGit.fetchRef(p, r, ref, { url: `file://${path.join(tmp, 'src', r)}` }),
+  fetchRef: (p, r, ref) => { fetched.push(`${r}@${ref || 'HEAD'}`); return realGit.fetchRef(p, r, ref, { url: `file://${path.join(tmp, 'src', r)}` }); },
   fetchFirst: (p, r, refs) => realGit.fetchFirst(p, r, refs, { url: `file://${path.join(tmp, 'src', r)}` }),
+  remoteRefs: (p, r) => realGit.remoteRefs(p, r, { url: `file://${path.join(tmp, 'src', r)}` }),
 };
 
 test('names to try for a library repo', () => {
@@ -80,6 +87,8 @@ test('modules of a bigger repo: found, only the module read, tag from the ext { 
   assert.ok(!eps.some(e => e.startsWith('/not-mine')), 'other modules of the repo are not read');
   assert.ok(p.effective.endpoints.find(e => e.path === '/ping').file.startsWith('web/src/'), 'file paths are relative to the repo');
   assert.equal(searched.filter(q => q === 'acme-starter').length, 1, 'one Bitbucket search per name per build');
+  assert.equal(fetched.filter(f => f.startsWith('acme-starter@')).length, 1, 'the tag is known before fetching: one fetch, no failed tries');
+  assert.ok(fetched.includes('acme-starter@v2.0.0'));
 });
 
 test('a library that cannot be found says what was tried and how to map it', async () => {
@@ -91,6 +100,17 @@ test('a library that cannot be found says what was tried and how to map it', asy
     sh(path.join(tmp, 'src', 'billing-service'), 'commit', '-qam', 'ghost');
     const r = await p.build('billing-service', { gitImpl });
     const ghost = r.libraries.find(l => l.artifactId === 'ghost-lib');
-    assert.match(ghost.error, /no Bitbucket repo for ghost-lib \(tried ghost-lib, ghost, libs, acme-libs\).*passports\.libraryRepos/);
+    assert.match(ghost.error, /no Bitbucket repo declares ghost-lib \(searched ghost-lib, ghost, libs, acme-libs\).*passports\.libraryRepos/);
   } finally { atl.repos = atlRepos; }
+});
+
+test('a repo found by name is looked at first: a look-alike that does not declare the artifact is not fetched', async () => {
+  const p = require('../lib/passport');
+  fs.writeFileSync(path.join(tmp, 'src', 'billing-service', 'build.gradle'), 'group = "com.acme.billing"\ndependencies { implementation "com.acme.tools:acme-tools-core:3.0" }');
+  sh(path.join(tmp, 'src', 'billing-service'), 'commit', '-qam', 'tools');
+  const before = fetched.length;
+  const r = await p.build('billing-service', { gitImpl });
+  const core = r.libraries.find(l => l.artifactId === 'acme-tools-core');
+  assert.match(core.error, /no Bitbucket repo declares acme-tools-core .*looked inside LIB\/acme-tools/);
+  assert.ok(!fetched.slice(before).some(f => f.startsWith('acme-tools@')), 'never fetched on a guess');
 });

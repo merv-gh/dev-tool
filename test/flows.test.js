@@ -104,6 +104,7 @@ test('flow test context: the chain\'s beans imported, the edge mocked, propertie
   const W = require('../lib/workspace');
   const ws = await W.open({ project: 'SHOP', repo: 'orders-service', ref: 'main', url: `file://${repos['SHOP/orders-service']}`, git: gitImpl });
   assert.deepEqual(ws.libs.map(l => `${l.artifactId}@${l.repo}/${l.module}`).sort(), ['acme-audit-core@LIB/commons/audit', 'acme-kafka-support@LIB/commons/kafka', 'acme-web-starter@LIB/commons/acme-web-starter']);
+  assert.ok(ws.libs.every(l => /the passport of orders-service/.test(l.found)), 'library code from the passport: nothing fetched for running tests');
   const c = require('../lib/testgen').context(ws.id, 'POST /process/order');
   assert.equal(c.style, 'flow');
   assert.equal(c.test.path, 'src/test/java/com/acme/orders/ProcessControllerProcessFlowTest.java');
