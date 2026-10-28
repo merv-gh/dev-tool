@@ -367,6 +367,9 @@ var require_config = __commonJS({
         timeoutMs: Number(e.DT_TESTS_TIMEOUT_MS || c.timeoutMs || 9e5),
         waitMs: Number(e.DT_TESTS_WAIT_MS || c.waitMs || 5e4),
         scenarioConcurrency: Number(c.scenarioConcurrency ?? 2),
+        node: there(c.node) || process.execPath,
+        targets: c.targets || {},
+        differentialProfiles: c.differentialProfiles || {},
         // compile checks after each write (workspace_write, test_run files): on unless false; how long a write waits for the first classpath
         compileCheck: c.compileCheck !== false && e.DT_COMPILE_CHECK !== "0",
         compileFix: c.compileFix !== false && e.DT_COMPILE_FIX !== "0",
@@ -1502,7 +1505,7 @@ var require_connection = __commonJS({
     var tls = require("tls");
     var crypto = require("crypto");
     var Stream = require("stream");
-    var { performance } = require("perf_hooks");
+    var { performance: performance2 } = require("perf_hooks");
     var { stringify, handleValue, arrayParser, arraySerializer } = require_types();
     var { Errors } = require_errors();
     var Result = require_result();
@@ -1766,7 +1769,7 @@ var require_connection = __commonJS({
         hostIndex = (hostIndex + 1) % port.length;
       }
       function reconnect() {
-        setTimeout(connect, closedTime ? Math.max(0, closedTime + delay - performance.now()) : 0);
+        setTimeout(connect, closedTime ? Math.max(0, closedTime + delay - performance2.now()) : 0);
       }
       function connected() {
         try {
@@ -1839,7 +1842,7 @@ var require_connection = __commonJS({
         if (initial)
           return reconnect();
         !hadError && (query || sent.length) && error(Errors.connection("CONNECTION_CLOSED", options, socket));
-        closedTime = performance.now();
+        closedTime = performance2.now();
         hadError && options.shared.retries++;
         delay = (typeof backoff === "function" ? backoff(options.shared.retries) : backoff) * 1e3;
         onclose(connection, Errors.connection("CONNECTION_CLOSED", options, socket));
@@ -3370,11 +3373,12 @@ var require_es = __commonJS({
     async function sync(envName, { only, log = console.error } = {}) {
       const es = client(envName);
       const started = Date.now();
-      const [indices, aliases, mappings, info] = await Promise.all([
+      const [indices, aliases, mappings, info, settings] = await Promise.all([
         es("/_cat/indices?format=json&h=index,health,status,docs.count,store.size"),
         es("/_cat/aliases?format=json&h=alias,index"),
         es("/_mapping"),
-        es("/")
+        es("/"),
+        es("/_settings?include_defaults=false")
       ]);
       let names = indices.map((i) => i.index).filter((n) => !n.startsWith("."));
       if (only) names = names.filter((n) => only.some((o) => n.includes(o)));
@@ -3403,7 +3407,8 @@ var require_es = __commonJS({
           size: byName[n]["store.size"],
           fields: flattenMapping(props),
           samples: samples[n] || [],
-          mapping: m
+          mapping: m,
+          settings: Object.fromEntries(Object.entries(settings[n]?.settings?.index || {}).filter(([key]) => ["analysis", "similarity", "sort", "max_ngram_diff", "max_shingle_diff"].includes(key)))
         });
       }
       writeJson(path2.join(dir, "_index.json"), {
@@ -3415,6 +3420,37 @@ var require_es = __commonJS({
       return { indices: names.length, ms: Date.now() - started };
     }
     module2.exports = { search, sync, buildQuery, client };
+  }
+});
+
+// lib/fixture-json.js
+var require_fixture_json = __commonJS({
+  "lib/fixture-json.js"(exports2, module2) {
+    function normalized(text) {
+      const match = String(text).match(/^(-?)(\d+)(?:\.(\d+))?(?:e([+-]?\d+))?$/i);
+      if (!match) return null;
+      let digits = (match[2] + (match[3] || "")).replace(/^0+/, ""), exponent = Number(match[4] || 0) - (match[3]?.length || 0);
+      if (!digits) return "0";
+      while (digits.endsWith("0")) {
+        digits = digits.slice(0, -1);
+        exponent++;
+      }
+      return `${match[1]}${digits}e${exponent}`;
+    }
+    function parse(text) {
+      if (typeof text !== "string") return text;
+      if (Buffer.byteLength(text) > 16 * 1024 * 1024) throw new Error("fixture JSON exceeds 16 MiB");
+      const tokens = /"(?:\\[\s\S]|[^"\\])*"|(-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?)/g;
+      for (const token of text.matchAll(tokens)) if (token[1]) {
+        const value = Number(token[1]);
+        if (!Number.isFinite(value) || Number.isInteger(value) && !Number.isSafeInteger(value) || normalized(token[1]) !== normalized(String(value))) throw new Error("fixture JSON numeric precision would be lost; encode exact integers/decimals as strings or use an encoded-payload adapter");
+      }
+      return JSON.parse(text);
+    }
+    function object(text) {
+      return typeof text === "string" && /^\s*[\[{]/.test(text) ? parse(text) : text;
+    }
+    module2.exports = { parse, object };
   }
 });
 
@@ -3460,9 +3496,9 @@ var require_kafka = __commonJS({
       partition: m.partition,
       offset: m.offset,
       timestamp: m.timestamp,
-      key: tryJson(m.key),
+      key: require_fixture_json().object(m.key),
       headers: m.headers,
-      value: tryJson(m.content)
+      value: require_fixture_json().object(m.content)
     });
     async function lastMessages(envName, topic, n = 3, partitions) {
       const c = await cluster(envName);
@@ -3621,6 +3657,34 @@ var require_consul = __commonJS({
       return { services: res.length, ms: Date.now() - started };
     }
     module2.exports = { service, instances, sync };
+  }
+});
+
+// lib/semantic-identity.js
+var require_semantic_identity = __commonJS({
+  "lib/semantic-identity.js"(exports2, module2) {
+    var enc = (s) => encodeURIComponent(String(s ?? "unknown"));
+    var dec = (s) => decodeURIComponent(s);
+    var identifier = (s) => /^[a-z_][a-z0-9_$]*$/.test(String(s)) ? String(s) : '"' + String(s).replace(/"/g, '""') + '"';
+    var qualified = (...parts) => parts.map(identifier).join(".");
+    var norm = (s) => (String(s || "").match(/"(?:""|[^"])*"|[^"]+/g) || []).map((x) => x.startsWith('"') ? identifier(x.slice(1, -1).replace(/""/g, '"')) : x.replace(/\s+/g, "").toLowerCase()).join("");
+    var signature = (m) => `${m.name}(${(m.params || []).map((p) => String(p.type || "?").replace(/\s+/g, "")).join(",")})`;
+    function code(repo, revision2, symbol) {
+      return `code:${enc(repo)}@${enc(revision2 || "unknown")}:${symbol}`;
+    }
+    function parseCode(id) {
+      const m = String(id).match(/^code:([^@]+)@([^:]+):(.+)$/);
+      return m ? { repo: dec(m[1]), revision: dec(m[2]), symbol: m[3] } : null;
+    }
+    function pg(kind, env, db, object) {
+      return `${kind}:${enc(env)}:${enc(db)}:${norm(object)}`;
+    }
+    function parsePg(id) {
+      const m = String(id).match(/^(table|column|pgfn):([^:]+):([^:]+):(.+)$/);
+      return m ? { kind: m[1], env: dec(m[2]), db: dec(m[3]), object: m[4] } : null;
+    }
+    var revision = (idx) => idx?.workspace || idx?.key?.startsWith("work/") ? `${idx?.sha || "unknown"}+work:${idx?.sourceDigest || idx?.builtAt || "unknown"}` : idx?.sha || "unknown";
+    module2.exports = { protocol: "dt.identity/v1", code, parseCode, pg, parsePg, signature, norm, revision, identifier, qualified };
   }
 });
 
@@ -3931,7 +3995,7 @@ var require_extract = __commonJS({
       const refs = [];
       const add = (access, re) => {
         for (const m of sql.matchAll(re)) {
-          const name = m[1].replace(/["\s]/g, "").toLowerCase();
+          const name = require_semantic_identity().norm(m[1]);
           if (SQL_NOT_TABLE.has(name) || /^\d/.test(name)) continue;
           if (access === "read" && /delete\s+$/i.test(sql.slice(Math.max(0, m.index - 8), m.index))) continue;
           const after = sql.slice(m.index + m[0].length).trimStart();
@@ -3950,7 +4014,7 @@ var require_extract = __commonJS({
     function sqlCalls(sql) {
       const out2 = /* @__PURE__ */ new Set();
       for (const m of sql.matchAll(/(?<![\w$."'])("?[a-zA-Z_][\w$]*"?(?:\s*\.\s*"?[a-zA-Z_][\w$]*"?)?)\s*\(/g)) {
-        const name = m[1].replace(/["\s]/g, "").toLowerCase();
+        const name = require_semantic_identity().norm(m[1]);
         const parts = name.split(".");
         if (SQL_NOT_FN.has(parts[parts.length - 1]) || parts[0] === "pg_catalog") continue;
         if (/\b(into|table|references|exists|index|on|view|type)\s*$/i.test(sql.slice(Math.max(0, m.index - 12), m.index))) continue;
@@ -4204,7 +4268,7 @@ var require_extract = __commonJS({
         const isMigration = /(db\/migration|liquibase|changelog|flyway|migrations?)\//i.test(f.path);
         if (/\.sql$/.test(f.path) || /\.xml$/.test(f.path) && /<mapper\b|<changeSet\b|<databaseChangeLog\b/.test(f.text) || /\.ya?ml$/.test(f.path) && /databaseChangeLog/.test(f.text)) {
           if (isMigration) {
-            for (const m of f.text.matchAll(new RegExp(`create\\s+table\\s+(?:if\\s+not\\s+exists\\s+)?${TABLE_RE}`, "gi"))) tables.push({ table: m[1].replace(/["\s]/g, "").toLowerCase(), access: "owner", via: "migration", ...at(f, m.index) });
+            for (const m of f.text.matchAll(new RegExp(`create\\s+table\\s+(?:if\\s+not\\s+exists\\s+)?${TABLE_RE}`, "gi"))) tables.push({ table: require_semantic_identity().norm(m[1]), access: "owner", via: "migration", ...at(f, m.index) });
             for (const m of f.text.matchAll(/<createTable\b([^>]*)>/g)) {
               const tn = (m[1].match(/tableName="([^"]+)"/) || [])[1];
               const sc = (m[1].match(/schemaName="([^"]+)"/) || [])[1];
@@ -4954,7 +5018,7 @@ var require_codegraph = __commonJS({
         (bySimple.get(c.name) || bySimple.set(c.name, []).get(c.name)).push(c.id);
       }
       const edges = [];
-      const edge = (from, to, kind, where, arity) => edges.push(arity === void 0 ? [from, to, kind, where || ""] : [from, to, kind, where || "", arity]);
+      const edge = (from, to, kind, where, arity, types, fromSymbol) => edges.push([from, to, kind, where || "", arity, types, fromSymbol]);
       for (const f of files) {
         const local = new Map(f.classes.map((c) => [c.name, c.id]));
         const resolveType = (name) => {
@@ -5006,14 +5070,15 @@ var require_codegraph = __commonJS({
           }
           for (const m of c.methods) {
             m.id = `${c.id}#${m.name}`;
-            edge(m.id, c.id, "member", `${f.file}:${m.line}`);
+            const methodEdge = (from, to, kind, where2, arity, types) => edge(from, to, kind, where2, arity, types, from === m.id ? `${c.id}#${require_semantic_identity().signature(m)}` : void 0);
+            methodEdge(m.id, c.id, "member", `${f.file}:${m.line}`);
             for (const p of m.params) {
               p.typeId = resolveType(p.type);
-              for (const t of [p.typeId, ...typeArgs(p.type).map(resolveType)]) if (t) edge(m.id, t, "uses", `${f.file}:${m.line}`);
+              for (const t of [p.typeId, ...typeArgs(p.type).map(resolveType)]) if (t) methodEdge(m.id, t, "uses", `${f.file}:${m.line}`);
             }
             const r = resolveType(m.ret);
-            if (r) edge(m.id, r, "uses", `${f.file}:${m.line}`);
-            if (m.body) calls(f, c, m, byId, resolveType, edge);
+            if (r) methodEdge(m.id, r, "uses", `${f.file}:${m.line}`);
+            if (m.body) calls(f, c, m, byId, resolveType, methodEdge);
           }
         }
       }
@@ -5120,14 +5185,16 @@ var require_codegraph = __commonJS({
           impl: c.implIds || [],
           fields: c.fields.map((x) => ({ name: x.name, type: x.type, typeId: x.typeId || null, annos: x.annos, inject: !!x.inject, final: !!x.final, static: !!x.static, line: x.line, column: x.column, value: x.value, valueDefault: x.valueDefault })),
           ctor: c.ctorParams.map((p) => ({ name: p.name, type: p.type, typeId: p.typeId || null, value: p.value, valueDefault: p.valueDefault })),
-          methods: c.methods.map((m) => ({ name: m.name, params: m.params.map((p) => ({ name: p.name, type: p.type, typeId: p.typeId || null })), ret: m.ret, annos: m.annos, mods: m.mods, line: m.line, startLine: m.startLine, endLine: m.endLine, ctor: !!m.ctor, abstract: !m.body }))
+          methods: c.methods.map((m) => ({ name: m.name, signature: require_semantic_identity().signature(m), legacyId: `${c.id}#${m.name}`, symbol: `${c.id}#${require_semantic_identity().signature(m)}`, params: m.params.map((p) => ({ name: p.name, type: p.type, typeId: p.typeId || null })), ret: m.ret, annos: m.annos, mods: m.mods, line: m.line, startLine: m.startLine, endLine: m.endLine, ctor: !!m.ctor, abstract: !m.body }))
         });
       }
       return {
         ...meta,
         builtAt: (/* @__PURE__ */ new Date()).toISOString(),
+        identityVersion: "dt.identity/v1",
         classes,
         edges: dedupe(edges),
+        preciseEdges: edges,
         sql,
         app: passport && !passport.error ? { ...passport.app, dependencies: passport.dependencies } : null,
         errors: files.filter((f) => f.error).map((f) => ({ file: f.file, error: f.error }))
@@ -5144,13 +5211,19 @@ var require_codegraph = __commonJS({
       for (const x of body.matchAll(/\b(?:val|var)\s+([a-z_$][\w$]*)\s*(?::\s*([A-Z][\w$.<>?, ]*?))?\s*=\s*([A-Z][\w$.]*)?/g)) vars.set(x[1], x[2] || x[3] || "?");
       const self2 = new Set(c.methods.map((x) => x.name));
       const seen = /* @__PURE__ */ new Set();
-      const once = (to, kind, arity) => {
-        const k = to + kind;
+      const sourceLine = lineIndex(f.clean);
+      const once = (to, kind, arity, types, offset = 0) => {
+        const k = `${to}|${kind}|${arity}|${JSON.stringify(types)}|${offset}`;
         if (!seen.has(k)) {
           seen.add(k);
-          edge(m.id, to, kind, where, arity);
+          edge(m.id, to, kind, `${f.file}:${sourceLine(m.body[0] + offset)}`, arity, types);
         }
       };
+      const argumentsOf = (open) => splitTop(f.clean.slice(m.body[0] + open + 1, m.body[0] + closeParen(body, open)));
+      const argTypes = (open) => argumentsOf(open).map((a) => {
+        a = a.trim();
+        return vars.get(a) || (/^[+-]?\d+[lL]$/.test(a) ? "long" : /^[+-]?\d+$/.test(a) ? "int" : /^"/.test(a) ? "String" : /^(true|false)$/.test(a) ? "boolean" : (a.match(/^new\s+([\w.]+)/) || [])[1] || null);
+      });
       const argc = (open) => {
         const inner = body.slice(open + 1, closeParen(body, open));
         return inner.trim() ? splitTop(inner).length : 0;
@@ -5169,26 +5242,26 @@ var require_codegraph = __commonJS({
       for (const x of body.matchAll(/(?<![\w$])([\w$]+)\s*(?:\?\.|\.|::)\s*([\w$]+)\s*(\(|\{)?/g)) {
         const [, recv, name, paren] = x;
         if (recv === "this" || recv === "super") {
-          if (paren && self2.has(name)) once(`${c.id}#${name}`, "calls");
+          if (paren && self2.has(name)) once(`${c.id}#${name}`, "calls", argc(x.index + x[0].length - 1), argTypes(x.index + x[0].length - 1), x.index);
           continue;
         }
         const t = vars.has(recv) ? vars.get(recv) : /^[A-Z]/.test(recv) ? recv : null;
         if (!t) continue;
         const id = resolveType(t);
         if (!id) continue;
-        if (paren || x[0].includes("::")) once(`${id}#${name}`, "calls", paren === "(" ? argc(x.index + x[0].length - 1) : void 0);
-        else if (!/^[A-Z]/.test(name) && name !== "class") once(`${id}.${name}`, "reads");
+        if (paren || x[0].includes("::")) once(`${id}#${name}`, "calls", paren === "(" ? argc(x.index + x[0].length - 1) : void 0, paren === "(" ? argTypes(x.index + x[0].length - 1) : void 0, x.index);
+        else if (!/^[A-Z]/.test(name) && name !== "class") once(`${id}.${name}`, "reads", void 0, void 0, x.index);
         const g = name.match(/^(get|set|is)([A-Z][\w$]*)$/);
         if (g && byId.has(id)) {
           const fn = g[2][0].toLowerCase() + g[2].slice(1);
-          if (byId.get(id).fields.some((fl) => fl.name === fn)) once(`${id}.${fn}`, g[1] === "set" ? "writes" : "reads");
+          if (byId.get(id).fields.some((fl) => fl.name === fn)) once(`${id}.${fn}`, g[1] === "set" ? "writes" : "reads", void 0, void 0, x.index);
         }
       }
-      for (const x of body.matchAll(/(?<![\w$.])([a-z_$][\w$]*)\s*\(/g)) if (self2.has(x[1]) && !KEYWORDS.has(x[1])) once(`${c.id}#${x[1]}`, "calls");
+      for (const x of body.matchAll(/(?<![\w$.])([a-z_$][\w$]*)\s*\(/g)) if (self2.has(x[1]) && !KEYWORDS.has(x[1])) once(`${c.id}#${x[1]}`, "calls", argc(x.index + x[0].length - 1), argTypes(x.index + x[0].length - 1), x.index);
       for (const x of body.matchAll(/\bnew\s+([A-Z][\w$.]*)\s*(?:<[^>]*>)?\s*(\()?/g)) {
         const id = resolveType(x[1]);
         if (!id) continue;
-        once(id, "uses");
+        once(id, "uses", void 0, void 0, x.index);
         if (x[2]) {
           const close = closeParen(body, x.index + x[0].length - 1);
           const after = body.slice(close + 1).match(/^\s*\.\s*([\w$]+)\s*\(/);
@@ -5197,7 +5270,7 @@ var require_codegraph = __commonJS({
       }
       for (const x of body.matchAll(/(?<![\w$.])([A-Z][\w$]*)\b/g)) {
         const id = resolveType(x[1]);
-        if (id && byId.has(id) && id !== c.id) once(id, "uses");
+        if (id && byId.has(id) && id !== c.id) once(id, "uses", void 0, void 0, x.index);
       }
     }
     function annoArgsOf(clean, line, ...names) {
@@ -5378,17 +5451,19 @@ var require_codeindex = __commonJS({
       const started = Date.now();
       const files = walk(root);
       const dir = keyDir(key);
-      const input = crypto.createHash("sha256").update(JSON.stringify([1, path2.resolve(root), meta, extracted ?? null])).digest("hex");
+      const input = crypto.createHash("sha256").update(JSON.stringify([2, path2.resolve(root), meta, extracted ?? null])).digest("hex");
       const prev = !force && files.reusable ? load(key) : null;
       if (prev?.input === input && prev.list.length === files.length && files.every((f, i) => f.path === prev.list[i].path && f.stamp === prev.list[i].stamp) && fs2.existsSync(path2.join(dir, "tri.bin")) && fs2.existsSync(path2.join(dir, "graph.json"))) {
         const { list: _, dir: _dir, tri: _tri, graph: _graph, ...info2 } = prev;
         return { ...info2, reused: true, ms: Date.now() - started };
       }
       const postings = /* @__PURE__ */ new Map(), seen = /* @__PURE__ */ new Map();
+      const sourceHash = crypto.createHash("sha256");
       let bytes = 0;
       const texts = /* @__PURE__ */ new Map();
       files.forEach((f, id) => {
         const buf = fs2.readFileSync(path2.join(root, f.path));
+        sourceHash.update(f.path).update("\0").update(buf).update("\0");
         if (buf.includes(0)) {
           f.binary = true;
           return;
@@ -5406,9 +5481,10 @@ var require_codeindex = __commonJS({
       });
       fs2.mkdirSync(dir, { recursive: true });
       writeTrigrams(path2.join(dir, "tri.bin"), postings);
-      const graph = require_codegraph().build(root, texts, meta, extracted);
+      const sourceDigest = sourceHash.digest("hex");
+      const graph = require_codegraph().build(root, texts, { ...meta, sourceDigest }, extracted);
       fs2.writeFileSync(path2.join(dir, "graph.json"), JSON.stringify(graph));
-      const info = { key, root, ...meta, input, builtAt: (/* @__PURE__ */ new Date()).toISOString(), files: files.length, bytes, trigrams: postings.size, classes: graph.classes.length, edges: graph.edges.length, ms: Date.now() - started };
+      const info = { key, root, ...meta, input, sourceDigest, builtAt: (/* @__PURE__ */ new Date()).toISOString(), files: files.length, bytes, trigrams: postings.size, classes: graph.classes.length, edges: graph.edges.length, ms: Date.now() - started };
       writeJson(path2.join(dir, "files.json"), { ...info, list: files });
       memo.delete(key);
       return info;
@@ -5417,11 +5493,12 @@ var require_codeindex = __commonJS({
     function load(key) {
       const dir = keyDir(key);
       const file = path2.join(dir, "files.json");
-      const stamp = fileStamp(file);
-      if (!stamp) {
+      const filesStamp = fileStamp(file);
+      if (!filesStamp) {
         memo.delete(key);
         return null;
       }
+      const stamp = `${filesStamp}|${fileStamp(path2.join(dir, "graph.json"))}|${fileStamp(path2.join(dir, "tri.bin"))}`;
       const m = memo.get(key);
       if (m && m.stamp === stamp) return m.value;
       const files = readJson(file);
@@ -5923,6 +6000,260 @@ var require_git = __commonJS({
   }
 });
 
+// lib/passport/edges.js
+var require_edges = __commonJS({
+  "lib/passport/edges.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var crypto = require("crypto");
+    var snapshots = /* @__PURE__ */ new Map();
+    function validate(data) {
+      if (!data || typeof data !== "object" || Array.isArray(data) || typeof data.service !== "string" || !data.service || !data.effective || typeof data.effective !== "object" || Array.isArray(data.effective)) throw new Error("Invalid persisted passport: service and effective object required");
+      if (data.env != null && typeof data.env !== "string" || data.repo?.sha != null && typeof data.repo.sha !== "string") throw new Error("Invalid persisted passport environment/revision");
+      const arrays = (object, names) => {
+        for (const name of names) if (object?.[name] !== void 0 && (!Array.isArray(object[name]) || object[name].some((x) => !x || typeof x !== "object" || Array.isArray(x)))) throw new Error(`Invalid persisted passport edge array: ${name}`);
+      };
+      arrays(data.effective, ["consumes", "produces", "calls", "endpoints", "tables", "es", "feign"]);
+      arrays(data.effective.kafka, ["consumes", "produces"]);
+      return data;
+    }
+    function snapshot() {
+      const dir = require_passport().DIR, rows = [], gaps = [], signatures = [];
+      let dirs = [];
+      try {
+        dirs = fs2.readdirSync(dir, { withFileTypes: true }).filter((x) => x.isDirectory()).sort((a, b) => a.name.localeCompare(b.name));
+      } catch (e) {
+        if (e.code !== "ENOENT") gaps.push({ kind: "passport-read-error", message: e.message });
+      }
+      const alive = /* @__PURE__ */ new Set();
+      for (const d of dirs) {
+        const f = path2.join(dir, d.name, "passport.json");
+        alive.add(f);
+        let stamp;
+        try {
+          const s = fs2.statSync(f);
+          stamp = `${s.dev}:${s.ino}:${s.size}:${s.mtimeMs}:${s.ctimeMs}`;
+        } catch (e) {
+          if (e.code !== "ENOENT") gaps.push({ kind: "passport-read-error", service: d.name, message: e.message });
+          else snapshots.delete(f);
+          continue;
+        }
+        let m = snapshots.get(f);
+        if (!m || m.stamp !== stamp) {
+          try {
+            const raw = fs2.readFileSync(f);
+            const data = validate(JSON.parse(raw));
+            m = { stamp, digest: crypto.createHash("sha256").update(raw).digest("hex"), data };
+            snapshots.set(f, m);
+          } catch (e) {
+            m = { stamp, digest: `invalid:${stamp}`, data: m?.data, error: e.message };
+            snapshots.set(f, m);
+          }
+        }
+        signatures.push([d.name, m.digest, m.error || ""]);
+        if (m.error) gaps.push({ kind: "passport-stale-last-good", service: d.name, message: m.error, retained: !!m.data });
+        if (m.data) rows.push({ passport: m.data, stale: !!m.error, digest: m.digest });
+      }
+      for (const f of snapshots.keys()) if (!alive.has(f)) snapshots.delete(f);
+      return { protocol: "dt.passport-edges/v1", signature: JSON.stringify(signatures), rows, gaps };
+    }
+    function normalize(p, { env, stale = false, digest } = {}) {
+      const effective = p.effective || {}, gaps = [];
+      if (env && p.env && p.env !== env) return { included: false, edges: [], gaps: [] };
+      const evidence = { env: p.env || null, revision: p.repo?.sha || null, passportDigest: digest || null, stale };
+      if (env && !p.env) gaps.push({ kind: "passport-environment-unknown", service: p.service });
+      if (!p.repo?.sha) gaps.push({ kind: "passport-revision-unknown", service: p.service });
+      const edges = [], loc = (x) => x.file ? `${x.file}:${x.line || 1}` : "passport";
+      const add = (from, to, kind, x) => edges.push({ from, to, kind, where: loc(x), repo: `svc:${p.service}`, ...evidence });
+      const svc = `svc:${p.service}`;
+      for (const x of effective.consumes || effective.kafka?.consumes || []) if (x.topic && !/^[?(]/.test(x.topic)) add(svc, `topic:${x.topic}`, "consumes", x);
+      for (const x of effective.produces || effective.kafka?.produces || []) if (x.topic && !/^[?(]/.test(x.topic)) add(`topic:${x.topic}`, svc, "produced-by", x);
+      const normPath = (p2) => String(p2 || "").replace(/\{[^}]*\}/g, "{}").replace(/\/+$/, "") || "/";
+      for (const x of effective.calls || effective.feign || []) if (x.method && x.path) add(svc, `endpoint:${x.method.toUpperCase()} ${normPath(x.path)}`, "calls-http", x);
+      for (const x of effective.endpoints || []) if (x.method && x.path) add(`endpoint:${x.method.toUpperCase()} ${normPath(x.path)}`, svc, "handler", x);
+      for (const x of effective.es || []) if (x.index && !/^[?(]/.test(x.index)) add(svc, `es:${x.index}`, "es", x);
+      return { included: true, edges, gaps, evidence };
+    }
+    module2.exports = { snapshot, normalize };
+  }
+});
+
+// lib/column-lineage.js
+var require_column_lineage = __commonJS({
+  "lib/column-lineage.js"(exports2, module2) {
+    var ID = require_semantic_identity();
+    var norm = ID.norm;
+    var RESERVED = new Set("select from join inner left right full outer cross on where group order having limit offset returning set values into update insert delete using as and or not null true false case when then else end begin return perform distinct all union intersect except exists for each row language create function procedure replace view materialized table with recursive over partition by asc desc conflict do only lateral".split(" "));
+    function tokens(sql) {
+      const out2 = [], re = /--[^\n]*|\/\*[\s\S]*?\*\/|'(?:''|[^'])*'|"(?:""|[^"])*"|[A-Za-z_][\w$]*|:=|::|<=|>=|<>|!=|\S/g;
+      let line = 1, last = 0;
+      for (const m of String(sql || "").matchAll(re)) {
+        line += sql.slice(last, m.index).split("\n").length - 1;
+        last = m.index;
+        const text = m[0];
+        if (/^(--|\/\*)/.test(text)) continue;
+        out2.push({ text, word: /^"/.test(text) ? text.slice(1, -1).replace(/""/g, '"').toLowerCase() : text.toLowerCase(), literal: /^'/.test(text), quoted: /^"/.test(text), line, at: m.index });
+      }
+      return out2;
+    }
+    function analyze(sql, catalog2, { schema, triggerTables = [] } = {}) {
+      sql = String(sql || "");
+      const all = tokens(sql), hits = [], gaps = [];
+      const tables = new Map((catalog2.tables || []).map((t) => [ID.qualified(t.schema, t.name), t]));
+      const resolve = (name) => {
+        name = norm(name);
+        if (tables.has(name)) return [name];
+        if (name.includes(".")) return [];
+        const preferred = [schema, "public"].filter(Boolean).map((s) => `${s.toLowerCase()}.${name}`).find((k) => tables.has(k));
+        return preferred ? [preferred] : [...tables.keys()].filter((k) => k.endsWith(`.${name}`));
+      };
+      let parts = [], cur = [];
+      for (const t of all) {
+        if (t.word === ";") {
+          if (cur.length) parts.push(cur);
+          cur = [];
+        } else cur.push(t);
+      }
+      if (cur.length) parts.push(cur);
+      const addGap = (kind, line, detail) => {
+        if (!gaps.some((g) => g.kind === kind && g.line === line && g.detail === detail)) gaps.push({ kind, line, detail });
+      };
+      for (const ts of parts) {
+        if (ts.some((t) => t.quoted && /[A-Z]|[^A-Za-z0-9_$]/.test(t.text.slice(1, -1)))) {
+          addGap("quoted-identifier-lineage-unsupported", ts.find((t) => t.quoted).line, "Case-sensitive or special quoted identifiers retain canonical identity; column parsing requires a SQL parser adapter.");
+          continue;
+        }
+        const refs = [], declarations = /* @__PURE__ */ new Set();
+        let update = null, insert = null;
+        for (let i = 0; i < ts.length; i++) {
+          const w = ts[i].word;
+          if (w === "execute") addGap("dynamic-sql", ts[i].line, "Runtime SQL requires observed queries or a reviewed resolver; string construction is not complete static lineage.");
+          if (w === "merge") addGap("unsupported-sql-merge", ts[i].line, "MERGE column effects require a parser/runtime adapter.");
+          if (!["from", "join", "update", "into", "using"].includes(w)) continue;
+          let j = i + 1;
+          if (ts[j]?.word === "only") j++;
+          if (!ts[j] || ts[j].literal || !/^\w+$/.test(ts[j].word)) continue;
+          let name = ts[j].word;
+          declarations.add(j);
+          if (ts[j + 1]?.word === "." && ts[j + 2]) {
+            name += "." + ts[j + 2].word;
+            declarations.add(j + 2);
+            j += 2;
+          }
+          if (ts[j + 1]?.word === "(" && w !== "into") continue;
+          const found = resolve(name);
+          if (!found.length) {
+            addGap("unresolved-relation", ts[i].line, name);
+            continue;
+          }
+          if (found.length > 1) addGap("ambiguous-relation", ts[i].line, name);
+          let a = j + 1;
+          if (ts[a]?.word === "as") a++;
+          const alias = ts[a] && !RESERVED.has(ts[a].word) && /^[\w$]+$/.test(ts[a].word) && !ts[a].literal ? ts[a].word : name.split(".").pop();
+          if (alias !== name.split(".").pop()) declarations.add(a);
+          for (const table2 of found) refs.push({ table: table2, alias, word: w, index: i, name });
+          if (w === "update") update = found;
+          if (w === "into") insert = { tables: found, at: j + 1 };
+        }
+        for (const table2 of triggerTables) for (const alias of ["old", "new"]) refs.push({ table: norm(table2), alias, word: "trigger", index: -1 });
+        const hasCol = (table2, col) => tables.get(table2)?.columns?.some((c) => norm(c.name) === col);
+        const emit = (table2, column, access, t, extra = {}) => {
+          const k = `${table2}|${column}|${access}|${t.line}|${t.at}`;
+          if (!hits.some((x) => x.key === k)) hits.push({ key: k, table: table2, column, access, line: t.line, offset: t.at, ...extra });
+        };
+        const insertCols = /* @__PURE__ */ new Set(), setTargets = /* @__PURE__ */ new Set();
+        const setStart = ts.findIndex((t) => t.word === "set");
+        if (setStart >= 0) {
+          let start = setStart + 1, paren = 0, cases = 0, assigned = false;
+          for (let j = start; j < ts.length; j++) {
+            const w = ts[j].word;
+            if (paren === 0 && cases === 0 && ["where", "returning", "from"].includes(w)) break;
+            if (w === "(") paren++;
+            if (w === ")") paren--;
+            if (w === "case") cases++;
+            if (w === "end" && cases) cases--;
+            if (w === "=" && paren === 0 && cases === 0 && !assigned) {
+              assigned = true;
+              const left = ts.slice(start, j);
+              if (left.length === 1 || left.length === 3 && left[1].word === ".") setTargets.add(j - 1);
+              else addGap("complex-set-target", ts[j].line, "Tuple/generated SET target requires a parser adapter.");
+            }
+            if (w === "," && paren === 0 && cases === 0) {
+              start = j + 1;
+              assigned = false;
+            }
+          }
+        }
+        if (insert && ts[insert.at]?.word !== "(") {
+          for (const table2 of insert.tables) for (const col of tables.get(table2)?.columns || []) emit(table2, norm(col.name), "write", ts[insert.at] || ts[0], { syntax: "implicit-insert-target" });
+          addGap("implicit-insert-columns", ts[0].line, "All relation columns are candidates; generated/default column effects require runtime verification.");
+        }
+        if (ts.some((t) => t.word === "delete")) for (const r of refs.filter((r2) => r2.word === "from").slice(0, 1)) for (const col of tables.get(r.table)?.columns || []) emit(r.table, norm(col.name), "write", ts[0], { syntax: "delete-row" });
+        if (insert && ts[insert.at]?.word === "(") {
+          let i = insert.at + 1;
+          for (; i < ts.length && ts[i].word !== ")"; i++) if (/^[\w$]+$/.test(ts[i].word)) {
+            insertCols.add(i);
+            for (const table2 of insert.tables) if (hasCol(table2, ts[i].word)) emit(table2, ts[i].word, "write", ts[i], { syntax: "insert-target" });
+          }
+        }
+        for (let i = 0; i < ts.length; i++) {
+          const t = ts[i], w = t.word;
+          if (w === "*" && ts[i - 1]?.word !== "(" && (ts[i - 1]?.word === "." && ts[i - 2] && ["select", "returning", ","].includes(ts[i - 3]?.word) || ["select", "returning", ",", "distinct", "all"].includes(ts[i - 1]?.word)) && ["from", "into", ",", ";"].includes(ts[i + 1]?.word || ";")) {
+            const qual2 = ts[i - 1]?.word === "." ? ts[i - 2]?.word : null;
+            const before2 = ts.slice(0, i).map((x) => x.word);
+            if (!before2.includes("select") && !before2.includes("returning")) continue;
+            const rr2 = qual2 ? refs.filter((r) => r.alias === qual2 || r.table === qual2) : refs.filter((r) => r.word !== "trigger");
+            for (const r of rr2) for (const col of tables.get(r.table)?.columns || []) emit(r.table, norm(col.name), "read", t, { syntax: "star-expansion" });
+            continue;
+          }
+          if (t.literal || declarations.has(i) || insertCols.has(i) || RESERVED.has(w) || !t.quoted && !/^[A-Za-z_][\w$]*$/.test(t.text)) continue;
+          if (ts[i + 1]?.word === "." || ts[i + 1]?.word === "(" || ts[i - 1]?.word === "as" || ts[i - 1]?.word === "::") continue;
+          const qual = ts[i - 1]?.word === "." ? ts[i - 2]?.word : null;
+          let rr = refs.filter((r) => hasCol(r.table, w) && (qual ? r.alias === qual || r.table === qual : r.word !== "trigger"));
+          rr = [...new Map(rr.map((r) => [r.table + "|" + (qual || ""), r])).values()];
+          if (!rr.length) continue;
+          const assignment = ["=", ":="].includes(ts[i + 1]?.word), setAt = ts.findIndex((x) => x.word === "set");
+          const before = ts.slice(0, i).map((x) => x.word), lastClause = [...before].reverse().find((x) => ["where", "on", "having", "select", "returning", "set", "values", "join", "from"].includes(x));
+          let access = lastClause === "where" || lastClause === "on" || lastClause === "having" ? "predicate" : "read";
+          if (qual === "new" && assignment) access = "write";
+          else if (assignment && setTargets.has(i)) {
+            rr = rr.filter((r) => update?.includes(r.table));
+            access = "write";
+          }
+          if (!qual && rr.length > 1) {
+            addGap("ambiguous-column", t.line, w);
+            access = "unknown";
+          }
+          for (const r of rr) emit(r.table, w, access, t, { syntax: qual === "old" || qual === "new" ? `trigger-${qual}` : access === "write" ? "set-target" : lastClause || "expression", ambiguous: !qual && rr.length > 1 || void 0 });
+        }
+        if (ts.some((t) => t.word === "with")) addGap("cte-or-nested-scope", ts.find((t) => t.word === "with").line, "Nested alias scopes require a SQL parser adapter; results are candidates.");
+        if (ts.filter((t) => t.word === "select").length > 1) addGap("nested-query-scope", ts.find((t) => t.word === "select").line, "Nested query scopes may shadow aliases.");
+      }
+      return { protocol: "dt.column-lineage/v1", hits: hits.map(({ key, ...h }) => h), gaps, coverage: { parser: "bounded-sql-lexer/v1", exhaustive: false, supported: ["select", "star", "update-set", "insert-columns", "where", "join-on", "returning", "trigger-old-new"], unsupported: ["dynamic-sql", "nested-alias-scopes", "merge", "runtime-generated-queries"] } };
+    }
+    function catalog(catalog2, env) {
+      const edges = [], gaps = [];
+      for (const f of catalog2.functions || []) {
+        const user = ID.qualified(f.schema, f.name);
+        if (!/^(sql|plpgsql)$/.test(f.lang || "")) {
+          gaps.push({ kind: "unsupported-function-language", db: catalog2.db, user, language: f.lang });
+          continue;
+        }
+        const r = analyze(f.body, catalog2, { schema: f.schema, triggerTables: (catalog2.triggers || []).filter((t) => norm(t.function) === user).map((t) => t.table) });
+        for (const h of r.hits) edges.push({ env, db: catalog2.db, revision: catalog2.syncedAt || null, target: `${h.table}.${h.column}`, targetKind: "column", user, userKind: f.kind || "function", role: h.access, access: h.access, where: `${user}:${h.line}`, line: h.line, source: "db", detail: h.syntax, syntax: h.syntax, ...h.ambiguous ? { ambiguous: true } : {} });
+        gaps.push(...r.gaps.map((g) => ({ ...g, db: catalog2.db, user, source: "db" })));
+      }
+      for (const v of catalog2.tables || []) if (v.definition) {
+        const user = ID.qualified(v.schema, v.name), r = analyze(v.definition, catalog2, { schema: v.schema });
+        for (const h of r.hits) edges.push({ env, db: catalog2.db, revision: catalog2.syncedAt || null, target: `${h.table}.${h.column}`, targetKind: "column", user, userKind: v.kind, role: h.access, access: h.access, where: `${user}:${h.line}`, line: h.line, source: "db", detail: h.syntax });
+        gaps.push(...r.gaps.map((g) => ({ ...g, db: catalog2.db, user, source: "db" })));
+      }
+      return { edges, gaps };
+    }
+    module2.exports = { tokens, analyze, catalog };
+  }
+});
+
 // lib/pgindex.js
 var require_pgindex = __commonJS({
   "lib/pgindex.js"(exports2, module2) {
@@ -5930,18 +6261,19 @@ var require_pgindex = __commonJS({
     var { CACHE: CACHE2, readJson, writeJson, fileStamp } = require_util();
     var { sqlRefs, sqlCalls } = require_extract();
     var file = (env) => path2.join(CACHE2, env, "pg", "_usage.json");
-    var norm = (s) => String(s || "").replace(/"/g, "").replace(/\s+/g, "").toLowerCase();
+    var ID = require_semantic_identity();
+    var norm = ID.norm;
     var base = (s) => s.split(".").pop();
     function namesOf(cat) {
       const rel = /* @__PURE__ */ new Map(), fn = /* @__PURE__ */ new Map(), relBy = /* @__PURE__ */ new Map(), fnBy = /* @__PURE__ */ new Map();
       for (const t of cat.tables) {
-        const k = `${t.schema}.${t.name}`.toLowerCase();
+        const k = ID.qualified(t.schema, t.name);
         rel.set(k, t.kind);
-        (relBy.get(t.name.toLowerCase()) || relBy.set(t.name.toLowerCase(), []).get(t.name.toLowerCase())).push(k);
+        (relBy.get(ID.identifier(t.name)) || relBy.set(ID.identifier(t.name), []).get(ID.identifier(t.name))).push(k);
       }
       for (const f of cat.functions || []) {
-        const k = `${f.schema}.${f.name}`.toLowerCase();
-        if (!fn.has(k)) (fnBy.get(f.name.toLowerCase()) || fnBy.set(f.name.toLowerCase(), []).get(f.name.toLowerCase())).push(k);
+        const k = ID.qualified(f.schema, f.name);
+        if (!fn.has(k)) (fnBy.get(ID.identifier(f.name)) || fnBy.set(ID.identifier(f.name), []).get(ID.identifier(f.name))).push(k);
         fn.set(k, f.kind);
       }
       return { rel, fn, relBy, fnBy };
@@ -5959,27 +6291,27 @@ var require_pgindex = __commonJS({
       const db = cat.db;
       const push = (e) => edges.push({ db, source: "db", where: "", detail: "", ...e });
       for (const t of cat.tables) {
-        const user = `${t.schema}.${t.name}`.toLowerCase();
+        const user = ID.qualified(t.schema, t.name);
         for (const c of t.constraints || []) {
-          if (c.type === "f" && c.ref) push({ target: c.ref.toLowerCase(), targetKind: names.rel.get(c.ref.toLowerCase()) || "table", user, userKind: t.kind, role: "references", detail: c.def, where: c.name });
+          if (c.type === "f" && c.ref) push({ target: norm(c.ref), targetKind: names.rel.get(norm(c.ref)) || "table", user, userKind: t.kind, role: "references", detail: c.def, where: c.name });
         }
       }
       for (const d of cat.viewDeps || []) {
-        const ref = d.ref.toLowerCase();
+        const ref = norm(d.ref);
         const fn = d.ref_kind === "function";
-        push({ target: ref, targetKind: fn ? names.fn.get(ref) || "function" : names.rel.get(ref) || "table", user: d.view.toLowerCase(), userKind: names.rel.get(d.view.toLowerCase()) || "view", role: fn ? "calls" : "selects" });
+        push({ target: ref, targetKind: fn ? names.fn.get(ref) || "function" : names.rel.get(ref) || "table", user: norm(d.view), userKind: names.rel.get(norm(d.view)) || "view", role: fn ? "calls" : "selects" });
       }
       for (const tr of cat.triggers || []) {
-        const table2 = tr.table.toLowerCase(), fn = tr.function.toLowerCase();
+        const table2 = norm(tr.table), fn = norm(tr.function);
         const when = (tr.def.match(/\b(BEFORE|AFTER|INSTEAD OF)\b.*?\bON\b/i) || [""])[0].replace(/\s+ON$/i, "");
         push({ target: fn, targetKind: "function", user: table2, userKind: "trigger", role: "executes", detail: `${tr.name} ${when}${tr.enabled ? "" : " (disabled)"}`, where: tr.name });
         push({ target: table2, targetKind: names.rel.get(table2) || "table", user: fn, userKind: "function", role: "trigger", detail: `${tr.name} ${when}`, where: tr.name });
       }
       for (const f of cat.functions || []) {
         if (!/^(sql|plpgsql)$/.test(f.lang)) continue;
-        const user = `${f.schema}.${f.name}`.toLowerCase();
+        const user = ID.qualified(f.schema, f.name);
         const body = stripSqlComments(f.body);
-        const schemas = [f.schema.toLowerCase()];
+        const schemas = [ID.identifier(f.schema)];
         const seen = /* @__PURE__ */ new Set();
         const once = (e) => {
           const k = `${e.target}|${e.role}`;
@@ -6045,8 +6377,10 @@ var require_pgindex = __commonJS({
       const edges = [];
       for (const { cat, names } of cats) dbSide(cat, names, edges);
       const passport = require_passport();
-      codeSide(cats, passport.list().map((s) => passport.load(s.service)).filter(Boolean), edges);
-      const data = { builtAt: (/* @__PURE__ */ new Date()).toISOString(), env, dbs: cats.map((c) => c.cat.db), edges };
+      const snapshot = require_edges().snapshot();
+      codeSide(cats, snapshot.rows.map((x) => x.passport).filter((p) => !p.env || p.env === env), edges);
+      const columns = cats.map((c) => require_column_lineage().catalog(c.cat, env));
+      const data = { identityVersion: "dt.identity/v1", builtAt: (/* @__PURE__ */ new Date()).toISOString(), env, passportSignature: snapshot.signature, dbs: cats.map((c) => c.cat.db), edges, columns: columns.flatMap((x) => x.edges), gaps: columns.flatMap((x) => x.gaps) };
       writeJson(file(env), data);
       memo.delete(env);
       return { edges: edges.length, dbs: data.dbs.length };
@@ -6054,7 +6388,7 @@ var require_pgindex = __commonJS({
     function current(env) {
       const d = load(env);
       const synced = require_pg().loadAll(env).map((c) => c.syncedAt).sort().pop();
-      if (synced && (!d.builtAt || d.builtAt < synced)) {
+      if (synced && (!d.builtAt || d.builtAt < synced) || d.passportSignature !== void 0 && d.passportSignature !== require_edges().snapshot().signature) {
         build(env);
         return load(env);
       }
@@ -6090,12 +6424,12 @@ var require_pgindex = __commonJS({
     var sortEdges = (rows) => rows.sort((a, b) => (ORDER[a.userKind] ?? 9) - (ORDER[b.userKind] ?? 9) || a.user.localeCompare(b.user) || a.role.localeCompare(b.role));
     function usages(env, name) {
       const hit = matcher(name);
-      return sortEdges(load(env).edges.filter((e) => hit(e.target, e.db)));
+      if (isColumn(name)) return columnLineage(env, name).edges;
+      return sortEdges(current(env).edges.filter((e) => hit(e.target, e.db)));
     }
     function uses(env, name) {
-      const n = norm(name);
-      const hit = n.includes(".") || !/^[\w$]+$/.test(n) ? (u) => u === n : (u) => u === n || base(u) === n;
-      return load(env).edges.filter((e) => hit(e.user)).sort((a, b) => a.target.localeCompare(b.target));
+      const hit = matcher(name);
+      return current(env).edges.filter((e) => hit(e.user, e.db)).sort((a, b) => a.target.localeCompare(b.target));
     }
     function usedBySummary(env, max = 8) {
       const by = /* @__PURE__ */ new Map();
@@ -6118,12 +6452,12 @@ var require_pgindex = __commonJS({
       const out2 = [];
       for (const cat of require_pg().loadAll(env)) {
         for (const t of cat.tables) {
-          const k = `${t.schema}.${t.name}`.toLowerCase();
+          const k = ID.qualified(t.schema, t.name);
           if (!hit(k, cat.db)) continue;
-          out2.push({ db: cat.db, object: k, ...t, triggers: (cat.triggers || []).filter((x) => x.table.toLowerCase() === k) });
+          out2.push({ db: cat.db, object: k, ...t, triggers: (cat.triggers || []).filter((x) => norm(x.table) === k) });
         }
         for (const f of cat.functions || []) {
-          const k = `${f.schema}.${f.name}`.toLowerCase();
+          const k = ID.qualified(f.schema, f.name);
           if (!hit(k, cat.db)) continue;
           out2.push({ db: cat.db, object: k, ...f });
         }
@@ -6139,7 +6473,45 @@ var require_pgindex = __commonJS({
       }
       return out2;
     }
-    module2.exports = { build, load, current, usages, uses, describe, usedBySummary, resolve, namesOf };
+    function isColumn(name) {
+      return String(name).replace(/^column:/, "").split(":").pop().split(".").length >= 3;
+    }
+    function columnLineage(env, name) {
+      const I = require_impact(), G = I.load({ env }), r = I.resolveTarget(G, `column:${String(name).replace(/^column:/, "")}`);
+      if (!r.start.length) return { protocol: "dt.column-lineage/v1", env, target: name, edges: [], complete: false, ambiguous: r.ambiguous || void 0, candidates: r.candidates || [], gaps: [{ kind: r.ambiguous ? "ambiguous-target" : "unknown-column" }] };
+      const edges = [], gaps = [...G.gaps], callers = [];
+      for (const id of r.start) {
+        const ce = I.columnEdges(G, id);
+        gaps.push(...ce.gaps);
+        for (const e of ce.edges) {
+          const n = G.nodes.get(e.from), object = require_semantic_identity().parsePg(id);
+          edges.push({ db: object.db, env, revision: e.revision || n?.revision || null, target: object.object, targetId: id, targetKind: "column", user: n?.object || e.from, userId: e.from, userKind: n?.kind || "code", access: e.access, role: e.access, file: e.file || n?.file || null, line: e.line || n?.line || null, where: e.where, source: e.repo?.startsWith("db:") ? "db" : "code", detail: e.syntax, ...e });
+          const visited = /* @__PURE__ */ new Set([e.from]), queue = [e.from];
+          while (queue.length && visited.size <= 1e3) {
+            const child = queue.shift();
+            for (const c of G.rev.get(child) || []) {
+              if (visited.has(c.from)) continue;
+              visited.add(c.from);
+              callers.push({ userId: c.from, via: child, role: c.kind, where: c.where, repo: c.repo, targetId: id });
+              queue.push(c.from);
+            }
+          }
+          if (queue.length) gaps.push({ kind: "caller-chain-limit", targetId: id });
+        }
+        for (const e of G.rev.get(id) || []) {
+          const field = G.nodes.get(e.from);
+          if (field?.kind !== "field") continue;
+          edges.push({ env, db: require_semantic_identity().parsePg(id).db, revision: field.revision, targetId: id, targetKind: "column", target: require_semantic_identity().parsePg(id).object, user: field.legacyId, userId: field.id, userKind: "field", role: "unknown", access: "unknown", source: "code", file: field.file, line: field.line, where: e.where, detail: "ORM column mapping; persistence behavior requires runtime verification" });
+          for (const use of G.rev.get(field.id) || []) if (["reads", "writes"].includes(use.kind)) {
+            const method = G.nodes.get(use.from);
+            edges.push({ env, db: require_semantic_identity().parsePg(id).db, revision: method?.revision, targetId: id, targetKind: "column", target: require_semantic_identity().parsePg(id).object, user: method?.legacyId || use.from, userId: use.from, userKind: "method", role: use.kind === "writes" ? "write" : "read", access: use.kind === "writes" ? "write" : "read", source: "code", file: method?.file, line: method?.line, where: use.where, detail: "ORM object field access", persistenceWriteVerified: false });
+          }
+          gaps.push({ kind: "orm-runtime-persistence", userId: field.id });
+        }
+      }
+      return { protocol: "dt.column-lineage/v1", identityVersion: "dt.identity/v1", env, target: name, resolved: r.start, edges, callers, complete: false, traversalComplete: !gaps.some((g) => g.kind === "caller-chain-limit"), gaps: [...new Map(gaps.map((g) => [JSON.stringify(g), g])).values()], coverage: { source: "cached-catalog-and-indexed-source", exhaustive: false, parser: "bounded-sql-lexer/v1", unknowns: ["dynamic-sql", "unindexed-repositories", "generated-code", "reflection", "ORM runtime persistence"] } };
+    }
+    module2.exports = { build, load, current, usages, uses, describe, usedBySummary, resolve, namesOf, isColumn, columnLineage };
   }
 });
 
@@ -6147,314 +6519,473 @@ var require_pgindex = __commonJS({
 var require_impact = __commonJS({
   "lib/impact.js"(exports2, module2) {
     var CI = require_codeindex();
-    var kindOf = (id) => {
-      const m = id.match(/^(table|column|topic|es|pgfn|endpoint|svc|file|ext):/);
-      if (m) return m[1];
-      if (id.includes("#")) return "method";
-      return "class-or-field";
-    };
-    var memo = { sig: null, G: null };
+    var ID = require_semantic_identity();
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var crypto = require("crypto");
+    var digest = (x) => crypto.createHash("sha256").update(JSON.stringify(x)).digest("hex");
+    var memo = /* @__PURE__ */ new Map();
     function load({ repos, env } = {}) {
-      const keys = CI.select(repos);
-      let sig = null;
-      try {
-        const pdir = require_passport().DIR;
-        const pm = require("fs").existsSync(pdir) ? require("fs").statSync(pdir).mtimeMs : 0;
-        sig = JSON.stringify([keys.map((k) => `${k}@${CI.load(k)?.builtAt}`), env, env ? require_pgindex().current(env).builtAt : null, pm]);
-      } catch {
-      }
-      if (sig && memo.sig === sig) return memo.G;
-      const G = build(keys, env);
-      if (sig) Object.assign(memo, { sig, G });
+      const keys = CI.select(repos), passports = require_edges().snapshot();
+      const cats = env ? require_pg().loadAll(env) : [];
+      const usage = env ? require_pgindex().current(env) : { edges: [] };
+      const info = keys.map((k) => ({ key: k, idx: CI.load(k) })).filter((x) => x.idx);
+      const signature = digest([env, info.map((x) => [x.key, x.idx.sha, x.idx.builtAt, x.idx.sourceDigest, require_util().fileStamp(path2.join(x.idx.dir, "files.json")), require_util().fileStamp(path2.join(x.idx.dir, "graph.json"))]), cats, usage.builtAt, usage.edges, passports.signature, require_config().getPersonal().libraryRepos]);
+      const key = JSON.stringify([keys, env]);
+      if (memo.get(key)?.signature === signature) return memo.get(key);
+      const G = build(info, env, cats, usage, passports);
+      G.signature = signature;
+      memo.set(key, G);
+      if (memo.size > 8) memo.delete(memo.keys().next().value);
       return G;
     }
-    function build(keys, env) {
-      const rev = /* @__PURE__ */ new Map(), fwd = /* @__PURE__ */ new Map(), nodes = /* @__PURE__ */ new Map(), sql = [], classes = /* @__PURE__ */ new Map();
-      const add = (from, to, kind, where, repo, arity) => {
-        const e = { from, to, kind, where, repo, ...arity !== void 0 ? { arity } : {} };
-        (rev.get(to) || rev.set(to, []).get(to)).push(e);
-        (fwd.get(from) || fwd.set(from, []).get(from)).push(e);
+    function build(info, env, cats, usage, passports) {
+      const nodes = /* @__PURE__ */ new Map(), classes = /* @__PURE__ */ new Map(), fwd = /* @__PURE__ */ new Map(), rev = /* @__PURE__ */ new Map(), aliases = /* @__PURE__ */ new Map(), gaps = [...passports.gaps], sql = [];
+      const alias = (a, id) => {
+        const s = aliases.get(a) || /* @__PURE__ */ new Set();
+        s.add(id);
+        aliases.set(a, s);
       };
-      const graphs = [];
-      for (const key of keys) {
-        const idx = CI.load(key);
-        const g = idx && idx.graph_();
-        if (g) graphs.push({ key, idx, g });
+      const node = (id, n) => {
+        nodes.set(id, { id, ...n });
+        if (n.legacyId) alias(n.legacyId, id);
+        return id;
+      };
+      const add = (e) => {
+        (fwd.get(e.from) || fwd.set(e.from, []).get(e.from)).push(e);
+        (rev.get(e.to) || rev.set(e.to, []).get(e.to)).push(e);
+      };
+      const pgid = (kind, db, name) => ID.pg(kind, env, db, name);
+      for (const cat of cats) {
+        for (const t of cat.tables || []) {
+          const name = ID.qualified(t.schema, t.name);
+          node(pgid("table", cat.db, name), { kind: "table", name: `table:${name}`, legacyId: `table:${name}`, env, db: cat.db, object: name, revision: cat.syncedAt });
+          for (const c of t.columns || []) node(pgid("column", cat.db, `${name}.${ID.identifier(c.name)}`), { kind: "column", legacyId: `column:${name}.${c.name}`, env, db: cat.db, object: `${name}.${ID.identifier(c.name)}`, revision: cat.syncedAt });
+        }
+        for (const [ordinal, f] of (cat.functions || []).entries()) {
+          const name = ID.qualified(f.schema, f.name), overloaded = cat.functions.filter((x) => x.schema === f.schema && x.name === f.name).length > 1;
+          const fid = overloaded ? pgid("pgfn", cat.db, `${name}(${f.signature || f.args || `overload-${ordinal}`})`) : pgid("pgfn", cat.db, name);
+          if (overloaded) gaps.push({ kind: "ambiguous-pg-function-overload", env, db: cat.db, target: name, detail: "Legacy usage edges do not preserve argument signatures; select exact catalog overload and verify runtime callers." });
+          node(fid, { kind: "pgfn", name: `pgfn:${name}`, legacyId: `pgfn:${name}`, env, db: cat.db, object: name, revision: cat.syncedAt });
+        }
       }
-      for (const { key, g } of graphs) for (const c of g.classes) if (!classes.has(c.id) || classes.get(c.id).test) classes.set(c.id, { ...c, repo: key });
-      const own = (id) => {
-        if (!id || !id.startsWith("ext:")) return id;
-        const x = id.slice(4), cls = x.replace(/[#].*$/, "");
-        if (classes.has(cls)) return x;
-        const dot = cls.lastIndexOf(".");
-        return dot > 0 && classes.has(cls.slice(0, dot)) ? x : id;
-      };
-      const indexed = /* @__PURE__ */ new Set();
-      for (const { key, idx, g } of graphs) {
+      const indexed = /* @__PURE__ */ new Set(), perRepo = /* @__PURE__ */ new Map(), byClass = /* @__PURE__ */ new Map();
+      for (const { key, idx } of info) {
+        const revision = ID.revision(idx);
+        const g = idx.graph_(), local = /* @__PURE__ */ new Map();
+        if (!g.preciseEdges) gaps.push({ kind: "legacy-codegraph", repo: key, detail: "Refresh the code index for call-site and overload evidence." });
+        perRepo.set(key, local);
+        const put = (legacy, id) => {
+          const ns = local.get(legacy) || [];
+          ns.push(id);
+          local.set(legacy, ns);
+        };
+        for (const c of g.classes || []) {
+          const cid = ID.code(key, ID.revision(idx), c.id), sc = { ...c, id: cid, legacyId: c.id, repo: key, revision: ID.revision(idx) };
+          classes.set(cid, sc);
+          node(cid, { ...sc, kind: "class" });
+          put(c.id, cid);
+          const cs = byClass.get(c.id) || [];
+          cs.push(sc);
+          byClass.set(c.id, cs);
+          for (const m of c.methods) {
+            const symbol = `${c.id}#${ID.signature(m)}`, mid = ID.code(key, ID.revision(idx), symbol);
+            node(mid, { kind: "method", classId: cid, legacyId: `${c.id}#${m.name}`, symbol, signature: ID.signature(m), repo: key, revision: ID.revision(idx), file: c.file, line: m.line, endLine: m.endLine, test: c.test, role: c.role, name: `${c.name}#${m.name}`, annos: m.annos, params: m.params });
+            alias(symbol, mid);
+            put(`${c.id}#${m.name}`, mid);
+            put(symbol, mid);
+          }
+          for (const f of c.fields) {
+            const fid = ID.code(key, ID.revision(idx), `${c.id}.${f.name}`);
+            node(fid, { kind: "field", classId: cid, legacyId: `${c.id}.${f.name}`, repo: key, revision: ID.revision(idx), file: c.file, line: f.line, test: c.test, role: c.role, name: `${c.name}.${f.name}`, column: f.column });
+            put(`${c.id}.${f.name}`, fid);
+          }
+        }
         if (g.app?.name) indexed.add(g.app.name);
         indexed.add(idx.repo || key.split("/").pop());
-        for (const c of g.classes) {
-          nodes.set(c.id, { id: c.id, kind: "class", repo: key, file: c.file, line: c.line, role: c.role, test: c.test, name: c.name });
-          for (const m of c.methods) nodes.set(`${c.id}#${m.name}`, { id: `${c.id}#${m.name}`, kind: "method", repo: key, file: c.file, line: m.line, endLine: m.endLine, role: c.role, test: c.test, name: `${c.name}#${m.name}`, annos: m.annos });
-          for (const f of c.fields) nodes.set(`${c.id}.${f.name}`, { id: `${c.id}.${f.name}`, kind: "field", repo: key, file: c.file, line: f.line, role: c.role, test: c.test, name: `${c.name}.${f.name}`, column: f.column });
-        }
-        for (const [from, to, kind, where, arity] of g.edges) add(own(from), own(to), kind, where, key, arity);
-        for (const s of g.sql || []) sql.push({ ...s, repo: key });
       }
-      const declared = /* @__PURE__ */ new Set();
-      for (const [from, list] of fwd) if (list.some((e) => e.kind === "member")) declared.add(from);
-      for (const c of classes.values()) {
-        for (const sup of [...c.impl || [], ...c.ext || []].map(own)) {
-          const sc = classes.get(sup);
-          if (!sc || sc.repo === c.repo) continue;
-          for (const m of c.methods) if (sc.methods.some((x) => x.name === m.name)) add(`${sup}#${m.name}`, `${c.id}#${m.name}`, "dispatch", `${c.file}:${m.line}`, c.repo);
+      const servicePassports = new Map(passports.rows.filter((x) => !env || !x.passport.env || x.passport.env === env).map((x) => [x.passport.service, x.passport]));
+      function resolveData(raw, key) {
+        const m = raw.match(/^(table|column|pgfn):(.+)$/);
+        if (!m) return [raw];
+        const kind = m[1], name = ID.norm(m[2]);
+        let ns = [...nodes.values()].filter((n) => n.kind === kind && (n.object === name || n.object?.endsWith("." + name)));
+        const i = info.find((x) => x.key === key), p = servicePassports.get(i?.idx.graph_().app?.name) || servicePassports.get(i?.idx.repo);
+        const dbs = new Set((p?.db?.datasources || []).map((d) => String(d.db || "").toLowerCase()));
+        if (dbs.size) ns = ns.filter((n) => dbs.has(n.db) || dbs.has(cats.find((c) => c.db === n.db)?.database));
+        if (ns.length === 1) return [ns[0].id];
+        if (ns.length > 1) {
+          gaps.push({ kind: "ambiguous-code-database", repo: key, target: raw, candidates: ns.map((n) => n.id) });
+          return [];
         }
+        node(raw, { kind, legacyId: raw, name: raw, known: false, env });
+        return [raw];
       }
-      for (const [to] of rev) {
-        const cls = to.split("#")[0];
-        if (to.includes("#") && classes.has(cls) && !declared.has(to)) {
-          declared.add(to);
-          add(to, cls, "member", "inherited", classes.get(cls).repo);
+      const versionCandidates = (legacy, key) => {
+        const bare = legacy.replace(/^ext:/, ""), className = bare.split("#")[0];
+        let candidates = [...aliases.get(bare) || []];
+        if (!candidates.length) return [];
+        const same = candidates.filter((id) => nodes.get(id)?.repo === key);
+        if (same.length) return same;
+        const owner = info.find((i) => i.key === key), libs = owner?.idx.libs || [];
+        const allowed = new Set(libs.map((l) => l.index).filter(Boolean));
+        if (allowed.size) {
+          const exact = candidates.filter((id) => allowed.has(nodes.get(id)?.repo));
+          if (exact.length) return exact;
         }
-      }
-      let cats = [];
-      if (env) {
-        try {
-          cats = require_pg().loadAll(env);
-        } catch {
+        const deps = owner?.idx.graph_().app?.dependencies?.internal || [];
+        if (deps.length) {
+          const matched = candidates.filter((id) => {
+            const item = info.find((i) => i.key === nodes.get(id)?.repo);
+            const a = item?.idx.graph_().app;
+            return a?.artifactId && deps.some((d) => d.artifactId === a.artifactId && d.version && d.version === a.version);
+          });
+          if (matched.length) return matched;
         }
-        try {
-          for (const e of require_pgindex().current(env).edges) {
-            const t = e.targetKind === "function" || e.targetKind === "procedure" ? `pgfn:${e.target}` : `table:${e.target}`;
-            if (e.source === "db") {
-              if (e.role === "trigger") continue;
-              const u = e.userKind === "function" || e.userKind === "procedure" ? `pgfn:${e.user}` : `table:${e.user}`;
-              add(u, t, e.role, e.where || e.detail || "", `db:${e.db}`);
-            } else if (!indexed.has(e.user)) add(`svc:${e.user}`, t, e.role, e.where, `svc:${e.user}`);
+        if (new Set(candidates.map((id) => nodes.get(id)?.repo)).size > 1) {
+          gaps.push({ kind: "ambiguous-library-revision", repo: key, target: bare, candidates });
+          return [];
+        }
+        return candidates;
+      };
+      function resolveCode(raw, key, { where, source = false, arity, types } = {}) {
+        if (!raw) return [];
+        if (/^(table|column|pgfn):/.test(raw)) return resolveData(raw, key);
+        if (/^(topic|es|endpoint|svc|file):/.test(raw)) return [raw];
+        let ids = source ? perRepo.get(key)?.get(raw) || [] : versionCandidates(raw, key);
+        if (source && ids.length > 1 && where) {
+          const line = Number(where.match(/:(\d+)$/)?.[1]);
+          const file = where.replace(/:\d+$/, "");
+          const precise = ids.filter((id2) => {
+            const n = nodes.get(id2);
+            return n.file === file && n.line === line;
+          });
+          if (precise.length) ids = precise;
+          else {
+            const ranged = ids.filter((id2) => {
+              const n = nodes.get(id2);
+              return n.file === file && n.line <= line && line <= (n.endLine || n.line);
+            });
+            if (ranged.length) ids = ranged;
           }
-        } catch {
+        }
+        if (!source && ids.length > 1 && arity !== void 0) {
+          const match = ids.filter((id2) => nodes.get(id2)?.params?.length === arity);
+          if (match.length) ids = match;
+        }
+        if (!source && ids.length > 1 && types?.length && types.every(Boolean)) {
+          const exact = ids.filter((id2) => nodes.get(id2)?.params?.every((p, i) => p.type.replace(/\s+/g, "").split(".").pop() === String(types[i]).split(".").pop()));
+          if (exact.length) ids = exact;
+        }
+        if (ids.length > 1 && raw.includes("#")) gaps.push({ kind: "ambiguous-overload-edge", repo: key, target: raw, where, candidates: ids });
+        if (ids.length) return ids;
+        if (raw.startsWith("ext:")) return [raw];
+        gaps.push({ kind: "unknown-code-node", repo: key, target: raw, where });
+        const id = ID.code(key, ID.revision(info.find((i) => i.key === key)?.idx), raw);
+        node(id, { kind: raw.includes("#") ? "method" : "other", repo: key, legacyId: raw, name: raw, known: false });
+        return [id];
+      }
+      for (const { key, idx } of info) {
+        const g = idx.graph_();
+        for (const [from, to, kind, where, arity, types, fromSymbol] of g.preciseEdges || g.edges || []) {
+          const src = resolveCode(fromSymbol || from, key, { source: true, where }), dst = resolveCode(to, key, { where, arity, types });
+          for (const a of src) for (const b of dst) add({ from: a, to: b, kind, where, repo: key, arity, ...src.length > 1 || dst.length > 1 ? { ambiguous: true } : {} });
+        }
+        for (const f of idx.list || []) {
+          if (!/\.(java|kt|sql)$/.test(f.path)) continue;
+          let text;
+          try {
+            text = fs2.readFileSync(path2.join(idx.root, f.path), "utf8");
+          } catch {
+            gaps.push({ kind: "source-unreadable", repo: key, file: f.path });
+            continue;
+          }
+          const literals = /\.sql$/.test(f.path) ? [{ value: text, index: 0 }] : require_extract().stringLiterals(require_extract().stripComments(text));
+          for (const lit of literals) if (/\b(select|insert|update|delete|merge|execute)\b/i.test(lit.value)) {
+            const line = text.slice(0, lit.index).split("\n").length;
+            const enclosing = [...nodes.values()].filter((n) => n.repo === key && n.file === f.path && n.kind === "method" && n.line <= line && line <= (n.endLine || n.line)).sort((a, b) => a.endLine - a.line - (b.endLine - b.line))[0];
+            sql.push({ m: enclosing?.id || `file:${key}/${f.path}`, sql: lit.value, repo: key, file: f.path, line, revision: ID.revision(idx) });
+          }
+        }
+        for (const e of g.errors || []) gaps.push({ kind: "source-parse-error", repo: key, ...e });
+      }
+      for (const e of usage.edges || []) {
+        if (e.targetKind === "column") continue;
+        if (["function", "procedure"].includes(e.targetKind) && [...nodes.values()].filter((n) => n.kind === "pgfn" && n.db === e.db && n.object === e.target).length > 1) continue;
+        if (["function", "procedure"].includes(e.userKind) && [...nodes.values()].filter((n) => n.kind === "pgfn" && n.db === e.db && n.object === e.user).length > 1) continue;
+        const kind = ["function", "procedure"].includes(e.targetKind) ? "pgfn" : "table", to = e.db ? pgid(kind, e.db, e.target) : `${kind}:${e.target}`;
+        if (e.source === "db") {
+          if (e.role === "trigger") continue;
+          const uk = ["function", "procedure"].includes(e.userKind) ? "pgfn" : "table";
+          add({ from: pgid(uk, e.db, e.user), to, kind: e.role, where: e.where || e.detail || "", repo: `db:${e.db}`, env, db: e.db });
+        } else if (!indexed.has(e.user)) {
+          const p = servicePassports.get(e.user), other = passports.rows.find((x) => x.passport.service === e.user)?.passport;
+          if (other?.env && other.env !== env) continue;
+          add({ from: `svc:${e.user}`, to, kind: e.role, where: e.where, repo: `svc:${e.user}`, env: p?.env || env, db: e.db, revision: p?.repo?.sha || null });
         }
       }
-      try {
-        const pp = require_passport();
-        for (const s of pp.list()) {
-          if (indexed.has(s.service)) continue;
-          const p = pp.load(s.service);
-          const e = p?.effective || p || {};
-          for (const k of e.kafka?.consumes || []) if (k.topic && !/^\?/.test(k.topic)) add(`svc:${s.service}`, `topic:${k.topic}`, "consumes", `${k.file}:${k.line}`, `svc:${s.service}`);
-          for (const k of e.kafka?.produces || []) if (k.topic && !/^[?(]/.test(k.topic)) add(`topic:${k.topic}`, `svc:${s.service}`, "produced-by", `${k.file}:${k.line}`, `svc:${s.service}`);
-          for (const x of e.feign || []) add(`svc:${s.service}`, `endpoint:${x.method} ${normPath(x.path)}`, "calls-http", `${x.file}:${x.line}`, `svc:${s.service}`);
-          for (const x of e.endpoints || []) add(`endpoint:${x.method} ${normPath(x.path)}`, `svc:${s.service}`, "handler", `${x.file}:${x.line}`, `svc:${s.service}`);
-          for (const x of e.es || []) if (x.index && !/^\?/.test(x.index)) add(`svc:${s.service}`, `es:${x.index}`, "es", `${x.file}:${x.line}`, `svc:${s.service}`);
-        }
-      } catch {
+      for (const x of passports.rows) {
+        const p = x.passport;
+        if (indexed.has(p.service)) continue;
+        const n = require_edges().normalize(p, { env, ...x });
+        gaps.push(...n.gaps);
+        for (const e of n.edges) add(e);
       }
-      const relNames = /* @__PURE__ */ new Map();
-      for (const cat of cats) for (const t of cat.tables) {
-        const k = `${t.schema}.${t.name}`.toLowerCase();
-        (relNames.get(t.name.toLowerCase()) || relNames.set(t.name.toLowerCase(), /* @__PURE__ */ new Set()).get(t.name.toLowerCase())).add(k);
-      }
-      for (const id of [...rev.keys(), ...fwd.keys()]) {
-        const m = id.match(/^(table|column):([^.]+)(?:\.([^.]+))?$/);
-        if (!m) continue;
-        const isCol = m[1] === "column";
-        const tname = m[2], col = m[3];
-        if (isCol ? !col : col) continue;
-        const full = relNames.get(tname);
-        if (full && full.size === 1) {
-          const q = [...full][0];
-          add(id, isCol ? `column:${q}.${col}` : `table:${q}`, "alias", "catalog", "catalog");
+      for (const [cid, c] of classes) for (const sup of [...c.impl || [], ...c.ext || []]) {
+        for (const sid of versionCandidates(sup, c.repo)) {
+          const base = classes.get(sid);
+          if (!base || base.repo === c.repo) continue;
+          for (const m of c.methods) {
+            const match = base.methods.filter((x) => ID.signature(x) === ID.signature(m));
+            for (const x of match) add({ from: ID.code(base.repo, base.revision, `${base.legacyId}#${ID.signature(x)}`), to: ID.code(c.repo, c.revision, `${c.legacyId}#${ID.signature(m)}`), kind: "dispatch", where: `${c.file}:${m.line}`, repo: c.repo });
+          }
         }
       }
-      return { keys, rev, fwd, nodes, sql, cats, classes };
+      return { keys: info.map((x) => x.key), env, cats, nodes, classes, rev, fwd, aliases, sql, gaps };
     }
-    var normPath = (p) => String(p || "").replace(/\{[^}]*\}/g, "{}").replace(/\/+$/, "") || "/";
-    function resolveTarget(G, target) {
+    function unique(G, ids, kind) {
+      ids = [...new Set(ids)];
+      return ids.length > 1 ? { start: [], kind, ambiguous: true, candidates: ids } : { start: ids, kind };
+    }
+    function resolveTarget(G, target, { db } = {}) {
       const t = String(target || "").trim();
       if (!t) throw new Error("target is empty");
-      const pre = t.match(/^(table|column|topic|kafka|es|pgfn|fn|function|endpoint|svc|service|class|method):\s*(.+)$/i);
-      const known = (id) => G.rev.has(id) || G.fwd.has(id) || G.nodes.has(id);
-      if (pre) {
-        const k = { kafka: "topic", fn: "pgfn", function: "pgfn", service: "svc" }[pre[1].toLowerCase()] || pre[1].toLowerCase();
-        const v = pre[2].trim();
-        if (k === "endpoint") return endpointNodes(G, v);
-        if (k === "class" || k === "method") return codeNodes(G, v);
-        if (k === "table" || k === "column" || k === "pgfn") return { start: [`${k}:${v.toLowerCase().replace(/"/g, "")}`], kind: k };
-        return { start: [`${k}:${v}`], kind: k };
+      if (G.nodes.has(t) || G.rev.has(t) || G.fwd.has(t)) return { start: [t], kind: G.nodes.get(t)?.kind || kindOf(t) };
+      const pre = t.match(/^(table|column|pgfn|fn|function|topic|kafka|es|endpoint|svc|service|class|method):\s*(.+)$/i);
+      let kind = pre ? { fn: "pgfn", function: "pgfn", kafka: "topic", service: "svc" }[pre[1].toLowerCase()] || pre[1].toLowerCase() : null, value = pre ? pre[2] : t;
+      if (kind === "endpoint" || /^(GET|POST|PUT|DELETE|PATCH|ANY)\s+\//i.test(t)) {
+        const [method, p] = value.split(/\s+/);
+        if (!p) return { start: [], kind: "endpoint" };
+        const want = normPath(p.replace(/\?.*$/, "")).split("/");
+        return { start: [.../* @__PURE__ */ new Set([...G.rev.keys(), ...G.fwd.keys()])].filter((id) => {
+          const m = id.match(/^endpoint:(\w+) (.*)$/);
+          const have = m?.[2].split("/");
+          return m && (m[1] === method.toUpperCase() || m[1] === "ANY") && have.length === want.length && have.every((s, i) => s === "{}" || want[i] === "{}" || s === want[i]);
+        }), kind: "endpoint" };
       }
-      if (/^(GET|POST|PUT|DELETE|PATCH|ANY)\s+\//i.test(t)) return endpointNodes(G, t);
-      const file = t.match(/^([\w./-]+\.(?:java|kt|groovy))(?::(\d+))?$/);
-      if (file) return fileNodes(G, file[1], file[2] ? Number(file[2]) : null);
-      const low = t.toLowerCase().replace(/"/g, "");
-      const parts = low.split(".");
-      for (const cat of G.cats) {
-        for (const r of cat.tables) {
-          const k = `${r.schema}.${r.name}`.toLowerCase();
-          if (parts.length === 2 && low === k) return { start: [`table:${k}`], kind: "table", db: cat.db };
-          if (parts.length === 3 && `${parts[0]}.${parts[1]}` === k && r.columns.some((c) => c.name.toLowerCase() === parts[2])) return { start: [`column:${low}`], kind: "column", db: cat.db };
-          if (parts.length === 2 && r.name.toLowerCase() === parts[0] && r.columns.some((c) => c.name.toLowerCase() === parts[1])) return { start: [`column:${k}.${parts[1]}`], kind: "column", db: cat.db };
+      if (["topic", "es", "svc"].includes(kind)) {
+        const id = `${kind}:${value}`;
+        return { start: G.rev.has(id) || G.fwd.has(id) ? [id] : [], kind };
+      }
+      if (["table", "column", "pgfn"].includes(kind) || !kind && !t.includes("#")) {
+        let n = ID.norm(value), wantedDb = db, wantedEnv = G.env;
+        const ps = n.split(":");
+        if (ps.length === 3) {
+          wantedEnv = decodeURIComponent(ps[0]);
+          wantedDb = decodeURIComponent(ps[1]);
+          n = ps[2];
+        } else if (ps.length === 2) {
+          wantedDb = decodeURIComponent(ps[0]);
+          n = ps[1];
         }
-        for (const f of cat.functions || []) if (`${f.schema}.${f.name}`.toLowerCase() === low || parts.length === 1 && f.name.toLowerCase() === low) return { start: [`pgfn:${f.schema}.${f.name}`.toLowerCase()], kind: "pgfn", db: cat.db };
-        if (parts.length === 1) {
-          const ts = cat.tables.filter((r) => r.name.toLowerCase() === low);
-          if (ts.length === 1) return { start: [`table:${ts[0].schema}.${ts[0].name}`.toLowerCase()], kind: "table", db: cat.db };
+        const found = [...G.nodes.values()].filter((x) => (!kind || x.kind === kind) && ["table", "column", "pgfn"].includes(x.kind) && (!wantedDb || x.db === wantedDb) && (!wantedEnv || x.env === wantedEnv) && (x.object === n || x.object?.endsWith("." + n)));
+        if (found.length) {
+          const ks = new Set(found.map((x) => x.kind));
+          if (!kind && ks.has("table") && ks.has("pgfn")) return { start: [], kind: "database", ambiguous: true, candidates: found.map((x) => x.id) };
+          return unique(G, found.map((x) => x.id), found[0].kind);
         }
+        if (kind) return { start: [], kind };
       }
-      for (const k of ["topic", "es", "table", "pgfn"]) if (known(`${k}:${t}`) || known(`${k}:${low}`)) return { start: [known(`${k}:${t}`) ? `${k}:${t}` : `${k}:${low}`], kind: k };
-      const code = codeNodes(G, t);
-      if (code.start.length) return code;
-      return { start: [], kind: "unknown", candidates: code.candidates };
+      if (!kind) {
+        const data = ["topic", "es", "svc"].map((k) => `${k}:${value}`).filter((id) => G.rev.has(id) || G.fwd.has(id));
+        if (data.length) return unique(G, data, data.length === 1 ? kindOf(data[0]) : "data");
+      }
+      const alias = G.aliases.get(value);
+      if (alias?.size) return unique(G, [...alias], kind || G.nodes.get([...alias][0])?.kind);
+      const file = value.match(/^([\w./-]+\.(?:java|kt|groovy))(?::(\d+))?$/);
+      if (file) {
+        const ns = [...G.nodes.values()].filter((n) => n.file && (n.file === file[1] || n.file.endsWith("/" + file[1])) && (!file[2] || n.line <= Number(file[2]) && Number(file[2]) <= (n.endLine || n.line)));
+        const ms = ns.filter((n) => n.kind === "method");
+        return file[2] ? unique(G, ms.map((n) => n.id), "method") : { start: ns.map((n) => n.id), kind: "file" };
+      }
+      const [cls, member] = value.split(/#|::/), all = [...G.classes.values()];
+      const cs = all.filter((c) => c.legacyId === cls || c.legacyId.endsWith("." + cls) || c.name === cls);
+      if (cs.length > 1) {
+        const ms = member ? [...G.nodes.values()].filter((n) => cs.some((c) => c.id === n.classId) && (n.signature === member || n.legacyId?.endsWith("#" + member) || n.legacyId?.endsWith("." + member))) : cs;
+        return { start: [], kind: member ? "method" : "class", ambiguous: true, candidates: ms.map((c) => c.id) };
+      }
+      if (cs.length === 1) {
+        const c = cs[0], ns = [...G.nodes.values()].filter((n) => n.classId === c.id);
+        if (member) return unique(G, ns.filter((n) => n.signature === member || n.legacyId?.endsWith("#" + member) || n.legacyId?.endsWith("." + member)).map((n) => n.id), "method");
+        return { start: [c.id, ...ns.map((n) => n.id)], kind: "class" };
+      }
+      return { start: [], kind: kind || "unknown", candidates: [...G.nodes.values()].filter((n) => value.toLowerCase().split(/[.#\s]+/).every((w) => (n.legacyId || n.id).toLowerCase().includes(w))).slice(0, 15).map((n) => n.id) };
     }
-    function codeNodes(G, t) {
-      const [cls, member] = t.split(/#|::/);
-      const all = [...G.nodes.values()];
-      let classes = all.filter((n) => n.kind === "class" && (n.id === cls || n.id.endsWith(`.${cls}`) || n.name === cls));
-      let m = member;
-      if (!classes.length && !member && cls.includes(".")) {
-        const i = cls.lastIndexOf(".");
-        const c2 = cls.slice(0, i);
-        classes = all.filter((n) => n.kind === "class" && (n.id === c2 || n.id.endsWith(`.${c2}`) || n.name === c2));
-        m = classes.length ? cls.slice(i + 1) : void 0;
-      }
-      if (!classes.length) {
-        const words = t.toLowerCase().split(/[#.\s]+/).filter(Boolean);
-        const candidates = all.filter((n) => n.kind !== "field" && words.every((w) => n.id.toLowerCase().includes(w))).slice(0, 15).map((n) => n.id);
-        return { start: [], kind: "code", candidates };
-      }
-      if (m) {
-        const ids = classes.map((c) => `${c.id}#${m}`).filter((id) => G.nodes.has(id) || G.rev.has(id));
-        const fields = classes.map((c) => `${c.id}.${m}`).filter((id) => G.nodes.has(id));
-        return { start: [...ids, ...fields], kind: ids.length ? "method" : "field" };
-      }
-      const start = [];
-      for (const c of classes) {
-        start.push(c.id);
-        for (const n of all) if (n.id.startsWith(`${c.id}#`) || n.id.startsWith(`${c.id}.`) && n.kind === "field") start.push(n.id);
-      }
-      return { start, kind: "class" };
-    }
-    function endpointNodes(G, t) {
-      const [method, p] = t.trim().split(/\s+/);
-      const want = normPath(p.replace(/\?.*$/, "")).split("/");
-      const start = [.../* @__PURE__ */ new Set([...G.rev.keys(), ...G.fwd.keys()])].filter((id) => {
-        const m = id.match(/^endpoint:(\w+) (.*)$/);
-        if (!m || m[1] !== method.toUpperCase() && m[1] !== "ANY") return false;
-        const have = m[2].split("/");
-        return have.length === want.length && have.every((s, i) => s === "{}" || want[i] === "{}" || s === want[i]);
-      });
-      return { start, kind: "endpoint" };
-    }
-    function fileNodes(G, file, line) {
-      const inFile = [...G.nodes.values()].filter((n) => n.file === file || n.file.endsWith("/" + file) || file.endsWith("/" + n.file));
-      if (line == null) return { start: inFile.filter((n) => n.kind === "class").flatMap((c) => [c.id, ...inFile.filter((n) => n.id.startsWith(c.id + "#")).map((n) => n.id)]), kind: "file" };
-      const m = inFile.filter((n) => n.kind === "method" && n.line <= line + 3 && line <= (n.endLine || n.line)).sort((a, b) => a.endLine - a.line - (b.endLine - b.line))[0];
-      return m ? { start: [m.id], kind: "method" } : { start: inFile.filter((n) => n.kind === "class").map((n) => n.id), kind: "file" };
-    }
-    function columnEdges(G, col) {
-      const [, s, t, c] = col.match(/^column:([^.]+)\.([^.]+)\.(.+)$/) || [];
-      if (!c) return { edges: [], facts: [] };
-      const table2 = `${s}.${t}`, word = new RegExp(`\\b${c.replace(/[^\w$]/g, "")}\\b`, "i");
-      const out2 = [];
-      const tableNames = /* @__PURE__ */ new Set([table2, t]);
-      for (const x of G.sql) if (x.tables.some((n) => tableNames.has(n)) && (word.test(x.sql) || /select\s+\*|returning\s+\*/i.test(x.sql))) out2.push({ from: x.m, to: col, kind: word.test(x.sql) ? "sql" : "sql select *", where: x.sql.replace(/\s+/g, " ").slice(0, 160), repo: x.repo });
-      const facts = [];
-      for (const cat of G.cats) {
-        const r = cat.tables.find((x) => `${x.schema}.${x.name}`.toLowerCase() === table2);
-        if (!r) continue;
-        for (const ix of r.indexes || []) if (word.test(ix.replace(/^.*?\(/, "("))) facts.push({ db: cat.db, kind: "index", def: ix });
-        for (const k of r.constraints || []) if (word.test(k.def)) facts.push({ db: cat.db, kind: { p: "primary key", u: "unique", f: "foreign key", c: "check" }[k.type] || k.type, name: k.name, def: k.def });
-        for (const fk of cat.tables) for (const k of fk.constraints || []) if (k.type === "f" && k.ref?.toLowerCase() === table2 && word.test(k.def.replace(/^.*REFERENCES/i, ""))) facts.push({ db: cat.db, kind: "referenced by", name: `${fk.schema}.${fk.name}.${k.name}`, def: k.def });
-        for (const f of cat.functions || []) {
-          const fid = `pgfn:${f.schema}.${f.name}`.toLowerCase();
-          const touches = (G.fwd.get(fid) || []).some((e) => e.to === `table:${table2}`);
-          if (touches && word.test(f.body || "")) out2.push({ from: fid, to: col, kind: "body", where: `${f.schema}.${f.name}`, repo: `db:${cat.db}` });
+    var kindOf = (id) => ID.parseCode(id) ? id.includes("#") ? "method" : "class" : id.match(/^(\w+):/)?.[1] || "other";
+    var normPath = (p) => String(p || "").replace(/\{[^}]*\}/g, "{}").replace(/\/+$/, "") || "/";
+    function columnEdges(G, id) {
+      const p = ID.parsePg(id);
+      if (!p) return { edges: [], facts: [], gaps: [] };
+      if (p.object.includes('"')) return { edges: [], facts: [], gaps: [{ kind: "quoted-identifier-lineage-unsupported", targetId: id, detail: "Canonical identity is preserved; a SQL parser adapter is required for column evidence." }] };
+      const col = p.object.split(".").pop(), table2 = p.object.slice(0, -col.length - 1), cat = G.cats.find((c) => c.db === p.db), edges = [], facts = [], gaps = [];
+      if (!cat) return { edges, facts, gaps: [{ kind: "catalog-missing", db: p.db }] };
+      const a = require_column_lineage().catalog(cat, G.env);
+      for (const e of a.edges.filter((e2) => e2.target === p.object)) {
+        if (cat.functions.filter((f) => ID.qualified(f.schema, f.name) === e.user).length > 1) {
+          gaps.push({ kind: "ambiguous-pg-function-overload", db: p.db, target: e.user });
+          continue;
         }
-        for (const v of cat.tables) {
-          if (!v.definition) continue;
-          const vid = `table:${v.schema}.${v.name}`.toLowerCase();
-          if ((cat.viewDeps || []).some((d) => d.view.toLowerCase() === vid.slice(6) && d.ref.toLowerCase() === table2) && word.test(v.definition)) out2.push({ from: vid, to: col, kind: "view", where: `${v.schema}.${v.name}`, repo: `db:${cat.db}` });
-        }
+        const k = ["function", "procedure"].includes(e.userKind) ? "pgfn" : "table";
+        edges.push({ from: ID.pg(k, G.env, p.db, e.user), to: id, kind: e.access, where: e.where, repo: `db:${p.db}`, access: e.access, env: G.env, db: p.db, line: e.line, revision: e.revision, syntax: e.syntax });
       }
-      return { edges: out2, facts };
+      gaps.push(...a.gaps);
+      for (const s of G.sql) {
+        const r = require_column_lineage().analyze(s.sql, cat);
+        const possible = G.cats.filter((c) => c.tables.some((t) => ID.qualified(t.schema, t.name) === table2));
+        const uncertain = possible.length > 1 && G.gaps.some((g) => g.kind === "ambiguous-code-database" && g.repo === s.repo);
+        if (uncertain) gaps.push({ kind: "ambiguous-code-database", repo: s.repo, file: s.file, candidates: possible.map((c) => ID.pg("column", G.env, c.db, p.object)) });
+        for (const h of r.hits.filter((h2) => h2.table === table2 && h2.column === col)) edges.push({ binding: uncertain ? "candidate" : "resolved", ambiguous: uncertain || void 0, from: s.m, to: id, kind: h.access, access: h.access, where: `${s.file}:${s.line + h.line - 1}`, repo: s.repo, file: s.file, line: s.line + h.line - 1, revision: s.revision, env: G.env, db: p.db, syntax: h.syntax });
+        gaps.push(...r.gaps.map((g) => ({ ...g, repo: s.repo, file: s.file, line: s.line + g.line - 1 })));
+      }
+      const rel = cat.tables.find((t) => ID.qualified(t.schema, t.name) === table2), word = new RegExp(`\\b${col.replace(/[^\w$]/g, "")}\\b`, "i");
+      for (const x of rel?.indexes || []) if (word.test(x)) facts.push({ db: p.db, kind: "index", def: x });
+      for (const x of rel?.constraints || []) if (word.test(x.def)) facts.push({ db: p.db, kind: "constraint", name: x.name, def: x.def });
+      return { edges, facts, gaps };
     }
-    function impact(target, { repos, env, depth = 4, limit = 400, grep = true } = {}) {
-      const G = load({ repos, env });
-      const r = resolveTarget(G, target);
-      if (!r.start.length) return { target, resolved: [], note: `nothing named "${target}" in ${G.keys.length} indexed repos${env ? ` or the ${env} catalog` : ""}`, candidates: r.candidates || [], repos: G.keys };
-      let facts = [];
-      const extra = /* @__PURE__ */ new Map();
+    function impact(target, { repos, env, db, depth = 4, limit = 400, node_limit = 1e4, time_ms = 1e3, max_output_bytes = 32768, cursor, grep = true } = {}) {
+      depth = Math.max(0, Math.min(32, depth));
+      limit = Math.max(1, Math.min(2e3, limit));
+      node_limit = Math.max(1, Math.min(1e5, node_limit));
+      time_ms = Math.max(1, Math.min(5e3, time_ms));
+      max_output_bytes = Math.max(4096, Math.min(262144, max_output_bytes));
+      const G = load({ repos, env }), r = resolveTarget(G, target, { db }), query = digest([target, repos, env, db, depth, node_limit, time_ms, max_output_bytes]), cuts = [];
+      let offset = 0;
+      if (cursor) {
+        let c;
+        try {
+          c = JSON.parse(Buffer.from(cursor, "base64url").toString());
+        } catch {
+          throw new Error("invalid impact continuation");
+        }
+        if (c.graph !== G.signature || c.query !== query) throw new Error("impact continuation expired: graph or query changed");
+        if (!Number.isSafeInteger(c.offset) || c.offset < 0) throw new Error("invalid impact continuation offset");
+        offset = c.offset;
+      }
+      const base = { protocol: "dt.impact/v2", identityVersion: ID.protocol, target, env: env || null, graphRevision: G.signature, resolved: r.start.slice(0, 20), resolvedTotal: r.start.length, kind: r.kind, repos: G.keys.length, coverage: { source: "cached-index", exhaustive: false, codeParser: "java-kotlin-static/v1", unknowns: "Dynamic SQL, generated code, reflection and unindexed/runtime dependencies require observations or parser adapters." } };
+      if (!r.start.length) return boundResult({ ...base, complete: false, traversalComplete: false, ambiguous: r.ambiguous || void 0, candidates: (r.candidates || []).slice(0, 20), candidateTotal: r.candidates?.length || 0, gaps: [{ kind: r.ambiguous ? "ambiguous-target" : "unknown-target" }], note: r.ambiguous ? "Select one exact canonical candidate; narrow repos or db to reduce candidates." : `nothing named in the selected cached indexes` }, max_output_bytes);
+      const extra = /* @__PURE__ */ new Map(), facts = [], gaps = [...G.gaps];
       for (const s of r.start.filter((x) => x.startsWith("column:"))) {
         const ce = columnEdges(G, s);
         for (const e of ce.edges) (extra.get(e.to) || extra.set(e.to, []).get(e.to)).push(e);
-        facts = facts.concat(ce.facts);
+        facts.push(...ce.facts);
+        gaps.push(...ce.gaps);
       }
-      const seen = new Map(r.start.map((s) => [s, { depth: 0, via: null }]));
-      let frontier = [...r.start];
-      for (let d = 1; d <= depth && frontier.length; d++) {
-        let visit2 = function(n, e, from) {
-          if (seen.has(n) || /^ext:/.test(n)) return;
-          seen.set(n, { depth: d, via: { from, kind: e.kind, where: e.where, repo: e.repo } });
-          next.push(n);
-        };
-        var visit = visit2;
-        const next = [];
-        for (const id of frontier) {
-          const ins = [...G.rev.get(id) || [], ...extra.get(id) || []];
-          const outs = d === 1 && /^(table|topic|es|column|endpoint|pgfn):/.test(id) ? (G.fwd.get(id) || []).filter((e) => /produced-by|handler/.test(e.kind)) : [];
-          for (const e of ins) visit2(e.from, e, id);
-          for (const e of outs) visit2(e.to, e, id);
+      const neighbours = (id, d) => [...G.rev.get(id) || [], ...extra.get(id) || []].map((e) => ({ id: e.from, e })).concat(d === 0 && /^(table|topic|es|column|endpoint|pgfn):/.test(id) ? (G.fwd.get(id) || []).filter((e) => /produced-by|handler/.test(e.kind)).map((e) => ({ id: e.to, e })) : []);
+      const seeds = r.start.slice(0, node_limit), seen = new Map(seeds.map((id) => [id, { depth: 0, via: null }])), queue = [...seeds], started = performance.now();
+      let q = 0, frontier = r.start.slice(node_limit);
+      if (frontier.length) cuts.push("nodes");
+      outer: while (q < queue.length) {
+        const id = queue[q++], s = seen.get(id), next2 = neighbours(id, s.depth).filter((n) => !seen.has(n.id));
+        if (s.depth >= depth) {
+          if (next2.length) {
+            cuts.push("depth");
+            frontier.push(id);
+          }
+          continue;
         }
-        frontier = next;
-        if (seen.size > limit * 4) break;
+        for (const n of next2) {
+          if (n.id.startsWith("ext:")) {
+            gaps.push({ kind: "unindexed-external-symbol", id: n.id, where: n.e.where });
+            continue;
+          }
+          if (seen.has(n.id)) continue;
+          if (seen.size >= node_limit) {
+            cuts.push("nodes");
+            frontier.push(id, ...queue.slice(q));
+            break outer;
+          }
+          if (performance.now() - started >= time_ms) {
+            cuts.push("time");
+            frontier.push(id, ...queue.slice(q));
+            break outer;
+          }
+          seen.set(n.id, { depth: s.depth + 1, via: { ...n.e, from: id } });
+          queue.push(n.id);
+        }
       }
       const items = [];
       for (const [id, s] of seen) {
-        if (s.depth === 0) continue;
-        const n = G.nodes.get(id) || { id, kind: kindOf(id) };
-        if (n.kind === "class-or-field") n.kind = "other";
-        items.push({ depth: s.depth, kind: n.kind, id, name: n.name || id, repo: n.repo || s.via.repo, file: n.file || null, line: n.line || null, role: n.role || null, test: !!n.test, via: `${s.via.kind} ${short(s.via.from)}`, where: s.via.where });
+        if (!s.depth) continue;
+        const n = G.nodes.get(id) || { id, kind: kindOf(id), name: id };
+        const { params, methods, fields, ctor, ext, impl, annos, lombok, ...display } = n;
+        items.push({ ...display, depth: s.depth, name: n.name || id, repo: n.repo || s.via.repo, file: n.file || null, line: n.line || s.via.line || null, test: !!n.test, via: `${s.via.kind} ${s.via.from}`, where: s.via.where, access: s.via.access, edge: { kind: s.via.kind, access: s.via.access, ambiguous: s.via.ambiguous, env: s.via.env, db: s.via.db, revision: s.via.revision, syntax: s.via.syntax } });
       }
       items.sort((a, b) => a.depth - b.depth || a.test - b.test || a.kind.localeCompare(b.kind) || a.id.localeCompare(b.id));
-      const pick = (k) => items.filter((i) => i.kind === k).map((i) => i.id.replace(/^\w+:/, ""));
-      const tests = [...new Set(items.filter((i) => i.test).map((i) => i.id.split(/[#]/)[0]))];
-      const out2 = {
-        target,
-        resolved: r.start.slice(0, 20),
-        kind: r.kind,
-        depth,
-        repos: G.keys.length,
-        counts: Object.fromEntries(Object.entries(items.reduce((m, i) => {
-          m[i.kind] = (m[i.kind] || 0) + 1;
-          return m;
-        }, {}))),
-        endpoints: pick("endpoint"),
-        topics: pick("topic"),
-        tables: pick("table"),
-        functions: pick("pgfn"),
-        services: pick("svc"),
-        es: pick("es"),
-        tests,
-        db: facts,
-        items: items.slice(0, limit),
-        truncated: items.length > limit || void 0
-      };
-      if (grep) out2.mentions = textMentions(G, target, r, items);
+      const more = offset + limit < items.length;
+      if (more) cuts.push("output");
+      const reasons = [...new Set(cuts)], traversalComplete = !reasons.some((x) => x !== "output");
+      const resultGaps = [...new Map(gaps.map((g) => [JSON.stringify(g), g])).values()].map((g) => ({ ...g, ...g.candidates ? { candidates: g.candidates.slice(0, 10), candidateTotal: g.candidates.length } : {}, ...g.detail ? { detail: String(g.detail).slice(0, 512) } : {} }));
+      const pick = (k) => items.filter((i) => i.kind === k).map((i) => i.kind === "pgfn" || i.kind === "table" ? i.id : i.id.replace(/^\w+:/, "")).slice(0, 25);
+      if (cursor && !traversalComplete) throw new Error("impact continuation could not reproduce a complete traversal within its budget; increase time_ms or node_limit and restart");
+      const continuation = more && traversalComplete ? Buffer.from(JSON.stringify({ v: 1, graph: G.signature, query, offset: offset + limit })).toString("base64url") : void 0;
+      const next = traversalComplete ? void 0 : { target, env, repos, db, depth: Math.min(32, Math.max(depth + 1, depth * 2)), limit, node_limit: Math.min(1e5, node_limit * 2), time_ms: Math.min(5e3, time_ms * 2) };
+      const out2 = { ...base, complete: !reasons.length && !resultGaps.length, traversalComplete, counts: items.reduce((m, i) => (m[i.kind] = (m[i.kind] || 0) + 1, m), {}), endpoints: pick("endpoint"), topics: pick("topic"), tables: pick("table"), functions: pick("pgfn"), services: pick("svc"), es: pick("es"), tests: [...new Set(items.filter((i) => i.test).map((i) => i.classId || i.id.split("#")[0]))].slice(0, 25), db: facts, items: items.slice(offset, offset + limit), total: items.length, truncated: reasons.length > 0, cutReasons: reasons, frontier: [...new Set(frontier)].slice(0, 20), frontierTotal: new Set(frontier).size, continuation, next, gaps: resultGaps.slice(0, 20), gapTotal: resultGaps.length, summaryTruncated: items.length > 25, maxOutputBytes: max_output_bytes };
+      if (grep) {
+        const raw = G.nodes.get(r.start[0])?.legacyId || target, name = r.kind === "column" ? raw.split(".").pop() : raw.split("#").pop().replace(/\(.*$/, "");
+        try {
+          out2.mentions = name.length >= 3 ? CI.grep(G.keys, name, { limit: 10, perFile: 2 }).hits.map((h) => ({ ...h, text: String(h.text).slice(0, 500) })) : [];
+        } catch {
+          out2.mentions = [];
+        }
+      }
+      while (out2.items.length > 1 && Buffer.byteLength(JSON.stringify(out2)) > max_output_bytes) out2.items.pop();
+      if (offset + out2.items.length < items.length) {
+        out2.complete = false;
+        out2.truncated = true;
+        if (!out2.cutReasons.includes("output")) out2.cutReasons.push("output");
+        if (traversalComplete) out2.continuation = Buffer.from(JSON.stringify({ v: 1, graph: G.signature, query, offset: offset + out2.items.length })).toString("base64url");
+        else out2.pagination = "requires-complete-traversal";
+      }
+      return boundResult(out2, max_output_bytes);
+    }
+    function boundResult(out2, max = 32768) {
+      const budget = max - 32;
+      const bytes = () => Buffer.byteLength(JSON.stringify(out2));
+      if (bytes() > budget) {
+        out2.metadataTruncated = true;
+        for (const k of ["mentions", "nearest", "gaps", "frontier", "endpoints", "topics", "tables", "functions", "services", "tests", "es", "resolved", "candidates"]) {
+          if (!Array.isArray(out2[k])) continue;
+          while (out2[k].length > 1 && bytes() > budget) out2[k].pop();
+        }
+      }
+      if (bytes() > budget && out2.gaps?.length) out2.gaps = out2.gaps.map((g) => ({ kind: g.kind }));
+      if (bytes() > budget) {
+        for (const k of ["mentions", "nearest", "frontier", "endpoints", "topics", "tables", "functions", "services", "tests", "es", "candidates"]) if (Array.isArray(out2[k])) out2[k] = [];
+      }
+      if (bytes() > budget) {
+        out2.outputBudgetExceeded = true;
+        out2.complete = false;
+        out2.truncated = true;
+        out2.items = [];
+        out2.continuation = void 0;
+        out2.next = { target: out2.target, env: out2.env, max_output_bytes: Math.min(262144, max * 2) };
+      }
+      if (bytes() > budget) throw new Error("impact identity/metadata exceeds max_output_bytes; narrow the target or raise the result budget");
+      out2.outputBytes = bytes();
+      out2.outputBytes = bytes();
+      if (bytes() > max) throw new Error("impact response exceeds its byte budget");
       return out2;
     }
-    var short = (id) => (id || "").replace(/^[\w.]+\.(?=[A-Z][\w$]*(?:[#.]|$))/, "");
-    function textMentions(G, target, r, items) {
-      const name = r.kind === "column" ? r.start[0].split(".").pop() : r.kind === "class" ? r.start[0].split(".").pop() : r.kind === "method" || r.kind === "field" ? r.start[0].split(/[#.]/).pop() : String(r.start[0] || target).replace(/^\w+:/, "").replace(/^(GET|POST|PUT|DELETE|PATCH|ANY) /, "").replace(/\{\}/g, "");
-      if (!name || name.length < 3) return [];
-      const known = new Set(items.filter((i) => i.file).map((i) => `${i.repo}|${i.file}`));
-      const pattern = /^[\w$]+$/.test(name) ? `\\b${name}\\b` : name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      try {
-        const g = CI.grep(G.keys, pattern, { regex: true, ignoreCase: false, limit: 60, perFile: 3 });
-        return g.hits.filter((h) => !known.has(`${h.repo}|${h.path}`) && !/\.(java|kt)$/.test(h.path)).slice(0, 30);
-      } catch {
-        return [];
+    function loadLegacy(opts = {}) {
+      const G = load(opts), names = /* @__PURE__ */ new Map(), legacy = { ...G, nodes: /* @__PURE__ */ new Map(), classes: /* @__PURE__ */ new Map(), rev: /* @__PURE__ */ new Map(), fwd: /* @__PURE__ */ new Map(), legacyAmbiguities: new Map([...G.aliases].filter(([name, ids]) => name.includes("#") && !name.includes("(") && ids.size > 1)) };
+      for (const [id, c] of G.classes) {
+        if (names.has(c.legacyId)) throw new Error(`Ambiguous legacy class ${c.legacyId}; choose one repo/revision with repos. Candidates: ${names.get(c.legacyId)}, ${id}`);
+        names.set(c.legacyId, id);
+        legacy.classes.set(c.legacyId, { ...c, id: c.legacyId });
       }
+      const old = (id) => G.nodes.get(id)?.legacyId || id;
+      for (const [id, n] of G.nodes) {
+        const k = old(id);
+        if (!legacy.nodes.has(k)) legacy.nodes.set(k, { ...n, id: k });
+      }
+      for (const rows of G.fwd.values()) for (const e of rows) {
+        const x = { ...e, from: old(e.from), to: old(e.to) };
+        (legacy.fwd.get(x.from) || legacy.fwd.set(x.from, []).get(x.from)).push(x);
+        (legacy.rev.get(x.to) || legacy.rev.set(x.to, []).get(x.to)).push(x);
+      }
+      return legacy;
     }
-    module2.exports = { impact, load, resolveTarget };
+    module2.exports = { load, loadLegacy, impact, resolveTarget, columnEdges, boundResult };
   }
 });
 
@@ -6476,7 +7007,7 @@ var require_flows = __commonJS({
     var base = (t) => String(t || "").replace(/<[\s\S]*$/, "").trim();
     var elem = (t) => (String(t).match(/^(?:java\.util\.)?(?:List|Set|Collection|Iterable|Optional|ObjectProvider|Provider)\s*<\s*(?:\?\s*extends\s+)?([\w$.]+)/) || [])[1];
     function flows(keys, { config = {}, maxDepth = 14 } = {}) {
-      const G = require_impact().load({ repos: keys });
+      const G = require_impact().loadLegacy({ repos: keys });
       const unresolved = /* @__PURE__ */ new Set();
       const resolve = X.resolver(config, unresolved);
       const own = (id) => id && id.startsWith("ext:") && G.classes.has(id.slice(4)) ? id.slice(4) : id;
@@ -6505,6 +7036,7 @@ var require_flows = __commonJS({
       const order = [start];
       for (let i = 0; i < order.length; i++) {
         const id = order[i];
+        if (G.legacyAmbiguities?.has(id)) throw new Error(`Overloaded flow method ${id} requires a signature-aware flow adapter; inspect exact canonical impact candidates: ${[...G.legacyAmbiguities.get(id)].join(", ")}`);
         if (depth.get(id) >= maxDepth) continue;
         for (const e of G.fwd.get(id) || []) {
           if (e.kind !== "calls" && e.kind !== "dispatch") continue;
@@ -6592,7 +7124,7 @@ var require_flows = __commonJS({
       return { chain, out: out2, beans: beans.map((b) => ({ id: b.id, name: b.name, role: b.role, repo: b.repo, file: b.file })), mocks, properties, infra: [...infra] };
     }
     function from(keys, methodId, { config = {} } = {}) {
-      const G = require_impact().load({ repos: keys });
+      const G = require_impact().loadLegacy({ repos: keys });
       const resolve = X.resolver(config, /* @__PURE__ */ new Set());
       const own = (id) => id && id.startsWith("ext:") && G.classes.has(id.slice(4)) ? id.slice(4) : id;
       return { entry: methodId, kind: "method", method: methodId, ...walk(G, methodId, { resolve, own, cls: (m) => G.classes.get(m.split("#")[0]) }) };
@@ -7330,391 +7862,755 @@ var require_buildenv = __commonJS({
   }
 });
 
-// lib/fastrun.js
-var require_fastrun = __commonJS({
-  "lib/fastrun.js"(exports2, module2) {
-    var fs2 = require("fs");
-    var path2 = require("path");
-    var crypto = require("crypto");
+// lib/process-tree.js
+var require_process_tree = __commonJS({
+  "lib/process-tree.js"(exports2, module2) {
     var { spawn } = require("child_process");
-    var { CACHE: CACHE2, readJson, writeJson, fileStamp } = require_util();
-    var LAUNCHER = `
-import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.*;
-import java.util.*;
-import org.junit.platform.engine.*;
-import org.junit.platform.engine.discovery.DiscoverySelectors;
-import org.junit.platform.engine.support.descriptor.MethodSource;
-import org.junit.platform.launcher.*;
-import org.junit.platform.launcher.core.*;
-
-// dt fast runs: runs the selected tests, writes [{class, name, status, ms, message, type, stack}] as JSON
-public class DtLauncher {
-    // each test's own console output (tests run one after another)
-    static volatile ByteArrayOutputStream current;
-    static PrintStream tee(PrintStream to) {
-        return new PrintStream(new OutputStream() {
-            public void write(int b) { to.write(b); ByteArrayOutputStream c = current; if (c != null && c.size() < 200000) c.write(b); }
-            public void write(byte[] b, int off, int len) { to.write(b, off, len); ByteArrayOutputStream c = current; if (c != null && c.size() < 200000) c.write(b, off, len); }
-        }, true);
-    }
-    // expected / actual of an opentest4j AssertionFailedError (JUnit, AssertJ), without depending on it
-    static String val(Throwable t, String which) {
+    function spawnTree(cmd, args, options = {}) {
+      const p = spawn(cmd, args, { ...options, detached: process.platform !== "win32" });
+      const directKill = p.kill.bind(p);
+      p.kill = (signal = "SIGTERM") => {
+        if (!p.pid) return false;
+        if (process.platform === "win32") {
+          require("child_process").spawn("taskkill", ["/pid", String(p.pid), "/T", ...signal === "SIGKILL" ? ["/F"] : []], { stdio: "ignore" });
+          return true;
+        }
         try {
-            if (!(Boolean) t.getClass().getMethod("is" + which + "Defined").invoke(t)) return null;
-            Object w = t.getClass().getMethod("get" + which).invoke(t);
-            return w == null ? null : String.valueOf(w.getClass().getMethod("getStringRepresentation").invoke(w));
-        } catch (Exception e) { return null; }
-    }
-
-    static String q(String s) {
-        if (s == null) return "null";
-        StringBuilder b = new StringBuilder("\\"");
-        for (char c : s.toCharArray()) {
-            if (c == '"' || c == '\\\\') b.append('\\\\').append(c);
-            else if (c < 0x20) b.append(String.format("\\\\u%04x", (int) c));
-            else b.append(c);
+          process.kill(-p.pid, signal);
+          return true;
+        } catch (e) {
+          if (e.code === "ESRCH") return false;
+          return directKill(signal);
         }
-        return b.append('"').toString();
+      };
+      return p;
     }
+    function stop(p, graceMs = 1e3) {
+      p.kill("SIGTERM");
+      const t = setTimeout(() => p.kill("SIGKILL"), graceMs);
+      t.unref();
+    }
+    module2.exports = { spawnTree, stop };
+  }
+});
 
-    public static void main(String[] args) throws Exception {
-        List<DiscoverySelector> sel = new ArrayList<>();
-        for (int i = 1; i < args.length; i++) {
-            String a = args[i];
-            sel.add(a.contains("#") ? DiscoverySelectors.selectMethod(a) : DiscoverySelectors.selectClass(a));
-        }
-        List<String> out = Collections.synchronizedList(new ArrayList<>());
-        System.setOut(tee(System.out));
-        System.setErr(tee(System.err));
-        Map<String, Long> started = new HashMap<>();
-        TestExecutionListener l = new TestExecutionListener() {
-            String[] where(TestIdentifier id) {
-                Optional<TestSource> s = id.getSource();
-                if (s.isPresent() && s.get() instanceof MethodSource m) {
-                    String name = m.getMethodName() + (id.getUniqueId().contains("-invocation:") ? " " + id.getDisplayName() : "");
-                    return new String[] { m.getClassName(), name };
-                }
-                return new String[] { id.getLegacyReportingName(), id.getDisplayName() };
-            }
-            public void executionStarted(TestIdentifier id) { started.put(id.getUniqueId(), System.nanoTime()); if (id.isTest()) current = new ByteArrayOutputStream(); }
-            public void executionSkipped(TestIdentifier id, String reason) {
-                if (!id.isTest()) return;
-                String[] w = where(id);
-                out.add("{\\"class\\":" + q(w[0]) + ",\\"name\\":" + q(w[1]) + ",\\"status\\":\\"skipped\\",\\"ms\\":0,\\"message\\":" + q(reason) + "}");
-            }
-            public void executionFinished(TestIdentifier id, TestExecutionResult r) {
-                Throwable t = r.getThrowable().orElse(null);
-                if (!id.isTest() && t == null) return;
-                String[] w = where(id);
-                long ms = (System.nanoTime() - started.getOrDefault(id.getUniqueId(), System.nanoTime())) / 1000000;
-                String status = r.getStatus() == TestExecutionResult.Status.SUCCESSFUL ? "passed" : (t instanceof AssertionError ? "failed" : "error");
-                String stack = null;
-                if (t != null) { StringWriter sw = new StringWriter(); t.printStackTrace(new PrintWriter(sw)); stack = sw.toString(); }
-                String output = null;
-                if (id.isTest() && current != null) { output = current.toString(StandardCharsets.UTF_8); current = null; }
-                out.add("{\\"class\\":" + q(w[0]) + ",\\"name\\":" + q(id.isTest() ? w[1] : "(" + id.getDisplayName() + ")") + ",\\"status\\":" + q(status) + ",\\"ms\\":" + ms
-                    + ",\\"message\\":" + q(t == null ? null : String.valueOf(t.getMessage())) + ",\\"type\\":" + q(t == null ? null : t.getClass().getName()) + ",\\"stack\\":" + q(stack)
-                    + ",\\"expected\\":" + q(t == null ? null : val(t, "Expected")) + ",\\"actual\\":" + q(t == null ? null : val(t, "Actual")) + ",\\"output\\":" + q(output == null || output.isEmpty() ? null : output.length() > 20000 ? output.substring(output.length() - 20000) : output) + "}");
-            }
-        };
-        LauncherDiscoveryRequest req = LauncherDiscoveryRequestBuilder.request().selectors(sel).build();
-        LauncherFactory.create().execute(req, l);
-        Files.writeString(Path.of(args[0]), "[" + String.join(",", out) + "]", StandardCharsets.UTF_8);
-        System.exit(0);
+// lib/test-targets.js
+var require_test_targets = __commonJS({
+  "lib/test-targets.js"(exports2, module2) {
+    var crypto = require("crypto");
+    var os = require("os");
+    function stable(value) {
+      if (Array.isArray(value)) return "[" + value.map(stable).join(",") + "]";
+      if (value && typeof value === "object") return "{" + Object.keys(value).filter((k) => value[k] !== void 0).sort().map((k) => JSON.stringify(k) + ":" + stable(value[k])).join(",") + "}";
+      return JSON.stringify(value);
     }
-}
-`;
-    var stateFile = (id) => path2.join(CACHE2, "work", `${id}.fast.json`);
-    var hash = (s) => crypto.createHash("sha1").update(s).digest("hex").slice(0, 16);
-    async function exec(cmd, args, opts = {}) {
-      if (require_config().getTests().runnerUrl) {
-        const r = await require_runner().exec(cmd, args, { ...opts, cwd: opts.cwd || require_config().PATHS.build });
-        if (!r.unreachable) return r;
-        if (!r.quiet) require_trace().note(`${r.out}: running the build in dt itself (Testcontainers has no Docker here)`);
+    var digest = (value) => crypto.createHash("sha256").update(stable(value)).digest("hex");
+    function resolve(id = "local", { env, fixturePath, fixtureRuntime, db, inspection = false } = {}) {
+      const cfg = require_config().getTests();
+      const configured = cfg.targets || {};
+      const manifest = configured[id] || (id === "local" ? { reviewed: true, kind: "local", dependencies: [], effects: "workspace-and-scratch", runnerUrl: cfg.runnerUrl } : null);
+      if (!manifest) throw new Error(`unknown test target ${id}; test_targets lists reviewed execution targets`);
+      if (manifest.reviewed !== true) throw new Error(`test target ${id} is not reviewed`);
+      if (!["local", "captured-dev", "live-dev"].includes(manifest.kind)) throw new Error(`invalid test target kind ${manifest.kind}`);
+      if (!inspection && manifest.kind === "captured-dev" && !fixturePath && !fixtureRuntime) throw new Error(`test target ${id} requires fixture_path or fixture_runtime with captured source provenance`);
+      if (manifest.kind === "live-dev") {
+        if (manifest.allowLive !== true || !manifest.runnerUrl || !manifest.environment || !manifest.deployment?.revision || !manifest.dependencies?.length || !manifest.effects) throw new Error(`live-dev target ${id} requires allowLive, runnerUrl, environment, deployment.revision, dependencies and effects`);
+        if (fixturePath || fixtureRuntime || db) throw new Error("live-dev target cannot replace its declared dependencies with a scratch fixture or DDL database");
+        if (env && env !== manifest.environment) throw new Error(`catalog environment ${env} conflicts with target environment ${manifest.environment}`);
       }
-      return execLocal(cmd, args, opts);
+      for (const dep of manifest.dependencies || []) if (!dep.id || !dep.kind || !dep.environment || !["read-only", "sandbox-write"].includes(dep.access)) throw new Error(`test target ${id} has an incomplete dependency declaration`);
+      const runnerUrl = manifest.runnerUrl || null;
+      if (runnerUrl && !/^https?:\/\//.test(runnerUrl)) throw new Error("target runnerUrl must be HTTP(S)");
+      if (runnerUrl) {
+        const endpoint = new URL(runnerUrl);
+        if (endpoint.username || endpoint.password) throw new Error("target runnerUrl must not contain embedded credentials; use runnerToken");
+      }
+      if (fixtureRuntime && (manifest.kind === "live-dev" || runnerUrl)) throw new Error("fixture_runtime requires a local or captured-dev target executing on this host");
+      const metadata = {
+        id,
+        kind: manifest.kind,
+        manifestSha256: digest(manifest),
+        environment: manifest.environment || null,
+        sourceEnvironment: env || null,
+        deployment: manifest.deployment ? Object.fromEntries(["service", "revision", "version", "imageDigest"].filter((k) => manifest.deployment[k] !== void 0).map((k) => [k, manifest.deployment[k]])) : null,
+        host: runnerUrl ? { placement: "remote", origin: new URL(runnerUrl).origin } : { placement: "local", hostname: os.hostname() },
+        dependencies: (manifest.dependencies || []).map(({ id: id2, kind, environment, access }) => ({ id: id2, kind, environment, access })),
+        effects: manifest.effects || "workspace-and-scratch",
+        isolation: "build process with cleaned environment; host filesystem and network are not sandboxed by this profile",
+        attestation: { deploymentVerified: false, runtimeReadsVerified: false },
+        provenance: manifest.kind === "live-dev" ? "configured live deployment and dependencies; execution is not a deployment attestation" : fixturePath ? "captured fixture replay on isolated dependencies" : db ? "scratch database from catalog or saved DDL" : "project local dependencies; env alone does not select a live deployment"
+      };
+      return { metadata, env: { ...manifest.env || {} }, runnerUrl, runnerToken: manifest.runnerToken || cfg.runnerToken, requireRunner: !!runnerUrl, forceLocal: !runnerUrl };
     }
-    function execLocal(cmd, args, { cwd, env, timeoutMs = 9e5, log } = {}) {
-      return new Promise((resolve) => {
-        const started = Date.now();
-        const p = require_trace().child(spawn(cmd, args, { cwd, env, stdio: ["ignore", "pipe", "pipe"] }));
-        let out2 = "", killed = false;
-        const keep = (b) => {
-          out2 += b.toString();
-          if (out2.length > 4e6) out2 = out2.slice(-3e6);
-          const last = b.toString().trim().split("\n").pop();
-          if (last && log) log(last.slice(0, 200));
-        };
-        p.stdout.on("data", keep);
-        p.stderr.on("data", keep);
-        const timer = setTimeout(() => {
-          killed = true;
-          p.kill("SIGTERM");
-        }, timeoutMs);
-        p.on("error", (e) => {
-          clearTimeout(timer);
-          resolve({ code: -1, out: out2 + `
-${e.message}`, ms: Date.now() - started });
-        });
-        p.on("close", (code) => {
-          clearTimeout(timer);
-          resolve({ code, out: out2, killed, ms: Date.now() - started });
-        });
+    function list() {
+      const cfg = require_config().getTests();
+      return ["local", ...Object.keys(cfg.targets || {}).filter((id) => id !== "local")].map((id) => {
+        try {
+          const metadata = resolve(id, { inspection: true }).metadata;
+          return { ...metadata, available: true, availability: "manifest-valid; runner/dependency reachability checked on execution", ...metadata.kind === "captured-dev" ? { requiredOneOf: ["fixture_path", "fixture_runtime"] } : {} };
+        } catch (e) {
+          return { id, kind: cfg.targets?.[id]?.kind, available: false, reason: e.message };
+        }
       });
     }
-    function supported(root, plan, testFiles) {
-      if (plan.tool !== "maven") return "the build is not Maven";
-      if (testFiles.some((f) => !/\.java$/.test(f))) return "tests in Kotlin, Groovy or Scala";
-      if (fs2.existsSync(path2.join(plan.modDir, "src", "main", "kotlin")) || fs2.existsSync(path2.join(plan.modDir, "src", "main", "groovy"))) return "Kotlin or Groovy sources";
-      return null;
-    }
-    var walkJava = (dir, out2 = []) => {
-      let es;
+    function jobKey(args) {
+      const clean = { ...args };
+      delete clean.job;
+      const cfg = require_config().getTests();
+      let workspace;
       try {
-        es = fs2.readdirSync(dir, { withFileTypes: true });
+        const m = require_workspace().checkId(args.workspace);
+        workspace = { sha: m.sha, path: m.path, contents: require_testrun().fingerprint(m.path, { includeTests: true }) };
       } catch {
-        return out2;
       }
-      for (const e of es) {
-        const f = path2.join(dir, e.name);
-        if (e.isDirectory()) walkJava(f, out2);
-        else if (/\.java$/.test(e.name)) out2.push(f);
-      }
-      return out2;
-    };
-    var walkFiles = (dir, out2 = []) => {
-      let es;
+      return `tests:${args.workspace}:${digest({ args: clean, cfg, workspace })}`;
+    }
+    module2.exports = { resolve, list, stable, digest, jobKey };
+  }
+});
+
+// lib/scenario.js
+var require_scenario = __commonJS({
+  "lib/scenario.js"(exports2, module2) {
+    var crypto = require("crypto");
+    var { isDeepStrictEqual } = require("util");
+    var fs2 = require("fs");
+    var path2 = require("path");
+    function canonical(v, seen = /* @__PURE__ */ new Set()) {
+      if (typeof v === "bigint") return String(v);
+      if (!v || typeof v !== "object") return v;
+      if (v instanceof Date) return v.toISOString();
+      if (seen.has(v)) throw new Error("scenario manifests must be acyclic JSON");
+      const next = new Set(seen);
+      next.add(v);
+      return Array.isArray(v) ? v.map((x) => canonical(x, next)) : Object.fromEntries(Object.keys(v).sort().filter((k) => v[k] !== void 0).map((k) => [k, canonical(v[k], next)]));
+    }
+    var json = (v) => JSON.stringify(canonical(v));
+    var copy = (v) => JSON.parse(json(v));
+    var id = (kind, value) => `${kind}:${crypto.createHash("sha256").update(json(value)).digest("hex").slice(0, 20)}`;
+    var array = (v) => Array.isArray(v) ? v : [];
+    var strings = (v) => [].concat(v || []).filter((x) => typeof x === "string");
+    var unique = (values) => [...new Map(values.map((v) => [json(v), v])).values()].sort((a, b) => json(a).localeCompare(json(b)));
+    var unresolved = (s) => !s || /\$\{|^\?|^\(|<unresolved|\bunknown\b/i.test(String(s));
+    var route = (s) => String(s || "").replace(/\{[^}]*\}/g, "{}");
+    var handler = (s) => String(s || "").includes("#") ? String(s) : String(s || "").replace(/\.([^.()]+)$/, "#$1");
+    var WRITE = /^(write|insert|update|delete|save|merge|persist|remove)$/i;
+    function provenance(source, action, item = {}) {
+      return copy({ source, ...action ? { action } : {}, ...item.file ? { file: item.file, line: item.line ?? null } : {}, ...item.at ? { at: item.at } : {}, ...item.via ? { via: item.via } : {}, ...item.source ? { library: item.source } : {} });
+    }
+    function externalKind(item) {
+      const s = `${item.kind || ""} ${item.type || ""} ${item.why || ""}`;
+      if (/cache|redis/i.test(s)) return "cache";
+      if (/queue|rabbit|jms|sqs|amqp/i.test(s)) return "queue";
+      if (/file|sftp|filesystem|FileStore|BlobStore|S3Client/i.test(s)) return "file";
+      if (/kafka|StreamBridge/i.test(s)) return "kafka";
+      if (/http|feign|RestTemplate|WebClient|RestClient|HttpClient/i.test(s)) return "http";
+      if (/\bes\b|elasticsearch/i.test(s)) return "es";
+      if (/\bdb\b|database|Jdbc|Repository|EntityManager|DataSource/i.test(s)) return "pg";
+      return "unknown";
+    }
+    function inventory({ service, passport, env, entry } = {}) {
+      const p = passport || service && require_passport().load(service);
+      if (!p || typeof p !== "object") throw new Error(`no cached passport for ${service || "(service required)"}`);
+      service ||= p.service;
+      if (!service) throw new Error("scenario inventory needs service or passport.service");
+      env ||= p.env || require_config().envNames()[0];
+      const gaps = [], states = /* @__PURE__ */ new Map(), effects = /* @__PURE__ */ new Map(), entries = /* @__PURE__ */ new Map(), methodShapes = /* @__PURE__ */ new Map(), methodIds = /* @__PURE__ */ new Set();
+      const configKeys = new Set(Object.keys(p.config?.merged || {}));
+      let cats = [], catalogError;
       try {
-        es = fs2.readdirSync(dir, { withFileTypes: true });
-      } catch {
-        return out2;
+        cats = require_pg().loadAll(env);
+      } catch (e) {
+        catalogError = e.message;
       }
-      for (const e of es) {
-        const f = path2.join(dir, e.name);
-        if (e.isDirectory()) walkFiles(f, out2);
-        else out2.push(f);
-      }
-      return out2;
-    };
-    function tails(cfg) {
-      return cfg.args.map((a) => (a.match(/^-Dmaven\.repo\.local\.tail=(.+)$/) || [])[1]).filter(Boolean).flatMap((x) => x.split(","));
-    }
-    function findJar(cfg, group, artifact, version) {
-      for (const repo of [cfg.mavenRepo, ...tails(cfg)]) {
-        const f = path2.join(repo, ...group.split("."), artifact, version, `${artifact}-${version}.jar`);
-        if (fs2.existsSync(f)) return f;
-      }
-      return null;
-    }
-    function javaBin(cfg, tool) {
-      return cfg.javaHome ? path2.join(cfg.javaHome, "bin", tool) : tool;
-    }
-    function mavenArgs(cfg) {
-      const a = ["-B", "-ntp", `-Dmaven.repo.local=${cfg.mavenRepo}`];
-      if (cfg.offline) a.push("-o");
-      if (cfg.mavenSettings) a.push("-s", cfg.mavenSettings);
-      return [...a, ...cfg.args];
-    }
-    function release(modDir, root) {
-      for (const f of [path2.join(modDir, "pom.xml"), path2.join(root, "pom.xml")]) {
-        try {
-          const t = fs2.readFileSync(f, "utf8");
-          const m = t.match(/<maven\.compiler\.release>\s*(\d+)/) || t.match(/<java\.version>\s*(\d+)/) || t.match(/<maven\.compiler\.source>\s*(?:1\.)?(\d+)/);
-          if (m) return Number(m[1]);
-        } catch {
-        }
-      }
-      return null;
-    }
-    function pomsIn(root) {
-      const out2 = [], skip = /* @__PURE__ */ new Set(["target", "build", "node_modules", "out", "dist", "coverage"]);
-      const visit = (dir) => {
-        for (const e of fs2.readdirSync(dir, { withFileTypes: true })) {
-          const full = path2.join(dir, e.name);
-          if (e.isDirectory() && !e.name.startsWith(".") && !skip.has(e.name)) visit(full);
-          else if (e.isFile() && e.name === "pom.xml") out2.push(full);
-        }
-      };
-      visit(root);
-      return out2.sort();
-    }
-    function preparationKey(root, plan, cfg, mvn, env = process.env) {
-      const descriptors = [...pomsIn(root), ...["jvm.config", "maven.config", "extensions.xml", "wrapper/maven-wrapper.properties"].map((f) => path2.join(root, ".mvn", f))];
-      if (cfg.mavenSettings) descriptors.push(cfg.mavenSettings);
-      const contents = descriptors.map((f) => [path2.relative(root, f), fs2.existsSync(f) ? fs2.readFileSync(f, "utf8") : null]);
-      const executable = javaBin(cfg, "javac");
-      const javaPath = path2.isAbsolute(executable) ? executable : String(env.PATH || "").split(path2.delimiter).map((p) => path2.join(p, executable)).find((f) => fs2.existsSync(f));
-      return hash(JSON.stringify({
-        root,
-        module: plan.module,
-        cfg: { javaHome: cfg.javaHome, mavenRepo: cfg.mavenRepo, mavenSettings: cfg.mavenSettings, offline: cfg.offline, args: cfg.args, runnerUrl: cfg.runnerUrl },
-        mvn,
-        contents,
-        java: javaPath ? fileStamp(javaPath) : null,
-        maven: fileStamp(mvn.cmd),
-        launcher: hash(LAUNCHER),
-        env: [env.JAVA_HOME, env.MAVEN_OPTS, env.JDK_JAVA_OPTIONS, env.JAVA_TOOL_OPTIONS, env.PATH]
-      }));
-    }
-    function preparedStateUsable(state, buildKey) {
-      return !!(state && state.buildKey === buildKey && Array.isArray(state.classpath) && [state.classes, state.testClasses, state.launcherJar, state.launcherDir && path2.join(state.launcherDir, "DtLauncher.class"), ...state.classpath].every((f) => f && fs2.existsSync(f)));
-    }
-    function sourceInventory(modDir) {
-      return [
-        ...walkJava(path2.join(modDir, "src", "main", "java")),
-        ...walkJava(path2.join(modDir, "src", "test", "java")),
-        ...walkFiles(path2.join(modDir, "src", "main", "resources")),
-        ...walkFiles(path2.join(modDir, "src", "test", "resources"))
-      ].map((f) => path2.relative(modDir, f).split(path2.sep).join("/")).sort();
-    }
-    function removedSources(state, sources) {
-      const present = new Set(sources);
-      return (state?.sources || []).filter((f) => !present.has(f));
-    }
-    async function prepare({ id, root, plan, cfg, env, mvn, log }) {
-      const st = readJson(stateFile(id), {});
-      const buildKey = preparationKey(root, plan, cfg, mvn, env);
-      const key = plan.module;
-      const prev = st[key];
-      const sources = sourceInventory(plan.modDir), removed = removedSources(prev, sources);
-      if (preparedStateUsable(prev, buildKey) && Array.isArray(prev.sources) && !removed.length) return { state: prev, prepared: false, sources };
-      const clean = !!prev && (removed.length > 0 || !Array.isArray(prev.sources) || prev.buildKey !== buildKey);
-      fs2.mkdirSync(path2.join(root, ".dt"), { recursive: true });
-      const cpFile = path2.join(root, ".dt", `classpath-${hash(key)}.txt`);
-      const multi = plan.module !== "." && fs2.existsSync(path2.join(root, "pom.xml"));
-      const args = [...mvn.args, ...mavenArgs(cfg), ...clean ? ["clean"] : [], "test-compile", "dependency:build-classpath", `-Dmdep.outputFile=${cpFile}`, "-Dmdep.includeScope=test", ...multi ? ["-pl", plan.module, "-am"] : []];
-      log(`fast: preparing ${key} with Maven (${clean ? `clean: ${removed.length ? `${removed.length} deleted source/resource files` : "build inputs changed"}; ` : ""}compile + classpath)`);
-      const T = require_trace();
-      const r = await T.step("maven prepare", () => exec(mvn.cmd, args, { cwd: multi ? root : plan.modDir, env, log }), "test-compile + dependency:build-classpath, once per workspace");
-      if (r.code !== 0) return { error: r };
-      const classpath = fs2.readFileSync(cpFile, "utf8").trim().split(path2.delimiter).filter(Boolean);
-      const engine = classpath.map((j) => path2.basename(j).match(/^junit-platform-engine-(.+)\.jar$/)).find(Boolean);
-      if (!engine) return { error: { code: 1, out: 'no JUnit Platform on the test classpath (JUnit 4 only?): use mode="build"', ms: r.ms } };
-      const v = engine[1];
-      let launcherJar = classpath.find((j) => /junit-platform-launcher-/.test(path2.basename(j))) || findJar(cfg, "org.junit.platform", "junit-platform-launcher", v);
-      if (!launcherJar) {
-        await exec(mvn.cmd, [...mvn.args, ...mavenArgs(cfg), "dependency:get", `-Dartifact=org.junit.platform:junit-platform-launcher:${v}`, "-Dtransitive=false"], { cwd: plan.modDir, env, log });
-        launcherJar = findJar(cfg, "org.junit.platform", "junit-platform-launcher", v);
-        if (!launcherJar) return { error: { code: 1, out: `could not get org.junit.platform:junit-platform-launcher:${v}`, ms: r.ms } };
-      }
-      const ldir = path2.join(require_config().PATHS.build, "fastrun", `launcher-${v}-${hash(LAUNCHER)}`);
-      if (!fs2.existsSync(path2.join(ldir, "DtLauncher.class"))) {
-        fs2.mkdirSync(ldir, { recursive: true });
-        fs2.writeFileSync(path2.join(ldir, "DtLauncher.java"), LAUNCHER);
-        const c = await exec(javaBin(cfg, "javac"), ["-d", ldir, "-cp", [launcherJar, ...classpath].join(path2.delimiter), path2.join(ldir, "DtLauncher.java")], { env });
-        if (c.code !== 0) return { error: c };
-      }
-      const javacVersion = await exec(javaBin(cfg, "javac"), ["-version"], { env }).then((x) => Number((x.out.match(/javac (\d+)/) || [])[1] || 0));
-      const state = {
-        buildKey,
-        sources,
-        classpath,
-        launcherJar,
-        launcherDir: ldir,
-        javacVersion,
-        release: release(plan.modDir, root),
-        classes: path2.join(plan.modDir, "target", "classes"),
-        testClasses: path2.join(plan.modDir, "target", "test-classes"),
-        stamp: Date.now(),
-        preparedMs: r.ms
-      };
-      st[key] = state;
-      writeJson(stateFile(id), st);
-      return { state, prepared: true, sources, ms: r.ms };
-    }
-    function changed(modDir, stamp, graph, root) {
-      const newer = (f) => fs2.statSync(f).mtimeMs > stamp;
-      const main2 = walkJava(path2.join(modDir, "src", "main", "java")), test = walkJava(path2.join(modDir, "src", "test", "java"));
-      const mainChanged = main2.filter(newer), testChanged = test.filter(newer);
-      if (mainChanged.length && graph) {
-        const rel = (f) => path2.relative(root, f).split(path2.sep).join("/");
-        const paths = new Set(mainChanged.map(rel));
-        const changedIds = new Set(graph.classes.filter((c) => paths.has(c.file)).map((c) => c.id));
-        const byId = new Map(graph.classes.map((c) => [c.id, c]));
-        const owner = (node) => {
-          let id = String(node).split("#")[0];
-          while (id) {
-            if (byId.has(id)) return byId.get(id);
-            const dot = id.lastIndexOf(".");
-            if (dot < 0) break;
-            id = id.slice(0, dot);
+      const datasources = array(p.db?.datasources);
+      const wanted = new Set(datasources.map((d) => d.db).filter(Boolean));
+      const allowed = cats.filter((c) => !wanted.size || wanted.has(c.db) || wanted.has(c.database));
+      function resolveDb(name, item = {}, fn = false) {
+        const hinted = item.db || datasources.find((d) => item.datasource && (d.key === item.datasource || d.name === item.datasource))?.db;
+        const candidates = [];
+        for (const c of hinted ? cats.filter((c2) => c2.db === hinted || c2.database === hinted) : allowed) {
+          for (const t of fn ? array(c.functions) : array(c.tables)) {
+            const full = `${t.schema}.${t.name}`;
+            if (full.toLowerCase() === String(name).toLowerCase() || !String(name).includes(".") && t.name?.toLowerCase() === String(name).toLowerCase()) candidates.push({ db: c.db, [fn ? "function" : "table"]: full });
           }
-          return null;
+        }
+        const matches = unique(candidates);
+        return { target: matches.length === 1 ? matches[0] : { db: hinted || (wanted.size === 1 ? [...wanted][0] : null), [fn ? "function" : "table"]: name || null }, resolution: { status: matches.length === 1 ? "resolved" : matches.length ? "ambiguous" : "unknown", ...matches.length ? { candidates: matches } : {} } };
+      }
+      const addState = (kind, target, action, evidence, resolution = { status: "resolved" }, required = true) => {
+        const sid = id("state", [service, kind, target]);
+        let s = states.get(sid);
+        if (!s) {
+          s = { id: sid, kind, target, required, actions: [], provenance: [], resolution };
+          states.set(sid, s);
+        }
+        s.required ||= required;
+        if (action && !s.actions.includes(action.id)) {
+          s.actions.push(action.id);
+          action.dependencies.push(sid);
+        }
+        s.provenance = unique([...s.provenance, evidence]);
+        if (resolution.status !== "resolved" && !gaps.some((g) => g.stateId === sid)) gaps.push({ id: id("gap", [sid, resolution.status]), kind: resolution.status === "ambiguous" ? "ambiguous-dependency" : "unresolved-dependency", stateId: sid, detail: `Resolve ${kind} dependency explicitly; static evidence does not identify its complete state.`, ...resolution.candidates ? { candidates: resolution.candidates } : {} });
+        return s;
+      };
+      const addEffect = (kind, target, action, evidence, direction = "write") => {
+        const eid = id("expectation", [service, action?.id || null, kind, target, direction]);
+        let e = effects.get(eid);
+        if (!e) {
+          e = { id: eid, kind, target, action: action?.id || null, required: true, direction, valueKnown: false, provenance: [] };
+          effects.set(eid, e);
+        }
+        e.provenance = unique([...e.provenance, evidence]);
+        if (action && !action.expectations.includes(eid)) action.expectations.push(eid);
+        return e;
+      };
+      const addAction = (kind, target, h, item, source) => {
+        target = kind === "http" ? route(target) : String(target);
+        const aid = id("action", [service, kind, target]);
+        let a = entries.get(aid);
+        if (!a) {
+          a = { id: aid, kind, target, entry: target, handler: h || null, handlers: [], required: true, input: { known: false, ...item?.inputSchema ? { schema: item.inputSchema, known: true } : {}, ...item?.inputType || item?.payloadType ? { type: item.inputType || item.payloadType } : {}, hints: ["Supply scenario-specific values; TestData factories provide type-valid objects, not expected behavior."] }, dependencies: [], expectations: [], provenance: [] };
+          entries.set(aid, a);
+        }
+        if (item?.inputSchema) {
+          a.input.schema = item.inputSchema;
+          a.input.known = true;
+        }
+        if (item?.inputType || item?.payloadType) a.input.type = item.inputType || item.payloadType;
+        if (item?.pattern) a.pattern = true;
+        const shapes = methodShapes.get(handler(h));
+        if (shapes?.length === 1) {
+          a.input.parameters = shapes[0].parameters;
+          a.returnType = shapes[0].returnType;
+        } else if (shapes?.length) a.input.overloads = shapes;
+        if (h) {
+          const same = a.handlers.find((old) => handler(old) === handler(h) || handler(old).endsWith(`.${handler(h)}`) || handler(h).endsWith(`.${handler(old)}`));
+          if (!same) a.handlers.push(h);
+          else if (h.length > same.length) {
+            a.handlers[a.handlers.indexOf(same)] = h;
+            a.handler = h;
+          }
+        }
+        a.provenance = unique([...a.provenance, provenance(source, aid, item)]);
+        return a;
+      };
+      const summaryFlows = array(p.flows);
+      if (catalogError) addState("unknown", { type: "catalog-analysis", detail: catalogError }, null, { source: "cached-catalog" }, { status: "unknown" });
+      let flows = summaryFlows;
+      const keys = [typeof p.codeIndex === "string" ? p.codeIndex : null, ...array(p.libraries).map((l) => l.index)].filter(Boolean);
+      if (keys.length) try {
+        const CI = require_codeindex();
+        if (keys.every((k) => CI.load(k))) {
+          for (const key of keys) for (const c of CI.load(key).graph_().classes || []) if (!c.test) for (const m of c.methods || []) {
+            methodIds.add(`${c.id}#${m.name}`);
+            const shape = { parameters: m.params || [], returnType: m.ret || null };
+            for (const name of [`${c.id}#${m.name}`, `${c.name}#${m.name}`]) methodShapes.set(name, unique([...methodShapes.get(name) || [], shape]));
+          }
+          const F = require_flows();
+          const repo = p.repo?.path && path2.resolve(require_config().ROOT, p.repo.path);
+          const config = repo && fs2.existsSync(repo) ? F.serviceConfig(repo) : {};
+          for (const key of Object.keys(config)) configKeys.add(key);
+          const detailed = F.flows(keys, { config });
+          if (detailed.length) flows = detailed;
+        }
+      } catch (e) {
+        addState("unknown", { type: "flow-analysis", detail: e.message }, null, { source: "code-index" }, { status: "unknown" });
+      }
+      for (const f of flows) if (f?.entry) addAction(f.kind || "method", f.entry, f.method || f.handler, f, "flow");
+      const effective = p.effective || {};
+      for (const e of [...array(effective.endpoints), ...array(p.endpoints)]) addAction("http", `${e.method || "ANY"} ${e.path || "?"}`, e.handler, e, "passport-endpoint");
+      for (const k of [...array(effective.consumes), ...array(p.kafka?.consumes)]) addAction(k.pattern ? "kafka" : "kafka", `kafka ${k.topic || "?"}`, k.handler, k, "passport-listener");
+      for (const f of [...array(p.scheduled), ...array(p.events), ...array(p.methods)]) if (f.entry || f.handler || f.method) addAction(f.kind || (array(p.scheduled).includes(f) ? "scheduled" : "method"), f.entry || f.handler || f.method, f.handler || f.method, f, "passport-action");
+      const selectors = entry == null ? [] : strings(entry);
+      let selected = [...entries.values()].filter((a) => !selectors.length || selectors.some((s) => s === a.id || route(s) === a.target || handler(a.handler).endsWith(handler(s))));
+      if (selectors.length && !selected.length && keys.length) try {
+        const F = require_flows();
+        for (const s of selectors) if (s.includes("#")) {
+          const matches = [...methodIds].filter((name) => name === s || name.endsWith(`.${s}`));
+          if (matches.length === 1) {
+            const f = F.from(keys, matches[0]);
+            flows = [...flows, f];
+            selected.push(addAction("method", f.entry, f.method, f, "code-method"));
+          }
+        }
+      } catch {
+      }
+      if (!selected.length) {
+        const unknown = addState("unknown", { type: "entrypoint-analysis", entry: entry || null, detail: p.flows?.error || "No matching cached entrypoints; provide method/endpoint evidence." }, null, { source: "passport" }, { status: "unknown" });
+        gaps.push({ id: id("gap", [unknown.id, "no-actions"]), kind: "no-actions", stateId: unknown.id, detail: "No selected action can be invoked without an explicit entrypoint binding." });
+      }
+      for (const selector of selectors) if (!selected.some((a) => selector === a.id || route(selector) === a.target || handler(a.handler).endsWith(handler(selector)))) addState("unknown", { type: "unmatched-action-selection", entry: selector }, null, { source: "action-selection" }, { status: "unknown" });
+      const selectedIds = new Set(selected.map((a) => a.id));
+      const actionFor = (f) => selected.find((a) => a.kind === (f.kind || "method") && a.target === (f.kind === "http" ? route(f.entry) : f.entry));
+      const found = /* @__PURE__ */ new Set();
+      function pg(item, action, source) {
+        const name = item.table || item.function || item.name;
+        const fn = !!item.function || item.access === "function" || source === "passport-function";
+        const resolved = resolveDb(name, item, fn), evidence = provenance(source, action?.id, item);
+        const key = json(["pg", fn ? "function" : item.access, resolved.target]);
+        found.add(key);
+        addState("pg", resolved.target, action, evidence, resolved.resolution, !/^(owner|entity|repository)$/.test(item.access || ""));
+        if (WRITE.test(item.access || "") || fn) addEffect("pg", resolved.target, action, evidence, fn ? "function-effects-unknown" : item.access);
+      }
+      function outgoing(item, action, source, kind) {
+        const evidence = provenance(source, action?.id, item);
+        if (kind === "kafka") {
+          const target = { topic: item.topic || null };
+          found.add(json(["kafka-out", item.topic]));
+          addEffect("kafka", target, action, evidence, "produce");
+          if (unresolved(item.topic)) addState("unknown", { type: "kafka-topic", topic: item.topic || null }, action, evidence, { status: "unknown" });
+        } else if (kind === "http") {
+          const call = item.call?.match(/^([A-Z]+)\s+(.+)$/);
+          const target = { method: item.method || call?.[1] || null, path: item.path || call?.[2] || item.url || item.target || null, ...item.client ? { client: item.client } : {} };
+          found.add(json(["http", target]));
+          addState("http", target, action, evidence, { status: unresolved(target.path) ? "unknown" : "resolved" });
+          addEffect("http", target, action, evidence, "call");
+        } else {
+          const target = { index: item.index || item.name || null };
+          found.add(json(["es", target.index]));
+          addState("es", target, action, evidence, { status: unresolved(target.index) ? "unknown" : "resolved" });
+          const access = item.access || item.operation;
+          if (!access || WRITE.test(access)) addEffect("es", target, action, evidence, access || "effects-unknown");
+        }
+      }
+      function mock(item, action, source) {
+        if (typeof item === "string") {
+          const split = item.indexOf(": "), decl = split < 0 ? item : item.slice(0, split), last = decl.lastIndexOf(" ");
+          item = { type: last < 0 ? decl : decl.slice(0, last), name: last < 0 ? null : decl.slice(last + 1), why: split < 0 ? null : item.slice(split + 2) };
+        }
+        const kind = externalKind(item), target = { type: item.type || item.name || "unknown", ...item.name ? { name: item.name } : {}, ...item.call ? { call: item.call } : {} };
+        addState(kind, target, action, provenance(source, action?.id, item), { status: "unknown" });
+        if (item.call && /^(send|publish|put|set|write|save|delete|remove|update|post|exchange|execute)/i.test(item.call)) addEffect(kind, target, action, provenance(source, action?.id, item), item.call);
+      }
+      for (const a of selected) {
+        if (a.handlers.length > 1 || a.input.overloads?.length > 1) addState("unknown", { type: "ambiguous-handler", entry: a.target, handlers: a.handlers, ...a.input.overloads ? { overloads: a.input.overloads } : {} }, a, { source: "entrypoint-analysis" }, { status: "ambiguous" });
+        if (a.kind === "http") {
+          addEffect("status", a.target, a, a.provenance[0], "respond");
+          addEffect("return", a.target, a, a.provenance[0], "respond");
+        }
+        if (a.kind === "kafka" || a.kind === "queue") {
+          const topic = a.target.replace(/^(?:kafka|queue)\s+/, "");
+          addState(a.kind, { topic, direction: "inbound", ...a.pattern ? { pattern: true } : {} }, a, a.provenance[0], { status: a.pattern || unresolved(topic) ? "unknown" : "resolved" });
+        }
+      }
+      for (const f of flows) {
+        const a = actionFor(f);
+        if (!a || !selectedIds.has(a.id)) continue;
+        for (const t of array(f.out?.tables)) pg(t, a, "flow-table");
+        for (const fn of array(f.out?.functions)) pg({ ...fn, access: "function" }, a, "flow-function");
+        for (const k of array(f.out?.produces)) outgoing(k, a, "flow-topic", "kafka");
+        for (const h of array(f.out?.http)) outgoing(h, a, "flow-http", "http");
+        for (const es of array(f.out?.es)) outgoing(es, a, "flow-es", "es");
+        for (const x of array(f.out?.external)) mock(x, a, "flow-external");
+        for (const x of array(f.mocks)) mock(x, a, "flow-mock");
+        for (const prop of array(f.properties)) {
+          const k = typeof prop === "string" ? prop : prop.key;
+          addState("config", { key: k || null }, a, provenance("flow-property", a.id, typeof prop === "string" ? {} : prop), { status: unresolved(k) ? "unknown" : "resolved" });
+        }
+      }
+      for (const t of [...array(effective.tables), ...array(p.db?.tables)]) if (!found.has(json(["pg", t.access === "function" ? "function" : t.access, resolveDb(t.table, t, t.access === "function").target]))) pg(t, null, "passport-table");
+      for (const fn of [...array(effective.dbCalls), ...array(p.db?.calls)]) if (!found.has(json(["pg", "function", resolveDb(fn.name || fn.function, fn, true).target]))) pg({ ...fn, function: fn.function || fn.name }, null, "passport-function");
+      for (const k of [...array(effective.produces), ...array(p.kafka?.produces)]) if (!found.has(json(["kafka-out", k.topic]))) outgoing(k, null, "passport-topic", "kafka");
+      for (const h of [...array(effective.calls), ...array(p.feign), ...array(p.http)]) {
+        const target = { method: h.method || null, path: h.path || h.url || h.target || null, ...h.client ? { client: h.client } : {} };
+        if (!found.has(json(["http", target]))) outgoing(h, null, "passport-http", "http");
+      }
+      for (const es of array(p.es)) if (!found.has(json(["es", es.index]))) outgoing(es, null, "passport-es", "es");
+      for (const prop of [...configKeys, ...strings(p.config?.unresolved), ...array(p.config?.properties).map((x) => typeof x === "string" ? x : x.key), ...datasources.map((d) => d.key).filter(Boolean)]) addState("config", { key: prop }, null, { source: "passport-config" }, { status: unresolved(prop) ? "unknown" : "resolved" });
+      for (const l of array(p.libraries)) if (l.error || l.found === false) addState("unknown", { type: "unread-library", library: l.artifactId || l.repo || null, detail: l.error || "Library was not inspected." }, null, { source: "passport-library" }, { status: "unknown" });
+      if (!flows.length || !Array.isArray(p.flows) && !keys.length) addState("unknown", { type: "call-graph-coverage", detail: p.flows?.error || "No cached transitive flow graph." }, null, { source: "passport" }, { status: "unknown" });
+      for (const s of states.values()) if (!s.actions.length && s.required && s.resolution.status === "resolved") gaps.push({ id: id("gap", [s.id, "attribution"]), kind: "unattributed-dependency", stateId: s.id, detail: "Dependency is present in the passport but is not attributed to a selected action." });
+      for (const e of effects.values()) if (!e.action) {
+        const s = addState("unknown", { type: "effect-attribution", expectationId: e.id, kind: e.kind, target: e.target }, null, { source: "passport-effect" }, { status: "unknown" });
+        gaps.push({ id: id("gap", [e.id, "attribution"]), kind: "unattributed-effect", stateId: s.id, expectationId: e.id, detail: "Bind the expected behavior explicitly; this effect is not attributed to a selected action." });
+      }
+      selected = selected.map((a) => ({ ...a, handlers: a.handlers.sort(), dependencies: [...new Set(a.dependencies)].sort(), expectations: a.expectations.sort() })).sort((a, b) => a.id.localeCompare(b.id));
+      return copy({ version: 1, service, env, source: { passportSha: p.repo?.sha || null, passportBuiltAt: p.builtAt || null }, states: [...states.values()].map((s) => ({ ...s, actions: s.actions.sort() })).sort((a, b) => a.id.localeCompare(b.id)), actions: selected, expectations: [...effects.values()].sort((a, b) => a.id.localeCompare(b.id)), gaps: unique(gaps), complete: false, coverage: { static: true, runtimeVerified: false, exhaustive: false, note: "Static analysis records observed dependencies; reflection, runtime branches and unresolved external behavior still require explicit evidence." } });
+    }
+    function actions(inv, { bindings = {} } = {}) {
+      const gaps = [];
+      const known = new Set(array(inv.actions).map((a) => a.id));
+      for (const key of Object.keys(bindings)) if (!known.has(key)) gaps.push({ kind: "unknown-action-binding", id: key });
+      const bound = array(inv.actions).map((a) => {
+        const present = Object.hasOwn(bindings, a.id);
+        if (a.required !== false && !present) gaps.push({ kind: "unbound-action", actionId: a.id, target: a.target });
+        return { ...a, bound: present, ...present ? { binding: copy(bindings[a.id]) } : {} };
+      });
+      return copy({ version: 1, service: inv.service, env: inv.env, actions: bound, gaps, complete: !gaps.length, ready: !gaps.length, coverage: inv.coverage });
+    }
+    var OPS = /* @__PURE__ */ new Set(["exact", "subset", "count", "forbidden", "ordered"]);
+    function descriptorError(match) {
+      if (!match || !OPS.has(match.op)) return "match.op must be exact, subset, count, forbidden or ordered";
+      if (["exact", "subset", "ordered"].includes(match.op) && !Object.hasOwn(match, "value")) return `${match.op} requires an explicit value`;
+      if (match.op === "ordered" && !Array.isArray(match.value)) return "ordered requires an array value";
+      if (match.op === "count") {
+        if (!Object.hasOwn(match, "value") && !Object.hasOwn(match, "min") && !Object.hasOwn(match, "max")) return "count requires value, min or max";
+        if (["value", "min", "max"].some((k) => Object.hasOwn(match, k) && (!Number.isInteger(match[k]) || match[k] < 0))) return "count bounds must be nonnegative integers";
+        if (match.min != null && match.max != null && match.min > match.max) return "count min exceeds max";
+      }
+      return null;
+    }
+    function expectations(inv, { bindings = {} } = {}) {
+      const gaps = [], known = new Set(array(inv.expectations).map((e) => e.id));
+      for (const key of Object.keys(bindings)) if (!known.has(key)) gaps.push({ kind: "unknown-expectation-binding", id: key });
+      const bound = array(inv.expectations).map((e) => {
+        const b = bindings[e.id], present = Object.hasOwn(bindings, e.id);
+        const match = b?.match || (b?.op ? b : void 0), error = present ? descriptorError(match) : null;
+        if (e.required !== false && !present) gaps.push({ kind: "unbound-expectation", expectationId: e.id });
+        if (error) gaps.push({ kind: "invalid-expectation", expectationId: e.id, detail: error });
+        return { ...e, bound: present && !error, select: b?.select || { kind: e.kind, target: e.target, ...e.action ? { action: e.action } : {} }, ...match ? { match } : {} };
+      });
+      return copy({ version: 1, service: inv.service, env: inv.env, expectations: bound, gaps, complete: !gaps.length, ready: !gaps.length, coverage: inv.coverage });
+    }
+    function subset(actual, expected) {
+      if (isDeepStrictEqual(actual, expected)) return true;
+      if (Array.isArray(expected)) {
+        let assign2 = function(n, seen) {
+          for (let i = 0; i < actual.length; i++) if (!seen.has(i) && subset(actual[i], expected[n])) {
+            seen.add(i);
+            if (!owner.has(i) || assign2(owner.get(i), seen)) {
+              owner.set(i, n);
+              return true;
+            }
+          }
+          return false;
         };
-        const users = /* @__PURE__ */ new Set();
-        for (const [from, to] of graph.edges) {
-          const cls = String(to).split(/[#]/)[0];
-          if (changedIds.has(cls) || changedIds.has(to)) {
-            const c = owner(from);
-            if (c) users.add(c.file);
+        var assign = assign2;
+        if (!Array.isArray(actual)) return false;
+        if (expected.length > actual.length) return false;
+        const owner = /* @__PURE__ */ new Map();
+        return expected.every((_, n) => assign2(n, /* @__PURE__ */ new Set()));
+      }
+      return !!expected && typeof expected === "object" && !!actual && typeof actual === "object" && !Array.isArray(actual) && Object.keys(expected).every((k) => Object.hasOwn(actual, k) && subset(actual[k], expected[k]));
+    }
+    function check(plan, observed, { allowUnexpected = false } = {}) {
+      const expected = array(plan?.expectations), gaps = [...array(plan?.gaps)], results = [];
+      const records = Array.isArray(observed) ? observed : null;
+      const map = !records && observed && typeof observed === "object" ? observed : {};
+      const used = /* @__PURE__ */ new Set();
+      const duplicates = expected.filter((e, i) => expected.findIndex((x) => x.id === e.id) !== i);
+      for (const e of duplicates) gaps.push({ kind: "duplicate-expectation", expectationId: e.id });
+      for (const e of expected) {
+        const error = descriptorError(e.match);
+        if (!e.bound || error) {
+          results.push({ id: e.id, ok: e.required === false, reason: error || "expectation has no explicit binding" });
+          continue;
+        }
+        const selector = e.select || { kind: e.kind, target: e.target, ...e.action ? { action: e.action } : {} };
+        let present, value, ambiguous = false;
+        if (records) {
+          const selected = records.filter((r) => r && (r.id === e.id || !r.id && Object.entries(selector).every(([key, wanted]) => key === "action" && r.action == null ? true : isDeepStrictEqual(r[key], wanted))));
+          for (const record of selected) used.add(record);
+          if (selector.action && selected.some((r) => r.action == null && !r.id)) {
+            const peers = expected.filter((other) => other.id !== e.id && other.select?.action !== selector.action && isDeepStrictEqual(other.select?.kind, selector.kind) && isDeepStrictEqual(other.select?.target, selector.target));
+            ambiguous = peers.length > 0;
+          }
+          present = selected.length > 0;
+          value = selected.length === 1 ? selected[0].value : selected.map((r) => r.value);
+        } else {
+          present = Object.hasOwn(map, e.id);
+          value = map[e.id];
+          if (present) used.add(e.id);
+        }
+        if (ambiguous) {
+          results.push({ id: e.id, ok: false, reason: "observation has no action id and matches multiple actions" });
+          continue;
+        }
+        if (!present && !(records && (e.match.op === "forbidden" || e.match.op === "count" && (e.match.value === 0 || e.match.max === 0)))) {
+          results.push({ id: e.id, ok: false, reason: "required observation is missing" });
+          continue;
+        }
+        const m = e.match, values = !present ? [] : Array.isArray(value) ? value : [value];
+        let ok = false;
+        if (m.op === "exact") ok = isDeepStrictEqual(value, m.value);
+        else if (m.op === "subset") ok = subset(value, m.value);
+        else if (m.op === "count") {
+          const n = values.length;
+          ok = (m.value == null || n === m.value) && (m.min == null || n >= m.min) && (m.max == null || n <= m.max);
+        } else if (m.op === "forbidden") ok = Object.hasOwn(m, "value") ? !values.some((v) => subset(v, m.value)) : !values.length;
+        else if (m.op === "ordered") {
+          let i = 0;
+          for (const v of values) if (i < m.value.length && subset(v, m.value[i])) i++;
+          ok = i === m.value.length && (m.exact === false || values.length === m.value.length);
+        }
+        results.push({ id: e.id, ok, reason: ok ? "matched" : `${m.op} expectation did not match`, ...m.op === "count" ? { count: values.length } : {} });
+      }
+      if (!allowUnexpected) {
+        if (records) records.forEach((record, index) => {
+          if (!used.has(record)) gaps.push({ kind: "unexpected-observation", observation: index, ...record?.id ? { id: record.id } : {} });
+        });
+        else for (const key of Object.keys(map)) if (!used.has(key)) gaps.push({ kind: "unexpected-observation", id: key });
+      }
+      if (!expected.length) gaps.push({ kind: "no-expectations", detail: "No explicit business expectations were checked." });
+      const passed = results.filter((r) => r.ok).length, failed = results.length - passed;
+      return { ok: failed === 0 && gaps.length === 0, passed, failed, results, gaps, coverage: { runtimeVerified: false, checked: results.length, note: "Checks apply to supplied observations; this function does not execute the service." } };
+    }
+    module2.exports = { inventory, actions, expectations, check };
+  }
+});
+
+// lib/reproduction-sources.js
+var require_reproduction_sources = __commonJS({
+  "lib/reproduction-sources.js"(exports2, module2) {
+    var crypto = require("crypto");
+    var digest = (v) => crypto.createHash("sha256").update(JSON.stringify(v)).digest("hex");
+    async function snapshots(env, names, { signal } = {}) {
+      const cfg = require_config().getEnv(env), readers = /* @__PURE__ */ new Map(), pending = [];
+      try {
+        for (const db of [...new Set(names)].sort()) {
+          signal?.throwIfAborted();
+          if (!cfg.pg[db]) throw new Error(`No configured source database ${db}`);
+          let release, ready, failed;
+          const hold = new Promise((resolve) => {
+            release = resolve;
+          });
+          const opened = new Promise((resolve, reject) => {
+            ready = resolve;
+            failed = reject;
+          });
+          const connection = require_src()(cfg.pg[db], { max: 1, idle_timeout: 0, connect_timeout: 10, onnotice: () => {
+          }, connection: { application_name: "dev-tool fixture snapshot", default_transaction_read_only: "on" } });
+          const transaction = connection.begin("isolation level repeatable read read only", async (sql) => {
+            await sql.unsafe(`set local statement_timeout = ${Math.max(1e3, require_config().getTimeouts().pgQueryMs)}`);
+            const [identity] = await sql`select txid_current_snapshot()::text as snapshot, current_database() as database, transaction_timestamp()::text as started_at, current_setting('transaction_read_only') as read_only`;
+            const evidence = { version: 1, adapter: "postgres-snapshot/v1", database: db, sourceDatabase: identity.database, snapshot: identity.snapshot, isolation: "repeatable read", readOnly: identity.read_only === "on", startedAt: identity.started_at };
+            readers.set(db, { sql, evidence });
+            ready();
+            await hold;
+            evidence.finishedAt = (/* @__PURE__ */ new Date()).toISOString();
+          }).finally(() => connection.end({ timeout: 2 }));
+          transaction.catch(failed);
+          pending.push({ transaction, release });
+          await opened;
+        }
+        return {
+          version: 1,
+          adapter: "postgres-snapshot/v1",
+          query: async (db, sql, params) => {
+            signal?.throwIfAborted();
+            const reader = readers.get(db);
+            if (!reader) throw new Error(`snapshot database ${db} was not planned`);
+            const query = reader.sql.unsafe(sql, params || []), cancel = () => query.cancel();
+            signal?.addEventListener("abort", cancel, { once: true });
+            try {
+              return [...await query];
+            } finally {
+              signal?.removeEventListener("abort", cancel);
+            }
+          },
+          evidence: () => Object.fromEntries([...readers].map(([db, reader]) => [db, { ...reader.evidence, identity: digest(reader.evidence) }])),
+          close: async () => {
+            pending.forEach((p) => p.release());
+            await Promise.all(pending.map((p) => p.transaction));
+          }
+        };
+      } catch (error) {
+        pending.forEach((p) => p.release());
+        await Promise.allSettled(pending.map((p) => p.transaction));
+        throw error;
+      }
+    }
+    module2.exports = { snapshots };
+  }
+});
+
+// lib/schema.js
+var require_schema = __commonJS({
+  "lib/schema.js"(exports2, module2) {
+    var { isDeepStrictEqual } = require("util");
+    var known = new Set("$schema $id $comment title description default examples deprecated readOnly writeOnly contentMediaType contentEncoding format $defs definitions $ref type enum const allOf anyOf oneOf not if then else minimum maximum exclusiveMinimum exclusiveMaximum multipleOf minLength maxLength pattern items prefixItems contains minContains maxContains minItems maxItems uniqueItems properties patternProperties additionalProperties required dependentRequired dependentSchemas propertyNames minProperties maxProperties".split(" "));
+    function validate(value, schema, { maxNodes = 1e5 } = {}) {
+      const issues = [];
+      let visited = 0;
+      const bad = (path2, message) => {
+        if (issues.length < 20) issues.push({ path: path2, message });
+      };
+      function visit(v, s, p, depth = 0) {
+        if (++visited > maxNodes || depth > 64) {
+          bad(p, "input exceeds structural budget");
+          return;
+        }
+        if (s === false) {
+          bad(p, "value is not allowed");
+          return;
+        }
+        if (!s || s === true) return;
+        if (typeof s !== "object" || Array.isArray(s)) {
+          bad(p, "schema must be an object or boolean");
+          return;
+        }
+        for (const key of Object.keys(s)) if (!known.has(key) && !key.startsWith("x-")) bad(p, `unsupported schema assertion ${key}`);
+        if (s.$ref) {
+          bad(p, "unresolved schema reference");
+          return;
+        }
+        for (const op of ["allOf", "anyOf", "oneOf"]) if (s[op]) {
+          const results = s[op].map((x) => validate(v, x, { maxNodes: Math.min(maxNodes, 1e4) }).length === 0);
+          if (op === "allOf" ? results.some((x) => !x) : op === "anyOf" ? !results.some(Boolean) : results.filter(Boolean).length !== 1) bad(p, `does not satisfy ${op}`);
+        }
+        if (s.not && !validate(v, s.not, { maxNodes: 1e4 }).length) bad(p, "matches a forbidden schema");
+        if (s.if !== void 0) visit(v, validate(v, s.if, { maxNodes: 1e4 }).length ? s.else : s.then, p, depth + 1);
+        const type = (t) => t === "null" ? v === null : t === "array" ? Array.isArray(v) : t === "object" ? v !== null && typeof v === "object" && !Array.isArray(v) : t === "integer" ? Number.isInteger(v) : t === "number" ? typeof v === "number" && Number.isFinite(v) : typeof v === t;
+        if (s.type && ![].concat(s.type).some(type)) {
+          bad(p, `must be ${[].concat(s.type).join(" or ")}`);
+          return;
+        }
+        if (s.enum && !s.enum.some((x) => isDeepStrictEqual(x, v))) bad(p, "must be an allowed value");
+        if (Object.hasOwn(s, "const") && !isDeepStrictEqual(s.const, v)) bad(p, "must equal the declared constant");
+        if (typeof v === "string") {
+          if (s.minLength !== void 0 && [...v].length < s.minLength) bad(p, `minimum length is ${s.minLength}`);
+          if (s.maxLength !== void 0 && [...v].length > s.maxLength) bad(p, `maximum length is ${s.maxLength}`);
+          if (s.pattern && !new RegExp(s.pattern, "u").test(v)) bad(p, "does not match the required pattern");
+        }
+        if (typeof v === "number") {
+          for (const [key, fails] of [["minimum", (n) => v < n], ["maximum", (n) => v > n], ["exclusiveMinimum", (n) => v <= n], ["exclusiveMaximum", (n) => v >= n]]) if (s[key] !== void 0 && fails(s[key])) bad(p, `violates ${key}`);
+          if (s.multipleOf !== void 0 && (!(s.multipleOf > 0) || Math.abs(v / s.multipleOf - Math.round(v / s.multipleOf)) > 1e-10)) bad(p, "violates multipleOf");
+        }
+        if (Array.isArray(v)) {
+          if (s.minItems !== void 0 && v.length < s.minItems) bad(p, `minimum items is ${s.minItems}`);
+          if (s.maxItems !== void 0 && v.length > s.maxItems) bad(p, `maximum items is ${s.maxItems}`);
+          const canonical = (x, depth2 = 0) => depth2 > 64 ? '"[too deep]"' : x && typeof x === "object" ? Array.isArray(x) ? `[${x.map((y) => canonical(y, depth2 + 1)).join(",")}]` : `{${Object.keys(x).sort().map((k) => `${JSON.stringify(k)}:${canonical(x[k], depth2 + 1)}`).join(",")}}` : JSON.stringify(x);
+          if (s.uniqueItems && new Set(v.map((x) => canonical(x))).size !== v.length) bad(p, "items must be unique");
+          if (s.contains !== void 0) {
+            const count = v.filter((x) => !validate(x, s.contains, { maxNodes: 1e4 }).length).length;
+            if (count < (s.minContains ?? 1) || s.maxContains !== void 0 && count > s.maxContains) bad(p, "violates contains count");
+          }
+          v.forEach((x, i) => visit(x, s.prefixItems?.[i] ?? s.items, `${p}[${i}]`, depth + 1));
+        } else if (v && typeof v === "object") {
+          if (s.minProperties !== void 0 && Object.keys(v).length < s.minProperties || s.maxProperties !== void 0 && Object.keys(v).length > s.maxProperties) bad(p, "violates property count");
+          for (const k of s.required || []) if (!Object.hasOwn(v, k) || v[k] === void 0) bad(`${p}.${k}`, "required");
+          for (const [key, required] of Object.entries(s.dependentRequired || {})) if (Object.hasOwn(v, key)) {
+            for (const dep of required) if (!Object.hasOwn(v, dep)) bad(`${p}.${dep}`, `required with ${key}`);
+          }
+          for (const [key, schema2] of Object.entries(s.dependentSchemas || {})) if (Object.hasOwn(v, key)) visit(v, schema2, p, depth + 1);
+          for (const [k, x] of Object.entries(v)) {
+            if (x === void 0) continue;
+            if (s.propertyNames) visit(k, s.propertyNames, `${p}.${k}`, depth + 1);
+            let matched = false;
+            if (Object.hasOwn(s.properties || {}, k)) {
+              visit(x, s.properties[k], `${p}.${k}`, depth + 1);
+              matched = true;
+            }
+            for (const [pattern, schema2] of Object.entries(s.patternProperties || {})) if (new RegExp(pattern, "u").test(k)) {
+              visit(x, schema2, `${p}.${k}`, depth + 1);
+              matched = true;
+            }
+            if (!matched && s.additionalProperties === false) bad(`${p}.${k}`, "unknown property");
+            else if (!matched && typeof s.additionalProperties === "object") visit(x, s.additionalProperties, `${p}.${k}`, depth + 1);
           }
         }
-        for (const f of main2) if (users.has(rel(f)) && !mainChanged.includes(f)) mainChanged.push(f);
-        for (const f of test) if (users.has(rel(f)) && !testChanged.includes(f)) testChanged.push(f);
       }
-      const res = (kind) => walkFiles(path2.join(modDir, "src", kind, "resources")).filter(newer).map((f) => ({ from: f, rel: path2.relative(path2.join(modDir, "src", kind, "resources"), f) }));
-      return { mainChanged, testChanged, mainRes: res("main"), testRes: res("test") };
+      visit(value, schema, "$");
+      return issues;
     }
-    async function javac(state, files, outDir, extraCp, cfg, env) {
-      if (!files.length) return { code: 0, out: "", ms: 0 };
-      const args = ["-d", outDir, "-encoding", "UTF-8", "-parameters", "-g", "-nowarn", "-cp", [...extraCp, ...state.classpath].join(path2.delimiter)];
-      if (state.release && state.javacVersion && state.release <= state.javacVersion) args.push("--release", String(state.release));
-      if (state.javacVersion >= 21) args.push("-proc:full");
-      return exec(javaBin(cfg, "javac"), [...args, ...files], { env });
+    function assert(value, schema) {
+      let text;
+      try {
+        text = JSON.stringify(value);
+      } catch {
+        throw Object.assign(new Error("Arguments must be JSON serializable"), { code: "DT_ARGUMENT_INVALID" });
+      }
+      const maxInputBytes = require_config().getTools().maxInputBytes;
+      if (text === void 0 || Buffer.byteLength(text) > maxInputBytes) throw Object.assign(new Error(`Arguments exceed ${maxInputBytes} bytes`), { code: "DT_ARGUMENT_INVALID" });
+      const issues = validate(value, schema);
+      if (issues.length) throw Object.assign(new Error(`Invalid argument ${issues[0].path}: ${issues[0].message}`), { code: "DT_ARGUMENT_INVALID", issues });
+      return value;
     }
-    async function run({ id, root, plan, cfg, env, mvn, selectors, graph, log }) {
-      const started = Date.now();
-      const p = await prepare({ id, root, plan, cfg, env, mvn, log });
-      if (p.error) return { code: p.error.code || 1, out: p.error.out, ms: Date.now() - started, cases: [], phase: "prepare" };
-      const st = p.state;
-      if (st.sources.length !== p.sources.length || st.sources.some((f, i) => f !== p.sources[i])) {
-        const inventory = readJson(stateFile(id), {});
-        if (inventory[plan.module]) {
-          inventory[plan.module].sources = p.sources;
-          writeJson(stateFile(id), inventory);
+    module2.exports = { validate, assert };
+  }
+});
+
+// lib/fixture-payload.js
+var require_fixture_payload = __commonJS({
+  "lib/fixture-payload.js"(exports2, module2) {
+    var supportedKinds = /* @__PURE__ */ new Set(["JSON", "JSONSCHEMA", "JSON_SCHEMA"]);
+    function schema(definition) {
+      if (!definition) return null;
+      const wrapper = typeof definition === "object" && Object.hasOwn(definition, "schema");
+      const kind = String(wrapper ? definition.type || definition.schemaType || "JSON" : "JSON").toUpperCase();
+      if (!supportedKinds.has(kind)) return { unsupported: `unsupported ${kind} wire schema; configure a codec worker and recapture exact encoded bytes` };
+      let value = wrapper ? definition.schema : definition;
+      if (typeof value === "string") {
+        try {
+          value = JSON.parse(value);
+        } catch {
+          return { unsupported: "invalid JSON schema" };
         }
       }
-      const ch = changed(plan.modDir, p.prepared ? Date.now() + 1 : st.stamp, graph, root);
-      const stampAt = Date.now();
-      let out2 = "";
-      fs2.mkdirSync(st.classes, { recursive: true });
-      fs2.mkdirSync(st.testClasses, { recursive: true });
-      for (const r2 of ch.mainRes) {
-        fs2.mkdirSync(path2.dirname(path2.join(st.classes, r2.rel)), { recursive: true });
-        fs2.copyFileSync(r2.from, path2.join(st.classes, r2.rel));
-      }
-      for (const r2 of ch.testRes) {
-        fs2.mkdirSync(path2.dirname(path2.join(st.testClasses, r2.rel)), { recursive: true });
-        fs2.copyFileSync(r2.from, path2.join(st.testClasses, r2.rel));
-      }
-      const T = require_trace();
-      const cm = await T.step("javac main", () => javac(st, ch.mainChanged, st.classes, [st.classes], cfg, env), `${ch.mainChanged.length} files`);
-      out2 += cm.out;
-      if (cm.code !== 0) return { code: cm.code, out: out2, ms: Date.now() - started, cases: [], phase: "compile", compiled: ch.mainChanged.length };
-      const ct = await T.step("javac tests", () => javac(st, ch.testChanged, st.testClasses, [st.testClasses, st.classes], cfg, env), `${ch.testChanged.length} files`);
-      out2 += ct.out;
-      if (ct.code !== 0) return { code: ct.code, out: out2, ms: Date.now() - started, cases: [], phase: "compile", compiled: ch.mainChanged.length + ch.testChanged.length };
-      const all = readJson(stateFile(id), {});
-      if (all[plan.module]) {
-        all[plan.module].stamp = stampAt;
-        writeJson(stateFile(id), all);
-      }
-      fs2.mkdirSync(path2.join(root, ".dt"), { recursive: true });
-      const results = path2.join(root, ".dt", `results-${Date.now().toString(36)}.json`);
-      const cp = [st.testClasses, st.classes, ...st.classpath, st.launcherJar, st.launcherDir].join(path2.delimiter);
-      const r = await T.step("run tests", () => exec(javaBin(cfg, "java"), ["-cp", cp, "DtLauncher", results, ...selectors], { cwd: plan.modDir, env, timeoutMs: cfg.timeoutMs, log }), selectors.join(" "));
-      out2 += r.out;
-      let cases = [];
-      try {
-        cases = JSON.parse(fs2.readFileSync(results, "utf8"));
-        fs2.rmSync(results, { force: true });
-      } catch {
-      }
-      return { code: r.code, out: out2, killed: r.killed, ms: Date.now() - started, cases, compiled: ch.mainChanged.length + ch.testChanged.length, prepared: p.prepared, prepareMs: p.ms };
+      return { value };
     }
-    module2.exports = { run, supported, prepare, changed, exec, LAUNCHER, pomsIn, preparationKey, preparedStateUsable };
+    function validateEnvelope(envelope, definitions = {}, codec = "auto") {
+      const gaps = [];
+      const headers = Array.isArray(envelope.headers) ? envelope.headers : Object.entries(envelope.headers || {}).map(([key, value]) => ({ key, value }));
+      if (headers.some((header) => typeof header?.key !== "string" || typeof header?.value !== "string")) gaps.push("unsupported Kafka header encoding; native replay needs explicit UTF-8 string key/value pairs");
+      if (!Number.isInteger(envelope.partition) || envelope.partition < 0 || !/^\d+$/.test(String(envelope.offset))) gaps.push("invalid partition/offset envelope");
+      if (!["json", "string", "auto"].includes(codec)) gaps.push(`unsupported codec ${codec}`);
+      for (const side of ["key", "value"]) {
+        const definition = schema(definitions[side]);
+        if (!definition) continue;
+        if (definition.unsupported) {
+          gaps.push(`${side}: ${definition.unsupported}`);
+          continue;
+        }
+        if (envelope[side] == null) continue;
+        const issues = require_schema().validate(envelope[side], definition.value, { maxNodes: 1e4 });
+        gaps.push(...issues.map((issue) => `${side}${issue.path.slice(1)}: ${issue.message}`));
+      }
+      return gaps;
+    }
+    module2.exports = { validateEnvelope, schema };
+  }
+});
+
+// lib/reproduction-es.js
+var require_reproduction_es = __commonJS({
+  "lib/reproduction-es.js"(exports2, module2) {
+    var crypto = require("crypto");
+    var hash = (value) => crypto.createHash("sha256").update(JSON.stringify(value)).digest("hex");
+    function queryFor(matches, rows) {
+      const groups = /* @__PURE__ */ new Map();
+      for (const match of matches) {
+        const key = `${match.from.db}:${match.from.table}`;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(match);
+      }
+      const must = [];
+      for (const [key, rules] of groups) {
+        const should = (rows[key] || []).map((row) => ({ bool: { filter: rules.map((rule) => {
+          const value = row[rule.from.column], field = rule.path === "_id" ? "_id" : rule.path.replace(/^_source\./, "").replace(/\[\]/g, "");
+          return value == null ? { bool: { must_not: [{ exists: { field } }] } } : { term: { [field]: value } };
+        }) } }));
+        must.push(should.length ? { bool: { should, minimum_should_match: 1 } } : { match_none: {} });
+      }
+      return { bool: { must } };
+    }
+    async function capture(env, index, { maxDocuments, matches, rows, mapping, settings = {}, client } = {}) {
+      const rawClient = client || require_es().client(env);
+      client = async (route, options = {}) => require_fixture_json().parse(await rawClient(route, { ...options, raw: true }));
+      const startedAt = (/* @__PURE__ */ new Date()).toISOString(), actual = await client(`/${encodeURIComponent(index)}/_mapping`);
+      const actualMapping = actual[index]?.mappings;
+      const settingsResponse = await client(`/${encodeURIComponent(index)}/_settings?include_defaults=false`);
+      const actualSettings = Object.fromEntries(Object.entries(settingsResponse[index]?.settings?.index || {}).filter(([key]) => ["analysis", "similarity", "sort", "max_ngram_diff", "max_shingle_diff"].includes(key)));
+      if (!actualMapping) throw new Error("ES capture mapping response must identify the exact concrete index");
+      const nested = (value) => value && typeof value === "object" && (value.type === "nested" || Object.values(value).some(nested));
+      if (nested(actualMapping)) throw new Error("ES nested mappings require a reviewed nested-query adapter; native fixture capture supports object/scalar mappings");
+      const opened = await client(`/${encodeURIComponent(index)}/_pit?keep_alive=1m`, { method: "POST" });
+      if (!opened.id) throw new Error("ES server did not provide a point-in-time id");
+      let pit = opened.id;
+      try {
+        const response = await client("/_search", { method: "POST", body: { pit: { id: pit, keep_alive: "1m" }, query: queryFor(matches, rows), size: maxDocuments + 1, sort: ["_shard_doc"], track_total_hits: true, seq_no_primary_term: true } });
+        pit = response.pit_id || pit;
+        const total = response.hits?.total?.value ?? response.hits?.total;
+        if (!Number.isInteger(total) || response.hits?.total?.relation === "gte") throw new Error("ES exact hit count was not provided");
+        const documents = (response.hits?.hits || []).slice(0, maxDocuments).map((hit) => ({ _id: hit._id, _index: index, _source: hit._source, _seq_no: hit._seq_no, _primary_term: hit._primary_term }));
+        require_reproduction().exactNumbers(documents, `ES ${index}`);
+        return { documents, mapping: actualMapping, settings: actualSettings, truncated: total > maxDocuments, observation: { version: 1, adapter: "elasticsearch-pit/v1", pointInTimeVerified: true, pitFingerprint: hash(pit), startedAt, finishedAt: (/* @__PURE__ */ new Date()).toISOString(), exactTotal: total, mappingFingerprint: hash(actualMapping), reviewedMappingFingerprint: hash(mapping), settingsFingerprint: hash(actualSettings), reviewedSettingsFingerprint: hash(settings) } };
+      } finally {
+        await client("/_pit", { method: "DELETE", body: { id: pit } });
+      }
+    }
+    module2.exports = { queryFor, capture };
   }
 });
 
@@ -8566,7 +9462,7 @@ var require_reproduction = __commonJS({
     var { CACHE: CACHE2, readJson, writeJson } = require_util();
     var qi = (s) => `"${String(s).replace(/"/g, '""')}"`;
     var qt = (s) => s.split(".").map(qi).join(".");
-    var stable = (v) => JSON.stringify(v, (_, x) => typeof x === "bigint" ? String(x) : x);
+    var stable = (v) => JSON.stringify(v, (_, x) => typeof x === "bigint" ? String(x) : x && typeof x === "object" && !Array.isArray(x) ? Object.fromEntries(Object.keys(x).sort().map((key) => [key, x[key]])) : x);
     var hash = (s) => crypto.createHash("sha256").update(String(s)).digest("hex");
     var idOf = (x) => `${x.db}:${x.table}`;
     var same = (a, b) => a == null || b == null ? a === b : String(a) === String(b);
@@ -8606,19 +9502,65 @@ var require_reproduction = __commonJS({
       }
       return out2;
     }
-    function plan({ env, service, seeds = [], relations = [], topics = [], limits = {}, includeChildren = false } = {}) {
+    function strict(value, allowed, name) {
+      if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`${name} must be an object`);
+      const extra = Object.keys(value).filter((k) => !allowed.includes(k));
+      if (extra.length) throw new Error(`unsupported ${name} fields: ${extra.join(", ")}`);
+    }
+    function exactNumbers(v, name = "fixture") {
+      if (typeof v === "number" && (!Number.isFinite(v) || Number.isInteger(v) && !Number.isSafeInteger(v))) throw new Error(`${name} contains an unsafe numeric value; encode large integers and exact decimals as strings`);
+      if (v && typeof v === "object") for (const [k, x] of Object.entries(v)) exactNumbers(x, `${name}.${k}`);
+    }
+    function plan(input = {}) {
+      if (input.version !== void 0 && input.version !== 1) throw new Error("unsupported fixture plan version");
+      if (input.contract && !["dt.fixture.plan/v2"].includes(input.contract)) throw new Error("unsupported fixture plan contract");
+      strict(input, [
+        "env",
+        "service",
+        "seeds",
+        "relations",
+        "topics",
+        "es",
+        "limits",
+        "includeChildren",
+        "requiredReads",
+        "consistencyMode",
+        "version",
+        "contract",
+        "passportCoverage",
+        "candidates",
+        "topicCandidates",
+        "topicCandidatesTotal",
+        "gaps",
+        "catalogs",
+        "tables",
+        "consistency",
+        "obligations"
+      ], "fixture plan");
+      let { env, service, seeds = [], relations = [], topics = [], es = [], limits = {}, includeChildren = false, requiredReads = [], consistencyMode = "snapshot" } = input;
+      if (!["snapshot", "verify"].includes(consistencyMode)) throw new Error("consistencyMode must be snapshot or verify");
+      for (const [items, name, allowed] of [[seeds, "seed", ["db", "table", "where"]], [relations, "relation", ["from", "to", "source", "evidence", "required"]], [topics, "topic", ["topic", "matches", "match", "offsets", "required", "schema", "paths", "codec"]], [es, "ES source", ["index", "matches", "required", "mapping", "settings", "codec"]]]) {
+        if (!Array.isArray(items)) throw new Error(`${name}s must be an array`);
+        items.forEach((x) => strict(x, allowed, name));
+      }
+      strict(limits, ["depth", "rowsPerTable", "totalRows", "messagesPerTopic", "totalMessages", "queries", "documentsPerIndex", "totalDocuments", "durationMs"], "limits");
+      exactNumbers({ seeds, topics, es, relations, requiredReads, limits }, "capture inputs");
       env ||= require_config().envNames()[0];
       require_config().getEnv(env);
-      if (seeds.length > 100 || relations.length > 1e3 || topics.length > 100) throw new Error("capture plan limit: 100 seeds, 1000 explicit relations and 100 topics");
+      if (seeds.length > 100 || relations.length > 1e3 || topics.length > 100 || es.length > 100) throw new Error("capture plan limit: 100 seeds, 1000 explicit relations, 100 topics and 100 ES indexes");
       if (new Set(topics.map((t) => t.topic)).size !== topics.length) throw new Error("duplicate capture topics");
+      if (new Set(es.map((e) => e.index)).size !== es.length) throw new Error("duplicate ES capture indexes");
       const { cats, tables } = catalog(env), gaps = [];
       const links = foreignKeys(tables, gaps);
       for (const r of relations.filter((r2) => r2.source !== "foreign-key")) {
+        strict(r.from, ["db", "table", "columns", "column"], "relation endpoint");
+        strict(r.to, ["db", "table", "columns", "column"], "relation endpoint");
         const from = endpoint(r.from, tables), to = endpoint(r.to, tables);
         if (from.columns.length !== to.columns.length) throw new Error("relationship column counts differ");
         links.push({ from, to, source: "explicit", evidence: String(r.evidence || "capture plan"), required: r.required === true });
       }
       const roots = seeds.map((s) => {
+        if (!/^[\w.-]+$/.test(s.db || "")) throw new Error("fixture database aliases must use letters, digits, underscore, dot or dash");
         const t = tables.get(idOf(s));
         if (!t) throw new Error(`no cached table ${idOf(s)}`);
         if (!s.where || !Object.keys(s.where).length) throw new Error(`seed ${idOf(s)} needs equality filters in where`);
@@ -8629,13 +9571,32 @@ var require_reproduction = __commonJS({
       const eventPlans = topics.map((t) => {
         const cached = require_kafka().cached(env, t.topic);
         if (!cached) throw new Error(`no cached topic ${t.topic}`);
+        if (t.match && !["all", "any"].includes(t.match)) throw new Error("Kafka match must be all or any");
+        if (t.codec && !["json", "string", "auto"].includes(t.codec)) throw new Error(`unsupported Kafka codec ${t.codec}; native replay supports decoded JSON/UTF-8 string only`);
         const matches = (t.matches || []).map((m) => {
+          strict(m, ["path", "from"], "Kafka match");
+          strict(m.from, ["db", "table", "column"], "Kafka match endpoint");
           if (!/^(value|key|headers)(\.[\w-]+|\[\])*$/.test(m.path || "")) throw new Error(`bad Kafka match path ${m.path}`);
           const from = endpoint({ ...m.from, columns: [m.from.column] }, tables);
           return { path: m.path, from: { db: from.db, table: from.table, column: from.columns[0] } };
         });
         if (!matches.length) throw new Error(`topic ${t.topic} needs matches against captured columns`);
-        return { topic: t.topic, matches, match: t.match === "any" ? "any" : "all", offsets: t.offsets || {}, required: t.required !== false, schema: { key: cached.keySchema, value: cached.valueSchema }, paths: require_fixture_schema().paths(cached) };
+        return { topic: t.topic, matches, match: t.match === "any" ? "any" : "all", offsets: t.offsets || {}, required: t.required !== false, codec: t.codec || "auto", schema: { key: cached.keySchema, value: cached.valueSchema }, paths: require_fixture_schema().paths(cached) };
+      });
+      const documentPlans = es.map((e) => {
+        if (!/^[a-z0-9][a-z0-9._-]*$/.test(e.index || "") || e.index.startsWith(".")) throw new Error("ES capture requires one exact non-system index name");
+        const cached = readJson(path2.join(CACHE2, env, "es", `${require_util().safeName(e.index)}.json`));
+        if (!cached?.mapping) throw new Error(`no cached ES mapping for ${e.index}; sync ES first`);
+        if (e.codec && e.codec !== "json") throw new Error("ES fixture codec must be json");
+        const matches = (e.matches || []).map((m) => {
+          strict(m, ["path", "from"], "ES match");
+          strict(m.from, ["db", "table", "column"], "ES match endpoint");
+          if (!/^_id$|^_source(?:\.[\w-]+|\[\])+$/.test(m.path || "")) throw new Error(`bad ES match path ${m.path}`);
+          const from = endpoint({ ...m.from, columns: [m.from.column] }, tables);
+          return { path: m.path, from: { db: from.db, table: from.table, column: from.columns[0] } };
+        });
+        if (!matches.length) throw new Error(`ES index ${e.index} needs tuple matches against captured columns`);
+        return { index: e.index, matches, mapping: cached.mapping, settings: cached.settings || {}, required: e.required !== false, codec: "json" };
       });
       const reachable = new Set(roots.map(idOf));
       if (service) {
@@ -8666,14 +9627,51 @@ var require_reproduction = __commonJS({
       } catch {
       }
       const topicCandidates = require_fixture_schema().candidates(reachableTables, cachedTopics);
+      let serviceInventory = null;
+      if (service) {
+        try {
+          serviceInventory = require_scenario().inventory({ service, env });
+        } catch (error) {
+          gaps.push({ kind: "passport-unavailable", service, detail: error.message });
+        }
+      }
+      const obligations = [...reachable].map((id) => ({ kind: "pg", id, required: true }));
+      for (const t of eventPlans) obligations.push({ kind: "kafka", id: t.topic, required: t.required });
+      for (const e of documentPlans) obligations.push({ kind: "es", id: e.index, required: e.required });
+      const passportReads = [];
+      for (const read of serviceInventory?.states || []) {
+        if (!["pg", "es", "kafka"].includes(read.kind)) continue;
+        const id = read.kind === "pg" ? read.target.db && read.target.table && `${read.target.db}:${read.target.table}` : read.target[read.kind === "es" ? "index" : "topic"];
+        if (!id || ["ambiguous", "unresolved", "missing", "dynamic", "unknown"].includes(read.resolution?.status)) {
+          gaps.push({ kind: "unresolved-passport-read", state: read.id, source: read.kind, detail: "Resolve the passport dependency before claiming source coverage" });
+          continue;
+        }
+        passportReads.push({ kind: read.kind, id, required: read.required !== false, evidence: `passport state ${read.id}` });
+      }
+      if (serviceInventory?.gaps?.length) gaps.push(...serviceInventory.gaps.map((gap) => ({ kind: "passport-coverage", detail: gap.detail || gap.kind, state: gap.stateId })));
+      if (!Array.isArray(requiredReads)) throw new Error("requiredReads must be an array");
+      for (const read of [...requiredReads, ...passportReads]) {
+        strict(read, ["kind", "id", "required", "evidence"], "required read");
+        if (!["pg", "es", "kafka"].includes(read.kind) || typeof read.id !== "string") throw new Error("required read needs kind pg|es|kafka and exact id");
+        if (!obligations.some((o) => o.kind === read.kind && o.id === read.id)) {
+          obligations.push({ ...read, required: read.required !== false });
+          if (read.required !== false) gaps.push({ kind: "unplanned-source", source: read.kind, id: read.id, detail: "Required read has no reviewed capture binding" });
+        }
+      }
       return {
         version: 1,
+        contract: "dt.fixture.plan/v2",
         env,
         service,
+        consistencyMode,
+        requiredReads,
+        obligations,
+        passportCoverage: serviceInventory ? { service, states: serviceInventory.states.length, scope: "native PG/ES/Kafka capture; bind other kinds through scenario_state_plan", runtimeReadsVerified: false } : void 0,
+        es: documentPlans,
         seeds: roots,
         relations: links.filter((r) => reachable.has(idOf(r.from)) || reachable.has(idOf(r.to))),
         topics: eventPlans,
-        limits: { depth: number(limits.depth, 8, 50, "depth"), rowsPerTable: number(limits.rowsPerTable, 200, 1e4, "rowsPerTable"), totalRows: number(limits.totalRows, 2e3, 5e4, "totalRows"), messagesPerTopic: number(limits.messagesPerTopic, 300, 1e4, "messagesPerTopic"), totalMessages: number(limits.totalMessages, 2e3, 5e4, "totalMessages"), queries: number(limits.queries, 200, 1e3, "queries") },
+        limits: { depth: number(limits.depth, 8, 50, "depth"), rowsPerTable: number(limits.rowsPerTable, 200, 1e4, "rowsPerTable"), totalRows: number(limits.totalRows, 2e3, 5e4, "totalRows"), messagesPerTopic: number(limits.messagesPerTopic, 300, 1e4, "messagesPerTopic"), totalMessages: number(limits.totalMessages, 2e3, 5e4, "totalMessages"), queries: number(limits.queries, 200, 1e3, "queries"), durationMs: number(limits.durationMs, 12e4, 6e5, "durationMs"), documentsPerIndex: number(limits.documentsPerIndex, 200, 1e4, "documentsPerIndex"), totalDocuments: number(limits.totalDocuments, 2e3, 5e4, "totalDocuments") },
         includeChildren: !!includeChildren,
         candidates: candidates.slice(0, 100),
         topicCandidates: topicCandidates.slice(0, 200),
@@ -8681,7 +9679,7 @@ var require_reproduction = __commonJS({
         gaps: gaps.filter((g) => !g.table || reachable.has(g.table)),
         catalogs: cats.map((c) => ({ db: c.db, syncedAt: c.syncedAt, fingerprint: hash(stable(c)) })),
         tables: [...reachable].map((id) => tables.get(id)).filter(Boolean).map((t) => ({ id: idOf(t), db: t.db, table: t.table, columns: t.columns, constraints: t.constraints, primaryKey: primary(t) })),
-        consistency: "Independent read-only statements across databases and Kafka; observation window and offsets are recorded, not a distributed snapshot."
+        consistency: "One read-only repeatable-read snapshot per PostgreSQL database; ES PIT and Kafka partition windows are separate observations. No distributed snapshot or distributed-commit guarantee."
       };
     }
     var tupleKey = (tuple) => stable(tuple.map((x) => x == null ? null : String(x)));
@@ -8717,12 +9715,65 @@ var require_reproduction = __commonJS({
       }
       return true;
     }
-    async function capture(input, { query, messages, mask = true, log = () => {
+    function related(value, rules, mode, rows, provenance) {
+      if (mode === "any") {
+        const matches = rules.flatMap((rule) => (rows[idOf(rule.from)] || []).flatMap((row, i) => correlated(value, [rule], row) ? provenance[idOf(rule.from)]?.[i]?.roots || [] : []));
+        return { matched: !!matches.length, lineage: [...new Set(matches)] };
+      }
+      const groups = /* @__PURE__ */ new Map();
+      for (const rule of rules) {
+        const id = idOf(rule.from);
+        if (!groups.has(id)) groups.set(id, []);
+        groups.get(id).push(rule);
+      }
+      let shared;
+      for (const [id, group] of groups) {
+        const matched = new Set((rows[id] || []).flatMap((row, i) => correlated(value, group, row) ? provenance[id]?.[i]?.roots || [] : []));
+        shared = shared ? new Set([...shared].filter((root) => matched.has(root))) : matched;
+      }
+      return { matched: !!shared?.size, lineage: [...shared || []] };
+    }
+    async function capture(input, options = {}) {
+      const p = plan(input);
+      const deadline = AbortSignal.timeout(p.limits.durationMs);
+      options = { ...options, signal: options.signal ? AbortSignal.any([options.signal, deadline]) : deadline };
+      if (options.query) return captureCore(input, { ...options, sourceEvidence: options.sourceEvidence || (() => ({ adapter: "injected-reader/v1", perDatabaseSnapshotVerified: false })) });
+      const source = await require_reproduction_sources().snapshots(p.env, p.tables.map((t) => t.db), options);
+      try {
+        const result = await captureCore(input, {
+          ...options,
+          query: async (...args) => {
+            await require_limit().take(`pg:${p.env}`);
+            return source.query(...args);
+          },
+          sourceEvidence: source.evidence,
+          ...p.consistencyMode === "verify" ? { verifyQuery: async (db, sql, params) => (await require_pg().query(p.env, sql, { db, params })).rows } : {}
+        });
+        await source.close();
+        result.consistency.databases = source.evidence();
+        return result;
+      } catch (error) {
+        try {
+          await source.close();
+        } catch (cleanup) {
+          error.cleanupError = cleanup.message;
+        }
+        throw error;
+      }
+    }
+    async function captureCore(input, { query, messages, documents, verifyQuery, sourceEvidence, signal, mask = true, log = () => {
     } } = {}) {
       const p = plan(input), { tables } = catalog(p.env);
+      const checkpoint = () => {
+        signal?.throwIfAborted();
+        const reason = require_trace().current()?.cancelled;
+        if (reason) throw new Error(`fixture capture cancelled: ${reason}`);
+      };
+      checkpoint();
       if (!p.seeds.length) throw new Error("capture needs at least one seed");
-      const startedAt = (/* @__PURE__ */ new Date()).toISOString(), rows = {}, provenance = {}, gaps = [...p.gaps], seen = /* @__PURE__ */ new Map(), requested = /* @__PURE__ */ new Set();
+      const startedAt = (/* @__PURE__ */ new Date()).toISOString(), rows = {}, provenance = {}, gaps = [...p.gaps], seen = /* @__PURE__ */ new Map(), requested = /* @__PURE__ */ new Set(), observations = [], lineages = /* @__PURE__ */ new Map();
       let total = 0, queries = 0;
+      const lineageSalt = crypto.randomBytes(16).toString("hex");
       query ||= async (db, sql, params) => {
         await require_limit().take(`pg:${p.env}`);
         return (await require_pg().query(p.env, sql, { db, params })).rows;
@@ -8731,20 +9782,33 @@ var require_reproduction = __commonJS({
       const addGap = (g) => {
         if (!gaps.some((x) => stable(x) === stable(g))) gaps.push(g);
       };
-      async function fetchRows(e, tuples, why, depth) {
+      async function fetchRows(e, tuples, why, depth, ancestry = []) {
+        checkpoint();
         const id = idOf(e), t = tables.get(id);
+        const reused = [];
+        for (let i = 0; i < (rows[id] || []).length; i++) {
+          const row = rows[id][i], record = provenance[id][i];
+          if (!tuples.some((tuple) => e.columns.every((column, n) => same(row[column], tuple[n])))) continue;
+          const extra = ancestry.filter((a) => e.columns.every((column, n) => same(row[column], a.tuple[n]))).flatMap((a) => a.roots);
+          const roots = [.../* @__PURE__ */ new Set([...record.roots || [], ...extra])];
+          if (roots.length !== record.roots.length) {
+            record.roots = roots;
+            lineages.set(`${id}:${record.key}`, roots);
+            reused.push(row);
+          }
+        }
         const fresh = tuples.filter((tuple) => {
           const k = `${id}:${e.columns.join(",")}:${tupleKey(tuple)}`;
           if (requested.has(k)) return false;
           requested.add(k);
           return true;
         });
-        if (!fresh.length) return [];
+        if (!fresh.length) return reused;
         if (depth > p.limits.depth) {
           addGap({ kind: "depth-limit", table: id, detail: why });
           return [];
         }
-        const added = [];
+        const added = [...reused];
         for (let i = 0; i < fresh.length; i += 100) {
           const remaining = Math.min(p.limits.rowsPerTable - (rows[id]?.length || 0), p.limits.totalRows - total);
           if (remaining < 1) {
@@ -8768,6 +9832,10 @@ var require_reproduction = __commonJS({
           log(`read ${id}: up to ${remaining} rows, depth ${depth}`);
           queries++;
           const result2 = await query(t.db, sql, params);
+          checkpoint();
+          if (!Array.isArray(result2)) throw new Error(`PG reader for ${id} must return rows`);
+          exactNumbers(result2, id);
+          observations.push({ db: t.db, sql, params, fingerprint: hash(stable(result2)) });
           if (result2.length > remaining) addGap({ kind: "row-limit", table: id });
           if (!rows[id]) {
             rows[id] = [];
@@ -8777,12 +9845,20 @@ var require_reproduction = __commonJS({
           for (const r of result2.slice(0, remaining)) {
             const row = { ...r }, key = pk.length ? tupleKey(pk.map((c) => r[c])) : r[identity] || stable(r);
             if (!pk.length) delete row[identity];
-            if (seen.get(id).has(key)) continue;
+            const ancestors = ancestry.filter((a) => e.columns.every((c, n) => same(row[c], a.tuple[n])));
+            const roots = ancestors.length ? [...new Set(ancestors.flatMap((a) => a.roots))] : [hash(stable([lineageSalt, id, e.columns, fresh.find((tuple) => e.columns.every((c, n) => same(row[c], tuple[n])))]))];
+            const identityKey = `${id}:${key}`;
+            lineages.set(identityKey, [.../* @__PURE__ */ new Set([...lineages.get(identityKey) || [], ...roots])]);
+            if (seen.get(id).has(key)) {
+              const prior = provenance[id].find((x) => x.key === key);
+              if (prior) prior.roots = lineages.get(identityKey);
+              continue;
+            }
             seen.get(id).add(key);
             rows[id].push(jsonValue(row));
             total++;
             added.push(row);
-            provenance[id].push({ key, via: why, depth });
+            provenance[id].push({ key, via: why, depth, roots, parents: ancestors.map((a) => a.parent) });
           }
         }
         return added;
@@ -8802,7 +9878,12 @@ var require_reproduction = __commonJS({
           if (p.includeChildren && idOf(node.endpoint) === idOf(r.to)) directions.push([r.to, r.from]);
           for (const [from, to] of directions) {
             const tuples = node.rows.map((row) => from.columns.map((c) => row[c])).filter((vs) => vs.every((v) => v != null));
-            const added = await fetchRows(to, tuples, `${r.source}: ${r.evidence}`, node.depth + 1);
+            const ancestry = node.rows.map((row) => {
+              const sourceTable = tables.get(idOf(from));
+              const key = primary(sourceTable).length ? tupleKey(primary(sourceTable).map((c) => row[c])) : stable(row);
+              return { tuple: from.columns.map((c) => row[c]), parent: { table: idOf(from), key }, roots: lineages.get(`${idOf(from)}:${key}`) || [] };
+            });
+            const added = await fetchRows(to, tuples, `${r.source}: ${r.evidence}`, node.depth + 1, ancestry);
             if (added.length) next.push({ endpoint: to, rows: added, depth: node.depth + 1 });
           }
         }
@@ -8817,32 +9898,79 @@ var require_reproduction = __commonJS({
           continue;
         }
         log(`scan ${t.topic}: up to ${budget} messages across partitions`);
+        checkpoint();
         const scan = await messages(t.topic, { maxMessages: budget, offsets: t.offsets });
+        checkpoint();
         scannedTotal += (scan.messages || []).length;
         const matched = [], unique = /* @__PURE__ */ new Map();
-        for (const m of scan.messages || []) {
+        if ((scan.messages || []).length > budget) addGap({ kind: "message-limit", topic: t.topic, detail: "Reader exceeded the requested scan budget" });
+        for (const m of (scan.messages || []).slice(0, budget)) {
           const key = `${m.partition}:${m.offset}`, envelope = stable(m);
           if (unique.has(key)) {
             if (unique.get(key) !== envelope) addGap({ kind: "conflicting-event", topic: t.topic, partition: m.partition, offset: String(m.offset), detail: "Different envelopes were returned for the same partition and offset" });
             continue;
           }
           unique.set(key, envelope);
-          const groups = /* @__PURE__ */ new Map();
-          for (const rule of t.matches) {
-            const id = idOf(rule.from);
-            if (!groups.has(id)) groups.set(id, []);
-            groups.get(id).push(rule);
-          }
-          const hit = t.match === "any" ? t.matches.some((rule) => (rows[idOf(rule.from)] || []).some((row) => correlated(m, [rule], row))) : [...groups].every(([id, rules]) => (rows[id] || []).some((row) => correlated(m, rules, row)));
+          const matchEvidence = related(m, t.matches, t.match, rows, provenance);
+          const hit = matchEvidence.matched;
           if (!hit) continue;
-          matched.push(jsonValue(m));
+          exactNumbers(m, `Kafka ${t.topic}`);
+          const schemaGaps = require_fixture_payload().validateEnvelope(m, t.schema, t.codec);
+          schemaGaps.forEach((detail) => addGap({ kind: "payload-schema", topic: t.topic, detail }));
+          matched.push({ ...jsonValue(m), fixtureLineage: matchEvidence.lineage });
         }
         matched.sort((a, b) => a.partition - b.partition || (BigInt(a.offset) < BigInt(b.offset) ? -1 : BigInt(a.offset) > BigInt(b.offset) ? 1 : 0));
         events[t.topic] = { messages: matched, windows: scan.windows || [], schema: t.schema, matches: t.matches, scanned: (scan.messages || []).length };
-        if (scan.truncated) addGap({ kind: "kafka-window", topic: t.topic, detail: "Only the bounded partition windows were scanned." });
+        if (scan.truncated !== false || (scan.windows || []).some((w) => w.truncated || w.offsetExpired)) addGap({ kind: "kafka-window", topic: t.topic, detail: "Only the bounded partition windows were scanned." });
         if (!matched.length && t.required) addGap({ kind: "missing-events", topic: t.topic });
       }
-      const result = { version: 1, plan: p, startedAt, finishedAt: (/* @__PURE__ */ new Date()).toISOString(), rows, events, provenance, gaps, counts: { rows: total, queries, messages: Object.values(events).reduce((n, e) => n + e.messages.length, 0) } };
+      const indexes = {};
+      let documentTotal = 0;
+      documents ||= (index, options) => require_reproduction_es().capture(p.env, index, options);
+      for (const e of p.es) {
+        const budget = Math.min(p.limits.documentsPerIndex, p.limits.totalDocuments - documentTotal);
+        if (budget < 1) {
+          addGap({ kind: "document-limit", index: e.index });
+          continue;
+        }
+        checkpoint();
+        const scan = await documents(e.index, { maxDocuments: budget, matches: e.matches, rows, mapping: e.mapping, settings: e.settings });
+        checkpoint();
+        if (!Array.isArray(scan.documents)) throw new Error("ES reader must return documents");
+        exactNumbers(scan.documents, `ES ${e.index}`);
+        const matched = [], seenDocuments = /* @__PURE__ */ new Map();
+        for (const doc of scan.documents.slice(0, budget)) {
+          if (typeof doc._id !== "string" || !doc._source || typeof doc._source !== "object") {
+            addGap({ kind: "invalid-document", index: e.index });
+            continue;
+          }
+          const match = related(doc, e.matches, "all", rows, provenance);
+          if (!match.matched) continue;
+          if (seenDocuments.has(doc._id)) {
+            if (seenDocuments.get(doc._id) !== stable(doc)) addGap({ kind: "conflicting-document", index: e.index, id: doc._id });
+            continue;
+          }
+          seenDocuments.set(doc._id, stable(doc));
+          matched.push({ ...jsonValue(doc), fixtureLineage: match.lineage });
+        }
+        documentTotal += scan.documents.length;
+        indexes[e.index] = { documents: matched, mapping: scan.mapping || e.mapping, settings: scan.settings || e.settings, matches: e.matches, observation: scan.observation || { adapter: "injected-reader/v1", pointInTimeVerified: false }, scanned: scan.documents.length };
+        if (scan.truncated || scan.documents.length > budget) addGap({ kind: "es-window", index: e.index, detail: "Bounded query omitted matching documents" });
+        if (!matched.length && e.required) addGap({ kind: "missing-documents", index: e.index });
+        if (scan.settings && stable(scan.settings) !== stable(e.settings)) addGap({ kind: "settings-changed", index: e.index, detail: "Source ES analysis/similarity settings differ from the reviewed cache" });
+        if (scan.mapping && stable(scan.mapping) !== stable(e.mapping)) addGap({ kind: "mapping-changed", index: e.index, detail: "Source mapping differs from the reviewed cached mapping" });
+      }
+      if (p.consistencyMode === "verify") {
+        if (!verifyQuery) addGap({ kind: "unverified-consistency", detail: "verify mode requires an independent reread adapter" });
+        else for (const observation of observations) {
+          const after = await verifyQuery(observation.db, observation.sql, observation.params);
+          if (hash(stable(after)) !== observation.fingerprint) addGap({ kind: "source-changed", table: observation.db, detail: "A captured query changed between snapshot and independent reread" });
+        }
+      }
+      const coverage = p.obligations.map((o) => ({ ...o, captured: o.kind === "pg" ? Object.hasOwn(rows, o.id) : o.kind === "es" ? Object.hasOwn(indexes, o.id) : Object.hasOwn(events, o.id) }));
+      for (const o of coverage) if (o.required && !o.captured) addGap({ kind: "missing-source", source: o.kind, id: o.id });
+      const result = { version: 1, contract: "dt.fixture.capture/v2", indexes, coverage, consistency: { scope: "per-source", distributedSnapshot: false, databases: sourceEvidence?.() || {}, mode: p.consistencyMode, reread: p.consistencyMode === "verify" ? "captured queries compared after snapshot reads" : "not requested" }, plan: p, startedAt, finishedAt: (/* @__PURE__ */ new Date()).toISOString(), rows, events, provenance, gaps, counts: { rows: total, queries, messages: Object.values(events).reduce((n, e) => n + e.messages.length, 0) } };
+      if (p.es.length) result.counts.documents = Object.values(indexes).reduce((n, e) => n + e.documents.length, 0);
       if (mask !== false) result.redactions = redact(result);
       else result.redactions = { enabled: false, fields: 0 };
       result.gaps.push(...validate(result).gaps);
@@ -8860,7 +9988,7 @@ var require_reproduction = __commonJS({
             const key = String(x), digest = hash(key);
             const numeric = /^-?\d+(?:\.\d+)?$/.test(key);
             let n = 0;
-            const replacement = numeric ? key.replace(/\d/g, () => String(1 + Number.parseInt(digest[n++ % digest.length], 16) % 9)) : typeof x === "boolean" ? x : /email/i.test(k) ? `u${digest.slice(0, 10)}@example.invalid` : digest.slice(0, Math.max(1, Math.min(key.length, 24)));
+            const replacement = numeric ? key.replace(/\d/g, () => String(1 + Number.parseInt(digest[n++ % digest.length], 16) % (/^-?\d{16}$/.test(key) && n === 1 ? 8 : 9))) : typeof x === "boolean" ? x : /email/i.test(k) ? `u${digest.slice(0, 10)}@example.invalid` : digest.slice(0, Math.max(1, Math.min(key.length, 24)));
             if (!replacements.has(key)) replacements.set(key, replacement);
             fields++;
           } else discover(x);
@@ -8868,6 +9996,7 @@ var require_reproduction = __commonJS({
       }
       discover(capture2.rows);
       discover(capture2.events);
+      discover(capture2.indexes);
       discover(capture2.plan.seeds);
       discover(capture2.gaps);
       function replace(v) {
@@ -8881,8 +10010,16 @@ var require_reproduction = __commonJS({
       }
       capture2.rows = replace(capture2.rows);
       for (const e of Object.values(capture2.events)) e.messages = replace(e.messages);
+      for (const e of Object.values(capture2.indexes || {})) e.documents = replace(e.documents);
       capture2.plan.seeds = replace(capture2.plan.seeds);
       if (capture2.gaps) capture2.gaps = replace(capture2.gaps);
+      for (const records of Object.values(capture2.provenance)) for (const record of records) for (const parent of record.parents || []) {
+        try {
+          parent.key = tupleKey(replace(JSON.parse(parent.key)));
+        } catch {
+          parent.key = "masked-row";
+        }
+      }
       for (const [id, records] of Object.entries(capture2.provenance)) {
         const t = capture2.plan.tables.find((t2) => t2.id === id);
         records.forEach((r, i) => {
@@ -8894,6 +10031,16 @@ var require_reproduction = __commonJS({
     }
     function validate(capture2) {
       const gaps = [];
+      for (const table2 of capture2.plan.tables || []) {
+        if (!table2.primaryKey?.length) continue;
+        const seen = /* @__PURE__ */ new Set();
+        for (const row of capture2.rows[table2.id] || []) {
+          const key = tupleKey(table2.primaryKey.map((column) => row[column]));
+          if (seen.has(key)) gaps.push({ kind: "duplicate-primary-key", table: table2.id, key });
+          seen.add(key);
+        }
+      }
+      for (const expected of capture2.plan.obligations || []) if (expected.required && !(expected.kind === "pg" ? Object.hasOwn(capture2.rows, expected.id) : expected.kind === "es" ? Object.hasOwn(capture2.indexes || {}, expected.id) : Object.hasOwn(capture2.events || {}, expected.id))) gaps.push({ kind: "missing-source", source: expected.kind, id: expected.id });
       for (const r of capture2.plan.relations) if (r.required) {
         for (const row of capture2.rows[idOf(r.from)] || []) {
           const values = r.from.columns.map((c) => row[c]);
@@ -8963,7 +10110,7 @@ var require_reproduction = __commonJS({
         files[rel] = hash(text);
       };
       const encoded = (s) => Buffer.from(s).toString("hex");
-      const manifest = { ...capture2, name, files, databases: {}, topics: {} };
+      const manifest = { ...capture2, name, files, databases: {}, topics: {}, elasticsearch: {} };
       try {
         for (const db of [...new Set(Object.keys(capture2.rows).map((id) => id.split(":")[0]))].sort()) {
           const prefix = `pg/${encoded(db)}`, sql = statements(capture2, db);
@@ -8979,13 +10126,22 @@ var require_reproduction = __commonJS({
           put(`${prefix}/schema.json`, JSON.stringify(e.schema, null, 2) + "\n");
           put(`${prefix}/offsets.json`, JSON.stringify(e.windows, null, 2) + "\n");
         }
+        for (const [index, e] of Object.entries(capture2.indexes || {})) {
+          const prefix = `es/${encoded(index)}`;
+          manifest.elasticsearch[index] = { directory: prefix, documents: e.documents.length };
+          put(`${prefix}/mapping.json`, JSON.stringify(e.mapping, null, 2) + "\n");
+          put(`${prefix}/settings.json`, JSON.stringify(e.settings || {}, null, 2) + "\n");
+          put(`${prefix}/documents.jsonl`, e.documents.map(stable).join("\n") + (e.documents.length ? "\n" : ""));
+          put(`${prefix}/observation.json`, JSON.stringify(e.observation, null, 2) + "\n");
+        }
+        put("capture-contract.json", JSON.stringify({ contract: capture2.contract || "dt.fixture.capture/v1", plan: capture2.plan, complete: capture2.complete, gaps: capture2.gaps, coverage: capture2.coverage, consistency: capture2.consistency }, null, 2) + "\n");
         put("README.txt", `Fixture ${name}
 
 Load each database's schema.sql, data.sql, constraints.sql in that order.
 The fixture_replay tool validates hashes and loads isolated scratch databases, dropping them on error.
 For test_run give fixture_path and (for multiple datasources) fixture_bindings.
 Kafka messages.jsonl preserves key, value, headers, partition, source offset and timestamp.
-Use the service's test producer to publish them to its test Kafka; no live publish tool is provided.
+fixture_runtime_start loads owned local PostgreSQL, Elasticsearch and Kafka-compatible broker containers. It never publishes into the source environment. Source offsets/timestamps remain recorded metadata; native replay offsets/timestamps are independently observed and explicitly remapped.
 Capture window: ${capture2.startedAt} .. ${capture2.finishedAt}
 ${capture2.plan.consistency}
 Complete: ${capture2.complete}; gaps: ${capture2.gaps.length}. See manifest.json.
@@ -9002,30 +10158,53 @@ Complete: ${capture2.complete}; gaps: ${capture2.gaps.length}. See manifest.json
     }
     function loadFixture(workspace, directory) {
       const dest = resourcePath(workspace, directory), m = readJson(path2.join(dest.full, "manifest.json"));
-      if (!m || m.version !== 1 || !m.files || !m.databases) throw new Error("invalid fixture manifest");
+      if (!m || m.version !== 1 || !m.files || !m.databases || m.contract && !["dt.fixture.capture/v1", "dt.fixture.capture/v2"].includes(m.contract)) throw new Error("invalid or unsupported fixture manifest");
       for (const [rel, digest] of Object.entries(m.files)) {
         const file = path2.resolve(dest.full, rel);
         if (!file.startsWith(dest.full + path2.sep) || fs2.lstatSync(file).isSymbolicLink() || fs2.realpathSync(file) !== path2.resolve(fs2.realpathSync(dest.full), rel)) throw new Error("fixture file escapes its directory");
         if (hash(fs2.readFileSync(file)) !== digest) throw new Error(`fixture hash mismatch: ${rel}`);
       }
-      for (const db of Object.values(m.databases)) {
-        if (!/^pg\/[0-9a-f]+$/.test(db.directory)) throw new Error("invalid fixture database directory");
+      for (const [logical, db] of Object.entries(m.databases)) {
+        if (db.directory !== `pg/${Buffer.from(logical).toString("hex")}`) throw new Error("invalid fixture database directory");
         db.statements = Object.fromEntries(["schema", "data", "constraints"].map((kind) => {
           const rel = `${db.directory}/${kind}.sql`;
           if (!Object.hasOwn(m.files, rel)) throw new Error(`missing hashed fixture file ${rel}`);
           return [kind, require_testrun().splitSql(fs2.readFileSync(path2.join(dest.full, rel), "utf8"))];
         }));
       }
+      const verifiedJson = (rel) => {
+        if (!Object.hasOwn(m.files, rel)) throw new Error(`missing hashed fixture file ${rel}`);
+        return JSON.parse(fs2.readFileSync(path2.join(dest.full, rel), "utf8"));
+      };
+      const verifiedLines = (rel) => {
+        if (!Object.hasOwn(m.files, rel)) throw new Error(`missing hashed fixture file ${rel}`);
+        return fs2.readFileSync(path2.join(dest.full, rel), "utf8").split("\n").filter(Boolean).map((line) => JSON.parse(line));
+      };
+      if (Object.hasOwn(m.files, "capture-contract.json")) Object.assign(m, verifiedJson("capture-contract.json"));
+      for (const [logical, topic] of Object.entries(m.topics || {})) {
+        if (topic.directory !== `kafka/${Buffer.from(logical).toString("hex")}`) throw new Error("invalid fixture topic directory");
+        topic.envelopes = verifiedLines(`${topic.directory}/messages.jsonl`);
+        topic.schema = verifiedJson(`${topic.directory}/schema.json`);
+        topic.windows = verifiedJson(`${topic.directory}/offsets.json`);
+      }
+      for (const [logical, index] of Object.entries(m.elasticsearch || {})) {
+        if (index.directory !== `es/${Buffer.from(logical).toString("hex")}`) throw new Error("invalid fixture ES directory");
+        index.documents = verifiedLines(`${index.directory}/documents.jsonl`);
+        index.mapping = verifiedJson(`${index.directory}/mapping.json`);
+        index.settings = Object.hasOwn(m.files, `${index.directory}/settings.json`) ? verifiedJson(`${index.directory}/settings.json`) : {};
+        index.observation = verifiedJson(`${index.directory}/observation.json`);
+      }
       return m;
     }
     async function replay(workspace, directory, { allowIncomplete = false, runId = crypto.randomBytes(10).toString("hex"), template = false, ttlMs, settings, signal } = {}) {
       const m = loadFixture(workspace, directory);
+      const topicSummary = Object.fromEntries(Object.entries(m.topics || {}).map(([name, topic]) => [name, { directory: topic.directory, messages: topic.envelopes?.length ?? topic.messages }]));
       if (!m.complete && !allowIncomplete) throw new Error("fixture is incomplete: inspect gaps, or set allow_incomplete=true");
       if (template) {
         await require_testdb().initialize({ label: "dt fixture replay scratch" });
         const T = require_testdb_templates(), base = await T.build({ workspace, directory, signal });
         const cloned = await T.clone({ template: base.id, runId, ttlMs, settings, signal });
-        return { ...cloned, topics: m.topics, timings: { ...base.timings, ...cloned.timings, templateReused: base.reused } };
+        return { ...cloned, topics: topicSummary, timings: { ...base.timings, ...cloned.timings, templateReused: base.reused } };
       }
       const databases = {};
       try {
@@ -9035,7 +10214,7 @@ Complete: ${capture2.complete}; gaps: ${capture2.gaps.length}. See manifest.json
           databases[name] = created;
           if (created.errors.length) throw new Error(`fixture ${name}: ${created.errors.map((e) => e.error).join("; ")}`);
         }
-        return { databases, topics: m.topics, cleanup: async () => {
+        return { databases, topics: topicSummary, replayed: { pg: Object.keys(databases), es: [], kafka: [] }, proof: { level: "sql-constraints", nativeMixedSourceReplay: false }, pendingAdapters: [...Object.keys(m.elasticsearch || {}).map((id) => ({ kind: "es", id })), ...Object.keys(m.topics || {}).map((id) => ({ kind: "kafka", id }))], cleanup: async () => {
           await Promise.all(Object.values(databases).map((db) => require_testdb().drop(db.database)));
         } };
       } catch (e) {
@@ -9058,388 +10237,7 @@ Complete: ${capture2.complete}; gaps: ${capture2.gaps.length}. See manifest.json
       if (!r) throw new Error("capture not found");
       return r;
     }
-    module2.exports = { plan, capture, validate, redact, literal, statements, exportFixture, loadFixture, replay, resourcePath, save, load, valuesAt };
-  }
-});
-
-// lib/scenario.js
-var require_scenario = __commonJS({
-  "lib/scenario.js"(exports2, module2) {
-    var crypto = require("crypto");
-    var { isDeepStrictEqual } = require("util");
-    var fs2 = require("fs");
-    var path2 = require("path");
-    function canonical(v, seen = /* @__PURE__ */ new Set()) {
-      if (typeof v === "bigint") return String(v);
-      if (!v || typeof v !== "object") return v;
-      if (v instanceof Date) return v.toISOString();
-      if (seen.has(v)) throw new Error("scenario manifests must be acyclic JSON");
-      const next = new Set(seen);
-      next.add(v);
-      return Array.isArray(v) ? v.map((x) => canonical(x, next)) : Object.fromEntries(Object.keys(v).sort().filter((k) => v[k] !== void 0).map((k) => [k, canonical(v[k], next)]));
-    }
-    var json = (v) => JSON.stringify(canonical(v));
-    var copy = (v) => JSON.parse(json(v));
-    var id = (kind, value) => `${kind}:${crypto.createHash("sha256").update(json(value)).digest("hex").slice(0, 20)}`;
-    var array = (v) => Array.isArray(v) ? v : [];
-    var strings = (v) => [].concat(v || []).filter((x) => typeof x === "string");
-    var unique = (values) => [...new Map(values.map((v) => [json(v), v])).values()].sort((a, b) => json(a).localeCompare(json(b)));
-    var unresolved = (s) => !s || /\$\{|^\?|^\(|<unresolved|\bunknown\b/i.test(String(s));
-    var route = (s) => String(s || "").replace(/\{[^}]*\}/g, "{}");
-    var handler = (s) => String(s || "").includes("#") ? String(s) : String(s || "").replace(/\.([^.()]+)$/, "#$1");
-    var WRITE = /^(write|insert|update|delete|save|merge|persist|remove)$/i;
-    function provenance(source, action, item = {}) {
-      return copy({ source, ...action ? { action } : {}, ...item.file ? { file: item.file, line: item.line ?? null } : {}, ...item.at ? { at: item.at } : {}, ...item.via ? { via: item.via } : {}, ...item.source ? { library: item.source } : {} });
-    }
-    function externalKind(item) {
-      const s = `${item.kind || ""} ${item.type || ""} ${item.why || ""}`;
-      if (/cache|redis/i.test(s)) return "cache";
-      if (/queue|rabbit|jms|sqs|amqp/i.test(s)) return "queue";
-      if (/file|sftp|filesystem|FileStore|BlobStore|S3Client/i.test(s)) return "file";
-      if (/kafka|StreamBridge/i.test(s)) return "kafka";
-      if (/http|feign|RestTemplate|WebClient|RestClient|HttpClient/i.test(s)) return "http";
-      if (/\bes\b|elasticsearch/i.test(s)) return "es";
-      if (/\bdb\b|database|Jdbc|Repository|EntityManager|DataSource/i.test(s)) return "pg";
-      return "unknown";
-    }
-    function inventory({ service, passport, env, entry } = {}) {
-      const p = passport || service && require_passport().load(service);
-      if (!p || typeof p !== "object") throw new Error(`no cached passport for ${service || "(service required)"}`);
-      service ||= p.service;
-      if (!service) throw new Error("scenario inventory needs service or passport.service");
-      env ||= p.env || require_config().envNames()[0];
-      const gaps = [], states = /* @__PURE__ */ new Map(), effects = /* @__PURE__ */ new Map(), entries = /* @__PURE__ */ new Map(), methodShapes = /* @__PURE__ */ new Map(), methodIds = /* @__PURE__ */ new Set();
-      const configKeys = new Set(Object.keys(p.config?.merged || {}));
-      let cats = [], catalogError;
-      try {
-        cats = require_pg().loadAll(env);
-      } catch (e) {
-        catalogError = e.message;
-      }
-      const datasources = array(p.db?.datasources);
-      const wanted = new Set(datasources.map((d) => d.db).filter(Boolean));
-      const allowed = cats.filter((c) => !wanted.size || wanted.has(c.db) || wanted.has(c.database));
-      function resolveDb(name, item = {}, fn = false) {
-        const hinted = item.db || datasources.find((d) => item.datasource && (d.key === item.datasource || d.name === item.datasource))?.db;
-        const candidates = [];
-        for (const c of hinted ? cats.filter((c2) => c2.db === hinted || c2.database === hinted) : allowed) {
-          for (const t of fn ? array(c.functions) : array(c.tables)) {
-            const full = `${t.schema}.${t.name}`;
-            if (full.toLowerCase() === String(name).toLowerCase() || !String(name).includes(".") && t.name?.toLowerCase() === String(name).toLowerCase()) candidates.push({ db: c.db, [fn ? "function" : "table"]: full });
-          }
-        }
-        const matches = unique(candidates);
-        return { target: matches.length === 1 ? matches[0] : { db: hinted || (wanted.size === 1 ? [...wanted][0] : null), [fn ? "function" : "table"]: name || null }, resolution: { status: matches.length === 1 ? "resolved" : matches.length ? "ambiguous" : "unknown", ...matches.length ? { candidates: matches } : {} } };
-      }
-      const addState = (kind, target, action, evidence, resolution = { status: "resolved" }, required = true) => {
-        const sid = id("state", [service, kind, target]);
-        let s = states.get(sid);
-        if (!s) {
-          s = { id: sid, kind, target, required, actions: [], provenance: [], resolution };
-          states.set(sid, s);
-        }
-        s.required ||= required;
-        if (action && !s.actions.includes(action.id)) {
-          s.actions.push(action.id);
-          action.dependencies.push(sid);
-        }
-        s.provenance = unique([...s.provenance, evidence]);
-        if (resolution.status !== "resolved" && !gaps.some((g) => g.stateId === sid)) gaps.push({ id: id("gap", [sid, resolution.status]), kind: resolution.status === "ambiguous" ? "ambiguous-dependency" : "unresolved-dependency", stateId: sid, detail: `Resolve ${kind} dependency explicitly; static evidence does not identify its complete state.`, ...resolution.candidates ? { candidates: resolution.candidates } : {} });
-        return s;
-      };
-      const addEffect = (kind, target, action, evidence, direction = "write") => {
-        const eid = id("expectation", [service, action?.id || null, kind, target, direction]);
-        let e = effects.get(eid);
-        if (!e) {
-          e = { id: eid, kind, target, action: action?.id || null, required: true, direction, valueKnown: false, provenance: [] };
-          effects.set(eid, e);
-        }
-        e.provenance = unique([...e.provenance, evidence]);
-        if (action && !action.expectations.includes(eid)) action.expectations.push(eid);
-        return e;
-      };
-      const addAction = (kind, target, h, item, source) => {
-        target = kind === "http" ? route(target) : String(target);
-        const aid = id("action", [service, kind, target]);
-        let a = entries.get(aid);
-        if (!a) {
-          a = { id: aid, kind, target, entry: target, handler: h || null, handlers: [], required: true, input: { known: false, ...item?.inputSchema ? { schema: item.inputSchema, known: true } : {}, ...item?.inputType || item?.payloadType ? { type: item.inputType || item.payloadType } : {}, hints: ["Supply scenario-specific values; TestData factories provide type-valid objects, not expected behavior."] }, dependencies: [], expectations: [], provenance: [] };
-          entries.set(aid, a);
-        }
-        if (item?.inputSchema) {
-          a.input.schema = item.inputSchema;
-          a.input.known = true;
-        }
-        if (item?.inputType || item?.payloadType) a.input.type = item.inputType || item.payloadType;
-        if (item?.pattern) a.pattern = true;
-        const shapes = methodShapes.get(handler(h));
-        if (shapes?.length === 1) {
-          a.input.parameters = shapes[0].parameters;
-          a.returnType = shapes[0].returnType;
-        } else if (shapes?.length) a.input.overloads = shapes;
-        if (h) {
-          const same = a.handlers.find((old) => handler(old) === handler(h) || handler(old).endsWith(`.${handler(h)}`) || handler(h).endsWith(`.${handler(old)}`));
-          if (!same) a.handlers.push(h);
-          else if (h.length > same.length) {
-            a.handlers[a.handlers.indexOf(same)] = h;
-            a.handler = h;
-          }
-        }
-        a.provenance = unique([...a.provenance, provenance(source, aid, item)]);
-        return a;
-      };
-      const summaryFlows = array(p.flows);
-      if (catalogError) addState("unknown", { type: "catalog-analysis", detail: catalogError }, null, { source: "cached-catalog" }, { status: "unknown" });
-      let flows = summaryFlows;
-      const keys = [typeof p.codeIndex === "string" ? p.codeIndex : null, ...array(p.libraries).map((l) => l.index)].filter(Boolean);
-      if (keys.length) try {
-        const CI = require_codeindex();
-        if (keys.every((k) => CI.load(k))) {
-          for (const key of keys) for (const c of CI.load(key).graph_().classes || []) if (!c.test) for (const m of c.methods || []) {
-            methodIds.add(`${c.id}#${m.name}`);
-            const shape = { parameters: m.params || [], returnType: m.ret || null };
-            for (const name of [`${c.id}#${m.name}`, `${c.name}#${m.name}`]) methodShapes.set(name, unique([...methodShapes.get(name) || [], shape]));
-          }
-          const F = require_flows();
-          const repo = p.repo?.path && path2.resolve(require_config().ROOT, p.repo.path);
-          const config = repo && fs2.existsSync(repo) ? F.serviceConfig(repo) : {};
-          for (const key of Object.keys(config)) configKeys.add(key);
-          const detailed = F.flows(keys, { config });
-          if (detailed.length) flows = detailed;
-        }
-      } catch (e) {
-        addState("unknown", { type: "flow-analysis", detail: e.message }, null, { source: "code-index" }, { status: "unknown" });
-      }
-      for (const f of flows) if (f?.entry) addAction(f.kind || "method", f.entry, f.method || f.handler, f, "flow");
-      const effective = p.effective || {};
-      for (const e of [...array(effective.endpoints), ...array(p.endpoints)]) addAction("http", `${e.method || "ANY"} ${e.path || "?"}`, e.handler, e, "passport-endpoint");
-      for (const k of [...array(effective.consumes), ...array(p.kafka?.consumes)]) addAction(k.pattern ? "kafka" : "kafka", `kafka ${k.topic || "?"}`, k.handler, k, "passport-listener");
-      for (const f of [...array(p.scheduled), ...array(p.events), ...array(p.methods)]) if (f.entry || f.handler || f.method) addAction(f.kind || (array(p.scheduled).includes(f) ? "scheduled" : "method"), f.entry || f.handler || f.method, f.handler || f.method, f, "passport-action");
-      const selectors = entry == null ? [] : strings(entry);
-      let selected = [...entries.values()].filter((a) => !selectors.length || selectors.some((s) => s === a.id || route(s) === a.target || handler(a.handler).endsWith(handler(s))));
-      if (selectors.length && !selected.length && keys.length) try {
-        const F = require_flows();
-        for (const s of selectors) if (s.includes("#")) {
-          const matches = [...methodIds].filter((name) => name === s || name.endsWith(`.${s}`));
-          if (matches.length === 1) {
-            const f = F.from(keys, matches[0]);
-            flows = [...flows, f];
-            selected.push(addAction("method", f.entry, f.method, f, "code-method"));
-          }
-        }
-      } catch {
-      }
-      if (!selected.length) {
-        const unknown = addState("unknown", { type: "entrypoint-analysis", entry: entry || null, detail: p.flows?.error || "No matching cached entrypoints; provide method/endpoint evidence." }, null, { source: "passport" }, { status: "unknown" });
-        gaps.push({ id: id("gap", [unknown.id, "no-actions"]), kind: "no-actions", stateId: unknown.id, detail: "No selected action can be invoked without an explicit entrypoint binding." });
-      }
-      for (const selector of selectors) if (!selected.some((a) => selector === a.id || route(selector) === a.target || handler(a.handler).endsWith(handler(selector)))) addState("unknown", { type: "unmatched-action-selection", entry: selector }, null, { source: "action-selection" }, { status: "unknown" });
-      const selectedIds = new Set(selected.map((a) => a.id));
-      const actionFor = (f) => selected.find((a) => a.kind === (f.kind || "method") && a.target === (f.kind === "http" ? route(f.entry) : f.entry));
-      const found = /* @__PURE__ */ new Set();
-      function pg(item, action, source) {
-        const name = item.table || item.function || item.name;
-        const fn = !!item.function || item.access === "function" || source === "passport-function";
-        const resolved = resolveDb(name, item, fn), evidence = provenance(source, action?.id, item);
-        const key = json(["pg", fn ? "function" : item.access, resolved.target]);
-        found.add(key);
-        addState("pg", resolved.target, action, evidence, resolved.resolution, !/^(owner|entity|repository)$/.test(item.access || ""));
-        if (WRITE.test(item.access || "") || fn) addEffect("pg", resolved.target, action, evidence, fn ? "function-effects-unknown" : item.access);
-      }
-      function outgoing(item, action, source, kind) {
-        const evidence = provenance(source, action?.id, item);
-        if (kind === "kafka") {
-          const target = { topic: item.topic || null };
-          found.add(json(["kafka-out", item.topic]));
-          addEffect("kafka", target, action, evidence, "produce");
-          if (unresolved(item.topic)) addState("unknown", { type: "kafka-topic", topic: item.topic || null }, action, evidence, { status: "unknown" });
-        } else if (kind === "http") {
-          const call = item.call?.match(/^([A-Z]+)\s+(.+)$/);
-          const target = { method: item.method || call?.[1] || null, path: item.path || call?.[2] || item.url || item.target || null, ...item.client ? { client: item.client } : {} };
-          found.add(json(["http", target]));
-          addState("http", target, action, evidence, { status: unresolved(target.path) ? "unknown" : "resolved" });
-          addEffect("http", target, action, evidence, "call");
-        } else {
-          const target = { index: item.index || item.name || null };
-          found.add(json(["es", target.index]));
-          addState("es", target, action, evidence, { status: unresolved(target.index) ? "unknown" : "resolved" });
-          const access = item.access || item.operation;
-          if (!access || WRITE.test(access)) addEffect("es", target, action, evidence, access || "effects-unknown");
-        }
-      }
-      function mock(item, action, source) {
-        if (typeof item === "string") {
-          const split = item.indexOf(": "), decl = split < 0 ? item : item.slice(0, split), last = decl.lastIndexOf(" ");
-          item = { type: last < 0 ? decl : decl.slice(0, last), name: last < 0 ? null : decl.slice(last + 1), why: split < 0 ? null : item.slice(split + 2) };
-        }
-        const kind = externalKind(item), target = { type: item.type || item.name || "unknown", ...item.name ? { name: item.name } : {}, ...item.call ? { call: item.call } : {} };
-        addState(kind, target, action, provenance(source, action?.id, item), { status: "unknown" });
-        if (item.call && /^(send|publish|put|set|write|save|delete|remove|update|post|exchange|execute)/i.test(item.call)) addEffect(kind, target, action, provenance(source, action?.id, item), item.call);
-      }
-      for (const a of selected) {
-        if (a.handlers.length > 1 || a.input.overloads?.length > 1) addState("unknown", { type: "ambiguous-handler", entry: a.target, handlers: a.handlers, ...a.input.overloads ? { overloads: a.input.overloads } : {} }, a, { source: "entrypoint-analysis" }, { status: "ambiguous" });
-        if (a.kind === "http") {
-          addEffect("status", a.target, a, a.provenance[0], "respond");
-          addEffect("return", a.target, a, a.provenance[0], "respond");
-        }
-        if (a.kind === "kafka" || a.kind === "queue") {
-          const topic = a.target.replace(/^(?:kafka|queue)\s+/, "");
-          addState(a.kind, { topic, direction: "inbound", ...a.pattern ? { pattern: true } : {} }, a, a.provenance[0], { status: a.pattern || unresolved(topic) ? "unknown" : "resolved" });
-        }
-      }
-      for (const f of flows) {
-        const a = actionFor(f);
-        if (!a || !selectedIds.has(a.id)) continue;
-        for (const t of array(f.out?.tables)) pg(t, a, "flow-table");
-        for (const fn of array(f.out?.functions)) pg({ ...fn, access: "function" }, a, "flow-function");
-        for (const k of array(f.out?.produces)) outgoing(k, a, "flow-topic", "kafka");
-        for (const h of array(f.out?.http)) outgoing(h, a, "flow-http", "http");
-        for (const es of array(f.out?.es)) outgoing(es, a, "flow-es", "es");
-        for (const x of array(f.out?.external)) mock(x, a, "flow-external");
-        for (const x of array(f.mocks)) mock(x, a, "flow-mock");
-        for (const prop of array(f.properties)) {
-          const k = typeof prop === "string" ? prop : prop.key;
-          addState("config", { key: k || null }, a, provenance("flow-property", a.id, typeof prop === "string" ? {} : prop), { status: unresolved(k) ? "unknown" : "resolved" });
-        }
-      }
-      for (const t of [...array(effective.tables), ...array(p.db?.tables)]) if (!found.has(json(["pg", t.access === "function" ? "function" : t.access, resolveDb(t.table, t, t.access === "function").target]))) pg(t, null, "passport-table");
-      for (const fn of [...array(effective.dbCalls), ...array(p.db?.calls)]) if (!found.has(json(["pg", "function", resolveDb(fn.name || fn.function, fn, true).target]))) pg({ ...fn, function: fn.function || fn.name }, null, "passport-function");
-      for (const k of [...array(effective.produces), ...array(p.kafka?.produces)]) if (!found.has(json(["kafka-out", k.topic]))) outgoing(k, null, "passport-topic", "kafka");
-      for (const h of [...array(effective.calls), ...array(p.feign), ...array(p.http)]) {
-        const target = { method: h.method || null, path: h.path || h.url || h.target || null, ...h.client ? { client: h.client } : {} };
-        if (!found.has(json(["http", target]))) outgoing(h, null, "passport-http", "http");
-      }
-      for (const es of array(p.es)) if (!found.has(json(["es", es.index]))) outgoing(es, null, "passport-es", "es");
-      for (const prop of [...configKeys, ...strings(p.config?.unresolved), ...array(p.config?.properties).map((x) => typeof x === "string" ? x : x.key), ...datasources.map((d) => d.key).filter(Boolean)]) addState("config", { key: prop }, null, { source: "passport-config" }, { status: unresolved(prop) ? "unknown" : "resolved" });
-      for (const l of array(p.libraries)) if (l.error || l.found === false) addState("unknown", { type: "unread-library", library: l.artifactId || l.repo || null, detail: l.error || "Library was not inspected." }, null, { source: "passport-library" }, { status: "unknown" });
-      if (!flows.length || !Array.isArray(p.flows) && !keys.length) addState("unknown", { type: "call-graph-coverage", detail: p.flows?.error || "No cached transitive flow graph." }, null, { source: "passport" }, { status: "unknown" });
-      for (const s of states.values()) if (!s.actions.length && s.required && s.resolution.status === "resolved") gaps.push({ id: id("gap", [s.id, "attribution"]), kind: "unattributed-dependency", stateId: s.id, detail: "Dependency is present in the passport but is not attributed to a selected action." });
-      for (const e of effects.values()) if (!e.action) {
-        const s = addState("unknown", { type: "effect-attribution", expectationId: e.id, kind: e.kind, target: e.target }, null, { source: "passport-effect" }, { status: "unknown" });
-        gaps.push({ id: id("gap", [e.id, "attribution"]), kind: "unattributed-effect", stateId: s.id, expectationId: e.id, detail: "Bind the expected behavior explicitly; this effect is not attributed to a selected action." });
-      }
-      selected = selected.map((a) => ({ ...a, handlers: a.handlers.sort(), dependencies: [...new Set(a.dependencies)].sort(), expectations: a.expectations.sort() })).sort((a, b) => a.id.localeCompare(b.id));
-      return copy({ version: 1, service, env, source: { passportSha: p.repo?.sha || null, passportBuiltAt: p.builtAt || null }, states: [...states.values()].map((s) => ({ ...s, actions: s.actions.sort() })).sort((a, b) => a.id.localeCompare(b.id)), actions: selected, expectations: [...effects.values()].sort((a, b) => a.id.localeCompare(b.id)), gaps: unique(gaps), complete: false, coverage: { static: true, runtimeVerified: false, exhaustive: false, note: "Static analysis records observed dependencies; reflection, runtime branches and unresolved external behavior still require explicit evidence." } });
-    }
-    function actions(inv, { bindings = {} } = {}) {
-      const gaps = [];
-      const known = new Set(array(inv.actions).map((a) => a.id));
-      for (const key of Object.keys(bindings)) if (!known.has(key)) gaps.push({ kind: "unknown-action-binding", id: key });
-      const bound = array(inv.actions).map((a) => {
-        const present = Object.hasOwn(bindings, a.id);
-        if (a.required !== false && !present) gaps.push({ kind: "unbound-action", actionId: a.id, target: a.target });
-        return { ...a, bound: present, ...present ? { binding: copy(bindings[a.id]) } : {} };
-      });
-      return copy({ version: 1, service: inv.service, env: inv.env, actions: bound, gaps, complete: !gaps.length, ready: !gaps.length, coverage: inv.coverage });
-    }
-    var OPS = /* @__PURE__ */ new Set(["exact", "subset", "count", "forbidden", "ordered"]);
-    function descriptorError(match) {
-      if (!match || !OPS.has(match.op)) return "match.op must be exact, subset, count, forbidden or ordered";
-      if (["exact", "subset", "ordered"].includes(match.op) && !Object.hasOwn(match, "value")) return `${match.op} requires an explicit value`;
-      if (match.op === "ordered" && !Array.isArray(match.value)) return "ordered requires an array value";
-      if (match.op === "count") {
-        if (!Object.hasOwn(match, "value") && !Object.hasOwn(match, "min") && !Object.hasOwn(match, "max")) return "count requires value, min or max";
-        if (["value", "min", "max"].some((k) => Object.hasOwn(match, k) && (!Number.isInteger(match[k]) || match[k] < 0))) return "count bounds must be nonnegative integers";
-        if (match.min != null && match.max != null && match.min > match.max) return "count min exceeds max";
-      }
-      return null;
-    }
-    function expectations(inv, { bindings = {} } = {}) {
-      const gaps = [], known = new Set(array(inv.expectations).map((e) => e.id));
-      for (const key of Object.keys(bindings)) if (!known.has(key)) gaps.push({ kind: "unknown-expectation-binding", id: key });
-      const bound = array(inv.expectations).map((e) => {
-        const b = bindings[e.id], present = Object.hasOwn(bindings, e.id);
-        const match = b?.match || (b?.op ? b : void 0), error = present ? descriptorError(match) : null;
-        if (e.required !== false && !present) gaps.push({ kind: "unbound-expectation", expectationId: e.id });
-        if (error) gaps.push({ kind: "invalid-expectation", expectationId: e.id, detail: error });
-        return { ...e, bound: present && !error, select: b?.select || { kind: e.kind, target: e.target, ...e.action ? { action: e.action } : {} }, ...match ? { match } : {} };
-      });
-      return copy({ version: 1, service: inv.service, env: inv.env, expectations: bound, gaps, complete: !gaps.length, ready: !gaps.length, coverage: inv.coverage });
-    }
-    function subset(actual, expected) {
-      if (isDeepStrictEqual(actual, expected)) return true;
-      if (Array.isArray(expected)) {
-        let assign2 = function(n, seen) {
-          for (let i = 0; i < actual.length; i++) if (!seen.has(i) && subset(actual[i], expected[n])) {
-            seen.add(i);
-            if (!owner.has(i) || assign2(owner.get(i), seen)) {
-              owner.set(i, n);
-              return true;
-            }
-          }
-          return false;
-        };
-        var assign = assign2;
-        if (!Array.isArray(actual)) return false;
-        if (expected.length > actual.length) return false;
-        const owner = /* @__PURE__ */ new Map();
-        return expected.every((_, n) => assign2(n, /* @__PURE__ */ new Set()));
-      }
-      return !!expected && typeof expected === "object" && !!actual && typeof actual === "object" && !Array.isArray(actual) && Object.keys(expected).every((k) => Object.hasOwn(actual, k) && subset(actual[k], expected[k]));
-    }
-    function check(plan, observed, { allowUnexpected = false } = {}) {
-      const expected = array(plan?.expectations), gaps = [...array(plan?.gaps)], results = [];
-      const records = Array.isArray(observed) ? observed : null;
-      const map = !records && observed && typeof observed === "object" ? observed : {};
-      const used = /* @__PURE__ */ new Set();
-      const duplicates = expected.filter((e, i) => expected.findIndex((x) => x.id === e.id) !== i);
-      for (const e of duplicates) gaps.push({ kind: "duplicate-expectation", expectationId: e.id });
-      for (const e of expected) {
-        const error = descriptorError(e.match);
-        if (!e.bound || error) {
-          results.push({ id: e.id, ok: e.required === false, reason: error || "expectation has no explicit binding" });
-          continue;
-        }
-        const selector = e.select || { kind: e.kind, target: e.target, ...e.action ? { action: e.action } : {} };
-        let present, value, ambiguous = false;
-        if (records) {
-          const selected = records.filter((r) => r && (r.id === e.id || !r.id && Object.entries(selector).every(([key, wanted]) => key === "action" && r.action == null ? true : isDeepStrictEqual(r[key], wanted))));
-          for (const record of selected) used.add(record);
-          if (selector.action && selected.some((r) => r.action == null && !r.id)) {
-            const peers = expected.filter((other) => other.id !== e.id && other.select?.action !== selector.action && isDeepStrictEqual(other.select?.kind, selector.kind) && isDeepStrictEqual(other.select?.target, selector.target));
-            ambiguous = peers.length > 0;
-          }
-          present = selected.length > 0;
-          value = selected.length === 1 ? selected[0].value : selected.map((r) => r.value);
-        } else {
-          present = Object.hasOwn(map, e.id);
-          value = map[e.id];
-          if (present) used.add(e.id);
-        }
-        if (ambiguous) {
-          results.push({ id: e.id, ok: false, reason: "observation has no action id and matches multiple actions" });
-          continue;
-        }
-        if (!present && !(records && (e.match.op === "forbidden" || e.match.op === "count" && (e.match.value === 0 || e.match.max === 0)))) {
-          results.push({ id: e.id, ok: false, reason: "required observation is missing" });
-          continue;
-        }
-        const m = e.match, values = !present ? [] : Array.isArray(value) ? value : [value];
-        let ok = false;
-        if (m.op === "exact") ok = isDeepStrictEqual(value, m.value);
-        else if (m.op === "subset") ok = subset(value, m.value);
-        else if (m.op === "count") {
-          const n = values.length;
-          ok = (m.value == null || n === m.value) && (m.min == null || n >= m.min) && (m.max == null || n <= m.max);
-        } else if (m.op === "forbidden") ok = Object.hasOwn(m, "value") ? !values.some((v) => subset(v, m.value)) : !values.length;
-        else if (m.op === "ordered") {
-          let i = 0;
-          for (const v of values) if (i < m.value.length && subset(v, m.value[i])) i++;
-          ok = i === m.value.length && (m.exact === false || values.length === m.value.length);
-        }
-        results.push({ id: e.id, ok, reason: ok ? "matched" : `${m.op} expectation did not match`, ...m.op === "count" ? { count: values.length } : {} });
-      }
-      if (!allowUnexpected) {
-        if (records) records.forEach((record, index) => {
-          if (!used.has(record)) gaps.push({ kind: "unexpected-observation", observation: index, ...record?.id ? { id: record.id } : {} });
-        });
-        else for (const key of Object.keys(map)) if (!used.has(key)) gaps.push({ kind: "unexpected-observation", id: key });
-      }
-      if (!expected.length) gaps.push({ kind: "no-expectations", detail: "No explicit business expectations were checked." });
-      const passed = results.filter((r) => r.ok).length, failed = results.length - passed;
-      return { ok: failed === 0 && gaps.length === 0, passed, failed, results, gaps, coverage: { runtimeVerified: false, checked: results.length, note: "Checks apply to supplied observations; this function does not execute the service." } };
-    }
-    module2.exports = { inventory, actions, expectations, check };
+    module2.exports = { plan, capture, validate, redact, literal, statements, exportFixture, loadFixture, replay, resourcePath, save, load, valuesAt, related, exactNumbers, jsonValue };
   }
 });
 
@@ -10021,7 +10819,12 @@ var require_scenario_state = __commonJS({
         if (target !== resolved.topic) throw new Error("fixture topic differs from the declared read dependency");
         if (!Object.hasOwn(capture.events, target)) throw new Error(`capture does not contain ${target}`);
         value = capture.events[target].messages;
-      } else throw new Error("Fixture captures contain PostgreSQL and Kafka; provide other dependencies separately");
+      } else if (dep.kind === "es") {
+        const target = binding.index || resolved.index;
+        if (target !== resolved.index) throw new Error("fixture index differs from the declared read dependency");
+        if (!Object.hasOwn(capture.indexes || {}, target)) throw new Error(`capture does not contain ES ${target}`);
+        value = capture.indexes[target].documents;
+      } else throw new Error("Fixture captures contain PostgreSQL, Elasticsearch and Kafka; provide other dependencies separately");
       return { value, complete: capture.complete === true, gaps: capture.gaps, fixture: binding.capture };
     }
     async function captureState(plan, { adapters: supplied = {}, mask = true } = {}) {
@@ -10388,6 +11191,10 @@ var require_scenario_package = __commonJS({
           if (value.directory !== `kafka/${Buffer.from(topic).toString("hex")}`) throw new Error("scenario fixture topic directory does not match its source identity");
           for (const file of ["messages.jsonl", "schema.json", "offsets.json"]) if (!Object.hasOwn(manifest.files, `${value.directory}/${file}`)) throw new Error(`missing fixture ${topic} ${file}`);
         }
+        for (const [index, value] of Object.entries(manifest.elasticsearch || {})) {
+          if (value.directory !== `es/${Buffer.from(index).toString("hex")}`) throw new Error("scenario fixture ES directory does not match its source identity");
+          for (const file of ["mapping.json", "documents.jsonl", "observation.json"]) if (!Object.hasOwn(manifest.files, `${value.directory}/${file}`)) throw new Error(`missing fixture ${index} ${file}`);
+        }
       } else if (Object.keys(artifact.resources.files).length) throw new Error("scenario resources need fixture/manifest.json");
       if (artifact.runtime) {
         relative(artifact.runtime.profile);
@@ -10480,6 +11287,2028 @@ var require_scenario_package = __commonJS({
       };
     }
     module2.exports = { create, verify, importPackage, load, read, diff, explain, verifyExtracted, workspacePath, relative, digest, json };
+  }
+});
+
+// lib/scenario-container.js
+var require_scenario_container = __commonJS({
+  "lib/scenario-container.js"(exports2, module2) {
+    function harness() {
+      const fs2 = require("fs"), http2 = require("http"), path2 = require("path"), { spawn } = require("child_process"), { isDeepStrictEqual } = require("util");
+      const input = JSON.parse(fs2.readFileSync("/dt-control/input.json", "utf8")), counts = /* @__PURE__ */ new Map(), records = "/dt-evidence/events.jsonl";
+      const event = (value) => fs2.appendFileSync(records, JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), ...value }) + "\n");
+      const normalizedPath = (p) => {
+        const u = new URL(p, "http://local");
+        u.searchParams.sort();
+        return u.pathname + u.search;
+      };
+      const sequences = /* @__PURE__ */ new Map();
+      try {
+        const watch = fs2.watch("/dt-files", { recursive: true }, (change, filename) => event({ kind: filename ? "file-change" : "file-watch-gap", change, path: filename && String(filename).replace(/\\/g, "/") }));
+        watch.on("error", (e) => event({ kind: "file-watch-gap", error: e.message }));
+      } catch (e) {
+        event({ kind: "file-watch-gap", error: e.message });
+      }
+      const handler = async (id, req, res) => {
+        let bytes = 0, chunks = [];
+        for await (const part of req) {
+          bytes += part.length;
+          if (bytes > 1024 * 1024) {
+            event({ kind: "http-mismatch", reason: "request exceeds 1 MiB" });
+            res.writeHead(413).end();
+            return;
+          }
+          chunks.push(part);
+        }
+        let body = Buffer.concat(chunks).toString("utf8");
+        try {
+          body = JSON.parse(body);
+        } catch {
+        }
+        if (!chunks.length) body = null;
+        const request = { method: req.method, path: normalizedPath(req.url), body };
+        const exchanges = input.http[id]?.exchanges || [];
+        const index = exchanges.findIndex((exchange2, i) => {
+          const expected = exchange2.request, n = counts.get(`${id}:${i}`) || 0, max = exchange2.times?.max ?? exchange2.times?.value ?? 1;
+          return n < max && request.method === (expected.method || "GET").toUpperCase() && request.path === normalizedPath(expected.path || "/") && isDeepStrictEqual(request.body, Object.hasOwn(expected, "body") ? expected.body : null) && Object.entries(expected.headers || {}).every(([key, value]) => req.headers[key.toLowerCase()] === String(value));
+        });
+        if (index < 0) {
+          event({ kind: "http-mismatch", state: id, request, reason: "No exact method/path/body/header fixture with remaining calls" });
+          res.writeHead(503, { "content-type": "application/json" }).end('{"error":"scenario HTTP fixture mismatch"}');
+          return;
+        }
+        const exchange = exchanges[index], count = counts.get(`${id}:${index}`) || 0;
+        if (input.http[id].ordered && index !== (sequences.get(id) || 0)) {
+          event({ kind: "http-mismatch", state: id, request, reason: `Expected exchange ${sequences.get(id) || 0}, received ${index}` });
+          res.writeHead(503).end();
+          return;
+        }
+        counts.set(`${id}:${index}`, count + 1);
+        if (input.http[id].ordered && count + 1 >= (exchange.times?.max ?? exchange.times?.value ?? 1)) sequences.set(id, index + 1);
+        const responses = exchange.responses || [exchange.response], response = responses[Math.min(count, responses.length - 1)];
+        event({ kind: "http", state: id, exchange: index, request, count: count + 1 });
+        if (response.delayMs) await new Promise((r) => setTimeout(r, response.delayMs));
+        if (response.close) {
+          res.destroy();
+          return;
+        }
+        const text = typeof response.body === "string" ? response.body : response.body == null ? "" : JSON.stringify(response.body);
+        res.writeHead(response.status || 200, { "content-type": "application/json", ...response.headers || {} });
+        res.end(text);
+      };
+      const servers = [];
+      Promise.all(Object.keys(input.http).map((id) => new Promise((resolve, reject) => {
+        const server = http2.createServer((req, res) => {
+          handler(id, req, res).catch((error) => {
+            event({ kind: "http-mismatch", state: id, reason: error.message });
+            if (!res.headersSent) res.writeHead(503);
+            res.end();
+          });
+        });
+        servers.push(server);
+        server.once("error", reject);
+        server.listen(input.ports[id], "127.0.0.1", resolve);
+      }))).then(() => {
+        const child = spawn(process.execPath, ["--experimental-permission", "--allow-fs-read=/workspace", "--allow-fs-read=/dt-files", "--allow-fs-read=/tmp", "--allow-fs-read=/dt-control/audit.js", "--allow-fs-write=/dt-files", "--allow-fs-write=/tmp", "--require", "/dt-control/audit.js", path2.join("/workspace", input.profile.entry), ...input.profile.args || []], { cwd: "/workspace", env: { PATH: process.env.PATH, HOME: "/tmp", TMPDIR: "/tmp", NODE_ENV: "test", ...input.env }, stdio: ["ignore", "pipe", "pipe", "ipc"] });
+        child.on("message", (message) => {
+          if (message && message.dtFileAudit === 1 && typeof message.path === "string" && message.path.startsWith("/dt-files/")) event({ kind: "file-operation", path: path2.relative("/dt-files", message.path), operation: String(message.operation || "write").slice(0, 40) });
+        });
+        child.stdout.on("data", (c) => process.stdout.write(c));
+        child.stderr.on("data", (c) => process.stderr.write(c));
+        child.on("error", (e) => {
+          event({ kind: "process-error", error: e.message });
+          process.exit(1);
+        });
+        child.on("close", (code) => {
+          event({ kind: "process-exit", code });
+          process.exit(code || 0);
+        });
+        process.on("SIGTERM", () => {
+          child.kill("SIGTERM");
+          servers.forEach((server) => server.close());
+          setTimeout(() => process.exit(0), 500).unref();
+        });
+        event({ kind: "started", pid: child.pid });
+      }).catch((error) => {
+        event({ kind: "process-error", error: error.message });
+        process.exit(1);
+      });
+    }
+    function audit() {
+      const fs2 = require("fs"), path2 = require("path"), { fileURLToPath } = require("url"), descriptors = /* @__PURE__ */ new Map();
+      const filename = (value) => typeof value === "number" ? descriptors.get(value) : value instanceof URL ? fileURLToPath(value) : typeof value === "string" || Buffer.isBuffer(value) ? path2.resolve(String(value)) : null;
+      const record = (operation, value) => {
+        const full = filename(value);
+        if (full?.startsWith("/dt-files/")) process.send?.({ dtFileAudit: 1, operation, path: full });
+      };
+      const methods = { writeFile: [0], appendFile: [0], unlink: [0], rename: [0, 1], rm: [0], mkdir: [0], rmdir: [0], copyFile: [1], cp: [1], truncate: [0], chmod: [0], chown: [0], symlink: [1], link: [1] };
+      for (const [name, positions] of Object.entries(methods)) {
+        if (fs2[name + "Sync"]) {
+          const original = fs2[name + "Sync"];
+          fs2[name + "Sync"] = function(...args) {
+            const result = Reflect.apply(original, this, args);
+            positions.forEach((i) => record(name, args[i]));
+            return result;
+          };
+        }
+        if (fs2[name]) {
+          const original = fs2[name];
+          fs2[name] = function(...args) {
+            const callback = args.at(-1);
+            if (typeof callback === "function") args[args.length - 1] = function(error, ...values) {
+              if (!error) positions.forEach((i) => record(name, args[i]));
+              Reflect.apply(callback, this, [error, ...values]);
+            };
+            return Reflect.apply(original, this, args);
+          };
+        }
+        if (fs2.promises[name]) {
+          const original = fs2.promises[name];
+          fs2.promises[name] = async function(...args) {
+            const result = await Reflect.apply(original, this, args);
+            positions.forEach((i) => record(name, args[i]));
+            return result;
+          };
+        }
+      }
+      const openSync = fs2.openSync;
+      fs2.openSync = function(file, flags, ...args) {
+        const fd = Reflect.apply(openSync, this, [file, flags, ...args]);
+        descriptors.set(fd, filename(file));
+        if (typeof flags === "number" || /[wa+]/.test(flags || "r")) record("open", file);
+        return fd;
+      };
+      for (const name of ["writeSync", "writevSync", "ftruncateSync", "fchmodSync", "fchownSync"]) {
+        const original = fs2[name];
+        if (original) fs2[name] = function(...args) {
+          const result = Reflect.apply(original, this, args);
+          record(name, args[0]);
+          return result;
+        };
+      }
+      const closeSync = fs2.closeSync;
+      fs2.closeSync = function(fd) {
+        const result = Reflect.apply(closeSync, this, [fd]);
+        descriptors.delete(fd);
+        return result;
+      };
+      const open = fs2.open;
+      fs2.open = function(file, flags, ...args) {
+        const callback = args.at(-1);
+        if (typeof callback === "function") args[args.length - 1] = function(error, fd) {
+          if (!error) {
+            descriptors.set(fd, filename(file));
+            if (typeof flags === "number" || /[wa+]/.test(flags || "r")) record("open", file);
+          }
+          Reflect.apply(callback, this, [error, fd]);
+        };
+        return Reflect.apply(open, this, [file, flags, ...args]);
+      };
+      for (const name of ["write", "writev", "ftruncate", "fchmod", "fchown"]) {
+        const original = fs2[name];
+        if (original) fs2[name] = function(...args) {
+          const callback = args.at(-1);
+          if (typeof callback === "function") args[args.length - 1] = function(error, ...values) {
+            if (!error) record(name, args[0]);
+            Reflect.apply(callback, this, [error, ...values]);
+          };
+          return Reflect.apply(original, this, args);
+        };
+      }
+      const promiseOpen = fs2.promises.open;
+      fs2.promises.open = async function(file, flags, ...args) {
+        const handle = await Reflect.apply(promiseOpen, this, [file, flags, ...args]);
+        if (typeof flags === "number" || /[wa+]/.test(flags || "r")) record("open", file);
+        for (const name of ["write", "writev", "writeFile", "appendFile", "truncate", "chmod", "chown"]) {
+          const original = handle[name];
+          handle[name] = async function(...values) {
+            const result = await Reflect.apply(original, this, values);
+            record(name, file);
+            return result;
+          };
+        }
+        return handle;
+      };
+      const stream = fs2.createWriteStream;
+      fs2.createWriteStream = function(file, options) {
+        const result = Reflect.apply(stream, this, [file, options]);
+        result.on("finish", () => record("stream", file || options?.fd));
+        return result;
+      };
+      require("module").syncBuiltinESMExports();
+    }
+    function client() {
+      const http2 = require("http");
+      let data = "";
+      process.stdin.on("data", (c) => {
+        data += c;
+      });
+      process.stdin.on("end", () => {
+        try {
+          const input = JSON.parse(data), body = Object.hasOwn(input, "body") ? typeof input.body === "string" ? input.body : JSON.stringify(input.body) : null;
+          const req = http2.request({ hostname: "127.0.0.1", port: input.port, method: input.method || "GET", path: input.path, headers: { ...body ? { "content-type": "application/json", "content-length": Buffer.byteLength(body) } : {}, ...input.headers || {} }, timeout: input.timeoutMs || 1e4 }, (res) => {
+            let size = 0, chunks = [];
+            res.on("data", (c) => {
+              size += c.length;
+              if (size > 2 * 1024 * 1024) req.destroy(new Error("HTTP response exceeds 2 MiB"));
+              else chunks.push(c);
+            });
+            res.on("end", () => {
+              let value = Buffer.concat(chunks).toString("utf8");
+              try {
+                value = JSON.parse(value);
+              } catch {
+              }
+              process.stdout.write(JSON.stringify({ status: res.statusCode, headers: res.headers, body: value }));
+            });
+          });
+          req.on("timeout", () => req.destroy(new Error("HTTP deadline expired")));
+          req.on("error", (e) => {
+            process.stderr.write(e.message);
+            process.exitCode = 1;
+          });
+          req.end(body);
+        } catch (e) {
+          process.stderr.write(e.message);
+          process.exitCode = 1;
+        }
+      });
+    }
+    module2.exports = { harness: `(${harness.toString()})();
+`, client: `(${client.toString()})();
+`, audit: `(${audit.toString()})();
+` };
+  }
+});
+
+// lib/scenario-runtime.js
+var require_scenario_runtime = __commonJS({
+  "lib/scenario-runtime.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var crypto = require("crypto");
+    var { spawn } = require("child_process");
+    var { isDeepStrictEqual } = require("util");
+    var P = require_scenario_package();
+    var { CACHE: CACHE2, readJson } = require_util();
+    var ROOT = path2.join(CACHE2, "scenario-runs");
+    var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    var checkCancellation = () => {
+      const why = require_trace().current()?.cancelled;
+      if (why) throw new Error(`scenario cancelled: ${why}`);
+    };
+    var bounded = (n, def, max) => {
+      n ??= def;
+      if (!Number.isInteger(n) || n < 0 || n > max) throw new Error(`duration/limit must be 0..${max}`);
+      return n;
+    };
+    function exec(command, args, { input, timeoutMs = 3e4, cwd } = {}) {
+      return new Promise((resolve) => {
+        let out2 = "", error = "", done = false;
+        const child = spawn(command, args, { cwd, env: Object.fromEntries(Object.entries(process.env).filter(([key]) => /^(PATH|HOME|USER|LANG|LC_\w+|DOCKER_HOST|DOCKER_CONTEXT|DOCKER_CONFIG|DOCKER_TLS_VERIFY|DOCKER_CERT_PATH|TMPDIR)$/.test(key))), stdio: ["pipe", "pipe", "pipe"] });
+        require_trace().child(child);
+        const timer = setTimeout(() => {
+          child.kill("SIGKILL");
+        }, timeoutMs);
+        child.stdout.on("data", (c) => {
+          out2 = (out2 + c).slice(-2 * 1024 * 1024);
+        });
+        child.stderr.on("data", (c) => {
+          error = (error + c).slice(-3e4);
+        });
+        const finish = (code, reason) => {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          resolve({ code, out: out2, error: reason || error });
+        };
+        child.on("error", (e) => finish(-1, e.message));
+        child.on("close", (code) => finish(code));
+        child.stdin.on("error", () => {
+        });
+        child.stdin.end(input || "");
+      });
+    }
+    function sessionPath(id) {
+      if (!/^[a-f0-9]{24}$/.test(id || "")) throw new Error("invalid scenario session id");
+      return path2.join(ROOT, id);
+    }
+    function load(id, { stopped = false, expired = false } = {}) {
+      const dir = sessionPath(id), m = readJson(path2.join(dir, "session.json"));
+      if (!m) throw new Error("scenario session not found");
+      if (!stopped && m.status !== "ready") throw new Error(`scenario session is ${m.status}`);
+      if (!expired && Date.now() > m.expiresAt) throw new Error("scenario session lease expired; stop it or run scenario_cleanup");
+      return { m, dir };
+    }
+    function save(m) {
+      const file = path2.join(sessionPath(m.id), "session.json"), prior = readJson(file);
+      if (prior?.status === "stopped" && m.status !== "stopped") Object.assign(m, { status: "stopped", stoppedAt: prior.stoppedAt, timings: { ...m.timings, cleanupMs: prior.timings.cleanupMs } });
+      const temp = `${file}.tmp-${crypto.randomBytes(5).toString("hex")}`;
+      fs2.writeFileSync(temp, JSON.stringify(m, null, 2), { mode: 384 });
+      fs2.renameSync(temp, file);
+    }
+    async function locked(id, fn) {
+      const lock = path2.join(sessionPath(id), "operation.lock");
+      try {
+        fs2.mkdirSync(lock);
+      } catch (e) {
+        if (e.code === "EEXIST") throw new Error("scenario session already has an active action/observation");
+        throw e;
+      }
+      try {
+        return await fn();
+      } finally {
+        fs2.rmSync(lock, { recursive: true, force: true });
+      }
+    }
+    function publicSession(m) {
+      return {
+        id: m.id,
+        workspace: m.workspace,
+        package: m.packagePath,
+        artifact: m.artifact,
+        service: m.service,
+        status: m.status,
+        startedAt: m.startedAt,
+        expiresAt: new Date(m.expiresAt).toISOString(),
+        adapter: m.adapter,
+        proof: m.proof,
+        actions: m.actions,
+        timings: m.timings,
+        ...m.cleanupError ? { cleanupError: m.cleanupError } : {},
+        ...m.result ? { result: m.result } : {}
+      };
+    }
+    function profileFor(workspace, artifact) {
+      if (!artifact.runtime) throw new Error("scenario package needs a reviewed workspace runtime profile");
+      const p = P.workspacePath(workspace, artifact.runtime.profile), text = fs2.readFileSync(p.full);
+      if (P.digest(text) !== artifact.runtime.sha256) throw new Error("runtime profile changed: review it and create a new scenario package");
+      const profile = JSON.parse(text);
+      if (profile.version !== 1 || !["node-container", "test-run"].includes(profile.adapter)) throw new Error("runtime profile version 1 adapter must be node-container or test-run");
+      return profile;
+    }
+    function requestFor(action) {
+      const binding = action.binding;
+      if (!binding || typeof binding !== "object" || !binding.path || !String(binding.path).startsWith("/") || String(binding.path).startsWith("//") || /[\r\n]/.test(binding.path)) throw new Error(`action ${action.id} needs a bound relative HTTP path`);
+      const declared = String(action.target).match(/^([A-Z]+)\s+(.+)$/), method = String(binding.method || declared?.[1] || "GET").toUpperCase();
+      if (!/^(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)$/.test(method) || declared && method !== declared[1]) throw new Error(`action ${action.id} method differs from its declared entry`);
+      if (declared) {
+        const pattern = declared[2].split(/\{[^}]*\}/).map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[^/?]+");
+        if (!new RegExp(`^${pattern}(?:\\?.*)?$`).test(binding.path)) throw new Error(`action ${action.id} path differs from its declared entry`);
+      }
+      return { method, path: binding.path, headers: binding.headers || {}, ...Object.hasOwn(binding, "body") ? { body: binding.body } : {} };
+    }
+    function validateHttp(value, id) {
+      if (!Array.isArray(value?.exchanges) || !value.exchanges.length) throw new Error(`HTTP state ${id} needs exchanges [{request,response}]`);
+      for (const exchange of value.exchanges) {
+        if (!exchange.request || !String(exchange.request.path || "/").startsWith("/") || String(exchange.request.path || "/").startsWith("//")) throw new Error(`HTTP state ${id} exchange needs a local request.path`);
+        const min = exchange.times?.min ?? exchange.times?.value ?? 1, max = exchange.times?.max ?? exchange.times?.value ?? 1;
+        if (!Number.isInteger(min) || !Number.isInteger(max) || min < 0 || max < min || max > 1e3) throw new Error(`HTTP state ${id} call count must satisfy 0 <= min <= max <= 1000`);
+        const responses = exchange.responses || [exchange.response];
+        if (!Array.isArray(responses) || !responses.length || responses.some((r) => !r || typeof r !== "object" || r.status && (!Number.isInteger(r.status) || r.status < 100 || r.status > 599))) throw new Error(`HTTP state ${id} needs valid response fixtures`);
+        responses.forEach((r) => bounded(r.delayMs, 0, 1e4));
+      }
+    }
+    function preflight(workspace, packagePath) {
+      const artifact = P.load(workspace, packagePath), profile = profileFor(workspace, artifact), gaps = [], { inventory, state, actions, expectations } = artifact.contract;
+      const gap = (kind, detail, id) => gaps.push({ kind, detail, ...id ? { id } : {} });
+      if (profile.adapter === "node-container") {
+        try {
+          P.workspacePath(workspace, profile.entry);
+        } catch (e) {
+          gap("entrypoint", e.message);
+        }
+        if (!/^[a-zA-Z0-9][a-zA-Z0-9._/:@-]*$/.test(profile.image || "")) gap("image", "Specify an existing stock Node image; the runtime never pulls images");
+        if (!Number.isInteger(profile.port) || profile.port < 1 || profile.port > 65535 || profile.port === 19081) gap("port", "Service port must be 1..65535 and different from stub port 19081");
+        if (profile.args && (!Array.isArray(profile.args) || profile.args.length > 100 || profile.args.some((a) => typeof a !== "string" || a.length > 2048))) gap("args", "Entrypoint args must be at most 100 strings of at most 2048 characters");
+        try {
+          bounded(profile.readyTimeoutMs, 1e4, 6e4);
+          bounded(profile.actionTimeoutMs, 1e4, 3e4);
+          bounded(profile.temporal?.deadlineMs, 1e3, 3e4);
+          bounded(profile.temporal?.quietMs, 0, 1e4);
+          bounded(profile.temporal?.intervalMs, 50, 1e3);
+          if (profile.readyTimeoutMs === 0 || profile.actionTimeoutMs === 0) throw new Error("Readiness and action deadlines must be positive");
+          if (profile.readyPath && (!profile.readyPath.startsWith("/") || profile.readyPath.startsWith("//") || /[\r\n]/.test(profile.readyPath))) throw new Error("Readiness path must be a relative HTTP path");
+          if (profile.readyStatus !== void 0 && (!Number.isInteger(profile.readyStatus) || profile.readyStatus < 100 || profile.readyStatus > 599)) throw new Error("Readiness status must be 100..599");
+        } catch (e) {
+          gap("runtime-limits", e.message);
+        }
+        const mapped = /* @__PURE__ */ new Set();
+        const filePaths = [];
+        for (const [kind, bindings] of Object.entries({ http: profile.http, config: profile.config, file: profile.files })) for (const [id, binding] of Object.entries(bindings || {})) {
+          const dep = inventory.states.find((s) => s.id === id);
+          if (!dep || dep.kind !== kind) {
+            gap("state-binding", `Runtime ${kind} mapping does not match inventory state`, id);
+            continue;
+          }
+          mapped.add(id);
+          try {
+            if (kind === "http") {
+              validateHttp(state.states[id].value, id);
+              if (!/^[A-Z][A-Z0-9_]*$/.test(binding)) throw new Error("HTTP mapping must name an environment variable");
+            }
+            if (kind === "config" && !/^[A-Z][A-Z0-9_]*$/.test(binding)) throw new Error("Config mapping must name an environment variable");
+            if (kind === "file") {
+              P.relative(binding.path);
+              filePaths.push(binding.path);
+              if (!["json", "text", "base64"].includes(binding.encoding || "json")) throw new Error("File encoding must be json, text or base64");
+              if (["text", "base64"].includes(binding.encoding) && typeof state.states[id].value !== "string") throw new Error("Text/base64 file state must be an explicit string");
+              if (binding.encoding === "base64" && Buffer.from(state.states[id].value, "base64").toString("base64") !== state.states[id].value) throw new Error("File base64 data must be canonical and valid");
+            }
+          } catch (e) {
+            gap("state-binding", e.message, id);
+          }
+        }
+        for (const dep of inventory.states) if (dep.required !== false && !mapped.has(dep.id)) gap("unsupported-runtime-state", `node-container supports explicit HTTP, config and file reads; ${dep.kind} needs a project test adapter`, dep.id);
+        for (const action of actions.actions) try {
+          if (action.kind !== "http") throw new Error(`${action.kind} actions need a project test adapter; native Kafka/schedule/method replay is not implemented`);
+          requestFor(action);
+        } catch (e) {
+          gap("unsupported-runtime-action", e.message, action.id);
+        }
+        const envVars = [...Object.values(profile.http || {}), ...Object.values(profile.config || {})];
+        if (new Set(filePaths).size !== filePaths.length || filePaths.some((file) => filePaths.some((other) => other !== file && file.startsWith(other + "/")))) gap("file-binding", "File state paths must be distinct and cannot be parents of another file");
+        if (new Set(envVars).size !== envVars.length || envVars.some((k) => ["PATH", "HOME", "NODE_OPTIONS", "NODE_PATH", "PORT", "DT_SCENARIO_FILES"].includes(k))) gap("environment-binding", "State environment bindings must be unique and cannot replace runtime control variables");
+        for (const id of Object.keys(profile.observations || {})) if (!expectations.expectations.some((e) => e.id === id)) gap("observation", "Unknown expectation id", id);
+        for (const expected of expectations.expectations) {
+          const id = expected.id, observation = profile.observations?.[id] || (["status", "return"].includes(expected.kind) ? { kind: expected.kind, action: expected.action } : null);
+          if (!observation) {
+            gap("unbound-observer", "Bind an independent runtime observer for this expectation", id);
+            continue;
+          }
+          if (!["status", "return", "http", "file"].includes(observation.kind)) gap("observation", `Unsupported observer ${observation.kind}`, id);
+          if (observation.kind !== expected.kind) gap("observation-kind", `A ${expected.kind} expectation cannot be satisfied by a ${observation.kind} observer`, id);
+          if (Object.hasOwn(observation, "action") && observation.action !== expected.action) gap("observation-action", "Observer action must equal the declared expectation action", id);
+          const action = actions.actions.find((a) => a.id === expected.action);
+          if (expected.action && !action) gap("observation-action", "Expectation action is not in the bound runtime actions", id);
+          if (expected.select && ["kind", "target", "action"].some((key) => Object.hasOwn(expected.select, key) && !isDeepStrictEqual(expected.select[key], expected[key]))) gap("observation-selector", "Runtime selectors cannot change declared effect kind, target or action", id);
+          if (["status", "return"].includes(observation.kind) && (!action || !isDeepStrictEqual(expected.target, action.target))) gap("observation-target", "Response observer target must equal its declared action entry", id);
+          if (observation.kind === "http") {
+            const dep = inventory.states.find((s) => s.id === observation.state);
+            if (!profile.http?.[observation.state] || dep?.kind !== "http") gap("observation", "HTTP observer needs a mapped HTTP state id", id);
+            else if (!isDeepStrictEqual(dep.target, expected.target) || expected.action && !action?.dependencies.includes(dep.id)) gap("observation-target", "HTTP observer must collect the exact target declared for this action", id);
+          }
+          if (observation.kind === "file") try {
+            P.relative(observation.path);
+            if (typeof expected.target?.path !== "string" || expected.target.path !== observation.path) throw new Error("File observer path must equal the concrete declared expectation target.path");
+          } catch (e) {
+            gap("observation-target", e.message, id);
+          }
+        }
+      } else {
+        if (!Array.isArray(profile.tests) || !profile.tests.length || profile.tests.some((t) => typeof t !== "string")) gap("tests", "test-run profile needs exact project test selectors");
+        if (!["build", "fast", "auto", void 0].includes(profile.mode)) gap("mode", "test mode must be build, fast or auto");
+        try {
+          P.workspacePath(workspace, profile.report, { missing: true });
+          if (!/^(?:[^/]+\/)*(?:target|build)\//.test(profile.report)) throw new Error("Project observation report must be below a target/ or build/ directory");
+        } catch (e) {
+          gap("observation-report", e.message);
+        }
+        if (Object.keys(artifact.resources.files).length && !profile.fixtureBindings && Object.keys(JSON.parse(artifact.resources.files["fixture/manifest.json"].data).databases || {}).length > 1) gap("datasources", "Multiple fixture databases need explicit fixtureBindings");
+        try {
+          P.verifyExtracted(workspace, packagePath, artifact);
+        } catch (e) {
+          gap("fixture-integrity", e.message);
+        }
+      }
+      return {
+        ok: !gaps.length,
+        workspace,
+        package: packagePath,
+        artifact: artifact.sha256,
+        service: artifact.service,
+        adapter: profile.adapter,
+        gaps,
+        support: profile.adapter === "node-container" ? { states: ["http", "config", "file"], actions: ["http"], observations: ["status", "return", "http", "file"], network: "docker --network none", brokerCodecs: [] } : { execution: "existing test_run", dependencies: "owned by reviewed project tests", runtimeReadsVerified: false },
+        proof: { level: "discovery", applicationExecuted: false, runtimeReadsVerified: false }
+      };
+    }
+    async function probe(workspace, packagePath) {
+      checkCancellation();
+      const report = preflight(workspace, packagePath);
+      if (!report.ok || report.adapter !== "node-container") return report;
+      const artifact = P.load(workspace, packagePath), profile = profileFor(workspace, artifact);
+      const inspected = await exec("docker", ["image", "inspect", "--format", "{{.Id}}", profile.image], { timeoutMs: 1e4 });
+      report.prerequisites = { image: profile.image, imageId: inspected.code === 0 ? inspected.out.trim() : null, docker: inspected.code === 0, imagePull: false };
+      if (inspected.code !== 0) {
+        report.ok = false;
+        report.gaps.push({ kind: "docker-image", detail: `Docker must be reachable and ${profile.image} must already exist: ${inspected.error || inspected.out}` });
+      }
+      return report;
+    }
+    async function identity(m) {
+      const r = await exec("docker", ["inspect", "--format", "{{json .Config.Labels}}", m.container]);
+      if (r.code !== 0) {
+        const absent = new RegExp(`^(?:Error(?: response from daemon)?:\\s*)?No such (?:object|container):\\s*${m.container.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "im");
+        if (r.code === 1 && absent.test(r.error)) return false;
+        throw new Error(`cannot verify scenario container: ${r.error || r.out || `docker inspect exited ${r.code}`}`);
+      }
+      let labels;
+      try {
+        labels = JSON.parse(r.out);
+      } catch {
+        throw new Error("cannot verify scenario container ownership");
+      }
+      if (!labels || labels["dt.scenario.owner"] !== m.owner || labels["dt.scenario.id"] !== m.id) throw new Error("container ownership does not match scenario session; refusing to operate");
+      return true;
+    }
+    function sessionArtifact(m) {
+      const artifact = P.load(m.workspace, m.packagePath);
+      if (artifact.sha256 !== m.artifact) throw new Error("scenario package changed during session");
+      if (!isDeepStrictEqual(profileFor(m.workspace, artifact), m.profile)) throw new Error("durable session profile differs from its reviewed profile");
+      const checked = preflight(m.workspace, m.packagePath);
+      if (!checked.ok) throw new Error(`session runtime preflight failed: ${checked.gaps.map((g) => `${g.kind}: ${g.detail}`).join("; ")}`);
+      return artifact;
+    }
+    function fileTree(dir) {
+      const result = {};
+      function walk(root, prefix) {
+        if (!fs2.existsSync(root)) return;
+        for (const item of fs2.readdirSync(root, { withFileTypes: true })) {
+          const rel = prefix ? `${prefix}/${item.name}` : item.name, full = path2.join(root, item.name);
+          if (item.isSymbolicLink()) {
+            result[rel] = { unsupported: "symlink" };
+            continue;
+          }
+          if (item.isDirectory()) walk(full, rel);
+          else if (item.isFile()) {
+            const stat = fs2.statSync(full);
+            result[rel] = stat.size > 2 * 1024 * 1024 ? { unsupported: "file exceeds 2 MiB" } : { sha256: P.digest(fs2.readFileSync(full)), bytes: stat.size };
+          } else result[rel] = { unsupported: "special file" };
+          if (Object.keys(result).length > 1e3) throw new Error("scenario file tree exceeds 1000 files");
+        }
+      }
+      walk(dir, "");
+      return result;
+    }
+    function fileValue(dir, observer) {
+      const full = path2.join(dir, P.relative(observer.path));
+      let cursor = full;
+      while (cursor !== dir) {
+        if (fs2.existsSync(cursor) && fs2.lstatSync(cursor).isSymbolicLink()) throw new Error("file observer refuses symlink");
+        cursor = path2.dirname(cursor);
+      }
+      if (!fs2.existsSync(full)) return null;
+      if (!fs2.statSync(full).isFile() || fs2.statSync(full).size > 2 * 1024 * 1024) throw new Error("file observer requires an ordinary file <= 2 MiB");
+      const body = fs2.readFileSync(full);
+      return observer.encoding === "base64" ? body.toString("base64") : observer.encoding === "text" ? body.toString("utf8") : JSON.parse(body.toString("utf8"));
+    }
+    async function request(m, request2) {
+      checkCancellation();
+      if (!await identity(m)) throw new Error("scenario container disappeared");
+      const r = await exec("docker", ["exec", "-i", m.container, "node", "/dt-control/client.js"], { input: JSON.stringify({ port: m.port, ...request2 }), timeoutMs: (request2.timeoutMs || 1e4) + 3e3 });
+      if (r.code !== 0) throw new Error(`service request failed: ${r.error || r.out}`);
+      try {
+        return JSON.parse(r.out);
+      } catch {
+        throw new Error("service client did not return a valid response");
+      }
+    }
+    async function start(workspace, packagePath, { ttlMs = 3e5 } = {}) {
+      const started = Date.now(), report = await probe(workspace, packagePath);
+      if (!report.ok) return { ok: false, preflight: report };
+      const artifact = P.load(workspace, packagePath), profile = profileFor(workspace, artifact);
+      if (profile.adapter === "test-run") throw new Error("test-run is one-shot: use scenario_run");
+      ttlMs = bounded(ttlMs, 3e5, 36e5);
+      if (ttlMs < 1e3) throw new Error("scenario lease must be at least 1000 ms");
+      const id = crypto.randomBytes(12).toString("hex"), dir = sessionPath(id), owner = crypto.randomBytes(20).toString("hex");
+      fs2.mkdirSync(ROOT, { recursive: true, mode: 448 });
+      const m = {
+        id,
+        workspace,
+        packagePath,
+        artifact: artifact.sha256,
+        service: artifact.service,
+        profile,
+        adapter: profile.adapter,
+        status: "starting",
+        startedAt: (/* @__PURE__ */ new Date()).toISOString(),
+        expiresAt: Date.now() + ttlMs,
+        container: `dt-scenario-${id}`,
+        owner,
+        port: profile.port,
+        actions: [],
+        timings: {},
+        proof: { level: "process", applicationExecuted: false, runtimeReadsVerified: false, network: "none" }
+      };
+      const reservation = path2.join(ROOT, ".reservation.lock");
+      try {
+        fs2.mkdirSync(reservation);
+      } catch (e) {
+        if (e.code === "EEXIST") throw new Error("scenario startup reservation is busy; retry after the current reservation");
+        throw e;
+      }
+      try {
+        fs2.writeFileSync(path2.join(reservation, "owner.json"), JSON.stringify({ pid: process.pid }));
+        const active = fs2.readdirSync(ROOT).filter((id2) => /^[a-f0-9]{24}$/.test(id2)).map((id2) => readJson(path2.join(ROOT, id2, "session.json"))).filter((s) => s && ["starting", "ready"].includes(s.status));
+        const maximum = require_config().getTests().scenarioConcurrency ?? 2;
+        if (!Number.isInteger(maximum) || maximum < 1 || maximum > 8) throw new Error("tests.scenarioConcurrency must be 1..8");
+        if (active.length >= maximum) throw new Error(`scenario capacity ${maximum} reached; stop or clean up a session before starting another`);
+        fs2.mkdirSync(dir, { recursive: true, mode: 448 });
+        save(m);
+      } finally {
+        fs2.rmSync(reservation, { recursive: true, force: true });
+      }
+      try {
+        const input = { profile, http: {}, ports: {}, env: { PORT: String(profile.port), DT_SCENARIO_FILES: "/dt-files" } };
+        let port = 19081;
+        for (const [sid, variable] of Object.entries(profile.http || {})) {
+          if (port === profile.port) port++;
+          input.http[sid] = artifact.contract.state.states[sid].value;
+          input.ports[sid] = port;
+          input.env[variable] = `http://127.0.0.1:${port++}`;
+        }
+        for (const [sid, variable] of Object.entries(profile.config || {})) {
+          const v = artifact.contract.state.states[sid].value;
+          input.env[variable] = typeof v === "object" ? JSON.stringify(v) : String(v);
+        }
+        fs2.mkdirSync(path2.join(dir, "files"));
+        for (const [sid, binding] of Object.entries(profile.files || {})) {
+          const value = artifact.contract.state.states[sid].value, full = path2.join(dir, "files", binding.path);
+          fs2.mkdirSync(path2.dirname(full), { recursive: true });
+          fs2.writeFileSync(full, binding.encoding === "base64" ? Buffer.from(value, "base64") : binding.encoding === "text" ? String(value) : JSON.stringify(value));
+        }
+        m.filesBefore = fileTree(path2.join(dir, "files"));
+        fs2.mkdirSync(path2.join(dir, "control"));
+        fs2.mkdirSync(path2.join(dir, "evidence"));
+        fs2.writeFileSync(path2.join(dir, "control/input.json"), JSON.stringify(input));
+        fs2.writeFileSync(path2.join(dir, "control/harness.js"), require_scenario_container().harness);
+        fs2.writeFileSync(path2.join(dir, "control/client.js"), require_scenario_container().client);
+        fs2.writeFileSync(path2.join(dir, "control/audit.js"), require_scenario_container().audit);
+        fs2.writeFileSync(path2.join(dir, "evidence/events.jsonl"), "");
+        const root = fs2.realpathSync(require_workspace().checkId(workspace).path);
+        if (root.includes(",") || dir.includes(",")) throw new Error("Docker mount paths containing commas are unsupported");
+        const create = await exec("docker", ["run", "--detach", "--pull=never", "--name", m.container, "--label", `dt.scenario.owner=${owner}`, "--label", `dt.scenario.id=${id}`, "--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "64", "--memory", "256m", "--cpus", "1", "--tmpfs", "/tmp:rw,nosuid,size=64m", "--mount", `type=bind,source=${root},target=/workspace,readonly`, "--mount", `type=bind,source=${dir}/control,target=/dt-control,readonly`, "--mount", `type=bind,source=${dir}/files,target=/dt-files`, "--mount", `type=bind,source=${dir}/evidence,target=/dt-evidence`, "--workdir", "/workspace", "--entrypoint", "node", profile.image, "/dt-control/harness.js"]);
+        if (create.code !== 0) throw new Error(`Docker start failed: ${create.error || create.out}`);
+        m.timings.startMs = Date.now() - started;
+        const deadline = Date.now() + bounded(profile.readyTimeoutMs, 1e4, 6e4), ready = profile.readyPath || "/health";
+        if (!ready.startsWith("/") || ready.startsWith("//")) throw new Error("readiness path must be local");
+        let last;
+        do {
+          checkCancellation();
+          try {
+            const response = await request(m, { path: ready, timeoutMs: 500 });
+            if (response.status === (profile.readyStatus || 200)) {
+              m.status = "ready";
+              m.proof.applicationExecuted = true;
+              m.timings.readyMs = Date.now() - started - m.timings.startMs;
+              save(m);
+              return { ok: true, session: publicSession(m) };
+            }
+            last = `HTTP ${response.status}`;
+          } catch (e) {
+            last = e.message;
+          }
+          await sleep(50);
+        } while (Date.now() < deadline);
+        throw new Error(`Service readiness deadline expired: ${last}`);
+      } catch (e) {
+        m.status = "failed";
+        m.error = e.message;
+        save(m);
+        let logs = "";
+        try {
+          logs = (await exec("docker", ["logs", "--tail", "100", m.container])).out;
+        } catch {
+        }
+        await stop(id).catch(() => {
+        });
+        return { ok: false, error: e.message, session: publicSession(m), logs };
+      }
+    }
+    async function act(id, actionId) {
+      return locked(id, async () => {
+        const { m } = load(id), artifact = sessionArtifact(m);
+        const action = artifact.contract.actions.actions.find((a) => a.id === actionId);
+        if (!action) throw new Error("unknown scenario action");
+        if (m.actions.some((a) => a.id === actionId)) throw new Error("action already performed; start a clean session for deterministic replay");
+        const started = Date.now(), before = readEvents(id).length;
+        try {
+          const response = await request(m, { ...requestFor(action), timeoutMs: bounded(m.profile.actionTimeoutMs, 1e4, 3e4) });
+          const result = { id: actionId, at: (/* @__PURE__ */ new Date()).toISOString(), ms: Date.now() - started, eventStart: before, response };
+          m.actions.push(result);
+          save(m);
+          return { ok: true, session: id, action: result };
+        } catch (e) {
+          m.actions.push({ id: actionId, at: (/* @__PURE__ */ new Date()).toISOString(), ms: Date.now() - started, error: e.message, eventStart: before });
+          save(m);
+          return { ok: false, session: id, action: actionId, error: e.message };
+        }
+      });
+    }
+    function readEvents(id) {
+      const file = path2.join(sessionPath(id), "evidence/events.jsonl");
+      if (!fs2.existsSync(file)) return [];
+      if (fs2.statSync(file).size > 4 * 1024 * 1024) throw new Error("scenario event evidence exceeds 4 MiB");
+      const text = fs2.readFileSync(file, "utf8"), lines = text.split("\n");
+      if (lines.at(-1) !== "") lines.pop();
+      return lines.filter(Boolean).map((line) => JSON.parse(line));
+    }
+    function sample(m, artifact) {
+      const observed = {}, events = readEvents(m.id), violations = events.filter((e) => ["http-mismatch", "process-error", "process-exit", "file-watch-gap"].includes(e.kind));
+      const { expectations } = artifact.contract;
+      for (const expected of expectations.expectations) {
+        const observer = m.profile.observations?.[expected.id] || (["status", "return"].includes(expected.kind) ? { kind: expected.kind, action: expected.action } : null);
+        if (!observer) continue;
+        const action = m.actions.find((a) => a.id === (observer.action || expected.action));
+        if (expected.action && !action) continue;
+        if (observer.kind === "status" && action?.response) observed[expected.id] = action.response.status;
+        else if (observer.kind === "return" && action?.response) observed[expected.id] = action.response.body;
+        else if (observer.kind === "http") {
+          const next = action && m.actions[m.actions.indexOf(action) + 1];
+          observed[expected.id] = events.slice(action?.eventStart || 0, next?.eventStart).filter((e) => e.kind === "http" && e.state === observer.state).map((e) => e.request);
+        } else if (observer.kind === "file") observed[expected.id] = fileValue(path2.join(sessionPath(m.id), "files"), observer);
+      }
+      const files = fileTree(path2.join(sessionPath(m.id), "files")), allowed = new Set(Object.values(m.profile.observations || {}).filter((o) => o.kind === "file").map((o) => o.path));
+      const allowedDirectories = new Set([...allowed].flatMap((rel) => {
+        const parts = rel.split("/"), result = [];
+        for (let n = 1; n < parts.length; n++) result.push(parts.slice(0, n).join("/"));
+        return result;
+      }));
+      for (const event of events) if (["file-change", "file-operation"].includes(event.kind) && !allowed.has(event.path) && !allowedDirectories.has(event.path)) violations.push({ kind: "unexpected-file-effect", path: event.path, change: event.change || event.operation });
+      for (const rel of /* @__PURE__ */ new Set([...Object.keys(files), ...Object.keys(m.filesBefore || {})])) if (!isDeepStrictEqual(files[rel], m.filesBefore?.[rel]) && !allowed.has(rel)) violations.push({ kind: "unexpected-file-effect", path: rel });
+      for (const [sid, value] of Object.entries(artifact.contract.state.states)) if (m.profile.http?.[sid]) for (let index = 0; index < value.value.exchanges.length; index++) {
+        const exchange = value.value.exchanges[index], count = events.filter((e) => e.kind === "http" && e.state === sid && e.exchange === index).length;
+        const min = exchange.times?.min ?? exchange.times?.value ?? 1, max = exchange.times?.max ?? exchange.times?.value ?? 1;
+        if (count < min || count > max) violations.push({ kind: "http-call-count", state: sid, exchange: index, count, min, max });
+      }
+      for (const a of artifact.contract.actions.actions) if (!m.actions.some((done) => done.id === a.id && done.response)) violations.push({ kind: "unperformed-action", action: a.id });
+      const checks = require_scenario().check(expectations, observed);
+      return { ok: checks.ok && !violations.length, observed, checks, violations, events, files, proof: { ...m.proof, level: "process", applicationExecuted: true, independentObservations: true, runtimeReadsVerified: false } };
+    }
+    async function observe(id, { deadlineMs, quietMs, intervalMs } = {}) {
+      return locked(id, async () => {
+        const { m } = load(id), artifact = sessionArtifact(m);
+        if (!await identity(m)) throw new Error("scenario container disappeared");
+        const temporal = m.profile.temporal || {};
+        deadlineMs = bounded(deadlineMs, temporal.deadlineMs ?? 1e3, 3e4);
+        quietMs = bounded(quietMs, temporal.quietMs ?? 0, 1e4);
+        intervalMs = Math.max(10, bounded(intervalMs, temporal.intervalMs ?? 50, 1e3));
+        const start2 = Date.now(), deadline = start2 + deadlineMs;
+        let result, quietStart = null, samples = 0;
+        do {
+          checkCancellation();
+          result = sample(m, artifact);
+          samples++;
+          if (result.ok) {
+            quietStart ??= Date.now();
+            if (Date.now() - quietStart >= quietMs) break;
+          } else quietStart = null;
+          if (Date.now() >= deadline) break;
+          await sleep(Math.min(intervalMs, deadline - Date.now()));
+        } while (Date.now() <= deadline);
+        if (result.ok && quietStart != null && Date.now() - quietStart < quietMs) {
+          result.ok = false;
+          result.violations.push({ kind: "quiet-window-incomplete", requiredMs: quietMs, observedMs: Date.now() - quietStart });
+        }
+        result.temporal = { deadlineMs, quietMs, elapsedMs: Date.now() - start2, samples };
+        m.result = result;
+        m.timings.observeMs = result.temporal.elapsedMs;
+        save(m);
+        return { session: id, ...result };
+      });
+    }
+    async function inspect(id) {
+      if (!id) return { sessions: (fs2.existsSync(ROOT) ? fs2.readdirSync(ROOT).filter((id2) => /^[a-f0-9]{24}$/.test(id2)).map((id2) => readJson(path2.join(ROOT, id2, "session.json"))).filter(Boolean) : []).sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, 100).map((m2) => ({ ...publicSession(m2), ...m2.cleanupError ? { cleanupError: m2.cleanupError } : {} })) };
+      const { m } = load(id, { stopped: true, expired: true });
+      const logs = m.status === "stopped" ? m.logs || "" : (await exec("docker", ["logs", "--tail", "100", m.container])).out;
+      return { session: publicSession(m), events: readEvents(id), logs, ...m.error ? { error: m.error } : {} };
+    }
+    function check(id) {
+      const { m } = load(id, { stopped: true, expired: true });
+      if (!m.result) throw new Error("Collect independent effects with scenario_observe first");
+      const artifact = sessionArtifact(m);
+      const checks = require_scenario().check(artifact.contract.expectations, m.result.observed);
+      return { session: id, ok: checks.ok && !m.result.violations.length, checks, violations: m.result.violations, temporal: m.result.temporal, proof: m.result.proof };
+    }
+    async function stop(id) {
+      const { m } = load(id, { stopped: true, expired: true }), started = Date.now();
+      let present;
+      try {
+        present = await identity(m);
+      } catch (e) {
+        m.cleanupError = e.message;
+        save(m);
+        throw e;
+      }
+      if (m.status === "stopped" && !present) return { stopped: true, session: id, reused: true };
+      if (present) {
+        const logs = await exec("docker", ["logs", "--tail", "100", m.container]);
+        m.logs = `${logs.out}${logs.error}`.slice(-3e4);
+        const r = await exec("docker", ["rm", "--force", m.container]);
+        if (r.code !== 0) {
+          m.cleanupError = r.error;
+          save(m);
+          throw new Error(`scenario container cleanup failed: ${r.error}`);
+        }
+      }
+      delete m.cleanupError;
+      m.status = "stopped";
+      m.stoppedAt = (/* @__PURE__ */ new Date()).toISOString();
+      m.timings.cleanupMs = Date.now() - started;
+      save(m);
+      return { stopped: true, session: id, ms: m.timings.cleanupMs };
+    }
+    async function cleanup() {
+      const results = [];
+      const reservation = path2.join(ROOT, ".reservation.lock");
+      if (fs2.existsSync(reservation) && Date.now() - fs2.statSync(reservation).mtimeMs > 3e4) {
+        const owner = readJson(path2.join(reservation, "owner.json"));
+        let alive = false;
+        if (owner?.pid) try {
+          process.kill(owner.pid, 0);
+          alive = true;
+        } catch (e) {
+          if (e.code !== "ESRCH") alive = true;
+        }
+        if (!alive) {
+          fs2.rmSync(reservation, { recursive: true, force: true });
+          results.push({ recoveredStartupReservation: true });
+        }
+      }
+      for (const id of fs2.existsSync(ROOT) ? fs2.readdirSync(ROOT).filter((id2) => /^[a-f0-9]{24}$/.test(id2)) : []) {
+        const { m } = load(id, { stopped: true, expired: true });
+        if (Date.now() > m.expiresAt) try {
+          results.push(await stop(id));
+        } catch (e) {
+          results.push({ session: id, error: e.message });
+        }
+      }
+      return { ok: results.every((r) => !r.error), results };
+    }
+    async function run(workspace, packagePath, options = {}) {
+      const report = await probe(workspace, packagePath);
+      if (!report.ok) return { ok: false, preflight: report };
+      const artifact = P.load(workspace, packagePath), profile = profileFor(workspace, artifact);
+      if (profile.adapter === "test-run") {
+        const root = path2.posix.dirname(packagePath), fixture = artifact.resources.files["fixture/manifest.json"];
+        const reportFile = P.workspacePath(workspace, profile.report, { missing: true }).full;
+        fs2.rmSync(reportFile, { force: true });
+        const result = await require_testrun().run(workspace, { tests: profile.tests, mode: profile.mode || "build", scenarioPath: packagePath, scenarioOutput: profile.report, ...fixture ? { fixturePath: `${root}/fixture`, fixtureBindings: profile.fixtureBindings, fixtureTemplate: profile.template === true } : {} });
+        const gaps = [];
+        let observationReport, checks;
+        try {
+          P.workspacePath(workspace, profile.report);
+          if (fs2.statSync(reportFile).size > 4 * 1024 * 1024) throw new Error("project observation report exceeds 4 MiB");
+          observationReport = JSON.parse(fs2.readFileSync(reportFile, "utf8"));
+          if (observationReport.version !== 1 || observationReport.artifact !== artifact.sha256) throw new Error("project observation report version/artifact fingerprint mismatch");
+          const actual = observationReport.actions;
+          if (!Array.isArray(actual) || actual.some((id2) => typeof id2 !== "string") || new Set(actual).size !== actual.length || !isDeepStrictEqual([...actual].sort(), artifact.contract.actions.actions.map((a) => a.id).sort())) throw new Error("project report must account for every bound action exactly once");
+          checks = require_scenario().check(artifact.contract.expectations, observationReport.observed);
+        } catch (e) {
+          gaps.push({ kind: "project-observation-report", detail: e.message });
+        }
+        return {
+          ok: result.outcome === "passed" && !gaps.length && checks?.ok === true,
+          adapter: "test-run",
+          result,
+          gaps,
+          checks,
+          observed: observationReport?.observed,
+          proof: { level: "build", applicationExecuted: result.counts?.tests > 0, independentObservations: "collected by reviewed project adapter", expectationsChecked: checks?.ok === true, runtimeReadsVerified: false, network: "owned by project test adapter" }
+        };
+      }
+      const prepared = await start(workspace, packagePath, options);
+      if (!prepared.ok) return prepared;
+      const id = prepared.session.id;
+      let output;
+      try {
+        for (const action of artifact.contract.actions.actions) {
+          const r = await act(id, action.id);
+          if (!r.ok) {
+            output = { ok: false, session: id, action: r, proof: prepared.session.proof };
+            break;
+          }
+        }
+        if (!output) output = await observe(id, options);
+      } finally {
+        await stop(id);
+      }
+      const final = await inspect(id);
+      return { ...output, timings: final.session.timings, sessionStatus: final.session.status };
+    }
+    module2.exports = { preflight, probe, start, act, observe, check, inspect, stop, cleanup, run, requestFor, profileFor, fileTree, exec };
+  }
+});
+
+// lib/reproduction-runtime.js
+var require_reproduction_runtime = __commonJS({
+  "lib/reproduction-runtime.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var crypto = require("crypto");
+    var net = require("net");
+    var postgres = require_src();
+    var { isDeepStrictEqual } = require("util");
+    var { CACHE: CACHE2, readJson } = require_util();
+    var R = require_reproduction();
+    var ROOT = path2.join(CACHE2, "fixture-runs");
+    var hash = (value) => crypto.createHash("sha256").update(JSON.stringify(value)).digest("hex");
+    var qi = (value) => `"${String(value).replace(/"/g, '""')}"`;
+    var qt = (value) => value.split(".").map(qi).join(".");
+    var sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    var cancellation = (session) => {
+      const reason = require_trace().current()?.cancelled || (session && readJson(path2.join(location(session.id), "session.json"))?.stopRequestedAt ? "stop requested" : null);
+      if (reason) throw new Error(`fixture runtime cancelled: ${reason}`);
+    };
+    var exec = (...args) => require_scenario_runtime().exec(...args);
+    var DEFAULT_IMAGES = { pg: "postgres:16-alpine", es: "docker.elastic.co/elasticsearch/elasticsearch:8.17.3", kafka: "docker.redpanda.com/redpandadata/redpanda:v24.3.6" };
+    var bounded = (value, def, low, high, name) => {
+      value ??= def;
+      if (!Number.isInteger(value) || value < low || value > high) throw new Error(`${name} must be ${low}..${high}`);
+      return value;
+    };
+    function strict(value, keys, name) {
+      if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`${name} must be an object`);
+      const extra = Object.keys(value).filter((k) => !keys.includes(k));
+      if (extra.length) throw new Error(`unsupported ${name}: ${extra.join(", ")}`);
+    }
+    function location(id) {
+      if (!/^[a-f0-9]{24}$/.test(id || "")) throw new Error("invalid fixture runtime id");
+      return path2.join(ROOT, id);
+    }
+    function save(session) {
+      const dir = location(session.id);
+      const prior = readJson(path2.join(dir, "session.json"));
+      if (prior?.stopRequestedAt) session.stopRequestedAt = prior.stopRequestedAt;
+      fs2.mkdirSync(dir, { recursive: true });
+      const temporary = path2.join(dir, `${crypto.randomBytes(6).toString("hex")}.tmp`);
+      fs2.writeFileSync(temporary, JSON.stringify(session, null, 2), { mode: 384 });
+      fs2.renameSync(temporary, path2.join(dir, "session.json"));
+    }
+    function load(id, stopped = false) {
+      const session = readJson(path2.join(location(id), "session.json"));
+      if (!session) throw new Error("fixture runtime not found");
+      if (!stopped && session.status !== "ready") throw new Error(`fixture runtime is ${session.status}`);
+      if (!stopped && Date.now() > session.expiresAt) throw new Error("fixture runtime lease expired; stop it or call fixture_runtime_cleanup");
+      return session;
+    }
+    async function locked(id, run) {
+      const dir = path2.join(location(id), "operation.lock");
+      try {
+        fs2.mkdirSync(dir);
+      } catch (e) {
+        if (e.code === "EEXIST") throw new Error("fixture runtime already has an active operation");
+        throw e;
+      }
+      try {
+        return await run();
+      } finally {
+        fs2.rmSync(dir, { recursive: true, force: true });
+      }
+    }
+    function profile(workspace, file) {
+      if (/(^|\/)src\/test\/resources\/dt-(scenarios|fixtures)\//.test(file || "")) throw new Error("reviewed runtime profile must be outside imported test resources");
+      const full = require_scenario_package().workspacePath(workspace, file).full, text = fs2.readFileSync(full), value = JSON.parse(text);
+      strict(value, ["version", "adapter", "images", "ttlMs", "readyTimeoutMs", "observationLimit", "kafka"], "native fixture profile");
+      if (value.version !== 1 || value.adapter !== "native-containers") throw new Error("fixture profile must be version 1 adapter native-containers");
+      if (value.images) strict(value.images, ["pg", "es", "kafka"], "fixture images");
+      if (value.kafka) strict(value.kafka, ["allowOffsetRemap"], "Kafka profile");
+      const images = { ...DEFAULT_IMAGES, ...value.images };
+      for (const image of Object.values(images)) if (!/^[\w][\w./:@-]+$/.test(image)) throw new Error("fixture image must be an exact existing Docker image");
+      return { value: { ...value, images, ttlMs: bounded(value.ttlMs, 6e5, 1e3, 36e5, "ttlMs"), readyTimeoutMs: bounded(value.readyTimeoutMs, 18e4, 1e3, 3e5, "readyTimeoutMs"), observationLimit: bounded(value.observationLimit, 2e3, 1, 1e4, "observationLimit") }, digest: hash(text.toString()) };
+    }
+    function publicSession(session) {
+      return { version: 1, adapter: "native-containers/v1", id: session.id, workspace: session.workspace, directory: session.directory, status: session.status, expiresAt: new Date(session.expiresAt).toISOString(), proof: session.proof, sources: session.sources, timings: session.timings, ...session.expectations ? { expectations: { digest: session.expectations.digest, armedAt: session.expectations.armedAt } } : {}, ...session.cleanupError ? { cleanupError: session.cleanupError } : {} };
+    }
+    async function docker(args, options) {
+      const result = await exec("docker", args, options);
+      if (result.code !== 0) throw new Error(`Docker ${args.slice(0, 2).join(" ")}: ${result.error || result.out || result.code}`);
+      return result.out.trim();
+    }
+    async function owned(session, container) {
+      const result = await exec("docker", ["inspect", "--format", '{"labels":{{json .Config.Labels}},"image":{{json .Image}}}', container]);
+      if (result.code !== 0) {
+        if (/No such (?:object|container)/i.test(result.error + result.out)) return false;
+        throw new Error(`cannot verify fixture container ownership: ${result.error || result.out}`);
+      }
+      const inspected = JSON.parse(result.out), labels = inspected.labels;
+      const kind = Object.keys(session.names || {}).find((kind2) => session.names[kind2] === container), expectedImage = session.proof?.imageIds?.[kind];
+      if (expectedImage && inspected.image !== expectedImage) throw new Error(`fixture container ${container} image identity differs from its pinned preflight image`);
+      if (labels?.["dt.fixture.owner"] !== session.owner || labels?.["dt.fixture.id"] !== session.id) throw new Error(`fixture container ${container} has different ownership; refusing operation`);
+      return true;
+    }
+    async function verify(session, { source } = {}) {
+      if (profile(session.workspace, session.profilePath).digest !== session.profileDigest) throw new Error("reviewed runtime profile changed");
+      if (hash(R.loadFixture(session.workspace, session.directory).files) !== session.fixtureDigest) throw new Error("fixture changed since native replay");
+      for (const container of session.containers.filter((name) => !source || session.names[source.split(":")[0]] === name)) if (!await owned(session, container)) throw new Error(`fixture container disappeared: ${container}`);
+    }
+    async function port() {
+      return new Promise((resolve, reject) => {
+        const server = net.createServer();
+        server.on("error", reject);
+        server.listen(0, "127.0.0.1", () => {
+          const value = server.address().port;
+          server.close((error) => error ? reject(error) : resolve(value));
+        });
+      });
+    }
+    async function waitFor(session, operation) {
+      const deadline = Date.now() + session.profile.readyTimeoutMs;
+      let error;
+      while (Date.now() < deadline) {
+        cancellation(session);
+        try {
+          return await operation();
+        } catch (e) {
+          error = e;
+          await sleep(200);
+        }
+      }
+      throw new Error(`native dependency readiness deadline: ${error?.message || "not ready"}`);
+    }
+    async function esRequest(session, route, options = {}) {
+      const controller = AbortSignal.timeout(15e3), response = await fetch(session.endpoints.es + route, { ...options, headers: { "content-type": "application/json", ...options.headers }, body: options.body === void 0 ? void 0 : typeof options.body === "string" ? options.body : JSON.stringify(options.body), signal: controller, redirect: "error" });
+      let chunks = [], size = 0;
+      for await (const chunk of response.body) {
+        size += chunk.length;
+        if (size > 16 * 1024 * 1024) throw new Error("native ES observation exceeds 16 MiB");
+        chunks.push(Buffer.from(chunk));
+      }
+      const text = Buffer.concat(chunks).toString("utf8");
+      if (!response.ok) throw new Error(`native ES ${response.status}: ${text.slice(0, 500)}`);
+      return text ? require_fixture_json().parse(text) : {};
+    }
+    async function pgConnection(session, database, fn) {
+      const sql = postgres(session.endpoints.pg, { database, username: "postgres", password: session.password, max: 1, connect_timeout: 3, onnotice: () => {
+      } });
+      try {
+        return await fn(sql);
+      } finally {
+        await sql.end({ timeout: 2 });
+      }
+    }
+    async function rpk(session, args, options) {
+      return docker(["exec", "-i", session.names.kafka, "rpk", ...args, "-X", "brokers=127.0.0.1:9092"], options);
+    }
+    var wire = (value, codec) => value == null ? null : codec === "auto" ? typeof value === "string" ? value : JSON.stringify(value) : codec === "string" ? typeof value === "string" ? value : (() => {
+      throw new Error("string codec needs explicit string values");
+    })() : JSON.stringify(value);
+    function headersOf(value) {
+      if (value == null) return [];
+      const headers = Array.isArray(value) ? value : Object.entries(value).map(([key, value2]) => ({ key, value: value2 }));
+      for (const h of headers) if (typeof h.key !== "string" || typeof h.value !== "string" || /[\r\n\0]/.test(h.key)) throw new Error("native Kafka headers need string key/value pairs");
+      return headers;
+    }
+    async function publish(session, topic, message, codec = "auto") {
+      if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,248}$/.test(topic) || !Number.isInteger(message.partition) || message.partition < 0 || message.partition > 1e3) throw new Error("invalid native Kafka topic/partition");
+      R.exactNumbers(message, "native Kafka payload");
+      const key = wire(message.key, codec), value = wire(message.value, codec);
+      let input = "", format = "";
+      if (key !== null) {
+        input += `${Buffer.byteLength(key)}:${key}`;
+        format += "%K:%k";
+      }
+      input += `${Buffer.byteLength(value || "")}:${value || ""}`;
+      format += "%V:%v";
+      const args = ["topic", "produce", topic, "--partition", String(message.partition), "--format", format, "--output-format", "%p:%o\\n", "--delivery-timeout", "10s"];
+      if (value === null) args.push("--tombstone");
+      for (const h of headersOf(message.headers)) args.push("--header", `${h.key}:${h.value}`);
+      const result = await rpk(session, args, { input, timeoutMs: 2e4 });
+      const parts = result.trim().split(":");
+      return { partition: Number(parts[0]), offset: parts[1], sourceOffset: message.offset == null ? null : String(message.offset), sourceTimestamp: message.timestamp ?? null, timestampPreserved: false };
+    }
+    async function nativeStart(session, manifest) {
+      const labels = ["--label", `dt.fixture.owner=${session.owner}`, "--label", `dt.fixture.id=${session.id}`];
+      const run = async (kind, args) => {
+        cancellation(session);
+        const name = `dt-fixture-${session.id}-${kind}`;
+        session.names[kind] = name;
+        session.containers.push(name);
+        save(session);
+        await docker(["run", "--detach", "--pull=never", "--name", name, ...labels, "--network", session.network, "--cap-drop", "ALL", "--security-opt", "no-new-privileges", ...args]);
+      };
+      if (Object.keys(manifest.databases).length) {
+        await run("pg", ["--user", "postgres", "--publish", "127.0.0.1::5432", "--memory", "512m", "--cpus", "1", "--env", `POSTGRES_PASSWORD=${session.password}`, "--env", "PGDATA=/tmp/pgdata", "--tmpfs", "/tmp:rw,nosuid,size=384m", session.proof.imageIds.pg]);
+        const mapping = JSON.parse(await docker(["inspect", "--format", "{{json .NetworkSettings.Ports}}", session.names.pg]));
+        session.endpoints.pg = `postgresql://127.0.0.1:${mapping["5432/tcp"][0].HostPort}/postgres`;
+        save(session);
+        await waitFor(session, () => pgConnection(session, "postgres", (sql) => sql`select 1`));
+        await pgConnection(session, "postgres", (sql) => sql.unsafe(`create role dt_fixture_app login password '${session.applicationPassword}'`));
+        for (const [logical, db] of Object.entries(manifest.databases)) {
+          const name = `fixture_${Buffer.from(logical).toString("hex")}`;
+          if (name.length > 63) throw new Error("native fixture database name exceeds PostgreSQL identifier limit");
+          await pgConnection(session, "postgres", (sql) => sql.unsafe(`create database ${qi(name)}`));
+          session.databases[logical] = name;
+          save(session);
+          const statements = [...db.statements.schema, ...db.statements.data, ...db.statements.constraints];
+          require_testdb().checkStatements(statements);
+          await pgConnection(session, name, async (sql) => {
+            await sql.unsafe(`set statement_timeout='30s'`);
+            for (const statement of statements) {
+              cancellation(session);
+              await sql.unsafe(statement);
+            }
+            await sql.unsafe(`create schema dt_fixture_observation; revoke all on schema dt_fixture_observation from public;
+          create table dt_fixture_observation.writes (ordinal bigserial primary key, target text not null, operation text not null, before_row jsonb, after_row jsonb);
+          create function dt_fixture_observation.record() returns trigger language plpgsql security definer set search_path=pg_catalog,dt_fixture_observation as $$
+          begin
+            insert into dt_fixture_observation.writes(target,operation,before_row,after_row) values (TG_TABLE_SCHEMA||'.'||TG_TABLE_NAME,TG_OP,case when TG_OP in ('UPDATE','DELETE') then to_jsonb(OLD) end,case when TG_OP in ('UPDATE','INSERT') then to_jsonb(NEW) end);
+            if TG_LEVEL='STATEMENT' then return NULL; end if; if TG_OP='DELETE' then return OLD; end if; return NEW;
+          end $$`);
+            for (const t of manifest.plan.tables.filter((t2) => t2.db === logical)) {
+              await sql.unsafe(`create trigger dt_fixture_audit after insert or update or delete on ${qt(t.table)} for each row execute function dt_fixture_observation.record()`);
+              await sql.unsafe(`create trigger dt_fixture_truncate after truncate on ${qt(t.table)} for each statement execute function dt_fixture_observation.record()`);
+              await sql.unsafe(`grant usage on schema ${qi(t.table.split(".")[0])} to dt_fixture_app; grant select,insert,update,delete,truncate on ${qt(t.table)} to dt_fixture_app`);
+            }
+            for (const schema of new Set(manifest.plan.tables.filter((t) => t.db === logical).map((t) => t.table.split(".")[0]))) await sql.unsafe(`grant usage,select on all sequences in schema ${qi(schema)} to dt_fixture_app`);
+          });
+        }
+      }
+      if (Object.keys(manifest.elasticsearch || {}).length) {
+        await run("es", ["--publish", "127.0.0.1::9200", "--memory", "1536m", "--cpus", "4", "--env", "xpack.ml.enabled=false", "--env", "ingest.geoip.downloader.enabled=false", "--env", "discovery.type=single-node", "--env", "xpack.security.enabled=false", "--env", "ES_JAVA_OPTS=-Xms512m -Xmx512m", session.proof.imageIds.es]);
+        const mapping = JSON.parse(await docker(["inspect", "--format", "{{json .NetworkSettings.Ports}}", session.names.es]));
+        session.endpoints.es = `http://127.0.0.1:${mapping["9200/tcp"][0].HostPort}`;
+        save(session);
+        await waitFor(session, () => esRequest(session, "/_cluster/health?wait_for_status=yellow&timeout=1s"));
+        for (const [index, source] of Object.entries(manifest.elasticsearch)) {
+          await esRequest(session, `/${encodeURIComponent(index)}`, { method: "PUT", body: { mappings: source.mapping, settings: { ...source.settings, number_of_shards: 1, number_of_replicas: 0 } } });
+          for (const document2 of source.documents) await esRequest(session, `/${encodeURIComponent(index)}/_doc/${encodeURIComponent(document2._id)}`, { method: "PUT", body: document2._source });
+          await esRequest(session, `/${encodeURIComponent(index)}/_refresh`, { method: "POST" });
+        }
+      }
+      if (Object.keys(manifest.topics || {}).length) {
+        const exposed = await port();
+        session.endpoints.kafka = `127.0.0.1:${exposed}`;
+        await run("kafka", ["--publish", `127.0.0.1:${exposed}:19092`, "--memory", "768m", "--cpus", "1", session.proof.imageIds.kafka, "redpanda", "start", "--overprovisioned", "--smp", "1", "--memory", "512M", "--reserve-memory", "0M", "--node-id", "0", "--check=false", "--kafka-addr", "internal://0.0.0.0:9092,external://0.0.0.0:19092", "--advertise-kafka-addr", `internal://dt-fixture-${session.id}-kafka:9092,external://127.0.0.1:${exposed}`]);
+        save(session);
+        await waitFor(session, () => rpk(session, ["cluster", "info"], { timeoutMs: 3e3 }));
+        for (const [topic, source] of Object.entries(manifest.topics)) {
+          const partitions = Math.max(1, ...source.envelopes.map((m) => m.partition + 1));
+          if (partitions > 1001) throw new Error("Kafka fixture has too many partitions");
+          await rpk(session, ["topic", "create", topic, "--partitions", String(partitions), "--replicas", "1"]);
+          const codec = manifest.plan.topics.find((t) => t.topic === topic)?.codec || "auto";
+          session.offsets[topic] = [];
+          for (const message of source.envelopes) {
+            const errors = require_fixture_payload().validateEnvelope(message, source.schema, codec);
+            if (errors.length) throw new Error(errors.join("; "));
+            session.offsets[topic].push(await publish(session, topic, message, codec));
+          }
+        }
+      }
+    }
+    async function preflight(workspace, directory, profilePath) {
+      const manifest = R.loadFixture(workspace, directory), reviewed = profile(workspace, profilePath), gaps = [];
+      if (!manifest.complete) gaps.push({ kind: "incomplete-fixture", detail: "A native replay requires a complete reviewed capture" });
+      if (Object.keys(manifest.topics || {}).length && reviewed.value.kafka?.allowOffsetRemap !== true) gaps.push({ kind: "kafka-offset-policy", detail: "Explicitly set kafka.allowOffsetRemap:true; source offsets/timestamps remain metadata and broker offsets/timestamps are new" });
+      const needed = [...Object.keys(manifest.databases).length ? ["pg"] : [], ...Object.keys(manifest.elasticsearch || {}).length ? ["es"] : [], ...Object.keys(manifest.topics || {}).length ? ["kafka"] : []];
+      const images = {};
+      for (const kind of needed) {
+        const inspected = await exec("docker", ["image", "inspect", "--format", "{{.Id}}", reviewed.value.images[kind]], { timeoutMs: 1e4 });
+        if (inspected.code !== 0) gaps.push({ kind: "docker-image", source: kind, detail: `Required existing image ${reviewed.value.images[kind]} is unavailable; no images are pulled` });
+        else images[kind] = inspected.out.trim();
+      }
+      return { version: 1, ok: !gaps.length, gaps, images, profile: reviewed.digest, capabilities: { postgres: "SQL/constraints, exact numeric strings", es: "mappings/documents", kafka: "decoded JSON/untouched UTF-8 string keys/values, headers, partitions; offsets/timestamps remapped", distributedSnapshot: false } };
+    }
+    function reserve(workspace, directory, profilePath, manifest, reviewed, report) {
+      const id = crypto.randomBytes(12).toString("hex");
+      fs2.mkdirSync(ROOT, { recursive: true, mode: 448 });
+      const reservation = path2.join(ROOT, ".reservation.lock");
+      try {
+        fs2.mkdirSync(reservation);
+      } catch (e) {
+        if (e.code === "EEXIST") throw new Error("native fixture startup reservation busy; retry or recover a stale lock with cleanup");
+        throw e;
+      }
+      try {
+        fs2.writeFileSync(path2.join(reservation, "owner.json"), JSON.stringify({ pid: process.pid, startedAt: Date.now() }));
+        const active = fs2.existsSync(ROOT) ? fs2.readdirSync(ROOT).filter((id2) => /^[a-f0-9]{24}$/.test(id2)).map((id2) => readJson(path2.join(ROOT, id2, "session.json"))).filter((s) => s && s.status !== "stopped") : [];
+        if (active.length >= 2) throw new Error("native fixture capacity reached (2); stop or clean expired runtimes");
+        const session = { version: 1, id, owner: crypto.randomUUID(), workspace, directory, fixtureDigest: hash(manifest.files), profilePath, profileDigest: reviewed.digest, profile: reviewed.value, expiresAt: Date.now() + reviewed.value.ttlMs, status: "starting", network: `dt-fixture-${id}`, containers: [], names: {}, endpoints: {}, databases: {}, offsets: {}, password: crypto.randomBytes(24).toString("hex"), applicationPassword: crypto.randomBytes(24).toString("hex"), sources: { pg: Object.keys(manifest.databases), es: Object.keys(manifest.elasticsearch || {}), kafka: Object.keys(manifest.topics || {}) }, timings: {}, proof: { level: "native-dependencies", applicationExecuted: false, runtimeReadsVerified: false, sourceWrites: false, network: "owned Docker bridge with loopback publications; outbound network is not blocked", distributedSnapshot: false, sourceKafkaOffsetsPreserved: false, sourceKafkaTimestampsPreserved: false, imageIds: report.images } };
+        fs2.mkdirSync(location(session.id), { recursive: true, mode: 448 });
+        save(session);
+        return session;
+      } finally {
+        fs2.rmSync(reservation, { recursive: true, force: true });
+      }
+    }
+    async function start(workspace, directory, profilePath) {
+      const report = await preflight(workspace, directory, profilePath);
+      if (!report.ok) return { ok: false, preflight: report };
+      const manifest = R.loadFixture(workspace, directory), session = reserve(workspace, directory, profilePath, manifest, profile(workspace, profilePath), report), id = session.id;
+      const started = Date.now();
+      fs2.writeFileSync(path2.join(location(id), "starting.json"), JSON.stringify({ pid: process.pid }), { mode: 384 });
+      try {
+        await docker(["network", "create", "--label", `dt.fixture.owner=${session.owner}`, "--label", `dt.fixture.id=${id}`, session.network]);
+        await nativeStart(session, manifest);
+        cancellation(session);
+        session.status = "ready";
+        session.timings.startMs = Date.now() - started;
+        save(session);
+        session.baseline = await observeSources(session, manifest);
+        session.baselineDigest = hash(session.baseline);
+        save(session);
+        return { ok: true, session: publicSession(session), baselineDigest: session.baselineDigest };
+      } catch (error) {
+        session.error = error.message;
+        session.failureEvidence = {};
+        for (const name of session.containers) {
+          const inspected = await exec("docker", ["inspect", "--format", "{{json .State}}", name]);
+          const logs = await exec("docker", ["logs", "--tail", "10", name]);
+          session.failureEvidence[name] = { state: inspected.out.slice(0, 1e3), logs: (logs.out + logs.error).slice(-4e3) };
+        }
+        error.nativeEvidence = session.failureEvidence;
+        save(session);
+        try {
+          await stop(id, { startupOwner: true });
+        } catch (cleanup2) {
+          error.cleanupError = cleanup2.message;
+        }
+        throw error;
+      } finally {
+        fs2.rmSync(path2.join(location(id), "starting.json"), { force: true });
+      }
+    }
+    async function bindings(id) {
+      const session = load(id);
+      await verify(session);
+      return { id, workspace: session.workspace, directory: session.directory, databases: Object.fromEntries(Object.entries(session.databases).map(([logical, db]) => [logical, { database: db, url: `${session.endpoints.pg.replace(/\/postgres$/, "")}/${db}`, user: "dt_fixture_app", password: session.applicationPassword, jdbcUrl: `jdbc:${session.endpoints.pg.replace(/\/postgres$/, "")}/${db}` }])), es: session.endpoints.es, kafka: session.endpoints.kafka, offsetMappings: session.offsets, fixtureDigest: session.fixtureDigest, profileDigest: session.profileDigest, runnerHost: "local", environment: "owned-local-fixture", proof: session.proof };
+    }
+    async function observeSources(session, manifest, { source } = {}) {
+      const selected = (id) => !source || source === id;
+      const sources = {}, writeEvidence = {}, limit = session.profile.observationLimit;
+      for (const [logical, name] of Object.entries(session.databases)) {
+        if (source && (!source.startsWith("pg:") || source.split(":")[1] !== logical)) continue;
+        writeEvidence[logical] = [...await pgConnection(session, name, (sql) => sql.unsafe(`select ordinal::text,target,operation,before_row::text as before_json,after_row::text as after_json from dt_fixture_observation.writes order by ordinal limit ${limit + 1}`))].map((row) => R.jsonValue({ ...row }));
+        if (writeEvidence[logical].length > limit) throw new Error(`PG write observer exceeded ${limit} events: ${logical}; cannot prove effects`);
+      }
+      for (const table2 of manifest.plan.tables || []) {
+        if (!session.databases[table2.db] || !selected(`pg:${table2.id}`)) continue;
+        const rows = await pgConnection(session, session.databases[table2.db], (sql) => sql.begin("read only", (tx) => tx.unsafe(`select * from ${qt(table2.table)} limit ${limit + 1}`)));
+        if (rows.length > limit) throw new Error(`PG observer exceeded ${limit} rows: ${table2.id}; cannot prove effects`);
+        R.exactNumbers(rows, `PG observation ${table2.id}`);
+        sources[`pg:${table2.id}`] = [...rows].map((row) => R.jsonValue({ ...row })).sort((a, b) => require_scenario_package().json(a).localeCompare(require_scenario_package().json(b)));
+      }
+      for (const index of Object.keys(manifest.elasticsearch || {})) {
+        if (!selected(`es:${index}`)) continue;
+        await esRequest(session, `/${encodeURIComponent(index)}/_refresh`, { method: "POST" });
+        const response = await esRequest(session, `/${encodeURIComponent(index)}/_search`, { method: "POST", body: { size: limit + 1, track_total_hits: true, seq_no_primary_term: true, query: { match_all: {} } } });
+        if ((response.hits.total?.value ?? response.hits.total) > limit) throw new Error(`ES observer exceeded ${limit} documents: ${index}; cannot prove effects`);
+        sources[`es:${index}`] = response.hits.hits.map((doc) => ({ _id: doc._id, _source: doc._source })).sort((a, b) => a._id.localeCompare(b._id));
+        const stats = await esRequest(session, `/${encodeURIComponent(index)}/_stats/indexing?filter_path=indices.*.uuid,indices.*.primaries.indexing`), indexStats = stats.indices?.[index], counters = indexStats?.primaries?.indexing;
+        if (typeof indexStats?.uuid !== "string" || !Number.isSafeInteger(counters?.index_total) || !Number.isSafeInteger(counters?.delete_total)) throw new Error(`ES observer lacks index identity/write counters for ${index}`);
+        writeEvidence[`es:${index}`] = { uuid: indexStats.uuid, indexed: counters.index_total, deleted: counters.delete_total, documents: response.hits.hits.map((doc) => ({ id: doc._id, seqNo: doc._seq_no, primaryTerm: doc._primary_term })).sort((a, b) => a.id.localeCompare(b.id)) };
+        R.exactNumbers(sources[`es:${index}`], `ES observation ${index}`);
+      }
+      for (const topic of Object.keys(manifest.topics || {})) {
+        if (!selected(`kafka:${topic}`)) continue;
+        const response = await rpk(session, ["topic", "consume", topic, "--offset", ":end", "--num", String(limit + 1), "--format", "json", "--pretty-print=false"], { timeoutMs: 1e4 });
+        const envelopes = response.split("\n").filter(Boolean).map((line) => JSON.parse(line));
+        if (envelopes.length > limit) throw new Error(`Kafka observer exceeded ${limit} messages: ${topic}; cannot prove effects`);
+        const codec = manifest.plan.topics.find((t) => t.topic === topic)?.codec || "auto";
+        const decode = (value) => {
+          if (value == null) return null;
+          if (codec === "string") return value;
+          if (codec === "auto") return require_fixture_json().object(value);
+          try {
+            return require_fixture_json().parse(value);
+          } catch {
+            throw new Error(`Kafka ${topic}: observed invalid JSON codec payload`);
+          }
+        };
+        sources[`kafka:${topic}`] = envelopes.map((e) => ({ partition: e.partition, offset: String(e.offset), key: decode(e.key), value: decode(e.value), headers: headersOf(e.headers || []) })).sort((a, b) => a.partition - b.partition || (BigInt(a.offset) < BigInt(b.offset) ? -1 : 1));
+        R.exactNumbers(sources[`kafka:${topic}`], `Kafka observation ${topic}`);
+      }
+      const records = Object.values(sources).reduce((n, rows) => n + rows.length, 0) + Object.values(writeEvidence).reduce((n, rows) => n + (Array.isArray(rows) ? rows.length : 1), 0);
+      if (records > 2e4 || Buffer.byteLength(JSON.stringify({ sources, writeEvidence })) > 16 * 1024 * 1024) throw new Error("Native observation exceeds 20000 records or 16 MiB; narrow the capture before claiming effects");
+      return { version: 1, adapter: "native-observer/v1", scope: source || "all", sources, writeEvidence, observedAt: (/* @__PURE__ */ new Date()).toISOString(), complete: true, proof: { independentOfApplicationReport: true, snapshotOnly: false, transientWritesVerified: { pg: "committed row/statement audit in protected schema", es: "index identity, operation counters and document sequence metadata during the owned instance lifetime", kafka: "append-only envelopes within observed topic windows" }, kafkaProducerTransactionsVerified: false } };
+    }
+    function delta(before, after) {
+      const key = (value) => require_scenario_package().json(value), old = /* @__PURE__ */ new Map(), next = /* @__PURE__ */ new Map();
+      for (const row of before) {
+        const k = key(row);
+        old.set(k, (old.get(k) || 0) + 1);
+      }
+      for (const row of after) {
+        const k = key(row);
+        next.set(k, (next.get(k) || 0) + 1);
+      }
+      const added = [], removed = [];
+      for (const [k, n] of next) for (let i = old.get(k) || 0; i < n; i++) added.push(JSON.parse(k));
+      for (const [k, n] of old) for (let i = next.get(k) || 0; i < n; i++) removed.push(JSON.parse(k));
+      return { added, removed };
+    }
+    function changes(before, after) {
+      return Object.fromEntries([.../* @__PURE__ */ new Set([...Object.keys(before.sources), ...Object.keys(after.sources)])].sort().map((id) => [id, delta(before.sources[id] || [], after.sources[id] || [])]));
+    }
+    function validateExpectations(session, contract) {
+      strict(contract, ["version", "sources", "allowUnlistedEffects", "quietMs"], "effect contract");
+      if (contract.version !== 1 || !Array.isArray(contract.sources) || !contract.sources.length) throw new Error("effect contract v1 needs at least one source assertion");
+      const seen = /* @__PURE__ */ new Set();
+      for (const assertion of contract.sources) {
+        strict(assertion, ["id", "noWrites", "rows", "added", "removed"], "source effect assertion");
+        if (!Object.hasOwn(session.baseline.sources, assertion.id) || seen.has(assertion.id)) throw new Error(`unknown or duplicate effect source ${assertion.id}`);
+        seen.add(assertion.id);
+        if (assertion.noWrites !== true && !["rows", "added", "removed"].some((k) => Object.hasOwn(assertion, k))) throw new Error("effect assertion needs noWrites:true or exact rows/added/removed");
+        for (const key of ["rows", "added", "removed"]) if (Object.hasOwn(assertion, key) && !Array.isArray(assertion[key])) throw new Error(`effect ${key} must be an exact array`);
+      }
+      R.exactNumbers(contract, "effect contract");
+      return { ...contract, quietMs: bounded(contract.quietMs, 100, 0, 5e3, "quietMs") };
+    }
+    async function arm(id, contract) {
+      return locked(id, async () => {
+        const session = load(id);
+        await verify(session);
+        if (session.expectations) throw new Error("effects already armed; create a new runtime to change expectations");
+        const value = validateExpectations(session, contract);
+        const observed = await observeSources(session, R.loadFixture(session.workspace, session.directory));
+        if (Object.values(changes(session.baseline, observed)).some((d) => d.added.length || d.removed.length) || !isDeepStrictEqual(session.baseline.writeEvidence, observed.writeEvidence)) throw new Error("dependency state changed before arming expectations; create a new runtime");
+        session.expectations = { value, digest: hash(value), armedAt: (/* @__PURE__ */ new Date()).toISOString() };
+        save(session);
+        return { id, armed: true, digest: session.expectations.digest, proof: "expectations frozen before observed effects" };
+      });
+    }
+    async function observe(id, { source } = {}) {
+      return locked(id, async () => {
+        const session = load(id);
+        if (source && !Object.hasOwn(session.baseline.sources, source)) throw new Error(`unknown runtime observation source ${source}`);
+        await verify(session, { source });
+        const observed = await observeSources(session, R.loadFixture(session.workspace, session.directory), { source });
+        const baseline = source ? { sources: { [source]: session.baseline.sources[source] } } : session.baseline;
+        return { id, ...observed, changes: changes(baseline, observed) };
+      });
+    }
+    async function check(id) {
+      return locked(id, async () => {
+        const session = load(id);
+        await verify(session);
+        if (!session.expectations) throw new Error("arm independently reviewed expectations before running the application");
+        const contract = session.expectations.value, manifest = R.loadFixture(session.workspace, session.directory), initial = await observeSources(session, manifest);
+        await sleep(contract.quietMs);
+        const observed = await observeSources(session, manifest), diff = changes(session.baseline, observed), checks = [];
+        const ordered = (rows) => [...rows].sort((a, b) => require_scenario_package().json(a).localeCompare(require_scenario_package().json(b)));
+        for (const expected of contract.sources) {
+          const actual = observed.sources[expected.id], d = diff[expected.id];
+          if (expected.noWrites === true) {
+            let noObservedWrites = !d.added.length && !d.removed.length;
+            if (expected.id.startsWith("pg:")) {
+              const logical = expected.id.split(":")[1], target = expected.id.split(":").slice(2).join(":");
+              noObservedWrites &&= !(observed.writeEvidence[logical] || []).some((event) => event.target === target);
+            }
+            if (expected.id.startsWith("es:")) noObservedWrites &&= isDeepStrictEqual(session.baseline.writeEvidence[expected.id], observed.writeEvidence[expected.id]);
+            checks.push({ id: expected.id, assertion: "no-observed-writes", ok: noObservedWrites });
+          }
+          for (const key of ["rows", "added", "removed"]) if (Object.hasOwn(expected, key)) {
+            const value = key === "rows" ? actual : d[key];
+            checks.push({ id: expected.id, assertion: key, ok: isDeepStrictEqual(ordered(expected[key]), ordered(value)), ...isDeepStrictEqual(ordered(expected[key]), ordered(value)) ? {} : { expected: expected[key], actual: value } });
+          }
+        }
+        if (contract.allowUnlistedEffects !== true) {
+          for (const [id2, d] of Object.entries(diff)) if (!contract.sources.some((e) => e.id === id2)) {
+            let clean = !d.added.length && !d.removed.length;
+            if (id2.startsWith("pg:")) clean &&= !(observed.writeEvidence[id2.split(":")[1]] || []).some((event) => event.target === id2.split(":").slice(2).join(":"));
+            if (id2.startsWith("es:")) clean &&= isDeepStrictEqual(session.baseline.writeEvidence[id2], observed.writeEvidence[id2]);
+            checks.push({ id: id2, assertion: "no-unlisted-observed-effects", ok: clean });
+          }
+        }
+        checks.push({ assertion: "quiet-window-stable", ok: isDeepStrictEqual(initial.sources, observed.sources) && isDeepStrictEqual(initial.writeEvidence, observed.writeEvidence) });
+        const result = { version: 1, id, ok: checks.every((c) => c.ok), checks, expectationDigest: session.expectations.digest, baselineDigest: session.baselineDigest, observationDigest: hash(observed), changes: diff, proof: { ...observed.proof, level: "native-observed-effects", applicationExecuted: false, applicationExecution: "caller-owned; link project-run evidence separately", quietMs: contract.quietMs } };
+        session.result = result;
+        save(session);
+        return result;
+      });
+    }
+    async function publishAction(id, topic, message) {
+      return locked(id, async () => {
+        const session = load(id);
+        await verify(session, { source: `kafka:${topic}` });
+        if (!session.expectations) throw new Error("arm independent expectations before publishing an action");
+        const manifest = R.loadFixture(session.workspace, session.directory);
+        if (!Object.hasOwn(manifest.topics || {}, topic)) throw new Error("Kafka action topic must be declared in the reviewed fixture");
+        strict(message, ["partition", "key", "value", "headers"], "Kafka action envelope");
+        if (!Object.hasOwn(message, "value")) throw new Error("Kafka action must explicitly provide value, including null for a tombstone");
+        const plan = manifest.plan.topics.find((t) => t.topic === topic), errors = require_fixture_payload().validateEnvelope({ ...message, offset: "0" }, manifest.topics[topic].schema, plan?.codec || "auto");
+        if (errors.length) throw new Error(errors.join("; "));
+        const produced = await publish(session, topic, message, plan?.codec || "auto");
+        session.actions ||= [];
+        session.actions.push({ kind: "kafka", topic, partition: produced.partition, offset: produced.offset, at: (/* @__PURE__ */ new Date()).toISOString() });
+        save(session);
+        return { id, ok: true, topic, ...produced, proof: { level: "owned-broker-action", applicationExecuted: false, consumerEffectsVerified: false } };
+      });
+    }
+    async function stop(id, { startupOwner = false } = {}) {
+      const session = load(id, true);
+      if (session.status === "stopped") return { id, stopped: true, alreadyStopped: true };
+      const startup = readJson(path2.join(location(id), "starting.json"));
+      if (startup?.pid && !startupOwner) {
+        let alive = true;
+        try {
+          process.kill(startup.pid, 0);
+        } catch (e) {
+          if (e.code === "ESRCH") alive = false;
+          else throw e;
+        }
+        if (alive) {
+          session.stopRequestedAt = (/* @__PURE__ */ new Date()).toISOString();
+          save(session);
+          return { id, stopped: false, state: "stopping", next: "Startup will compensate owned resources; poll fixture_runtime_stop" };
+        }
+      }
+      const errors = [];
+      for (const name of [...session.containers].reverse()) try {
+        if (await owned(session, name)) await docker(["rm", "--force", name]);
+      } catch (e) {
+        errors.push(e.message);
+      }
+      try {
+        const result = await exec("docker", ["network", "inspect", "--format", "{{json .Labels}}", session.network]);
+        if (result.code === 0) {
+          const labels = JSON.parse(result.out);
+          if (labels?.["dt.fixture.owner"] !== session.owner || labels?.["dt.fixture.id"] !== session.id) throw new Error("fixture network ownership mismatch");
+          await docker(["network", "rm", session.network]);
+        } else if (!/not found|No such network/i.test(result.error + result.out)) throw new Error(`cannot inspect fixture network: ${result.error || result.out}`);
+      } catch (e) {
+        errors.push(e.message);
+      }
+      if (errors.length) {
+        session.cleanupError = errors;
+        session.status = "cleanup-failed";
+        save(session);
+        throw new Error(`fixture cleanup failed: ${errors.join("; ")}`);
+      }
+      session.status = "stopped";
+      session.stoppedAt = (/* @__PURE__ */ new Date()).toISOString();
+      delete session.password;
+      delete session.applicationPassword;
+      save(session);
+      return { id, stopped: true };
+    }
+    async function cleanup() {
+      const results = [];
+      if (!fs2.existsSync(ROOT)) return { results };
+      const reservation = path2.join(ROOT, ".reservation.lock"), owner = readJson(path2.join(reservation, "owner.json"));
+      if (owner?.pid) {
+        try {
+          process.kill(owner.pid, 0);
+        } catch (e) {
+          if (e.code === "ESRCH") {
+            fs2.rmSync(reservation, { recursive: true, force: true });
+            results.push({ reservationRecovered: true });
+          }
+        }
+      }
+      for (const id of fs2.readdirSync(ROOT)) {
+        if (!/^[a-f0-9]{24}$/.test(id)) continue;
+        const session = load(id, true);
+        if (session.status !== "stopped" && session.expiresAt <= Date.now()) {
+          try {
+            results.push(await stop(id));
+          } catch (e) {
+            results.push({ id, error: e.message });
+          }
+        }
+      }
+      return { results, ok: results.every((r) => !r.error) };
+    }
+    module2.exports = { preflight, start, bindings, arm, observe, check, stop, cleanup, delta, changes, validateExpectations, DEFAULT_IMAGES, publish, publishAction, load };
+  }
+});
+
+// lib/fixture-runtime-bridge.js
+var require_fixture_runtime_bridge = __commonJS({
+  "lib/fixture-runtime-bridge.js"(exports2, module2) {
+    var HASH = /^[a-f0-9]{64}$/;
+    function loopback(value, protocols, name) {
+      let url;
+      try {
+        url = new URL(value);
+      } catch {
+        throw new Error(`invalid owned fixture ${name}`);
+      }
+      if (!protocols.includes(url.protocol) || !["127.0.0.1", "localhost", "[::1]"].includes(url.hostname) || !url.port || url.username || url.password || url.search || url.hash) throw new Error(`owned fixture ${name} must be a loopback endpoint without embedded credentials`);
+      return url;
+    }
+    async function bindings(id) {
+      return require_reproduction_runtime().bindings(id);
+    }
+    async function resolve(id, { workspace, executionTarget, fixtureBindings } = {}) {
+      if (!/^[a-f0-9]{24}$/.test(id || "")) throw new Error("invalid fixture_runtime lease id");
+      if (!["local", "captured-dev"].includes(executionTarget.metadata.kind) || executionTarget.runnerUrl || executionTarget.requireRunner || executionTarget.metadata.host.placement !== "local") throw new Error("fixture_runtime requires a local or captured-dev target executing on this host");
+      const b = await module2.exports.bindings(id);
+      if (b.id !== id || b.workspace !== workspace || b.runnerHost !== "local" || b.environment !== "owned-local-fixture" || !HASH.test(b.fixtureDigest || "") || !HASH.test(b.profileDigest || "")) throw new Error("native fixture binding identity, workspace or proof digest mismatch");
+      if (!b.databases || typeof b.databases !== "object" || Array.isArray(b.databases)) throw new Error("invalid native fixture database bindings");
+      const kinds = [];
+      for (const [logical, db] of Object.entries(b.databases)) {
+        if (!logical || !db || typeof db.database !== "string" || typeof db.user !== "string" || typeof db.password !== "string" || !db.password) throw new Error("invalid native fixture datasource");
+        const endpoint = loopback(db.url, ["postgresql:", "postgres:"], "Postgres");
+        if (decodeURIComponent(endpoint.pathname) !== `/${db.database}` || db.jdbcUrl !== `jdbc:${db.url}`) throw new Error("native fixture JDBC/URL database identity mismatch");
+      }
+      if (Object.keys(b.databases).length) kinds.push("pg");
+      if (b.es) {
+        loopback(b.es, ["http:", "https:"], "Elasticsearch");
+        kinds.push("es");
+      }
+      if (b.kafka) {
+        const endpoint = loopback(`kafka://${b.kafka}`, ["kafka:"], "Kafka");
+        if (endpoint.pathname && endpoint.pathname !== "/") throw new Error("invalid native Kafka bootstrap endpoint");
+        kinds.push("kafka");
+      }
+      if (b.proof?.level !== "native-dependencies" || kinds.some((k) => !/^sha256:[a-f0-9]{64}$/.test(b.proof.imageIds?.[k] || ""))) throw new Error("native fixture image ownership proof is incomplete");
+      if (Object.keys(b.databases).length && !fixtureBindings) throw new Error("native PostgreSQL datasources require explicit fixture_bindings for every captured database");
+      const env = Object.keys(b.databases).length ? require_testrun().fixtureEnvironment(b.databases, fixtureBindings) : {};
+      if (!Object.keys(b.databases).length && fixtureBindings && Object.keys(fixtureBindings).length) throw new Error("fixture_bindings names databases absent from native runtime");
+      if (b.es) env.SPRING_ELASTICSEARCH_URIS = b.es;
+      if (b.kafka) env.SPRING_KAFKA_BOOTSTRAP_SERVERS = b.kafka;
+      env.DT_NATIVE_FIXTURE_BINDINGS = JSON.stringify({ version: 1, id, databases: b.databases, es: b.es, kafka: b.kafka, offsetMappings: b.offsetMappings, fixtureDigest: b.fixtureDigest, profileDigest: b.profileDigest, environment: b.environment });
+      const metadata = { id, workspace, directory: b.directory, environment: b.environment, runnerHost: b.runnerHost, fixtureDigest: b.fixtureDigest, profileDigest: b.profileDigest, databases: Object.keys(b.databases), systems: kinds, offsetMappings: b.offsetMappings, ownership: "caller-retained lease; use arm, independent check, then stop", proof: Object.fromEntries(["level", "applicationExecuted", "runtimeReadsVerified", "sourceWrites", "network", "distributedSnapshot", "sourceKafkaOffsetsPreserved", "sourceKafkaTimestampsPreserved", "imageIds"].filter((k) => b.proof[k] !== void 0).map((k) => [k, b.proof[k]])), effectsVerified: false, runtimeReadsVerified: false };
+      return { env, metadata, secrets: [...Object.values(env), ...Object.values(b.databases).flatMap((db) => [db.password, db.url, db.jdbcUrl])].map(String) };
+    }
+    module2.exports = { resolve, bindings };
+  }
+});
+
+// lib/node-test.js
+var require_node_test = __commonJS({
+  "lib/node-test.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    function find(root, selector) {
+      if (typeof selector !== "string" || selector.startsWith("-") || !/\.(?:[cm]?js)$/.test(selector) || selector.includes("#")) return null;
+      const full = path2.resolve(root, selector);
+      if (!full.startsWith(path2.resolve(root) + path2.sep) || !fs2.existsSync(full) || !fs2.statSync(full).isFile()) return null;
+      const real = fs2.realpathSync(full), base = fs2.realpathSync(root);
+      if (!real.startsWith(base + path2.sep)) throw new Error(`Node test escapes workspace: ${selector}`);
+      return { file: path2.relative(root, full), fqn: path2.relative(root, full).split(path2.sep).join("/") };
+    }
+    async function* nodeReporter(source) {
+      const display = (v) => typeof v === "string" ? v.slice(0, 5e3) : require("util").inspect(v, { depth: 5, maxArrayLength: 50, maxStringLength: 5e3, customInspect: false });
+      const error = (e, depth = 0) => e ? { name: e.name, message: String(e.message || "").slice(0, 16e3), stack: String(e.stack || "").slice(0, 3e4), code: e.code, failureType: e.failureType, ...Object.hasOwn(e, "expected") ? { expected: display(e.expected), actual: display(e.actual) } : {}, ...depth < 3 && e.cause ? { cause: error(e.cause, depth + 1) } : {} } : null;
+      for await (const event of source) {
+        if (!["test:pass", "test:fail"].includes(event.type)) continue;
+        const d = event.data;
+        yield JSON.stringify({ type: event.type, data: { name: String(d.name).slice(0, 4096), file: d.file, line: d.line, nesting: d.nesting, testNumber: d.testNumber, skip: !!d.skip, todo: !!d.todo, details: { type: d.details?.type, duration_ms: d.details?.duration_ms, error: error(d.details?.error) } } }) + "\n";
+      }
+    }
+    function command(root, files, cfg, runId) {
+      const dir = path2.join(root, ".dt", "node-reports");
+      fs2.mkdirSync(dir, { recursive: true });
+      const report = path2.join(dir, `TEST-${runId}.jsonl`), reporter = path2.join(dir, `reporter-${runId}.cjs`);
+      fs2.writeFileSync(reporter, `module.exports = ${nodeReporter.toString()};
+`);
+      return { cmd: cfg.node || process.execPath, args: ["--test", `--test-reporter=${reporter}`, `--test-reporter-destination=${report}`, ...files.map((f) => path2.resolve(root, f))], cwd: root, report };
+    }
+    function parse(report, root) {
+      if (!fs2.existsSync(report)) return [];
+      if (fs2.statSync(report).size > 4 * 1048576) throw new Error("Node test report exceeds 4 MiB");
+      const events = fs2.readFileSync(report, "utf8").split("\n").filter(Boolean).map((line, index) => {
+        try {
+          return JSON.parse(line);
+        } catch {
+          throw new Error(`invalid Node test event JSON at line ${index + 1}`);
+        }
+      });
+      const cases = [], pendingChildren = /* @__PURE__ */ new Map(), failedFiles = /* @__PURE__ */ new Set(), realRoot = fs2.realpathSync(root);
+      for (const { type, data: d } of events) {
+        if (!["test:pass", "test:fail"].includes(type) || !d?.file || !Number.isInteger(d.nesting)) throw new Error("invalid Node test event");
+        const levels = pendingChildren.get(d.file) || /* @__PURE__ */ new Set();
+        const parent = [...levels].some((n) => n > d.nesting);
+        for (const n of levels) if (n > d.nesting) levels.delete(n);
+        levels.add(d.nesting);
+        pendingChildren.set(d.file, levels);
+        const failed = type === "test:fail";
+        const synthetic = path2.isAbsolute(d.name) && path2.resolve(d.name) === path2.resolve(d.file);
+        if (d.details?.type === "suite" || !failed && (synthetic || parent)) continue;
+        const e = d.details?.error, cause = e?.cause || e;
+        if (failed && e?.failureType === "subtestsFailed" && failedFiles.has(d.file)) continue;
+        if (failed) failedFiles.add(d.file);
+        const filename = path2.resolve(d.file), relative = path2.relative(filename.startsWith(realRoot + path2.sep) ? realRoot : root, filename).split(path2.sep).join("/");
+        cases.push({ class: relative, file: relative, name: d.name, ms: Math.round(d.details?.duration_ms || 0), status: failed ? "failed" : d.skip || d.todo ? "skipped" : "passed", message: cause?.message || e?.message, type: cause?.name || e?.failureType, stack: cause?.stack || e?.stack, ...cause?.expected !== void 0 ? { expected: cause.expected, actual: cause.actual } : {} });
+      }
+      return cases;
+    }
+    module2.exports = { find, command, parse };
+  }
+});
+
+// lib/fastrun.js
+var require_fastrun = __commonJS({
+  "lib/fastrun.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var crypto = require("crypto");
+    var { AsyncLocalStorage } = require("async_hooks");
+    var executionScope = new AsyncLocalStorage();
+    var { CACHE: CACHE2, readJson, writeJson, fileStamp } = require_util();
+    var LAUNCHER = `
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
+import java.util.*;
+import org.junit.platform.engine.*;
+import org.junit.platform.engine.discovery.DiscoverySelectors;
+import org.junit.platform.engine.support.descriptor.MethodSource;
+import org.junit.platform.launcher.*;
+import org.junit.platform.launcher.core.*;
+
+// dt fast runs: runs the selected tests, writes [{class, name, status, ms, message, type, stack}] as JSON
+public class DtLauncher {
+    // each test's own console output (tests run one after another)
+    static volatile ByteArrayOutputStream current;
+    static PrintStream tee(PrintStream to) {
+        return new PrintStream(new OutputStream() {
+            public void write(int b) { to.write(b); ByteArrayOutputStream c = current; if (c != null && c.size() < 200000) c.write(b); }
+            public void write(byte[] b, int off, int len) { to.write(b, off, len); ByteArrayOutputStream c = current; if (c != null && c.size() < 200000) c.write(b, off, len); }
+        }, true);
+    }
+    // expected / actual of an opentest4j AssertionFailedError (JUnit, AssertJ), without depending on it
+    static String val(Throwable t, String which) {
+        try {
+            if (!(Boolean) t.getClass().getMethod("is" + which + "Defined").invoke(t)) return null;
+            Object w = t.getClass().getMethod("get" + which).invoke(t);
+            return w == null ? null : String.valueOf(w.getClass().getMethod("getStringRepresentation").invoke(w));
+        } catch (Exception e) { return null; }
+    }
+
+    static String q(String s) {
+        if (s == null) return "null";
+        StringBuilder b = new StringBuilder("\\"");
+        for (char c : s.toCharArray()) {
+            if (c == '"' || c == '\\\\') b.append('\\\\').append(c);
+            else if (c < 0x20) b.append(String.format("\\\\u%04x", (int) c));
+            else b.append(c);
+        }
+        return b.append('"').toString();
+    }
+
+    public static void main(String[] args) throws Exception {
+        List<DiscoverySelector> sel = new ArrayList<>();
+        for (int i = 1; i < args.length; i++) {
+            String a = args[i];
+            sel.add(a.contains("#") ? DiscoverySelectors.selectMethod(a) : DiscoverySelectors.selectClass(a));
+        }
+        List<String> out = Collections.synchronizedList(new ArrayList<>());
+        System.setOut(tee(System.out));
+        System.setErr(tee(System.err));
+        Map<String, Long> started = new HashMap<>();
+        TestExecutionListener l = new TestExecutionListener() {
+            String[] where(TestIdentifier id) {
+                Optional<TestSource> s = id.getSource();
+                if (s.isPresent() && s.get() instanceof MethodSource m) {
+                    String name = m.getMethodName() + (id.getUniqueId().contains("-invocation:") ? " " + id.getDisplayName() : "");
+                    return new String[] { m.getClassName(), name };
+                }
+                return new String[] { id.getLegacyReportingName(), id.getDisplayName() };
+            }
+            public void executionStarted(TestIdentifier id) { started.put(id.getUniqueId(), System.nanoTime()); if (id.isTest()) current = new ByteArrayOutputStream(); }
+            public void executionSkipped(TestIdentifier id, String reason) {
+                if (!id.isTest()) return;
+                String[] w = where(id);
+                out.add("{\\"class\\":" + q(w[0]) + ",\\"name\\":" + q(w[1]) + ",\\"status\\":\\"skipped\\",\\"ms\\":0,\\"message\\":" + q(reason) + "}");
+            }
+            public void executionFinished(TestIdentifier id, TestExecutionResult r) {
+                Throwable t = r.getThrowable().orElse(null);
+                if (!id.isTest() && t == null) return;
+                String[] w = where(id);
+                long ms = (System.nanoTime() - started.getOrDefault(id.getUniqueId(), System.nanoTime())) / 1000000;
+                String status = r.getStatus() == TestExecutionResult.Status.SUCCESSFUL ? "passed" : (t instanceof AssertionError ? "failed" : "error");
+                String stack = null;
+                if (t != null) { StringWriter sw = new StringWriter(); t.printStackTrace(new PrintWriter(sw)); stack = sw.toString(); }
+                String output = null;
+                if (id.isTest() && current != null) { output = current.toString(StandardCharsets.UTF_8); current = null; }
+                out.add("{\\"class\\":" + q(w[0]) + ",\\"name\\":" + q(id.isTest() ? w[1] : "(" + id.getDisplayName() + ")") + ",\\"status\\":" + q(status) + ",\\"ms\\":" + ms
+                    + ",\\"message\\":" + q(t == null ? null : String.valueOf(t.getMessage())) + ",\\"type\\":" + q(t == null ? null : t.getClass().getName()) + ",\\"stack\\":" + q(stack)
+                    + ",\\"expected\\":" + q(t == null ? null : val(t, "Expected")) + ",\\"actual\\":" + q(t == null ? null : val(t, "Actual")) + ",\\"output\\":" + q(output == null || output.isEmpty() ? null : output.length() > 20000 ? output.substring(output.length() - 20000) : output) + "}");
+            }
+        };
+        LauncherDiscoveryRequest req = LauncherDiscoveryRequestBuilder.request().selectors(sel).build();
+        LauncherFactory.create().execute(req, l);
+        Files.writeString(Path.of(args[0]), "[" + String.join(",", out) + "]", StandardCharsets.UTF_8);
+        System.exit(0);
+    }
+}
+`;
+    var stateFile = (id) => path2.join(CACHE2, "work", `${id}.fast.json`);
+    var hash = (s) => crypto.createHash("sha1").update(s).digest("hex").slice(0, 16);
+    async function exec(cmd, args, opts = {}) {
+      const selected = executionScope.getStore();
+      const transport = selected ? Object.fromEntries(["runnerUrl", "runnerToken", "requireRunner", "forceLocal"].filter((k) => selected[k] !== void 0).map((k) => [k, selected[k]])) : {};
+      return require_testrun().exec(cmd, args, { ...transport, ...opts });
+    }
+    var withExecutionTarget = (target, run2) => executionScope.run(target || {}, run2);
+    function supported(root, plan, testFiles) {
+      if (plan.tool !== "maven") return "the build is not Maven";
+      if (testFiles.some((f) => !/\.java$/.test(f))) return "tests in Kotlin, Groovy or Scala";
+      if (fs2.existsSync(path2.join(plan.modDir, "src", "main", "kotlin")) || fs2.existsSync(path2.join(plan.modDir, "src", "main", "groovy"))) return "Kotlin or Groovy sources";
+      return null;
+    }
+    var walkJava = (dir, out2 = []) => {
+      let es;
+      try {
+        es = fs2.readdirSync(dir, { withFileTypes: true });
+      } catch {
+        return out2;
+      }
+      for (const e of es) {
+        const f = path2.join(dir, e.name);
+        if (e.isDirectory()) walkJava(f, out2);
+        else if (/\.java$/.test(e.name)) out2.push(f);
+      }
+      return out2;
+    };
+    var walkFiles = (dir, out2 = []) => {
+      let es;
+      try {
+        es = fs2.readdirSync(dir, { withFileTypes: true });
+      } catch {
+        return out2;
+      }
+      for (const e of es) {
+        const f = path2.join(dir, e.name);
+        if (e.isDirectory()) walkFiles(f, out2);
+        else out2.push(f);
+      }
+      return out2;
+    };
+    function tails(cfg) {
+      return cfg.args.map((a) => (a.match(/^-Dmaven\.repo\.local\.tail=(.+)$/) || [])[1]).filter(Boolean).flatMap((x) => x.split(","));
+    }
+    function findJar(cfg, group, artifact, version) {
+      for (const repo of [cfg.mavenRepo, ...tails(cfg)]) {
+        const f = path2.join(repo, ...group.split("."), artifact, version, `${artifact}-${version}.jar`);
+        if (fs2.existsSync(f)) return f;
+      }
+      return null;
+    }
+    function javaBin(cfg, tool) {
+      return cfg.javaHome ? path2.join(cfg.javaHome, "bin", tool) : tool;
+    }
+    function mavenArgs(cfg) {
+      const a = ["-B", "-ntp", `-Dmaven.repo.local=${cfg.mavenRepo}`];
+      if (cfg.offline) a.push("-o");
+      if (cfg.mavenSettings) a.push("-s", cfg.mavenSettings);
+      return [...a, ...cfg.args];
+    }
+    function release(modDir, root) {
+      for (const f of [path2.join(modDir, "pom.xml"), path2.join(root, "pom.xml")]) {
+        try {
+          const t = fs2.readFileSync(f, "utf8");
+          const m = t.match(/<maven\.compiler\.release>\s*(\d+)/) || t.match(/<java\.version>\s*(\d+)/) || t.match(/<maven\.compiler\.source>\s*(?:1\.)?(\d+)/);
+          if (m) return Number(m[1]);
+        } catch {
+        }
+      }
+      return null;
+    }
+    function pomsIn(root) {
+      const out2 = [], skip = /* @__PURE__ */ new Set(["target", "build", "node_modules", "out", "dist", "coverage"]);
+      const visit = (dir) => {
+        for (const e of fs2.readdirSync(dir, { withFileTypes: true })) {
+          const full = path2.join(dir, e.name);
+          if (e.isDirectory() && !e.name.startsWith(".") && !skip.has(e.name)) visit(full);
+          else if (e.isFile() && e.name === "pom.xml") out2.push(full);
+        }
+      };
+      visit(root);
+      return out2.sort();
+    }
+    function preparationKey(root, plan, cfg, mvn, env = process.env) {
+      const descriptors = [...pomsIn(root), ...["jvm.config", "maven.config", "extensions.xml", "wrapper/maven-wrapper.properties"].map((f) => path2.join(root, ".mvn", f))];
+      if (cfg.mavenSettings) descriptors.push(cfg.mavenSettings);
+      const contents = descriptors.map((f) => [path2.relative(root, f), fs2.existsSync(f) ? fs2.readFileSync(f, "utf8") : null]);
+      const executable = javaBin(cfg, "javac");
+      const javaPath = path2.isAbsolute(executable) ? executable : String(env.PATH || "").split(path2.delimiter).map((p) => path2.join(p, executable)).find((f) => fs2.existsSync(f));
+      return hash(JSON.stringify({
+        root,
+        module: plan.module,
+        execution: executionScope.getStore() ? { runnerUrl: executionScope.getStore().runnerUrl, forceLocal: executionScope.getStore().forceLocal, requireRunner: executionScope.getStore().requireRunner, manifestSha256: executionScope.getStore().metadata?.manifestSha256 } : null,
+        cfg: { javaHome: cfg.javaHome, mavenRepo: cfg.mavenRepo, mavenSettings: cfg.mavenSettings, offline: cfg.offline, args: cfg.args, runnerUrl: cfg.runnerUrl },
+        mvn,
+        contents,
+        java: javaPath ? fileStamp(javaPath) : null,
+        maven: fileStamp(mvn.cmd),
+        launcher: hash(LAUNCHER),
+        env: [env.JAVA_HOME, env.MAVEN_OPTS, env.JDK_JAVA_OPTIONS, env.JAVA_TOOL_OPTIONS, env.PATH]
+      }));
+    }
+    function preparedStateUsable(state, buildKey) {
+      return !!(state && state.buildKey === buildKey && Array.isArray(state.classpath) && [state.classes, state.testClasses, state.launcherJar, state.launcherDir && path2.join(state.launcherDir, "DtLauncher.class"), ...state.classpath].every((f) => f && fs2.existsSync(f)));
+    }
+    function sourceInventory(modDir) {
+      return [
+        ...walkJava(path2.join(modDir, "src", "main", "java")),
+        ...walkJava(path2.join(modDir, "src", "test", "java")),
+        ...walkFiles(path2.join(modDir, "src", "main", "resources")),
+        ...walkFiles(path2.join(modDir, "src", "test", "resources"))
+      ].map((f) => path2.relative(modDir, f).split(path2.sep).join("/")).sort();
+    }
+    function removedSources(state, sources) {
+      const present = new Set(sources);
+      return (state?.sources || []).filter((f) => !present.has(f));
+    }
+    async function prepare({ id, root, plan, cfg, env, mvn, log }) {
+      const st = readJson(stateFile(id), {});
+      const buildKey = preparationKey(root, plan, cfg, mvn, env);
+      const key = plan.module;
+      const prev = st[key];
+      const sources = sourceInventory(plan.modDir), removed = removedSources(prev, sources);
+      if (preparedStateUsable(prev, buildKey) && Array.isArray(prev.sources) && !removed.length) return { state: prev, prepared: false, sources };
+      const clean = !!prev && (removed.length > 0 || !Array.isArray(prev.sources) || prev.buildKey !== buildKey);
+      fs2.mkdirSync(path2.join(root, ".dt"), { recursive: true });
+      const cpFile = path2.join(root, ".dt", `classpath-${hash(key)}.txt`);
+      const multi = plan.module !== "." && fs2.existsSync(path2.join(root, "pom.xml"));
+      const args = [...mvn.args, ...mavenArgs(cfg), ...clean ? ["clean"] : [], "test-compile", "dependency:build-classpath", `-Dmdep.outputFile=${cpFile}`, "-Dmdep.includeScope=test", ...multi ? ["-pl", plan.module, "-am"] : []];
+      log(`fast: preparing ${key} with Maven (${clean ? `clean: ${removed.length ? `${removed.length} deleted source/resource files` : "build inputs changed"}; ` : ""}compile + classpath)`);
+      const T = require_trace();
+      const r = await T.step("maven prepare", () => exec(mvn.cmd, args, { cwd: multi ? root : plan.modDir, env, log }), "test-compile + dependency:build-classpath, once per workspace");
+      if (r.code !== 0) return { error: r };
+      const classpath = fs2.readFileSync(cpFile, "utf8").trim().split(path2.delimiter).filter(Boolean);
+      const engine = classpath.map((j) => path2.basename(j).match(/^junit-platform-engine-(.+)\.jar$/)).find(Boolean);
+      if (!engine) return { error: { code: 1, out: 'no JUnit Platform on the test classpath (JUnit 4 only?): use mode="build"', ms: r.ms } };
+      const v = engine[1];
+      let launcherJar = classpath.find((j) => /junit-platform-launcher-/.test(path2.basename(j))) || findJar(cfg, "org.junit.platform", "junit-platform-launcher", v);
+      if (!launcherJar) {
+        await exec(mvn.cmd, [...mvn.args, ...mavenArgs(cfg), "dependency:get", `-Dartifact=org.junit.platform:junit-platform-launcher:${v}`, "-Dtransitive=false"], { cwd: plan.modDir, env, log });
+        launcherJar = findJar(cfg, "org.junit.platform", "junit-platform-launcher", v);
+        if (!launcherJar) return { error: { code: 1, out: `could not get org.junit.platform:junit-platform-launcher:${v}`, ms: r.ms } };
+      }
+      const ldir = path2.join(require_config().PATHS.build, "fastrun", `launcher-${v}-${hash(LAUNCHER)}`);
+      if (!fs2.existsSync(path2.join(ldir, "DtLauncher.class"))) {
+        fs2.mkdirSync(ldir, { recursive: true });
+        fs2.writeFileSync(path2.join(ldir, "DtLauncher.java"), LAUNCHER);
+        const c = await exec(javaBin(cfg, "javac"), ["-d", ldir, "-cp", [launcherJar, ...classpath].join(path2.delimiter), path2.join(ldir, "DtLauncher.java")], { env });
+        if (c.code !== 0) return { error: c };
+      }
+      const javacVersion = await exec(javaBin(cfg, "javac"), ["-version"], { env }).then((x) => Number((x.out.match(/javac (\d+)/) || [])[1] || 0));
+      const state = {
+        buildKey,
+        sources,
+        classpath,
+        launcherJar,
+        launcherDir: ldir,
+        javacVersion,
+        release: release(plan.modDir, root),
+        classes: path2.join(plan.modDir, "target", "classes"),
+        testClasses: path2.join(plan.modDir, "target", "test-classes"),
+        stamp: Date.now(),
+        preparedMs: r.ms
+      };
+      st[key] = state;
+      writeJson(stateFile(id), st);
+      return { state, prepared: true, sources, ms: r.ms };
+    }
+    function changed(modDir, stamp, graph, root) {
+      const newer = (f) => fs2.statSync(f).mtimeMs > stamp;
+      const main2 = walkJava(path2.join(modDir, "src", "main", "java")), test = walkJava(path2.join(modDir, "src", "test", "java"));
+      const mainChanged = main2.filter(newer), testChanged = test.filter(newer);
+      if (mainChanged.length && graph) {
+        const rel = (f) => path2.relative(root, f).split(path2.sep).join("/");
+        const paths = new Set(mainChanged.map(rel));
+        const changedIds = new Set(graph.classes.filter((c) => paths.has(c.file)).map((c) => c.id));
+        const byId = new Map(graph.classes.map((c) => [c.id, c]));
+        const owner = (node) => {
+          let id = String(node).split("#")[0];
+          while (id) {
+            if (byId.has(id)) return byId.get(id);
+            const dot = id.lastIndexOf(".");
+            if (dot < 0) break;
+            id = id.slice(0, dot);
+          }
+          return null;
+        };
+        const users = /* @__PURE__ */ new Set();
+        for (const [from, to] of graph.edges) {
+          const cls = String(to).split(/[#]/)[0];
+          if (changedIds.has(cls) || changedIds.has(to)) {
+            const c = owner(from);
+            if (c) users.add(c.file);
+          }
+        }
+        for (const f of main2) if (users.has(rel(f)) && !mainChanged.includes(f)) mainChanged.push(f);
+        for (const f of test) if (users.has(rel(f)) && !testChanged.includes(f)) testChanged.push(f);
+      }
+      const res = (kind) => walkFiles(path2.join(modDir, "src", kind, "resources")).filter(newer).map((f) => ({ from: f, rel: path2.relative(path2.join(modDir, "src", kind, "resources"), f) }));
+      return { mainChanged, testChanged, mainRes: res("main"), testRes: res("test") };
+    }
+    async function javac(state, files, outDir, extraCp, cfg, env) {
+      if (!files.length) return { code: 0, out: "", ms: 0 };
+      const args = ["-d", outDir, "-encoding", "UTF-8", "-parameters", "-g", "-nowarn", "-cp", [...extraCp, ...state.classpath].join(path2.delimiter)];
+      if (state.release && state.javacVersion && state.release <= state.javacVersion) args.push("--release", String(state.release));
+      if (state.javacVersion >= 21) args.push("-proc:full");
+      return exec(javaBin(cfg, "javac"), [...args, ...files], { env });
+    }
+    async function runSelected({ id, root, plan, cfg, env, mvn, selectors, graph, log }) {
+      const started = Date.now();
+      const p = await prepare({ id, root, plan, cfg, env, mvn, log });
+      if (p.error) return { code: p.error.code || 1, out: p.error.out, ms: Date.now() - started, cases: [], phase: "prepare" };
+      const st = p.state;
+      if (st.sources.length !== p.sources.length || st.sources.some((f, i) => f !== p.sources[i])) {
+        const inventory = readJson(stateFile(id), {});
+        if (inventory[plan.module]) {
+          inventory[plan.module].sources = p.sources;
+          writeJson(stateFile(id), inventory);
+        }
+      }
+      const ch = changed(plan.modDir, p.prepared ? Date.now() + 1 : st.stamp, graph, root);
+      const stampAt = Date.now();
+      let out2 = "";
+      fs2.mkdirSync(st.classes, { recursive: true });
+      fs2.mkdirSync(st.testClasses, { recursive: true });
+      for (const r2 of ch.mainRes) {
+        fs2.mkdirSync(path2.dirname(path2.join(st.classes, r2.rel)), { recursive: true });
+        fs2.copyFileSync(r2.from, path2.join(st.classes, r2.rel));
+      }
+      for (const r2 of ch.testRes) {
+        fs2.mkdirSync(path2.dirname(path2.join(st.testClasses, r2.rel)), { recursive: true });
+        fs2.copyFileSync(r2.from, path2.join(st.testClasses, r2.rel));
+      }
+      const T = require_trace();
+      const cm = await T.step("javac main", () => javac(st, ch.mainChanged, st.classes, [st.classes], cfg, env), `${ch.mainChanged.length} files`);
+      out2 += cm.out;
+      if (cm.code !== 0) return { code: cm.code, out: out2, ms: Date.now() - started, cases: [], phase: "compile", compiled: ch.mainChanged.length };
+      const ct = await T.step("javac tests", () => javac(st, ch.testChanged, st.testClasses, [st.testClasses, st.classes], cfg, env), `${ch.testChanged.length} files`);
+      out2 += ct.out;
+      if (ct.code !== 0) return { code: ct.code, out: out2, ms: Date.now() - started, cases: [], phase: "compile", compiled: ch.mainChanged.length + ch.testChanged.length };
+      const all = readJson(stateFile(id), {});
+      if (all[plan.module]) {
+        all[plan.module].stamp = stampAt;
+        writeJson(stateFile(id), all);
+      }
+      fs2.mkdirSync(path2.join(root, ".dt"), { recursive: true });
+      const results = path2.join(root, ".dt", `results-${Date.now().toString(36)}.json`);
+      const cp = [st.testClasses, st.classes, ...st.classpath, st.launcherJar, st.launcherDir].join(path2.delimiter);
+      const r = await T.step("run tests", () => exec(javaBin(cfg, "java"), ["-cp", cp, "DtLauncher", results, ...selectors], { cwd: plan.modDir, env, timeoutMs: cfg.timeoutMs, log }), selectors.join(" "));
+      out2 += r.out;
+      let cases = [];
+      try {
+        cases = JSON.parse(fs2.readFileSync(results, "utf8"));
+        fs2.rmSync(results, { force: true });
+      } catch {
+      }
+      return { code: r.code, out: out2, killed: r.killed, ms: Date.now() - started, cases, compiled: ch.mainChanged.length + ch.testChanged.length, prepared: p.prepared, prepareMs: p.ms };
+    }
+    async function run(options) {
+      return withExecutionTarget(options.executionTarget, () => runSelected(options));
+    }
+    module2.exports = { run, withExecutionTarget, supported, prepare, changed, exec, LAUNCHER, pomsIn, preparationKey, preparedStateUsable };
+  }
+});
+
+// lib/execution-privacy.js
+var require_execution_privacy = __commonJS({
+  "lib/execution-privacy.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    function secrets(cfg, execution) {
+      return [...new Set([...Object.values(cfg.env || {}), ...Object.values(execution.env || {})].flatMap((v) => {
+        const s = String(v);
+        return [s, ...s.split(/\r?\n/).filter((line) => line.length >= 3)];
+      }).filter(Boolean))];
+    }
+    var structural = /* @__PURE__ */ new Set(["passed", "failed", "error", "skipped", "returned", "threw", "timeout", "compile-error", "no-tests-ran", "all-tests-skipped", "cleanup-failed", "different", "equivalent"]);
+    var tags = /* @__PURE__ */ new Set(["undefined", "bigint", "number", "regexp", "date", "bytes", "array-buffer", "array-buffer-view", "map", "set", "array", "object"]);
+    function mask(text, known) {
+      let out2 = require_buildenv().mask(text, known);
+      for (const secret of known) {
+        if (secret.length < 48) continue;
+        const prefix = secret.slice(0, 32);
+        let at = out2.indexOf(prefix);
+        while (at >= 0) {
+          let n = 32;
+          while (n < secret.length && out2[at + n] === secret[n]) n++;
+          out2 = out2.slice(0, at) + "***" + out2.slice(at + n);
+          at = out2.indexOf(prefix, at + 3);
+        }
+      }
+      return out2;
+    }
+    function clean(value, mask2) {
+      if (typeof value === "string") return mask2(value);
+      if (Array.isArray(value)) return value.map((v) => clean(v, mask2));
+      if (!value || typeof value !== "object") return value;
+      return Object.fromEntries(Object.entries(value).map(([k, v]) => [mask2(k), (k === "status" || k === "outcome") && structural.has(v) || k === "failureKind" && ["assertion", "test-error"].includes(v) || k === "$dtType" && tags.has(v) ? v : clean(v, mask2)]));
+    }
+    function reports(files, known) {
+      const xml = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+      const variants = [...new Set(known.flatMap((s) => [s, JSON.stringify(s).slice(1, -1), xml(s), xml(s).replace(/\n/g, "&#10;").replace(/\r/g, "&#13;").replace(/\t/g, "&#9;")]))].filter(Boolean);
+      for (const file of files) {
+        let st;
+        try {
+          st = fs2.lstatSync(file);
+        } catch (e) {
+          if (e.code === "ENOENT") continue;
+          throw e;
+        }
+        if (!st.isFile()) throw new Error("test report must be a regular file");
+        if (st.size > 8 * 1048576) {
+          fs2.writeFileSync(file, "Oversized test report removed during credential redaction. Inspect the retained structured failure.\n");
+          continue;
+        }
+        let text = fs2.readFileSync(file, "utf8"), clean2 = text;
+        clean2 = mask(clean2, variants);
+        if (clean2 !== text) fs2.writeFileSync(file, clean2, { mode: st.mode });
+      }
+    }
+    function filesIn(dirs) {
+      return dirs.flatMap((dir) => {
+        try {
+          return fs2.readdirSync(dir).filter((f) => /^TEST-.*\.(xml|json|jsonl)$/.test(f)).map((f) => path2.join(dir, f));
+        } catch (e) {
+          if (e.code === "ENOENT") return [];
+          throw e;
+        }
+      });
+    }
+    module2.exports = { secrets, mask, clean, reports, filesIn };
   }
 });
 
@@ -10686,7 +13515,7 @@ var require_testrun = __commonJS({
       let text = "";
       if (cfg.runnerUrl) {
         try {
-          text = (await require_runner().remoteInfo()).java?.out || "";
+          text = (await require_runner().remoteInfo({ runnerUrl: cfg.runnerUrl, runnerToken: cfg.runnerToken })).java?.out || "";
         } catch {
         }
       }
@@ -10701,7 +13530,7 @@ var require_testrun = __commonJS({
     var KEEP_ENV = /^(PATH|HOME|USER|LOGNAME|SHELL|TMPDIR|TMP|TEMP|LANG|LANGUAGE|LC_\w+|TZ|TERM|JAVA_HOME|MAVEN_HOME|M2_HOME|MAVEN_OPTS|GRADLE_OPTS|GRADLE_USER_HOME|JAVA_TOOL_OPTIONS|(HTTPS?|NO|ALL)_PROXY|(https?|no|all)_proxy|SSL_CERT_FILE|SSL_CERT_DIR|NODE_EXTRA_CA_CERTS|DOCKER_HOST|TESTCONTAINERS_\w+)$/;
     function cleanEnv(cfg) {
       const out2 = {};
-      for (const [k, v] of Object.entries(process.env)) if (KEEP_ENV.test(k) || cfg.passEnv.includes(k)) out2[k] = v;
+      for (const [k, v] of Object.entries(process.env)) if (KEEP_ENV.test(k) || (cfg.passEnv || []).includes(k)) out2[k] = v;
       return out2;
     }
     function gradleCmd(root, cfg) {
@@ -10710,7 +13539,7 @@ var require_testrun = __commonJS({
       if (!gr[0]) throw new Error("no Gradle: the repo has no gradlew, and gradle is not on PATH (set tests.gradle in config.json)");
       return gr;
     }
-    async function envFor(p, cfg) {
+    async function envFor(p, cfg, executionTarget) {
       const B = require_buildenv().forBuild(cfg, p.tool);
       const env = { ...cleanEnv(cfg), MAVEN_OPTS: process.env.MAVEN_OPTS || "-Xmx1g", CI: "true", ...B.env };
       if (cfg.javaHome) {
@@ -10718,7 +13547,7 @@ var require_testrun = __commonJS({
         env.PATH = `${path2.join(cfg.javaHome, "bin")}${path2.delimiter}${env.PATH}`;
       }
       if (cfg.gradleHome) env.GRADLE_USER_HOME = cfg.gradleHome;
-      const javaMajor = await jdkMajor(cfg);
+      const javaMajor = p.tool === "node" ? 0 : await jdkMajor(executionTarget ? { ...cfg, runnerUrl: executionTarget.runnerUrl, runnerToken: executionTarget.runnerToken } : cfg);
       if (cfg.javaToolOptions && javaMajor >= 22 && (p.tool !== "gradle" || cfg.javaToolOptionsGradle)) env.JAVA_TOOL_OPTIONS = [process.env.JAVA_TOOL_OPTIONS, cfg.javaToolOptions].filter(Boolean).join(" ");
       else if (p.tool === "gradle") delete env.JAVA_TOOL_OPTIONS;
       return { env, B, javaMajor, hide: (t) => require_buildenv().mask(t, B.secrets) };
@@ -10758,12 +13587,12 @@ var require_testrun = __commonJS({
       }
       throw new Error("no pom.xml or build.gradle for these tests");
     }
-    function parseReports(dirs, since) {
+    function parseReports(dirs, since, onlyFiles) {
       const cases = [];
       for (const d of dirs) {
         let files = [];
         try {
-          files = fs2.readdirSync(d).filter((f) => /^TEST-.*\.xml$/.test(f)).map((f) => path2.join(d, f));
+          files = fs2.readdirSync(d).filter((f) => /^TEST-.*\.xml$/.test(f) && (!onlyFiles || onlyFiles.includes(f))).map((f) => path2.join(d, f));
         } catch {
           continue;
         }
@@ -10781,7 +13610,7 @@ var require_testrun = __commonJS({
             const msg = fail ? unxml((fail[2].match(/\bmessage="([^"]*)"/) || [])[1] || "") : null;
             const stack = fail ? unxml((fail[3] || "").replace(/^<!\[CDATA\[|\]\]>$/g, "")) : null;
             const out2 = unxml(((inner.match(/<system-out>([\s\S]*?)<\/system-out>/) || [])[1] || "").replace(/^<!\[CDATA\[|\]\]>$/g, ""));
-            cases.push({ class: attr("classname"), name: attr("name"), ms: Math.round(Number(attr("time") || 0) * 1e3), status: fail ? fail[1] === "error" ? "error" : "failed" : skipped ? "skipped" : "passed", message: msg, type: fail ? (fail[2].match(/\btype="([^"]*)"/) || [])[1] || null : null, stack, output: out2 ? out2.slice(-4e3) : void 0 });
+            cases.push({ class: attr("classname"), file: attr("file") || void 0, name: attr("name"), ms: Math.round(Number(attr("time") || 0) * 1e3), status: fail ? fail[1] === "error" ? "error" : "failed" : skipped ? "skipped" : "passed", message: msg, type: fail ? (fail[2].match(/\btype="([^"]*)"/) || [])[1] || null : null, stack, output: out2 ? out2.slice(-4e3) : void 0 });
           }
         }
       }
@@ -10836,17 +13665,17 @@ var require_testrun = __commonJS({
       }
     }
     async function exec(cmd, args, opts = {}) {
-      if (getTests().runnerUrl) {
+      if (!opts.forceLocal && (opts.runnerUrl || getTests().runnerUrl)) {
         const r = await require_runner().exec(cmd, args, { ...opts, cwd: opts.cwd || require_config().PATHS.build });
-        if (!r.unreachable) return r;
+        if (!r.unreachable || opts.requireRunner) return r;
         if (!r.quiet) require_trace().note(`${r.out}: running the build in dt itself (Testcontainers has no Docker here)`);
       }
       return execLocal(cmd, args, opts);
     }
-    function execLocal(cmd, args, { cwd, env, timeoutMs, log }) {
+    function execLocal(cmd, args, { cwd, env, timeoutMs = 9e5, log }) {
       return new Promise((resolve) => {
         const started = Date.now();
-        const p = require_trace().child(spawn(cmd, args, { cwd, env, stdio: ["ignore", "pipe", "pipe"] }));
+        const p = require_trace().child(require_process_tree().spawnTree(cmd, args, { cwd, env, stdio: ["ignore", "pipe", "pipe"] }));
         let out2 = "", killed = false;
         const keep = (b) => {
           out2 += b.toString();
@@ -10858,8 +13687,7 @@ var require_testrun = __commonJS({
         p.stderr.on("data", keep);
         const timer = setTimeout(() => {
           killed = true;
-          p.kill("SIGTERM");
-          setTimeout(() => p.kill("SIGKILL"), 5e3);
+          require_process_tree().stop(p);
         }, timeoutMs);
         p.on("error", (e) => {
           clearTimeout(timer);
@@ -10868,13 +13696,17 @@ ${e.message}`, ms: Date.now() - started });
         });
         p.on("close", (code) => {
           clearTimeout(timer);
-          resolve({ code, out: out2, killed, ms: Date.now() - started });
+          resolve({ code, out: out2, killed, ms: Date.now() - started, runner: { placement: "local", hostname: require("os").hostname() } });
         });
       });
     }
-    async function run(id, { tests = [], db, fixturePath, fixtureBindings, fixtureTemplate = false, allowIncomplete = false, scenarioPath, scenarioOutput, log = () => {
-    }, mode = "auto", files: writes = [], check: checkFiles = true, fix } = {}) {
+    async function runUnlocked(id, { tests = [], db, fixturePath, fixtureRuntime, fixtureBindings, fixtureTemplate = false, allowIncomplete = false, scenarioPath, scenarioOutput, log = () => {
+    }, mode = "auto", target = "local", sourceEnv, files: writes = [], check: checkFiles = true, fix } = {}) {
+      if (fixtureRuntime !== void 0 && !/^[a-f0-9]{24}$/.test(fixtureRuntime || "")) throw new Error("invalid fixture_runtime lease id");
+      if (fixtureRuntime && (db || fixturePath || fixtureTemplate)) throw new Error("choose fixture_runtime or db/ddl_path/fixture_path/template, never both");
       if (db && fixturePath) throw new Error("choose fixture_path or db/ddl_path for the test database");
+      const executionTarget = require_test_targets().resolve(target, { env: sourceEnv || db?.env, fixturePath, fixtureRuntime, db });
+      const nativeFixture = fixtureRuntime ? await require_fixture_runtime_bridge().resolve(fixtureRuntime, { workspace: id, executionTarget, fixtureBindings }) : null;
       const m = W.checkId(id);
       const root = m.path;
       const written = writes.map((f) => W.write(id, f.path, { content: f.content, edits: f.edits }));
@@ -10892,6 +13724,7 @@ ${e.message}`, ms: Date.now() - started });
           exit: 1,
           ms: check.ms,
           counts: { tests: 0, passed: 0, failed: 0, errors: 0, skipped: 0 },
+          failureKinds: { assertions: 0, testErrors: 0 },
           cases: [],
           compile: compile2,
           check,
@@ -10902,24 +13735,44 @@ ${e.message}`, ms: Date.now() - started });
           history: []
         };
       }
+      if (nativeFixture && written.length) {
+        const current = await require_fixture_runtime_bridge().resolve(fixtureRuntime, { workspace: id, executionTarget, fixtureBindings });
+        if (current.metadata.fixtureDigest !== nativeFixture.metadata.fixtureDigest || current.metadata.profileDigest !== nativeFixture.metadata.profileDigest) throw new Error("native fixture changed while applying test files; restart the reviewed lease");
+      }
       const idx = W.index(id);
       const g = idx.graph_();
       if (!tests.length) throw new Error("name the tests to run (class names like FooTest, or Class#method)");
-      const found = tests.map((t) => findTest(root, g, t));
+      const nodeFound = tests.map((t) => require_node_test().find(root, t));
+      if (nodeFound.some(Boolean) && !nodeFound.every(Boolean)) throw new Error("do not mix Node file selectors with JVM class selectors in one run");
+      const isNode = nodeFound.every(Boolean);
+      const found = isNode ? nodeFound : tests.map((t) => findTest(root, g, t));
       const missing = tests.filter((t, i) => !found[i]);
       if (missing.length) throw new Error(`no test class ${missing.join(", ")} in ${id} (write it with workspace_write first, or give the full name com.acme.FooTest)`);
       const files = found.map((f) => f.file);
-      const p = plan(root, files);
+      const p = isNode ? { tool: "node", module: ".", modDir: root } : plan(root, files);
       const cfg = getTests();
       const fast = require_fastrun();
-      const why = mode === "build" ? "mode=build" : fast.supported(root, p, files);
-      if (mode === "fast" && why && p.tool !== "gradle") throw new Error(`no fast run here: ${why} (use mode="build")`);
+      const why = isNode ? "reviewed node:test profile" : executionTarget.requireRunner ? "reviewed remote target requires its project build" : mode === "build" ? "mode=build" : fast.supported(root, p, files);
+      if (mode === "fast" && why && !isNode && p.tool !== "gradle") throw new Error(`no fast run here: ${why} (use mode="build")`);
       p.selectors = found.map((f, i) => {
         const meth = tests[i].split("#")[1];
         return meth ? `${f.fqn}#${meth}` : f.fqn;
       });
-      const c = why ? command(root, p, tests, cfg) : null;
-      const { env, B, hide } = await envFor(p, cfg);
+      const nodeRunId = `${Date.now().toString(36)}${require("crypto").randomBytes(4).toString("hex")}`;
+      const c = isNode ? require_node_test().command(root, files, cfg, nodeRunId) : why ? command(root, p, tests, cfg) : null;
+      const { env, B, hide: buildHide } = await envFor(p, cfg, executionTarget);
+      Object.assign(env, executionTarget.env);
+      if (nativeFixture) {
+        for (const key of ["SPRING_DATASOURCE_URL", "SPRING_DATASOURCE_USERNAME", "SPRING_DATASOURCE_PASSWORD", "SPRING_ELASTICSEARCH_URIS", "SPRING_KAFKA_BOOTSTRAP_SERVERS"]) delete env[key];
+        Object.assign(env, nativeFixture.env);
+        executionTarget.metadata.environment = "owned-local-fixture";
+        executionTarget.metadata.fixtureRuntime = nativeFixture.metadata;
+        executionTarget.metadata.provenance = "caller-owned native dependency lease; test success does not prove service actions or effects; run fixture_runtime_check independently";
+      }
+      const privacy = require_execution_privacy(), knownSecrets = [.../* @__PURE__ */ new Set([...B.secrets, ...privacy.secrets(cfg, executionTarget), ...nativeFixture?.secrets || []])];
+      const hide = (text) => privacy.mask(buildHide(text), knownSecrets);
+      const originalLog = log;
+      log = (line) => originalLog(hide(line));
       if (scenarioPath || scenarioOutput) {
         if (!scenarioPath || !scenarioOutput) throw new Error("scenarioPath and scenarioOutput are required together");
         env.DT_SCENARIO_PACKAGE = require_scenario_package().workspacePath(id, scenarioPath).full;
@@ -10953,34 +13806,48 @@ ${e.message}`, ms: Date.now() - started });
         }
       }
       let r, cases, fastInfo = null;
+      const failureKinds = { assertions: 0, testErrors: 0 };
       const cleanupErrors = [];
       let executionError;
+      const reportDirs = isNode ? [] : [path2.join(p.modDir, "target", "surefire-reports"), path2.join(p.modDir, "build", "test-results", "test")];
       try {
-        const reportDirs = [path2.join(p.modDir, "target", "surefire-reports"), path2.join(p.modDir, "build", "test-results", "test")];
         await require_javacheck().idle(id);
         const started = Date.now();
         if (!why) {
           const selectors = p.selectors;
           log(`fast: ${selectors.join(" ")}`);
-          r = await fast.run({ id, root, plan: p, cfg, env, mvn: { cmd: mavenCmd(root, cfg)[0], args: mavenCmd(root, cfg)[1] }, selectors, graph: g, log: (l) => log(hide(l)) });
+          r = await fast.run({ id, root, plan: p, cfg, executionTarget, env, mvn: { cmd: mavenCmd(root, cfg)[0], args: mavenCmd(root, cfg)[1] }, selectors, graph: g, log: (l) => log(hide(l)) });
           cases = r.cases;
           fastInfo = { compiled: r.compiled, prepared: !!r.prepared, prepareMs: r.prepareMs, phase: r.phase };
         } else {
           for (const d of reportDirs) fs2.rmSync(d, { recursive: true, force: true });
           log(`${p.tool}: ${path2.basename(c.cmd)} ${c.args.filter((a) => !/^-Dmaven\.repo\.local|^-s$/.test(a)).join(" ")}`);
-          r = await require_trace().step(`${p.tool} test`, () => exec(c.cmd, c.args, { cwd: c.cwd, env, timeoutMs: cfg.timeoutMs, log: (l) => log(hide(l)) }), `${p.module} ${tests.join(",")}`);
+          r = await require_trace().step(`${p.tool} test`, () => exec(c.cmd, c.args, { ...executionTarget, cwd: c.cwd, env, timeoutMs: cfg.timeoutMs, log: (l) => log(hide(l)) }), `${p.module} ${tests.join(",")}`);
           if (p.tool === "gradle" && (r.killed || r.code === null)) {
             require_trace().note("the Gradle run was stopped: stopping its daemon (gradle --stop)");
             await exec(c.cmd, [...c.args.filter((a, i) => i < c.args.indexOf("--console=plain") && !/^-D/.test(a)), "--stop"], { cwd: c.cwd, env, timeoutMs: 6e4 }).catch(() => {
             });
           }
           if (r.code !== 0 && !r.out.trim()) require_trace().note(`${p.tool} exited ${r.code} with no output: is ${c.cmd} runnable here?`);
-          cases = parseReports(reportDirs, started);
+          cases = isNode ? require_node_test().parse(c.report, root) : parseReports(reportDirs, started);
         }
+        for (const k of cases) {
+          if (k.status !== "failed" && k.status !== "error") continue;
+          k.failureKind = /(?:^|[.$])(?:AssertionError|AssertionFailedError|ComparisonFailure)$/.test(k.type || "") || /^\s*(?:[\w$]+\.)*(?:AssertionError|AssertionFailedError|ComparisonFailure)(?=\s|:|\[|$)/.test(k.stack || "") ? "assertion" : "test-error";
+          failureKinds[k.failureKind === "assertion" ? "assertions" : "testErrors"]++;
+        }
+        cases = privacy.clean(cases, hide);
       } catch (e) {
+        e.message = hide(e.message);
         executionError = e;
         throw e;
       } finally {
+        try {
+          privacy.reports(isNode ? [c.report] : privacy.filesIn(reportDirs), knownSecrets);
+        } catch (e) {
+          cleanupErrors.push({ kind: "report-redaction", error: hide(e.message) });
+          log(`test report redaction failed: ${e.message}`);
+        }
         if (database) {
           try {
             await require_testdb().drop(database.database);
@@ -10999,7 +13866,7 @@ ${e.message}`, ms: Date.now() - started });
         }
         if (executionError && cleanupErrors.length) executionError.cleanupErrors = cleanupErrors;
       }
-      for (const k of cases) k.name = testName(k.name);
+      if (!isNode) for (const k of cases) k.name = testName(k.name);
       const O = require_testout();
       const pkgs = /* @__PURE__ */ new Set(), ids = /* @__PURE__ */ new Set();
       for (const key of (() => {
@@ -11023,7 +13890,7 @@ ${e.message}`, ms: Date.now() - started });
         if (k.stack && k.stack.length > 3e4) k.stack = `${k.stack.slice(0, 3e4)}
 ... (cut)`;
       }
-      const compile = cases.length ? [] : compileErrors(r.out, root);
+      const compile = privacy.clean(cases.length ? [] : compileErrors(r.out, root), hide);
       for (const k of cases) if (k.status === "failed" || k.status === "error") k.parts = partsOf(root, g, k);
       const counts = { tests: cases.length, passed: cases.filter((k) => k.status === "passed").length, failed: cases.filter((k) => k.status === "failed").length, errors: cases.filter((k) => k.status === "error").length, skipped: cases.filter((k) => k.status === "skipped").length };
       const parts = [];
@@ -11036,8 +13903,8 @@ ${e.message}`, ms: Date.now() - started });
       if (/Could not get unknown property '(\w+)'|Could not resolve all (files|dependencies)|Received status code 401|status code 401|Unauthorized/.test(r.out)) hints.push(`The build needs settings of this machine (a private repository and its credentials): put them in gradle.properties in dt's config folder (or tests.gradleProperties; values may be \${VAR} from .env), or tests.env for environment variables${p.tool === "maven" ? "; for Maven, maven-settings.xml in the config folder (or tests.mavenSettings)" : ""}.`);
       if (/Could not find a valid Docker environment|DockerClientProviderStrategy|Previous attempts to find a Docker environment failed/.test(r.out)) hints.push(getTests().runnerUrl ? "Testcontainers found no Docker on the runner: doctor shows its Docker check (the socket mount, DT_DOCKER_GID)." : "Testcontainers needs Docker: run builds on the runner (compose: the jdk profile starts it with the host's Docker socket), or give dt a DOCKER_HOST.");
       if (/Failed to determine a suitable driver class|Connection to .* refused|password authentication failed/.test(r.out)) hints.push("The tests wanted a database: run with db (env + db) so test_run loads the DDL snapshot into a throwaway database.");
-      const ok = !cleanupErrors.length && r.code === 0 && counts.failed === 0 && counts.errors === 0 && !compile.length && counts.tests > 0;
-      const outcome = ok ? "passed" : cleanupErrors.length ? "cleanup-failed" : r.killed ? "timeout" : compile.length ? "compile-error" : counts.tests === 0 ? "no-tests-ran" : "failed";
+      const ok = !cleanupErrors.length && r.code === 0 && counts.failed === 0 && counts.errors === 0 && !compile.length && counts.passed > 0;
+      const outcome = ok ? "passed" : cleanupErrors.length ? "cleanup-failed" : r.killed ? "timeout" : compile.length ? "compile-error" : counts.tests === 0 ? "no-tests-ran" : counts.passed === 0 && counts.skipped === counts.tests ? "all-tests-skipped" : "failed";
       record(id, root, cases, why ? "build" : "fast");
       const suggestions = (() => {
         try {
@@ -11047,6 +13914,7 @@ ${e.message}`, ms: Date.now() - started });
         }
       })();
       return {
+        execution: { ...executionTarget.metadata, host: r.runner || executionTarget.metadata.host },
         workspace: id,
         tool: p.tool,
         mode: why ? p.tool === "gradle" ? "gradle" : "build" : "fast",
@@ -11057,17 +13925,19 @@ ${e.message}`, ms: Date.now() - started });
         command: hide(c ? `${path2.basename(c.cmd)} ${c.args.filter((a) => !/^-Dmaven\.repo\.local/.test(a)).join(" ")}` : `javac (${fastInfo.compiled ?? 0} changed) + JUnit launcher${fastInfo.prepared ? " (prepared with Maven first)" : ""}`),
         ...B.sources.length ? { gradleProperties: B.sources.map((f) => path2.basename(path2.dirname(f)) + "/" + path2.basename(f)) } : {},
         outcome,
-        ...cleanupErrors.length ? { cleanupErrors } : {},
+        ...cleanupErrors.length ? { cleanupErrors: privacy.clean(cleanupErrors, hide) } : {},
         exit: r.code,
         ms: r.ms,
         counts,
+        failureKinds,
         cases,
         compile,
-        parts,
-        hints,
-        ...check ? { check } : {},
-        ...suggestions.length ? { suggestions } : {},
+        parts: privacy.clean(parts, hide),
+        hints: privacy.clean(hints, hide),
+        ...check ? { check: privacy.clean(check, hide) } : {},
+        ...suggestions.length ? { suggestions: privacy.clean(suggestions, hide) } : {},
         database: database ? { name: database.database, failedStatements: database.errors } : null,
+        ...nativeFixture ? { fixture: { runtime: nativeFixture.metadata } } : {},
         ...fixture ? { fixture: { path: fixturePath, databases: Object.keys(fixture.databases), topics: fixture.topics, ...fixture.lease ? { lease: fixture.lease, template: fixture.template, timings: fixture.timings } : {} } } : {},
         tail: hide(require_testout().compactLog(r.out)),
         history: history(id, cases)
@@ -11089,7 +13959,7 @@ ${e.message}`, ms: Date.now() - started });
     }
     var testName = (n) => String(n || "").replace(/\s*\[(\d+)\].*$/, "[$1]").replace(/\([^)]*\)(?=\[|$)/, "");
     var runsFile = (id) => path2.join(require_util().CACHE, "work", `${id}.runs.json`);
-    function fingerprint(root) {
+    function fingerprint(root, { includeTests = false } = {}) {
       const parts = [];
       (function rec(d) {
         let es;
@@ -11101,10 +13971,9 @@ ${e.message}`, ms: Date.now() - started });
         for (const e of es) {
           const f = path2.join(d, e.name), rel = path2.relative(root, f).split(path2.sep).join("/");
           if (e.isDirectory()) {
-            if (!/^(\.git|target|build|node_modules|\.gradle)$/.test(e.name) && !/(^|\/)src\/(test|it)$/.test(rel)) rec(f);
-          } else if (/\.(java|kt|groovy|ya?ml|properties|xml|sql)$/.test(e.name)) {
-            const st = fs2.statSync(f);
-            parts.push(`${rel}:${st.size}:${Math.round(st.mtimeMs)}`);
+            if (!/^(\.git|\.dt|target|build|node_modules|\.gradle)$/.test(e.name) && (includeTests || !/(^|\/)(?:src\/(?:test|it)|test|tests|__tests__)$/.test(rel))) rec(f);
+          } else if (/\.(java|kt|groovy|[cm]?js|[cm]?ts|json|ya?ml|properties|xml|sql)$/.test(e.name) && (includeTests || !/\.(?:test|spec)\.[cm]?[jt]s$/.test(e.name))) {
+            parts.push(`${rel}:${require("crypto").createHash("sha256").update(fs2.readFileSync(f)).digest("hex")}`);
           }
         }
       })(root);
@@ -11171,7 +14040,17 @@ ${e.message}`, ms: Date.now() - started });
       if (cur.trim()) out2.push(cur.trim());
       return out2;
     }
-    module2.exports = { run, envFor, gradleCmd, mavenCmd, findTest, jdkMajor, cleanEnv, proof, testName, fingerprint, plan, parseReports, compileErrors, codeParts, splitSql, fixtureEnvironment };
+    var activeWorkspaces = /* @__PURE__ */ new Set();
+    async function run(id, options) {
+      if (activeWorkspaces.has(id)) throw new Error(`workspace ${id} already has a test execution; wait or use a separate workspace for conflicting targets/inputs`);
+      activeWorkspaces.add(id);
+      try {
+        return await runUnlocked(id, options);
+      } finally {
+        activeWorkspaces.delete(id);
+      }
+    }
+    module2.exports = { run, envFor, gradleCmd, mavenCmd, findTest, jdkMajor, cleanEnv, proof, testName, fingerprint, plan, parseReports, compileErrors, codeParts, splitSql, fixtureEnvironment, exec, execLocal };
   }
 });
 
@@ -12208,7 +15087,7 @@ var require_runner = __commonJS({
         res.writeHead(200, { "content-type": "application/x-ndjson" });
         const started = Date.now();
         let killed = false;
-        const p = spawn(body.cmd, body.args || [], { cwd, env, stdio: ["ignore", "pipe", "pipe"] });
+        const p = require_process_tree().spawnTree(body.cmd, body.args || [], { cwd, env, stdio: ["ignore", "pipe", "pipe"] });
         const id = body.id || String(p.pid);
         procs.set(id, p);
         const timer = setTimeout(() => {
@@ -12250,22 +15129,25 @@ var require_runner = __commonJS({
     var auth = () => ({ authorization: `Bearer ${require_config().getTests().runnerToken || ""}` });
     var downUntil = 0;
     var downWhy = "";
-    function exec(cmd, args, { cwd, env, timeoutMs = 9e5, log } = {}) {
+    var downEndpoint = "";
+    function exec(cmd, args, { cwd, env, timeoutMs = 9e5, log, runnerUrl, runnerToken } = {}) {
+      const endpoint = runnerUrl || url();
+      const headers = runnerToken ? { authorization: `Bearer ${runnerToken}` } : auth();
       const T = require_trace();
-      if (Date.now() < downUntil) return Promise.resolve({ code: -1, out: downWhy, ms: 0, runnerError: true, unreachable: true, quiet: true });
+      if (endpoint === downEndpoint && Date.now() < downUntil) return Promise.resolve({ code: -1, out: downWhy, ms: 0, runnerError: true, unreachable: true, quiet: true });
       const id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
       const handle = new EventEmitter();
       handle.kill = () => {
-        fetch(`${url()}/kill`, { method: "POST", headers: { ...auth(), "content-type": "application/json" }, body: JSON.stringify({ id }) }).catch(() => {
+        fetch(`${endpoint}/kill`, { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: JSON.stringify({ id }) }).catch(() => {
         });
         return true;
       };
       T.child(handle);
       return new Promise((resolve) => {
         const started = Date.now();
-        const u = new URL("/exec", url());
+        const u = new URL("/exec", endpoint);
         let out2 = "", buf = "", done = null;
-        const req = http2.request({ hostname: u.hostname, port: u.port, path: u.pathname, method: "POST", headers: { ...auth(), "content-type": "application/json" } }, (res) => {
+        const req = (u.protocol === "https:" ? require("https") : http2).request({ hostname: u.hostname, port: u.port, path: u.pathname, method: "POST", headers: { ...headers, "content-type": "application/json" } }, (res) => {
           if (res.statusCode !== 200) {
             let d = "";
             res.on("data", (c) => {
@@ -12301,21 +15183,24 @@ var require_runner = __commonJS({
           res.on("end", () => {
             handle.emit("exit");
             resolve({ code: done ? done.code : -1, out: out2 + (done?.error ? `
-${done.error}` : ""), killed: done?.killed, ms: Date.now() - started, ...done ? {} : { runnerError: true } });
+${done.error}` : ""), runner: { placement: "remote", origin: new URL(endpoint).origin }, killed: done?.killed, ms: Date.now() - started, ...done ? {} : { runnerError: true } });
           });
         });
         req.on("error", (e) => {
           handle.emit("exit");
+          downEndpoint = endpoint;
           downUntil = Date.now() + 6e4;
-          downWhy = `runner ${url()}: ${e.code || e.message}`;
+          downWhy = `runner ${endpoint}: ${e.code || e.message}`;
           resolve({ code: -1, out: downWhy, ms: Date.now() - started, runnerError: true, unreachable: true });
         });
         req.end(JSON.stringify({ id, cmd, args, cwd, env, timeoutMs }));
       });
     }
-    async function remoteInfo() {
-      const res = await fetch(`${url()}/info`, { headers: auth(), signal: AbortSignal.timeout(3e4) });
-      if (!res.ok) throw new Error(`runner ${url()}: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
+    async function remoteInfo({ runnerUrl, runnerToken } = {}) {
+      const endpoint = runnerUrl || url();
+      const headers = runnerToken ? { authorization: `Bearer ${runnerToken}` } : auth();
+      const res = await fetch(`${endpoint}/info`, { headers, signal: AbortSignal.timeout(3e4) });
+      if (!res.ok) throw new Error(`runner ${endpoint}: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
       return res.json();
     }
     module2.exports = { serve, exec, remoteInfo, info, url };
@@ -14220,7 +17105,7 @@ var require_knowledge = __commonJS({
       };
     }
     function system(env) {
-      const nodes = /* @__PURE__ */ new Map(), relations = [], passports = [];
+      const nodes = /* @__PURE__ */ new Map(), relations = [], passports = [], gaps = [];
       const consul = readJson(path2.join(CACHE2, env, "consul.json"), {});
       const add = (n) => {
         const old = nodes.get(n.id);
@@ -14228,12 +17113,15 @@ var require_knowledge = __commonJS({
         return n.id;
       };
       const relation = (from, to, kind, src = {}, extra = {}) => relations.push({ from, to, kind, label: kind, confidence: "verified", provenance: { source: "code", status: "verified", ...src }, ...extra });
-      for (const p of require_passport().list()) {
-        const full = require_passport().load(p.service);
-        if (!full) continue;
+      const cachedPassports = require_edges().snapshot();
+      gaps.push(...cachedPassports.gaps);
+      for (const { passport: full, stale, digest } of cachedPassports.rows) {
+        if (!full || full.env && full.env !== env) continue;
         passports.push(full);
+        const p = { service: full.service, repo: `${full.repo?.project || "?"}/${full.repo?.repo || "?"}` };
+        if (!full.env) gaps.push({ kind: "passport-environment-unknown", service: p.service });
         const aliases = [p.service, full.repo?.repo, full.app?.name, full.config?.values?.["spring.application.name"], full.config?.merged?.["spring.application.name"], full.kubernetes?.name, ...full.aliases || []].filter((x) => typeof x === "string");
-        add({ id: "service:" + p.service, name: p.service, kind: "service", aliases: aliases.flatMap(variants), version: full.deployed?.version || full.app?.version || full.version || full.repo?.sha?.slice(0, 10), owner: full.owner || full.repo?.project, env: full.env, provenance: { source: "passport", status: "verified", sha: full.repo?.sha, repo: p.repo } });
+        add({ id: "service:" + p.service, name: p.service, kind: "service", aliases: aliases.flatMap(variants), version: full.deployed?.version || full.app?.version || full.version || full.repo?.sha?.slice(0, 10), owner: full.owner || full.repo?.project, env: full.env, provenance: { source: "passport", status: "verified", sha: full.repo?.sha, repo: p.repo, stale, digest } });
         const deployed = consul.services?.[p.service]?.instances || [];
         const versions = [...new Set(deployed.map((i) => i.meta?.version || i.version).filter(Boolean))];
         if (versions.length) Object.assign(nodes.get("service:" + p.service), { version: versions.join(", "), versions: { [env]: versions }, env, deploymentProvenance: { source: "catalog:consul", syncedAt: consul.syncedAt } });
@@ -14248,8 +17136,16 @@ var require_knowledge = __commonJS({
       }
       for (const db of cachedDbs.values()) {
         add({ id: `database:${db.db}`, name: db.db, kind: "database", technology: "PostgreSQL", aliases: [db.db], tables: (db.tables || []).map((t) => `${t.schema}.${t.name}`), provenance: { source: "catalog:pg", status: "verified", syncedAt: db.syncedAt } });
-        for (const t of db.tables || []) add({ id: `table:${db.db}:${t.schema}.${t.name}`, name: `${t.schema}.${t.name}`, kind: "table", db: db.db, aliases: [`${t.schema}.${t.name}`, t.name], columns: t.columns, provenance: { source: "catalog:pg", status: "verified", syncedAt: db.syncedAt } });
-        for (const f of db.functions || []) add({ id: `function:${db.db}:${f.schema}.${f.name}`, name: `${f.schema}.${f.name}`, kind: "function", db: db.db, aliases: [`${f.schema}.${f.name}`, f.name], provenance: { source: "catalog:pg", status: "verified", syncedAt: db.syncedAt } });
+        for (const t of db.tables || []) {
+          const ID = require_semantic_identity(), object = `${t.schema}.${t.name}`, canonicalId = ID.pg("table", env, db.db, ID.qualified(t.schema, t.name));
+          add({ id: `table:${db.db}:${object}`, canonicalId, identityVersion: "dt.identity/v1", scope: { env, db: db.db, schema: t.schema, name: t.name }, name: object, kind: "table", db: db.db, aliases: [canonicalId, object, t.name], columns: t.columns, provenance: { source: "catalog:pg", status: "verified", syncedAt: db.syncedAt } });
+        }
+        for (const f of db.functions || []) {
+          const object = `${f.schema}.${f.name}`, overloaded = (db.functions || []).filter((x) => x.schema === f.schema && x.name === f.name).length > 1;
+          const ID = require_semantic_identity(), name = overloaded ? `${object}(${f.arguments || ""})` : object, scopedObject = ID.qualified(f.schema, f.name) + (overloaded ? `(${f.arguments || ""})` : ""), canonicalId = ID.pg("pgfn", env, db.db, scopedObject);
+          add({ id: `function:${db.db}:${name}`, canonicalId, identityVersion: "dt.identity/v1", scope: { env, db: db.db, schema: f.schema, name: f.name, arguments: f.arguments }, name, kind: "function", db: db.db, aliases: [canonicalId, `function:${db.db}:${object}`, object, f.name], provenance: { source: "catalog:pg", status: "verified", syncedAt: db.syncedAt } });
+          if (overloaded) gaps.push({ kind: "function-overload-resolution", db: db.db, object, detail: "Unqualified function usage cannot establish the called overload." });
+        }
       }
       let files = [];
       try {
@@ -14302,10 +17198,10 @@ var require_knowledge = __commonJS({
         const to = `${["function", "procedure"].includes(e.targetKind) ? "function" : "table"}:${e.db}:${e.target}`;
         if (nodes.has(from) && nodes.has(to) && e.source === "db") relation(from, to, e.role, { source: "catalog:pg-usage", status: "verified", where: e.where, detail: e.detail }, { technology: "PostgreSQL" });
       }
-      return { nodes: [...nodes.values()], relations, passports };
+      return { nodes: [...nodes.values()], relations, passports, gaps };
     }
     function build(env, { pages = docs.list(), systemModel } = {}) {
-      const sys = systemModel || system(env), nodes = new Map(sys.nodes.map((n) => [n.id, { ...n }])), relations = [...sys.relations], mentions = [], gaps = [];
+      const sys = systemModel || system(env), nodes = new Map(sys.nodes.map((n) => [n.id, { ...n }])), relations = [...sys.relations], mentions = [], gaps = [...sys.gaps || []];
       const entities = [...nodes.values()], match = entityMatcher(entities);
       const byTitle = (title, space) => pages.filter((p) => p.title === title && (!space || p.space === space));
       for (const p of pages) {
@@ -36321,6 +39217,41 @@ var require_files = __commonJS({
   }
 });
 
+// lib/call-outcome.js
+var require_call_outcome = __commonJS({
+  "lib/call-outcome.js"(exports2, module2) {
+    var FAILED = /* @__PURE__ */ new Set(["failed", "error", "cancelled", "interrupted", "timeout", "compile-error", "no-tests-ran", "skipped-only", "all-tests-skipped", "cleanup-failed", "invalid", "different"]);
+    var TESTS = /* @__PURE__ */ new Set(["test_run", "test_compare"]);
+    var ASSERTIONS = /* @__PURE__ */ new Set(["scenario_check", "scenario_preflight", "scenario_emulate", "scenario_assert", "scenario_observe", "scenario_run", "scenario_verify", "collection_check", "collection_validate", "collection_run", "collection_report", "script_run", "fixture_validate", "fixture_runtime_preflight", "fixture_runtime_start", "fixture_runtime_arm", "fixture_runtime_check", "fixture_runtime_cleanup"]);
+    function classify(tool, value, { invocation = "succeeded", job, traceId } = {}) {
+      const r = value && typeof value === "object" ? value : {};
+      const out2 = { version: 1, invocation, ...traceId ? { traceId } : {} };
+      const id = typeof r.job === "string" ? r.job : job?.id;
+      if (id) out2.job = { id, state: job?.state || r.state || r.status || "unknown", ...job?.traceId ? { traceId: job.traceId } : {} };
+      const payload = job?.result || r;
+      if (tool === "differential_check" && ["equivalent", "different"].includes(payload.outcome)) out2.execution = { kind: "assertions", status: payload.outcome };
+      else if (TESTS.has(tool) && typeof payload.outcome === "string") out2.execution = { kind: "tests", status: payload.outcome, ...payload.counts ? { counts: payload.counts } : {} };
+      else if (ASSERTIONS.has(tool)) {
+        if (typeof payload.ok === "boolean") out2.execution = { kind: "assertions", status: payload.ok ? "passed" : "failed" };
+        else if (typeof payload.status === "string") out2.execution = { kind: "assertions", status: payload.status };
+      }
+      if (!out2.execution && out2.job) out2.execution = { kind: "job", status: out2.job.state };
+      out2.failed = invocation === "failed" || FAILED.has(out2.execution?.status) || FAILED.has(out2.job?.state);
+      return out2;
+    }
+    function refresh(call) {
+      if (!call.evidence?.job) return call;
+      const job = require_jobs().get(call.evidence.job.id);
+      if (!job) return { ...call, evidence: { ...call.evidence, job: { ...call.evidence.job, retained: false } } };
+      return { ...call, evidence: classify(call.target || call.tool, null, { invocation: call.evidence.invocation, traceId: call.evidence.traceId, job }) };
+    }
+    function failed(call) {
+      return call.evidence ? call.evidence.failed : call.ok === false;
+    }
+    module2.exports = { classify, refresh, failed };
+  }
+});
+
 // lib/calls.js
 var require_calls = __commonJS({
   "lib/calls.js"(exports2, module2) {
@@ -36338,11 +39269,11 @@ var require_calls = __commonJS({
       if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).slice(0, 50).map(([k, x]) => [k, clipArgs(x, n)]));
       return v;
     };
-    function record({ tool, args, source, ok, ms, error, size, steps, redactions = [] }) {
+    function record({ tool, args, source, ok, ms, error, size, steps, evidence, target, redactions = [] }) {
       if (SKIP.has(tool)) return;
       const st = (steps || []).filter((x) => x.depth === 0 || !x.ok).slice(0, 30).map((x) => ({ name: x.name, ms: x.ms, ...x.ok ? {} : { error: x.error } }));
-      const evidence = require_redact().clean({ args: args || {}, error, steps: st }, { known: redactions });
-      const line = JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), tool, source: source || "api", args: clipArgs(evidence.args), ok, ms, ...error ? { error: String(evidence.error).slice(0, 600) } : {}, ...size ? { size } : {}, ...st.length ? { steps: evidence.steps } : {} });
+      const cleaned = require_redact().clean({ args: args || {}, error, steps: st, evidence, target: typeof target === "string" ? target : void 0 }, { known: redactions });
+      const line = JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), tool, source: source || "api", args: clipArgs(cleaned.args), ok, ms, ...cleaned.target ? { target: cleaned.target } : {}, ...evidence ? { evidence: cleaned.evidence } : {}, ...error ? { error: String(cleaned.error).slice(0, 600) } : {}, ...size ? { size } : {}, ...st.length ? { steps: cleaned.steps } : {} });
       try {
         fs2.mkdirSync(path2.dirname(FILE), { recursive: true });
         fs2.appendFileSync(FILE, line + "\n");
@@ -36382,9 +39313,9 @@ var require_calls = __commonJS({
         }
       }).filter(Boolean);
     }
-    function history({ q, tool, source, limit = 200 } = {}) {
+    function history({ q, tool, source, failed, status, kind, limit = 200 } = {}) {
       const words = String(q || "").toLowerCase().split(/\s+/).filter(Boolean);
-      return all().reverse().filter((c) => (!tool || c.tool === tool) && (!source || c.source === source || source === "direct" && !c.source.startsWith("script:"))).filter((c) => !words.length || words.every((w) => `${c.tool} ${c.source} ${JSON.stringify(c.args)}`.toLowerCase().includes(w))).slice(0, limit);
+      return all().reverse().map(require_call_outcome().refresh).filter((c) => (!tool || c.tool === tool) && (!source || c.source === source || source === "direct" && !c.source.startsWith("script:"))).filter((c) => !words.length || words.every((w) => `${c.tool} ${c.source} ${JSON.stringify(c.args)}`.toLowerCase().includes(w))).filter((c) => (!failed || require_call_outcome().failed(c)) && (!status || c.evidence?.execution?.status === status || c.evidence?.invocation === status) && (!kind || c.evidence?.execution?.kind === kind)).slice(0, limit);
     }
     var SLOT = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|'[^']*'|\b\d+\b/gi;
     var shape = (v) => typeof v === "string" ? v.replace(SLOT, "\0") : JSON.stringify(v);
@@ -36427,7 +39358,7 @@ var require_calls = __commonJS({
       }
       return { args, params };
     }
-    var direct = (cs) => cs.filter((c) => c.ok !== false && !String(c.source).startsWith("script:") && !String(c.tool).startsWith("script_"));
+    var direct = (cs) => cs.map(require_call_outcome().refresh).filter((c) => !require_call_outcome().failed(c) && !String(c.source).startsWith("script:") && !String(c.tool).startsWith("script_"));
     function sessions(cs) {
       const out2 = [];
       let cur = [];
@@ -38544,6 +41475,13 @@ ${indent(hint, 4)}` : ""}`);
     }
     function context(id, target, { env, db: dbName, writeDdl = true, flow, allFunctions } = {}) {
       const m = W.checkId(id);
+      const canonical = require_semantic_identity().parseCode(target);
+      if (canonical) {
+        if (!W.keys(id).includes(canonical.repo)) throw new Error(`Canonical target belongs to ${canonical.repo}; it is not in workspace ${id} or its bound libraries`);
+        const actual = require_codeindex().load(canonical.repo);
+        if (require_semantic_identity().revision(actual) !== canonical.revision) throw new Error("Canonical target revision does not match the indexed workspace; refresh code_symbols");
+        target = canonical.symbol;
+      }
       const wg = W.index(id).graph_();
       const [tc, tm] = String(target).split(/#|::/);
       const entryMethod = tm && findClass(wg, tc)[0]?.methods.find((x) => x.name === tm && x.annos.some((a) => /^(Scheduled|KafkaListener|EventListener|TransactionalEventListener|RabbitListener|JmsListener|SqsListener)$/.test(a)));
@@ -38578,14 +41516,18 @@ ${indent(hint, 4)}` : ""}`);
       const st = style(c, g, deps);
       const pub = (x) => !x.ctor && !x.mods.includes("private") && x.name !== "main";
       let methods = c.methods.filter((x) => pub(x) && !x.abstract || c.kind === "interface" && !x.ctor);
-      if (member) methods = c.methods.filter((x) => x.name === member);
+      if (member) {
+        const identity = require_semantic_identity();
+        methods = c.methods.filter((x) => member.includes("(") ? identity.signature(x) === member : x.name === member);
+        if (methods.length > 1) throw new Error(`Ambiguous method ${member}; select a signature: ${methods.map(identity.signature).join(", ")}`);
+      }
       if (member && !methods.length) throw new Error(`no method ${member} in ${c.id}; it has ${c.methods.filter((x) => !x.ctor).map((x) => x.name).join(", ")}`);
       const calls = /* @__PURE__ */ new Map();
       const depByType = new Map(deps.map((d) => [d.typeId, d]));
       for (const x of methods) {
         const out2 = [];
-        for (const [from2, to2, kind] of g.edges) {
-          if (from2 !== `${c.id}#${x.name}` || kind !== "calls") continue;
+        for (const [from2, to2, kind, where, arity, types, fromSymbol] of g.preciseEdges || g.edges) {
+          if ((fromSymbol ? fromSymbol !== `${c.id}#${require_semantic_identity().signature(x)}` : from2 !== `${c.id}#${x.name}`) || kind !== "calls") continue;
           const [tid, mname] = to2.split("#");
           const d = depByType.get(tid) || deps.find((dd) => `ext:${dd.type.replace(/<.*$/, "")}` === tid || dd.typeId === tid);
           if (!d) continue;
@@ -38847,7 +41789,7 @@ ${indent(hint, 4)}` : ""}`);
       const keys = W.keys(id);
       const F = require_flows();
       const config = F.serviceConfig(m.path);
-      const G = require_impact().load({ repos: keys });
+      const G = require_impact().loadLegacy({ repos: keys });
       const t = String(target).trim();
       const normPath = (p) => p.replace(/\{[^}]*\}/g, "{}").replace(/\/+$/, "");
       const all = F.flows(keys, { config });
@@ -38871,7 +41813,9 @@ ${indent(hint, 4)}` : ""}`);
       }
       if (!f) return null;
       const entryCls = G.classes.get(f.method.split("#")[0]);
-      const entryMethod = entryCls.methods.find((x) => x.name === f.method.split("#")[1]);
+      const entryMethods = entryCls.methods.filter((x) => x.name === f.method.split("#")[1]);
+      if (entryMethods.length > 1) throw new Error(`Overloaded flow entry ${f.method} requires a signature-aware flow adapter`);
+      const entryMethod = entryMethods[0];
       const g = W.index(id).graph_();
       const app = g.classes.find((c) => c.role === "application") || g.classes.find((c) => !c.test);
       const pkg = app ? app.id.slice(0, app.id.length - app.name.length - 1) : "";
@@ -39044,6 +41988,107 @@ ${k.type} ${k.name};`);
   }
 });
 
+// lib/differential.js
+var require_differential = __commonJS({
+  "lib/differential.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var crypto = require("crypto");
+    var W = require_workspace();
+    var T = require_test_targets();
+    function file(root, rel) {
+      if (typeof rel !== "string" || !rel || path2.isAbsolute(rel)) throw new Error("differential paths must be workspace relative");
+      const full = W.resolvePath({ path: root }, rel).full;
+      if (fs2.existsSync(full) && !fs2.realpathSync(full).startsWith(fs2.realpathSync(root) + path2.sep)) throw new Error("differential path escapes workspace");
+      return full;
+    }
+    function observedFiles(root, paths) {
+      const out2 = {};
+      for (const rel of paths) {
+        const full = file(root, rel);
+        if (!fs2.existsSync(full)) {
+          out2[rel] = { exists: false };
+          continue;
+        }
+        const st = fs2.lstatSync(full);
+        if (!st.isFile() || st.size > 1048576) throw new Error(`effect observation requires regular files <= 1 MiB: ${rel}`);
+        out2[rel] = { exists: true, sha256: crypto.createHash("sha256").update(fs2.readFileSync(full)).digest("hex") };
+      }
+      return out2;
+    }
+    function normalize(value, rules) {
+      const out2 = structuredClone(value);
+      for (const rule of rules || []) {
+        if (rule.kind !== "omit" || !Array.isArray(rule.path) || !rule.path.length || !rule.reason || rule.path.some((p) => typeof p !== "string")) throw new Error("normalizers require kind=omit, a nonempty field path and a review reason");
+        let parent = out2.value;
+        for (const part of rule.path.slice(0, -1)) parent = parent?.$dtType === "object" ? parent.entries.find(([k]) => k === part)?.[1] : void 0;
+        if (parent?.$dtType === "object") parent.entries = parent.entries.filter(([k]) => k !== rule.path.at(-1));
+      }
+      return out2;
+    }
+    async function databaseObservations(profile, execution, input) {
+      const observed = {};
+      for (const spec of profile.observers || []) {
+        if (spec.kind !== "postgres" || !spec.id || !spec.query || !spec.db) throw new Error("differential observers require id, kind=postgres, db and a reviewed read-only query");
+        const env = spec.environment || execution.metadata.environment;
+        if (!env) throw new Error(`observer ${spec.id} requires an explicit environment or a target environment`);
+        const params = (spec.argumentIndexes || []).map((i) => {
+          if (!Number.isInteger(i) || i < 0 || i >= input.args.length) throw new Error(`invalid observer argument index ${i}`);
+          return input.args[i];
+        });
+        const result = await require_pg().query(env, spec.query, { db: spec.db, params });
+        if (result.rows.length > 1e3 || Buffer.byteLength(JSON.stringify(result.rows)) > 1048576) throw new Error(`observer ${spec.id} exceeds 1000 rows / 1 MiB; narrow the reviewed query`);
+        observed[spec.id] = result.rows;
+      }
+      return observed;
+    }
+    async function check({ profile: profileId, baseline, candidate, inputs, target = "local", baseline_target, candidate_target, sourceEnv, log = () => {
+    } }) {
+      const cfg = require_config().getTests();
+      const profile = cfg.differentialProfiles?.[profileId];
+      if (!profile || profile.reviewed !== true || profile.kind !== "node-module" || !profile.module) throw new Error("differential_check requires a reviewed tests.differentialProfiles node-module profile");
+      if (!Array.isArray(inputs) || !inputs.length || inputs.length > 100 || inputs.some((x) => !x.id || !Array.isArray(x.args))) throw new Error("inputs must have 1..100 {id,args} cases");
+      if (new Set(inputs.map((x) => x.id)).size !== inputs.length) throw new Error("differential input IDs must be unique");
+      if (Buffer.byteLength(JSON.stringify(inputs)) > 1048576) throw new Error("differential inputs exceed 1 MiB");
+      normalize({}, profile.normalizers);
+      const executions = [baseline_target || target, candidate_target || target].map((id) => T.resolve(id, { env: sourceEnv }));
+      if (executions.some((execution) => execution.runnerUrl)) throw new Error("node-module differential observer is local-only; configure a local dependency target or an external differential adapter");
+      const workspaces = [baseline, candidate].map((id) => W.checkId(id));
+      if (baseline === candidate) throw new Error("baseline and candidate must be separate workspace snapshots");
+      const versions = workspaces.map((m) => ({ workspace: m.id, revision: m.sha, sourceSha256: T.digest(require_testrun().fingerprint(m.path, { includeTests: true })), moduleSha256: crypto.createHash("sha256").update(fs2.readFileSync(file(m.path, profile.module))).digest("hex") }));
+      const cases = [];
+      for (const input of inputs) {
+        const observations = [];
+        for (const [position, m] of workspaces.entries()) {
+          const execution = executions[position];
+          fs2.mkdirSync(require_config().PATHS.build, { recursive: true });
+          const scratch = fs2.mkdtempSync(path2.join(require_config().PATHS.build, "differential-"));
+          try {
+            const request = path2.join(scratch, "request.json"), response = path2.join(scratch, "response.json");
+            fs2.writeFileSync(request, JSON.stringify({ module: file(m.path, profile.module), export: profile.export, args: input.args }));
+            const before = { files: observedFiles(m.path, profile.observeFiles || []), databases: await databaseObservations(profile, execution, input) };
+            const privacy = require_execution_privacy(), knownSecrets2 = privacy.secrets(cfg, execution), mask2 = (text) => require_execution_privacy().mask(text, knownSecrets2);
+            const env = { ...require_testrun().cleanEnv(cfg), ...Object.fromEntries(Object.entries(cfg.env || {}).map(([k, v]) => [k, String(v)])), ...execution.env };
+            const r = await require_testrun().execLocal(cfg.node || process.execPath, [path2.join(__dirname, "differential-worker.js"), request, response], { cwd: m.path, env, timeoutMs: Math.min(cfg.timeoutMs, profile.timeoutMs || 3e4), log: (line) => log(mask2(line)) });
+            if (r.code !== 0 || r.killed || !fs2.existsSync(response)) throw new Error(`differential worker ${m.id}/${input.id}: ${r.killed ? "timeout" : `exit ${r.code}`}`);
+            if (fs2.statSync(response).size > 1048576) throw new Error("differential result exceeds 1 MiB");
+            observations.push({ ...JSON.parse(fs2.readFileSync(response)), effects: { observer: "parent filesystem and read-only database snapshots", before, after: { files: observedFiles(m.path, profile.observeFiles || []), databases: await databaseObservations(profile, execution, input) } } });
+          } finally {
+            fs2.rmSync(scratch, { recursive: true, force: true });
+          }
+        }
+        const equal = T.stable(normalize(observations[0], profile.normalizers)) === T.stable(normalize(observations[1], profile.normalizers));
+        const knownSecrets = [...new Set(executions.flatMap((e) => require_execution_privacy().secrets(cfg, e)))], mask = (text) => require_execution_privacy().mask(text, knownSecrets);
+        cases.push({ id: input.id, equal, baseline: require_execution_privacy().clean(observations[0], mask), candidate: require_execution_privacy().clean(observations[1], mask) });
+      }
+      const result = { version: 1, profile: profileId, profileSha256: T.digest(profile), inputsSha256: T.digest(inputs), execution: { baseline: executions[0].metadata, candidate: executions[1].metadata }, versions, normalizers: profile.normalizers || [], outcome: cases.every((c) => c.equal) ? "equivalent" : "different", counts: { cases: cases.length, equal: cases.filter((c) => c.equal).length }, cases, proof: { type: "executed-differential", returnValues: true, errorSemantics: true, fileEffects: profile.observeFiles?.length > 0, databaseEffects: (profile.observers || []).some((o) => o.kind === "postgres"), networkEffects: false, configuredSecretsMaskedAfterComparison: true, coverage: "only declared inputs and independent file/database snapshots; no claim of exhaustive reads, atomic distributed snapshots or complete semantic equivalence" } };
+      result.sha256 = T.digest(result);
+      return result;
+    }
+    module2.exports = { check, normalize, observedFiles };
+  }
+});
+
 // lib/tools-code.js
 var require_tools_code = __commonJS({
   "lib/tools-code.js"(exports2, module2) {
@@ -39140,15 +42185,16 @@ var require_tools_code = __commonJS({
             const words = a.q.toLowerCase().split(/[\s#.]+/).filter(Boolean);
             const rows = [];
             for (const key of keysOf(a.repos)) {
-              const g = CI.load(key)?.graph_();
+              const idx = CI.load(key), g = idx?.graph_();
+              const identity = require_semantic_identity();
               for (const c of g?.classes || []) {
                 const hit = (s) => words.every((w) => s.toLowerCase().includes(w));
-                if ((!a.kind || a.kind === "class") && hit(c.id)) rows.push({ id: c.id, kind: c.kind, role: c.role || "", repo: key, file: `${c.file}:${c.line}`, signature: `${c.annos.map((x) => "@" + x).join(" ")} ${c.kind} ${c.name}`.trim() });
+                if ((!a.kind || a.kind === "class") && hit(c.id)) rows.push({ id: identity.code(key, identity.revision(idx), c.id), legacyId: c.id, revision: identity.revision(idx), kind: c.kind, role: c.role || "", repo: key, file: `${c.file}:${c.line}`, signature: `${c.annos.map((x) => "@" + x).join(" ")} ${c.kind} ${c.name}`.trim() });
                 if (!a.kind || a.kind === "method") {
-                  for (const m of c.methods) if (hit(`${c.id}#${m.name}`)) rows.push({ id: `${c.id}#${m.name}`, kind: m.ctor ? "constructor" : "method", role: c.role || "", repo: key, file: `${c.file}:${m.line}`, signature: `${m.ret ? m.ret + " " : ""}${m.name}(${m.params.map((p) => `${p.type} ${p.name}`).join(", ")})` });
+                  for (const m of c.methods) if (hit(`${c.id}#${m.name}`)) rows.push({ id: identity.code(key, identity.revision(idx), `${c.id}#${identity.signature(m)}`), legacyId: `${c.id}#${m.name}`, revision: identity.revision(idx), kind: m.ctor ? "constructor" : "method", role: c.role || "", repo: key, file: `${c.file}:${m.line}`, signature: `${m.ret ? m.ret + " " : ""}${m.name}(${m.params.map((p) => `${p.type} ${p.name}`).join(", ")})` });
                 }
                 if (!a.kind || a.kind === "field") {
-                  for (const f of c.fields) if (hit(`${c.id}.${f.name}`)) rows.push({ id: `${c.id}.${f.name}`, kind: "field", role: c.role || "", repo: key, file: `${c.file}:${f.line}`, signature: `${f.type} ${f.name}${f.column ? ` -> column ${f.column}` : ""}${f.inject ? " (injected)" : ""}` });
+                  for (const f of c.fields) if (hit(`${c.id}.${f.name}`)) rows.push({ id: identity.code(key, identity.revision(idx), `${c.id}.${f.name}`), legacyId: `${c.id}.${f.name}`, revision: identity.revision(idx), kind: "field", role: c.role || "", repo: key, file: `${c.file}:${f.line}`, signature: `${f.type} ${f.name}${f.column ? ` -> column ${f.column}` : ""}${f.inject ? " (injected)" : ""}` });
                 }
                 if (rows.length > 2e3) break;
               }
@@ -39172,16 +42218,16 @@ var require_tools_code = __commonJS({
         {
           name: "impact",
           group: "code",
-          description: 'Impact radius: what is affected when something changes, walking "who uses it" back through the code graphs of all indexed repos and workspaces, the Postgres usage index of env, and service passports. Target: a class or method ("PaymentService#create", FQN, file.java:42), a table ("pay.payments"), a column ("pay.payments.fee": entity fields, SQL naming it, function bodies, views, indexes/constraints), a database function, a Kafka topic ("topic:payments.created"), an ES index ("es:orders"), an endpoint ("POST /payments/{id}/settle": handlers and Feign callers in other services). Returns layers by distance with file:line and why, the endpoints/topics/tables/services reached, the tests that exercise it (run those), and text mentions in config/SQL files. Shown as a view.',
-          input: { target: str("What changes"), env, repos, depth: int("Steps back to walk", 4), limit: int("Max items", 300) },
+          description: 'Impact radius: what is affected when something changes, walking "who uses it" back through the code graphs of all indexed repos and workspaces, the Postgres usage index of env, and service passports. Target: a class or method ("PaymentService#create", FQN, file.java:42), a table ("pay.payments"), a column ("pay.payments.fee": entity fields, SQL naming it, function bodies, views, indexes/constraints), a database function, a Kafka topic ("topic:payments.created"), an ES index ("es:orders"), an endpoint ("POST /payments/{id}/settle": handlers and Feign callers in other services). Returns layers by distance with file:line and why, the endpoints/topics/tables/services reached, candidate tests (inspect coverage before choosing regression scope), and text mentions in config/SQL files. Shown as a view.',
+          input: { target: str("Canonical ID or legacy name; ambiguous names return candidates"), env, db: str("Exact logical database for a database target"), repos, depth: int("Steps back to walk (0..32)", 4), limit: int("Items per page", 300), node_limit: int("Maximum visited nodes (1..100000)", 1e4), time_ms: int("Traversal budget in milliseconds (1..5000)", 1e3), max_output_bytes: int("Result byte budget (4096..262144)", 32768), cursor: str("Continuation for the same query and graph revision") },
           required: ["target"],
           run: (a) => {
             keysOf(a.repos);
-            const r = require_impact().impact(a.target, { env: a.env, repos: a.repos, depth: Math.min(a.depth || 4, 8), limit: Math.min(a.limit || 300, 2e3) });
+            const r = require_impact().impact(a.target, { env: a.env, db: a.db, repos: a.repos, depth: a.depth ?? 4, limit: a.limit ?? 300, node_limit: a.node_limit ?? 1e4, time_ms: a.time_ms ?? 1e3, max_output_bytes: a.max_output_bytes ?? 32768, cursor: a.cursor });
             if (!r.resolved?.length) return r;
             const view = R().saveView("impact", r, { title: `impact of ${a.target}` });
             const near = r.items.filter((i) => i.depth <= 2).slice(0, 25).map((i) => `${i.depth} ${i.kind} ${i.name}${i.file ? ` (${i.file}:${i.line})` : ""} <- ${i.via}`);
-            return { target: r.target, resolved: r.resolved, counts: r.counts, endpoints: r.endpoints, topics: r.topics, tables: r.tables, functions: r.functions, services: r.services, tests: r.tests, db: r.db, nearest: near, mentions: (r.mentions || []).slice(0, 10).map((m) => `${m.repo} ${m.path}:${m.line} ${m.text}`), truncated: r.truncated, view };
+            return require_impact().boundResult({ protocol: r.protocol, identityVersion: r.identityVersion, env: r.env, graphRevision: r.graphRevision, complete: r.complete, traversalComplete: r.traversalComplete, coverage: r.coverage, cutReasons: r.cutReasons, frontier: r.frontier, frontierTotal: r.frontierTotal, continuation: r.continuation, next: r.next, gaps: r.gaps, gapTotal: r.gapTotal, total: r.total, resolvedTotal: r.resolvedTotal, outputBytes: r.outputBytes, summaryTruncated: r.summaryTruncated, target: r.target, resolved: r.resolved, counts: r.counts, endpoints: r.endpoints, topics: r.topics, tables: r.tables, functions: r.functions, services: r.services, tests: r.tests, db: r.db, nearest: near, mentions: (r.mentions || []).slice(0, 10).map((m) => `${m.repo} ${m.path}:${m.line} ${m.text}`), truncated: r.truncated, view }, a.max_output_bytes ?? 32768);
           }
         },
         {
@@ -39313,18 +42359,40 @@ var require_tools_code = __commonJS({
           run: (a) => require_testdata().generate(a.workspace, { env: a.env, db: a.db, write: a.write !== false })
         },
         {
+          name: "test_targets",
+          group: "code",
+          description: "List reviewed execution target manifests: actual runner placement, dependency environment/access, deployment revision and effects. local, captured-dev and live-dev are distinct. Source env does not imply remote execution.",
+          input: {},
+          run: () => ({ targets: require_test_targets().list() })
+        },
+        {
+          name: "differential_check",
+          group: "code",
+          logArgs: ["profile", "baseline", "candidate", "target", "baseline_target", "candidate_target", "env"],
+          description: "Execute the same declared cases against separate baseline/candidate workspaces with a reviewed differential profile. Compare exact typed values, nulls, array order, errors and independently observed file/database effects. Normalizers must be reviewed config with reasons. Reports revisions, hashes, explicit proof coverage and target provenance.",
+          input: { profile: str("Reviewed tests.differentialProfiles id"), baseline: str("Baseline workspace snapshot"), candidate: str("Candidate workspace snapshot"), inputs: { type: "array", items: { type: "object", properties: { id: { type: "string" }, args: { type: "array", items: {} } }, required: ["id", "args"], additionalProperties: false } }, target: str("Reviewed test target; default local"), baseline_target: str("Optional separate reviewed baseline dependency target"), candidate_target: str("Optional separate reviewed candidate dependency target"), env: str("Source environment provenance") },
+          required: ["profile", "baseline", "candidate", "inputs"],
+          run: async (a) => {
+            const r = await require_differential().check({ ...a, sourceEnv: a.env });
+            const view = R().saveView("differential", r, { title: `Differential: ${r.outcome}` });
+            return { ...r, view };
+          }
+        },
+        {
           name: "test_run",
           group: "code",
-          description: `Run tests of a workspace. Fast by default on Maven projects: after one Maven prepare per workspace, only changed sources are compiled and the tests run in one JVM (seconds); mode="build" runs the project's Maven/Gradle (the final check). files=[{path, content|edits}] writes before running, so a try is one call. Every result is kept per test, so workspace_patch can show which tests failed before the fix and pass after it (red-green). The answer has: each test, its status and time, failures with message and the code parts to work on (the repo frames of the stack trace with the lines around them), compile errors with their lines, and the output tail. With env + db (or ddl_path), the run gets a throwaway Postgres database loaded with the DDL snapshot, passed to Spring as SPRING_DATASOURCE_*. Shown as a view. Takes a while: if it answers "running", call it again with that job id.`,
+          description: `Run tests of a workspace using reviewed Node node:test file execution or the JVM build. Select target for actual execution placement/dependencies; env is source-catalog provenance. Fast by default on Maven projects: after one Maven prepare per workspace, only changed sources are compiled and the tests run in one JVM (seconds); mode="build" runs the project's Maven/Gradle (the final check). files=[{path, content|edits}] writes before running, so a try is one call. Every result is kept per test, so workspace_patch can show which tests failed before the fix and pass after it (red-green). The answer has: each test, its status and time, failures with message and the code parts to work on (the repo frames of the stack trace with the lines around them), compile errors with their lines, and the output tail. With env + db (or ddl_path), the run gets a throwaway Postgres database loaded with the DDL snapshot, passed to Spring as SPRING_DATASOURCE_*. Shown as a view. Takes a while: if it answers "running", call it again with that job id.`,
           input: {
             workspace: str("Workspace id"),
-            tests: list("Test classes (FooTest) or Class#method"),
+            tests: list("JVM classes (FooTest), Class#method, or explicit Node .test.js/.cjs/.mjs file paths"),
             files: { type: "array", items: { type: "object", properties: { path: { type: "string" }, content: { type: "string" }, edits: { type: "array", items: { type: "object", properties: { find: { type: "string" }, replace: { type: "string" } } } } }, required: ["path"] }, description: "Write these first (like workspace_write), then run: one call per try" },
             mode: { type: "string", enum: ["auto", "fast", "build"], default: "auto", description: "fast: compile only what changed and run in one JVM (Maven projects; a few seconds); build: the project's Maven/Gradle (the final check before the patch); auto: fast where it fits" },
-            env: str("With db: the environment of the DDL snapshot"),
+            target: str("Reviewed execution target id from test_targets; default local. env alone never selects a live deployment"),
+            env: str("Source catalog environment for db DDL; runtime is selected separately by target"),
             db: str("Database to snapshot into the throwaway test database"),
             ddl_path: str("Or: a DDL file in the workspace to load (e.g. src/test/resources/dt-schema/pay.sql)"),
             fixture_path: str("Saved src/test/resources/dt-fixtures/<name>; replay its PG databases on scratch Postgres and expose Kafka files as DT_FIXTURE_PATH"),
+            fixture_runtime: str("Owned native PG/ES/Kafka lease id from fixture_runtime_start; caller arms, independently checks effects and stops it. Local execution only; choose this or fixture_path/db/ddl_path"),
             fixture_template: bool("Reuse a verified immutable prefilled PostgreSQL template and allocate private leased clones"),
             fixture_bindings: { type: "object", additionalProperties: { type: "string" }, description: 'For multiple databases: {orders:"SPRING_DATASOURCE",billing:"BILLING_DATASOURCE"}; each prefix gets _URL, _USERNAME, _PASSWORD' },
             allow_incomplete: bool("Replay a fixture with reported gaps (review fixture explorer first)"),
@@ -39337,17 +42405,21 @@ var require_tools_code = __commonJS({
             const cfg = require_config().getTests();
             let job = a.job ? J.find(a.job) : null;
             if (a.job && !job) throw new Error(`no job ${a.job}`);
+            if (job && !job.key.startsWith(`tests:${a.workspace}:`)) throw new Error("test job belongs to a different workspace");
             if (!job) {
               if (!a.tests?.length) throw new Error("tests: which test classes to run");
               const db = a.ddl_path || a.db ? { env: a.env || require_config().envNames()[0], db: a.db, ddlPath: a.ddl_path } : null;
-              job = J.start(`tests:${a.workspace}:${a.tests.join(",")}`, `tests ${a.tests.join(", ")} in ${a.workspace}`, async (log) => {
-                const r = await require_testrun().run(a.workspace, { tests: a.tests, db, fixturePath: a.fixture_path, fixtureBindings: a.fixture_bindings, fixtureTemplate: a.fixture_template, allowIncomplete: a.allow_incomplete, log, mode: a.mode || "auto", files: a.files || [], check: a.check, fix: a.fix });
+              require_test_targets().resolve(a.target || "local", { env: a.env, fixturePath: a.fixture_path, fixtureRuntime: a.fixture_runtime, db });
+              job = J.start(require_test_targets().jobKey(a), `tests ${a.tests.join(", ")} in ${a.workspace}`, async (log) => {
+                const r = await require_testrun().run(a.workspace, { tests: a.tests, target: a.target || "local", sourceEnv: a.env, db, fixturePath: a.fixture_path, fixtureRuntime: a.fixture_runtime, fixtureBindings: a.fixture_bindings, fixtureTemplate: a.fixture_template, allowIncomplete: a.allow_incomplete, log, mode: a.mode || "auto", files: a.files || [], check: a.check, fix: a.fix });
                 const view = R().saveView("tests", r, { title: `${r.outcome}: ${a.tests.join(", ")}` });
                 const failing = r.cases.filter((c) => c.status === "failed" || c.status === "error");
                 return {
                   workspace: r.workspace,
+                  execution: r.execution,
                   outcome: r.outcome,
                   counts: r.counts,
+                  failureKinds: r.failureKinds,
                   ms: r.ms,
                   mode: r.mode,
                   ...r.buildBecause ? { buildBecause: r.buildBecause } : {},
@@ -39362,6 +42434,7 @@ var require_tools_code = __commonJS({
                     return {
                       test: `${c.class.split(".").pop()}#${c.name}`,
                       status: c.status,
+                      failureKind: c.failureKind,
                       message: c.expected != null ? void 0 : O.compactMessage(c.message || c.type),
                       expected: cut(c.expected),
                       actual: cut(c.actual),
@@ -39390,6 +42463,68 @@ var require_tools_code = __commonJS({
             return waitJob(job, cfg.waitMs, "test_run");
           }
         }
+      ];
+    };
+  }
+});
+
+// lib/tools-reproduction-runtime.js
+var require_tools_reproduction_runtime = __commonJS({
+  "lib/tools-reproduction-runtime.js"(exports2, module2) {
+    module2.exports = ({ str }) => {
+      const N = () => require_reproduction_runtime(), id = str("Owned native fixture runtime id");
+      async function startJob(a) {
+        const J = require_jobs();
+        let job = a.job ? J.find(a.job) : null;
+        if (a.job && (!job || !job.key.startsWith("fixture-runtime-start:"))) throw new Error("native fixture job not found");
+        if (!job) {
+          if (!a.workspace || !a.directory || !a.profile) throw new Error("workspace, directory and reviewed profile are required");
+          const identity = require("crypto").createHash("sha256").update(JSON.stringify([a.workspace, a.directory, a.profile, require_reproduction().loadFixture(a.workspace, a.directory).files, require("fs").readFileSync(require_scenario_package().workspacePath(a.workspace, a.profile).full, "utf8")])).digest("hex");
+          job = J.start(`fixture-runtime-start:${identity}`, "native mixed-source fixture replay", () => N().start(a.workspace, a.directory, a.profile));
+        }
+        let timer, done = job;
+        if (job.state === "running") try {
+          done = await Promise.race([job.promise, new Promise((resolve) => {
+            timer = setTimeout(() => resolve(null), Math.min(5e4, require_config().getTests().waitMs));
+          })]);
+        } finally {
+          clearTimeout(timer);
+        }
+        return done ? { job: done.id, state: done.state, ...done.error ? { error: done.error } : done.result } : { job: job.id, state: "running", next: "Poll fixture_runtime_start with job; dependencies start once." };
+      }
+      function bounds(a) {
+        const limit = a.limit ?? 20, offset = a.offset ?? 0;
+        if (!Number.isInteger(limit) || limit < 1 || limit > 100 || !Number.isInteger(offset) || offset < 0) throw new Error("limit must be 1..100 and offset nonnegative");
+        return { limit, offset };
+      }
+      function view(data, title) {
+        try {
+          return require_results().saveView("json", data, { title });
+        } catch (error) {
+          return { error: error.message };
+        }
+      }
+      async function observed(a) {
+        const { limit, offset } = bounds(a), result = await N().observe(a.id, { source: a.source }), entries = Object.entries(result.sources);
+        if (a.source && !Object.hasOwn(result.sources, a.source)) throw new Error(`unknown runtime observation source ${a.source}`);
+        const sources = a.source ? [{ id: a.source, total: result.sources[a.source].length, rows: result.sources[a.source].slice(offset, offset + limit), changes: { added: result.changes[a.source].added.slice(0, limit), removed: result.changes[a.source].removed.slice(0, limit) } }] : entries.slice(offset, offset + limit).map(([id2, rows]) => ({ id: id2, records: rows.length, added: result.changes[id2].added.length, removed: result.changes[id2].removed.length }));
+        return { id: a.id, complete: result.complete, proof: result.proof, observedAt: result.observedAt, sourceCount: entries.length, offset, limit, sources, outputTruncated: a.source ? result.sources[a.source].length > offset + limit : entries.length > offset + limit, view: view(result, "Native fixture observations") };
+      }
+      async function checked(a) {
+        const { limit, offset } = bounds(a), result = await N().check(a.id), failures = result.checks.filter((c) => !c.ok);
+        return { id: a.id, ok: result.ok, proof: result.proof, expectationDigest: result.expectationDigest, baselineDigest: result.baselineDigest, observationDigest: result.observationDigest, counts: { checks: result.checks.length, passed: result.checks.length - failures.length, failed: failures.length }, failures: failures.slice(offset, offset + limit).map(({ expected, actual, ...failure }) => ({ ...failure, ...expected !== void 0 ? { expectedRecords: Array.isArray(expected) ? expected.length : 1 } : {}, ...actual !== void 0 ? { actualRecords: Array.isArray(actual) ? actual.length : 1 } : {} })), offset, limit, outputTruncated: failures.length > offset + limit, view: view(result, "Native fixture effect checks") };
+      }
+      const start = { workspace: str("Writable workspace id"), directory: str("Verified fixture resource directory"), profile: str('Reviewed workspace JSON profile: {version:1,adapter:"native-containers",images?:{pg,es,kafka},kafka:{allowOffsetRemap:true}}. Existing images only; no arbitrary commands or source endpoints.') };
+      return [
+        { name: "fixture_runtime_preflight", group: "code", strictInput: true, description: "Independently check hashes, source coverage, native replay policy, Docker and exact image availability before starting disposable PostgreSQL/ES/Kafka containers. Does not pull images or start dependencies.", input: start, required: ["workspace", "directory", "profile"], run: (a) => N().preflight(a.workspace, a.directory, a.profile) },
+        { name: "fixture_runtime_start", group: "code", strictInput: true, description: "Replay the verified mixed-source fixture into owned disposable PostgreSQL, Elasticsearch and Kafka-compatible broker containers. Captures an independent initial state. Source environments never receive writes. Kafka source offsets/timestamps remain metadata; replayed offsets/timestamps are new. Returns a lease; stop it after use.", input: { ...start, job: str("Poll an existing native replay job") }, run: startJob },
+        { name: "fixture_runtime_bindings", group: "code", strictInput: true, description: "Return temporary loopback connection bindings and Kafka source-to-replay offset mappings for one owned fixture runtime. Connect the actual service or project tests separately; starting dependencies does not prove application execution.", input: { id }, required: ["id"], run: (a) => N().bindings(a.id) },
+        { name: "fixture_runtime_arm", group: "code", strictInput: true, description: 'Freeze independent effect expectations before running an application. Contract {version:1,sources:[{id:"pg:db:schema.table|es:index|kafka:topic",noWrites:true|rows:[...]|added:[...],removed:[...]}],quietMs:100,allowUnlistedEffects:false}. PG committed writes use a protected audit journal, ES updates retain sequence evidence, and Kafka records are independently consumed. Proof limits remain explicit for uncommitted writes, ES deletions/recreation and broker retention.', input: { id, contract: { type: "object", additionalProperties: true, description: "Reviewed immutable effect contract" } }, required: ["id", "contract"], run: (a) => N().arm(a.id, a.contract) },
+        { name: "fixture_runtime_observe", group: "code", strictInput: true, description: "Independently read all fixture PG tables, ES documents and Kafka envelopes in the owned runtime. Return initial-to-current net changes with bounded-output failures. Never accepts application-supplied observations or writes data.", input: { id, source: str("Optional exact source id to inspect records independently"), limit: { type: "integer", default: 20, description: "Source/record page size, 1..100" }, offset: { type: "integer", default: 0, description: "Nonnegative source/record page offset" } }, required: ["id"], run: observed },
+        { name: "fixture_runtime_check", group: "code", strictInput: true, description: "Compare direct native observations against the expectations frozen before execution, including exact writes/rejected-action no-observed-write assertions, unlisted effects and quiet-window stability. Reports per-protocol proof limits separately from application execution; it does not trust a green project report.", input: { id, limit: { type: "integer", default: 20, description: "Failed-check page size, 1..100" }, offset: { type: "integer", default: 0, description: "Nonnegative failed-check offset" } }, required: ["id"], run: checked },
+        { name: "fixture_runtime_publish", group: "code", strictInput: true, description: "Trigger a declared Kafka action only on the owned disposable broker, after independent expectations are armed. Preserves explicit null tombstones/empty values and validates the captured schema/codec. Production Kafka is never a destination. Publishing an input does not prove consumer execution; inspect/check effects separately.", input: { id, topic: str("Exact topic declared in the reviewed fixture"), message: { type: "object", additionalProperties: false, properties: { partition: { type: "integer", minimum: 0 }, key: {}, value: {}, headers: { description: "UTF-8 header object or [{key,value}]" } }, required: ["partition", "value"] } }, required: ["id", "topic", "message"], run: (a) => N().publishAction(a.id, a.topic, a.message) },
+        { name: "fixture_runtime_stop", group: "code", strictInput: true, description: "Stop only containers and network whose ownership labels agree with this durable native fixture lease. Preserve cleanup failures; safe to retry.", input: { id }, required: ["id"], run: (a) => N().stop(a.id) },
+        { name: "fixture_runtime_cleanup", group: "code", strictInput: true, description: "Recover expired native fixture leases after process failure; remove only verified owned containers/networks and retain ownership or cleanup errors.", input: {}, run: () => N().cleanup() }
       ];
     };
   }
@@ -39621,13 +42756,15 @@ var require_tools_dev = __commonJS({
         },
         {
           name: "fixture_plan",
+          strictInput: true,
           group: "code",
-          description: "Offline plan for related test data across Postgres databases and Kafka. Reads cached schemas, FKs and usage indexes first. Seeds use explicit db/schema.table and equality filters. Follows schema FKs; cross-database joins are explicit relations. Returns candidates for review, never guesses them as facts. Inspect then pass the inputs to fixture_capture.",
-          input: { env, service: str("Service whose usage informs candidates"), seeds: arr('Roots: [{db, table:"sales.orders", where:{id:42}}]'), relations: arr('Cross-DB relationships: [{from:{db,table,columns:[...]},to:{db,table,columns:[...]},required:true,evidence:"file:line"}]'), topics: arr('Topics: [{topic,matches:[{path:"value.orderId",from:{db,table,column:"id"}}],match:"all|any",offsets:{partition:offset}}]'), limits: obj("depth, rowsPerTable, totalRows, messagesPerTopic, totalMessages, queries"), includeChildren: bool("Also follow reverse FKs (bounded); default only required parents") },
+          description: "Offline plan for related test data across Postgres databases, Elasticsearch indexes and Kafka. Reads cached schemas, FKs and usage indexes first. Seeds use explicit db/schema.table and equality filters. Follows schema FKs; cross-database joins are explicit relations. Returns candidates for review, never guesses them as facts. Inspect then pass the inputs to fixture_capture.",
+          input: { env, service: str("Service whose usage informs candidates"), seeds: arr('Roots: [{db, table:"sales.orders", where:{id:42}}]'), relations: arr('Cross-DB relationships: [{from:{db,table,columns:[...]},to:{db,table,columns:[...]},required:true,evidence:"file:line"}]'), topics: arr('Topics: [{topic,matches:[{path:"value.orderId",from:{db,table,column:"id"}}],match:"all|any",codec:"auto|json|string",offsets:{partition:offset}}]'), es: arr('ES indexes [{index,matches:[{path:"_source.tenantId",from:{db,table,column:"tenant_id"}},{path:"_source.orderId",from:{db,table,column:"id"}}],required:true}]'), requiredReads: arr('Required reads [{kind:"pg|es|kafka",id:"db:schema.table|index|topic",evidence}] that must be explicitly bound'), consistencyMode: { type: "string", enum: ["snapshot", "verify"], description: "Per-database repeatable-read snapshots; verify independently rereads captured queries to detect changes" }, limits: obj("depth, rowsPerTable, totalRows, messagesPerTopic, totalMessages, documentsPerIndex, totalDocuments, queries, durationMs (default 120000, max 600000)"), includeChildren: bool("Also follow reverse FKs (bounded); default only required parents") },
           run: (a) => R().plan(a)
         },
         {
           name: "fixture_capture",
+          strictInput: true,
           group: "code",
           description: "Capture one reproducible scenario with bounded, parameterized, read-only reads. Input is fixture_plan inputs or its returned plan. Captures every Kafka partition window, correlation matches, offsets and provenance. Masks sensitive values consistently by default. Returns capture id + interactive explorer; gaps/truncation prevent a claim of completeness. Never writes to the environment.",
           input: { plan: obj("fixture_plan result or input"), mask: bool("Mask personal/secret fields consistently across PG and Kafka", true), job: str("Poll a running capture instead of starting another") },
@@ -39670,26 +42807,28 @@ var require_tools_dev = __commonJS({
         {
           name: "fixture_export",
           group: "code",
-          description: "Save a capture into [module/]src/test/resources/dt-fixtures/<name>: per-DB schema/data/constraints SQL + JSON, Kafka JSONL/schema/offsets, hashed manifest and loading instructions. Existing fixtures are preserved unless overwrite=true. Generated resources can be committed with tests.",
+          description: "Save a capture into [module/]src/test/resources/dt-fixtures/<name>: per-DB schema/data/constraints SQL + JSON, ES mappings/documents/observations, Kafka JSONL/schema/offsets, hashed manifest and loading instructions. Existing fixtures are preserved unless overwrite=true. Generated resources can be committed with tests.",
           input: { workspace: str("Writable workspace id"), capture: str("Capture id"), name: str("Scenario name"), directory: str("Optional resource directory (for a multi-module project)"), overwrite: bool("Replace this fixture if it exists") },
           required: ["workspace", "capture"],
           run: (a) => R().exportFixture(a.workspace, R().load(a.capture), a)
         },
         {
           name: "fixture_replay",
+          strictInput: true,
           group: "code",
-          description: "Verify fixture hashes and load its databases on the configured scratch Postgres, check real constraints, then drop all throwaway databases. No writes to configured environment databases. Kafka files are for the service test producer. For actual tests use test_run fixture_path.",
+          description: "Verify fixture hashes and load its databases on the configured scratch Postgres, check real constraints, then drop all throwaway databases. No writes to configured environment databases. This SQL-only check reports pending native ES/Kafka adapters; use fixture_runtime_start for native mixed-source replay. For project tests use test_run fixture_path.",
           input: { workspace: str("Workspace id"), directory: str("Fixture resource directory"), allow_incomplete: bool("Replay despite reported capture gaps") },
           required: ["workspace", "directory"],
           run: async (a) => {
             const replay = await R().replay(a.workspace, a.directory, { allowIncomplete: a.allow_incomplete });
             try {
-              return { validated: true, databases: Object.keys(replay.databases), topics: replay.topics };
+              return { validated: true, databases: Object.keys(replay.databases), topics: replay.topics, replayed: replay.replayed, pendingAdapters: replay.pendingAdapters, proof: replay.proof };
             } finally {
               await replay.cleanup();
             }
           }
         },
+        ...require_tools_reproduction_runtime()({ str, int }),
         {
           name: "experiment_save",
           group: "code",
@@ -39714,65 +42853,268 @@ var require_tools_dev = __commonJS({
   }
 });
 
-// lib/contracts.js
-var require_contracts = __commonJS({
-  "lib/contracts.js"(exports2, module2) {
-    var path2 = require("path");
+// lib/evaluation-evidence.js
+var require_evaluation_evidence = __commonJS({
+  "lib/evaluation-evidence.js"(exports2, module2) {
     var fs2 = require("fs");
-    var aliases = {
-      "v1/collection.schema.json": "schemas/collection-contract.schema.json",
-      "v1/scenario-package.schema.json": "schemas/scenario-package-v1.json",
-      "v1/postgres-template.schema.json": "docs/contracts/postgres-template-v1.schema.json",
-      "v1/api-exchange.schema.json": "schemas/api-exchange.v1.schema.json",
-      "v1/api-request.schema.json": "schemas/api-request.v1.schema.json"
-    };
-    function resolve(name, root = require_config().ROOT) {
-      if (!/^v\d+\/[a-z][a-z0-9-]*\.schema\.json$/.test(name)) return null;
-      const direct = path2.join(root, "contracts", name), fallback = aliases[name] && path2.join(root, aliases[name]);
-      return fs2.existsSync(direct) ? direct : fallback && fs2.existsSync(fallback) ? fallback : null;
+    var path2 = require("path");
+    var crypto = require("crypto");
+    var digest = (data) => crypto.createHash("sha256").update(typeof data === "string" || Buffer.isBuffer(data) ? data : canonical(data)).digest("hex");
+    function canonical(v) {
+      return Array.isArray(v) ? `[${v.map(canonical).join(",")}]` : v && typeof v === "object" ? `{${Object.keys(v).filter((k) => v[k] !== void 0).sort().map((k) => `${JSON.stringify(k)}:${canonical(v[k])}`).join(",")}}` : JSON.stringify(v);
     }
-    function list() {
-      const root = require_config().ROOT, names = new Set(Object.keys(aliases));
-      try {
-        for (const f of fs2.readdirSync(path2.join(root, "contracts/v1"))) if (f.endsWith(".schema.json")) names.add(`v1/${f}`);
-      } catch {
+    function chain(events) {
+      let previous = "0".repeat(64);
+      return events.map((event, index) => {
+        const { hash: ignored, previous: ignoredPrevious, seq: ignoredSeq, ...body } = event;
+        const entry = { ...body, seq: index + 1, previous };
+        entry.hash = digest(entry);
+        previous = entry.hash;
+        return entry;
+      });
+    }
+    function verifyChain(events) {
+      if (!Array.isArray(events)) return false;
+      return chain(events).every((entry, i) => entry.hash === events[i].hash && entry.previous === events[i].previous && entry.seq === events[i].seq);
+    }
+    var positive = (c) => c && Number.isSafeInteger(c.tests) && c.tests > 0 && Number.isSafeInteger(c.passed) && c.passed > 0 && c.failed === 0 && c.errors === 0 && (c.skipped || 0) === 0 && c.tests === c.passed;
+    var negative = (c) => c && Number.isSafeInteger(c.tests) && c.tests > 0 && ((c.failed || 0) > 0 || (c.errors || 0) > 0);
+    function assess(r) {
+      const issues = [], need = (v, text) => {
+        if (!v) issues.push(text);
+      };
+      need(r.version === 1, "unsupported evidence version");
+      need(["fix", "tests", "expected-gap"].includes(r.kind), "unsupported task evidence kind");
+      need(["complete", "blocked", "incomplete"].includes(r.claimedStatus), "invalid completion claim");
+      need(typeof r.case === "string" && r.case.length > 0, "missing case identity");
+      for (const name of ["publicSha256", "candidatePatchSha256", "oracleSha256"]) need(/^[a-f0-9]{64}$/.test(r.integrity?.[name] || ""), `missing immutable ${name}`);
+      need(r.integrity?.protectedUnchanged === true, "protected inputs/contracts/harness changed or unchecked");
+      need(r.transcript?.events > 0 && /^[a-f0-9]{64}$/.test(r.transcript?.head || ""), "missing hash-chained tool transcript");
+      need(r.grade?.independent === true && r.grade?.passed === true, "independent hidden grade did not pass");
+      need(Number.isSafeInteger(r.grade?.assertions) && r.grade.assertions > 0, "no independently executed hidden assertions");
+      const expectedGap = r.kind === "expected-gap";
+      if (expectedGap) {
+        need(r.claimedStatus === "blocked" && r.grade?.expectedUnsupported === true, "unsupported case was claimed complete");
+      } else {
+        need(r.execution?.post?.through === "tool" && r.execution?.post?.tool === "test_run", "external execution cannot certify tool completion");
+        need(r.execution?.post?.outcome === "passed" && positive(r.execution?.post?.counts), "post-change tool run has no complete passing assertions");
+        if (r.kind !== "tests") need(r.execution?.baseline?.assertionFailure === true && negative(r.execution?.baseline?.counts) && ["failed", "assertion-failed"].includes(r.execution?.baseline?.outcome), "baseline must fail actual application assertions");
+        else need(positive(r.execution?.baseline?.counts), "test-writing baseline/reference did not execute passing application assertions");
+        need(r.execution?.baseline?.through === "tool", "baseline did not execute through supported tools");
+        need(r.execution?.post?.target && r.execution?.post?.revision, "actual execution target/revision not recorded");
+        if (r.kind === "tests") need(r.mutations?.executed === true && r.mutations.through === "tool" && r.mutations.total > 0 && r.mutations.killed === r.mutations.total && !r.mutations.infrastructureFailures, "tests did not reject every required behavioral mutant through supported tools");
       }
-      return [...names].sort().filter((name) => resolve(name)).map((name) => ({ name, url: `/contracts/${name}`, schema: JSON.parse(fs2.readFileSync(resolve(name), "utf8")) }));
+      const sealed = !!r.integrity?.solverStartedAt && ["publicFrozenAt", "oracleFrozenAt", "graderFrozenAt"].every((k) => Number.isFinite(Date.parse(r.integrity?.[k])) && Date.parse(r.integrity[k]) < Date.parse(r.integrity.solverStartedAt));
+      const modelIssues = [];
+      if (r.modelInteraction) {
+        if (r.claimedStatus !== "complete") modelIssues.push("model did not claim completion");
+        if (!r.modelInteraction.passingTestObserved) modelIssues.push("model did not observe a passing tool test on the final candidate");
+        if (!r.modelInteraction.candidateChanged) modelIssues.push("model did not produce a candidate change");
+        need(r.execution?.cleanup?.complete === true, "owned sandbox cleanup did not complete");
+        const revision = r.execution?.post?.revision;
+        if (!revision?.beforeSha256 || revision.beforeSha256 !== revision.afterSha256) modelIssues.push("post-verification changed candidate inputs");
+      }
+      return { complete: issues.length === 0, fixCorrect: r.grade?.passed === true && r.integrity?.protectedUnchanged === true, toolComplete: !expectedGap && issues.length === 0, modelComplete: !!r.modelInteraction && !expectedGap && issues.length === 0 && modelIssues.length === 0, modelIssues: r.modelInteraction ? modelIssues : ["model interaction not recorded"], expectedGapCorrect: expectedGap && issues.length === 0, falseSuccess: r.claimedStatus === "complete" && (issues.length > 0 || r.modelInteraction && modelIssues.length > 0), blindProtocol: sealed ? "presealed" : "procedural-or-unverified", issues, limits: "Evidence applies to this case, revision and execution target. Tool completion can include verification harness execution; modelComplete additionally requires the model to observe its final passing test. Signed retention proves record provenance/integrity, not honesty of an arbitrary external author or universal production readiness." };
     }
-    module2.exports = { aliases, resolve, list };
+    var root = () => path2.join(require_util().CACHE, "evaluations");
+    var filename = (name) => {
+      if (!/^[a-zA-Z0-9][\w.-]{0,100}$/.test(name) || name.includes("..")) throw new Error("Invalid evidence artifact name");
+      return name;
+    };
+    function snapshot(directory, { excludeDependencies = false } = {}) {
+      const out2 = {};
+      const walk = (dir, prefix = "") => {
+        for (const entry of fs2.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+          const name = prefix + entry.name, full = path2.join(dir, entry.name);
+          if (name === ".git") continue;
+          if (excludeDependencies && name === "node_modules") continue;
+          if (entry.isSymbolicLink()) throw new Error(`Evaluation inputs cannot contain symlinks: ${name}`);
+          if (/^\.dt\/node-reports\/(?:TEST-[a-z0-9]+\.jsonl|reporter-[a-z0-9]+\.cjs)$/.test(name)) continue;
+          if (entry.isDirectory()) walk(full, name + "/");
+          else if (entry.isFile()) out2[name] = digest(fs2.readFileSync(full));
+        }
+      };
+      walk(directory);
+      return out2;
+    }
+    function protectedFiles(before, directory, editable = []) {
+      if (!Array.isArray(editable) || editable.some((p) => typeof p !== "string" || !p || p.startsWith("/") || p.split("/").includes("..") || p.includes("\\"))) throw new Error("Invalid editable input paths");
+      const after = snapshot(directory), changed = [.../* @__PURE__ */ new Set([...Object.keys(before), ...Object.keys(after)])].filter((f) => before[f] !== after[f]);
+      const forbidden = changed.filter((f) => !editable.some((p) => p.endsWith("/") ? f.startsWith(p) : f === p));
+      return { protectedUnchanged: forbidden.length === 0, changed, forbidden, beforeSha256: digest(before), afterSha256: digest(after) };
+    }
+    function save(report, artifacts) {
+      if (!artifacts || typeof artifacts !== "object") throw new Error("Evidence artifacts required");
+      const id = crypto.randomBytes(12).toString("hex"), dir = path2.join(root(), id);
+      fs2.mkdirSync(dir, { recursive: true });
+      const files = {};
+      try {
+        for (const [name, value] of Object.entries(artifacts)) {
+          filename(name);
+          const bytes = Buffer.isBuffer(value) ? value : Buffer.from(typeof value === "string" ? value : canonical(value));
+          if (bytes.length > 10 * 1024 * 1024) throw new Error("Evidence artifact exceeds 10 MiB");
+          fs2.writeFileSync(path2.join(dir, name), bytes, { flag: "wx", mode: 384 });
+          files[name] = { sha256: digest(bytes), bytes: bytes.length };
+        }
+        const record = { ...report, id, artifacts: files, assessment: assess(report) };
+        const hash = digest(record), signature = require_results().sign(hash);
+        fs2.writeFileSync(path2.join(dir, "record.json"), JSON.stringify({ record, sha256: hash, signature }, null, 2), { flag: "wx", mode: 384 });
+        return { id, ...verify(id) };
+      } catch (e) {
+        fs2.rmSync(dir, { recursive: true, force: true });
+        throw e;
+      }
+    }
+    function verify(id) {
+      if (!/^[a-f0-9]{24}$/.test(id || "")) throw new Error("Invalid evaluation id");
+      const dir = path2.join(root(), id), envelope = JSON.parse(fs2.readFileSync(path2.join(dir, "record.json"), "utf8"));
+      const record = envelope.record, issues = [];
+      if (digest(record) !== envelope.sha256 || !require_results().verify(envelope.sha256, envelope.signature)) issues.push("record signature/hash mismatch");
+      for (const [name, ref] of Object.entries(record.artifacts || {})) {
+        filename(name);
+        try {
+          const data = fs2.readFileSync(path2.join(dir, name));
+          if (data.length !== ref.bytes || digest(data) !== ref.sha256) issues.push(`artifact modified: ${name}`);
+        } catch {
+          issues.push(`artifact missing: ${name}`);
+        }
+      }
+      const transcript = record.transcript?.artifact;
+      if (!transcript || !Object.hasOwn(record.artifacts, transcript)) issues.push("transcript artifact missing");
+      else {
+        try {
+          const events = JSON.parse(fs2.readFileSync(path2.join(dir, filename(transcript)), "utf8"));
+          if (!verifyChain(events) || events.length !== record.transcript.events || events.at(-1)?.hash !== record.transcript.head) issues.push("transcript chain mismatch");
+        } catch {
+          issues.push("transcript unreadable");
+        }
+      }
+      if (!record.artifacts?.["candidate.patch"] || record.artifacts["candidate.patch"].sha256 !== record.integrity?.candidatePatchSha256) issues.push("candidate patch digest mismatch");
+      const assessment = assess(record);
+      return { verified: issues.length === 0, ...record, assessment: { ...assessment, complete: !issues.length && assessment.complete, fixCorrect: !issues.length && assessment.fixCorrect, toolComplete: !issues.length && assessment.toolComplete, expectedGapCorrect: !issues.length && assessment.expectedGapCorrect, ...assessment.modelComplete !== void 0 ? { modelComplete: !issues.length && assessment.modelComplete } : {}, falseSuccess: record.claimedStatus === "complete" && (issues.length > 0 || assessment.falseSuccess), issues: [...issues, ...assessment.issues] } };
+    }
+    function list(limit = 20) {
+      if (!fs2.existsSync(root())) return [];
+      return fs2.readdirSync(root()).filter((f) => /^[a-f0-9]{24}$/.test(f)).map((id) => {
+        try {
+          const r = verify(id);
+          return { id, case: r.case, observedAt: r.observedAt, verified: r.verified, assessment: r.assessment };
+        } catch {
+          return { id, verified: false };
+        }
+      }).sort((a, b) => String(b.observedAt).localeCompare(String(a.observedAt))).slice(0, limit);
+    }
+    module2.exports = { canonical, digest, chain, verifyChain, assess, snapshot, protectedFiles, save, verify, list };
   }
 });
 
-// lib/tool-profiles.js
-var require_tool_profiles = __commonJS({
-  "lib/tool-profiles.js"(exports2, module2) {
-    var CORE = ["find", "tool_search", "tool_describe", "tool_execute", "tool_profiles", "tool_contracts", "knowledge_graph", "knowledge_search", "job_cancel", "call_history", "doctor"];
-    var DISCOVERY = ["tool_search", "tool_describe", "tool_execute", "tool_profiles"];
-    var PROFILES = {
-      compact: { description: "Small starting set; discover an exact tool then execute it with validated arguments.", names: CORE },
-      lean: { description: "Four discovery tools. Search the catalog capability, describe it, then execute; expand profiles on request.", includeCore: false, names: DISCOVERY },
-      "lean-find": { description: "Five tools: cached catalog search plus discovery; expand capabilities on request.", includeCore: false, names: [...DISCOVERY, "find"] },
-      investigate: { description: "Find services and data, inspect evidence, follow logs and visualize dependencies.", names: [...CORE, "passport", "passports", "pg_query", "pg_usage", "es_search", "kafka_last", "logs_search", "logs_trace", "health", "overview", "impact", "code_search", "feature", "experiment_list", "experiment_run"] },
-      testing: { description: "Build reproducible fixtures, scenario contracts, collections and isolated test runs.", prefixes: ["fixture_", "scenario_", "collection_", "testdb_", "test_"], names: [...CORE, "workspace_open", "workspace_read", "workspace_write", "workspace_patch", "script_list", "script_get", "script_run"] },
-      develop: { description: "Inspect code, make a workspace change, compile and verify its behavior.", prefixes: ["workspace_", "code_", "test_"], names: [...CORE, "passport", "repo_fetch", "impact", "experiment_save", "experiment_run", "experiment_compare"] },
-      knowledge: { description: "Inspect source-neutral documentation, contracts, architecture and provenance.", prefixes: ["knowledge_", "docs_"], names: [...CORE, "feature", "passport", "who_uses"] },
-      api: { description: "Inspect UI traffic, discover routes, edit requests and save reusable scripts or collections.", groups: ["api", "browser"], prefixes: ["api_", "collection_"], names: [...CORE, "script_list", "script_get", "script_run", "script_save", "script_collection", "routes_discover", "routes_learn"] },
-      all: { description: "Every enabled tool; compatible with existing installations." }
+// lib/workflow-guides.json
+var require_workflow_guides = __commonJS({
+  "lib/workflow-guides.json"(exports2, module2) {
+    module2.exports = {
+      version: 1,
+      guides: [
+        {
+          id: "column-lineage",
+          title: "Locate column reads and writes",
+          terms: "column field read write written reads writes functions repositories lineage usage impact",
+          required: ["environment", "database", "schema.table.column"],
+          stages: [
+            { id: "resolve", goal: "Resolve the exact cached database/table/column; keep ambiguity explicit", tools: ["find", "pg_table"] },
+            { id: "lineage", goal: "Inspect classified column accesses, caller chains, revisions and incomplete coverage", tools: ["pg_usage", "impact"] },
+            { id: "verify", goal: "Read exact function/source evidence, including dynamic SQL and generated-code gaps", tools: ["pg_function", "code_search", "code_read"] }
+          ],
+          boundaries: ["A text hit is not proof of read/write access. Unknown dynamic SQL, missing revisions or bounded traversal prevent an exhaustive claim."]
+        },
+        {
+          id: "reproduce-state",
+          title: "Recreate a cross-system bug",
+          terms: "recreate reproduce reproduction bug related entities databases postgres pg tables elasticsearch es kafka messages streams capture fixture state tenant",
+          required: ["environment", "service/passport", "entity and tenant identity", "bounded event window"],
+          stages: [
+            { id: "inventory", goal: "Inventory every known read and action from the selected service/passport", tools: ["scenario_inventory", "passport"] },
+            { id: "plan", goal: "Bind scoped relational tuples and explicit PG/ES/Kafka obligations, schemas and windows", tools: ["fixture_plan", "scenario_state_plan"] },
+            { id: "capture", goal: "Capture read-only source state and inspect completeness, precision, hashes and consistency", tools: ["fixture_capture", "fixture_validate", "scenario_state_capture"] },
+            { id: "export", goal: "Export hashed test resources and independently verify SQL constraints", tools: ["fixture_export", "fixture_replay"] },
+            { id: "replay", goal: "Preflight reviewed native dependency adapters, start isolated replay and inspect connection bindings", tools: ["fixture_runtime_preflight", "fixture_runtime_start", "fixture_runtime_bindings"] },
+            { id: "effects", goal: "Freeze independent effects; execute actual application tests with fixture_runtime and explicit datasource bindings, or publish a declared owned broker action; then independently observe and check writes or rejected-action no-writes", tools: ["fixture_runtime_arm", "test_run", "fixture_runtime_publish", "fixture_runtime_observe", "fixture_runtime_check", "scenario_run"] },
+            { id: "cleanup", goal: "Stop only owned resources and retain cleanup failures", tools: ["fixture_runtime_stop", "fixture_runtime_cleanup"] }
+          ],
+          boundaries: ["Separate per-source snapshots do not establish a distributed atomic snapshot or exactly-once delivery.", "Truncated windows, missing schemas/codecs or unbound reads must remain gaps."]
+        },
+        {
+          id: "differential-refactor",
+          title: "Prove a refactor preserves behavior",
+          terms: "refactor method function results fills fields enrichment compare differential old new baseline same locally dev environment",
+          required: ["baseline and candidate revisions", "representative captured inputs", "independent expectations", "reviewed execution target"],
+          stages: [
+            { id: "scope", goal: "Resolve function and library versions, enrichment precedence and affected callers", tools: ["impact", "pg_function", "code_search"] },
+            { id: "inputs", goal: "Capture source function/schema versions and representative null/error/precision inputs", tools: ["ddl_snapshot", "fixture_plan", "fixture_capture"] },
+            { id: "compare", goal: "Compare old/new exact values, ordering, errors and independently observed effects using reviewed runners", tools: ["differential_check", "test_run", "workspace_patch"] }
+          ],
+          boundaries: ["Captured-dev local equivalence and observations of a deployed dev process are separate verdicts.", "Normalization must be explicit; it must not erase business differences."]
+        },
+        {
+          id: "test-target",
+          title: "Run a test against an explicit target",
+          terms: "run execute test tests dev environment staging target remote deployment",
+          required: ["workspace", "test selector", "reviewed target profile"],
+          stages: [
+            { id: "inspect", goal: "Inspect workspace language/build capability and target placement, dependencies and allowed effects", tools: ["test_targets", "doctor", "workspace_read"] },
+            { id: "run", goal: "Run the selected supported test on the exact reviewed target and poll its job", tools: ["test_run", "call_history"] },
+            { id: "verify", goal: "Check executed assertions, cleanup and target revision; retain red/green evidence", tools: ["workspace_patch", "call_history"] }
+          ],
+          boundaries: ["env=dev alone selects source context; it does not select a remote runner or a deployed application.", "No tests, skipped-only runs, unsupported targets or cleanup failures cannot prove success."]
+        },
+        {
+          id: "investigate-incident",
+          title: "Investigate an unexplained service symptom",
+          terms: "bug exception error incident production failing wrong timeout intermittent service reservation invoice reconciliation",
+          required: ["environment", "service or entrypoint", "time/trace/entity identity"],
+          stages: [
+            { id: "evidence", goal: "Identify deployment revision, health, configuration and relevant logs before diagnosing", tools: ["find", "consul_service", "health", "logs_search", "logs_trace"] },
+            { id: "chain", goal: "Follow the entrypoint through service/library code and scoped data reads", tools: ["passport", "code_search", "impact", "scenario_inventory"] },
+            { id: "prove", goal: "Capture a minimal failing state and run an independent regression", tools: ["fixture_plan", "test_context", "test_run"] }
+          ],
+          boundaries: ["Symptom keyword matches route investigation; they do not identify the cause."]
+        },
+        {
+          id: "write-tests",
+          title: "Implement a sensitive regression test",
+          terms: "implement write create add unit integration contract regression tests test mocks fixture complexity",
+          required: ["workspace and behavior contract", "test level", "independent expected values"],
+          stages: [
+            { id: "context", goal: "Resolve actual application entrypoints, dependencies and supported build capability", tools: ["test_context", "code_search", "scenario_inventory"] },
+            { id: "arrange", goal: "Create valid edge objects or replay related state without inventing missing inputs", tools: ["test_data", "fixture_plan", "scenario_state_plan"] },
+            { id: "prove", goal: "Execute the application, show failure before the fix and pass after; reject a relevant defect", tools: ["workspace_write", "test_run", "workspace_patch"] }
+          ],
+          boundaries: ["An external grader pass cannot substitute for supported tool execution."]
+        },
+        {
+          id: "ui-api-collection",
+          title: "Turn UI traffic into a reusable API check",
+          terms: "browser playwright ui network request response api routes discover client json pretty scripts collections reuse save",
+          required: ["reviewed site URL", "interaction scope", "independent response assertions"],
+          stages: [
+            { id: "observe", goal: "Inspect the UI and capture bounded browser network evidence with secrets removed", tools: ["api_browser_open", "api_browser_action", "api_browser_capture", "routes_discover"] },
+            { id: "inspect", goal: "Inspect attributed routes and request/response JSON in the interactive client", tools: ["api_exchange_get", "api_request_prepare", "api_routes"] },
+            { id: "reuse", goal: "Replay only allowlisted intended requests and save a parameterized script/collection", tools: ["api_request_replay", "api_request_save", "collection_validate", "collection_run", "api_browser_close"] }
+          ],
+          boundaries: ["Captured credentials remain placeholders. Replaying a mutation requires the user's intended action scope."]
+        },
+        {
+          id: "knowledge-refresh",
+          title: "Update understandable architecture knowledge",
+          terms: "knowledge confluence rag graph documentation architecture semantic mirror update migration source",
+          required: ["source id and revision", "environment/scope"],
+          stages: [
+            { id: "inspect", goal: "Inspect source provenance, stale records and exact citations", tools: ["knowledge_search", "knowledge_graph", "tool_contracts"] },
+            { id: "refresh", goal: "Refresh a selected source, then inspect typed edges and coverage", tools: ["knowledge_sync", "knowledge_graph"] }
+          ],
+          boundaries: ["Knowledge projections retain source identity; a successful mirror does not prove runtime dependencies."]
+        }
+      ]
     };
-    function definitions() {
-      return { ...PROFILES, ...require_config().getTools().profiles || {} };
-    }
-    function select(tools, name = "all") {
-      const profile = definitions()[name];
-      if (!profile) throw Object.assign(new Error(`Unknown tool profile ${name}`), { code: "DT_PROFILE_UNKNOWN" });
-      if (name === "all") return tools;
-      const names = /* @__PURE__ */ new Set([...profile.includeCore === false ? [] : CORE, ...profile.names || []]);
-      return tools.filter((t) => names.has(t.name) || (profile.groups || []).includes(t.group) || (profile.prefixes || []).some((p) => t.name.startsWith(p)));
-    }
-    function list(tools) {
-      return Object.entries(definitions()).map(([name, x]) => ({ name, description: x.description || "", tools: select(tools, name).map((t) => t.name), count: select(tools, name).length }));
-    }
-    module2.exports = { select, list };
   }
 });
 
@@ -39828,10 +43170,143 @@ var require_tool_search = __commonJS({
   }
 });
 
+// lib/workflows.js
+var require_workflows = __commonJS({
+  "lib/workflows.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var builtin = require_workflow_guides();
+    var { terms } = require_tool_search();
+    function definitions() {
+      const guides = new Map(builtin.guides.map((g) => [g.id, g]));
+      const dir = path2.join(require_config().HOME, "workflows");
+      if (fs2.existsSync(dir)) for (const f of fs2.readdirSync(dir).filter((f2) => /^[\w-]+\.json$/.test(f2)).sort()) {
+        const v = JSON.parse(fs2.readFileSync(path2.join(dir, f), "utf8"));
+        require_schema().assert(v, { type: "object", additionalProperties: false, required: ["version", "guides"], properties: { version: { const: 1 }, guides: { type: "array", maxItems: 50, items: { type: "object", additionalProperties: false, required: ["id", "title", "terms", "required", "stages", "boundaries"], properties: { id: { type: "string", pattern: "^[a-z][a-z0-9-]{0,63}$" }, title: { type: "string", maxLength: 160 }, terms: { type: "string", maxLength: 2e3 }, required: { type: "array", items: { type: "string" }, maxItems: 20 }, boundaries: { type: "array", items: { type: "string" }, maxItems: 20 }, stages: { type: "array", maxItems: 12, items: { type: "object", required: ["id", "goal", "tools"], additionalProperties: false, properties: { id: { type: "string" }, goal: { type: "string", maxLength: 500 }, tools: { type: "array", maxItems: 20, items: { type: "string", pattern: "^[A-Za-z][A-Za-z0-9_]*$" } } } } } } } } } });
+        for (const g of v.guides) guides.set(g.id, g);
+      }
+      return [...guides.values()];
+    }
+    function suggest(query, tools, limit = 2) {
+      const words = new Set(terms(query)), enabled = new Set(tools.map((t) => t.name));
+      if (!enabled.has("workflow_plan")) return [];
+      return definitions().map((g) => {
+        const vocabulary = new Set(terms(g.terms));
+        return { g, matched: [...words].filter((w) => vocabulary.has(w)) };
+      }).filter((x) => x.matched.length >= 2 || query.trim() === x.g.id).sort((a, b) => b.matched.length - a.matched.length || a.g.id.localeCompare(b.g.id)).slice(0, limit).map(({ g, matched }) => ({ id: g.id, title: g.title, matchedTerms: matched.slice(0, 8), first: g.stages[0].tools.filter((n) => enabled.has(n)), next: { tool: "tool_describe", args: { name: "workflow_plan" } }, planArguments: { id: g.id } }));
+    }
+    function plan(id, tools) {
+      const all = definitions(), guide = all.find((g) => g.id === id);
+      if (!guide && id) throw Object.assign(new Error(`Unknown workflow ${id}; omit id to list guides`), { code: "DT_WORKFLOW_UNKNOWN" });
+      if (!guide) return { version: 1, kind: "planning-guides", guides: all.map(({ id: id2, title }) => ({ id: id2, title })), executionPerformed: false };
+      const enabled = new Set(tools.map((t) => t.name));
+      const stages = guide.stages.map((s) => ({ ...s, tools: s.tools.filter((n) => enabled.has(n)), unavailable: s.tools.filter((n) => !enabled.has(n)) }));
+      return { version: 1, kind: "planning-guide", id: guide.id, title: guide.title, required: guide.required, stages, boundaries: guide.boundaries, executionPerformed: false, coverage: "Named enabled tools are candidates, not a guarantee their configured backend, target or runtime capability is available. Inspect each schema and preflight." };
+    }
+    function bounded(result, maxBytes = 4096) {
+      if (Buffer.byteLength(JSON.stringify(result)) <= maxBytes) return result;
+      const original = structuredClone(result), r = structuredClone(result);
+      try {
+        r.view = require_results().saveView("json", original, { title: "Discovery results" });
+      } catch {
+      }
+      r.truncated = true;
+      r.omitted = { tools: 0, workflows: 0 };
+      r.outputBudgetBytes = maxBytes;
+      for (const t of r.tools) if (t.description.length > 180) {
+        t.description = t.description.slice(0, 180);
+        t.descriptionTruncated = true;
+      }
+      while (Buffer.byteLength(JSON.stringify(r)) > maxBytes && (r.tools.length || r.workflows?.length)) {
+        if ((r.tools.length > 2 || !r.workflows?.length) && r.tools.length) {
+          r.tools.pop();
+          r.omitted.tools++;
+        } else {
+          r.workflows.pop();
+          r.omitted.workflows++;
+        }
+      }
+      if (Buffer.byteLength(JSON.stringify(r)) > maxBytes) r.lexical = { mode: r.lexical.mode, ranker: r.lexical.ranker, truncated: true };
+      return r;
+    }
+    module2.exports = { definitions, suggest, plan, bounded };
+  }
+});
+
+// lib/contracts.js
+var require_contracts = __commonJS({
+  "lib/contracts.js"(exports2, module2) {
+    var path2 = require("path");
+    var fs2 = require("fs");
+    var aliases = {
+      "v1/collection.schema.json": "schemas/collection-contract.schema.json",
+      "v1/scenario-package.schema.json": "schemas/scenario-package-v1.json",
+      "v1/postgres-template.schema.json": "docs/contracts/postgres-template-v1.schema.json",
+      "v1/api-exchange.schema.json": "schemas/api-exchange.v1.schema.json",
+      "v1/api-request.schema.json": "schemas/api-request.v1.schema.json"
+    };
+    function resolve(name, root = require_config().ROOT) {
+      if (!/^v\d+\/[a-z][a-z0-9-]*\.schema\.json$/.test(name)) return null;
+      const direct = path2.join(root, "contracts", name), fallback = aliases[name] && path2.join(root, aliases[name]);
+      return fs2.existsSync(direct) ? direct : fallback && fs2.existsSync(fallback) ? fallback : null;
+    }
+    function list() {
+      const root = require_config().ROOT, names = new Set(Object.keys(aliases));
+      try {
+        for (const v of fs2.readdirSync(path2.join(root, "contracts")).filter((v2) => /^v\d+$/.test(v2))) for (const f of fs2.readdirSync(path2.join(root, "contracts", v))) if (f.endsWith(".schema.json")) names.add(`${v}/${f}`);
+      } catch {
+      }
+      return [...names].sort().filter((name) => resolve(name)).map((name) => ({ name, url: `/contracts/${name}`, schema: JSON.parse(fs2.readFileSync(resolve(name), "utf8")) }));
+    }
+    module2.exports = { aliases, resolve, list };
+  }
+});
+
+// lib/tool-profiles.js
+var require_tool_profiles = __commonJS({
+  "lib/tool-profiles.js"(exports2, module2) {
+    var CORE = ["find", "tool_search", "tool_describe", "tool_execute", "tool_profiles", "tool_contracts", "knowledge_graph", "knowledge_search", "job_cancel", "call_history", "doctor"];
+    var DISCOVERY = ["tool_search", "tool_describe", "tool_execute", "tool_profiles"];
+    var PROFILES = {
+      compact: { description: "Small starting set; discover an exact tool then execute it with validated arguments.", names: CORE },
+      lean: { description: "Four discovery tools. Search the catalog capability, describe it, then execute; expand profiles on request.", includeCore: false, names: DISCOVERY },
+      "lean-find": { description: "Five tools: cached catalog search plus discovery; expand capabilities on request.", includeCore: false, names: [...DISCOVERY, "find"] },
+      investigate: { description: "Find services and data, inspect evidence, follow logs and visualize dependencies.", names: [...CORE, "passport", "passports", "pg_query", "pg_usage", "es_search", "kafka_last", "logs_search", "logs_trace", "health", "overview", "impact", "code_search", "feature", "experiment_list", "experiment_run"] },
+      testing: { description: "Build reproducible fixtures, scenario contracts, collections and isolated test runs.", prefixes: ["fixture_", "scenario_", "collection_", "testdb_", "test_"], names: [...CORE, "workspace_open", "workspace_read", "workspace_write", "workspace_patch", "script_list", "script_get", "script_run"] },
+      develop: { description: "Inspect code, make a workspace change, compile and verify its behavior.", prefixes: ["workspace_", "code_", "test_"], names: [...CORE, "passport", "repo_fetch", "impact", "experiment_save", "experiment_run", "experiment_compare"] },
+      knowledge: { description: "Inspect source-neutral documentation, contracts, architecture and provenance.", prefixes: ["knowledge_", "docs_"], names: [...CORE, "feature", "passport", "who_uses"] },
+      api: { description: "Inspect UI traffic, discover routes, edit requests and save reusable scripts or collections.", groups: ["api", "browser"], prefixes: ["api_", "collection_"], names: [...CORE, "script_list", "script_get", "script_run", "script_save", "script_collection", "routes_discover", "routes_learn"] },
+      all: { description: "Every enabled tool; compatible with existing installations." }
+    };
+    function definitions() {
+      return { ...PROFILES, ...require_config().getTools().profiles || {} };
+    }
+    function select(tools, name = "all") {
+      const profile = definitions()[name];
+      if (!profile) throw Object.assign(new Error(`Unknown tool profile ${name}`), { code: "DT_PROFILE_UNKNOWN" });
+      if (name === "all") return tools;
+      const names = /* @__PURE__ */ new Set([...profile.includeCore === false ? [] : CORE, ...profile.names || []]);
+      return tools.filter((t) => names.has(t.name) || (profile.groups || []).includes(t.group) || (profile.prefixes || []).some((p) => t.name.startsWith(p)));
+    }
+    function list(tools) {
+      return Object.entries(definitions()).map(([name, x]) => ({ name, description: x.description || "", tools: select(tools, name).map((t) => t.name), count: select(tools, name).length }));
+    }
+    module2.exports = { select, list };
+  }
+});
+
 // lib/tools-discovery.js
 var require_tools_discovery = __commonJS({
   "lib/tools-discovery.js"(exports2, module2) {
     module2.exports = ({ str, int, registry }) => [
+      { name: "evaluation_evidence", strictInput: true, group: "history", description: "Inspect parent-recorded evaluation evidence separately: immutable inputs, hash-chained safe tool transcript, candidate patch digest, independent grade, mutations and tool-versus-external execution. Rechecks signatures and artifact hashes. No inline grading results are accepted. Omit run to list retained records.", input: { run: str("Retained evaluation id"), limit: { ...int("Records when listing", 20), minimum: 1, maximum: 100 } }, run: (a) => {
+        const r = a.run ? require_evaluation_evidence().verify(a.run) : { records: require_evaluation_evidence().list(a.limit) };
+        return { ...r, view: require_results().saveView("json", r, { title: "Evaluation evidence" }) };
+      } },
+      { name: "workflow_plan", strictInput: true, group: "catalog", description: "Inspect a named composable workflow planning guide, or list guide ids. Stages reference exact enabled tools, prerequisites and proof boundaries. A guide never diagnoses a symptom, executes work or grants permissions.", input: { id: str("Exact guide id from tool_search; omit to list guides") }, run: async (a) => {
+        const r = require_workflows().plan(a.id, await registry());
+        return { ...r, view: require_results().saveView("json", r, { title: r.title || "Workflow guides" }) };
+      } },
       { name: "tool_contracts", group: "catalog", description: "Inspect versioned language-neutral transport, knowledge, scenario, collection and resource schemas. Use these contracts and the tool_describe adapter result schema when replacing an implementation or migrating storage. Includes stable public schema URLs.", input: { name: str("Optional exact contract name, e.g. v1/tool-request.schema.json") }, run: (a) => {
         const contracts = require_contracts().list();
         if (!a.name) return contracts.map(({ schema, ...x }) => ({ ...x, title: schema.title, id: schema.$id }));
@@ -39843,12 +43318,13 @@ var require_tools_discovery = __commonJS({
       {
         name: "tool_search",
         group: "catalog",
-        description: "Find enabled capabilities by name, description and group keywords. For symptoms, first identify evidence needed: environment, logs, code, health or data. Matched/unmatched keywords show retrieval limits. Use tool_describe for exact arguments, then tool_execute.",
-        input: { query: str("Task or tool name, e.g. clone test database or inspect Kafka"), group: str("Optional exact group"), limit: { ...int("Max matches", 8), minimum: 1, maximum: 30 } },
+        description: "Find enabled capabilities and planning guides for compound tasks. Keyword matches route investigation, not diagnosis. Use tool_describe for exact arguments, then tool_execute. Results are bounded; the view retains omitted matches.",
+        input: { query: { ...str("Task or exact tool name; compound tasks also return planning guides"), maxLength: 4e3 }, group: str("Optional exact group"), limit: { ...int("Max matches", 8), minimum: 1, maximum: 30 }, max_bytes: { ...int("JSON response budget; full oversized result in view", 4096), minimum: 2048, maximum: 16384 } },
         required: ["query"],
         run: async (a) => {
-          const { matches, lexical } = require_tool_search().search(await registry(), a.query, a.group, require_config().getTools().discoveryRanker);
-          return { total: matches.length, tools: matches.slice(0, a.limit).map(({ t }) => ({ name: t.name, group: t.group, description: t.description.slice(0, 450), required: t.inputSchema.required, next: { tool: "tool_describe", args: { name: t.name } } })), lexical };
+          const tools = await registry(), W = require_workflows();
+          const { matches, lexical } = require_tool_search().search(tools, a.query, a.group, require_config().getTools().discoveryRanker);
+          return W.bounded({ total: matches.length, tools: matches.slice(0, a.limit).map(({ t }) => ({ name: t.name, group: t.group, description: t.description.slice(0, 450), required: t.inputSchema.required, next: { tool: "tool_describe", args: { name: t.name } } })), lexical, ...!a.group ? { workflows: W.suggest(a.query, tools), workflowKind: "planning-guides-not-diagnosis" } : {} }, a.max_bytes);
         }
       },
       { name: "tool_describe", group: "catalog", description: "Read the exact input schema and guidance for one enabled tool. Inspect required fields and defaults before tool_execute; discoverability does not grant additional permissions.", input: { name: str("Exact tool name") }, required: ["name"], run: async (a) => {
@@ -40051,7 +43527,7 @@ var require_semantic_knowledge = __commonJS({
       const pages = includeConfluence ? require_docs_cache().list() : [];
       const key = digest([env, stamps, pages.map((p) => [p.id, p.space, p.version, p.syncedAt])]);
       if (memo.has(key)) return structuredClone(memo.get(key));
-      const sys = require_knowledge().system(env), nodes = /* @__PURE__ */ new Map(), relations = [], documents = [], gaps = [], sourceVersions = [];
+      const sys = require_knowledge().system(env), nodes = /* @__PURE__ */ new Map(), relations = [], documents = [], gaps = [...sys.gaps || []], sourceVersions = [];
       const addNode = (node, proof) => {
         const old = nodes.get(node.id);
         if (old && old.kind !== node.kind) gaps.push({ kind: "entity-type-conflict", id: node.id, kinds: [old.kind, node.kind] });
@@ -40741,907 +44217,6 @@ var require_tools_testdb = __commonJS({
         { name: "testdb_gc", description: "Recover expired/abandoned leases and owned setup probes, then prune unleased bases by age/LRU/size/count. Active leases and pinned bases are protected. dryRun previews candidates; cleanup failures are returned and retained for retry.", input: { templateTtlMs: int("Unleased template idle age in ms", 864e5), maxBytes: int("Optional total template storage budget"), maxTemplates: int("Optional template count budget"), dryRun: bool("Preview without deleting resources") }, run: async (a) => view(await T().gc(a), "Scratch PostgreSQL cleanup") }
       ].map((tool) => ({ ...tool, group: "code" }));
     };
-  }
-});
-
-// lib/scenario-container.js
-var require_scenario_container = __commonJS({
-  "lib/scenario-container.js"(exports2, module2) {
-    function harness() {
-      const fs2 = require("fs"), http2 = require("http"), path2 = require("path"), { spawn } = require("child_process"), { isDeepStrictEqual } = require("util");
-      const input = JSON.parse(fs2.readFileSync("/dt-control/input.json", "utf8")), counts = /* @__PURE__ */ new Map(), records = "/dt-evidence/events.jsonl";
-      const event = (value) => fs2.appendFileSync(records, JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), ...value }) + "\n");
-      const normalizedPath = (p) => {
-        const u = new URL(p, "http://local");
-        u.searchParams.sort();
-        return u.pathname + u.search;
-      };
-      const sequences = /* @__PURE__ */ new Map();
-      try {
-        const watch = fs2.watch("/dt-files", { recursive: true }, (change, filename) => event({ kind: filename ? "file-change" : "file-watch-gap", change, path: filename && String(filename).replace(/\\/g, "/") }));
-        watch.on("error", (e) => event({ kind: "file-watch-gap", error: e.message }));
-      } catch (e) {
-        event({ kind: "file-watch-gap", error: e.message });
-      }
-      const handler = async (id, req, res) => {
-        let bytes = 0, chunks = [];
-        for await (const part of req) {
-          bytes += part.length;
-          if (bytes > 1024 * 1024) {
-            event({ kind: "http-mismatch", reason: "request exceeds 1 MiB" });
-            res.writeHead(413).end();
-            return;
-          }
-          chunks.push(part);
-        }
-        let body = Buffer.concat(chunks).toString("utf8");
-        try {
-          body = JSON.parse(body);
-        } catch {
-        }
-        if (!chunks.length) body = null;
-        const request = { method: req.method, path: normalizedPath(req.url), body };
-        const exchanges = input.http[id]?.exchanges || [];
-        const index = exchanges.findIndex((exchange2, i) => {
-          const expected = exchange2.request, n = counts.get(`${id}:${i}`) || 0, max = exchange2.times?.max ?? exchange2.times?.value ?? 1;
-          return n < max && request.method === (expected.method || "GET").toUpperCase() && request.path === normalizedPath(expected.path || "/") && isDeepStrictEqual(request.body, Object.hasOwn(expected, "body") ? expected.body : null) && Object.entries(expected.headers || {}).every(([key, value]) => req.headers[key.toLowerCase()] === String(value));
-        });
-        if (index < 0) {
-          event({ kind: "http-mismatch", state: id, request, reason: "No exact method/path/body/header fixture with remaining calls" });
-          res.writeHead(503, { "content-type": "application/json" }).end('{"error":"scenario HTTP fixture mismatch"}');
-          return;
-        }
-        const exchange = exchanges[index], count = counts.get(`${id}:${index}`) || 0;
-        if (input.http[id].ordered && index !== (sequences.get(id) || 0)) {
-          event({ kind: "http-mismatch", state: id, request, reason: `Expected exchange ${sequences.get(id) || 0}, received ${index}` });
-          res.writeHead(503).end();
-          return;
-        }
-        counts.set(`${id}:${index}`, count + 1);
-        if (input.http[id].ordered && count + 1 >= (exchange.times?.max ?? exchange.times?.value ?? 1)) sequences.set(id, index + 1);
-        const responses = exchange.responses || [exchange.response], response = responses[Math.min(count, responses.length - 1)];
-        event({ kind: "http", state: id, exchange: index, request, count: count + 1 });
-        if (response.delayMs) await new Promise((r) => setTimeout(r, response.delayMs));
-        if (response.close) {
-          res.destroy();
-          return;
-        }
-        const text = typeof response.body === "string" ? response.body : response.body == null ? "" : JSON.stringify(response.body);
-        res.writeHead(response.status || 200, { "content-type": "application/json", ...response.headers || {} });
-        res.end(text);
-      };
-      const servers = [];
-      Promise.all(Object.keys(input.http).map((id) => new Promise((resolve, reject) => {
-        const server = http2.createServer((req, res) => {
-          handler(id, req, res).catch((error) => {
-            event({ kind: "http-mismatch", state: id, reason: error.message });
-            if (!res.headersSent) res.writeHead(503);
-            res.end();
-          });
-        });
-        servers.push(server);
-        server.once("error", reject);
-        server.listen(input.ports[id], "127.0.0.1", resolve);
-      }))).then(() => {
-        const child = spawn(process.execPath, ["--experimental-permission", "--allow-fs-read=/workspace", "--allow-fs-read=/dt-files", "--allow-fs-read=/tmp", "--allow-fs-read=/dt-control/audit.js", "--allow-fs-write=/dt-files", "--allow-fs-write=/tmp", "--require", "/dt-control/audit.js", path2.join("/workspace", input.profile.entry), ...input.profile.args || []], { cwd: "/workspace", env: { PATH: process.env.PATH, HOME: "/tmp", TMPDIR: "/tmp", NODE_ENV: "test", ...input.env }, stdio: ["ignore", "pipe", "pipe", "ipc"] });
-        child.on("message", (message) => {
-          if (message && message.dtFileAudit === 1 && typeof message.path === "string" && message.path.startsWith("/dt-files/")) event({ kind: "file-operation", path: path2.relative("/dt-files", message.path), operation: String(message.operation || "write").slice(0, 40) });
-        });
-        child.stdout.on("data", (c) => process.stdout.write(c));
-        child.stderr.on("data", (c) => process.stderr.write(c));
-        child.on("error", (e) => {
-          event({ kind: "process-error", error: e.message });
-          process.exit(1);
-        });
-        child.on("close", (code) => {
-          event({ kind: "process-exit", code });
-          process.exit(code || 0);
-        });
-        process.on("SIGTERM", () => {
-          child.kill("SIGTERM");
-          servers.forEach((server) => server.close());
-          setTimeout(() => process.exit(0), 500).unref();
-        });
-        event({ kind: "started", pid: child.pid });
-      }).catch((error) => {
-        event({ kind: "process-error", error: error.message });
-        process.exit(1);
-      });
-    }
-    function audit() {
-      const fs2 = require("fs"), path2 = require("path"), { fileURLToPath } = require("url"), descriptors = /* @__PURE__ */ new Map();
-      const filename = (value) => typeof value === "number" ? descriptors.get(value) : value instanceof URL ? fileURLToPath(value) : typeof value === "string" || Buffer.isBuffer(value) ? path2.resolve(String(value)) : null;
-      const record = (operation, value) => {
-        const full = filename(value);
-        if (full?.startsWith("/dt-files/")) process.send?.({ dtFileAudit: 1, operation, path: full });
-      };
-      const methods = { writeFile: [0], appendFile: [0], unlink: [0], rename: [0, 1], rm: [0], mkdir: [0], rmdir: [0], copyFile: [1], cp: [1], truncate: [0], chmod: [0], chown: [0], symlink: [1], link: [1] };
-      for (const [name, positions] of Object.entries(methods)) {
-        if (fs2[name + "Sync"]) {
-          const original = fs2[name + "Sync"];
-          fs2[name + "Sync"] = function(...args) {
-            const result = Reflect.apply(original, this, args);
-            positions.forEach((i) => record(name, args[i]));
-            return result;
-          };
-        }
-        if (fs2[name]) {
-          const original = fs2[name];
-          fs2[name] = function(...args) {
-            const callback = args.at(-1);
-            if (typeof callback === "function") args[args.length - 1] = function(error, ...values) {
-              if (!error) positions.forEach((i) => record(name, args[i]));
-              Reflect.apply(callback, this, [error, ...values]);
-            };
-            return Reflect.apply(original, this, args);
-          };
-        }
-        if (fs2.promises[name]) {
-          const original = fs2.promises[name];
-          fs2.promises[name] = async function(...args) {
-            const result = await Reflect.apply(original, this, args);
-            positions.forEach((i) => record(name, args[i]));
-            return result;
-          };
-        }
-      }
-      const openSync = fs2.openSync;
-      fs2.openSync = function(file, flags, ...args) {
-        const fd = Reflect.apply(openSync, this, [file, flags, ...args]);
-        descriptors.set(fd, filename(file));
-        if (typeof flags === "number" || /[wa+]/.test(flags || "r")) record("open", file);
-        return fd;
-      };
-      for (const name of ["writeSync", "writevSync", "ftruncateSync", "fchmodSync", "fchownSync"]) {
-        const original = fs2[name];
-        if (original) fs2[name] = function(...args) {
-          const result = Reflect.apply(original, this, args);
-          record(name, args[0]);
-          return result;
-        };
-      }
-      const closeSync = fs2.closeSync;
-      fs2.closeSync = function(fd) {
-        const result = Reflect.apply(closeSync, this, [fd]);
-        descriptors.delete(fd);
-        return result;
-      };
-      const open = fs2.open;
-      fs2.open = function(file, flags, ...args) {
-        const callback = args.at(-1);
-        if (typeof callback === "function") args[args.length - 1] = function(error, fd) {
-          if (!error) {
-            descriptors.set(fd, filename(file));
-            if (typeof flags === "number" || /[wa+]/.test(flags || "r")) record("open", file);
-          }
-          Reflect.apply(callback, this, [error, fd]);
-        };
-        return Reflect.apply(open, this, [file, flags, ...args]);
-      };
-      for (const name of ["write", "writev", "ftruncate", "fchmod", "fchown"]) {
-        const original = fs2[name];
-        if (original) fs2[name] = function(...args) {
-          const callback = args.at(-1);
-          if (typeof callback === "function") args[args.length - 1] = function(error, ...values) {
-            if (!error) record(name, args[0]);
-            Reflect.apply(callback, this, [error, ...values]);
-          };
-          return Reflect.apply(original, this, args);
-        };
-      }
-      const promiseOpen = fs2.promises.open;
-      fs2.promises.open = async function(file, flags, ...args) {
-        const handle = await Reflect.apply(promiseOpen, this, [file, flags, ...args]);
-        if (typeof flags === "number" || /[wa+]/.test(flags || "r")) record("open", file);
-        for (const name of ["write", "writev", "writeFile", "appendFile", "truncate", "chmod", "chown"]) {
-          const original = handle[name];
-          handle[name] = async function(...values) {
-            const result = await Reflect.apply(original, this, values);
-            record(name, file);
-            return result;
-          };
-        }
-        return handle;
-      };
-      const stream = fs2.createWriteStream;
-      fs2.createWriteStream = function(file, options) {
-        const result = Reflect.apply(stream, this, [file, options]);
-        result.on("finish", () => record("stream", file || options?.fd));
-        return result;
-      };
-      require("module").syncBuiltinESMExports();
-    }
-    function client() {
-      const http2 = require("http");
-      let data = "";
-      process.stdin.on("data", (c) => {
-        data += c;
-      });
-      process.stdin.on("end", () => {
-        try {
-          const input = JSON.parse(data), body = Object.hasOwn(input, "body") ? typeof input.body === "string" ? input.body : JSON.stringify(input.body) : null;
-          const req = http2.request({ hostname: "127.0.0.1", port: input.port, method: input.method || "GET", path: input.path, headers: { ...body ? { "content-type": "application/json", "content-length": Buffer.byteLength(body) } : {}, ...input.headers || {} }, timeout: input.timeoutMs || 1e4 }, (res) => {
-            let size = 0, chunks = [];
-            res.on("data", (c) => {
-              size += c.length;
-              if (size > 2 * 1024 * 1024) req.destroy(new Error("HTTP response exceeds 2 MiB"));
-              else chunks.push(c);
-            });
-            res.on("end", () => {
-              let value = Buffer.concat(chunks).toString("utf8");
-              try {
-                value = JSON.parse(value);
-              } catch {
-              }
-              process.stdout.write(JSON.stringify({ status: res.statusCode, headers: res.headers, body: value }));
-            });
-          });
-          req.on("timeout", () => req.destroy(new Error("HTTP deadline expired")));
-          req.on("error", (e) => {
-            process.stderr.write(e.message);
-            process.exitCode = 1;
-          });
-          req.end(body);
-        } catch (e) {
-          process.stderr.write(e.message);
-          process.exitCode = 1;
-        }
-      });
-    }
-    module2.exports = { harness: `(${harness.toString()})();
-`, client: `(${client.toString()})();
-`, audit: `(${audit.toString()})();
-` };
-  }
-});
-
-// lib/scenario-runtime.js
-var require_scenario_runtime = __commonJS({
-  "lib/scenario-runtime.js"(exports2, module2) {
-    var fs2 = require("fs");
-    var path2 = require("path");
-    var crypto = require("crypto");
-    var { spawn } = require("child_process");
-    var { isDeepStrictEqual } = require("util");
-    var P = require_scenario_package();
-    var { CACHE: CACHE2, readJson } = require_util();
-    var ROOT = path2.join(CACHE2, "scenario-runs");
-    var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-    var checkCancellation = () => {
-      const why = require_trace().current()?.cancelled;
-      if (why) throw new Error(`scenario cancelled: ${why}`);
-    };
-    var bounded = (n, def, max) => {
-      n ??= def;
-      if (!Number.isInteger(n) || n < 0 || n > max) throw new Error(`duration/limit must be 0..${max}`);
-      return n;
-    };
-    function exec(command, args, { input, timeoutMs = 3e4, cwd } = {}) {
-      return new Promise((resolve) => {
-        let out2 = "", error = "", done = false;
-        const child = spawn(command, args, { cwd, env: Object.fromEntries(Object.entries(process.env).filter(([key]) => /^(PATH|HOME|USER|LANG|LC_\w+|DOCKER_HOST|DOCKER_CONTEXT|DOCKER_CONFIG|DOCKER_TLS_VERIFY|DOCKER_CERT_PATH|TMPDIR)$/.test(key))), stdio: ["pipe", "pipe", "pipe"] });
-        require_trace().child(child);
-        const timer = setTimeout(() => {
-          child.kill("SIGKILL");
-        }, timeoutMs);
-        child.stdout.on("data", (c) => {
-          out2 = (out2 + c).slice(-2 * 1024 * 1024);
-        });
-        child.stderr.on("data", (c) => {
-          error = (error + c).slice(-3e4);
-        });
-        const finish = (code, reason) => {
-          if (done) return;
-          done = true;
-          clearTimeout(timer);
-          resolve({ code, out: out2, error: reason || error });
-        };
-        child.on("error", (e) => finish(-1, e.message));
-        child.on("close", (code) => finish(code));
-        child.stdin.on("error", () => {
-        });
-        child.stdin.end(input || "");
-      });
-    }
-    function sessionPath(id) {
-      if (!/^[a-f0-9]{24}$/.test(id || "")) throw new Error("invalid scenario session id");
-      return path2.join(ROOT, id);
-    }
-    function load(id, { stopped = false, expired = false } = {}) {
-      const dir = sessionPath(id), m = readJson(path2.join(dir, "session.json"));
-      if (!m) throw new Error("scenario session not found");
-      if (!stopped && m.status !== "ready") throw new Error(`scenario session is ${m.status}`);
-      if (!expired && Date.now() > m.expiresAt) throw new Error("scenario session lease expired; stop it or run scenario_cleanup");
-      return { m, dir };
-    }
-    function save(m) {
-      const file = path2.join(sessionPath(m.id), "session.json"), prior = readJson(file);
-      if (prior?.status === "stopped" && m.status !== "stopped") Object.assign(m, { status: "stopped", stoppedAt: prior.stoppedAt, timings: { ...m.timings, cleanupMs: prior.timings.cleanupMs } });
-      const temp = `${file}.tmp-${crypto.randomBytes(5).toString("hex")}`;
-      fs2.writeFileSync(temp, JSON.stringify(m, null, 2), { mode: 384 });
-      fs2.renameSync(temp, file);
-    }
-    async function locked(id, fn) {
-      const lock = path2.join(sessionPath(id), "operation.lock");
-      try {
-        fs2.mkdirSync(lock);
-      } catch (e) {
-        if (e.code === "EEXIST") throw new Error("scenario session already has an active action/observation");
-        throw e;
-      }
-      try {
-        return await fn();
-      } finally {
-        fs2.rmSync(lock, { recursive: true, force: true });
-      }
-    }
-    function publicSession(m) {
-      return {
-        id: m.id,
-        workspace: m.workspace,
-        package: m.packagePath,
-        artifact: m.artifact,
-        service: m.service,
-        status: m.status,
-        startedAt: m.startedAt,
-        expiresAt: new Date(m.expiresAt).toISOString(),
-        adapter: m.adapter,
-        proof: m.proof,
-        actions: m.actions,
-        timings: m.timings,
-        ...m.cleanupError ? { cleanupError: m.cleanupError } : {},
-        ...m.result ? { result: m.result } : {}
-      };
-    }
-    function profileFor(workspace, artifact) {
-      if (!artifact.runtime) throw new Error("scenario package needs a reviewed workspace runtime profile");
-      const p = P.workspacePath(workspace, artifact.runtime.profile), text = fs2.readFileSync(p.full);
-      if (P.digest(text) !== artifact.runtime.sha256) throw new Error("runtime profile changed: review it and create a new scenario package");
-      const profile = JSON.parse(text);
-      if (profile.version !== 1 || !["node-container", "test-run"].includes(profile.adapter)) throw new Error("runtime profile version 1 adapter must be node-container or test-run");
-      return profile;
-    }
-    function requestFor(action) {
-      const binding = action.binding;
-      if (!binding || typeof binding !== "object" || !binding.path || !String(binding.path).startsWith("/") || String(binding.path).startsWith("//") || /[\r\n]/.test(binding.path)) throw new Error(`action ${action.id} needs a bound relative HTTP path`);
-      const declared = String(action.target).match(/^([A-Z]+)\s+(.+)$/), method = String(binding.method || declared?.[1] || "GET").toUpperCase();
-      if (!/^(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)$/.test(method) || declared && method !== declared[1]) throw new Error(`action ${action.id} method differs from its declared entry`);
-      if (declared) {
-        const pattern = declared[2].split(/\{[^}]*\}/).map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[^/?]+");
-        if (!new RegExp(`^${pattern}(?:\\?.*)?$`).test(binding.path)) throw new Error(`action ${action.id} path differs from its declared entry`);
-      }
-      return { method, path: binding.path, headers: binding.headers || {}, ...Object.hasOwn(binding, "body") ? { body: binding.body } : {} };
-    }
-    function validateHttp(value, id) {
-      if (!Array.isArray(value?.exchanges) || !value.exchanges.length) throw new Error(`HTTP state ${id} needs exchanges [{request,response}]`);
-      for (const exchange of value.exchanges) {
-        if (!exchange.request || !String(exchange.request.path || "/").startsWith("/") || String(exchange.request.path || "/").startsWith("//")) throw new Error(`HTTP state ${id} exchange needs a local request.path`);
-        const min = exchange.times?.min ?? exchange.times?.value ?? 1, max = exchange.times?.max ?? exchange.times?.value ?? 1;
-        if (!Number.isInteger(min) || !Number.isInteger(max) || min < 0 || max < min || max > 1e3) throw new Error(`HTTP state ${id} call count must satisfy 0 <= min <= max <= 1000`);
-        const responses = exchange.responses || [exchange.response];
-        if (!Array.isArray(responses) || !responses.length || responses.some((r) => !r || typeof r !== "object" || r.status && (!Number.isInteger(r.status) || r.status < 100 || r.status > 599))) throw new Error(`HTTP state ${id} needs valid response fixtures`);
-        responses.forEach((r) => bounded(r.delayMs, 0, 1e4));
-      }
-    }
-    function preflight(workspace, packagePath) {
-      const artifact = P.load(workspace, packagePath), profile = profileFor(workspace, artifact), gaps = [], { inventory, state, actions, expectations } = artifact.contract;
-      const gap = (kind, detail, id) => gaps.push({ kind, detail, ...id ? { id } : {} });
-      if (profile.adapter === "node-container") {
-        try {
-          P.workspacePath(workspace, profile.entry);
-        } catch (e) {
-          gap("entrypoint", e.message);
-        }
-        if (!/^[a-zA-Z0-9][a-zA-Z0-9._/:@-]*$/.test(profile.image || "")) gap("image", "Specify an existing stock Node image; the runtime never pulls images");
-        if (!Number.isInteger(profile.port) || profile.port < 1 || profile.port > 65535 || profile.port === 19081) gap("port", "Service port must be 1..65535 and different from stub port 19081");
-        if (profile.args && (!Array.isArray(profile.args) || profile.args.length > 100 || profile.args.some((a) => typeof a !== "string" || a.length > 2048))) gap("args", "Entrypoint args must be at most 100 strings of at most 2048 characters");
-        try {
-          bounded(profile.readyTimeoutMs, 1e4, 6e4);
-          bounded(profile.actionTimeoutMs, 1e4, 3e4);
-          bounded(profile.temporal?.deadlineMs, 1e3, 3e4);
-          bounded(profile.temporal?.quietMs, 0, 1e4);
-          bounded(profile.temporal?.intervalMs, 50, 1e3);
-          if (profile.readyTimeoutMs === 0 || profile.actionTimeoutMs === 0) throw new Error("Readiness and action deadlines must be positive");
-          if (profile.readyPath && (!profile.readyPath.startsWith("/") || profile.readyPath.startsWith("//") || /[\r\n]/.test(profile.readyPath))) throw new Error("Readiness path must be a relative HTTP path");
-          if (profile.readyStatus !== void 0 && (!Number.isInteger(profile.readyStatus) || profile.readyStatus < 100 || profile.readyStatus > 599)) throw new Error("Readiness status must be 100..599");
-        } catch (e) {
-          gap("runtime-limits", e.message);
-        }
-        const mapped = /* @__PURE__ */ new Set();
-        const filePaths = [];
-        for (const [kind, bindings] of Object.entries({ http: profile.http, config: profile.config, file: profile.files })) for (const [id, binding] of Object.entries(bindings || {})) {
-          const dep = inventory.states.find((s) => s.id === id);
-          if (!dep || dep.kind !== kind) {
-            gap("state-binding", `Runtime ${kind} mapping does not match inventory state`, id);
-            continue;
-          }
-          mapped.add(id);
-          try {
-            if (kind === "http") {
-              validateHttp(state.states[id].value, id);
-              if (!/^[A-Z][A-Z0-9_]*$/.test(binding)) throw new Error("HTTP mapping must name an environment variable");
-            }
-            if (kind === "config" && !/^[A-Z][A-Z0-9_]*$/.test(binding)) throw new Error("Config mapping must name an environment variable");
-            if (kind === "file") {
-              P.relative(binding.path);
-              filePaths.push(binding.path);
-              if (!["json", "text", "base64"].includes(binding.encoding || "json")) throw new Error("File encoding must be json, text or base64");
-              if (["text", "base64"].includes(binding.encoding) && typeof state.states[id].value !== "string") throw new Error("Text/base64 file state must be an explicit string");
-              if (binding.encoding === "base64" && Buffer.from(state.states[id].value, "base64").toString("base64") !== state.states[id].value) throw new Error("File base64 data must be canonical and valid");
-            }
-          } catch (e) {
-            gap("state-binding", e.message, id);
-          }
-        }
-        for (const dep of inventory.states) if (dep.required !== false && !mapped.has(dep.id)) gap("unsupported-runtime-state", `node-container supports explicit HTTP, config and file reads; ${dep.kind} needs a project test adapter`, dep.id);
-        for (const action of actions.actions) try {
-          if (action.kind !== "http") throw new Error(`${action.kind} actions need a project test adapter; native Kafka/schedule/method replay is not implemented`);
-          requestFor(action);
-        } catch (e) {
-          gap("unsupported-runtime-action", e.message, action.id);
-        }
-        const envVars = [...Object.values(profile.http || {}), ...Object.values(profile.config || {})];
-        if (new Set(filePaths).size !== filePaths.length || filePaths.some((file) => filePaths.some((other) => other !== file && file.startsWith(other + "/")))) gap("file-binding", "File state paths must be distinct and cannot be parents of another file");
-        if (new Set(envVars).size !== envVars.length || envVars.some((k) => ["PATH", "HOME", "NODE_OPTIONS", "NODE_PATH", "PORT", "DT_SCENARIO_FILES"].includes(k))) gap("environment-binding", "State environment bindings must be unique and cannot replace runtime control variables");
-        for (const id of Object.keys(profile.observations || {})) if (!expectations.expectations.some((e) => e.id === id)) gap("observation", "Unknown expectation id", id);
-        for (const expected of expectations.expectations) {
-          const id = expected.id, observation = profile.observations?.[id] || (["status", "return"].includes(expected.kind) ? { kind: expected.kind, action: expected.action } : null);
-          if (!observation) {
-            gap("unbound-observer", "Bind an independent runtime observer for this expectation", id);
-            continue;
-          }
-          if (!["status", "return", "http", "file"].includes(observation.kind)) gap("observation", `Unsupported observer ${observation.kind}`, id);
-          if (observation.kind !== expected.kind) gap("observation-kind", `A ${expected.kind} expectation cannot be satisfied by a ${observation.kind} observer`, id);
-          if (Object.hasOwn(observation, "action") && observation.action !== expected.action) gap("observation-action", "Observer action must equal the declared expectation action", id);
-          const action = actions.actions.find((a) => a.id === expected.action);
-          if (expected.action && !action) gap("observation-action", "Expectation action is not in the bound runtime actions", id);
-          if (expected.select && ["kind", "target", "action"].some((key) => Object.hasOwn(expected.select, key) && !isDeepStrictEqual(expected.select[key], expected[key]))) gap("observation-selector", "Runtime selectors cannot change declared effect kind, target or action", id);
-          if (["status", "return"].includes(observation.kind) && (!action || !isDeepStrictEqual(expected.target, action.target))) gap("observation-target", "Response observer target must equal its declared action entry", id);
-          if (observation.kind === "http") {
-            const dep = inventory.states.find((s) => s.id === observation.state);
-            if (!profile.http?.[observation.state] || dep?.kind !== "http") gap("observation", "HTTP observer needs a mapped HTTP state id", id);
-            else if (!isDeepStrictEqual(dep.target, expected.target) || expected.action && !action?.dependencies.includes(dep.id)) gap("observation-target", "HTTP observer must collect the exact target declared for this action", id);
-          }
-          if (observation.kind === "file") try {
-            P.relative(observation.path);
-            if (typeof expected.target?.path !== "string" || expected.target.path !== observation.path) throw new Error("File observer path must equal the concrete declared expectation target.path");
-          } catch (e) {
-            gap("observation-target", e.message, id);
-          }
-        }
-      } else {
-        if (!Array.isArray(profile.tests) || !profile.tests.length || profile.tests.some((t) => typeof t !== "string")) gap("tests", "test-run profile needs exact project test selectors");
-        if (!["build", "fast", "auto", void 0].includes(profile.mode)) gap("mode", "test mode must be build, fast or auto");
-        try {
-          P.workspacePath(workspace, profile.report, { missing: true });
-          if (!/^(?:[^/]+\/)*(?:target|build)\//.test(profile.report)) throw new Error("Project observation report must be below a target/ or build/ directory");
-        } catch (e) {
-          gap("observation-report", e.message);
-        }
-        if (Object.keys(artifact.resources.files).length && !profile.fixtureBindings && Object.keys(JSON.parse(artifact.resources.files["fixture/manifest.json"].data).databases || {}).length > 1) gap("datasources", "Multiple fixture databases need explicit fixtureBindings");
-        try {
-          P.verifyExtracted(workspace, packagePath, artifact);
-        } catch (e) {
-          gap("fixture-integrity", e.message);
-        }
-      }
-      return {
-        ok: !gaps.length,
-        workspace,
-        package: packagePath,
-        artifact: artifact.sha256,
-        service: artifact.service,
-        adapter: profile.adapter,
-        gaps,
-        support: profile.adapter === "node-container" ? { states: ["http", "config", "file"], actions: ["http"], observations: ["status", "return", "http", "file"], network: "docker --network none", brokerCodecs: [] } : { execution: "existing test_run", dependencies: "owned by reviewed project tests", runtimeReadsVerified: false },
-        proof: { level: "discovery", applicationExecuted: false, runtimeReadsVerified: false }
-      };
-    }
-    async function probe(workspace, packagePath) {
-      checkCancellation();
-      const report = preflight(workspace, packagePath);
-      if (!report.ok || report.adapter !== "node-container") return report;
-      const artifact = P.load(workspace, packagePath), profile = profileFor(workspace, artifact);
-      const inspected = await exec("docker", ["image", "inspect", "--format", "{{.Id}}", profile.image], { timeoutMs: 1e4 });
-      report.prerequisites = { image: profile.image, imageId: inspected.code === 0 ? inspected.out.trim() : null, docker: inspected.code === 0, imagePull: false };
-      if (inspected.code !== 0) {
-        report.ok = false;
-        report.gaps.push({ kind: "docker-image", detail: `Docker must be reachable and ${profile.image} must already exist: ${inspected.error || inspected.out}` });
-      }
-      return report;
-    }
-    async function identity(m) {
-      const r = await exec("docker", ["inspect", "--format", "{{json .Config.Labels}}", m.container]);
-      if (r.code !== 0) {
-        const absent = new RegExp(`^(?:Error(?: response from daemon)?:\\s*)?No such (?:object|container):\\s*${m.container.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "im");
-        if (r.code === 1 && absent.test(r.error)) return false;
-        throw new Error(`cannot verify scenario container: ${r.error || r.out || `docker inspect exited ${r.code}`}`);
-      }
-      let labels;
-      try {
-        labels = JSON.parse(r.out);
-      } catch {
-        throw new Error("cannot verify scenario container ownership");
-      }
-      if (!labels || labels["dt.scenario.owner"] !== m.owner || labels["dt.scenario.id"] !== m.id) throw new Error("container ownership does not match scenario session; refusing to operate");
-      return true;
-    }
-    function sessionArtifact(m) {
-      const artifact = P.load(m.workspace, m.packagePath);
-      if (artifact.sha256 !== m.artifact) throw new Error("scenario package changed during session");
-      if (!isDeepStrictEqual(profileFor(m.workspace, artifact), m.profile)) throw new Error("durable session profile differs from its reviewed profile");
-      const checked = preflight(m.workspace, m.packagePath);
-      if (!checked.ok) throw new Error(`session runtime preflight failed: ${checked.gaps.map((g) => `${g.kind}: ${g.detail}`).join("; ")}`);
-      return artifact;
-    }
-    function fileTree(dir) {
-      const result = {};
-      function walk(root, prefix) {
-        if (!fs2.existsSync(root)) return;
-        for (const item of fs2.readdirSync(root, { withFileTypes: true })) {
-          const rel = prefix ? `${prefix}/${item.name}` : item.name, full = path2.join(root, item.name);
-          if (item.isSymbolicLink()) {
-            result[rel] = { unsupported: "symlink" };
-            continue;
-          }
-          if (item.isDirectory()) walk(full, rel);
-          else if (item.isFile()) {
-            const stat = fs2.statSync(full);
-            result[rel] = stat.size > 2 * 1024 * 1024 ? { unsupported: "file exceeds 2 MiB" } : { sha256: P.digest(fs2.readFileSync(full)), bytes: stat.size };
-          } else result[rel] = { unsupported: "special file" };
-          if (Object.keys(result).length > 1e3) throw new Error("scenario file tree exceeds 1000 files");
-        }
-      }
-      walk(dir, "");
-      return result;
-    }
-    function fileValue(dir, observer) {
-      const full = path2.join(dir, P.relative(observer.path));
-      let cursor = full;
-      while (cursor !== dir) {
-        if (fs2.existsSync(cursor) && fs2.lstatSync(cursor).isSymbolicLink()) throw new Error("file observer refuses symlink");
-        cursor = path2.dirname(cursor);
-      }
-      if (!fs2.existsSync(full)) return null;
-      if (!fs2.statSync(full).isFile() || fs2.statSync(full).size > 2 * 1024 * 1024) throw new Error("file observer requires an ordinary file <= 2 MiB");
-      const body = fs2.readFileSync(full);
-      return observer.encoding === "base64" ? body.toString("base64") : observer.encoding === "text" ? body.toString("utf8") : JSON.parse(body.toString("utf8"));
-    }
-    async function request(m, request2) {
-      checkCancellation();
-      if (!await identity(m)) throw new Error("scenario container disappeared");
-      const r = await exec("docker", ["exec", "-i", m.container, "node", "/dt-control/client.js"], { input: JSON.stringify({ port: m.port, ...request2 }), timeoutMs: (request2.timeoutMs || 1e4) + 3e3 });
-      if (r.code !== 0) throw new Error(`service request failed: ${r.error || r.out}`);
-      try {
-        return JSON.parse(r.out);
-      } catch {
-        throw new Error("service client did not return a valid response");
-      }
-    }
-    async function start(workspace, packagePath, { ttlMs = 3e5 } = {}) {
-      const started = Date.now(), report = await probe(workspace, packagePath);
-      if (!report.ok) return { ok: false, preflight: report };
-      const artifact = P.load(workspace, packagePath), profile = profileFor(workspace, artifact);
-      if (profile.adapter === "test-run") throw new Error("test-run is one-shot: use scenario_run");
-      ttlMs = bounded(ttlMs, 3e5, 36e5);
-      if (ttlMs < 1e3) throw new Error("scenario lease must be at least 1000 ms");
-      const id = crypto.randomBytes(12).toString("hex"), dir = sessionPath(id), owner = crypto.randomBytes(20).toString("hex");
-      fs2.mkdirSync(ROOT, { recursive: true, mode: 448 });
-      const m = {
-        id,
-        workspace,
-        packagePath,
-        artifact: artifact.sha256,
-        service: artifact.service,
-        profile,
-        adapter: profile.adapter,
-        status: "starting",
-        startedAt: (/* @__PURE__ */ new Date()).toISOString(),
-        expiresAt: Date.now() + ttlMs,
-        container: `dt-scenario-${id}`,
-        owner,
-        port: profile.port,
-        actions: [],
-        timings: {},
-        proof: { level: "process", applicationExecuted: false, runtimeReadsVerified: false, network: "none" }
-      };
-      const reservation = path2.join(ROOT, ".reservation.lock");
-      try {
-        fs2.mkdirSync(reservation);
-      } catch (e) {
-        if (e.code === "EEXIST") throw new Error("scenario startup reservation is busy; retry after the current reservation");
-        throw e;
-      }
-      try {
-        fs2.writeFileSync(path2.join(reservation, "owner.json"), JSON.stringify({ pid: process.pid }));
-        const active = fs2.readdirSync(ROOT).filter((id2) => /^[a-f0-9]{24}$/.test(id2)).map((id2) => readJson(path2.join(ROOT, id2, "session.json"))).filter((s) => s && ["starting", "ready"].includes(s.status));
-        const maximum = require_config().getTests().scenarioConcurrency ?? 2;
-        if (!Number.isInteger(maximum) || maximum < 1 || maximum > 8) throw new Error("tests.scenarioConcurrency must be 1..8");
-        if (active.length >= maximum) throw new Error(`scenario capacity ${maximum} reached; stop or clean up a session before starting another`);
-        fs2.mkdirSync(dir, { recursive: true, mode: 448 });
-        save(m);
-      } finally {
-        fs2.rmSync(reservation, { recursive: true, force: true });
-      }
-      try {
-        const input = { profile, http: {}, ports: {}, env: { PORT: String(profile.port), DT_SCENARIO_FILES: "/dt-files" } };
-        let port = 19081;
-        for (const [sid, variable] of Object.entries(profile.http || {})) {
-          if (port === profile.port) port++;
-          input.http[sid] = artifact.contract.state.states[sid].value;
-          input.ports[sid] = port;
-          input.env[variable] = `http://127.0.0.1:${port++}`;
-        }
-        for (const [sid, variable] of Object.entries(profile.config || {})) {
-          const v = artifact.contract.state.states[sid].value;
-          input.env[variable] = typeof v === "object" ? JSON.stringify(v) : String(v);
-        }
-        fs2.mkdirSync(path2.join(dir, "files"));
-        for (const [sid, binding] of Object.entries(profile.files || {})) {
-          const value = artifact.contract.state.states[sid].value, full = path2.join(dir, "files", binding.path);
-          fs2.mkdirSync(path2.dirname(full), { recursive: true });
-          fs2.writeFileSync(full, binding.encoding === "base64" ? Buffer.from(value, "base64") : binding.encoding === "text" ? String(value) : JSON.stringify(value));
-        }
-        m.filesBefore = fileTree(path2.join(dir, "files"));
-        fs2.mkdirSync(path2.join(dir, "control"));
-        fs2.mkdirSync(path2.join(dir, "evidence"));
-        fs2.writeFileSync(path2.join(dir, "control/input.json"), JSON.stringify(input));
-        fs2.writeFileSync(path2.join(dir, "control/harness.js"), require_scenario_container().harness);
-        fs2.writeFileSync(path2.join(dir, "control/client.js"), require_scenario_container().client);
-        fs2.writeFileSync(path2.join(dir, "control/audit.js"), require_scenario_container().audit);
-        fs2.writeFileSync(path2.join(dir, "evidence/events.jsonl"), "");
-        const root = fs2.realpathSync(require_workspace().checkId(workspace).path);
-        if (root.includes(",") || dir.includes(",")) throw new Error("Docker mount paths containing commas are unsupported");
-        const create = await exec("docker", ["run", "--detach", "--pull=never", "--name", m.container, "--label", `dt.scenario.owner=${owner}`, "--label", `dt.scenario.id=${id}`, "--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "64", "--memory", "256m", "--cpus", "1", "--tmpfs", "/tmp:rw,nosuid,size=64m", "--mount", `type=bind,source=${root},target=/workspace,readonly`, "--mount", `type=bind,source=${dir}/control,target=/dt-control,readonly`, "--mount", `type=bind,source=${dir}/files,target=/dt-files`, "--mount", `type=bind,source=${dir}/evidence,target=/dt-evidence`, "--workdir", "/workspace", "--entrypoint", "node", profile.image, "/dt-control/harness.js"]);
-        if (create.code !== 0) throw new Error(`Docker start failed: ${create.error || create.out}`);
-        m.timings.startMs = Date.now() - started;
-        const deadline = Date.now() + bounded(profile.readyTimeoutMs, 1e4, 6e4), ready = profile.readyPath || "/health";
-        if (!ready.startsWith("/") || ready.startsWith("//")) throw new Error("readiness path must be local");
-        let last;
-        do {
-          checkCancellation();
-          try {
-            const response = await request(m, { path: ready, timeoutMs: 500 });
-            if (response.status === (profile.readyStatus || 200)) {
-              m.status = "ready";
-              m.proof.applicationExecuted = true;
-              m.timings.readyMs = Date.now() - started - m.timings.startMs;
-              save(m);
-              return { ok: true, session: publicSession(m) };
-            }
-            last = `HTTP ${response.status}`;
-          } catch (e) {
-            last = e.message;
-          }
-          await sleep(50);
-        } while (Date.now() < deadline);
-        throw new Error(`Service readiness deadline expired: ${last}`);
-      } catch (e) {
-        m.status = "failed";
-        m.error = e.message;
-        save(m);
-        let logs = "";
-        try {
-          logs = (await exec("docker", ["logs", "--tail", "100", m.container])).out;
-        } catch {
-        }
-        await stop(id).catch(() => {
-        });
-        return { ok: false, error: e.message, session: publicSession(m), logs };
-      }
-    }
-    async function act(id, actionId) {
-      return locked(id, async () => {
-        const { m } = load(id), artifact = sessionArtifact(m);
-        const action = artifact.contract.actions.actions.find((a) => a.id === actionId);
-        if (!action) throw new Error("unknown scenario action");
-        if (m.actions.some((a) => a.id === actionId)) throw new Error("action already performed; start a clean session for deterministic replay");
-        const started = Date.now(), before = readEvents(id).length;
-        try {
-          const response = await request(m, { ...requestFor(action), timeoutMs: bounded(m.profile.actionTimeoutMs, 1e4, 3e4) });
-          const result = { id: actionId, at: (/* @__PURE__ */ new Date()).toISOString(), ms: Date.now() - started, eventStart: before, response };
-          m.actions.push(result);
-          save(m);
-          return { ok: true, session: id, action: result };
-        } catch (e) {
-          m.actions.push({ id: actionId, at: (/* @__PURE__ */ new Date()).toISOString(), ms: Date.now() - started, error: e.message, eventStart: before });
-          save(m);
-          return { ok: false, session: id, action: actionId, error: e.message };
-        }
-      });
-    }
-    function readEvents(id) {
-      const file = path2.join(sessionPath(id), "evidence/events.jsonl");
-      if (!fs2.existsSync(file)) return [];
-      if (fs2.statSync(file).size > 4 * 1024 * 1024) throw new Error("scenario event evidence exceeds 4 MiB");
-      const text = fs2.readFileSync(file, "utf8"), lines = text.split("\n");
-      if (lines.at(-1) !== "") lines.pop();
-      return lines.filter(Boolean).map((line) => JSON.parse(line));
-    }
-    function sample(m, artifact) {
-      const observed = {}, events = readEvents(m.id), violations = events.filter((e) => ["http-mismatch", "process-error", "process-exit", "file-watch-gap"].includes(e.kind));
-      const { expectations } = artifact.contract;
-      for (const expected of expectations.expectations) {
-        const observer = m.profile.observations?.[expected.id] || (["status", "return"].includes(expected.kind) ? { kind: expected.kind, action: expected.action } : null);
-        if (!observer) continue;
-        const action = m.actions.find((a) => a.id === (observer.action || expected.action));
-        if (expected.action && !action) continue;
-        if (observer.kind === "status" && action?.response) observed[expected.id] = action.response.status;
-        else if (observer.kind === "return" && action?.response) observed[expected.id] = action.response.body;
-        else if (observer.kind === "http") {
-          const next = action && m.actions[m.actions.indexOf(action) + 1];
-          observed[expected.id] = events.slice(action?.eventStart || 0, next?.eventStart).filter((e) => e.kind === "http" && e.state === observer.state).map((e) => e.request);
-        } else if (observer.kind === "file") observed[expected.id] = fileValue(path2.join(sessionPath(m.id), "files"), observer);
-      }
-      const files = fileTree(path2.join(sessionPath(m.id), "files")), allowed = new Set(Object.values(m.profile.observations || {}).filter((o) => o.kind === "file").map((o) => o.path));
-      const allowedDirectories = new Set([...allowed].flatMap((rel) => {
-        const parts = rel.split("/"), result = [];
-        for (let n = 1; n < parts.length; n++) result.push(parts.slice(0, n).join("/"));
-        return result;
-      }));
-      for (const event of events) if (["file-change", "file-operation"].includes(event.kind) && !allowed.has(event.path) && !allowedDirectories.has(event.path)) violations.push({ kind: "unexpected-file-effect", path: event.path, change: event.change || event.operation });
-      for (const rel of /* @__PURE__ */ new Set([...Object.keys(files), ...Object.keys(m.filesBefore || {})])) if (!isDeepStrictEqual(files[rel], m.filesBefore?.[rel]) && !allowed.has(rel)) violations.push({ kind: "unexpected-file-effect", path: rel });
-      for (const [sid, value] of Object.entries(artifact.contract.state.states)) if (m.profile.http?.[sid]) for (let index = 0; index < value.value.exchanges.length; index++) {
-        const exchange = value.value.exchanges[index], count = events.filter((e) => e.kind === "http" && e.state === sid && e.exchange === index).length;
-        const min = exchange.times?.min ?? exchange.times?.value ?? 1, max = exchange.times?.max ?? exchange.times?.value ?? 1;
-        if (count < min || count > max) violations.push({ kind: "http-call-count", state: sid, exchange: index, count, min, max });
-      }
-      for (const a of artifact.contract.actions.actions) if (!m.actions.some((done) => done.id === a.id && done.response)) violations.push({ kind: "unperformed-action", action: a.id });
-      const checks = require_scenario().check(expectations, observed);
-      return { ok: checks.ok && !violations.length, observed, checks, violations, events, files, proof: { ...m.proof, level: "process", applicationExecuted: true, independentObservations: true, runtimeReadsVerified: false } };
-    }
-    async function observe(id, { deadlineMs, quietMs, intervalMs } = {}) {
-      return locked(id, async () => {
-        const { m } = load(id), artifact = sessionArtifact(m);
-        if (!await identity(m)) throw new Error("scenario container disappeared");
-        const temporal = m.profile.temporal || {};
-        deadlineMs = bounded(deadlineMs, temporal.deadlineMs ?? 1e3, 3e4);
-        quietMs = bounded(quietMs, temporal.quietMs ?? 0, 1e4);
-        intervalMs = Math.max(10, bounded(intervalMs, temporal.intervalMs ?? 50, 1e3));
-        const start2 = Date.now(), deadline = start2 + deadlineMs;
-        let result, quietStart = null, samples = 0;
-        do {
-          checkCancellation();
-          result = sample(m, artifact);
-          samples++;
-          if (result.ok) {
-            quietStart ??= Date.now();
-            if (Date.now() - quietStart >= quietMs) break;
-          } else quietStart = null;
-          if (Date.now() >= deadline) break;
-          await sleep(Math.min(intervalMs, deadline - Date.now()));
-        } while (Date.now() <= deadline);
-        if (result.ok && quietStart != null && Date.now() - quietStart < quietMs) {
-          result.ok = false;
-          result.violations.push({ kind: "quiet-window-incomplete", requiredMs: quietMs, observedMs: Date.now() - quietStart });
-        }
-        result.temporal = { deadlineMs, quietMs, elapsedMs: Date.now() - start2, samples };
-        m.result = result;
-        m.timings.observeMs = result.temporal.elapsedMs;
-        save(m);
-        return { session: id, ...result };
-      });
-    }
-    async function inspect(id) {
-      if (!id) return { sessions: (fs2.existsSync(ROOT) ? fs2.readdirSync(ROOT).filter((id2) => /^[a-f0-9]{24}$/.test(id2)).map((id2) => readJson(path2.join(ROOT, id2, "session.json"))).filter(Boolean) : []).sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, 100).map((m2) => ({ ...publicSession(m2), ...m2.cleanupError ? { cleanupError: m2.cleanupError } : {} })) };
-      const { m } = load(id, { stopped: true, expired: true });
-      const logs = m.status === "stopped" ? m.logs || "" : (await exec("docker", ["logs", "--tail", "100", m.container])).out;
-      return { session: publicSession(m), events: readEvents(id), logs, ...m.error ? { error: m.error } : {} };
-    }
-    function check(id) {
-      const { m } = load(id, { stopped: true, expired: true });
-      if (!m.result) throw new Error("Collect independent effects with scenario_observe first");
-      const artifact = sessionArtifact(m);
-      const checks = require_scenario().check(artifact.contract.expectations, m.result.observed);
-      return { session: id, ok: checks.ok && !m.result.violations.length, checks, violations: m.result.violations, temporal: m.result.temporal, proof: m.result.proof };
-    }
-    async function stop(id) {
-      const { m } = load(id, { stopped: true, expired: true }), started = Date.now();
-      let present;
-      try {
-        present = await identity(m);
-      } catch (e) {
-        m.cleanupError = e.message;
-        save(m);
-        throw e;
-      }
-      if (m.status === "stopped" && !present) return { stopped: true, session: id, reused: true };
-      if (present) {
-        const logs = await exec("docker", ["logs", "--tail", "100", m.container]);
-        m.logs = `${logs.out}${logs.error}`.slice(-3e4);
-        const r = await exec("docker", ["rm", "--force", m.container]);
-        if (r.code !== 0) {
-          m.cleanupError = r.error;
-          save(m);
-          throw new Error(`scenario container cleanup failed: ${r.error}`);
-        }
-      }
-      delete m.cleanupError;
-      m.status = "stopped";
-      m.stoppedAt = (/* @__PURE__ */ new Date()).toISOString();
-      m.timings.cleanupMs = Date.now() - started;
-      save(m);
-      return { stopped: true, session: id, ms: m.timings.cleanupMs };
-    }
-    async function cleanup() {
-      const results = [];
-      const reservation = path2.join(ROOT, ".reservation.lock");
-      if (fs2.existsSync(reservation) && Date.now() - fs2.statSync(reservation).mtimeMs > 3e4) {
-        const owner = readJson(path2.join(reservation, "owner.json"));
-        let alive = false;
-        if (owner?.pid) try {
-          process.kill(owner.pid, 0);
-          alive = true;
-        } catch (e) {
-          if (e.code !== "ESRCH") alive = true;
-        }
-        if (!alive) {
-          fs2.rmSync(reservation, { recursive: true, force: true });
-          results.push({ recoveredStartupReservation: true });
-        }
-      }
-      for (const id of fs2.existsSync(ROOT) ? fs2.readdirSync(ROOT).filter((id2) => /^[a-f0-9]{24}$/.test(id2)) : []) {
-        const { m } = load(id, { stopped: true, expired: true });
-        if (Date.now() > m.expiresAt) try {
-          results.push(await stop(id));
-        } catch (e) {
-          results.push({ session: id, error: e.message });
-        }
-      }
-      return { ok: results.every((r) => !r.error), results };
-    }
-    async function run(workspace, packagePath, options = {}) {
-      const report = await probe(workspace, packagePath);
-      if (!report.ok) return { ok: false, preflight: report };
-      const artifact = P.load(workspace, packagePath), profile = profileFor(workspace, artifact);
-      if (profile.adapter === "test-run") {
-        const root = path2.posix.dirname(packagePath), fixture = artifact.resources.files["fixture/manifest.json"];
-        const reportFile = P.workspacePath(workspace, profile.report, { missing: true }).full;
-        fs2.rmSync(reportFile, { force: true });
-        const result = await require_testrun().run(workspace, { tests: profile.tests, mode: profile.mode || "build", scenarioPath: packagePath, scenarioOutput: profile.report, ...fixture ? { fixturePath: `${root}/fixture`, fixtureBindings: profile.fixtureBindings, fixtureTemplate: profile.template === true } : {} });
-        const gaps = [];
-        let observationReport, checks;
-        try {
-          P.workspacePath(workspace, profile.report);
-          if (fs2.statSync(reportFile).size > 4 * 1024 * 1024) throw new Error("project observation report exceeds 4 MiB");
-          observationReport = JSON.parse(fs2.readFileSync(reportFile, "utf8"));
-          if (observationReport.version !== 1 || observationReport.artifact !== artifact.sha256) throw new Error("project observation report version/artifact fingerprint mismatch");
-          const actual = observationReport.actions;
-          if (!Array.isArray(actual) || actual.some((id2) => typeof id2 !== "string") || new Set(actual).size !== actual.length || !isDeepStrictEqual([...actual].sort(), artifact.contract.actions.actions.map((a) => a.id).sort())) throw new Error("project report must account for every bound action exactly once");
-          checks = require_scenario().check(artifact.contract.expectations, observationReport.observed);
-        } catch (e) {
-          gaps.push({ kind: "project-observation-report", detail: e.message });
-        }
-        return {
-          ok: result.outcome === "passed" && !gaps.length && checks?.ok === true,
-          adapter: "test-run",
-          result,
-          gaps,
-          checks,
-          observed: observationReport?.observed,
-          proof: { level: "build", applicationExecuted: result.counts?.tests > 0, independentObservations: "collected by reviewed project adapter", expectationsChecked: checks?.ok === true, runtimeReadsVerified: false, network: "owned by project test adapter" }
-        };
-      }
-      const prepared = await start(workspace, packagePath, options);
-      if (!prepared.ok) return prepared;
-      const id = prepared.session.id;
-      let output;
-      try {
-        for (const action of artifact.contract.actions.actions) {
-          const r = await act(id, action.id);
-          if (!r.ok) {
-            output = { ok: false, session: id, action: r, proof: prepared.session.proof };
-            break;
-          }
-        }
-        if (!output) output = await observe(id, options);
-      } finally {
-        await stop(id);
-      }
-      const final = await inspect(id);
-      return { ...output, timings: final.session.timings, sessionStatus: final.session.status };
-    }
-    module2.exports = { preflight, probe, start, act, observe, check, inspect, stop, cleanup, run, requestFor, profileFor, fileTree, exec };
   }
 });
 
@@ -42410,112 +44985,6 @@ var require_browser = __commonJS({
   }
 });
 
-// lib/schema.js
-var require_schema = __commonJS({
-  "lib/schema.js"(exports2, module2) {
-    var { isDeepStrictEqual } = require("util");
-    var known = new Set("$schema $id $comment title description default examples deprecated readOnly writeOnly contentMediaType contentEncoding format $defs definitions $ref type enum const allOf anyOf oneOf not if then else minimum maximum exclusiveMinimum exclusiveMaximum multipleOf minLength maxLength pattern items prefixItems contains minContains maxContains minItems maxItems uniqueItems properties patternProperties additionalProperties required dependentRequired dependentSchemas propertyNames minProperties maxProperties".split(" "));
-    function validate(value, schema, { maxNodes = 1e5 } = {}) {
-      const issues = [];
-      let visited = 0;
-      const bad = (path2, message) => {
-        if (issues.length < 20) issues.push({ path: path2, message });
-      };
-      function visit(v, s, p, depth = 0) {
-        if (++visited > maxNodes || depth > 64) {
-          bad(p, "input exceeds structural budget");
-          return;
-        }
-        if (s === false) {
-          bad(p, "value is not allowed");
-          return;
-        }
-        if (!s || s === true) return;
-        if (typeof s !== "object" || Array.isArray(s)) {
-          bad(p, "schema must be an object or boolean");
-          return;
-        }
-        for (const key of Object.keys(s)) if (!known.has(key) && !key.startsWith("x-")) bad(p, `unsupported schema assertion ${key}`);
-        if (s.$ref) {
-          bad(p, "unresolved schema reference");
-          return;
-        }
-        for (const op of ["allOf", "anyOf", "oneOf"]) if (s[op]) {
-          const results = s[op].map((x) => validate(v, x, { maxNodes: Math.min(maxNodes, 1e4) }).length === 0);
-          if (op === "allOf" ? results.some((x) => !x) : op === "anyOf" ? !results.some(Boolean) : results.filter(Boolean).length !== 1) bad(p, `does not satisfy ${op}`);
-        }
-        if (s.not && !validate(v, s.not, { maxNodes: 1e4 }).length) bad(p, "matches a forbidden schema");
-        if (s.if !== void 0) visit(v, validate(v, s.if, { maxNodes: 1e4 }).length ? s.else : s.then, p, depth + 1);
-        const type = (t) => t === "null" ? v === null : t === "array" ? Array.isArray(v) : t === "object" ? v !== null && typeof v === "object" && !Array.isArray(v) : t === "integer" ? Number.isInteger(v) : t === "number" ? typeof v === "number" && Number.isFinite(v) : typeof v === t;
-        if (s.type && ![].concat(s.type).some(type)) {
-          bad(p, `must be ${[].concat(s.type).join(" or ")}`);
-          return;
-        }
-        if (s.enum && !s.enum.some((x) => isDeepStrictEqual(x, v))) bad(p, "must be an allowed value");
-        if (Object.hasOwn(s, "const") && !isDeepStrictEqual(s.const, v)) bad(p, "must equal the declared constant");
-        if (typeof v === "string") {
-          if (s.minLength !== void 0 && [...v].length < s.minLength) bad(p, `minimum length is ${s.minLength}`);
-          if (s.maxLength !== void 0 && [...v].length > s.maxLength) bad(p, `maximum length is ${s.maxLength}`);
-          if (s.pattern && !new RegExp(s.pattern, "u").test(v)) bad(p, "does not match the required pattern");
-        }
-        if (typeof v === "number") {
-          for (const [key, fails] of [["minimum", (n) => v < n], ["maximum", (n) => v > n], ["exclusiveMinimum", (n) => v <= n], ["exclusiveMaximum", (n) => v >= n]]) if (s[key] !== void 0 && fails(s[key])) bad(p, `violates ${key}`);
-          if (s.multipleOf !== void 0 && (!(s.multipleOf > 0) || Math.abs(v / s.multipleOf - Math.round(v / s.multipleOf)) > 1e-10)) bad(p, "violates multipleOf");
-        }
-        if (Array.isArray(v)) {
-          if (s.minItems !== void 0 && v.length < s.minItems) bad(p, `minimum items is ${s.minItems}`);
-          if (s.maxItems !== void 0 && v.length > s.maxItems) bad(p, `maximum items is ${s.maxItems}`);
-          const canonical = (x, depth2 = 0) => depth2 > 64 ? '"[too deep]"' : x && typeof x === "object" ? Array.isArray(x) ? `[${x.map((y) => canonical(y, depth2 + 1)).join(",")}]` : `{${Object.keys(x).sort().map((k) => `${JSON.stringify(k)}:${canonical(x[k], depth2 + 1)}`).join(",")}}` : JSON.stringify(x);
-          if (s.uniqueItems && new Set(v.map((x) => canonical(x))).size !== v.length) bad(p, "items must be unique");
-          if (s.contains !== void 0) {
-            const count = v.filter((x) => !validate(x, s.contains, { maxNodes: 1e4 }).length).length;
-            if (count < (s.minContains ?? 1) || s.maxContains !== void 0 && count > s.maxContains) bad(p, "violates contains count");
-          }
-          v.forEach((x, i) => visit(x, s.prefixItems?.[i] ?? s.items, `${p}[${i}]`, depth + 1));
-        } else if (v && typeof v === "object") {
-          if (s.minProperties !== void 0 && Object.keys(v).length < s.minProperties || s.maxProperties !== void 0 && Object.keys(v).length > s.maxProperties) bad(p, "violates property count");
-          for (const k of s.required || []) if (!Object.hasOwn(v, k) || v[k] === void 0) bad(`${p}.${k}`, "required");
-          for (const [key, required] of Object.entries(s.dependentRequired || {})) if (Object.hasOwn(v, key)) {
-            for (const dep of required) if (!Object.hasOwn(v, dep)) bad(`${p}.${dep}`, `required with ${key}`);
-          }
-          for (const [key, schema2] of Object.entries(s.dependentSchemas || {})) if (Object.hasOwn(v, key)) visit(v, schema2, p, depth + 1);
-          for (const [k, x] of Object.entries(v)) {
-            if (x === void 0) continue;
-            if (s.propertyNames) visit(k, s.propertyNames, `${p}.${k}`, depth + 1);
-            let matched = false;
-            if (Object.hasOwn(s.properties || {}, k)) {
-              visit(x, s.properties[k], `${p}.${k}`, depth + 1);
-              matched = true;
-            }
-            for (const [pattern, schema2] of Object.entries(s.patternProperties || {})) if (new RegExp(pattern, "u").test(k)) {
-              visit(x, schema2, `${p}.${k}`, depth + 1);
-              matched = true;
-            }
-            if (!matched && s.additionalProperties === false) bad(`${p}.${k}`, "unknown property");
-            else if (!matched && typeof s.additionalProperties === "object") visit(x, s.additionalProperties, `${p}.${k}`, depth + 1);
-          }
-        }
-      }
-      visit(value, schema, "$");
-      return issues;
-    }
-    function assert(value, schema) {
-      let text;
-      try {
-        text = JSON.stringify(value);
-      } catch {
-        throw Object.assign(new Error("Arguments must be JSON serializable"), { code: "DT_ARGUMENT_INVALID" });
-      }
-      const maxInputBytes = require_config().getTools().maxInputBytes;
-      if (text === void 0 || Buffer.byteLength(text) > maxInputBytes) throw Object.assign(new Error(`Arguments exceed ${maxInputBytes} bytes`), { code: "DT_ARGUMENT_INVALID" });
-      const issues = validate(value, schema);
-      if (issues.length) throw Object.assign(new Error(`Invalid argument ${issues[0].path}: ${issues[0].message}`), { code: "DT_ARGUMENT_INVALID", issues });
-      return value;
-    }
-    module2.exports = { validate, assert };
-  }
-});
-
 // contracts/v1/tool-response.schema.json
 var require_tool_response_schema = __commonJS({
   "contracts/v1/tool-response.schema.json"(exports2, module2) {
@@ -42666,11 +45135,16 @@ var require_tools = __commonJS({
       {
         name: "pg_usage",
         group: "pg",
-        description: 'What uses a Postgres table/view/function, or what an object/service uses, across database objects AND code: services (passports: reads, writes, entity, repository, migration owner, SQL calls, with file:line), functions/procedures (bodies), triggers, views, foreign keys. direction=used_by (default) answers "who touches X"; direction=uses answers "what does X touch" (X can be a function, view or service name).' + VIEW_NOTE,
-        input: { name: str("schema.table, schema.function, plain name, db:schema.name, or a service (direction=uses)"), env, direction: { type: "string", enum: ["used_by", "uses"], default: "used_by" } },
+        description: 'Column read/write/predicate lineage (db:schema.table.column), or what uses a Postgres table/view/function, or what an object/service uses, across database objects AND code: services (passports: reads, writes, entity, repository, migration owner, SQL calls, with file:line), functions/procedures (bodies), triggers, views, foreign keys. direction=used_by (default) answers "who touches X"; direction=uses answers "what does X touch" (X can be a function, view or service name).' + VIEW_NOTE,
+        input: { name: str("schema.table, db:schema.table.column for column lineage, schema.function, plain name, db:schema.name, or a service (direction=uses)"), env, direction: { type: "string", enum: ["used_by", "uses"], default: "used_by" } },
         required: ["name"],
         run: (a) => {
           const idx = require_pgindex();
+          if (a.direction !== "uses" && idx.isColumn(a.name)) {
+            const r = idx.columnLineage(a.env, a.name);
+            const view = require_results().save("column-lineage", r.edges, { query: `column lineage: ${a.name}` });
+            return { ...r, total: r.edges.length, edges: r.edges.slice(0, 60), edgeTotal: r.edges.length, callers: r.callers?.slice(0, 60), view };
+          }
           const edges = a.direction === "uses" ? idx.uses(a.env, a.name) : idx.usages(a.env, a.name);
           const rows = edges.map((e) => ({ user: e.user, user_kind: e.userKind, role: e.role, where: e.where, detail: e.detail, object: e.target, kind: e.targetKind, db: e.db, source: e.source, ...e.ambiguous ? { ambiguous: true } : {}, ...e.known === false ? { not_in_db: true } : {} }));
           if (!rows.length) return { total: 0, hint: `nothing ${a.direction === "uses" ? "used by" : "uses"} "${a.name}" in the ${a.env} index. Check the name with find; code usages need a passport of the service (passport tool).` };
@@ -43282,11 +45756,11 @@ var require_tools = __commonJS({
         name: "call_history",
         group: "history",
         description: "Tool calls and jobs: the ones running now (with the step they are in and how long), then recent ones newest first: tool, args, ok, time taken, the steps with their times (git fetch, index, Maven prepare, compile, run...) and the error with the step it failed in. Use it to see whether something is slow or failed, and where.",
-        input: { q: str("Words to match in tool, source or args"), tool: str("Only this tool"), source: str('mcp, openapi, api, cli, tool, script:<id>, or "direct"'), failed: { type: "boolean", default: false, description: "Only calls that failed" }, limit: int("Max calls", 50) },
+        input: { q: str("Words to match in tool, source or args"), tool: str("Only this tool"), source: str('mcp, openapi, api, cli, tool, script:<id>, or "direct"'), failed: { type: "boolean", default: false, description: "Failed invocation, job, test or assertion; includes jobs that failed after the call returned" }, status: str("Exact execution or invocation status, e.g. failed, passed, running, succeeded"), kind: { type: "string", enum: ["job", "tests", "assertions"], description: "Only this evidence kind" }, limit: int("Max calls", 50) },
         run: (a) => {
           const T = require_trace();
-          const running = T.list().filter((c) => !a.tool || c.tool === a.tool).map((c) => ({ at: c.startedAt, tool: c.tool, source: c.source, ok: "running", ms: c.runningMs, steps: `${c.steps}${c.step ? `${c.steps ? ", " : ""}now: ${c.step}` : ""}`, args: "", error: "" }));
-          const done = require_calls().history({ ...a, limit: Math.min(a.limit || 50, 500) }).filter((c) => !a.failed || !c.ok).map((c) => ({ at: c.at, tool: c.tool, source: c.source, ok: c.ok, ms: c.ms, steps: (c.steps || []).map((x) => `${x.name} ${T.secs(x.ms)}${x.error ? " FAILED" : ""}`).join(", "), args: JSON.stringify(c.args), error: c.error || "" }));
+          const running = a.failed || a.kind || a.status && a.status !== "running" ? [] : T.list().filter((c) => (!a.tool || c.tool === a.tool) && (!a.source || c.source === a.source)).map((c) => ({ at: c.startedAt, tool: c.tool, source: c.source, ok: "running", traceId: c.id, ms: c.runningMs, steps: `${c.steps}${c.step ? `${c.steps ? ", " : ""}now: ${c.step}` : ""}`, args: "", error: "" }));
+          const done = require_calls().history({ ...a, limit: Math.min(a.limit || 50, 500) }).map((c) => ({ at: c.at, tool: c.tool, source: c.source, ok: c.ok, evidence: c.evidence, ms: c.ms, steps: (c.steps || []).map((x) => `${x.name} ${T.secs(x.ms)}${x.error ? " FAILED" : ""}`).join(", "), args: JSON.stringify(c.args), error: c.error || "" }));
           return tabular("calls", [...running, ...done], { query: "call history" }, { preview: 20 });
         }
       },
@@ -43658,7 +46132,7 @@ var require_tools = __commonJS({
         name: t.name,
         description: t.description,
         ...metadata ? { group: t.group, origin: t.origin, execution: { protocol: "dt.tool/v1", transport: require_adapter_port().route(t.name) ? "http" : "in-process", ...t.adapterSchema ? { resultSchema: t.adapterSchema } : {} } } : {},
-        inputSchema: { type: "object", properties: props(t.input), required: t.required || [] }
+        inputSchema: { type: "object", properties: props(t.input), required: t.required || [], ...t.strictInput ? { additionalProperties: false } : {} }
       }));
     }
     async function call(name, args = {}, { source, session } = {}) {
@@ -43674,9 +46148,10 @@ var require_tools = __commonJS({
         return { ...Object.fromEntries(fields.filter((key) => Object.hasOwn(input || {}, key) && (input[key] === null || ["string", "number", "boolean"].includes(typeof input[key]))).map((key) => [key, input[key]])), argumentsOmitted: true };
       };
       const logged = evidenceArgs(name, args);
-      let ok = false, error, size, steps;
+      let ok = false, error, size, steps, evidence, traceId;
       try {
         const r = await T.call(name, logged, { source, session: session || parent?.session, redactions }, async () => {
+          traceId = T.current()?.id;
           try {
             return await callTool(name, args);
           } finally {
@@ -43684,6 +46159,7 @@ var require_tools = __commonJS({
           }
         });
         ok = true;
+        evidence = require_call_outcome().classify(name === "tool_execute" ? args.name : name, r, { traceId });
         try {
           size = JSON.stringify(r).length;
         } catch {
@@ -43693,7 +46169,7 @@ var require_tools = __commonJS({
         error = e.message;
         throw e;
       } finally {
-        require_calls().record({ tool: name, args: logged, source, ok, ms: Date.now() - started, error, size, steps, redactions });
+        require_calls().record({ tool: name, args: logged, source, ok, ms: Date.now() - started, error, size, steps, redactions, evidence: evidence || require_call_outcome().classify(name, null, { invocation: "failed", traceId }), ...name === "tool_execute" ? { target: args.name } : {} });
       }
     }
     async function callTool(name, args = {}) {
@@ -43703,7 +46179,7 @@ var require_tools = __commonJS({
       const a = { ...args };
       for (const [k, s] of Object.entries(props(t.input))) if (a[k] === void 0 && s.default !== void 0) a[k] = s.default;
       for (const k of t.required || []) if (a[k] === void 0 || a[k] === "") throw Object.assign(new Error(`Missing argument: ${k}`), { code: "DT_ARGUMENT_INVALID", issues: [{ path: `$.${k}`, message: "required" }] });
-      require_schema().assert(a, { type: "object", properties: props(t.input), required: t.required || [] });
+      require_schema().assert(a, { type: "object", properties: props(t.input), required: t.required || [], ...t.strictInput ? { additionalProperties: false } : {} });
       if (t.limit) await limit.take(t.limit(a));
       const backend = require_adapter_port().route(name);
       const value = await (backend ? require_adapter_port().execute(name, a, backend) : t.run(a));

@@ -8,7 +8,7 @@ Updated 2026-10-29. This is the implementation follow-up to the [frozen producti
 | --- | --- | --- |
 | Find every known reader/writer of a column | `find` → scoped `pg_usage` → `impact` → `pg_function` / `code_search` / `code_read` | Environment/database/revision/signature identities, classified column access and caller evidence. Dynamic SQL, nested/quoted SQL parsing, reflection/generated code and missing indexes remain explicit coverage gaps. “All places” cannot be inferred from text matches. |
 | Recreate a cross-system state bug | `scenario_inventory` → `fixture_plan` → `fixture_capture` → `fixture_validate` → `fixture_export` | Typed PG/ES/Kafka obligations, reviewed relation tuples and tenant/seed lineage, per-source snapshots, bounded windows, schema/codec checks, precision guards and hashed test resources. No distributed atomic snapshot is claimed. |
-| Exercise native captured dependencies | `fixture_runtime_preflight` → `fixture_runtime_start` → `fixture_runtime_bindings` → `fixture_runtime_arm` → actual project tests → `fixture_runtime_observe` / `fixture_runtime_check` → `fixture_runtime_stop` | Owned disposable PostgreSQL, ES and Kafka-compatible broker; exact effects and protected committed PG write journals. Kafka offsets/timestamps are remapped. Source environments receive no replay writes. Starting dependencies does not execute application code. |
+| Exercise native captured dependencies | `fixture_runtime_preflight` → `fixture_runtime_start` → `fixture_runtime_bindings` → `fixture_runtime_arm` → `test_run(fixture_runtime=...)` / `fixture_runtime_publish` → `fixture_runtime_observe` / `fixture_runtime_check` → `fixture_runtime_stop` | Owned disposable PostgreSQL, ES and Kafka-compatible broker; exact effects and protected committed PG write journals. Explicit datasource prefixes bind every captured database. Project execution retains the lease for an independent check; its result alone does not certify effects. Kafka offsets/timestamps are remapped. Source environments receive no replay writes. |
 | Refactor function-result enrichment | `impact` / `pg_function` → capture representative inputs → `differential_check` → `test_run` | Separate executable baseline/candidate workspaces, exact declared DTO/error/order/byte comparisons, reviewed normalization and independent file/PG observations. Unsupported opaque values fail closed. Captured-source local equivalence and a deployed-dev observation are different verdicts. |
 | Run a test on dev | `test_targets` → `test_run(target=...)` → exact-job polling → `call_history` / `workspace_patch` | Reviewed local/captured-dev/live-dev manifests, actual placement and declared deployment/dependencies/effects. `env=dev` remains source context. Unknown/unavailable live targets fail without local fallback. |
 | Turn a UI investigation into reusable requests | `api_browser_open` / `api_browser_action` / `api_browser_capture` → `api_exchange_get` → `api_request_prepare` → intended replay / `api_request_save` → collection suite | Existing browser/API client and pretty JSON views stay enabled. Saved requests remain ordinary parameterized scripts; credentials are runtime placeholders. |
@@ -24,6 +24,8 @@ Built-in guide data lives in `lib/workflow-guides.json`. Teams can update one so
 
 The public contract catalog now includes multiple version directories: identity, column lineage, passport edges, `dt.impact/v2`, fixture runtime and evaluation evidence. Exact/prefix HTTP backend adapters remain available for gradual replacement with another language, graph, RAG index or database. A consumer should use canonical identities and versioned DTOs rather than parse display labels.
 
+The independent frozen compound-request review found the intended guide in 22/24 supported requests and all 62 declared stage capabilities after integration. Both unrelated requests abstained; permission checks passed. Two column-lineage paraphrases remain routing misses, with direct `workflow_plan` available as recovery. The [independent report and next-corpus plan](independent-readiness-review.md) preserve those misses; the held-out wording was not used to retune ranking.
+
 ## Verification commands
 
 ```sh
@@ -34,15 +36,29 @@ node dev/request-readiness.js --assert-ready
 node dev/benchmark-impact.js --assert-ready --output docs/benchmarks/impact-scale.json
 node dev/benchmark-discovery-scale.js --assert-ready
 DT_TEST_NATIVE_FIXTURE=1 node --test test/reproduction-native.test.js
+DT_TEST_NATIVE_BRIDGE=1 node --test test/fixture-runtime-bridge.test.js
 DT_TEST_TASK_EVAL_DOCKER=1 node --test test/task-model-evaluation.test.js
 node dev/verify-node-challenges.js  # C06 additionally needs an owned disposable DT_TEST_PG_URL
 ```
 
-The seven previously unsupported Node challenge submissions now execute through `tool_execute → test_run`; C06 includes real two-database red/green verification. Node 22 and 24 use structured test events with stable file identity. Empty/nested skip-only files cannot pass; module-load errors remain distinct from real assertion failures. Cancellation/deadlines kill descendants. Job identities include inputs, target/configuration and workspace content; conflicting mutable workspace executions do not share results.
+The seven previously unsupported Node challenge submissions now execute through `tool_execute → test_run`; C06 includes real two-database red/green verification. Node 22 and 24 use structured test events with stable file identity. Empty/nested skip-only files cannot pass; module-load errors remain distinct from real assertion failures. Full-run assertion/error counters precede preview truncation and credential masking. Cancellation/deadlines kill descendants. Job identities include inputs, target/configuration and workspace content; conflicting mutable workspace executions do not share results. Reviewed placement also governs every fast Maven preparation/compiler/launcher command and JDK probe, independently of a global runner setting.
 
 Retained failure history distinguishes invocation, job, test and assertion outcomes, refreshes asynchronous job results and filters failures before applying limits. An intentionally expected HTTP 404 is not automatically a failed call. Selected execution credentials are masked in parsed failures, reports, views, logs and history after verdicts are computed.
 
 Independent review added adversarial negative controls for identity collisions, stale leaf artifacts, bounded traversal, arithmetic-versus-star SQL, quoted names/overloads, encoding failures, opaque/byte-backed values, credential echoes, hidden grading, mutation sensitivity and protected files. See [impact evidence](evidence/impact-readiness-implemented.json), [Node challenge reruns](evidence/node-challenge-rerun.json), [impact scale](benchmarks/impact-scale.json), and [discovery scale](benchmarks/discovery-scale.json). Counts from overlapping live/default executions are not summed as unique tests.
+
+Final integrated verification is retained in [the machine-readable run record](evidence/readiness-integration.json):
+
+| Execution | Result |
+| --- | --- |
+| Rebuilt default suite | 442 passed, zero failed, 47 explicit prerequisite-dependent skips; 489 tests in 51.2 seconds |
+| Actual owned PG/ES/Kafka native integration | 15 passed, zero skips; 250 seconds; cold startup 149 seconds (prior sample 177 seconds) |
+| Actual project/native-lease bridge | 7 passed, zero skips; includes owned PostgreSQL action → independent effect check → retained lease → cleanup |
+| Isolated task evaluator | 4 passed, zero skips; five scripted task cases, protected inputs, oracle isolation, crash-sensitive mutation grading and recursive retained-output privacy checks |
+| Live Maven/Temurin fixture | Passed red/green, Spring slice, compile error and full build; unchanged rerun 2.65 seconds, full build 33.22 seconds on this run |
+| Cached scale gates | 1,000 passports / 100,008 edges: warm impact p95 223 ms; 1,000 extra tools: discovery p95 140 ms; five starting schemas 2,989 bytes |
+
+The final scale measurements ran alongside Maven and the other scale benchmark on the recorded host. These are observations under that load, not latency guarantees. Both readiness probe programs pass; their routing/metadata checks retain explicit limits and do not stand in for application execution. The full distribution passes `npm run build:check`. Desktop/mobile inspection confirmed differential, impact and fixture views; the fixture records and relationship graph scroll within the mobile viewport.
 
 ## External verification and explicit unsupported coverage
 

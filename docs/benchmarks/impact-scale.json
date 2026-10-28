@@ -1,6 +1,6 @@
 {
   "protocol": "dt.impact-scale/v1",
-  "generatedAt": "2026-10-28T22:32:21.668Z",
+  "generatedAt": "2026-10-28T23:01:41.134Z",
   "proof": "synthetic-cached-tool-execution",
   "networkUsed": false,
   "host": {
@@ -20,15 +20,15 @@
     "columns": 2000
   },
   "measurements": {
-    "setupMs": 2345.264,
-    "coldMs": 860.32,
+    "setupMs": 3785.364,
+    "coldMs": 1432.328,
     "warmSamples": 30,
-    "warmP50Ms": 96.45,
-    "warmP95Ms": 136.145,
-    "warmMaxMs": 141.041,
+    "warmP50Ms": 133.329,
+    "warmP95Ms": 223.011,
+    "warmMaxMs": 243.919,
     "maxResponseBytes": 2658,
-    "heapUsedBytes": 68921680,
-    "maxRssBytes": 191180800
+    "heapUsedBytes": 73340128,
+    "maxRssBytes": 192020480
   },
   "gates": {
     "architectureSize": true,

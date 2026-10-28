@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:dev-tool:evaluation-evidence:v1",
+  "title": "Parent-recorded task evaluation evidence",
+  "description": "Hash-chained safe transcripts and immutable candidate/input/oracle digests. Signed host retention is independent of candidate workspaces. Inline claims are not independently verified evidence.",
+  "type": "object", "required": ["version", "case", "kind", "claimedStatus", "integrity", "transcript", "grade"],
+  "properties": {
+    "version": {"const": 1}, "case": {"type": "string"}, "kind": {"enum": ["fix", "tests", "expected-gap"]},
+    "claimedStatus": {"enum": ["complete", "blocked", "incomplete"]},
+    "integrity": {"type": "object", "required": ["publicSha256", "oracleSha256", "candidatePatchSha256", "protectedUnchanged"], "properties": {
+      "publicSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "oracleSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "candidatePatchSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "protectedUnchanged": {"type": "boolean"},
+      "publicFrozenAt": {"type": "string"}, "oracleFrozenAt": {"type": "string"}, "graderFrozenAt": {"type": "string"}, "solverStartedAt": {"type": "string"}
+    }},
+    "transcript": {"type": "object", "required": ["artifact", "events", "head"], "properties": {"artifact": {"type": "string"}, "events": {"type": "integer", "minimum": 1}, "head": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}},
+    "execution": {"type": "object", "properties": {"baseline": {"type": "object"}, "post": {"type": "object"}}},
+    "mutations": {"type": "object", "properties": {"executed": {"type": "boolean"}, "through": {"enum": ["tool", "external"]}, "total": {"type": "integer", "minimum": 0}, "killed": {"type": "integer", "minimum": 0}, "infrastructureFailures": {"type": "integer", "minimum": 0}}},
+    "grade": {"type": "object", "required": ["independent", "passed", "assertions"], "properties": {"independent": {"type": "boolean"}, "passed": {"type": "boolean"}, "assertions": {"type": "integer", "minimum": 0}, "expectedUnsupported": {"type": "boolean"}}}
+  }
+}

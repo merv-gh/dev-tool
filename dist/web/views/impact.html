@@ -14,6 +14,8 @@
 </style>
 <div class="im">
   <div class="vhead"><h1 data-title></h1><span class="spacer"></span><span class="muted" id="res"></span></div>
+  <p id="coverage" role="status" class="muted"></p>
+  <details id="gaps"><summary>Evidence gaps and continuation</summary><pre id="gap-data" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre></details>
   <div class="sum" id="sum"></div>
   <div class="filt" id="filt"></div>
   <div id="layers" class="im"></div>
@@ -24,6 +26,10 @@
   const D = DATA;
   dt.title(META.title || `Impact of ${D.target}`);
   dt.$('#res').textContent = (D.resolved || []).slice(0, 3).join(', ') + ((D.resolved || []).length > 3 ? ` +${D.resolved.length - 3}` : '');
+  dt.$('#coverage').textContent = `${D.traversalComplete === false ? 'Traversal incomplete' : D.traversalComplete === true ? 'Traversal finished within its bounds' : 'Traversal coverage not recorded'}${(D.cutReasons || []).length ? ` · Cut by ${(D.cutReasons || []).join(', ')}` : ''}${D.env ? ` · Environment ${D.env}` : ''}. Static evidence covers indexed sources; dynamic and unindexed behavior requires observations.`;
+  const gapData = { graphRevision: D.graphRevision, identityVersion: D.identityVersion, gaps: D.gaps, gapTotal: D.gapTotal, frontier: D.frontier, frontierTotal: D.frontierTotal, next: D.next, continuation: D.continuation };
+  dt.$('#gap-data').textContent = JSON.stringify(gapData, null, 2);
+  dt.$('#gaps').hidden = !D.gaps?.length && !D.frontierTotal && !D.continuation;
   const chips = [['endpoints', 'endpoint'], ['topics', 'topic'], ['tables', 'table'], ['functions', 'function'], ['services', 'service'], ['tests', 'test']];
   dt.$('#sum').innerHTML = chips.flatMap(([k, label]) => (D[k] || []).map(x => `<span class="chip" title="${label}">${label}: ${dt.esc(x.split('.').slice(k === 'tests' ? -1 : 0).join('.'))}</span>`)).join('') || '<span class="muted">No endpoints, topics, tables or tests reached.</span>';
   const kinds = [...new Set((D.items || []).map(i => i.kind))];
@@ -31,7 +37,7 @@
   const draw = () => {
     const by = {};
     for (const i of D.items || []) if (!only || i.kind === only) (by[i.depth] ||= []).push(i);
-    dt.$('#layers').innerHTML = Object.entries(by).map(([d, xs]) => `<div class="layer"><h3>${d === '1' ? 'Uses it directly' : `${d} steps away`} · ${xs.length}</h3><div class="card" style="padding:0">${xs.map(i => `<div class="it ${i.test ? 'test' : ''}"><span class="k">${dt.esc(i.kind)}</span><span class="n">${dt.esc(i.name)}</span><span class="w">${dt.esc(i.via)}${i.file ? ` · ${dt.esc(i.repo)} ${dt.esc(i.file)}:${i.line}` : i.repo ? ` · ${dt.esc(i.repo)}` : ''}${i.where && !i.file && i.where !== 'catalog' ? ` · ${dt.esc(String(i.where).slice(0, 160))}` : ''}</span></div>`).join('')}</div></div>`).join('') || '<p class="muted">Nothing uses it.</p>';
+    dt.$('#layers').innerHTML = Object.entries(by).map(([d, xs]) => `<div class="layer"><h3>${d === '1' ? 'Uses it directly' : `${d} steps away`} · ${xs.length}</h3><div class="card" style="padding:0">${xs.map(i => `<div class="it ${i.test ? 'test' : ''}"><span class="k">${dt.esc(i.kind)}</span><span class="n" title="${dt.esc(i.id)}">${dt.esc(i.name)}${i.access ? ` · ${dt.esc(i.access)}` : ''}</span><span class="w">${dt.esc(i.via)}${i.revision ? ` · revision ${dt.esc(i.revision)}` : ''}${i.db ? ` · database ${dt.esc(i.db)}` : ''}${i.file ? ` · ${dt.esc(i.repo)} ${dt.esc(i.file)}:${i.line}` : i.repo ? ` · ${dt.esc(i.repo)}` : ''}${i.where && !i.file && i.where !== 'catalog' ? ` · ${dt.esc(String(i.where).slice(0, 160))}` : ''}</span></div>`).join('')}</div></div>`).join('') || '<p class="muted">No users found within the selected indexes and traversal bounds.</p>';
   };
   dt.$('#filt').innerHTML = kinds.length > 1 ? ['all', ...kinds].map(k => `<button class="small ${k === 'all' ? 'on' : ''}" data-k="${k}">${k} ${k === 'all' ? (D.items || []).length : (D.counts || {})[k] || ''}</button>`).join('') : '';
   dt.$('#filt').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; only = b.dataset.k === 'all' ? null : b.dataset.k; for (const x of dt.$('#filt').children) x.classList.toggle('on', x === b); draw(); };

@@ -1,4 +1,4 @@
-<!-- {"description":"Explore a related-data capture: schema and explicit relationships, PostgreSQL rows, Kafka envelopes, provenance, offsets and capture gaps.","sample":{"version":1,"complete":false,"startedAt":"2026-10-28T12:00:00Z","finishedAt":"2026-10-28T12:00:02Z","counts":{"rows":2,"queries":2,"messages":1},"redactions":{"enabled":true,"fields":1},"plan":{"env":"dev","consistency":"Independent observations across databases and Kafka.","seeds":[{"db":"orders","table":"sales.orders","where":{"id":42}}],"relations":[{"from":{"db":"orders","table":"sales.orders","columns":["id"]},"to":{"db":"billing","table":"pay.payments","columns":["order_id"]},"source":"explicit","evidence":"PaymentListener.java:14"}],"topics":[]},"rows":{"orders:sales.orders":[{"id":42,"status":"PAID","email":"sample@example.invalid"}],"billing:pay.payments":[{"id":80,"order_id":42,"amount":"12.50"}]},"events":{"order_paid":{"messages":[{"partition":0,"offset":"17","key":"42","value":{"orderId":42,"status":"PAID"}}],"windows":[{"partition":0,"from":"10","highExclusive":"18"}],"matches":[{"path":"value.orderId","from":{"db":"orders","table":"sales.orders","column":"id"}}],"scanned":8}},"provenance":{"billing:pay.payments":[{"key":"80","via":"explicit: PaymentListener.java:14","depth":1}]},"gaps":[{"kind":"kafka-window","topic":"order_paid","detail":"Only the bounded partition window was scanned."}]}} -->
+<!-- {"description":"Explore a related-data capture: schema and explicit relationships, PostgreSQL rows, Elasticsearch documents, Kafka envelopes, provenance, offsets and capture gaps.","sample":{"version":1,"complete":false,"startedAt":"2026-10-28T12:00:00Z","finishedAt":"2026-10-28T12:00:02Z","counts":{"rows":2,"queries":2,"messages":1},"redactions":{"enabled":true,"fields":1},"plan":{"env":"dev","consistency":"Independent observations across databases and Kafka.","seeds":[{"db":"orders","table":"sales.orders","where":{"id":42}}],"relations":[{"from":{"db":"orders","table":"sales.orders","columns":["id"]},"to":{"db":"billing","table":"pay.payments","columns":["order_id"]},"source":"explicit","evidence":"PaymentListener.java:14"}],"topics":[]},"rows":{"orders:sales.orders":[{"id":42,"status":"PAID","email":"sample@example.invalid"}],"billing:pay.payments":[{"id":80,"order_id":42,"amount":"12.50"}]},"events":{"order_paid":{"messages":[{"partition":0,"offset":"17","key":"42","value":{"orderId":42,"status":"PAID"}}],"windows":[{"partition":0,"from":"10","highExclusive":"18"}],"matches":[{"path":"value.orderId","from":{"db":"orders","table":"sales.orders","column":"id"}}],"scanned":8}},"provenance":{"billing:pay.payments":[{"key":"80","via":"explicit: PaymentListener.java:14","depth":1}]},"gaps":[{"kind":"kafka-window","topic":"order_paid","detail":"Only the bounded partition window was scanned."}]}} -->
 <style>
   .capture { display:grid; grid-template-columns:minmax(0,1fr); gap:18px; font-variant-numeric:tabular-nums; }
   .capture > *, .capture section { min-width:0; }
@@ -24,7 +24,9 @@
   .capture svg .minor { fill:var(--muted); font-size:11px; }
   .capture svg path { stroke:var(--muted); fill:none; }
   .capture .legend { color:var(--muted); font-size:12px; margin-top:7px; }
-  .capture .detail { min-width:0; display:grid; gap:14px; }
+  .capture .detail { min-width:0; display:grid; grid-template-columns:minmax(0,1fr); gap:14px; }
+  .capture .detail > * { min-width:0; max-width:100%; }
+  .capture .detail .scroll { max-width:100%; overflow:auto; }
   .capture .detail pre { max-height:400px; }
   .capture .gaps { margin:0; padding-left:20px; display:grid; gap:6px; font-size:13px; }
   .capture .warning { color:var(--bad); }
@@ -40,49 +42,51 @@
   <div class="summary" id="summary"></div>
   <p class="muted" id="window"></p>
   <section aria-label="Capture gaps" id="gaps-section"><h2 id="gaps-title"></h2><ul class="gaps" id="gaps"></ul></section>
-  <section aria-label="Relationships"><h2>How the data connects</h2><div class="graph" id="graph"></div><p class="legend">Solid: schema foreign key. Dashed: explicit relationship or Kafka correlation. Select a source to inspect its records.</p></section>
+  <section aria-label="Relationships"><h2>How the data connects</h2><div class="graph" id="graph"></div><p class="legend">Solid: schema foreign key. Dashed: explicit relationship or reviewed Kafka/Elasticsearch correlation. Select a source to inspect its records.</p></section>
   <div class="tools"><label for="capture-search">Search records and sources<input id="capture-search" type="search" placeholder="An id, field, table or topic" autocomplete="off"></label><span class="muted" id="record-count" role="status" aria-live="polite"></span></div>
   <div class="layout"><nav class="sources" id="sources" aria-label="Captured sources"></nav><section class="detail" id="detail" aria-label="Source records"></section></div>
 </main>
 <script>
 (() => {
   const D = DATA || {}, E = dt.esc;
-  const sources = [...Object.entries(D.rows || {}).map(([id, rows]) => ({ id, kind:'Postgres', rows, meta:D.provenance?.[id] || [] })), ...Object.entries(D.events || {}).map(([topic, event]) => ({ id:`kafka:${topic}`, topic, kind:'Kafka', rows:event.messages || [], meta:{ windows:event.windows || [], schema:event.schema || {}, scanned:event.scanned || 0 } }))];
+  const sources = [...Object.entries(D.rows || {}).map(([id, rows]) => ({ id, kind:'Postgres', rows, meta:D.provenance?.[id] || [] })), ...Object.entries(D.events || {}).map(([topic, event]) => ({ id:`kafka:${topic}`, topic, kind:'Kafka', rows:event.messages || [], meta:{ windows:event.windows || [], schema:event.schema || {}, scanned:event.scanned || 0 } })), ...Object.entries(D.indexes || {}).map(([index, source]) => ({id:`es:${index}`, index, kind:'Elasticsearch', rows:source.documents || [], meta:{mapping:source.mapping, observation:source.observation, matches:source.matches, scanned:source.scanned}}))];
   let selected = sources[0]?.id, search = '';
   dt.title(META.title || 'Reproduction capture');
-  dt.$('#summary').innerHTML = `<strong class="${D.complete ? '' : 'warning'}">${D.complete ? 'Capture complete' : 'Capture has gaps'}</strong><span>${D.counts?.rows || 0} rows</span><span>${D.counts?.messages || 0} messages</span><span>${D.counts?.queries || 0} queries</span><span class="muted">${E(D.plan?.env || '')} · ${D.redactions?.enabled ? 'Sensitive fields masked' : 'Values retained'}</span>`;
+  dt.$('#summary').innerHTML = `<strong class="${D.complete ? '' : 'warning'}">${D.complete ? 'Capture complete' : 'Capture has gaps'}</strong><span>${D.counts?.rows || 0} rows</span><span>${D.counts?.messages || 0} messages</span><span>${D.counts?.documents || 0} documents</span><span>${D.counts?.queries || 0} queries</span><span class="muted">${E(D.plan?.env || '')} · ${D.redactions?.enabled ? 'Sensitive fields masked' : 'Values retained'}</span>`;
   dt.$('#window').textContent = `${D.startedAt || ''} — ${D.finishedAt || ''}. ${D.plan?.consistency || ''}`;
   const gaps = D.gaps || [];
+  if(D.consistency) { const details=document.createElement('details');details.innerHTML='<summary>Source consistency and coverage</summary><div data-consistency></div>';dt.$('#window').after(details);dt.json(details.querySelector('[data-consistency]'),{consistency:D.consistency,coverage:D.coverage},{open:1}); }
   dt.$('#gaps-title').textContent = `${gaps.length} capture gap${gaps.length === 1 ? '' : 's'}`;
   dt.$('#gaps-section').hidden = !gaps.length;
-  dt.$('#gaps').innerHTML = gaps.map(g => `<li><strong>${E(g.kind)}</strong> · ${E(g.table || g.topic || '')}${g.target ? ` → ${E(g.target)}` : ''}${g.detail ? `: ${E(g.detail)}` : ''}</li>`).join('');
+  dt.$('#gaps').innerHTML = gaps.map(g => `<li><strong>${E(g.kind)}</strong> · ${E(g.table || g.topic || g.index || g.id || '')}${g.target ? ` → ${E(g.target)}` : ''}${g.detail ? `: ${E(g.detail)}` : ''}</li>`).join('');
   function graph() {
     if (!sources.length) { dt.$('#graph').innerHTML='<p style="padding:16px" class="muted">No records captured. Review the seeds and capture gaps.</p>'; return; }
-    const groups = [...new Set(sources.map(s => s.kind === 'Kafka' ? 'Kafka' : s.id.split(':')[0]))];
-    const coords = new Map(), width = Math.max(540, groups.length * 265), height = Math.max(150, ...groups.map(g => 65 + sources.filter(s => (s.kind === 'Kafka' ? 'Kafka' : s.id.split(':')[0]) === g).length * 80));
-    groups.forEach((g, i) => sources.filter(s => (s.kind === 'Kafka' ? 'Kafka' : s.id.split(':')[0]) === g).forEach((s, j) => coords.set(s.id,{x:18+i*265,y:40+j*80})));
+    const groups = [...new Set(sources.map(s => s.kind === 'Kafka' ? 'Kafka' : s.kind === 'Elasticsearch' ? 'Elasticsearch' : s.id.split(':')[0]))];
+    const coords = new Map(), width = Math.max(540, groups.length * 265), height = Math.max(150, ...groups.map(g => 65 + sources.filter(s => (s.kind === 'Kafka' ? 'Kafka' : s.kind === 'Elasticsearch' ? 'Elasticsearch' : s.id.split(':')[0]) === g).length * 80));
+    groups.forEach((g, i) => sources.filter(s => (s.kind === 'Kafka' ? 'Kafka' : s.kind === 'Elasticsearch' ? 'Elasticsearch' : s.id.split(':')[0]) === g).forEach((s, j) => coords.set(s.id,{x:18+i*265,y:40+j*80})));
     const relations = (D.plan?.relations || []).map(r => ({from:`${r.from.db}:${r.from.table}`,to:`${r.to.db}:${r.to.table}`,solid:r.source==='foreign-key',label:r.evidence}));
     for (const s of sources.filter(s => s.topic)) for (const m of D.events[s.topic].matches || []) relations.push({from:`${m.from.db}:${m.from.table}`,to:s.id,label:m.path});
+    for (const s of sources.filter(s => s.index)) for (const m of D.indexes[s.index].matches || []) relations.push({from:`${m.from.db}:${m.from.table}`,to:s.id,label:m.path});
     const edges = relations.map(r => {
       const a=coords.get(r.from),b=coords.get(r.to); if(!a||!b) return '';
       const x1=a.x+110,y1=a.y+52,x2=b.x+110,y2=b.y;
       return `<path d="M${x1} ${y1} C${x1} ${y1+35},${x2} ${y2-35},${x2} ${y2}" ${r.solid?'':'stroke-dasharray="5 4"'} marker-end="url(#capture-arrow)"><title>${E(r.label)}</title></path>`;
     }).join('');
-    const nodes = sources.map((s,i) => { const p=coords.get(s.id); const label=s.id.split(':').slice(1).join(':'); return `<g role="button" tabindex="0" data-source="${i}" aria-label="${E(s.id)}, ${s.rows.length} records" aria-pressed="${s.id===selected}"><title>${E(s.id)}</title><rect x="${p.x}" y="${p.y}" width="225" height="52" rx="6"/><text x="${p.x+10}" y="${p.y+21}">${E(label.length>29?label.slice(0,27)+'…':label)}</text><text class="minor" x="${p.x+10}" y="${p.y+40}">${s.rows.length} ${s.topic?'messages':'rows'}</text></g>`; }).join('');
-    dt.$('#graph').innerHTML=`<svg viewBox="0 0 ${width} ${height}" aria-label="Capture relationships"><defs><marker id="capture-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10" style="fill:var(--muted);stroke:none"/></marker></defs>${groups.map((g,i)=>`<text class="minor" x="${18+i*265}" y="23">${E(g)}</text>`).join('')}${edges}${nodes}</svg>`;
+    const nodes = sources.map((s,i) => { const p=coords.get(s.id); const label=s.id.split(':').slice(1).join(':'); return `<g role="button" tabindex="0" data-source="${i}" aria-label="${E(s.id)}, ${s.rows.length} records" aria-pressed="${s.id===selected}"><title>${E(s.id)}</title><rect x="${p.x}" y="${p.y}" width="225" height="52" rx="6"/><text x="${p.x+10}" y="${p.y+21}">${E(label.length>29?label.slice(0,27)+'…':label)}</text><text class="minor" x="${p.x+10}" y="${p.y+40}">${s.rows.length} ${s.topic?'messages':s.index?'documents':'rows'}</text></g>`; }).join('');
+    dt.$('#graph').innerHTML=`<svg viewBox="0 0 ${width} ${height}" style="min-width:${width}px" aria-label="Capture relationships"><defs><marker id="capture-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10" style="fill:var(--muted);stroke:none"/></marker></defs>${groups.map((g,i)=>`<text class="minor" x="${18+i*265}" y="23">${E(g)}</text>`).join('')}${edges}${nodes}</svg>`;
     for(const node of dt.$('#graph').querySelectorAll('[data-source]')) {
       const choose=()=>{selected=sources[Number(node.dataset.source)].id;draw();};
       node.onclick=choose; node.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();choose();}};
     }
   }
   function draw() {
-    dt.$('#sources').innerHTML=sources.map((s,i)=>({s,i})).filter(({s})=>!search||s.id.toLowerCase().includes(search)||s.rows.some(r=>JSON.stringify(r).toLowerCase().includes(search))).map(({s,i})=>`<button type="button" data-select="${i}" aria-pressed="${s.id===selected}">${E(s.id)}<small>${s.rows.length} ${s.topic?'messages':'rows'}</small></button>`).join('') || '<p class="muted">No matching sources.</p>';
+    dt.$('#sources').innerHTML=sources.map((s,i)=>({s,i})).filter(({s})=>!search||s.id.toLowerCase().includes(search)||s.rows.some(r=>JSON.stringify(r).toLowerCase().includes(search))).map(({s,i})=>`<button type="button" data-select="${i}" aria-pressed="${s.id===selected}">${E(s.id)}<small>${s.rows.length} ${s.topic?'messages':s.index?'documents':'rows'}</small></button>`).join('') || '<p class="muted">No matching sources.</p>';
     for(const b of dt.$('#sources').querySelectorAll('button'))b.onclick=()=>{selected=sources[Number(b.dataset.select)].id;draw();};
     const s=sources.find(s=>s.id===selected), el=dt.$('#detail');
     if(!s){el.innerHTML='<p class="muted">No records captured. Start with a seed that matches an existing row.</p>';dt.$('#record-count').textContent='0 records';graph();return;}
     const rows=s.rows.filter(r=>!search||s.id.toLowerCase().includes(search)||JSON.stringify(r).toLowerCase().includes(search));
     dt.$('#record-count').textContent=`${rows.length} of ${s.rows.length} records in ${s.id}`;
-    el.innerHTML=`<h2>${E(s.id)}</h2><div id="capture-records"></div><details><summary>${s.topic?'Offsets, schemas and scanned window':'Why these rows were included'}</summary><div id="capture-meta"></div></details>`;
+    el.innerHTML=`<h2>${E(s.id)}</h2><div id="capture-records"></div><details><summary>${s.topic?'Offsets, schemas and scanned window':s.index?'Mapping, capture window and relationships':'Why these rows were included'}</summary><div id="capture-meta"></div></details>`;
     if(rows.length) dt.table(dt.$('#capture-records'),rows); else dt.$('#capture-records').innerHTML='<p class="muted">No records match this search in the selected source.</p>';
     dt.json(dt.$('#capture-meta'),s.meta,{open:1});graph();
   }

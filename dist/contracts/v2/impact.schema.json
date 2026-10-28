@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "urn:dev-tool:impact:v2", "title": "Scoped bounded impact result",
+  "description": "Full or compact result. complete applies to the reported cached graph projection, not exhaustive runtime discovery. A cut or evidence gap remains explicit even when items are shortened for a view.",
+  "type": "object", "required": ["protocol", "identityVersion", "target", "graphRevision", "complete", "traversalComplete"],
+  "properties": {
+    "protocol": {"const": "dt.impact/v2"}, "identityVersion": {"const": "dt.identity/v1"}, "target": {"type": "string"}, "env": {"type": ["string", "null"]}, "graphRevision": {"type": "string"}, "complete": {"type": "boolean"}, "traversalComplete": {"type": "boolean"}, "truncated": {"type": "boolean"}, "resolved": {"type": "array", "items": {"type": "string"}}, "candidates": {"type": "array", "items": {"type": "string"}}, "counts": {"type": "object"}, "items": {"type": "array", "items": {"type": "object"}}, "nearest": {"type": "array"}, "gaps": {"type": "array", "items": {"type": "object"}}, "cutReasons": {"type": "array", "items": {"enum": ["depth", "nodes", "time", "output"]}}, "frontier": {"type": "array", "items": {"type": "string"}}, "continuation": {"type": "string"}, "next": {"type": "object"}, "coverage": {"type": "object"}, "view": {"type": "string"}
+  }
+}

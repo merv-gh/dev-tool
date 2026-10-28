@@ -1,5 +1,7 @@
 # Compact discovery: measured limits and release gates
 
+Implementation follow-up: [readiness implementation](readiness-implementation.md) and [independent review](independent-readiness-review.md) cover the implemented workflow guides, isolated task evaluator, updated capability checks and remaining real-model evidence requirement. The measurements below retain the original discovery experiments.
+
 The discovery surface can start with four or five tools. Production readiness for
 a particular small model is **unverified**. Registry retrieval scores, scripted
 responses and successful argument validation do not measure model reasoning or

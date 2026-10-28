@@ -1,0 +1,90 @@
+{
+  "protocol": "dt.integration-verification/v1",
+  "recordedAt": "2026-10-28T23:04:23.188Z",
+  "sourceRevision": "0c4b7e2237c2a543a002d00904e104cd73f9579f",
+  "sourceFiles": 381,
+  "sourceTreeSha256": "c94f3a4c65f0617b57f2e6089fd98a7e0b80a8b9449ae99e5c6ee3b21b73e364",
+  "host": {
+    "node": "v24.22.0",
+    "platform": "darwin",
+    "arch": "x64"
+  },
+  "executions": {
+    "default": {
+      "command": "npm test",
+      "tests": 489,
+      "passed": 442,
+      "failed": 0,
+      "skipped": 47,
+      "durationMs": 51210.542748,
+      "logSha256": "3188c4b02abb1451765644490be044ba6cbbe4e518eec7a4d47380a25913dd33"
+    },
+    "evaluator": {
+      "command": "DT_TEST_TASK_EVAL_DOCKER=1 node --test test/task-model-evaluation.test.js",
+      "tests": 4,
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 86646.341322,
+      "logSha256": "0dd049f9bb24853ca838108a86bbb70d12f4c15ca1ff38d9c2daa341731672a1"
+    },
+    "nativeBridge": {
+      "command": "DT_TEST_NATIVE_BRIDGE=1 node --test test/fixture-runtime-bridge.test.js",
+      "tests": 7,
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 9930.183019,
+      "logSha256": "caba224496f95c32fb44a8aef1f01214af5746f261e6d90f709cf079944f2cd6"
+    },
+    "maven": {
+      "command": "DT_TEST_MAVEN=<Maven 3.9.11> JAVA_HOME=<Temurin 21.0.11> DT_LOG=quiet node --test test/fastrun.live.test.js",
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 178907.944797,
+      "logSha256": "dec59d3954f9169da7c7c2f8d1e5c4c7c553ff24d996a73d173d32f95fd6a42e",
+      "timingsMs": {
+        "prepareAndRed": 28673,
+        "rerun": 2646,
+        "fixAndRun": 12222,
+        "springSlice": 20387,
+        "fullBuild": 33224
+      }
+    }
+  },
+  "referencedNativeRun": {
+    "evidence": "native-fixture-readiness.json",
+    "sha256": "c61c79ea065cc839b0001ac30461c59dd18c6ff2dd2bca96ec11ea8d432973ba",
+    "proofType": "real-owned-containers",
+    "passed": true,
+    "cleanupVerified": true,
+    "startMs": 149245,
+    "executedBy": "parallel native implementation worktree",
+    "tests": 15,
+    "skipped": 0
+  },
+  "gates": {
+    "impact": "impact-readiness-implemented.json",
+    "supplemental": "user-request-readiness-implemented.json",
+    "impactScale": "../benchmarks/impact-scale.json",
+    "discoveryScale": "../benchmarks/discovery-scale.json"
+  },
+  "cleanup": {
+    "ownedContainersRemoved": true,
+    "preexistingContainersPreserved": [
+      "dt-pg",
+      "dt-demo-webui"
+    ],
+    "temporaryPreviewClosed": true
+  },
+  "limits": [
+    "Executions overlap; their counts are not a unique-test sum.",
+    "Default skips are explicit prerequisite-dependent live checks; selected native, evaluator, bridge and Maven runs are recorded separately.",
+    "Evaluator uses a scripted endpoint with five task cases; this is not actual language-model evaluation.",
+    "No customer deployed-dev endpoint was exercised.",
+    "Native replay does not establish distributed atomic snapshots, all protocol codecs or exhaustive runtime-read coverage."
+  ],
+  "reproducibility": "Local verification record, not a signed model-completion verdict. Source hash covers ordered paths and file hashes in lib/dev/test/contracts/web and listed root runtime/build manifests; docs and dist are excluded."
+}

@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "urn:dev-tool:passport-edges:v1", "title": "Versioned passport edge projection",
+  "description": "Adapter for persisted effective.consumes/produces/calls/endpoints. Known environment mismatches are excluded; unknown environment/revision and retained stale evidence must remain gaps.",
+  "type": "object", "required": ["included", "edges", "gaps"], "properties": {
+    "included": {"type": "boolean"}, "edges": {"type": "array", "items": {"type": "object", "required": ["from", "to", "kind", "where", "repo"], "properties": {"from": {"type": "string"}, "to": {"type": "string"}, "kind": {"type": "string"}, "where": {"type": "string"}, "repo": {"type": "string"}, "env": {"type": ["string", "null"]}, "revision": {"type": ["string", "null"]}, "stale": {"type": "boolean"}, "passportDigest": {"type": ["string", "null"]}}}}, "gaps": {"type": "array", "items": {"type": "object"}}
+  }
+}
