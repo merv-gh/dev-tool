@@ -135,6 +135,21 @@ class ReleaseFixtureTest {
     try(Connection b=ReleaseEngine.connection("BILLING_DATASOURCE");Statement s=b.createStatement()) { s.executeUpdate("update risk.accounts set credit_limit=99.000000"); }
     assertThrows(IllegalStateException.class,()->new ReleaseEngine().release(11,ORDER,original)); assertState("PAID","PENDING","0.000000");
   }
+  @AfterAll static void reportActualPortableScenarioEffects() throws Exception {
+    String packagePath=System.getenv("DT_SCENARIO_PACKAGE"); if(packagePath==null) return;
+    JsonNode scenario=JSON.readTree(Path.of(packagePath).toFile());
+    try(Connection a=ReleaseEngine.connection("ORDERS_DATASOURCE");Connection b=ReleaseEngine.connection("BILLING_DATASOURCE");Statement x=a.createStatement();Statement y=b.createStatement()) {
+      x.executeUpdate("update sales.orders set status='PAID'"); y.executeUpdate("update pay.payments set status='PENDING',amount=0.000000"); y.executeUpdate("update risk.accounts set credit_limit=150.000001,status='APPROVED'");
+    }
+    ReleaseEngine.Receipt actual=new ReleaseEngine().release(11,ORDER,original);
+    Map<String,Object> observed=new LinkedHashMap<>();
+    observed.put("receipt",Map.of("tenantId",actual.tenantId(),"orderId",actual.orderId(),"amount",actual.amount().toPlainString(),"status",actual.status()));
+    try(Connection a=ReleaseEngine.connection("ORDERS_DATASOURCE");Connection b=ReleaseEngine.connection("BILLING_DATASOURCE");Statement x=a.createStatement();Statement y=b.createStatement();ResultSet order=x.executeQuery("select tenant_id,id,status,amount from sales.orders");ResultSet payment=y.executeQuery("select tenant_id,order_id,status,amount from pay.payments")) {
+      List<Object> rows=new ArrayList<>(); while(order.next()) rows.add(Map.of("tenantId",order.getLong(1),"orderId",order.getString(2),"status",order.getString(3),"amount",order.getBigDecimal(4).toPlainString())); observed.put("order-write",rows);
+      rows=new ArrayList<>(); while(payment.next()) rows.add(Map.of("tenantId",payment.getLong(1),"orderId",payment.getString(2),"status",payment.getString(3),"amount",payment.getBigDecimal(4).toPlainString())); observed.put("payment-write",rows);
+    }
+    JSON.writeValue(Path.of(System.getenv("DT_SCENARIO_OUTPUT")).toFile(),Map.of("version",1,"artifact",scenario.path("sha256").asText(),"actions",List.of("release"),"observed",observed));
+  }
 }`;
 
 test('captured resources execute real two-database Java business code and saved Kafka envelopes', { skip, timeout: 900000 }, async () => {
@@ -199,6 +214,36 @@ test('captured resources execute real two-database Java business code and saved 
     assert.equal(sourceStatus.rows[0].status, 'PAID', 'only replay databases were changed by Java');
     assert.equal(sourceStatus.rows[0].amount, '100.000001');
     assert.deepEqual(R.loadFixture(ws.id, exported.path).files, verified.files, 'Java consumed resources without modifying verified files');
+    // The portable runtime consumes the same resources and checks independently collected real
+    // database effects, in addition to the project's four business assertions. No test result alone
+    // is accepted as evidence that this scenario contract passed.
+    const State = require('../lib/scenario-state'), Scenario = require('../lib/scenario'), Package = require('../lib/scenario-package');
+    const states = Object.keys(captured.rows).map((key, index) => ({ id: `db-${index}`, kind: 'pg', target: { db: key.split(':')[0], table: key.slice(key.indexOf(':') + 1) }, required: true, actions: ['release'], provenance: [{ source: 'live-capture' }], resolution: { status: 'resolved' } }));
+    states.push({ id: 'paid-event', kind: 'kafka', target: { topic: 'orders.paid' }, required: true, actions: ['release'], provenance: [{ source: 'saved-envelope' }], resolution: { status: 'resolved' } });
+    const inventory = { version: 1, service: 'release-service', env: 'dev', states, gaps: [], actions: [{ id: 'release', kind: 'method', target: 'example.ReleaseEngine#release', required: true, input: { known: true }, dependencies: states.map(s => s.id), expectations: ['receipt', 'order-write', 'payment-write'] }], expectations: [
+      { id: 'receipt', kind: 'return', target: 'example.ReleaseEngine#release', action: 'release', required: true },
+      { id: 'order-write', kind: 'pg', target: { db: 'commerce', table: 'sales.orders' }, action: 'release', required: true },
+      { id: 'payment-write', kind: 'pg', target: { db: 'billing', table: 'pay.payments' }, action: 'release', required: true },
+    ] };
+    const state = await State.captureState(State.planState(inventory, Object.fromEntries(states.map(s => [s.id, { value: s.kind === 'pg' ? captured.rows[`${s.target.db}:${s.target.table}`] : captured.events['orders.paid'].messages }]))), { mask: false });
+    const actions = Scenario.actions(inventory, { bindings: { release: { tenantId: 11, orderId, event: captured.events['orders.paid'].messages[0] } } });
+    const receipt = { tenantId: 11, orderId, amount: '100.000001', status: 'RELEASED' };
+    const expectations = Scenario.expectations(inventory, { bindings: { receipt: { match: { op: 'exact', value: receipt } }, 'order-write': { match: { op: 'exact', value: [receipt] } }, 'payment-write': { match: { op: 'exact', value: [{ ...receipt, status: 'CAPTURED' }] } } } });
+    const profilePath = 'release.runtime.json';
+    const workspaceRoot = require('../lib/workspace').checkId(ws.id).path;
+    fs.writeFileSync(path.join(workspaceRoot, profilePath), JSON.stringify({ version: 1, adapter: 'test-run', tests: ['ReleaseFixtureTest'], mode: 'build', report: 'target/scenario-observations.json', fixtureBindings: { commerce: 'ORDERS_DATASOURCE', billing: 'BILLING_DATASOURCE' } }));
+    const artifact = Package.create({ workspace: ws.id, name: 'portable-release', inventory, state, actions, expectations, fixturePath: exported.path, profile: profilePath });
+    const imported = Package.importPackage(ws.id, artifact);
+    const portable = await require('../lib/scenario-runtime').run(ws.id, imported.path);
+    assert.equal(portable.ok, true, JSON.stringify(portable));
+    assert.equal(portable.proof.level, 'build'); assert.equal(portable.proof.expectationsChecked, true); assert.equal(portable.proof.runtimeReadsVerified, false);
+    assert.equal(portable.checks.passed, 3); assert.equal(portable.result.counts.tests, 4);
+    const changed = structuredClone(artifact); changed.contract.expectations.expectations.find(e => e.id === 'receipt').match.value.amount = '100.000002'; delete changed.sha256; changed.sha256 = Package.digest(changed);
+    const wrong = Package.importPackage(ws.id, changed, { directory: 'src/test/resources/dt-scenarios/wrong-expectation' });
+    const negative = await require('../lib/scenario-runtime').run(ws.id, wrong.path);
+    assert.equal(negative.result.outcome, 'passed', 'project JUnit tests still pass');
+    assert.equal(negative.ok, false, 'independent wrong package expectation fails actual service scenario');
+    assert.ok(negative.checks.results.some(c => c.id === 'receipt' && !c.ok));
     console.log(JSON.stringify({ integration: 'captured-resources-to-real-java', sourceDatabases: 2, replayDatabases: 2, capturedRows: captured.counts.rows, savedKafkaEnvelopes: captured.counts.messages, mode: result.mode, counts: result.counts, ms: result.ms, replayCleanupVerified: true }));
   } finally {
     await require('../lib/pg').closeAll();

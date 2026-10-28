@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:dev-tool:scenario-package:1",
+  "title": "Portable dev-tool scenario package, version 1",
+  "description": "Language-neutral data contract. Hashes, reference equality, completeness and adapter capability checks are additional semantic invariants enforced by scenario_verify/preflight.",
+  "type": "object",
+  "required": ["format", "version", "name", "service", "contract", "resources", "runtime", "proof", "sha256"],
+  "properties": {
+    "format": { "const": "dt-scenario" },
+    "version": { "const": 1 },
+    "name": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$" },
+    "service": { "type": "string", "minLength": 1 },
+    "contract": {
+      "type": "object",
+      "required": ["inventory", "state", "actions", "expectations"],
+      "properties": {
+        "inventory": { "type": "object", "required": ["version", "states", "actions", "expectations"], "properties": { "version": { "const": 1 }, "states": { "type": "array", "items": { "$ref": "#/$defs/identified" } }, "actions": { "type": "array", "items": { "$ref": "#/$defs/identified" } }, "expectations": { "type": "array", "items": { "$ref": "#/$defs/identified" } } } },
+        "state": { "type": "object", "required": ["version", "inventoryHash", "states", "complete"], "properties": { "version": { "const": 1 }, "inventoryHash": { "$ref": "#/$defs/hash" }, "states": { "type": "object" }, "complete": { "const": true } } },
+        "actions": { "type": "object", "required": ["actions"], "properties": { "actions": { "type": "array", "items": { "allOf": [{ "$ref": "#/$defs/identified" }, { "required": ["bound", "binding"], "properties": { "bound": { "const": true } } }] } } } },
+        "expectations": { "type": "object", "required": ["expectations"], "properties": { "expectations": { "type": "array", "items": { "allOf": [{ "$ref": "#/$defs/identified" }, { "required": ["bound", "match"], "properties": { "bound": { "const": true }, "match": { "type": "object", "required": ["op"], "properties": { "op": { "enum": ["exact", "subset", "count", "forbidden", "ordered"] } } } } }] } } } }
+      }
+    },
+    "resources": { "type": "object", "required": ["files"], "properties": { "files": { "type": "object", "additionalProperties": { "type": "object", "required": ["encoding", "sha256", "data"], "properties": { "encoding": { "const": "utf8" }, "sha256": { "$ref": "#/$defs/hash" }, "data": { "type": "string" } }, "additionalProperties": false } } } },
+    "runtime": { "oneOf": [{ "type": "null" }, { "type": "object", "required": ["profile", "sha256"], "properties": { "profile": { "type": "string", "minLength": 1 }, "sha256": { "$ref": "#/$defs/hash" } }, "additionalProperties": false }] },
+    "notes": { "type": "array", "items": { "type": "string" } },
+    "proof": { "type": "object", "required": ["level", "applicationExecuted", "runtimeReadsVerified"], "properties": { "level": { "const": "discovery" }, "applicationExecuted": { "const": false }, "runtimeReadsVerified": { "const": false } } },
+    "sha256": { "$ref": "#/$defs/hash" }
+  },
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "identified": { "type": "object", "required": ["id", "kind", "target"], "properties": { "id": { "type": "string", "minLength": 1 }, "kind": { "type": "string", "minLength": 1 } } }
+  }
+}

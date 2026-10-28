@@ -49,7 +49,7 @@ test('diffLines: LCS with trimmed head/tail, counts', () => {
 
 test('views: built-ins listed; custom save, override, remove; names checked', () => {
   const V = require('../lib/views');
-  assert.deepEqual(V.list().filter(v => v.builtin).map(v => v.name), ['code', 'collection-report', 'diagram', 'impact', 'json', 'knowledge-map', 'list-diff', 'patch', 'reproduction', 'table', 'tests', 'text-diff', 'xml']);
+  assert.deepEqual(V.list().filter(v => v.builtin).map(v => v.name), ['code', 'collection-report', 'diagram', 'impact', 'json', 'knowledge-map', 'list-diff', 'patch', 'reproduction', 'scenario-run', 'table', 'tests', 'text-diff', 'xml']);
   assert.ok(V.get('json').sample, 'built-ins have sample data');
   V.save('order-card', { html: '<!-- {"description": "ignored"} -->\n<h1 id="h"></h1><script>dt.$("#h").textContent = DATA.id</script>', description: 'one order', sample: { id: 'ORD-1' } });
   const v = V.get('order-card');
