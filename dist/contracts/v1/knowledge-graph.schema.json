@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:dt:knowledge-graph:v1",
+  "title": "Source-neutral graph adapter result; presentation is independent of storage",
+  "type": "object",
+  "required": ["version", "env", "revision", "nodes", "relations", "documents", "gaps", "sources", "runtimeVerified"],
+  "properties": {
+    "version": { "const": 1 }, "env": { "type": "string" }, "revision": { "type": "string" },
+    "runtimeVerified": { "const": false },
+    "nodes": { "type": "array", "maxItems": 500, "items": { "type": "object", "required": ["id", "name", "kind", "evidence"], "properties": { "id": { "type": "string" }, "name": { "type": "string" }, "kind": { "type": "string" }, "evidence": { "type": "array", "items": { "type": "object", "required": ["proof"], "properties": { "proof": { "enum": ["indexed", "stated", "inferred"] } }, "additionalProperties": true } } }, "additionalProperties": true } },
+    "relations": { "type": "array", "maxItems": 2000, "items": { "type": "object", "required": ["from", "to", "kind", "proof", "provenance"], "properties": { "from": { "type": "string" }, "to": { "type": "string" }, "kind": { "type": "string" }, "proof": { "enum": ["indexed", "stated", "inferred"] }, "provenance": { "type": "object" } }, "additionalProperties": true } },
+    "documents": { "type": "array", "maxItems": 50, "items": { "type": "object", "required": ["id", "text", "provenance"], "properties": { "id": { "type": "string" }, "text": { "type": "string", "maxLength": 3000 }, "provenance": { "type": "object" } }, "additionalProperties": true } },
+    "gaps": { "type": "array", "maxItems": 500, "items": { "type": "object" } },
+    "sources": { "type": "array", "items": { "type": "object" } },
+    "truncated": { "type": "boolean" }, "complete": { "type": "boolean" }
+  },
+  "additionalProperties": true
+}

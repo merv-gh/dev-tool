@@ -36,6 +36,9 @@
   "graph": { "url": "${GRAPH_URL:-http://graph:8000}" },
 
   "tools": {
+    "profile": "compact",
+    "profiles": {},
+    "backends": {},
     "enable": ["all"],
     "disable": ["confluence"],
     "plugins": [],
@@ -94,6 +97,7 @@
     }
   },
 
+  "knowledge": { "sources": [] },
   "scripts": { "http": { "allow": ["https://partner-api.dev.example.com/imports"] }, "js": true, "jsTimeoutMs": 5000 },
 
   "timeouts": { "pgQueryMs": 60000, "pgIndexMs": 120000, "catalogSyncWaitMs": 50000 },

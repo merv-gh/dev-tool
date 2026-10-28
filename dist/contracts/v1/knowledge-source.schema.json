@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:dt:knowledge-source:v1",
+  "title": "Source-neutral knowledge import",
+  "type": "object",
+  "required": ["version", "entities"],
+  "properties": {
+    "version": { "const": 1 },
+    "entities": { "type": "array", "items": { "type": "object", "required": ["id", "kind"], "properties": { "id": { "type": "string", "minLength": 1 }, "kind": { "type": "string", "minLength": 1 }, "name": { "type": "string" }, "aliases": { "type": "array", "items": { "type": "string" } } }, "additionalProperties": true } },
+    "relations": { "type": "array", "items": { "type": "object", "required": ["from", "to", "kind"], "properties": { "from": { "type": "string" }, "to": { "type": "string" }, "kind": { "type": "string" } }, "additionalProperties": true } },
+    "documents": { "type": "array", "items": { "type": "object", "required": ["text"], "properties": { "text": { "type": "string" }, "title": { "type": "string" }, "entities": { "type": "array", "items": { "type": "string" } } }, "additionalProperties": true } }
+  },
+  "additionalProperties": true
+}

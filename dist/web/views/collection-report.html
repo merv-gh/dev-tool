@@ -1,0 +1,67 @@
+<!-- {"description":"Interactive collection suite report: case and assertion outcomes, dataset/matrix selection, retries, setup and cleanup failures, exact revisions and downloadable JSON/JUnit evidence.","sample":{"collection":"orders/regression","status":"failed","run":"example","seed":"42","ms":315,"counts":{"cases":3,"passed":2,"failed":1,"errors":0,"skipped":0},"cases":[{"id":"orders/regression/paid#1","script":"orders/regression/paid","status":"passed","ms":101,"tags":["smoke"],"row":0,"matrix":{"tenant":"north"},"result":{"ok":true,"steps":[{"step":1,"do":"tool pg_query","ok":true,"ms":3}],"tests":{"passed":1,"failed":0,"list":[{"name":"paid total","ok":true}]}}},{"id":"orders/regression/paid#2","script":"orders/regression/paid","status":"failed","ms":105,"row":1,"matrix":{"tenant":"south"},"result":{"ok":false,"error":"1 of 2 tests failed: paid total","tests":{"passed":1,"failed":1,"list":[{"name":"paid total","ok":false,"error":"expected 19.99 to be 20"},{"name":"customer attached","ok":true}]},"steps":[{"step":1,"do":"http GET","ok":true,"ms":15,"attempts":[{"attempt":1,"ok":false,"error":"HTTP 503"},{"attempt":2,"ok":true}]}]}},{"id":"orders/regression/refund#3","script":"orders/regression/refund","status":"passed","ms":109,"result":{"ok":true}}],"hooks":[],"cleanupErrors":[]}} -->
+<style>
+  .cr { min-width:0; display:grid; gap:14px; }
+  .cr h1 { font-size:21px; margin:0; overflow-wrap:anywhere; }
+  .cr-head,.cr-controls { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  .cr-summary { font-variant-numeric:tabular-nums; }
+  .cr-outcome { font-weight:700; }
+  .cr .passed { color:var(--good); } .cr .failed,.cr .error,.cr .cancelled { color:var(--bad); }
+  .cr .skipped,.cr .running { color:var(--muted); }
+  .cr-controls input { flex:1; min-width:min(220px,100%); }
+  .cr-controls select { max-width:100%; }
+  .cr-grid { display:grid; grid-template-columns:minmax(240px,35%) minmax(0,1fr); gap:16px; align-items:start; }
+  .cr-nav { border:1px solid var(--line); border-radius:10px; overflow:auto; max-height:620px; }
+  .cr-case { display:block; width:100%; border:0; border-bottom:1px solid var(--line); border-radius:0; padding:12px; text-align:left; white-space:normal; background:transparent; }
+  .cr-case:last-child { border-bottom:0; } .cr-case:hover { background:var(--soft); }
+  .cr-case[aria-current=true] { background:color-mix(in srgb,var(--accent) 12%,var(--bg)); }
+  .cr-case b { display:block; overflow-wrap:anywhere; margin:3px 0; font-weight:600; }
+  .cr-case small { color:var(--muted); display:block; overflow-wrap:anywhere; }
+  .cr-detail { min-width:0; } .cr-detail h2 { font-size:17px; margin:0 0 12px; overflow-wrap:anywhere; }
+  .cr-detail h3 { font-size:14px; margin:22px 0 8px; }
+  .cr-detail pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:420px; overflow:auto; padding:10px; background:var(--soft); border-radius:6px; }
+  .cr-step,.cr-assertion { padding:9px 0; border-bottom:1px solid var(--line); }
+  .cr-step summary { cursor:pointer; overflow-wrap:anywhere; }
+  .cr-alert { padding:12px; background:var(--soft); border-radius:8px; overflow-wrap:anywhere; }
+  .cr-empty { padding:24px 12px; color:var(--muted); }
+  .cr button:focus-visible,.cr input:focus-visible,.cr select:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+  .cr ::selection { background:color-mix(in srgb,var(--accent) 25%,transparent); }
+  @media(max-width:680px) { .cr-grid { grid-template-columns:minmax(0,1fr); } .cr-nav { max-height:280px; } }
+</style>
+<div class="cr">
+  <div class="cr-head"><h1 data-title></h1><span id="cr-outcome" class="cr-outcome"></span></div>
+  <div id="cr-summary" class="muted cr-summary"></div>
+  <div id="cr-alerts"></div>
+  <div class="cr-controls"><input id="cr-search" type="search" aria-label="Search cases" placeholder="Search script, case or tag"><select id="cr-filter" aria-label="Filter case status"><option value="all">All cases</option><option value="failed">Failures and errors</option><option value="passed">Passed</option><option value="skipped">Skipped</option></select><button id="cr-download">Download JSON</button><button id="cr-junit">Download JUnit</button></div>
+  <div class="cr-grid"><nav id="cr-cases" class="cr-nav" aria-label="Collection cases"></nav><section id="cr-detail" class="cr-detail" aria-live="polite"></section></div>
+  <details><summary>Suite setup, success and finally hooks</summary><div id="cr-hooks"></div></details>
+  <details><summary>Run identity and revisions</summary><div id="cr-identity"></div></details>
+</div>
+<script>
+  const D = DATA, cases = D.cases || [], bad = c => ['failed','error'].includes(c.status);
+  let selected = cases.find(bad) || cases[0];
+  dt.title(D.collection || META.title || 'Collection suite');
+  dt.$('#cr-outcome').textContent = D.status || 'unknown'; dt.$('#cr-outcome').classList.add(['passed','failed','error','skipped','running','cancelled'].includes(D.status) ? D.status : 'error');
+  const c = D.counts || {};
+  dt.$('#cr-summary').textContent = `${c.passed || 0} passed · ${c.failed || 0} failed · ${c.errors || 0} errors · ${c.skipped || 0} skipped · ${c.cases || 0} selected · ${D.ms || 0} ms`;
+  const messages = [D.error, ...(D.cleanupErrors || []).map(x => `${x.collection || x.script}: ${x.error}`)].filter(Boolean);
+  dt.$('#cr-alerts').innerHTML = messages.map(x => `<div class="cr-alert failed">${dt.esc(x)}</div>`).join('');
+  function detail() {
+    const el = dt.$('#cr-detail');
+    if (!selected) { el.innerHTML = '<p class="cr-empty">No cases were selected. Change the tags or script selection and plan again.</p>'; return; }
+    const k = selected, r = k.result || {};
+    el.innerHTML = `<h2>${dt.esc(k.script)}</h2><div class="${dt.esc(k.status)}">${dt.esc(k.status)} · ${k.ms || 0} ms · dataset row ${k.row ?? '—'}</div>${r.error || k.error ? `<pre class="failed">${dt.esc(r.error || k.error)}</pre>` : ''}<h3>Case bindings</h3><div id="cr-bindings"></div><h3>Assertions</h3>${(r.tests?.list || []).map(t => `<div class="cr-assertion"><b class="${t.ok ? 'passed' : 'failed'}">${t.ok ? 'Passed' : 'Failed'}: ${dt.esc(t.name)}</b>${t.error ? `<pre>${dt.esc(t.error)}</pre>` : ''}</div>`).join('') || '<p class="muted">No named assertions were recorded.</p>'}<h3>Steps and attempts</h3>${(r.steps || []).map(s => `<details class="cr-step"><summary><span class="${s.ok ? 'passed' : 'failed'}">${s.ok ? 'Passed' : 'Failed'}</span> · ${dt.esc(s.do)} · ${s.ms || 0} ms${s.attempts?.length > 1 ? ` · ${s.attempts.length} attempts` : ''}</summary><pre>${dt.esc(dt.prettyJson(s))}</pre></details>`).join('') || '<p class="muted">No steps ran.</p>'}<details style="margin-top:18px"><summary>Retained case evidence</summary><div id="cr-evidence"></div></details>`;
+    dt.json(dt.$('#cr-bindings'), { id:k.id, tags:k.tags, seed:D.seed, matrix:k.matrix, revision:k.revision, ...(k.params ? {params:k.params} : {}) }, {open:1});
+    dt.json(dt.$('#cr-evidence'), r, {open:1});
+  }
+  function draw() {
+    const query = dt.$('#cr-search').value.trim().toLowerCase(), status = dt.$('#cr-filter').value;
+    const shown = cases.filter(k => (!query || `${k.id} ${(k.tags || []).join(' ')}`.toLowerCase().includes(query)) && (status === 'all' || status === 'failed' ? status === 'all' || bad(k) : k.status === status));
+    dt.$('#cr-cases').innerHTML = shown.map(k => `<button class="cr-case" data-index="${cases.indexOf(k)}" aria-current="${selected === k}"><span class="${dt.esc(k.status)}">${dt.esc(k.status)} · ${k.ms || 0} ms</span><b>${dt.esc(k.script.split('/').pop())}</b><small>${dt.esc(k.id)}${Object.keys(k.matrix || {}).length ? ` · ${dt.esc(JSON.stringify(k.matrix))}` : ''}</small></button>`).join('') || '<p class="cr-empty">No cases match this filter.</p>';
+    dt.$('#cr-cases').querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => { selected = cases[Number(btn.dataset.index)]; draw(); detail(); }));
+  }
+  function download(name, value, type) { const url = URL.createObjectURL(new Blob([value], {type})), link = document.createElement('a'); link.href=url; link.download=name; link.click(); setTimeout(()=>URL.revokeObjectURL(url),1000); }
+  dt.$('#cr-download').onclick = () => download(`collection-${D.run || 'report'}.json`,JSON.stringify(D,null,2),'application/json');
+  dt.$('#cr-junit').onclick = () => { const esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c])); const all = [...cases,...(D.hooks || []).filter(h=>!h.result.ok).map(h=>({script:h.collection,id:h.kind,status:'error',result:h.result}))]; download(`collection-${D.run || 'report'}.xml`,`<?xml version="1.0" encoding="UTF-8"?><testsuite name="${esc(D.collection)}" tests="${all.length}" failures="${all.filter(k=>k.status==='failed').length}" errors="${all.filter(k=>k.status==='error').length}" skipped="${all.filter(k=>k.status==='skipped').length}">${all.map(k=>`<testcase classname="${esc(k.script)}" name="${esc(k.id)}">${k.status==='skipped'?'<skipped/>':k.status!=='passed'?`<${k.status==='failed'?'failure':'error'} message="${esc(k.result?.error || k.error)}">${esc(JSON.stringify(k.result))}</${k.status==='failed'?'failure':'error'}>`:''}</testcase>`).join('')}</testsuite>`,'application/xml'); };
+  dt.$('#cr-search').oninput = draw; dt.$('#cr-filter').onchange = draw;
+  dt.json(dt.$('#cr-hooks'), D.hooks || [], {open:1}); dt.json(dt.$('#cr-identity'), {run:D.run, startedAt:D.startedAt, endedAt:D.endedAt, planHash:D.planHash, seed:D.seed, validation:D.validation}, {open:1}); draw(); detail();
+</script>

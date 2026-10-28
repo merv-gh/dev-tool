@@ -26,9 +26,15 @@ See [Open WebUI setup](openwebui-workflows.md), [composable contracts](composabl
 
 Review fixes include strict replacement-backend result/error contracts, unsupported-schema assertion rejection, missing-entity completeness gaps, default collection evidence minimization and credential echo redaction. Runtime review prevents a Docker inspection failure from looking like successful cleanup and prevents an HTTP observer from satisfying a file-effect expectation. New regressions exercise these negative cases.
 
+API review additionally fixed bodyless GET/HEAD execution after saving, prepared assertions/captures/hooks and provenance retention, case-insensitive header bindings, repeated form secrets and captured-credential echoes, bounded failed/pending response capture and consistent navigation checks. Native Playwright capabilities and element-reference fields are selected from the endpoint's discovered schemas.
+
 ## Verification
 
 The integrated live database/runtime group passed **57 tests with no skips or failures** using disposable PostgreSQL 16, Docker, Java 21 and Maven. It covers actual two-database Java code reading captured rows and saved Kafka envelopes, strict expectation mismatch despite passing project tests, isolated HTTP/file execution, forbidden egress, async effects, readiness compensation, parallel session leases, template clone isolation, cancellation, process-death recovery, domain/constraint verification and GC ownership.
+
+The final rebuilt default suite passed **361 of 405 tests, zero failures, 44 explicit opt-in skips** in 27.57 seconds. Separately, all **four live JVM workflow suites** passed with no skips: fast red/fix/green/full-build proof, library/controller flows, generated test data and database tests, and workspace/impact/fix/patch proof. The measured unchanged Maven rerun was 1.55 seconds versus a 19.66-second full build on the small fixture project; cold preparation and edited runs are separate timings.
+
+The **real Playwright MCP/Chromium workflow passed** with the default v0.0.83 browser image and no extra unsafe capability: UI click → JSON/headers → `OrderController.get` route attribution → explicit HTTP replay → saved GET collection script with two assertions. Cookies remained browser-only; persisted exchanges/scripts excluded the seeded credentials. The API request saved during the separate desktop/mobile UI check also executed successfully through the normal `script_run` tool. These live groups are separate executions and overlap default test definitions; their counts are not a combined count of unique tests.
 
 Performance observations from the committed benchmark: unchanged index rebuilds improved about 13×, manifest loads 57×, catalog searches 4.3× and PG usage-index loads 919× on the measured local dataset. A two-database/1,000-row PostgreSQL template benchmark measured cold preparation p50 4,629 ms versus warm allocation 357 ms and fresh-clone reset 714 ms (three samples). These are local observations, not universal latency guarantees.
 
@@ -45,3 +51,5 @@ The next distinct implementation units are below; each has an acceptance target 
 5. **Requirement/test traceability and team governance (J–O):** reviewed structured test obligations from cited rules, change approval/ownership, CI capacity policy and representative protocol compatibility matrices. Semantic sources preserve the required identities/provenance but do not automatically decide business expectations.
 
 Implement each adapter behind the existing stage/tool contract, expose its capability and preflight separately, and add a real positive/negative integration test before upgrading a proof or completeness label. The platform can be useful across architectures while reporting unsupported parts honestly.
+
+With the repository's default enabled sources, the measured initial catalog is 159 tools / 114,229 JSON characters versus 11 tools / 6,991 characters for `compact` (about 94% less schema text). Counts vary with configured systems/plugins and future tools. The `api` profile exposes the combined browser, request and collection workflow; compact discovery can still find and execute those same enabled operations.

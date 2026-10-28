@@ -282,7 +282,11 @@ var require_config = __commonJS({
         enable: parts ? parts.filter((p) => !p.startsWith("-")) : list(t.enable && t.enable.length ? t.enable : ["all"]),
         disable: parts ? parts.filter((p) => p.startsWith("-")).map((p) => p.slice(1)) : list(t.disable),
         plugins: [].concat(t.plugins || []),
-        custom: [].concat(t.custom || [])
+        custom: [].concat(t.custom || []),
+        profile: process.env.DT_TOOL_PROFILE || t.profile || "all",
+        profiles: t.profiles && typeof t.profiles === "object" ? t.profiles : {},
+        backends: t.backends && typeof t.backends === "object" ? t.backends : {},
+        maxInputBytes: Number.isInteger(t.maxInputBytes) && t.maxInputBytes > 0 && t.maxInputBytes <= 50 * 1024 * 1024 ? t.maxInputBytes : 2 * 1024 * 1024
       };
     }
     function siteLinks(base, links = {}) {
@@ -361,6 +365,7 @@ var require_config = __commonJS({
         offline: String(e.DT_TESTS_OFFLINE || c.offline || "") === "true" || c.offline === true,
         timeoutMs: Number(e.DT_TESTS_TIMEOUT_MS || c.timeoutMs || 9e5),
         waitMs: Number(e.DT_TESTS_WAIT_MS || c.waitMs || 5e4),
+        scenarioConcurrency: Number(c.scenarioConcurrency ?? 2),
         // compile checks after each write (workspace_write, test_run files): on unless false; how long a write waits for the first classpath
         compileCheck: c.compileCheck !== false && e.DT_COMPILE_CHECK !== "0",
         compileFix: c.compileFix !== false && e.DT_COMPILE_FIX !== "0",
@@ -551,6 +556,68 @@ var require_limit = __commonJS({
   }
 });
 
+// lib/redact.js
+var require_redact = __commonJS({
+  "lib/redact.js"(exports2, module2) {
+    var sensitive = (key) => /(^|[_\s.-])(password|passwd|secret|token|authorization|cookie|api[_-]?key|private[_-]?key|client[_-]?secret)([_\s.-]|$)/i.test(String(key).replace(/([a-z0-9])([A-Z])/g, "$1_$2"));
+    function values(value) {
+      const out2 = /* @__PURE__ */ new Set(), seen = /* @__PURE__ */ new WeakSet();
+      const visit = (v, depth = 0) => {
+        if (depth > 64) return;
+        if (typeof v === "string" && v.length <= 1024 * 1024 && /^\s*[\[{]/.test(v)) {
+          try {
+            visit(JSON.parse(v), depth + 1);
+          } catch {
+          }
+          return;
+        }
+        if (!v || typeof v !== "object" || seen.has(v)) return;
+        seen.add(v);
+        if (sensitive(v.name) && typeof v.value === "string" && v.value.length >= 4) out2.add(v.value);
+        for (const [key, x] of Object.entries(v)) if (sensitive(key) && typeof x === "string" && x.length >= 4) out2.add(x);
+        else visit(x, depth + 1);
+      };
+      visit(value);
+      return [...out2];
+    }
+    function clean(value, { known = [] } = {}) {
+      const secrets = new Set([...known, ...values(value)].filter((v) => typeof v === "string" && v.length >= 4));
+      try {
+        const C = require_config();
+        for (const [key, v] of Object.entries({ ...C.parseEnvFile(C.SECRETS_FILE), ...C.parseEnvFile(require("path").join(C.HOME, ".env.personal")) })) if (sensitive(key) && v.length >= 4) secrets.add(v);
+        const p = C.getPersonal();
+        for (const v of [p.bitbucket.token, p.confluence.token, p.llm.key, C.getServer().apiKey]) if (v && v.length >= 4) secrets.add(v);
+      } catch {
+      }
+      const scanned = /* @__PURE__ */ new WeakSet();
+      const discover = (v) => {
+        if (!v || typeof v !== "object" || scanned.has(v)) return;
+        scanned.add(v);
+        for (const [key, x] of Object.entries(v)) if (sensitive(key) && typeof x === "string" && x.length >= 4) secrets.add(x);
+        else discover(x);
+      };
+      discover(value);
+      const text = (v) => {
+        let out2 = String(v).replace(/([a-z][a-z\d+.-]*:\/\/)[^\s/?#@]*:[^\s/@]+@/gi, "$1[redacted]@").replace(/\bBearer\s+[^\s"'<>]+/gi, "Bearer [redacted]").replace(/([?&](?:access_token|token|api_?key|password|secret)=)[^&#\s"']+/gi, "$1[redacted]");
+        for (const secret of [...secrets].sort((a, b) => b.length - a.length)) out2 = out2.split(secret).join("[redacted]");
+        return out2;
+      };
+      const seen = /* @__PURE__ */ new WeakSet();
+      function walk(v, depth = 0) {
+        if (typeof v === "string") return text(v);
+        if (!v || typeof v !== "object") return typeof v === "bigint" ? String(v) : v;
+        if (seen.has(v) || depth > 64) return "[circular or too deep]";
+        seen.add(v);
+        const result = Array.isArray(v) ? v.map((x) => walk(x, depth + 1)) : Object.fromEntries(Object.entries(v).map(([key, x]) => [key, (sensitive(key) || key === "value" && sensitive(v.name)) && x != null ? "[redacted]" : walk(x, depth + 1)]));
+        seen.delete(v);
+        return result;
+      }
+      return walk(value);
+    }
+    module2.exports = { clean, sensitive, values };
+  }
+});
+
 // lib/trace.js
 var require_trace = __commonJS({
   "lib/trace.js"(exports2, module2) {
@@ -559,6 +626,7 @@ var require_trace = __commonJS({
     var { AsyncLocalStorage } = require("async_hooks");
     var als = new AsyncLocalStorage();
     var running = /* @__PURE__ */ new Map();
+    var callSecrets = /* @__PURE__ */ new WeakMap();
     var seq = 0;
     var level = () => process.env.DT_LOG || "steps";
     var secs = (ms) => ms >= 1e3 ? `${(ms / 1e3).toFixed(1)}s` : `${ms}ms`;
@@ -590,22 +658,23 @@ var require_trace = __commonJS({
       if (files > 1) fs2.renameSync(file, `${file}.1`);
       else fs2.rmSync(file, { force: true });
     }
-    function write(event) {
+    function write(event, context = als.getStore()) {
       try {
-        append(logFile(), JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), ...event }), limits());
+        append(logFile(), JSON.stringify(require_redact().clean({ at: (/* @__PURE__ */ new Date()).toISOString(), ...event }, { known: callSecrets.get(context) || [] })), limits());
       } catch {
       }
     }
-    function say(text) {
-      if (level() !== "quiet") process.stderr.write(`${clock()} dt ${text}
+    function say(text, context = als.getStore()) {
+      if (level() !== "quiet") process.stderr.write(`${clock()} dt ${require_redact().clean(text, { known: callSecrets.get(context) || [] })}
 `);
     }
     var short = (args) => {
-      const s = JSON.stringify(args || {});
+      const s = JSON.stringify(require_redact().clean(args || {}));
       return s.length > 160 ? `${s.slice(0, 160)}\u2026}` : s;
     };
-    async function call(tool, args, { source, session, kind = "call" } = {}, fn) {
-      const c = { id: `${(++seq).toString(36)}${Date.now().toString(36).slice(-3)}`, kind, tool, source: source || "api", session: session || null, args, startedAt: Date.now(), steps: [], current: null, depth: 0, notes: [] };
+    async function call(tool, args, { source, session, kind = "call", redactions = [] } = {}, fn) {
+      const c = { id: `${(++seq).toString(36)}${Date.now().toString(36).slice(-3)}`, kind, tool, source: source || "api", session: session || null, args: require_redact().clean(args), startedAt: Date.now(), steps: [], current: null, depth: 0, notes: [] };
+      callSecrets.set(c, [...callSecrets.get(als.getStore()) || [], ...redactions, ...require_redact().values(args)]);
       running.set(c.id, c);
       say(`${kind} ${tool}#${c.id} start ${short(args)} (${c.source})`);
       write({ event: "start", kind, id: c.id, tool, source: c.source, session: c.session, args });
@@ -625,8 +694,8 @@ var require_trace = __commonJS({
       const slow = c.steps.filter((s) => s.depth === 0).map((s) => `${s.name} ${secs(s.ms)}${s.ok ? "" : " FAILED"}`).join(" \xB7 ");
       const failedStep = c.steps.filter((s) => !s.ok).pop();
       if (ok) say(`${c.kind} ${c.tool}#${c.id} ok ${secs(c.ms)}${slow ? `  ${slow}` : ""}`);
-      else say(`${c.kind} ${c.tool}#${c.id} FAILED ${secs(c.ms)}${failedStep ? ` in ${failedStep.name}` : ""}: ${String(error).split("\n")[0].slice(0, 300)}`);
-      write({ event: ok ? "ok" : "failed", kind: c.kind, id: c.id, tool: c.tool, ms: c.ms, steps: c.steps, notes: c.notes, ...error ? { error: String(error).slice(0, 4e3) } : {} });
+      else say(`${c.kind} ${c.tool}#${c.id} FAILED ${secs(c.ms)}${failedStep ? ` in ${failedStep.name}` : ""}: ${String(error).split("\n")[0].slice(0, 300)}`, c);
+      write({ event: ok ? "ok" : "failed", kind: c.kind, id: c.id, tool: c.tool, ms: c.ms, steps: c.steps, notes: c.notes, ...error ? { error: String(error).slice(0, 4e3) } : {} }, c);
     }
     async function step(name, fn, detail) {
       const c = als.getStore();
@@ -7837,70 +7906,635 @@ alter table ${q(tr.table)} disable trigger ${q(tr.name)}`));
 var require_testdb = __commonJS({
   "lib/testdb.js"(exports2, module2) {
     var postgres = require_src();
+    var crypto = require("crypto");
     var { getTests, envNames: envNames2, getEnv: getEnv2 } = require_config();
-    var same = (a, b) => {
+    var SCHEMA = "dt_test_control";
+    var MARK = "dev-tool scratch control v1";
+    var qi = (s) => `"${String(s).replace(/"/g, '""')}"`;
+    var ql = (s) => `'${String(s).replace(/'/g, "''")}'`;
+    var normalizeHost = (h) => ["localhost", "127.0.0.1", "[::1]", "::1"].includes(h) ? "loopback" : h.toLowerCase();
+    var sameServer = (a, b) => {
       try {
         const x = new URL(a), y = new URL(b);
-        return x.hostname === y.hostname && (x.port || "5432") === (y.port || "5432") && x.pathname === y.pathname;
+        return normalizeHost(x.hostname) === normalizeHost(y.hostname) && (x.port || "5432") === (y.port || "5432");
       } catch {
         return false;
       }
     };
     function server() {
       const url = getTests().pgUrl;
-      if (!url) throw new Error("no test database: set tests.pgUrl in config.json (or DT_TEST_DB_URL), e.g. the compose testdb profile: postgres://dt:dt@testdb:5432/postgres");
-      for (const e of envNames2()) for (const [db, u] of Object.entries(getEnv2(e).pg)) if (u && same(u, url)) throw new Error(`tests.pgUrl is the ${e} database "${db}": use a scratch Postgres for tests`);
+      if (!url) throw new Error("no test database: set tests.pgUrl in config.json (or DT_TEST_DB_URL) to a dedicated scratch PostgreSQL cluster");
+      const u = new URL(url);
+      if (!["postgres:", "postgresql:"].includes(u.protocol)) throw new Error("tests.pgUrl must be a PostgreSQL URL");
+      for (const e of envNames2()) for (const [db, configured] of Object.entries(getEnv2(e).pg)) if (configured && sameServer(configured, url) && new URL(configured).pathname === u.pathname) throw new Error(`tests.pgUrl is the ${e} database "${db}": use a separate scratch control database`);
       return url;
     }
-    async function create(runId, statements) {
-      const url = server();
-      const name = `dt_test_${String(runId).replace(/[^a-z0-9]/gi, "").toLowerCase().slice(0, 40)}`;
-      const admin = postgres(url, { max: 1, onnotice: () => {
-      }, connect_timeout: 10 });
+    function connect(database) {
+      const u = new URL(server());
+      if (database) u.pathname = `/${database}`;
+      return postgres(u.toString(), { max: 1, onnotice: () => {
+      }, connect_timeout: 10, idle_timeout: 0, connection: { application_name: "dev-tool scratch" } });
+    }
+    async function withControl(fn, { initialize: initialize2 = false, label = "dt configured scratch cluster" } = {}) {
+      const sql = connect();
       try {
-        await admin.unsafe(`drop database if exists ${name}`);
-        await admin.unsafe(`create database ${name}`);
-      } catch (e) {
-        if (/ENOTFOUND|ECONNREFUSED|EAI_AGAIN|getaddrinfo/.test(`${e.code} ${e.message}`)) throw new Error(`the test database at ${new URL(url).host} is not reachable (${e.code || e.message}): with compose add testdb to COMPOSE_PROFILES, or set tests.pgUrl`);
-        throw e;
-      } finally {
-        await admin.end({ timeout: 2 });
-      }
-      const u = new URL(url);
-      u.pathname = `/${name}`;
-      const sql = postgres(u.toString(), { max: 1, onnotice: () => {
-      }, connect_timeout: 10 });
-      const errors = [];
-      try {
-        for (const s of statements) {
-          try {
-            await sql.unsafe(s);
-          } catch (e) {
-            errors.push({ statement: s.split("\n")[0].slice(0, 160), error: e.message });
-          }
+        await sql`set statement_timeout = '120s'`;
+        let systemId = null;
+        try {
+          const [system] = await sql`select system_identifier::text as id from pg_control_system()`;
+          systemId = system.id;
+        } catch (e) {
+          if (e.code !== "42501") throw e;
         }
+        await sql`select pg_advisory_lock(hashtextextended('dev-tool scratch lifecycle v1', 0))`;
+        const schema = await sql`select obj_description(oid, 'pg_namespace') as comment from pg_namespace where nspname = ${SCHEMA}`;
+        if (!schema.length) {
+          if (!initialize2) throw new Error("scratch cluster is not initialized: call testdb_initialize first");
+          await sql.begin(async (tx) => {
+            await tx.unsafe(`create schema ${SCHEMA}`);
+            await tx.unsafe(`comment on schema ${SCHEMA} is ${ql(MARK)}`);
+            await tx.unsafe(`revoke all on schema ${SCHEMA} from public`);
+            await tx.unsafe(`create table ${SCHEMA}.identity (id boolean primary key default true check(id), cluster_id text not null, label text not null, system_id text, created_at timestamptz not null default now())`);
+            await tx.unsafe(`create table ${SCHEMA}.resources (name text primary key, resource_id text not null, cluster_id text not null, kind text not null, state text not null, template_key text, lease text, created_at timestamptz not null default now(), expires_at timestamptz, details jsonb not null default '{}')`);
+            await tx.unsafe(`create table ${SCHEMA}.templates (key text primary key, state text not null, created_at timestamptz not null default now(), used_at timestamptz not null default now(), details jsonb not null)`);
+            await tx.unsafe(`create table ${SCHEMA}.leases (id text primary key, state text not null, created_at timestamptz not null default now(), expires_at timestamptz not null, details jsonb not null)`);
+            await tx.unsafe(`insert into ${SCHEMA}.identity (cluster_id,label,system_id) values ($1,$2,$3)`, [crypto.randomUUID(), String(label).slice(0, 200), systemId]);
+          });
+        } else if (schema[0].comment !== MARK) throw new Error("scratch control schema exists without the dev-tool ownership marker; refusing to adopt it");
+        await sql.unsafe(`alter table ${SCHEMA}.identity add column if not exists system_id text`);
+        const [identity] = await sql.unsafe(`select cluster_id, label, system_id, created_at from ${SCHEMA}.identity where id`);
+        if (identity?.system_id && systemId && identity.system_id !== systemId) throw new Error("scratch physical cluster identity changed: copied registry cannot own this cluster");
+        if (!identity?.system_id && systemId) {
+          await sql.unsafe(`update ${SCHEMA}.identity set system_id=$1 where id`, [systemId]);
+          identity.system_id = systemId;
+        }
+        if (!identity || !/^[0-9a-f-]{36}$/.test(identity.cluster_id)) throw new Error("invalid scratch cluster identity");
+        return await fn(sql, identity);
       } finally {
         await sql.end({ timeout: 2 });
       }
-      return {
-        database: name,
-        jdbcUrl: `jdbc:postgresql://${u.hostname}:${u.port || 5432}/${name}`,
-        user: decodeURIComponent(u.username),
-        password: decodeURIComponent(u.password),
-        errors
-      };
     }
-    async function drop(name) {
-      if (!/^dt_test_[a-z0-9]+$/.test(name)) throw new Error(`not a dt test database: ${name}`);
-      const admin = postgres(server(), { max: 1, onnotice: () => {
-      } });
+    async function initialize({ label } = {}) {
+      return withControl(async (sql, identity) => {
+        const [role] = await sql`select rolcreatedb, rolcreaterole, rolsuper from pg_roles where rolname = current_user`;
+        if (!role.rolcreatedb && !role.rolsuper) throw new Error("scratch role needs CREATEDB to prepare test databases");
+        return { version: 1, initialized: true, cluster: identity.cluster_id, label: identity.label, copyConcurrency: 1, capabilities: { createDatabase: true, privateApplicationRoles: role.rolcreaterole || role.rolsuper, physicalClusterIdentity: identity.system_id ? "verified" : "registry-uuid (pg_control_system permission unavailable)" } };
+      }, { initialize: true, label });
+    }
+    function marker(identity, resourceId) {
+      return `dt-testdb:v1:${identity.cluster_id}:${resourceId}`;
+    }
+    async function ownedCreate(sql, identity, { kind = "test", templateKey, lease, template = "template0", details = {}, expiresAt, namePrefix = "dt_test_" } = {}) {
+      const id = crypto.randomUUID(), name = namePrefix + crypto.randomBytes(14).toString("hex");
+      await sql.unsafe(`insert into ${SCHEMA}.resources (name,resource_id,cluster_id,kind,state,template_key,lease,expires_at,details) values ($1,$2,$3,$4,'creating',$5,$6,$7,$8)`, [name, id, identity.cluster_id, kind, templateKey || null, lease || null, expiresAt || null, details]);
       try {
-        await admin.unsafe(`drop database if exists ${name} with (force)`);
-      } finally {
-        await admin.end({ timeout: 2 });
+        await sql.unsafe(`create database ${qi(name)} template ${qi(template)}`);
+        await sql.unsafe(`comment on database ${qi(name)} is ${ql(marker(identity, id))}`);
+        await sql.unsafe(`revoke all on database ${qi(name)} from public`);
+        await sql.unsafe(`update ${SCHEMA}.resources set state='ready' where name=$1`, [name]);
+        return { name, resourceId: id };
+      } catch (e) {
+        await sql.unsafe(`update ${SCHEMA}.resources set state='failed', details=details || $2::jsonb where name=$1`, [name, { error: e.message }]);
+        try {
+          await ownedDrop(sql, identity, name);
+        } catch (cleanup) {
+          e.cleanupError = cleanup.message;
+        }
+        throw e;
       }
     }
-    module2.exports = { create, drop, server };
+    async function ownedDrop(sql, identity, name) {
+      const [resource] = await sql.unsafe(`select * from ${SCHEMA}.resources where name=$1`, [name]);
+      if (!resource || resource.cluster_id !== identity.cluster_id) throw new Error(`database ${name} has no owned scratch resource record`);
+      const [db] = await sql`select d.oid, d.datallowconn, pg_get_userbyid(d.datdba) as owner, shobj_description(d.oid, 'pg_database') as comment from pg_database d where datname = ${name}`;
+      if (db) {
+        const [{ user }] = await sql`select current_user as "user"`;
+        if (db.comment !== marker(identity, resource.resource_id) || db.owner !== user) {
+          const error = `ownership mismatch for ${name}; database was not deleted`;
+          await sql.unsafe(`update ${SCHEMA}.resources set state='cleanup-failed',details=details || $2::jsonb where name=$1`, [name, { cleanupError: error }]);
+          throw new Error(error);
+        }
+        try {
+          await sql.unsafe(`drop database ${qi(name)} with (force)`);
+        } catch (e) {
+          await sql.unsafe(`update ${SCHEMA}.resources set state='cleanup-failed',details=details || $2::jsonb where name=$1`, [name, { cleanupError: e.message }]);
+          throw e;
+        }
+      }
+      await sql.unsafe(`delete from ${SCHEMA}.resources where name=$1`, [name]);
+      return { version: 1, database: name, dropped: !!db };
+    }
+    function credentials(database, { user, password } = {}) {
+      const u = new URL(server());
+      const hostname = u.hostname.includes(":") && !u.hostname.startsWith("[") ? `[${u.hostname}]` : u.hostname;
+      return { database, endpoint: { host: u.hostname, port: Number(u.port || 5432), database, parameters: Object.fromEntries([...u.searchParams].filter(([key]) => ["sslmode", "sslrootcert", "sslcert", "sslkey"].includes(key))) }, jdbcUrl: `jdbc:postgresql://${hostname}:${u.port || 5432}/${database}${u.searchParams.has("sslmode") ? "?sslmode=" + encodeURIComponent(u.searchParams.get("sslmode")) : ""}`, user: user ?? decodeURIComponent(u.username), password: password ?? decodeURIComponent(u.password), errors: [] };
+    }
+    function checkStatements(statements) {
+      if (!Array.isArray(statements) || statements.some((s) => typeof s !== "string")) throw new Error("scratch statements must be an array of SQL strings");
+      if (statements.length > 1e5 || statements.reduce((n, s) => n + Buffer.byteLength(s), 0) > 256 * 1024 * 1024) throw new Error("scratch SQL exceeds 100000 statements or 256 MiB");
+      for (const statement of statements) if (/\b(?:create|alter|drop)\s+(?:database|role|user|tablespace)\b|\bcopy\b[^;]*\bprogram\b/i.test(statement)) throw new Error("fixture SQL contains unsupported cluster administration");
+    }
+    async function runStatements(database, statements, { allowPartial = false, signal } = {}) {
+      checkStatements(statements);
+      const sql = connect(database), errors = [];
+      try {
+        await sql`set statement_timeout = '120s'`;
+        for (let i = 0; i < statements.length; i++) {
+          signal?.throwIfAborted();
+          try {
+            const query = sql.unsafe(statements[i]);
+            const cancel = () => query.cancel();
+            signal?.addEventListener("abort", cancel, { once: true });
+            try {
+              await query;
+            } finally {
+              signal?.removeEventListener("abort", cancel);
+            }
+          } catch (e) {
+            signal?.throwIfAborted();
+            const failure = { index: i, statement: statements[i].split("\n")[0].slice(0, 160), error: e.message, code: e.code };
+            errors.push(failure);
+            if (!allowPartial) {
+              const error = new Error(`scratch preparation failed at statement ${i + 1}: ${failure.error}`);
+              error.failures = errors;
+              throw error;
+            }
+          }
+        }
+        return errors;
+      } finally {
+        await sql.end({ timeout: 2 });
+      }
+    }
+    async function create(runId, statements, { allowPartial = false, signal } = {}) {
+      checkStatements(statements);
+      return withControl(async (sql, identity) => {
+        signal?.throwIfAborted();
+        const resource = await ownedCreate(sql, identity, { details: { runId: String(runId).slice(0, 100) }, expiresAt: new Date(Date.now() + 36e5) });
+        try {
+          const errors = await runStatements(resource.name, statements, { allowPartial, signal });
+          return { ...credentials(resource.name), errors, diagnostic: allowPartial };
+        } catch (e) {
+          try {
+            await ownedDrop(sql, identity, resource.name);
+          } catch (cleanup) {
+            e.cleanupError = cleanup.message;
+          }
+          throw e;
+        }
+      }, { initialize: true });
+    }
+    async function drop(name) {
+      return withControl((sql, identity) => ownedDrop(sql, identity, name));
+    }
+    async function resources({ limit = 100, offset = 0 } = {}) {
+      if (!Number.isInteger(limit) || limit < 1 || limit > 500 || !Number.isInteger(offset) || offset < 0) throw new Error("resources limit 1..500 and nonnegative offset required");
+      return withControl(async (sql, identity) => {
+        const [{ total }] = await sql.unsafe(`select count(*)::int as total from ${SCHEMA}.resources`);
+        return { version: 1, cluster: identity.cluster_id, totalResources: total, offset, limit, resources: await sql.unsafe(`select name,kind,state,template_key,lease,created_at,expires_at,details from ${SCHEMA}.resources order by created_at limit $1 offset $2`, [limit, offset]) };
+      });
+    }
+    module2.exports = { create, drop, server, initialize, resources, withControl, connect, ownedCreate, ownedDrop, credentials, marker, checkStatements, runStatements, qi, ql, SCHEMA, sameServer };
+  }
+});
+
+// lib/testdb-templates.js
+var require_testdb_templates = __commonJS({
+  "lib/testdb-templates.js"(exports2, module2) {
+    var crypto = require("crypto");
+    var DB = require_testdb();
+    var { SCHEMA, qi, ql } = DB;
+    var stable = (value) => JSON.stringify(value, (_, v) => v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, v[k]])) : v);
+    var hash = (value) => crypto.createHash("sha256").update(stable(value)).digest("hex");
+    var errorText = (e) => ({ error: e.message, ...e.failures ? { failures: e.failures } : {}, ...e.cleanupError ? { cleanupError: e.cleanupError } : {} });
+    var duration = (value, fallback = 36e5) => {
+      value ??= fallback;
+      if (!Number.isInteger(value) || value < 1 || value > 6048e5) throw new Error("ttlMs must be 1..604800000");
+      return value;
+    };
+    function id(value) {
+      if (!/^[a-f0-9]{64}$/.test(value || "")) throw new Error("invalid template key");
+      return value;
+    }
+    function leaseId(value) {
+      if (!/^[a-f0-9]{32}$/.test(value || "")) throw new Error("invalid lease id");
+      return value;
+    }
+    function inputs(options) {
+      let databases, origin;
+      if (options.workspace && options.directory) {
+        const m = require_reproduction().loadFixture(options.workspace, options.directory);
+        if (!m.complete) throw new Error("templates require a complete verified fixture");
+        databases = Object.fromEntries(Object.entries(m.databases).map(([name, db]) => [name, { statements: [...db.statements.schema, ...db.statements.data, ...db.statements.constraints] }]));
+        origin = { format: m.version, sqlFiles: Object.fromEntries(Object.entries(m.files).filter(([file]) => /^pg\/[^/]+\/(schema|data|constraints)\.sql$/.test(file))), masked: m.masked };
+      } else {
+        databases = options.databases;
+        origin = { format: "sql-statements-v1" };
+      }
+      if (!databases || !Object.keys(databases).length || Object.keys(databases).length > 32) throw new Error("template requires 1..32 logical databases");
+      databases = Object.fromEntries(Object.entries(databases).sort(([a], [b]) => a.localeCompare(b)).map(([name, db]) => {
+        if (!name || name.length > 200) throw new Error("invalid logical database name");
+        DB.checkStatements(db.statements);
+        return [name, { statements: db.statements }];
+      }));
+      const mode = options.mode || "snapshot";
+      if (!["snapshot", "migrations-empty", "upgrade"].includes(mode)) throw new Error("template mode must be snapshot, migrations-empty or upgrade");
+      if (mode === "upgrade" && !options.base) throw new Error("upgrade mode needs an immutable base template");
+      if (mode !== "upgrade" && options.base) throw new Error("base is supported only in upgrade mode");
+      const sanity = options.sanity || [];
+      if (!Array.isArray(sanity) || sanity.length > 100) throw new Error("at most 100 sanity checks");
+      for (const check of sanity) {
+        if (!Object.hasOwn(databases, check.db) || typeof check.sql !== "string" || !/^\s*(select|with)\b/i.test(check.sql) || !Object.hasOwn(check, "expected")) throw new Error("sanity checks need a logical db, read-only SELECT SQL and exact expected row array");
+      }
+      return { version: 1, databases, origin, mode, base: options.base ? id(options.base) : null, policy: options.policy || {}, compatibility: options.compatibility || {}, sanity };
+    }
+    async function compatibility(sql, requested = {}) {
+      const [version] = await sql`select current_setting('server_version_num') as version, current_setting('server_encoding') as encoding`;
+      const [locale] = await sql`select datcollate, datctype, to_jsonb(d)->>'datlocprovider' as locale_provider, to_jsonb(d)->>'daticulocale' as icu_locale, to_jsonb(d)->>'datcollversion' as collation_version from pg_database d where datname = 'template0'`;
+      const extensions = await sql`select name, default_version from pg_available_extensions order by name`;
+      if (requested.major && String(Math.floor(Number(version.version) / 1e4)) !== String(requested.major)) throw new Error(`PostgreSQL major mismatch: requested ${requested.major}, available ${version.version}`);
+      for (const [name, expected] of Object.entries(requested.extensions || {})) if (!extensions.some((e) => e.name === name && e.default_version === String(expected))) throw new Error(`extension compatibility mismatch: ${name} ${expected}`);
+      if (requested.collation && locale.datcollate !== requested.collation) throw new Error("PostgreSQL collation mismatch");
+      return { ...version, ...locale, extensions };
+    }
+    async function snapshot(database, { validate = false, sanity = [], signal } = {}) {
+      const sql = DB.connect(database);
+      try {
+        await sql`set statement_timeout = '120s'`;
+        const unsupported = [
+          ...await sql`select 'row-level-security' as kind, n.nspname || '.' || c.relname as object from pg_class c join pg_namespace n on n.oid=c.relnamespace where c.relrowsecurity and n.nspname not in ('pg_catalog','information_schema')`,
+          ...await sql`select 'security-definer' as kind, p.oid::regprocedure::text as object from pg_proc p join pg_namespace n on n.oid=p.pronamespace where p.prosecdef and n.nspname not in ('pg_catalog','information_schema') and not exists (select 1 from pg_depend d where d.objid=p.oid and d.deptype='e')`,
+          ...await sql`select 'foreign-table' as kind, n.nspname || '.' || c.relname as object from pg_class c join pg_namespace n on n.oid=c.relnamespace where c.relkind='f'`
+        ];
+        if (unsupported.length) {
+          const e = new Error(`unsupported scratch fixture fidelity: ${unsupported.map((x) => `${x.kind} ${x.object}`).join(", ")}`);
+          e.unsupported = unsupported;
+          throw e;
+        }
+        if (validate) {
+          for (const c of await sql`select conname,n.nspname,c.relname from pg_constraint k join pg_class c on c.oid=k.conrelid join pg_namespace n on n.oid=c.relnamespace where not k.convalidated and n.nspname not in ('pg_catalog','information_schema')`) await sql.unsafe(`alter table ${qi(c.nspname)}.${qi(c.relname)} validate constraint ${qi(c.conname)}`);
+          for (const c of await sql`select k.conname,n.nspname,t.typname from pg_constraint k join pg_type t on t.oid=k.contypid join pg_namespace n on n.oid=t.typnamespace where not k.convalidated and n.nspname not in ('pg_catalog','information_schema')`) await sql.unsafe(`alter domain ${qi(c.nspname)}.${qi(c.typname)} validate constraint ${qi(c.conname)}`);
+          await sql`analyze`;
+        }
+        const tables = [];
+        for (const t of await sql`select n.nspname as schema,c.relname as name from pg_class c join pg_namespace n on n.oid=c.relnamespace where c.relkind in ('r','p','m') and n.nspname not in ('pg_catalog','information_schema') and n.nspname not like 'pg_toast%' order by 1,2`) {
+          signal?.throwIfAborted();
+          const [counts] = await sql.unsafe(`select count(*)::text as rows, md5(coalesce(string_agg(h, '' order by h), '')) as content from (select md5(row_to_json(t)::text) as h from ${qi(t.schema)}.${qi(t.name)} t) s`);
+          tables.push({ ...t, ...counts });
+        }
+        const columns = await sql`select table_schema,table_name,column_name,ordinal_position,data_type,udt_name,is_nullable,column_default,is_identity,is_generated,generation_expression from information_schema.columns where table_schema not in ('pg_catalog','information_schema') order by 1,2,4`;
+        const constraints = await sql`select n.nspname as schema,c.relname as table,k.conname,pg_get_constraintdef(k.oid) as definition from pg_constraint k join pg_class c on c.oid=k.conrelid join pg_namespace n on n.oid=c.relnamespace where n.nspname not in ('pg_catalog','information_schema') order by 1,2,3`;
+        const sequences = await sql`select schemaname,sequencename,data_type,start_value,min_value,max_value,increment_by,cycle,last_value from pg_sequences where schemaname not in ('pg_catalog','information_schema') order by 1,2`;
+        const extensions = await sql`select extname,extversion from pg_extension order by extname`;
+        const indexes = await sql`select schemaname,tablename,indexname,indexdef from pg_indexes where schemaname not in ('pg_catalog','information_schema') order by 1,2,3`;
+        const views = await sql`select schemaname,viewname,definition from pg_views where schemaname not in ('pg_catalog','information_schema') order by 1,2`;
+        const triggers = await sql`select n.nspname,c.relname,t.tgname,pg_get_triggerdef(t.oid) as definition from pg_trigger t join pg_class c on c.oid=t.tgrelid join pg_namespace n on n.oid=c.relnamespace where not t.tgisinternal and n.nspname not in ('pg_catalog','information_schema') order by 1,2,3`;
+        const types = await sql`select n.nspname,t.typname,t.typtype,t.typnotnull,t.typdefault,format_type(t.typbasetype,t.typtypmod) as base,coalesce((select json_agg(e.enumlabel order by e.enumsortorder)::text from pg_enum e where e.enumtypid=t.oid),'') as labels,coalesce((select json_agg(pg_get_constraintdef(k.oid) order by k.conname)::text from pg_constraint k where k.contypid=t.oid),'[]') as constraints from pg_type t join pg_namespace n on n.oid=t.typnamespace where t.typtype in ('d','e') and n.nspname not in ('pg_catalog','information_schema') order by 1,2`;
+        const functions = await sql`select p.oid::regprocedure::text as name,pg_get_functiondef(p.oid) as definition from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname not in ('pg_catalog','information_schema') and p.prokind <> 'a' and not exists (select 1 from pg_depend d where d.objid=p.oid and d.deptype='e') order by 1`;
+        const checks = [];
+        for (const check of sanity) {
+          signal?.throwIfAborted();
+          const actual = await sql.begin(async (tx) => {
+            await tx`set transaction read only`;
+            return Array.from(await tx.unsafe(check.sql, check.params || []));
+          });
+          if (stable(actual) !== stable(check.expected)) throw new Error(`template sanity check failed: ${check.name || check.sql.slice(0, 80)}`);
+          checks.push({ name: check.name || check.sql.slice(0, 80), passed: true });
+        }
+        return { fingerprint: hash({ tables, columns, constraints, sequences, extensions, functions, indexes, views, triggers, types }), tables, extensions, checks };
+      } finally {
+        await sql.end({ timeout: 2 });
+      }
+    }
+    async function templateRow(sql, key) {
+      const [row] = await sql.unsafe(`select * from ${SCHEMA}.templates where key=$1`, [id(key)]);
+      if (!row) throw new Error("template not found");
+      return row;
+    }
+    async function verifyOwned(sql, identity, row) {
+      const failures = [];
+      if (row.state !== "ready") failures.push({ kind: "state", state: row.state });
+      for (const [logical, info] of Object.entries(row.details.databases || {})) {
+        const [resource] = await sql.unsafe(`select * from ${SCHEMA}.resources where name=$1`, [info.database]);
+        const [database] = await sql`select datallowconn,datistemplate,pg_get_userbyid(datdba) as owner,shobj_description(oid,'pg_database') as comment from pg_database where datname=${info.database}`;
+        const [{ owner }] = await sql`select current_user as owner`;
+        if (!resource || resource.template_key !== row.key || resource.cluster_id !== identity.cluster_id || !database || database.owner !== owner || database.comment !== DB.marker(identity, resource.resource_id)) failures.push({ kind: "ownership", db: logical });
+        else if (database.datallowconn || database.datistemplate) failures.push({ kind: "not-frozen", db: logical });
+      }
+      if (Object.keys(row.details.databases || {}).length === 0) failures.push({ kind: "empty-template" });
+      return failures;
+    }
+    function publicTemplate(row) {
+      return { version: 1, id: row.key, state: row.state, createdAt: row.created_at, usedAt: row.used_at, mode: row.details.mode, inputHash: row.details.inputHash, databases: row.details.databases, compatibility: row.details.compatibility, pinned: !!row.details.pinned, timings: row.details.timings, ...row.details.failure ? { failure: row.details.failure } : {}, ...row.details.invalidated ? { invalidated: row.details.invalidated } : {} };
+    }
+    async function build(options = {}) {
+      const spec = inputs(options), started = Date.now();
+      return DB.withControl(async (sql, identity) => {
+        options.signal?.throwIfAborted();
+        const platform = await compatibility(sql, spec.compatibility), key = hash({ spec, platform });
+        const [existing] = await sql.unsafe(`select * from ${SCHEMA}.templates where key=$1`, [key]);
+        if (existing?.state === "ready") {
+          const failures = await verifyOwned(sql, identity, existing);
+          if (failures.length) throw new Error(`template verification failed: ${stable(failures)}; invalidate before rebuilding`);
+          await sql.unsafe(`update ${SCHEMA}.templates set used_at=now() where key=$1`, [key]);
+          return { ...publicTemplate(existing), reused: true, cluster: identity.cluster_id, ms: Date.now() - started };
+        }
+        if (existing) throw new Error(`template ${key} is ${existing.state}; inspect and invalidate/delete it before rebuilding the same input`);
+        let base;
+        if (spec.base) {
+          base = await templateRow(sql, spec.base);
+          const failures = await verifyOwned(sql, identity, base);
+          if (failures.length) throw new Error(`upgrade base is not verified: ${stable(failures)}`);
+          if (stable(Object.keys(base.details.databases).sort()) !== stable(Object.keys(spec.databases).sort())) throw new Error("upgrade logical databases must match the base");
+        }
+        const details = { mode: spec.mode, inputHash: hash(spec), compatibility: platform, databases: {}, pinned: options.pin === true, timings: {} };
+        await sql.unsafe(`insert into ${SCHEMA}.templates (key,state,details) values ($1,'building',$2)`, [key, details]);
+        try {
+          for (const [logical, input] of Object.entries(spec.databases)) {
+            options.signal?.throwIfAborted();
+            const step = Date.now();
+            const resource = await DB.ownedCreate(sql, identity, { kind: "template", templateKey: key, namePrefix: "dt_tpl_", template: base?.details.databases[logical].database || "template0", details: { logical, inputHash: hash(input) } });
+            details.databases[logical] = { database: resource.name };
+            await sql.unsafe(`update ${SCHEMA}.templates set details=$2 where key=$1`, [key, details]);
+            await DB.runStatements(resource.name, input.statements, { signal: options.signal });
+            const checked = await snapshot(resource.name, { validate: true, sanity: spec.sanity.filter((c) => c.db === logical), signal: options.signal });
+            await sql.unsafe(`alter database ${qi(resource.name)} allow_connections false`);
+            await sql.unsafe(`update ${SCHEMA}.resources set state='frozen' where name=$1`, [resource.name]);
+            const [{ bytes }] = await sql`select pg_database_size(${resource.name})::text as bytes`;
+            details.databases[logical] = { database: resource.name, ...checked, bytes, ms: Date.now() - step };
+          }
+          details.timings.buildMs = Date.now() - started;
+          await sql.unsafe(`update ${SCHEMA}.templates set state='ready',details=$2 where key=$1`, [key, details]);
+          return { version: 1, id: key, state: "ready", cluster: identity.cluster_id, databases: details.databases, timings: details.timings, reused: false, mode: spec.mode };
+        } catch (e) {
+          const cleanup = [];
+          for (const resource of await sql.unsafe(`select name from ${SCHEMA}.resources where template_key=$1 and kind='template'`, [key])) try {
+            await DB.ownedDrop(sql, identity, resource.name);
+          } catch (dropError) {
+            cleanup.push(dropError.message);
+          }
+          details.failure = { ...errorText(e), cleanup };
+          await sql.unsafe(`update ${SCHEMA}.templates set state='failed',details=$2 where key=$1`, [key, details]);
+          e.template = key;
+          e.cleanupErrors = cleanup;
+          throw e;
+        }
+      });
+    }
+    async function inspect(template) {
+      return DB.withControl(async (sql, identity) => {
+        const row = await templateRow(sql, template);
+        return { ...publicTemplate(row), cluster: identity.cluster_id, failures: await verifyOwned(sql, identity, row) };
+      });
+    }
+    async function list({ limit = 50, offset = 0 } = {}) {
+      if (!Number.isInteger(limit) || limit < 1 || limit > 200 || !Number.isInteger(offset) || offset < 0) throw new Error("template list limit 1..200 and nonnegative offset required");
+      return DB.withControl(async (sql, identity) => {
+        const [{ templates, leases }] = await sql.unsafe(`select (select count(*)::int from ${SCHEMA}.templates) as templates,(select count(*)::int from ${SCHEMA}.leases) as leases`);
+        return {
+          version: 1,
+          cluster: identity.cluster_id,
+          totalTemplates: templates,
+          totalLeases: leases,
+          limit,
+          offset,
+          templates: (await sql.unsafe(`select * from ${SCHEMA}.templates order by used_at desc limit $1 offset $2`, [limit, offset])).map((t) => ({ version: 1, id: t.key, state: t.state, mode: t.details.mode, inputHash: t.details.inputHash, createdAt: t.created_at, usedAt: t.used_at, pinned: !!t.details.pinned, databases: Object.keys(t.details.databases || {}), bytes: String(Object.values(t.details.databases || {}).reduce((n, d) => n + BigInt(d.bytes || 0), 0n)), timings: t.details.timings, ...t.details.failure ? { failure: t.details.failure } : {} })),
+          leases: (await sql.unsafe(`select id,state,created_at,expires_at,details from ${SCHEMA}.leases order by created_at desc limit $1 offset $2`, [limit, offset])).map((l) => ({ lease: l.id, state: l.state, createdAt: l.created_at, expiresAt: l.expires_at, template: l.details.template, runId: l.details.runId, databases: Object.fromEntries(Object.entries(l.details.databases || {}).map(([db, c]) => [db, c.database])), ...l.details.cleanupErrors ? { cleanupErrors: l.details.cleanupErrors } : {} }))
+        };
+      });
+    }
+    async function verify(template, { deep = false, signal } = {}) {
+      return DB.withControl(async (sql, identity) => {
+        const row = await templateRow(sql, template), failures = await verifyOwned(sql, identity, row), checks = {};
+        if (deep && !failures.length) for (const [logical, info] of Object.entries(row.details.databases)) {
+          signal?.throwIfAborted();
+          const probe = await DB.ownedCreate(sql, identity, { kind: "verification", templateKey: row.key, template: info.database, expiresAt: new Date(Date.now() + 6e5) });
+          try {
+            const checked = await snapshot(probe.name, { signal });
+            checks[logical] = checked;
+            if (checked.fingerprint !== info.fingerprint) failures.push({ kind: "content-drift", db: logical });
+          } finally {
+            await DB.ownedDrop(sql, identity, probe.name);
+          }
+        }
+        if (failures.length && row.state === "ready") await sql.unsafe(`update ${SCHEMA}.templates set state='invalid',details=details || $2::jsonb where key=$1`, [row.key, { invalidated: { reason: "verification failed", failures, at: (/* @__PURE__ */ new Date()).toISOString() } }]);
+        return { version: 1, template: row.key, ok: failures.length === 0, depth: deep ? "content" : "metadata", failures, checks };
+      });
+    }
+    async function invalidate(template, reason = "explicit invalidation") {
+      return DB.withControl(async (sql) => {
+        const row = await templateRow(sql, template);
+        await sql.unsafe(`update ${SCHEMA}.templates set state='invalid',details=details || $2::jsonb where key=$1`, [row.key, { invalidated: { reason: String(reason).slice(0, 500), at: (/* @__PURE__ */ new Date()).toISOString() } }]);
+        return { version: 1, template: row.key, state: "invalid", existingLeasesPreserved: true };
+      });
+    }
+    function validateSettings(settings = {}) {
+      for (const [name, value] of Object.entries(settings)) if (!/^[a-z_][a-z0-9_.]*$/.test(name) || !["string", "number", "boolean"].includes(typeof value) || String(value).length > 4e3) throw new Error(`invalid clone setting ${name}`);
+      return settings;
+    }
+    function leaseResult(row, extra = {}) {
+      return { version: 1, lease: row.id, template: row.details.template, databases: row.details.databases, expiresAt: row.expires_at, timings: row.details.timings, ...extra, cleanup: () => release(row.id) };
+    }
+    async function clone({ template, runId, ttlMs, settings = {}, idempotencyKey, signal } = {}) {
+      const ttl = duration(ttlMs), started = Date.now();
+      validateSettings(settings);
+      if (idempotencyKey && (typeof idempotencyKey !== "string" || idempotencyKey.length > 200)) throw new Error("idempotencyKey must be at most 200 characters");
+      return DB.withControl(async (sql, identity) => {
+        signal?.throwIfAborted();
+        const row = await templateRow(sql, template), failures = await verifyOwned(sql, identity, row);
+        if (failures.length) throw new Error(`cannot clone template: ${stable(failures)}`);
+        const requestHash = hash({ template, runId, settings, ttlMs: ttl });
+        if (idempotencyKey) {
+          const [prior] = await sql.unsafe(`select * from ${SCHEMA}.leases where details->>'idempotencyKey'=$1 order by created_at desc limit 1`, [idempotencyKey]);
+          if (prior) {
+            if (prior.details.requestHash !== requestHash) throw new Error("idempotency key reused for different clone inputs");
+            if (prior.state !== "active" || new Date(prior.expires_at) <= /* @__PURE__ */ new Date()) throw new Error("idempotent clone lease is no longer active");
+            return leaseResult(prior, { reused: true });
+          }
+        }
+        const lease2 = crypto.randomBytes(16).toString("hex"), expires = new Date(Date.now() + ttl);
+        const role = { name: `dt_app_${crypto.randomBytes(12).toString("hex")}`, password: crypto.randomBytes(24).toString("base64url") };
+        const details = { template: row.key, runId: String(runId || "").slice(0, 200), idempotencyKey, requestHash, role, databases: {}, settings, timings: {} };
+        await sql.unsafe(`insert into ${SCHEMA}.leases (id,state,expires_at,details) values ($1,'creating',$2,$3)`, [lease2, expires, details]);
+        try {
+          await sql.unsafe(`create role ${qi(role.name)} login password ${ql(role.password)} noinherit nocreatedb nocreaterole`);
+          await sql.unsafe(`comment on role ${qi(role.name)} is ${ql(`dt-testdb-role:v1:${identity.cluster_id}:${lease2}`)}`);
+          for (const [logical, info] of Object.entries(row.details.databases)) {
+            signal?.throwIfAborted();
+            const resource = await DB.ownedCreate(sql, identity, { kind: "clone", templateKey: row.key, lease: lease2, template: info.database, expiresAt: expires, details: { logical } });
+            details.databases[logical] = DB.credentials(resource.name, { user: role.name, password: role.password });
+            await sql.unsafe(`update ${SCHEMA}.leases set details=$2 where id=$1`, [lease2, details]);
+            for (const [name, value] of Object.entries(settings)) await sql.unsafe(`alter database ${qi(resource.name)} set ${qi(name)} to ${ql(value)}`);
+            await sql.unsafe(`grant connect,temporary on database ${qi(resource.name)} to ${qi(role.name)}`);
+            const app = DB.connect(resource.name);
+            try {
+              for (const s of await app`select nspname from pg_namespace where nspname not in ('pg_catalog','information_schema') and nspname not like 'pg_toast%' and nspname not like 'pg_temp%'`) {
+                await app.unsafe(`grant usage on schema ${qi(s.nspname)} to ${qi(role.name)}`);
+                await app.unsafe(`grant all privileges on all tables in schema ${qi(s.nspname)} to ${qi(role.name)}`);
+                await app.unsafe(`grant all privileges on all sequences in schema ${qi(s.nspname)} to ${qi(role.name)}`);
+                await app.unsafe(`grant execute on all functions in schema ${qi(s.nspname)} to ${qi(role.name)}`);
+              }
+            } finally {
+              await app.end({ timeout: 2 });
+            }
+          }
+          signal?.throwIfAborted();
+          details.timings.cloneMs = Date.now() - started;
+          await sql.unsafe(`update ${SCHEMA}.leases set state='active',details=$2 where id=$1`, [lease2, details]);
+          await sql.unsafe(`update ${SCHEMA}.templates set used_at=now() where key=$1`, [row.key]);
+          return leaseResult({ id: lease2, details, expires_at: expires }, { reused: false });
+        } catch (e) {
+          const cleanupErrors = await releaseOwned(sql, identity, lease2);
+          e.lease = lease2;
+          e.cleanupErrors = cleanupErrors;
+          throw e;
+        }
+      });
+    }
+    async function releaseOwned(sql, identity, lease2) {
+      const [row] = await sql.unsafe(`select * from ${SCHEMA}.leases where id=$1`, [leaseId(lease2)]);
+      if (!row) throw new Error("lease not found");
+      if (row.state === "released") return [];
+      const errors = [];
+      for (const resource of await sql.unsafe(`select name from ${SCHEMA}.resources where lease=$1 order by created_at desc`, [lease2])) try {
+        await DB.ownedDrop(sql, identity, resource.name);
+      } catch (e) {
+        errors.push(`${resource.name}: ${e.message}`);
+      }
+      if (!errors.length && row.details.role) {
+        const role = row.details.role.name;
+        const [exists] = await sql`select shobj_description(oid,'pg_authid') as comment from pg_roles where rolname=${role}`;
+        if (exists) {
+          if (exists.comment !== `dt-testdb-role:v1:${identity.cluster_id}:${lease2}`) errors.push("role ownership mismatch; role was not deleted");
+          else try {
+            await sql.unsafe(`drop role ${qi(role)}`);
+          } catch (e) {
+            errors.push(`role ${role}: ${e.message}`);
+          }
+        }
+      }
+      await sql.unsafe(`update ${SCHEMA}.leases set state=$2,details=details || $3::jsonb where id=$1`, [lease2, errors.length ? "cleanup-failed" : "released", { cleanupErrors: errors }]);
+      return errors;
+    }
+    async function release(lease2) {
+      return DB.withControl(async (sql, identity) => {
+        const cleanupErrors = await releaseOwned(sql, identity, lease2);
+        if (cleanupErrors.length) {
+          const e = new Error(`lease cleanup failed: ${cleanupErrors.join("; ")}`);
+          e.cleanupErrors = cleanupErrors;
+          throw e;
+        }
+        return { version: 1, lease: lease2, released: true };
+      });
+    }
+    async function renew(lease2, ttlMs) {
+      const ttl = duration(ttlMs);
+      return DB.withControl(async (sql) => {
+        const expires = new Date(Date.now() + ttl);
+        const rows = await sql.unsafe(`update ${SCHEMA}.leases set expires_at=$2 where id=$1 and state='active' returning id`, [leaseId(lease2), expires]);
+        if (!rows.length) throw new Error("active lease not found");
+        await sql.unsafe(`update ${SCHEMA}.resources set expires_at=$2 where lease=$1`, [lease2, expires]);
+        return { version: 1, lease: lease2, expiresAt: expires };
+      });
+    }
+    async function reset(lease2, { ttlMs, signal } = {}) {
+      const current = await DB.withControl(async (sql) => {
+        const [row] = await sql.unsafe(`select * from ${SCHEMA}.leases where id=$1`, [leaseId(lease2)]);
+        if (!row || row.state !== "active" || new Date(row.expires_at) <= /* @__PURE__ */ new Date()) throw new Error("active unexpired lease required");
+        return row;
+      });
+      const next = await clone({ template: current.details.template, runId: current.details.runId, settings: current.details.settings, ttlMs, signal });
+      try {
+        await release(lease2);
+        return { ...next, previousLease: lease2, reset: "fresh-private-clone" };
+      } catch (e) {
+        try {
+          await next.cleanup();
+        } catch (cleanup) {
+          e.cleanupError = cleanup.message;
+        }
+        throw e;
+      }
+    }
+    async function gc({ templateTtlMs = 864e5, maxBytes, maxTemplates, dryRun = false } = {}) {
+      if (!Number.isInteger(templateTtlMs) || templateTtlMs < 0) throw new Error("templateTtlMs must be a nonnegative integer");
+      if (maxBytes != null && (!Number.isSafeInteger(maxBytes) || maxBytes < 0)) throw new Error("maxBytes must be a nonnegative safe integer");
+      if (maxTemplates != null && (!Number.isInteger(maxTemplates) || maxTemplates < 0)) throw new Error("maxTemplates must be a nonnegative integer");
+      return DB.withControl(async (sql, identity) => {
+        const result = { version: 1, dryRun, leases: [], templates: [], resources: [], failures: [], retained: [] };
+        for (const lease2 of await sql.unsafe(`select id from ${SCHEMA}.leases where state <> 'released' and expires_at <= now()`)) {
+          result.leases.push(lease2.id);
+          if (!dryRun) {
+            const errors = await releaseOwned(sql, identity, lease2.id);
+            result.failures.push(...errors.map((error) => ({ lease: lease2.id, error })));
+          }
+        }
+        const live = await sql.unsafe(`select distinct details->>'template' as key from ${SCHEMA}.leases where state <> 'released' and ${dryRun ? "expires_at > now()" : "true"}`);
+        const active = new Set(live.map((x) => x.key));
+        const templates = await sql.unsafe(`select * from ${SCHEMA}.templates order by used_at asc`);
+        let count = templates.length, bytes = templates.reduce((sum, t) => sum + Object.values(t.details.databases || {}).reduce((n, d) => n + Number(d.bytes || 0), 0), 0);
+        for (const template of templates) {
+          const candidate = template.state !== "ready" || Date.now() - new Date(template.used_at).getTime() >= templateTtlMs || maxTemplates != null && count > maxTemplates || maxBytes != null && bytes > maxBytes;
+          if (!candidate) continue;
+          if (active.has(template.key) || template.details.pinned) {
+            result.retained.push({ template: template.key, reason: active.has(template.key) ? "active-or-unreleased-lease" : "pinned" });
+            continue;
+          }
+          result.templates.push(template.key);
+          let failed = false;
+          if (!dryRun) for (const resource of await sql.unsafe(`select name from ${SCHEMA}.resources where template_key=$1 and kind='template'`, [template.key])) try {
+            await DB.ownedDrop(sql, identity, resource.name);
+          } catch (e) {
+            failed = true;
+            result.failures.push({ database: resource.name, error: e.message });
+          }
+          if (!failed) {
+            if (!dryRun) await sql.unsafe(`delete from ${SCHEMA}.templates where key=$1`, [template.key]);
+            count--;
+            bytes -= Object.values(template.details.databases || {}).reduce((n, d) => n + Number(d.bytes || 0), 0);
+          }
+        }
+        for (const resource of await sql.unsafe(`select name from ${SCHEMA}.resources where kind in ('test','verification') and expires_at <= now()`)) {
+          result.resources.push(resource.name);
+          if (!dryRun) try {
+            await DB.ownedDrop(sql, identity, resource.name);
+          } catch (e) {
+            result.failures.push({ database: resource.name, error: e.message });
+          }
+        }
+        result.remainingTemplateBytes = String(bytes);
+        result.remainingTemplates = count;
+        result.budgetSatisfied = (maxBytes == null || bytes <= maxBytes) && (maxTemplates == null || count <= maxTemplates);
+        return result;
+      });
+    }
+    function plan(options = {}) {
+      const spec = inputs(options);
+      return { version: 1, protocol: "dt.postgres.templates/v1", inputHash: hash(spec), mode: spec.mode, base: spec.base, databases: Object.entries(spec.databases).map(([name, db]) => ({ name, statements: db.statements.length, sqlBytes: db.statements.reduce((n, s) => n + Buffer.byteLength(s), 0) })), compatibility: spec.compatibility, requiredCapabilities: ["initialized-scratch-control-database", "CREATEDB", "CREATEROLE for private clones"], verification: "hash-verified SQL; source snapshot fidelity is limited to the captured/exported schema", next: "testdb_template_build" };
+    }
+    function capabilities() {
+      return { version: 1, protocol: "dt.postgres.templates/v1", backend: "postgresql-native-templates", portableInput: "hashed-sql-statements-v1", concurrency: { copies: 1, coordination: "PostgreSQL session advisory lock" }, operations: ["plan", "build", "inspect", "list", "verify", "invalidate", "pin", "clone", "lease", "renew", "reset", "release", "gc"], reset: "fresh-private-clone; reconnect application", ownership: "registry cluster UUID plus resource UUID in database comment plus database owner", migrationModes: ["snapshot", "migrations-empty", "upgrade"], unsupportedFidelity: ["row-level-security policies", "security-definer ownership", "foreign tables"], jsonContract: "docs/contracts/postgres-template-v1.schema.json" };
+    }
+    async function lease(lease2, { bindings = false } = {}) {
+      return DB.withControl(async (sql) => {
+        const [row] = await sql.unsafe(`select * from ${SCHEMA}.leases where id=$1`, [leaseId(lease2)]);
+        if (!row) throw new Error("lease not found");
+        if (bindings) {
+          if (row.state !== "active" || new Date(row.expires_at) <= /* @__PURE__ */ new Date()) throw new Error("active unexpired lease required for bindings");
+          return leaseResult(row);
+        }
+        return { version: 1, lease: row.id, state: row.state, expiresAt: row.expires_at, template: row.details.template, runId: row.details.runId, databases: Object.fromEntries(Object.entries(row.details.databases || {}).map(([name, db]) => [name, { database: db.database, endpoint: db.endpoint, jdbcUrl: db.jdbcUrl, user: db.user }])), cleanupErrors: row.details.cleanupErrors || [] };
+      });
+    }
+    async function pin(template, pinned) {
+      if (typeof pinned !== "boolean") throw new Error("pinned must be boolean");
+      return DB.withControl(async (sql) => {
+        const row = await templateRow(sql, template);
+        await sql.unsafe(`update ${SCHEMA}.templates set details=details || $2::jsonb where key=$1`, [row.key, { pinned }]);
+        return { version: 1, template: row.key, pinned };
+      });
+    }
+    module2.exports = { pin, lease, plan, capabilities, inputs, build, inspect, list, verify, invalidate, clone, release, renew, reset, gc, snapshot, stable, hash, validateSettings };
   }
 });
 
@@ -8290,7 +8924,7 @@ var require_reproduction = __commonJS({
     function resourcePath(workspace, relative) {
       const W = require_workspace(), m = W.checkId(workspace), full = W.resolvePath(m, relative).full;
       const rel = path2.relative(m.path, full).split(path2.sep).join("/");
-      if (!/(^|\/)src\/test\/resources\/dt-fixtures\/[\w.-]+$/.test(rel)) throw new Error("fixture path must be [module/]src/test/resources/dt-fixtures/<name>");
+      if (!/(^|\/)src\/test\/resources\/(?:dt-fixtures\/[\w.-]+|dt-scenarios\/[\w.-]+\/fixture)$/.test(rel)) throw new Error("fixture path must be [module/]src/test/resources/dt-fixtures/<name> or dt-scenarios/<name>/fixture");
       let dir = full;
       while (dir !== m.path) {
         if (fs2.existsSync(dir) && fs2.lstatSync(dir).isSymbolicLink()) throw new Error("fixture paths cannot contain symlinks");
@@ -8365,14 +8999,20 @@ Complete: ${capture2.complete}; gaps: ${capture2.gaps.length}. See manifest.json
       }
       return m;
     }
-    async function replay(workspace, directory, { allowIncomplete = false, runId = crypto.randomBytes(10).toString("hex") } = {}) {
+    async function replay(workspace, directory, { allowIncomplete = false, runId = crypto.randomBytes(10).toString("hex"), template = false, ttlMs, settings, signal } = {}) {
       const m = loadFixture(workspace, directory);
       if (!m.complete && !allowIncomplete) throw new Error("fixture is incomplete: inspect gaps, or set allow_incomplete=true");
+      if (template) {
+        await require_testdb().initialize({ label: "dt fixture replay scratch" });
+        const T = require_testdb_templates(), base = await T.build({ workspace, directory, signal });
+        const cloned = await T.clone({ template: base.id, runId, ttlMs, settings, signal });
+        return { ...cloned, topics: m.topics, timings: { ...base.timings, ...cloned.timings, templateReused: base.reused } };
+      }
       const databases = {};
       try {
         for (const [name, db] of Object.entries(m.databases)) {
           const s = db.statements;
-          const created = await require_testdb().create(`${runId}${hash(name).slice(0, 8)}`, [...s.schema, ...s.data, ...s.constraints]);
+          const created = await require_testdb().create(`${runId}${hash(name).slice(0, 8)}`, [...s.schema, ...s.data, ...s.constraints], { signal });
           databases[name] = created;
           if (created.errors.length) throw new Error(`fixture ${name}: ${created.errors.map((e) => e.error).join("; ")}`);
         }
@@ -8380,7 +9020,8 @@ Complete: ${capture2.complete}; gaps: ${capture2.gaps.length}. See manifest.json
           await Promise.all(Object.values(databases).map((db) => require_testdb().drop(db.database)));
         } };
       } catch (e) {
-        await Promise.allSettled(Object.values(databases).map((db) => require_testdb().drop(db.database)));
+        const cleanup = await Promise.allSettled(Object.values(databases).map((db) => require_testdb().drop(db.database)));
+        e.cleanupErrors = cleanup.filter((x) => x.status === "rejected").map((x) => x.reason.message);
         throw e;
       }
     }
@@ -8399,6 +9040,1427 @@ Complete: ${capture2.complete}; gaps: ${capture2.gaps.length}. See manifest.json
       return r;
     }
     module2.exports = { plan, capture, validate, redact, literal, statements, exportFixture, loadFixture, replay, resourcePath, save, load, valuesAt };
+  }
+});
+
+// lib/scenario.js
+var require_scenario = __commonJS({
+  "lib/scenario.js"(exports2, module2) {
+    var crypto = require("crypto");
+    var { isDeepStrictEqual } = require("util");
+    var fs2 = require("fs");
+    var path2 = require("path");
+    function canonical(v, seen = /* @__PURE__ */ new Set()) {
+      if (typeof v === "bigint") return String(v);
+      if (!v || typeof v !== "object") return v;
+      if (v instanceof Date) return v.toISOString();
+      if (seen.has(v)) throw new Error("scenario manifests must be acyclic JSON");
+      const next = new Set(seen);
+      next.add(v);
+      return Array.isArray(v) ? v.map((x) => canonical(x, next)) : Object.fromEntries(Object.keys(v).sort().filter((k) => v[k] !== void 0).map((k) => [k, canonical(v[k], next)]));
+    }
+    var json = (v) => JSON.stringify(canonical(v));
+    var copy = (v) => JSON.parse(json(v));
+    var id = (kind, value) => `${kind}:${crypto.createHash("sha256").update(json(value)).digest("hex").slice(0, 20)}`;
+    var array = (v) => Array.isArray(v) ? v : [];
+    var strings = (v) => [].concat(v || []).filter((x) => typeof x === "string");
+    var unique = (values) => [...new Map(values.map((v) => [json(v), v])).values()].sort((a, b) => json(a).localeCompare(json(b)));
+    var unresolved = (s) => !s || /\$\{|^\?|^\(|<unresolved|\bunknown\b/i.test(String(s));
+    var route = (s) => String(s || "").replace(/\{[^}]*\}/g, "{}");
+    var handler = (s) => String(s || "").includes("#") ? String(s) : String(s || "").replace(/\.([^.()]+)$/, "#$1");
+    var WRITE = /^(write|insert|update|delete|save|merge|persist|remove)$/i;
+    function provenance(source, action, item = {}) {
+      return copy({ source, ...action ? { action } : {}, ...item.file ? { file: item.file, line: item.line ?? null } : {}, ...item.at ? { at: item.at } : {}, ...item.via ? { via: item.via } : {}, ...item.source ? { library: item.source } : {} });
+    }
+    function externalKind(item) {
+      const s = `${item.kind || ""} ${item.type || ""} ${item.why || ""}`;
+      if (/cache|redis/i.test(s)) return "cache";
+      if (/queue|rabbit|jms|sqs|amqp/i.test(s)) return "queue";
+      if (/file|sftp|filesystem|FileStore|BlobStore|S3Client/i.test(s)) return "file";
+      if (/kafka|StreamBridge/i.test(s)) return "kafka";
+      if (/http|feign|RestTemplate|WebClient|RestClient|HttpClient/i.test(s)) return "http";
+      if (/\bes\b|elasticsearch/i.test(s)) return "es";
+      if (/\bdb\b|database|Jdbc|Repository|EntityManager|DataSource/i.test(s)) return "pg";
+      return "unknown";
+    }
+    function inventory({ service, passport, env, entry } = {}) {
+      const p = passport || service && require_passport().load(service);
+      if (!p || typeof p !== "object") throw new Error(`no cached passport for ${service || "(service required)"}`);
+      service ||= p.service;
+      if (!service) throw new Error("scenario inventory needs service or passport.service");
+      env ||= p.env || require_config().envNames()[0];
+      const gaps = [], states = /* @__PURE__ */ new Map(), effects = /* @__PURE__ */ new Map(), entries = /* @__PURE__ */ new Map(), methodShapes = /* @__PURE__ */ new Map(), methodIds = /* @__PURE__ */ new Set();
+      const configKeys = new Set(Object.keys(p.config?.merged || {}));
+      let cats = [], catalogError;
+      try {
+        cats = require_pg().loadAll(env);
+      } catch (e) {
+        catalogError = e.message;
+      }
+      const datasources = array(p.db?.datasources);
+      const wanted = new Set(datasources.map((d) => d.db).filter(Boolean));
+      const allowed = cats.filter((c) => !wanted.size || wanted.has(c.db) || wanted.has(c.database));
+      function resolveDb(name, item = {}, fn = false) {
+        const hinted = item.db || datasources.find((d) => item.datasource && (d.key === item.datasource || d.name === item.datasource))?.db;
+        const candidates = [];
+        for (const c of hinted ? cats.filter((c2) => c2.db === hinted || c2.database === hinted) : allowed) {
+          for (const t of fn ? array(c.functions) : array(c.tables)) {
+            const full = `${t.schema}.${t.name}`;
+            if (full.toLowerCase() === String(name).toLowerCase() || !String(name).includes(".") && t.name?.toLowerCase() === String(name).toLowerCase()) candidates.push({ db: c.db, [fn ? "function" : "table"]: full });
+          }
+        }
+        const matches = unique(candidates);
+        return { target: matches.length === 1 ? matches[0] : { db: hinted || (wanted.size === 1 ? [...wanted][0] : null), [fn ? "function" : "table"]: name || null }, resolution: { status: matches.length === 1 ? "resolved" : matches.length ? "ambiguous" : "unknown", ...matches.length ? { candidates: matches } : {} } };
+      }
+      const addState = (kind, target, action, evidence, resolution = { status: "resolved" }, required = true) => {
+        const sid = id("state", [service, kind, target]);
+        let s = states.get(sid);
+        if (!s) {
+          s = { id: sid, kind, target, required, actions: [], provenance: [], resolution };
+          states.set(sid, s);
+        }
+        s.required ||= required;
+        if (action && !s.actions.includes(action.id)) {
+          s.actions.push(action.id);
+          action.dependencies.push(sid);
+        }
+        s.provenance = unique([...s.provenance, evidence]);
+        if (resolution.status !== "resolved" && !gaps.some((g) => g.stateId === sid)) gaps.push({ id: id("gap", [sid, resolution.status]), kind: resolution.status === "ambiguous" ? "ambiguous-dependency" : "unresolved-dependency", stateId: sid, detail: `Resolve ${kind} dependency explicitly; static evidence does not identify its complete state.`, ...resolution.candidates ? { candidates: resolution.candidates } : {} });
+        return s;
+      };
+      const addEffect = (kind, target, action, evidence, direction = "write") => {
+        const eid = id("expectation", [service, action?.id || null, kind, target, direction]);
+        let e = effects.get(eid);
+        if (!e) {
+          e = { id: eid, kind, target, action: action?.id || null, required: true, direction, valueKnown: false, provenance: [] };
+          effects.set(eid, e);
+        }
+        e.provenance = unique([...e.provenance, evidence]);
+        if (action && !action.expectations.includes(eid)) action.expectations.push(eid);
+        return e;
+      };
+      const addAction = (kind, target, h, item, source) => {
+        target = kind === "http" ? route(target) : String(target);
+        const aid = id("action", [service, kind, target]);
+        let a = entries.get(aid);
+        if (!a) {
+          a = { id: aid, kind, target, entry: target, handler: h || null, handlers: [], required: true, input: { known: false, ...item?.inputSchema ? { schema: item.inputSchema, known: true } : {}, ...item?.inputType || item?.payloadType ? { type: item.inputType || item.payloadType } : {}, hints: ["Supply scenario-specific values; TestData factories provide type-valid objects, not expected behavior."] }, dependencies: [], expectations: [], provenance: [] };
+          entries.set(aid, a);
+        }
+        if (item?.inputSchema) {
+          a.input.schema = item.inputSchema;
+          a.input.known = true;
+        }
+        if (item?.inputType || item?.payloadType) a.input.type = item.inputType || item.payloadType;
+        if (item?.pattern) a.pattern = true;
+        const shapes = methodShapes.get(handler(h));
+        if (shapes?.length === 1) {
+          a.input.parameters = shapes[0].parameters;
+          a.returnType = shapes[0].returnType;
+        } else if (shapes?.length) a.input.overloads = shapes;
+        if (h) {
+          const same = a.handlers.find((old) => handler(old) === handler(h) || handler(old).endsWith(`.${handler(h)}`) || handler(h).endsWith(`.${handler(old)}`));
+          if (!same) a.handlers.push(h);
+          else if (h.length > same.length) {
+            a.handlers[a.handlers.indexOf(same)] = h;
+            a.handler = h;
+          }
+        }
+        a.provenance = unique([...a.provenance, provenance(source, aid, item)]);
+        return a;
+      };
+      const summaryFlows = array(p.flows);
+      if (catalogError) addState("unknown", { type: "catalog-analysis", detail: catalogError }, null, { source: "cached-catalog" }, { status: "unknown" });
+      let flows = summaryFlows;
+      const keys = [typeof p.codeIndex === "string" ? p.codeIndex : null, ...array(p.libraries).map((l) => l.index)].filter(Boolean);
+      if (keys.length) try {
+        const CI = require_codeindex();
+        if (keys.every((k) => CI.load(k))) {
+          for (const key of keys) for (const c of CI.load(key).graph_().classes || []) if (!c.test) for (const m of c.methods || []) {
+            methodIds.add(`${c.id}#${m.name}`);
+            const shape = { parameters: m.params || [], returnType: m.ret || null };
+            for (const name of [`${c.id}#${m.name}`, `${c.name}#${m.name}`]) methodShapes.set(name, unique([...methodShapes.get(name) || [], shape]));
+          }
+          const F = require_flows();
+          const repo = p.repo?.path && path2.resolve(require_config().ROOT, p.repo.path);
+          const config = repo && fs2.existsSync(repo) ? F.serviceConfig(repo) : {};
+          for (const key of Object.keys(config)) configKeys.add(key);
+          const detailed = F.flows(keys, { config });
+          if (detailed.length) flows = detailed;
+        }
+      } catch (e) {
+        addState("unknown", { type: "flow-analysis", detail: e.message }, null, { source: "code-index" }, { status: "unknown" });
+      }
+      for (const f of flows) if (f?.entry) addAction(f.kind || "method", f.entry, f.method || f.handler, f, "flow");
+      const effective = p.effective || {};
+      for (const e of [...array(effective.endpoints), ...array(p.endpoints)]) addAction("http", `${e.method || "ANY"} ${e.path || "?"}`, e.handler, e, "passport-endpoint");
+      for (const k of [...array(effective.consumes), ...array(p.kafka?.consumes)]) addAction(k.pattern ? "kafka" : "kafka", `kafka ${k.topic || "?"}`, k.handler, k, "passport-listener");
+      for (const f of [...array(p.scheduled), ...array(p.events), ...array(p.methods)]) if (f.entry || f.handler || f.method) addAction(f.kind || (array(p.scheduled).includes(f) ? "scheduled" : "method"), f.entry || f.handler || f.method, f.handler || f.method, f, "passport-action");
+      const selectors = entry == null ? [] : strings(entry);
+      let selected = [...entries.values()].filter((a) => !selectors.length || selectors.some((s) => s === a.id || route(s) === a.target || handler(a.handler).endsWith(handler(s))));
+      if (selectors.length && !selected.length && keys.length) try {
+        const F = require_flows();
+        for (const s of selectors) if (s.includes("#")) {
+          const matches = [...methodIds].filter((name) => name === s || name.endsWith(`.${s}`));
+          if (matches.length === 1) {
+            const f = F.from(keys, matches[0]);
+            flows = [...flows, f];
+            selected.push(addAction("method", f.entry, f.method, f, "code-method"));
+          }
+        }
+      } catch {
+      }
+      if (!selected.length) {
+        const unknown = addState("unknown", { type: "entrypoint-analysis", entry: entry || null, detail: p.flows?.error || "No matching cached entrypoints; provide method/endpoint evidence." }, null, { source: "passport" }, { status: "unknown" });
+        gaps.push({ id: id("gap", [unknown.id, "no-actions"]), kind: "no-actions", stateId: unknown.id, detail: "No selected action can be invoked without an explicit entrypoint binding." });
+      }
+      for (const selector of selectors) if (!selected.some((a) => selector === a.id || route(selector) === a.target || handler(a.handler).endsWith(handler(selector)))) addState("unknown", { type: "unmatched-action-selection", entry: selector }, null, { source: "action-selection" }, { status: "unknown" });
+      const selectedIds = new Set(selected.map((a) => a.id));
+      const actionFor = (f) => selected.find((a) => a.kind === (f.kind || "method") && a.target === (f.kind === "http" ? route(f.entry) : f.entry));
+      const found = /* @__PURE__ */ new Set();
+      function pg(item, action, source) {
+        const name = item.table || item.function || item.name;
+        const fn = !!item.function || item.access === "function" || source === "passport-function";
+        const resolved = resolveDb(name, item, fn), evidence = provenance(source, action?.id, item);
+        const key = json(["pg", fn ? "function" : item.access, resolved.target]);
+        found.add(key);
+        addState("pg", resolved.target, action, evidence, resolved.resolution, !/^(owner|entity|repository)$/.test(item.access || ""));
+        if (WRITE.test(item.access || "") || fn) addEffect("pg", resolved.target, action, evidence, fn ? "function-effects-unknown" : item.access);
+      }
+      function outgoing(item, action, source, kind) {
+        const evidence = provenance(source, action?.id, item);
+        if (kind === "kafka") {
+          const target = { topic: item.topic || null };
+          found.add(json(["kafka-out", item.topic]));
+          addEffect("kafka", target, action, evidence, "produce");
+          if (unresolved(item.topic)) addState("unknown", { type: "kafka-topic", topic: item.topic || null }, action, evidence, { status: "unknown" });
+        } else if (kind === "http") {
+          const call = item.call?.match(/^([A-Z]+)\s+(.+)$/);
+          const target = { method: item.method || call?.[1] || null, path: item.path || call?.[2] || item.url || item.target || null, ...item.client ? { client: item.client } : {} };
+          found.add(json(["http", target]));
+          addState("http", target, action, evidence, { status: unresolved(target.path) ? "unknown" : "resolved" });
+          addEffect("http", target, action, evidence, "call");
+        } else {
+          const target = { index: item.index || item.name || null };
+          found.add(json(["es", target.index]));
+          addState("es", target, action, evidence, { status: unresolved(target.index) ? "unknown" : "resolved" });
+          const access = item.access || item.operation;
+          if (!access || WRITE.test(access)) addEffect("es", target, action, evidence, access || "effects-unknown");
+        }
+      }
+      function mock(item, action, source) {
+        if (typeof item === "string") {
+          const split = item.indexOf(": "), decl = split < 0 ? item : item.slice(0, split), last = decl.lastIndexOf(" ");
+          item = { type: last < 0 ? decl : decl.slice(0, last), name: last < 0 ? null : decl.slice(last + 1), why: split < 0 ? null : item.slice(split + 2) };
+        }
+        const kind = externalKind(item), target = { type: item.type || item.name || "unknown", ...item.name ? { name: item.name } : {}, ...item.call ? { call: item.call } : {} };
+        addState(kind, target, action, provenance(source, action?.id, item), { status: "unknown" });
+        if (item.call && /^(send|publish|put|set|write|save|delete|remove|update|post|exchange|execute)/i.test(item.call)) addEffect(kind, target, action, provenance(source, action?.id, item), item.call);
+      }
+      for (const a of selected) {
+        if (a.handlers.length > 1 || a.input.overloads?.length > 1) addState("unknown", { type: "ambiguous-handler", entry: a.target, handlers: a.handlers, ...a.input.overloads ? { overloads: a.input.overloads } : {} }, a, { source: "entrypoint-analysis" }, { status: "ambiguous" });
+        if (a.kind === "http") {
+          addEffect("status", a.target, a, a.provenance[0], "respond");
+          addEffect("return", a.target, a, a.provenance[0], "respond");
+        }
+        if (a.kind === "kafka" || a.kind === "queue") {
+          const topic = a.target.replace(/^(?:kafka|queue)\s+/, "");
+          addState(a.kind, { topic, direction: "inbound", ...a.pattern ? { pattern: true } : {} }, a, a.provenance[0], { status: a.pattern || unresolved(topic) ? "unknown" : "resolved" });
+        }
+      }
+      for (const f of flows) {
+        const a = actionFor(f);
+        if (!a || !selectedIds.has(a.id)) continue;
+        for (const t of array(f.out?.tables)) pg(t, a, "flow-table");
+        for (const fn of array(f.out?.functions)) pg({ ...fn, access: "function" }, a, "flow-function");
+        for (const k of array(f.out?.produces)) outgoing(k, a, "flow-topic", "kafka");
+        for (const h of array(f.out?.http)) outgoing(h, a, "flow-http", "http");
+        for (const es of array(f.out?.es)) outgoing(es, a, "flow-es", "es");
+        for (const x of array(f.out?.external)) mock(x, a, "flow-external");
+        for (const x of array(f.mocks)) mock(x, a, "flow-mock");
+        for (const prop of array(f.properties)) {
+          const k = typeof prop === "string" ? prop : prop.key;
+          addState("config", { key: k || null }, a, provenance("flow-property", a.id, typeof prop === "string" ? {} : prop), { status: unresolved(k) ? "unknown" : "resolved" });
+        }
+      }
+      for (const t of [...array(effective.tables), ...array(p.db?.tables)]) if (!found.has(json(["pg", t.access === "function" ? "function" : t.access, resolveDb(t.table, t, t.access === "function").target]))) pg(t, null, "passport-table");
+      for (const fn of [...array(effective.dbCalls), ...array(p.db?.calls)]) if (!found.has(json(["pg", "function", resolveDb(fn.name || fn.function, fn, true).target]))) pg({ ...fn, function: fn.function || fn.name }, null, "passport-function");
+      for (const k of [...array(effective.produces), ...array(p.kafka?.produces)]) if (!found.has(json(["kafka-out", k.topic]))) outgoing(k, null, "passport-topic", "kafka");
+      for (const h of [...array(effective.calls), ...array(p.feign), ...array(p.http)]) {
+        const target = { method: h.method || null, path: h.path || h.url || h.target || null, ...h.client ? { client: h.client } : {} };
+        if (!found.has(json(["http", target]))) outgoing(h, null, "passport-http", "http");
+      }
+      for (const es of array(p.es)) if (!found.has(json(["es", es.index]))) outgoing(es, null, "passport-es", "es");
+      for (const prop of [...configKeys, ...strings(p.config?.unresolved), ...array(p.config?.properties).map((x) => typeof x === "string" ? x : x.key), ...datasources.map((d) => d.key).filter(Boolean)]) addState("config", { key: prop }, null, { source: "passport-config" }, { status: unresolved(prop) ? "unknown" : "resolved" });
+      for (const l of array(p.libraries)) if (l.error || l.found === false) addState("unknown", { type: "unread-library", library: l.artifactId || l.repo || null, detail: l.error || "Library was not inspected." }, null, { source: "passport-library" }, { status: "unknown" });
+      if (!flows.length || !Array.isArray(p.flows) && !keys.length) addState("unknown", { type: "call-graph-coverage", detail: p.flows?.error || "No cached transitive flow graph." }, null, { source: "passport" }, { status: "unknown" });
+      for (const s of states.values()) if (!s.actions.length && s.required && s.resolution.status === "resolved") gaps.push({ id: id("gap", [s.id, "attribution"]), kind: "unattributed-dependency", stateId: s.id, detail: "Dependency is present in the passport but is not attributed to a selected action." });
+      for (const e of effects.values()) if (!e.action) {
+        const s = addState("unknown", { type: "effect-attribution", expectationId: e.id, kind: e.kind, target: e.target }, null, { source: "passport-effect" }, { status: "unknown" });
+        gaps.push({ id: id("gap", [e.id, "attribution"]), kind: "unattributed-effect", stateId: s.id, expectationId: e.id, detail: "Bind the expected behavior explicitly; this effect is not attributed to a selected action." });
+      }
+      selected = selected.map((a) => ({ ...a, handlers: a.handlers.sort(), dependencies: [...new Set(a.dependencies)].sort(), expectations: a.expectations.sort() })).sort((a, b) => a.id.localeCompare(b.id));
+      return copy({ version: 1, service, env, source: { passportSha: p.repo?.sha || null, passportBuiltAt: p.builtAt || null }, states: [...states.values()].map((s) => ({ ...s, actions: s.actions.sort() })).sort((a, b) => a.id.localeCompare(b.id)), actions: selected, expectations: [...effects.values()].sort((a, b) => a.id.localeCompare(b.id)), gaps: unique(gaps), complete: false, coverage: { static: true, runtimeVerified: false, exhaustive: false, note: "Static analysis records observed dependencies; reflection, runtime branches and unresolved external behavior still require explicit evidence." } });
+    }
+    function actions(inv, { bindings = {} } = {}) {
+      const gaps = [];
+      const known = new Set(array(inv.actions).map((a) => a.id));
+      for (const key of Object.keys(bindings)) if (!known.has(key)) gaps.push({ kind: "unknown-action-binding", id: key });
+      const bound = array(inv.actions).map((a) => {
+        const present = Object.hasOwn(bindings, a.id);
+        if (a.required !== false && !present) gaps.push({ kind: "unbound-action", actionId: a.id, target: a.target });
+        return { ...a, bound: present, ...present ? { binding: copy(bindings[a.id]) } : {} };
+      });
+      return copy({ version: 1, service: inv.service, env: inv.env, actions: bound, gaps, complete: !gaps.length, ready: !gaps.length, coverage: inv.coverage });
+    }
+    var OPS = /* @__PURE__ */ new Set(["exact", "subset", "count", "forbidden", "ordered"]);
+    function descriptorError(match) {
+      if (!match || !OPS.has(match.op)) return "match.op must be exact, subset, count, forbidden or ordered";
+      if (["exact", "subset", "ordered"].includes(match.op) && !Object.hasOwn(match, "value")) return `${match.op} requires an explicit value`;
+      if (match.op === "ordered" && !Array.isArray(match.value)) return "ordered requires an array value";
+      if (match.op === "count") {
+        if (!Object.hasOwn(match, "value") && !Object.hasOwn(match, "min") && !Object.hasOwn(match, "max")) return "count requires value, min or max";
+        if (["value", "min", "max"].some((k) => Object.hasOwn(match, k) && (!Number.isInteger(match[k]) || match[k] < 0))) return "count bounds must be nonnegative integers";
+        if (match.min != null && match.max != null && match.min > match.max) return "count min exceeds max";
+      }
+      return null;
+    }
+    function expectations(inv, { bindings = {} } = {}) {
+      const gaps = [], known = new Set(array(inv.expectations).map((e) => e.id));
+      for (const key of Object.keys(bindings)) if (!known.has(key)) gaps.push({ kind: "unknown-expectation-binding", id: key });
+      const bound = array(inv.expectations).map((e) => {
+        const b = bindings[e.id], present = Object.hasOwn(bindings, e.id);
+        const match = b?.match || (b?.op ? b : void 0), error = present ? descriptorError(match) : null;
+        if (e.required !== false && !present) gaps.push({ kind: "unbound-expectation", expectationId: e.id });
+        if (error) gaps.push({ kind: "invalid-expectation", expectationId: e.id, detail: error });
+        return { ...e, bound: present && !error, select: b?.select || { kind: e.kind, target: e.target, ...e.action ? { action: e.action } : {} }, ...match ? { match } : {} };
+      });
+      return copy({ version: 1, service: inv.service, env: inv.env, expectations: bound, gaps, complete: !gaps.length, ready: !gaps.length, coverage: inv.coverage });
+    }
+    function subset(actual, expected) {
+      if (isDeepStrictEqual(actual, expected)) return true;
+      if (Array.isArray(expected)) {
+        let assign2 = function(n, seen) {
+          for (let i = 0; i < actual.length; i++) if (!seen.has(i) && subset(actual[i], expected[n])) {
+            seen.add(i);
+            if (!owner.has(i) || assign2(owner.get(i), seen)) {
+              owner.set(i, n);
+              return true;
+            }
+          }
+          return false;
+        };
+        var assign = assign2;
+        if (!Array.isArray(actual)) return false;
+        if (expected.length > actual.length) return false;
+        const owner = /* @__PURE__ */ new Map();
+        return expected.every((_, n) => assign2(n, /* @__PURE__ */ new Set()));
+      }
+      return !!expected && typeof expected === "object" && !!actual && typeof actual === "object" && !Array.isArray(actual) && Object.keys(expected).every((k) => Object.hasOwn(actual, k) && subset(actual[k], expected[k]));
+    }
+    function check(plan, observed, { allowUnexpected = false } = {}) {
+      const expected = array(plan?.expectations), gaps = [...array(plan?.gaps)], results = [];
+      const records = Array.isArray(observed) ? observed : null;
+      const map = !records && observed && typeof observed === "object" ? observed : {};
+      const used = /* @__PURE__ */ new Set();
+      const duplicates = expected.filter((e, i) => expected.findIndex((x) => x.id === e.id) !== i);
+      for (const e of duplicates) gaps.push({ kind: "duplicate-expectation", expectationId: e.id });
+      for (const e of expected) {
+        const error = descriptorError(e.match);
+        if (!e.bound || error) {
+          results.push({ id: e.id, ok: e.required === false, reason: error || "expectation has no explicit binding" });
+          continue;
+        }
+        const selector = e.select || { kind: e.kind, target: e.target, ...e.action ? { action: e.action } : {} };
+        let present, value, ambiguous = false;
+        if (records) {
+          const selected = records.filter((r) => r && (r.id === e.id || !r.id && Object.entries(selector).every(([key, wanted]) => key === "action" && r.action == null ? true : isDeepStrictEqual(r[key], wanted))));
+          for (const record of selected) used.add(record);
+          if (selector.action && selected.some((r) => r.action == null && !r.id)) {
+            const peers = expected.filter((other) => other.id !== e.id && other.select?.action !== selector.action && isDeepStrictEqual(other.select?.kind, selector.kind) && isDeepStrictEqual(other.select?.target, selector.target));
+            ambiguous = peers.length > 0;
+          }
+          present = selected.length > 0;
+          value = selected.length === 1 ? selected[0].value : selected.map((r) => r.value);
+        } else {
+          present = Object.hasOwn(map, e.id);
+          value = map[e.id];
+          if (present) used.add(e.id);
+        }
+        if (ambiguous) {
+          results.push({ id: e.id, ok: false, reason: "observation has no action id and matches multiple actions" });
+          continue;
+        }
+        if (!present && !(records && (e.match.op === "forbidden" || e.match.op === "count" && (e.match.value === 0 || e.match.max === 0)))) {
+          results.push({ id: e.id, ok: false, reason: "required observation is missing" });
+          continue;
+        }
+        const m = e.match, values = !present ? [] : Array.isArray(value) ? value : [value];
+        let ok = false;
+        if (m.op === "exact") ok = isDeepStrictEqual(value, m.value);
+        else if (m.op === "subset") ok = subset(value, m.value);
+        else if (m.op === "count") {
+          const n = values.length;
+          ok = (m.value == null || n === m.value) && (m.min == null || n >= m.min) && (m.max == null || n <= m.max);
+        } else if (m.op === "forbidden") ok = Object.hasOwn(m, "value") ? !values.some((v) => subset(v, m.value)) : !values.length;
+        else if (m.op === "ordered") {
+          let i = 0;
+          for (const v of values) if (i < m.value.length && subset(v, m.value[i])) i++;
+          ok = i === m.value.length && (m.exact === false || values.length === m.value.length);
+        }
+        results.push({ id: e.id, ok, reason: ok ? "matched" : `${m.op} expectation did not match`, ...m.op === "count" ? { count: values.length } : {} });
+      }
+      if (!allowUnexpected) {
+        if (records) records.forEach((record, index) => {
+          if (!used.has(record)) gaps.push({ kind: "unexpected-observation", observation: index, ...record?.id ? { id: record.id } : {} });
+        });
+        else for (const key of Object.keys(map)) if (!used.has(key)) gaps.push({ kind: "unexpected-observation", id: key });
+      }
+      if (!expected.length) gaps.push({ kind: "no-expectations", detail: "No explicit business expectations were checked." });
+      const passed = results.filter((r) => r.ok).length, failed = results.length - passed;
+      return { ok: failed === 0 && gaps.length === 0, passed, failed, results, gaps, coverage: { runtimeVerified: false, checked: results.length, note: "Checks apply to supplied observations; this function does not execute the service." } };
+    }
+    module2.exports = { inventory, actions, expectations, check };
+  }
+});
+
+// lib/diff.js
+var require_diff = __commonJS({
+  "lib/diff.js"(exports2, module2) {
+    function diffLists(first, last, opts) {
+      const o = opts || {};
+      const toList = (x) => (Array.isArray(x) ? x : x == null ? [] : String(x).split(/[\r\n,;\t]+/)).map((v) => v && typeof v === "object" ? JSON.stringify(v) : String(v).trim()).filter((v) => v !== "");
+      const key = (v) => {
+        let k = o.ignoreCase ? v.toLowerCase() : v;
+        if (o.numeric !== false && /^[+-]?\d+(\.\d+)?$/.test(k)) k = String(Number(k));
+        return k;
+      };
+      const a = toList(first), b = toList(last);
+      const inB = /* @__PURE__ */ new Map(), inA = /* @__PURE__ */ new Map();
+      for (const v of b) inB.set(key(v), (inB.get(key(v)) || 0) + 1);
+      for (const v of a) inA.set(key(v), (inA.get(key(v)) || 0) + 1);
+      const seen = /* @__PURE__ */ new Set();
+      const onlyFirst = [], common = [], onlyLast = [], dupFirst = [], dupLast = [];
+      for (const v of a) {
+        const k = key(v);
+        if (seen.has("a" + k)) {
+          dupFirst.push(v);
+          continue;
+        }
+        seen.add("a" + k);
+        (inB.has(k) ? common : onlyFirst).push(v);
+      }
+      for (const v of b) {
+        const k = key(v);
+        if (seen.has("b" + k)) {
+          dupLast.push(v);
+          continue;
+        }
+        seen.add("b" + k);
+        if (!inA.has(k)) onlyLast.push(v);
+      }
+      return {
+        counts: { first: a.length, last: b.length, onlyFirst: onlyFirst.length, common: common.length, onlyLast: onlyLast.length, duplicatesFirst: dupFirst.length, duplicatesLast: dupLast.length },
+        onlyFirst,
+        common,
+        onlyLast,
+        duplicatesFirst: dupFirst,
+        duplicatesLast: dupLast,
+        same: onlyFirst.length === 0 && onlyLast.length === 0
+      };
+    }
+    function diffLines(first, last, opts) {
+      const o = opts || {};
+      const split = (t) => t == null ? [] : String(t).replace(/\r\n/g, "\n").split("\n");
+      const A = split(first), B = split(last);
+      const eq = (x, y) => o.ignoreWhitespace ? x.replace(/\s+/g, " ").trim() === y.replace(/\s+/g, " ").trim() : x === y;
+      let s = 0;
+      while (s < A.length && s < B.length && eq(A[s], B[s])) s++;
+      let ea = A.length, eb = B.length;
+      while (ea > s && eb > s && eq(A[ea - 1], B[eb - 1])) {
+        ea--;
+        eb--;
+      }
+      const ops = [];
+      for (let i = 0; i < s; i++) ops.push({ op: " ", text: A[i], a: i + 1, b: i + 1 });
+      const n = ea - s, m = eb - s;
+      if (n * m > 4e6) {
+        for (let i = s; i < ea; i++) ops.push({ op: "-", text: A[i], a: i + 1 });
+        for (let j = s; j < eb; j++) ops.push({ op: "+", text: B[j], b: j + 1 });
+      } else {
+        const L = Array.from({ length: n + 1 }, () => new Uint32Array(m + 1));
+        for (let i2 = n - 1; i2 >= 0; i2--) for (let j2 = m - 1; j2 >= 0; j2--) L[i2][j2] = eq(A[s + i2], B[s + j2]) ? L[i2 + 1][j2 + 1] + 1 : Math.max(L[i2 + 1][j2], L[i2][j2 + 1]);
+        let i = 0, j = 0;
+        while (i < n || j < m) {
+          if (i < n && j < m && eq(A[s + i], B[s + j])) {
+            ops.push({ op: " ", text: A[s + i], a: s + i + 1, b: s + j + 1 });
+            i++;
+            j++;
+          } else if (i < n && (j === m || L[i + 1][j] >= L[i][j + 1])) {
+            ops.push({ op: "-", text: A[s + i], a: s + i + 1 });
+            i++;
+          } else {
+            ops.push({ op: "+", text: B[s + j], b: s + j + 1 });
+            j++;
+          }
+        }
+      }
+      for (let i = ea, j = eb; i < A.length; i++, j++) ops.push({ op: " ", text: A[i], a: i + 1, b: j + 1 });
+      const added = ops.filter((x) => x.op === "+").length, removed = ops.filter((x) => x.op === "-").length;
+      return { ops, counts: { first: A.length, last: B.length, added, removed, same: ops.length - added - removed }, same: added === 0 && removed === 0 };
+    }
+    module2.exports = { diffLists, diffLines };
+  }
+});
+
+// lib/js.js
+var require_js = __commonJS({
+  "lib/js.js"(exports2, module2) {
+    var { spawn, spawnSync } = require("child_process");
+    var flag;
+    var permissionFlag = () => {
+      if (flag === void 0) {
+        flag = ["--permission", "--experimental-permission"].find((f) => spawnSync(process.execPath, [f, "-e", "0"], { env: {}, stdio: "ignore" }).status === 0) || null;
+      }
+      return flag;
+    };
+    var { diffLists, diffLines } = require_diff();
+    var RUNNER = String.raw`
+${diffLists.toString()}
+${diffLines.toString()}
+const fmt = (v) => (typeof v === 'string' ? v : (() => { try { return JSON.stringify(v); } catch { return String(v); } })());
+const pad = (n, w = 2) => String(n).padStart(w, '0');
+const date = (f = 'YYYY-MM-DD', d = new Date()) => f.replace(/YYYY|MM|DD|HH|mm|ss|SSS/g, (t) => ({ YYYY: d.getFullYear(), MM: pad(d.getMonth() + 1), DD: pad(d.getDate()), HH: pad(d.getHours()), mm: pad(d.getMinutes()), ss: pad(d.getSeconds()), SSS: pad(d.getMilliseconds(), 3) }[t]));
+const rand = (n = 6) => Array.from(crypto.getRandomValues(new Uint8Array(n)), b => b % 10).join('').replace(/^0/, '1');
+const hex = (n = 8) => Array.from(crypto.getRandomValues(new Uint8Array(Math.ceil(n / 2))), b => b.toString(16).padStart(2, '0')).join('').slice(0, n);
+const logs = [], tests = [], pending = [], output = [];
+// tool calls go to dt over stdout; answers come back on stdin
+let rpcSeq = 0;
+const rpcWait = new Map();
+const rpc = (tool, args) => new Promise((resolve, reject) => {
+  const id = ++rpcSeq;
+  rpcWait.set(id, { resolve, reject });
+  process.stdout.write(JSON.stringify({ rpc: id, tool, args: args === undefined ? {} : args }) + '\n');
+});
+const tools = new Proxy({}, { get: (_, name) => {
+  if (typeof name !== 'string' || name === 'then') return undefined;
+  if (name === 'call') return (tool, args) => rpc(tool, args);
+  if (name === 'list') return () => rpc('__list', {});
+  return (args) => rpc(name, args);
+} });
+const pretty = (v) => (typeof v === 'string' ? v : (() => { try { return JSON.stringify(v, null, 2); } catch { return String(v); } })());
+const check = (ok, msg) => { if (!ok) throw new Error(msg); };
+function expect(v) {
+  const m = (neg) => ({
+    toBe: (x) => check((v === x) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to be ' + fmt(x)),
+    toEqual: (x) => check((JSON.stringify(v) === JSON.stringify(x)) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to equal ' + fmt(x)),
+    toMatch: (re) => check(new RegExp(re).test(String(v)) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to match ' + re),
+    toContain: (x) => check((v != null && v.includes(x)) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to contain ' + fmt(x)),
+    toBeTruthy: () => check(!!v !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to be truthy'),
+    toBeGreaterThan: (x) => check((v > x) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to be greater than ' + fmt(x)),
+    toHaveProperty: (k) => check((v != null && k.split('.').reduce((o, p) => (o == null ? undefined : o[p]), v) !== undefined) !== neg, 'expected ' + fmt(v).slice(0, 200) + (neg ? ' not' : '') + ' to have ' + k),
+  });
+  return Object.assign(m(false), { not: m(true) });
+}
+const helpers = {
+  uuid: () => crypto.randomUUID(), now: () => new Date().toISOString(), date, rand, hex, diffLists, diffLines,
+  log: (...a) => { logs.push(a.map(fmt).join(' ').slice(0, 2000)); },
+  text: (...a) => { output.push(a.map(pretty).join(' ')); },
+  tools,
+  assert: (ok, msg) => check(ok, msg || 'assertion failed'),
+  expect,
+  test: (name, fn) => {
+    const done = (error) => tests.push(error ? { name, ok: false, error: error.message || String(error) } : { name, ok: true });
+    try { const r = fn(); if (r && typeof r.then === 'function') pending.push(r.then(() => done(), done)); else done(); } catch (e) { done(e); }
+  },
+};
+// one JSON request per line, one JSON answer per line
+let buf = '';
+process.stdin.setEncoding('utf8');
+let queue = Promise.resolve();
+process.stdin.on('data', (c) => {
+  buf += c;
+  let i;
+  while ((i = buf.indexOf('\n')) >= 0) {
+    const line = buf.slice(0, i); buf = buf.slice(i + 1);
+    const msg = JSON.parse(line);
+    if (msg.rpcResult !== undefined) {
+      const w = rpcWait.get(msg.rpcResult);
+      rpcWait.delete(msg.rpcResult);
+      if (w) msg.error ? w.reject(new Error(msg.error)) : w.resolve(msg.result);
+    } else queue = queue.then(() => handle(msg));
+  }
+});
+async function handle(input) {
+  logs.length = 0; tests.length = 0; pending.length = 0; output.length = 0;
+  const out = { vars: input.vars, args: input.args, result: input.result, logs, tests, output };
+  try {
+    const AsyncFunction = (async () => {}).constructor;
+    const fn = new AsyncFunction('vars', 'args', 'result', ...Object.keys(helpers), input.code);
+    const r = await fn(out.vars, out.args, out.result, ...Object.values(helpers));
+    await Promise.all(pending);
+    if (r !== undefined) { out.returned = r; out.hasReturn = true; }
+  } catch (e) { out.error = (e && e.message) || String(e); }
+  let text;
+  try { text = JSON.stringify(out); } catch (e) { text = JSON.stringify({ logs, tests, output, error: 'result is not JSON: ' + e.message }); }
+  process.stdout.write(text + '\n');
+}
+`;
+    function enabled() {
+      const c = require_config().getScripts();
+      if (c.js === false) throw new Error("JavaScript in scripts is turned off (scripts.js: false in config.json)");
+      return c;
+    }
+    var Session = class {
+      constructor() {
+        this.child = null;
+        this.wait = null;
+      }
+      start() {
+        const pf = permissionFlag();
+        if (!pf) throw new Error(`JavaScript needs Node 20+ with the permission model (this is ${process.version})`);
+        const child = spawn(process.execPath, [pf, "--max-old-space-size=128", "-e", RUNNER], { env: {}, stdio: ["pipe", "pipe", "pipe"] });
+        let out2 = "", err = "";
+        child.stdout.on("data", (d) => {
+          out2 += d;
+          let i;
+          while ((i = out2.indexOf("\n")) >= 0) {
+            const line = out2.slice(0, i);
+            out2 = out2.slice(i + 1);
+            let msg = null;
+            try {
+              msg = JSON.parse(line);
+            } catch {
+            }
+            if (msg && msg.rpc !== void 0) this.tool(child, msg);
+            else if (this.wait) this.wait.done(line);
+          }
+          if (out2.length > 2e7) this.kill("more than 20 MB of output");
+        });
+        child.stderr.on("data", (d) => {
+          err = (err + d).slice(-4e3);
+        });
+        child.on("close", () => {
+          if (this.child !== child) return;
+          this.child = null;
+          if (this.wait) this.wait.fail(new Error(`js: ${(err.split("\n").find((l) => /Error/.test(l)) || err || "the sandbox stopped").trim().slice(0, 500)}`));
+        });
+        child.stdin.on("error", () => {
+        });
+        this.child = child;
+      }
+      // a tool call from the code: run it through onTool (or refuse), answer on stdin
+      async tool(child, { rpc, tool, args }) {
+        let reply;
+        try {
+          if (!this.onTool) throw new Error("dt tools are not available here");
+          reply = { rpcResult: rpc, result: await this.onTool(tool, args) };
+        } catch (e) {
+          reply = { rpcResult: rpc, error: e.message };
+        }
+        let line;
+        try {
+          line = JSON.stringify(reply);
+        } catch (e) {
+          line = JSON.stringify({ rpcResult: rpc, error: `result is not JSON: ${e.message}` });
+        }
+        if (this.child === child) child.stdin.write(line + "\n");
+      }
+      kill(why) {
+        const w = this.wait;
+        this.wait = null;
+        if (this.child) {
+          this.child.kill("SIGKILL");
+          this.child = null;
+        }
+        if (w) w.fail(new Error(`js: ${why}`));
+      }
+      // -> { vars, args, result, returned, hasReturn, logs, tests, output, error }
+      // onTool(name, args): lets the code call dt tools; timeoutMs: instead of scripts.jsTimeoutMs
+      run(code, { vars = {}, args, result } = {}, { onTool, timeoutMs } = {}) {
+        const c = enabled();
+        this.onTool = onTool || this.onTool;
+        const limitMs = timeoutMs || c.jsTimeoutMs;
+        if (!this.child) this.start();
+        let line;
+        try {
+          line = JSON.stringify({ code: String(code), vars, args, result });
+        } catch (e) {
+          return Promise.reject(new Error(`js: data is not JSON: ${e.message}`));
+        }
+        return new Promise((resolve, reject) => {
+          const t = setTimeout(() => this.kill(`stopped after ${limitMs}ms`), limitMs);
+          this.wait = {
+            done: (text) => {
+              clearTimeout(t);
+              this.wait = null;
+              try {
+                resolve(JSON.parse(text));
+              } catch (e) {
+                reject(new Error(`js: bad answer: ${e.message}`));
+              }
+            },
+            fail: (e) => {
+              clearTimeout(t);
+              this.wait = null;
+              reject(e);
+            }
+          };
+          this.child.stdin.write(line + "\n");
+        });
+      }
+      close() {
+        if (this.child) {
+          this.child.stdin.end();
+          this.child.kill();
+          this.child = null;
+        }
+      }
+    };
+    async function run(code, data, opts) {
+      const s = new Session();
+      try {
+        return await s.run(code, data, opts);
+      } finally {
+        s.close();
+      }
+    }
+    module2.exports = { run, Session, permissionFlag };
+  }
+});
+
+// lib/offline-js.js
+var require_offline_js = __commonJS({
+  "lib/offline-js.js"(exports2, module2) {
+    var J = require_js();
+    var { diffLists, diffLines } = require_diff();
+    var BOOTSTRAP = String.raw`
+(function () {
+  'use strict';
+  const bridge = globalThis.__dtBridge;
+  const input = JSON.parse(globalThis.__dtInput);
+  delete globalThis.__dtBridge;
+  delete globalThis.__dtInput;
+  const jsonStringify = JSON.stringify.bind(JSON), jsonParse = JSON.parse.bind(JSON);
+  const entries = Object.entries, defineProperty = Object.defineProperty;
+  const logs = [], tests = [], output = [], pending = [], requests = new Map();
+  const out = { vars: input.vars, args: input.args, result: input.result, logs, tests, output };
+  let seq = 0;
+  const fmt = (v, pretty) => {
+    if (typeof v === 'string') return v;
+    try { return jsonStringify(v, null, pretty ? 2 : undefined) ?? String(v); }
+    catch { return String(v); }
+  };
+  const message = (e) => { try { return String(e && e.message || e); } catch { return 'program error'; } };
+  const check = (ok, msg) => { if (!ok) throw new Error(msg || 'assertion failed'); };
+  function expect(v) {
+    const matchers = (neg) => ({
+      toBe: (x) => check((v === x) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to be ' + fmt(x)),
+      toEqual: (x) => check((jsonStringify(v) === jsonStringify(x)) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to equal ' + fmt(x)),
+      toMatch: (re) => check(new RegExp(re).test(String(v)) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to match ' + re),
+      toContain: (x) => check((v != null && v.includes(x)) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to contain ' + fmt(x)),
+      toBeTruthy: () => check(!!v !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to be truthy'),
+      toBeGreaterThan: (x) => check((v > x) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to be greater than ' + fmt(x)),
+      toHaveProperty: (k) => check((v != null && String(k).split('.').reduce((a, p) => a == null ? undefined : a[p], v) !== undefined) !== neg, 'expected ' + fmt(v).slice(0, 200) + (neg ? ' not' : '') + ' to have ' + k),
+    });
+    return Object.assign(matchers(false), { not: matchers(true) });
+  }
+  const rpc = (tool, args) => {
+    if (typeof tool !== 'string' || !tool) return Promise.reject(new Error('tool name must be a nonempty string'));
+    let payload;
+    try { payload = jsonStringify({ id: ++seq, tool, args: args === undefined ? {} : args }); }
+    catch (e) { return Promise.reject(new Error('tool arguments are not JSON: ' + message(e))); }
+    const id = seq;
+    let resolve, reject;
+    const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+    // Set a handler now so fire-and-forget RPC cannot create an unhandled host rejection.
+    promise.catch(() => {});
+    requests.set(id, { resolve, reject, promise });
+    bridge(payload);
+    return promise;
+  };
+  const tools = new Proxy(Object.create(null), { get: (_, name) => {
+    if (typeof name !== 'string' || name === 'then') return undefined;
+    if (name === 'call') return (name, args) => rpc(name, args);
+    if (name === 'list') return () => rpc('__list', {});
+    return (args) => rpc(name, args);
+  } });
+  const pad = (n, w = 2) => String(n).padStart(w, '0');
+  const date = (f = 'YYYY-MM-DD', d = new Date()) => f.replace(/YYYY|MM|DD|HH|mm|ss|SSS/g, t => ({ YYYY: d.getFullYear(), MM: pad(d.getMonth() + 1), DD: pad(d.getDate()), HH: pad(d.getHours()), mm: pad(d.getMinutes()), ss: pad(d.getSeconds()), SSS: pad(d.getMilliseconds(), 3) }[t]));
+  const hex = (n = 8) => Array.from({ length: n }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+  const rand = (n = 6) => Array.from({ length: n }, (_, i) => Math.floor(Math.random() * (i ? 10 : 9)) + (i ? 0 : 1)).join('');
+  const helpers = {
+    tools, expect, assert: check, date, hex, rand,
+    // UUIDs/random values are for fixtures, not cryptographic use.
+    uuid: () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const n = Math.floor(Math.random() * 16); return (c === 'x' ? n : (n & 3) | 8).toString(16); }),
+    now: () => new Date().toISOString(),
+    diffLists: ${diffLists.toString()},
+    diffLines: ${diffLines.toString()},
+    log: (...args) => { logs.push(args.map(v => fmt(v)).join(' ').slice(0, 2000)); },
+    text: (...args) => { output.push(args.map(v => fmt(v, true)).join(' ')); },
+    test: (name, fn) => {
+      const done = (ok, e) => tests.push(ok ? { name, ok: true } : { name, ok: false, error: message(e) });
+      try {
+        const r = fn();
+        if (r && typeof r.then === 'function') pending.push(Promise.resolve(r).then(() => done(true), e => done(false, e)));
+        else done(true);
+      } catch (e) { done(false, e); }
+    },
+  };
+  for (const [name, value] of entries(helpers)) defineProperty(globalThis, name, { value, enumerable: true });
+  defineProperty(globalThis, 'console', { value: Object.freeze({ log: helpers.log, info: helpers.log, warn: helpers.log, error: helpers.log }) });
+  return {
+    receive: (payload) => {
+      const reply = jsonParse(payload), request = requests.get(reply.id);
+      if (!request) return;
+      requests.delete(reply.id);
+      if (reply.error !== undefined) request.reject(new Error(String(reply.error)));
+      else request.resolve(reply.result);
+    },
+    execute: async (fn) => {
+      let returned;
+      try {
+        returned = await fn(out.vars, out.args, out.result);
+      } catch (e) { out.error = message(e); }
+      try {
+        // Tests can register other async tests, and unawaited RPC must settle before completion.
+        let done = 0;
+        while (done < pending.length || requests.size) {
+          const batch = pending.slice(done); done = pending.length;
+          await Promise.allSettled([...batch, ...Array.from(requests.values(), r => r.promise)]);
+        }
+        if (!out.error && returned !== undefined) { out.returned = returned; out.hasReturn = true; }
+      } catch (e) { out.error = message(e); }
+      try { return jsonStringify(out); }
+      catch (e) { return jsonStringify({ logs, tests, output, error: 'result is not JSON: ' + message(e) }); }
+    },
+  };
+})()
+`;
+    var PROGRAM = String.raw`
+'use strict';
+const vm = require('node:vm');
+const context = vm.createContext(Object.create(null), { codeGeneration: { strings: false, wasm: false } });
+let control;
+const stringify = JSON.stringify.bind(JSON), parse = JSON.parse.bind(JSON);
+const bridge = (payload) => {
+  if (typeof payload !== 'string') return;
+  let request;
+  try { request = parse(payload); } catch { return; }
+  const respond = (reply) => {
+    let serialized;
+    try { serialized = stringify(reply); }
+    catch { serialized = stringify({ id: request.id, error: 'tool result is not JSON' }); }
+    control.receive(serialized);
+  };
+  Promise.resolve().then(() => tools.call(request.tool, request.args)).then(
+    (result) => respond({ id: request.id, result }),
+    (error) => respond({ id: request.id, error: String(error && error.message || error) })
+  );
+};
+Object.setPrototypeOf(bridge, null);
+Object.freeze(bridge);
+context.__dtBridge = bridge;
+context.__dtInput = stringify(vars.data);
+control = new vm.Script(${JSON.stringify(BOOTSTRAP)}, { filename: 'offline-helpers.js' }).runInContext(context);
+const fn = new vm.Script('(async function(vars, args, result) { "use strict";\n' + vars.code + '\n})', { filename: 'offline-program.js' }).runInContext(context);
+return parse(await control.execute(fn));
+`;
+    async function run(code, data = {}, options = {}) {
+      code = String(code);
+      if (/\bimport\b/u.test(code)) {
+        return { vars: data.vars || {}, ...data.args === void 0 ? {} : { args: data.args }, ...data.result === void 0 ? {} : { result: data.result }, logs: [], tests: [], output: [], error: "offline code cannot contain the import keyword (including strings/comments)" };
+      }
+      const response = await J.run(PROGRAM, { vars: { code, data: { vars: {}, ...data } } }, options);
+      if (response.error) return { vars: data.vars || {}, ...data.args === void 0 ? {} : { args: data.args }, ...data.result === void 0 ? {} : { result: data.result }, logs: response.logs || [], tests: response.tests || [], output: response.output || [], error: response.error };
+      return response.returned;
+    }
+    module2.exports = { run };
+  }
+});
+
+// lib/scenario-state.js
+var require_scenario_state = __commonJS({
+  "lib/scenario-state.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var crypto = require("crypto");
+    var { isDeepStrictEqual } = require("util");
+    var { CACHE: CACHE2, readJson, writeJson, pool } = require_util();
+    var supported = /* @__PURE__ */ new Set(["pg", "kafka", "http", "es", "config", "cache", "queue", "file", "mock"]);
+    var canonical = (v) => JSON.stringify(v, (_, x) => typeof x === "bigint" ? String(x) : x);
+    var hash = (v) => crypto.createHash("sha256").update(canonical(v)).digest("hex");
+    var clone = (v) => JSON.parse(canonical(v));
+    var inventoryHash = (inv) => hash({ ...inv, builtAt: void 0 });
+    var problem = (kind, stateId, detail) => ({ kind, ...stateId ? { stateId } : {}, detail });
+    var unresolved = (dep) => ["ambiguous", "unresolved", "missing", "dynamic", "unknown"].includes(typeof dep.resolution === "string" ? dep.resolution : dep.resolution?.status);
+    var targetOf = (dep, binding) => unresolved(dep) ? { ...dep.target, ...Object.fromEntries(Object.entries(binding.resolve || {}).filter(([key]) => key !== "evidence")) } : dep.target;
+    function planState(inventory, bindings = {}) {
+      if (!inventory || inventory.version !== 1 || !Array.isArray(inventory.states)) throw new Error("scenario inventory required");
+      const known = new Set(inventory.states.map((s) => s.id));
+      for (const id of Object.keys(bindings)) if (!known.has(id)) throw new Error(`unknown state binding ${id}`);
+      const gaps = [], resolved = /* @__PURE__ */ new Set();
+      const states = inventory.states.map((dep) => {
+        const binding = bindings[dep.id];
+        if (!binding) {
+          if (dep.required !== false) gaps.push(problem("unbound-state", dep.id, `Bind ${dep.kind} ${canonical(dep.target)}`));
+          return { ...dep, binding: null };
+        }
+        const mode = binding.mode || (binding.capture ? "fixture" : Object.hasOwn(binding, "value") ? "provided" : "capture");
+        const needsResolution = unresolved(dep);
+        const hasResolution = binding.resolve && typeof binding.resolve.evidence === "string" && binding.resolve.evidence.trim();
+        const candidates = dep.resolution?.candidates || [];
+        const validResolution = hasResolution && (!candidates.length || candidates.some((c) => Object.entries(c).every(([key, value]) => isDeepStrictEqual(binding.resolve[key], value))));
+        if (dep.kind === "unknown" || !supported.has(dep.kind)) gaps.push(problem("unsupported-state", dep.id, "Model this dependency as a concrete supported read before emulating it"));
+        else if (needsResolution && !validResolution) gaps.push(problem("unresolved-state", dep.id, "An explicit candidate target resolution with evidence is required"));
+        else if (needsResolution && validResolution) resolved.add(dep.id);
+        if (!needsResolution && binding.resolve && Object.entries(binding.resolve).some(([key, value]) => key !== "evidence" && !isDeepStrictEqual(dep.target[key], value))) gaps.push(problem("resolved-target-override", dep.id, "A known dependency cannot be replaced by another target"));
+        if (!["provided", "capture", "fixture"].includes(mode)) gaps.push(problem("state-mode", dep.id, `Unsupported state mode ${mode}`));
+        if (mode === "provided" && !Object.hasOwn(binding, "value")) gaps.push(problem("missing-value", dep.id, "Provided state must include value (null and empty collections are explicit values)"));
+        return { ...dep, binding: { ...binding, mode } };
+      });
+      for (const gap of inventory.gaps || []) {
+        const id = gap.stateId || gap.state;
+        if (!id || !resolved.has(id)) gaps.push(gap);
+      }
+      return {
+        version: 1,
+        service: inventory.service,
+        env: inventory.env,
+        inventoryHash: inventoryHash(inventory),
+        inventory,
+        states,
+        gaps,
+        complete: !gaps.length,
+        coverage: { required: inventory.states.filter((s) => s.required !== false).length, bound: states.filter((s) => s.binding).length, runtimeVerified: false }
+      };
+    }
+    function bounded(v, def, max) {
+      const n = v ?? def;
+      if (!Number.isInteger(n) || n < 1 || n > max) throw new Error(`limit must be 1..${max}`);
+      return n;
+    }
+    var adapters = {
+      pg: async (dep, binding, plan) => {
+        const q = binding.query || {}, db = targetOf(dep, binding).db;
+        if (!db || !q.sql) throw new Error("Postgres capture needs an exact database and query.sql with bound params");
+        if (q.db && q.db !== db) throw new Error("query database differs from the resolved dependency");
+        const max = bounded(q.maxRows, 200, 1e4);
+        await require_limit().take(`pg:${plan.env}`);
+        const r = await require_pg().query(plan.env, `select * from (${q.sql.replace(/;\s*$/, "")}) as dt_state_rows limit ${max + 1}`, { db, params: q.params || [] });
+        return { value: r.rows.slice(0, max), complete: r.rows.length <= max, truncated: r.rows.length > max };
+      },
+      kafka: async (dep, binding, plan) => {
+        const q = binding.query || {};
+        const r = await require_kafka().captureMessages(plan.env, targetOf(dep, binding).topic, { maxMessages: bounded(q.maxMessages, 300, 1e4), offsets: q.offsets || {} });
+        return { value: r.messages, complete: !r.truncated, truncated: r.truncated, windows: r.windows };
+      },
+      es: async (dep, binding, plan) => {
+        const q = binding.query || {}, size = bounded(q.maxRows, 200, 1e3);
+        if (!q.query) throw new Error("Elasticsearch capture needs an explicit query");
+        await require_limit().take(`es:${plan.env}`);
+        const r = await require_es().search(plan.env, targetOf(dep, binding).index, typeof q.query === "string" ? q.query : JSON.stringify({ ...q.query, size }), { size });
+        return { value: r.hits.slice(0, size), complete: r.total <= size, truncated: r.total > size };
+      },
+      http: async (dep, binding, plan) => {
+        const q = binding.query || {}, method = String(q.method || dep.target.method || "GET").toUpperCase();
+        if (!["GET", "HEAD"].includes(method)) throw new Error("Live HTTP state capture supports GET/HEAD; provide response fixtures for other methods");
+        const url = new URL(q.url), allow = require_config().getScripts().http.allow || [];
+        const allowed = (u) => allow.some((prefix) => {
+          const p = String(prefix).replace(/\/$/, "");
+          return u === p || u.startsWith(p + "/") || u.startsWith(p + "?");
+        });
+        if (!allowed(url.href) || url.username || url.password) throw new Error("HTTP state URL must be in scripts.http.allow and contain no credentials");
+        await require_limit().take(`http:${url.host}:${plan.env}`);
+        const r = await fetch(url, { method, headers: q.headers || {}, redirect: "manual", signal: AbortSignal.timeout(3e4) });
+        if (r.status >= 300 && r.status < 400) throw new Error("HTTP state redirects must be captured explicitly as another allowed URL");
+        let size = 0, chunks = [];
+        for await (const chunk of r.body || []) {
+          size += chunk.length;
+          if (size > 2 * 1024 * 1024) throw new Error("HTTP state exceeds 2 MiB");
+          chunks.push(chunk);
+        }
+        let body = Buffer.concat(chunks).toString("utf8");
+        try {
+          body = JSON.parse(body);
+        } catch {
+        }
+        return { value: { status: r.status, headers: Object.fromEntries(r.headers), body }, complete: true };
+      }
+    };
+    function fixtureState(dep, binding) {
+      const capture = require_reproduction().load(binding.capture);
+      const resolved = targetOf(dep, binding);
+      let value;
+      if (dep.kind === "pg") {
+        const target = binding.table || `${resolved.db}:${resolved.table}`;
+        if (target !== `${resolved.db}:${resolved.table}`) throw new Error("fixture table differs from the declared read dependency");
+        if (!Object.hasOwn(capture.rows, target)) throw new Error(`capture does not contain ${target}`);
+        value = capture.rows[target];
+      } else if (dep.kind === "kafka") {
+        const target = binding.topic || resolved.topic;
+        if (target !== resolved.topic) throw new Error("fixture topic differs from the declared read dependency");
+        if (!Object.hasOwn(capture.events, target)) throw new Error(`capture does not contain ${target}`);
+        value = capture.events[target].messages;
+      } else throw new Error("Fixture captures contain PostgreSQL and Kafka; provide other dependencies separately");
+      return { value, complete: capture.complete === true, gaps: capture.gaps, fixture: binding.capture };
+    }
+    async function captureState(plan, { adapters: supplied = {}, mask = true } = {}) {
+      if (!plan || plan.version !== 1 || !Array.isArray(plan.states)) throw new Error("scenario state plan required");
+      if (!plan.inventory || inventoryHash(plan.inventory) !== plan.inventoryHash) throw new Error("state plan inventory fingerprint changed");
+      const seen = /* @__PURE__ */ new Set();
+      for (const dep of plan.states) {
+        const original = plan.inventory.states.find((d) => d.id === dep.id), { binding, ...metadata } = dep;
+        if (!original || seen.has(dep.id) || !isDeepStrictEqual(metadata, original)) throw new Error("state plan dependency differs from its inventory");
+        seen.add(dep.id);
+      }
+      plan = planState(plan.inventory, Object.fromEntries(plan.states.filter((d) => d.binding).map((d) => [d.id, d.binding])));
+      const gaps = [...plan.gaps], states = {}, trace = [];
+      const results = await pool(plan.states, 4, async (dep) => {
+        const binding = dep.binding, start = Date.now();
+        if (!binding) return { id: dep.id, status: "missing" };
+        try {
+          let r;
+          if (binding.mode === "provided") r = { value: binding.value, complete: Object.hasOwn(binding, "value") };
+          else if (binding.mode === "fixture") r = fixtureState(dep, binding);
+          else {
+            const adapter = supplied[dep.kind] || adapters[dep.kind];
+            if (!adapter) throw new Error(`No ${dep.kind} live reader; bind explicit provided state`);
+            r = await adapter(dep, binding, plan);
+          }
+          if (!r || !Object.hasOwn(r, "value")) throw new Error("State adapter did not provide value");
+          const complete = r.complete === true && !r.truncated && !(r.gaps || []).length;
+          trace.push({ stateId: dep.id, mode: binding.mode, ms: Date.now() - start });
+          return {
+            id: dep.id,
+            kind: dep.kind,
+            target: dep.target,
+            required: dep.required !== false,
+            value: clone(r.value),
+            status: complete ? "captured" : "partial",
+            complete,
+            source: { mode: binding.mode, ...binding.resolve ? { resolve: binding.resolve } : {}, ...r.fixture ? { capture: r.fixture } : {}, ...r.windows ? { windows: r.windows } : {} },
+            gaps: r.gaps || []
+          };
+        } catch (e) {
+          return { id: dep.id, kind: dep.kind, target: dep.target, status: "failed", complete: false, error: String(e.message).slice(0, 500) };
+        }
+      });
+      for (const result of results) {
+        const state = result.value;
+        if (!state) {
+          gaps.push(problem("state-error", result.item.id, result.error?.message || "State capture failed"));
+          continue;
+        }
+        states[state.id] = state;
+        if (result.item.required !== false && state.status !== "captured") gaps.push(problem("state-incomplete", state.id, state.error || `State is ${state.status}`));
+      }
+      if (mask) {
+        const rows = {};
+        for (const state of Object.values(states)) if (Object.hasOwn(state, "value")) {
+          const dep = plan.states.find((d) => d.id === state.id), key = dep?.kind === "config" ? dep.target.key : null;
+          rows[state.id] = [{ value: state.value, ...key ? { [key]: state.value } : {} }];
+        }
+        const masked = { rows, events: {}, plan: { seeds: [], tables: [] }, provenance: {}, gaps };
+        require_reproduction().redact(masked);
+        for (const [id, values] of Object.entries(masked.rows)) states[id].value = values[0].value;
+        gaps.splice(0, gaps.length, ...masked.gaps);
+      }
+      return {
+        version: 1,
+        service: plan.service,
+        env: plan.env,
+        inventoryHash: plan.inventoryHash,
+        inventory: plan.inventory,
+        states,
+        gaps,
+        complete: !gaps.length,
+        capturedAt: (/* @__PURE__ */ new Date()).toISOString(),
+        trace,
+        coverage: { required: plan.states.filter((s) => s.required !== false).length, captured: Object.values(states).filter((s) => s.status === "captured").length, runtimeVerified: false }
+      };
+    }
+    function getState(state, id, { where, key, request } = {}) {
+      const item = state.states[id];
+      if (!item || item.status !== "captured" || !Object.hasOwn(item, "value")) throw new Error(`state ${id} is not captured`);
+      let value = item.value;
+      const subset = (expected, actual) => expected && typeof expected === "object" ? actual && typeof actual === "object" && Object.entries(expected).every(([k, v]) => subset(v, actual[k])) : expected === actual;
+      if (key !== void 0) {
+        if (!value || !Object.hasOwn(value, key)) throw new Error(`state ${id} has no key ${key}`);
+        value = value[key];
+      }
+      if (where) {
+        if (!Array.isArray(value)) throw new Error("where requires array state");
+        value = value.filter((row) => subset(where, row));
+      }
+      if (request) {
+        if (!Array.isArray(value?.exchanges)) throw new Error("request matching requires explicit exchanges [{request,response}]");
+        const matches = value.exchanges.filter((e) => subset(e.request, request));
+        if (matches.length !== 1) throw new Error(`request for ${id} matched ${matches.length} exchanges`);
+        value = matches[0].response;
+      }
+      return clone(value);
+    }
+    async function emulate({ inventory, state, actions, expectations, code, timeoutMs = 3e4, requireAllReads = true } = {}) {
+      const S = require_scenario(), gaps = contractGaps(inventory, state, actions, expectations), reads = [], performed = [], observed = {}, violations = [];
+      const fail = (detail) => {
+        violations.push(detail);
+        throw new Error(detail);
+      };
+      const actionList = actions?.actions || [], expectationList = expectations?.expectations || [];
+      if (gaps.length) return { ok: false, gaps, checks: { ok: false, passed: 0, failed: gaps.length, results: [] }, reads, actions: performed, observed, coverage: { runtimeVerified: false, proof: "contract-emulation" } };
+      let active = null, calls = 0, result;
+      try {
+        result = await require_offline_js().run(code, { vars: { service: inventory.service, actions: actionList.map((a) => ({ id: a.id, kind: a.kind, target: a.target, dependencies: a.dependencies, expectations: a.expectations })) } }, {
+          timeoutMs,
+          onTool: async (name, args = {}) => {
+            if (++calls > 2e3) return fail("scenario exceeds 2000 local operations");
+            if (name === "action_input") {
+              const action = actionList.find((a) => a.id === args.id);
+              if (!action) return fail(`unknown scenario action ${args.id}`);
+              if (!action.bound || !Object.hasOwn(action, "binding")) return fail(`action ${args.id} has no input binding`);
+              active = action.id;
+              performed.push({ id: action.id });
+              return clone(action.binding);
+            }
+            if (name === "state_read") {
+              const action = actionList.find((a) => a.id === (args.action || active)), dep = inventory.states.find((d) => d.id === args.id);
+              if (!dep) return fail(`unknown scenario state ${args.id}`);
+              if (!action || !action.dependencies.includes(dep.id)) return fail(`state ${args.id} is not declared for this action`);
+              const value = getState(state, dep.id, args);
+              reads.push({ id: dep.id, action: action.id, ...args.key !== void 0 ? { key: args.key } : {} });
+              return value;
+            }
+            if (name === "observe") {
+              const e = expectationList.find((e2) => e2.id === args.id);
+              if (!e) return fail(`unknown scenario expectation ${args.id}`);
+              if (e.action && !performed.some((a) => a.id === e.action)) return fail("observe requires its action_input first");
+              if (Object.hasOwn(observed, args.id)) return fail(`duplicate scenario observation ${args.id}; aggregate ordered/count effects explicitly`);
+              observed[args.id] = clone(args.value);
+              return { observed: args.id };
+            }
+            return fail(`only local scenario tools are available; refused ${name}`);
+          }
+        });
+      } catch (e) {
+        result = { error: e.message, tests: [], logs: [], output: [] };
+      }
+      for (const action of actionList) {
+        if (!performed.some((a) => a.id === action.id)) gaps.push(problem("unperformed-action", null, action.id));
+        if (requireAllReads) {
+          for (const id of action.dependencies || []) if (!reads.some((r) => r.id === id && r.action === action.id)) gaps.push(problem("unread-state", id, `No read observed for action ${action.id}`));
+        }
+      }
+      const checks = S.check(expectations, observed);
+      return {
+        ok: !result.error && !violations.length && !gaps.length && checks.ok && (result.tests || []).every((t) => t.ok),
+        checks,
+        gaps,
+        violations,
+        reads,
+        actions: performed,
+        observed,
+        tests: result.tests || [],
+        logs: result.logs || [],
+        output: result.output || [],
+        error: result.error,
+        value: result.returned,
+        coverage: { states: new Set(reads.map((r) => r.id)).size, required: inventory.states.filter((s) => s.required !== false).length, runtimeVerified: false, proof: "contract-emulation", allReadsChecked: requireAllReads }
+      };
+    }
+    function contractGaps(inventory, state, actions, expectations) {
+      const gaps = [], S = require_scenario();
+      if (!inventory?.states || !state?.states || state.inventoryHash !== inventoryHash(inventory)) return [problem("inventory-mismatch", null, "Captured state must match this exact passport inventory")];
+      if (!state.complete || state.gaps?.length) gaps.push(problem("state-incomplete", null, "Capture every required dependency first"));
+      for (const dep of inventory.states) {
+        const captured = state.states[dep.id];
+        if (dep.required !== false && (captured?.status !== "captured" || !Object.hasOwn(captured, "value"))) gaps.push(problem("missing-state", dep.id, "Required state is absent"));
+        if (captured && (!isDeepStrictEqual(captured.target, dep.target) || captured.kind !== dep.kind)) gaps.push(problem("state-target-mismatch", dep.id, "Captured state names another dependency"));
+        if (!supported.has(dep.kind)) gaps.push(problem("unsupported-state", dep.id, "Unknown read dependencies must be modeled before running"));
+      }
+      const readBindings = Object.fromEntries(inventory.states.filter((dep) => Object.hasOwn(state.states[dep.id] || {}, "value")).map((dep) => [dep.id, { mode: "provided", value: state.states[dep.id].value, ...state.states[dep.id].source?.resolve ? { resolve: state.states[dep.id].source.resolve } : {} }]));
+      gaps.push(...planState(inventory, readBindings).gaps);
+      const actionList = actions?.actions || [], expectationList = expectations?.expectations || [];
+      const actionBindings = {}, expectationBindings = {};
+      for (const action of actionList) {
+        const original = inventory.actions.find((a) => a.id === action.id);
+        if (!original || ["kind", "target", "dependencies", "expectations"].some((key) => !isDeepStrictEqual(action[key], original[key]))) gaps.push(problem("action-mismatch", null, action.id));
+        if (Object.hasOwn(actionBindings, action.id)) gaps.push(problem("duplicate-action", null, action.id));
+        if (action.bound && Object.hasOwn(action, "binding")) actionBindings[action.id] = action.binding;
+      }
+      for (const e of expectationList) {
+        const original = inventory.expectations.find((x) => x.id === e.id);
+        if (!original || ["kind", "target", "action", "required"].some((key) => !isDeepStrictEqual(e[key], original[key]))) gaps.push(problem("expectation-mismatch", null, e.id));
+        if (Object.hasOwn(expectationBindings, e.id)) gaps.push(problem("duplicate-expectation", null, e.id));
+        if (e.bound && e.match) expectationBindings[e.id] = { match: e.match, select: e.select };
+      }
+      gaps.push(...S.actions(inventory, { bindings: actionBindings }).gaps, ...S.expectations(inventory, { bindings: expectationBindings }).gaps);
+      return gaps;
+    }
+    var file = (id) => {
+      if (!/^[a-f0-9]{24}$/.test(id || "")) throw new Error("invalid scenario state id");
+      return path2.join(CACHE2, "scenarios", `${id}.json`);
+    };
+    function save(state) {
+      const id = crypto.randomBytes(12).toString("hex");
+      writeJson(file(id), state);
+      return id;
+    }
+    function load(id) {
+      const value = readJson(file(id));
+      if (!value) throw new Error("scenario state not found");
+      return value;
+    }
+    function exportScenario(workspace, { inventory, state, actions, expectations }, { name = "scenario", directory, overwrite = false } = {}) {
+      const R = require_reproduction(), dest = R.resourcePath(workspace, directory || `src/test/resources/dt-fixtures/${name}`);
+      if (!/^[a-z0-9][\w.-]{0,79}$/i.test(name)) throw new Error("invalid scenario name");
+      if (contractGaps(inventory, state, actions, expectations).length) throw new Error("Only complete, bound scenario contracts can be exported");
+      if (fs2.existsSync(dest.full) && !overwrite) throw new Error("scenario resources exist; overwrite=true to replace");
+      const stage = `${dest.full}.tmp-${crypto.randomBytes(4).toString("hex")}`, files = {};
+      try {
+        fs2.mkdirSync(stage, { recursive: true });
+        for (const [filename, value] of Object.entries({ "inventory.json": inventory, "state.json": state, "actions.json": actions, "expectations.json": expectations })) {
+          const text = JSON.stringify(value, null, 2) + "\n";
+          fs2.writeFileSync(path2.join(stage, filename), text);
+          files[filename] = crypto.createHash("sha256").update(text).digest("hex");
+        }
+        const instructions = "Scenario contract resources. Arrange every state.json dependency with a real test container or a mock. Apply each actions.json input to the service. Observe each effects/return value and check expectations.json. scenario_emulate checks a local model; run the real application tests with test_run for application proof.\n";
+        fs2.writeFileSync(path2.join(stage, "README.txt"), instructions);
+        fs2.writeFileSync(path2.join(stage, "scenario.json"), JSON.stringify({ version: 1, name, inventoryHash: inventoryHash(inventory), files, coverage: state.coverage }, null, 2) + "\n");
+        if (fs2.existsSync(dest.full)) fs2.rmSync(dest.full, { recursive: true });
+        fs2.mkdirSync(path2.dirname(dest.full), { recursive: true });
+        fs2.renameSync(stage, dest.full);
+        require_workspace().touch(workspace, { dirty: true });
+        return { workspace, path: dest.rel, files: [...Object.keys(files), "scenario.json", "README.txt"] };
+      } finally {
+        fs2.rmSync(stage, { recursive: true, force: true });
+      }
+    }
+    module2.exports = { inventoryHash, planState, captureState, getState, emulate, exportScenario, contractGaps, save, load };
+  }
+});
+
+// lib/scenario-package.js
+var require_scenario_package = __commonJS({
+  "lib/scenario-package.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var crypto = require("crypto");
+    var { isDeepStrictEqual } = require("util");
+    var MAX_BYTES = 20 * 1024 * 1024;
+    function canonical(value) {
+      if (Array.isArray(value)) return value.map(canonical);
+      if (value && typeof value === "object") return Object.fromEntries(Object.keys(value).sort().filter((k) => value[k] !== void 0).map((k) => [k, canonical(value[k])]));
+      if (typeof value === "bigint") return String(value);
+      return value;
+    }
+    function json(value) {
+      if (Array.isArray(value)) return `[${value.map((v) => v === void 0 ? "null" : json(v)).join(",")}]`;
+      if (value && typeof value === "object") return `{${Object.keys(value).sort().filter((k) => value[k] !== void 0).map((k) => `${JSON.stringify(k)}:${json(value[k])}`).join(",")}}`;
+      if (typeof value === "bigint") return JSON.stringify(String(value));
+      if (typeof value === "number" && !Number.isFinite(value) || !["string", "number", "boolean"].includes(typeof value) && value !== null) throw new Error("scenario package values must be finite JSON");
+      return JSON.stringify(value);
+    }
+    var digest = (v) => crypto.createHash("sha256").update(typeof v === "string" || Buffer.isBuffer(v) ? v : json(v)).digest("hex");
+    function relative(p) {
+      if (typeof p !== "string" || !p || p.includes("\\") || p.includes("\0") || path2.posix.isAbsolute(p) || /^[A-Za-z]:/.test(p) || p.split("/").some((s) => !s || s === "." || s === "..")) throw new Error(`scenario path must be relative without traversal: ${p}`);
+      return p;
+    }
+    function workspacePath(workspace, rel, { missing = false } = {}) {
+      relative(rel);
+      const W = require_workspace(), m = W.checkId(workspace), root = fs2.realpathSync(m.path), full = path2.resolve(root, rel);
+      if (!full.startsWith(root + path2.sep) || rel.split("/").includes(".git")) throw new Error("scenario path escapes workspace");
+      let cursor = full;
+      while (cursor !== root) {
+        if (fs2.existsSync(cursor) && fs2.lstatSync(cursor).isSymbolicLink()) throw new Error("scenario paths cannot contain symlinks");
+        cursor = path2.dirname(cursor);
+      }
+      if (!missing && !fs2.existsSync(full)) throw new Error(`missing scenario file ${rel}`);
+      return { full, rel, root };
+    }
+    function portable(value, root, trail = []) {
+      if (Array.isArray(value)) return value.map((v) => portable(v, root, trail));
+      if (!value || typeof value !== "object") return value;
+      const metadata = !trail.some((key) => ["value", "binding", "match"].includes(key));
+      return Object.fromEntries(Object.entries(value).filter(([key]) => !metadata || !["capturedAt", "builtAt", "trace"].includes(key)).map(([key, item]) => {
+        if (metadata && key === "source" && trail[0] === "state" && trail[1] === "states" && item && typeof item === "object") {
+          const { capture, ...rest } = item;
+          return [key, portable(rest, root, [...trail, key])];
+        }
+        if (metadata && ["file", "path"].includes(key) && (trail.includes("provenance") || trail.at(-1) === "repo") && typeof item === "string" && path2.isAbsolute(item)) {
+          if (root && item.startsWith(root + path2.sep)) return [key, path2.relative(root, item).split(path2.sep).join("/")];
+          throw new Error(`absolute source ${key} cannot be exported: use a repository-relative path`);
+        }
+        return [key, portable(item, root, [...trail, key])];
+      }));
+    }
+    function create({ workspace, name = "scenario", inventory, state, actions, expectations, fixturePath, profile, notes = [] }) {
+      if (!/^[a-z0-9][a-z0-9._-]{0,79}$/i.test(name) || name === "..") throw new Error("invalid scenario name");
+      const root = require_workspace().checkId(workspace).path;
+      const contract = canonical(portable({ inventory, state, actions, expectations }, root));
+      contract.state.inventory = contract.inventory;
+      contract.state.inventoryHash = require_scenario_state().inventoryHash(contract.inventory);
+      const gaps = require_scenario_state().contractGaps(contract.inventory, contract.state, contract.actions, contract.expectations);
+      if (gaps.length) throw new Error(`scenario contract incomplete: ${gaps.map((g) => g.kind).join(", ")}`);
+      const files = {};
+      if (fixturePath) {
+        require_reproduction().loadFixture(workspace, fixturePath);
+        const dir = require_reproduction().resourcePath(workspace, fixturePath).full;
+        const manifest = JSON.parse(fs2.readFileSync(path2.join(dir, "manifest.json"), "utf8"));
+        for (const rel of [...Object.keys(manifest.files), "manifest.json"]) {
+          relative(rel);
+          const text = fs2.readFileSync(path2.join(dir, rel), "utf8");
+          files[`fixture/${rel}`] = { encoding: "utf8", sha256: digest(text), data: text };
+        }
+      }
+      let runtime = null;
+      if (profile) {
+        const p = workspacePath(workspace, profile);
+        if (/(^|\/)src\/test\/resources\/dt-(scenarios|fixtures)\//.test(p.rel)) throw new Error("runtime profiles must live outside imported test resources");
+        runtime = { profile: p.rel, sha256: digest(fs2.readFileSync(p.full)) };
+      }
+      const result = {
+        format: "dt-scenario",
+        version: 1,
+        name,
+        service: inventory.service,
+        contract,
+        resources: { files },
+        runtime,
+        notes,
+        proof: { level: "discovery", applicationExecuted: false, runtimeReadsVerified: false }
+      };
+      result.sha256 = digest(result);
+      verify(result);
+      return result;
+    }
+    function verify(artifact) {
+      if (!artifact || artifact.format !== "dt-scenario" || artifact.version !== 1 || !artifact.contract || !artifact.resources?.files) throw new Error("unsupported scenario package format/version");
+      if (Buffer.byteLength(json(artifact)) > MAX_BYTES) throw new Error("scenario package exceeds 20 MiB");
+      const { sha256, ...body } = artifact;
+      if (sha256 !== digest(body)) throw new Error("scenario package hash mismatch");
+      if (artifact.proof?.level !== "discovery" || artifact.proof.applicationExecuted !== false || artifact.proof.runtimeReadsVerified !== false) throw new Error("portable input packages cannot claim execution proof");
+      const { inventory, state, actions, expectations } = artifact.contract;
+      if (!/^[a-z0-9][a-z0-9._-]{0,79}$/i.test(artifact.name || "") || artifact.name === ".." || !artifact.service || artifact.service !== inventory?.service) throw new Error("scenario package name/service identity differs from its contract");
+      if (!isDeepStrictEqual(state?.inventory, inventory)) throw new Error("scenario state embeds a different inventory");
+      if (artifact.notes && (!Array.isArray(artifact.notes) || artifact.notes.some((n) => typeof n !== "string"))) throw new Error("scenario notes must be strings");
+      const gaps = require_scenario_state().contractGaps(inventory, state, actions, expectations);
+      if (gaps.length) throw new Error(`scenario contract invalid: ${gaps.map((g) => g.kind).join(", ")}`);
+      for (const [rel, item] of Object.entries(artifact.resources.files)) {
+        relative(rel);
+        if (!rel.startsWith("fixture/")) throw new Error("scenario resource must be inside fixture/");
+        if (item.encoding !== "utf8" || typeof item.data !== "string" || digest(item.data) !== item.sha256) throw new Error(`scenario resource hash mismatch: ${rel}`);
+      }
+      const mf = artifact.resources.files["fixture/manifest.json"];
+      if (mf) {
+        const manifest = JSON.parse(mf.data);
+        if (manifest.version !== 1 || !manifest.complete || manifest.gaps?.length) throw new Error("scenario fixture is incomplete");
+        for (const [rel, expected] of Object.entries(manifest.files || {})) {
+          relative(rel);
+          const file = artifact.resources.files[`fixture/${rel}`];
+          if (!file || file.sha256 !== expected) throw new Error(`scenario fixture manifest hash mismatch: ${rel}`);
+        }
+        for (const rel of Object.keys(artifact.resources.files)) if (rel !== "fixture/manifest.json" && !Object.hasOwn(manifest.files || {}, rel.slice("fixture/".length))) throw new Error(`unreferenced scenario fixture resource: ${rel}`);
+        for (const [db, value] of Object.entries(manifest.databases || {})) {
+          if (value.directory !== `pg/${Buffer.from(db).toString("hex")}`) throw new Error("scenario fixture database directory does not match its source identity");
+          for (const kind of ["schema", "data", "constraints"]) if (!Object.hasOwn(manifest.files, `${value.directory}/${kind}.sql`)) throw new Error(`missing fixture ${db} ${kind}.sql`);
+        }
+        for (const [topic, value] of Object.entries(manifest.topics || {})) {
+          if (value.directory !== `kafka/${Buffer.from(topic).toString("hex")}`) throw new Error("scenario fixture topic directory does not match its source identity");
+          for (const file of ["messages.jsonl", "schema.json", "offsets.json"]) if (!Object.hasOwn(manifest.files, `${value.directory}/${file}`)) throw new Error(`missing fixture ${topic} ${file}`);
+        }
+      } else if (Object.keys(artifact.resources.files).length) throw new Error("scenario resources need fixture/manifest.json");
+      if (artifact.runtime) {
+        relative(artifact.runtime.profile);
+        if (/(^|\/)src\/test\/resources\/dt-(scenarios|fixtures)\//.test(artifact.runtime.profile)) throw new Error("runtime profiles must live outside imported test resources");
+        if (!/^[a-f0-9]{64}$/.test(artifact.runtime.sha256)) throw new Error("invalid runtime profile fingerprint");
+      }
+      return {
+        ok: true,
+        format: artifact.format,
+        version: artifact.version,
+        sha256,
+        service: artifact.service,
+        name: artifact.name,
+        states: inventory.states.length,
+        actions: actions.actions.length,
+        expectations: expectations.expectations.length,
+        resources: Object.keys(artifact.resources.files).length,
+        proof: artifact.proof
+      };
+    }
+    function read(workspace, file) {
+      return JSON.parse(fs2.readFileSync(workspacePath(workspace, file).full, "utf8"));
+    }
+    function load(workspace, file) {
+      const artifact = read(workspace, file);
+      verify(artifact);
+      return artifact;
+    }
+    function verifyExtracted(workspace, file, artifact) {
+      verify(artifact);
+      const root = path2.posix.dirname(file);
+      for (const [rel, item] of Object.entries(artifact.resources.files)) {
+        const actual = workspacePath(workspace, `${root}/${rel}`);
+        if (digest(fs2.readFileSync(actual.full)) !== item.sha256) throw new Error(`extracted scenario resource differs from package: ${rel}`);
+      }
+      return { ok: true, resources: Object.keys(artifact.resources.files).length };
+    }
+    function importPackage(workspace, artifact, { directory, overwrite = false } = {}) {
+      verify(artifact);
+      directory ||= `src/test/resources/dt-scenarios/${artifact.name}`;
+      if (!/(^|\/)src\/test\/resources\/dt-scenarios\/[\w.-]+$/.test(directory)) throw new Error("scenario directory must be [module/]src/test/resources/dt-scenarios/<name>");
+      const dest = workspacePath(workspace, directory, { missing: true });
+      if (fs2.existsSync(dest.full) && !overwrite) throw new Error("scenario package exists; overwrite=true replaces it");
+      const stage = `${dest.full}.tmp-${crypto.randomBytes(5).toString("hex")}`;
+      try {
+        fs2.mkdirSync(stage, { recursive: true });
+        fs2.writeFileSync(path2.join(stage, "scenario.json"), JSON.stringify(artifact, null, 2) + "\n");
+        for (const [rel, item] of Object.entries(artifact.resources.files)) {
+          fs2.mkdirSync(path2.dirname(path2.join(stage, rel)), { recursive: true });
+          fs2.writeFileSync(path2.join(stage, rel), item.data);
+        }
+        if (fs2.existsSync(dest.full)) fs2.rmSync(dest.full, { recursive: true });
+        fs2.mkdirSync(path2.dirname(dest.full), { recursive: true });
+        fs2.renameSync(stage, dest.full);
+        require_workspace().touch(workspace, { dirty: true });
+        return { workspace, path: `${dest.rel}/scenario.json`, directory: dest.rel, sha256: artifact.sha256, files: ["scenario.json", ...Object.keys(artifact.resources.files)] };
+      } finally {
+        fs2.rmSync(stage, { recursive: true, force: true });
+      }
+    }
+    function diff(before, after) {
+      verify(before);
+      verify(after);
+      const changes = [];
+      const visit = (a2, b2, location) => {
+        if (isDeepStrictEqual(a2, b2)) return;
+        if (Array.isArray(a2) && Array.isArray(b2) && [...a2, ...b2].every((v) => v && typeof v.id === "string") && new Set(a2.map((v) => v.id)).size === a2.length && new Set(b2.map((v) => v.id)).size === b2.length) {
+          const aa = new Map(a2.map((v) => [v.id, v])), bb = new Map(b2.map((v) => [v.id, v]));
+          for (const id of /* @__PURE__ */ new Set([...aa.keys(), ...bb.keys()])) visit(aa.get(id), bb.get(id), `${location}/${id.replace(/~/g, "~0").replace(/\//g, "~1")}`);
+          return;
+        }
+        if (a2 && b2 && !Array.isArray(a2) && !Array.isArray(b2) && typeof a2 === "object" && typeof b2 === "object") {
+          for (const key of /* @__PURE__ */ new Set([...Object.keys(a2), ...Object.keys(b2)])) visit(a2[key], b2[key], `${location}/${key.replace(/~/g, "~0").replace(/\//g, "~1")}`);
+        } else changes.push({ path: location, before: a2, after: b2 });
+      };
+      for (const key of ["contract", "runtime", "notes"]) visit(before[key], after[key], `/${key}`);
+      const a = before.resources.files, b = after.resources.files;
+      for (const key of /* @__PURE__ */ new Set([...Object.keys(a), ...Object.keys(b)])) if (a[key]?.sha256 !== b[key]?.sha256) changes.push({ path: `/resources/files/${key}`, before: a[key]?.sha256, after: b[key]?.sha256 });
+      return { equal: !changes.length, before: before.sha256, after: after.sha256, changes };
+    }
+    function explain(artifact) {
+      const summary = verify(artifact), { inventory, state, actions, expectations } = artifact.contract;
+      return {
+        ...summary,
+        workflow: ["verify package", "preflight reviewed runtime profile", "start isolated session", "act", "observe", "assert", "stop"],
+        states: inventory.states.map((s) => ({ id: s.id, kind: s.kind, target: s.target, source: state.states[s.id]?.source, actions: s.actions, provenance: s.provenance })),
+        actions: actions.actions.map((a) => ({ id: a.id, kind: a.kind, target: a.target, input: a.binding, reads: a.dependencies, expects: a.expectations })),
+        expectations: expectations.expectations.map((e) => ({ id: e.id, kind: e.kind, target: e.target, action: e.action, match: e.match })),
+        boundaries: ["Package verification proves integrity and contract binding.", "Process proof covers independent supported observations; it does not prove every runtime read.", "Build proof reports actual project test results; project adapters own unsupported dependencies."]
+      };
+    }
+    module2.exports = { create, verify, importPackage, load, read, diff, explain, verifyExtracted, workspacePath, relative, digest, json };
   }
 });
 
@@ -8791,7 +10853,7 @@ ${e.message}`, ms: Date.now() - started });
         });
       });
     }
-    async function run(id, { tests = [], db, fixturePath, fixtureBindings, allowIncomplete = false, log = () => {
+    async function run(id, { tests = [], db, fixturePath, fixtureBindings, fixtureTemplate = false, allowIncomplete = false, scenarioPath, scenarioOutput, log = () => {
     }, mode = "auto", files: writes = [], check: checkFiles = true, fix } = {}) {
       if (db && fixturePath) throw new Error("choose fixture_path or db/ddl_path for the test database");
       const m = W.checkId(id);
@@ -8839,6 +10901,11 @@ ${e.message}`, ms: Date.now() - started });
       });
       const c = why ? command(root, p, tests, cfg) : null;
       const { env, B, hide } = await envFor(p, cfg);
+      if (scenarioPath || scenarioOutput) {
+        if (!scenarioPath || !scenarioOutput) throw new Error("scenarioPath and scenarioOutput are required together");
+        env.DT_SCENARIO_PACKAGE = require_scenario_package().workspacePath(id, scenarioPath).full;
+        env.DT_SCENARIO_OUTPUT = require_scenario_package().workspacePath(id, scenarioOutput, { missing: true }).full;
+      }
       if (c) c.args.splice(c.args.indexOf("--console=plain") + 1 || 0, 0, ...p.tool === "gradle" ? B.args : []);
       let database = null, fixture = null;
       const runId = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -8853,16 +10920,22 @@ ${e.message}`, ms: Date.now() - started });
         Object.assign(env, { SPRING_DATASOURCE_URL: database.jdbcUrl, SPRING_DATASOURCE_USERNAME: database.user, SPRING_DATASOURCE_PASSWORD: database.password, SPRING_JPA_HIBERNATE_DDL_AUTO: "none", SPRING_SQL_INIT_MODE: "never", SPRING_FLYWAY_ENABLED: "false", SPRING_LIQUIBASE_ENABLED: "false" });
       }
       if (fixturePath) {
-        fixture = await require_reproduction().replay(id, fixturePath, { allowIncomplete, runId });
+        fixture = await require_reproduction().replay(id, fixturePath, { allowIncomplete, runId, template: fixtureTemplate });
         try {
           Object.assign(env, fixtureEnvironment(fixture.databases, fixtureBindings));
           env.DT_FIXTURE_PATH = W.resolvePath(m, fixturePath).full;
         } catch (e) {
-          await fixture.cleanup();
+          try {
+            await fixture.cleanup();
+          } catch (cleanup) {
+            e.cleanupErrors = [cleanup.message];
+          }
           throw e;
         }
       }
       let r, cases, fastInfo = null;
+      const cleanupErrors = [];
+      let executionError;
       try {
         const reportDirs = [path2.join(p.modDir, "target", "surefire-reports"), path2.join(p.modDir, "build", "test-results", "test")];
         await require_javacheck().idle(id);
@@ -8885,11 +10958,15 @@ ${e.message}`, ms: Date.now() - started });
           if (r.code !== 0 && !r.out.trim()) require_trace().note(`${p.tool} exited ${r.code} with no output: is ${c.cmd} runnable here?`);
           cases = parseReports(reportDirs, started);
         }
+      } catch (e) {
+        executionError = e;
+        throw e;
       } finally {
         if (database) {
           try {
             await require_testdb().drop(database.database);
           } catch (e) {
+            cleanupErrors.push({ kind: "database", error: e.message });
             log(`test db: drop failed: ${e.message}`);
           }
         }
@@ -8897,9 +10974,11 @@ ${e.message}`, ms: Date.now() - started });
           try {
             await fixture.cleanup();
           } catch (e) {
+            cleanupErrors.push({ kind: "fixture", error: e.message });
             log(`fixture: drop failed: ${e.message}`);
           }
         }
+        if (executionError && cleanupErrors.length) executionError.cleanupErrors = cleanupErrors;
       }
       for (const k of cases) k.name = testName(k.name);
       const O = require_testout();
@@ -8938,8 +11017,8 @@ ${e.message}`, ms: Date.now() - started });
       if (/Could not get unknown property '(\w+)'|Could not resolve all (files|dependencies)|Received status code 401|status code 401|Unauthorized/.test(r.out)) hints.push(`The build needs settings of this machine (a private repository and its credentials): put them in gradle.properties in dt's config folder (or tests.gradleProperties; values may be \${VAR} from .env), or tests.env for environment variables${p.tool === "maven" ? "; for Maven, maven-settings.xml in the config folder (or tests.mavenSettings)" : ""}.`);
       if (/Could not find a valid Docker environment|DockerClientProviderStrategy|Previous attempts to find a Docker environment failed/.test(r.out)) hints.push(getTests().runnerUrl ? "Testcontainers found no Docker on the runner: doctor shows its Docker check (the socket mount, DT_DOCKER_GID)." : "Testcontainers needs Docker: run builds on the runner (compose: the jdk profile starts it with the host's Docker socket), or give dt a DOCKER_HOST.");
       if (/Failed to determine a suitable driver class|Connection to .* refused|password authentication failed/.test(r.out)) hints.push("The tests wanted a database: run with db (env + db) so test_run loads the DDL snapshot into a throwaway database.");
-      const ok = r.code === 0 && counts.failed === 0 && counts.errors === 0 && !compile.length && counts.tests > 0;
-      const outcome = ok ? "passed" : r.killed ? "timeout" : compile.length ? "compile-error" : counts.tests === 0 ? "no-tests-ran" : "failed";
+      const ok = !cleanupErrors.length && r.code === 0 && counts.failed === 0 && counts.errors === 0 && !compile.length && counts.tests > 0;
+      const outcome = ok ? "passed" : cleanupErrors.length ? "cleanup-failed" : r.killed ? "timeout" : compile.length ? "compile-error" : counts.tests === 0 ? "no-tests-ran" : "failed";
       record(id, root, cases, why ? "build" : "fast");
       const suggestions = (() => {
         try {
@@ -8959,6 +11038,7 @@ ${e.message}`, ms: Date.now() - started });
         command: hide(c ? `${path2.basename(c.cmd)} ${c.args.filter((a) => !/^-Dmaven\.repo\.local/.test(a)).join(" ")}` : `javac (${fastInfo.compiled ?? 0} changed) + JUnit launcher${fastInfo.prepared ? " (prepared with Maven first)" : ""}`),
         ...B.sources.length ? { gradleProperties: B.sources.map((f) => path2.basename(path2.dirname(f)) + "/" + path2.basename(f)) } : {},
         outcome,
+        ...cleanupErrors.length ? { cleanupErrors } : {},
         exit: r.code,
         ms: r.ms,
         counts,
@@ -8969,7 +11049,7 @@ ${e.message}`, ms: Date.now() - started });
         ...check ? { check } : {},
         ...suggestions.length ? { suggestions } : {},
         database: database ? { name: database.database, failedStatements: database.errors } : null,
-        ...fixture ? { fixture: { path: fixturePath, databases: Object.keys(fixture.databases), topics: fixture.topics } } : {},
+        ...fixture ? { fixture: { path: fixturePath, databases: Object.keys(fixture.databases), topics: fixture.topics, ...fixture.lease ? { lease: fixture.lease, template: fixture.template, timings: fixture.timings } : {} } } : {},
         tail: hide(require_testout().compactLog(r.out)),
         history: history(id, cases)
       };
@@ -11309,6 +13389,19 @@ var require_routes = __commonJS({
         return false;
       }
     })?.site || "";
+    function resolve(url, method = "GET") {
+      return resolver()(url, method);
+    }
+    function resolver() {
+      const code = codeEndpoints();
+      return (url, method = "GET") => {
+        const route = normalize(url);
+        if (!route) return { status: "unknown", candidates: [] };
+        const matches = code.filter((c) => (!c.method || c.method === "ANY" || c.method === String(method).toUpperCase()) && c.re.test(route.path)).sort((a, b) => b.weight - a.weight);
+        const candidates = matches.filter((c) => c.weight === matches[0]?.weight).map(({ re, weight, ...c }) => c);
+        return { ...route, method: String(method).toUpperCase(), site: siteOf(route.host), status: candidates.length === 1 ? "matched" : candidates.length ? "ambiguous" : "observed", candidates };
+      };
+    }
     function list({ q, service, host } = {}) {
       const code = codeEndpoints();
       const rows = [];
@@ -11332,7 +13425,7 @@ var require_routes = __commonJS({
     function catalogLines() {
       return list().map((r) => `api ${r.service || r.site || r.host} ${r.method} ${r.path}${r.query ? `?${r.query}` : ""} [${r.seen ? `seen ${r.seen}${r.statuses ? ` ${r.statuses}` : ""}` : "code"}]${r.host ? ` ${r.host}` : ""}${r.handler ? ` -> ${r.handler}` : ""}`);
     }
-    module2.exports = { normalize, parseNetwork, learn, list, load, catalogLines, idLike, FILE };
+    module2.exports = { normalize, parseNetwork, learn, list, load, catalogLines, idLike, resolve, resolver, FILE };
   }
 });
 
@@ -12126,7 +14219,15 @@ var require_knowledge = __commonJS({
         const versions = [...new Set(deployed.map((i) => i.meta?.version || i.version).filter(Boolean))];
         if (versions.length) Object.assign(nodes.get("service:" + p.service), { version: versions.join(", "), versions: { [env]: versions }, env, deploymentProvenance: { source: "catalog:consul", syncedAt: consul.syncedAt } });
       }
-      for (const db of require_pg().loadAll(env)) {
+      const cachedDbs = new Map(require_pg().loadAll(env).map((db) => [db.db, db]));
+      try {
+        for (const f of fs2.readdirSync(path2.join(CACHE2, env, "pg")).filter((f2) => f2.endsWith(".json") && !f2.startsWith("_"))) {
+          const db = readJson(path2.join(CACHE2, env, "pg", f));
+          if (db?.db && Array.isArray(db.tables)) cachedDbs.set(db.db, db);
+        }
+      } catch {
+      }
+      for (const db of cachedDbs.values()) {
         add({ id: `database:${db.db}`, name: db.db, kind: "database", technology: "PostgreSQL", aliases: [db.db], tables: (db.tables || []).map((t) => `${t.schema}.${t.name}`), provenance: { source: "catalog:pg", status: "verified", syncedAt: db.syncedAt } });
         for (const t of db.tables || []) add({ id: `table:${db.db}:${t.schema}.${t.name}`, name: `${t.schema}.${t.name}`, kind: "table", db: db.db, aliases: [`${t.schema}.${t.name}`, t.name], columns: t.columns, provenance: { source: "catalog:pg", status: "verified", syncedAt: db.syncedAt } });
         for (const f of db.functions || []) add({ id: `function:${db.db}:${f.schema}.${f.name}`, name: `${f.schema}.${f.name}`, kind: "function", db: db.db, aliases: [`${f.schema}.${f.name}`, f.name], provenance: { source: "catalog:pg", status: "verified", syncedAt: db.syncedAt } });
@@ -12946,310 +15047,6 @@ var require_logs = __commonJS({
   }
 });
 
-// lib/diff.js
-var require_diff = __commonJS({
-  "lib/diff.js"(exports2, module2) {
-    function diffLists(first, last, opts) {
-      const o = opts || {};
-      const toList = (x) => (Array.isArray(x) ? x : x == null ? [] : String(x).split(/[\r\n,;\t]+/)).map((v) => v && typeof v === "object" ? JSON.stringify(v) : String(v).trim()).filter((v) => v !== "");
-      const key = (v) => {
-        let k = o.ignoreCase ? v.toLowerCase() : v;
-        if (o.numeric !== false && /^[+-]?\d+(\.\d+)?$/.test(k)) k = String(Number(k));
-        return k;
-      };
-      const a = toList(first), b = toList(last);
-      const inB = /* @__PURE__ */ new Map(), inA = /* @__PURE__ */ new Map();
-      for (const v of b) inB.set(key(v), (inB.get(key(v)) || 0) + 1);
-      for (const v of a) inA.set(key(v), (inA.get(key(v)) || 0) + 1);
-      const seen = /* @__PURE__ */ new Set();
-      const onlyFirst = [], common = [], onlyLast = [], dupFirst = [], dupLast = [];
-      for (const v of a) {
-        const k = key(v);
-        if (seen.has("a" + k)) {
-          dupFirst.push(v);
-          continue;
-        }
-        seen.add("a" + k);
-        (inB.has(k) ? common : onlyFirst).push(v);
-      }
-      for (const v of b) {
-        const k = key(v);
-        if (seen.has("b" + k)) {
-          dupLast.push(v);
-          continue;
-        }
-        seen.add("b" + k);
-        if (!inA.has(k)) onlyLast.push(v);
-      }
-      return {
-        counts: { first: a.length, last: b.length, onlyFirst: onlyFirst.length, common: common.length, onlyLast: onlyLast.length, duplicatesFirst: dupFirst.length, duplicatesLast: dupLast.length },
-        onlyFirst,
-        common,
-        onlyLast,
-        duplicatesFirst: dupFirst,
-        duplicatesLast: dupLast,
-        same: onlyFirst.length === 0 && onlyLast.length === 0
-      };
-    }
-    function diffLines(first, last, opts) {
-      const o = opts || {};
-      const split = (t) => t == null ? [] : String(t).replace(/\r\n/g, "\n").split("\n");
-      const A = split(first), B = split(last);
-      const eq = (x, y) => o.ignoreWhitespace ? x.replace(/\s+/g, " ").trim() === y.replace(/\s+/g, " ").trim() : x === y;
-      let s = 0;
-      while (s < A.length && s < B.length && eq(A[s], B[s])) s++;
-      let ea = A.length, eb = B.length;
-      while (ea > s && eb > s && eq(A[ea - 1], B[eb - 1])) {
-        ea--;
-        eb--;
-      }
-      const ops = [];
-      for (let i = 0; i < s; i++) ops.push({ op: " ", text: A[i], a: i + 1, b: i + 1 });
-      const n = ea - s, m = eb - s;
-      if (n * m > 4e6) {
-        for (let i = s; i < ea; i++) ops.push({ op: "-", text: A[i], a: i + 1 });
-        for (let j = s; j < eb; j++) ops.push({ op: "+", text: B[j], b: j + 1 });
-      } else {
-        const L = Array.from({ length: n + 1 }, () => new Uint32Array(m + 1));
-        for (let i2 = n - 1; i2 >= 0; i2--) for (let j2 = m - 1; j2 >= 0; j2--) L[i2][j2] = eq(A[s + i2], B[s + j2]) ? L[i2 + 1][j2 + 1] + 1 : Math.max(L[i2 + 1][j2], L[i2][j2 + 1]);
-        let i = 0, j = 0;
-        while (i < n || j < m) {
-          if (i < n && j < m && eq(A[s + i], B[s + j])) {
-            ops.push({ op: " ", text: A[s + i], a: s + i + 1, b: s + j + 1 });
-            i++;
-            j++;
-          } else if (i < n && (j === m || L[i + 1][j] >= L[i][j + 1])) {
-            ops.push({ op: "-", text: A[s + i], a: s + i + 1 });
-            i++;
-          } else {
-            ops.push({ op: "+", text: B[s + j], b: s + j + 1 });
-            j++;
-          }
-        }
-      }
-      for (let i = ea, j = eb; i < A.length; i++, j++) ops.push({ op: " ", text: A[i], a: i + 1, b: j + 1 });
-      const added = ops.filter((x) => x.op === "+").length, removed = ops.filter((x) => x.op === "-").length;
-      return { ops, counts: { first: A.length, last: B.length, added, removed, same: ops.length - added - removed }, same: added === 0 && removed === 0 };
-    }
-    module2.exports = { diffLists, diffLines };
-  }
-});
-
-// lib/js.js
-var require_js = __commonJS({
-  "lib/js.js"(exports2, module2) {
-    var { spawn, spawnSync } = require("child_process");
-    var flag;
-    var permissionFlag = () => {
-      if (flag === void 0) {
-        flag = ["--permission", "--experimental-permission"].find((f) => spawnSync(process.execPath, [f, "-e", "0"], { env: {}, stdio: "ignore" }).status === 0) || null;
-      }
-      return flag;
-    };
-    var { diffLists, diffLines } = require_diff();
-    var RUNNER = String.raw`
-${diffLists.toString()}
-${diffLines.toString()}
-const fmt = (v) => (typeof v === 'string' ? v : (() => { try { return JSON.stringify(v); } catch { return String(v); } })());
-const pad = (n, w = 2) => String(n).padStart(w, '0');
-const date = (f = 'YYYY-MM-DD', d = new Date()) => f.replace(/YYYY|MM|DD|HH|mm|ss|SSS/g, (t) => ({ YYYY: d.getFullYear(), MM: pad(d.getMonth() + 1), DD: pad(d.getDate()), HH: pad(d.getHours()), mm: pad(d.getMinutes()), ss: pad(d.getSeconds()), SSS: pad(d.getMilliseconds(), 3) }[t]));
-const rand = (n = 6) => Array.from(crypto.getRandomValues(new Uint8Array(n)), b => b % 10).join('').replace(/^0/, '1');
-const hex = (n = 8) => Array.from(crypto.getRandomValues(new Uint8Array(Math.ceil(n / 2))), b => b.toString(16).padStart(2, '0')).join('').slice(0, n);
-const logs = [], tests = [], pending = [], output = [];
-// tool calls go to dt over stdout; answers come back on stdin
-let rpcSeq = 0;
-const rpcWait = new Map();
-const rpc = (tool, args) => new Promise((resolve, reject) => {
-  const id = ++rpcSeq;
-  rpcWait.set(id, { resolve, reject });
-  process.stdout.write(JSON.stringify({ rpc: id, tool, args: args === undefined ? {} : args }) + '\n');
-});
-const tools = new Proxy({}, { get: (_, name) => {
-  if (typeof name !== 'string' || name === 'then') return undefined;
-  if (name === 'call') return (tool, args) => rpc(tool, args);
-  if (name === 'list') return () => rpc('__list', {});
-  return (args) => rpc(name, args);
-} });
-const pretty = (v) => (typeof v === 'string' ? v : (() => { try { return JSON.stringify(v, null, 2); } catch { return String(v); } })());
-const check = (ok, msg) => { if (!ok) throw new Error(msg); };
-function expect(v) {
-  const m = (neg) => ({
-    toBe: (x) => check((v === x) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to be ' + fmt(x)),
-    toEqual: (x) => check((JSON.stringify(v) === JSON.stringify(x)) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to equal ' + fmt(x)),
-    toMatch: (re) => check(new RegExp(re).test(String(v)) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to match ' + re),
-    toContain: (x) => check((v != null && v.includes(x)) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to contain ' + fmt(x)),
-    toBeTruthy: () => check(!!v !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to be truthy'),
-    toBeGreaterThan: (x) => check((v > x) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to be greater than ' + fmt(x)),
-    toHaveProperty: (k) => check((v != null && k.split('.').reduce((o, p) => (o == null ? undefined : o[p]), v) !== undefined) !== neg, 'expected ' + fmt(v).slice(0, 200) + (neg ? ' not' : '') + ' to have ' + k),
-  });
-  return Object.assign(m(false), { not: m(true) });
-}
-const helpers = {
-  uuid: () => crypto.randomUUID(), now: () => new Date().toISOString(), date, rand, hex, diffLists, diffLines,
-  log: (...a) => { logs.push(a.map(fmt).join(' ').slice(0, 2000)); },
-  text: (...a) => { output.push(a.map(pretty).join(' ')); },
-  tools,
-  assert: (ok, msg) => check(ok, msg || 'assertion failed'),
-  expect,
-  test: (name, fn) => {
-    const done = (error) => tests.push(error ? { name, ok: false, error: error.message || String(error) } : { name, ok: true });
-    try { const r = fn(); if (r && typeof r.then === 'function') pending.push(r.then(() => done(), done)); else done(); } catch (e) { done(e); }
-  },
-};
-// one JSON request per line, one JSON answer per line
-let buf = '';
-process.stdin.setEncoding('utf8');
-let queue = Promise.resolve();
-process.stdin.on('data', (c) => {
-  buf += c;
-  let i;
-  while ((i = buf.indexOf('\n')) >= 0) {
-    const line = buf.slice(0, i); buf = buf.slice(i + 1);
-    const msg = JSON.parse(line);
-    if (msg.rpcResult !== undefined) {
-      const w = rpcWait.get(msg.rpcResult);
-      rpcWait.delete(msg.rpcResult);
-      if (w) msg.error ? w.reject(new Error(msg.error)) : w.resolve(msg.result);
-    } else queue = queue.then(() => handle(msg));
-  }
-});
-async function handle(input) {
-  logs.length = 0; tests.length = 0; pending.length = 0; output.length = 0;
-  const out = { vars: input.vars, args: input.args, result: input.result, logs, tests, output };
-  try {
-    const AsyncFunction = (async () => {}).constructor;
-    const fn = new AsyncFunction('vars', 'args', 'result', ...Object.keys(helpers), input.code);
-    const r = await fn(out.vars, out.args, out.result, ...Object.values(helpers));
-    await Promise.all(pending);
-    if (r !== undefined) { out.returned = r; out.hasReturn = true; }
-  } catch (e) { out.error = (e && e.message) || String(e); }
-  let text;
-  try { text = JSON.stringify(out); } catch (e) { text = JSON.stringify({ logs, tests, output, error: 'result is not JSON: ' + e.message }); }
-  process.stdout.write(text + '\n');
-}
-`;
-    function enabled() {
-      const c = require_config().getScripts();
-      if (c.js === false) throw new Error("JavaScript in scripts is turned off (scripts.js: false in config.json)");
-      return c;
-    }
-    var Session = class {
-      constructor() {
-        this.child = null;
-        this.wait = null;
-      }
-      start() {
-        const pf = permissionFlag();
-        if (!pf) throw new Error(`JavaScript needs Node 20+ with the permission model (this is ${process.version})`);
-        const child = spawn(process.execPath, [pf, "--max-old-space-size=128", "-e", RUNNER], { env: {}, stdio: ["pipe", "pipe", "pipe"] });
-        let out2 = "", err = "";
-        child.stdout.on("data", (d) => {
-          out2 += d;
-          let i;
-          while ((i = out2.indexOf("\n")) >= 0) {
-            const line = out2.slice(0, i);
-            out2 = out2.slice(i + 1);
-            let msg = null;
-            try {
-              msg = JSON.parse(line);
-            } catch {
-            }
-            if (msg && msg.rpc !== void 0) this.tool(child, msg);
-            else if (this.wait) this.wait.done(line);
-          }
-          if (out2.length > 2e7) this.kill("more than 20 MB of output");
-        });
-        child.stderr.on("data", (d) => {
-          err = (err + d).slice(-4e3);
-        });
-        child.on("close", () => {
-          if (this.child === child) this.child = null;
-          if (this.wait) this.wait.fail(new Error(`js: ${(err.split("\n").find((l) => /Error/.test(l)) || err || "the sandbox stopped").trim().slice(0, 500)}`));
-        });
-        child.stdin.on("error", () => {
-        });
-        this.child = child;
-      }
-      // a tool call from the code: run it through onTool (or refuse), answer on stdin
-      async tool(child, { rpc, tool, args }) {
-        let reply;
-        try {
-          if (!this.onTool) throw new Error("dt tools are not available here");
-          reply = { rpcResult: rpc, result: await this.onTool(tool, args) };
-        } catch (e) {
-          reply = { rpcResult: rpc, error: e.message };
-        }
-        let line;
-        try {
-          line = JSON.stringify(reply);
-        } catch (e) {
-          line = JSON.stringify({ rpcResult: rpc, error: `result is not JSON: ${e.message}` });
-        }
-        if (this.child === child) child.stdin.write(line + "\n");
-      }
-      kill(why) {
-        const w = this.wait;
-        this.wait = null;
-        if (this.child) {
-          this.child.kill("SIGKILL");
-          this.child = null;
-        }
-        if (w) w.fail(new Error(`js: ${why}`));
-      }
-      // -> { vars, args, result, returned, hasReturn, logs, tests, output, error }
-      // onTool(name, args): lets the code call dt tools; timeoutMs: instead of scripts.jsTimeoutMs
-      run(code, { vars = {}, args, result } = {}, { onTool, timeoutMs } = {}) {
-        const c = enabled();
-        this.onTool = onTool || this.onTool;
-        const limitMs = timeoutMs || c.jsTimeoutMs;
-        if (!this.child) this.start();
-        let line;
-        try {
-          line = JSON.stringify({ code: String(code), vars, args, result });
-        } catch (e) {
-          return Promise.reject(new Error(`js: data is not JSON: ${e.message}`));
-        }
-        return new Promise((resolve, reject) => {
-          const t = setTimeout(() => this.kill(`stopped after ${limitMs}ms`), limitMs);
-          this.wait = {
-            done: (text) => {
-              clearTimeout(t);
-              this.wait = null;
-              try {
-                resolve(JSON.parse(text));
-              } catch (e) {
-                reject(new Error(`js: bad answer: ${e.message}`));
-              }
-            },
-            fail: (e) => {
-              clearTimeout(t);
-              this.wait = null;
-              reject(e);
-            }
-          };
-          this.child.stdin.write(line + "\n");
-        });
-      }
-      close() {
-        if (this.child) {
-          this.child.stdin.end();
-          this.child.kill();
-          this.child = null;
-        }
-      }
-    };
-    async function run(code, data, opts) {
-      const s = new Session();
-      try {
-        return await s.run(code, data, opts);
-      } finally {
-        s.close();
-      }
-    }
-    module2.exports = { run, Session, permissionFlag };
-  }
-});
-
 // lib/browser-mcp.js
 var require_browser_mcp = __commonJS({
   "lib/browser-mcp.js"(exports2, module2) {
@@ -13262,12 +15059,12 @@ var require_browser_mcp = __commonJS({
         this.id = null;
         this.seq = 0;
       }
-      async post(body) {
+      async post(body, { timeout = this.timeout } = {}) {
         const headers = { "content-type": "application/json", accept: "application/json, text/event-stream", "mcp-protocol-version": PROTOCOL };
         if (this.id) headers["mcp-session-id"] = this.id;
         let res;
         try {
-          res = await fetch(this.url, { method: "POST", headers, body: JSON.stringify(body), signal: AbortSignal.timeout(this.timeout) });
+          res = await fetch(this.url, { method: "POST", headers, body: JSON.stringify(body), signal: AbortSignal.timeout(timeout) });
         } catch (e) {
           throw new Error(`browser MCP ${this.url}: ${e.cause?.code || e.message}`);
         }
@@ -13305,12 +15102,20 @@ var require_browser_mcp = __commonJS({
       }
       async tools() {
         await this.open();
-        return (await this.post({ jsonrpc: "2.0", id: ++this.seq, method: "tools/list", params: {} })).tools || [];
+        this.definitions = (await this.post({ jsonrpc: "2.0", id: ++this.seq, method: "tools/list", params: {} })).tools || [];
+        return this.definitions;
       }
       // -> { text, images: n }; throws when the tool reports an error
-      async call(name, args = {}) {
+      async call(name, args = {}, options = {}) {
         await this.open();
-        const r = await this.post({ jsonrpc: "2.0", id: ++this.seq, method: "tools/call", params: { name, arguments: args } });
+        if (args.ref !== void 0) {
+          const definition = (this.definitions || await this.tools()).find((t) => t.name === name);
+          if (definition?.inputSchema?.properties?.target && !definition.inputSchema.properties.ref) {
+            args = { ...args, target: args.target ?? args.ref };
+            delete args.ref;
+          }
+        }
+        const r = await this.post({ jsonrpc: "2.0", id: ++this.seq, method: "tools/call", params: { name, arguments: args } }, options);
         const text = (r.content || []).filter((c) => c.type === "text").map((c) => c.text).join("\n");
         if (r.isError) throw new Error(`${name}: ${text.slice(0, 1e3)}`);
         return { text, images: (r.content || []).filter((c) => c.type === "image").length };
@@ -13469,19 +15274,25 @@ var require_scripts = __commonJS({
         meta = JSON.parse(fs2.readFileSync(path2.join(f.dir, META), "utf8"));
       } catch {
       }
-      return { collection: f.id, description: meta.description || "", tool: meta.tool || false, toolName: meta.tool ? toolName(meta.tool, f.id) : null, vars: meta.vars || {}, before: meta.before || "", after: meta.after || "", scripts: walk(f.dir).map((x) => `${f.id}/${x}`) };
+      return { ...meta, collection: f.id, description: meta.description || "", tool: meta.tool || false, toolName: meta.tool ? toolName(meta.tool, f.id) : null, vars: meta.vars || {}, before: meta.before || "", after: meta.after || "", finally: meta.finally || "", scripts: walk(f.dir).map((x) => `${f.id}/${x}`) };
     }
-    function setCollection(p, { description = "", tool = false, vars = {}, before = "", after = "" } = {}) {
+    function setCollection(p, changes = {}) {
       const f = folder(p);
       if (!f.id || !fs2.existsSync(f.dir)) throw new Error(`no collection "${p}"`);
-      if (tool && !/^[a-z][a-z0-9_]{1,63}$/.test(toolName(tool, f.id))) throw new Error(`tool name "${toolName(tool, f.id)}": lowercase letters, digits and _`);
-      if (vars && (typeof vars !== "object" || Array.isArray(vars))) throw new Error('vars must be { "name": value }');
-      for (const [h, v] of [["before", before], ["after", after]]) if (v && ![].concat(v).every((x) => typeof x === "string")) throw new Error(`${h} must be JavaScript`);
-      const meta = { description: String(description || "").trim(), tool: tool || false, ...vars && Object.keys(vars).length ? { vars } : {}, ...before ? { before } : {}, ...after ? { after } : {} };
+      let prior = {};
+      try {
+        prior = JSON.parse(fs2.readFileSync(path2.join(f.dir, META), "utf8"));
+      } catch {
+      }
+      const meta = { ...prior, ...Object.fromEntries(Object.entries(changes).filter(([, v]) => v !== void 0)) };
+      if (meta.tool && !/^[a-z][a-z0-9_]{1,63}$/.test(toolName(meta.tool, f.id))) throw new Error(`tool name "${toolName(meta.tool, f.id)}": lowercase letters, digits and _`);
+      if (meta.vars && (typeof meta.vars !== "object" || Array.isArray(meta.vars))) throw new Error('vars must be { "name": value }');
+      for (const h of ["before", "after", "finally"]) if (meta[h] && ![].concat(meta[h]).every((x) => typeof x === "string")) throw new Error(`${h} must be JavaScript`);
+      if (meta.description !== void 0) meta.description = String(meta.description || "").trim();
       fs2.writeFileSync(path2.join(f.dir, META), JSON.stringify(meta, null, 2) + "\n");
       return getCollection(f.id);
     }
-    var PARAM_TYPES = /* @__PURE__ */ new Set(["string", "integer", "number", "boolean"]);
+    var PARAM_TYPES = /* @__PURE__ */ new Set(["string", "integer", "number", "boolean", "object", "array"]);
     function exposed() {
       const folders = [];
       const ids = walk(DIR, "", folders);
@@ -13529,7 +15340,7 @@ var require_scripts = __commonJS({
           origin: `collection ${c}`,
           description: `${meta.description || `Saved scripts of the ${c} collection`}. Run one by name (a close name is enough):
 ${lines.join("\n") || "(empty)"}`,
-          input: { script: { type: "string", description: "Script name in this collection", ...items.length ? { enum: items.map((x) => x.rel) } : {} }, params: { type: "object", description: "Its params", additionalProperties: true } },
+          input: { script: { type: "string", description: "Script name in this collection (exact name or unambiguous close match)", ...items.length ? { examples: items.map((x) => x.rel) } : {} }, params: { type: "object", description: "Its params", additionalProperties: true } },
           required: ["script"],
           run: (a) => run(resolve(a.script, c), a.params || {}, { source: "tool" })
         });
@@ -13575,18 +15386,29 @@ ${lines.join("\n") || "(empty)"}`,
         if (s.as !== void 0 && !/^[a-z_]\w*$/i.test(s.as)) throw new Error(`step ${i + 1}: "as" must be a name`);
         if (s.set !== void 0 && (!s.set || typeof s.set !== "object" || Array.isArray(s.set))) throw new Error(`step ${i + 1}: set must be { "name": value }`);
         if (s.transform !== void 0 && s.replace !== void 0 && !Array.isArray(s.replace)) throw new Error(`step ${i + 1}: replace must be a list of { find, with }`);
-        if (s.http !== void 0 && !/^(GET|POST|PUT|PATCH|DELETE)\s+\S+$/i.test(String(s.http))) throw new Error(`step ${i + 1}: http must be "METHOD url"`);
-        for (const h of ["before", "after", "js"]) if (s[h] !== void 0 && ![].concat(s[h]).every((x) => typeof x === "string")) throw new Error(`step ${i + 1}: ${h} must be JavaScript (a string, or a list of lines)`);
+        if (s.http !== void 0 && !/^(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)\s+\S+$/i.test(String(s.http))) throw new Error(`step ${i + 1}: http must be "METHOD url"`);
+        for (const h of ["before", "after", "finally", "js"]) if (s[h] !== void 0 && ![].concat(s[h]).every((x) => typeof x === "string")) throw new Error(`step ${i + 1}: ${h} must be JavaScript (a string, or a list of lines)`);
+        if (s.urlEncodeParams !== void 0 && (!Array.isArray(s.urlEncodeParams) || s.urlEncodeParams.some((p) => !/^[a-z_]\w*$/i.test(p)))) throw new Error(`step ${i + 1}: urlEncodeParams must be parameter names`);
+        for (const key of ["timeoutMs"]) if (s[key] !== void 0 && (!Number.isInteger(s[key]) || s[key] < 1 || s[key] > 12e4)) throw new Error(`step ${i + 1}: ${key} must be 1..120000`);
+        if (s.assertions !== void 0 && (!Array.isArray(s.assertions) || s.assertions.some((a) => !a || typeof a.name !== "string" || !a.name || (a.code === void 0 ? !["equal", "exists", "contains", "count"].includes(a.op) || typeof a.path !== "string" : ![].concat(a.code).every((x) => typeof x === "string"))))) throw new Error(`step ${i + 1}: assertions need name and code, or name/path/op (equal, exists, contains, count)`);
+        if (s.retry || s.poll) {
+          const attempts = s.poll?.attempts || s.retry?.attempts || 1;
+          if (!Number.isInteger(attempts) || attempts < 1 || attempts > 20) throw new Error(`step ${i + 1}: retry/poll attempts must be 1..20`);
+          if (!safeRepeat(s)) throw new Error(`step ${i + 1}: retry/poll requires GET/HEAD or an explicitly idempotent tool`);
+        }
         if (s.capture !== void 0 && (typeof s.capture !== "object" || Array.isArray(s.capture) || !Object.entries(s.capture).every(([k, v]) => /^[a-z_]\w*$/i.test(k) && typeof v === "string"))) throw new Error(`step ${i + 1}: capture must be { "name": "path.in.result" }`);
       });
       for (const [k, p] of Object.entries(def.params || {})) if (!/^\w+$/.test(k) || p && typeof p !== "object") throw new Error(`param ${k}: use { "description", "default", "required" }`);
-      for (const h of ["before", "after"]) if (def[h] !== void 0 && ![].concat(def[h]).every((x) => typeof x === "string")) throw new Error(`${h} must be JavaScript (a string, or a list of lines)`);
+      for (const h of ["before", "after", "finally"]) if (def[h] !== void 0 && ![].concat(def[h]).every((x) => typeof x === "string")) throw new Error(`${h} must be JavaScript (a string, or a list of lines)`);
       if (def.vars !== void 0 && (typeof def.vars !== "object" || Array.isArray(def.vars))) throw new Error('vars must be { "name": value }');
       if (def.tool && typeof def.tool === "string" && !/^[a-z][a-z0-9_]{1,63}$/.test(def.tool)) throw new Error(`tool name "${def.tool}": lowercase letters, digits and _`);
     }
-    function save(id, def) {
+    function save(id, def, { merge = false } = {}) {
       const f = file(id);
-      const { id: _, ...body } = def;
+      const { id: _, ...changes } = def;
+      let prior = {};
+      if (merge && fs2.existsSync(f)) prior = JSON.parse(fs2.readFileSync(f, "utf8"));
+      const body = { ...prior, ...changes };
       validate(body);
       fs2.mkdirSync(path2.dirname(f), { recursive: true });
       const existed = fs2.existsSync(f);
@@ -13640,6 +15462,12 @@ ${lines.join("\n") || "(empty)"}`,
         if ((out2[k] === void 0 || out2[k] === "") && p && p.default !== void 0) out2[k] = p.default;
         if ((out2[k] === void 0 || out2[k] === "") && p && p.required) throw new Error(`script ${def.id}: missing param ${k}${p.description ? ` (${p.description})` : ""}`);
       }
+      for (const [k, p] of Object.entries(def.params || {})) if (out2[k] !== void 0 && p && p.type) {
+        const v = out2[k], type = p.type;
+        const ok = type === "integer" ? Number.isInteger(v) : type === "array" ? Array.isArray(v) : type === "object" ? v !== null && typeof v === "object" && !Array.isArray(v) : typeof v === type;
+        if (!ok) throw new Error(`script ${def.id}: param ${k} must be ${type}`);
+        if (p.enum && !p.enum.some((x) => JSON.stringify(x) === JSON.stringify(v))) throw new Error(`script ${def.id}: param ${k} is not an allowed value`);
+      }
       return out2;
     }
     var brief = (v, n = 3e3) => {
@@ -13654,7 +15482,11 @@ ${lines.join("\n") || "(empty)"}`,
       if (step.open) return { url: /^https?:\/\//.test(step.open) ? fill(step.open, scope) : require_config().siteUrl(fill(step.open, scope), scope) };
       if (step.http) {
         const [, method, url] = String(step.http).match(/^(\w+)\s+(\S+)$/);
-        return { method: method.toUpperCase(), url: fill(url, scope), headers: fill(step.headers || {}, scope), ...step.body !== void 0 ? { body: fill(step.body, scope) } : {} };
+        const encoded = { ...scope };
+        for (const p of step.urlEncodeParams || []) {
+          if (scope[p] !== void 0) encoded[p] = encodeURIComponent(String(scope[p]));
+        }
+        return { method: method.toUpperCase(), url: fill(url, encoded), headers: fill(step.headers || {}, scope), ...step.body !== void 0 ? { body: fill(step.body, scope) } : {} };
       }
       if (step.set) return fill(step.set, scope);
       if (step.transform !== void 0) return { text: fill(step.transform, scope) };
@@ -13664,13 +15496,56 @@ ${lines.join("\n") || "(empty)"}`,
     var kindOf = (step) => KINDS.find((k) => step[k] !== void 0);
     var label = (step) => step.tool ? `tool ${step.tool}` : step.script ? `script ${step.script}` : step.browser ? `browser ${browserTool(step.browser)}` : step.open ? `open ${step.open}` : step.set ? `set ${Object.keys(step.set).join(", ")}` : step.transform !== void 0 ? "transform" : step.http ? `http ${String(step.http).split(/\s+/)[0].toUpperCase()}` : step.js !== void 0 ? "js" : `wait ${step.wait}`;
     var capturePath = (v, p) => !p || p === "." || p === "$" ? v : dig(v, String(p).replace(/^\$\.?/, "").replace(/\[(\d+)\]/g, ".$1").split(".").filter(Boolean));
+    function check(st) {
+      if (st.cleaning) {
+        if (Date.now() >= st.cleanupDeadline) throw new Error("cleanup deadline exceeded");
+        return;
+      }
+      if (st.signal?.aborted) throw new Error(`cancelled: ${st.signal.reason?.message || st.signal.reason || "requested"}`);
+      if (st.cancelled?.()) throw new Error("cancelled");
+      if (Date.now() >= st.deadline) throw new Error("run deadline exceeded");
+    }
+    async function bounded(fn, st, maxMs) {
+      check(st);
+      const remaining = (st.cleaning ? st.cleanupDeadline : st.deadline) - Date.now();
+      const ms = Math.max(1, Math.min(maxMs || 12e4, remaining));
+      let timer, listener;
+      try {
+        const result = await Promise.race([Promise.resolve().then(fn), new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error("step deadline exceeded; outcome may be unknown")), ms);
+          if (!st.cleaning && st.signal) {
+            listener = () => reject(new Error("cancelled; in-flight tool outcome may be unknown"));
+            st.signal.addEventListener("abort", listener, { once: true });
+          }
+        })]);
+        check(st);
+        return result;
+      } finally {
+        clearTimeout(timer);
+        if (listener) st.signal.removeEventListener("abort", listener);
+      }
+    }
+    async function delay(ms, st) {
+      return bounded(() => new Promise((resolve2) => setTimeout(resolve2, ms)), st, ms + 100);
+    }
     async function hook(code, st, where, { scope, args, result }) {
+      check(st);
       if (!st.js) st.js = new (require_js()).Session();
       const onTool = (name, a) => {
+        check(st);
         if (name === "__list") return require_tools().schemas().then((ts) => ts.map((t) => ({ name: t.name, description: t.description.split(". ")[0] })));
-        return require_tools().call(name, a, { source: `script:${where.script}` });
+        return bounded(() => (st.call || require_tools().call)(name, a, { source: `script:${where.script}` }), st);
       };
-      const r = await st.js.run([].concat(code).join("\n"), { vars: scope, args, result }, { onTool, timeoutMs: [].concat(code).join("\n").includes("tools.") ? require_config().getScripts().codeTimeoutMs : void 0 });
+      const codeText = [].concat(code).join("\n"), config = require_config().getScripts();
+      const ms = Math.max(1, Math.min(codeText.includes("tools.") ? config.codeTimeoutMs : config.jsTimeoutMs, (st.cleaning ? st.cleanupDeadline : st.deadline) - Date.now()));
+      const abort = () => st.js?.kill("cancelled");
+      if (!st.cleaning) st.signal?.addEventListener("abort", abort, { once: true });
+      let r;
+      try {
+        r = await st.js.run([].concat(code).join("\n"), { vars: scope, args, result }, { onTool, timeoutMs: ms });
+      } finally {
+        st.signal?.removeEventListener("abort", abort);
+      }
       if (r.vars && typeof r.vars === "object") {
         for (const k of Object.keys(scope)) if (!(k in r.vars)) delete scope[k];
         Object.assign(scope, r.vars);
@@ -13678,10 +15553,48 @@ ${lines.join("\n") || "(empty)"}`,
       for (const msg of r.logs || []) st.logs.push({ ...where, msg });
       for (const t of r.tests || []) st.tests.push({ ...where, ...t });
       if (r.error) throw new Error(`${where.hook}: ${r.error}`);
+      check(st);
       return r;
+    }
+    async function cleanup(code, st, where, scope, result) {
+      if (!code) return;
+      const prior = st.cleaning;
+      if (!prior) st.cleanupDeadline = Date.now() + st.cleanupTimeoutMs;
+      st.cleaning = true;
+      try {
+        await hook(code, st, { ...where, hook: "finally" }, { scope, result });
+      } catch (e) {
+        st.cleanupErrors.push({ ...where, error: e.message });
+      } finally {
+        st.cleaning = prior;
+      }
+    }
+    var safeRepeat = (step) => step.http ? /^(GET|HEAD)\s/i.test(step.http) : !!step.tool && step.retry?.idempotent === true;
+    async function repeatStep(step, st, rec, fn) {
+      const retry = step.retry || {}, poll = step.poll;
+      const attempts = poll?.attempts || retry.attempts || 1;
+      if (!Number.isInteger(attempts) || attempts < 1 || attempts > 20) throw new Error("retry/poll attempts must be 1..20");
+      if ((attempts > 1 || poll) && !safeRepeat(step)) throw new Error("retry/poll requires GET/HEAD, or an explicitly idempotent tool");
+      rec.attempts = [];
+      for (let n = 1; n <= attempts; n++) {
+        check(st);
+        const started = Date.now();
+        try {
+          const value = await bounded(fn, st, step.timeoutMs);
+          const matched = !poll || JSON.stringify(capturePath(value, poll.path)) === JSON.stringify(poll.equals);
+          rec.attempts.push({ attempt: n, ok: true, matched, ms: Date.now() - started });
+          if (matched) return value;
+          if (n === attempts) throw Object.assign(new Error(`poll condition not met after ${attempts} attempts`), { final: true });
+        } catch (e) {
+          if (!rec.attempts.some((x) => x.attempt === n)) rec.attempts.push({ attempt: n, ok: false, error: e.message, ms: Date.now() - started });
+          if (e.final || n === attempts || /deadline|cancelled|outcome may be unknown/.test(e.message)) throw e;
+        }
+        await delay(Math.max(0, Math.min(1e4, Number(poll?.intervalMs ?? retry.delayMs ?? 100))), st);
+      }
     }
     async function runSteps(def, scope, st) {
       for (const [i, step] of def.steps.entries()) {
+        check(st);
         const started = Date.now();
         const rec = { script: def.id, step: i + 1, do: label(step) };
         const where = { script: def.id, step: i + 1 };
@@ -13696,8 +15609,8 @@ ${lines.join("\n") || "(empty)"}`,
           let result;
           const k = kindOf(step);
           if (k === "tool") {
-            if (step.tool.startsWith("script_")) throw new Error('use a "script" step to run another script');
-            result = await require_tools().call(step.tool, input, { source: `script:${def.id}` });
+            if (step.tool.startsWith("script_") || step.tool.startsWith("collection_")) throw new Error('use a "script" step to run another script');
+            result = await repeatStep(step, st, rec, () => (st.call || require_tools().call)(step.tool, input, { source: `script:${def.id}` }));
           } else if (k === "set") {
             result = input;
             Object.assign(scope, result);
@@ -13706,13 +15619,13 @@ ${lines.join("\n") || "(empty)"}`,
             result = t.text;
             rec.detail = { replaced: t.replaced, map: t.map };
           } else if (k === "http") {
-            result = await httpStep(input, step);
+            result = await repeatStep(step, st, rec, () => httpStep(input, step, st));
           } else if (k === "js") {
             const r = await hook(step.js, st, { ...where, hook: "js" }, { scope, result: st.last });
             result = r.hasReturn ? r.returned : null;
           } else if (k === "script") {
             if (st.depth >= MAX_DEPTH) throw new Error(`scripts nest deeper than ${MAX_DEPTH}`);
-            const sub = get(step.script);
+            const sub = st.definitions?.[step.script] || get(step.script);
             st.depth++;
             try {
               result = await runScript(sub, params(sub, input), st);
@@ -13721,12 +15634,13 @@ ${lines.join("\n") || "(empty)"}`,
             }
           } else if (k === "wait") {
             const w = input.wait;
-            result = (await browser(st).call("browser_wait_for", typeof w === "number" ? { time: w } : { text: String(w) })).text;
+            result = (await bounded(() => browser(st).call("browser_wait_for", typeof w === "number" ? { time: w } : { text: String(w) }), st, step.timeoutMs)).text;
           } else {
             const [name, args] = k === "open" ? ["browser_navigate", input] : [browserTool(step.browser), input];
             if (name === "browser_navigate") st.pages.add(args.url);
-            result = (await browser(st).call(name, args)).text;
+            result = (await bounded(() => browser(st).call(name, args), st, step.timeoutMs)).text;
           }
+          check(st);
           for (const [name, p] of Object.entries(step.capture || {})) {
             const v = capturePath(result, p);
             if (v === void 0) throw new Error(`capture ${name}: no "${p}" in the result`);
@@ -13736,6 +15650,17 @@ ${lines.join("\n") || "(empty)"}`,
             const r = await hook(step.after, st, { ...where, hook: "after" }, { scope, result });
             if (r.hasReturn) result = r.returned;
           }
+          for (const assertion of step.assertions || []) {
+            const before = st.tests.length;
+            if (assertion.code !== void 0) await hook(`test(${JSON.stringify(assertion.name)}, async () => { ${[].concat(assertion.code).join("\n")} });`, st, { ...where, hook: "assertion" }, { scope, result });
+            else {
+              const actual = capturePath(result, assertion.path), expected = fill(assertion.value, scope);
+              const equal = (a, b) => require("util").isDeepStrictEqual(a, b);
+              const ok = assertion.op === "exists" ? actual !== void 0 === (expected !== false) : assertion.op === "count" ? actual != null && actual.length === expected : assertion.op === "contains" ? Array.isArray(actual) ? actual.some((v) => equal(v, expected)) : typeof actual === "string" && actual.includes(String(expected)) : equal(actual, expected);
+              st.tests.push({ ...where, name: assertion.name, ok, ...ok ? {} : { error: `expected ${assertion.path} ${assertion.op} ${JSON.stringify(expected)}; actual ${JSON.stringify(actual)}`, expected, actual } });
+            }
+            if (assertion.hard && st.tests.slice(before).some((t) => !t.ok)) throw new Error(`assertion ${assertion.name} failed`);
+          }
           if (step.as) scope[step.as] = result;
           st.last = result;
           if (result && typeof result === "object" && typeof result.view === "string" && /^https?:/.test(result.view)) st.lastView = result.view;
@@ -13744,7 +15669,9 @@ ${lines.join("\n") || "(empty)"}`,
         } catch (e) {
           Object.assign(rec, { ok: false, ms: Date.now() - started, error: e.message });
           delete rec.detail;
-          if (!step.optional) throw Object.assign(e, { scriptStep: rec });
+          if (!step.optional || /cancelled|deadline/.test(e.message)) throw Object.assign(e, { scriptStep: rec });
+        } finally {
+          await cleanup(step.finally, st, where, scope, st.last);
         }
       }
       return scope;
@@ -13762,16 +15689,26 @@ ${lines.join("\n") || "(empty)"}`,
       return out2;
     }
     async function runScript(def, scope, st) {
-      const cols = chain(def.id);
-      for (const c of cols) for (const [k, v] of Object.entries(c.vars || {})) if (scope[k] === void 0) scope[k] = fill(v, scope);
-      for (const [k, v] of Object.entries(def.vars || {})) if (scope[k] === void 0) scope[k] = fill(v, scope);
+      const cols = st.collectionChains?.[def.id] || chain(def.id), entered = [];
       const where = { script: def.id, step: 0 };
-      for (const c of cols) if (c.before) await hook(c.before, st, { ...where, hook: `before (${c.collection})` }, { scope });
-      if (def.before) await hook(def.before, st, { ...where, hook: "before" }, { scope });
-      await runSteps(def, scope, st);
-      if (def.after) await hook(def.after, st, { ...where, step: def.steps.length + 1, hook: "after" }, { scope, result: st.last });
-      for (const c of [...cols].reverse()) if (c.after) await hook(c.after, st, { ...where, step: def.steps.length + 1, hook: `after (${c.collection})` }, { scope, result: st.last });
-      return scope;
+      let scriptEntered = true;
+      try {
+        for (const c of cols) {
+          entered.push(c);
+          for (const [k, v] of Object.entries(c.vars || {})) if (scope[k] === void 0) scope[k] = fill(v, scope);
+        }
+        for (const [k, v] of Object.entries(def.vars || {})) if (scope[k] === void 0) scope[k] = fill(v, scope);
+        for (const c of cols) if (c.before) await hook(c.before, st, { ...where, hook: `before (${c.collection})` }, { scope });
+        scriptEntered = true;
+        if (def.before) await hook(def.before, st, { ...where, hook: "before" }, { scope });
+        await runSteps(def, scope, st);
+        if (def.after) await hook(def.after, st, { ...where, step: def.steps.length + 1, hook: "after" }, { scope, result: st.last });
+        for (const c of [...cols].reverse()) if (c.after) await hook(c.after, st, { ...where, step: def.steps.length + 1, hook: `after (${c.collection})` }, { scope, result: st.last });
+        return scope;
+      } finally {
+        if (scriptEntered) await cleanup(def.finally, st, where, scope, st.last);
+        for (const c of entered.reverse()) await cleanup(c.finally, st, { ...where, collection: c.collection }, scope, st.last);
+      }
     }
     function transform(input, step, scope) {
       let text = typeof input === "string" ? input : JSON.stringify(input, null, 2);
@@ -13825,24 +15762,56 @@ ${lines.join("\n") || "(empty)"}`,
       }
       return n;
     }
-    async function httpStep(input, step) {
+    async function httpStep(input, step, st) {
       const { method, url, headers = {} } = input;
       const allow = require_config().getScripts().httpAllow;
-      if (!allow.some((a) => url.startsWith(a))) throw new Error(`http to ${url} is not allowed: add its URL prefix to scripts.http.allow in config.json${allow.length ? ` (allowed: ${allow.join(", ")})` : ""}`);
+      const target = new URL(url);
+      if (!/^https?:$/.test(target.protocol) || target.username || target.password || !allow.some((a) => {
+        try {
+          const prefix = new URL(a);
+          return target.origin === prefix.origin && (target.pathname === prefix.pathname || target.pathname.startsWith(prefix.pathname.endsWith("/") ? prefix.pathname : prefix.pathname + "/")) && (!prefix.search || target.search === prefix.search);
+        } catch {
+          return false;
+        }
+      })) throw new Error(`http to ${target.origin}${target.pathname} is not allowed: add its URL prefix to scripts.http.allow in config.json`);
       await require_limit().take(`http:${new URL(url).host}`);
       let body = input.body;
       if (body !== void 0 && typeof body !== "string") {
         body = JSON.stringify(body);
         if (!Object.keys(headers).some((h) => h.toLowerCase() === "content-type")) headers["content-type"] = "application/json";
       }
-      const res = await fetch(url, { method, headers, body, signal: AbortSignal.timeout(step.timeoutMs || 3e4) });
-      const text = await res.text();
+      const started = Date.now();
+      const res = await fetch(url, { method, headers, body, redirect: "error", signal: AbortSignal.any([AbortSignal.timeout(Math.max(1, Math.min(step.timeoutMs || 3e4, (st.cleaning ? st.cleanupDeadline : st.deadline) - Date.now()))), ...!st.cleaning && st.signal ? [st.signal] : []]) });
+      const cap = Math.max(1, Math.min(step.maxResponseBytes || 1048576, 2097152)), chunks = [];
+      let bytes = 0, truncated = false;
+      if (res.body) {
+        const reader = res.body.getReader();
+        try {
+          for (; ; ) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            const room = cap - bytes;
+            if (value.length > room) {
+              chunks.push(value.subarray(0, room));
+              bytes += room;
+              truncated = true;
+              await reader.cancel();
+              break;
+            }
+            chunks.push(value);
+            bytes += value.length;
+          }
+        } finally {
+          reader.releaseLock();
+        }
+      }
+      const text = Buffer.concat(chunks).toString("utf8");
       let json;
       try {
         json = JSON.parse(text);
       } catch {
       }
-      const out2 = { status: res.status, ...json !== void 0 ? { json } : { text: text.slice(0, 2e4) } };
+      const out2 = { status: res.status, statusText: res.statusText, headers: Object.fromEntries([...res.headers].filter(([k]) => !/^(set-cookie|authorization|proxy-authenticate)$/i.test(k))), ms: Date.now() - started, bytes, truncated, ...json !== void 0 ? { json } : { text } };
       if (!res.ok && !step.allowErrors) throw new Error(`HTTP ${res.status} from ${method} ${url}: ${text.slice(0, 300)}`);
       return out2;
     }
@@ -13850,9 +15819,10 @@ ${lines.join("\n") || "(empty)"}`,
       if (!st.browser) st.browser = require_browser_mcp().session();
       return st.browser;
     }
-    async function run(idOrDef, given = {}, { source } = {}) {
+    async function run(idOrDef, given = {}, options = {}) {
       const def = typeof idOrDef === "string" ? get(idOrDef) : { id: "(inline)", ...idOrDef };
-      const st = { log: [], logs: [], tests: [], depth: 0, browser: null, pages: /* @__PURE__ */ new Set(), last: void 0 };
+      const { source, signal, timeoutMs = 12e4, cleanupTimeoutMs = 1e4, call, cancelled, fullScope = false, definitions, collectionChains } = options;
+      const st = { log: [], logs: [], tests: [], cleanupErrors: [], depth: 0, browser: null, pages: /* @__PURE__ */ new Set(), last: void 0, signal, deadline: Date.now() + timeoutMs, cleanupTimeoutMs, call, cancelled, definitions, collectionChains };
       const scope = params(def, given);
       const keys = new Set(Object.keys(scope));
       let error = null;
@@ -13862,6 +15832,7 @@ ${lines.join("\n") || "(empty)"}`,
         error = e.message;
       }
       if (st.js) st.js.close();
+      if (!error && st.cleanupErrors.length) error = "cleanup failed";
       let routes;
       if (st.browser) {
         try {
@@ -13879,6 +15850,8 @@ ${lines.join("\n") || "(empty)"}`,
         script: def.id,
         ok: !error,
         ...error ? { error } : {},
+        ...st.cleanupErrors.length ? { cleanupErrors: st.cleanupErrors } : {},
+        ...fullScope ? { scope } : {},
         ...st.lastView ? { view: st.lastView } : {},
         // the last view a step made, embedded in the chat
         steps: st.log,
@@ -13888,7 +15861,11 @@ ${lines.join("\n") || "(empty)"}`,
         ...routes ? { routes } : {}
       };
     }
-    module2.exports = { list, get, save, remove, run, fill, validate, mkdir, move, copy, removeFolder, resolve, getCollection, setCollection, exposed, signature, transform, generate, DIR };
+    async function httpRequest(input, options = {}) {
+      const timeoutMs = Math.max(1, Math.min(options.timeoutMs || 3e4, 12e4));
+      return httpStep(input, { ...options, timeoutMs }, { deadline: Date.now() + timeoutMs, signal: options.signal });
+    }
+    module2.exports = { list, get, save, remove, run, fill, validate, mkdir, move, copy, removeFolder, resolve, getCollection, setCollection, exposed, signature, transform, generate, params, chain, DIR, httpRequest };
   }
 });
 
@@ -34342,10 +36319,11 @@ var require_calls = __commonJS({
       if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).slice(0, 50).map(([k, x]) => [k, clipArgs(x, n)]));
       return v;
     };
-    function record({ tool, args, source, ok, ms, error, size, steps }) {
+    function record({ tool, args, source, ok, ms, error, size, steps, redactions = [] }) {
       if (SKIP.has(tool)) return;
       const st = (steps || []).filter((x) => x.depth === 0 || !x.ok).slice(0, 30).map((x) => ({ name: x.name, ms: x.ms, ...x.ok ? {} : { error: x.error } }));
-      const line = JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), tool, source: source || "api", args: clipArgs(args || {}), ok, ms, ...error ? { error: String(error).slice(0, 600) } : {}, ...size ? { size } : {}, ...st.length ? { steps: st } : {} });
+      const evidence = require_redact().clean({ args: args || {}, error, steps: st }, { known: redactions });
+      const line = JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), tool, source: source || "api", args: clipArgs(evidence.args), ok, ms, ...error ? { error: String(evidence.error).slice(0, 600) } : {}, ...size ? { size } : {}, ...st.length ? { steps: evidence.steps } : {} });
       try {
         fs2.mkdirSync(path2.dirname(FILE), { recursive: true });
         fs2.appendFileSync(FILE, line + "\n");
@@ -37328,6 +39306,7 @@ var require_tools_code = __commonJS({
             db: str("Database to snapshot into the throwaway test database"),
             ddl_path: str("Or: a DDL file in the workspace to load (e.g. src/test/resources/dt-schema/pay.sql)"),
             fixture_path: str("Saved src/test/resources/dt-fixtures/<name>; replay its PG databases on scratch Postgres and expose Kafka files as DT_FIXTURE_PATH"),
+            fixture_template: bool("Reuse a verified immutable prefilled PostgreSQL template and allocate private leased clones"),
             fixture_bindings: { type: "object", additionalProperties: { type: "string" }, description: 'For multiple databases: {orders:"SPRING_DATASOURCE",billing:"BILLING_DATASOURCE"}; each prefix gets _URL, _USERNAME, _PASSWORD' },
             allow_incomplete: bool("Replay a fixture with reported gaps (review fixture explorer first)"),
             job: str('A job id from an earlier "running" answer'),
@@ -37343,7 +39322,7 @@ var require_tools_code = __commonJS({
               if (!a.tests?.length) throw new Error("tests: which test classes to run");
               const db = a.ddl_path || a.db ? { env: a.env || require_config().envNames()[0], db: a.db, ddlPath: a.ddl_path } : null;
               job = J.start(`tests:${a.workspace}:${a.tests.join(",")}`, `tests ${a.tests.join(", ")} in ${a.workspace}`, async (log) => {
-                const r = await require_testrun().run(a.workspace, { tests: a.tests, db, fixturePath: a.fixture_path, fixtureBindings: a.fixture_bindings, allowIncomplete: a.allow_incomplete, log, mode: a.mode || "auto", files: a.files || [], check: a.check, fix: a.fix });
+                const r = await require_testrun().run(a.workspace, { tests: a.tests, db, fixturePath: a.fixture_path, fixtureBindings: a.fixture_bindings, fixtureTemplate: a.fixture_template, allowIncomplete: a.allow_incomplete, log, mode: a.mode || "auto", files: a.files || [], check: a.check, fix: a.fix });
                 const view = R().saveView("tests", r, { title: `${r.outcome}: ${a.tests.join(", ")}` });
                 const failing = r.cases.filter((c) => c.status === "failed" || c.status === "error");
                 return {
@@ -37394,156 +39373,6 @@ var require_tools_code = __commonJS({
         }
       ];
     };
-  }
-});
-
-// lib/offline-js.js
-var require_offline_js = __commonJS({
-  "lib/offline-js.js"(exports2, module2) {
-    var J = require_js();
-    var { diffLists, diffLines } = require_diff();
-    var BOOTSTRAP = String.raw`
-(function () {
-  'use strict';
-  const bridge = globalThis.__dtBridge;
-  const input = JSON.parse(globalThis.__dtInput);
-  delete globalThis.__dtBridge;
-  delete globalThis.__dtInput;
-  const jsonStringify = JSON.stringify.bind(JSON), jsonParse = JSON.parse.bind(JSON);
-  const entries = Object.entries, defineProperty = Object.defineProperty;
-  const logs = [], tests = [], output = [], pending = [], requests = new Map();
-  const out = { vars: input.vars, args: input.args, result: input.result, logs, tests, output };
-  let seq = 0;
-  const fmt = (v, pretty) => {
-    if (typeof v === 'string') return v;
-    try { return jsonStringify(v, null, pretty ? 2 : undefined) ?? String(v); }
-    catch { return String(v); }
-  };
-  const message = (e) => { try { return String(e && e.message || e); } catch { return 'program error'; } };
-  const check = (ok, msg) => { if (!ok) throw new Error(msg || 'assertion failed'); };
-  function expect(v) {
-    const matchers = (neg) => ({
-      toBe: (x) => check((v === x) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to be ' + fmt(x)),
-      toEqual: (x) => check((jsonStringify(v) === jsonStringify(x)) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to equal ' + fmt(x)),
-      toMatch: (re) => check(new RegExp(re).test(String(v)) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to match ' + re),
-      toContain: (x) => check((v != null && v.includes(x)) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to contain ' + fmt(x)),
-      toBeTruthy: () => check(!!v !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to be truthy'),
-      toBeGreaterThan: (x) => check((v > x) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to be greater than ' + fmt(x)),
-      toHaveProperty: (k) => check((v != null && String(k).split('.').reduce((a, p) => a == null ? undefined : a[p], v) !== undefined) !== neg, 'expected ' + fmt(v).slice(0, 200) + (neg ? ' not' : '') + ' to have ' + k),
-    });
-    return Object.assign(matchers(false), { not: matchers(true) });
-  }
-  const rpc = (tool, args) => {
-    if (typeof tool !== 'string' || !tool) return Promise.reject(new Error('tool name must be a nonempty string'));
-    let payload;
-    try { payload = jsonStringify({ id: ++seq, tool, args: args === undefined ? {} : args }); }
-    catch (e) { return Promise.reject(new Error('tool arguments are not JSON: ' + message(e))); }
-    const id = seq;
-    let resolve, reject;
-    const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
-    // Set a handler now so fire-and-forget RPC cannot create an unhandled host rejection.
-    promise.catch(() => {});
-    requests.set(id, { resolve, reject, promise });
-    bridge(payload);
-    return promise;
-  };
-  const tools = new Proxy(Object.create(null), { get: (_, name) => {
-    if (typeof name !== 'string' || name === 'then') return undefined;
-    if (name === 'call') return (name, args) => rpc(name, args);
-    if (name === 'list') return () => rpc('__list', {});
-    return (args) => rpc(name, args);
-  } });
-  const pad = (n, w = 2) => String(n).padStart(w, '0');
-  const date = (f = 'YYYY-MM-DD', d = new Date()) => f.replace(/YYYY|MM|DD|HH|mm|ss|SSS/g, t => ({ YYYY: d.getFullYear(), MM: pad(d.getMonth() + 1), DD: pad(d.getDate()), HH: pad(d.getHours()), mm: pad(d.getMinutes()), ss: pad(d.getSeconds()), SSS: pad(d.getMilliseconds(), 3) }[t]));
-  const hex = (n = 8) => Array.from({ length: n }, () => Math.floor(Math.random() * 16).toString(16)).join('');
-  const rand = (n = 6) => Array.from({ length: n }, (_, i) => Math.floor(Math.random() * (i ? 10 : 9)) + (i ? 0 : 1)).join('');
-  const helpers = {
-    tools, expect, assert: check, date, hex, rand,
-    // UUIDs/random values are for fixtures, not cryptographic use.
-    uuid: () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const n = Math.floor(Math.random() * 16); return (c === 'x' ? n : (n & 3) | 8).toString(16); }),
-    now: () => new Date().toISOString(),
-    diffLists: ${diffLists.toString()},
-    diffLines: ${diffLines.toString()},
-    log: (...args) => { logs.push(args.map(v => fmt(v)).join(' ').slice(0, 2000)); },
-    text: (...args) => { output.push(args.map(v => fmt(v, true)).join(' ')); },
-    test: (name, fn) => {
-      const done = (ok, e) => tests.push(ok ? { name, ok: true } : { name, ok: false, error: message(e) });
-      try {
-        const r = fn();
-        if (r && typeof r.then === 'function') pending.push(Promise.resolve(r).then(() => done(true), e => done(false, e)));
-        else done(true);
-      } catch (e) { done(false, e); }
-    },
-  };
-  for (const [name, value] of entries(helpers)) defineProperty(globalThis, name, { value, enumerable: true });
-  defineProperty(globalThis, 'console', { value: Object.freeze({ log: helpers.log, info: helpers.log, warn: helpers.log, error: helpers.log }) });
-  return {
-    receive: (payload) => {
-      const reply = jsonParse(payload), request = requests.get(reply.id);
-      if (!request) return;
-      requests.delete(reply.id);
-      if (reply.error !== undefined) request.reject(new Error(String(reply.error)));
-      else request.resolve(reply.result);
-    },
-    execute: async (fn) => {
-      let returned;
-      try {
-        returned = await fn(out.vars, out.args, out.result);
-      } catch (e) { out.error = message(e); }
-      try {
-        // Tests can register other async tests, and unawaited RPC must settle before completion.
-        let done = 0;
-        while (done < pending.length || requests.size) {
-          const batch = pending.slice(done); done = pending.length;
-          await Promise.allSettled([...batch, ...Array.from(requests.values(), r => r.promise)]);
-        }
-        if (!out.error && returned !== undefined) { out.returned = returned; out.hasReturn = true; }
-      } catch (e) { out.error = message(e); }
-      try { return jsonStringify(out); }
-      catch (e) { return jsonStringify({ logs, tests, output, error: 'result is not JSON: ' + message(e) }); }
-    },
-  };
-})()
-`;
-    var PROGRAM = String.raw`
-'use strict';
-const vm = require('node:vm');
-const context = vm.createContext(Object.create(null), { codeGeneration: { strings: false, wasm: false } });
-let control;
-const stringify = JSON.stringify.bind(JSON), parse = JSON.parse.bind(JSON);
-const bridge = (payload) => {
-  if (typeof payload !== 'string') return;
-  let request;
-  try { request = parse(payload); } catch { return; }
-  const respond = (reply) => {
-    let serialized;
-    try { serialized = stringify(reply); }
-    catch { serialized = stringify({ id: request.id, error: 'tool result is not JSON' }); }
-    control.receive(serialized);
-  };
-  Promise.resolve().then(() => tools.call(request.tool, request.args)).then(
-    (result) => respond({ id: request.id, result }),
-    (error) => respond({ id: request.id, error: String(error && error.message || error) })
-  );
-};
-Object.setPrototypeOf(bridge, null);
-Object.freeze(bridge);
-context.__dtBridge = bridge;
-context.__dtInput = stringify(vars.data);
-control = new vm.Script(${JSON.stringify(BOOTSTRAP)}, { filename: 'offline-helpers.js' }).runInContext(context);
-const fn = new vm.Script('(async function(vars, args, result) { "use strict";\n' + vars.code + '\n})', { filename: 'offline-program.js' }).runInContext(context);
-return parse(await control.execute(fn));
-`;
-    async function run(code, data = {}, options = {}) {
-      code = String(code);
-      if (/\bimport\b/u.test(code)) {
-        return { vars: data.vars || {}, ...data.args === void 0 ? {} : { args: data.args }, ...data.result === void 0 ? {} : { result: data.result }, logs: [], tests: [], output: [], error: "offline code cannot contain the import keyword (including strings/comments)" };
-      }
-      const response = await J.run(PROGRAM, { vars: { code, data: { vars: {}, ...data } } }, options);
-      if (response.error) return { vars: data.vars || {}, ...data.args === void 0 ? {} : { args: data.args }, ...data.result === void 0 ? {} : { result: data.result }, logs: response.logs || [], tests: response.tests || [], output: response.output || [], error: response.error };
-      return response.returned;
-    }
-    module2.exports = { run };
   }
 });
 
@@ -37645,748 +39474,6 @@ var require_experiments = __commonJS({
       };
     }
     module2.exports = { save, list, run, compare, ALLOWED };
-  }
-});
-
-// lib/scenario.js
-var require_scenario = __commonJS({
-  "lib/scenario.js"(exports2, module2) {
-    var crypto = require("crypto");
-    var { isDeepStrictEqual } = require("util");
-    var fs2 = require("fs");
-    var path2 = require("path");
-    function canonical(v, seen = /* @__PURE__ */ new Set()) {
-      if (typeof v === "bigint") return String(v);
-      if (!v || typeof v !== "object") return v;
-      if (v instanceof Date) return v.toISOString();
-      if (seen.has(v)) throw new Error("scenario manifests must be acyclic JSON");
-      const next = new Set(seen);
-      next.add(v);
-      return Array.isArray(v) ? v.map((x) => canonical(x, next)) : Object.fromEntries(Object.keys(v).sort().filter((k) => v[k] !== void 0).map((k) => [k, canonical(v[k], next)]));
-    }
-    var json = (v) => JSON.stringify(canonical(v));
-    var copy = (v) => JSON.parse(json(v));
-    var id = (kind, value) => `${kind}:${crypto.createHash("sha256").update(json(value)).digest("hex").slice(0, 20)}`;
-    var array = (v) => Array.isArray(v) ? v : [];
-    var strings = (v) => [].concat(v || []).filter((x) => typeof x === "string");
-    var unique = (values) => [...new Map(values.map((v) => [json(v), v])).values()].sort((a, b) => json(a).localeCompare(json(b)));
-    var unresolved = (s) => !s || /\$\{|^\?|^\(|<unresolved|\bunknown\b/i.test(String(s));
-    var route = (s) => String(s || "").replace(/\{[^}]*\}/g, "{}");
-    var handler = (s) => String(s || "").includes("#") ? String(s) : String(s || "").replace(/\.([^.()]+)$/, "#$1");
-    var WRITE = /^(write|insert|update|delete|save|merge|persist|remove)$/i;
-    function provenance(source, action, item = {}) {
-      return copy({ source, ...action ? { action } : {}, ...item.file ? { file: item.file, line: item.line ?? null } : {}, ...item.at ? { at: item.at } : {}, ...item.via ? { via: item.via } : {}, ...item.source ? { library: item.source } : {} });
-    }
-    function externalKind(item) {
-      const s = `${item.kind || ""} ${item.type || ""} ${item.why || ""}`;
-      if (/cache|redis/i.test(s)) return "cache";
-      if (/queue|rabbit|jms|sqs|amqp/i.test(s)) return "queue";
-      if (/file|sftp|filesystem|FileStore|BlobStore|S3Client/i.test(s)) return "file";
-      if (/kafka|StreamBridge/i.test(s)) return "kafka";
-      if (/http|feign|RestTemplate|WebClient|RestClient|HttpClient/i.test(s)) return "http";
-      if (/\bes\b|elasticsearch/i.test(s)) return "es";
-      if (/\bdb\b|database|Jdbc|Repository|EntityManager|DataSource/i.test(s)) return "pg";
-      return "unknown";
-    }
-    function inventory({ service, passport, env, entry } = {}) {
-      const p = passport || service && require_passport().load(service);
-      if (!p || typeof p !== "object") throw new Error(`no cached passport for ${service || "(service required)"}`);
-      service ||= p.service;
-      if (!service) throw new Error("scenario inventory needs service or passport.service");
-      env ||= p.env || require_config().envNames()[0];
-      const gaps = [], states = /* @__PURE__ */ new Map(), effects = /* @__PURE__ */ new Map(), entries = /* @__PURE__ */ new Map(), methodShapes = /* @__PURE__ */ new Map(), methodIds = /* @__PURE__ */ new Set();
-      const configKeys = new Set(Object.keys(p.config?.merged || {}));
-      let cats = [], catalogError;
-      try {
-        cats = require_pg().loadAll(env);
-      } catch (e) {
-        catalogError = e.message;
-      }
-      const datasources = array(p.db?.datasources);
-      const wanted = new Set(datasources.map((d) => d.db).filter(Boolean));
-      const allowed = cats.filter((c) => !wanted.size || wanted.has(c.db) || wanted.has(c.database));
-      function resolveDb(name, item = {}, fn = false) {
-        const hinted = item.db || datasources.find((d) => item.datasource && (d.key === item.datasource || d.name === item.datasource))?.db;
-        const candidates = [];
-        for (const c of hinted ? cats.filter((c2) => c2.db === hinted || c2.database === hinted) : allowed) {
-          for (const t of fn ? array(c.functions) : array(c.tables)) {
-            const full = `${t.schema}.${t.name}`;
-            if (full.toLowerCase() === String(name).toLowerCase() || !String(name).includes(".") && t.name?.toLowerCase() === String(name).toLowerCase()) candidates.push({ db: c.db, [fn ? "function" : "table"]: full });
-          }
-        }
-        const matches = unique(candidates);
-        return { target: matches.length === 1 ? matches[0] : { db: hinted || (wanted.size === 1 ? [...wanted][0] : null), [fn ? "function" : "table"]: name || null }, resolution: { status: matches.length === 1 ? "resolved" : matches.length ? "ambiguous" : "unknown", ...matches.length ? { candidates: matches } : {} } };
-      }
-      const addState = (kind, target, action, evidence, resolution = { status: "resolved" }, required = true) => {
-        const sid = id("state", [service, kind, target]);
-        let s = states.get(sid);
-        if (!s) {
-          s = { id: sid, kind, target, required, actions: [], provenance: [], resolution };
-          states.set(sid, s);
-        }
-        s.required ||= required;
-        if (action && !s.actions.includes(action.id)) {
-          s.actions.push(action.id);
-          action.dependencies.push(sid);
-        }
-        s.provenance = unique([...s.provenance, evidence]);
-        if (resolution.status !== "resolved" && !gaps.some((g) => g.stateId === sid)) gaps.push({ id: id("gap", [sid, resolution.status]), kind: resolution.status === "ambiguous" ? "ambiguous-dependency" : "unresolved-dependency", stateId: sid, detail: `Resolve ${kind} dependency explicitly; static evidence does not identify its complete state.`, ...resolution.candidates ? { candidates: resolution.candidates } : {} });
-        return s;
-      };
-      const addEffect = (kind, target, action, evidence, direction = "write") => {
-        const eid = id("expectation", [service, action?.id || null, kind, target, direction]);
-        let e = effects.get(eid);
-        if (!e) {
-          e = { id: eid, kind, target, action: action?.id || null, required: true, direction, valueKnown: false, provenance: [] };
-          effects.set(eid, e);
-        }
-        e.provenance = unique([...e.provenance, evidence]);
-        if (action && !action.expectations.includes(eid)) action.expectations.push(eid);
-        return e;
-      };
-      const addAction = (kind, target, h, item, source) => {
-        target = kind === "http" ? route(target) : String(target);
-        const aid = id("action", [service, kind, target]);
-        let a = entries.get(aid);
-        if (!a) {
-          a = { id: aid, kind, target, entry: target, handler: h || null, handlers: [], required: true, input: { known: false, ...item?.inputSchema ? { schema: item.inputSchema, known: true } : {}, ...item?.inputType || item?.payloadType ? { type: item.inputType || item.payloadType } : {}, hints: ["Supply scenario-specific values; TestData factories provide type-valid objects, not expected behavior."] }, dependencies: [], expectations: [], provenance: [] };
-          entries.set(aid, a);
-        }
-        if (item?.inputSchema) {
-          a.input.schema = item.inputSchema;
-          a.input.known = true;
-        }
-        if (item?.inputType || item?.payloadType) a.input.type = item.inputType || item.payloadType;
-        if (item?.pattern) a.pattern = true;
-        const shapes = methodShapes.get(handler(h));
-        if (shapes?.length === 1) {
-          a.input.parameters = shapes[0].parameters;
-          a.returnType = shapes[0].returnType;
-        } else if (shapes?.length) a.input.overloads = shapes;
-        if (h) {
-          const same = a.handlers.find((old) => handler(old) === handler(h) || handler(old).endsWith(`.${handler(h)}`) || handler(h).endsWith(`.${handler(old)}`));
-          if (!same) a.handlers.push(h);
-          else if (h.length > same.length) {
-            a.handlers[a.handlers.indexOf(same)] = h;
-            a.handler = h;
-          }
-        }
-        a.provenance = unique([...a.provenance, provenance(source, aid, item)]);
-        return a;
-      };
-      const summaryFlows = array(p.flows);
-      if (catalogError) addState("unknown", { type: "catalog-analysis", detail: catalogError }, null, { source: "cached-catalog" }, { status: "unknown" });
-      let flows = summaryFlows;
-      const keys = [typeof p.codeIndex === "string" ? p.codeIndex : null, ...array(p.libraries).map((l) => l.index)].filter(Boolean);
-      if (keys.length) try {
-        const CI = require_codeindex();
-        if (keys.every((k) => CI.load(k))) {
-          for (const key of keys) for (const c of CI.load(key).graph_().classes || []) if (!c.test) for (const m of c.methods || []) {
-            methodIds.add(`${c.id}#${m.name}`);
-            const shape = { parameters: m.params || [], returnType: m.ret || null };
-            for (const name of [`${c.id}#${m.name}`, `${c.name}#${m.name}`]) methodShapes.set(name, unique([...methodShapes.get(name) || [], shape]));
-          }
-          const F = require_flows();
-          const repo = p.repo?.path && path2.resolve(require_config().ROOT, p.repo.path);
-          const config = repo && fs2.existsSync(repo) ? F.serviceConfig(repo) : {};
-          for (const key of Object.keys(config)) configKeys.add(key);
-          const detailed = F.flows(keys, { config });
-          if (detailed.length) flows = detailed;
-        }
-      } catch (e) {
-        addState("unknown", { type: "flow-analysis", detail: e.message }, null, { source: "code-index" }, { status: "unknown" });
-      }
-      for (const f of flows) if (f?.entry) addAction(f.kind || "method", f.entry, f.method || f.handler, f, "flow");
-      const effective = p.effective || {};
-      for (const e of [...array(effective.endpoints), ...array(p.endpoints)]) addAction("http", `${e.method || "ANY"} ${e.path || "?"}`, e.handler, e, "passport-endpoint");
-      for (const k of [...array(effective.consumes), ...array(p.kafka?.consumes)]) addAction(k.pattern ? "kafka" : "kafka", `kafka ${k.topic || "?"}`, k.handler, k, "passport-listener");
-      for (const f of [...array(p.scheduled), ...array(p.events), ...array(p.methods)]) if (f.entry || f.handler || f.method) addAction(f.kind || (array(p.scheduled).includes(f) ? "scheduled" : "method"), f.entry || f.handler || f.method, f.handler || f.method, f, "passport-action");
-      const selectors = entry == null ? [] : strings(entry);
-      let selected = [...entries.values()].filter((a) => !selectors.length || selectors.some((s) => s === a.id || route(s) === a.target || handler(a.handler).endsWith(handler(s))));
-      if (selectors.length && !selected.length && keys.length) try {
-        const F = require_flows();
-        for (const s of selectors) if (s.includes("#")) {
-          const matches = [...methodIds].filter((name) => name === s || name.endsWith(`.${s}`));
-          if (matches.length === 1) {
-            const f = F.from(keys, matches[0]);
-            flows = [...flows, f];
-            selected.push(addAction("method", f.entry, f.method, f, "code-method"));
-          }
-        }
-      } catch {
-      }
-      if (!selected.length) {
-        const unknown = addState("unknown", { type: "entrypoint-analysis", entry: entry || null, detail: p.flows?.error || "No matching cached entrypoints; provide method/endpoint evidence." }, null, { source: "passport" }, { status: "unknown" });
-        gaps.push({ id: id("gap", [unknown.id, "no-actions"]), kind: "no-actions", stateId: unknown.id, detail: "No selected action can be invoked without an explicit entrypoint binding." });
-      }
-      for (const selector of selectors) if (!selected.some((a) => selector === a.id || route(selector) === a.target || handler(a.handler).endsWith(handler(selector)))) addState("unknown", { type: "unmatched-action-selection", entry: selector }, null, { source: "action-selection" }, { status: "unknown" });
-      const selectedIds = new Set(selected.map((a) => a.id));
-      const actionFor = (f) => selected.find((a) => a.kind === (f.kind || "method") && a.target === (f.kind === "http" ? route(f.entry) : f.entry));
-      const found = /* @__PURE__ */ new Set();
-      function pg(item, action, source) {
-        const name = item.table || item.function || item.name;
-        const fn = !!item.function || item.access === "function" || source === "passport-function";
-        const resolved = resolveDb(name, item, fn), evidence = provenance(source, action?.id, item);
-        const key = json(["pg", fn ? "function" : item.access, resolved.target]);
-        found.add(key);
-        addState("pg", resolved.target, action, evidence, resolved.resolution, !/^(owner|entity|repository)$/.test(item.access || ""));
-        if (WRITE.test(item.access || "") || fn) addEffect("pg", resolved.target, action, evidence, fn ? "function-effects-unknown" : item.access);
-      }
-      function outgoing(item, action, source, kind) {
-        const evidence = provenance(source, action?.id, item);
-        if (kind === "kafka") {
-          const target = { topic: item.topic || null };
-          found.add(json(["kafka-out", item.topic]));
-          addEffect("kafka", target, action, evidence, "produce");
-          if (unresolved(item.topic)) addState("unknown", { type: "kafka-topic", topic: item.topic || null }, action, evidence, { status: "unknown" });
-        } else if (kind === "http") {
-          const call = item.call?.match(/^([A-Z]+)\s+(.+)$/);
-          const target = { method: item.method || call?.[1] || null, path: item.path || call?.[2] || item.url || item.target || null, ...item.client ? { client: item.client } : {} };
-          found.add(json(["http", target]));
-          addState("http", target, action, evidence, { status: unresolved(target.path) ? "unknown" : "resolved" });
-          addEffect("http", target, action, evidence, "call");
-        } else {
-          const target = { index: item.index || item.name || null };
-          found.add(json(["es", target.index]));
-          addState("es", target, action, evidence, { status: unresolved(target.index) ? "unknown" : "resolved" });
-          const access = item.access || item.operation;
-          if (!access || WRITE.test(access)) addEffect("es", target, action, evidence, access || "effects-unknown");
-        }
-      }
-      function mock(item, action, source) {
-        if (typeof item === "string") {
-          const split = item.indexOf(": "), decl = split < 0 ? item : item.slice(0, split), last = decl.lastIndexOf(" ");
-          item = { type: last < 0 ? decl : decl.slice(0, last), name: last < 0 ? null : decl.slice(last + 1), why: split < 0 ? null : item.slice(split + 2) };
-        }
-        const kind = externalKind(item), target = { type: item.type || item.name || "unknown", ...item.name ? { name: item.name } : {}, ...item.call ? { call: item.call } : {} };
-        addState(kind, target, action, provenance(source, action?.id, item), { status: "unknown" });
-        if (item.call && /^(send|publish|put|set|write|save|delete|remove|update|post|exchange|execute)/i.test(item.call)) addEffect(kind, target, action, provenance(source, action?.id, item), item.call);
-      }
-      for (const a of selected) {
-        if (a.handlers.length > 1 || a.input.overloads?.length > 1) addState("unknown", { type: "ambiguous-handler", entry: a.target, handlers: a.handlers, ...a.input.overloads ? { overloads: a.input.overloads } : {} }, a, { source: "entrypoint-analysis" }, { status: "ambiguous" });
-        if (a.kind === "http") {
-          addEffect("status", a.target, a, a.provenance[0], "respond");
-          addEffect("return", a.target, a, a.provenance[0], "respond");
-        }
-        if (a.kind === "kafka" || a.kind === "queue") {
-          const topic = a.target.replace(/^(?:kafka|queue)\s+/, "");
-          addState(a.kind, { topic, direction: "inbound", ...a.pattern ? { pattern: true } : {} }, a, a.provenance[0], { status: a.pattern || unresolved(topic) ? "unknown" : "resolved" });
-        }
-      }
-      for (const f of flows) {
-        const a = actionFor(f);
-        if (!a || !selectedIds.has(a.id)) continue;
-        for (const t of array(f.out?.tables)) pg(t, a, "flow-table");
-        for (const fn of array(f.out?.functions)) pg({ ...fn, access: "function" }, a, "flow-function");
-        for (const k of array(f.out?.produces)) outgoing(k, a, "flow-topic", "kafka");
-        for (const h of array(f.out?.http)) outgoing(h, a, "flow-http", "http");
-        for (const es of array(f.out?.es)) outgoing(es, a, "flow-es", "es");
-        for (const x of array(f.out?.external)) mock(x, a, "flow-external");
-        for (const x of array(f.mocks)) mock(x, a, "flow-mock");
-        for (const prop of array(f.properties)) {
-          const k = typeof prop === "string" ? prop : prop.key;
-          addState("config", { key: k || null }, a, provenance("flow-property", a.id, typeof prop === "string" ? {} : prop), { status: unresolved(k) ? "unknown" : "resolved" });
-        }
-      }
-      for (const t of [...array(effective.tables), ...array(p.db?.tables)]) if (!found.has(json(["pg", t.access === "function" ? "function" : t.access, resolveDb(t.table, t, t.access === "function").target]))) pg(t, null, "passport-table");
-      for (const fn of [...array(effective.dbCalls), ...array(p.db?.calls)]) if (!found.has(json(["pg", "function", resolveDb(fn.name || fn.function, fn, true).target]))) pg({ ...fn, function: fn.function || fn.name }, null, "passport-function");
-      for (const k of [...array(effective.produces), ...array(p.kafka?.produces)]) if (!found.has(json(["kafka-out", k.topic]))) outgoing(k, null, "passport-topic", "kafka");
-      for (const h of [...array(effective.calls), ...array(p.feign), ...array(p.http)]) {
-        const target = { method: h.method || null, path: h.path || h.url || h.target || null, ...h.client ? { client: h.client } : {} };
-        if (!found.has(json(["http", target]))) outgoing(h, null, "passport-http", "http");
-      }
-      for (const es of array(p.es)) if (!found.has(json(["es", es.index]))) outgoing(es, null, "passport-es", "es");
-      for (const prop of [...configKeys, ...strings(p.config?.unresolved), ...array(p.config?.properties).map((x) => typeof x === "string" ? x : x.key), ...datasources.map((d) => d.key).filter(Boolean)]) addState("config", { key: prop }, null, { source: "passport-config" }, { status: unresolved(prop) ? "unknown" : "resolved" });
-      for (const l of array(p.libraries)) if (l.error || l.found === false) addState("unknown", { type: "unread-library", library: l.artifactId || l.repo || null, detail: l.error || "Library was not inspected." }, null, { source: "passport-library" }, { status: "unknown" });
-      if (!flows.length || !Array.isArray(p.flows) && !keys.length) addState("unknown", { type: "call-graph-coverage", detail: p.flows?.error || "No cached transitive flow graph." }, null, { source: "passport" }, { status: "unknown" });
-      for (const s of states.values()) if (!s.actions.length && s.required && s.resolution.status === "resolved") gaps.push({ id: id("gap", [s.id, "attribution"]), kind: "unattributed-dependency", stateId: s.id, detail: "Dependency is present in the passport but is not attributed to a selected action." });
-      for (const e of effects.values()) if (!e.action) {
-        const s = addState("unknown", { type: "effect-attribution", expectationId: e.id, kind: e.kind, target: e.target }, null, { source: "passport-effect" }, { status: "unknown" });
-        gaps.push({ id: id("gap", [e.id, "attribution"]), kind: "unattributed-effect", stateId: s.id, expectationId: e.id, detail: "Bind the expected behavior explicitly; this effect is not attributed to a selected action." });
-      }
-      selected = selected.map((a) => ({ ...a, handlers: a.handlers.sort(), dependencies: [...new Set(a.dependencies)].sort(), expectations: a.expectations.sort() })).sort((a, b) => a.id.localeCompare(b.id));
-      return copy({ version: 1, service, env, source: { passportSha: p.repo?.sha || null, passportBuiltAt: p.builtAt || null }, states: [...states.values()].map((s) => ({ ...s, actions: s.actions.sort() })).sort((a, b) => a.id.localeCompare(b.id)), actions: selected, expectations: [...effects.values()].sort((a, b) => a.id.localeCompare(b.id)), gaps: unique(gaps), complete: false, coverage: { static: true, runtimeVerified: false, exhaustive: false, note: "Static analysis records observed dependencies; reflection, runtime branches and unresolved external behavior still require explicit evidence." } });
-    }
-    function actions(inv, { bindings = {} } = {}) {
-      const gaps = [];
-      const known = new Set(array(inv.actions).map((a) => a.id));
-      for (const key of Object.keys(bindings)) if (!known.has(key)) gaps.push({ kind: "unknown-action-binding", id: key });
-      const bound = array(inv.actions).map((a) => {
-        const present = Object.hasOwn(bindings, a.id);
-        if (a.required !== false && !present) gaps.push({ kind: "unbound-action", actionId: a.id, target: a.target });
-        return { ...a, bound: present, ...present ? { binding: copy(bindings[a.id]) } : {} };
-      });
-      return copy({ version: 1, service: inv.service, env: inv.env, actions: bound, gaps, complete: !gaps.length, ready: !gaps.length, coverage: inv.coverage });
-    }
-    var OPS = /* @__PURE__ */ new Set(["exact", "subset", "count", "forbidden", "ordered"]);
-    function descriptorError(match) {
-      if (!match || !OPS.has(match.op)) return "match.op must be exact, subset, count, forbidden or ordered";
-      if (["exact", "subset", "ordered"].includes(match.op) && !Object.hasOwn(match, "value")) return `${match.op} requires an explicit value`;
-      if (match.op === "ordered" && !Array.isArray(match.value)) return "ordered requires an array value";
-      if (match.op === "count") {
-        if (!Object.hasOwn(match, "value") && !Object.hasOwn(match, "min") && !Object.hasOwn(match, "max")) return "count requires value, min or max";
-        if (["value", "min", "max"].some((k) => Object.hasOwn(match, k) && (!Number.isInteger(match[k]) || match[k] < 0))) return "count bounds must be nonnegative integers";
-        if (match.min != null && match.max != null && match.min > match.max) return "count min exceeds max";
-      }
-      return null;
-    }
-    function expectations(inv, { bindings = {} } = {}) {
-      const gaps = [], known = new Set(array(inv.expectations).map((e) => e.id));
-      for (const key of Object.keys(bindings)) if (!known.has(key)) gaps.push({ kind: "unknown-expectation-binding", id: key });
-      const bound = array(inv.expectations).map((e) => {
-        const b = bindings[e.id], present = Object.hasOwn(bindings, e.id);
-        const match = b?.match || (b?.op ? b : void 0), error = present ? descriptorError(match) : null;
-        if (e.required !== false && !present) gaps.push({ kind: "unbound-expectation", expectationId: e.id });
-        if (error) gaps.push({ kind: "invalid-expectation", expectationId: e.id, detail: error });
-        return { ...e, bound: present && !error, select: b?.select || { kind: e.kind, target: e.target, ...e.action ? { action: e.action } : {} }, ...match ? { match } : {} };
-      });
-      return copy({ version: 1, service: inv.service, env: inv.env, expectations: bound, gaps, complete: !gaps.length, ready: !gaps.length, coverage: inv.coverage });
-    }
-    function subset(actual, expected) {
-      if (isDeepStrictEqual(actual, expected)) return true;
-      if (Array.isArray(expected)) {
-        let assign2 = function(n, seen) {
-          for (let i = 0; i < actual.length; i++) if (!seen.has(i) && subset(actual[i], expected[n])) {
-            seen.add(i);
-            if (!owner.has(i) || assign2(owner.get(i), seen)) {
-              owner.set(i, n);
-              return true;
-            }
-          }
-          return false;
-        };
-        var assign = assign2;
-        if (!Array.isArray(actual)) return false;
-        if (expected.length > actual.length) return false;
-        const owner = /* @__PURE__ */ new Map();
-        return expected.every((_, n) => assign2(n, /* @__PURE__ */ new Set()));
-      }
-      return !!expected && typeof expected === "object" && !!actual && typeof actual === "object" && !Array.isArray(actual) && Object.keys(expected).every((k) => Object.hasOwn(actual, k) && subset(actual[k], expected[k]));
-    }
-    function check(plan, observed, { allowUnexpected = false } = {}) {
-      const expected = array(plan?.expectations), gaps = [...array(plan?.gaps)], results = [];
-      const records = Array.isArray(observed) ? observed : null;
-      const map = !records && observed && typeof observed === "object" ? observed : {};
-      const used = /* @__PURE__ */ new Set();
-      const duplicates = expected.filter((e, i) => expected.findIndex((x) => x.id === e.id) !== i);
-      for (const e of duplicates) gaps.push({ kind: "duplicate-expectation", expectationId: e.id });
-      for (const e of expected) {
-        const error = descriptorError(e.match);
-        if (!e.bound || error) {
-          results.push({ id: e.id, ok: e.required === false, reason: error || "expectation has no explicit binding" });
-          continue;
-        }
-        const selector = e.select || { kind: e.kind, target: e.target, ...e.action ? { action: e.action } : {} };
-        let present, value, ambiguous = false;
-        if (records) {
-          const selected = records.filter((r) => r && (r.id === e.id || !r.id && Object.entries(selector).every(([key, wanted]) => key === "action" && r.action == null ? true : isDeepStrictEqual(r[key], wanted))));
-          for (const record of selected) used.add(record);
-          if (selector.action && selected.some((r) => r.action == null && !r.id)) {
-            const peers = expected.filter((other) => other.id !== e.id && other.select?.action !== selector.action && isDeepStrictEqual(other.select?.kind, selector.kind) && isDeepStrictEqual(other.select?.target, selector.target));
-            ambiguous = peers.length > 0;
-          }
-          present = selected.length > 0;
-          value = selected.length === 1 ? selected[0].value : selected.map((r) => r.value);
-        } else {
-          present = Object.hasOwn(map, e.id);
-          value = map[e.id];
-          if (present) used.add(e.id);
-        }
-        if (ambiguous) {
-          results.push({ id: e.id, ok: false, reason: "observation has no action id and matches multiple actions" });
-          continue;
-        }
-        if (!present && !(records && (e.match.op === "forbidden" || e.match.op === "count" && (e.match.value === 0 || e.match.max === 0)))) {
-          results.push({ id: e.id, ok: false, reason: "required observation is missing" });
-          continue;
-        }
-        const m = e.match, values = !present ? [] : Array.isArray(value) ? value : [value];
-        let ok = false;
-        if (m.op === "exact") ok = isDeepStrictEqual(value, m.value);
-        else if (m.op === "subset") ok = subset(value, m.value);
-        else if (m.op === "count") {
-          const n = values.length;
-          ok = (m.value == null || n === m.value) && (m.min == null || n >= m.min) && (m.max == null || n <= m.max);
-        } else if (m.op === "forbidden") ok = Object.hasOwn(m, "value") ? !values.some((v) => subset(v, m.value)) : !values.length;
-        else if (m.op === "ordered") {
-          let i = 0;
-          for (const v of values) if (i < m.value.length && subset(v, m.value[i])) i++;
-          ok = i === m.value.length && (m.exact === false || values.length === m.value.length);
-        }
-        results.push({ id: e.id, ok, reason: ok ? "matched" : `${m.op} expectation did not match`, ...m.op === "count" ? { count: values.length } : {} });
-      }
-      if (!allowUnexpected) {
-        if (records) records.forEach((record, index) => {
-          if (!used.has(record)) gaps.push({ kind: "unexpected-observation", observation: index, ...record?.id ? { id: record.id } : {} });
-        });
-        else for (const key of Object.keys(map)) if (!used.has(key)) gaps.push({ kind: "unexpected-observation", id: key });
-      }
-      if (!expected.length) gaps.push({ kind: "no-expectations", detail: "No explicit business expectations were checked." });
-      const passed = results.filter((r) => r.ok).length, failed = results.length - passed;
-      return { ok: failed === 0 && gaps.length === 0, passed, failed, results, gaps, coverage: { runtimeVerified: false, checked: results.length, note: "Checks apply to supplied observations; this function does not execute the service." } };
-    }
-    module2.exports = { inventory, actions, expectations, check };
-  }
-});
-
-// lib/scenario-state.js
-var require_scenario_state = __commonJS({
-  "lib/scenario-state.js"(exports2, module2) {
-    var fs2 = require("fs");
-    var path2 = require("path");
-    var crypto = require("crypto");
-    var { isDeepStrictEqual } = require("util");
-    var { CACHE: CACHE2, readJson, writeJson, pool } = require_util();
-    var supported = /* @__PURE__ */ new Set(["pg", "kafka", "http", "es", "config", "cache", "queue", "file", "mock"]);
-    var canonical = (v) => JSON.stringify(v, (_, x) => typeof x === "bigint" ? String(x) : x);
-    var hash = (v) => crypto.createHash("sha256").update(canonical(v)).digest("hex");
-    var clone = (v) => JSON.parse(canonical(v));
-    var inventoryHash = (inv) => hash({ ...inv, builtAt: void 0 });
-    var problem = (kind, stateId, detail) => ({ kind, ...stateId ? { stateId } : {}, detail });
-    var unresolved = (dep) => ["ambiguous", "unresolved", "missing", "dynamic", "unknown"].includes(typeof dep.resolution === "string" ? dep.resolution : dep.resolution?.status);
-    var targetOf = (dep, binding) => unresolved(dep) ? { ...dep.target, ...Object.fromEntries(Object.entries(binding.resolve || {}).filter(([key]) => key !== "evidence")) } : dep.target;
-    function planState(inventory, bindings = {}) {
-      if (!inventory || inventory.version !== 1 || !Array.isArray(inventory.states)) throw new Error("scenario inventory required");
-      const known = new Set(inventory.states.map((s) => s.id));
-      for (const id of Object.keys(bindings)) if (!known.has(id)) throw new Error(`unknown state binding ${id}`);
-      const gaps = [], resolved = /* @__PURE__ */ new Set();
-      const states = inventory.states.map((dep) => {
-        const binding = bindings[dep.id];
-        if (!binding) {
-          if (dep.required !== false) gaps.push(problem("unbound-state", dep.id, `Bind ${dep.kind} ${canonical(dep.target)}`));
-          return { ...dep, binding: null };
-        }
-        const mode = binding.mode || (binding.capture ? "fixture" : Object.hasOwn(binding, "value") ? "provided" : "capture");
-        const needsResolution = unresolved(dep);
-        const hasResolution = binding.resolve && typeof binding.resolve.evidence === "string" && binding.resolve.evidence.trim();
-        const candidates = dep.resolution?.candidates || [];
-        const validResolution = hasResolution && (!candidates.length || candidates.some((c) => Object.entries(c).every(([key, value]) => isDeepStrictEqual(binding.resolve[key], value))));
-        if (dep.kind === "unknown" || !supported.has(dep.kind)) gaps.push(problem("unsupported-state", dep.id, "Model this dependency as a concrete supported read before emulating it"));
-        else if (needsResolution && !validResolution) gaps.push(problem("unresolved-state", dep.id, "An explicit candidate target resolution with evidence is required"));
-        else if (needsResolution && validResolution) resolved.add(dep.id);
-        if (!needsResolution && binding.resolve && Object.entries(binding.resolve).some(([key, value]) => key !== "evidence" && !isDeepStrictEqual(dep.target[key], value))) gaps.push(problem("resolved-target-override", dep.id, "A known dependency cannot be replaced by another target"));
-        if (!["provided", "capture", "fixture"].includes(mode)) gaps.push(problem("state-mode", dep.id, `Unsupported state mode ${mode}`));
-        if (mode === "provided" && !Object.hasOwn(binding, "value")) gaps.push(problem("missing-value", dep.id, "Provided state must include value (null and empty collections are explicit values)"));
-        return { ...dep, binding: { ...binding, mode } };
-      });
-      for (const gap of inventory.gaps || []) {
-        const id = gap.stateId || gap.state;
-        if (!id || !resolved.has(id)) gaps.push(gap);
-      }
-      return {
-        version: 1,
-        service: inventory.service,
-        env: inventory.env,
-        inventoryHash: inventoryHash(inventory),
-        inventory,
-        states,
-        gaps,
-        complete: !gaps.length,
-        coverage: { required: inventory.states.filter((s) => s.required !== false).length, bound: states.filter((s) => s.binding).length, runtimeVerified: false }
-      };
-    }
-    function bounded(v, def, max) {
-      const n = v ?? def;
-      if (!Number.isInteger(n) || n < 1 || n > max) throw new Error(`limit must be 1..${max}`);
-      return n;
-    }
-    var adapters = {
-      pg: async (dep, binding, plan) => {
-        const q = binding.query || {}, db = targetOf(dep, binding).db;
-        if (!db || !q.sql) throw new Error("Postgres capture needs an exact database and query.sql with bound params");
-        if (q.db && q.db !== db) throw new Error("query database differs from the resolved dependency");
-        const max = bounded(q.maxRows, 200, 1e4);
-        await require_limit().take(`pg:${plan.env}`);
-        const r = await require_pg().query(plan.env, `select * from (${q.sql.replace(/;\s*$/, "")}) as dt_state_rows limit ${max + 1}`, { db, params: q.params || [] });
-        return { value: r.rows.slice(0, max), complete: r.rows.length <= max, truncated: r.rows.length > max };
-      },
-      kafka: async (dep, binding, plan) => {
-        const q = binding.query || {};
-        const r = await require_kafka().captureMessages(plan.env, targetOf(dep, binding).topic, { maxMessages: bounded(q.maxMessages, 300, 1e4), offsets: q.offsets || {} });
-        return { value: r.messages, complete: !r.truncated, truncated: r.truncated, windows: r.windows };
-      },
-      es: async (dep, binding, plan) => {
-        const q = binding.query || {}, size = bounded(q.maxRows, 200, 1e3);
-        if (!q.query) throw new Error("Elasticsearch capture needs an explicit query");
-        await require_limit().take(`es:${plan.env}`);
-        const r = await require_es().search(plan.env, targetOf(dep, binding).index, typeof q.query === "string" ? q.query : JSON.stringify({ ...q.query, size }), { size });
-        return { value: r.hits.slice(0, size), complete: r.total <= size, truncated: r.total > size };
-      },
-      http: async (dep, binding, plan) => {
-        const q = binding.query || {}, method = String(q.method || dep.target.method || "GET").toUpperCase();
-        if (!["GET", "HEAD"].includes(method)) throw new Error("Live HTTP state capture supports GET/HEAD; provide response fixtures for other methods");
-        const url = new URL(q.url), allow = require_config().getScripts().http.allow || [];
-        const allowed = (u) => allow.some((prefix) => {
-          const p = String(prefix).replace(/\/$/, "");
-          return u === p || u.startsWith(p + "/") || u.startsWith(p + "?");
-        });
-        if (!allowed(url.href) || url.username || url.password) throw new Error("HTTP state URL must be in scripts.http.allow and contain no credentials");
-        await require_limit().take(`http:${url.host}:${plan.env}`);
-        const r = await fetch(url, { method, headers: q.headers || {}, redirect: "manual", signal: AbortSignal.timeout(3e4) });
-        if (r.status >= 300 && r.status < 400) throw new Error("HTTP state redirects must be captured explicitly as another allowed URL");
-        let size = 0, chunks = [];
-        for await (const chunk of r.body || []) {
-          size += chunk.length;
-          if (size > 2 * 1024 * 1024) throw new Error("HTTP state exceeds 2 MiB");
-          chunks.push(chunk);
-        }
-        let body = Buffer.concat(chunks).toString("utf8");
-        try {
-          body = JSON.parse(body);
-        } catch {
-        }
-        return { value: { status: r.status, headers: Object.fromEntries(r.headers), body }, complete: true };
-      }
-    };
-    function fixtureState(dep, binding) {
-      const capture = require_reproduction().load(binding.capture);
-      const resolved = targetOf(dep, binding);
-      let value;
-      if (dep.kind === "pg") {
-        const target = binding.table || `${resolved.db}:${resolved.table}`;
-        if (target !== `${resolved.db}:${resolved.table}`) throw new Error("fixture table differs from the declared read dependency");
-        if (!Object.hasOwn(capture.rows, target)) throw new Error(`capture does not contain ${target}`);
-        value = capture.rows[target];
-      } else if (dep.kind === "kafka") {
-        const target = binding.topic || resolved.topic;
-        if (target !== resolved.topic) throw new Error("fixture topic differs from the declared read dependency");
-        if (!Object.hasOwn(capture.events, target)) throw new Error(`capture does not contain ${target}`);
-        value = capture.events[target].messages;
-      } else throw new Error("Fixture captures contain PostgreSQL and Kafka; provide other dependencies separately");
-      return { value, complete: capture.complete === true, gaps: capture.gaps, fixture: binding.capture };
-    }
-    async function captureState(plan, { adapters: supplied = {}, mask = true } = {}) {
-      if (!plan || plan.version !== 1 || !Array.isArray(plan.states)) throw new Error("scenario state plan required");
-      if (!plan.inventory || inventoryHash(plan.inventory) !== plan.inventoryHash) throw new Error("state plan inventory fingerprint changed");
-      const seen = /* @__PURE__ */ new Set();
-      for (const dep of plan.states) {
-        const original = plan.inventory.states.find((d) => d.id === dep.id), { binding, ...metadata } = dep;
-        if (!original || seen.has(dep.id) || !isDeepStrictEqual(metadata, original)) throw new Error("state plan dependency differs from its inventory");
-        seen.add(dep.id);
-      }
-      plan = planState(plan.inventory, Object.fromEntries(plan.states.filter((d) => d.binding).map((d) => [d.id, d.binding])));
-      const gaps = [...plan.gaps], states = {}, trace = [];
-      const results = await pool(plan.states, 4, async (dep) => {
-        const binding = dep.binding, start = Date.now();
-        if (!binding) return { id: dep.id, status: "missing" };
-        try {
-          let r;
-          if (binding.mode === "provided") r = { value: binding.value, complete: Object.hasOwn(binding, "value") };
-          else if (binding.mode === "fixture") r = fixtureState(dep, binding);
-          else {
-            const adapter = supplied[dep.kind] || adapters[dep.kind];
-            if (!adapter) throw new Error(`No ${dep.kind} live reader; bind explicit provided state`);
-            r = await adapter(dep, binding, plan);
-          }
-          if (!r || !Object.hasOwn(r, "value")) throw new Error("State adapter did not provide value");
-          const complete = r.complete === true && !r.truncated && !(r.gaps || []).length;
-          trace.push({ stateId: dep.id, mode: binding.mode, ms: Date.now() - start });
-          return {
-            id: dep.id,
-            kind: dep.kind,
-            target: dep.target,
-            required: dep.required !== false,
-            value: clone(r.value),
-            status: complete ? "captured" : "partial",
-            complete,
-            source: { mode: binding.mode, ...binding.resolve ? { resolve: binding.resolve } : {}, ...r.fixture ? { capture: r.fixture } : {}, ...r.windows ? { windows: r.windows } : {} },
-            gaps: r.gaps || []
-          };
-        } catch (e) {
-          return { id: dep.id, kind: dep.kind, target: dep.target, status: "failed", complete: false, error: String(e.message).slice(0, 500) };
-        }
-      });
-      for (const result of results) {
-        const state = result.value;
-        if (!state) {
-          gaps.push(problem("state-error", result.item.id, result.error?.message || "State capture failed"));
-          continue;
-        }
-        states[state.id] = state;
-        if (result.item.required !== false && state.status !== "captured") gaps.push(problem("state-incomplete", state.id, state.error || `State is ${state.status}`));
-      }
-      if (mask) {
-        const rows = {};
-        for (const state of Object.values(states)) if (Object.hasOwn(state, "value")) {
-          const dep = plan.states.find((d) => d.id === state.id), key = dep?.kind === "config" ? dep.target.key : null;
-          rows[state.id] = [{ value: state.value, ...key ? { [key]: state.value } : {} }];
-        }
-        const masked = { rows, events: {}, plan: { seeds: [], tables: [] }, provenance: {}, gaps };
-        require_reproduction().redact(masked);
-        for (const [id, values] of Object.entries(masked.rows)) states[id].value = values[0].value;
-        gaps.splice(0, gaps.length, ...masked.gaps);
-      }
-      return {
-        version: 1,
-        service: plan.service,
-        env: plan.env,
-        inventoryHash: plan.inventoryHash,
-        inventory: plan.inventory,
-        states,
-        gaps,
-        complete: !gaps.length,
-        capturedAt: (/* @__PURE__ */ new Date()).toISOString(),
-        trace,
-        coverage: { required: plan.states.filter((s) => s.required !== false).length, captured: Object.values(states).filter((s) => s.status === "captured").length, runtimeVerified: false }
-      };
-    }
-    function getState(state, id, { where, key, request } = {}) {
-      const item = state.states[id];
-      if (!item || item.status !== "captured" || !Object.hasOwn(item, "value")) throw new Error(`state ${id} is not captured`);
-      let value = item.value;
-      const subset = (expected, actual) => expected && typeof expected === "object" ? actual && typeof actual === "object" && Object.entries(expected).every(([k, v]) => subset(v, actual[k])) : expected === actual;
-      if (key !== void 0) {
-        if (!value || !Object.hasOwn(value, key)) throw new Error(`state ${id} has no key ${key}`);
-        value = value[key];
-      }
-      if (where) {
-        if (!Array.isArray(value)) throw new Error("where requires array state");
-        value = value.filter((row) => subset(where, row));
-      }
-      if (request) {
-        if (!Array.isArray(value?.exchanges)) throw new Error("request matching requires explicit exchanges [{request,response}]");
-        const matches = value.exchanges.filter((e) => subset(e.request, request));
-        if (matches.length !== 1) throw new Error(`request for ${id} matched ${matches.length} exchanges`);
-        value = matches[0].response;
-      }
-      return clone(value);
-    }
-    async function emulate({ inventory, state, actions, expectations, code, timeoutMs = 3e4, requireAllReads = true } = {}) {
-      const S = require_scenario(), gaps = contractGaps(inventory, state, actions, expectations), reads = [], performed = [], observed = {}, violations = [];
-      const fail = (detail) => {
-        violations.push(detail);
-        throw new Error(detail);
-      };
-      const actionList = actions?.actions || [], expectationList = expectations?.expectations || [];
-      if (gaps.length) return { ok: false, gaps, checks: { ok: false, passed: 0, failed: gaps.length, results: [] }, reads, actions: performed, observed, coverage: { runtimeVerified: false, proof: "contract-emulation" } };
-      let active = null, calls = 0, result;
-      try {
-        result = await require_offline_js().run(code, { vars: { service: inventory.service, actions: actionList.map((a) => ({ id: a.id, kind: a.kind, target: a.target, dependencies: a.dependencies, expectations: a.expectations })) } }, {
-          timeoutMs,
-          onTool: async (name, args = {}) => {
-            if (++calls > 2e3) return fail("scenario exceeds 2000 local operations");
-            if (name === "action_input") {
-              const action = actionList.find((a) => a.id === args.id);
-              if (!action) return fail(`unknown scenario action ${args.id}`);
-              if (!action.bound || !Object.hasOwn(action, "binding")) return fail(`action ${args.id} has no input binding`);
-              active = action.id;
-              performed.push({ id: action.id });
-              return clone(action.binding);
-            }
-            if (name === "state_read") {
-              const action = actionList.find((a) => a.id === (args.action || active)), dep = inventory.states.find((d) => d.id === args.id);
-              if (!dep) return fail(`unknown scenario state ${args.id}`);
-              if (!action || !action.dependencies.includes(dep.id)) return fail(`state ${args.id} is not declared for this action`);
-              const value = getState(state, dep.id, args);
-              reads.push({ id: dep.id, action: action.id, ...args.key !== void 0 ? { key: args.key } : {} });
-              return value;
-            }
-            if (name === "observe") {
-              const e = expectationList.find((e2) => e2.id === args.id);
-              if (!e) return fail(`unknown scenario expectation ${args.id}`);
-              if (e.action && !performed.some((a) => a.id === e.action)) return fail("observe requires its action_input first");
-              if (Object.hasOwn(observed, args.id)) return fail(`duplicate scenario observation ${args.id}; aggregate ordered/count effects explicitly`);
-              observed[args.id] = clone(args.value);
-              return { observed: args.id };
-            }
-            return fail(`only local scenario tools are available; refused ${name}`);
-          }
-        });
-      } catch (e) {
-        result = { error: e.message, tests: [], logs: [], output: [] };
-      }
-      for (const action of actionList) {
-        if (!performed.some((a) => a.id === action.id)) gaps.push(problem("unperformed-action", null, action.id));
-        if (requireAllReads) {
-          for (const id of action.dependencies || []) if (!reads.some((r) => r.id === id && r.action === action.id)) gaps.push(problem("unread-state", id, `No read observed for action ${action.id}`));
-        }
-      }
-      const checks = S.check(expectations, observed);
-      return {
-        ok: !result.error && !violations.length && !gaps.length && checks.ok && (result.tests || []).every((t) => t.ok),
-        checks,
-        gaps,
-        violations,
-        reads,
-        actions: performed,
-        observed,
-        tests: result.tests || [],
-        logs: result.logs || [],
-        output: result.output || [],
-        error: result.error,
-        value: result.returned,
-        coverage: { states: new Set(reads.map((r) => r.id)).size, required: inventory.states.filter((s) => s.required !== false).length, runtimeVerified: false, proof: "contract-emulation", allReadsChecked: requireAllReads }
-      };
-    }
-    function contractGaps(inventory, state, actions, expectations) {
-      const gaps = [], S = require_scenario();
-      if (!inventory?.states || !state?.states || state.inventoryHash !== inventoryHash(inventory)) return [problem("inventory-mismatch", null, "Captured state must match this exact passport inventory")];
-      if (!state.complete || state.gaps?.length) gaps.push(problem("state-incomplete", null, "Capture every required dependency first"));
-      for (const dep of inventory.states) {
-        const captured = state.states[dep.id];
-        if (dep.required !== false && (captured?.status !== "captured" || !Object.hasOwn(captured, "value"))) gaps.push(problem("missing-state", dep.id, "Required state is absent"));
-        if (captured && (!isDeepStrictEqual(captured.target, dep.target) || captured.kind !== dep.kind)) gaps.push(problem("state-target-mismatch", dep.id, "Captured state names another dependency"));
-        if (!supported.has(dep.kind)) gaps.push(problem("unsupported-state", dep.id, "Unknown read dependencies must be modeled before running"));
-      }
-      const readBindings = Object.fromEntries(inventory.states.filter((dep) => Object.hasOwn(state.states[dep.id] || {}, "value")).map((dep) => [dep.id, { mode: "provided", value: state.states[dep.id].value, ...state.states[dep.id].source?.resolve ? { resolve: state.states[dep.id].source.resolve } : {} }]));
-      gaps.push(...planState(inventory, readBindings).gaps);
-      const actionList = actions?.actions || [], expectationList = expectations?.expectations || [];
-      const actionBindings = {}, expectationBindings = {};
-      for (const action of actionList) {
-        const original = inventory.actions.find((a) => a.id === action.id);
-        if (!original || ["kind", "target", "dependencies", "expectations"].some((key) => !isDeepStrictEqual(action[key], original[key]))) gaps.push(problem("action-mismatch", null, action.id));
-        if (Object.hasOwn(actionBindings, action.id)) gaps.push(problem("duplicate-action", null, action.id));
-        if (action.bound && Object.hasOwn(action, "binding")) actionBindings[action.id] = action.binding;
-      }
-      for (const e of expectationList) {
-        const original = inventory.expectations.find((x) => x.id === e.id);
-        if (!original || ["kind", "target", "action", "required"].some((key) => !isDeepStrictEqual(e[key], original[key]))) gaps.push(problem("expectation-mismatch", null, e.id));
-        if (Object.hasOwn(expectationBindings, e.id)) gaps.push(problem("duplicate-expectation", null, e.id));
-        if (e.bound && e.match) expectationBindings[e.id] = { match: e.match, select: e.select };
-      }
-      gaps.push(...S.actions(inventory, { bindings: actionBindings }).gaps, ...S.expectations(inventory, { bindings: expectationBindings }).gaps);
-      return gaps;
-    }
-    var file = (id) => {
-      if (!/^[a-f0-9]{24}$/.test(id || "")) throw new Error("invalid scenario state id");
-      return path2.join(CACHE2, "scenarios", `${id}.json`);
-    };
-    function save(state) {
-      const id = crypto.randomBytes(12).toString("hex");
-      writeJson(file(id), state);
-      return id;
-    }
-    function load(id) {
-      const value = readJson(file(id));
-      if (!value) throw new Error("scenario state not found");
-      return value;
-    }
-    function exportScenario(workspace, { inventory, state, actions, expectations }, { name = "scenario", directory, overwrite = false } = {}) {
-      const R = require_reproduction(), dest = R.resourcePath(workspace, directory || `src/test/resources/dt-fixtures/${name}`);
-      if (!/^[a-z0-9][\w.-]{0,79}$/i.test(name)) throw new Error("invalid scenario name");
-      if (contractGaps(inventory, state, actions, expectations).length) throw new Error("Only complete, bound scenario contracts can be exported");
-      if (fs2.existsSync(dest.full) && !overwrite) throw new Error("scenario resources exist; overwrite=true to replace");
-      const stage = `${dest.full}.tmp-${crypto.randomBytes(4).toString("hex")}`, files = {};
-      try {
-        fs2.mkdirSync(stage, { recursive: true });
-        for (const [filename, value] of Object.entries({ "inventory.json": inventory, "state.json": state, "actions.json": actions, "expectations.json": expectations })) {
-          const text = JSON.stringify(value, null, 2) + "\n";
-          fs2.writeFileSync(path2.join(stage, filename), text);
-          files[filename] = crypto.createHash("sha256").update(text).digest("hex");
-        }
-        const instructions = "Scenario contract resources. Arrange every state.json dependency with a real test container or a mock. Apply each actions.json input to the service. Observe each effects/return value and check expectations.json. scenario_emulate checks a local model; run the real application tests with test_run for application proof.\n";
-        fs2.writeFileSync(path2.join(stage, "README.txt"), instructions);
-        fs2.writeFileSync(path2.join(stage, "scenario.json"), JSON.stringify({ version: 1, name, inventoryHash: inventoryHash(inventory), files, coverage: state.coverage }, null, 2) + "\n");
-        if (fs2.existsSync(dest.full)) fs2.rmSync(dest.full, { recursive: true });
-        fs2.mkdirSync(path2.dirname(dest.full), { recursive: true });
-        fs2.renameSync(stage, dest.full);
-        require_workspace().touch(workspace, { dirty: true });
-        return { workspace, path: dest.rel, files: [...Object.keys(files), "scenario.json", "README.txt"] };
-      } finally {
-        fs2.rmSync(stage, { recursive: true, force: true });
-      }
-    }
-    module2.exports = { inventoryHash, planState, captureState, getState, emulate, exportScenario, save, load };
   }
 });
 
@@ -38608,6 +39695,2623 @@ var require_tools_dev = __commonJS({
   }
 });
 
+// lib/contracts.js
+var require_contracts = __commonJS({
+  "lib/contracts.js"(exports2, module2) {
+    var path2 = require("path");
+    var fs2 = require("fs");
+    var aliases = {
+      "v1/collection.schema.json": "schemas/collection-contract.schema.json",
+      "v1/scenario-package.schema.json": "schemas/scenario-package-v1.json",
+      "v1/postgres-template.schema.json": "docs/contracts/postgres-template-v1.schema.json",
+      "v1/api-exchange.schema.json": "schemas/api-exchange.v1.schema.json",
+      "v1/api-request.schema.json": "schemas/api-request.v1.schema.json"
+    };
+    function resolve(name, root = require_config().ROOT) {
+      if (!/^v\d+\/[a-z][a-z0-9-]*\.schema\.json$/.test(name)) return null;
+      const direct = path2.join(root, "contracts", name), fallback = aliases[name] && path2.join(root, aliases[name]);
+      return fs2.existsSync(direct) ? direct : fallback && fs2.existsSync(fallback) ? fallback : null;
+    }
+    function list() {
+      const root = require_config().ROOT, names = new Set(Object.keys(aliases));
+      try {
+        for (const f of fs2.readdirSync(path2.join(root, "contracts/v1"))) if (f.endsWith(".schema.json")) names.add(`v1/${f}`);
+      } catch {
+      }
+      return [...names].sort().filter((name) => resolve(name)).map((name) => ({ name, url: `/contracts/${name}`, schema: JSON.parse(fs2.readFileSync(resolve(name), "utf8")) }));
+    }
+    module2.exports = { aliases, resolve, list };
+  }
+});
+
+// lib/tool-profiles.js
+var require_tool_profiles = __commonJS({
+  "lib/tool-profiles.js"(exports2, module2) {
+    var CORE = ["find", "tool_search", "tool_describe", "tool_execute", "tool_profiles", "tool_contracts", "knowledge_graph", "knowledge_search", "job_cancel", "call_history", "doctor"];
+    var PROFILES = {
+      compact: { description: "Small starting set; discover an exact tool then execute it with validated arguments.", names: CORE },
+      investigate: { description: "Find services and data, inspect evidence, follow logs and visualize dependencies.", names: [...CORE, "passport", "passports", "pg_query", "pg_usage", "es_search", "kafka_last", "logs_search", "logs_trace", "health", "overview", "impact", "code_search", "feature", "experiment_list", "experiment_run"] },
+      testing: { description: "Build reproducible fixtures, scenario contracts, collections and isolated test runs.", prefixes: ["fixture_", "scenario_", "collection_", "testdb_", "test_"], names: [...CORE, "workspace_open", "workspace_read", "workspace_write", "workspace_patch", "script_list", "script_get", "script_run"] },
+      develop: { description: "Inspect code, make a workspace change, compile and verify its behavior.", prefixes: ["workspace_", "code_", "test_"], names: [...CORE, "passport", "repo_fetch", "impact", "experiment_save", "experiment_run", "experiment_compare"] },
+      knowledge: { description: "Inspect source-neutral documentation, contracts, architecture and provenance.", prefixes: ["knowledge_", "docs_"], names: [...CORE, "feature", "passport", "who_uses"] },
+      api: { description: "Inspect UI traffic, discover routes, edit requests and save reusable scripts or collections.", groups: ["api", "browser"], prefixes: ["api_", "collection_"], names: [...CORE, "script_list", "script_get", "script_run", "script_save", "script_collection", "routes_discover", "routes_learn"] },
+      all: { description: "Every enabled tool; compatible with existing installations." }
+    };
+    function definitions() {
+      return { ...PROFILES, ...require_config().getTools().profiles || {} };
+    }
+    function select(tools, name = "all") {
+      const profile = definitions()[name];
+      if (!profile) throw Object.assign(new Error(`Unknown tool profile ${name}`), { code: "DT_PROFILE_UNKNOWN" });
+      if (name === "all") return tools;
+      const names = /* @__PURE__ */ new Set([...CORE, ...profile.names || []]);
+      return tools.filter((t) => names.has(t.name) || (profile.groups || []).includes(t.group) || (profile.prefixes || []).some((p) => t.name.startsWith(p)));
+    }
+    function list(tools) {
+      return Object.entries(definitions()).map(([name, x]) => ({ name, description: x.description || "", tools: select(tools, name).map((t) => t.name), count: select(tools, name).length }));
+    }
+    module2.exports = { select, list };
+  }
+});
+
+// lib/tools-discovery.js
+var require_tools_discovery = __commonJS({
+  "lib/tools-discovery.js"(exports2, module2) {
+    module2.exports = ({ str, int, registry }) => [
+      { name: "tool_contracts", group: "catalog", description: "Inspect versioned language-neutral transport, knowledge, scenario, collection and resource schemas. Use these contracts and the tool_describe adapter result schema when replacing an implementation or migrating storage. Includes stable public schema URLs.", input: { name: str("Optional exact contract name, e.g. v1/tool-request.schema.json") }, run: (a) => {
+        const contracts = require_contracts().list();
+        if (!a.name) return contracts.map(({ schema, ...x }) => ({ ...x, title: schema.title, id: schema.$id }));
+        const contract = contracts.find((c) => c.name === a.name);
+        if (!contract) throw new Error("Unknown contract");
+        return contract;
+      } },
+      { name: "tool_profiles", group: "catalog", description: "List task-oriented tool profiles and their exact enabled tools. Profiles reduce model context for Open WebUI; configured tool enable/disable permissions still apply.", input: {}, run: async () => require_tool_profiles().list(await registry()) },
+      {
+        name: "tool_search",
+        group: "catalog",
+        description: "Find the enabled tool for a task before calling it. Searches names, semantic descriptions and groups, with required arguments and effect hints. Results are bounded; use tool_describe for the exact schema, then tool_execute.",
+        input: { query: str("Task or tool name, e.g. clone test database or inspect Kafka"), group: str("Optional exact group"), limit: { ...int("Max matches", 8), minimum: 1, maximum: 30 } },
+        required: ["query"],
+        run: async (a) => {
+          const words = a.query.toLowerCase().split(/[\s_:-]+/).filter(Boolean), tools = await registry();
+          const matches = tools.filter((t) => !a.group || t.group === a.group).map((t) => {
+            const name = t.name.toLowerCase(), text = `${name.replace(/_/g, " ")} ${t.group} ${t.description}`.toLowerCase();
+            return { t, score: (name === a.query.toLowerCase() ? 1e3 : 0) + words.reduce((n, w) => n + (text.includes(w) ? 20 : 0) + (name.includes(w) ? 3 : 0), 0) };
+          }).filter((x) => x.score > 0).sort((a2, b) => b.score - a2.score || a2.t.name.localeCompare(b.t.name));
+          return { total: matches.length, tools: matches.slice(0, a.limit).map(({ t }) => ({ name: t.name, group: t.group, description: t.description.slice(0, 450), required: t.inputSchema.required, next: { tool: "tool_describe", args: { name: t.name } } })) };
+        }
+      },
+      { name: "tool_describe", group: "catalog", description: "Read the exact input schema and guidance for one enabled tool. Inspect required fields and defaults before tool_execute; discoverability does not grant additional permissions.", input: { name: str("Exact tool name") }, required: ["name"], run: async (a) => {
+        const tool = (await registry()).find((t) => t.name === a.name);
+        if (!tool) throw new Error(`Unknown or disabled tool ${a.name}`);
+        return tool;
+      } },
+      { name: "tool_execute", group: "catalog", description: "Execute one discovered enabled tool with its exact arguments. Uses the same validation, rate limits, trace and permissions as calling that tool directly, and preserves its visualization. Call tool_describe first. Cannot recursively call discovery dispatchers.", input: { name: str("Exact enabled tool name"), arguments: { type: "object", additionalProperties: true, description: "Arguments conforming to tool_describe inputSchema" } }, required: ["name", "arguments"], run: (a) => {
+        if (["tool_execute", "tool_search", "tool_describe", "tool_profiles"].includes(a.name)) throw new Error("Call discovery tools directly");
+        return require_tools().call(a.name, a.arguments, { source: "tool_execute" });
+      } }
+    ];
+  }
+});
+
+// lib/semantic-knowledge.js
+var require_semantic_knowledge = __commonJS({
+  "lib/semantic-knowledge.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var crypto = require("crypto");
+    var C = require_config();
+    var { CACHE: CACHE2, readJson, writeJson, fileStamp } = require_util();
+    var DIR = path2.join(CACHE2, "knowledge");
+    var digest = (value) => crypto.createHash("sha256").update(typeof value === "string" ? value : JSON.stringify(value)).digest("hex");
+    var identifier = (id) => {
+      if (!/^[a-zA-Z0-9][\w.-]{0,79}$/.test(id || "")) throw new Error("Source id must use letters, digits, _, . and -");
+      return id;
+    };
+    var sourceFile = (id) => path2.join(DIR, "sources", identifier(id) + ".json");
+    var sourceStatus = (id) => path2.join(DIR, "status", identifier(id) + ".json");
+    var cfg = () => {
+      const s = C.load();
+      return C.interpolate(s.raw.knowledge || {}, s.lookup());
+    };
+    function configured() {
+      const sources = cfg().sources || [];
+      if (!Array.isArray(sources) || sources.length > 100) throw new Error("knowledge.sources must be an array of at most 100 sources");
+      const ids = /* @__PURE__ */ new Set();
+      return sources.map((s) => {
+        identifier(s.id);
+        if (ids.has(s.id)) throw new Error(`Duplicate knowledge source ${s.id}`);
+        ids.add(s.id);
+        return { ...s, type: s.type || "json" };
+      });
+    }
+    function inputs(source) {
+      if (!source.path) throw new Error("Source path is required");
+      const root = path2.resolve(C.HOME, source.path), files = [];
+      let bytes = 0;
+      function walk(p) {
+        const st = fs2.lstatSync(p);
+        if (st.isSymbolicLink()) throw new Error("Knowledge sources cannot traverse symlinks");
+        if (st.isDirectory()) {
+          for (const f of fs2.readdirSync(p).sort()) if (!f.startsWith(".") && !["node_modules", "target", "build"].includes(f)) walk(path2.join(p, f));
+          return;
+        }
+        if (!st.isFile() || !/\.(md|markdown|json)$/i.test(p)) return;
+        if (st.size > 5 * 1024 * 1024 || (bytes += st.size) > 20 * 1024 * 1024 || files.length >= 500) throw new Error("Knowledge source exceeds file/byte budget (500 files, 5 MiB/file, 20 MiB/source)");
+        files.push({ path: p, name: path2.relative(stRoot(), p) || path2.basename(p), text: fs2.readFileSync(p, "utf8") });
+      }
+      const stRoot = () => fs2.statSync(root).isDirectory() ? root : path2.dirname(root);
+      walk(root);
+      return files;
+    }
+    function normalize(source, files) {
+      const entities = [], relations = [], documents = [], gaps = [];
+      const revision = digest([{ id: source.id, type: source.type, service: source.service, title: source.title, url: source.url, technology: source.technology }, files.map((f) => [f.name, f.text])]);
+      const provenance = (file, extra = {}) => ({ ...extra, source: source.id, type: source.type, revision, file, status: "stated" });
+      const entity = (n, file) => {
+        if (!n || typeof n.id !== "string" || !n.id || n.id.length > 500 || typeof n.kind !== "string" || !n.kind) throw new Error("Every knowledge entity needs an explicit id and kind");
+        entities.push({ ...n, name: n.name || n.id, aliases: [.../* @__PURE__ */ new Set([n.name || n.id, ...n.aliases || []])], provenance: provenance(file, n.provenance || {}) });
+      };
+      const relation = (r, file) => {
+        if (!r || !["from", "to", "kind"].every((k) => typeof r[k] === "string" && r[k])) throw new Error("Every knowledge relation needs explicit from, to and kind");
+        relations.push({ ...r, label: r.label || r.kind, confidence: "stated", provenance: provenance(file, r.provenance || {}) });
+      };
+      const document2 = (text, title, file, extra = {}) => {
+        if (!text?.trim()) return;
+        documents.push({ id: `document:${source.id}:${digest([file, title, text]).slice(0, 24)}`, title, text, provenance: provenance(file), ...extra });
+      };
+      for (const f of files) {
+        const ext = /\.md(?:own)?$|\.markdown$/i.test(f.name);
+        if (source.type === "markdown" || ext) {
+          let section = source.title || f.name, buffer = [], line = 1, start = 1;
+          const flush = () => {
+            if (buffer.join("\n").trim()) document2(buffer.join("\n").trim(), section, f.name, { line: start, url: source.url });
+            buffer = [];
+          };
+          for (const text of f.text.split(/\r?\n/)) {
+            const h = text.match(/^#{1,6}\s+(.+?)\s*#*$/);
+            if (h) {
+              flush();
+              section = h[1];
+              start = line + 1;
+            } else {
+              if (!buffer.length) start = line;
+              buffer.push(text);
+            }
+            line++;
+          }
+          flush();
+          continue;
+        }
+        const data = JSON.parse(f.text);
+        if (source.type === "openapi" || data.openapi || data.swagger) {
+          const service = source.service || data.info?.["x-service"] || source.id, own = `service:${service}`;
+          entity({ id: own, kind: "service", name: service, description: data.info?.description }, f.name);
+          document2(data.info?.description || "", data.info?.title || service, f.name);
+          for (const [route, item] of Object.entries(data.paths || {})) for (const method of ["get", "put", "post", "delete", "patch", "head", "options", "trace"]) if (item[method]) {
+            const op = item[method], id = `endpoint:${service}:${method.toUpperCase()} ${route}`;
+            entity({ id, kind: "endpoint", name: `${method.toUpperCase()} ${route}`, service, operationId: op.operationId, aliases: [route, op.operationId].filter(Boolean) }, f.name);
+            relation({ from: own, to: id, kind: "exposes", technology: "HTTP" }, f.name);
+            document2([op.summary, op.description].filter(Boolean).join("\n"), `${method.toUpperCase()} ${route}`, f.name, { entities: [own, id] });
+          }
+        } else if (source.type === "asyncapi" || data.asyncapi) {
+          const service = source.service || source.id, own = `service:${service}`;
+          entity({ id: own, kind: "service", name: service }, f.name);
+          const channelIds = /* @__PURE__ */ new Map();
+          for (const [key, channel] of Object.entries(data.channels || {})) {
+            const topic = channel.address || key, id = `topic:${topic}`;
+            channelIds.set(key, id);
+            entity({ id, kind: "topic", name: topic, technology: source.technology || "Messaging" }, f.name);
+            document2(channel.description || "", topic, f.name, { entities: [id] });
+          }
+          if (/^3\./.test(data.asyncapi || "")) for (const [name, op] of Object.entries(data.operations || {})) {
+            const key = op.channel?.$ref?.match(/^#\/channels\/(.+)$/)?.[1]?.replace(/~1/g, "/").replace(/~0/g, "~"), id = channelIds.get(key);
+            if (!id || !["send", "receive"].includes(op.action)) {
+              gaps.push({ kind: "unsupported-operation", source: source.id, operation: name });
+              continue;
+            }
+            relation({ from: op.action === "send" ? own : id, to: op.action === "send" ? id : own, kind: op.action === "send" ? "produces" : "consumes", technology: source.technology || "Messaging" }, f.name);
+          }
+          else gaps.push({ kind: "asyncapi-direction", source: source.id, detail: "Channels are indexed; operation directions require AsyncAPI 3 send/receive or explicit normalized relations." });
+        } else {
+          if (data.version !== 1 || !Array.isArray(data.entities || data.nodes || [])) throw new Error("Normalized knowledge JSON requires version:1, entities and optional relations/documents");
+          for (const n of data.entities || data.nodes || []) entity(n, f.name);
+          for (const r of data.relations || []) relation(r, f.name);
+          for (const d of data.documents || []) document2(d.text, d.title || f.name, f.name, { url: d.url, entities: d.entities });
+        }
+      }
+      if (entities.length > 2e4 || relations.length > 5e4 || documents.length > 2e4) throw new Error("Knowledge source exceeds entity/relation/document budget");
+      return { version: 1, id: source.id, type: source.type, revision, entities, relations, documents, gaps };
+    }
+    function status() {
+      const sources = configured().map((source) => {
+        const cached = readJson(sourceFile(source.id));
+        return { id: source.id, type: source.type, configured: true, cached: !!cached, revision: cached?.revision, syncedAt: cached?.syncedAt, update: readJson(sourceStatus(source.id)), entities: cached?.entities?.length || 0, documents: cached?.documents?.length || 0, gaps: cached?.gaps || [] };
+      });
+      const conf = require_docs_cache().status();
+      return { sources, confluence: { optional: true, configured: conf.configured, cachedPages: conf.count }, ontology: { entities: "Stable explicit ids, type, scope and aliases", relations: "Directional verb with source and revision; co-occurrence is not an interaction", proof: "indexed code/catalog evidence and stated documentation; neither is runtime proof" } };
+    }
+    function sync(id) {
+      const sources = configured().filter((s) => !id || s.id === id);
+      if (id && !sources.length) throw new Error(`Unknown configured knowledge source ${id}`);
+      const results = [];
+      for (const source of sources) {
+        try {
+          const model = normalize(source, inputs(source)), previous = readJson(sourceFile(source.id));
+          if (previous?.revision === model.revision && previous.type === model.type) {
+            const result2 = { id: source.id, state: "unchanged", revision: model.revision };
+            writeJson(sourceStatus(source.id), result2);
+            results.push(result2);
+            continue;
+          }
+          const next = { ...model, syncedAt: (/* @__PURE__ */ new Date()).toISOString() };
+          if (previous) writeJson(path2.join(DIR, "history", source.id, previous.revision + ".json"), previous);
+          writeJson(sourceFile(source.id), next);
+          const result = { id: source.id, state: "updated", revision: next.revision, entities: next.entities.length, relations: next.relations.length, documents: next.documents.length, gaps: next.gaps };
+          writeJson(sourceStatus(source.id), result);
+          results.push(result);
+        } catch (e) {
+          const result = { id: source.id, state: "failed", error: require_redact().clean(e.message), retainedPrevious: !!readJson(sourceFile(source.id)) };
+          writeJson(sourceStatus(source.id), result);
+          results.push(result);
+        }
+      }
+      return { ok: results.every((r) => r.state !== "failed"), sources: results };
+    }
+    var memo = /* @__PURE__ */ new Map();
+    function graph(env = C.envNames()[0], { includeConfluence = false } = {}) {
+      C.getEnv(env);
+      const sources = configured(), stamps = [];
+      const stampDir = (dir, nested = false) => {
+        let files = [];
+        try {
+          files = fs2.readdirSync(dir).sort();
+        } catch {
+        }
+        for (const name of files) {
+          const file = path2.join(dir, name);
+          if (nested) stamps.push(fileStamp(path2.join(file, "passport.json")));
+          else if (name.endsWith(".json")) stamps.push([name, fileStamp(file)]);
+        }
+      };
+      for (const dir of ["pg", "kafka"]) stampDir(path2.join(CACHE2, env, dir));
+      stampDir(C.PATHS.passports, true);
+      stamps.push(fileStamp(path2.join(CACHE2, env, "consul.json")));
+      for (const s of sources) stamps.push([s.id, fileStamp(sourceFile(s.id)), fileStamp(sourceStatus(s.id))]);
+      const pages = includeConfluence ? require_docs_cache().list() : [];
+      const key = digest([env, stamps, pages.map((p) => [p.id, p.space, p.version, p.syncedAt])]);
+      if (memo.has(key)) return structuredClone(memo.get(key));
+      const sys = require_knowledge().system(env), nodes = /* @__PURE__ */ new Map(), relations = [], documents = [], gaps = [], sourceVersions = [];
+      const addNode = (node, proof) => {
+        const old = nodes.get(node.id);
+        if (old && old.kind !== node.kind) gaps.push({ kind: "entity-type-conflict", id: node.id, kinds: [old.kind, node.kind] });
+        nodes.set(node.id, { ...node, ...old, aliases: [...new Set([...old?.aliases || [], ...node.aliases || [], node.name].filter(Boolean))], evidence: [...old?.evidence || [], { ...node.provenance, proof }] });
+      };
+      for (const n of sys.nodes) addNode(n, "indexed");
+      for (const r of sys.relations) relations.push({ ...r, proof: "indexed" });
+      for (const source of sources) {
+        const model = readJson(sourceFile(source.id));
+        if (!model) {
+          gaps.push({ kind: "source-not-synced", source: source.id });
+          continue;
+        }
+        if (readJson(sourceStatus(source.id))?.state === "failed") gaps.push({ kind: "source-update-failed", source: source.id, detail: "Using retained previous revision; inspect knowledge_sources" });
+        sourceVersions.push({ id: model.id, revision: model.revision, syncedAt: model.syncedAt });
+        for (const n of model.entities) addNode(n, "stated");
+        relations.push(...model.relations.map((r) => ({ ...r, proof: "stated" })));
+        documents.push(...model.documents);
+        gaps.push(...model.gaps);
+      }
+      if (includeConfluence) for (const p of pages) for (const b of p.blocks || []) documents.push({ id: b.id, title: p.title, text: b.text, url: p.url, provenance: { source: "confluence", space: p.space, pageId: p.id, revision: p.version, blockId: b.id, status: "stated" } });
+      const match = require_knowledge().entityMatcher([...nodes.values()]);
+      for (const d of documents) {
+        const mentions = [.../* @__PURE__ */ new Set([...d.entities || [], ...match(d.text).filter((m) => m.entity).map((m) => m.entity)])];
+        d.entities = mentions;
+        for (const id of mentions) if (!nodes.has(id)) gaps.push({ kind: "unresolved-document-entity", document: d.id, id });
+        for (const m of match(d.text).filter((m2) => !m2.entity)) gaps.push({ kind: "ambiguous-mention", document: d.id, name: m.name, candidates: m.candidates });
+      }
+      for (const r of relations) for (const id of [r.from, r.to]) if (!nodes.has(id)) {
+        addNode({ id, name: id, kind: "unresolved", provenance: r.provenance }, r.proof);
+        gaps.push({ kind: "unresolved-endpoint", id, relation: r.kind, source: r.provenance?.source });
+      }
+      const revision = digest([env, [...nodes.values()], relations, sourceVersions.map((s) => [s.id, s.revision]), documents, gaps]);
+      const result = { version: 1, env, builtAt: (/* @__PURE__ */ new Date()).toISOString(), revision, sources: sourceVersions, nodes: [...nodes.values()], relations, documents, gaps, runtimeVerified: false };
+      memo.clear();
+      memo.set(key, result);
+      return structuredClone(result);
+    }
+    function query({ env, q = "", entity, hops = 1, kinds, limit = 150, includeConfluence = false } = {}) {
+      if (!Number.isInteger(hops) || hops < 0 || hops > 4 || !Number.isInteger(limit) || limit < 1 || limit > 500) throw new Error("hops must be 0..4; limit must be 1..500");
+      const model = graph(env, { includeConfluence }), words = q.toLowerCase().split(/\s+/).filter(Boolean), matches = model.nodes.filter((n) => (!kinds?.length || kinds.includes(n.kind)) && (!entity || n.id === entity || n.name === entity || n.aliases.includes(entity)) && words.every((w) => `${n.id} ${n.name} ${n.kind} ${n.aliases.join(" ")}`.toLowerCase().includes(w)));
+      if (entity && matches.length > 1 && !matches.some((n) => n.id === entity)) return { ...model, total: model.nodes.length, nodes: [], relations: [], documents: [], candidates: matches.slice(0, 100).map((n) => ({ id: n.id, name: n.name, kind: n.kind })), gaps: [...model.gaps.slice(0, 499), { kind: "ambiguous-entity", name: entity }], complete: false };
+      const selected = new Set((entity && matches.some((n) => n.id === entity) ? matches.filter((n) => n.id === entity) : matches).slice(0, limit).map((n) => n.id));
+      if (entity && !matches.length) model.gaps.push({ kind: "entity-not-found", id: entity, detail: "No exact identity or alias in the available cached evidence" });
+      let truncated = matches.length > limit;
+      for (let i = 0; i < hops; i++) {
+        const before = new Set(selected);
+        for (const r of model.relations) if (before.has(r.from) || before.has(r.to)) {
+          for (const id of [r.from, r.to]) if (!selected.has(id)) {
+            if (selected.size >= limit) truncated = true;
+            else selected.add(id);
+          }
+        }
+      }
+      const relations = model.relations.filter((r) => selected.has(r.from) && selected.has(r.to));
+      if (relations.length > 2e3) truncated = true;
+      return { ...model, nodes: model.nodes.filter((n) => selected.has(n.id)), relations: relations.slice(0, 2e3), relationsTotal: relations.length, documents: model.documents.filter((d) => d.entities.some((id) => selected.has(id))).slice(0, 50).map((d) => ({ ...d, text: d.text.slice(0, 3e3), ...d.text.length > 3e3 ? { truncated: true } : {} })), gaps: model.gaps.slice(0, 500), gapsTotal: model.gaps.length, total: model.nodes.length, truncated, complete: !truncated && !model.gaps.length };
+    }
+    function search(queryText, options = {}) {
+      const model = graph(options.env, options), terms = queryText.toLowerCase().split(/\s+/).filter(Boolean);
+      const records = [...model.nodes.map((n) => ({ id: n.id, kind: n.kind, title: n.name, text: `${n.name} ${n.id} ${n.aliases.join(" ")}`, evidence: n.evidence })), ...model.documents.map((d) => ({ ...d, kind: "document" }))];
+      const matches = records.map((r) => ({ ...r, score: terms.reduce((n, t) => n + (`${r.title} ${r.text}`.toLowerCase().includes(t) ? 1 : 0), 0) })).filter((r) => r.score && r.score === terms.length).sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
+      return { revision: model.revision, total: matches.length, results: matches.slice(0, Math.min(50, options.limit || 15)).map((r) => ({ ...r, text: r.text.slice(0, 1200) })), gaps: model.gaps, runtimeVerified: false };
+    }
+    function verify(quotes, options = {}) {
+      const model = graph(options.env, options);
+      return quotes.map((q) => {
+        let document2 = model.documents.find((d) => d.id === q.document && (!q.source || d.provenance?.source === q.source));
+        if (q.source && q.revision && (!document2 || document2.provenance.revision !== q.revision)) {
+          const old = /^[a-f0-9]{64}$/.test(q.revision) ? readJson(path2.join(DIR, "history", identifier(q.source), q.revision + ".json")) : null;
+          document2 = old?.documents.find((d) => d.id === q.document);
+        }
+        const parts = q.text.split(/\.{3}|…/).map((s) => s.trim()).filter(Boolean);
+        let offset = 0, verified = !!document2 && (!q.revision || document2.provenance.revision === q.revision) && parts.length > 0;
+        for (const part of parts) {
+          const index = document2?.text.indexOf(part, offset) ?? -1;
+          if (index < 0) verified = false;
+          else offset = index + part.length;
+        }
+        return { document: q.document, verified, ...document2 ? { title: document2.title, provenance: document2.provenance, url: document2.url, text: q.text } : { reason: "Document/version is not cached" } };
+      });
+    }
+    module2.exports = { configured, status, sync, graph, query, search, verify, normalize, inputs };
+  }
+});
+
+// contracts/v1/knowledge-graph.schema.json
+var require_knowledge_graph_schema = __commonJS({
+  "contracts/v1/knowledge-graph.schema.json"(exports2, module2) {
+    module2.exports = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "urn:dt:knowledge-graph:v1",
+      title: "Source-neutral graph adapter result; presentation is independent of storage",
+      type: "object",
+      required: ["version", "env", "revision", "nodes", "relations", "documents", "gaps", "sources", "runtimeVerified"],
+      properties: {
+        version: { const: 1 },
+        env: { type: "string" },
+        revision: { type: "string" },
+        runtimeVerified: { const: false },
+        nodes: { type: "array", maxItems: 500, items: { type: "object", required: ["id", "name", "kind", "evidence"], properties: { id: { type: "string" }, name: { type: "string" }, kind: { type: "string" }, evidence: { type: "array", items: { type: "object", required: ["proof"], properties: { proof: { enum: ["indexed", "stated", "inferred"] } }, additionalProperties: true } } }, additionalProperties: true } },
+        relations: { type: "array", maxItems: 2e3, items: { type: "object", required: ["from", "to", "kind", "proof", "provenance"], properties: { from: { type: "string" }, to: { type: "string" }, kind: { type: "string" }, proof: { enum: ["indexed", "stated", "inferred"] }, provenance: { type: "object" } }, additionalProperties: true } },
+        documents: { type: "array", maxItems: 50, items: { type: "object", required: ["id", "text", "provenance"], properties: { id: { type: "string" }, text: { type: "string", maxLength: 3e3 }, provenance: { type: "object" } }, additionalProperties: true } },
+        gaps: { type: "array", maxItems: 500, items: { type: "object" } },
+        sources: { type: "array", items: { type: "object" } },
+        truncated: { type: "boolean" },
+        complete: { type: "boolean" }
+      },
+      additionalProperties: true
+    };
+  }
+});
+
+// lib/tools-knowledge.js
+var require_tools_knowledge = __commonJS({
+  "lib/tools-knowledge.js"(exports2, module2) {
+    module2.exports = ({ str, int, env }) => {
+      const K = () => require_semantic_knowledge();
+      const options = { env, includeConfluence: { type: "boolean", default: false, description: "Include already cached Confluence text; no mirror/API required" } };
+      const searchSchema = {
+        type: "object",
+        required: ["revision", "total", "results", "runtimeVerified"],
+        properties: {
+          revision: { type: "string" },
+          total: { type: "integer", minimum: 0 },
+          runtimeVerified: { const: false },
+          results: { type: "array", maxItems: 50, items: {
+            type: "object",
+            required: ["id", "text"],
+            anyOf: [{ required: ["evidence"] }, { required: ["provenance"] }],
+            properties: { id: { type: "string" }, text: { type: "string", maxLength: 1200 }, evidence: { type: "array" }, provenance: { type: "object" } }
+          } }
+        }
+      };
+      return [
+        { name: "knowledge_sources", group: "knowledge", description: "Inspect independent knowledge providers, cached revisions, update failures and semantic conventions. Works without Confluence. Configured local JSON, Markdown, OpenAPI and AsyncAPI sources update individually; system passports/catalogs are included automatically.", input: {}, run: () => K().status() },
+        { name: "knowledge_sync", group: "knowledge", description: "Update one configured local knowledge source, or all configured sources. Content-addressed revisions preserve history; errors retain the last good revision and remain explicit gaps. Reads configured paths only; does not query live systems or require a Confluence mirror.", input: { source: str("Configured source id; omit for all") }, run: (a) => K().sync(a.source) },
+        { name: "knowledge_search", group: "knowledge", description: "Search cached semantic entities, contracts and documentation across independently updated sources. Returns exact excerpts, stable ids and source revisions. Documentation claims are stated evidence; indexed code/catalog facts are separate from runtime proof.", input: { query: str("Technical name or question keywords"), ...options, limit: { ...int("Max matches", 15), minimum: 1, maximum: 50 } }, required: ["query"], adapterSchema: searchSchema, run: (a) => K().search(a.query, a) },
+        { name: "knowledge_verify", group: "knowledge", description: "Verify exact quoted text against a cached source revision independently of graph/search. Ellipsis-separated pieces must occur in order. Historical normalized/Markdown/contract revisions remain checkable by source and revision; retrieved text never establishes runtime proof.", input: { ...options, quotes: { type: "array", maxItems: 50, items: { type: "object", properties: { document: str("Stable document id"), text: str("Exact quotation"), source: str("Source id for historical revision"), revision: str("Exact source revision") }, required: ["document", "text"] } } }, required: ["quotes"], run: (a) => K().verify(a.quotes, a) },
+        { name: "knowledge_graph", group: "knowledge", description: "Visualize a bounded semantic neighborhood across services, endpoints, data, events and documentation. Select an exact entity id or search, then inspect directional verbs and source/version evidence. View is on by default, works offline without Confluence, and preserves ambiguity instead of guessing. Indexed evidence is not runtime proof.", input: { ...options, q: str("Entity words, optional"), entity: str("Exact entity id or unambiguous alias"), hops: { ...int("Relationship hops", 1), minimum: 0, maximum: 4 }, limit: { ...int("Max entities", 150), minimum: 1, maximum: 500 }, kinds: { type: "array", items: { type: "string" }, description: "Optional seed entity kinds" } }, adapterSchema: require_knowledge_graph_schema(), run: (a) => K().query(a), present: (r, a) => {
+          const view = require_results().saveView("knowledge-map", r, { title: a.entity || a.q || "System knowledge", env: r.env });
+          return { env: r.env, revision: r.revision, total: r.total, shown: r.nodes.length, relations: r.relations.length, truncated: r.truncated, complete: r.complete, runtimeVerified: false, sources: r.sources, nodes: r.nodes.slice(0, 20).map((n) => ({ id: n.id, name: n.name, kind: n.kind })), candidates: r.candidates, gaps: r.gaps.slice(0, 40), gapsTotal: r.gapsTotal ?? r.gaps.length, view, next: "Use knowledge_entity for exact evidence or knowledge_graph entity=<id> to focus." };
+        } },
+        { name: "knowledge_entity", group: "knowledge", description: "Inspect one exact semantic entity and every directly connected indexed/stated relation with provenance. Ambiguous aliases return candidates; no match is fabricated. Use knowledge_graph to view its neighborhood.", input: { ...options, id: str("Exact entity id or unambiguous alias") }, required: ["id"], run: (a) => {
+          const r = K().query({ ...a, entity: a.id, hops: 1, limit: 100 });
+          return { ...r, documents: r.documents.map((d) => ({ ...d, text: d.text.slice(0, 3e3) })) };
+        } }
+      ];
+    };
+  }
+});
+
+// lib/collection-evidence.js
+var require_collection_evidence = __commonJS({
+  "lib/collection-evidence.js"(exports2, module2) {
+    var sensitive = (key) => /(^|[_\s.-])(password|passwd|secret|token|authorization|cookie|api[_-]?key|private[_-]?key|client[_-]?secret)([_\s.-]|$)/i.test(String(key).replace(/([a-z0-9])([A-Z])/g, "$1_$2"));
+    function secrets(value, into = /* @__PURE__ */ new Set()) {
+      if (!value || typeof value !== "object") return into;
+      for (const [key, child] of Object.entries(value)) {
+        if (sensitive(key) && typeof child === "string" && child) into.add(child);
+        else secrets(child, into);
+      }
+      return into;
+    }
+    function clean(value, known = /* @__PURE__ */ new Set()) {
+      const found = secrets(value, new Set(known));
+      const text = (value2) => {
+        let out2 = value2.replace(/([a-z][a-z\d+.-]*:\/\/)[^\s/?#@]*:[^\s/@]+@/gi, "$1[redacted]@").replace(/\bBearer\s+[^\s"'<>]+/gi, "Bearer [redacted]").replace(/([?&](?:access_token|token|api_?key|password|secret)=)[^&#\s"']+/gi, "$1[redacted]");
+        for (const secret of [...found].sort((a, b) => b.length - a.length)) {
+          if (out2 === secret) return "[redacted]";
+          if (secret.length >= 4) out2 = out2.split(secret).join("[redacted]");
+        }
+        return out2;
+      };
+      const visit = (x) => typeof x === "string" ? text(x) : Array.isArray(x) ? x.map(visit) : x && typeof x === "object" ? Object.fromEntries(Object.entries(x).map(([key, child]) => [key, sensitive(key) && child != null ? "[redacted]" : visit(child)])) : x;
+      return visit(value);
+    }
+    function configuredSecrets() {
+      const found = /* @__PURE__ */ new Set();
+      try {
+        const C = require_config();
+        secrets({ ...C.parseEnvFile(C.SECRETS_FILE), ...C.parseEnvFile(require("path").join(C.HOME, ".env.personal")) }, found);
+        secrets(C.interpolate(C.load().raw, C.load().lookup()), found);
+        const personal = C.getPersonal();
+        for (const value of [personal.bitbucket?.token, personal.confluence?.token, personal.llm?.key, C.getServer().apiKey]) if (value) found.add(value);
+      } catch {
+      }
+      return found;
+    }
+    function definitions(items = {}) {
+      return Object.fromEntries(Object.entries(items).map(([id, def]) => [id, {
+        id,
+        description: def.description || "",
+        revision: require("crypto").createHash("sha256").update(JSON.stringify(def)).digest("hex"),
+        parameters: Object.keys(def.params || {}),
+        steps: (def.steps || []).map((step, index) => ({ step: index + 1, kind: ["tool", "http", "script", "browser", "open", "wait", "js", "set", "transform"].find((k) => step[k] !== void 0) || "step" }))
+      }]));
+    }
+    function artifact(run, known) {
+      const out2 = JSON.parse(JSON.stringify(run));
+      const retainInputs = out2.evidence === true;
+      out2.definitions = definitions(run.definitions);
+      out2.plan.definitions = out2.definitions;
+      delete out2.plan.collectionChains;
+      const hideCase = (c) => {
+        delete c.overrides;
+        if (!retainInputs) {
+          delete c.params;
+          c.matrix = {};
+        }
+      };
+      out2.cases.forEach(hideCase);
+      out2.plan.cases.forEach(hideCase);
+      for (const scope of out2.plan.scopes) {
+        scope.hooks = ["before", "after", "finally"].filter((key) => scope[key]);
+        for (const key of ["before", "after", "finally"]) delete scope[key];
+        if (!retainInputs) scope.params = {};
+      }
+      out2.retention = { inputs: retainInputs ? "included" : "omitted", credentials: "redacted", definitions: "revision-summaries", executableSnapshot: false };
+      return clean(out2, known);
+    }
+    module2.exports = { secrets, configuredSecrets, artifact };
+  }
+});
+
+// lib/collections.js
+var require_collections = __commonJS({
+  "lib/collections.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var crypto = require("crypto");
+    var S = require_scripts();
+    var { CACHE: CACHE2, readJson, writeJson } = require_util();
+    var DIR = path2.join(CACHE2, "collection-runs");
+    var active = /* @__PURE__ */ new Map();
+    var evidenceSecrets = /* @__PURE__ */ new WeakMap();
+    var E = require_collection_evidence();
+    var clone = (x) => JSON.parse(JSON.stringify(x));
+    var digest = (x) => crypto.createHash("sha256").update(JSON.stringify(x)).digest("hex");
+    var names = (x) => [].concat(x || []).map(String);
+    var MAX_CASES = 1e3;
+    function exactScript(id) {
+      if (!/^[a-z0-9][\w.-]*(\/[a-z0-9][\w.-]*)*$/i.test(id || "") || id.split("/").some((s) => s.startsWith(".")) || !fs2.existsSync(path2.join(S.DIR, `${id}.json`))) throw new Error(`exact script reference ${id} not found`);
+      return S.get(id);
+    }
+    function suiteSettings(value = {}) {
+      if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("suite must be an object");
+      if (value.version !== void 0 && value.version !== 1) throw new Error("unsupported collection suite version; expected 1");
+      for (const h of ["before", "after", "finally"]) if (value[h] !== void 0 && ![].concat(value[h]).every((x) => typeof x === "string")) throw new Error(`suite ${h} must be JavaScript`);
+      if (value.order !== void 0 && !Array.isArray(value.order)) throw new Error("suite order must be an array");
+      if (value.datasets !== void 0 && (!Array.isArray(value.datasets) || value.datasets.some((x) => !x || typeof x !== "object" || Array.isArray(x)))) throw new Error("datasets must be an array of parameter objects");
+      if (value.matrix !== void 0 && (!value.matrix || typeof value.matrix !== "object" || Array.isArray(value.matrix) || Object.values(value.matrix).some((x) => !Array.isArray(x)))) throw new Error("matrix must map parameter names to arrays");
+      return value;
+    }
+    function save(collection, changes) {
+      if (changes.suite !== void 0) suiteSettings(changes.suite);
+      try {
+        S.getCollection(collection);
+      } catch {
+        S.mkdir(collection);
+      }
+      const prior = S.getCollection(collection);
+      return S.setCollection(collection, { ...changes, ...changes.suite !== void 0 ? { suite: { version: 1, ...prior.suite || {}, ...changes.suite } } : {} });
+    }
+    function inspect(collection) {
+      const metadata = S.getCollection(collection);
+      return { ...metadata, version: 1, suite: metadata.suite || {}, definitions: metadata.scripts.map((id) => S.get(id)), next: "collection_plan \u2192 collection_validate \u2192 collection_run \u2192 collection_check / collection_history / collection_report" };
+    }
+    function cross(matrix = {}) {
+      let values = [{}];
+      for (const [k, vs] of Object.entries(matrix)) {
+        if (values.length * vs.length > MAX_CASES) throw new Error(`matrix exceeds ${MAX_CASES} cases`);
+        values = values.flatMap((v) => vs.map((x) => ({ ...v, [k]: x })));
+      }
+      return values;
+    }
+    function plan(collection, { params = {}, tags = [], excludeTags = [], select = [], seed = "0", datasets, matrix } = {}) {
+      seed = String(seed);
+      const scopes = [], cases = [], skipped = [], definitions = {}, visiting = /* @__PURE__ */ new Set();
+      const wanted = new Set(names(select)), include = new Set(names(tags)), exclude = new Set(names(excludeTags));
+      const add = (id, values, inheritedTags, scope, entry = {}) => {
+        const def = exactScript(id);
+        definitions[def.id] = def;
+        const allTags = [.../* @__PURE__ */ new Set([...inheritedTags, ...names(def.tags), ...names(entry.tags)])];
+        const reason = wanted.size && !wanted.has(def.id) && !wanted.has(def.id.split("/").pop()) ? "selection" : include.size && !allTags.some((x) => include.has(x)) ? "tags" : allTags.some((x) => exclude.has(x)) ? "excluded-tag" : null;
+        if (reason) {
+          skipped.push({ script: def.id, scope, reason, tags: allTags });
+          return;
+        }
+        suiteSettings(entry);
+        for (const [rowIndex, row] of (entry.datasets || datasets || [{}]).entries()) for (const combination of cross(entry.matrix || matrix || {})) {
+          if (cases.length >= MAX_CASES) throw new Error(`suite exceeds ${MAX_CASES} cases`);
+          const overrides = { ...entry.params || {}, ...row, ...combination, seed };
+          const given = { ...values, ...overrides };
+          const ordinal = cases.length + 1;
+          cases.push({ id: `${def.id}#${ordinal}`, script: def.id, scope, row: rowIndex, matrix: combination, tags: allTags, params: clone(given), overrides: clone(overrides), revision: digest(def) });
+        }
+      };
+      const visit = (id, parent, inherited, inheritedTags) => {
+        if (visiting.has(id)) throw new Error(`collection cycle: ${[...visiting, id].join(" \u2192 ")}`);
+        if (visiting.size >= 20) throw new Error("collection nesting exceeds 20");
+        visiting.add(id);
+        const meta = S.getCollection(id), suite = suiteSettings(meta.suite || {});
+        const scope = { id, parent, before: suite.before, after: suite.after, finally: suite.finally, params: { ...inherited, ...suite.params || {}, ...params }, revision: digest(meta) };
+        scopes.push(scope);
+        const inheritedAll = [...inheritedTags, ...names(suite.tags)];
+        const prefix = id + "/", direct = meta.scripts.filter((x) => !x.slice(prefix.length).includes("/"));
+        const children = S.list(id).collections.map((x) => x.collection).filter((x) => x !== id && !x.slice(prefix.length).includes("/"));
+        const order = suite.order || [...direct.map((script) => ({ script })), ...children.map((collection2) => ({ collection: collection2 }))];
+        for (const raw of order) {
+          const entry = typeof raw === "string" ? { script: raw } : raw;
+          if (!entry || !!entry.script === !!entry.collection) throw new Error(`collection ${id}: order entry needs script or collection`);
+          const target = entry.script || entry.collection;
+          const full = target.startsWith(prefix) ? target : `${prefix}${target}`;
+          if (!full.startsWith(prefix) || full.includes("/../")) throw new Error(`collection ${id}: reference escapes its subtree`);
+          if (entry.collection) visit(full, id, { ...scope.params, ...entry.params || {} }, [...inheritedAll, ...names(entry.tags)]);
+          else add(full, scope.params, inheritedAll, id, { ...suite.datasets ? { datasets: suite.datasets } : {}, ...suite.matrix ? { matrix: suite.matrix } : {}, ...entry });
+        }
+        visiting.delete(id);
+      };
+      visit(collection, null, params, []);
+      const selectedScopes = new Set(cases.map((x) => x.scope));
+      for (let changed = true; changed; ) {
+        changed = false;
+        for (const s of scopes) if (selectedScopes.has(s.id) && s.parent && !selectedScopes.has(s.parent)) {
+          selectedScopes.add(s.parent);
+          changed = true;
+        }
+      }
+      const selected = scopes.filter((s) => selectedScopes.has(s.id));
+      return { version: 1, collection, seed: String(seed), cases, skipped, scopes: selected, definitions, hash: digest({ cases, scopes: selected, definitions }), counts: { cases: cases.length, scripts: new Set(cases.map((c) => c.script)).size, scopes: selected.length, skipped: skipped.length }, next: "collection_validate before collection_run" };
+    }
+    function templateErrors(value, known, location, errors) {
+      if (Array.isArray(value)) return value.forEach((v, i) => templateErrors(v, known, `${location}[${i}]`, errors));
+      if (value && typeof value === "object") return Object.entries(value).forEach(([k, v]) => templateErrors(v, known, `${location}.${k}`, errors));
+      if (typeof value !== "string") return;
+      for (const m of value.matchAll(/\{\{([^}]+)\}\}/g)) {
+        const expr = m[1].trim(), root = expr.split(".")[0];
+        if (/^(uuid|now|timestamp|date(?::.*)?|rand:\d+|hex:\d+|link:.*)$/.test(expr)) continue;
+        if (!known.has(root)) errors.push({ location, kind: "template", expression: expr, error: `variable ${root} is not declared before use; declare hook-produced vars explicitly` });
+      }
+    }
+    async function validate(collectionOrPlan, options = {}, { schemas } = {}) {
+      const p = typeof collectionOrPlan === "string" ? plan(collectionOrPlan, options) : collectionOrPlan;
+      const errors = [], warnings = [], capabilities = /* @__PURE__ */ new Set(), references = /* @__PURE__ */ new Map();
+      const toolSchemas = schemas || await require_tools().schemas();
+      const available = new Set(toolSchemas.map((t) => t.name));
+      const byName = new Map(toolSchemas.map((t) => [t.name, t]));
+      p.collectionChains = {};
+      const visit = (def, given, stack = []) => {
+        if (stack.includes(def.id)) {
+          errors.push({ kind: "cycle", script: def.id, error: `script cycle: ${[...stack, def.id].join(" \u2192 ")}` });
+          return;
+        }
+        if (stack.length >= 5) {
+          errors.push({ kind: "depth", script: def.id, error: "script nesting exceeds 5" });
+          return;
+        }
+        references.set(def.id, digest(def));
+        p.definitions[def.id] = clone(def);
+        try {
+          S.validate(def);
+          if (!stack.length) S.params(def, given);
+          else for (const [key, spec] of Object.entries(def.params || {})) if (spec?.required && spec.default === void 0 && !(key in given)) throw new Error(`script ${def.id}: missing param ${key}`);
+        } catch (e) {
+          errors.push({ script: def.id, error: e.message });
+        }
+        p.collectionChains[def.id] = S.chain(def.id);
+        const inherited = Object.assign({}, ...p.collectionChains[def.id].map((c) => c.vars || {}));
+        const known = /* @__PURE__ */ new Set([...Object.keys(inherited), ...Object.keys(def.vars || {}), ...Object.keys(def.params || {}), ...Object.keys(given)]);
+        templateErrors(inherited, known, `${def.id}.collection.vars`, errors);
+        templateErrors(def.vars, known, `${def.id}.vars`, errors);
+        for (const [i, step] of def.steps.entries()) {
+          const loc = `${def.id}.steps[${i}]`;
+          for (const [k, v] of Object.entries(step)) if (!["js", "before", "after", "finally", "assertions", "set"].includes(k)) templateErrors(v, known, `${loc}.${k}`, errors);
+          if (step.set) {
+            for (const [k, v] of Object.entries(step.set)) {
+              templateErrors(v, known, `${loc}.set.${k}`, errors);
+              known.add(k);
+            }
+          }
+          if (step.tool) {
+            capabilities.add(`tool:${step.tool}`);
+            if (!available.has(step.tool) || step.tool.startsWith("script_") || step.tool.startsWith("collection_")) errors.push({ location: loc, kind: "tool", error: `tool ${step.tool} unavailable or recursive control tool; use script references` });
+            for (const key of byName.get(step.tool)?.inputSchema?.required || []) if (!(key in (step.args || {})) && !step.before) errors.push({ location: loc, kind: "argument", error: `tool ${step.tool} missing required argument ${key}` });
+          }
+          if (step.http) {
+            capabilities.add(`http:${String(step.http).split(" ")[0].toUpperCase()}`);
+            const url = String(step.http).split(/\s+/)[1];
+            if (!url.includes("{{") && !require_config().getScripts().httpAllow.some((prefix) => url.startsWith(prefix))) errors.push({ location: loc, kind: "capability", error: "HTTP URL is not configured in scripts.http.allow" });
+          }
+          if (step.browser || step.open || step.wait !== void 0) {
+            capabilities.add("browser");
+            try {
+              if (!require_config().getBrowser().mcp) errors.push({ location: loc, kind: "capability", error: "browser MCP is not configured" });
+            } catch (e) {
+              errors.push({ location: loc, error: e.message });
+            }
+          }
+          if (step.js !== void 0 || step.before || step.after || step.finally || step.assertions?.some((a) => a.code !== void 0)) capabilities.add("javascript");
+          if (step.script) {
+            if (String(step.script).includes("{{")) errors.push({ location: loc, error: "dynamic script references cannot be validated" });
+            else try {
+              const child = exactScript(step.script);
+              visit(child, Object.fromEntries(Object.keys(step.params || step.args || {}).map((k) => [k, void 0])), [...stack, def.id]);
+            } catch (e) {
+              errors.push({ location: loc, kind: "reference", error: e.message });
+            }
+          }
+          for (const key of [...Object.keys(step.capture || {}), ...names(step.as)]) if (key) known.add(key);
+        }
+        if ([def.before, def.after, def.finally, ...S.chain(def.id).flatMap((c) => [c.before, c.after, c.finally])].some(Boolean)) capabilities.add("javascript");
+      };
+      for (const c of p.cases) visit(p.definitions[c.script], c.params);
+      for (const scope of p.scopes) if (scope.before || scope.after || scope.finally) capabilities.add("javascript");
+      if (capabilities.has("javascript")) warnings.push("JavaScript can call dynamic tools. Static validation cannot establish these calls; use explicit tool steps when a complete preflight is required.");
+      if (capabilities.has("javascript") && !require_config().getScripts().js) errors.push({ kind: "capability", error: "JavaScript is disabled" });
+      if (!p.cases.length) errors.push({ kind: "selection", error: "no cases selected" });
+      p.hash = digest({ cases: p.cases, scopes: p.scopes, definitions: p.definitions, collectionChains: p.collectionChains });
+      return { version: 1, ok: !errors.length, collection: p.collection, planHash: p.hash, errors, warnings, capabilities: [...capabilities].sort(), references: Object.fromEntries(references), counts: p.counts };
+    }
+    function runFile(id) {
+      if (!/^[a-f0-9]{24}$/.test(id || "")) throw new Error("invalid collection run id");
+      return path2.join(DIR, `${id}.json`);
+    }
+    function get(id) {
+      const r = readJson(runFile(id));
+      if (!r) throw new Error(`collection run ${id} not found`);
+      return r;
+    }
+    function history(collection, limit = 30) {
+      let files = [];
+      try {
+        files = fs2.readdirSync(DIR).filter((x) => /^[a-f0-9]{24}\.json$/.test(x));
+      } catch {
+      }
+      return files.map((f) => readJson(path2.join(DIR, f))).filter((r) => r && (!collection || r.collection === collection)).sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, Math.min(100, Math.max(1, limit))).map(({ run: run2, collection: collection2, startedAt, status, counts, ms, seed, planHash, error }) => ({ run: run2, collection: collection2, startedAt, status, counts, ms, seed, planHash, error }));
+    }
+    function artifact(r) {
+      return E.artifact(r, evidenceSecrets.get(r));
+    }
+    function persist(r) {
+      fs2.mkdirSync(DIR, { recursive: true });
+      const file = runFile(r.run), temp = `${file}.tmp`;
+      fs2.writeFileSync(temp, JSON.stringify(artifact(r), null, 2) + "\n", { mode: 384 });
+      fs2.renameSync(temp, file);
+    }
+    function cancel(id, reason = "cancelled by caller") {
+      const running = active.get(id);
+      if (!running) return { run: id, cancelled: false, status: get(id).status };
+      running.abort(new Error(reason));
+      return { run: id, cancelled: true, status: "cancelling" };
+    }
+    function summary(r) {
+      return { version: 1, run: r.run, collection: r.collection, status: r.status, ok: r.ok, counts: r.counts, ms: r.ms, planHash: r.planHash, ...r.error ? { error: r.error } : {}, ...r.view ? { view: r.view } : {}, next: "collection_check, collection_report or collection_history with this run id" };
+    }
+    function check(run2) {
+      const r = typeof run2 === "string" ? get(run2) : run2;
+      return { ...summary(r), ok: r.status === "passed" && r.counts.failed === 0 && r.counts.errors === 0 && r.counts.skipped === 0, failed: r.cases.filter((c) => c.status === "failed" || c.status === "error").map((c) => ({ case: c.id, script: c.script, error: c.result?.error || c.error, cleanupErrors: c.result?.cleanupErrors, tests: c.result?.tests })), hookErrors: r.hooks.filter((h) => !h.result.ok).map((h) => ({ collection: h.collection, kind: h.kind, error: h.result.error, tests: h.result.tests })), cleanupErrors: r.cleanupErrors || [] };
+    }
+    async function run(collection, options = {}, adapters = {}) {
+      const p = plan(collection, options), validation = await validate(p, {}, adapters);
+      if (!validation.ok) return { ok: false, status: "invalid", collection, validation };
+      const timeoutMs = options.timeoutMs ?? 12e4, cleanupMs = options.cleanupTimeoutMs ?? 1e4;
+      if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 9e5 || !Number.isInteger(cleanupMs) || cleanupMs < 1 || cleanupMs > 6e4) throw new Error("run timeout must be 1..900000; cleanup timeout 1..60000");
+      const controller = new AbortController(), listener = () => controller.abort(options.signal.reason);
+      options.signal?.addEventListener("abort", listener, { once: true });
+      if (options.signal?.aborted) listener();
+      if (options.cancelled?.()) controller.abort(new Error("background job cancelled"));
+      const cancellation = options.cancelled ? setInterval(() => {
+        if (options.cancelled()) controller.abort(new Error("background job cancelled"));
+      }, 50) : null;
+      const r = { version: 1, run: crypto.randomBytes(12).toString("hex"), collection, startedAt: (/* @__PURE__ */ new Date()).toISOString(), status: "running", seed: p.seed, evidence: options.evidence === true, planHash: p.hash, validation, definitions: p.definitions, plan: p, cases: [], hooks: [], cleanupErrors: [], counts: { cases: p.cases.length, passed: 0, failed: 0, errors: 0, skipped: 0 } };
+      evidenceSecrets.set(r, E.secrets(p, E.configuredSecrets()));
+      active.set(r.run, controller);
+      persist(r);
+      options.onStart?.(r.run);
+      const deadline = Date.now() + timeoutMs, scopeVars = /* @__PURE__ */ new Map(), entered = [];
+      let primary;
+      const executeHook = async (scope, kind, cleaning = false) => {
+        if (!scope[kind]) return;
+        const vars = scopeVars.get(scope.id);
+        vars.run = { cases: r.cases, counts: r.counts, status: r.status };
+        const result = await S.run({ description: `${kind} ${scope.id}`, steps: [{ js: scope[kind] }] }, clone(vars), { call: adapters.call, signal: cleaning ? void 0 : controller.signal, timeoutMs: cleaning ? cleanupMs : Math.max(1, deadline - Date.now()), cleanupTimeoutMs: cleanupMs, fullScope: true });
+        if (result.scope) {
+          E.secrets(result.scope, evidenceSecrets.get(r));
+          delete result.scope.run;
+          scopeVars.set(scope.id, result.scope);
+          delete result.scope;
+        }
+        r.hooks.push({ collection: scope.id, kind, result });
+        persist(r);
+        if (!result.ok) throw new Error(`${scope.id} ${kind}: ${result.error}`);
+      };
+      const enter = async (id) => {
+        if (scopeVars.has(id)) return;
+        const scope = p.scopes.find((x) => x.id === id);
+        if (scope.parent) await enter(scope.parent);
+        const inherited = scope.parent ? scopeVars.get(scope.parent) : {};
+        scopeVars.set(id, clone({ ...inherited, ...scope.params }));
+        entered.push(scope);
+        await executeHook(scope, "before");
+      };
+      try {
+        for (const c of p.cases) {
+          if (controller.signal.aborted || Date.now() >= deadline) throw new Error(controller.signal.aborted ? "cancelled" : "run deadline exceeded");
+          await enter(c.scope);
+          const given = clone({ ...scopeVars.get(c.scope), ...c.overrides });
+          const started = Date.now();
+          const result = await S.run(clone(p.definitions[c.script]), given, { call: adapters.call, signal: controller.signal, timeoutMs: Math.max(1, deadline - Date.now()), cleanupTimeoutMs: cleanupMs, definitions: p.definitions, collectionChains: p.collectionChains });
+          const status = result.ok ? "passed" : result.tests?.failed ? "failed" : "error";
+          r.cases.push({ ...c, params: options.evidence ? given : void 0, status, ms: Date.now() - started, result });
+          r.counts[status === "error" ? "errors" : status]++;
+          persist(r);
+          if (controller.signal.aborted || /deadline|cancelled/.test(result.error || "")) throw new Error(controller.signal.aborted ? "cancelled" : result.error);
+          if (options.failFast && !result.ok) throw new Error(`case ${c.id} failed`);
+        }
+        for (const scope of [...entered].reverse()) await executeHook(scope, "after");
+      } catch (e) {
+        primary = e.message;
+      } finally {
+        for (const c of p.cases.slice(r.cases.length)) {
+          r.cases.push({ ...c, params: void 0, status: "skipped", error: primary || "scope setup failed" });
+          r.counts.skipped++;
+        }
+        for (const scope of entered.reverse()) try {
+          await executeHook(scope, "finally", true);
+        } catch (e) {
+          r.cleanupErrors.push({ collection: scope.id, error: e.message });
+        }
+        r.ms = Date.now() - Date.parse(r.startedAt);
+        r.endedAt = (/* @__PURE__ */ new Date()).toISOString();
+        r.ok = !primary && !r.cleanupErrors.length && !r.counts.failed && !r.counts.errors && !r.counts.skipped;
+        r.status = controller.signal.aborted ? "cancelled" : r.ok ? "passed" : "failed";
+        if (primary) r.error = primary;
+        else if (r.cleanupErrors.length) r.error = "suite cleanup failed";
+        if (options.visualize !== false) try {
+          r.view = require_results().saveView("collection-report", artifact(r), { title: `${collection}: ${r.status}` });
+        } catch (e) {
+          r.viewError = e.message;
+        }
+        persist(r);
+        active.delete(r.run);
+        clearInterval(cancellation);
+        options.signal?.removeEventListener("abort", listener);
+      }
+      return artifact(r);
+    }
+    var xml = (x) => String(x ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[c]).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "");
+    function junit(run2) {
+      const r = typeof run2 === "string" ? get(run2) : run2;
+      const extra = [...r.hooks.filter((h) => !h.result.ok).map((h) => ({ id: `${h.collection}:${h.kind}`, script: h.collection, status: "error", result: h.result })), ...r.cleanupErrors.filter((e) => !r.hooks.some((h) => h.kind === "finally" && h.collection === e.collection)).map((e) => ({ id: `${e.collection}:finally`, script: e.collection, status: "error", result: e }))];
+      const cases = [...r.cases, ...extra];
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="${xml(r.collection)}" tests="${cases.length}" failures="${cases.filter((c) => c.status === "failed").length}" errors="${cases.filter((c) => c.status === "error").length}" skipped="${cases.filter((c) => c.status === "skipped").length}" time="${(r.ms || 0) / 1e3}">
+${cases.map((c) => `<testcase classname="${xml(c.script)}" name="${xml(c.id)}" time="${(c.ms || 0) / 1e3}">${c.status === "skipped" ? `<skipped message="${xml(c.error)}"/>` : c.status !== "passed" ? `<${c.status === "failed" ? "failure" : "error"} message="${xml(c.result?.error || c.error || "assertions failed")}">${xml(JSON.stringify(c.result || c))}</${c.status === "failed" ? "failure" : "error"}>` : ""}</testcase>`).join("\n")}
+</testsuite>
+`;
+    }
+    module2.exports = { save, inspect, plan, validate, run, get, history, cancel, check, junit, summary, DIR };
+  }
+});
+
+// lib/tools-collections.js
+var require_tools_collections = __commonJS({
+  "lib/tools-collections.js"(exports2, module2) {
+    module2.exports = ({ str, int }) => {
+      const obj = (description) => ({ type: "object", additionalProperties: true, description });
+      const strings = (description) => ({ type: "array", items: { type: "string" }, description });
+      const C = () => require_collections();
+      const selection = { params: obj("Shared typed parameter values"), tags: strings("Include cases with any of these tags"), exclude_tags: strings("Exclude cases with any of these tags"), select: strings("Exact script ids or basenames"), seed: str("Recorded deterministic seed, exposed as vars.seed"), datasets: { type: "array", items: obj("One parameter row"), description: "Independent parameter rows" }, matrix: obj("Cartesian product: parameter name \u2192 array of typed values") };
+      const options = (a) => ({ ...a, excludeTags: a.exclude_tags, timeoutMs: a.timeout_ms, cleanupTimeoutMs: a.cleanup_timeout_ms, failFast: a.fail_fast });
+      return [
+        { name: "collection_get", group: "scripts", description: "Inspect a script collection independently: stored suite configuration, nested script definitions and the next lifecycle stages. Does not run hooks or actions.", input: { collection: str("Collection path") }, required: ["collection"], run: (a) => C().inspect(a.collection) },
+        { name: "collection_save", group: "scripts", description: "Update collection metadata without clearing omitted fields. Suite uses the existing script language: ordered script/collection references, tags, datasets, matrix, shared params and before/after/finally JavaScript hooks. Collection hooks remain per-script; suite hooks execute once per selected scope.", input: { collection: str("Collection path; created if missing"), description: str("What it tests and when to use it"), vars: obj("Per-script inherited vars"), before: str("Per-script setup JavaScript"), after: str("Per-script success hook"), finally: str("Per-script cleanup, including failures"), suite: obj("Suite configuration: order, tags, params, datasets, matrix, before, after, finally") }, required: ["collection"], run: (a) => C().save(a.collection, Object.fromEntries(["description", "vars", "before", "after", "finally", "suite"].filter((k) => a[k] !== void 0).map((k) => [k, a[k]]))) },
+        { name: "collection_plan", group: "scripts", description: "Build an offline ordered plan of nested suite cases. Expands datasets and matrix values with isolated per-case vars, records tags, selection exclusions, source revisions and seed. Maximum 1000 cases. No hooks, tool calls or HTTP requests execute.", input: { collection: str("Collection path"), ...selection }, required: ["collection"], run: (a) => C().plan(a.collection, options(a)) },
+        { name: "collection_validate", group: "scripts", description: "Dry-run preflight of the selected collection: nested script references/cycles, typed parameters, template variables, tool availability, browser/HTTP/JavaScript capabilities. Returns precise errors before any action; dynamic JavaScript tool calls are reported as a static-analysis limitation.", input: { collection: str("Collection path"), ...selection }, required: ["collection"], run: (a) => C().validate(a.collection, options(a)) },
+        { name: "collection_run", group: "scripts", description: "Run a validated collection suite with ordered nested scopes, independent dataset/matrix cases, assertions and finally cleanup. Durable reports preserve primary and cleanup failures. Returns a run id immediately when work exceeds wait_ms; poll with collection_history or collection_report. An interactive report is created by default.", input: { collection: str("Collection path, required when starting"), job: str("Poll a background collection job instead of starting another"), ...selection, timeout_ms: int("Whole-run deadline, 1..900000", 12e4), cleanup_timeout_ms: int("Separate budget for each cleanup scope, 1..60000", 1e4), fail_fast: { type: "boolean", description: "Stop after the first failed case" }, evidence: { type: "boolean", description: "Retain case parameter inputs; outputs are always retained" }, wait_ms: int("Wait before returning a background job, 0..50000", 1e3) }, run: async (a) => {
+          const J = require_jobs();
+          let job = a.job ? J.find(a.job) : null;
+          if (a.job && (!job || !job.key.startsWith("collection:"))) throw new Error("collection job not found");
+          if (!job) {
+            if (!a.collection) throw new Error("collection required when starting a run");
+            job = J.start(`collection:${require("crypto").randomBytes(12).toString("hex")}`, `collection ${a.collection}`, () => C().run(a.collection, { ...options(a), cancelled: () => job.state !== "running", onStart: (id) => {
+              job.collectionRun = id;
+            } }));
+          }
+          let timer;
+          const done = await Promise.race([job.promise || Promise.resolve(job), new Promise((resolve) => {
+            timer = setTimeout(() => resolve(null), Math.max(0, Math.min(5e4, a.wait_ms ?? 1e3)));
+          })]);
+          clearTimeout(timer);
+          if (!done) return { job: job.id, run: job.collectionRun, status: job.state, next: "Poll collection_run with job; collection_report with run for progress; collection_cancel to stop and run cleanup" };
+          if (done.error) return done.collectionRun ? { ...C().summary(C().get(done.collectionRun)), job: job.id } : { job: job.id, status: done.state || "error", error: done.error };
+          return done.result.status === "invalid" ? done.result : C().summary(done.result);
+        } },
+        { name: "collection_cancel", group: "scripts", description: "Cancel a running collection. Stops new actions and interrupts JS/HTTP operations, then executes finally hooks with separate cleanup deadlines. Generic in-flight tools may finish with an unknown outcome; their actions are never retried on cancellation.", input: { run: str("Collection run id"), reason: str("Reason recorded with cancellation") }, required: ["run"], run: (a) => C().cancel(a.run, a.reason) },
+        { name: "collection_check", group: "scripts", description: "Check a durable collection run independently. Success requires a finished passed run with every selected case executed and no failed assertions, infrastructure errors, skipped cases or cleanup failures.", input: { run: str("Collection run id") }, required: ["run"], run: (a) => C().check(a.run) },
+        { name: "collection_history", group: "scripts", description: "List durable collection run summaries, including exact source revisions, seed, case counts and status. With run, inspect sanitized definition summaries, attempts, assertions, outputs and primary/cleanup errors. Expanded inputs are retained only with evidence:true; executable source is not retained.", input: { collection: str("Optional collection filter"), run: str("Optional exact run id"), limit: int("Newest runs, up to 100", 30) }, run: (a) => a.run ? C().get(a.run) : C().history(a.collection, a.limit) },
+        { name: "collection_report", group: "scripts", description: "Open an interactive collection report, or export its retained JSON or JUnit XML independently for CI. JUnit includes failed setup/cleanup scopes and skipped cases; an HTTP 200 never converts a failed assertion into success.", input: { run: str("Collection run id"), format: { type: "string", enum: ["view", "json", "junit"], default: "view" } }, required: ["run"], run: (a) => {
+          const r = C().get(a.run);
+          if (a.format === "junit") return { run: r.run, ok: C().check(r).ok, filename: `collection-${r.run}.xml`, xml: C().junit(r) };
+          if (a.format === "json") return r;
+          return { ...C().summary(r), view: require_results().saveView("collection-report", r, { title: `${r.collection}: ${r.status}` }) };
+        } }
+      ];
+    };
+  }
+});
+
+// lib/tools-testdb.js
+var require_tools_testdb = __commonJS({
+  "lib/tools-testdb.js"(exports2, module2) {
+    module2.exports = ({ str, int }) => {
+      const object = (description) => ({ type: "object", additionalProperties: true, description });
+      const bool = (description, value = false) => ({ type: "boolean", default: value, description });
+      const T = () => require_testdb_templates();
+      function view(result, title) {
+        const { cleanup, ...jsonResult } = result;
+        const safe = JSON.parse(JSON.stringify(jsonResult, (key, value) => /password/i.test(key) ? "[scratch credential]" : value));
+        try {
+          return { ...jsonResult, view: require_results().saveView("json", safe, { title }) };
+        } catch (e) {
+          return { ...jsonResult, viewError: e.message };
+        }
+      }
+      async function jobCall(a, kind, run, hydrate = async (result) => result) {
+        const J = require_jobs();
+        let job = a.job ? J.find(a.job) : null;
+        if (a.job && (!job || !job.key.startsWith(`testdb-${kind}:`))) throw new Error("scratch PostgreSQL job not found");
+        if (!job) {
+          const key = T().hash({ ...a, ...kind === "clone" && !a.idempotencyKey ? { request: require("crypto").randomUUID() } : {} });
+          job = J.start(`testdb-${kind}:${key}`, `scratch PostgreSQL ${kind}`, async (log) => {
+            const controller = new AbortController();
+            const timer = setInterval(() => {
+              if (job.state !== "running") controller.abort(new Error("scratch PostgreSQL job cancelled"));
+            }, 100);
+            try {
+              log(`${kind}: verifying ownership and inputs`);
+              return await run(controller.signal);
+            } finally {
+              clearInterval(timer);
+            }
+          });
+        }
+        let done = job;
+        if (job.state === "running") {
+          let timer;
+          try {
+            done = await Promise.race([job.promise, new Promise((resolve) => {
+              timer = setTimeout(() => resolve(null), Math.min(5e4, require_config().getTests().waitMs));
+            })]);
+          } finally {
+            clearTimeout(timer);
+          }
+        }
+        if (!done) return { version: 1, job: job.id, state: "running", log: job.log.slice(-3), next: `Call testdb_${kind === "build" ? "template_build" : "clone"} with job to wait.` };
+        return { version: 1, job: done.id, state: done.state, ms: done.ms, ...done.error ? { error: done.error } : await hydrate(done.result) };
+      }
+      const setup = { mode: { type: "string", enum: ["snapshot", "migrations-empty", "upgrade"], default: "snapshot", description: "Exact fixture SQL, ordered migrations from empty, or ordered upgrade SQL over an immutable base" }, base: str("Required immutable base key only for upgrade mode"), sanity: { type: "array", items: { type: "object", additionalProperties: true }, description: "Independent checks [{db,name?,sql,params?,expected:[exact rows]}], read-only transactions" } };
+      const inputTemplate = { template: str("Exact immutable template key from testdb_template_build/list") };
+      return [
+        { name: "testdb_capabilities", description: "Describe the versioned JSON PostgreSQL lifecycle contract, backend capabilities, portable SQL input format, ownership checks and unsupported schema fidelity. Lets alternative language/storage adapters implement the same operations without importing JavaScript internals.", input: {}, run: () => T().capabilities() },
+        { name: "testdb_template_plan", description: "Offline preparation plan from a verified portable fixture: input content identity, database sizes/counts, compatibility requirements and exact next stage. No PostgreSQL calls or resource creation. The native template key also includes the actual scratch platform, determined at build time.", input: { ...setup, workspace: str("Workspace holding the fixture"), directory: str("Fixture resource directory"), policy: object("Masking/seed/migration identities"), compatibility: object("Required PostgreSQL major/collation/extensions") }, required: ["workspace", "directory"], run: (a) => view(T().plan(a), "PostgreSQL template plan") },
+        { name: "testdb_initialize", description: "Label and initialize the configured dedicated scratch PostgreSQL cluster for owned test resources. Refuses any configured environment database as the control database. Checks CREATEDB; PostgreSQL templates additionally require CREATEROLE for private application users. Does not write to environment databases.", input: { label: str("Human-readable scratch cluster purpose") }, run: async (a) => view(await require_testdb().initialize(a), "Scratch PostgreSQL") },
+        { name: "testdb_resources", description: "Inspect owned scratch databases, active/expired leases, immutable templates and visible cleanup failures. Does not expose passwords. Prefixes alone never establish ownership.", input: { limit: int("Page size, at most 200", 50), offset: int("Page offset", 0) }, run: async (a) => view({ ...await require_testdb().resources(a), ...await T().list(a) }, "Scratch resources") },
+        { name: "testdb_template_build", description: "Verify hashed portable fixture SQL, build one prefilled base per logical database, validate constraints/sanity, ANALYZE, then freeze against connections. Identical fixture/policy/PG compatibility reuses the immutable base; changed inputs get a different key. Initialized scratch cluster only. Modes are snapshot, ordered migrations-empty, or ordered upgrade over a base; SQL comes from the verified fixture, not an implicit migration engine.", input: { ...setup, job: str("Poll a running preparation job"), workspace: str("Workspace holding the verified fixture"), directory: str("Fixture resource directory"), policy: object("Masking/seed/migration identities that affect compatibility"), compatibility: object("Optional {major,collation,extensions:{name:version}}"), pin: bool("Keep base from ordinary garbage collection") }, run: async (a) => {
+          if (!a.job && (!a.workspace || !a.directory)) throw new Error("workspace and directory are required");
+          return jobCall(a, "build", async (signal) => view(await T().build({ ...a, signal }), "PostgreSQL fixture templates"));
+        } },
+        { name: "testdb_template_list", description: "List independently updateable PostgreSQL bases and lease summaries, including readiness, size, input identity and timings. Active leases remain distinct from frozen templates.", input: { limit: int("Page size, at most 200", 50), offset: int("Page offset", 0) }, run: async (a) => view(await T().list(a), "PostgreSQL templates and leases") },
+        { name: "testdb_template_inspect", description: "Inspect one template and its verified table counts, content fingerprints, extension versions, physical size and freeze/ownership status. No live source queries.", input: inputTemplate, required: ["template"], run: async (a) => view(await T().inspect(a.template), "PostgreSQL template detail") },
+        { name: "testdb_template_verify", description: "Independently verify ownership and frozen metadata. deep=true makes a temporary private copy and compares schema/data/sequence fingerprints without opening the base. Drift invalidates future clones; active run copies are preserved.", input: { ...inputTemplate, deep: bool("Verify actual content through a disposable copy") }, required: ["template"], run: async (a) => view(await T().verify(a.template, a), "PostgreSQL template verification") },
+        { name: "testdb_template_invalidate", description: "Mark a base unusable for new clones with an explicit reason. Existing private run databases remain available until lease release/expiry. GC can remove an unleased invalid base before the same input is rebuilt.", input: { ...inputTemplate, reason: str("Why this base must no longer be reused") }, required: ["template", "reason"], run: async (a) => view(await T().invalidate(a.template, a.reason), "Invalidated PostgreSQL template") },
+        { name: "testdb_template_pin", description: "Set retention independently from immutable template content. A pinned base survives normal age/LRU/size garbage collection; unpin explicitly when it may be reclaimed. This does not restore an invalid base.", input: { ...inputTemplate, pinned: bool("Protect this base from eviction", true) }, required: ["template", "pinned"], run: async (a) => T().pin(a.template, a.pinned) },
+        { name: "testdb_clone", description: "Create clean per-run PostgreSQL copies from an immutable template with one private, non-owner application role and datasource settings. Returns logical database bindings and scratch credentials plus a lease. Idempotency key prevents duplicate allocation after a lost response. No state is shared between runs.", input: { job: str("Poll a running clone allocation job"), ...inputTemplate, runId: str("Owning test/scenario run"), ttlMs: int("Lease TTL, 1..604800000 ms", 36e5), settings: object('Database-local PostgreSQL settings, e.g. {timezone:"UTC"}'), idempotencyKey: str("Optional unique allocation request id") }, run: async (a) => {
+          if (!a.job && !a.template) throw new Error("template is required");
+          return jobCall(a, "clone", async (signal) => {
+            const r = await T().clone({ ...a, signal });
+            return { lease: r.lease, reused: r.reused };
+          }, async (r) => view({ ...await T().lease(r.lease, { bindings: true }), reused: r.reused }, "Private PostgreSQL run databases"));
+        } },
+        { name: "testdb_lease_inspect", description: "Inspect one durable lease independently: owning run, logical database bindings, expiry, lifecycle status and cleanup failures. Passwords are omitted. Resource ownership is rechecked by release and template verification.", input: { lease: str("Lease id") }, required: ["lease"], run: async (a) => view(await T().lease(a.lease), "PostgreSQL lease") },
+        { name: "testdb_lease_renew", description: "Retain an active debug/test database lease for a bounded time. Expired resources are reclaimed by explicit GC, never silently reused.", input: { lease: str("Lease id"), ttlMs: int("TTL from now, 1..604800000 ms", 36e5) }, required: ["lease"], run: async (a) => T().renew(a.lease, a.ttlMs) },
+        { name: "testdb_reset", description: "Reset a suite/test boundary by replacing the entire lease with fresh private copies, then releasing the old copies. Returns new datasource bindings; reconnect the application. This resets committed/asynchronous writes, unlike transaction rollback.", input: { lease: str("Active unexpired lease"), ttlMs: int("New lease TTL", 36e5) }, required: ["lease"], run: async (a) => view(await T().reset(a.lease, a), "Reset PostgreSQL run databases") },
+        { name: "testdb_release", description: "Release one lease and its private role. Drops only registry-owned databases with matching cluster/database markers. Repeat calls are idempotent; any cleanup failure stays visible for GC retry.", input: { lease: str("Lease id") }, required: ["lease"], run: async (a) => T().release(a.lease) },
+        { name: "testdb_gc", description: "Recover expired/abandoned leases and owned setup probes, then prune unleased bases by age/LRU/size/count. Active leases and pinned bases are protected. dryRun previews candidates; cleanup failures are returned and retained for retry.", input: { templateTtlMs: int("Unleased template idle age in ms", 864e5), maxBytes: int("Optional total template storage budget"), maxTemplates: int("Optional template count budget"), dryRun: bool("Preview without deleting resources") }, run: async (a) => view(await T().gc(a), "Scratch PostgreSQL cleanup") }
+      ].map((tool) => ({ ...tool, group: "code" }));
+    };
+  }
+});
+
+// lib/scenario-container.js
+var require_scenario_container = __commonJS({
+  "lib/scenario-container.js"(exports2, module2) {
+    function harness() {
+      const fs2 = require("fs"), http2 = require("http"), path2 = require("path"), { spawn } = require("child_process"), { isDeepStrictEqual } = require("util");
+      const input = JSON.parse(fs2.readFileSync("/dt-control/input.json", "utf8")), counts = /* @__PURE__ */ new Map(), records = "/dt-evidence/events.jsonl";
+      const event = (value) => fs2.appendFileSync(records, JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), ...value }) + "\n");
+      const normalizedPath = (p) => {
+        const u = new URL(p, "http://local");
+        u.searchParams.sort();
+        return u.pathname + u.search;
+      };
+      const sequences = /* @__PURE__ */ new Map();
+      try {
+        const watch = fs2.watch("/dt-files", { recursive: true }, (change, filename) => event({ kind: filename ? "file-change" : "file-watch-gap", change, path: filename && String(filename).replace(/\\/g, "/") }));
+        watch.on("error", (e) => event({ kind: "file-watch-gap", error: e.message }));
+      } catch (e) {
+        event({ kind: "file-watch-gap", error: e.message });
+      }
+      const handler = async (id, req, res) => {
+        let bytes = 0, chunks = [];
+        for await (const part of req) {
+          bytes += part.length;
+          if (bytes > 1024 * 1024) {
+            event({ kind: "http-mismatch", reason: "request exceeds 1 MiB" });
+            res.writeHead(413).end();
+            return;
+          }
+          chunks.push(part);
+        }
+        let body = Buffer.concat(chunks).toString("utf8");
+        try {
+          body = JSON.parse(body);
+        } catch {
+        }
+        if (!chunks.length) body = null;
+        const request = { method: req.method, path: normalizedPath(req.url), body };
+        const exchanges = input.http[id]?.exchanges || [];
+        const index = exchanges.findIndex((exchange2, i) => {
+          const expected = exchange2.request, n = counts.get(`${id}:${i}`) || 0, max = exchange2.times?.max ?? exchange2.times?.value ?? 1;
+          return n < max && request.method === (expected.method || "GET").toUpperCase() && request.path === normalizedPath(expected.path || "/") && isDeepStrictEqual(request.body, Object.hasOwn(expected, "body") ? expected.body : null) && Object.entries(expected.headers || {}).every(([key, value]) => req.headers[key.toLowerCase()] === String(value));
+        });
+        if (index < 0) {
+          event({ kind: "http-mismatch", state: id, request, reason: "No exact method/path/body/header fixture with remaining calls" });
+          res.writeHead(503, { "content-type": "application/json" }).end('{"error":"scenario HTTP fixture mismatch"}');
+          return;
+        }
+        const exchange = exchanges[index], count = counts.get(`${id}:${index}`) || 0;
+        if (input.http[id].ordered && index !== (sequences.get(id) || 0)) {
+          event({ kind: "http-mismatch", state: id, request, reason: `Expected exchange ${sequences.get(id) || 0}, received ${index}` });
+          res.writeHead(503).end();
+          return;
+        }
+        counts.set(`${id}:${index}`, count + 1);
+        if (input.http[id].ordered && count + 1 >= (exchange.times?.max ?? exchange.times?.value ?? 1)) sequences.set(id, index + 1);
+        const responses = exchange.responses || [exchange.response], response = responses[Math.min(count, responses.length - 1)];
+        event({ kind: "http", state: id, exchange: index, request, count: count + 1 });
+        if (response.delayMs) await new Promise((r) => setTimeout(r, response.delayMs));
+        if (response.close) {
+          res.destroy();
+          return;
+        }
+        const text = typeof response.body === "string" ? response.body : response.body == null ? "" : JSON.stringify(response.body);
+        res.writeHead(response.status || 200, { "content-type": "application/json", ...response.headers || {} });
+        res.end(text);
+      };
+      const servers = [];
+      Promise.all(Object.keys(input.http).map((id) => new Promise((resolve, reject) => {
+        const server = http2.createServer((req, res) => {
+          handler(id, req, res).catch((error) => {
+            event({ kind: "http-mismatch", state: id, reason: error.message });
+            if (!res.headersSent) res.writeHead(503);
+            res.end();
+          });
+        });
+        servers.push(server);
+        server.once("error", reject);
+        server.listen(input.ports[id], "127.0.0.1", resolve);
+      }))).then(() => {
+        const child = spawn(process.execPath, ["--experimental-permission", "--allow-fs-read=/workspace", "--allow-fs-read=/dt-files", "--allow-fs-read=/tmp", "--allow-fs-read=/dt-control/audit.js", "--allow-fs-write=/dt-files", "--allow-fs-write=/tmp", "--require", "/dt-control/audit.js", path2.join("/workspace", input.profile.entry), ...input.profile.args || []], { cwd: "/workspace", env: { PATH: process.env.PATH, HOME: "/tmp", TMPDIR: "/tmp", NODE_ENV: "test", ...input.env }, stdio: ["ignore", "pipe", "pipe", "ipc"] });
+        child.on("message", (message) => {
+          if (message && message.dtFileAudit === 1 && typeof message.path === "string" && message.path.startsWith("/dt-files/")) event({ kind: "file-operation", path: path2.relative("/dt-files", message.path), operation: String(message.operation || "write").slice(0, 40) });
+        });
+        child.stdout.on("data", (c) => process.stdout.write(c));
+        child.stderr.on("data", (c) => process.stderr.write(c));
+        child.on("error", (e) => {
+          event({ kind: "process-error", error: e.message });
+          process.exit(1);
+        });
+        child.on("close", (code) => {
+          event({ kind: "process-exit", code });
+          process.exit(code || 0);
+        });
+        process.on("SIGTERM", () => {
+          child.kill("SIGTERM");
+          servers.forEach((server) => server.close());
+          setTimeout(() => process.exit(0), 500).unref();
+        });
+        event({ kind: "started", pid: child.pid });
+      }).catch((error) => {
+        event({ kind: "process-error", error: error.message });
+        process.exit(1);
+      });
+    }
+    function audit() {
+      const fs2 = require("fs"), path2 = require("path"), { fileURLToPath } = require("url"), descriptors = /* @__PURE__ */ new Map();
+      const filename = (value) => typeof value === "number" ? descriptors.get(value) : value instanceof URL ? fileURLToPath(value) : typeof value === "string" || Buffer.isBuffer(value) ? path2.resolve(String(value)) : null;
+      const record = (operation, value) => {
+        const full = filename(value);
+        if (full?.startsWith("/dt-files/")) process.send?.({ dtFileAudit: 1, operation, path: full });
+      };
+      const methods = { writeFile: [0], appendFile: [0], unlink: [0], rename: [0, 1], rm: [0], mkdir: [0], rmdir: [0], copyFile: [1], cp: [1], truncate: [0], chmod: [0], chown: [0], symlink: [1], link: [1] };
+      for (const [name, positions] of Object.entries(methods)) {
+        if (fs2[name + "Sync"]) {
+          const original = fs2[name + "Sync"];
+          fs2[name + "Sync"] = function(...args) {
+            const result = Reflect.apply(original, this, args);
+            positions.forEach((i) => record(name, args[i]));
+            return result;
+          };
+        }
+        if (fs2[name]) {
+          const original = fs2[name];
+          fs2[name] = function(...args) {
+            const callback = args.at(-1);
+            if (typeof callback === "function") args[args.length - 1] = function(error, ...values) {
+              if (!error) positions.forEach((i) => record(name, args[i]));
+              Reflect.apply(callback, this, [error, ...values]);
+            };
+            return Reflect.apply(original, this, args);
+          };
+        }
+        if (fs2.promises[name]) {
+          const original = fs2.promises[name];
+          fs2.promises[name] = async function(...args) {
+            const result = await Reflect.apply(original, this, args);
+            positions.forEach((i) => record(name, args[i]));
+            return result;
+          };
+        }
+      }
+      const openSync = fs2.openSync;
+      fs2.openSync = function(file, flags, ...args) {
+        const fd = Reflect.apply(openSync, this, [file, flags, ...args]);
+        descriptors.set(fd, filename(file));
+        if (typeof flags === "number" || /[wa+]/.test(flags || "r")) record("open", file);
+        return fd;
+      };
+      for (const name of ["writeSync", "writevSync", "ftruncateSync", "fchmodSync", "fchownSync"]) {
+        const original = fs2[name];
+        if (original) fs2[name] = function(...args) {
+          const result = Reflect.apply(original, this, args);
+          record(name, args[0]);
+          return result;
+        };
+      }
+      const closeSync = fs2.closeSync;
+      fs2.closeSync = function(fd) {
+        const result = Reflect.apply(closeSync, this, [fd]);
+        descriptors.delete(fd);
+        return result;
+      };
+      const open = fs2.open;
+      fs2.open = function(file, flags, ...args) {
+        const callback = args.at(-1);
+        if (typeof callback === "function") args[args.length - 1] = function(error, fd) {
+          if (!error) {
+            descriptors.set(fd, filename(file));
+            if (typeof flags === "number" || /[wa+]/.test(flags || "r")) record("open", file);
+          }
+          Reflect.apply(callback, this, [error, fd]);
+        };
+        return Reflect.apply(open, this, [file, flags, ...args]);
+      };
+      for (const name of ["write", "writev", "ftruncate", "fchmod", "fchown"]) {
+        const original = fs2[name];
+        if (original) fs2[name] = function(...args) {
+          const callback = args.at(-1);
+          if (typeof callback === "function") args[args.length - 1] = function(error, ...values) {
+            if (!error) record(name, args[0]);
+            Reflect.apply(callback, this, [error, ...values]);
+          };
+          return Reflect.apply(original, this, args);
+        };
+      }
+      const promiseOpen = fs2.promises.open;
+      fs2.promises.open = async function(file, flags, ...args) {
+        const handle = await Reflect.apply(promiseOpen, this, [file, flags, ...args]);
+        if (typeof flags === "number" || /[wa+]/.test(flags || "r")) record("open", file);
+        for (const name of ["write", "writev", "writeFile", "appendFile", "truncate", "chmod", "chown"]) {
+          const original = handle[name];
+          handle[name] = async function(...values) {
+            const result = await Reflect.apply(original, this, values);
+            record(name, file);
+            return result;
+          };
+        }
+        return handle;
+      };
+      const stream = fs2.createWriteStream;
+      fs2.createWriteStream = function(file, options) {
+        const result = Reflect.apply(stream, this, [file, options]);
+        result.on("finish", () => record("stream", file || options?.fd));
+        return result;
+      };
+      require("module").syncBuiltinESMExports();
+    }
+    function client() {
+      const http2 = require("http");
+      let data = "";
+      process.stdin.on("data", (c) => {
+        data += c;
+      });
+      process.stdin.on("end", () => {
+        try {
+          const input = JSON.parse(data), body = Object.hasOwn(input, "body") ? typeof input.body === "string" ? input.body : JSON.stringify(input.body) : null;
+          const req = http2.request({ hostname: "127.0.0.1", port: input.port, method: input.method || "GET", path: input.path, headers: { ...body ? { "content-type": "application/json", "content-length": Buffer.byteLength(body) } : {}, ...input.headers || {} }, timeout: input.timeoutMs || 1e4 }, (res) => {
+            let size = 0, chunks = [];
+            res.on("data", (c) => {
+              size += c.length;
+              if (size > 2 * 1024 * 1024) req.destroy(new Error("HTTP response exceeds 2 MiB"));
+              else chunks.push(c);
+            });
+            res.on("end", () => {
+              let value = Buffer.concat(chunks).toString("utf8");
+              try {
+                value = JSON.parse(value);
+              } catch {
+              }
+              process.stdout.write(JSON.stringify({ status: res.statusCode, headers: res.headers, body: value }));
+            });
+          });
+          req.on("timeout", () => req.destroy(new Error("HTTP deadline expired")));
+          req.on("error", (e) => {
+            process.stderr.write(e.message);
+            process.exitCode = 1;
+          });
+          req.end(body);
+        } catch (e) {
+          process.stderr.write(e.message);
+          process.exitCode = 1;
+        }
+      });
+    }
+    module2.exports = { harness: `(${harness.toString()})();
+`, client: `(${client.toString()})();
+`, audit: `(${audit.toString()})();
+` };
+  }
+});
+
+// lib/scenario-runtime.js
+var require_scenario_runtime = __commonJS({
+  "lib/scenario-runtime.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var crypto = require("crypto");
+    var { spawn } = require("child_process");
+    var { isDeepStrictEqual } = require("util");
+    var P = require_scenario_package();
+    var { CACHE: CACHE2, readJson } = require_util();
+    var ROOT = path2.join(CACHE2, "scenario-runs");
+    var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    var checkCancellation = () => {
+      const why = require_trace().current()?.cancelled;
+      if (why) throw new Error(`scenario cancelled: ${why}`);
+    };
+    var bounded = (n, def, max) => {
+      n ??= def;
+      if (!Number.isInteger(n) || n < 0 || n > max) throw new Error(`duration/limit must be 0..${max}`);
+      return n;
+    };
+    function exec(command, args, { input, timeoutMs = 3e4, cwd } = {}) {
+      return new Promise((resolve) => {
+        let out2 = "", error = "", done = false;
+        const child = spawn(command, args, { cwd, env: Object.fromEntries(Object.entries(process.env).filter(([key]) => /^(PATH|HOME|USER|LANG|LC_\w+|DOCKER_HOST|DOCKER_CONTEXT|DOCKER_CONFIG|DOCKER_TLS_VERIFY|DOCKER_CERT_PATH|TMPDIR)$/.test(key))), stdio: ["pipe", "pipe", "pipe"] });
+        require_trace().child(child);
+        const timer = setTimeout(() => {
+          child.kill("SIGKILL");
+        }, timeoutMs);
+        child.stdout.on("data", (c) => {
+          out2 = (out2 + c).slice(-2 * 1024 * 1024);
+        });
+        child.stderr.on("data", (c) => {
+          error = (error + c).slice(-3e4);
+        });
+        const finish = (code, reason) => {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          resolve({ code, out: out2, error: reason || error });
+        };
+        child.on("error", (e) => finish(-1, e.message));
+        child.on("close", (code) => finish(code));
+        child.stdin.on("error", () => {
+        });
+        child.stdin.end(input || "");
+      });
+    }
+    function sessionPath(id) {
+      if (!/^[a-f0-9]{24}$/.test(id || "")) throw new Error("invalid scenario session id");
+      return path2.join(ROOT, id);
+    }
+    function load(id, { stopped = false, expired = false } = {}) {
+      const dir = sessionPath(id), m = readJson(path2.join(dir, "session.json"));
+      if (!m) throw new Error("scenario session not found");
+      if (!stopped && m.status !== "ready") throw new Error(`scenario session is ${m.status}`);
+      if (!expired && Date.now() > m.expiresAt) throw new Error("scenario session lease expired; stop it or run scenario_cleanup");
+      return { m, dir };
+    }
+    function save(m) {
+      const file = path2.join(sessionPath(m.id), "session.json"), prior = readJson(file);
+      if (prior?.status === "stopped" && m.status !== "stopped") Object.assign(m, { status: "stopped", stoppedAt: prior.stoppedAt, timings: { ...m.timings, cleanupMs: prior.timings.cleanupMs } });
+      const temp = `${file}.tmp-${crypto.randomBytes(5).toString("hex")}`;
+      fs2.writeFileSync(temp, JSON.stringify(m, null, 2), { mode: 384 });
+      fs2.renameSync(temp, file);
+    }
+    async function locked(id, fn) {
+      const lock = path2.join(sessionPath(id), "operation.lock");
+      try {
+        fs2.mkdirSync(lock);
+      } catch (e) {
+        if (e.code === "EEXIST") throw new Error("scenario session already has an active action/observation");
+        throw e;
+      }
+      try {
+        return await fn();
+      } finally {
+        fs2.rmSync(lock, { recursive: true, force: true });
+      }
+    }
+    function publicSession(m) {
+      return {
+        id: m.id,
+        workspace: m.workspace,
+        package: m.packagePath,
+        artifact: m.artifact,
+        service: m.service,
+        status: m.status,
+        startedAt: m.startedAt,
+        expiresAt: new Date(m.expiresAt).toISOString(),
+        adapter: m.adapter,
+        proof: m.proof,
+        actions: m.actions,
+        timings: m.timings,
+        ...m.cleanupError ? { cleanupError: m.cleanupError } : {},
+        ...m.result ? { result: m.result } : {}
+      };
+    }
+    function profileFor(workspace, artifact) {
+      if (!artifact.runtime) throw new Error("scenario package needs a reviewed workspace runtime profile");
+      const p = P.workspacePath(workspace, artifact.runtime.profile), text = fs2.readFileSync(p.full);
+      if (P.digest(text) !== artifact.runtime.sha256) throw new Error("runtime profile changed: review it and create a new scenario package");
+      const profile = JSON.parse(text);
+      if (profile.version !== 1 || !["node-container", "test-run"].includes(profile.adapter)) throw new Error("runtime profile version 1 adapter must be node-container or test-run");
+      return profile;
+    }
+    function requestFor(action) {
+      const binding = action.binding;
+      if (!binding || typeof binding !== "object" || !binding.path || !String(binding.path).startsWith("/") || String(binding.path).startsWith("//") || /[\r\n]/.test(binding.path)) throw new Error(`action ${action.id} needs a bound relative HTTP path`);
+      const declared = String(action.target).match(/^([A-Z]+)\s+(.+)$/), method = String(binding.method || declared?.[1] || "GET").toUpperCase();
+      if (!/^(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)$/.test(method) || declared && method !== declared[1]) throw new Error(`action ${action.id} method differs from its declared entry`);
+      if (declared) {
+        const pattern = declared[2].split(/\{[^}]*\}/).map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[^/?]+");
+        if (!new RegExp(`^${pattern}(?:\\?.*)?$`).test(binding.path)) throw new Error(`action ${action.id} path differs from its declared entry`);
+      }
+      return { method, path: binding.path, headers: binding.headers || {}, ...Object.hasOwn(binding, "body") ? { body: binding.body } : {} };
+    }
+    function validateHttp(value, id) {
+      if (!Array.isArray(value?.exchanges) || !value.exchanges.length) throw new Error(`HTTP state ${id} needs exchanges [{request,response}]`);
+      for (const exchange of value.exchanges) {
+        if (!exchange.request || !String(exchange.request.path || "/").startsWith("/") || String(exchange.request.path || "/").startsWith("//")) throw new Error(`HTTP state ${id} exchange needs a local request.path`);
+        const min = exchange.times?.min ?? exchange.times?.value ?? 1, max = exchange.times?.max ?? exchange.times?.value ?? 1;
+        if (!Number.isInteger(min) || !Number.isInteger(max) || min < 0 || max < min || max > 1e3) throw new Error(`HTTP state ${id} call count must satisfy 0 <= min <= max <= 1000`);
+        const responses = exchange.responses || [exchange.response];
+        if (!Array.isArray(responses) || !responses.length || responses.some((r) => !r || typeof r !== "object" || r.status && (!Number.isInteger(r.status) || r.status < 100 || r.status > 599))) throw new Error(`HTTP state ${id} needs valid response fixtures`);
+        responses.forEach((r) => bounded(r.delayMs, 0, 1e4));
+      }
+    }
+    function preflight(workspace, packagePath) {
+      const artifact = P.load(workspace, packagePath), profile = profileFor(workspace, artifact), gaps = [], { inventory, state, actions, expectations } = artifact.contract;
+      const gap = (kind, detail, id) => gaps.push({ kind, detail, ...id ? { id } : {} });
+      if (profile.adapter === "node-container") {
+        try {
+          P.workspacePath(workspace, profile.entry);
+        } catch (e) {
+          gap("entrypoint", e.message);
+        }
+        if (!/^[a-zA-Z0-9][a-zA-Z0-9._/:@-]*$/.test(profile.image || "")) gap("image", "Specify an existing stock Node image; the runtime never pulls images");
+        if (!Number.isInteger(profile.port) || profile.port < 1 || profile.port > 65535 || profile.port === 19081) gap("port", "Service port must be 1..65535 and different from stub port 19081");
+        if (profile.args && (!Array.isArray(profile.args) || profile.args.length > 100 || profile.args.some((a) => typeof a !== "string" || a.length > 2048))) gap("args", "Entrypoint args must be at most 100 strings of at most 2048 characters");
+        try {
+          bounded(profile.readyTimeoutMs, 1e4, 6e4);
+          bounded(profile.actionTimeoutMs, 1e4, 3e4);
+          bounded(profile.temporal?.deadlineMs, 1e3, 3e4);
+          bounded(profile.temporal?.quietMs, 0, 1e4);
+          bounded(profile.temporal?.intervalMs, 50, 1e3);
+          if (profile.readyTimeoutMs === 0 || profile.actionTimeoutMs === 0) throw new Error("Readiness and action deadlines must be positive");
+          if (profile.readyPath && (!profile.readyPath.startsWith("/") || profile.readyPath.startsWith("//") || /[\r\n]/.test(profile.readyPath))) throw new Error("Readiness path must be a relative HTTP path");
+          if (profile.readyStatus !== void 0 && (!Number.isInteger(profile.readyStatus) || profile.readyStatus < 100 || profile.readyStatus > 599)) throw new Error("Readiness status must be 100..599");
+        } catch (e) {
+          gap("runtime-limits", e.message);
+        }
+        const mapped = /* @__PURE__ */ new Set();
+        const filePaths = [];
+        for (const [kind, bindings] of Object.entries({ http: profile.http, config: profile.config, file: profile.files })) for (const [id, binding] of Object.entries(bindings || {})) {
+          const dep = inventory.states.find((s) => s.id === id);
+          if (!dep || dep.kind !== kind) {
+            gap("state-binding", `Runtime ${kind} mapping does not match inventory state`, id);
+            continue;
+          }
+          mapped.add(id);
+          try {
+            if (kind === "http") {
+              validateHttp(state.states[id].value, id);
+              if (!/^[A-Z][A-Z0-9_]*$/.test(binding)) throw new Error("HTTP mapping must name an environment variable");
+            }
+            if (kind === "config" && !/^[A-Z][A-Z0-9_]*$/.test(binding)) throw new Error("Config mapping must name an environment variable");
+            if (kind === "file") {
+              P.relative(binding.path);
+              filePaths.push(binding.path);
+              if (!["json", "text", "base64"].includes(binding.encoding || "json")) throw new Error("File encoding must be json, text or base64");
+              if (["text", "base64"].includes(binding.encoding) && typeof state.states[id].value !== "string") throw new Error("Text/base64 file state must be an explicit string");
+              if (binding.encoding === "base64" && Buffer.from(state.states[id].value, "base64").toString("base64") !== state.states[id].value) throw new Error("File base64 data must be canonical and valid");
+            }
+          } catch (e) {
+            gap("state-binding", e.message, id);
+          }
+        }
+        for (const dep of inventory.states) if (dep.required !== false && !mapped.has(dep.id)) gap("unsupported-runtime-state", `node-container supports explicit HTTP, config and file reads; ${dep.kind} needs a project test adapter`, dep.id);
+        for (const action of actions.actions) try {
+          if (action.kind !== "http") throw new Error(`${action.kind} actions need a project test adapter; native Kafka/schedule/method replay is not implemented`);
+          requestFor(action);
+        } catch (e) {
+          gap("unsupported-runtime-action", e.message, action.id);
+        }
+        const envVars = [...Object.values(profile.http || {}), ...Object.values(profile.config || {})];
+        if (new Set(filePaths).size !== filePaths.length || filePaths.some((file) => filePaths.some((other) => other !== file && file.startsWith(other + "/")))) gap("file-binding", "File state paths must be distinct and cannot be parents of another file");
+        if (new Set(envVars).size !== envVars.length || envVars.some((k) => ["PATH", "HOME", "NODE_OPTIONS", "NODE_PATH", "PORT", "DT_SCENARIO_FILES"].includes(k))) gap("environment-binding", "State environment bindings must be unique and cannot replace runtime control variables");
+        for (const id of Object.keys(profile.observations || {})) if (!expectations.expectations.some((e) => e.id === id)) gap("observation", "Unknown expectation id", id);
+        for (const expected of expectations.expectations) {
+          const id = expected.id, observation = profile.observations?.[id] || (["status", "return"].includes(expected.kind) ? { kind: expected.kind, action: expected.action } : null);
+          if (!observation) {
+            gap("unbound-observer", "Bind an independent runtime observer for this expectation", id);
+            continue;
+          }
+          if (!["status", "return", "http", "file"].includes(observation.kind)) gap("observation", `Unsupported observer ${observation.kind}`, id);
+          if (observation.kind !== expected.kind) gap("observation-kind", `A ${expected.kind} expectation cannot be satisfied by a ${observation.kind} observer`, id);
+          if (Object.hasOwn(observation, "action") && observation.action !== expected.action) gap("observation-action", "Observer action must equal the declared expectation action", id);
+          const action = actions.actions.find((a) => a.id === expected.action);
+          if (expected.action && !action) gap("observation-action", "Expectation action is not in the bound runtime actions", id);
+          if (expected.select && ["kind", "target", "action"].some((key) => Object.hasOwn(expected.select, key) && !isDeepStrictEqual(expected.select[key], expected[key]))) gap("observation-selector", "Runtime selectors cannot change declared effect kind, target or action", id);
+          if (["status", "return"].includes(observation.kind) && (!action || !isDeepStrictEqual(expected.target, action.target))) gap("observation-target", "Response observer target must equal its declared action entry", id);
+          if (observation.kind === "http") {
+            const dep = inventory.states.find((s) => s.id === observation.state);
+            if (!profile.http?.[observation.state] || dep?.kind !== "http") gap("observation", "HTTP observer needs a mapped HTTP state id", id);
+            else if (!isDeepStrictEqual(dep.target, expected.target) || expected.action && !action?.dependencies.includes(dep.id)) gap("observation-target", "HTTP observer must collect the exact target declared for this action", id);
+          }
+          if (observation.kind === "file") try {
+            P.relative(observation.path);
+            if (typeof expected.target?.path !== "string" || expected.target.path !== observation.path) throw new Error("File observer path must equal the concrete declared expectation target.path");
+          } catch (e) {
+            gap("observation-target", e.message, id);
+          }
+        }
+      } else {
+        if (!Array.isArray(profile.tests) || !profile.tests.length || profile.tests.some((t) => typeof t !== "string")) gap("tests", "test-run profile needs exact project test selectors");
+        if (!["build", "fast", "auto", void 0].includes(profile.mode)) gap("mode", "test mode must be build, fast or auto");
+        try {
+          P.workspacePath(workspace, profile.report, { missing: true });
+          if (!/^(?:[^/]+\/)*(?:target|build)\//.test(profile.report)) throw new Error("Project observation report must be below a target/ or build/ directory");
+        } catch (e) {
+          gap("observation-report", e.message);
+        }
+        if (Object.keys(artifact.resources.files).length && !profile.fixtureBindings && Object.keys(JSON.parse(artifact.resources.files["fixture/manifest.json"].data).databases || {}).length > 1) gap("datasources", "Multiple fixture databases need explicit fixtureBindings");
+        try {
+          P.verifyExtracted(workspace, packagePath, artifact);
+        } catch (e) {
+          gap("fixture-integrity", e.message);
+        }
+      }
+      return {
+        ok: !gaps.length,
+        workspace,
+        package: packagePath,
+        artifact: artifact.sha256,
+        service: artifact.service,
+        adapter: profile.adapter,
+        gaps,
+        support: profile.adapter === "node-container" ? { states: ["http", "config", "file"], actions: ["http"], observations: ["status", "return", "http", "file"], network: "docker --network none", brokerCodecs: [] } : { execution: "existing test_run", dependencies: "owned by reviewed project tests", runtimeReadsVerified: false },
+        proof: { level: "discovery", applicationExecuted: false, runtimeReadsVerified: false }
+      };
+    }
+    async function probe(workspace, packagePath) {
+      checkCancellation();
+      const report = preflight(workspace, packagePath);
+      if (!report.ok || report.adapter !== "node-container") return report;
+      const artifact = P.load(workspace, packagePath), profile = profileFor(workspace, artifact);
+      const inspected = await exec("docker", ["image", "inspect", "--format", "{{.Id}}", profile.image], { timeoutMs: 1e4 });
+      report.prerequisites = { image: profile.image, imageId: inspected.code === 0 ? inspected.out.trim() : null, docker: inspected.code === 0, imagePull: false };
+      if (inspected.code !== 0) {
+        report.ok = false;
+        report.gaps.push({ kind: "docker-image", detail: `Docker must be reachable and ${profile.image} must already exist: ${inspected.error || inspected.out}` });
+      }
+      return report;
+    }
+    async function identity(m) {
+      const r = await exec("docker", ["inspect", "--format", "{{json .Config.Labels}}", m.container]);
+      if (r.code !== 0) {
+        const absent = new RegExp(`^(?:Error(?: response from daemon)?:\\s*)?No such (?:object|container):\\s*${m.container.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "im");
+        if (r.code === 1 && absent.test(r.error)) return false;
+        throw new Error(`cannot verify scenario container: ${r.error || r.out || `docker inspect exited ${r.code}`}`);
+      }
+      let labels;
+      try {
+        labels = JSON.parse(r.out);
+      } catch {
+        throw new Error("cannot verify scenario container ownership");
+      }
+      if (!labels || labels["dt.scenario.owner"] !== m.owner || labels["dt.scenario.id"] !== m.id) throw new Error("container ownership does not match scenario session; refusing to operate");
+      return true;
+    }
+    function sessionArtifact(m) {
+      const artifact = P.load(m.workspace, m.packagePath);
+      if (artifact.sha256 !== m.artifact) throw new Error("scenario package changed during session");
+      if (!isDeepStrictEqual(profileFor(m.workspace, artifact), m.profile)) throw new Error("durable session profile differs from its reviewed profile");
+      const checked = preflight(m.workspace, m.packagePath);
+      if (!checked.ok) throw new Error(`session runtime preflight failed: ${checked.gaps.map((g) => `${g.kind}: ${g.detail}`).join("; ")}`);
+      return artifact;
+    }
+    function fileTree(dir) {
+      const result = {};
+      function walk(root, prefix) {
+        if (!fs2.existsSync(root)) return;
+        for (const item of fs2.readdirSync(root, { withFileTypes: true })) {
+          const rel = prefix ? `${prefix}/${item.name}` : item.name, full = path2.join(root, item.name);
+          if (item.isSymbolicLink()) {
+            result[rel] = { unsupported: "symlink" };
+            continue;
+          }
+          if (item.isDirectory()) walk(full, rel);
+          else if (item.isFile()) {
+            const stat = fs2.statSync(full);
+            result[rel] = stat.size > 2 * 1024 * 1024 ? { unsupported: "file exceeds 2 MiB" } : { sha256: P.digest(fs2.readFileSync(full)), bytes: stat.size };
+          } else result[rel] = { unsupported: "special file" };
+          if (Object.keys(result).length > 1e3) throw new Error("scenario file tree exceeds 1000 files");
+        }
+      }
+      walk(dir, "");
+      return result;
+    }
+    function fileValue(dir, observer) {
+      const full = path2.join(dir, P.relative(observer.path));
+      let cursor = full;
+      while (cursor !== dir) {
+        if (fs2.existsSync(cursor) && fs2.lstatSync(cursor).isSymbolicLink()) throw new Error("file observer refuses symlink");
+        cursor = path2.dirname(cursor);
+      }
+      if (!fs2.existsSync(full)) return null;
+      if (!fs2.statSync(full).isFile() || fs2.statSync(full).size > 2 * 1024 * 1024) throw new Error("file observer requires an ordinary file <= 2 MiB");
+      const body = fs2.readFileSync(full);
+      return observer.encoding === "base64" ? body.toString("base64") : observer.encoding === "text" ? body.toString("utf8") : JSON.parse(body.toString("utf8"));
+    }
+    async function request(m, request2) {
+      checkCancellation();
+      if (!await identity(m)) throw new Error("scenario container disappeared");
+      const r = await exec("docker", ["exec", "-i", m.container, "node", "/dt-control/client.js"], { input: JSON.stringify({ port: m.port, ...request2 }), timeoutMs: (request2.timeoutMs || 1e4) + 3e3 });
+      if (r.code !== 0) throw new Error(`service request failed: ${r.error || r.out}`);
+      try {
+        return JSON.parse(r.out);
+      } catch {
+        throw new Error("service client did not return a valid response");
+      }
+    }
+    async function start(workspace, packagePath, { ttlMs = 3e5 } = {}) {
+      const started = Date.now(), report = await probe(workspace, packagePath);
+      if (!report.ok) return { ok: false, preflight: report };
+      const artifact = P.load(workspace, packagePath), profile = profileFor(workspace, artifact);
+      if (profile.adapter === "test-run") throw new Error("test-run is one-shot: use scenario_run");
+      ttlMs = bounded(ttlMs, 3e5, 36e5);
+      if (ttlMs < 1e3) throw new Error("scenario lease must be at least 1000 ms");
+      const id = crypto.randomBytes(12).toString("hex"), dir = sessionPath(id), owner = crypto.randomBytes(20).toString("hex");
+      fs2.mkdirSync(ROOT, { recursive: true, mode: 448 });
+      const m = {
+        id,
+        workspace,
+        packagePath,
+        artifact: artifact.sha256,
+        service: artifact.service,
+        profile,
+        adapter: profile.adapter,
+        status: "starting",
+        startedAt: (/* @__PURE__ */ new Date()).toISOString(),
+        expiresAt: Date.now() + ttlMs,
+        container: `dt-scenario-${id}`,
+        owner,
+        port: profile.port,
+        actions: [],
+        timings: {},
+        proof: { level: "process", applicationExecuted: false, runtimeReadsVerified: false, network: "none" }
+      };
+      const reservation = path2.join(ROOT, ".reservation.lock");
+      try {
+        fs2.mkdirSync(reservation);
+      } catch (e) {
+        if (e.code === "EEXIST") throw new Error("scenario startup reservation is busy; retry after the current reservation");
+        throw e;
+      }
+      try {
+        fs2.writeFileSync(path2.join(reservation, "owner.json"), JSON.stringify({ pid: process.pid }));
+        const active = fs2.readdirSync(ROOT).filter((id2) => /^[a-f0-9]{24}$/.test(id2)).map((id2) => readJson(path2.join(ROOT, id2, "session.json"))).filter((s) => s && ["starting", "ready"].includes(s.status));
+        const maximum = require_config().getTests().scenarioConcurrency ?? 2;
+        if (!Number.isInteger(maximum) || maximum < 1 || maximum > 8) throw new Error("tests.scenarioConcurrency must be 1..8");
+        if (active.length >= maximum) throw new Error(`scenario capacity ${maximum} reached; stop or clean up a session before starting another`);
+        fs2.mkdirSync(dir, { recursive: true, mode: 448 });
+        save(m);
+      } finally {
+        fs2.rmSync(reservation, { recursive: true, force: true });
+      }
+      try {
+        const input = { profile, http: {}, ports: {}, env: { PORT: String(profile.port), DT_SCENARIO_FILES: "/dt-files" } };
+        let port = 19081;
+        for (const [sid, variable] of Object.entries(profile.http || {})) {
+          if (port === profile.port) port++;
+          input.http[sid] = artifact.contract.state.states[sid].value;
+          input.ports[sid] = port;
+          input.env[variable] = `http://127.0.0.1:${port++}`;
+        }
+        for (const [sid, variable] of Object.entries(profile.config || {})) {
+          const v = artifact.contract.state.states[sid].value;
+          input.env[variable] = typeof v === "object" ? JSON.stringify(v) : String(v);
+        }
+        fs2.mkdirSync(path2.join(dir, "files"));
+        for (const [sid, binding] of Object.entries(profile.files || {})) {
+          const value = artifact.contract.state.states[sid].value, full = path2.join(dir, "files", binding.path);
+          fs2.mkdirSync(path2.dirname(full), { recursive: true });
+          fs2.writeFileSync(full, binding.encoding === "base64" ? Buffer.from(value, "base64") : binding.encoding === "text" ? String(value) : JSON.stringify(value));
+        }
+        m.filesBefore = fileTree(path2.join(dir, "files"));
+        fs2.mkdirSync(path2.join(dir, "control"));
+        fs2.mkdirSync(path2.join(dir, "evidence"));
+        fs2.writeFileSync(path2.join(dir, "control/input.json"), JSON.stringify(input));
+        fs2.writeFileSync(path2.join(dir, "control/harness.js"), require_scenario_container().harness);
+        fs2.writeFileSync(path2.join(dir, "control/client.js"), require_scenario_container().client);
+        fs2.writeFileSync(path2.join(dir, "control/audit.js"), require_scenario_container().audit);
+        fs2.writeFileSync(path2.join(dir, "evidence/events.jsonl"), "");
+        const root = fs2.realpathSync(require_workspace().checkId(workspace).path);
+        if (root.includes(",") || dir.includes(",")) throw new Error("Docker mount paths containing commas are unsupported");
+        const create = await exec("docker", ["run", "--detach", "--pull=never", "--name", m.container, "--label", `dt.scenario.owner=${owner}`, "--label", `dt.scenario.id=${id}`, "--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "64", "--memory", "256m", "--cpus", "1", "--tmpfs", "/tmp:rw,nosuid,size=64m", "--mount", `type=bind,source=${root},target=/workspace,readonly`, "--mount", `type=bind,source=${dir}/control,target=/dt-control,readonly`, "--mount", `type=bind,source=${dir}/files,target=/dt-files`, "--mount", `type=bind,source=${dir}/evidence,target=/dt-evidence`, "--workdir", "/workspace", "--entrypoint", "node", profile.image, "/dt-control/harness.js"]);
+        if (create.code !== 0) throw new Error(`Docker start failed: ${create.error || create.out}`);
+        m.timings.startMs = Date.now() - started;
+        const deadline = Date.now() + bounded(profile.readyTimeoutMs, 1e4, 6e4), ready = profile.readyPath || "/health";
+        if (!ready.startsWith("/") || ready.startsWith("//")) throw new Error("readiness path must be local");
+        let last;
+        do {
+          checkCancellation();
+          try {
+            const response = await request(m, { path: ready, timeoutMs: 500 });
+            if (response.status === (profile.readyStatus || 200)) {
+              m.status = "ready";
+              m.proof.applicationExecuted = true;
+              m.timings.readyMs = Date.now() - started - m.timings.startMs;
+              save(m);
+              return { ok: true, session: publicSession(m) };
+            }
+            last = `HTTP ${response.status}`;
+          } catch (e) {
+            last = e.message;
+          }
+          await sleep(50);
+        } while (Date.now() < deadline);
+        throw new Error(`Service readiness deadline expired: ${last}`);
+      } catch (e) {
+        m.status = "failed";
+        m.error = e.message;
+        save(m);
+        let logs = "";
+        try {
+          logs = (await exec("docker", ["logs", "--tail", "100", m.container])).out;
+        } catch {
+        }
+        await stop(id).catch(() => {
+        });
+        return { ok: false, error: e.message, session: publicSession(m), logs };
+      }
+    }
+    async function act(id, actionId) {
+      return locked(id, async () => {
+        const { m } = load(id), artifact = sessionArtifact(m);
+        const action = artifact.contract.actions.actions.find((a) => a.id === actionId);
+        if (!action) throw new Error("unknown scenario action");
+        if (m.actions.some((a) => a.id === actionId)) throw new Error("action already performed; start a clean session for deterministic replay");
+        const started = Date.now(), before = readEvents(id).length;
+        try {
+          const response = await request(m, { ...requestFor(action), timeoutMs: bounded(m.profile.actionTimeoutMs, 1e4, 3e4) });
+          const result = { id: actionId, at: (/* @__PURE__ */ new Date()).toISOString(), ms: Date.now() - started, eventStart: before, response };
+          m.actions.push(result);
+          save(m);
+          return { ok: true, session: id, action: result };
+        } catch (e) {
+          m.actions.push({ id: actionId, at: (/* @__PURE__ */ new Date()).toISOString(), ms: Date.now() - started, error: e.message, eventStart: before });
+          save(m);
+          return { ok: false, session: id, action: actionId, error: e.message };
+        }
+      });
+    }
+    function readEvents(id) {
+      const file = path2.join(sessionPath(id), "evidence/events.jsonl");
+      if (!fs2.existsSync(file)) return [];
+      if (fs2.statSync(file).size > 4 * 1024 * 1024) throw new Error("scenario event evidence exceeds 4 MiB");
+      const text = fs2.readFileSync(file, "utf8"), lines = text.split("\n");
+      if (lines.at(-1) !== "") lines.pop();
+      return lines.filter(Boolean).map((line) => JSON.parse(line));
+    }
+    function sample(m, artifact) {
+      const observed = {}, events = readEvents(m.id), violations = events.filter((e) => ["http-mismatch", "process-error", "process-exit", "file-watch-gap"].includes(e.kind));
+      const { expectations } = artifact.contract;
+      for (const expected of expectations.expectations) {
+        const observer = m.profile.observations?.[expected.id] || (["status", "return"].includes(expected.kind) ? { kind: expected.kind, action: expected.action } : null);
+        if (!observer) continue;
+        const action = m.actions.find((a) => a.id === (observer.action || expected.action));
+        if (expected.action && !action) continue;
+        if (observer.kind === "status" && action?.response) observed[expected.id] = action.response.status;
+        else if (observer.kind === "return" && action?.response) observed[expected.id] = action.response.body;
+        else if (observer.kind === "http") {
+          const next = action && m.actions[m.actions.indexOf(action) + 1];
+          observed[expected.id] = events.slice(action?.eventStart || 0, next?.eventStart).filter((e) => e.kind === "http" && e.state === observer.state).map((e) => e.request);
+        } else if (observer.kind === "file") observed[expected.id] = fileValue(path2.join(sessionPath(m.id), "files"), observer);
+      }
+      const files = fileTree(path2.join(sessionPath(m.id), "files")), allowed = new Set(Object.values(m.profile.observations || {}).filter((o) => o.kind === "file").map((o) => o.path));
+      const allowedDirectories = new Set([...allowed].flatMap((rel) => {
+        const parts = rel.split("/"), result = [];
+        for (let n = 1; n < parts.length; n++) result.push(parts.slice(0, n).join("/"));
+        return result;
+      }));
+      for (const event of events) if (["file-change", "file-operation"].includes(event.kind) && !allowed.has(event.path) && !allowedDirectories.has(event.path)) violations.push({ kind: "unexpected-file-effect", path: event.path, change: event.change || event.operation });
+      for (const rel of /* @__PURE__ */ new Set([...Object.keys(files), ...Object.keys(m.filesBefore || {})])) if (!isDeepStrictEqual(files[rel], m.filesBefore?.[rel]) && !allowed.has(rel)) violations.push({ kind: "unexpected-file-effect", path: rel });
+      for (const [sid, value] of Object.entries(artifact.contract.state.states)) if (m.profile.http?.[sid]) for (let index = 0; index < value.value.exchanges.length; index++) {
+        const exchange = value.value.exchanges[index], count = events.filter((e) => e.kind === "http" && e.state === sid && e.exchange === index).length;
+        const min = exchange.times?.min ?? exchange.times?.value ?? 1, max = exchange.times?.max ?? exchange.times?.value ?? 1;
+        if (count < min || count > max) violations.push({ kind: "http-call-count", state: sid, exchange: index, count, min, max });
+      }
+      for (const a of artifact.contract.actions.actions) if (!m.actions.some((done) => done.id === a.id && done.response)) violations.push({ kind: "unperformed-action", action: a.id });
+      const checks = require_scenario().check(expectations, observed);
+      return { ok: checks.ok && !violations.length, observed, checks, violations, events, files, proof: { ...m.proof, level: "process", applicationExecuted: true, independentObservations: true, runtimeReadsVerified: false } };
+    }
+    async function observe(id, { deadlineMs, quietMs, intervalMs } = {}) {
+      return locked(id, async () => {
+        const { m } = load(id), artifact = sessionArtifact(m);
+        if (!await identity(m)) throw new Error("scenario container disappeared");
+        const temporal = m.profile.temporal || {};
+        deadlineMs = bounded(deadlineMs, temporal.deadlineMs ?? 1e3, 3e4);
+        quietMs = bounded(quietMs, temporal.quietMs ?? 0, 1e4);
+        intervalMs = Math.max(10, bounded(intervalMs, temporal.intervalMs ?? 50, 1e3));
+        const start2 = Date.now(), deadline = start2 + deadlineMs;
+        let result, quietStart = null, samples = 0;
+        do {
+          checkCancellation();
+          result = sample(m, artifact);
+          samples++;
+          if (result.ok) {
+            quietStart ??= Date.now();
+            if (Date.now() - quietStart >= quietMs) break;
+          } else quietStart = null;
+          if (Date.now() >= deadline) break;
+          await sleep(Math.min(intervalMs, deadline - Date.now()));
+        } while (Date.now() <= deadline);
+        if (result.ok && quietStart != null && Date.now() - quietStart < quietMs) {
+          result.ok = false;
+          result.violations.push({ kind: "quiet-window-incomplete", requiredMs: quietMs, observedMs: Date.now() - quietStart });
+        }
+        result.temporal = { deadlineMs, quietMs, elapsedMs: Date.now() - start2, samples };
+        m.result = result;
+        m.timings.observeMs = result.temporal.elapsedMs;
+        save(m);
+        return { session: id, ...result };
+      });
+    }
+    async function inspect(id) {
+      if (!id) return { sessions: (fs2.existsSync(ROOT) ? fs2.readdirSync(ROOT).filter((id2) => /^[a-f0-9]{24}$/.test(id2)).map((id2) => readJson(path2.join(ROOT, id2, "session.json"))).filter(Boolean) : []).sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, 100).map((m2) => ({ ...publicSession(m2), ...m2.cleanupError ? { cleanupError: m2.cleanupError } : {} })) };
+      const { m } = load(id, { stopped: true, expired: true });
+      const logs = m.status === "stopped" ? m.logs || "" : (await exec("docker", ["logs", "--tail", "100", m.container])).out;
+      return { session: publicSession(m), events: readEvents(id), logs, ...m.error ? { error: m.error } : {} };
+    }
+    function check(id) {
+      const { m } = load(id, { stopped: true, expired: true });
+      if (!m.result) throw new Error("Collect independent effects with scenario_observe first");
+      const artifact = sessionArtifact(m);
+      const checks = require_scenario().check(artifact.contract.expectations, m.result.observed);
+      return { session: id, ok: checks.ok && !m.result.violations.length, checks, violations: m.result.violations, temporal: m.result.temporal, proof: m.result.proof };
+    }
+    async function stop(id) {
+      const { m } = load(id, { stopped: true, expired: true }), started = Date.now();
+      let present;
+      try {
+        present = await identity(m);
+      } catch (e) {
+        m.cleanupError = e.message;
+        save(m);
+        throw e;
+      }
+      if (m.status === "stopped" && !present) return { stopped: true, session: id, reused: true };
+      if (present) {
+        const logs = await exec("docker", ["logs", "--tail", "100", m.container]);
+        m.logs = `${logs.out}${logs.error}`.slice(-3e4);
+        const r = await exec("docker", ["rm", "--force", m.container]);
+        if (r.code !== 0) {
+          m.cleanupError = r.error;
+          save(m);
+          throw new Error(`scenario container cleanup failed: ${r.error}`);
+        }
+      }
+      delete m.cleanupError;
+      m.status = "stopped";
+      m.stoppedAt = (/* @__PURE__ */ new Date()).toISOString();
+      m.timings.cleanupMs = Date.now() - started;
+      save(m);
+      return { stopped: true, session: id, ms: m.timings.cleanupMs };
+    }
+    async function cleanup() {
+      const results = [];
+      const reservation = path2.join(ROOT, ".reservation.lock");
+      if (fs2.existsSync(reservation) && Date.now() - fs2.statSync(reservation).mtimeMs > 3e4) {
+        const owner = readJson(path2.join(reservation, "owner.json"));
+        let alive = false;
+        if (owner?.pid) try {
+          process.kill(owner.pid, 0);
+          alive = true;
+        } catch (e) {
+          if (e.code !== "ESRCH") alive = true;
+        }
+        if (!alive) {
+          fs2.rmSync(reservation, { recursive: true, force: true });
+          results.push({ recoveredStartupReservation: true });
+        }
+      }
+      for (const id of fs2.existsSync(ROOT) ? fs2.readdirSync(ROOT).filter((id2) => /^[a-f0-9]{24}$/.test(id2)) : []) {
+        const { m } = load(id, { stopped: true, expired: true });
+        if (Date.now() > m.expiresAt) try {
+          results.push(await stop(id));
+        } catch (e) {
+          results.push({ session: id, error: e.message });
+        }
+      }
+      return { ok: results.every((r) => !r.error), results };
+    }
+    async function run(workspace, packagePath, options = {}) {
+      const report = await probe(workspace, packagePath);
+      if (!report.ok) return { ok: false, preflight: report };
+      const artifact = P.load(workspace, packagePath), profile = profileFor(workspace, artifact);
+      if (profile.adapter === "test-run") {
+        const root = path2.posix.dirname(packagePath), fixture = artifact.resources.files["fixture/manifest.json"];
+        const reportFile = P.workspacePath(workspace, profile.report, { missing: true }).full;
+        fs2.rmSync(reportFile, { force: true });
+        const result = await require_testrun().run(workspace, { tests: profile.tests, mode: profile.mode || "build", scenarioPath: packagePath, scenarioOutput: profile.report, ...fixture ? { fixturePath: `${root}/fixture`, fixtureBindings: profile.fixtureBindings, fixtureTemplate: profile.template === true } : {} });
+        const gaps = [];
+        let observationReport, checks;
+        try {
+          P.workspacePath(workspace, profile.report);
+          if (fs2.statSync(reportFile).size > 4 * 1024 * 1024) throw new Error("project observation report exceeds 4 MiB");
+          observationReport = JSON.parse(fs2.readFileSync(reportFile, "utf8"));
+          if (observationReport.version !== 1 || observationReport.artifact !== artifact.sha256) throw new Error("project observation report version/artifact fingerprint mismatch");
+          const actual = observationReport.actions;
+          if (!Array.isArray(actual) || actual.some((id2) => typeof id2 !== "string") || new Set(actual).size !== actual.length || !isDeepStrictEqual([...actual].sort(), artifact.contract.actions.actions.map((a) => a.id).sort())) throw new Error("project report must account for every bound action exactly once");
+          checks = require_scenario().check(artifact.contract.expectations, observationReport.observed);
+        } catch (e) {
+          gaps.push({ kind: "project-observation-report", detail: e.message });
+        }
+        return {
+          ok: result.outcome === "passed" && !gaps.length && checks?.ok === true,
+          adapter: "test-run",
+          result,
+          gaps,
+          checks,
+          observed: observationReport?.observed,
+          proof: { level: "build", applicationExecuted: result.counts?.tests > 0, independentObservations: "collected by reviewed project adapter", expectationsChecked: checks?.ok === true, runtimeReadsVerified: false, network: "owned by project test adapter" }
+        };
+      }
+      const prepared = await start(workspace, packagePath, options);
+      if (!prepared.ok) return prepared;
+      const id = prepared.session.id;
+      let output;
+      try {
+        for (const action of artifact.contract.actions.actions) {
+          const r = await act(id, action.id);
+          if (!r.ok) {
+            output = { ok: false, session: id, action: r, proof: prepared.session.proof };
+            break;
+          }
+        }
+        if (!output) output = await observe(id, options);
+      } finally {
+        await stop(id);
+      }
+      const final = await inspect(id);
+      return { ...output, timings: final.session.timings, sessionStatus: final.session.status };
+    }
+    module2.exports = { preflight, probe, start, act, observe, check, inspect, stop, cleanup, run, requestFor, profileFor, fileTree, exec };
+  }
+});
+
+// lib/tools-scenario-runtime.js
+var require_tools_scenario_runtime = __commonJS({
+  "lib/tools-scenario-runtime.js"(exports2, module2) {
+    module2.exports = function scenarioRuntimeTools() {
+      const P = () => require_scenario_package(), R = () => require_scenario_runtime();
+      const str = (description) => ({ type: "string", description }), obj = (description) => ({ type: "object", description }), bool = (description) => ({ type: "boolean", description });
+      const source = (a) => {
+        if (a.artifact) return a.artifact;
+        if (!a.workspace || !a.package) throw new Error("Provide artifact, or workspace and package");
+        return P().load(a.workspace, a.package);
+      };
+      function shown(result, title, view = true, data = result) {
+        if (!view) return result;
+        try {
+          return { ...result, view: require_results().saveView("scenario-run", data, { title }) };
+        } catch (e) {
+          return { ...result, viewError: e.message };
+        }
+      }
+      const location = { workspace: str("Writable workspace id"), package: str("Repository-relative path to scenario.json"), view: { ...bool("Include an interactive result view; default true"), default: true } };
+      async function background(kind, a, fn) {
+        const Jobs = require_jobs();
+        let job = a.job ? Jobs.find(a.job) : null;
+        if (a.job && (!job || !job.key.startsWith(`${kind}:`))) throw new Error(`${kind} job not found`);
+        if (!job) {
+          if (!a.workspace || !a.package) throw new Error("workspace and package are required to start a scenario job");
+          job = Jobs.start(`${kind}:${P().digest([a.workspace, a.package, a.deadline_ms, a.quiet_ms, a.ttl_ms, a.view !== false])}`, `${kind} ${a.package}`, async (log) => {
+            log("Verify package and runtime capabilities");
+            const result = await fn();
+            log(result.ok ? "Scenario stage passed" : "Scenario stage needs attention");
+            return shown(result, kind === "scenario-start" ? "Scenario session" : "Scenario run", a.view);
+          });
+        }
+        let completed = job;
+        if (job.state === "running") {
+          let timer;
+          try {
+            completed = await Promise.race([job.promise, new Promise((resolve) => {
+              timer = setTimeout(() => resolve(null), Math.max(0, Math.min(5e4, require_config().getTests().waitMs)));
+            })]);
+          } finally {
+            clearTimeout(timer);
+          }
+        }
+        return completed ? { job: completed.id, state: completed.state, ms: completed.ms, ...completed.error ? { error: completed.error } : completed.result } : { job: job.id, state: "running", log: job.log.slice(-3), next: `Call ${kind.replace("-", "_")} with job to wait for the result; progress is also on /admin.` };
+      }
+      return [
+        {
+          name: "scenario_package",
+          description: "Package a complete passport scenario: captured reads, bound action inputs, independent expectations, optional PG/Kafka fixture files, and a reviewed runtime profile. Writes portable versioned test resources and returns their path/hash. Full data stays in the default visualization; include_artifact=true returns it for transfer. No application execution.",
+          input: { workspace: location.workspace, name: str("Scenario name"), inventory: obj("scenario_inventory result"), state: obj("Complete scenario_state_capture result"), actions: obj("scenario_actions result"), expectations: obj("scenario_expectations result"), fixture_path: str("Optional exported related-data fixture directory"), profile: str("Repository-relative reviewed runtime profile JSON"), directory: str("Optional resource directory"), overwrite: bool("Replace existing package"), include_artifact: { ...bool("Return full portable data in tool output; default false to keep model context small"), default: false }, view: location.view },
+          required: ["workspace", "inventory", "state", "actions", "expectations"],
+          run: (a) => {
+            const artifact = P().create({ ...a, fixturePath: a.fixture_path }), saved = P().importPackage(a.workspace, artifact, a), result = { ...saved, summary: P().verify(artifact), ...a.include_artifact ? { artifact } : {} };
+            return shown(result, "Portable scenario package", a.view, { ...result, artifact });
+          }
+        },
+        {
+          name: "scenario_import",
+          description: "Verify and write a portable scenario into [module/]src/test/resources/dt-scenarios/<name>. Import writes data and hashed resources; it never installs or runs commands. The referenced runtime profile must already exist in the reviewed workspace.",
+          input: { workspace: location.workspace, artifact: obj("Versioned portable scenario artifact"), directory: str("Optional repository-relative resource directory"), overwrite: bool("Replace existing scenario resources"), view: location.view },
+          required: ["workspace", "artifact"],
+          run: (a) => shown(P().importPackage(a.workspace, a.artifact, a), "Imported scenario", a.view)
+        },
+        {
+          name: "scenario_verify",
+          description: "Independently verify a scenario package version, content hashes, complete state/action/expectation bindings, resource hashes and proof level. No execution or network access.",
+          input: { ...location, artifact: obj("Or inline portable artifact") },
+          run: (a) => shown(P().verify(source(a)), "Scenario integrity", a.view)
+        },
+        {
+          name: "scenario_diff",
+          description: "Explain semantic changes between two verified portable scenarios: reads, inputs, expected effects, runtime profile and resource fingerprints. Expectations remain independent of observed output.",
+          input: { before: obj("Previous portable artifact"), after: obj("Current portable artifact"), view: location.view },
+          required: ["before", "after"],
+          run: (a) => shown(P().diff(a.before, a.after), "Scenario changes", a.view)
+        },
+        {
+          name: "scenario_explain",
+          description: "Show how every captured dependency connects to scenario actions and independently bound effects, including provenance, proof boundaries and the next execution stages.",
+          input: { ...location, artifact: obj("Or inline portable artifact") },
+          run: (a) => shown(P().explain(source(a)), "Scenario contract", a.view)
+        },
+        {
+          name: "scenario_preflight",
+          description: "Check a scenario against its reviewed runtime profile before starting anything. Node containers support HTTP/config/files with network disabled; other dependencies require explicit project test adapters. Unsupported brokers, codecs or observers are blocking gaps.",
+          input: location,
+          required: ["workspace", "package"],
+          run: async (a) => shown(await R().probe(a.workspace, a.package), "Scenario preflight", a.view)
+        },
+        {
+          name: "scenario_start",
+          description: "Start the unchanged Node service in a private Docker network-none container, arrange exact HTTP fixtures/config/files, wait for readiness and return a leased session. No host ports, sockets, environment credentials or live HTTP fallback. Poll with job if still running. Use scenario_stop when finished.",
+          input: { ...location, job: str("Poll a scenario_start job; workspace/package may be omitted"), ttl_ms: { type: "integer", default: 3e5, minimum: 1e3, maximum: 36e5 } },
+          run: (a) => background("scenario-start", a, () => R().start(a.workspace, a.package, { ttlMs: a.ttl_ms }))
+        },
+        {
+          name: "scenario_act",
+          description: "Invoke one bound HTTP action on an isolated scenario session and record its actual response. Inputs come from the verified package; each action runs once per clean session.",
+          input: { session: str("scenario_start session id"), action: str("Bound action id"), view: location.view },
+          required: ["session", "action"],
+          run: async (a) => shown(await R().act(a.session, a.action), "Scenario action", a.view)
+        },
+        {
+          name: "scenario_observe",
+          description: "Independently collect real response, HTTP calls and file effects from a scenario session, polling until the deadline and then checking an explicit quiet window. Unexpected HTTP calls/files fail. Captured evidence and assertion results are retained for separate inspection.",
+          input: { session: str("Scenario session id"), deadline_ms: { type: "integer", minimum: 0, maximum: 3e4 }, quiet_ms: { type: "integer", minimum: 0, maximum: 1e4 }, view: location.view },
+          required: ["session"],
+          run: async (a) => shown(await R().observe(a.session, { deadlineMs: a.deadline_ms, quietMs: a.quiet_ms }), "Observed scenario effects", a.view)
+        },
+        {
+          name: "scenario_assert",
+          description: "Recheck independently collected scenario observations against the package expectations. Does not accept model-supplied observations or alter expected values. Keeps process proof distinct from build/test proof.",
+          input: { session: str("Observed scenario session id"), view: location.view },
+          required: ["session"],
+          run: (a) => shown(R().check(a.session), "Scenario assertions", a.view)
+        },
+        {
+          name: "scenario_inspect",
+          description: "List retained scenario sessions, including leases and cleanup failures. With session, inspect actual actions, result, timeline, logs, phase timings and proof boundaries. Expired failures remain inspectable without recapturing live state.",
+          input: { session: str("Optional scenario session id; omit to list retained sessions"), view: location.view },
+          run: async (a) => shown(await R().inspect(a.session), "Scenario evidence", a.view)
+        },
+        {
+          name: "scenario_stop",
+          description: "Stop and remove only the container owned by this scenario session. Ownership labels are verified before deletion; evidence is retained and repeated stop is safe.",
+          input: { session: str("Scenario session id") },
+          required: ["session"],
+          run: (a) => R().stop(a.session)
+        },
+        { name: "scenario_cleanup", description: "Recover expired scenario leases after interruption or restart, removing only containers whose ownership labels match durable session records. Reports cleanup failures explicitly.", input: {}, run: () => R().cleanup() },
+        {
+          name: "scenario_run",
+          description: "Run a verified scenario end to end. The node-container adapter arranges isolated reads, starts the actual service, invokes actions, independently observes effects and always stops. The test-run adapter runs reviewed real project tests with verified multi-DB fixtures and checks the independent observation report. Poll with job if still running; proof levels and unsupported boundaries remain explicit.",
+          input: { ...location, job: str("Poll a scenario_run job; workspace/package may be omitted"), deadline_ms: { type: "integer", minimum: 0, maximum: 3e4 }, quiet_ms: { type: "integer", minimum: 0, maximum: 1e4 } },
+          run: (a) => background("scenario-run", a, () => R().run(a.workspace, a.package, { deadlineMs: a.deadline_ms, quietMs: a.quiet_ms }))
+        }
+      ].map((t) => ({ ...t, group: "code" }));
+    };
+  }
+});
+
+// lib/api-client.js
+var require_api_client = __commonJS({
+  "lib/api-client.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var crypto = require("crypto");
+    var { CACHE: CACHE2, readJson, writeJson } = require_util();
+    var S = () => require_scripts();
+    var R = () => require_routes();
+    var DIR = path2.join(CACHE2, "api-exchanges");
+    var MAX_BODY = 262144;
+    var MAX_INPUT = 4 * 1048576;
+    var MAX_ENTRIES = 100;
+    var KEEP = 500;
+    var SECRET = /password|passwd|secret|token|authorization|api.?key|session|cookie|credential|email|phone|ssn|private.?key/i;
+    var OMIT_HEADER = /^(cookie|set-cookie|host|content-length|connection|transfer-encoding|accept-encoding|proxy-authorization|sec-.*)$/i;
+    var METHODS = /* @__PURE__ */ new Set(["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]);
+    var clone = (x) => JSON.parse(JSON.stringify(x));
+    function remember(ctx, value) {
+      if (value && typeof value === "object") {
+        for (const v of Object.values(value)) remember(ctx, v);
+        return;
+      }
+      if (typeof value === "string" && value.length >= 4 && !/\{\{[a-z_]\w*\}\}|\[redacted\]/i.test(value)) {
+        ctx.secrets.add(value);
+        const auth = value.match(/^(?:Bearer|Basic)\s+(.+)$/i);
+        if (auth?.[1].length >= 4) ctx.secrets.add(auth[1]);
+      }
+    }
+    function scrubEchoes(value, ctx) {
+      if (typeof value === "string") return value.split(/(\{\{[a-z_]\w*\}\})/gi).map((part, i) => {
+        if (i % 2) return part;
+        for (const secret of [...ctx.secrets].sort((a, b) => b.length - a.length)) part = part.split(secret).join("[redacted]");
+        return part;
+      }).join("");
+      if (Array.isArray(value)) return value.map((v) => scrubEchoes(v, ctx));
+      if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, scrubEchoes(v, ctx)]));
+      return value;
+    }
+    var bytes = (x) => Buffer.byteLength(typeof x === "string" ? x : JSON.stringify(x));
+    var safeName = (x) => String(x).replace(/[^a-z0-9_]/gi, "_").replace(/^([^a-z_])/i, "p_$1").slice(0, 60) || "value";
+    var id = () => crypto.randomBytes(12).toString("hex");
+    function bounded(input) {
+      if (bytes(input) > MAX_INPUT) throw new Error("exchange import exceeds 4 MiB; split the capture");
+    }
+    function headers(input) {
+      return Array.isArray(input) ? Object.fromEntries(input.map((h) => [h.name, h.value])) : input || {};
+    }
+    function secretRef(name, ctx, location) {
+      if (location.startsWith("response/")) {
+        ctx.redactions.push({ location, reason: "sensitive response field" });
+        return "[redacted]";
+      }
+      const base = safeName(name);
+      let param = ["__proto__", "prototype", "constructor"].includes(base) ? "p_" + base : base, n = 1;
+      while (ctx.params[param] && ctx.params[param].location !== location) param = `${base}_${++n}`;
+      ctx.params[param] = { type: "string", required: true, secret: true, description: `Supply ${name} at run time; the captured value was removed`, location };
+      ctx.redactions.push({ location, param, reason: "sensitive field" });
+      return `{{${param}}}`;
+    }
+    function redactJson(value, ctx, location) {
+      if (Array.isArray(value)) return value.map((v, i) => redactJson(v, ctx, `${location}/${i}`));
+      if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => {
+        if (SECRET.test(k)) {
+          remember(ctx, v);
+          return [k, secretRef(k, ctx, `${location}/${k}`)];
+        }
+        return [k, redactJson(v, ctx, `${location}/${k}`)];
+      }));
+      return value;
+    }
+    function cleanHeaders(input, ctx, location) {
+      const out2 = {};
+      for (const [key, v] of Object.entries(headers(input))) {
+        const name = key.toLowerCase();
+        if (OMIT_HEADER.test(name)) {
+          if (/cookie|authorization/i.test(name)) {
+            remember(ctx, String(v));
+            if (/cookie/i.test(name)) for (const pair of String(v).split(";")) remember(ctx, pair.slice(pair.indexOf("=") + 1).trim());
+            ctx.redactions.push({ location: `${location}/${name}`, reason: "browser/session header omitted" });
+          }
+          continue;
+        }
+        if (!/^[!#$%&'*+.^_`|~\w-]+$/.test(name)) continue;
+        const text = String(v).slice(0, 8192);
+        if (SECRET.test(name)) remember(ctx, text);
+        out2[name] = SECRET.test(name) ? (/^(Bearer|Basic)\s/i.test(text) ? text.split(/\s/)[0] + " " : "") + secretRef(name, ctx, `${location}/${name}`) : text;
+      }
+      return out2;
+    }
+    function cleanUrl(input, ctx, location = "request/url") {
+      const url = new URL(input);
+      if (!/^https?:$/.test(url.protocol)) throw new Error("request URL must use http or https");
+      if (url.username || url.password) {
+        remember(ctx, url.password);
+        try {
+          remember(ctx, decodeURIComponent(url.password));
+        } catch {
+        }
+        url.username = "";
+        url.password = "";
+        ctx.redactions.push({ location, reason: "URL credentials omitted" });
+      }
+      url.hash = "";
+      for (const key of [...new Set(url.searchParams.keys())]) if (SECRET.test(key)) {
+        const vals = url.searchParams.getAll(key);
+        vals.forEach((v) => remember(ctx, v));
+        url.searchParams.delete(key);
+        vals.forEach((_, i) => url.searchParams.append(key, secretRef(key, ctx, `${location}/query/${key}/${i}`)));
+      }
+      return url.toString().replace(/%7B%7B([^%]+)%7D%7D/gi, "{{$1}}");
+    }
+    function body(input, contentType, ctx, location, supplied = false) {
+      if (input === void 0 || input === null || input === "") return { kind: supplied ? "text" : "none", ...supplied ? { value: input ?? "" } : {} };
+      if (input && typeof input === "object" && input.kind) {
+        if (input.kind === "none") return { kind: "none" };
+        if (input.kind === "text" && input.reviewed === true && typeof input.value === "string" && bytes(input.value) <= MAX_BODY) return { kind: "text", value: input.value, reviewed: true, bytes: bytes(input.value), contentType: input.contentType || contentType || "text/plain" };
+        if (["binary", "unsupported", "unavailable"].includes(input.kind)) {
+          const reason = String(input.reason || "Body unavailable");
+          ctx.gaps.push({ kind: input.kind === "unavailable" ? "body-unavailable" : "unsupported-body", location, reason });
+          return { kind: input.kind, reason, ...Number.isFinite(input.bytes) && input.bytes >= 0 ? { bytes: input.bytes } : {} };
+        }
+        return body(input.value, input.contentType || contentType, ctx, location, true);
+      }
+      const size = bytes(input);
+      if (size > MAX_BODY) {
+        ctx.gaps.push({ kind: "body-truncated", location, bytes: size, limit: MAX_BODY });
+        return { kind: "unsupported", bytes: size, reason: "Body exceeds 256 KiB capture limit" };
+      }
+      if (/multipart\/|octet-stream|image\/|audio\/|video\//i.test(contentType || "")) {
+        ctx.gaps.push({ kind: "unsupported-body", location });
+        return { kind: "unsupported", contentType, bytes: size, reason: "Binary and multipart bodies require a separate file fixture" };
+      }
+      let value = input;
+      if (typeof input !== "string") return { kind: "json", value: redactJson(input, ctx, location), bytes: size, contentType: contentType || "application/json" };
+      if (/json/i.test(contentType || "") || /^[\[{]/.test(input.trim())) {
+        try {
+          value = JSON.parse(input);
+          return { kind: "json", value: redactJson(value, ctx, location), bytes: size, contentType: contentType || "application/json" };
+        } catch {
+        }
+      }
+      if (/x-www-form-urlencoded/i.test(contentType || "")) {
+        const p = new URLSearchParams(input);
+        for (const key of [...new Set(p.keys())]) if (SECRET.test(key)) {
+          const values = p.getAll(key);
+          p.delete(key);
+          values.forEach((value2, i) => {
+            remember(ctx, value2);
+            p.append(key, secretRef(key, ctx, `${location}/${key}/${i}`));
+          });
+        }
+        return { kind: "form", value: p.toString().replace(/%7B%7B([^%]+)%7D%7D/gi, "{{$1}}"), bytes: size, contentType };
+      }
+      ctx.gaps.push({ kind: "unstructured-body", location, reason: "Text body omitted; explicitly supply reviewed text when preparing a request" });
+      return { kind: "unavailable", contentType, bytes: size, reason: "Unstructured body needs explicit review" };
+    }
+    function normalize(entry, source = {}, { resolve = R().resolve } = {}) {
+      if (!entry || typeof entry !== "object") throw new Error("exchange must be an object");
+      const ctx = { params: {}, redactions: [], gaps: [], secrets: /* @__PURE__ */ new Set() };
+      const req = entry.request || entry, res = entry.response || {};
+      const requestHeaders = headers(req.headers), responseHeaders = headers(res.headers);
+      const method = String(req.method || "GET").toUpperCase();
+      if (!METHODS.has(method)) throw new Error(`unsupported HTTP method ${method}`);
+      const url = cleanUrl(req.url, ctx);
+      const post = req.postData;
+      const requestBody = body(req.body ?? post?.text ?? (post?.params ? Object.fromEntries(post.params.map((p) => [p.name, p.value])) : void 0), post?.mimeType || requestHeaders["content-type"] || requestHeaders["Content-Type"], ctx, "request/body");
+      const content = res.content;
+      const responseBody = content?.encoding === "base64" ? { kind: "unsupported", reason: "Base64/binary response omitted", bytes: content.size } : body(res.body ?? content?.text ?? res.json ?? res.text, content?.mimeType || responseHeaders["content-type"] || responseHeaders["Content-Type"], ctx, "response/body");
+      if (content?.encoding === "base64") ctx.gaps.push({ kind: "unsupported-body", location: "response/body", reason: "Base64/binary response omitted" });
+      if (entry.metadataOnly) ctx.gaps.push({ kind: "metadata-only", reason: "Network listing does not include headers or bodies; use browser capture instrumentation or import a HAR" });
+      let route;
+      try {
+        route = resolve(url, method);
+      } catch {
+        route = { status: "unknown", candidates: [] };
+        ctx.gaps.push({ kind: "route-attribution-unavailable", reason: "Cached passport endpoints could not be read" });
+      }
+      const exchange = { schema: "dt.api-exchange", version: 1, id: id(), at: (/* @__PURE__ */ new Date()).toISOString(), source: { ...Number.isInteger(entry.sequence) ? { sequence: entry.sequence } : {}, kind: String(source.kind || "import").slice(0, 80), ...source.session ? { session: String(source.session) } : {}, ...source.site ? { site: String(source.site) } : {}, ...source.note ? { note: String(source.note).slice(0, 1e3) } : {} }, request: { method, url, headers: cleanHeaders(requestHeaders, ctx, "request/headers"), body: requestBody }, response: { status: Number.isInteger(Number(res.status ?? entry.status)) && Number(res.status ?? entry.status) >= 100 && Number(res.status ?? entry.status) <= 599 ? Number(res.status ?? entry.status) : null, statusText: String(res.statusText || "").slice(0, 100), headers: cleanHeaders(responseHeaders, ctx, "response/headers"), body: responseBody }, timing: { durationMs: Number.isFinite(Number(entry.time ?? entry.timing?.durationMs ?? res.ms)) && Number(entry.time ?? entry.timing?.durationMs ?? res.ms) >= 0 ? Number(entry.time ?? entry.timing?.durationMs ?? res.ms) : null }, route, params: ctx.params, redactions: ctx.redactions, gaps: ctx.gaps };
+      if (entry.error) exchange.gaps.push({ kind: "network-error", reason: "Response capture failed; request metadata retained" });
+      return scrubEchoes(exchange, ctx);
+    }
+    function persist(exchange) {
+      fs2.mkdirSync(DIR, { recursive: true });
+      writeJson(path2.join(DIR, exchange.id + ".json"), exchange);
+      const files = fs2.readdirSync(DIR).filter((f) => /^[a-f0-9]{24}\.json$/.test(f)).map((f) => ({ f, time: fs2.statSync(path2.join(DIR, f)).mtimeMs })).sort((a, b) => b.time - a.time);
+      for (const f of files.slice(KEEP)) fs2.unlinkSync(path2.join(DIR, f.f));
+      return exchange;
+    }
+    function get(exchange) {
+      if (!/^[a-f0-9]{24}$/.test(exchange || "")) throw new Error("invalid exchange id");
+      const e = readJson(path2.join(DIR, exchange + ".json"));
+      if (!e) throw new Error("exchange not found or expired");
+      return e;
+    }
+    function list({ q = "", limit = 50 } = {}) {
+      let files;
+      try {
+        files = fs2.readdirSync(DIR);
+      } catch {
+        return [];
+      }
+      return files.filter((f) => /^[a-f0-9]{24}\.json$/.test(f)).map((f) => readJson(path2.join(DIR, f))).filter(Boolean).filter((e) => `${e.request.method} ${e.request.url} ${e.response.status} ${e.route.candidates.map((c) => c.service).join(" ")}`.toLowerCase().includes(String(q).toLowerCase())).sort((a, b) => b.at.localeCompare(a.at)).slice(0, Math.max(1, Math.min(Number(limit) || 50, KEEP))).map((e) => ({ id: e.id, at: e.at, method: e.request.method, url: e.request.url, status: e.response.status, ms: e.timing.durationMs, route: e.route, gaps: e.gaps.length }));
+    }
+    function importExchanges(input, source = {}) {
+      bounded(input);
+      let entries;
+      if (typeof input === "string") {
+        try {
+          input = JSON.parse(input);
+        } catch {
+          entries = R().parseNetwork(input).map((e) => ({ ...e, metadataOnly: true }));
+        }
+      }
+      if (!entries) entries = Array.isArray(input) ? input : Array.isArray(input?.log?.entries) ? input.log.entries : Array.isArray(input?.entries) ? input.entries : [input];
+      if (entries.length > MAX_ENTRIES) throw new Error("at most 100 exchanges per import");
+      let resolve;
+      try {
+        resolve = R().resolver();
+      } catch {
+        resolve = () => {
+          throw new Error("unavailable");
+        };
+      }
+      const exchanges = entries.map((e) => normalize(e, source, { resolve }));
+      exchanges.forEach(persist);
+      try {
+        R().learn(exchanges.map((e) => ({ method: e.request.method, url: e.request.url, status: e.response.status })), `exchange:${source.kind || "import"}`);
+      } catch {
+        for (const e of exchanges) {
+          e.gaps.push({ kind: "route-index-update-failed", reason: "Exchanges retained; route index could not be rebuilt" });
+          persist(e);
+        }
+      }
+      return { exchanges, count: exchanges.length };
+    }
+    function editable(request) {
+      const req = clone(request);
+      req.headers ||= {};
+      req.body ||= { kind: "none" };
+      if (!METHODS.has(String(req.method).toUpperCase())) throw new Error("unsupported HTTP method");
+      req.method = req.method.toUpperCase();
+      const u = new URL(req.url);
+      if (!/^https?:$/.test(u.protocol) || u.username || u.password) throw new Error("URL must use http(s) without inline credentials");
+      if (!req.headers || typeof req.headers !== "object" || Array.isArray(req.headers)) throw new Error("headers must be an object");
+      const normalized = {};
+      for (const [h, value] of Object.entries(req.headers)) {
+        const name = h.toLowerCase();
+        if (OMIT_HEADER.test(h)) throw new Error(`header ${h} is browser/transport managed; supply credentials via a named authorization placeholder`);
+        if (Object.hasOwn(normalized, name)) throw new Error(`duplicate header ${name}`);
+        if (!/^[!#$%&'*+.^_`|~\w-]+$/.test(name) || typeof value !== "string" || /[\r\n]/.test(value)) throw new Error(`invalid header ${name}`);
+        normalized[name] = value;
+      }
+      req.headers = normalized;
+      if (!["none", "json", "text", "form"].includes(req.body?.kind || "none")) throw new Error(`cannot replay ${req.body?.kind} body; supply a reviewed JSON/text/form body first`);
+      if (bytes(req) > MAX_BODY * 2) throw new Error("prepared request exceeds 512 KiB");
+      return req;
+    }
+    function prepare({ exchange, request, bindings = {}, description, assertions, capture, before, after, finally: finalHook } = {}) {
+      const e = exchange ? typeof exchange === "string" ? get(exchange) : clone(exchange) : null;
+      const req = editable(request || e?.request || {}), params = { ...e?.params || {} }, encoded = [];
+      for (const [name, binding] of Object.entries(bindings)) {
+        if (!/^[a-z_]\w*$/i.test(name) || ["__proto__", "prototype", "constructor"].includes(name)) throw new Error(`invalid parameter ${name}`);
+        const placeholder = `{{${name}}}`;
+        let old;
+        if (binding.in === "path" || binding.in === "query") {
+          const u = new URL(req.url);
+          if (binding.in === "path") {
+            const segments = u.pathname.split("/");
+            if (!Number.isInteger(binding.index) || binding.index < 1 || binding.index >= segments.length) throw new Error(`invalid path segment for ${name}`);
+            old = decodeURIComponent(segments[binding.index]);
+            segments[binding.index] = placeholder;
+            u.pathname = segments.join("/");
+          } else {
+            if (!u.searchParams.has(binding.key)) throw new Error(`query ${binding.key} not found`);
+            old = u.searchParams.get(binding.key);
+            u.searchParams.set(binding.key, placeholder);
+          }
+          req.url = u.toString().replace(/%7B%7B([^%]+)%7D%7D/gi, "{{$1}}");
+          encoded.push(name);
+        } else if (binding.in === "header") {
+          const key = String(binding.key).toLowerCase();
+          if (OMIT_HEADER.test(key)) throw new Error("cannot bind browser/transport managed header");
+          old = req.headers[key];
+          req.headers[key] = placeholder;
+        } else if (binding.in === "body") {
+          if (req.body.kind !== "json") throw new Error("body bindings require JSON");
+          const parts = String(binding.path || "").split(".").filter(Boolean);
+          let obj = req.body.value;
+          for (const key2 of parts.slice(0, -1)) {
+            if (!Object.hasOwn(obj || {}, key2) || ["__proto__", "constructor", "prototype"].includes(key2)) throw new Error("body path not found");
+            obj = obj[key2];
+          }
+          const key = parts.at(-1);
+          if (!key || ["__proto__", "constructor", "prototype"].includes(key) || !Object.hasOwn(obj || {}, key)) throw new Error("body path not found");
+          old = obj[key];
+          obj[key] = placeholder;
+        } else throw new Error(`binding ${name}: in must be path, query, header or body`);
+        params[name] = { type: typeof old === "number" ? "number" : typeof old === "boolean" ? "boolean" : "string", required: true, description: binding.description || `${binding.in} ${binding.key || binding.path || binding.index}`, ...binding.secret ? { secret: true } : {}, ...binding.default !== void 0 && !binding.secret ? { default: binding.default } : {} };
+      }
+      for (const match of JSON.stringify(req).matchAll(/\{\{([a-z_]\w*)\}\}/gi)) if (!params[match[1]]) params[match[1]] = { type: "string", required: true, description: `Request parameter ${match[1]}` };
+      for (const match of req.url.matchAll(/\{\{([a-z_]\w*)\}\}/gi)) encoded.push(match[1]);
+      if (req.body?.kind === "form" && !Object.keys(req.headers).some((k) => k.toLowerCase() === "content-type")) req.headers["content-type"] = "application/x-www-form-urlencoded";
+      const step = { http: `${req.method} ${req.url}`, headers: req.headers || {}, ...req.body?.kind !== "none" && req.body?.value !== void 0 ? { body: req.body.value } : {}, urlEncodeParams: [...new Set(encoded)], allowErrors: true, as: "response", ...assertions ? { assertions } : {}, ...capture ? { capture } : {}, ...before ? { before } : {}, ...after ? { after } : {}, ...finalHook ? { finally: finalHook } : {} };
+      const script = { description: description || `${req.method} ${e?.route.path || new URL(req.url).pathname}`, params, steps: [step], provenance: { schema: "dt.api-request", version: 1, ...e ? { exchange: e.id, source: e.source, route: e.route } : {} } };
+      S().validate(script);
+      return { schema: "dt.api-request", version: 1, request: req, params, script, ...e ? { exchange: e.id, route: e.route } : {}, mutation: !["GET", "HEAD", "OPTIONS"].includes(req.method) };
+    }
+    async function replay({ prepared, exchange, request, params = {}, timeoutMs = 3e4 } = {}) {
+      const p = prepared || prepare({ exchange, request });
+      if (p.schema !== "dt.api-request" || p.version !== 1) throw new Error("unsupported prepared request contract");
+      const clean = prepare({ request: p.request });
+      clean.script.params = p.params || clean.params;
+      const values = S().params(clean.script, params), step = clean.script.steps[0], encoded = { ...values };
+      for (const name of step.urlEncodeParams) if (encoded[name] !== void 0) encoded[name] = encodeURIComponent(String(encoded[name]));
+      const sent = { method: clean.request.method, url: S().fill(clean.request.url, encoded), headers: S().fill(clean.request.headers || {}, values), ...clean.request.body?.value !== void 0 ? { body: S().fill(clean.request.body.value, values) } : {} };
+      const result = await S().httpRequest(sent, { timeoutMs, allowErrors: true, maxResponseBytes: MAX_BODY });
+      const out2 = persist(normalize({ request: sent, response: result, time: result.ms }, { kind: "explicit-replay", note: p.exchange ? `replayed exchange ${p.exchange}` : "API client" }));
+      if (result.truncated) out2.gaps.push({ kind: "response-truncated", limit: MAX_BODY });
+      persist(out2);
+      R().learn([{ method: out2.request.method, url: out2.request.url, status: out2.response.status }], `exchange:${out2.id}`);
+      return out2;
+    }
+    function save({ id: scriptId, prepared, exchange, request, bindings, description, overwrite = false, tool = false, assertions, capture, before, after, finally: finalHook } = {}) {
+      if (prepared && (prepared.schema !== "dt.api-request" || prepared.version !== 1)) throw new Error("unsupported prepared request contract");
+      const prior = prepared?.script?.steps?.[0] || {};
+      assertions = assertions ?? prior.assertions;
+      capture = capture ?? prior.capture;
+      before = before ?? prior.before;
+      after = after ?? prior.after;
+      finalHook = finalHook ?? prior.finally;
+      description = description ?? prepared?.script?.description;
+      const provenance = prepared?.script?.provenance;
+      const origin = exchange || (prepared?.exchange ? { id: prepared.exchange, params: prepared.params || {}, route: provenance?.route || prepared.route || {}, source: provenance?.source } : void 0);
+      const p = prepare({ exchange: origin, request: request || prepared?.request, bindings, description, assertions, capture, before, after, finally: finalHook });
+      if (prepared?.params) p.script.params = prepared.params;
+      if (S().list().scripts.some((s) => s.id === scriptId) && !overwrite) throw new Error("script already exists; use overwrite explicitly");
+      const scrubbed = normalize({ request: p.request }, { kind: "saved-request" });
+      const safe = prepare({ request: scrubbed.request, description: description || p.script.description, assertions, capture, before, after, finally: finalHook });
+      const referenced = new Set([...JSON.stringify(safe.script.steps).matchAll(/\{\{([a-z_]\w*)\}\}/gi)].map((m) => m[1]));
+      safe.script.params = Object.fromEntries(Object.entries({ ...p.script.params, ...scrubbed.params }).filter(([k]) => referenced.has(k)).map(([k, v]) => {
+        const x = { ...v };
+        if (x.secret || SECRET.test(k)) {
+          delete x.default;
+          x.secret = true;
+          x.required = true;
+        }
+        return [k, x];
+      }));
+      safe.script.provenance = p.script.provenance;
+      safe.script.tool = tool;
+      return { ...S().save(scriptId, safe.script), params: safe.script.params, provenance: safe.script.provenance };
+    }
+    var sessions = /* @__PURE__ */ new Map();
+    var TTL = 15 * 6e4;
+    async function sessionGet(key) {
+      const s = sessions.get(key);
+      if (!s || Date.now() - s.used > TTL) {
+        if (s) {
+          sessions.delete(key);
+          clearTimeout(s.timer);
+          await s.browser.close();
+        }
+        throw new Error("browser session not found or idle for 15 minutes; open a new session");
+      }
+      s.used = Date.now();
+      armSession(key, s);
+      return s;
+    }
+    var captureInstall = `async (page) => {
+ if (page.__dtApiCapture) return { installed: true };
+ const store = page.__dtApiCapture = { entries: [], pending: new Set(), dropped: 0, sequence:0, bytes:0 };
+ const enqueue=entry=>{store.entries.push(entry);store.bytes+=JSON.stringify(entry).length*4;while(store.entries.length>${MAX_ENTRIES}||store.bytes>3*1048576){const removed=store.entries.shift();store.bytes-=JSON.stringify(removed).length*4;store.dropped++;}};
+ page.on('requestfinished', request => {
+  const sequence=++store.sequence;
+  if(store.pending.size>=16){store.dropped++;return;}
+  const job = (async () => { try {
+   const response = await request.response(); if (!response) return;
+   const headers = await response.allHeaders(); const length = Number(headers['content-length']);
+   const type = headers['content-type'] || ''; let body = { kind: 'unavailable', reason: 'Content length unknown or too large; import a bounded HAR body instead' };
+   const encoding=headers['content-encoding']||'identity';
+   if (encoding==='identity'&&Number.isFinite(length) && length >= 0 && length <= ${MAX_BODY} && /json|text|xml|x-www-form-urlencoded/i.test(type)) {body=await response.text();if(body.length>${MAX_BODY})body={kind:'unavailable',reason:'Decoded response exceeds body limit'};}
+   else if(encoding!=='identity')body={kind:'unavailable',reason:'Compressed response omitted to avoid unbounded decompression'};
+   else if (/image|audio|video|octet-stream|multipart/i.test(type)) body = {kind:'unsupported',reason:'Binary or multipart payload',bytes:length};
+   const post = request.postData();
+   enqueue({ sequence, request: {method:request.method(),url:request.url(),headers:await request.allHeaders(),body:post && post.length > ${MAX_BODY} ? {kind:'unsupported',reason:'Request body too large',bytes:post.length}:post}, response:{status:response.status(),statusText:response.statusText(),headers,body}, timing:{durationMs:Math.max(0,request.timing().responseEnd)} });
+  } catch(e) { enqueue({sequence,request:{method:request.method(),url:request.url()},error:'Response capture failed'}); } })();
+  store.pending.add(job); job.finally(() => store.pending.delete(job));
+ });
+ return {installed:true};
+}`;
+    var captureRead = `async (page) => { const s = page.__dtApiCapture; if (!s) return {entries:[],unavailable:true}; await Promise.race([Promise.allSettled([...s.pending]),new Promise(r=>setTimeout(r,1500))]); const entries=s.entries.splice(0).sort((a,b)=>a.sequence-b.sequence);s.bytes=0; const dropped=s.dropped;s.dropped=0; return {entries,dropped,pending:s.pending.size}; }`;
+    function armSession(key, s) {
+      clearTimeout(s.timer);
+      s.timer = setTimeout(() => {
+        if (sessions.get(key) === s) {
+          sessions.delete(key);
+          s.browser.close().catch(() => {
+          });
+        }
+      }, TTL);
+      s.timer.unref?.();
+    }
+    function toolJson(r) {
+      const text = r.text;
+      try {
+        return JSON.parse(text);
+      } catch {
+      }
+      const m = text.match(/### Result\s*\n([\s\S]*?)(?:\n###|$)/);
+      if (m) {
+        try {
+          return JSON.parse(m[1]);
+        } catch {
+        }
+      }
+      throw new Error("browser run_code did not return structured JSON");
+    }
+    function resultText(text) {
+      return String(text).replace(/^### Result\s*\n/, "").replace(/\n### [\s\S]*$/, "").trimEnd();
+    }
+    function nativeList(text) {
+      return [...String(text).matchAll(/^(\d+)\.\s+\[(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)\]\s+(https?:\/\/\S+)(?:[^\n]*)/gm)].map((m) => ({ index: Number(m[1]), method: m[2], url: m[3] }));
+    }
+    function nativeDetails(text, listed) {
+      const value = resultText(text), sections = {};
+      let current = "";
+      for (const line of value.split("\n")) {
+        const heading = line.match(/^  (General|Request headers|Response headers)\s*$/);
+        if (heading) {
+          current = heading[1];
+          sections[current] = {};
+          continue;
+        }
+        const field = line.match(/^    ([^:]+):\s*(.*)$/);
+        if (field && current) sections[current][field[1].trim().toLowerCase()] = field[2];
+      }
+      const general = sections.General || {}, status = String(general.status || "").match(/\[(\d{3})\]\s*(.*)/), duration = String(general.duration || "").match(/([\d.]+)ms/);
+      return { sequence: listed.index, request: { method: listed.method, url: listed.url, headers: sections["Request headers"] || {} }, response: { status: status ? Number(status[1]) : null, statusText: status?.[2] || "", headers: sections["Response headers"] || {} }, time: duration ? Number(duration[1]) : void 0 };
+    }
+    async function nativeCapture(s) {
+      const listed = nativeList((await s.browser.call("browser_network_requests", { static: false })).text).filter((r) => !s.seen.has(`${r.index} ${r.url}`));
+      const entries = [], gaps = [], deadline = Date.now() + 3e4;
+      let total = 0;
+      const call = (name, args) => s.browser.call(name, args, { timeout: Math.max(1, Math.min(s.browser.timeout || 3e4, deadline - Date.now())) });
+      for (const item of listed.slice(0, MAX_ENTRIES)) {
+        if (Date.now() >= deadline) {
+          gaps.push({ kind: "capture-budget", reason: "30 second detail budget reached; capture again to continue" });
+          break;
+        }
+        let e;
+        try {
+          e = nativeDetails((await call("browser_network_request", { index: item.index })).text, item);
+          for (const side of ["request", "response"]) {
+            const h = e[side].headers, type = h["content-type"] || "", length = h["content-length"] === void 0 ? NaN : Number(h["content-length"]);
+            if (side === "request" && ["GET", "HEAD", "OPTIONS"].includes(e.request.method)) continue;
+            if (length === 0) {
+              e[side].body = { kind: "none" };
+              continue;
+            }
+            if (Number.isFinite(length) && length > 0 && length <= MAX_BODY && (!h["content-encoding"] || h["content-encoding"] === "identity") && /json|text|xml|x-www-form-urlencoded/i.test(type)) {
+              const text = resultText((await call("browser_network_request", { index: item.index, part: side + "-body" })).text);
+              e[side].body = bytes(text) <= MAX_BODY ? text : { kind: "unsupported", reason: "Body exceeds capture limit", bytes: bytes(text) };
+            } else e[side].body = { kind: /image|audio|video|octet-stream|multipart/i.test(type) ? "unsupported" : "unavailable", reason: "Content length unknown, compressed or too large; use a bounded HAR body instead" };
+          }
+        } catch {
+          e = { ...item, metadataOnly: true, error: "Network detail unavailable" };
+        }
+        const size = bytes(e);
+        if (total + size > 3 * 1048576) {
+          gaps.push({ kind: "capture-budget", reason: "Batch reached 3 MiB; capture again to continue" });
+          break;
+        }
+        entries.push(e);
+        total += size;
+        if (e.response?.status) s.seen.add(`${item.index} ${item.url}`);
+        else gaps.push({ kind: "pending-response", index: item.index, reason: "Response not complete; capture again to retry" });
+      }
+      if (listed.length > MAX_ENTRIES) gaps.push({ kind: "capture-budget", reason: "Batch reached 100 exchanges; capture again to continue" });
+      return { entries, gaps };
+    }
+    async function browserOpen({ site, link, params = {}, url, timeoutMs } = {}) {
+      for (const [key2, s] of sessions) if (Date.now() - s.used > TTL) {
+        sessions.delete(key2);
+        clearTimeout(s.timer);
+        await s.browser.close();
+      }
+      if (sessions.size >= 20) throw new Error("20 active browser sessions; close one first");
+      const browser = require_browser_mcp().session({ timeout: timeoutMs || 3e4 }), key = id();
+      try {
+        const tools = await browser.tools();
+        const native = tools.some((t) => t.name === "browser_network_request"), codeTool = tools.some((t) => t.name === "browser_run_code") ? "browser_run_code" : null;
+        const detailed = native || !!codeTool;
+        if (!native && codeTool) await browser.call(codeTool, { code: captureInstall });
+        const target = url || (site ? require_config().siteUrl(link ? `${site}.${link}` : site, params) : null);
+        let page;
+        if (target) {
+          const u = new URL(target);
+          if (!/^https?:$/.test(u.protocol) || u.username || u.password) throw new Error("browser URL must use http(s) without inline credentials");
+          page = (await browser.call("browser_navigate", { url: target })).text;
+        }
+        const state = { browser, used: Date.now(), detailed, native, codeTool, tools, seen: /* @__PURE__ */ new Set(), site };
+        sessions.set(key, state);
+        armSession(key, state);
+        return { session: key, adapter: native ? "native-network" : codeTool ? "fixed-listener" : "network-list", mode: detailed ? "exchanges" : "metadata-only", ...page ? { page } : {}, next: "Inspect the UI with api_browser_action, then call api_browser_capture. This isolated session keeps browser cookies in the browser." };
+      } catch (e) {
+        await browser.close();
+        throw e;
+      }
+    }
+    async function browserAction({ session, action = "snapshot", args = {}, describe = false } = {}) {
+      const s = await sessionGet(session);
+      const allowed = ["snapshot", "navigate", "click", "type", "fill_form", "press_key", "select_option", "hover", "wait_for", "take_screenshot", "navigate_back", "network_requests"];
+      action = action.replace(/^browser_/, "");
+      if (!allowed.includes(action)) throw new Error(`unsupported browser action; choose ${allowed.join(", ")}`);
+      if (describe) {
+        const def = s.tools.find((t) => t.name === `browser_${action}`);
+        return { action, available: !!def, inputSchema: def?.inputSchema || { type: "object" }, description: def?.description || "" };
+      }
+      if (action === "navigate") {
+        const target = new URL(args.url);
+        if (!/^https?:$/.test(target.protocol) || target.username || target.password) throw new Error("browser URL must use http(s) without inline credentials");
+      }
+      if (["navigate", "navigate_back"].includes(action)) s.seen.clear();
+      return s.browser.call(`browser_${action}`, args);
+    }
+    async function browserCapture({ session, source } = {}) {
+      const s = await sessionGet(session);
+      let entries, captureGaps = [];
+      if (s.native) {
+        const result2 = await nativeCapture(s);
+        entries = result2.entries;
+        captureGaps = result2.gaps;
+      } else if (s.detailed) {
+        const result2 = toolJson(await s.browser.call(s.codeTool, { code: captureRead }));
+        entries = result2.entries || [];
+        if (result2.dropped) captureGaps.push({ kind: "capture-overflow", dropped: result2.dropped });
+        if (result2.pending) captureGaps.push({ kind: "pending-responses", count: result2.pending });
+      } else entries = R().parseNetwork((await s.browser.call("browser_network_requests", {})).text).map((e) => ({ ...e, metadataOnly: true }));
+      const result = importExchanges(entries, { kind: "playwright-mcp", session, site: s.site, note: source });
+      return { ...result, gaps: captureGaps, session, mode: s.detailed ? "exchanges" : "metadata-only" };
+    }
+    async function browserClose({ session }) {
+      const s = sessions.get(session);
+      if (s) {
+        sessions.delete(session);
+        clearTimeout(s.timer);
+        await s.browser.close();
+      }
+      return { session, closed: true };
+    }
+    function show(exchange) {
+      const e = typeof exchange === "string" ? get(exchange) : exchange;
+      const client = `${require_results().publicUrl()}/api-client?exchange=${encodeURIComponent(e.id)}`;
+      return { ...e, client, view: require_results().saveView("api-exchange", e, { title: `${e.request.method} ${e.route.path || "API exchange"}`, client }) };
+    }
+    module2.exports = { normalize, importExchanges, get, list, prepare, replay, save, browserOpen, browserAction, browserCapture, browserClose, show, MAX_BODY, DIR, captureInstall, captureRead, nativeList, nativeDetails };
+  }
+});
+
+// lib/tools-api-client.js
+var require_tools_api_client = __commonJS({
+  "lib/tools-api-client.js"(exports2, module2) {
+    module2.exports = ({ str, int }) => {
+      const obj = (description) => ({ type: "object", additionalProperties: true, description });
+      const C = () => require_api_client();
+      const decorated = (e) => C().show(e);
+      return [
+        { name: "api_exchange_import", logArgs: [], group: "api", description: "Import a HAR, structured request/response exchanges, or browser_network_requests text. Stores bounded sanitized v1 exchanges, removes cookies/credentials, and learns API routes with passport handler candidates. Network text has metadata-only gaps; no requests are replayed. Returns an interactive exchange view by default.", input: { data: { description: "HAR log.entries, exchange object/list, or network text; max 4 MiB and 100 entries" }, source: str("Provenance note, without credentials") }, required: ["data"], run: (a) => {
+          const r = C().importExchanges(a.data, { kind: "agent-import", note: a.source });
+          return { ...r, exchanges: r.exchanges.map((e) => ({ id: e.id, method: e.request.method, url: e.request.url, status: e.response.status, route: e.route, gaps: e.gaps })), ...r.count ? (() => {
+            const shown = decorated(r.exchanges[0]);
+            return { view: shown.view, client: shown.client };
+          })() : {} };
+        } },
+        { name: "api_exchange_list", logArgs: [], group: "api", description: "Search previously captured sanitized HTTP exchanges by method, URL, status or attributed service. Offline; returns exchange ids for inspection, preparation and reuse.", input: { q: str("Substring to match"), limit: int("Max records, at most 500", 50) }, run: (a) => ({ exchanges: C().list(a) }) },
+        { name: "api_exchange_get", logArgs: ["exchange"], group: "api", description: "Inspect an exchange independently: request/response headers, pretty JSON body, status, timing, redactions, capture gaps and all best matching passport handlers. Includes sandboxed interactive visualization and link to the trusted API client.", input: { exchange: str("Exchange id") }, required: ["exchange"], run: (a) => decorated(a.exchange) },
+        { name: "api_request_prepare", logArgs: ["exchange"], group: "api", description: 'Prepare an editable parameterized API request without sending it. Use an exchange id or explicit request {method,url,headers,body:{kind:"json|text|form|none",value}}. Bind named parameters to path segment index (initial slash is index 0), query key, header key, or dotted JSON body path. Secret params have no captured defaults. Returns a versioned contract and a normal saved-script definition.', input: { exchange: str("Optional captured exchange id"), request: obj("Explicit request overrides the captured request"), bindings: obj('Example {orderId:{in:"path",index:3},page:{in:"query",key:"page"},quantity:{in:"body",path:"items.0.quantity"}}'), description: str("Reusable request purpose"), assertions: { type: "array", items: obj("Named script assertion"), description: "Assertions retained when saving" } }, run: (a) => C().prepare(a) },
+        { name: "api_request_replay", logArgs: ["exchange"], group: "api", description: "EXPLICITLY SEND an HTTP request, including mutations. Call only when the user/workflow intends the action. Uses the existing scripts.http.allow URL boundaries, rate limits and timeout; never follows redirects or transfers browser cookies. No retry. Params supplied only for this run; result is sanitized, persisted and visualized with status/headers/JSON/timing. Prepare alone never sends traffic.", input: { prepared: obj("api_request_prepare versioned result"), exchange: str("Or exchange id"), request: obj("Or reviewed explicit request"), params: obj("Runtime parameter values (including credentials)"), timeoutMs: int("Request time limit, max 120000", 3e4) }, run: async (a) => decorated(await C().replay(a)) },
+        { name: "api_request_save", logArgs: ["id", "exchange"], group: "api", description: "Save a prepared/captured request as a reusable normal script in collection/name. Preserves route/source provenance, typed params, assertions, captures and supplied hooks. Collection vars/before/after/finally work through the existing script engine. Does not execute. Cookies are omitted and secrets become required runtime placeholders. Existing script requires overwrite=true.", input: { id: str("collection/request id"), prepared: obj("Prepared contract"), exchange: str("Or exchange id"), request: obj("Or explicit reviewed request"), bindings: obj("Explicit parameter locations"), description: str("What it does and when to use it"), tool: { type: "boolean", default: false, description: "Expose the saved request as an individual tool" }, overwrite: { type: "boolean", default: false }, assertions: { type: "array", items: obj("Script assertion") }, capture: obj('Capture names to response paths, e.g. {orderId:"json.id"}'), before: str("Existing script step before hook"), after: str("Existing script step after hook"), finally: str("Existing script step finally hook") }, required: ["id"], run: (a) => C().save(a) },
+        { name: "api_browser_open", logArgs: ["site", "link"], group: "browser", description: "Open an isolated Playwright MCP session with bounded network exchange capture enabled BEFORE navigation. Use browser site/link or URL. Cookies remain only in the browser. Uses native per-request network inspection when available, then a fixed browser_run_code adapter on older endpoints; missing both reports metadata-only mode. Returns session id; inspect UI with api_browser_action, then api_browser_capture. Idle sessions expire in 15 minutes.", input: { site: str("Configured browser site"), link: str("Site link"), params: obj("Link params"), url: str("Or explicit http(s) URL") }, run: (a) => C().browserOpen(a) },
+        { name: "api_browser_action", logArgs: ["session", "action"], group: "browser", description: "Inspect or interact with the UI in an existing capture session. Supports snapshot, navigate, click, type, fill_form, press_key, select_option, hover, wait_for, take_screenshot, navigate_back and network_requests with endpoint Playwright MCP args. describe=true returns the action schema without acting; legacy ref maps to target when the discovered schema requires it. UI actions may mutate application state; use intentionally. No browser credentials are exported.", input: { session: str("api_browser_open session"), action: str("Playwright action without browser_ prefix"), args: obj("Standard action args"), describe: { type: "boolean", default: false, description: "Inspect this action schema without executing" } }, required: ["session"], run: (a) => C().browserAction(a) },
+        { name: "api_browser_capture", logArgs: ["session"], group: "browser", description: "Drain captured exchanges from a browser session, learn routes, retain provenance and return ids + interactive response view. Does not replay requests. Reports missing bodies, response still pending, unsupported content and capture overflow explicitly. Session stays open for the next UI action.", input: { session: str("Capture session id"), source: str("What UI action these exchanges explain") }, required: ["session"], run: async (a) => {
+          const r = await C().browserCapture(a);
+          return { ...r, exchanges: r.exchanges.map((e) => ({ id: e.id, method: e.request.method, url: e.request.url, status: e.response.status, route: e.route, gaps: e.gaps })), ...r.count ? (() => {
+            const shown = decorated(r.exchanges[0]);
+            return { view: shown.view, client: shown.client };
+          })() : {} };
+        } },
+        { name: "api_browser_close", logArgs: ["session"], group: "browser", description: "Close an isolated capture session and discard its browser cookies. Sanitized saved exchanges remain available. Idempotent.", input: { session: str("Session to close") }, required: ["session"], run: (a) => C().browserClose(a) }
+      ];
+    };
+  }
+});
+
 // lib/browser.js
 var require_browser = __commonJS({
   "lib/browser.js"(exports2, module2) {
@@ -38633,6 +42337,176 @@ var require_browser = __commonJS({
       return { file: FILE, names: Object.keys(vals), changed: old !== text };
     }
     module2.exports = { writeSecrets, FILE };
+  }
+});
+
+// lib/schema.js
+var require_schema = __commonJS({
+  "lib/schema.js"(exports2, module2) {
+    var { isDeepStrictEqual } = require("util");
+    var known = new Set("$schema $id $comment title description default examples deprecated readOnly writeOnly contentMediaType contentEncoding format $defs definitions $ref type enum const allOf anyOf oneOf not if then else minimum maximum exclusiveMinimum exclusiveMaximum multipleOf minLength maxLength pattern items prefixItems contains minContains maxContains minItems maxItems uniqueItems properties patternProperties additionalProperties required dependentRequired dependentSchemas propertyNames minProperties maxProperties".split(" "));
+    function validate(value, schema, { maxNodes = 1e5 } = {}) {
+      const issues = [];
+      let visited = 0;
+      const bad = (path2, message) => {
+        if (issues.length < 20) issues.push({ path: path2, message });
+      };
+      function visit(v, s, p, depth = 0) {
+        if (++visited > maxNodes || depth > 64) {
+          bad(p, "input exceeds structural budget");
+          return;
+        }
+        if (s === false) {
+          bad(p, "value is not allowed");
+          return;
+        }
+        if (!s || s === true) return;
+        if (typeof s !== "object" || Array.isArray(s)) {
+          bad(p, "schema must be an object or boolean");
+          return;
+        }
+        for (const key of Object.keys(s)) if (!known.has(key) && !key.startsWith("x-")) bad(p, `unsupported schema assertion ${key}`);
+        if (s.$ref) {
+          bad(p, "unresolved schema reference");
+          return;
+        }
+        for (const op of ["allOf", "anyOf", "oneOf"]) if (s[op]) {
+          const results = s[op].map((x) => validate(v, x, { maxNodes: Math.min(maxNodes, 1e4) }).length === 0);
+          if (op === "allOf" ? results.some((x) => !x) : op === "anyOf" ? !results.some(Boolean) : results.filter(Boolean).length !== 1) bad(p, `does not satisfy ${op}`);
+        }
+        if (s.not && !validate(v, s.not, { maxNodes: 1e4 }).length) bad(p, "matches a forbidden schema");
+        if (s.if !== void 0) visit(v, validate(v, s.if, { maxNodes: 1e4 }).length ? s.else : s.then, p, depth + 1);
+        const type = (t) => t === "null" ? v === null : t === "array" ? Array.isArray(v) : t === "object" ? v !== null && typeof v === "object" && !Array.isArray(v) : t === "integer" ? Number.isInteger(v) : t === "number" ? typeof v === "number" && Number.isFinite(v) : typeof v === t;
+        if (s.type && ![].concat(s.type).some(type)) {
+          bad(p, `must be ${[].concat(s.type).join(" or ")}`);
+          return;
+        }
+        if (s.enum && !s.enum.some((x) => isDeepStrictEqual(x, v))) bad(p, "must be an allowed value");
+        if (Object.hasOwn(s, "const") && !isDeepStrictEqual(s.const, v)) bad(p, "must equal the declared constant");
+        if (typeof v === "string") {
+          if (s.minLength !== void 0 && [...v].length < s.minLength) bad(p, `minimum length is ${s.minLength}`);
+          if (s.maxLength !== void 0 && [...v].length > s.maxLength) bad(p, `maximum length is ${s.maxLength}`);
+          if (s.pattern && !new RegExp(s.pattern, "u").test(v)) bad(p, "does not match the required pattern");
+        }
+        if (typeof v === "number") {
+          for (const [key, fails] of [["minimum", (n) => v < n], ["maximum", (n) => v > n], ["exclusiveMinimum", (n) => v <= n], ["exclusiveMaximum", (n) => v >= n]]) if (s[key] !== void 0 && fails(s[key])) bad(p, `violates ${key}`);
+          if (s.multipleOf !== void 0 && (!(s.multipleOf > 0) || Math.abs(v / s.multipleOf - Math.round(v / s.multipleOf)) > 1e-10)) bad(p, "violates multipleOf");
+        }
+        if (Array.isArray(v)) {
+          if (s.minItems !== void 0 && v.length < s.minItems) bad(p, `minimum items is ${s.minItems}`);
+          if (s.maxItems !== void 0 && v.length > s.maxItems) bad(p, `maximum items is ${s.maxItems}`);
+          const canonical = (x, depth2 = 0) => depth2 > 64 ? '"[too deep]"' : x && typeof x === "object" ? Array.isArray(x) ? `[${x.map((y) => canonical(y, depth2 + 1)).join(",")}]` : `{${Object.keys(x).sort().map((k) => `${JSON.stringify(k)}:${canonical(x[k], depth2 + 1)}`).join(",")}}` : JSON.stringify(x);
+          if (s.uniqueItems && new Set(v.map((x) => canonical(x))).size !== v.length) bad(p, "items must be unique");
+          if (s.contains !== void 0) {
+            const count = v.filter((x) => !validate(x, s.contains, { maxNodes: 1e4 }).length).length;
+            if (count < (s.minContains ?? 1) || s.maxContains !== void 0 && count > s.maxContains) bad(p, "violates contains count");
+          }
+          v.forEach((x, i) => visit(x, s.prefixItems?.[i] ?? s.items, `${p}[${i}]`, depth + 1));
+        } else if (v && typeof v === "object") {
+          if (s.minProperties !== void 0 && Object.keys(v).length < s.minProperties || s.maxProperties !== void 0 && Object.keys(v).length > s.maxProperties) bad(p, "violates property count");
+          for (const k of s.required || []) if (!Object.hasOwn(v, k) || v[k] === void 0) bad(`${p}.${k}`, "required");
+          for (const [key, required] of Object.entries(s.dependentRequired || {})) if (Object.hasOwn(v, key)) {
+            for (const dep of required) if (!Object.hasOwn(v, dep)) bad(`${p}.${dep}`, `required with ${key}`);
+          }
+          for (const [key, schema2] of Object.entries(s.dependentSchemas || {})) if (Object.hasOwn(v, key)) visit(v, schema2, p, depth + 1);
+          for (const [k, x] of Object.entries(v)) {
+            if (x === void 0) continue;
+            if (s.propertyNames) visit(k, s.propertyNames, `${p}.${k}`, depth + 1);
+            let matched = false;
+            if (Object.hasOwn(s.properties || {}, k)) {
+              visit(x, s.properties[k], `${p}.${k}`, depth + 1);
+              matched = true;
+            }
+            for (const [pattern, schema2] of Object.entries(s.patternProperties || {})) if (new RegExp(pattern, "u").test(k)) {
+              visit(x, schema2, `${p}.${k}`, depth + 1);
+              matched = true;
+            }
+            if (!matched && s.additionalProperties === false) bad(`${p}.${k}`, "unknown property");
+            else if (!matched && typeof s.additionalProperties === "object") visit(x, s.additionalProperties, `${p}.${k}`, depth + 1);
+          }
+        }
+      }
+      visit(value, schema, "$");
+      return issues;
+    }
+    function assert(value, schema) {
+      let text;
+      try {
+        text = JSON.stringify(value);
+      } catch {
+        throw Object.assign(new Error("Arguments must be JSON serializable"), { code: "DT_ARGUMENT_INVALID" });
+      }
+      const maxInputBytes = require_config().getTools().maxInputBytes;
+      if (text === void 0 || Buffer.byteLength(text) > maxInputBytes) throw Object.assign(new Error(`Arguments exceed ${maxInputBytes} bytes`), { code: "DT_ARGUMENT_INVALID" });
+      const issues = validate(value, schema);
+      if (issues.length) throw Object.assign(new Error(`Invalid argument ${issues[0].path}: ${issues[0].message}`), { code: "DT_ARGUMENT_INVALID", issues });
+      return value;
+    }
+    module2.exports = { validate, assert };
+  }
+});
+
+// contracts/v1/tool-response.schema.json
+var require_tool_response_schema = __commonJS({
+  "contracts/v1/tool-response.schema.json"(exports2, module2) {
+    module2.exports = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "urn:dt:tool-response:v1",
+      title: "dt.tool/v1 response",
+      type: "object",
+      required: ["protocol", "requestId", "tool"],
+      properties: {
+        protocol: { const: "dt.tool/v1" },
+        requestId: { type: "string", minLength: 1 },
+        tool: { type: "string" },
+        result: {},
+        error: { type: "object", required: ["code", "message"], properties: { code: { type: "string", minLength: 1 }, message: { type: "string", minLength: 1 }, retryable: { type: "boolean" } }, additionalProperties: true }
+      },
+      oneOf: [{ required: ["result"], not: { required: ["error"] } }, { required: ["error"], not: { required: ["result"] } }],
+      additionalProperties: false
+    };
+  }
+});
+
+// lib/adapter-port.js
+var require_adapter_port = __commonJS({
+  "lib/adapter-port.js"(exports2, module2) {
+    var crypto = require("crypto");
+    var PROTOCOL = "dt.tool/v1";
+    function route(name) {
+      const backends = require_config().getTools().backends;
+      if (Object.hasOwn(backends, name)) return backends[name];
+      const prefix = Object.keys(backends).filter((k) => k.endsWith("*") && name.startsWith(k.slice(0, -1))).sort((a, b) => b.length - a.length)[0];
+      return prefix ? backends[prefix] : null;
+    }
+    async function execute(tool, args, backend, { signal } = {}) {
+      const url = new URL(backend.url);
+      if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.hash) throw new Error("Tool backend needs an HTTP(S) URL without credentials or fragment");
+      const timeoutMs = backend.timeoutMs ?? 3e4;
+      if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 12e4) throw new Error("Tool backend timeoutMs must be 1..120000");
+      const request = { protocol: PROTOCOL, requestId: crypto.randomUUID(), tool, arguments: args };
+      const localSignal = AbortSignal.timeout(timeoutMs);
+      const response = await fetch(url, { method: "POST", redirect: "error", signal: signal ? AbortSignal.any([localSignal, signal]) : localSignal, headers: { "content-type": "application/json", accept: "application/json", ...backend.token ? { authorization: `Bearer ${backend.token}` } : {} }, body: JSON.stringify(request) });
+      if (!response.ok) throw Object.assign(new Error(`Tool backend ${tool}: HTTP ${response.status}; execution outcome may be unknown`), { code: "DT_BACKEND_FAILED", requestId: request.requestId });
+      let bytes = 0;
+      const chunks = [];
+      for await (const chunk of response.body || []) {
+        bytes += chunk.length;
+        if (bytes > 20 * 1024 * 1024) throw new Error("Tool backend response exceeds 20 MiB");
+        chunks.push(chunk);
+      }
+      let body;
+      try {
+        body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+      } catch {
+        throw new Error("Tool backend returned invalid JSON; execution outcome may be unknown");
+      }
+      const issues = require_schema().validate(body, require_tool_response_schema());
+      if (issues.length || body.requestId !== request.requestId || body.tool !== tool) throw Object.assign(new Error("Tool backend contract mismatch; execution outcome may be unknown"), { code: "DT_BACKEND_CONTRACT", requestId: request.requestId });
+      if (Object.hasOwn(body, "error")) throw Object.assign(new Error(require_redact().clean(body.error.message, { known: [backend.token] })), { code: body.error.code, requestId: request.requestId });
+      return body.result;
+    }
+    module2.exports = { PROTOCOL, route, execute };
   }
 });
 
@@ -39119,7 +42993,7 @@ var require_tools = __commonJS({
         name: "script_collection",
         group: "scripts",
         description: "Describe a collection of scripts, and optionally make it a tool of its own: the tool lists its scripts and runs one by name. Give a description that says when to use it.",
-        input: { collection: str('Collection, e.g. "orders/support" (created if missing)'), description: str("What the scripts in it are for"), tool: { type: "boolean", default: false, description: "Expose the collection as a tool" }, tool_name: str("Tool name (default: from the collection path)") },
+        input: { collection: str('Collection, e.g. "orders/support" (created if missing)'), description: str("What the scripts in it are for"), tool: { type: "boolean", description: "Expose the collection as a tool; omitted preserves current value" }, tool_name: str("Tool name (default: from the collection path)"), vars: { type: "object", additionalProperties: true, description: "Inherited script vars; omitted preserves them" }, before: str("Before each script"), after: str("After successful script"), finally: str("Cleanup after every script, including errors") },
         required: ["collection"],
         run: (a) => {
           const S = require_scripts();
@@ -39128,7 +43002,7 @@ var require_tools = __commonJS({
           } catch {
             S.mkdir(a.collection);
           }
-          return S.setCollection(a.collection, { description: a.description || "", tool: a.tool ? a.tool_name || true : false });
+          return S.setCollection(a.collection, { ...a.description !== void 0 ? { description: a.description } : {}, ...a.tool !== void 0 || a.tool_name !== void 0 ? { tool: a.tool === false ? false : a.tool_name || true } : {}, ...Object.fromEntries(["vars", "before", "after", "finally"].filter((k) => a[k] !== void 0).map((k) => [k, a[k]])) });
         }
       },
       {
@@ -39148,10 +43022,15 @@ var require_tools = __commonJS({
           description: str("What it does and when to use it"),
           params: { type: "object", description: 'Params: {"orderId": {"description": "...", "required": true}, "env": {"default": "dev"}}', additionalProperties: true },
           steps: { type: "array", description: "Steps, see the tool description", items: { type: "object", additionalProperties: true } },
-          tool: str("Optional: a tool name to expose this script as its own tool (lowercase, _)")
+          tool: str("Optional: a tool name to expose this script as its own tool (lowercase, _)"),
+          vars: { type: "object", additionalProperties: true, description: "Script vars inherited by steps" },
+          before: str("Script setup JavaScript"),
+          after: str("Success hook JavaScript"),
+          finally: str("Cleanup JavaScript, including setup/step failures"),
+          tags: { type: "array", items: { type: "string" }, description: "Collection suite selection tags" }
         },
         required: ["id", "description", "steps"],
-        run: (a) => require_scripts().save(a.id, { description: a.description, params: a.params || {}, steps: a.steps, ...a.tool ? { tool: a.tool } : {} })
+        run: (a) => require_scripts().save(a.id, { description: a.description, ...a.params !== void 0 ? { params: a.params } : {}, steps: a.steps, ...a.tool !== void 0 ? { tool: a.tool } : {}, ...Object.fromEntries(["vars", "before", "after", "finally", "tags"].filter((k) => a[k] !== void 0).map((k) => [k, a[k]])) }, { merge: true })
       },
       {
         name: "script_run",
@@ -39469,6 +43348,12 @@ var require_tools = __commonJS({
       t.origin = "built-in";
     }
     TOOLS.push(...require_tools_dev()({ str, int, env }).map((t) => ({ ...t, origin: "built-in" })));
+    TOOLS.push(...require_tools_discovery()({ str, int, registry: () => schemas({ metadata: true }) }).map((t) => ({ ...t, origin: "built-in" })));
+    TOOLS.push(...require_tools_knowledge()({ str, int, env }).map((t) => ({ ...t, origin: "built-in" })));
+    TOOLS.push(...require_tools_collections()({ str, int, env }).map((t) => ({ ...t, origin: "built-in" })));
+    TOOLS.push(...require_tools_testdb()({ str, int, env }).map((t) => ({ ...t, origin: "built-in" })));
+    TOOLS.push(...require_tools_scenario_runtime()().map((t) => ({ ...t, origin: "built-in" })));
+    TOOLS.push(...require_tools_api_client()({ str, int, env }).map((t) => ({ ...t, origin: "built-in" })));
     var ctx = { tabular, clip, getEnv: (e) => require_config().getEnv(e), pg: () => require_pg(), http: require_util().http, limit };
     var PARAM_TYPES = /* @__PURE__ */ new Set(["string", "integer", "number", "boolean"]);
     function paramsSchema(params = {}) {
@@ -39697,11 +43582,12 @@ var require_tools = __commonJS({
     }
     var liveEnv = () => ({ ...env, enum: envNames2(), default: envNames2()[0] });
     var props = (input) => Object.fromEntries(Object.entries(input).map(([k, v]) => [k, v === env ? liveEnv() : v]));
-    async function schemas() {
+    async function schemas({ profile = "all", metadata = false } = {}) {
       const r = await ready();
-      return r.active.map((t) => ({
+      return require_tool_profiles().select(r.active, profile).map((t) => ({
         name: t.name,
         description: t.description,
+        ...metadata ? { group: t.group, origin: t.origin, execution: { protocol: "dt.tool/v1", transport: require_adapter_port().route(t.name) ? "http" : "in-process", ...t.adapterSchema ? { resultSchema: t.adapterSchema } : {} } } : {},
         inputSchema: { type: "object", properties: props(t.input), required: t.required || [] }
       }));
     }
@@ -39709,9 +43595,18 @@ var require_tools = __commonJS({
       const T = require_trace();
       const parent = T.current();
       const started = Date.now();
+      const registry = await ready(), redactions = require_redact().values(args);
+      const evidenceArgs = (tool, input, depth = 0) => {
+        if (depth > 3) return { argumentsOmitted: true };
+        if (tool === "tool_execute" && input && typeof input === "object") return { name: input.name, arguments: evidenceArgs(input.name, input.arguments, depth + 1) };
+        const fields = registry.byName[tool]?.logArgs;
+        if (!Array.isArray(fields)) return input;
+        return { ...Object.fromEntries(fields.filter((key) => Object.hasOwn(input || {}, key) && (input[key] === null || ["string", "number", "boolean"].includes(typeof input[key]))).map((key) => [key, input[key]])), argumentsOmitted: true };
+      };
+      const logged = evidenceArgs(name, args);
       let ok = false, error, size, steps;
       try {
-        const r = await T.call(name, args, { source, session: session || parent?.session }, async () => {
+        const r = await T.call(name, logged, { source, session: session || parent?.session, redactions }, async () => {
           try {
             return await callTool(name, args);
           } finally {
@@ -39728,17 +43623,25 @@ var require_tools = __commonJS({
         error = e.message;
         throw e;
       } finally {
-        require_calls().record({ tool: name, args, source, ok, ms: Date.now() - started, error, size, steps });
+        require_calls().record({ tool: name, args: logged, source, ok, ms: Date.now() - started, error, size, steps, redactions });
       }
     }
     async function callTool(name, args = {}) {
       const t = (await ready()).byName[name];
-      if (!t) throw new Error(`Unknown tool ${name}`);
+      if (!t) throw Object.assign(new Error(`Unknown tool ${name}`), { code: "DT_TOOL_UNKNOWN" });
+      if (!args || typeof args !== "object" || Array.isArray(args)) throw Object.assign(new Error("Tool arguments must be an object"), { code: "DT_ARGUMENT_INVALID" });
       const a = { ...args };
       for (const [k, s] of Object.entries(props(t.input))) if (a[k] === void 0 && s.default !== void 0) a[k] = s.default;
-      for (const k of t.required || []) if (a[k] === void 0 || a[k] === "") throw new Error(`Missing argument: ${k}`);
+      for (const k of t.required || []) if (a[k] === void 0 || a[k] === "") throw Object.assign(new Error(`Missing argument: ${k}`), { code: "DT_ARGUMENT_INVALID", issues: [{ path: `$.${k}`, message: "required" }] });
+      require_schema().assert(a, { type: "object", properties: props(t.input), required: t.required || [] });
       if (t.limit) await limit.take(t.limit(a));
-      return t.run(a);
+      const backend = require_adapter_port().route(name);
+      const value = await (backend ? require_adapter_port().execute(name, a, backend) : t.run(a));
+      if (t.adapterSchema) {
+        const issues = require_schema().validate(value, t.adapterSchema);
+        if (issues.length) throw Object.assign(new Error(`Tool result violates ${name} adapter contract: ${issues[0].path} ${issues[0].message}`), { code: "DT_BACKEND_CONTRACT", issues });
+      }
+      return t.present ? t.present(value, a) : value;
     }
     async function groups() {
       const r = await ready();
@@ -39769,6 +43672,16 @@ var require_webui = __commonJS({
     var { http: http2 } = require_util();
     var PROMPT_FILE = path2.join(__dirname, "agent-prompt.md");
     var prompt = () => fs2.readFileSync(PROMPT_FILE, "utf8").trim();
+    function modelPrompt(previous = "") {
+      const current = prompt(), section = `<dt-tools-instructions>
+${current}
+</dt-tools-instructions>`;
+      const old = String(previous || "").trim();
+      if (old.includes("<dt-tools-instructions>")) return old.replace(/<dt-tools-instructions>[\s\S]*?<\/dt-tools-instructions>/, section);
+      return !old || old === current ? section : `${old}
+
+${section}`;
+    }
     async function waitFor(base, ms = 18e4) {
       const until = Date.now() + ms;
       for (; ; ) {
@@ -39781,15 +43694,16 @@ var require_webui = __commonJS({
         await new Promise((r) => setTimeout(r, 3e3));
       }
     }
-    function dtConnection(dtUrl, dtKey) {
+    function dtConnection(dtUrl, dtKey, { profile = "all" } = {}) {
+      if (!/^[a-z][\w-]*$/.test(profile)) throw new Error("Invalid tool profile");
       return {
         type: "openapi",
         url: dtUrl.replace(/\/$/, ""),
-        path: "openapi.json",
+        path: profile === "all" ? "openapi.json" : `openapi/${profile}.json`,
         auth_type: dtKey ? "bearer" : "none",
         key: dtKey || "",
         config: { enable: true },
-        info: { id: "dt", name: "dt", description: "Postgres, Elasticsearch, Kafka, Consul, logs, Bitbucket, service passports (read-only)" }
+        info: { id: "dt", name: "dt", description: `Microservice investigation and isolated testing (${profile}); interactive results enabled` }
       };
     }
     async function register(base, auth, conn, log) {
@@ -39804,13 +43718,14 @@ var require_webui = __commonJS({
       key = process.env.WEBUI_API_KEY,
       dtUrl = process.env.DT_URL_FOR_WEBUI,
       dtKey = process.env.DT_API_KEY,
-      log = console.error
+      log = console.error,
+      profile = process.env.DT_TOOL_PROFILE || require_config().getTools().profile
     } = {}) {
       base = base.replace(/\/$/, "");
       await waitFor(base);
       const token = key || (await http2(`${base}/api/v1/auths/signin`, { method: "POST", body: { email: "", password: "" } })).token;
       const auth = { authorization: `Bearer ${token}` };
-      if (dtUrl) await register(base, auth, dtConnection(dtUrl, dtKey), log);
+      if (dtUrl) await register(base, auth, dtConnection(dtUrl, dtKey, { profile }), log);
       let tools = [];
       for (let i = 0; i < 20 && !tools.length; i++) {
         tools = await http2(`${base}/api/v1/tools/`, { headers: auth }).catch(() => []);
@@ -39827,7 +43742,7 @@ var require_webui = __commonJS({
           base_model_id: existing?.base_model_id ?? null,
           name: existing?.name || id,
           meta: { ...existing?.meta || {}, toolIds, capabilities: { ...existing?.meta?.capabilities || {}, function_calling: true } },
-          params: { ...existing?.params || {}, system: prompt(), function_calling: "native" },
+          params: { ...existing?.params || {}, system: modelPrompt(existing?.params?.system), function_calling: "native" },
           access_control: existing?.access_control ?? null,
           is_active: true
         };
@@ -39838,7 +43753,7 @@ var require_webui = __commonJS({
       }
       return { models: done, toolIds };
     }
-    module2.exports = { setup, prompt, dtConnection };
+    module2.exports = { setup, prompt, modelPrompt, dtConnection };
   }
 });
 
@@ -40069,7 +43984,17 @@ var require_server2 = __commonJS({
     }
     var readJsonBody = (req) => new Promise((resolve, reject) => {
       const chunks = [];
-      req.on("data", (c) => chunks.push(c)).on("error", reject).on("end", () => {
+      let size = 0, failed = false;
+      req.on("data", (c) => {
+        if (failed) return;
+        size += c.length;
+        if (size > require_config().getTools().maxInputBytes) {
+          failed = true;
+          chunks.length = 0;
+          reject(Object.assign(new Error("Request body exceeds configured input budget"), { code: "DT_ARGUMENT_INVALID", statusCode: 413 }));
+        } else chunks.push(c);
+      }).on("error", reject).on("end", () => {
+        if (failed) return;
         try {
           resolve(chunks.length ? JSON.parse(Buffer.concat(chunks)) : {});
         } catch (e) {
@@ -40077,6 +44002,7 @@ var require_server2 = __commonJS({
         }
       });
     });
+    var errorPayload = (e) => require_redact().clean({ error: e.message, ...e.code ? { code: e.code } : {}, ...e.issues ? { issues: e.issues } : {} });
     var cookie = (req, name) => (String(req.headers.cookie || "").match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`)) || [])[1];
     function sameSecret(a, b) {
       const x = Buffer.from(String(a || "")), y = Buffer.from(String(b || ""));
@@ -40135,7 +44061,7 @@ var require_server2 = __commonJS({
             const result = await tools.call(msg.params.name, msg.params.arguments || {}, { source: "mcp" });
             return reply({ content: [{ type: "text", text: typeof result === "string" ? result : JSON.stringify(result) }] });
           } catch (e) {
-            return reply({ content: [{ type: "text", text: `Error: ${e.message}` }], isError: true });
+            return reply({ content: [{ type: "text", text: `Error: ${errorPayload(e).error}` }], structuredContent: errorPayload(e), isError: true });
           }
         }
         default:
@@ -40155,9 +44081,9 @@ var require_server2 = __commonJS({
       res.end(fs2.readFileSync(path2.join(__dirname, "web", file)));
     };
     var viewPage = page("view.html");
-    async function openapi() {
+    async function openapi(profile = require_config().getTools().profile) {
       const paths = {};
-      for (const t of await tools.schemas()) {
+      for (const t of await tools.schemas({ profile })) {
         paths[`/oapi/${t.name}`] = {
           post: {
             operationId: t.name,
@@ -40168,7 +44094,7 @@ var require_server2 = __commonJS({
           }
         };
       }
-      return { openapi: "3.1.0", info: { title: "dt", version: VERSION, description: "Read-only dev/uat infrastructure tools" }, paths };
+      return { openapi: "3.1.0", info: { title: `dt (${profile})`, version: VERSION, description: "Microservice investigation and isolated testing tools. Profile selects discovery, not permissions." }, "x-dt-profile": profile, paths };
     }
     async function oapi(req, res, url) {
       const name = url.pathname.split("/").pop();
@@ -40177,17 +44103,18 @@ var require_server2 = __commonJS({
       try {
         result = await tools.call(name, await readJsonBody(req), { source: "openapi", session });
       } catch (e) {
-        return send(res, 400, { error: e.message });
+        return send(res, e.statusCode || 400, errorPayload(e));
       }
       const target = result && typeof result === "object" && (result.view || result.dashboard);
       const embed = typeof target === "string" ? target + (target.includes("?") ? "&" : "?") + "embed=1" : null;
-      if (embed) return send(res, 200, ["embed", result], { "content-disposition": "inline", location: embed });
+      if (embed) return send(res, 200, ["embed", result], { "content-disposition": "inline", location: embed, "access-control-expose-headers": "Content-Disposition, Location" });
       send(res, 200, result);
     }
     var admin = require_admin();
     var tokenOk = (url, value) => results.verify(value, url.searchParams.get("t"));
     var CORS = { "access-control-allow-origin": "*" };
     var routes = [
+      ["GET", "/api-client", true, page("api-client.html")],
       ["GET", "/", false, (req, res) => send(res, 200, { name: "dt", mcp: "/mcp", openapi: "/openapi.json", tools: "/api/tools", status: "/api/status", admin: "/admin", results: "/view", prompt: "/api/prompt" })],
       ["GET", "/health", false, (req, res) => send(res, 200, { ok: true, version: VERSION })],
       ["GET", "/api/status", false, (req, res) => send(res, 200, { trusted: trusted(req), ...status() })],
@@ -40196,15 +44123,25 @@ var require_server2 = __commonJS({
         res.end(require_webui().prompt());
       }],
       ["GET", "/api/find", true, (req, res, url) => send(res, 200, catalog.find(url.searchParams.get("env") || envNames2()[0], url.searchParams.get("q") || "", { limit: Number(url.searchParams.get("limit")) || 300 }))],
-      ["GET", "/api/tools", false, async (req, res) => send(res, 200, await tools.schemas())],
+      ["GET", "/api/tools", false, async (req, res, url) => send(res, 200, await tools.schemas({ profile: url.searchParams.get("profile") || "all" }))],
       ["POST", "/api/tool/*", true, async (req, res, url) => {
         try {
           send(res, 200, { result: await tools.call(url.pathname.split("/").pop(), await readJsonBody(req), { source: "api" }) });
         } catch (e) {
-          send(res, 400, { error: e.message });
+          send(res, e.statusCode || 400, errorPayload(e));
         }
       }],
-      ["GET", "/openapi.json", false, async (req, res) => send(res, 200, await openapi())],
+      ["GET", "/openapi.json", false, async (req, res, url) => send(res, 200, await openapi(url.searchParams.get("profile") || void 0))],
+      ["GET", "/openapi/*", false, async (req, res, url) => {
+        const name = url.pathname.slice("/openapi/".length);
+        if (!/^[a-z][\w-]*\.json$/.test(name)) return send(res, 404, { error: "Unknown profile URL" });
+        send(res, 200, await openapi(name.slice(0, -5)));
+      }],
+      ["GET", "/contracts/*", false, (req, res, url) => {
+        const full = require_contracts().resolve(url.pathname.slice("/contracts/".length));
+        if (!full) return send(res, 404, { error: "Unknown contract" });
+        send(res, 200, fs2.readFileSync(full, "utf8"), CORS);
+      }],
       ["POST", "/oapi/*", true, oapi],
       // admin: watch, edit and refresh the index
       ["GET", "/admin", false, (req, res, url) => {
@@ -40478,7 +44415,7 @@ var require_server2 = __commonJS({
           if (route[2] && !trusted(req)) return send(res, 403, { error: "not allowed: call from this machine, send Authorization: Bearer <DT_API_KEY>, or set DT_TRUST_NETWORK=1" });
           await route[3](req, res, url);
         } catch (e) {
-          if (!res.headersSent) send(res, 500, { error: e.message });
+          if (!res.headersSent) send(res, e.statusCode || (e.code === "DT_PROFILE_UNKNOWN" || e.code === "DT_ARGUMENT_INVALID" ? 400 : 500), errorPayload(e));
           else res.end();
         }
       });
@@ -40713,7 +44650,8 @@ var commands = {
       ...o("key") && { key: o("key") },
       ...o("model") && { model: o("model") },
       ...o("dt-url") && { dtUrl: o("dt-url") },
-      ...o("dt-key") && { dtKey: o("dt-key") }
+      ...o("dt-key") && { dtKey: o("dt-key") },
+      ...o("profile") && { profile: o("profile") }
     });
   },
   // Container entry point.
