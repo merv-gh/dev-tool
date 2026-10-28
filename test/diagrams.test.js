@@ -242,7 +242,7 @@ test('viewer config disables Mermaid HTML labels globally before rendering multi
   const context = {
     DATA:{ model:view.sample.model, diagrams:[{name:'Context',format:'mermaid',source:write(view.sample.model,{view:'context'})}] }, META:{},
     dt:{ $:lookup, title() {} }, window:{},
-    document:{createElement:name => new Element(name),createElementNS:(_ns,name) => new Element(name),importNode:node => node},
+    document:{documentElement:new Element('html'),createElement:name => new Element(name),createElementNS:(_ns,name) => new Element(name),importNode:node => node},
     matchMedia:() => ({matches:false}), ResizeObserver:class { observe() {} },
     DOMParser:class { parseFromString(value) { parsedSvg = value; const invalid = value.includes('<br>'); const svg = new Element('svg'); svg.setAttribute('viewBox','0 0 300 150'); parsedLabel = new Element('text'); parsedLabel.textContent = '&#91;HTTP&#93; &amp; &#60;script&#62;'; svg.querySelectorAll = selector => selector === '*' || selector === 'text,tspan' ? [parsedLabel] : []; return { documentElement:svg, querySelector:() => invalid ? {textContent:'Opening and ending tag mismatch: br line 1 and p'} : null }; } },
     mermaid:{ initialize(value) {config = value;}, async render(_id,input) { renderedInput = input; return {svg:config.htmlLabels === false ? xmlSvg : malformedHtmlSvg}; } },
@@ -257,6 +257,19 @@ test('viewer config disables Mermaid HTML labels globally before rendering multi
   assert.equal(parsedLabel.textContent,'[HTTP] & <script>','Mermaid escape artifacts become text, never parsed markup');
   assert.equal(lookup('#diagram-download-svg').disabled,false,'rendering completed and enables SVG export');
   assert.equal(lookup('#diagram-message').hidden,true,'no render error remains');
+  lookup('#diagram-theme').onchange({target:{value:'dark'}});
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(context.document.documentElement.dataset.diagramTheme,'dark','theme applies to page background and controls, not only the diagram stage');
+  assert.equal(lookup('#diagram').dataset.theme,'dark');
+  assert.equal(config.theme,'dark');
+  const theme = view.html.match(/:root\[data-diagram-theme="dark"\]\s*\{([^}]+)\}/)[1];
+  const tokens = Object.fromEntries([...theme.matchAll(/(--[\w-]+):([^;]+);/g)].map(match => [match[1],match[2].trim()]));
+  assert.equal(tokens['--bg'],'#141413','buttons and body use the explicit dark background');
+  assert.equal(tokens['--fg'],'#e8e7e3','page text shares the explicit theme');
+  assert.equal(tokens['--panel'],'#1b1b1a');
+  const ui = fs.readFileSync(path.join(__dirname,'../web/ui.css'),'utf8');
+  assert.match(ui,/body\s*\{[^}]*background:\s*var\(--bg\)[^}]*color:\s*var\(--fg\)/);
+  assert.match(ui,/button, select, input\s*\{[^}]*background:\s*var\(--bg\)[^}]*color:\s*var\(--fg\)/);
   const sanitized = sanitizeSvg(malformedHtmlSvg);
   assert.doesNotMatch(sanitized, /foreignObject|<br>|<p>/, 'imported HTML labels cannot survive the server SVG allowlist');
 });

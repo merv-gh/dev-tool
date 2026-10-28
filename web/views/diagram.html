@@ -38,8 +38,8 @@
   .diagram-source { max-height:340px; }
   .diagram-provenance { margin:0; padding-left:20px; max-height:240px; overflow:auto; font-size:12px; }
   .diagram-provenance li { margin:5px 0; overflow-wrap:anywhere; }
-  .diagram[data-theme="light"] { --panel:#fff; --fg:#1d1d1b; --muted:#6b6b66; --line:#e4e3df; --soft:#f2f1ee; --accent:#2457c5; --accent-soft:#e8eefb; --good:#2f7d32; --good-bg:#e3f1e4; --warn:#8a5300; --warn-bg:#fdf0d5; --bad:#a3231a; }
-  .diagram[data-theme="dark"] { --panel:#1b1b1a; --fg:#e8e7e3; --muted:#a8a79f; --line:#343431; --soft:#232321; --accent:#8eb0f7; --accent-soft:#1f2a44; --good:#8fd092; --good-bg:#1d3a1f; --warn:#f0cf8a; --warn-bg:#43330f; --bad:#f6b8b1; }
+  .diagram[data-theme="light"], :root[data-diagram-theme="light"] { --bg:#fbfbfa; --panel:#fff; --fg:#1d1d1b; --muted:#6b6b66; --line:#e4e3df; --soft:#f2f1ee; --accent:#2457c5; --accent-soft:#e8eefb; --good:#2f7d32; --good-bg:#e3f1e4; --warn:#8a5300; --warn-bg:#fdf0d5; --bad:#a3231a; }
+  .diagram[data-theme="dark"], :root[data-diagram-theme="dark"] { --bg:#141413; --panel:#1b1b1a; --fg:#e8e7e3; --muted:#a8a79f; --line:#343431; --soft:#232321; --accent:#8eb0f7; --accent-soft:#1f2a44; --good:#8fd092; --good-bg:#1d3a1f; --warn:#f0cf8a; --warn-bg:#43330f; --bad:#f6b8b1; }
   .diagram-stage, .diagram-source { scrollbar-color:var(--muted) var(--soft); }
   @media(max-width:600px) { .diagram-stage { min-height:330px; height:52vh; } .diagram-tools .spacer { display:none; } .diagram-tools { gap:5px; } .diagram-tools button { padding:6px 8px; } }
 </style>
@@ -194,8 +194,8 @@
   dt.$('#diagram-tabs').replaceChildren(...diagrams.map((d, i) => { const button = document.createElement('button'); button.type = 'button'; button.id = `diagram-tab-${i}`; button.role = 'tab'; button.setAttribute('aria-controls','diagram-stage'); button.textContent = `${d.name || d.view || 'Diagram'}${diagrams.some(x => x !== d && x.name === d.name) ? ` · ${d.format}` : ''}`; button.onclick = () => draw(i); return button; }));
   dt.$('#diagram-tabs').addEventListener('keydown', event => { if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key) || !diagrams.length) return; event.preventDefault(); const next = event.key === 'Home' ? 0 : event.key === 'End' ? diagrams.length - 1 : (active + (event.key === 'ArrowRight' ? 1 : -1) + diagrams.length) % diagrams.length; draw(next); dt.$(`#diagram-tab-${next}`).focus(); });
   dt.$('#diagram-in').onclick = () => changeZoom(1.25); dt.$('#diagram-out').onclick = () => changeZoom(.8); dt.$('#diagram-fit').onclick = fit;
-  dt.$('#diagram-theme').onchange = event => { root.dataset.theme = event.target.value; draw(active); };
-  root.dataset.theme = 'auto';
+  dt.$('#diagram-theme').onchange = event => { root.dataset.theme = event.target.value; document.documentElement.dataset.diagramTheme = event.target.value; draw(active); };
+  root.dataset.theme = 'auto'; document.documentElement.dataset.diagramTheme = 'auto';
   dt.$('#diagram-download-source').onclick = () => { const d = diagrams[active]; if (d) download(d.source || '', 'text/plain;charset=utf-8', ({mermaid:'mmd',plantuml:'puml','c4-plantuml':'puml',structurizr:'dsl'})[d.format] || 'txt'); };
   svgButton.onclick = () => { if (!currentSvg) return; const svg = currentSvg.cloneNode(true), css = document.createElementNS('http://www.w3.org/2000/svg','style'); css.textContent = 'text:not([fill]),tspan:not([fill]){font-family:system-ui,sans-serif;fill:#1d1d1b}.node rect,.actor,.labelBox{fill:#e8eefb;stroke:#2457c5}.cluster rect,.note{fill:#f2f1ee;stroke:#e4e3df}.flowchart-link,.messageLine0,.messageLine1,.actor-line{stroke:#6b6b66}.edgeLabel rect,.labelBkg{fill:#fff}.node .label text{text-anchor:middle}.node.person text,.node.person tspan,.node.system text,.node.system tspan{fill:#fff}'; svg.prepend(css); download(new XMLSerializer().serializeToString(svg),'image/svg+xml;charset=utf-8','svg'); };
   stage.addEventListener('pointerdown', event => { if (event.button !== 0) return; gesture = { id:event.pointerId, x:event.clientX, y:event.clientY, left:panX, top:panY }; stage.setPointerCapture(event.pointerId); stage.classList.add('dragging'); });
