@@ -16,7 +16,8 @@
   .diagram-stage svg text:not([fill]), .diagram-stage svg tspan:not([fill]) { fill:var(--fg); }
   .diagram-stage svg .node rect, .diagram-stage svg .node polygon, .diagram-stage svg .node circle, .diagram-stage svg .node path, .diagram-stage svg .actor, .diagram-stage svg .labelBox { fill:var(--accent-soft); stroke:var(--accent); }
   .diagram-stage svg .node.person rect, .diagram-stage svg .node.person path, .diagram-stage svg .node.person polygon, .diagram-stage svg .node.system rect { fill:#2457c5; stroke:#173d8b; }
-  .diagram-stage svg .node.person text, .diagram-stage svg .node.system text { fill:#fff; }
+  .diagram-stage svg .node .label text { text-anchor:middle; }
+  .diagram-stage svg .node.person text, .diagram-stage svg .node.system text, .diagram-stage svg .node.person tspan, .diagram-stage svg .node.system tspan { fill:#fff; }
   .diagram-stage svg .node.database path { fill:var(--good-bg); stroke:var(--good); }
   .diagram-stage svg .node.topic rect { fill:var(--warn-bg); stroke:var(--warn); }
   .diagram-stage svg .cluster rect, .diagram-stage svg .note { fill:var(--soft); stroke:var(--line); }
@@ -119,7 +120,7 @@
   function safeSvg(value) {
     if (text(value).length > 8 * 1024 * 1024 || /<!DOCTYPE|<!ENTITY/i.test(value)) throw new Error('The SVG contains unsupported markup. Download its source to inspect it.');
     const doc = new DOMParser().parseFromString(text(value), 'image/svg+xml');
-    if (doc.querySelector('parsererror') || doc.documentElement.localName !== 'svg') throw new Error('The renderer returned invalid SVG.');
+    if (doc.querySelector('parsererror') || doc.documentElement.localName !== 'svg') { const reason = doc.querySelector('parsererror')?.textContent?.replace(/\s+/g,' ').slice(0,350); throw new Error(`The renderer returned invalid SVG${reason ? ': ' + reason : '.'}`); }
     const allowedTags = new Set('svg g path rect circle ellipse line polyline polygon text tspan defs marker linearGradient radialGradient stop clipPath mask pattern title desc'.split(' '));
     const allowedAttrs = new Set('id class x y x1 x2 y1 y2 cx cy r rx ry dx dy d points width height viewBox preserveAspectRatio transform fill fill-opacity fill-rule stroke stroke-width stroke-opacity stroke-dasharray stroke-dashoffset stroke-linecap stroke-linejoin stroke-miterlimit opacity font-family font-size font-weight font-style text-anchor dominant-baseline alignment-baseline letter-spacing textLength lengthAdjust marker-start marker-mid marker-end markerWidth markerHeight markerUnits refX refY orient gradientUnits gradientTransform offset stop-color stop-opacity clip-path clip-rule clipPathUnits mask maskUnits patternUnits patternTransform role aria-label aria-labelledby aria-describedby data-node-id xmlns'.split(' '));
     const svg = doc.documentElement;
@@ -130,6 +131,16 @@
         if (attr.name === 'style') { const safe = v.split(';').map(part => part.trim()).filter(part => /^(?:fill|fill-opacity|stroke|stroke-width|stroke-opacity|stroke-dasharray|font-family|font-size|font-weight|font-style|text-anchor|opacity)\s*:\s*[-#(),.%\w\s]+$/.test(part) && !/url\s*\(|expression\s*\(|javascript/i.test(part)); if (safe.length) el.setAttribute('style',safe.join(';')); else el.removeAttribute('style'); continue; }
         if (!allowedAttrs.has(attr.name) || (/url\s*\(/i.test(v) && !/^url\(#[\w:.-]+\)$/.test(v.trim())) || /javascript:|data:|https?:|@import|expression\s*\(|[\\]/i.test(v) && attr.name !== 'xmlns') el.removeAttribute(attr.name);
       }
+    }
+    // With SVG text labels Mermaid may serialize its escape tokens as literal
+    // HTML entities. Decode once in text nodes only; markup remains inert text.
+    for (const label of svg.querySelectorAll('text,tspan')) {
+      if (label.children.length) continue;
+      label.textContent = label.textContent.replace(/&(?:#(x[\da-f]+|\d+)|(amp|lt|gt|quot|apos|nbsp));/gi, (token, numeric, named) => {
+        if (named) return ({amp:'&',lt:'<',gt:'>',quot:'"',apos:"'",nbsp:' '})[named.toLowerCase()];
+        const value = numeric[0].toLowerCase() === 'x' ? parseInt(numeric.slice(1),16) : Number(numeric);
+        return value > 0 && value <= 0x10ffff && !(value >= 0xd800 && value <= 0xdfff) ? String.fromCodePoint(value) : token;
+      });
     }
     return document.importNode(svg, true);
   }
@@ -155,6 +166,7 @@
     for (const [i, tab] of [...dt.$('#diagram-tabs').children].entries()) { tab.setAttribute('aria-selected', String(i === index)); tab.tabIndex = i === index ? 0 : -1; }
     stage.setAttribute('aria-labelledby', `diagram-tab-${index}`);
     sourceEl.textContent = diagram?.source || '';
+    dt.$('#diagram-download-source').disabled = !diagram?.source;
     if (!diagram) { showMessage('No diagram data', 'Pass a model with nodes and relations, or a diagrams array containing Mermaid source or SVG.'); return; }
     showMessage('Rendering diagram…');
     try {
@@ -162,7 +174,7 @@
       if (!raw && diagram.format === 'mermaid') {
         if (!window.mermaid) throw new Error('The Mermaid library could not load. Download the source, or provide a rendered SVG.');
         const dark = root.dataset.theme === 'dark' || (root.dataset.theme === 'auto' && matchMedia('(prefers-color-scheme:dark)').matches);
-        mermaid.initialize({ startOnLoad:false, securityLevel:'strict', theme:dark ? 'dark' : 'default', suppressErrorRendering:true, maxTextSize:100000, flowchart:{ htmlLabels:false }, secure:['securityLevel','startOnLoad','maxTextSize','suppressErrorRendering'] });
+        mermaid.initialize({ startOnLoad:false, securityLevel:'strict', htmlLabels:false, theme:dark ? 'dark' : 'default', suppressErrorRendering:true, maxTextSize:100000, flowchart:{ htmlLabels:false }, secure:['securityLevel','startOnLoad','maxTextSize','suppressErrorRendering','htmlLabels'] });
         // Remove per-document configuration and interaction directives; labels stay as data.
         const input = text(diagram.source).trimStart().replace(/^---\s*\n[\s\S]*?\n---\s*\n/, '').replace(/%%\{[\s\S]*?\}%%/g,'').replace(/^\s*(?:click|link)\s+.*$/gm,'');
         raw = (await mermaid.render(`dt-diagram-${mine}`, input)).svg;
@@ -185,7 +197,7 @@
   dt.$('#diagram-theme').onchange = event => { root.dataset.theme = event.target.value; draw(active); };
   root.dataset.theme = 'auto';
   dt.$('#diagram-download-source').onclick = () => { const d = diagrams[active]; if (d) download(d.source || '', 'text/plain;charset=utf-8', ({mermaid:'mmd',plantuml:'puml','c4-plantuml':'puml',structurizr:'dsl'})[d.format] || 'txt'); };
-  svgButton.onclick = () => { if (!currentSvg) return; const svg = currentSvg.cloneNode(true), css = document.createElementNS('http://www.w3.org/2000/svg','style'); css.textContent = 'text,tspan{font-family:system-ui,sans-serif;fill:#1d1d1b}.node rect,.actor,.labelBox{fill:#e8eefb;stroke:#2457c5}.cluster rect,.note{fill:#f2f1ee;stroke:#e4e3df}.flowchart-link,.messageLine0,.messageLine1,.actor-line{stroke:#6b6b66}.edgeLabel rect,.labelBkg{fill:#fff}'; svg.prepend(css); download(new XMLSerializer().serializeToString(svg),'image/svg+xml;charset=utf-8','svg'); };
+  svgButton.onclick = () => { if (!currentSvg) return; const svg = currentSvg.cloneNode(true), css = document.createElementNS('http://www.w3.org/2000/svg','style'); css.textContent = 'text:not([fill]),tspan:not([fill]){font-family:system-ui,sans-serif;fill:#1d1d1b}.node rect,.actor,.labelBox{fill:#e8eefb;stroke:#2457c5}.cluster rect,.note{fill:#f2f1ee;stroke:#e4e3df}.flowchart-link,.messageLine0,.messageLine1,.actor-line{stroke:#6b6b66}.edgeLabel rect,.labelBkg{fill:#fff}.node .label text{text-anchor:middle}.node.person text,.node.person tspan,.node.system text,.node.system tspan{fill:#fff}'; svg.prepend(css); download(new XMLSerializer().serializeToString(svg),'image/svg+xml;charset=utf-8','svg'); };
   stage.addEventListener('pointerdown', event => { if (event.button !== 0) return; gesture = { id:event.pointerId, x:event.clientX, y:event.clientY, left:panX, top:panY }; stage.setPointerCapture(event.pointerId); stage.classList.add('dragging'); });
   stage.addEventListener('pointermove', event => { if (!gesture || gesture.id !== event.pointerId) return; panX = gesture.left + event.clientX - gesture.x; panY = gesture.top + event.clientY - gesture.y; transform(); });
   const finish = () => { gesture = null; stage.classList.remove('dragging'); }; stage.addEventListener('pointerup', finish); stage.addEventListener('pointercancel', finish);

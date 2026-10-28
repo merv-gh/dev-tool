@@ -214,3 +214,49 @@ test('diagram view registers sample model and scripts remain syntactically valid
   const html = V.render('diagram', { model, diagrams: generate(model) }, {}, { metaCsp:true });
   assert.match(html, /connect-src/); // CSP is provided as a response header; source also documents zero network.
 });
+
+test('viewer config disables Mermaid HTML labels globally before rendering multiline C4 labels', async () => {
+  // Mermaid 11's browser serialization includes HTML void <br> inside a <p> when
+  // top-level htmlLabels is unset, even with flowchart.htmlLabels:false. That SVG
+  // is not XML and was rejected by the viewer's strict DOMParser. Exercise the
+  // viewer initialization/render integration, including the observed bad output.
+  const vm = require('node:vm');
+  const view = require('../lib/views').get('diagram');
+  const elements = new Map();
+  class Element {
+    constructor(name = 'div') { this.localName = name; this.children = []; this.attrs = {}; this.dataset = {}; this.style = {}; this.clientWidth = 900; this.clientHeight = 500; this.textContent = ''; this.namespaceURI = 'http://www.w3.org/2000/svg'; }
+    get attributes() { return Object.entries(this.attrs).map(([name,value]) => ({name,value})); }
+    removeAttribute(key) { delete this.attrs[key]; }
+    setAttribute(key,value) { this.attrs[key] = value; }
+    getAttribute(key) { return this.attrs[key] || null; }
+    replaceChildren(...children) { this.children = children; }
+    append(...children) { this.children.push(...children); }
+    prepend(...children) { this.children.unshift(...children); }
+    querySelectorAll() { return []; }
+    addEventListener() {}
+  }
+  const lookup = selector => { if (!elements.has(selector)) elements.set(selector,new Element()); return elements.get(selector); };
+  let config, renderedInput, parsedSvg, parsedLabel;
+  const malformedHtmlSvg = '<svg xmlns="http://www.w3.org/2000/svg"><g class="node"><foreignObject><div xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel"><p>Order service<br>Java</p></span></div></foreignObject></g></svg>';
+  const xmlSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 150"><g class="node"><text><tspan>Order service</tspan><tspan>Java</tspan></text></g></svg>';
+  const context = {
+    DATA:{ model:view.sample.model, diagrams:[{name:'Context',format:'mermaid',source:write(view.sample.model,{view:'context'})}] }, META:{},
+    dt:{ $:lookup, title() {} }, window:{},
+    document:{createElement:name => new Element(name),createElementNS:(_ns,name) => new Element(name),importNode:node => node},
+    matchMedia:() => ({matches:false}), ResizeObserver:class { observe() {} },
+    DOMParser:class { parseFromString(value) { parsedSvg = value; const invalid = value.includes('<br>'); const svg = new Element('svg'); svg.setAttribute('viewBox','0 0 300 150'); parsedLabel = new Element('text'); parsedLabel.textContent = '&#91;HTTP&#93; &amp; &#60;script&#62;'; svg.querySelectorAll = selector => selector === '*' || selector === 'text,tspan' ? [parsedLabel] : []; return { documentElement:svg, querySelector:() => invalid ? {textContent:'Opening and ending tag mismatch: br line 1 and p'} : null }; } },
+    mermaid:{ initialize(value) {config = value;}, async render(_id,input) { renderedInput = input; return {svg:config.htmlLabels === false ? xmlSvg : malformedHtmlSvg}; } },
+  };
+  context.window.mermaid = context.mermaid;
+  vm.runInNewContext([...view.html.matchAll(/<script>([\s\S]*?)<\/script>/g)][0][1],context);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.ok(renderedInput.includes('<br/>Java'), 'real C4 multiline labels are exercised');
+  assert.equal(config.htmlLabels,false,'Mermaid 11 reads the global option');
+  assert.ok(config.secure.includes('htmlLabels'),'diagram directives cannot re-enable HTML labels');
+  assert.equal(parsedSvg,xmlSvg,'only XML-compatible SVG reaches the strict parser');
+  assert.equal(parsedLabel.textContent,'[HTTP] & <script>','Mermaid escape artifacts become text, never parsed markup');
+  assert.equal(lookup('#diagram-download-svg').disabled,false,'rendering completed and enables SVG export');
+  assert.equal(lookup('#diagram-message').hidden,true,'no render error remains');
+  const sanitized = sanitizeSvg(malformedHtmlSvg);
+  assert.doesNotMatch(sanitized, /foreignObject|<br>|<p>/, 'imported HTML labels cannot survive the server SVG allowlist');
+});
