@@ -10,6 +10,8 @@ test('explicit application contracts preserve invocation versus failed tests/ass
   const r = O.classify('test_run', { outcome: 'failed', counts: { tests: 2, failed: 1 } });
   assert.equal(r.invocation, 'succeeded'); assert.equal(r.failed, true); assert.equal(r.execution.kind, 'tests');
   assert.equal(O.classify('scenario_check', { ok: false }).failed, true);
+  assert.equal(O.classify('scenario_preflight', { ok: false, gaps: [{ kind: 'unsupported-codec' }] }).failed, true);
+  assert.equal(O.classify('scenario_preflight', { ok: true }).execution.kind, 'assertions');
   assert.equal(O.classify('api_request_replay', { status: 404, ok: false }).failed, false);
   assert.equal(O.classify('script_run', { ok: true, response: { status: 404 } }).failed, false);
   assert.equal(O.classify('unknown', { status: 'failed', ok: false }).execution, undefined);
