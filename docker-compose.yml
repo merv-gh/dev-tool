@@ -28,6 +28,8 @@ services:
       GRAPH_URL: ${GRAPH_URL:-http://graph:8000}
       DT_BROWSER_MCP: ${DT_BROWSER_MCP:-http://browser:8931/mcp}  # dt drives the browser for saved scripts / route discovery
       DT_HOME: /dt
+      # git's data: a volume (the config folder may be a mount where git cannot chmod; /tmp is lost on restart)
+      DT_GIT_DIR: ${DT_GIT_DIR:-/var/dt-git}
       # test_run: the jdk profile's JDK + Maven (used when present), caches kept in the home folder
       DT_JAVA_HOME: ${DT_JAVA_HOME:-/opt/jdk/java}
       DT_MAVEN: ${DT_MAVEN:-/opt/jdk/maven/bin/mvn}
@@ -41,8 +43,10 @@ services:
       - ./dist:/app:ro          # the code: bundle + web pages (npm run build); a restart picks up a rebuild
       - ${DT_HOME_DIR:-.}:/dt   # config.json, .env, notes, plugins, scripts/, cache/, repos/, passports/, work/
       - jdk:/opt/jdk:ro         # filled by the jdk profile; empty otherwise
+      - dt-git:/var/dt-git      # git data of fetched repos and workspaces
     depends_on:
       jdk: { condition: service_completed_successfully, required: false }
+      init: { condition: service_completed_successfully }
     ports:
       - "${DT_BIND:-127.0.0.1}:${DT_PORT:-4000}:4000"
     healthcheck:
@@ -86,6 +90,15 @@ services:
     volumes:
       - ${DT_HOME_DIR:-.}/repos:/repos   # graph data is written next to each repo (.code-review-graph/)
     restart: unless-stopped
+
+  # One-shot: the git data volume belongs to dt's user (a new volume belongs to root)
+  init:
+    image: ${DT_NODE_IMAGE:-node:22-bookworm}
+    user: "0:0"
+    command: ["sh", "-c", "chown ${DT_UID:-1000}:${DT_GID:-1000} /var/dt-git"]
+    volumes:
+      - dt-git:/var/dt-git
+    restart: "no"
 
   # One-shot: copy the JDK and Maven of the official image into the jdk volume (again when the image changes).
   # glibc builds, so they run in the node (Debian) image of dt.
@@ -180,3 +193,4 @@ services:
 volumes:
   webui-data: {}
   jdk: {}
+  dt-git: {}

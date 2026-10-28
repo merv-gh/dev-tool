@@ -54,7 +54,10 @@ atl.repos = async (q) => { searched.push(q); return ['billing-service', 'acme-st
 // what dt looks at before taking a repo found by name: its folders and poms
 const local = (r, p = '') => path.join(tmp, 'src', r, p);
 atl.browse = async (project, r, dir = '') => { if (!fs.existsSync(local(r, dir))) throw new Error('404'); return fs.readdirSync(local(r, dir), { withFileTypes: true }).filter(e => e.name !== '.git').map(e => ({ name: e.name, type: e.isDirectory() ? 'DIRECTORY' : 'FILE' })); };
-atl.file = async (project, r, p) => { if (!fs.existsSync(local(r, p))) throw new Error('404'); return fs.readFileSync(local(r, p), 'utf8'); };
+atl.file = async (project, r, p, { at } = {}) => {
+  if (at) { try { return sh(local(r), 'show', `${at.replace('refs/heads/', '')}:${p}`); } catch { throw new Error('404'); } }
+  if (!fs.existsSync(local(r, p))) throw new Error('404'); return fs.readFileSync(local(r, p), 'utf8');
+};
 repo('acme-tools', { 'pom.xml': '<project><groupId>com.acme.tools</groupId><artifactId>acme-tools</artifactId><modules><module>cli</module></modules></project>', 'cli/pom.xml': '<project><artifactId>acme-tools-cli</artifactId></project>' });
 const realGit = require('../lib/git');
 const fetched = [];
@@ -113,4 +116,21 @@ test('a repo found by name is looked at first: a look-alike that does not declar
   const core = r.libraries.find(l => l.artifactId === 'acme-tools-core');
   assert.match(core.error, /no Bitbucket repo declares acme-tools-core .*looked inside LIB\/acme-tools/);
   assert.ok(!fetched.slice(before).some(f => f.startsWith('acme-tools@')), 'never fetched on a guess');
+});
+
+test('a SNAPSHOT version has no tag: the branch whose build files declare it is fetched', async () => {
+  // acme-starter's develop branch is at 2.1.0-SNAPSHOT; main stays at 2.0.0
+  const starter = local('acme-starter');
+  sh(starter, 'checkout', '-q', '-b', 'develop');
+  fs.writeFileSync(path.join(starter, 'pom.xml'), fs.readFileSync(path.join(starter, 'pom.xml'), 'utf8').replace('<version>2.0.0</version>', '<version>2.1.0-SNAPSHOT</version>'));
+  sh(starter, 'commit', '-qam', 'next snapshot');
+  sh(starter, 'checkout', '-q', 'main');
+  fs.writeFileSync(path.join(tmp, 'src', 'billing-service', 'build.gradle'), "group = 'com.acme.billing'\next {\n  starterVersion = '2.1.0-SNAPSHOT'\n}\ndependencies {\n  implementation \"com.acme.libs:acme-starter-kafka:$starterVersion\"\n}");
+  sh(path.join(tmp, 'src', 'billing-service'), 'commit', '-qam', 'snapshot');
+  const T = require('../lib/trace');
+  let notes;
+  const p = await T.call('passport', {}, {}, async () => { const r = await require('../lib/passport').build('billing-service', { gitImpl }); notes = T.current().notes; return r; });
+  const kafka = p.libraries.find(l => l.artifactId === 'acme-starter-kafka');
+  assert.deepEqual([kafka.ref, kafka.module, kafka.error], ['develop', 'acme-starter-kafka', undefined], JSON.stringify(kafka));
+  assert.ok(notes.some(n => /acme-starter-kafka 2\.1\.0-SNAPSHOT: no tag; branch develop declares it \(pom\.xml\)/.test(n)), notes.join('\n'));
 });

@@ -4417,7 +4417,7 @@ var require_bbindex = __commonJS({
         return `repo ${r.project}/${r.repo}${r.self?.artifactId ? ` ${r.self.groupId || ""}:${r.self.artifactId}` : ""}: ${mods.length ? `modules ${mods.join(", ")}; ` : ""}dirs ${(r.dirs || []).join(", ")}`;
       });
     }
-    module2.exports = { build, indexSome, lookup, load, catalogLines, indexRepo, FILE };
+    module2.exports = { build, throttle, indexSome, lookup, load, catalogLines, indexRepo, FILE };
   }
 });
 
@@ -5571,6 +5571,42 @@ var require_git = __commonJS({
       return info;
     }
     var NO_CHMOD = /core\.filemode|operation not permitted|chmod on|permission denied|could not (lock|write|set)|unable to (create|write)/i;
+    var chmodWorks = /* @__PURE__ */ new Map();
+    function canChmod(dir) {
+      const parent = path2.dirname(path2.resolve(dir));
+      if (chmodWorks.has(parent)) return chmodWorks.get(parent);
+      let ok = true;
+      try {
+        fs2.mkdirSync(parent, { recursive: true });
+        const f = path2.join(parent, `.dt-chmod-${process.pid}`);
+        fs2.writeFileSync(f, "x", { mode: 420 });
+        try {
+          fs2.chmodSync(f, 493);
+          ok = (fs2.statSync(f).mode & 511) === 493;
+        } catch {
+          ok = false;
+        }
+        fs2.rmSync(f, { force: true });
+      } catch {
+        ok = false;
+      }
+      chmodWorks.set(parent, ok);
+      if (!ok) require_trace().note(`git cannot chmod in ${parent}: git data of its repos goes to ${LOCAL_GIT} (said once; set DT_GIT_DIR to a lasting place, compose uses a volume)`);
+      return ok;
+    }
+    async function initSeparate(dir, url, gitKey) {
+      const gitDir = path2.join(LOCAL_GIT, ...gitKey.split("/"));
+      fs2.rmSync(path2.join(dir, ".git"), { recursive: true, force: true });
+      fs2.rmSync(gitDir, { recursive: true, force: true });
+      fs2.mkdirSync(path2.dirname(gitDir), { recursive: true });
+      try {
+        await git(["init", "-q", `--separate-git-dir=${gitDir}`], dir);
+        await git(["config", "core.filemode", "false"], dir);
+        await git(["remote", "add", "origin", url], dir);
+      } catch (e) {
+        throw new Error(`git cannot set up ${dir} with its data in ${gitDir}: ${e.message}. Run the containers as your user (run.sh sets DT_UID/DT_GID), make DT_GIT_DIR writable, or put the config folder on a local disk`);
+      }
+    }
     async function ensureRepo(dir, url, gitKey) {
       const dotgit = path2.join(dir, ".git");
       if (fs2.existsSync(dotgit)) {
@@ -5581,26 +5617,19 @@ var require_git = __commonJS({
           }
         } catch {
         }
-        require_trace().note(`${dir}: a broken .git was replaced`);
+        const pointer = fs2.statSync(dotgit).isFile();
+        if (!pointer) require_trace().note(`${dir}: a broken .git was replaced`);
         fs2.rmSync(dotgit, { recursive: true, force: true });
       }
+      if (!canChmod(dir)) return initSeparate(dir, url, gitKey);
       try {
         await git(["init", "-q"], dir);
         await git(["remote", "add", "origin", url], dir);
       } catch (e) {
         if (!NO_CHMOD.test(e.message)) throw e;
+        chmodWorks.set(path2.dirname(path2.resolve(dir)), false);
         require_trace().note(`git cannot chmod in ${dir} (${e.message.slice(0, 120)}): its git data goes to ${LOCAL_GIT}`);
-        fs2.rmSync(dotgit, { recursive: true, force: true });
-        const gitDir = path2.join(LOCAL_GIT, ...gitKey.split("/"));
-        fs2.rmSync(gitDir, { recursive: true, force: true });
-        fs2.mkdirSync(path2.dirname(gitDir), { recursive: true });
-        try {
-          await git(["init", "-q", `--separate-git-dir=${gitDir}`], dir);
-          await git(["config", "core.filemode", "false"], dir);
-          await git(["remote", "add", "origin", url], dir);
-        } catch (e2) {
-          throw new Error(`${e.message}; also with the git dir in ${gitDir}: ${e2.message}. git cannot write in ${dir}: run the containers as your user (run.sh sets DT_UID/DT_GID) or put the config folder on a local disk`);
-        }
+        await initSeparate(dir, url, gitKey);
       }
     }
     async function remoteSha(url, ref) {
@@ -6826,6 +6855,29 @@ var require_passport = __commonJS({
       if (x && typeof x === "object") return Object.fromEntries(Object.entries(x).map(([k, v]) => [k, k === "file" && typeof v === "string" && v !== "config" ? `${mod}/${v}` : underModule(v, mod)]));
       return x;
     }
+    async function branchDeclaring(repo, version, heads) {
+      const atl = require_atlassian();
+      const rank = (b) => /^(main|master)$/.test(b) ? 0 : /^(develop|dev|development)$/.test(b) ? 1 : /^release[/-]/.test(b) ? 2 : /^(hotfix|support)[/-]/.test(b) ? 3 : 4;
+      const branches = [...heads].sort((a, b) => rank(a) - rank(b) || b.localeCompare(a)).slice(0, 20);
+      const dirs = [...new Set([repo.module, ""].filter((x) => x !== null && x !== void 0))];
+      const files = dirs.flatMap((d) => ["gradle.properties", "build.gradle", "build.gradle.kts", "pom.xml"].map((f) => d ? `${d}/${f}` : f));
+      const v = version.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const declares = (text, file2) => /pom\.xml$/.test(file2) ? new RegExp(`<version>\\s*${v}\\s*</version>`).test(String(text).replace(/<(parent|dependencies|dependencyManagement|build|plugins)>[\s\S]*?<\/\1>/g, "")) : new RegExp(`^\\s*(?:\\w*[vV]ersion\\w*|version)\\s*[=:]?\\s*\\(?\\s*["']?${v}["']?\\s*\\)?\\s*$`, "m").test(String(text));
+      const wait = require_bbindex().throttle(getPersonal().indexRatePerSec || 8);
+      for (const b of branches) {
+        for (const f of files) {
+          let text;
+          try {
+            await wait();
+            text = await atl.file(repo.project, repo.repo, f, { at: `refs/heads/${b}` });
+          } catch {
+            continue;
+          }
+          if (declares(text, f)) return { branch: b, file: f };
+        }
+      }
+      return null;
+    }
     async function fetchLibrary(dep, git, searches = /* @__PURE__ */ new Map()) {
       let repo;
       try {
@@ -6843,7 +6895,13 @@ var require_passport = __commonJS({
         if (names.length) {
           const have = await T.step("git ls-remote", () => git.remoteRefs(repo.project, repo.repo), `${repo.project}/${repo.repo}`);
           ref = names.find((n) => have.tags.has(n) || have.heads.has(n));
-          if (!ref) T.note(`${dep.artifactId} ${v}: ${repo.project}/${repo.repo} has no tag or branch for it (looked for ${names.join(", ")}): its default branch`);
+          if (!ref) {
+            const hit = await T.step("find the version's branch", () => branchDeclaring(repo, v, have.heads), `${dep.artifactId} ${v}`).catch(() => null);
+            if (hit) {
+              ref = hit.branch;
+              T.note(`${dep.artifactId} ${v}: no tag; branch ${hit.branch} declares it (${hit.file})`);
+            } else T.note(`${dep.artifactId} ${v}: ${repo.project}/${repo.repo} has no tag for it and no branch declares it (looked for ${names.join(", ")}, and in the build files of ${Math.min(have.heads.size, 20)} branches): its default branch`);
+          }
         }
         const key = `fetch:${repo.project}/${repo.repo}@${ref || ""}`;
         if (!searches.has(key)) searches.set(key, git.fetchRef(repo.project, repo.repo, ref));
@@ -7078,7 +7136,7 @@ var require_passport = __commonJS({
       }
       return rows;
     }
-    module2.exports = { build, fetchLibraries, flowSummary, load, list, whoUses, libraryRepoNames, findModule, resolveRepo, deployedSha, diff, markdown, graphBuild, DIR };
+    module2.exports = { build, branchDeclaring, fetchLibraries, flowSummary, load, list, whoUses, libraryRepoNames, findModule, resolveRepo, deployedSha, diff, markdown, graphBuild, DIR };
   }
 });
 
@@ -29396,6 +29454,8 @@ var require_doctor = __commonJS({
         if (!w.ok) add("folders", name, "fail", `${dir}: ${w.error}`, "run dt as the owner of the folder (run.sh sets DT_UID/DT_GID), or point DT_HOME_DIR at a writable folder");
         else add("folders", name, w.chmod ? "ok" : "warn", `${dir}${w.chmod ? "" : ": no chmod here (a Windows drive, SMB, some mounts): git keeps its data in DT_GIT_DIR"}`);
       }
+      const gd = process.env.DT_GIT_DIR || path2.join(os.tmpdir(), "dt-git");
+      if (path2.resolve(gd).startsWith(path2.resolve(os.tmpdir()))) add("folders", "git data lasts", "warn", `${gd} is in the temporary folder: after a restart every repo is fetched again`, "set DT_GIT_DIR to a lasting folder git can chmod in (compose: the dt-git volume)");
       try {
         const st = fs2.statfsSync(cfg.PATHS.work.replace(/\/work$/, "") || cfg.HOME);
         const free = st.bavail * st.bsize / 1e9;

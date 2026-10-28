@@ -70,10 +70,11 @@ test('fetch works where git cannot chmod: git dir on local disk, files in repos/
 
 test('a broken .git is replaced on normal disks too', async () => {
   const git = require('../lib/git');
-  const dir = git.repoDir('SHOP', 'other');
+  // another folder: dt remembers per folder that the one above could not chmod
+  const dir = git.repoDir('LIB', 'other');
   fs.mkdirSync(path.join(dir, '.git'), { recursive: true });
   fs.writeFileSync(path.join(dir, '.git', 'config'), 'not a config');
-  const info = await git.fetchRef('SHOP', 'other', 'main', { url: `file://${src}` });
+  const info = await git.fetchRef('LIB', 'other', 'main', { url: `file://${src}` });
   assert.equal(info.sha, g(['rev-parse', 'HEAD'], src));
   assert.ok(fs.statSync(path.join(dir, '.git')).isDirectory());
 });

@@ -366,7 +366,12 @@ Passports look libraries up in this order:
 
 Nothing is fetched on a guess. When no repo declares the artifact, the passport says which repos it looked inside.
 
-For the version, one `git ls-remote` lists the repo's tags and branches. dt fetches the first of `v1.2.0`, `1.2.0`, `<artifact>-1.2.0`, `<repo>-1.2.0`, `release/1.2.0` that exists, otherwise the default branch, and says so. Several libraries in one repo share one fetch.
+For the version, one `git ls-remote` lists the repo's tags and branches. dt fetches the first of `v1.2.0`, `1.2.0`, `<artifact>-1.2.0`, `<repo>-1.2.0`, `release/1.2.0` that exists. A version without a tag, such as a SNAPSHOT or an untagged release, is looked for in the build files at the branch tips:
+- files: `gradle.properties`, `build.gradle(.kts)`, `pom.xml`, of the module and the root;
+- branch order: default branch, `develop`, `release/*`, then the others, up to 20;
+- the branch that declares exactly that version is fetched (`acme-starter-kafka 2.1.0-SNAPSHOT: no tag; branch develop declares it (pom.xml)`).
+
+Only if none declares it does dt take the default branch, and it says so. Several libraries in one repo share one fetch.
 
 **Workspaces don't fetch libraries.** The build takes their jars from your repository (Nexus). For flows through library code, a workspace uses the indexes the service's passport built. `libraries=true` fetches the library sources now, for a service without a passport.
 
@@ -695,7 +700,7 @@ dt runs it once at start and prints the problems to the log.
 
 **Workspaces or test runs fail and you don't know why.** Run `doctor` (with `repo=PROJECT/slug`), then `call_history failed=true` or `dt_log failed=true`: the failed step and its error are there.
 
-**Passports: `could not set 'core.filemode' to 'false'` / `not a git repository`.** git cannot manage its files in `repos/`. That happens when the config folder is on a drive that does not allow changing file permissions (a Windows drive under WSL such as `/mnt/c/...`, a network share, some Docker/Colima mounts), or when the containers run as another user. `run.sh` runs them as you (`DT_UID`/`DT_GID` from `id -u`/`id -g`; set them in `.env` to override). Where git still cannot chmod, dt keeps the git data in the container (`DT_GIT_DIR`, default `/tmp/dt-git`) and checks the files out into `repos/` as before; a half-made `.git` from an earlier failure is replaced. Fastest of all: put the config folder on the local disk (in WSL, under `~`, not `/mnt/c`).
+**Passports: `git cannot chmod` / `could not set 'core.filemode' to 'false'` / `not a git repository`.** dt checks once per folder whether git can change file modes there. Where it can't, dt keeps git's data in `DT_GIT_DIR` from the start, notes it once in the log, and checks the files out into `repos/` and `work/` as usual. In compose, `DT_GIT_DIR` is the `dt-git` volume (a one-shot `init` service hands it to dt's user), so the git data survives restarts. Elsewhere, set it to a lasting folder; `doctor` warns when it's in `/tmp`. Background: git cannot manage its files in `repos/`. That happens when the config folder is on a drive that does not allow changing file permissions (a Windows drive under WSL such as `/mnt/c/...`, a network share, some Docker/Colima mounts), or when the containers run as another user. `run.sh` runs them as you (`DT_UID`/`DT_GID` from `id -u`/`id -g`; set them in `.env` to override). Where git still cannot chmod, dt keeps the git data in the container (`DT_GIT_DIR`, default `/tmp/dt-git`) and checks the files out into `repos/` as before; a half-made `.git` from an earlier failure is replaced. Fastest of all: put the config folder on the local disk (in WSL, under `~`, not `/mnt/c`).
 
 **Indexing a big database is cancelled (`canceling statement due to statement timeout`).** Each catalog query may take `timeouts.pgIndexMs` (2 minutes by default); raise it in `config.json` (or `DT_PG_INDEX_TIMEOUT_MS`). In the chat, `catalog_sync` answers "running" with a job id after ~50 s instead of making the client time out; asking again with that id returns the result.
 
