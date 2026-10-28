@@ -26,9 +26,11 @@ test('Node tests execute through registry with actual red/green history and expl
 test('empty and skip-only Node files never yield a passing run; errors remain structured', async () => {
   W.write('node','test/empty.test.cjs',{content:'module.exports=123'});
   W.write('node','test/skip.test.cjs',{content:`require('node:test').skip('later',()=>{})`});
+  W.write('node','test/parent.test.cjs',{content:`require('node:test')('parent',t=>t.test('later',{skip:true},()=>{}))`});
   W.write('node','test/broken.test.cjs',{content:'throw new TypeError("bad module")'});
   assert.equal((await call('test_run',{workspace:'node',tests:['test/empty.test.cjs']})).outcome,'no-tests-ran');
   assert.equal((await call('test_run',{workspace:'node',tests:['test/skip.test.cjs']})).outcome,'all-tests-skipped');
+  assert.equal((await call('test_run',{workspace:'node',tests:['test/parent.test.cjs']})).outcome,'all-tests-skipped');
   const broken = await call('test_run',{workspace:'node',tests:['test/broken.test.cjs']});
   assert.equal(broken.outcome,'failed'); assert.equal(broken.counts.failed,1);
   await assert.rejects(()=>require('../lib/testrun').run('node',{tests:['--eval=bad.cjs']}),/no test class/);
@@ -53,10 +55,11 @@ test('all execution inputs and exact file contents change job identity; property
 test('timeout and cancellation kill a subprocess descendant', async () => {
   const {execLocal}=require('../lib/testrun'), pidfile=path.join(home,'child.pid');
   const script=`const {spawn}=require('child_process');const p=spawn(process.execPath,['-e','setInterval(()=>{},1000)']);require('fs').writeFileSync(${JSON.stringify(pidfile)},String(p.pid));setInterval(()=>{},1000);`;
-  const r=await execLocal(process.execPath,['-e',script],{cwd:home,env:{PATH:process.env.PATH},timeoutMs:250});assert.equal(r.killed,true);
+  const r=await execLocal(process.execPath,['-e',script],{cwd:home,env:{PATH:process.env.PATH},timeoutMs:2000});assert.equal(r.killed,true);
   const pid=Number(fs.readFileSync(pidfile)); await new Promise(r=>setTimeout(r,150)); assert.throws(()=>process.kill(pid,0),/ESRCH/);
+  fs.unlinkSync(pidfile);
   const J=require('../lib/jobs');const j=J.start('cancel-node','cancel node',()=>execLocal(process.execPath,['-e',script],{cwd:home,env:{PATH:process.env.PATH},timeoutMs:10000}));
-  await new Promise(r=>setTimeout(r,250));const child=Number(fs.readFileSync(pidfile));assert.equal(J.cancel(j.id).stopped,1);await j.promise;await new Promise(r=>setTimeout(r,150));assert.throws(()=>process.kill(child,0),/ESRCH/);
+  const readyDeadline=Date.now()+5000;while(!fs.existsSync(pidfile)&&Date.now()<readyDeadline)await new Promise(r=>setTimeout(r,20));const child=Number(fs.readFileSync(pidfile));assert.equal(J.cancel(j.id).stopped,1);await j.promise;await new Promise(r=>setTimeout(r,150));assert.throws(()=>process.kill(child,0),/ESRCH/);
 });
 test('differential tool preserves types/order/null/error/effects and reports exact executable evidence', async () => {
   workspace('before',{'src/projection.cjs':`exports.load=(n)=>{if(n==='error')throw new TypeError('invalid');require('fs').writeFileSync('result.txt',String(n));return {id:'9007199254740993',amount:'1.2300',optional:null,items:[n,undefined,1n,-0]}}`});
