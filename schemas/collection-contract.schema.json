@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:dev-tool:collections:v1",
+  "title": "Collection stage contracts v1",
+  "description": "Data-only, implementation-independent contracts. Validate a stage against its $defs schema. Optional JS source is capability-tagged text; callbacks, process handles and runtime adapters are never artifact fields.",
+  "$defs": {
+    "counts": {
+      "type": "object", "required": ["cases"],
+      "properties": {
+        "cases": {"type": "integer", "minimum": 0}, "scripts": {"type": "integer", "minimum": 0},
+        "scopes": {"type": "integer", "minimum": 0}, "passed": {"type": "integer", "minimum": 0},
+        "failed": {"type": "integer", "minimum": 0}, "errors": {"type": "integer", "minimum": 0},
+        "skipped": {"type": "integer", "minimum": 0}
+      }
+    },
+    "assertion": {
+      "type": "object", "required": ["name"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1}, "path": {"type": "string"},
+        "op": {"enum": ["equal", "exists", "contains", "count"]}, "value": {},
+        "code": {"oneOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}]},
+        "hard": {"type": "boolean"}
+      },
+      "oneOf": [{"required": ["code"]}, {"required": ["path", "op"], "not": {"required": ["code"]}}]
+    },
+    "suite": {
+      "type": "object",
+      "properties": {
+        "version": {"const": 1}, "params": {"type": "object"},
+        "tags": {"type": "array", "items": {"type": "string"}},
+        "datasets": {"type": "array", "items": {"type": "object"}},
+        "matrix": {"type": "object", "additionalProperties": {"type": "array"}},
+        "order": {"type": "array", "items": {"oneOf": [
+          {"type": "string"},
+          {"type": "object", "oneOf": [{"required": ["script"]}, {"required": ["collection"]}], "properties": {
+            "script": {"type": "string"}, "collection": {"type": "string"}, "params": {"type": "object"},
+            "tags": {"type": "array", "items": {"type": "string"}},
+            "datasets": {"type": "array", "items": {"type": "object"}},
+            "matrix": {"type": "object", "additionalProperties": {"type": "array"}}
+          }}
+        ]}},
+        "before": {"oneOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}]},
+        "after": {"oneOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}]},
+        "finally": {"oneOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}]}
+      }
+    },
+    "case": {
+      "type": "object", "required": ["id", "script", "scope", "row", "matrix", "tags", "revision"],
+      "properties": {
+        "id": {"type": "string"}, "script": {"type": "string"}, "scope": {"type": "string"},
+        "row": {"type": "integer", "minimum": 0}, "matrix": {"type": "object"},
+        "tags": {"type": "array", "items": {"type": "string"}}, "params": {"type": "object"},
+        "overrides": {"type": "object"}, "revision": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "status": {"enum": ["passed", "failed", "error", "skipped"]},
+        "result": {"type": "object"}, "error": {"type": "string"}, "ms": {"type": "number", "minimum": 0}
+      }
+    },
+    "plan": {
+      "type": "object", "required": ["version", "collection", "seed", "cases", "scopes", "definitions", "hash", "counts"],
+      "properties": {
+        "version": {"const": 1}, "collection": {"type": "string"}, "seed": {"type": "string"},
+        "cases": {"type": "array", "maxItems": 1000, "items": {"$ref": "#/$defs/case"}},
+        "skipped": {"type": "array", "items": {"type": "object"}},
+        "scopes": {"type": "array", "items": {"type": "object", "required": ["id", "params", "revision"]}},
+        "definitions": {"type": "object", "additionalProperties": {"type": "object"}},
+        "collectionChains": {"type": "object", "additionalProperties": {"type": "array", "items": {"type": "object"}}},
+        "hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "counts": {"$ref": "#/$defs/counts"}
+      }
+    },
+    "validation": {
+      "type": "object", "required": ["version", "ok", "collection", "planHash", "errors", "warnings", "capabilities", "references", "counts"],
+      "properties": {
+        "version": {"const": 1}, "ok": {"type": "boolean"}, "collection": {"type": "string"},
+        "planHash": {"type": "string"}, "errors": {"type": "array", "items": {"type": "object"}},
+        "warnings": {"type": "array", "items": {"type": "string"}},
+        "capabilities": {"type": "array", "items": {"type": "string"}},
+        "references": {"type": "object", "additionalProperties": {"type": "string"}}, "counts": {"$ref": "#/$defs/counts"}
+      }
+    },
+    "run": {
+      "type": "object", "required": ["version", "run", "collection", "startedAt", "status", "seed", "planHash", "validation", "plan", "definitions", "cases", "hooks", "cleanupErrors", "counts"],
+      "properties": {
+        "version": {"const": 1}, "run": {"type": "string", "pattern": "^[a-f0-9]{24}$"}, "collection": {"type": "string"},
+        "startedAt": {"type": "string"}, "endedAt": {"type": "string"},
+        "status": {"enum": ["running", "passed", "failed", "cancelled"]}, "ok": {"type": "boolean"}, "seed": {"type": "string"},
+        "planHash": {"type": "string"}, "validation": {"$ref": "#/$defs/validation"}, "plan": {"$ref": "#/$defs/plan"},
+        "definitions": {"type": "object", "additionalProperties": {"type": "object"}},
+        "cases": {"type": "array", "items": {"$ref": "#/$defs/case"}},
+        "hooks": {"type": "array", "items": {"type": "object"}},
+        "cleanupErrors": {"type": "array", "items": {"type": "object"}},
+        "counts": {"$ref": "#/$defs/counts"}, "view": {"type": "string"}, "error": {"type": "string"}, "ms": {"type": "number", "minimum": 0}
+      }
+    }
+  }
+}
