@@ -24,6 +24,11 @@ for (const f of fs.readdirSync(path.join(ROOT, 'web'), { recursive: true })) {
 }
 files['agent-prompt.md'] = fs.readFileSync(path.join(ROOT, 'lib', 'agent-prompt.md'));
 files['config.example.json'] = fs.readFileSync(path.join(ROOT, 'config.example.json'));
+const contracts = path.join(ROOT, 'contracts');
+if (fs.existsSync(contracts)) for (const f of fs.readdirSync(contracts, { recursive: true })) {
+  const p = path.join(contracts, f);
+  if (fs.statSync(p).isFile()) files[`contracts/${f.split(path.sep).join('/')}`] = fs.readFileSync(p);
+}
 
 const stale = Object.entries(files).filter(([f, data]) => {
   try { return !fs.readFileSync(path.join(DIST, f)).equals(Buffer.from(data)); } catch { return true; }

@@ -195,6 +195,7 @@ const commands = {
     return require('./lib/webui').setup({
       ...(o('url') && { base: o('url') }), ...(o('key') && { key: o('key') }), ...(o('model') && { model: o('model') }),
       ...(o('dt-url') && { dtUrl: o('dt-url') }), ...(o('dt-key') && { dtKey: o('dt-key') }),
+      ...(o('profile') && { profile: o('profile') }),
     });
   },
 

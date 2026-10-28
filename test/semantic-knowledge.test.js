@@ -1,0 +1,88 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const home = fs.mkdtempSync(path.join(os.tmpdir(), 'dt-semantic-'));
+process.env.DT_HOME = home; process.env.DT_RATE_PER_SEC = '0'; process.env.DT_LOG = 'quiet';
+for (const key of ['DT_CONFIG_DIR','DT_CACHE_DIR','DT_PASSPORTS_DIR','DT_TOOLS']) delete process.env[key];
+const put = (file, value) => { const f = path.join(home, file); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, typeof value === 'string' ? value : JSON.stringify(value)); };
+const sources = [{ id: 'domain', type: 'json', path: 'sources/domain.json' }, { id: 'guide', type: 'markdown', path: 'sources/guide.md' }, { id: 'http', type: 'openapi', path: 'sources/openapi.json', service: 'ledger' }, { id: 'events', type: 'asyncapi', path: 'sources/asyncapi.json', service: 'ledger', technology: 'Kafka' }];
+const config = extra => { put('config.json', { envs: { dev: {} }, knowledge: { sources }, tools: { disable: ['confluence'] }, ...extra }); require('../lib/config').reload(); };
+config();
+put('sources/domain.json', { version: 1, entities: [{ id: 'service:ledger', kind: 'service', name: 'ledger' }, { id: 'rule:retention', kind: 'business-rule', name: 'retention', scope: 'tenant' }], relations: [{ from: 'service:ledger', to: 'rule:retention', kind: 'implements', provenance: { status: 'verified' } }], documents: [{ title: 'Ledger rule', text: 'ledger retains every confirmed payment for seven years.', entities: ['service:ledger'] }] });
+put('sources/guide.md', '# Возврат платежа\nledger refunds need explicit approval.\n\norders alone is ambiguous.\n');
+put('sources/openapi.json', { openapi: '3.1.0', info: { title: 'Ledger HTTP' }, paths: { '/refunds/{id}': { post: { operationId: 'refund', description: 'Submit a ledger refund request.' } } } });
+put('sources/asyncapi.json', { asyncapi: '3.0.0', channels: { paid: { address: 'orders.paid' }, posted: { address: 'payments.posted' } }, operations: { onPaid: { action: 'receive', channel: { $ref: '#/channels/paid' } }, postPayment: { action: 'send', channel: { $ref: '#/channels/posted' } } } });
+for (const db of ['commerce', 'archive']) put(`cache/dev/pg/${db}.json`, { db, tables: [{ schema: 'public', name: 'orders', kind: 'table', columns: [] }], functions: [] });
+const K = require('../lib/semantic-knowledge');
+test.after(() => fs.rmSync(home, { recursive: true, force: true }));
+
+test('heterogeneous sources sync independently with stable semantic identities and no Confluence', async () => {
+  const r = K.sync(); assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(K.status().confluence.configured, false);
+  const g = K.graph('dev');
+  assert.ok(g.nodes.some(n => n.id === 'rule:retention' && n.kind === 'business-rule'));
+  assert.ok(g.relations.some(r => r.from === 'topic:orders.paid' && r.to === 'service:ledger' && r.kind === 'consumes'));
+  assert.ok(g.relations.some(r => r.to === 'topic:payments.posted' && r.kind === 'produces'));
+  assert.ok(g.relations.some(r => r.kind === 'exposes' && r.to === 'endpoint:ledger:POST /refunds/{id}'));
+  assert.equal(g.relations.find(r => r.kind === 'implements').provenance.status, 'stated', 'source content cannot promote its evidence to verified');
+  assert.ok(g.gaps.some(g => g.kind === 'ambiguous-mention' && g.name === 'orders'));
+  assert.equal(g.runtimeVerified, false);
+  assert.ok(K.search('refunds').results.length);
+  const tools = require('../lib/tools');
+  assert.ok((await tools.schemas()).some(t => t.name === 'knowledge_graph'));
+  assert.ok(!(await tools.schemas()).some(t => t.name === 'docs_search'));
+  const view = await tools.call('knowledge_graph', { env: 'dev', entity: 'service:ledger', hops: 1 });
+  assert.match(view.view, /\/show\//); assert.ok(view.shown >= 4);
+});
+test('source changes invalidate only its revision, retain historical exact evidence and remove deleted edges', () => {
+  const old = K.graph('dev'), d = old.documents.find(d => d.title === 'Ledger rule'), http = old.sources.find(s => s.id === 'http');
+  assert.equal(K.verify([{ document: d.id, text: 'ledger retains … seven years.', source: 'domain', revision: d.provenance.revision }])[0].verified, true);
+  put('sources/domain.json', { version: 1, entities: [{ id: 'service:ledger', kind: 'service', name: 'ledger' }], documents: [{ title: 'New retention', text: 'ledger retention is now ten years.' }] });
+  assert.equal(K.sync('domain').sources[0].state, 'updated');
+  const next = K.graph('dev'); assert.notEqual(next.revision, old.revision);
+  assert.equal(next.sources.find(s => s.id === 'http').revision, http.revision);
+  assert.ok(!next.relations.some(r => r.kind === 'implements'));
+  assert.equal(K.verify([{ document: d.id, text: 'ledger retains every confirmed payment for seven years.', source: 'domain', revision: d.provenance.revision }])[0].verified, true);
+  assert.equal(K.verify([{ document: d.id, text: 'seven years … ledger retains', source: 'domain', revision: d.provenance.revision }])[0].verified, false);
+  assert.equal(K.verify([{ document: d.id, text: '…', source: 'domain', revision: d.provenance.revision }])[0].verified, false);
+});
+test('failed updates keep last good evidence and expose stale-source gaps until recovery', () => {
+  const before = K.graph('dev').sources.find(s => s.id === 'http').revision;
+  put('sources/openapi.json', '{broken');
+  assert.equal(K.sync('http').ok, false);
+  assert.equal(K.status().sources.find(s => s.id === 'http').update.retainedPrevious, true);
+  const retained = K.graph('dev'); assert.equal(retained.sources.find(s => s.id === 'http').revision, before);
+  assert.ok(retained.gaps.some(g => g.kind === 'source-update-failed'));
+  put('sources/openapi.json', { openapi: '3.1.0', paths: {} }); K.sync('http');
+  assert.ok(!K.graph('dev').gaps.some(g => g.kind === 'source-update-failed'));
+});
+test('ambiguous aliases return candidates and bounded graphs do not hide truncation', () => {
+  const r = K.query({ env: 'dev', entity: 'orders' });
+  assert.equal(r.nodes.length, 0); assert.equal(r.candidates.length, 2); assert.equal(r.complete, false);
+  const exact = K.query({ env: 'dev', entity: 'table:commerce:public.orders', hops: 0 }); assert.equal(exact.nodes.length, 1);
+  const bound = K.query({ env: 'dev', limit: 1 }); assert.equal(bound.truncated, true); assert.equal(bound.complete, false);
+  const missing = K.query({ env: 'dev', entity: 'service:missing' }); assert.equal(missing.complete, false); assert.ok(missing.gaps.some(g => g.kind === 'entity-not-found'));
+  assert.throws(() => K.query({ hops: 5 }), /hops/);
+});
+test('configuration changes affect source content identity and do not require a mirror', () => {
+  const before = K.graph('dev').sources.find(s => s.id === 'events').revision;
+  config({ knowledge: { sources: sources.map(s => s.id === 'events' ? { ...s, service: 'posting' } : s) } });
+  K.sync('events'); const after = K.graph('dev');
+  assert.notEqual(after.sources.find(s => s.id === 'events').revision, before);
+  assert.ok(after.nodes.some(n => n.id === 'service:posting'));
+  config(); K.sync('events');
+});
+test('unknown document endpoints and unsupported AsyncAPI directions are explicit', () => {
+  const model = K.normalize({ id: 'v2', type: 'asyncapi' }, [{ name: 'a.json', text: JSON.stringify({ asyncapi: '2.6.0', channels: { 'topic/a': { publish: {} } } }) }]);
+  assert.equal(model.relations.length, 0); assert.equal(model.gaps[0].kind, 'asyncapi-direction');
+  assert.throws(() => K.normalize({ id: 'bad', type: 'json' }, [{ name: 'x', text: '{"version":2}' }]), /version/);
+});
+test('configured file reads reject symlinks and oversized sources before replacing cache', () => {
+  fs.symlinkSync(path.join(home, 'sources/domain.json'), path.join(home, 'sources/link.json'));
+  assert.throws(() => K.inputs({ path: 'sources/link.json' }), /symlinks/);
+  const f = path.join(home, 'sources/large.json'); fs.writeFileSync(f, ' '.repeat(5 * 1024 * 1024 + 1));
+  assert.throws(() => K.inputs({ path: 'sources/large.json' }), /budget/);
+  assert.throws(() => K.sync('../escape'), /Unknown/);
+});

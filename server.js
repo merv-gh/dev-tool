@@ -18,11 +18,13 @@ function send(res, status, body, extra = {}) {
 }
 
 const readJsonBody = (req) => new Promise((resolve, reject) => {
-  const chunks = [];
-  req.on('data', c => chunks.push(c)).on('error', reject).on('end', () => {
+  const chunks = []; let size = 0, failed = false;
+  req.on('data', c => { if (failed) return; size += c.length; if (size > require('./lib/config').getTools().maxInputBytes) { failed = true; chunks.length = 0; reject(Object.assign(new Error('Request body exceeds configured input budget'), { code: 'DT_ARGUMENT_INVALID', statusCode: 413 })); } else chunks.push(c); }).on('error', reject).on('end', () => {
+    if (failed) return;
     try { resolve(chunks.length ? JSON.parse(Buffer.concat(chunks)) : {}); } catch (e) { reject(e); }
   });
 });
+const errorPayload = e => require('./lib/redact').clean({ error: e.message, ...(e.code ? { code: e.code } : {}), ...(e.issues ? { issues: e.issues } : {}) });
 
 // Tools reach the infrastructure with your credentials. Allowed: this machine; a request with
 // DT_API_KEY (Authorization: Bearer, or the dt_key cookie set by /admin?key=...); or anyone on the
@@ -80,7 +82,7 @@ async function mcpHandle(msg) {
         const result = await tools.call(msg.params.name, msg.params.arguments || {}, { source: 'mcp' });
         return reply({ content: [{ type: 'text', text: typeof result === 'string' ? result : JSON.stringify(result) }] });
       } catch (e) {
-        return reply({ content: [{ type: 'text', text: `Error: ${e.message}` }], isError: true });
+        return reply({ content: [{ type: 'text', text: `Error: ${errorPayload(e).error}` }], structuredContent: errorPayload(e), isError: true });
       }
     }
     default:
@@ -107,9 +109,9 @@ const viewPage = page('view.html');
 // Open WebUI embeds a tool result as an iframe when the response carries
 // `Content-Disposition: inline` + `Location`, and gives the model the second element of a
 // two-element JSON array body. So table results show up as the live viewer inside the chat.
-async function openapi() {
+async function openapi(profile = require('./lib/config').getTools().profile) {
   const paths = {};
-  for (const t of await tools.schemas()) {
+  for (const t of await tools.schemas({ profile })) {
     paths[`/oapi/${t.name}`] = {
       post: {
         operationId: t.name,
@@ -120,7 +122,7 @@ async function openapi() {
       },
     };
   }
-  return { openapi: '3.1.0', info: { title: 'dt', version: VERSION, description: 'Read-only dev/uat infrastructure tools' }, paths };
+  return { openapi: '3.1.0', info: { title: `dt (${profile})`, version: VERSION, description: 'Microservice investigation and isolated testing tools. Profile selects discovery, not permissions.' }, 'x-dt-profile': profile, paths };
 }
 
 async function oapi(req, res, url) {
@@ -129,10 +131,10 @@ async function oapi(req, res, url) {
   // Open WebUI says which chat a call comes from when ENABLE_FORWARD_USER_INFO_HEADERS is on
   const session = req.headers['x-openwebui-chat-id'] || req.headers['x-chat-id'] || null;
   try { result = await tools.call(name, await readJsonBody(req), { source: 'openapi', session }); }
-  catch (e) { return send(res, 400, { error: e.message }); }
+  catch (e) { return send(res, e.statusCode || 400, errorPayload(e)); }
   const target = result && typeof result === 'object' && (result.view || result.dashboard);
   const embed = typeof target === 'string' ? target + (target.includes('?') ? '&' : '?') + 'embed=1' : null;
-  if (embed) return send(res, 200, ['embed', result], { 'content-disposition': 'inline', location: embed });
+  if (embed) return send(res, 200, ['embed', result], { 'content-disposition': 'inline', location: embed, 'access-control-expose-headers': 'Content-Disposition, Location' });
   send(res, 200, result);
 }
 
@@ -149,12 +151,14 @@ const routes = [
   ['GET', '/api/status', false, (req, res) => send(res, 200, { trusted: trusted(req), ...status() })],
   ['GET', '/api/prompt', false, (req, res) => { res.writeHead(200, { 'content-type': 'text/markdown; charset=utf-8' }); res.end(require('./lib/webui').prompt()); }],
   ['GET', '/api/find', true, (req, res, url) => send(res, 200, catalog.find(url.searchParams.get('env') || envNames()[0], url.searchParams.get('q') || '', { limit: Number(url.searchParams.get('limit')) || 300 }))],
-  ['GET', '/api/tools', false, async (req, res) => send(res, 200, await tools.schemas())],
+  ['GET', '/api/tools', false, async (req, res, url) => send(res, 200, await tools.schemas({ profile: url.searchParams.get('profile') || 'all' }))],
   ['POST', '/api/tool/*', true, async (req, res, url) => {
     try { send(res, 200, { result: await tools.call(url.pathname.split('/').pop(), await readJsonBody(req), { source: 'api' }) }); }
-    catch (e) { send(res, 400, { error: e.message }); }
+    catch (e) { send(res, e.statusCode || 400, errorPayload(e)); }
   }],
-  ['GET', '/openapi.json', false, async (req, res) => send(res, 200, await openapi())],
+  ['GET', '/openapi.json', false, async (req, res, url) => send(res, 200, await openapi(url.searchParams.get('profile') || undefined))],
+  ['GET', '/openapi/*', false, async (req, res, url) => { const name = url.pathname.slice('/openapi/'.length); if (!/^[a-z][\w-]*\.json$/.test(name)) return send(res, 404, { error: 'Unknown profile URL' }); send(res, 200, await openapi(name.slice(0, -5))); }],
+  ['GET', '/contracts/*', false, (req, res, url) => { const file = url.pathname.slice('/contracts/'.length); if (!/^v\d+\/[a-z][a-z0-9-]*\.schema\.json$/.test(file)) return send(res, 404, { error: 'Unknown contract' }); const full = path.join(require('./lib/config').ROOT, 'contracts', file); if (!fs.existsSync(full)) return send(res, 404, { error: 'Unknown contract' }); send(res, 200, fs.readFileSync(full, 'utf8'), CORS); }],
   ['POST', '/oapi/*', true, oapi],
 
   // admin: watch, edit and refresh the index
@@ -324,7 +328,7 @@ function start({ port = 4000, host = '127.0.0.1' } = {}) {
       if (route[2] && !trusted(req)) return send(res, 403, { error: 'not allowed: call from this machine, send Authorization: Bearer <DT_API_KEY>, or set DT_TRUST_NETWORK=1' });
       await route[3](req, res, url);
     } catch (e) {
-      if (!res.headersSent) send(res, 500, { error: e.message }); else res.end();
+      if (!res.headersSent) send(res, e.statusCode || (e.code === 'DT_PROFILE_UNKNOWN' || e.code === 'DT_ARGUMENT_INVALID' ? 400 : 500), errorPayload(e)); else res.end();
     }
   });
   // the browser container starts after dt is healthy and reads these secrets once

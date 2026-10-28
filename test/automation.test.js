@@ -168,7 +168,7 @@ test('scripts and collections as tools; rebuilt when scripts change', async () =
   const col = sch.find(t => t.name === 'partner');
   assert.match(col.description, /^Partner test uploads\. Run one by name/);
   assert.match(col.description, /- send-order: Send a test order.*\(params: customerId, template\)/);
-  assert.deepEqual(col.inputSchema.properties.script.enum.sort(), ['bad', 'send-invoice', 'send-order']);
+  assert.deepEqual(col.inputSchema.properties.script.examples.sort(), ['bad', 'send-invoice', 'send-order']);
   const inv = sch.find(t => t.name === 'send_invoice');
   assert.deepEqual(inv.inputSchema.required, ['amount']);
   assert.equal(inv.inputSchema.properties.amount.type, 'number');
