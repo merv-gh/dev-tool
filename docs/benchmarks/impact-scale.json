@@ -1,0 +1,41 @@
+{
+  "protocol": "dt.impact-scale/v1",
+  "generatedAt": "2026-10-28T22:32:21.668Z",
+  "proof": "synthetic-cached-tool-execution",
+  "networkUsed": false,
+  "host": {
+    "platform": "darwin",
+    "arch": "x64",
+    "node": "v24.22.0",
+    "cpus": 16,
+    "cpu": "Intel(R) Core(TM) i9-9980HK CPU @ 2.40GHz",
+    "memoryBytes": 68719476736
+  },
+  "fixture": {
+    "passports": 1000,
+    "topicsPerService": 100,
+    "edges": 100008,
+    "libraryRevisions": 4,
+    "tables": 200,
+    "columns": 2000
+  },
+  "measurements": {
+    "setupMs": 2345.264,
+    "coldMs": 860.32,
+    "warmSamples": 30,
+    "warmP50Ms": 96.45,
+    "warmP95Ms": 136.145,
+    "warmMaxMs": 141.041,
+    "maxResponseBytes": 2658,
+    "heapUsedBytes": 68921680,
+    "maxRssBytes": 191180800
+  },
+  "gates": {
+    "architectureSize": true,
+    "scopedLibraryIdentities": true,
+    "highFanoutBounded": true,
+    "warmP95Under250Ms": true,
+    "responseUnder8192Bytes": true
+  },
+  "ready": true
+}

@@ -92,20 +92,20 @@ test('impact: method -> callers -> endpoint; column -> entity field, function bo
 
   const c = I.impact('pay.payments.fee', { env: 'dev' });
   assert.equal(c.kind, 'column');
-  assert.deepEqual(c.items.map(i => `${i.depth} ${i.kind} ${i.name}`).sort(), ['1 field Payment.fee', '1 pgfn pgfn:pay.customer_balance', '1 table table:pay.settled_payments', '2 method BalanceDao#balance', '2 table table:pay.customer_totals'].sort());
+  assert.deepEqual(c.items.map(i => `${i.depth} ${i.kind} ${i.name}`).sort(), ['1 field Payment.fee', '1 file file:PAY/payments-service/src/main/java/com/acme/pay/PaymentRepository.java', '1 pgfn pgfn:pay.customer_balance', '1 table table:pay.settled_payments', '2 method BalanceDao#balance', '2 table table:pay.customer_totals'].sort());
 
   const t = I.impact('settlements', { env: 'dev' });
   assert.deepEqual(t.items.map(i => i.name), ['SettlementListener#onSettlement']);
   const e = I.impact('POST /payments/7/settle', { env: 'dev' });
   assert.deepEqual(e.resolved, ['endpoint:POST /payments/{}/settle']);
   const tbl = I.impact('pay.customers', { env: 'dev' });
-  assert.ok(tbl.items.some(i => i.id === 'table:pay.payments' && /references/.test(i.via)), 'FKs: payments references customers');
+  assert.ok(tbl.items.some(i => i.id === 'table:dev:pay:pay.payments' && /references/.test(i.via)), 'FKs: payments references customers');
   const none = I.impact('NoSuchThing', { env: 'dev' });
   assert.deepEqual(none.resolved, []);
   // a class: its members and everything that uses them; tests that reach it are listed
   const svc = I.impact('PaymentService', { env: 'dev' });
   assert.ok(svc.items.some(i => i.name === 'SettlementListener#onSettlement'));
-  assert.ok(svc.resolved.includes('com.acme.pay.PaymentService#settle'));
+  assert.ok(svc.resolved.some(id => id.endsWith(':com.acme.pay.PaymentService#settle(Long)')));
 });
 
 test('DDL snapshot: all objects in order; a subset closed over FKs, triggers and functions', () => {
@@ -217,7 +217,7 @@ test('tools: code_search, code_symbols, impact and patch views', async () => {
   assert.equal(s.total, 1);
   assert.match(s.rows[0].file, /PaymentEvents\.java:18$/);
   const y = await T.call('code_symbols', { q: 'payment settle' });
-  assert.ok(y.rows.some(r => r.id === 'com.acme.pay.PaymentService#settle'));
+  assert.ok(y.rows.some(r => r.legacyId === 'com.acme.pay.PaymentService#settle' && r.id.endsWith('#settle(Long)')));
   const i = await T.call('impact', { target: 'FeeCalculator#fee', env: 'dev', repos: 'PAY/*' });
   assert.match(i.view, /\/show\//);
   assert.equal(require('../lib/views').list().filter(v => ['impact', 'patch', 'tests'].includes(v.name) && v.builtin).length, 3);

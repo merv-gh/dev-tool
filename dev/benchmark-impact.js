@@ -1,0 +1,21 @@
+#!/usr/bin/env node
+// Reproducible scale probe: real tool registry, synthetic cached architecture, no source network calls.
+const fs=require('fs'),os=require('os'),path=require('path'),{performance}=require('perf_hooks');
+const home=fs.mkdtempSync(path.join(os.tmpdir(),'dt-impact-scale-'));
+process.env.DT_HOME=home;process.env.DT_LOG='quiet';process.env.DT_RATE_PER_SEC='0';
+for(const k of ['DT_CONFIG_DIR','DT_CACHE_DIR','DT_PASSPORTS_DIR','DT_REPOS_DIR','DT_WORK_DIR','DT_TOOLS'])delete process.env[k];
+const put=(p,data)=>{const f=path.join(home,p);fs.mkdirSync(path.dirname(f),{recursive:true});fs.writeFileSync(f,typeof data==='string'?data:JSON.stringify(data));};
+(async()=>{try{
+ put('config.json',{envs:{dev:{postgres:{alpha:'postgres://fixture@127.0.0.1:1/a',beta:'postgres://fixture@127.0.0.1:1/b'}}}});
+ const setup=performance.now();
+ for(let n=0;n<1000;n++)put(`passports/service-${n}/passport.json`,{service:`service-${n}`,env:'dev',repo:{project:'BENCH',repo:`service-${n}`,sha:`revision-${n}`},effective:{consumes:Array.from({length:100},(_,topic)=>({topic:`events.${topic}`,file:'src/main/java/Listener.java',line:topic+1})),calls:[],endpoints:[],tables:[],produces:[]}});
+ for(const db of ['alpha','beta'])put(`cache/dev/pg/${db}.json`,{db,database:db,syncedAt:'2026-10-01',tables:Array.from({length:100},(_,i)=>({schema:'public',name:`records_${i}`,kind:'table',columns:Array.from({length:10},(_,c)=>({name:`field_${c}`,type:'bigint'})),constraints:[]})),functions:[],viewDeps:[],triggers:[]});
+ const CI=require('../lib/codeindex');for(let n=0;n<4;n++){const key=`LIB/revision-${n}`;put(`sources/${key}/src/main/java/fixture/Library.java`,'package fixture;\npublic class Library {\npublic int apply(int n) { return n; }\npublic long apply(long n) { return n; }\n}\n');CI.build(path.join(home,'sources',key),key,{repo:'library',sha:`library-revision-${n}`});}
+ const tools=require('../lib/tools'),call=()=>tools.call('tool_execute',{name:'impact',arguments:{target:'topic:events.0',env:'dev',depth:4,limit:100,max_output_bytes:8192}});
+ const coldStart=performance.now();const cold=await call();const coldMs=performance.now()-coldStart;
+ const G=require('../lib/impact').load({env:'dev'}),edges=[...G.fwd.values()].reduce((n,x)=>n+x.length,0),samples=[],bytes=[];
+ for(let n=0;n<35;n++){const start=performance.now(),r=await call();if(n>=5){samples.push(performance.now()-start);bytes.push(Buffer.byteLength(JSON.stringify(r)));}if(r.total!==1000||r.complete!==false||!r.cutReasons.includes('output')||!r.continuation)throw new Error('High-fanout coverage/continuation contract failed');}
+ samples.sort((a,b)=>a-b);const percentile=q=>+samples[Math.min(samples.length-1,Math.ceil(samples.length*q)-1)].toFixed(3);
+ const out={protocol:'dt.impact-scale/v1',generatedAt:new Date().toISOString(),proof:'synthetic-cached-tool-execution',networkUsed:false,host:{platform:process.platform,arch:process.arch,node:process.version,cpus:os.cpus().length,cpu:os.cpus()[0]?.model,memoryBytes:os.totalmem()},fixture:{passports:1000,topicsPerService:100,edges,libraryRevisions:4,tables:200,columns:2000},measurements:{setupMs:+(coldStart-setup).toFixed(3),coldMs:+coldMs.toFixed(3),warmSamples:samples.length,warmP50Ms:percentile(.5),warmP95Ms:percentile(.95),warmMaxMs:+Math.max(...samples).toFixed(3),maxResponseBytes:Math.max(...bytes),heapUsedBytes:process.memoryUsage().heapUsed,maxRssBytes:process.resourceUsage().maxRSS*1024},gates:{architectureSize:edges>=100000,scopedLibraryIdentities:[...G.nodes.values()].filter(n=>n.kind==='method').length===8,highFanoutBounded:cold.complete===false&&cold.total===1000&&cold.cutReasons.includes('output'),warmP95Under250Ms:percentile(.95)<=250,responseUnder8192Bytes:Math.max(...bytes)<=8192}};
+ out.ready=Object.values(out.gates).every(Boolean);const at=process.argv.indexOf('--output');if(at>=0){fs.mkdirSync(path.dirname(process.argv[at+1]),{recursive:true});fs.writeFileSync(process.argv[at+1],JSON.stringify(out,null,2)+'\n');}console.log(JSON.stringify(out,null,2));if(process.argv.includes('--assert-ready')&&!out.ready)process.exitCode=1;
+ }finally{fs.rmSync(home,{recursive:true,force:true});}})().catch(e=>{console.error(e.stack);process.exitCode=2;});

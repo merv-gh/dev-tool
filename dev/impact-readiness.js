@@ -23,16 +23,18 @@ async function probe(id) {
       const a=await call('impact',{target:'public.orders',env:'dev'}),b=await call('impact',{target:'table:alpha:public.orders',env:'dev'});
       required='Identical schema.table names in different logical databases remain separate; an unscoped request reports ambiguity and an exact database-scoped request selects only its users.';
       observed={unscoped:{resolved:a.resolved,services:a.services,hasAmbiguity:(a.candidates?.length||0)>1||a.ambiguous===true||(a.gaps||[]).some(g=>String(g.kind).includes('ambigu'))},scoped:{resolved:b.resolved,services:b.services,nearest:b.nearest},inputHasDb:Object.hasOwn((await tools.call('tool_describe',{name:'impact'})).inputSchema.properties,'db')};
-      gap=!observed.unscoped.hasAmbiguity&&a.services?.includes('alpha-reader')&&a.services?.includes('beta-reader');
+      gap=!observed.unscoped.hasAmbiguity||a.resolved?.length!==0||b.resolved?.[0]!=='table:dev:alpha:public.orders'||JSON.stringify(b.services)!==JSON.stringify(['alpha-reader'])||!observed.inputHasDb;
     } else if(id==='symbol-identity') {
       const source=`package fixture;\npublic class MoneyMath {\n public int round(int value) { return value; }\n public long round(long value) { return value; }\n}\n`;
       indexed('LIB/v1',source,{sha:'version-one'});indexed('LIB/v2',source,{sha:'version-two'});
       const g=require('../lib/impact').load({env:'dev'}),a=await call('code_symbols',{q:'MoneyMath round',kind:'method'}),b=await call('impact',{target:'MoneyMath#round(int)',env:'dev'});
       const symbols=(a.preview||a.rows||[]); // The compact facade may use a preview; graph count remains direct fixture evidence.
-      const methods=['LIB/v1','LIB/v2'].flatMap(k=>require('../lib/codeindex').load(k).graph_().classes.flatMap(c=>c.methods.filter(m=>m.name==='round').map(m=>({repo:k,id:c.id+'#'+m.name,signature:m.params.map(p=>p.type).join(',')}))));
+      const identity=require('../lib/semantic-identity');
+      const methods=['LIB/v1','LIB/v2'].flatMap(k=>{const idx=require('../lib/codeindex').load(k);return idx.graph_().classes.flatMap(c=>c.methods.filter(m=>m.name==='round').map(m=>({repo:k,id:identity.code(k,identity.revision(idx),`${c.id}#${identity.signature(m)}`),signature:identity.signature(m)})));});
+      const exact=await call('impact',{target:methods[0].id,env:'dev'});
       required='Repository/revision and overload parameter signatures distinguish method identities; selecting one version/overload cannot silently overwrite another.';
-      observed={declaredMethods:methods,uniquePublicIds:new Set(methods.map(m=>m.id)).size,impactMethodNodes:[...g.nodes.values()].filter(n=>n.id==='fixture.MoneyMath#round').map(n=>({id:n.id,repo:n.repo})),signatureSelection:b.resolved,facadeRows:symbols.length};
-      gap=methods.length===4&&observed.uniquePublicIds===1&&observed.impactMethodNodes.length===1;
+      observed={declaredMethods:methods,uniquePublicIds:new Set(methods.map(m=>m.id)).size,impactMethodNodes:[...g.nodes.values()].filter(n=>n.kind==='method'&&n.signature?.startsWith('round(')).map(n=>({id:n.id,repo:n.repo})),signatureSelection:b.resolved,signatureAmbiguous:b.ambiguous,signatureCandidates:b.candidates,exactSelection:exact.resolved,facadeRows:symbols.length};
+      gap=methods.length!==4||observed.uniquePublicIds!==4||observed.impactMethodNodes.length!==4||b.ambiguous!==true||b.candidates?.length!==2||exact.resolved?.[0]!==methods[0].id||symbols.length!==4;
     } else if(id==='passport-edges') {
       put('passports/orders/passport.json',passport('orders',{endpoints:[],consumes:[{topic:'orders.paid',file:'Listener.java',line:12}],produces:[],tables:[],calls:[{client:'BillingClient',method:'GET',path:'/billing/{id}',file:'BillingClient.java',line:9}]}));
       put('passports/staging-only/passport.json',passport('staging-only',{endpoints:[{method:'GET',path:'/stage-only',handler:'Controller.get',file:'Controller.java',line:4}],consumes:[],produces:[],tables:[],calls:[]},'staging'));
@@ -52,13 +54,13 @@ async function probe(id) {
       const control=await call('impact',{target:'GET /after',env:'dev'});
       required='Updating an existing passport invalidates impact cache even when the top-level passports directory mtime is unchanged.';
       observed={parentDirectoryUnchanged:unchanged,newEndpoint:a.resolved,oldEndpoint:b.resolved,afterExplicitParentRefresh:control.resolved};
-      gap=observed.parentDirectoryUnchanged&&!a.resolved?.length&&!!b.resolved?.length;
+      gap=!observed.parentDirectoryUnchanged||a.resolved?.length!==1||b.resolved?.length!==0||control.resolved?.length!==1;
     } else if(id==='traversal-boundary') {
       let source='package fixture;\npublic class Chain {\n';for(let i=0;i<8;i++)source+=` public int step${i}() { return ${i===0?'1':`step${i-1}()`}; }\n`;source+='}\n';indexed('SERVICE/chain',source);
       const shallow=await call('impact',{target:'Chain#step0',env:'dev',depth:2}),deep=await call('impact',{target:'Chain#step0',env:'dev',depth:8});
       required='A depth- or work-budget cut reports an incomplete frontier, independently from returned-item truncation; a bounded result cannot imply no more callers.';
-      observed={shallowNearest:shallow.nearest,deepNearest:deep.nearest,shallowCounts:shallow.counts,deepCounts:deep.counts,shallowTruncated:shallow.truncated??null,complete:shallow.complete??null,gaps:shallow.gaps??null};
-      gap=(deep.counts?.method||0)>(shallow.counts?.method||0)&&!shallow.truncated&&!shallow.gaps&&!Object.hasOwn(shallow,'complete');
+      observed={shallowNearest:shallow.nearest,deepNearest:deep.nearest,shallowCounts:shallow.counts,deepCounts:deep.counts,shallowTruncated:shallow.truncated??null,complete:shallow.complete??null,gaps:shallow.gaps??null,cutReasons:shallow.cutReasons,frontier:shallow.frontier,deepTraversalComplete:deep.traversalComplete};
+      gap=(deep.counts?.method||0)<=(shallow.counts?.method||0)||shallow.complete!==false||!shallow.cutReasons?.includes('depth')||!shallow.frontier?.length||deep.traversalComplete!==true;
     }
     return {id,required,observed,gap,proof:'executed-tool-probe',calls:callLog};
   } finally {fs.rmSync(home,{recursive:true,force:true});}
