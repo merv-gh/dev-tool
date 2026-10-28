@@ -17,7 +17,7 @@ test('explicit application contracts preserve invocation versus failed tests/ass
 });
 
 test('registry history includes a returned failed job and its exact trace without calling it an invocation failure', async () => {
-  const job = J.start('broken-job', 'broken-job', async () => { throw new Error('application build failed'); });
+  const job = J.start('tests:not-needed-to-poll:broken-job', 'broken-job', async () => { throw new Error('application build failed'); });
   await job.promise;
   const answer = await T.call('tool_execute', { name: 'test_run', arguments: { workspace: 'not-needed-to-poll', job: job.id } });
   assert.equal(answer.state, 'failed');

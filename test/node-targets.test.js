@@ -67,3 +67,14 @@ test('differential tool preserves types/order/null/error/effects and reports exa
   const diff=await call('differential_check',{profile:'projection',baseline:'before',candidate:'after',inputs});assert.equal(diff.outcome,'different');assert.notEqual(diff.versions[0].moduleSha256,diff.versions[1].moduleSha256);
   assert.throws(()=>require('../lib/differential').normalize({},{kind:'sort'}),/iterable/);
 });
+test('unsupported return encoding cannot masquerade as equivalent errors and sparse arrays remain distinct', async () => {
+  const run = () => call('differential_check', { profile: 'projection', baseline: 'before', candidate: 'after', inputs: [{ id: 'encoding', args: [22] }] });
+  for (const text of ["exports.load=()=>()=>123", "exports.load=()=>{const x=new Map();x.set('self',x);return x}", "exports.load=()=>{const x=new Set();x.add(x);return x}"]) {
+    W.write('before', 'src/projection.cjs', { content: text }); W.write('after', 'src/projection.cjs', { content: text });
+    await assert.rejects(run(), /differential worker.*exit/);
+  }
+  W.write('before', 'src/projection.cjs', { content: 'exports.load=()=>Array(1)' });
+  W.write('after', 'src/projection.cjs', { content: 'exports.load=()=>[null]' });
+  assert.equal((await run()).outcome, 'different');
+  assert.ok((await require('../lib/tools').call('test_targets', {})).targets.find(t => t.id === 'captured').required.includes('fixture_path'));
+});
