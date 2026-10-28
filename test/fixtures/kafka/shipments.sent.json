@@ -1,0 +1,5 @@
+{
+  "topic": "shipments.sent", "partitions": 3, "messages": 5000,
+  "valueSchema": { "version": 2, "id": 17, "type": "JSON", "schema": { "type": "object", "properties": { "shipmentId": { "type": "integer" }, "orderId": { "type": "integer" }, "carrierCode": { "type": "string" }, "carrierName": { "type": "string" }, "trackingNo": { "type": "string" }, "sentAt": { "type": "string", "format": "date-time" } }, "required": ["shipmentId", "orderId", "carrierCode"] } },
+  "samples": []
+}

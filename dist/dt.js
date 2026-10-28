@@ -363,6 +363,7 @@ var require_config = __commonJS({
         waitMs: Number(e.DT_TESTS_WAIT_MS || c.waitMs || 5e4),
         // compile checks after each write (workspace_write, test_run files): on unless false; how long a write waits for the first classpath
         compileCheck: c.compileCheck !== false && e.DT_COMPILE_CHECK !== "0",
+        compileFix: c.compileFix !== false && e.DT_COMPILE_FIX !== "0",
         compileWaitMs: Number(e.DT_COMPILE_WAIT_MS || c.compileWaitMs || 45e3),
         pgUrl: c.pgUrl || e.DT_TEST_DB_URL || null,
         javaToolOptions: c.javaToolOptions !== void 0 ? c.javaToolOptions : "-Dnet.bytebuddy.experimental=true",
@@ -388,6 +389,15 @@ var require_config = __commonJS({
       if (!e[kind]) throw new Error(`${kind} not configured for ${e.name}: set envs.${e.name}.${kind} in ${path2.basename(CONFIG_FILE)}`);
       return e[kind];
     }
+    var NEVER_PUSH = ["main", "master", "release/*"];
+    function getPush() {
+      const c = resolved("push");
+      return {
+        enabled: c.enabled === true || c.enabled === "true",
+        protect: [.../* @__PURE__ */ new Set([...NEVER_PUSH, ...list(c.protect || [])])],
+        author: c.author || null
+      };
+    }
     module2.exports = {
       ROOT,
       HOME,
@@ -396,6 +406,7 @@ var require_config = __commonJS({
       SECRETS_FILE,
       ENVS_FILE,
       PATHS,
+      NEVER_PUSH,
       envNames: envNames2,
       getEnv: getEnv2,
       getPersonal,
@@ -406,6 +417,7 @@ var require_config = __commonJS({
       getFiles,
       getTimeouts,
       getTests,
+      getPush,
       getServer,
       endpoint,
       reload,
@@ -3154,6 +3166,7 @@ from pg_sequences where schemaname not in ('pg_catalog', 'information_schema') o
         q(EXTENSIONS_SQL).catch(() => []),
         q("select current_database() as database, version() as version")
       ]);
+      const dictionaries = await dictionaryRows(q, tables);
       writeJson(dbFile(envName, name), {
         db: name,
         database: meta.database,
@@ -3166,9 +3179,33 @@ from pg_sequences where schemaname not in ('pg_catalog', 'information_schema') o
         triggers: [...triggers],
         types: [...types],
         sequences: [...sequences],
-        extensions: [...extensions]
+        extensions: [...extensions],
+        dictionaries
       });
-      return { tables: tables.length, functions: functions.length, viewDeps: viewDeps.length, triggers: triggers.length, ms: Date.now() - started };
+      return { tables: tables.length, functions: functions.length, viewDeps: viewDeps.length, triggers: triggers.length, dictionaries: Object.keys(dictionaries).length, ms: Date.now() - started };
+    }
+    function dictionaryConfig() {
+      let c = {};
+      try {
+        c = require_config().load().raw.pg || {};
+      } catch {
+      }
+      return { re: new RegExp(process.env.DT_PG_DICTIONARIES || c.dictionaries || "^d_", "i"), max: Number(process.env.DT_PG_DICTIONARY_ROWS || c.dictionaryRows || 1e4) };
+    }
+    async function dictionaryRows(q, tables) {
+      const { re, max } = dictionaryConfig();
+      const out2 = {};
+      const qi = (n) => `"${String(n).replace(/"/g, '""')}"`;
+      for (const t of tables) {
+        if (t.kind !== "table" || !re.test(t.name)) continue;
+        try {
+          const rows = await q(`select * from ${qi(t.schema)}.${qi(t.name)} order by 1 limit ${max + 1}`);
+          out2[`${t.schema}.${t.name}`.toLowerCase()] = { rows: [...rows].slice(0, max).map((r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v instanceof Date ? v.toISOString() : typeof v === "bigint" ? String(v) : v]))), ...rows.length > max ? { truncated: true } : {} };
+        } catch (e) {
+          out2[`${t.schema}.${t.name}`.toLowerCase()] = { error: e.message };
+        }
+      }
+      return out2;
     }
     var loadDb = (envName, name) => readJson(dbFile(envName, name));
     function loadAll(envName) {
@@ -5726,7 +5763,7 @@ var require_git = __commonJS({
       }
       throw last;
     }
-    module2.exports = { fetchRef, fetchReusing, remoteSha, remoteRefs, fetchFirst, repoDir, REPOS, isSha, git };
+    module2.exports = { fetchRef, fetchReusing, remoteSha, remoteRefs, fetchFirst, repoDir, REPOS, isSha, git, remote, authArgs };
   }
 });
 
@@ -6349,7 +6386,16 @@ var require_flows = __commonJS({
         const c = cls(m);
         if (c && c.kind === "class" && (c.bean || c.role === "controller" || c.role === "listener") && !beans.some((b) => b.id === c.id)) beans.push(c);
       }
+      const DATA = /^(JdbcTemplate|NamedParameterJdbcTemplate|JdbcOperations|NamedParameterJdbcOperations|JdbcClient|DataSource|EntityManager)$/;
+      const onlyReads = (b) => {
+        const ms = order.filter((m) => m.startsWith(`${b.id}#`));
+        const acc = ms.flatMap((m) => (G.fwd.get(m) || []).filter((e) => String(e.to).startsWith("table:")).map((e) => e.kind));
+        return ms.length > 0 && acc.length > 0 && acc.every((k) => k === "read");
+      };
+      const daos = new Set(beans.filter((b) => b.role !== "controller" && b.role !== "listener" && [...b.bean ? b.ctor || [] : [], ...(b.fields || []).filter((f) => f.inject)].some((d) => DATA.test(base(d.type))) && onlyReads(b)).map((b) => b.id));
+      for (let i = beans.length - 1; i >= 0; i--) if (daos.has(beans[i].id)) beans.splice(i, 1);
       const beanIds = new Set(beans.map((b) => b.id));
+      const infra = /* @__PURE__ */ new Set();
       const implemented = (typeId) => beans.some((b) => (b.impl || []).map(own).includes(typeId) || (b.ext || []).map(own).includes(typeId));
       const mocks = [], properties = [];
       for (const b of beans) {
@@ -6363,6 +6409,10 @@ var require_flows = __commonJS({
             continue;
           }
           if (SKIP_TYPES.test(base(d.type))) continue;
+          if (/^(ObjectMapper|JsonMapper)$/.test(base(d.type))) {
+            infra.add("jackson");
+            continue;
+          }
           const tid = own(d.typeId);
           const el = elem(d.type);
           if (el) {
@@ -6370,12 +6420,12 @@ var require_flows = __commonJS({
           }
           if (tid && (beanIds.has(tid) || implemented(tid))) continue;
           const dc = tid && G.classes.get(tid);
-          const why = dc ? dc.role === "repository" ? "repository (database)" : dc.role === "feign" ? "Feign client (HTTP)" : dc.kind === "interface" ? "interface with no implementation on this flow" : "bean not on this flow" : `external (${(EXT.find(([re]) => re.test(String(tid || d.type))) || [, "library"])[1]})`;
+          const why = dc ? dc.role === "repository" || daos.has(tid) ? daos.has(tid) ? "DAO (database)" : "repository (database)" : dc.role === "feign" ? "Feign client (HTTP)" : dc.kind === "interface" ? "interface with no implementation on this flow" : "bean not on this flow" : `external (${(EXT.find(([re]) => re.test(String(tid || d.type))) || [, "library"])[1]})`;
           if (!mocks.some((x) => base(x.type) === base(d.type))) mocks.push({ type: d.type, typeId: tid || null, name: d.name, why, for: b.name });
         }
       }
       const chain = order.map((m) => ({ method: m, depth: depth.get(m), repo: G.nodes.get(m)?.repo || cls(m)?.repo, at: G.nodes.get(m) ? `${G.nodes.get(m).file}:${G.nodes.get(m).line}` : null }));
-      return { chain, out: out2, beans: beans.map((b) => ({ id: b.id, name: b.name, role: b.role, repo: b.repo, file: b.file })), mocks, properties };
+      return { chain, out: out2, beans: beans.map((b) => ({ id: b.id, name: b.name, role: b.role, repo: b.repo, file: b.file })), mocks, properties, infra: [...infra] };
     }
     function from(keys, methodId, { config = {} } = {}) {
       const G = require_impact().load({ repos: keys });
@@ -29439,7 +29489,7 @@ ${BUILD_OUTPUT.join("\n")}
 `);
       } catch {
       }
-      const meta = { id, project: info.project, repo, ref: ref || null, sha: info.sha, commitDate: info.commitDate, service: service || null, env: env || null, path: dir, createdAt: (/* @__PURE__ */ new Date()).toISOString(), usedAt: (/* @__PURE__ */ new Date()).toISOString(), session: session || null, fallback: info.fallback || void 0, reusedFrom: info.reusedFrom ? path2.relative(require_config().HOME, info.reusedFrom) : void 0 };
+      const meta = { id, project: info.project, repo, ref: ref || null, ...url ? { remote: url } : {}, sha: info.sha, commitDate: info.commitDate, service: service || null, env: env || null, path: dir, createdAt: (/* @__PURE__ */ new Date()).toISOString(), usedAt: (/* @__PURE__ */ new Date()).toISOString(), session: session || null, fallback: info.fallback || void 0, reusedFrom: info.reusedFrom ? path2.relative(require_config().HOME, info.reusedFrom) : void 0 };
       meta.libs = [];
       if (!libraries) {
         const pp = require_passport();
@@ -29546,6 +29596,81 @@ new file mode`) ? "added" : "modified";
       fs2.writeFileSync(path2.join(META, `${id}.patch`), text);
       return { id, repo: `${m.project}/${m.repo}`, base: m.sha, ref: m.ref, files, patch: text, apply: `git checkout ${m.sha.slice(0, 12)} && git apply --index ${id}.patch` };
     }
+    var branchGlob = (p) => /\/\*$/.test(p) ? new RegExp(`^${p.slice(0, -1).replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[^/]*")}.+$`) : branchGlobExact(p);
+    var branchGlobExact = (p) => new RegExp(`^${p.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*\*/g, "\0").replace(/\*/g, "[^/]*").replace(/\u0000/g, ".*")}$`);
+    async function push(id, { branch, message } = {}) {
+      const m = checkId(id);
+      const cfg = require_config().getPush();
+      if (!cfg.enabled) throw new Error('pushing is off: set "push": { "enabled": true } in config.json (main, master, release/* and the default branch stay protected)');
+      if (!branch) throw new Error("branch: which branch to push to (a new one, or an existing one that is not protected)");
+      if (!message || !String(message).trim()) throw new Error("message: the commit message");
+      await G.git(["check-ref-format", "--branch", branch], m.path).catch(() => {
+        throw new Error(`"${branch}" is not a valid branch name`);
+      });
+      const hit = cfg.protect.find((p) => branchGlob(p).test(branch));
+      if (hit) throw new Error(`${branch} is protected (${hit}): push to another branch, e.g. dt/${m.repo}-tests`);
+      const url = m.remote || G.remote(m.project, m.repo);
+      const auth = G.authArgs(url);
+      const refs = await G.git(["ls-remote", "--symref", url, "HEAD", `refs/heads/${branch}`], m.path, auth);
+      const def = (refs.match(/^ref: refs\/heads\/(\S+)\s+HEAD$/m) || [])[1];
+      if (def && def === branch) throw new Error(`${branch} is the default branch of ${m.project}/${m.repo}: push to another branch`);
+      const tip = (refs.match(new RegExp(`^([0-9a-f]{40})\\s+refs/heads/${branch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "m")) || [])[1] || null;
+      const not = [":(exclude).dt", ":(exclude)**/.dt"];
+      await G.git(["add", "-A", "--", ".", ...not], m.path);
+      const staged = await G.git(["diff", "--cached", "--name-only"], m.path);
+      if (!staged) throw new Error("nothing to push: no changes in the workspace since its commit");
+      const who = cfg.author && cfg.author.match(/^\s*(.+?)\s*<([^>]+)>\s*$/);
+      const ident = who ? ["-c", `user.name=${who[1]}`, "-c", `user.email=${who[2]}`] : [];
+      await G.git(["commit", "-q", "-m", message], m.path, ident).catch(async (e) => {
+        if (/Please tell me who you are|empty ident/i.test(e.message)) return G.git(["commit", "-q", "-m", message], m.path, ["-c", "user.name=dt", "-c", "user.email=dt@localhost"]);
+        throw e;
+      });
+      let commit = await G.git(["rev-parse", "HEAD"], m.path);
+      const ours = commit;
+      let replayed = false;
+      if (tip && tip !== m.sha) {
+        await G.git(["fetch", "-q", "--depth=1", url, `refs/heads/${branch}`], m.path, auth);
+        await G.git(["checkout", "-q", "--detach", "FETCH_HEAD"], m.path);
+        try {
+          await G.git(["cherry-pick", commit], m.path, ident.length ? ident : ["-c", "user.name=dt", "-c", "user.email=dt@localhost"]);
+        } catch (e) {
+          const conflicts = await G.git(["diff", "--name-only", "--diff-filter=U"], m.path).catch(() => "");
+          await G.git(["cherry-pick", "--abort"], m.path).catch(() => {
+          });
+          await G.git(["checkout", "-q", "--detach", commit], m.path);
+          await G.git(["reset", "-q", "--soft", m.sha], m.path);
+          throw new Error(`${branch} moved since the workspace was opened and the changes conflict with it${conflicts ? ` in ${conflicts.split("\n").join(", ")}` : ""}: nothing pushed; open a workspace at ${branch} and write the changes there`);
+        }
+        commit = await G.git(["rev-parse", "HEAD"], m.path);
+        replayed = true;
+      }
+      try {
+        await G.git(["push", "-q", url, `HEAD:refs/heads/${branch}`], m.path, auth);
+      } catch (e) {
+        if (replayed) await G.git(["checkout", "-q", "--detach", ours], m.path).catch(() => {
+        });
+        await G.git(["reset", "-q", "--soft", m.sha], m.path).catch(() => {
+        });
+        throw new Error(`push to ${branch} failed (nothing forced): ${e.message}`);
+      }
+      const files = staged.split("\n");
+      const base = m.sha;
+      const pushes = [...m.pushes || [], { branch, commit, base, at: (/* @__PURE__ */ new Date()).toISOString(), files: files.length }];
+      writeJson(metaFile(id), { ...m, sha: commit, ref: branch, pushes });
+      const bb = require_config().getPersonal().bitbucket.url;
+      return {
+        workspace: id,
+        repo: `${m.project}/${m.repo}`,
+        branch,
+        commit,
+        base,
+        files,
+        created: !tip,
+        ...replayed ? { replayedOn: tip } : {},
+        ...bb && !m.remote ? { compare: `${bb}/projects/${m.project}/repos/${m.repo}/compare/commits?sourceBranch=${encodeURIComponent(`refs/heads/${branch}`)}` } : {},
+        note: "the workspace now stands on this commit: later changes are a new patch and a new push"
+      };
+    }
     async function drop(id) {
       const m = checkId(id);
       fs2.rmSync(m.path, { recursive: true, force: true });
@@ -29588,7 +29713,7 @@ new file mode`) ? "added" : "modified";
       }
       return out2;
     }
-    module2.exports = { open, sweep, touch, keys, list, read, write, patch, drop, reindex, index, checkId, resolvePath, buildFiles, WORK };
+    module2.exports = { open, sweep, touch, keys, list, read, write, patch, push, branchGlob, drop, reindex, index, checkId, resolvePath, buildFiles, WORK };
   }
 });
 
@@ -30108,6 +30233,16 @@ ${cols.join(",\n")}
         if (!owners.has(k)) owners.set(k, `${q(`${t.schema}.${t.name}`)}.${q(c.name)}`);
       }
       for (const s of seqs) if (owners.has(s)) st.push(`alter sequence ${q(s.includes(".") ? s : `public.${s}`)} owned by ${owners.get(s)}`);
+      let dictRows = 0;
+      if (opts.dictionaries !== false) for (const t of incTables) {
+        const d = cat.dictionaries?.[key(t.schema, t.name)];
+        if (!d?.rows?.length) continue;
+        const cols = t.columns.filter((c) => c.generated !== "s").map((c) => c.name).filter((n) => d.rows.some((r) => r[n] !== void 0));
+        const val = (v) => v == null ? "null" : typeof v === "boolean" || typeof v === "number" ? String(v) : typeof v === "object" ? lit(JSON.stringify(v)) : lit(v);
+        for (let i = 0; i < d.rows.length; i += 500) st.push(`insert into ${q(`${t.schema}.${t.name}`)} (${cols.map(q).join(", ")}) overriding system value values
+${d.rows.slice(i, i + 500).map((r) => `  (${cols.map((c) => val(r[c])).join(", ")})`).join(",\n")}`);
+        dictRows += d.rows.length;
+      }
       st.push(...fks);
       for (const f of incFns) {
         if (f.kind === "aggregate" || f.kind === "window") continue;
@@ -30135,7 +30270,7 @@ ${cols.join(",\n")}
 alter table ${q(tr.table)} disable trigger ${q(tr.name)}`));
       const header = `-- DDL snapshot of ${env}/${db} (${cat.database || db}), synced ${cat.syncedAt} by dt.
 -- ${incTables.length} tables, ${incViews.length} views, ${incFns.length} functions${opts.service ? `; for ${opts.service}` : ""}.
--- Regenerate with the ddl_snapshot tool; data is not included.
+-- Regenerate with the ddl_snapshot tool; data: only the rows of dictionary tables (${dictRows}).
 -- dt: tables=${[...tables].join(",")} views=${[...views].join(",")} functions=${[...fns].join(",")}
 `;
       return {
@@ -30144,7 +30279,7 @@ alter table ${q(tr.table)} disable trigger ${q(tr.name)}`));
         syncedAt: cat.syncedAt,
         statements: st,
         sql: header + "\n" + st.map((s) => s + ";").join("\n\n") + "\n",
-        counts: { tables: incTables.length, views: incViews.length, functions: incFns.length, types: types.length, sequences: seqs.size },
+        counts: { tables: incTables.length, views: incViews.length, functions: incFns.length, types: types.length, sequences: seqs.size, ...dictRows ? { dictionaryRows: dictRows } : {} },
         tables: incTables.map((t) => key(t.schema, t.name)),
         views: order,
         functions: incFns.map((f) => key(f.schema, f.name)),
@@ -30622,11 +30757,11 @@ ${e.message}`, ms: Date.now() - started });
       });
     }
     async function run(id, { tests = [], db, log = () => {
-    }, mode = "auto", files: writes = [] } = {}) {
+    }, mode = "auto", files: writes = [], check: checkFiles = true, fix } = {}) {
       const m = W.checkId(id);
       const root = m.path;
       const written = writes.map((f) => W.write(id, f.path, { content: f.content, edits: f.edits }));
-      const check = written.length ? await require_javacheck().check(id, written.map((w) => w.path)).catch((e) => ({ skipped: e.message })) : null;
+      const check = written.length && checkFiles !== false ? await require_javacheck().check(id, written.map((w) => w.path), { fix }).catch((e) => ({ skipped: e.message })) : null;
       if (check?.errors?.length) {
         const compile2 = check.errors.map((e) => ({ file: e.file, line: e.line, message: e.message }));
         return {
@@ -31547,6 +31682,33 @@ ${fs2.readFileSync(f, "utf8")}`).join("\n"));
       for (const fqns of Object.values(JDK)) for (const f of fqns) add(f);
       return { index, known, own: [...own].filter((p) => !/^(java|javax|jakarta|org\.springframework|org\.junit)\./.test(p)), graph };
     }
+    function editsBetween(before, after) {
+      const a = before.split("\n"), b = after.split("\n");
+      const n = a.length, m = b.length, L = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
+      for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) L[i][j] = a[i] === b[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+      const hunks = [];
+      for (let i = 0, j = 0; i < n || j < m; ) {
+        if (i < n && j < m && a[i] === b[j]) {
+          i++;
+          j++;
+          continue;
+        }
+        const h = { i, j };
+        while ((i < n || j < m) && !(i < n && j < m && a[i] === b[j])) {
+          if (j < m && (i >= n || L[i][j + 1] >= L[i + 1][j])) j++;
+          else i++;
+        }
+        hunks.push({ ...h, i2: i, j2: j });
+      }
+      return hunks.map((h) => {
+        for (let k = 1; ; k++) {
+          const s0 = Math.max(0, h.i - k), e0 = Math.min(n, h.i2 + (h.i2 === h.i ? k : 0));
+          const find = a.slice(s0, e0).join("\n");
+          const replace = [...a.slice(s0, h.i), ...b.slice(h.j, h.j2), ...a.slice(h.i2, e0)].join("\n");
+          if (find && before.split(find).length === 2 || s0 === 0 && e0 === n) return { find, replace };
+        }
+      });
+    }
     var short = (msg) => String(msg).split("\n").map((l) => l.trim()).filter(Boolean).join("; ").slice(0, 400);
     function usersOf(graph, root, rels, max = 25) {
       if (!graph) return [];
@@ -31562,9 +31724,10 @@ ${fs2.readFileSync(f, "utf8")}`).join("\n"));
       }
       return [...files].filter((f) => fs2.existsSync(path2.join(root, f)));
     }
-    async function check(id, rels, { waitMs } = {}) {
+    async function check(id, rels, { waitMs, fix } = {}) {
       const cfg = require_config().getTests();
       if (!cfg.compileCheck) return null;
+      const autofix = fix ?? cfg.compileFix;
       const W = require_workspace();
       const root = W.checkId(id).path;
       const java = [...new Set(rels)].filter((f) => /\.java$/.test(f));
@@ -31605,8 +31768,8 @@ ${fs2.readFileSync(f, "utf8")}`).join("\n"));
       if (st.release && st.javaMajor && st.release <= st.javaMajor) options.push("--release", String(st.release));
       if (st.javaMajor >= 21) options.push("-proc:full");
       const users = usersOf(graph, root, java);
-      const fixed = [];
-      let r, errors = [], suggestions = [], alsoBroken = [];
+      const fixed = [], original = /* @__PURE__ */ new Map();
+      let r, errors = [], suggestions = [], alsoBroken = [], firstErrors = null;
       for (let round = 0; round < 4; round++) {
         r = await T.step("compile check", () => compile({ javaHome: st.javaHome, options, files: [...java, ...users].map((f) => path2.join(root, f)) }), `${java.length + users.length} files`);
         if (r.error) return { skipped: `the compile check failed: ${r.error}` };
@@ -31620,6 +31783,7 @@ ${fs2.readFileSync(f, "utf8")}`).join("\n"));
           const text = fs2.readFileSync(path2.join(root, f), "utf8");
           const fx = fixesFor(text, mine, { index, known, own, graph });
           if (fx.fixed.length && fx.text !== text) {
+            if (!original.has(f)) original.set(f, text);
             W.write(id, f, { content: fx.text });
             fixed.push(...fx.fixed.map((w) => `${f}: ${w}`));
             changed = true;
@@ -31627,8 +31791,18 @@ ${fs2.readFileSync(f, "utf8")}`).join("\n"));
           suggestions.push(...fx.suggestions.map((s) => ({ file: f, ...s })));
         }
         errors = errs.filter((d) => java.includes(d.rel)).map((d) => ({ file: d.rel, line: d.line, message: short(d.message) }));
+        firstErrors ??= errors;
         alsoBroken = errs.filter((d) => !java.includes(d.rel)).map((d) => ({ file: d.rel, line: d.line, message: short(d.message) }));
         if (!changed) break;
+      }
+      if (!autofix && original.size) {
+        const offered = [];
+        for (const [f, text] of original) {
+          const now = fs2.readFileSync(path2.join(root, f), "utf8");
+          W.write(id, f, { content: text });
+          offered.push({ file: f, why: `clear fixes, not applied (fix=false): ${fixed.filter((x) => x.startsWith(`${f}: `)).map((x) => x.slice(f.length + 2)).join("; ")}`, edits: editsBetween(text, now) });
+        }
+        return { ok: false, ms: Date.now() - started, compileMs: r.ms, checked: java.length + users.length, errors: firstErrors, suggestions: [...offered, ...suggestions.map((x) => ({ ...x, afterFixes: true }))], ...alsoBroken.length ? { alsoBroken: alsoBroken.slice(0, 10) } : {} };
       }
       return { ok: !errors.length && !alsoBroken.filter((e) => users.includes(e.file)).length, ms: Date.now() - started, compileMs: r.ms, checked: java.length + users.length, errors, ...fixed.length ? { fixed } : {}, ...suggestions.length ? { suggestions } : {}, ...alsoBroken.length ? { alsoBroken: alsoBroken.slice(0, 10) } : {} };
     }
@@ -31759,7 +31933,7 @@ ${field}` }, importEdit(t, annoFqn, false), ...t.includes(`import ${nb[1]};`) ||
       }
       return "TODO";
     }
-    module2.exports = { COMPILER, GRADLE_INIT, buildHash, runHints, propertyValue, compile, compileHere, zipEntries, jarIndex, rank, pick, importEdit, fixesFor, symbolOf, enclosing, similar, check, warm, prepared, idle, classIndex, STATIC, JDK };
+    module2.exports = { editsBetween, COMPILER, GRADLE_INIT, buildHash, runHints, propertyValue, compile, compileHere, zipEntries, jarIndex, rank, pick, importEdit, fixesFor, symbolOf, enclosing, similar, check, warm, prepared, idle, classIndex, STATIC, JDK };
   }
 });
 
@@ -32303,6 +32477,1461 @@ var require_showcase = __commonJS({
   }
 });
 
+// lib/testdata.js
+var require_testdata = __commonJS({
+  "lib/testdata.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var W = require_workspace();
+    function noComments(s) {
+      let out2 = "", i = 0;
+      while (i < s.length) {
+        const c = s[i], n = s[i + 1];
+        if (c === '"' || c === "'") {
+          if (c === '"' && s.startsWith('"""', i)) {
+            const e = s.indexOf('"""', i + 3);
+            const j2 = e < 0 ? s.length : e + 3;
+            out2 += s.slice(i, j2);
+            i = j2;
+            continue;
+          }
+          let j = i + 1;
+          while (j < s.length && s[j] !== c && s[j] !== "\n") j += s[j] === "\\" ? 2 : 1;
+          out2 += s.slice(i, j + 1);
+          i = j + 1;
+          continue;
+        }
+        if (c === "/" && n === "/") {
+          const e = s.indexOf("\n", i);
+          const j = e < 0 ? s.length : e;
+          out2 += " ".repeat(j - i);
+          i = j;
+          continue;
+        }
+        if (c === "/" && n === "*") {
+          const e = s.indexOf("*/", i + 2);
+          const j = e < 0 ? s.length : e + 2;
+          out2 += s.slice(i, j).replace(/[^\n]/g, " ");
+          i = j;
+          continue;
+        }
+        out2 += c;
+        i++;
+      }
+      return out2;
+    }
+    function closing(s, i) {
+      const open = s[i], close = { "(": ")", "{": "}", "[": "]", "<": ">" }[open];
+      let d = 0;
+      for (let j = i; j < s.length; j++) {
+        const c = s[j];
+        if (c === '"' || c === "'") {
+          j++;
+          while (j < s.length && s[j] !== c) j += s[j] === "\\" ? 2 : 1;
+          continue;
+        }
+        if (c === open) d++;
+        else if (c === close && --d === 0) return j;
+      }
+      return s.length - 1;
+    }
+    function splitTop(s, sep = ",") {
+      const out2 = [];
+      let d = 0, start = 0;
+      for (let j = 0; j < s.length; j++) {
+        const c = s[j];
+        if (c === '"' || c === "'") {
+          j++;
+          while (j < s.length && s[j] !== c) j += s[j] === "\\" ? 2 : 1;
+          continue;
+        }
+        if ("({[<".includes(c)) d++;
+        else if (")}]>".includes(c)) d--;
+        else if (c === sep && d === 0) {
+          out2.push(s.slice(start, j));
+          start = j + 1;
+        }
+      }
+      out2.push(s.slice(start));
+      return out2.map((x) => x.trim()).filter(Boolean);
+    }
+    var unquote = (v) => {
+      const t = String(v).trim();
+      if (/^".*"$/s.test(t)) return t.slice(1, -1).replace(/\\(.)/g, (m, c) => ({ n: "\n", t: "	" })[c] || c);
+      if (/^\{.*\}$/s.test(t)) return splitTop(t.slice(1, -1)).map(unquote);
+      if (/^-?\d+(\.\d+)?[LlFfDd]?$/.test(t)) return Number(t.replace(/[LlFfDd]$/, ""));
+      if (t === "true" || t === "false") return t === "true";
+      return t;
+    };
+    function annotations(text) {
+      const annos = {};
+      let s = text.trim();
+      for (; ; ) {
+        const m = s.match(/^@([\w.]+)\s*/);
+        if (!m) break;
+        const name = m[1].split(".").pop();
+        let args = {};
+        let k = m[0].length;
+        if (s[k] === "(") {
+          const e = closing(s, k);
+          const inner = s.slice(k + 1, e).trim();
+          if (inner) for (const part of splitTop(inner)) {
+            const kv = part.match(/^(\w+)\s*=\s*([\s\S]+)$/);
+            if (kv && !/^["{]/.test(part)) args[kv[1]] = unquote(kv[2]);
+            else args.value = unquote(part);
+          }
+          k = e + 1;
+        }
+        annos[name] = args;
+        s = s.slice(k).trim();
+      }
+      return { annos, rest: s };
+    }
+    function declaration(text) {
+      const { annos, rest } = annotations(text);
+      const r = rest.replace(/^((public|protected|private|static|final|transient|volatile)\s+)+/, "");
+      const m = r.match(/^([\s\S]+?)\s+(\w+)\s*(?:=\s*([\s\S]*))?$/);
+      if (!m) return null;
+      const elemAnnos = {};
+      const type = m[1].replace(/@([\w.]+)(\s*\([^)]*\))?\s*/g, (all, n) => {
+        Object.assign(elemAnnos, annotations(all).annos);
+        return "";
+      }).replace(/\s+/g, " ").replace(/\s*([<>,])\s*/g, "$1").replace(/,/g, ", ").trim();
+      return { annos, type, name: m[2], init: m[3] ? m[3].trim() : null, elemAnnos };
+    }
+    function shape(text, c) {
+      const s = noComments(text);
+      const lines = s.split("\n");
+      const from = lines.slice(0, Math.max(0, c.line - 1)).join("\n").length;
+      const re = new RegExp(`\\b(record|class|enum|interface)\\s+${c.name}\\b`, "g");
+      re.lastIndex = Math.max(0, from - 1);
+      const m = re.exec(s);
+      if (!m) return null;
+      let i = m.index + m[0].length;
+      const out2 = { kind: m[1], components: [], fields: [], constants: [], ctors: [], methods: /* @__PURE__ */ new Set() };
+      while (/\s/.test(s[i])) i++;
+      if (s[i] === "<") i = closing(s, i) + 1;
+      while (/\s/.test(s[i])) i++;
+      if (m[1] === "record" && s[i] === "(") {
+        const e = closing(s, i);
+        out2.components = splitTop(s.slice(i + 1, e)).map(declaration).filter(Boolean);
+        i = e + 1;
+      }
+      const open = s.indexOf("{", i);
+      if (open < 0) return out2;
+      const close = closing(s, open);
+      const body = s.slice(open + 1, close);
+      let start = 0, enumDone = m[1] !== "enum";
+      for (let j = 0; j < body.length; j++) {
+        const ch = body[j];
+        if (ch === '"' || ch === "'") {
+          j++;
+          while (j < body.length && body[j] !== ch) j += body[j] === "\\" ? 2 : 1;
+          continue;
+        }
+        if (ch === "(" || ch === "[") {
+          j = closing(body, j);
+          continue;
+        }
+        if (!enumDone && (ch === ";" || j === body.length - 1)) {
+          out2.constants = splitTop(body.slice(start, ch === ";" ? j : j + 1)).map((x) => (annotations(x).rest.match(/^(\w+)/) || [])[1]).filter(Boolean);
+          enumDone = true;
+          start = j + 1;
+          continue;
+        }
+        if (!enumDone) continue;
+        if (ch === "{") {
+          const e = closing(body, j);
+          const head = body.slice(start, j).trim();
+          const mm = annotations(head).rest.match(/(?:^|\s)(\w+)\s*\(([\s\S]*)\)\s*(throws[\s\S]*)?$/);
+          if (mm) {
+            const mods = annotations(head).rest;
+            if (mm[1] === c.name && !/\b(class|record|interface|enum)\b/.test(mods)) out2.ctors.push({ params: splitTop(mm[2]).map(declaration).filter(Boolean), visibility: (mods.match(/^(public|protected|private)\b/) || [])[1] || "package" });
+            else out2.methods.add(mm[1]);
+          }
+          if (/=\s*[^;]*$/.test(head) && !/\)\s*$/.test(head)) {
+            j = e;
+            continue;
+          }
+          start = e + 1;
+          j = e;
+          continue;
+        }
+        if (ch === ";") {
+          const stmt = body.slice(start, j).trim();
+          start = j + 1;
+          if (!stmt || /\(\s*[^)]*\)\s*(throws[\s\S]*)?$/.test(annotations(stmt).rest.split("=")[0])) {
+            const am = annotations(stmt).rest.match(/(\w+)\s*\(/);
+            if (am) out2.methods.add(am[1]);
+            continue;
+          }
+          const d = declaration(stmt);
+          if (d && !/\bstatic\b/.test(annotations(stmt).rest)) out2.fields.push(d);
+        }
+      }
+      return out2;
+    }
+    var base = (t) => String(t || "").replace(/<[\s\S]*$/, "").replace(/\[\]$/, "").trim().replace(/^([a-z_][\w]*\.)+(?=[A-Z])/, "");
+    var generics = (t) => {
+      const s = String(t);
+      const i = s.indexOf("<");
+      return i < 0 ? [] : splitTop(s.slice(i + 1, closing(s, i)));
+    };
+    var SIMPLE = /* @__PURE__ */ new Set(["String", "CharSequence", "Long", "long", "Integer", "int", "Short", "short", "Byte", "byte", "Double", "double", "Float", "float", "Boolean", "boolean", "Character", "char", "BigDecimal", "BigInteger", "UUID", "Instant", "LocalDate", "LocalDateTime", "OffsetDateTime", "ZonedDateTime", "LocalTime", "Duration", "Object"]);
+    var COLLECTION = /^(List|Set|Collection|Iterable|SortedSet|LinkedList|ArrayList|HashSet)$/;
+    var WRAPPER = /^(Optional|ResponseEntity|Mono|CompletableFuture|Page|Slice|Stream|Message|ConsumerRecord|Flux)$/;
+    function resolver(g) {
+      const byId = new Map(g.classes.filter((c) => !c.test).map((c) => [c.id, c]));
+      const bySimple = /* @__PURE__ */ new Map();
+      for (const c of byId.values()) (bySimple.get(c.name) || bySimple.set(c.name, []).get(c.name)).push(c);
+      const imports = /* @__PURE__ */ new Map();
+      return (name, from, readFile) => {
+        const n = base(name);
+        if (!n || SIMPLE.has(n)) return null;
+        if (n.includes(".")) {
+          const hit = [...byId.values()].find((c) => c.id === n || c.id.endsWith(`.${n}`));
+          if (hit) return hit;
+        }
+        const first = n.split(".")[0];
+        const cands = bySimple.get(n.split(".").pop()) || [];
+        if (!cands.length) return null;
+        if (cands.length === 1 && !n.includes(".")) return cands[0];
+        for (let o = from?.id; o; o = o.includes(".") ? o.slice(0, o.lastIndexOf(".")) : null) {
+          const c = byId.get(`${o}.${n}`);
+          if (c) return c;
+        }
+        if (from) {
+          if (!imports.has(from.file)) imports.set(from.file, [...noComments(readFile(from) || "").matchAll(/^\s*import\s+([\w.]+)\s*;/gm)].map((x) => x[1]));
+          const imp = imports.get(from.file).find((i) => i.endsWith(`.${first}`));
+          if (imp) {
+            const c2 = byId.get(n.includes(".") ? `${imp}${n.slice(first.length)}` : imp);
+            if (c2) return c2;
+          }
+          const pkg = from.pkg ?? from.id.slice(0, from.id.length - from.name.length - 1);
+          const c = byId.get(`${pkg}.${n}`);
+          if (c) return c;
+        }
+        return cands[0];
+      };
+    }
+    var snake = (n) => String(n).replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
+    var camel = (n) => n.charAt(0).toLowerCase() + n.slice(1);
+    var UPPER = (n) => snake(n).toUpperCase();
+    var javaStr = (s) => JSON.stringify(String(s));
+    function sample(re) {
+      let i = 0;
+      const src = String(re).replace(/^\^/, "").replace(/\$$/, "");
+      const atom = () => {
+        const c = src[i];
+        if (c === "(") {
+          let d = 0, j = i;
+          const alts = [];
+          let st = i + 1;
+          for (; j < src.length; j++) {
+            if (src[j] === "\\") {
+              j++;
+              continue;
+            }
+            if (src[j] === "(") d++;
+            else if (src[j] === ")" && --d === 0) break;
+            else if (src[j] === "|" && d === 1) {
+              alts.push(src.slice(st, j));
+              st = j + 1;
+            }
+          }
+          alts.push(src.slice(st, j));
+          i = j + 1;
+          const r = sample(alts[0].replace(/^\?:/, ""));
+          return r == null ? null : () => r;
+        }
+        if (c === "[") {
+          const j = src.indexOf("]", i + 2);
+          const set = src.slice(i + 1, j);
+          i = j + 1;
+          if (set.startsWith("^")) return () => "a";
+          const r = set.match(/^\\?(.)(?:-(.))?/);
+          return () => r[1] === "d" && set.startsWith("\\d") ? "1" : r[1];
+        }
+        if (c === "\\") {
+          const e = src[i + 1];
+          i += 2;
+          return () => ({ d: "1", w: "a", s: " ", D: "a", W: "-", S: "a" })[e] ?? e;
+        }
+        if (c === ".") {
+          i++;
+          return () => "a";
+        }
+        i++;
+        return () => c;
+      };
+      let out2 = "";
+      while (i < src.length) {
+        if (src[i] === "|") break;
+        const a = atom();
+        if (!a) return null;
+        let n = 1;
+        const q = src.slice(i).match(/^(\{(\d+)(?:,(\d*))?\}|[?*+])\??/);
+        if (q) {
+          i += q[0].length;
+          n = q[1] === "?" || q[1] === "*" ? 0 : q[1] === "+" ? 1 : Number(q[2]);
+        }
+        for (let k = 0; k < n; k++) out2 += a();
+      }
+      try {
+        return new RegExp(`^(?:${src})$`).test(out2) ? out2 : null;
+      } catch {
+        return out2;
+      }
+    }
+    function checksOf(table2, column) {
+      const out2 = { in: null, min: null, minExclusive: false, max: null };
+      for (const k of table2?.constraints || []) {
+        if (k.type !== "c" || !new RegExp(`\\b${column}\\b`).test(k.def)) continue;
+        const any = k.def.match(/ANY \(ARRAY\[([^\]]+)\]/) || k.def.match(/\bIN \(([^)]+)\)/i);
+        if (any) out2.in = [...any[1].matchAll(/'((?:[^']|'')*)'/g)].map((x) => x[1].replace(/''/g, "'"));
+        const gt = k.def.match(new RegExp(`${column}\\)?\\s*(>=?)\\s*\\(?(-?[\\d.]+)`));
+        if (gt) {
+          out2.min = Number(gt[2]);
+          out2.minExclusive = gt[1] === ">";
+        }
+        const lt = k.def.match(new RegExp(`${column}\\)?\\s*(<=?)\\s*\\(?(-?[\\d.]+)`));
+        if (lt) out2.max = Number(lt[2]) - (lt[1] === "<" ? 1e-9 : 0);
+      }
+      return out2;
+    }
+    var PARSE = [
+      [/(?:Long\.(?:parseLong|valueOf)|Integer\.(?:parseInt|valueOf)|Short\.parseShort)\(\s*([\w.]+?)(?:\(\))?(?:\.trim\(\))?\s*\)/g, "integer"],
+      [/(?:new\s+BigDecimal|Double\.(?:parseDouble|valueOf)|Float\.parseFloat|BigDecimal\.valueOf)\(\s*([\w.]+?)(?:\(\))?(?:\.trim\(\))?\s*\)/g, "decimal"],
+      [/UUID\.fromString\(\s*([\w.]+?)(?:\(\))?(?:\.trim\(\))?\s*\)/g, "uuid"],
+      [/(?:Instant|OffsetDateTime|ZonedDateTime)\.parse\(\s*([\w.]+?)(?:\(\))?\s*\)/g, "instant"],
+      [/LocalDate\.parse\(\s*([\w.]+?)(?:\(\))?\s*\)/g, "date"]
+    ];
+    function parsedNames(sources) {
+      const out2 = /* @__PURE__ */ new Map();
+      for (const text of sources) for (const [re, kind] of PARSE) for (const m of text.matchAll(re)) {
+        const last = m[1].split(".").pop().replace(/^get([A-Z])/, (a, c) => c.toLowerCase());
+        if (!out2.has(last)) out2.set(last, kind);
+      }
+      return out2;
+    }
+    var MONEY = /(amount|price|total|fee|sum|balance|cost)$/i;
+    var idConcept = (name, owner) => {
+      if (/^id$/i.test(name)) return owner ? UPPER(owner) : null;
+      const m = String(name).match(/^(\w+?)_?Id$/i) || String(name).match(/^(\w+?)_id$/);
+      return m ? UPPER(m[1]) : null;
+    };
+    function build(id, { env, db: dbName } = {}) {
+      const m = W.checkId(id);
+      const root = m.path;
+      const g = W.index(id).graph_();
+      const read = (f) => {
+        try {
+          return fs2.readFileSync(path2.join(root, f), "utf8");
+        } catch {
+          return null;
+        }
+      };
+      const CI = require_codeindex();
+      const libClasses = [];
+      for (const key of W.keys(id).slice(1)) {
+        const ix = CI.load(key);
+        if (!ix) continue;
+        for (const c of ix.graph_().classes) if (!c.test && !g.classes.some((x) => x.id === c.id) && !libClasses.some((x) => x.id === c.id)) libClasses.push({ ...c, lib: key, libRoot: ix.root });
+      }
+      const readOf = (c) => {
+        try {
+          return fs2.readFileSync(path2.join(c.libRoot || root, c.file), "utf8");
+        } catch {
+          return null;
+        }
+      };
+      const resolve = resolver({ classes: [...g.classes, ...libClasses] });
+      const shapes = /* @__PURE__ */ new Map();
+      const shapeOf = (c) => {
+        if (!shapes.has(c.id)) shapes.set(c.id, shape(readOf(c) || "", c));
+        return shapes.get(c.id);
+      };
+      const classes = g.classes.filter((c) => !c.test);
+      const byId = new Map([...classes, ...libClasses].map((c) => [c.id, c]));
+      const methodOf = (mid) => {
+        const [cid, mn] = mid.split("#");
+        const c = byId.get(cid);
+        return c && { c, m: c.methods.find((x) => x.name === mn) };
+      };
+      const paramsOf = (c, mt) => {
+        const lines = (read(c.file) || "").split("\n");
+        const text = noComments(lines.slice(Math.max(0, mt.startLine - 1), mt.endLine).join("\n"));
+        const at = text.search(new RegExp(`\\b${mt.name}\\s*\\(`));
+        if (at < 0) return [];
+        const open = text.indexOf("(", at);
+        return splitTop(text.slice(open + 1, closing(text, open))).map(declaration).filter(Boolean);
+      };
+      const bodyOf = (c, mt) => (read(c.file) || "").split("\n").slice(Math.max(0, mt.startLine - 1), mt.endLine).join("\n");
+      let cat = null;
+      const entityTables = new Set(classes.filter((c) => c.table).map((c) => c.table.toLowerCase()));
+      if (env) {
+        const cats = require_pg().loadAll(env);
+        const has = (x) => x.tables.some((t) => entityTables.has(`${t.schema}.${t.name}`.toLowerCase()) || entityTables.has(t.name.toLowerCase()));
+        cat = dbName ? cats.find((x) => x.db === dbName) : cats.find(has);
+      }
+      const tableOf = (name) => cat?.tables.find((t) => `${t.schema}.${t.name}`.toLowerCase() === String(name).toLowerCase() || t.name.toLowerCase() === String(name).toLowerCase());
+      const fkOf = (t, col) => {
+        for (const k of t?.constraints || []) {
+          if (k.type !== "f") continue;
+          const mm = k.def.match(/FOREIGN KEY \(([^)]+)\) REFERENCES ([\w."]+)\(([^)]+)\)/);
+          if (mm && mm[1].split(",").map((x) => x.trim().replace(/"/g, "")).length === 1 && mm[1].trim().replace(/"/g, "") === col) return { table: mm[2].replace(/"/g, "").toLowerCase(), column: mm[3].trim().replace(/"/g, "") };
+        }
+        return null;
+      };
+      const dictRow = (table2) => {
+        const d = cat?.dictionaries?.[table2];
+        if (!d?.rows?.length) return null;
+        return d.rows.find((r) => r.active === true || r.enabled === true || r.is_active === true || r.deleted === false) || d.rows[0];
+      };
+      const columnsByName = /* @__PURE__ */ new Map();
+      for (const t of [...entityTables].map(tableOf).filter(Boolean)) for (const col of t.columns) if (!columnsByName.has(col.name)) columnsByName.set(col.name, { table: t, col });
+      const norm = (x) => String(x).toLowerCase().replace(/^.*\./, "").replace(/^d_/, "").replace(/_/g, "").replace(/ies$/, "y").replace(/(ss)$/, "$1").replace(/([^s])s$/, "$1");
+      const normJava = (n) => norm(String(n).replace(/(Dictionary|Dict|Model|Enum|Entity|Row|Item)$/, "").replace(/([a-z0-9])([A-Z])/g, "$1_$2"));
+      const keyOfT = (t) => `${t.schema}.${t.name}`.toLowerCase();
+      const dicts = /* @__PURE__ */ new Map();
+      for (const [k, d] of Object.entries(cat?.dictionaries || {})) if (d.rows?.length) dicts.set(k, { table: k, rows: d.rows, enum: null, entity: null, models: [], reads: [], codeCol: null, idCol: null });
+      const dictByNorm = new Map([...dicts.keys()].map((k) => [norm(k), k]));
+      for (const d of dicts.values()) {
+        const t = tableOf(d.table);
+        const pk = (t?.constraints || []).find((c) => c.type === "p");
+        const pkCol = pk && (pk.def.match(/\(([^),]+)\)/) || [])[1]?.replace(/"/g, "").trim();
+        d.codeCol = d.rows[0].code !== void 0 ? "code" : pkCol || Object.keys(d.rows[0])[0];
+        d.idCol = d.rows[0].id !== void 0 ? "id" : pkCol;
+        d.activeCol = ["active", "is_active", "enabled"].find((x) => typeof d.rows[0][x] === "boolean") || null;
+      }
+      const allClasses = [...byId.values()];
+      const superOf = (c) => c.ext ? resolve(String(c.ext).split(/[\s,]/)[0], c, readOf) : null;
+      const modelLike = (c, depth = 0) => {
+        if (!c || c.kind === "enum" || c.kind === "interface" || depth > 4) return false;
+        const sh = shapeOf(c);
+        const names = new Set([...sh?.fields || [], ...sh?.components || []].map((f) => f.name));
+        return names.has("code") && (names.has("name") || names.has("title") || names.has("value") || names.has("description")) || modelLike(superOf(c), depth + 1);
+      };
+      if (dicts.size) {
+        for (const c of allClasses) {
+          const tk = c.table && tableOf(c.table) ? keyOfT(tableOf(c.table)) : null;
+          if (tk && dicts.has(tk)) {
+            dicts.get(tk).entity = c;
+            continue;
+          }
+          const byName2 = dictByNorm.get(normJava(c.name));
+          if (!byName2) continue;
+          if (c.kind === "enum") dicts.get(byName2).enum = c;
+          else if (modelLike(c)) dicts.get(byName2).models.push(c);
+        }
+        for (const [from, to] of g.edges) {
+          if (!to.startsWith("table:") || !from.includes("#")) continue;
+          const t = tableOf(to.slice(6));
+          const d = t && dicts.get(keyOfT(t));
+          const mm = d && methodOf(from);
+          if (!mm?.m) continue;
+          let r = mm.m.ret;
+          const many = /^(List|Set|Collection|Iterable|Stream)</.test(r || "");
+          while (WRAPPER.test(base(r)) || COLLECTION.test(base(r))) r = generics(r).slice(-1)[0] || "";
+          const rc = resolve(r, mm.c, readOf);
+          const body = bodyOf(mm.c, mm.m);
+          const active = /\bwhere\b[^"]*\b(is_)?(active|enabled)\b/i.test(body) || /Active(True)?\b/.test(mm.m.name);
+          d.reads.push({ method: `${mm.c.name}#${mm.m.name}`, via: mm.c.kind === "interface" ? "repository" : /JdbcTemplate|NamedParameterJdbcTemplate|JdbcClient/.test(read(mm.c.file) || "") ? "jdbc" : "code", returns: rc?.id || r, many, active });
+          if (rc && rc.kind !== "enum" && !rc.table && modelLike(rc) && !d.models.includes(rc)) d.models.push(rc);
+        }
+        for (const [from, to, kind] of g.edges) if (kind === "repository") {
+          const d = [...dicts.values()].find((x) => x.entity?.id === to);
+          const rc = byId.get(from);
+          if (d && rc) for (const mt of rc.methods) d.reads.push({ method: `${rc.name}#${mt.name}`, via: "repository", returns: to, many: /^(List|Set|Collection|Iterable)</.test(mt.ret || ""), active: /Active(True)?\b/.test(mt.name) });
+        }
+      }
+      const activeRows = (d) => d.activeCol ? d.rows.filter((r) => r[d.activeCol] === true) : d.rows;
+      const firstRow = (d) => activeRows(d)[0] || d.rows[0];
+      const dictForName = (name, owner) => {
+        const n = String(name || "").replace(/(Code|Id|Key)$/, "");
+        for (const cand of [n, `${owner || ""}${n[0]?.toUpperCase() || ""}${n.slice(1)}`]) {
+          const k = dictByNorm.get(normJava(cand));
+          if (k) return dicts.get(k);
+        }
+        return null;
+      };
+      const { CACHE: CACHE2, readJson, safeName } = require_util();
+      const topicCat = (topic) => env && topic ? readJson(path2.join(CACHE2, env, "kafka", `${safeName(topic)}.json`)) : null;
+      const node = () => ({ symbols: null, samples: [], children: /* @__PURE__ */ new Map(), items: null, type: null });
+      function fromSchema(n, sch) {
+        if (!sch) return n;
+        if (Array.isArray(sch)) return fromSchema(n, sch.find((x) => x !== "null") ?? null);
+        if (typeof sch === "string") {
+          n.type ||= sch;
+          return n;
+        }
+        if (sch.type === "enum" || Array.isArray(sch.enum)) n.symbols = sch.symbols || sch.enum;
+        if (sch.type === "record") for (const f of sch.fields || []) fromSchema(n.children.get(f.name) || n.children.set(f.name, node()).get(f.name), f.type);
+        if (sch.type === "object" && sch.properties) for (const [k, v] of Object.entries(sch.properties)) fromSchema(n.children.get(k) || n.children.set(k, node()).get(k), v);
+        if (sch.type === "array") fromSchema(n.items ||= node(), sch.items);
+        if (Array.isArray(sch.type)) fromSchema(n, sch.type.find((x) => x !== "null"));
+        if (typeof sch.type === "string" && !["record", "object", "array", "enum"].includes(sch.type)) n.type ||= sch.logicalType || sch.format || sch.type;
+        return n;
+      }
+      function fromSample(n, v) {
+        if (Array.isArray(v)) {
+          for (const x of v) fromSample(n.items ||= node(), x);
+          return n;
+        }
+        if (v && typeof v === "object") {
+          for (const [k, x] of Object.entries(v)) fromSample(n.children.get(k) || n.children.set(k, node()).get(k), x);
+          return n;
+        }
+        if (v !== null && v !== void 0) n.samples.push(v);
+        return n;
+      }
+      const topicHints = (topic) => {
+        const tc = topicCat(topic);
+        if (!tc) return null;
+        const n = node();
+        const sch = tc.valueSchema?.schema;
+        fromSchema(n, typeof sch === "string" ? (() => {
+          try {
+            return JSON.parse(sch);
+          } catch {
+            return null;
+          }
+        })() : sch);
+        for (const sm of tc.samples || []) fromSample(n, typeof sm.value === "string" ? (() => {
+          try {
+            return JSON.parse(sm.value);
+          } catch {
+            return sm.value;
+          }
+        })() : sm.value);
+        return { node: n, schema: tc.valueSchema ? `${tc.valueSchema.type || "AVRO"} v${tc.valueSchema.version}` : null, samples: (tc.samples || []).length, raw: tc };
+      };
+      const PERSONAL = /(e?mail|phone|mobile|fax|first|last|surname|fullname|^name$|street|line\d|address|zip|postal|postcode|city|birth|dob|passport|iban|card|account|ssn|tax|token|password|secret|^ip$|lat|lon|geo)/i;
+      const mostFrequent = (xs) => {
+        const c = /* @__PURE__ */ new Map();
+        for (const x of xs) c.set(x, (c.get(x) || 0) + 1);
+        return [...c].sort((a, b) => b[1] - a[1])[0]?.[0];
+      };
+      const parsed = parsedNames(classes.map((c) => read(c.file) || ""));
+      const consts = /* @__PURE__ */ new Map();
+      const notes = [];
+      const used = { imports: /* @__PURE__ */ new Set(), helpers: /* @__PURE__ */ new Set() };
+      const factories = /* @__PURE__ */ new Map();
+      const NOW = 'Instant.parse("2026-01-15T10:00:00Z")';
+      const idConst = (concept, kind = "long") => {
+        if (!consts.has(concept)) consts.set(concept, { kind, value: kind === "uuid" ? `UUID.fromString("00000000-0000-0000-0000-${String(consts.size + 1).padStart(12, "0")}")` : `${(consts.size + 1) * 1e3 + 1}L` });
+        return `${concept}_ID`;
+      };
+      const typeRef = (c) => {
+        const chain = [];
+        for (let x = c; x; ) {
+          chain.unshift(x.name);
+          const outer = x.id.slice(0, x.id.length - x.name.length - 1);
+          const oc = byId.get(outer);
+          if (!oc) {
+            used.imports.add(`${outer}.${chain[0]}`);
+            break;
+          }
+          x = oc;
+        }
+        return chain.join(".");
+      };
+      const factoryName = (c) => {
+        const outer = byId.get(c.id.slice(0, c.id.length - c.name.length - 1));
+        let n = camel(c.name);
+        const clash = [...byId.values()].some((o) => o.id !== c.id && o.name === c.name);
+        if (clash && outer) n = camel(outer.name) + c.name;
+        else if (clash) n = camel(c.id.split(".").slice(-2, -1)[0] || "") + c.name;
+        return /^(set|create|json|with|cases|valid|invalid|of|new|class|default|enum|record|int|long|char|boolean|byte|short|double|float)$/.test(n) ? `${n}Value` : n;
+      };
+      function value(t, k, depth = 0) {
+        const b = base(t);
+        const a = k.annos || {};
+        const name = k.name || "";
+        const colInfo = k.col || columnsByName.get(snake(name));
+        const col = colInfo?.col, table2 = colInfo?.table;
+        const checks = col ? checksOf(table2, col.name) : {};
+        const fk = col ? fkOf(table2, col.name) : null;
+        const dict = fk && /(^|\.)d_/.test(fk.table) ? dictRow(fk.table) : null;
+        if (/\[\]$/.test(t)) return b === "byte" ? "new byte[0]" : `new ${b}[] { ${value(b, { name }, depth + 1)} }`;
+        if (COLLECTION.test(b)) {
+          const el = generics(t)[0] || "Object";
+          const n = Math.max(1, Number(a.Size?.min || 0), Number(a.NotEmpty ? 1 : 0));
+          const one = value(el, { name: name.replace(/s$/, ""), annos: k.elemAnnos || {}, from: k.from, owner: k.owner, hint: k.hint?.items }, depth + 1);
+          return `${/Set$/.test(b) ? "Set" : "List"}.of(${Array(Math.min(n, 3)).fill(one).join(", ")})`;
+        }
+        if (/^Map$|Map$/.test(b)) return "Map.of()";
+        if (b === "Optional") return `Optional.of(${value(generics(t)[0], { ...k, annos: {} }, depth + 1)})`;
+        if (dict && fk) {
+          const ec = !SIMPLE.has(b) && resolve(t, k.from, readOf);
+          if (ec && (ec.kind === "enum" || shapeOf(ec)?.kind === "enum")) {
+            const d = dicts.get(fk.table);
+            const consts_ = shapeOf(ec)?.constants || [];
+            const codes = (rows2) => new Set(rows2.map((r) => String(r[fk.column])));
+            const code = d && (consts_.find((x) => codes(activeRows(d)).has(x)) || consts_.find((x) => codes(d.rows).has(x)));
+            if (code) return `${typeRef(ec)}.${code}`;
+          } else {
+            const v = dict[fk.column];
+            if (v != null) return lit(b, v);
+          }
+        }
+        const concept = idConcept(name, k.owner);
+        const dn = !dict ? dictForName(name, k.owner) : null;
+        if (dn && /^(String|CharSequence)$/.test(b) && firstRow(dn)[dn.codeCol] != null) {
+          dn.usedBy = [...dn.usedBy || [], `${k.owner || ""}.${name}`];
+          return javaStr(firstRow(dn)[dn.codeCol]);
+        }
+        if (dn && /^(long|Long|int|Integer)$/.test(b) && /Id$/.test(name) && dn.idCol && firstRow(dn)[dn.idCol] != null) {
+          dn.usedBy = [...dn.usedBy || [], `${k.owner || ""}.${name}`];
+          return lit(b, firstRow(dn)[dn.idCol]);
+        }
+        const h = k.hint;
+        const seen = (accept) => {
+          if (!h || PERSONAL.test(name)) return void 0;
+          const pool = (h.symbols ? h.samples.filter((x) => h.symbols.includes(x)) : h.samples).filter(accept);
+          const v = mostFrequent(pool);
+          return v !== void 0 ? v : (h.symbols || []).find(accept);
+        };
+        switch (b) {
+          case "String":
+          case "CharSequence": {
+            const kind = parsed.get(name);
+            if (kind === "integer") return concept ? `String.valueOf(${idConst(concept)})` : '"1"';
+            if (kind === "uuid") return concept ? `${idConst(concept, "uuid")}.toString()` : '"00000000-0000-0000-0000-000000000001"';
+            if (kind === "instant") return '"2026-01-15T10:00:00Z"';
+            if (kind === "date") return '"2026-01-15"';
+            if (checks.in?.length) return javaStr(checks.in[0]);
+            const len = col && (col.type.match(/(?:character varying|varchar|character|char|bpchar)\((\d+)\)/) || [])[1];
+            const max = Math.min(...[a.Size?.max, len].filter((x) => x != null).map(Number), Infinity);
+            const min = Math.max(Number(a.Size?.min || 0), a.NotBlank || a.NotEmpty ? 1 : 0, /^(character|char|bpchar)\(/.test(col?.type || "") ? Number(len) : 0);
+            const pat = a.Pattern?.regexp || a.Pattern?.value;
+            const fits = (x) => typeof x === "string" && x.length <= max && x.length >= min && (!pat || (() => {
+              try {
+                return new RegExp(`^(?:${pat})$`).test(x);
+              } catch {
+                return true;
+              }
+            })()) && (kind !== "decimal" || /^-?\d+(\.\d+)?$/.test(x));
+            const fromTopic = concept ? void 0 : seen(fits);
+            if (fromTopic !== void 0) return javaStr(fromTopic);
+            if (kind === "decimal") return '"1.5"';
+            let s = null;
+            if (pat) s = sample(pat);
+            if (s == null && (a.Email || /e?mail$/i.test(name))) s = "test@example.com";
+            if (s == null) s = byName(name);
+            if (s.length > max) s = s.slice(0, max);
+            while (s.length < min) s += "x";
+            return javaStr(s);
+          }
+          case "long":
+          case "Long":
+          case "int":
+          case "Integer":
+          case "short":
+          case "Short":
+          case "byte":
+          case "Byte": {
+            const L = /^[lL]ong$/.test(b) ? "L" : "";
+            if (concept && !/^(int|Integer|short|Short|byte|Byte)$/.test(b) && !a.Min && !a.Max) return idConst(concept);
+            const lo = Math.max(Number(a.Min?.value ?? -Infinity), a.Positive ? 1 : -Infinity, checks.min != null ? checks.min + (checks.minExclusive ? 1 : 0) : -Infinity);
+            const hi = Math.min(Number(a.Max?.value ?? Infinity), checks.max != null ? Math.floor(checks.max) : Infinity);
+            const fromTopic = concept ? void 0 : seen((x) => Number.isInteger(x) && x >= lo && x <= hi);
+            let v = fromTopic !== void 0 ? fromTopic : Math.max(1, lo);
+            v = Math.min(v, hi);
+            const cast = /^(short|Short)$/.test(b) ? "(short) " : /^(byte|Byte)$/.test(b) ? "(byte) " : "";
+            return `${cast}${v}${L}`;
+          }
+          case "BigDecimal": {
+            const scale = Number((col?.type.match(/numeric\(\d+,\s*(\d+)\)/) || [])[1] ?? a.Digits?.fraction ?? (MONEY.test(name) ? 2 : 0));
+            let v = MONEY.test(name) ? 10 : 1;
+            const lo = [a.DecimalMin?.value, a.Min?.value, checks.min].filter((x) => x != null).map(Number);
+            const hi = [a.DecimalMax?.value, a.Max?.value, checks.max].filter((x) => x != null).map(Number);
+            if (lo.length) v = Math.max(v, ...lo);
+            if (hi.length) v = Math.min(v, ...hi);
+            used.imports.add("java.math.BigDecimal");
+            const fromTopic = seen((x) => /^-?\d+(\.\d+)?$/.test(String(x)) && (!lo.length || Number(x) >= Math.max(...lo)) && (!hi.length || Number(x) <= Math.min(...hi)));
+            if (fromTopic !== void 0) return `new BigDecimal("${fromTopic}")`;
+            return `new BigDecimal("${v.toFixed(scale)}")`;
+          }
+          case "BigInteger":
+            used.imports.add("java.math.BigInteger");
+            return "BigInteger.ONE";
+          case "double":
+          case "Double":
+            return "1.0";
+          case "float":
+          case "Float":
+            return "1.0f";
+          case "boolean":
+          case "Boolean":
+            return /^(is)?(active|enabled|valid|visible|available)$/i.test(name) ? "true" : "false";
+          case "char":
+          case "Character":
+            return "'a'";
+          case "UUID":
+            used.imports.add("java.util.UUID");
+            return concept ? idConst(concept, "uuid") : 'UUID.fromString("00000000-0000-0000-0000-000000000001")';
+          case "Instant":
+            used.imports.add("java.time.Instant");
+            return a.Future || a.FutureOrPresent ? 'Instant.parse("2100-01-01T00:00:00Z")' : NOW;
+          case "OffsetDateTime":
+            used.imports.add("java.time.OffsetDateTime");
+            used.imports.add("java.time.ZoneOffset");
+            return a.Future ? "OffsetDateTime.of(2100, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC)" : "OffsetDateTime.of(2026, 1, 15, 10, 0, 0, 0, ZoneOffset.UTC)";
+          case "ZonedDateTime":
+            used.imports.add("java.time.ZonedDateTime");
+            return 'ZonedDateTime.parse("2026-01-15T10:00:00Z")';
+          case "LocalDate":
+            used.imports.add("java.time.LocalDate");
+            return a.Future ? "LocalDate.of(2100, 1, 1)" : "LocalDate.of(2026, 1, 15)";
+          case "LocalDateTime":
+            used.imports.add("java.time.LocalDateTime");
+            return a.Future ? "LocalDateTime.of(2100, 1, 1, 0, 0)" : "LocalDateTime.of(2026, 1, 15, 10, 0)";
+          case "LocalTime":
+            used.imports.add("java.time.LocalTime");
+            return "LocalTime.of(10, 0)";
+          case "Duration":
+            used.imports.add("java.time.Duration");
+            return "Duration.ofMinutes(1)";
+          case "Object":
+            return '"x"';
+        }
+        const c = resolve(t, k.from, readOf);
+        if (!c) return "null";
+        const sh = shapeOf(c);
+        if (c.kind === "enum" || sh?.kind === "enum") {
+          const consts_ = sh?.constants || [];
+          const de = [...dicts.values()].find((d) => d.enum?.id === c.id);
+          const deCode = de && (consts_.find((x) => activeRows(de).some((r) => String(r[de.codeCol]) === x)) || consts_.find((x) => de.rows.some((r) => String(r[de.codeCol]) === x)));
+          const pick = (checks.in || []).find((v) => consts_.includes(v)) || deCode || seen((x) => consts_.includes(x)) || consts_[0];
+          return pick ? `${typeRef(c)}.${pick}` : "null";
+        }
+        if (depth > 6) return "null";
+        const dd = [...dicts.values()].filter((d) => d.models.some((x) => x.id === c.id) || d.entity?.id === c.id);
+        const d1 = dd.length === 1 ? dd[0] : dd.find((d) => d === dictForName(name, k.owner));
+        if (d1) return `${dictFactory(d1, c).one}()`;
+        return `${factory(c, depth + 1, k.hint)}()`;
+      }
+      const lit = (b, v) => {
+        if (/^(long|Long)$/.test(b)) return `${v}L`;
+        if (/^(int|Integer|short|Short|double|Double)$/.test(b)) return String(v);
+        if (b === "BigDecimal") {
+          used.imports.add("java.math.BigDecimal");
+          return `new BigDecimal("${v}")`;
+        }
+        if (/^(boolean|Boolean)$/.test(b)) return String(!!v);
+        return javaStr(v);
+      };
+      const dictFactories = /* @__PURE__ */ new Map();
+      const plural = (n) => /y$/.test(n) ? n.replace(/y$/, "ies") : /(s|x|ch|sh)$/.test(n) ? `${n}es` : `${n}s`;
+      function dictFactory(d, c) {
+        const key = `${d.table}|${c.id}`;
+        if (dictFactories.has(key)) return dictFactories.get(key);
+        const tname = d.table.split(".").pop().replace(/^d_/, "");
+        let one = camel(tname.replace(/ies$/, "y").replace(/([^s])s$/, "$1").replace(/_(\w)/g, (m2, x) => x.toUpperCase()));
+        const taken = (n) => [...factories.values()].some((f2) => f2.name === n && f2.cls.id !== c.id) || [...dictFactories.values()].some((f2) => f2.one === n);
+        if (taken(one)) one = `${one}${c.name}`;
+        const f = { d, cls: c, one, all: plural(one), active: d.activeCol && activeRows(d).length < d.rows.length ? `active${plural(one)[0].toUpperCase()}${plural(one).slice(1)}` : null, type: typeRef(c) };
+        dictFactories.set(key, f);
+        if (d.entity?.id === c.id) f.one = factory(c);
+        return f;
+      }
+      const fieldsUp = (c, depth = 0) => !c || depth > 4 ? [] : [...shapeOf(c)?.fields || [], ...shapeOf(c)?.components || [], ...fieldsUp(superOf(c), depth + 1)];
+      function rowExpr(c, row) {
+        const sh = shapeOf(c) || { ctors: [] };
+        const T = typeRef(c);
+        const colFor = (n) => [snake(n), n.toLowerCase(), n].find((x) => row[x] !== void 0);
+        const valOf = (type, n) => {
+          const col = colFor(n);
+          return col === void 0 ? /^(int|long|short|double|float|boolean)$/.test(base(type)) ? value(type, { name: n }) : "null" : row[col] == null ? "null" : lit(base(type), row[col]);
+        };
+        if (sh.kind === "record") return `new ${T}(${sh.components.map((p) => valOf(p.type, p.name)).join(", ")})`;
+        const ctor = sh.ctors.filter((k) => k.visibility === "public").sort((x, y) => y.params.length - x.params.length)[0];
+        if (ctor && ctor.params.every((p) => colFor(p.name) !== void 0 || !/^(int|long|short|double|float|boolean)$/.test(base(p.type)))) return `new ${T}(${ctor.params.map((p) => valOf(p.type, p.name)).join(", ")})`;
+        used.helpers.add("set");
+        used.helpers.add("instance");
+        used.helpers.add("dictionaryRow");
+        used.imports.add("java.util.function.Consumer");
+        return `dictionaryRow(${T}.class, x -> { ${fieldsUp(c).filter((fl) => colFor(fl.name) !== void 0).map((fl) => `set(x, "${fl.name}", ${valOf(fl.type, fl.name)})`).join("; ")}; })`;
+      }
+      function factory(c, depth = 0, hint = null) {
+        if (factories.has(c.id)) return factories.get(c.id).name;
+        const name = factoryName(c);
+        const entry = { name, type: typeRef(c), code: null, cls: c, ...hint ? { fromTopic: true } : {} };
+        factories.set(c.id, entry);
+        const sh = shapeOf(c) || { components: [], fields: [], ctors: [], methods: /* @__PURE__ */ new Set() };
+        const entity = !!c.table || c.annos.includes("Entity");
+        const table2 = entity ? tableOf(c.table || snake(c.name)) : null;
+        const known = (fieldDecl) => {
+          const fc = (byId.get(c.id)?.fields || []).find((f) => f.name === fieldDecl.name);
+          const colName = fc?.column || fieldDecl.annos.Column?.name || snake(fieldDecl.name);
+          const col = table2?.columns.find((x) => x.name === colName);
+          return { name: fieldDecl.name, annos: fieldDecl.annos, elemAnnos: fieldDecl.elemAnnos, col: col ? { table: table2, col } : void 0, owner: c.name, from: c, hint: hint?.children?.get(fieldDecl.name) };
+        };
+        const drow = table2 && dictRow(`${table2.schema}.${table2.name}`.toLowerCase());
+        const colOf = (f) => known(f).col?.col.name || snake(f.name);
+        const val = (f, type, k) => drow && drow[colOf(f)] !== void 0 ? drow[colOf(f)] == null ? "null" : lit(base(type), drow[colOf(f)]) : value(type, k, depth);
+        const lines = [];
+        const T = entry.type;
+        if (sh.kind === "record") {
+          entry.code = `return new ${T}(${sh.components.map((p) => value(p.type, known(p), depth)).join(", ")});`;
+          entry.components = sh.components;
+          return name;
+        }
+        const lombokBuilder = c.lombok?.includes("Builder");
+        const fields = sh.fields;
+        if (lombokBuilder) {
+          entry.code = `return ${T}.builder()${fields.map((f) => `
+        .${f.name}(${value(f.type, known(f), depth)})`).join("")}
+        .build();`;
+          entry.fields = fields;
+          return name;
+        }
+        const pub = sh.ctors.filter((k) => k.visibility === "public");
+        const ctor = pub.sort((x, y) => y.params.length - x.params.length)[0];
+        const set = /* @__PURE__ */ new Set();
+        if (ctor) {
+          lines.push(`${T} x = new ${T}(${ctor.params.map((p) => {
+            const f = fields.find((ff) => ff.name === p.name) || p;
+            set.add(p.name);
+            return val(f, p.type, { ...known(f), annos: { ...p.annos, ...f.annos } });
+          }).join(", ")});`);
+        } else if (!sh.ctors.length || sh.ctors.some((k) => !k.params.length && k.visibility !== "public")) {
+          if (sh.ctors.length) {
+            lines.push(`${T} x = instance(${T}.class);`);
+            used.helpers.add("instance");
+          } else lines.push(`${T} x = new ${T}();`);
+        } else {
+          lines.push(`${T} x = instance(${T}.class); // no public constructor`);
+          used.helpers.add("instance");
+        }
+        for (const f of fields) {
+          if (set.has(f.name) || f.init != null && !drow) continue;
+          const k = known(f);
+          if (drow && drow[colOf(f)] !== void 0) {
+            const setter2 = `set${f.name[0].toUpperCase()}${f.name.slice(1)}`;
+            const v2 = val(f, f.type, k);
+            if (sh.methods.has(setter2)) lines.push(`x.${setter2}(${v2});`);
+            else {
+              lines.push(`set(x, "${f.name}", ${v2});`);
+              used.helpers.add("set");
+            }
+            continue;
+          }
+          const isId = !!f.annos.Id;
+          const notNull = k.col && !k.col.col.nullable;
+          const dbDefault = k.col?.col.default != null;
+          if (!(isId || notNull || !entity && f.annos.NotNull || !entity && (f.annos.NotBlank || f.annos.NotEmpty) || !entity && !c.table && !ctor)) continue;
+          if (entity && !isId && !notNull && !dbDefault) continue;
+          const v = value(f.type, isId ? { ...k, name: "id", owner: c.name } : k, depth);
+          const setter = `set${f.name[0].toUpperCase()}${f.name.slice(1)}`;
+          if (sh.methods.has(setter) || c.lombok?.some((l) => /^(Data|Setter)$/.test(l))) lines.push(`x.${setter}(${v});`);
+          else {
+            lines.push(`set(x, "${f.name}", ${v});`);
+            used.helpers.add("set");
+          }
+        }
+        lines.push("return x;");
+        entry.code = lines.join("\n");
+        entry.fields = fields;
+        return name;
+      }
+      const edges = [];
+      const add = (e) => {
+        if (!edges.some((x) => x.at === e.at && x.type === e.type && x.kind === e.kind)) edges.push(e);
+      };
+      for (const [from, to, kind] of g.edges) {
+        if (kind === "handler") {
+          const mm = methodOf(to);
+          if (!mm?.m) continue;
+          for (const p of paramsOf(mm.c, mm.m)) {
+            const at = `${from.replace(/^endpoint:/, "")} (${mm.c.name}#${mm.m.name})`;
+            if (p.annos.RequestBody) {
+              const c = resolve(p.type, mm.c, readOf);
+              if (c) add({ kind: "body", at, type: c.id, valid: !!(p.annos.Valid || p.annos.Validated), cls: c });
+            } else if (p.annos.PathVariable || p.annos.RequestParam) {
+              const owner = (resolve(mm.m.ret, mm.c, readOf) || {}).name || mm.c.name.replace(/(Controller|Resource|Api|Endpoint)$/, "");
+              add({ kind: p.annos.PathVariable ? "path" : "param", at, param: p.name, value: value(p.type, { name: p.name, annos: p.annos, owner, from: mm.c }) });
+            }
+          }
+        }
+        if (kind === "consumes" && to.startsWith("topic:")) {
+          const mm = methodOf(from);
+          if (!mm?.m) continue;
+          const p = paramsOf(mm.c, mm.m).find((x) => !x.annos.Header && !x.annos.Headers && !/^(Acknowledgment|Consumer|Headers)$/.test(base(x.type)));
+          if (!p) continue;
+          let t = p.type;
+          while (WRAPPER.test(base(t)) || COLLECTION.test(base(t))) t = generics(t).slice(-1)[0] || "String";
+          const topic = to.slice(6);
+          const at = `${topic} (${mm.c.name}#${mm.m.name})`;
+          const c = resolve(t, mm.c, readOf);
+          if (c) add({ kind: "kafka-in", at, topic, type: c.id, cls: c, hints: topicHints(topic) });
+          else if (base(t) === "String") {
+            const body = bodyOf(mm.c, mm.m);
+            const kinds = parsedNames([body]);
+            const rv = noComments(body).match(new RegExp(`readValue\\(\\s*${p.name}\\s*,\\s*([\\w.]+)\\.class`));
+            const dto = rv && resolve(rv[1], mm.c, readOf);
+            if (dto) add({ kind: "kafka-in", at, topic, param: p.name, text: true, json: true, type: dto.id, cls: dto, hints: topicHints(topic) });
+            else {
+              const th = topicHints(topic);
+              const last = th?.raw.samples?.[0]?.value;
+              add({ kind: "kafka-in", at, topic, param: p.name, text: true, value: kinds.has(p.name) ? value("String", { name: p.name }) : last && typeof last === "object" ? javaStr(JSON.stringify(masked(last))) : null, hints: th });
+            }
+          }
+        }
+        if (kind === "repository") {
+          const c = byId.get(to);
+          if (c) add({ kind: "repository", at: from.split(".").pop(), type: c.id, cls: c });
+        }
+      }
+      for (const c of classes) for (const f of [...c.fields, ...c.ctor]) {
+        if (!/^(KafkaTemplate|ReactiveKafkaProducerTemplate|Producer|KafkaProducer)$/.test(base(f.type))) continue;
+        const v = generics(f.type)[1];
+        const vc = v && resolve(v, c, readOf);
+        if (!vc) continue;
+        const topic = g.edges.find((e) => e[2] === "produced-by" && e[1].startsWith(`${c.id}#`))?.[0]?.slice(6) || null;
+        add({ kind: "kafka-out", at: `${c.name}.${f.name}`, topic, type: vc.id, cls: vc, hints: topic ? topicHints(topic) : null });
+      }
+      for (const c of classes.filter((x) => x.annos.includes("FeignClient") || x.annos.includes("HttpExchange"))) {
+        for (const mt of c.methods) {
+          let t = mt.ret;
+          while (WRAPPER.test(base(t)) || COLLECTION.test(base(t))) t = generics(t).slice(-1)[0] || "";
+          const rc = resolve(t, c, readOf);
+          if (rc) add({ kind: "http-in", at: `${c.name}#${mt.name}`, type: rc.id, cls: rc });
+        }
+      }
+      for (const e of [...edges].sort((x, y) => (y.hints ? 1 : 0) - (x.hints ? 1 : 0))) if (e.cls) e.factory = factory(e.cls, 0, e.hints?.node);
+      for (const e of edges.filter((x) => x.hints?.node.children.size && x.cls)) {
+        const names = new Set(fieldsUp(e.cls).map((f) => f.name));
+        const schemaNames = new Set(e.hints.node.children.keys());
+        const notInDto = [...schemaNames].filter((n) => !names.has(n)), notInTopic = [...names].filter((n) => !schemaNames.has(n));
+        if (notInDto.length || notInTopic.length) e.differs = { ...notInDto.length ? { notInDto } : {}, ...notInTopic.length ? { notInTopic } : {}, from: e.hints.schema ? `schema ${e.hints.schema}` : `the last ${e.hints.samples} messages` };
+      }
+      const dictionaries = [];
+      for (const d of dicts.values()) {
+        if (!d.entity && !d.models.length && !d.enum && !d.reads.length && !d.usedBy) continue;
+        const forms = [d.entity, ...d.models].filter(Boolean).map((c) => dictFactory(d, c));
+        let enumCheck = null;
+        if (d.enum) {
+          const consts_ = shapeOf(d.enum)?.constants || [];
+          const codes = d.rows.map((r) => String(r[d.codeCol]));
+          const notInEnum = codes.filter((x) => !consts_.includes(x)), notInTable = consts_.filter((x) => !codes.includes(x));
+          if (notInEnum.length || notInTable.length) enumCheck = { ...notInEnum.length ? { notInEnum } : {}, ...notInTable.length ? { notInTable } : {} };
+        }
+        dictionaries.push({ ...d, forms, enumCheck });
+      }
+      const rows = cat ? rowsOf() : [];
+      return { id, root, g, edges, factories, consts, dictionaries, rows, used, notes, cat, cases: casesFor, value, read, resolve, shapeOf, rowExpr, activeRows, firstRow };
+      function rowsOf() {
+        const isDict = (k) => /(^|\.)d_/.test(k) || !!cat.dictionaries?.[k];
+        const keyOf = (t) => `${t.schema}.${t.name}`.toLowerCase();
+        const wanted = /* @__PURE__ */ new Set();
+        for (const [, to] of g.edges) if (to.startsWith("table:")) {
+          const t = tableOf(to.slice(6));
+          if (t) wanted.add(keyOf(t));
+        }
+        for (const t of entityTables) {
+          const tt = tableOf(t);
+          if (tt) wanted.add(keyOf(tt));
+        }
+        const order = [], seen = /* @__PURE__ */ new Set();
+        const visit = (k, depth = 0) => {
+          if (seen.has(k) || isDict(k) || depth > 20) return;
+          const t = tableOf(k);
+          if (!t || t.kind !== "table") return;
+          seen.add(k);
+          for (const c of t.columns) {
+            const fk = fkOf(t, c.name);
+            if (fk && fk.table !== k && !c.nullable && !c.default) visit(fk.table, depth + 1);
+          }
+          order.push(k);
+        };
+        [...wanted].sort().forEach((k) => visit(k));
+        const types = new Map((cat.types || []).map((t) => [`${t.schema}.${t.name}`.toLowerCase(), t]));
+        const uniques = (t) => new Set((t.constraints || []).filter((k) => k.type === "u" || k.type === "p").map((k) => (k.def.match(/\(([^)]+)\)/) || [])[1]).filter((x) => x && !x.includes(",")).map((x) => x.replace(/"/g, "").trim()));
+        const methodName = (t) => {
+          let n = t.name.replace(/^(t|tbl)_/, "");
+          n = n.replace(/ies$/, "y").replace(/(sses|xes|ches|shes)$/, (m2) => m2.slice(0, -2)).replace(/([^s])s$/, "$1");
+          n = n.replace(/_(\w)/g, (m2, c) => c.toUpperCase());
+          return /^(id|next|insert|jdbc|rows|class|new|default|case|order|for|do|if|int|long|char)$/.test(n) ? `${n}Row` : n;
+        };
+        const names = new Map(order.map((k) => [k, methodName(tableOf(k))]));
+        for (const [k, n] of names) if ([...names.values()].filter((x) => x === n).length > 1) names.set(k, `${k.split(".")[0]}${n[0].toUpperCase()}${n.slice(1)}`);
+        return order.map((k) => {
+          const t = tableOf(k);
+          const uq = uniques(t);
+          const pk = (t.constraints || []).find((c) => c.type === "p");
+          const pkCols = pk ? (pk.def.match(/\(([^)]+)\)/) || [])[1].split(",").map((x) => x.replace(/"/g, "").trim()) : [];
+          const cols = [], params = [], why = [];
+          for (const c of t.columns) {
+            if (c.nullable || c.default != null || c.identity || c.generated) continue;
+            const fk = fkOf(t, c.name);
+            const dom = types.get(String(c.type).toLowerCase());
+            const ptype = dom?.kind === "domain" ? dom.base : c.type;
+            const cast = dom ? `cast(? as ${c.type})` : /^jsonb?$/.test(c.type) ? `cast(? as ${c.type})` : "?";
+            let v;
+            if (fk && isDict(fk.table)) {
+              const r = dictRow(fk.table);
+              v = r && r[fk.column] != null ? sqlLit(ptype, r[fk.column]) : "null";
+              why.push(`${c.name} -> ${fk.table} (a loaded row)`);
+            } else if (fk && fk.table !== k && names.has(fk.table)) {
+              const pn = camel(c.name.replace(/_(\w)/g, (m2, x) => x.toUpperCase()));
+              params.push({ name: pn, type: /int|serial/.test(ptype) ? "long" : "Object", parent: names.get(fk.table) });
+              v = pn;
+              why.push(`${c.name} -> ${fk.table}`);
+            } else {
+              const ch = checksOf(t, c.name);
+              if (dom?.kind === "enum") v = javaStr(dom.labels[0]);
+              else if (ch.in?.length) v = javaStr(ch.in[0]);
+              else if (uq.has(c.name) || pkCols.includes(c.name)) {
+                v = /int|serial|numeric/.test(ptype) ? "next()" : /uuid/.test(ptype) ? "UUID.randomUUID()" : /e?mail/.test(c.name) ? `"${c.name}-" + next() + "@example.com"` : `"${c.name}-" + next()`;
+                if (/uuid/.test(ptype)) used.imports.add("java.util.UUID");
+                why.push(`${c.name} unique`);
+              } else v = colValue(ptype, c.name, t, dom);
+              if (ch.in?.length) why.push(`${c.name} in (${ch.in.join(", ")})`);
+            }
+            cols.push({ name: c.name, value: v, cast });
+          }
+          const ret = pkCols.length === 1 ? pkCols[0] : null;
+          const retCol = ret && t.columns.find((c) => c.name === ret);
+          const retType = retCol && /int|serial/.test(retCol.type) ? "long" : retCol && /uuid/.test(retCol.type) ? "UUID" : retCol ? "Object" : null;
+          return { table: k, name: names.get(k), cols, params, why, returning: ret, retType };
+        });
+      }
+      function colValue(type, name, t, dom) {
+        const ch = checksOf(t, name);
+        if (/^(bigint|integer|smallint|int\d?)$/.test(type)) return String(Math.max(1, ch.min != null ? ch.min + (ch.minExclusive ? 1 : 0) : 1)) + (type === "bigint" ? "L" : "");
+        if (/^(numeric|decimal|real|double)/.test(type) || /^money$/.test(type)) {
+          const scale = Number((type.match(/\(\d+,\s*(\d+)\)/) || [])[1] || 0);
+          const domMin = dom ? checksOf({ constraints: (dom.checks || []).map((def) => ({ type: "c", def: def.replace(/VALUE/g, name) })) }, name).min : null;
+          let v = MONEY.test(name.replace(/_/g, "")) ? 10 : 1;
+          if (ch.min != null) v = Math.max(v, ch.min + (ch.minExclusive ? 1 : 0));
+          if (domMin != null) v = Math.max(v, domMin);
+          used.imports.add("java.math.BigDecimal");
+          return `new BigDecimal("${v.toFixed(scale)}")`;
+        }
+        if (/^bool/.test(type)) return /active|enabled/.test(name) ? "true" : "false";
+        if (/^timestamp/.test(type)) {
+          used.imports.add("java.time.OffsetDateTime");
+          used.imports.add("java.time.ZoneOffset");
+          return "OffsetDateTime.of(2026, 1, 15, 10, 0, 0, 0, ZoneOffset.UTC)";
+        }
+        if (/^date$/.test(type)) {
+          used.imports.add("java.time.LocalDate");
+          return "LocalDate.of(2026, 1, 15)";
+        }
+        if (/^uuid$/.test(type)) {
+          used.imports.add("java.util.UUID");
+          return "UUID.randomUUID()";
+        }
+        if (/^jsonb?$/.test(type)) return '"{}"';
+        if (/\[\]$/.test(type)) return "new String[0]";
+        const len = Number((type.match(/\((\d+)\)/) || [])[1] || 0);
+        let s = byName(name.replace(/_(\w)/g, (m2, c) => c.toUpperCase()));
+        if (len && s.length > len) s = s.slice(0, len);
+        if (/^(character|char|bpchar)\(/.test(type)) while (s.length < len) s += "x";
+        return javaStr(s);
+      }
+      function casesFor(c, depth = 0) {
+        const sh = shapeOf(c);
+        const comps = sh?.kind === "record" ? sh.components : sh?.fields || [];
+        const f = factories.get(c.id)?.name || factory(c);
+        const out2 = [];
+        const wrap = (prop, v) => `with(${f}(), "${prop}", ${v})`;
+        for (const p of comps) {
+          const a = p.annos, b = base(p.type), k = { name: p.name, annos: a, elemAnnos: p.elemAnnos, from: c, owner: c.name };
+          const tag = (n) => `@${n}${Object.keys(a[n] || {}).length ? `(${Object.entries(a[n]).map(([x, y]) => x === "value" ? JSON.stringify(y) : `${x} = ${JSON.stringify(y)}`).join(", ")})` : ""}`;
+          const isStr = b === "String" || b === "CharSequence";
+          const isColl = COLLECTION.test(b) || /Map$/.test(b);
+          if (!/^(int|long|short|byte|double|float|boolean|char)$/.test(b)) {
+            const req = a.NotNull || a.NotBlank || a.NotEmpty;
+            out2.push({ name: `${p.name} null`, valid: !req, why: req ? tag(a.NotNull ? "NotNull" : a.NotBlank ? "NotBlank" : "NotEmpty") : "no constraint: accepted", expr: wrap(p.name, "null") });
+          }
+          if (isStr && a.NotBlank) out2.push({ name: `${p.name} blank`, valid: false, why: tag("NotBlank"), expr: wrap(p.name, '" "') });
+          if ((isStr || isColl) && a.NotEmpty) out2.push({ name: `${p.name} empty`, valid: false, why: tag("NotEmpty"), expr: wrap(p.name, isStr ? '""' : /Set$/.test(b) ? "Set.of()" : /Map$/.test(b) ? "Map.of()" : "List.of()") });
+          if (a.Size?.max != null) {
+            const n = Number(a.Size.max);
+            if (isStr) {
+              out2.push({ name: `${p.name} ${n} long`, valid: true, why: tag("Size"), expr: wrap(p.name, `"x".repeat(${n})`) });
+              out2.push({ name: `${p.name} ${n + 1} long`, valid: false, why: tag("Size"), expr: wrap(p.name, `"x".repeat(${n + 1})`) });
+            } else if (COLLECTION.test(b)) {
+              const el = value(p.type, k).replace(/^(List|Set)\.of\(([\s\S]*?)(, [\s\S]*)?\)$/, "$2");
+              out2.push({ name: `${p.name} ${n + 1} items`, valid: false, why: tag("Size"), expr: wrap(p.name, `Collections.nCopies(${n + 1}, ${el})`) });
+              used.imports.add("java.util.Collections");
+            }
+          }
+          if (a.Size?.min > 0) out2.push({ name: `${p.name} under ${a.Size.min}`, valid: false, why: tag("Size"), expr: wrap(p.name, isStr ? `"x".repeat(${a.Size.min - 1})` : "List.of()") });
+          if (COLLECTION.test(b) && !a.Size?.max) {
+            const el = value(p.type, k).replace(/^(List|Set)\.of\(([\s\S]*?)(, [\s\S]*)?\)$/, "$2");
+            out2.push({ name: `${p.name} 3 items`, valid: true, why: "many", expr: wrap(p.name, `List.of(${el}, ${el}, ${el})`) });
+          }
+          const num = /^(int|Integer|long|Long|short|Short|BigDecimal|double|Double)$/.test(b);
+          const nv = (x) => b === "BigDecimal" ? `new BigDecimal("${x}")` : /^(long|Long)$/.test(b) ? `${x}L` : /^(double|Double)$/.test(b) ? `${Number(x).toFixed(1)}` : String(x);
+          if (num) {
+            if (a.Positive) {
+              out2.push({ name: `${p.name} 0`, valid: false, why: tag("Positive"), expr: wrap(p.name, nv(0)) });
+            }
+            if (a.PositiveOrZero) out2.push({ name: `${p.name} -1`, valid: false, why: tag("PositiveOrZero"), expr: wrap(p.name, nv(-1)) });
+            if (a.Min?.value != null) {
+              out2.push({ name: `${p.name} ${a.Min.value}`, valid: true, why: tag("Min"), expr: wrap(p.name, nv(a.Min.value)) });
+              out2.push({ name: `${p.name} ${a.Min.value - 1}`, valid: false, why: tag("Min"), expr: wrap(p.name, nv(a.Min.value - 1)) });
+            }
+            if (a.Max?.value != null) out2.push({ name: `${p.name} ${a.Max.value + 1}`, valid: false, why: tag("Max"), expr: wrap(p.name, nv(a.Max.value + 1)) });
+            if (a.DecimalMax?.value != null) {
+              const mx = String(a.DecimalMax.value);
+              out2.push({ name: `${p.name} ${mx}`, valid: a.DecimalMax.inclusive !== false, why: tag("DecimalMax"), expr: wrap(p.name, nv(mx)) });
+              const over = (Number(mx) + Math.pow(10, -((mx.split(".")[1] || "").length || 0))).toFixed((mx.split(".")[1] || "").length);
+              out2.push({ name: `${p.name} ${over}`, valid: false, why: tag("DecimalMax"), expr: wrap(p.name, nv(over)) });
+            }
+            if (a.DecimalMin?.value != null) {
+              const mn = String(a.DecimalMin.value);
+              const under = (Number(mn) - Math.pow(10, -((mn.split(".")[1] || "").length || 0))).toFixed((mn.split(".")[1] || "").length);
+              out2.push({ name: `${p.name} ${under}`, valid: false, why: tag("DecimalMin"), expr: wrap(p.name, nv(under)) });
+            }
+          }
+          const pd = isStr && dictForName(p.name, c.name);
+          if (pd) {
+            const real = String(firstRow(pd)[pd.codeCol] ?? "X");
+            const codes = new Set(pd.rows.map((r) => String(r[pd.codeCol])));
+            const unknown = [real.replace(/[A-Z]/g, "Z").replace(/[a-z]/g, "z").replace(/\d/g, "9"), real.replace(/[A-Z]/g, "Q").replace(/[a-z]/g, "q").replace(/\d/g, "8")].find((x) => !codes.has(x));
+            if (unknown) out2.push({ name: `${p.name} not in ${pd.table}`, valid: true, why: `no such row in ${pd.table}: validation passes, the service decides`, expr: wrap(p.name, javaStr(unknown)) });
+          }
+          if (isStr && (a.Pattern?.regexp || a.Pattern?.value)) out2.push({ name: `${p.name} not matching`, valid: false, why: tag("Pattern"), expr: wrap(p.name, '"#"') });
+          if (isStr && a.Email) out2.push({ name: `${p.name} not an email`, valid: false, why: tag("Email"), expr: wrap(p.name, '"not-an-email"') });
+          if (depth < 2) {
+            const nestedValid = a.Valid || p.elemAnnos?.Valid;
+            const elT = COLLECTION.test(b) ? generics(p.type)[0] : p.type;
+            const nc = nestedValid && resolve(elT, c, readOf);
+            if (nc && shapeOf(nc)?.kind !== "enum") {
+              for (const sub of casesFor(nc, depth + 1)) {
+                if (sub.name === "valid") continue;
+                const inner = COLLECTION.test(b) ? `List.of(${sub.expr})` : sub.expr;
+                out2.push({ name: `${p.name}${COLLECTION.test(b) ? "[0]" : ""}.${sub.name}`, valid: sub.valid, why: sub.why, expr: wrap(p.name, inner) });
+              }
+            }
+          }
+        }
+        return [{ name: "valid", valid: true, why: "as generated", expr: `${f}()` }, ...out2];
+      }
+    }
+    var PERSONAL_KEY = /(e?mail|phone|mobile|fax|first|last|surname|fullname|^name$|street|line\d|address|zip|postal|postcode|city|birth|dob|passport|iban|card|account|ssn|tax|token|password|secret|^ip$|lat|lon|geo)/i;
+    function masked(v, key = "") {
+      if (Array.isArray(v)) return v.map((x) => masked(x, key));
+      if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, masked(x, k)]));
+      if (key && PERSONAL_KEY.test(key) && v != null) return typeof v === "number" ? 1 : /e?mail/i.test(key) ? "test@example.com" : byName(key);
+      return v;
+    }
+    function byName(name) {
+      const n = String(name).toLowerCase();
+      const table2 = [
+        [/country/, "DE"],
+        [/currency/, "EUR"],
+        [/(zip|postcode|postal)/, "10115"],
+        [/city|town/, "Berlin"],
+        [/(line1|street|address)/, "Main Street 1"],
+        [/line2/, "Floor 2"],
+        [/phone|mobile/, "+4930123456"],
+        [/url|uri|link/, "https://example.com"],
+        [/^(first)?name$|fullname|firstname/, "Test Name"],
+        [/lastname|surname/, "Tester"],
+        [/(note|comment|description|reason|message|text)/, "test"],
+        [/lang|locale/, "en"],
+        [/iban/, "DE89370400440532013000"],
+        [/sku/, "SKU-1"],
+        [/(tracking|reference|ref)/, "REF-1"],
+        [/code$/, "CODE1"],
+        [/token|secret|password/, "test-only"],
+        [/status|state/, "NEW"]
+      ];
+      for (const [re, v] of table2) if (re.test(n)) return v;
+      return `${name}-1`;
+    }
+    var messageName = (topic) => `${camel(String(topic).replace(/[^\w]+(\w)/g, (a, c) => c.toUpperCase()).replace(/[^\w]/g, ""))}Message`;
+    function java(model, { pkg }) {
+      const { edges, factories, consts, used, dictionaries } = model;
+      const blocks = [];
+      const kinds = { body: "Request body", "kafka-in": "Kafka message", "kafka-out": "Kafka message the service sends", repository: "Row read by", "http-in": "Answer of" };
+      const byFactory = /* @__PURE__ */ new Map();
+      for (const e of edges.filter((x) => x.factory)) (byFactory.get(e.factory) || byFactory.set(e.factory, []).get(e.factory)).push(`${kinds[e.kind]} ${e.at}`);
+      for (const f of factories.values()) {
+        const why = byFactory.get(f.name);
+        const dictOf = dictionaries.find((d) => d.entity?.id === f.cls.id);
+        blocks.push([
+          dictOf ? `    // dictionary ${dictOf.table}: an active row${why ? ` (${why.join("; ")})` : ""}` : why ? `    // ${why.join("; ")}${f.fromTopic ? " (values from the topic's schema and last messages)" : ""}` : `    // part of ${[...factories.values()].filter((x) => x.code?.includes(`${f.name}()`)).map((x) => x.type).join(", ") || "the above"}`,
+          `    public static ${f.type} ${f.name}() {`,
+          f.code.split("\n").map((l) => `        ${l}`).join("\n"),
+          "    }"
+        ].join("\n"));
+      }
+      for (const d of dictionaries) for (const f of d.forms) {
+        const lines = [];
+        const how = d.reads.filter((r) => r.returns === f.cls.id || base(r.returns) === f.cls.name).map((r) => `${r.method} (${r.via})`);
+        const head = `${d.table}${how.length ? `, read by ${how.join(", ")}` : ""}`;
+        const rowsJava = (rows) => rows.slice(0, 50).map((r) => `            ${model.rowExpr(f.cls, r)}`).join(",\n");
+        used.imports.add("java.util.List");
+        if (!factories.has(f.cls.id) || factories.get(f.cls.id).name !== f.one) lines.push([`    // dictionary ${d.table}: an active row (${head})`, `    public static ${f.type} ${f.one}() {`, `        return ${model.rowExpr(f.cls, model.firstRow(d))};`, "    }"].join("\n"));
+        lines.push([`    // dictionary ${d.table}: all rows${d.rows.length > 50 ? " (the first 50)" : ""}, as the database holds them (${head})`, `    public static List<${f.type}> ${f.all}() {`, `        return List.of(
+${rowsJava(d.rows)});`, "    }"].join("\n"));
+        if (f.active) lines.push([`    // dictionary ${d.table}: the active rows (${d.activeCol})`, `    public static List<${f.type}> ${f.active}() {`, `        return List.of(
+${rowsJava(model.activeRows(d))});`, "    }"].join("\n"));
+        blocks.push(...lines);
+      }
+      for (const e of edges.filter((x) => x.kind === "body" && x.valid)) {
+        const cs = model.cases(e.cls);
+        used.imports.add("java.util.stream.Stream");
+        used.imports.add("org.junit.jupiter.params.provider.Arguments");
+        blocks.push([
+          `    // ${e.at} validates the body: each constraint broken (false: 400) and the edges that pass (true)`,
+          `    // @ParameterizedTest(name = "{0}") @MethodSource("${pkg ? pkg + "." : ""}TestData#${e.factory}Cases")`,
+          `    public static Stream<Arguments> ${e.factory}Cases() {`,
+          "        return Stream.of(",
+          cs.map((x) => `            Arguments.of("${x.name.replace(/"/g, '\\"')}", ${x.expr}, ${x.valid})${x.why && x.name !== "valid" ? ` // ${x.why}` : ""}`).join(",\n").replace(/,( \/\/[^\n]*)\n/g, ",$1\n").replace(/( \/\/[^\n]*),\n/g, ",$1\n"),
+          "        );",
+          "    }"
+        ].join("\n"));
+      }
+      if (model.rows.length && model.jdbc) {
+        used.imports.add("org.springframework.jdbc.core.JdbcTemplate");
+        used.imports.add("java.util.concurrent.atomic.AtomicLong");
+        if (model.rows.some((r) => r.cols.some((c) => /BigDecimal/.test(c.value)))) used.imports.add("java.math.BigDecimal");
+        const methods = [];
+        for (const r of model.rows) {
+          const sql = `insert into ${r.table} (${r.cols.map((c) => c.name).join(", ")}) values (${r.cols.map((c) => c.cast).join(", ")})${r.returning ? ` returning ${r.returning}` : ""}`;
+          const sqlNoCols = `insert into ${r.table} default values${r.returning ? ` returning ${r.returning}` : ""}`;
+          const args = r.cols.map((c) => c.value);
+          const body = r.returning ? `return jdbc.queryForObject(${JSON.stringify(r.cols.length ? sql : sqlNoCols)}, ${r.retType === "long" ? "Long" : r.retType}.class${args.length ? ", " + args.join(", ") : ""});` : `jdbc.update(${JSON.stringify(r.cols.length ? sql : sqlNoCols)}${args.length ? ", " + args.join(", ") : ""});`;
+          const ret = r.returning ? r.retType : "void";
+          const doc = `        // ${r.table}${r.why.length ? `: ${r.why.join(", ")}` : ""}`;
+          if (r.params.length) {
+            methods.push([
+              doc + ", its parents inserted first",
+              `        public ${ret} ${r.name}() {`,
+              `            ${r.returning ? "return " : ""}${r.name}(${r.params.map((p) => `${p.parent}()`).join(", ")});`,
+              "        }"
+            ].join("\n"));
+            methods.push([`        public ${ret} ${r.name}(${r.params.map((p) => `${p.type} ${p.name}`).join(", ")}) {`, `            ${body}`, "        }"].join("\n"));
+          } else methods.push([doc, `        public ${ret} ${r.name}() {`, `            ${body}`, "        }"].join("\n"));
+        }
+        blocks.push([
+          "    // Rows for tests against the database (the DDL snapshot, its dictionaries loaded): every required column",
+          "    // has a value, parents are inserted first, unique columns count up (from a new start each run, so tests that",
+          "    // commit do not collide). Plain SQL: change it as the schema does.",
+          "    //   var rows = new TestData.Rows(jdbc); long customer = rows.customer(); rows.payment(customer);",
+          "    public static final class Rows {",
+          "        private static final AtomicLong SEQ = new AtomicLong(System.nanoTime() % 1_000_000);",
+          "        private final JdbcTemplate jdbc;",
+          "",
+          "        public Rows(JdbcTemplate jdbc) {",
+          "            this.jdbc = jdbc;",
+          "        }",
+          "",
+          methods.join("\n\n"),
+          "",
+          "        private static long next() {",
+          "            return SEQ.incrementAndGet();",
+          "        }",
+          "    }"
+        ].join("\n"));
+      }
+      const imports = new Set(used.imports);
+      const all = blocks.join("\n");
+      if (/\bList\.of\(|List</.test(all)) imports.add("java.util.List");
+      if (/\bSet\.of\(/.test(all)) imports.add("java.util.Set");
+      if (/\bMap\.of\(/.test(all)) imports.add("java.util.Map");
+      if (/\bOptional\.of\(/.test(all)) imports.add("java.util.Optional");
+      if (/Instant\.parse/.test(all) || [...consts.values()].some((v) => /Instant/.test(v.value))) imports.add("java.time.Instant");
+      if ([...consts.values()].some((v) => v.kind === "uuid")) imports.add("java.util.UUID");
+      const jackson = model.jackson;
+      imports.add("java.lang.reflect.Field");
+      imports.add("java.lang.reflect.RecordComponent");
+      if (jackson) {
+        imports.add("com.fasterxml.jackson.databind.ObjectMapper");
+        imports.add("com.fasterxml.jackson.databind.SerializationFeature");
+      }
+      const helpers = [
+        "    // a copy with one property changed: records through their constructor, other classes on the object itself",
+        "    public static <T> T with(T value, String property, Object to) {",
+        "        try {",
+        "            if (value.getClass().isRecord()) {",
+        "                RecordComponent[] cs = value.getClass().getRecordComponents();",
+        "                Object[] args = new Object[cs.length];",
+        "                Class<?>[] types = new Class<?>[cs.length];",
+        "                boolean found = false;",
+        "                for (int i = 0; i < cs.length; i++) {",
+        "                    types[i] = cs[i].getType();",
+        "                    found |= cs[i].getName().equals(property);",
+        "                    args[i] = cs[i].getName().equals(property) ? to : cs[i].getAccessor().invoke(value);",
+        "                }",
+        '                if (!found) throw new IllegalArgumentException(value.getClass().getSimpleName() + " has no " + property);',
+        "                var ctor = value.getClass().getDeclaredConstructor(types);",
+        "                ctor.setAccessible(true);",
+        '                @SuppressWarnings("unchecked") T copy = (T) ctor.newInstance(args);',
+        "                return copy;",
+        "            }",
+        "            set(value, property, to);",
+        "            return value;",
+        "        } catch (ReflectiveOperationException e) {",
+        "            throw new IllegalStateException(e);",
+        "        }",
+        "    }",
+        "",
+        "    // a field set as the database or the framework would (no setter needed)",
+        "    public static void set(Object target, String field, Object value) {",
+        "        for (Class<?> c = target.getClass(); c != null; c = c.getSuperclass()) {",
+        "            try {",
+        "                Field f = c.getDeclaredField(field);",
+        "                f.setAccessible(true);",
+        "                f.set(target, value);",
+        "                return;",
+        "            } catch (NoSuchFieldException e) {",
+        "                // the superclass may have it",
+        "            } catch (IllegalAccessException e) {",
+        "                throw new IllegalStateException(e);",
+        "            }",
+        "        }",
+        '        throw new IllegalArgumentException(target.getClass().getSimpleName() + " has no field " + field);',
+        "    }"
+      ];
+      if (used.helpers.has("instance")) helpers.push(
+        "",
+        "    // an object through its non-public no-argument constructor (entities: protected for JPA)",
+        "    static <T> T instance(Class<T> type) {",
+        "        try {",
+        "            var ctor = type.getDeclaredConstructor();",
+        "            ctor.setAccessible(true);",
+        "            return ctor.newInstance();",
+        "        } catch (ReflectiveOperationException e) {",
+        "            throw new IllegalStateException(e);",
+        "        }",
+        "    }"
+      );
+      if (used.helpers.has("dictionaryRow")) helpers.push(
+        "",
+        "    private static <T> T dictionaryRow(Class<T> type, Consumer<T> fill) {",
+        "        T x = instance(type);",
+        "        fill.accept(x);",
+        "        return x;",
+        "    }"
+      );
+      if (jackson) helpers.push(
+        "",
+        "    // JSON as the endpoint and the listeners read it (dates as ISO text)",
+        "    private static final ObjectMapper JSON = new ObjectMapper().findAndRegisterModules().disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);",
+        "",
+        "    public static String json(Object value) {",
+        "        try {",
+        "            return JSON.writeValueAsString(value);",
+        "        } catch (Exception e) {",
+        "            throw new IllegalStateException(e);",
+        "        }",
+        "    }"
+      );
+      const idLines = [...consts.entries()].map(([k, v]) => `    public static final ${v.kind === "uuid" ? "UUID" : "long"} ${k}_ID = ${v.value};`);
+      const textEdges = edges.filter((e) => e.kind === "kafka-in" && e.text).map((e) => {
+        const n = messageName(e.topic);
+        const v = e.json ? `json(${e.factory}())` : e.value || '"test"';
+        const why = e.json ? `JSON the listener reads into ${e.cls.name}` : e.value && /^"\{/.test(e.value) ? "the last message on the topic, personal values replaced" : e.value ? "the code parses it" : "plain text";
+        return `    // Kafka message ${e.at}: ${why}
+    public static String ${n}() {
+        return ${v};
+    }`;
+      });
+      const own = (i) => pkg && i.startsWith(`${pkg}.`) && !i.slice(pkg.length + 1).includes(".");
+      return [
+        pkg ? `package ${pkg};
+` : "",
+        [...imports].filter((i) => !own(i) && !/^java\.lang\.[A-Z]\w*$/.test(i)).sort().map((i) => `import ${i};`).join("\n"),
+        "",
+        "// Valid data for what enters and leaves the service, generated by dt (test_data) from its code and",
+        "// database: built through each type's constructor; values from Bean Validation, the columns the names",
+        "// map to (length, scale, CHECKs, dictionary rows), how the code parses them. The ids of one concept are",
+        "// one constant, so a body, an event and a row agree. Plain Java, yours to change: once edited, dt no",
+        "// longer overwrites it (test_data then shows what it would generate instead).",
+        "// dt-generated: HASH",
+        "public final class TestData {",
+        ...idLines.length ? [...idLines, ""] : [],
+        "    private TestData() {}",
+        "",
+        [...blocks, ...textEdges].join("\n\n"),
+        "",
+        helpers.join("\n"),
+        "}",
+        ""
+      ].join("\n");
+    }
+    var sqlLit = (type, v) => {
+      if (/^(bigint)$/.test(type)) return `${v}L`;
+      if (/^(integer|smallint|int\d?)$/.test(type)) return String(v);
+      if (/^bool/.test(type)) return String(v === true || v === "t");
+      if (/^(numeric|decimal)/.test(type)) return `new BigDecimal("${v}")`;
+      return javaStr(v);
+    };
+    async function generate(id, { env, db, write = true, module: modDir } = {}) {
+      const model = build(id, { env, db });
+      const g = model.g;
+      const app = g.classes.find((c) => c.role === "application" && !c.test && (!modDir || c.file.startsWith(`${modDir}/`))) || g.classes.find((c) => !c.test);
+      if (!app) throw new Error(`no Java classes in workspace ${id}`);
+      const pkg = app.id.slice(0, app.id.length - app.name.length - 1);
+      const T = require_testgen();
+      const mod = T.moduleOf(model.root, app.file);
+      const s = T.setup(model.root, mod, g.app);
+      const buildText = mod.text + (model.read("pom.xml") || "") + (model.read("build.gradle") || "") + (model.read("build.gradle.kts") || "");
+      model.jackson = /spring-boot-starter-(web|json|webflux)|jackson-databind/.test(buildText);
+      model.jdbc = /spring-boot-starter-(jdbc|data-jpa)|spring-jdbc/.test(buildText);
+      const text = stamp(java(model, { pkg }));
+      const rel = app.file.replace(/(^|\/)src\/main\/(java|kotlin)\/.*$/, "$1src/test/java/") + (pkg ? `${pkg.replace(/\./g, "/")}/` : "") + "TestData.java";
+      let existing = null;
+      try {
+        existing = fs2.readFileSync(path2.join(model.root, rel), "utf8");
+      } catch {
+      }
+      const kept = existing != null && !untouched(existing) && existing !== text;
+      let compile = null;
+      if (write && !kept) {
+        W.write(id, rel, { content: text });
+        compile = await require_javacheck().check(id, [rel]).catch((e) => ({ skipped: e.message }));
+      }
+      return {
+        workspace: id,
+        path: rel,
+        class: `${pkg ? pkg + "." : ""}TestData`,
+        written: write && !kept,
+        ...kept ? { kept: `${rel} was changed by hand (or not written by dt): left as it is; source has what dt would generate now, to take parts of it` } : {},
+        edges: model.edges.map((e) => ({ kind: e.kind, at: e.at, ...e.hints ? { topic: [e.hints.schema && `schema ${e.hints.schema}`, e.hints.samples && `${e.hints.samples} last messages`].filter(Boolean).join(", ") || "synced, empty" } : {}, ...e.differs ? { differs: e.differs } : {}, ...e.type ? { type: e.type } : {}, ...e.factory ? { use: `TestData.${e.factory}()` } : {}, ...e.param ? { param: e.param } : {}, ...e.text ? { message: `TestData.${messageName(e.topic)}()` } : {}, ...e.value ? { value: e.value } : {}, ...e.valid ? { cases: `TestData#${e.factory}Cases` } : e.kind === "body" ? { validated: false } : {} })),
+        ids: Object.fromEntries([...model.consts].map(([k, v]) => [`${k}_ID`, v.value])),
+        dictionaries: model.dictionaries.map((d) => ({
+          table: d.table,
+          rows: d.rows.length,
+          java: [d.enum && `enum ${d.enum.id}`, d.entity && `entity ${d.entity.id}`, ...d.models.map((c) => `model ${c.id}${c.lib ? ` (${c.lib})` : ""}`)].filter(Boolean),
+          ...d.reads.length ? { reads: d.reads.map((r) => `${r.method} (${r.via}${r.active ? ", active only" : ""})`) } : {},
+          ...d.forms.length ? { use: d.forms.map((f) => `TestData.${f.one}(), TestData.${f.all}()${f.active ? `, TestData.${f.active}()` : ""}`) } : {},
+          ...d.usedBy ? { valuesFor: [...new Set(d.usedBy)] } : {},
+          ...d.enumCheck ? { enumDiffers: d.enumCheck } : {}
+        })),
+        rows: model.jdbc ? model.rows.map((r) => ({ table: r.table, use: `new TestData.Rows(jdbc).${r.name}(${r.params.map((p) => p.name).join(", ")})`, ...r.why.length ? { why: r.why } : {} })) : void 0,
+        database: model.cat ? model.cat.db : env ? `no synced database in ${env} has the entity tables` : "pass env to take lengths, CHECKs and dictionary rows from the database",
+        setup: { springBoot: s.springBoot, jackson: model.jackson },
+        compile: compile || void 0,
+        source: write && !kept ? void 0 : text,
+        usage: [
+          "given: when(repo.findById(SHIPMENT_ID)).thenReturn(Optional.of(TestData.shipment()))",
+          'a variant: TestData.with(TestData.createShipment(), "level", ServiceLevel.EXPRESS)',
+          "a body: mvc.perform(post(...).contentType(APPLICATION_JSON).content(TestData.json(TestData.createShipment())))",
+          'validation: @ParameterizedTest(name = "{0}") @MethodSource("<pkg>.TestData#<body>Cases") void rejects(String name, Body body, boolean valid)'
+        ]
+      };
+    }
+    var crypto = require("crypto");
+    var bodyHash = (text) => crypto.createHash("sha256").update(text.replace(/^\/\/ dt-generated: \S+\n/m, "")).digest("hex").slice(0, 16);
+    var stamp = (text) => text.replace("// dt-generated: HASH", `// dt-generated: ${bodyHash(text)}`);
+    var untouched = (text) => {
+      const m = text.match(/^\/\/ dt-generated: (\S+)$/m);
+      return !!m && m[1] === bodyHash(text);
+    };
+    module2.exports = { generate, untouched, build, java, shape, declaration, annotations, sample, checksOf, parsedNames, noComments, splitTop };
+  }
+});
+
 // lib/testgen.js
 var require_testgen = __commonJS({
   "lib/testgen.js"(exports2, module2) {
@@ -32348,9 +33977,18 @@ var require_testgen = __commonJS({
         buildTool: mod.buildFile ? mod.buildFile === "pom.xml" ? "maven" : "gradle" : null
       };
     }
-    function argFor(type, ctx) {
+    function argFor(type, ctx, name) {
       const t = String(type).trim();
       const b = baseName(t);
+      const td = ctx.testData;
+      if (td) {
+        const concept = name && (/^id$/i.test(name) ? ctx.concept : (String(name).match(/^(\w+?)Id$/) || [])[1]);
+        const id = concept && `${concept.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toUpperCase()}_ID`;
+        if (id && td.ids.has(id) && /^(long|Long)$/.test(b)) return `TestData.${id}`;
+        if (id && td.ids.has(id) && b === "String" && td.parsed.has(name)) return `String.valueOf(TestData.${id})`;
+        if (td.byType.has(b)) return `TestData.${td.byType.get(b)}()`;
+        if (b === "String" && ctx.topic && td.messages?.has(ctx.topic)) return `TestData.${td.messages.get(ctx.topic)}()`;
+      }
       const imported = (n) => ctx.imports.has(n) || ctx.samePkg.has(n);
       const fq = (pkg, n) => imported(n) ? n : `${pkg}.${n}`;
       const P = { long: "1L", Long: "1L", int: "1", Integer: "1", short: "(short) 1", Short: "(short) 1", byte: "(byte) 1", double: "1.0", Double: "1.0", float: "1.0f", Float: "1.0f", boolean: "false", Boolean: "false", char: "'a'", String: '"test"', Object: "new Object()", CharSequence: '"test"' };
@@ -32407,6 +34045,9 @@ var require_testgen = __commonJS({
       statics.add("import static org.mockito.ArgumentMatchers.any;");
       statics.add("import static org.mockito.Mockito.*;");
       if (st === "mockito") {
+        if ([...ctx.stubs?.values() || []].flat().some((x) => x.includes("returnsFirstArg"))) statics.add("import static org.mockito.AdditionalAnswers.returnsFirstArg;");
+        if ([...ctx.stubs?.values() || []].flat().some((x) => x.includes("Optional."))) add("java.util.Optional");
+        if ([...ctx.stubs?.values() || []].flat().some((x) => x.includes("List.of("))) add("java.util.List");
         add("org.junit.jupiter.api.extension.ExtendWith", "org.mockito.InjectMocks", "org.mockito.Mock", "org.mockito.junit.jupiter.MockitoExtension");
         ann.push("@ExtendWith(MockitoExtension.class)");
         for (const d of deps) {
@@ -32448,7 +34089,8 @@ ${c.name} subject;`, "@Autowired\nJdbcTemplate jdbc;");
       }
       const body = [];
       methods.forEach((m, i) => {
-        const call = `subject.${m.name}(${m.params.map((p) => argFor(p.type, ctx)).join(", ")})`;
+        const topic = (g.edges.find((e) => e[0] === `${c.id}#${m.name}` && e[2] === "consumes") || [])[1]?.replace(/^topic:/, "");
+        const call = `subject.${m.name}(${m.params.map((p) => argFor(p.type, { ...ctx, topic }, p.name)).join(", ")})`;
         const ret = m.ret && m.ret !== "void";
         const hint = (calls.get(m.name) || []).map((x) => `//   ${x}`).join("\n");
         const throwsChecked = /throws\s/.test(m.throws || "");
@@ -32475,6 +34117,7 @@ ${c.name} subject;`, "@Autowired\nJdbcTemplate jdbc;");
             for (const ins of (db?.inserts || []).slice(0, 4)) t.push(`    // jdbc.update(${JSON.stringify(ins.sql)}${ins.args.length ? ", " + ins.args.join(", ") : ""});`);
           } else t.push(`    // given${hint ? `: ${m.name} calls
 ${indent(hint, 4)}` : ""}`);
+          for (const stub of st === "mockito" && ctx.stubs?.get(m.name) || []) t.push(`    ${stub}`);
           t.push(`    ${ret ? `var result = ${call};` : `${call};`}`);
           if (st === "mockito") t.push("    // then: assertThat(result)... and verify(...) the calls that matter");
           else if (ret && s.assertj) t.push("    // then", "    assertThat(result).isNotNull();");
@@ -32540,7 +34183,7 @@ ${indent(hint, 4)}` : ""}`);
         return { table: k, sql: `insert into ${k} (${cols.map((c) => c.name).join(", ")}) values (${cols.map(() => "?").join(", ")})`, args: cols.map((c) => val(c.type)), checks };
       });
     }
-    function context(id, target, { env, db: dbName, writeDdl = true, flow } = {}) {
+    function context(id, target, { env, db: dbName, writeDdl = true, flow, allFunctions } = {}) {
       const m = W.checkId(id);
       const wg = W.index(id).graph_();
       const [tc, tm] = String(target).split(/#|::/);
@@ -32641,6 +34284,10 @@ ${indent(hint, 4)}` : ""}`);
           const D = require_ddl();
           const prev = fs2.existsSync(path2.join(root, rel)) ? D.requested(fs2.readFileSync(path2.join(root, rel), "utf8")) : null;
           const want = { tables: [...tables].filter((t) => resolve(namesOf(cat).rel, namesOf(cat).relBy, t).keys.length), functions: [...fnCalls].filter((f) => resolve(namesOf(cat).fn, namesOf(cat).fnBy, f).keys.length), views: [] };
+          if (allFunctions !== false) {
+            const schemas = new Set(want.tables.flatMap((t) => resolve(namesOf(cat).rel, namesOf(cat).relBy, t).keys).map((k) => k.split(".")[0]));
+            want.functions = [.../* @__PURE__ */ new Set([...want.functions, ...(cat.functions || []).filter((f) => schemas.has(f.schema.toLowerCase()) && f.kind !== "aggregate" && f.kind !== "window").map((f) => `${f.schema}.${f.name}`)])];
+          }
           if (prev) for (const k of ["tables", "functions", "views"]) want[k] = [.../* @__PURE__ */ new Set([...prev[k], ...want[k]])];
           const snap = D.snapshot(env, cat.db, want);
           if (writeDdl) W.write(id, rel, { content: snap.sql });
@@ -32648,13 +34295,37 @@ ${indent(hint, 4)}` : ""}`);
           db = { inserts: inserts(cat, snap.tables.filter((t) => [...tables].some((x) => t === x || t.endsWith(`.${x}`)))) };
         } else ddl = { note: `no synced database in ${env} has ${[...tables].join(", ")}: catalog_sync what=pg, then pass db=` };
       } else if (st === "jpa" || st === "jdbc") ddl = { note: "pass env (and db) to get the DDL snapshot for this test" };
+      const testData = readTestData(root, g);
+      const stubs = /* @__PURE__ */ new Map();
+      if (testData) for (const x of methods) {
+        const out2 = [];
+        for (const e of g.edges) {
+          const [from2, to2, kind] = e;
+          if (from2 !== `${c.id}#${x.name}` || kind !== "calls") continue;
+          const [tid, mname] = to2.split("#");
+          const d = depByType.get(tid);
+          if (!d) continue;
+          const dc = g.classes.find((k) => k.id === tid);
+          const dm = dc?.methods.find((k) => k.name === mname);
+          const entityId = g.edges.find((r) => r[0] === tid && r[2] === "repository")?.[1];
+          const entity = entityId && g.classes.find((k) => k.id === entityId)?.name;
+          const body = srcLines.slice(Math.max(0, x.startLine - 1), x.endLine).join("\n");
+          const reads = readsOf(g, root, tid, mname, entityId);
+          const line = stubOf({ mock: d.name, method: mname, params: dm ? dm.params.map((p) => p.type) : null, arity: e[4] ?? (/^(findAll|count|flush)$/.test(mname) ? 0 : 1), ret: dm?.ret, entity, body, ...reads }, testData);
+          if (line) out2.push(line);
+        }
+        if (out2.length) stubs.set(x.name, [...new Set(out2)]);
+      }
       const kt = /\.kt$/.test(c.file);
       const fileImports = [...src.matchAll(/^\s*import\s+(static\s+)?([\w.*]+)\s*;?\s*$/gm)].map((x) => (x[1] ? "static " : "") + x[2]);
-      const ctx = { imports: new Set(fileImports.map((i) => i.split(".").pop())), samePkg: new Set(g.classes.filter((x) => x.id === `${c.id.slice(0, c.id.length - c.name.length)}${x.name}`).map((x) => x.name)), byName, fileImports };
+      const ctx = { imports: new Set(fileImports.map((i) => i.split(".").pop())), samePkg: new Set(g.classes.filter((x) => x.id === `${c.id.slice(0, c.id.length - c.name.length)}${x.name}`).map((x) => x.name)), byName, fileImports, testData, stubs, concept: c.name.replace(/(Service|Controller|Resource|Listener|Handler|Dao|Repository|Impl)$/, "") };
       const testDir = c.file.replace(/(^|\/)src\/main\/(java|kotlin)\//, `$1src/test/$2/`);
       const testPath = testDir.replace(/\.(java|kt)$/, `Test.$1`);
       const existing = fs2.existsSync(path2.join(root, testPath));
-      const skeleton = kt ? null : javaSkeleton({ c, g, s, st, methods, deps, ctx, calls, ddl, db });
+      let skeleton = kt ? null : javaSkeleton({ c, g, s, st, methods, deps, ctx, calls, ddl, db });
+      const pkgOf = (x) => x.id.slice(0, x.id.length - x.name.length - 1);
+      if (skeleton && testData && /\bTestData\./.test(skeleton) && testData.pkg !== pkgOf(c)) skeleton = skeleton.replace(/^(package [^\n]+\n\n)/, `$1import ${testData.pkg ? testData.pkg + "." : ""}TestData;
+`);
       const example = exampleTest(root, mod.dir, c.file);
       const focus = member ? methods[0] : null;
       const from = focus ? Math.max(1, focus.startLine - 2) : 1;
@@ -32678,9 +34349,72 @@ ${indent(hint, 4)}` : ""}`);
         test: { path: testPath, exists: existing, class: `${c.id}Test` },
         skeleton: skeleton || void 0,
         example,
+        testData: testData ? { path: testData.path, factories: Object.fromEntries(testData.byType), ids: [...testData.ids], note: 'valid objects and ids for the arguments and stubs (used in the skeleton); TestData.with(x, "field", value) for variants' } : { note: "no TestData in this module: test_data generates valid objects for the service's bodies, events and rows (with env: from the database)" },
         rules: rules(st, s, kt),
         next: `Write the test with workspace_write path="${testPath}"${existing ? " (it exists: read it first and add to it, or use another name)" : ""}, then test_run tests=["${c.name}Test"]${ddl?.db ? ` env="${env}"` : ""}.`
       };
+    }
+    function stubOf(call, td) {
+      const { mock, method, params, arity, entity, body } = call;
+      const any = (pt) => ({ long: "anyLong()", int: "anyInt()", boolean: "anyBoolean()", double: "anyDouble()", short: "anyShort()" })[pt] || "any()";
+      const args = params ? params.map(any).join(", ") : Array(arity ?? 1).fill("any()").join(", ");
+      const ret = call.ret || (entity ? { findById: `Optional<${entity}>`, getReferenceById: entity, getById: entity, findAll: `List<${entity}>`, save: "arg", saveAndFlush: "arg" }[method] : null);
+      if (!ret || ret === "void") return null;
+      const on = `${mock}.${method}(${args})`;
+      if (ret === "arg" || /^(save|saveAndFlush|merge)$/.test(method) && (params ? params.length : arity) === 1) return `when(${on}).thenAnswer(returnsFirstArg());`;
+      const inner = baseName(ret.replace(/^(Optional|List|Set|Collection)<\s*([\s\S]+)>$/, "$2"));
+      const tableIs = (a, b) => a === b || a.endsWith(`.${b}`) || b.endsWith(`.${a}`);
+      const dicts = (td.dicts || []).filter((d) => d.type === inner && (call.tables || []).some((t) => tableIs(d.table, t)));
+      if (dicts.length) {
+        const pick = (k) => dicts.find((d) => d.kind === k)?.factory;
+        const many = /^(List|Collection|Iterable|Set)</.test(ret);
+        const f2 = many ? call.active && pick("active") || pick("all") : pick("one");
+        if (f2) return `when(${on}).thenReturn(${many ? /^Set</.test(ret) ? `java.util.Set.copyOf(TestData.${f2}())` : `TestData.${f2}()` : /^Optional</.test(ret) ? `Optional.of(TestData.${f2}())` : `TestData.${f2}()`});`;
+      }
+      const f = td.byType.get(inner);
+      if (!f) return null;
+      const guard = body && new RegExp(`${mock}\\.${method}\\([^;]*?\\)\\s*\\.(isPresent|isEmpty)\\(`).test(body);
+      const v = /^Optional</.test(ret) ? guard ? "Optional.empty()" : `Optional.of(TestData.${f}())` : /^(List|Collection|Iterable)</.test(ret) ? `List.of(TestData.${f}())` : /^Set</.test(ret) ? `java.util.Set.of(TestData.${f}())` : `TestData.${f}()`;
+      return `when(${on}).thenReturn(${v});`;
+    }
+    function readsOf(g, root, typeId, method, entityId) {
+      const tables = g.edges.filter((e) => e[0] === `${typeId}#${method}` && String(e[1]).startsWith("table:")).map((e) => e[1].slice(6));
+      const ent = entityId && g.classes.find((k) => k.id === entityId);
+      if (ent?.table) tables.push(ent.table);
+      const dc = g.classes.find((k) => k.id === typeId);
+      const dm = dc?.methods.find((k) => k.name === method);
+      let body = "";
+      try {
+        if (dm) body = fs2.readFileSync(path2.join(root, dc.file), "utf8").split("\n").slice(Math.max(0, dm.startLine - 1), dm.endLine).join("\n");
+      } catch {
+      }
+      return { tables, active: /\bwhere\b[^"]*\b(is_)?(active|enabled)\b/i.test(body) || /Active(True)?\b/.test(method) };
+    }
+    function readTestData(root, g) {
+      const tdc = g.classes.find((x) => x.test && x.name === "TestData");
+      if (!tdc) return null;
+      let text = "";
+      try {
+        text = fs2.readFileSync(path2.join(root, tdc.file), "utf8");
+      } catch {
+        return null;
+      }
+      const byType = /* @__PURE__ */ new Map();
+      for (const m of text.matchAll(/^\s{4}public static ([\w.]+) (\w+)\(\) \{/gm)) if (!byType.has(m[1].split(".").pop()) && !/^(String|void)$/.test(m[1])) byType.set(m[1].split(".").pop(), m[2]);
+      const ids = new Set([...text.matchAll(/public static final \w+ (\w+_ID) =/g)].map((m) => m[1]));
+      const dicts = [];
+      for (const m of text.matchAll(/^\s{4}\/\/ dictionary (\S+): (an active row|all rows|the active rows)[^\n]*\n\s{4}public static ([\w.<>]+) (\w+)\(\)/gm)) {
+        const type = m[3].replace(/^List<(.+)>$/, "$1").split(".").pop();
+        dicts.push({ table: m[1], kind: { "an active row": "one", "all rows": "all", "the active rows": "active" }[m[2]], type, factory: m[4] });
+      }
+      const messages = new Map([...text.matchAll(/^\s{4}\/\/ Kafka message (\S+) [^\n]*\n\s{4}public static String (\w+)\(\)/gm)].map((m) => [m[1], m[2]]));
+      return { path: tdc.file, pkg: tdc.id.slice(0, tdc.id.length - tdc.name.length - 1), byType, ids, dicts, messages, parsed: require_testdata().parsedNames(g.classes.filter((x) => !x.test).map((x) => {
+        try {
+          return fs2.readFileSync(path2.join(root, x.file), "utf8");
+        } catch {
+          return "";
+        }
+      })) };
     }
     function callees(g, root, c, methods, max = 6) {
       const out2 = [], seen = /* @__PURE__ */ new Set();
@@ -32806,6 +34540,11 @@ ${indent(hint, 4)}` : ""}`);
         imports.add("org.springframework.test.context.junit.jupiter.SpringJUnitConfig");
         ann.push(`@SpringJUnitConfig`);
       }
+      if (!web && (f.infra || []).includes("jackson")) {
+        imports.add("org.springframework.boot.autoconfigure.ImportAutoConfiguration");
+        imports.add("org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration");
+        ann.push("@ImportAutoConfiguration(JacksonAutoConfiguration.class)");
+      }
       ann.push(`@Import({${beans.map((b) => `${b.name}.class`).join(", ")}})`);
       const props = [...f.properties].sort((a, b) => a.key.localeCompare(b.key)).map((p) => `"${p.key}=${p.value ?? (p.hasDefault ? "" : "TODO")}"`).filter((x) => !x.endsWith('="'));
       if (props.length) {
@@ -32816,12 +34555,43 @@ ${indent(hint, 4)}` : ""}`);
       const callsOn = (mock) => {
         const ids = [mock.typeId].filter(Boolean);
         const out2 = [];
-        for (const cm of chainIds) for (const e of G.fwd.get(cm) || []) if (e.kind === "calls" && ids.some((i) => e.to === `${i}#${e.to.split("#")[1]}` && e.to.startsWith(`${i}#`))) out2.push({ method: e.to.split("#")[1], arity: e.arity, from: cm.split(".").pop() });
+        for (const cm of chainIds) for (const e of G.fwd.get(cm) || []) if (e.kind === "calls" && ids.some((i) => e.to === `${i}#${e.to.split("#")[1]}` && e.to.startsWith(`${i}#`))) out2.push({ method: e.to.split("#")[1], arity: e.arity, from: cm.split(".").pop(), fromId: cm });
         return out2.filter((x, i) => out2.findIndex((y) => y.method === x.method && y.arity === x.arity) === i);
       };
       const fields = [web ? "@Autowired\nMockMvc mvc;" : `@Autowired
 ${entryCls.name} entry;`];
       const given = [], then = [];
+      const td = readTestData(m.path, g);
+      const sourceOf = (cid) => {
+        const c = G.classes.get(cid);
+        if (!c) return null;
+        try {
+          return fs2.readFileSync(path2.join(m.path, c.file), "utf8");
+        } catch {
+          return null;
+        }
+      };
+      const bodyOf = (mid) => {
+        const [cid, mn] = mid.split("#");
+        const c = G.classes.get(cid), text = sourceOf(cid), mt = c?.methods.find((x) => x.name === mn);
+        return text && mt ? text.split("\n").slice(Math.max(0, mt.startLine - 1), mt.endLine).join("\n") : null;
+      };
+      const handlerParams = (() => {
+        const body = bodyOf(f.method);
+        if (!body) return [];
+        const TD = require_testdata();
+        const text = TD.noComments(body);
+        const at = text.search(new RegExp(`\\b${entryMethod.name}\\s*\\(`));
+        if (at < 0) return [];
+        const open = text.indexOf("(", at);
+        let d = 0, e = open;
+        for (; e < text.length; e++) {
+          if (text[e] === "(") d++;
+          else if (text[e] === ")" && --d === 0) break;
+        }
+        return TD.splitTop(text.slice(open + 1, e)).map(TD.declaration).filter(Boolean);
+      })();
+      const tdCtx = td && { imports: /* @__PURE__ */ new Set(), samePkg: /* @__PURE__ */ new Set(), byName: /* @__PURE__ */ new Map(), fileImports: [], testData: td, concept: entryCls.name.replace(/(Controller|Resource|Listener|Handler|Consumer|Job)$/, ""), topic: f.kind === "kafka" ? f.entry.replace(/^kafka\s+/, "") : null };
       const topics = f.out.produces.map((p) => p.topic);
       for (const k of f.mocks) {
         fields.push(`@${s.mockBean}
@@ -32831,7 +34601,10 @@ ${k.type} ${k.name};`);
           if (/KafkaTemplate|StreamBridge/.test(k.type) && topics.length === 1 && args.length) args[0] = `eq("${topics[0]}")`;
           const dc = G.classes.get(k.typeId);
           const ret = dc?.methods.find((x) => x.name === c.method)?.ret;
-          if (ret && ret !== "void") given.push(`// when(${k.name}.${c.method}(${args.join(", ")})).thenReturn(...);  // ${ret}, used by ${c.from}`);
+          const entityId = (G.fwd.get(k.typeId) || []).find((e) => e.kind === "repository")?.to;
+          const stub = td && stubOf({ mock: k.name, method: c.method, params: dc?.methods.find((x) => x.name === c.method)?.params.map((p) => p.type) || null, arity: c.arity, ret, entity: entityId && G.classes.get(entityId)?.name, body: bodyOf(c.fromId), ...readsOf(g, m.path, k.typeId, c.method, entityId) }, td);
+          if (stub) given.push(`${stub}  // used by ${c.from}`);
+          else if (ret && ret !== "void") given.push(`// when(${k.name}.${c.method}(${args.join(", ")})).thenReturn(...);  // ${ret}, used by ${c.from}`);
           else if (!dc && /^(find|get|load|query|exchange|retrieve|postFor|getFor|select)/.test(c.method)) given.push(`// when(${k.name}.${c.method}(${args.join(", ")})).thenReturn(...);  // used by ${c.from}`);
           then.push(`// verify(${k.name}).${c.method}(${args.join(", ")});  // ${k.why}, from ${c.from}`);
         }
@@ -32840,12 +34613,20 @@ ${k.type} ${k.name};`);
         const [verb, p] = f.entry.split(" ");
         let i = 0;
         const path3 = p.replace(/\{\}/g, () => `{p${++i}}`);
-        const vars = Array.from({ length: i }, () => '"1"');
-        const body = /POST|PUT|PATCH/.test(verb) ? '\n            .contentType(MediaType.APPLICATION_JSON)\n            .content("{}")' : "";
+        const pathParams = handlerParams.filter((x) => x.annos.PathVariable);
+        const vars = Array.from({ length: i }, (_, n) => td && pathParams[n] ? argFor(pathParams[n].type, tdCtx, pathParams[n].name) : '"1"');
+        const bodyParam = handlerParams.find((x) => x.annos.RequestBody);
+        const bodyFactory = td && bodyParam && td.byType.get(baseName(bodyParam.type));
+        const body = /POST|PUT|PATCH/.test(verb) ? `
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(${bodyFactory ? `TestData.json(TestData.${bodyFactory}())` : '"{}"'})` : "";
         return `mvc.perform(${{ GET: "get", POST: "post", PUT: "put", DELETE: "delete", PATCH: "patch" }[verb] || "get"}("${path3}"${vars.length ? ", " + vars.join(", ") : ""})${body})
         .andExpect(status().is2xxSuccessful());`;
-      })() : `entry.${entryMethod.name}(${entryMethod.params.map((p) => argFor(p.type, { imports: /* @__PURE__ */ new Set(), samePkg: /* @__PURE__ */ new Set(), byName: new Map([...G.classes.values()].map((c) => [c.name, c])), fileImports: [] })).join(", ")});`;
-      const statics = ["import static org.mockito.ArgumentMatchers.any;", "import static org.mockito.ArgumentMatchers.eq;", "import static org.mockito.Mockito.*;", ...s.assertj ? ["import static org.assertj.core.api.Assertions.assertThat;"] : [], ...web ? ["import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;", "import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;"] : []];
+      })() : `entry.${entryMethod.name}(${entryMethod.params.map((p) => argFor(p.type, tdCtx || { imports: /* @__PURE__ */ new Set(), samePkg: /* @__PURE__ */ new Set(), byName: new Map([...G.classes.values()].map((c) => [c.name, c])), fileImports: [] }, p.name)).join(", ")});`;
+      if (given.some((x) => x.includes("Optional."))) imports.add("java.util.Optional");
+      if (given.some((x) => /\bList\.of\(/.test(x))) imports.add("java.util.List");
+      if (td && td.pkg !== pkg && /TestData\./.test(`${given.join("\n")}${call}`)) imports.add(`${td.pkg ? td.pkg + "." : ""}TestData`);
+      const statics = [...given.some((x) => x.includes("returnsFirstArg")) ? ["import static org.mockito.AdditionalAnswers.returnsFirstArg;"] : [], "import static org.mockito.ArgumentMatchers.any;", "import static org.mockito.ArgumentMatchers.eq;", "import static org.mockito.Mockito.*;", ...s.assertj ? ["import static org.assertj.core.api.Assertions.assertThat;"] : [], ...web ? ["import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;", "import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;"] : []];
       const outLines = [
         ...f.out.produces.map((p) => `topic ${p.topic}${p.raw ? ` (${p.raw})` : ""} from ${p.from}`),
         ...f.out.http.map((h) => `HTTP ${h.call} via ${h.via}`),
@@ -32910,6 +34691,7 @@ var require_tools_code = __commonJS({
     module2.exports = ({ tabular, str, int, env, clip }) => {
       const bool = (description, def = false) => ({ type: "boolean", default: def, description });
       const list = (description) => ({ type: "array", items: { type: "string" }, description });
+      const CHECK = { check: bool("Compile the written Java files right away", true), fix: bool("Apply the clear compile fixes to the files (false: offer them as suggestions)", true) };
       const repos = { description: 'Which indexes: PROJECT/repo, a repo name, globs ("SHOP/*"), a workspace id, comma separated. Empty: all fetched repos.', type: "string" };
       const R = () => require_results();
       const keysOf = (spec) => {
@@ -33062,7 +34844,7 @@ var require_tools_code = __commonJS({
         {
           name: "workspace_open",
           group: "code",
-          description: "Check out a repo at master/main, a branch, tag or commit (or what is deployed in env) into a writable workspace (a commit already fetched by a passport or another workspace is reused, nothing downloaded; the same repo and ref in the same chat gives back that workspace), indexed for code_search, impact and test_context. Write tests and fixes there with workspace_write, run them with test_run, take the result with workspace_patch. Nothing is committed or pushed.",
+          description: "Check out a repo at master/main, a branch, tag or commit (or what is deployed in env) into a writable workspace (a commit already fetched by a passport or another workspace is reused, nothing downloaded; the same repo and ref in the same chat gives back that workspace), indexed for code_search, impact and test_context. Write tests and fixes there with workspace_write, run them with test_run, take the result with workspace_patch (or, when the user asks and push is enabled, workspace_push to a branch that is not protected).",
           input: { service: str("Service (resolved like passport)"), project: str("Project key"), repo: str("Repo slug"), ref: str("Branch, tag or sha (default branch if empty)"), env: str("Check out the commit deployed in this env (with service)"), fresh: { type: "boolean", default: false, description: "A new checkout even if this chat opened the same repo and ref" }, libraries: { type: "boolean", default: false, description: "Also fetch and index the sources of its internal libraries now (only for flows through library code when the service has no passport; tests do not need them: the build takes the jars from the company repository)" }, job: str('A job id from an earlier "running" answer') },
           limit: (a) => a.job ? null : "bitbucket",
           // a job: a big repo and its libraries can take longer than the chat client waits
@@ -33100,21 +34882,22 @@ var require_tools_code = __commonJS({
         {
           name: "workspace_write",
           group: "code",
-          description: "Write a file in a workspace: the whole content (new test files), or edits [{find, replace}] where each find matches exactly once (fixes in existing code). The change shows up in workspace_patch. A Java file is compiled right away against its module's classpath: the answer has compile.errors with their lines, compile.fixed (what was fixed in the file already: missing imports and static imports, throws Exception on tests, @MockBean/@MockitoBean for this Spring Boot, javax -> jakarta) and compile.suggestions (ready edits to choose from, e.g. which of several classes to import). Read compile before the next step; a file with errors does not need a test run to find them.",
-          input: { workspace: str("Workspace id"), path: str("File path"), content: str("Whole file content"), edits: { type: "array", items: { type: "object", properties: { find: { type: "string" }, replace: { type: "string" } }, required: ["find", "replace"] }, description: "Replacements, applied in order" } },
+          description: "Write a file in a workspace: the whole content (new test files), or edits [{find, replace}] where each find matches exactly once (fixes in existing code). The change shows up in workspace_patch. A Java file is compiled right away against its module's classpath: the answer has compile.errors with their lines, compile.fixed (what was fixed in the file already: missing imports and static imports, throws Exception on tests, @MockBean/@MockitoBean for this Spring Boot, javax -> jakarta) and compile.suggestions (ready edits to choose from, e.g. which of several classes to import). Read compile before the next step; a file with errors does not need a test run to find them. check=false skips the check; fix=false checks but leaves the file as written (the fixes come as suggestions).",
+          input: { workspace: str("Workspace id"), path: str("File path"), content: str("Whole file content"), edits: { type: "array", items: { type: "object", properties: { find: { type: "string" }, replace: { type: "string" } }, required: ["find", "replace"] }, description: "Replacements, applied in order" }, ...CHECK },
           required: ["workspace", "path"],
           // compiled at once against the module's classpath: errors with their lines, clear fixes applied (imports,
           // throws Exception, @MockBean/@MockitoBean), the rest offered as ready edits
           run: async (a) => {
             const w = require_workspace().write(a.workspace, a.path, { content: a.content, edits: a.edits });
-            const compile = await require_javacheck().check(a.workspace, [w.path]).catch((e) => ({ skipped: e.message }));
+            if (a.check === false) return w;
+            const compile = await require_javacheck().check(a.workspace, [w.path], { fix: a.fix }).catch((e) => ({ skipped: e.message }));
             return compile ? { ...w, compile } : w;
           }
         },
         {
           name: "workspace_patch",
           group: "code",
-          description: "The changes of a workspace as one git patch against the commit it was opened at (new tests, DDL snapshot, fixes): files with +/- counts, each test in it with its proof (red-green: failed before the fix and passes after; green-only; failing), the patch shown to the user as a diff with a download link, and how to apply it (git apply). Nothing is pushed.",
+          description: "The changes of a workspace as one git patch against the commit it was opened at (new tests, DDL snapshot, fixes): files with +/- counts, each test in it with its proof (red-green: failed before the fix and passes after; green-only; failing), the patch shown to the user as a diff with a download link, and how to apply it (git apply). It pushes nothing (workspace_push does, when the user asks).",
           input: { workspace: str("Workspace id") },
           required: ["workspace"],
           run: async (a) => {
@@ -33150,6 +34933,27 @@ var require_tools_code = __commonJS({
           run: (a) => require_testgen().context(a.workspace, a.target, { env: a.env, db: a.db, flow: a.flow })
         },
         {
+          name: "workspace_push",
+          group: "code",
+          description: "Commit the workspace's changes (tests, fixes) and push them to a branch of its repo: a new branch from the workspace's commit, or an existing branch (when the branch moved since the workspace was opened, the commit is replayed on its tip; a conflict stops it and nothing is pushed). Only when the user asks to push. Off unless push.enabled in config.json; never to the default branch, main, master, release/* or push.protect patterns; never forced. Answers the commit, the files, and each test in it with its proof (red-green, green-only). After it, the workspace stands on the pushed commit.",
+          input: { workspace: str("Workspace id"), branch: str("Branch to push to, e.g. dt/payments-tests or an existing feature branch"), message: str("Commit message") },
+          required: ["workspace", "branch", "message"],
+          run: async (a) => {
+            const r = await require_workspace().push(a.workspace, { branch: a.branch, message: a.message });
+            const testClasses = r.files.filter((f) => /(^|\/)src\/test\/(java|kotlin)\/.+\.(java|kt)$/.test(f)).map((f) => f.replace(/^.*src\/test\/(java|kotlin)\//, "").replace(/\.(java|kt)$/, "").replace(/\//g, "."));
+            const tests = require_testrun().proof(a.workspace).filter((t) => testClasses.includes(t.test.split("#")[0]));
+            return { ...r, tests, ...testClasses.length && !tests.length ? { warning: "the pushed tests were not run in this workspace (test_run before pushing)" } : {} };
+          }
+        },
+        {
+          name: "test_data",
+          group: "code",
+          description: `Generate TestData, one helper class in the module's test sources with a valid object for every type at the service's edges: request bodies and path variables of its controllers, payloads of its Kafka listeners and of what it sends, the entities its repositories read (a row as the database holds it: id and defaults set; dictionary entities from their real rows, all rows as a list), what its Feign clients answer. Built through each type's constructor; values from Bean Validation, the database columns the names map to (length, scale, CHECKs, FKs to d_ dictionary tables: a real row), how the code parses strings (Long.parseLong(id): the id as text), names, types. Ids of one concept are one constant (ORDER_ID) so a body, an event and a row agree. Bodies validated with @Valid get <body>Cases(): each constraint broken (false) and the edges that pass (true) for @ParameterizedTest. Also with(obj, "field", value) for variants and json(obj). With env, values come from that environment's synced database. Compile-checked; test_context uses it once it exists.`,
+          input: { workspace: str("Workspace id"), env: { ...env, description: "Environment whose synced database gives column lengths, CHECKs and dictionary rows" }, db: str("Database (default: the one with the entity tables)"), write: bool("Write it into the workspace (false: return the source)", true) },
+          required: ["workspace"],
+          run: (a) => require_testdata().generate(a.workspace, { env: a.env, db: a.db, write: a.write !== false })
+        },
+        {
           name: "test_run",
           group: "code",
           description: `Run tests of a workspace. Fast by default on Maven projects: after one Maven prepare per workspace, only changed sources are compiled and the tests run in one JVM (seconds); mode="build" runs the project's Maven/Gradle (the final check). files=[{path, content|edits}] writes before running, so a try is one call. Every result is kept per test, so workspace_patch can show which tests failed before the fix and pass after it (red-green). The answer has: each test, its status and time, failures with message and the code parts to work on (the repo frames of the stack trace with the lines around them), compile errors with their lines, and the output tail. With env + db (or ddl_path), the run gets a throwaway Postgres database loaded with the DDL snapshot, passed to Spring as SPRING_DATASOURCE_*. Shown as a view. Takes a while: if it answers "running", call it again with that job id.`,
@@ -33161,7 +34965,8 @@ var require_tools_code = __commonJS({
             env: str("With db: the environment of the DDL snapshot"),
             db: str("Database to snapshot into the throwaway test database"),
             ddl_path: str("Or: a DDL file in the workspace to load (e.g. src/test/resources/dt-schema/pay.sql)"),
-            job: str('A job id from an earlier "running" answer')
+            job: str('A job id from an earlier "running" answer'),
+            ...CHECK
           },
           required: ["workspace"],
           run: async (a) => {
@@ -33173,7 +34978,7 @@ var require_tools_code = __commonJS({
               if (!a.tests?.length) throw new Error("tests: which test classes to run");
               const db = a.ddl_path || a.db ? { env: a.env || require_config().envNames()[0], db: a.db, ddlPath: a.ddl_path } : null;
               job = J.start(`tests:${a.workspace}:${a.tests.join(",")}`, `tests ${a.tests.join(", ")} in ${a.workspace}`, async (log) => {
-                const r = await require_testrun().run(a.workspace, { tests: a.tests, db, log, mode: a.mode || "auto", files: a.files || [] });
+                const r = await require_testrun().run(a.workspace, { tests: a.tests, db, log, mode: a.mode || "auto", files: a.files || [], check: a.check, fix: a.fix });
                 const view = R().saveView("tests", r, { title: `${r.outcome}: ${a.tests.join(", ")}` });
                 const failing = r.cases.filter((c) => c.status === "failed" || c.status === "error");
                 return {

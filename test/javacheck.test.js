@@ -110,6 +110,29 @@ class FeeCheckTest {
   assert.equal(r.ok, true, JSON.stringify(r, null, 2));
   console.log(`compile check: first ${first} ms (JVM start + fixes, 4 rounds), then ${again} ms`);
   assert.ok(again < 5000, `${again} ms`);
+
+  // fix=false: the file stays as written, the fixes come as one ready edit list
+  const plain = 'src/test/java/com/acme/pay/PlainTest.java';
+  const written = 'package com.acme.pay;\n\nclass PlainTest {\n    @Test\n    void fee() {\n        assertThat(new BigDecimal("1")).isEqualByComparingTo("1");\n    }\n}\n';
+  W.write(ws.id, plain, { content: written });
+  r = await J.check(ws.id, [plain], { fix: false });
+  assert.equal(fs.readFileSync(path.join(root, plain), 'utf8'), written);
+  assert.equal(r.ok, false);
+  const clear = r.suggestions.find(s => /fix=false/.test(s.why));
+  assert.ok(clear?.edits.length, JSON.stringify(r.suggestions, null, 2));
+  W.write(ws.id, plain, { edits: clear.edits });
+  r = await J.check(ws.id, [plain]);
+  assert.equal(r.ok, true, JSON.stringify(r, null, 2));
+  assert.equal(r.fixed, undefined);
+});
+
+test('edits between two texts: each finds once, applied in order they give the new text', () => {
+  const { editsBetween } = require('../lib/javacheck');
+  const a = 'package x;\n\nimport a.B;\n\nclass T {\n  @Test\n  void t() {\n  }\n  @Test\n  void t() {\n  }\n}';
+  const b = 'package x;\n\nimport a.B;\nimport org.junit.jupiter.api.Test;\n\nclass T {\n  @Test\n  void t() {\n  }\n  @Test\n  void t() throws Exception {\n  }\n}';
+  let t = a;
+  for (const e of editsBetween(a, b)) { assert.equal(t.split(e.find).length, 2, e.find); t = t.replace(e.find, e.replace); }
+  assert.equal(t, b);
 });
 
 function buildJar() {

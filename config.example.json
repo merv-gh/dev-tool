@@ -93,7 +93,9 @@
 
   "timeouts": { "pgQueryMs": 60000, "pgIndexMs": 120000, "catalogSyncWaitMs": 50000 },
 
-  "tests": { "mavenSettings": "", "gradleProperties": [], "env": {}, "passEnv": [], "pgUrl": "${DT_TEST_DB_URL:-}", "offline": false, "timeoutMs": 900000, "workspaceDays": 7, "compileCheck": true, "compileWaitMs": 45000 },
+  "pg": { "dictionaries": "^d_", "dictionaryRows": 10000 },
+  "push": { "enabled": false, "protect": [], "author": "" },
+  "tests": { "mavenSettings": "", "gradleProperties": [], "env": {}, "passEnv": [], "pgUrl": "${DT_TEST_DB_URL:-}", "offline": false, "timeoutMs": 900000, "workspaceDays": 7, "compileCheck": true, "compileFix": true, "compileWaitMs": 45000 },
   "log": { "maxMb": 50, "files": 3 },
   "results": { "maxMb": 500 },
 

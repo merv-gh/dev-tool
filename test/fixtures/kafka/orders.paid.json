@@ -1,0 +1,7 @@
+{
+  "topic": "orders.paid", "partitions": 3, "messages": 1200, "keySchema": null, "valueSchema": null,
+  "samples": [
+    { "partition": 0, "offset": 411, "timestamp": "2026-10-01T08:15:02Z", "key": "99123", "value": { "orderId": 99123, "customerEmail": "jane.doe@corp.example", "lines": [{ "sku": "SKU-778", "qty": 2, "weightKg": "0.750" }], "shipTo": { "line1": "Rue Real 5", "city": "Lyon", "country": "FR", "zip": "69001" }, "paidAt": "2026-10-01T08:15:00Z" } },
+    { "partition": 1, "offset": 380, "timestamp": "2026-10-01T08:10:11Z", "key": "99120", "value": { "orderId": 99120, "customerEmail": "max.m@corp.example", "lines": [{ "sku": "SKU-778", "qty": 1, "weightKg": "0.750" }, { "sku": "SKU-12", "qty": 3, "weightKg": "2.100" }], "shipTo": { "line1": "Hauptstr. 9", "city": "Hamburg", "country": "DE", "zip": "20095" }, "paidAt": "2026-10-01T08:10:00Z" } }
+  ]
+}

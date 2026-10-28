@@ -405,7 +405,53 @@ The libraries must be resolvable by the build (your Nexus). Their sources come f
 
 ### Tests and patches
 
-The flow is `workspace_open` → `test_context` → `workspace_write` → `test_run` → `workspace_write` (fix) → `test_run` → `workspace_patch`.
+The flow is `workspace_open` → (`test_data` once) → `test_context` → `workspace_write` → `test_run` → `workspace_write` (fix) → `test_run` → `workspace_patch`.
+
+**Test data from the service's edges.** `test_data` writes one helper, `TestData.java`, into the module's test sources (next to the application class), with a valid object for every type that enters or leaves the service:
+- request bodies and path variables of its controllers;
+- payloads of its Kafka listeners (a JSON DTO, or a text the listener parses: `Long.parseLong(id)` gives the id as text) and of what it sends (`KafkaTemplate<K, V>`);
+- the entities its repositories read, as a row of the database holds them: through the constructor, then the id and the columns the database fills (`created_at`); a dictionary entity is a real row, and all its rows come as a list (`carriers()`);
+- what its Feign clients answer.
+
+Values come from what is known, most binding first:
+1. Bean Validation (`@Size`, `@Pattern`, `@Positive`, `@DecimalMax`…);
+2. the database column the name maps to: length, scale, CHECK lists and ranges, and an FK to a dictionary table, which gives a real row (the active one when the table has such a flag);
+3. how the code parses a string;
+4. the name (email, country, zip…);
+5. the type.
+
+**Dictionaries** (`d_*` tables, their rows synced with the catalog) are recognized in every form a service uses them in, in its own code and its internal libraries (their indexes come from the passport):
+- an enum named like the table (`ServiceLevel` ↔ `d_service_levels`): its value is a code the table has, in the enum's own order. The answer lists codes the table has and the enum lacks (`enumDiffers`);
+- an `@Entity` on the table, read by a repository;
+- a model class with `code` and `name` named like the table (`ParcelTypeDictionary`), or a general one (`DictionaryModel(id, code, name)` from a library) that a DAO fills from the table with `JdbcTemplate`.
+
+For each form, TestData has an active row, all rows, and the active rows when the table has an `active` flag (`parcelType()`, `parcelTypes()`, `activeParcelTypes()`), built through the class's constructor from the real rows. A field named like a dictionary (`carrierCode`, `parcelType`, `country`) gets a real code. Its validation cases add one that is shaped like a real code but not in the table (`DE` → `ZZ`): validation passes, and the service decides. The answer says which methods read each dictionary (`ShipDictionaries#parcelTypes (jdbc, active only)`), and `test_context` stubs those reads with the matching list: the active rows when the query asks for them.
+
+**Topics.** With `env`, Kafka payloads take values from the topic's schema (Avro or JSON Schema from the registry) and its last messages (`catalog_sync what=kafka`):
+- enum symbols, and the values seen most often (`scanType: IN_HUB`, `sku: SKU-778`, a weight as `"0.750"`);
+- never the values of personal fields (names, emails, addresses, phones, accounts): those stay synthetic.
+
+A listener that takes a String and reads it into a DTO (`mapper.readValue(payload, ParcelScanned.class)`) gets `parcelsScannedMessage()` = the DTO as JSON. A listener with no DTO gets the last message with its personal values replaced. A DTO that differs from its topic's schema is reported (`differs: { notInDto: ['carrierName'] }`).
+
+In flow skeletons, a DAO that only reads on the flow is mocked at the edge and stubbed from TestData, while a DAO that writes stays real and its SQL is verified on the mocked `JdbcTemplate`. An `ObjectMapper` is never mocked: the test gets Boot's Jackson configuration.
+
+The ids of one concept are one constant (`ORDER_ID`), so a body, an event and a row agree, and a test can follow them through the service. Bodies validated with `@Valid` get `<body>Cases()`: each constraint broken (`false`) and the edges that still pass (`true`), nested where `@Valid` cascades, for `@ParameterizedTest @MethodSource("pkg.TestData#createShipmentCases")`. `TestData.with(x, "field", value)` gives a variant (records through their constructor), and `TestData.json(x)` gives the JSON. With `env`, the values come from that environment's synced database. The class is compile-checked, and you can edit it freely. Once it exists, `test_context` uses it in its skeletons:
+- arguments from its factories and id constants;
+- stubs written out: a repository read returns `Optional.of(TestData.x())`, or `Optional.empty()` when the method uses the lookup as a guard (`isPresent()`), and `save` returns its argument.
+
+For database tests, `TestData.Rows` has one insert method per table the service uses (and the parent tables they need), as plain SQL over the test's `JdbcTemplate`:
+- every required column (not null, no default) gets a value;
+- an FK to a dictionary points at a loaded row;
+- an FK to another table is a parameter, or that table's row inserted first (`rows.payment()`, or `rows.payment(customerId)` to share one customer);
+- CHECK lists give their first value, and unique columns count up.
+
+Change a value in the SQL when the test needs another one, or write the `update` in the test.
+
+`test_context` flow skeletons take their input from TestData too: the request body, the path ids, the listener's payload (also a text it parses). The mocks at the edge get the same stubs as unit skeletons.
+
+TestData is plain Java and yours to change. It carries a `dt-generated:` hash of its content, and dt rewrites it only while it is exactly what dt wrote. Once you edit it, `test_data` leaves the file as it is and returns what it would generate now (`source`), to copy parts from.
+
+On the fixture `test/fixtures/shipping-service` (with the library `test/fixtures/dict-lib` and the topics in `test/fixtures/kafka`), the 52 tests written against `TestData` pass: validation cases, service, listeners, JPA on the snapshot and rows read back. So do the unit and flow skeletons as they come (`test/testdata.live.test.js`).
 
 1. **`workspace_open`** checks out master/main, a branch, a tag, a commit, or what is deployed in an env (`service` + `env`) into `work/<id>`. The checkout is writable and indexed.
 2. **`test_context`** collects what the agent needs for an isolated test of a class or method:
@@ -417,7 +463,7 @@ The flow is `workspace_open` → `test_context` → `workspace_write` → `test_
    - the dependencies with their methods, and what each method calls on them (what to stub);
    - the project's test setup (JUnit 4 or 5, AssertJ, Boot version, Testcontainers), an existing test to copy the style from, and rules;
    - a skeleton that compiles.
-   With `env`, it also writes a **DDL snapshot** of the tables the class touches to `src/test/resources/dt-schema/<db>.sql`, and suggests inserts (parents first, only columns that need a value). The snapshot grows as more tests need more tables.
+   With `env`, it also writes a **DDL snapshot** of the tables the class touches to `src/test/resources/dt-schema/<db>.sql`, and suggests inserts (parents first, only columns that need a value). The snapshot also has every function of those tables' schemas, and the rows of the dictionary tables it includes, so FKs to them hold. Dictionary tables are those named `d_*` (`pg.dictionaries`, a regex), synced with the catalog up to `pg.dictionaryRows` (10000) rows each. The snapshot grows as more tests need more tables.
 3. **`test_run`** runs the named tests with the repo's own build (Maven or Gradle; the wrapper when there is one) and answers with:
    - each test with its status and time;
    - failures with their messages;
@@ -445,8 +491,13 @@ The flow is `workspace_open` → `test_context` → `workspace_write` → `test_
    - Maven: `compile dependency:build-classpath` with compile errors not failing it, so a broken test file doesn't block it (or the fast run's prepare when there is one);
    - Gradle: a small init script prints the test compile classpath, the annotation processors, the release and the sources of the modules it depends on; nothing is compiled.
 
-   `workspace_open` starts that in the background for the module with the most tests. A write waits up to `tests.compileWaitMs` (45 s) for it, else answers `pending` and the next write is checked. `tests.compileCheck: false` turns the checks off. Kotlin files are checked by `test_run` (the build compiles them).
-4. **`workspace_patch`** lists each test in the patch with its proof:
+   `workspace_open` starts that in the background for the module with the most tests. A write waits up to `tests.compileWaitMs` (45 s) for it, else answers `pending` and the next write is checked. Both are on by default: `tests.compileCheck: false` (or `DT_COMPILE_CHECK=0`) turns the checks off, `tests.compileFix: false` (or `DT_COMPILE_FIX=0`) keeps checking but leaves files as written and offers the fixes as one edit list. Per call, `workspace_write` and `test_run` take `check: false` and `fix: false`. Kotlin files are checked by `test_run` (the build compiles them).
+4. **`workspace_push`** (only when you ask) commits the workspace's changes and pushes them to a branch:
+   - a new branch starts from the workspace's commit;
+   - an existing branch gets the commit on its tip: when it moved since the workspace was opened, the commit is replayed there, and a conflict stops it with nothing pushed and the changes kept.
+
+   The answer has the commit, the files and each test with its proof. Pushing is off unless `"push": { "enabled": true }`. It never goes to the repo's default branch, `main`, `master` or anything under `release/`, whatever the config says; `push.protect` adds patterns (`hotfix/*`). It is never forced. `push.author` (`"Name <email>"`) names the commits. The Bitbucket token needs write access to the repo.
+5. **`workspace_patch`** lists each test in the patch with its proof:
    - **red-green**: it failed, the code changed, then it passed, so it catches the bug;
    - **green-only**: never seen failing. That's fine for behaviour that already worked, suspicious for a bug fix;
    - **failing**.
@@ -454,7 +505,7 @@ The flow is `workspace_open` → `test_context` → `workspace_write` → `test_
    It also says whether the tests passed in a full build. The patch view shows the same.
 
    **For small bugs:** write one test that reproduces the bug, see it fail (`test_run`), fix with `test_run files=[{path, edits}]`, see it pass, run `mode: "build"` once, then take the patch. For pure logic (rounding, limits, parsing) the skeleton suggests a `@ParameterizedTest` with boundary values. The context also includes the bodies of the methods the target calls, so less reading is needed first.
-5. **`workspace_patch`** returns one git patch against the commit the workspace was opened at: new tests, the snapshot, fixes. The user sees it as a colored diff with **Download .patch** (`/patch/<id>.patch`). Apply it with `git apply --index`. **Nothing is committed or pushed.**
+6. **`workspace_patch`** returns one git patch against the commit the workspace was opened at: new tests, the snapshot, fixes. The user sees it as a colored diff with **Download .patch** (`/patch/<id>.patch`). Apply it with `git apply --index`. The patch commits nothing; `workspace_push` does, when you ask.
 
 `ddl_snapshot` writes the DDL of a synced database: extensions, schemas, enum and domain types, sequences, tables (defaults, identity, generated columns, constraints, indexes, comments), functions and procedures, views in dependency order, and triggers. It can do all of it, or only some tables or functions, or what a service uses, closed over what they need (FK targets, trigger functions, called functions and the tables they touch). A snapshot of a whole database loads into an empty one and reproduces the same catalog. The stress test checks that on 2,000 tables.
 
@@ -484,7 +535,7 @@ Without Docker, dt uses `JAVA_HOME`/PATH and `~/.m2`. The `tests` section of `co
   "mavenSettings": "maven-settings.xml",
   "pgUrl": "postgres://dt:dt@localhost:55432/postgres",
   "offline": false, "timeoutMs": 900000,
-  "compileCheck": true, "compileWaitMs": 45000
+  "compileCheck": true, "compileFix": true, "compileWaitMs": 45000
 }
 ```
 
@@ -634,7 +685,7 @@ Secrets (`.env`) are never shown or edited there.
 | bitbucket | `bitbucket_repos`, `bitbucket_files`, `bitbucket_file`, `bitbucket_prs`, `bitbucket_pr`, `bitbucket_my_prs`, `repo_fetch` |
 | confluence | `confluence_search`, `confluence_page` |
 | passport | `passport`, `passports`, `who_uses` |
-| code | `code_index`, `code_search`, `code_symbols`, `code_read`, `impact`, `ddl_snapshot`, `workspace_open`, `workspace_list`, `workspace_read`, `workspace_write`, `workspace_patch`, `workspace_drop`, `test_context`, `test_run` |
+| code | `code_index`, `code_search`, `code_symbols`, `code_read`, `impact`, `ddl_snapshot`, `workspace_open`, `workspace_list`, `workspace_read`, `workspace_write`, `workspace_patch`, `workspace_drop`, `test_data`, `test_context`, `test_run` |
 | browser | `browser_sites`, `site_url` (plus the Playwright MCP tools when the `browser` profile runs) |
 | api | `api_routes`, `routes_learn`, `routes_discover` |
 | scripts | `code`, `script_list`, `script_get`, `script_save`, `script_run`, `script_collection`, `js_run`, plus each script or collection exposed as a tool |

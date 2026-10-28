@@ -1,0 +1,14 @@
+{
+  "topic": "parcels.scanned", "partitions": 6, "messages": 88000,
+  "valueSchema": { "version": 3, "id": 41, "type": "AVRO", "schema": { "type": "record", "name": "ParcelScanned", "namespace": "com.acme.events", "fields": [
+    { "name": "shipmentId", "type": "long" },
+    { "name": "scanType", "type": { "type": "enum", "name": "ScanType", "symbols": ["PICKED", "IN_HUB", "OUT_FOR_DELIVERY", "DELIVERED"] } },
+    { "name": "hubCode", "type": ["null", "string"], "default": null },
+    { "name": "at", "type": { "type": "long", "logicalType": "timestamp-millis" } }
+  ] } },
+  "samples": [
+    { "partition": 2, "offset": 9001, "timestamp": "2026-10-01T09:00:00Z", "key": "5551", "value": { "shipmentId": 5551, "scanType": "IN_HUB", "hubCode": "HUB-FRA-1", "at": 1790845200000 } },
+    { "partition": 4, "offset": 8800, "timestamp": "2026-10-01T08:59:00Z", "key": "5549", "value": { "shipmentId": 5549, "scanType": "IN_HUB", "hubCode": "HUB-FRA-1", "at": 1790845140000 } },
+    { "partition": 1, "offset": 8700, "timestamp": "2026-10-01T08:58:00Z", "key": "5530", "value": { "shipmentId": 5530, "scanType": "DELIVERED", "hubCode": "HUB-LYS-2", "at": 1790845080000 } }
+  ]
+}

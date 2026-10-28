@@ -1,0 +1,1479 @@
+{
+ "db": "ship",
+ "database": "postgres",
+ "version": "PostgreSQL 16",
+ "syncedAt": "2026-10-28T00:00:00.000Z",
+ "tables": [
+  {
+   "schema": "pay",
+   "name": "customer_totals",
+   "kind": "view",
+   "comment": null,
+   "est_rows": "0",
+   "columns": [
+    {
+     "name": "customer_id",
+     "type": "bigint",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "total",
+     "type": "numeric",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    }
+   ],
+   "constraints": [],
+   "indexes": [],
+   "definition": " SELECT customer_id,\n    sum(amount) AS total\n   FROM pay.settled_payments\n  GROUP BY customer_id;"
+  },
+  {
+   "schema": "pay",
+   "name": "customers",
+   "kind": "table",
+   "comment": "Who pays",
+   "est_rows": "0",
+   "columns": [
+    {
+     "name": "id",
+     "type": "bigint",
+     "nullable": false,
+     "default": "nextval('pay.customers_id_seq'::regclass)",
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "email",
+     "type": "text",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "name",
+     "type": "text",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    }
+   ],
+   "constraints": [
+    {
+     "name": "customers_email_key",
+     "type": "u",
+     "def": "UNIQUE (email)",
+     "ref": null
+    },
+    {
+     "name": "customers_pkey",
+     "type": "p",
+     "def": "PRIMARY KEY (id)",
+     "ref": null
+    }
+   ],
+   "indexes": [
+    "CREATE UNIQUE INDEX customers_email_key ON pay.customers USING btree (email)",
+    "CREATE UNIQUE INDEX customers_pkey ON pay.customers USING btree (id)"
+   ],
+   "definition": null
+  },
+  {
+   "schema": "pay",
+   "name": "payments",
+   "kind": "table",
+   "comment": null,
+   "est_rows": "0",
+   "columns": [
+    {
+     "name": "id",
+     "type": "bigint",
+     "nullable": false,
+     "default": null,
+     "identity": "d",
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "customer_id",
+     "type": "bigint",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "amount",
+     "type": "numeric(12,2)",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "fee",
+     "type": "numeric(12,2)",
+     "nullable": false,
+     "default": "0",
+     "identity": null,
+     "generated": null,
+     "comment": "Card fee: 2.9% + 0.30, at least 0.50"
+    },
+    {
+     "name": "status",
+     "type": "text",
+     "nullable": false,
+     "default": "'NEW'::text",
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "created_at",
+     "type": "timestamp with time zone",
+     "nullable": false,
+     "default": "now()",
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "updated_at",
+     "type": "timestamp with time zone",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    }
+   ],
+   "constraints": [
+    {
+     "name": "payments_amount_check",
+     "type": "c",
+     "def": "CHECK ((amount > (0)::numeric))",
+     "ref": null
+    },
+    {
+     "name": "payments_customer_id_fkey",
+     "type": "f",
+     "def": "FOREIGN KEY (customer_id) REFERENCES pay.customers(id)",
+     "ref": "pay.customers"
+    },
+    {
+     "name": "payments_pkey",
+     "type": "p",
+     "def": "PRIMARY KEY (id)",
+     "ref": null
+    },
+    {
+     "name": "payments_status_check",
+     "type": "c",
+     "def": "CHECK ((status = ANY (ARRAY['NEW'::text, 'SETTLED'::text, 'FAILED'::text])))",
+     "ref": null
+    }
+   ],
+   "indexes": [
+    "CREATE INDEX payments_customer_status ON pay.payments USING btree (customer_id, status)",
+    "CREATE UNIQUE INDEX payments_pkey ON pay.payments USING btree (id)"
+   ],
+   "definition": null
+  },
+  {
+   "schema": "pay",
+   "name": "refunds",
+   "kind": "table",
+   "comment": null,
+   "est_rows": "0",
+   "columns": [
+    {
+     "name": "id",
+     "type": "bigint",
+     "nullable": false,
+     "default": "nextval('pay.refunds_id_seq'::regclass)",
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "payment_id",
+     "type": "bigint",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "reason",
+     "type": "pay.refund_reason",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "amount",
+     "type": "pay.money",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    }
+   ],
+   "constraints": [
+    {
+     "name": "refunds_payment_id_fkey",
+     "type": "f",
+     "def": "FOREIGN KEY (payment_id) REFERENCES pay.payments(id)",
+     "ref": "pay.payments"
+    },
+    {
+     "name": "refunds_pkey",
+     "type": "p",
+     "def": "PRIMARY KEY (id)",
+     "ref": null
+    }
+   ],
+   "indexes": [
+    "CREATE UNIQUE INDEX refunds_pkey ON pay.refunds USING btree (id)"
+   ],
+   "definition": null
+  },
+  {
+   "schema": "pay",
+   "name": "settled_payments",
+   "kind": "view",
+   "comment": null,
+   "est_rows": "0",
+   "columns": [
+    {
+     "name": "id",
+     "type": "bigint",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "customer_id",
+     "type": "bigint",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "amount",
+     "type": "numeric(12,2)",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "fee",
+     "type": "numeric(12,2)",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    }
+   ],
+   "constraints": [],
+   "indexes": [],
+   "definition": " SELECT id,\n    customer_id,\n    amount,\n    fee\n   FROM pay.payments p\n  WHERE (status = 'SETTLED'::text);"
+  },
+  {
+   "schema": "pay",
+   "name": "unrelated_audit",
+   "kind": "table",
+   "comment": null,
+   "est_rows": "0",
+   "columns": [
+    {
+     "name": "id",
+     "type": "bigint",
+     "nullable": false,
+     "default": "nextval('pay.unrelated_audit_id_seq'::regclass)",
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "note",
+     "type": "text",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    }
+   ],
+   "constraints": [
+    {
+     "name": "unrelated_audit_pkey",
+     "type": "p",
+     "def": "PRIMARY KEY (id)",
+     "ref": null
+    }
+   ],
+   "indexes": [
+    "CREATE UNIQUE INDEX unrelated_audit_pkey ON pay.unrelated_audit USING btree (id)"
+   ],
+   "definition": null
+  },
+  {
+   "schema": "public",
+   "name": "settings",
+   "kind": "table",
+   "comment": null,
+   "est_rows": "0",
+   "columns": [
+    {
+     "name": "k",
+     "type": "text",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "v",
+     "type": "text",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    }
+   ],
+   "constraints": [
+    {
+     "name": "settings_pkey",
+     "type": "p",
+     "def": "PRIMARY KEY (k)",
+     "ref": null
+    }
+   ],
+   "indexes": [
+    "CREATE UNIQUE INDEX settings_pkey ON public.settings USING btree (k)"
+   ],
+   "definition": null
+  },
+  {
+   "schema": "ship",
+   "name": "d_carriers",
+   "kind": "table",
+   "comment": null,
+   "est_rows": "0",
+   "columns": [
+    {
+     "name": "code",
+     "type": "character varying(10)",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "name",
+     "type": "text",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "max_weight_kg",
+     "type": "numeric(8,3)",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "active",
+     "type": "boolean",
+     "nullable": false,
+     "default": "true",
+     "identity": null,
+     "generated": null,
+     "comment": null
+    }
+   ],
+   "constraints": [
+    {
+     "name": "d_carriers_pkey",
+     "type": "p",
+     "def": "PRIMARY KEY (code)",
+     "ref": null
+    }
+   ],
+   "indexes": [
+    "CREATE UNIQUE INDEX d_carriers_pkey ON ship.d_carriers USING btree (code)"
+   ],
+   "definition": null
+  },
+  {
+   "schema": "ship",
+   "name": "d_countries",
+   "kind": "table",
+   "comment": null,
+   "est_rows": "0",
+   "columns": [
+    {
+     "name": "code",
+     "type": "character(2)",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "name",
+     "type": "text",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    }
+   ],
+   "constraints": [
+    {
+     "name": "d_countries_pkey",
+     "type": "p",
+     "def": "PRIMARY KEY (code)",
+     "ref": null
+    }
+   ],
+   "indexes": [
+    "CREATE UNIQUE INDEX d_countries_pkey ON ship.d_countries USING btree (code)"
+   ],
+   "definition": null
+  },
+  {
+   "schema": "ship",
+   "name": "d_parcel_types",
+   "kind": "table",
+   "comment": null,
+   "est_rows": "0",
+   "columns": [
+    {
+     "name": "id",
+     "type": "bigint",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "code",
+     "type": "character varying(20)",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "name",
+     "type": "text",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "active",
+     "type": "boolean",
+     "nullable": false,
+     "default": "true",
+     "identity": null,
+     "generated": null,
+     "comment": null
+    }
+   ],
+   "constraints": [
+    {
+     "name": "d_parcel_types_code_key",
+     "type": "u",
+     "def": "UNIQUE (code)",
+     "ref": null
+    },
+    {
+     "name": "d_parcel_types_pkey",
+     "type": "p",
+     "def": "PRIMARY KEY (id)",
+     "ref": null
+    }
+   ],
+   "indexes": [
+    "CREATE UNIQUE INDEX d_parcel_types_code_key ON ship.d_parcel_types USING btree (code)",
+    "CREATE UNIQUE INDEX d_parcel_types_pkey ON ship.d_parcel_types USING btree (id)"
+   ],
+   "definition": null
+  },
+  {
+   "schema": "ship",
+   "name": "d_service_levels",
+   "kind": "table",
+   "comment": null,
+   "est_rows": "0",
+   "columns": [
+    {
+     "name": "code",
+     "type": "text",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "name",
+     "type": "text",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    }
+   ],
+   "constraints": [
+    {
+     "name": "d_service_levels_pkey",
+     "type": "p",
+     "def": "PRIMARY KEY (code)",
+     "ref": null
+    }
+   ],
+   "indexes": [
+    "CREATE UNIQUE INDEX d_service_levels_pkey ON ship.d_service_levels USING btree (code)"
+   ],
+   "definition": null
+  },
+  {
+   "schema": "ship",
+   "name": "shipment_events",
+   "kind": "table",
+   "comment": null,
+   "est_rows": "0",
+   "columns": [
+    {
+     "name": "id",
+     "type": "bigint",
+     "nullable": false,
+     "default": "nextval('ship.shipment_events_id_seq'::regclass)",
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "shipment_id",
+     "type": "bigint",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "status",
+     "type": "text",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "at",
+     "type": "timestamp with time zone",
+     "nullable": false,
+     "default": "now()",
+     "identity": null,
+     "generated": null,
+     "comment": null
+    }
+   ],
+   "constraints": [
+    {
+     "name": "shipment_events_pkey",
+     "type": "p",
+     "def": "PRIMARY KEY (id)",
+     "ref": null
+    },
+    {
+     "name": "shipment_events_shipment_id_fkey",
+     "type": "f",
+     "def": "FOREIGN KEY (shipment_id) REFERENCES ship.shipments(id)",
+     "ref": "ship.shipments"
+    }
+   ],
+   "indexes": [
+    "CREATE UNIQUE INDEX shipment_events_pkey ON ship.shipment_events USING btree (id)"
+   ],
+   "definition": null
+  },
+  {
+   "schema": "ship",
+   "name": "shipments",
+   "kind": "table",
+   "comment": null,
+   "est_rows": "0",
+   "columns": [
+    {
+     "name": "id",
+     "type": "bigint",
+     "nullable": false,
+     "default": null,
+     "identity": "d",
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "order_id",
+     "type": "bigint",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "carrier_code",
+     "type": "character varying(10)",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "weight_kg",
+     "type": "numeric(10,3)",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "country",
+     "type": "character(2)",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "level",
+     "type": "text",
+     "nullable": false,
+     "default": "'STANDARD'::text",
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "status",
+     "type": "text",
+     "nullable": false,
+     "default": "'CREATED'::text",
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "tracking_no",
+     "type": "character varying(40)",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "created_at",
+     "type": "timestamp with time zone",
+     "nullable": false,
+     "default": "now()",
+     "identity": null,
+     "generated": null,
+     "comment": null
+    }
+   ],
+   "constraints": [
+    {
+     "name": "shipments_carrier_code_fkey",
+     "type": "f",
+     "def": "FOREIGN KEY (carrier_code) REFERENCES ship.d_carriers(code)",
+     "ref": "ship.d_carriers"
+    },
+    {
+     "name": "shipments_country_fkey",
+     "type": "f",
+     "def": "FOREIGN KEY (country) REFERENCES ship.d_countries(code)",
+     "ref": "ship.d_countries"
+    },
+    {
+     "name": "shipments_level_fkey",
+     "type": "f",
+     "def": "FOREIGN KEY (level) REFERENCES ship.d_service_levels(code)",
+     "ref": "ship.d_service_levels"
+    },
+    {
+     "name": "shipments_order_id_key",
+     "type": "u",
+     "def": "UNIQUE (order_id)",
+     "ref": null
+    },
+    {
+     "name": "shipments_pkey",
+     "type": "p",
+     "def": "PRIMARY KEY (id)",
+     "ref": null
+    },
+    {
+     "name": "shipments_status_check",
+     "type": "c",
+     "def": "CHECK ((status = ANY (ARRAY['CREATED'::text, 'SENT'::text, 'DELIVERED'::text, 'RETURNED'::text])))",
+     "ref": null
+    },
+    {
+     "name": "shipments_weight_kg_check",
+     "type": "c",
+     "def": "CHECK ((weight_kg > (0)::numeric))",
+     "ref": null
+    }
+   ],
+   "indexes": [
+    "CREATE UNIQUE INDEX shipments_order_id_key ON ship.shipments USING btree (order_id)",
+    "CREATE UNIQUE INDEX shipments_pkey ON ship.shipments USING btree (id)"
+   ],
+   "definition": null
+  },
+  {
+   "schema": "shop",
+   "name": "audit_log",
+   "kind": "table",
+   "comment": null,
+   "est_rows": "0",
+   "columns": [
+    {
+     "name": "id",
+     "type": "bigint",
+     "nullable": false,
+     "default": "nextval('shop.audit_log_id_seq'::regclass)",
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "entity",
+     "type": "text",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "entity_id",
+     "type": "bigint",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "at",
+     "type": "timestamp with time zone",
+     "nullable": true,
+     "default": "now()",
+     "identity": null,
+     "generated": null,
+     "comment": null
+    }
+   ],
+   "constraints": [
+    {
+     "name": "audit_log_pkey",
+     "type": "p",
+     "def": "PRIMARY KEY (id)",
+     "ref": null
+    }
+   ],
+   "indexes": [
+    "CREATE UNIQUE INDEX audit_log_pkey ON shop.audit_log USING btree (id)"
+   ],
+   "definition": null
+  },
+  {
+   "schema": "shop",
+   "name": "big_orders",
+   "kind": "view",
+   "comment": null,
+   "est_rows": "0",
+   "columns": [
+    {
+     "name": "order_id",
+     "type": "bigint",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "total",
+     "type": "numeric",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    }
+   ],
+   "constraints": [],
+   "indexes": [],
+   "definition": " SELECT order_id,\n    total\n   FROM shop.customer_orders((1)::bigint) customer_orders(order_id, total)\n  WHERE (total > shop.order_total((1)::bigint));"
+  },
+  {
+   "schema": "shop",
+   "name": "customers",
+   "kind": "table",
+   "comment": "People who buy",
+   "est_rows": "0",
+   "columns": [
+    {
+     "name": "id",
+     "type": "bigint",
+     "nullable": false,
+     "default": "nextval('shop.customers_id_seq'::regclass)",
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "email",
+     "type": "text",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "name",
+     "type": "text",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    }
+   ],
+   "constraints": [
+    {
+     "name": "customers_email_key",
+     "type": "u",
+     "def": "UNIQUE (email)",
+     "ref": null
+    },
+    {
+     "name": "customers_pkey",
+     "type": "p",
+     "def": "PRIMARY KEY (id)",
+     "ref": null
+    }
+   ],
+   "indexes": [
+    "CREATE UNIQUE INDEX customers_email_key ON shop.customers USING btree (email)",
+    "CREATE UNIQUE INDEX customers_pkey ON shop.customers USING btree (id)"
+   ],
+   "definition": null
+  },
+  {
+   "schema": "shop",
+   "name": "order_items",
+   "kind": "table",
+   "comment": null,
+   "est_rows": "0",
+   "columns": [
+    {
+     "name": "id",
+     "type": "bigint",
+     "nullable": false,
+     "default": "nextval('shop.order_items_id_seq'::regclass)",
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "order_id",
+     "type": "bigint",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "sku",
+     "type": "text",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "qty",
+     "type": "integer",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    }
+   ],
+   "constraints": [
+    {
+     "name": "order_items_order_id_fkey",
+     "type": "f",
+     "def": "FOREIGN KEY (order_id) REFERENCES shop.orders(id)",
+     "ref": "shop.orders"
+    },
+    {
+     "name": "order_items_pkey",
+     "type": "p",
+     "def": "PRIMARY KEY (id)",
+     "ref": null
+    }
+   ],
+   "indexes": [
+    "CREATE UNIQUE INDEX order_items_pkey ON shop.order_items USING btree (id)"
+   ],
+   "definition": null
+  },
+  {
+   "schema": "shop",
+   "name": "order_totals",
+   "kind": "view",
+   "comment": null,
+   "est_rows": "0",
+   "columns": [
+    {
+     "name": "id",
+     "type": "bigint",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "email",
+     "type": "text",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "items",
+     "type": "bigint",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    }
+   ],
+   "constraints": [],
+   "indexes": [],
+   "definition": " SELECT o.id,\n    c.email,\n    sum(i.qty) AS items\n   FROM ((shop.orders o\n     JOIN shop.customers c ON ((c.id = o.customer_id)))\n     LEFT JOIN shop.order_items i ON ((i.order_id = o.id)))\n  GROUP BY o.id, c.email;"
+  },
+  {
+   "schema": "shop",
+   "name": "orders",
+   "kind": "table",
+   "comment": null,
+   "est_rows": "0",
+   "columns": [
+    {
+     "name": "id",
+     "type": "bigint",
+     "nullable": false,
+     "default": "nextval('shop.orders_id_seq'::regclass)",
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "customer_id",
+     "type": "bigint",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "total",
+     "type": "numeric(12,2)",
+     "nullable": false,
+     "default": "0",
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "status",
+     "type": "text",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    }
+   ],
+   "constraints": [
+    {
+     "name": "orders_customer_id_fkey",
+     "type": "f",
+     "def": "FOREIGN KEY (customer_id) REFERENCES shop.customers(id)",
+     "ref": "shop.customers"
+    },
+    {
+     "name": "orders_pkey",
+     "type": "p",
+     "def": "PRIMARY KEY (id)",
+     "ref": null
+    }
+   ],
+   "indexes": [
+    "CREATE UNIQUE INDEX orders_pkey ON shop.orders USING btree (id)"
+   ],
+   "definition": null
+  }
+ ],
+ "functions": [
+  {
+   "schema": "pay",
+   "name": "customer_balance",
+   "kind": "function",
+   "args": "p_customer bigint",
+   "signature": "p_customer bigint",
+   "returns": "numeric",
+   "arg_list": [
+    {
+     "name": "p_customer",
+     "type": "bigint",
+     "mode": "in"
+    }
+   ],
+   "lang": "plpgsql",
+   "volatility": "stable",
+   "security_definer": false,
+   "comment": null,
+   "body": "\ndeclare settled numeric; refunded numeric;\nbegin\n  select coalesce(sum(amount - fee), 0) into settled from pay.payments where customer_id = p_customer and status = 'SETTLED';\n  select coalesce(sum(r.amount), 0) into refunded from pay.refunds r join pay.payments p on p.id = r.payment_id where p.customer_id = p_customer;\n  return settled - refunded;\nend "
+  },
+  {
+   "schema": "pay",
+   "name": "touch",
+   "kind": "function",
+   "args": "",
+   "signature": "",
+   "returns": "trigger",
+   "arg_list": [],
+   "lang": "plpgsql",
+   "volatility": "volatile",
+   "security_definer": false,
+   "comment": null,
+   "body": "\nbegin\n  NEW.updated_at := now();\n  return NEW;\nend "
+  },
+  {
+   "schema": "ship",
+   "name": "shipped_weight",
+   "kind": "function",
+   "args": "p_country character",
+   "signature": "p_country character",
+   "returns": "numeric",
+   "arg_list": [
+    {
+     "name": "p_country",
+     "type": "character",
+     "mode": "in"
+    }
+   ],
+   "lang": "sql",
+   "volatility": "stable",
+   "security_definer": false,
+   "comment": null,
+   "body": "\n  select coalesce(sum(weight_kg), 0) from ship.shipments where country = p_country and status in ('SENT', 'DELIVERED')\n"
+  },
+  {
+   "schema": "shop",
+   "name": "audit",
+   "kind": "function",
+   "args": "",
+   "signature": "",
+   "returns": "trigger",
+   "arg_list": [],
+   "lang": "plpgsql",
+   "volatility": "volatile",
+   "security_definer": false,
+   "comment": null,
+   "body": "\nbegin\n  insert into shop.audit_log(entity, entity_id) values (TG_TABLE_NAME, NEW.id);\n  return NEW;\nend "
+  },
+  {
+   "schema": "shop",
+   "name": "close_order",
+   "kind": "procedure",
+   "args": "IN p_id bigint, INOUT p_status text",
+   "signature": "IN p_id bigint, INOUT p_status text",
+   "returns": null,
+   "arg_list": [
+    {
+     "name": "p_id",
+     "type": "bigint",
+     "mode": "in"
+    },
+    {
+     "name": "p_status",
+     "type": "text",
+     "mode": "inout"
+    }
+   ],
+   "lang": "plpgsql",
+   "volatility": "volatile",
+   "security_definer": false,
+   "comment": null,
+   "body": "\nbegin\n  update shop.orders set status = 'closed' where id = p_id;\n  perform shop.order_total(p_id);\n  p_status := 'closed';\nend "
+  },
+  {
+   "schema": "shop",
+   "name": "customer_orders",
+   "kind": "function",
+   "args": "p_customer bigint",
+   "signature": "p_customer bigint",
+   "returns": "TABLE(order_id bigint, total numeric)",
+   "arg_list": [
+    {
+     "name": "p_customer",
+     "type": "bigint",
+     "mode": "in"
+    },
+    {
+     "name": "order_id",
+     "type": "bigint",
+     "mode": "table"
+    },
+    {
+     "name": "total",
+     "type": "numeric",
+     "mode": "table"
+    }
+   ],
+   "lang": "sql",
+   "volatility": "volatile",
+   "security_definer": false,
+   "comment": null,
+   "body": " select id, total from shop.orders where customer_id = p_customer "
+  },
+  {
+   "schema": "shop",
+   "name": "order_total",
+   "kind": "function",
+   "args": "p_order_id bigint, p_with_tax boolean",
+   "signature": "p_order_id bigint, p_with_tax boolean DEFAULT false",
+   "returns": "numeric",
+   "arg_list": [
+    {
+     "name": "p_order_id",
+     "type": "bigint",
+     "mode": "in"
+    },
+    {
+     "name": "p_with_tax",
+     "type": "boolean",
+     "mode": "in"
+    }
+   ],
+   "lang": "plpgsql",
+   "volatility": "stable",
+   "security_definer": false,
+   "comment": null,
+   "body": "\ndeclare t numeric;\nbegin\n  select total into t from shop.orders where id = p_order_id;\n  return case when p_with_tax then t * 1.2 else t end;\nend "
+  }
+ ],
+ "viewDeps": [
+  {
+   "view": "pay.customer_totals",
+   "ref": "pay.settled_payments",
+   "ref_kind": "relation"
+  },
+  {
+   "view": "pay.settled_payments",
+   "ref": "pay.payments",
+   "ref_kind": "relation"
+  },
+  {
+   "view": "shop.big_orders",
+   "ref": "shop.customer_orders",
+   "ref_kind": "function"
+  },
+  {
+   "view": "shop.big_orders",
+   "ref": "shop.order_total",
+   "ref_kind": "function"
+  },
+  {
+   "view": "shop.order_totals",
+   "ref": "shop.customers",
+   "ref_kind": "relation"
+  },
+  {
+   "view": "shop.order_totals",
+   "ref": "shop.order_items",
+   "ref_kind": "relation"
+  },
+  {
+   "view": "shop.order_totals",
+   "ref": "shop.orders",
+   "ref_kind": "relation"
+  }
+ ],
+ "triggers": [
+  {
+   "table": "pay.payments",
+   "name": "payments_touch",
+   "function": "pay.touch",
+   "def": "CREATE TRIGGER payments_touch BEFORE UPDATE ON pay.payments FOR EACH ROW EXECUTE FUNCTION pay.touch()",
+   "enabled": true
+  },
+  {
+   "table": "shop.orders",
+   "name": "orders_audit",
+   "function": "shop.audit",
+   "def": "CREATE TRIGGER orders_audit AFTER INSERT OR UPDATE ON shop.orders FOR EACH ROW EXECUTE FUNCTION shop.audit()",
+   "enabled": true
+  }
+ ],
+ "types": [
+  {
+   "schema": "pay",
+   "name": "money",
+   "kind": "domain",
+   "labels": [],
+   "base": "numeric(12,2)",
+   "not_null": false,
+   "default": null,
+   "checks": [
+    "CHECK ((VALUE >= (0)::numeric))"
+   ]
+  },
+  {
+   "schema": "pay",
+   "name": "refund_reason",
+   "kind": "enum",
+   "labels": [
+    "duplicate",
+    "fraud",
+    "customer_request"
+   ],
+   "base": null,
+   "not_null": false,
+   "default": null,
+   "checks": []
+  }
+ ],
+ "sequences": [
+  {
+   "schema": "pay",
+   "name": "customers_id_seq",
+   "type": "bigint",
+   "start": "1",
+   "increment": "1"
+  },
+  {
+   "schema": "pay",
+   "name": "payments_id_seq",
+   "type": "bigint",
+   "start": "1",
+   "increment": "1"
+  },
+  {
+   "schema": "pay",
+   "name": "refunds_id_seq",
+   "type": "bigint",
+   "start": "1",
+   "increment": "1"
+  },
+  {
+   "schema": "pay",
+   "name": "unrelated_audit_id_seq",
+   "type": "bigint",
+   "start": "1",
+   "increment": "1"
+  },
+  {
+   "schema": "ship",
+   "name": "shipment_events_id_seq",
+   "type": "bigint",
+   "start": "1",
+   "increment": "1"
+  },
+  {
+   "schema": "ship",
+   "name": "shipments_id_seq",
+   "type": "bigint",
+   "start": "1",
+   "increment": "1"
+  },
+  {
+   "schema": "shop",
+   "name": "audit_log_id_seq",
+   "type": "bigint",
+   "start": "1",
+   "increment": "1"
+  },
+  {
+   "schema": "shop",
+   "name": "customers_id_seq",
+   "type": "bigint",
+   "start": "1",
+   "increment": "1"
+  },
+  {
+   "schema": "shop",
+   "name": "order_items_id_seq",
+   "type": "bigint",
+   "start": "1",
+   "increment": "1"
+  },
+  {
+   "schema": "shop",
+   "name": "orders_id_seq",
+   "type": "bigint",
+   "start": "1",
+   "increment": "1"
+  }
+ ],
+ "extensions": [],
+ "dictionaries": {
+  "ship.d_carriers": {
+   "rows": [
+    {
+     "code": "DHL",
+     "name": "DHL Parcel",
+     "max_weight_kg": "31.500",
+     "active": true
+    },
+    {
+     "code": "OLD",
+     "name": "Retired post",
+     "max_weight_kg": "10.000",
+     "active": false
+    },
+    {
+     "code": "UPS",
+     "name": "UPS Standard",
+     "max_weight_kg": "70.000",
+     "active": true
+    }
+   ]
+  },
+  "ship.d_countries": {
+   "rows": [
+    {
+     "code": "DE",
+     "name": "Germany"
+    },
+    {
+     "code": "FR",
+     "name": "France"
+    },
+    {
+     "code": "NL",
+     "name": "Netherlands"
+    }
+   ]
+  },
+  "ship.d_parcel_types": {
+   "rows": [
+    {
+     "id": "1",
+     "code": "BOX",
+     "name": "Box",
+     "active": true
+    },
+    {
+     "id": "2",
+     "code": "ENVELOPE",
+     "name": "Envelope",
+     "active": true
+    },
+    {
+     "id": "3",
+     "code": "PALLET",
+     "name": "Pallet",
+     "active": false
+    }
+   ]
+  },
+  "ship.d_service_levels": {
+   "rows": [
+    {
+     "code": "ECONOMY",
+     "name": "Economy"
+    },
+    {
+     "code": "EXPRESS",
+     "name": "Express"
+    },
+    {
+     "code": "SAME_DAY",
+     "name": "Same day"
+    },
+    {
+     "code": "STANDARD",
+     "name": "Standard"
+    }
+   ]
+  }
+ }
+}
