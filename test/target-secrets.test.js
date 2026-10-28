@@ -1,11 +1,11 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('fs'),os=require('os'),path=require('path');
-const home=fs.mkdtempSync(path.join(os.tmpdir(),'dt-target-privacy-')),secret='target-private-<sentinel>&"19384',baseSecret='base-private-sentinel-28174';
+const home=fs.mkdtempSync(path.join(os.tmpdir(),'dt-target-privacy-')),secret='target-private-<sentinel>&"19384'+'X'.repeat(400),baseSecret='base-private-sentinel-28174';
 process.env.DT_HOME=home;process.env.DT_LOG='quiet';process.env.DT_RATE_PER_SEC='0';
 for(const k of ['DT_CONFIG_DIR','DT_CACHE_DIR','DT_PASSPORTS_DIR','DT_WORK_DIR','DT_BUILD_DIR','DT_RUNNER_URL','DT_TOOLS'])delete process.env[k];
 fs.writeFileSync(path.join(home,'config.json'),JSON.stringify({envs:{dev:{}},tests:{waitMs:5000,timeoutMs:3000,compileCheck:false,env:{BASE_SECRET:baseSecret},targets:{private:{reviewed:true,kind:'local',env:{TARGET_SECRET:secret,EMPTY_VALUE:''}},userinfo:{reviewed:true,kind:'local',runnerUrl:`http://user:${secret}@127.0.0.1:9`}},differentialProfiles:{private:{reviewed:true,kind:'node-module',module:'src/value.cjs',export:'run'}}}}));
 const U=require('../lib/util'),W=require('../lib/workspace'),T=require('../lib/tools');
 function workspace(id,files){const root=path.join(home,'work',id);for(const[p,s]of Object.entries(files)){const f=path.join(root,p);fs.mkdirSync(path.dirname(f),{recursive:true});fs.writeFileSync(f,s);}U.writeJson(path.join(home,'cache','work',id+'.json'),{id,path:root,project:'T',repo:id,sha:'one',createdAt:new Date().toISOString(),dirty:true});return root;}
-function forbidden(value){const s=typeof value==='string'?value:JSON.stringify(value);assert.ok(!s.includes(secret),'selected target secret escaped');assert.ok(!s.includes(baseSecret),'base config secret escaped');}
+function forbidden(value){const s=typeof value==='string'?value:JSON.stringify(value);assert.ok(!s.includes(secret),'selected target secret escaped');assert.ok(!s.includes(secret.slice(0,48)),'truncated target credential prefix escaped');assert.ok(!s.includes(baseSecret),'base config secret escaped');}
 test.after(()=>fs.rmSync(home,{recursive:true,force:true}));
 test('selected target credentials never reach test messages, names, views, history, logs or saved reports',async()=>{
  const root=workspace('private',{'test/secrets.test.cjs':`const t=require('node:test');t('failure '+process.env.TARGET_SECRET,()=>{console.log(process.env.BASE_SECRET);require('node:assert/strict').fail('message '+process.env.TARGET_SECRET)});`});
@@ -16,5 +16,13 @@ test('selected target credentials never reach test messages, names, views, histo
 test('differential observers compare raw values but only return/log masked configured credentials',async()=>{
  for(const id of ['baseline','candidate'])workspace(id,{'src/value.cjs':`exports.run=()=>{console.log(process.env.TARGET_SECRET);return {value:process.env.TARGET_SECRET,base:process.env.BASE_SECRET}}`});
  const logs=[];const r=await require('../lib/differential').check({profile:'private',baseline:'baseline',candidate:'candidate',target:'private',inputs:[{id:'one',args:[]}],log:s=>logs.push(s)});assert.equal(r.outcome,'equivalent');forbidden(logs);forbidden(r);
+});
+test('failed report parsing still sanitizes retained reports and JSON diagnostics never quote raw payloads',async()=>{
+ const N=require('../lib/node-test'),root=workspace('badreport',{'test/report.test.cjs':`require('node:test')('actual assertion',()=>require('node:assert/strict').equal(1,1))`}),original=N.parse;
+ N.parse=(report)=>{fs.appendFileSync(report,'\\n'+secret);throw new Error('controlled report parse failure');};
+ try{const r=await T.call('test_run',{workspace:'badreport',tests:['test/report.test.cjs'],target:'private'});assert.equal(r.state,'failed');forbidden(r);}finally{N.parse=original;}
+ for(const f of fs.readdirSync(path.join(root,'.dt','node-reports')))if(f.endsWith('.xml')||f.endsWith('.jsonl'))forbidden(fs.readFileSync(path.join(root,'.dt','node-reports',f),'utf8'));
+ const invalid=path.join(root,'invalid.jsonl');fs.writeFileSync(invalid,secret);assert.throws(()=>N.parse(invalid,root),e=>!e.message.includes(secret)&&/invalid Node/.test(e.message));
+ const large=path.join(root,'oversize.xml');fs.writeFileSync(large,secret);fs.truncateSync(large,9*1048576);require('../lib/execution-privacy').reports([large],[secret]);assert.ok(fs.statSync(large).size<200);forbidden(fs.readFileSync(large,'utf8'));
 });
 test('runner URLs reject embedded credentials before reachability/execution',()=>assert.throws(()=>require('../lib/test-targets').resolve('userinfo'),/credential|userinfo/i));
