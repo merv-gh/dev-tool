@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "guides": [
+    {
+      "id": "column-lineage", "title": "Locate column reads and writes", "terms": "column field read write written reads writes functions repositories lineage usage impact", "required": ["environment", "database", "schema.table.column"],
+      "stages": [
+        { "id": "resolve", "goal": "Resolve the exact cached database/table/column; keep ambiguity explicit", "tools": ["find", "describe"] },
+        { "id": "lineage", "goal": "Inspect classified column accesses, caller chains, revisions and incomplete coverage", "tools": ["pg_usage", "impact"] },
+        { "id": "verify", "goal": "Read exact function/source evidence, including dynamic SQL and generated-code gaps", "tools": ["pg_function", "code_search", "code_read"] }
+      ], "boundaries": ["A text hit is not proof of read/write access. Unknown dynamic SQL, missing revisions or bounded traversal prevent an exhaustive claim."]
+    },
+    {
+      "id": "reproduce-state", "title": "Recreate a cross-system bug", "terms": "recreate reproduce reproduction bug related entities databases postgres pg tables elasticsearch es kafka messages streams capture fixture state tenant", "required": ["environment", "service/passport", "entity and tenant identity", "bounded event window"],
+      "stages": [
+        { "id": "inventory", "goal": "Inventory every known read and action from the selected service/passport", "tools": ["scenario_inventory", "passport"] },
+        { "id": "plan", "goal": "Bind scoped relational tuples and explicit PG/ES/Kafka obligations, schemas and windows", "tools": ["fixture_plan", "scenario_state_plan"] },
+        { "id": "capture", "goal": "Capture read-only source state and inspect completeness, precision, hashes and consistency", "tools": ["fixture_capture", "fixture_inspect", "scenario_state_capture"] },
+        { "id": "replay", "goal": "Export resources, replay into owned isolated dependencies and independently observe effects", "tools": ["fixture_export", "fixture_replay", "scenario_run", "test_run"] }
+      ], "boundaries": ["Separate per-source snapshots do not establish a distributed atomic snapshot or exactly-once delivery.", "Truncated windows, missing schemas/codecs or unbound reads must remain gaps."]
+    },
+    {
+      "id": "differential-refactor", "title": "Prove a refactor preserves behavior", "terms": "refactor method function results fills fields enrichment compare differential old new baseline same locally dev environment", "required": ["baseline and candidate revisions", "representative captured inputs", "independent expectations", "reviewed execution target"],
+      "stages": [
+        { "id": "scope", "goal": "Resolve function and library versions, enrichment precedence and affected callers", "tools": ["impact", "pg_function", "code_search"] },
+        { "id": "inputs", "goal": "Capture source function/schema versions and representative null/error/precision inputs", "tools": ["ddl_snapshot", "fixture_plan", "fixture_capture"] },
+        { "id": "compare", "goal": "Compare old/new exact values, ordering, errors and independently observed effects using reviewed runners", "tools": ["differential_check", "test_run", "workspace_patch"] }
+      ], "boundaries": ["Captured-dev local equivalence and observations of a deployed dev process are separate verdicts.", "Normalization must be explicit; it must not erase business differences."]
+    },
+    {
+      "id": "test-target", "title": "Run a test against an explicit target", "terms": "run execute test tests dev environment staging target remote deployment", "required": ["workspace", "test selector", "reviewed target profile"],
+      "stages": [
+        { "id": "inspect", "goal": "Inspect workspace language/build capability and target placement, dependencies and allowed effects", "tools": ["test_targets", "doctor", "workspace_read"] },
+        { "id": "run", "goal": "Run the selected supported test on the exact reviewed target and poll its job", "tools": ["test_run", "call_history"] },
+        { "id": "verify", "goal": "Check executed assertions, cleanup and target revision; retain red/green evidence", "tools": ["workspace_patch", "call_history"] }
+      ], "boundaries": ["env=dev alone selects source context; it does not select a remote runner or a deployed application.", "No tests, skipped-only runs, unsupported targets or cleanup failures cannot prove success."]
+    },
+    {
+      "id": "investigate-incident", "title": "Investigate an unexplained service symptom", "terms": "bug exception error incident production failing wrong timeout intermittent service reservation invoice reconciliation", "required": ["environment", "service or entrypoint", "time/trace/entity identity"],
+      "stages": [
+        { "id": "evidence", "goal": "Identify deployment revision, health, configuration and relevant logs before diagnosing", "tools": ["find", "consul_service", "health", "logs_search", "logs_trace"] },
+        { "id": "chain", "goal": "Follow the entrypoint through service/library code and scoped data reads", "tools": ["passport", "code_search", "impact", "scenario_inventory"] },
+        { "id": "prove", "goal": "Capture a minimal failing state and run an independent regression", "tools": ["fixture_plan", "test_context", "test_run"] }
+      ], "boundaries": ["Symptom keyword matches route investigation; they do not identify the cause."]
+    },
+    {
+      "id": "write-tests", "title": "Implement a sensitive regression test", "terms": "implement write create add unit integration contract regression tests test mocks fixture complexity", "required": ["workspace and behavior contract", "test level", "independent expected values"],
+      "stages": [
+        { "id": "context", "goal": "Resolve actual application entrypoints, dependencies and supported build capability", "tools": ["test_context", "code_search", "scenario_inventory"] },
+        { "id": "arrange", "goal": "Create valid edge objects or replay related state without inventing missing inputs", "tools": ["test_data", "fixture_plan", "scenario_state_plan"] },
+        { "id": "prove", "goal": "Execute the application, show failure before the fix and pass after; reject a relevant defect", "tools": ["workspace_write", "test_run", "workspace_patch"] }
+      ], "boundaries": ["An external grader pass cannot substitute for supported tool execution."]
+    },
+    {
+      "id": "ui-api-collection", "title": "Turn UI traffic into a reusable API check", "terms": "browser playwright ui network request response api routes discover client json pretty scripts collections reuse save", "required": ["reviewed site URL", "interaction scope", "independent response assertions"],
+      "stages": [
+        { "id": "observe", "goal": "Inspect the UI and capture bounded browser network evidence with secrets removed", "tools": ["api_browser_open", "api_browser_action", "api_browser_capture", "routes_discover"] },
+        { "id": "inspect", "goal": "Inspect attributed routes and request/response JSON in the interactive client", "tools": ["api_exchange_get", "api_request_prepare", "api_routes"] },
+        { "id": "reuse", "goal": "Replay only allowlisted intended requests and save a parameterized script/collection", "tools": ["api_request_replay", "api_request_save", "collection_validate", "collection_run", "api_browser_close"] }
+      ], "boundaries": ["Captured credentials remain placeholders. Replaying a mutation requires the user's intended action scope."]
+    },
+    {
+      "id": "knowledge-refresh", "title": "Update understandable architecture knowledge", "terms": "knowledge confluence rag graph documentation architecture semantic mirror update migration source", "required": ["source id and revision", "environment/scope"],
+      "stages": [
+        { "id": "inspect", "goal": "Inspect source provenance, stale records and exact citations", "tools": ["knowledge_search", "knowledge_graph", "tool_contracts"] },
+        { "id": "refresh", "goal": "Refresh a selected source, then inspect typed edges and coverage", "tools": ["knowledge_sync", "knowledge_graph"] }
+      ], "boundaries": ["Knowledge projections retain source identity; a successful mirror does not prove runtime dependencies."]
+    }
+  ]
+}

@@ -63,7 +63,9 @@ test('legacy discovery ranking remains default and BM25 requires trusted configu
   const legacy = await T.call('tool_search', { query: 'in the', limit: 30, ranker: 'bm25' });
   assert.equal(legacy.lexical.ranker, 'legacy');
   const definitions = await T.schemas({ metadata: true });
-  assert.deepEqual(legacy.tools.map(t => t.name), require('../lib/tool-search').legacyRank(definitions, 'in the').slice(0, 30).map(x => x.t.name));
+  assert.deepEqual(legacy.tools.map(t => t.name), require('../lib/tool-search').legacyRank(definitions, 'in the').slice(0, legacy.tools.length).map(x => x.t.name));
+  assert.ok(Buffer.byteLength(JSON.stringify(legacy)) <= 4096);
+  assert.equal(legacy.truncated, true);
   config({ discoveryRanker: 'bm25' });
   const experimental = await T.call('tool_search', { query: 'in the' });
   assert.equal(experimental.lexical.ranker, 'bm25'); assert.deepEqual(experimental.tools, []);
