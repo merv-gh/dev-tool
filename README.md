@@ -428,6 +428,24 @@ The flow is `workspace_open` → `test_context` → `workspace_write` → `test_
    - `files: [{path, content | edits}]` writes before running, so each try is one call.
    - `mode: "build"` runs the project's own Maven/Gradle: do it once before the patch. Gradle and Kotlin projects always use the build.
    - Every result is kept per test, with a fingerprint of the code under test (not the tests).
+   **Compile checks on every write.** `workspace_write` (and `test_run files=`) compiles a written Java file right away against its module's classpath, and answers `compile` with:
+   - `errors`: what does not compile, with the line;
+   - `fixed`: what dt already fixed in the file, when there is one clear fix:
+     - a missing import, found in a class index of the workspace, its libraries' code and the module's jars (dt reads the jars' directories itself, cached per classpath); the file's own packages win, then the project, the JDK and well-known libraries over obscure ones (JUnit's `Test`, not AspectJ's);
+     - static imports of test helpers (`assertThat`, `when`, `verify`, `any`, `eq`, `get`/`post`, `status`, `jsonPath`…);
+     - an import from a package that is not there, when the class is somewhere else (`javax.persistence` → `jakarta.persistence`);
+     - `@MockBean`/`@SpyBean` ↔ `@MockitoBean`/`@MockitoSpyBean`, whichever this Spring Boot has;
+     - `throws Exception` on a test method that calls something throwing a checked exception;
+   - `suggestions`: ready `edits` to choose from: which of several classes to import, a method that is not there with the names the class has (`PaymentService has no settel: settle?`), ambiguous `any()`, `throws` outside tests;
+   - `alsoBroken`: for a main class, the classes that use it and no longer compile.
+
+   With errors left, `test_run files=` does not run: the errors are the answer. After a run, failures that need a mechanical fix come back as `suggestions` too: an unused Mockito stubbing (`lenient()` or remove it), a stubbing with other arguments than the call, mixed matchers, a `@Value` property the test's context lacks (`@TestPropertySource` with the value from the application properties), a bean the slice lacks (`@MockitoBean`/`@MockBean` field, or `@Import` for the service's own classes).
+
+   The compiler stays warm: a small Java program of dt's own runs the JDK's compiler (`javax.tools`) in one JVM per JDK, on the runner when there is one. It checks only the written files (plus the sources they reference, from the sourcepath), stops before writing classes, and runs annotation processors (Lombok). A check takes 0.2–0.6 s; the first one of a workspace waits for its classpath:
+   - Maven: `compile dependency:build-classpath` with compile errors not failing it, so a broken test file doesn't block it (or the fast run's prepare when there is one);
+   - Gradle: a small init script prints the test compile classpath, the annotation processors, the release and the sources of the modules it depends on; nothing is compiled.
+
+   `workspace_open` starts that in the background for the module with the most tests. A write waits up to `tests.compileWaitMs` (45 s) for it, else answers `pending` and the next write is checked. `tests.compileCheck: false` turns the checks off. Kotlin files are checked by `test_run` (the build compiles them).
 4. **`workspace_patch`** lists each test in the patch with its proof:
    - **red-green**: it failed, the code changed, then it passed, so it catches the bug;
    - **green-only**: never seen failing. That's fine for behaviour that already worked, suspicious for a bug fix;
@@ -465,7 +483,8 @@ Without Docker, dt uses `JAVA_HOME`/PATH and `~/.m2`. The `tests` section of `co
   "maven": "/opt/maven/bin/mvn",
   "mavenSettings": "maven-settings.xml",
   "pgUrl": "postgres://dt:dt@localhost:55432/postgres",
-  "offline": false, "timeoutMs": 900000
+  "offline": false, "timeoutMs": 900000,
+  "compileCheck": true, "compileWaitMs": 45000
 }
 ```
 

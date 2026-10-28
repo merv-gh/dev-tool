@@ -361,6 +361,9 @@ var require_config = __commonJS({
         offline: String(e.DT_TESTS_OFFLINE || c.offline || "") === "true" || c.offline === true,
         timeoutMs: Number(e.DT_TESTS_TIMEOUT_MS || c.timeoutMs || 9e5),
         waitMs: Number(e.DT_TESTS_WAIT_MS || c.waitMs || 5e4),
+        // compile checks after each write (workspace_write, test_run files): on unless false; how long a write waits for the first classpath
+        compileCheck: c.compileCheck !== false && e.DT_COMPILE_CHECK !== "0",
+        compileWaitMs: Number(e.DT_COMPILE_WAIT_MS || c.compileWaitMs || 45e3),
         pgUrl: c.pgUrl || e.DT_TEST_DB_URL || null,
         javaToolOptions: c.javaToolOptions !== void 0 ? c.javaToolOptions : "-Dnet.bytebuddy.experimental=true",
         javaToolOptionsGradle: c.javaToolOptionsGradle === true,
@@ -29376,469 +29379,6 @@ var require_calls = __commonJS({
   }
 });
 
-// lib/runner.js
-var require_runner = __commonJS({
-  "lib/runner.js"(exports2, module2) {
-    var http2 = require("http");
-    var fs2 = require("fs");
-    var path2 = require("path");
-    var { spawn, spawnSync } = require("child_process");
-    var { EventEmitter } = require("events");
-    var KEEP_ENV = /^(PATH|HOME|USER|LANG|LANGUAGE|LC_\w+|TZ|TMPDIR|JAVA_HOME|DOCKER_HOST|DOCKER_TLS_VERIFY|DOCKER_CERT_PATH|TESTCONTAINERS_\w+|(HTTPS?|NO|ALL)_PROXY|(https?|no|all)_proxy|SSL_CERT_FILE|SSL_CERT_DIR)$/;
-    var OWN = /^(DOCKER_HOST|DOCKER_TLS_VERIFY|DOCKER_CERT_PATH|TESTCONTAINERS_\w+)$/;
-    function roots() {
-      const { PATHS } = require_config();
-      return [PATHS.work, PATHS.build, ...String(process.env.DT_RUNNER_ROOTS || "").split(",").filter(Boolean)].map((p) => path2.resolve(p));
-    }
-    var ping = () => new Promise((resolve) => {
-      const sock = (process.env.DOCKER_HOST || "unix:///var/run/docker.sock").replace(/^unix:\/\//, "");
-      if (!fs2.existsSync(sock)) return resolve({ ok: false, error: `no Docker socket at ${sock}` });
-      const req = http2.get({ socketPath: sock, path: "/version", timeout: 5e3 }, (r) => {
-        let d = "";
-        r.on("data", (c) => {
-          d += c;
-        });
-        r.on("end", () => {
-          try {
-            const v = JSON.parse(d);
-            resolve({ ok: r.statusCode === 200, version: v.Version, os: v.Os, platform: v.Platform?.Name });
-          } catch {
-            resolve({ ok: false, error: `HTTP ${r.statusCode}` });
-          }
-        });
-      });
-      req.on("error", (e) => resolve({ ok: false, error: e.code === "EACCES" ? `EACCES on ${sock}: the runner's user is not in the socket's group (DT_DOCKER_GID)` : e.message }));
-    });
-    function info() {
-      const cfg = require_config().getTests();
-      const run = (cmd, args) => {
-        const r = spawnSync(cmd, args, { encoding: "utf8", timeout: 2e4, env: { ...process.env, JAVA_TOOL_OPTIONS: "" } });
-        return r.error ? { ok: false, error: r.error.message } : { ok: r.status === 0, out: `${r.stdout || ""}${r.stderr || ""}`.trim().split("\n")[0] };
-      };
-      const bin = (t) => cfg.javaHome ? path2.join(cfg.javaHome, "bin", t) : t;
-      return ping().then((docker) => ({
-        uid: process.getuid?.(),
-        java: run(bin("java"), ["-version"]),
-        javac: run(bin("javac"), ["-version"]),
-        maven: cfg.maven ? run(cfg.maven, ["-v"]) : null,
-        docker,
-        roots: roots(),
-        testcontainersHost: process.env.TESTCONTAINERS_HOST_OVERRIDE || null
-      }));
-    }
-    function serve({ port = 4100, host = "0.0.0.0" } = {}) {
-      const token = process.env.DT_RUNNER_TOKEN;
-      const procs = /* @__PURE__ */ new Map();
-      const send = (res, code, body) => {
-        res.writeHead(code, { "content-type": "application/json" });
-        res.end(JSON.stringify(body));
-      };
-      const server = http2.createServer(async (req, res) => {
-        if (req.url === "/health") return send(res, 200, { ok: true });
-        if (!token) return send(res, 503, { error: "DT_RUNNER_TOKEN is not set: the runner refuses commands" });
-        if (req.headers.authorization !== `Bearer ${token}`) return send(res, 401, { error: "bad token" });
-        const body = await new Promise((r) => {
-          let d = "";
-          req.on("data", (c) => {
-            d += c;
-          });
-          req.on("end", () => {
-            try {
-              r(JSON.parse(d || "{}"));
-            } catch {
-              r({});
-            }
-          });
-        });
-        if (req.method === "GET" && req.url === "/info") return send(res, 200, await info());
-        if (req.method === "POST" && req.url === "/kill") {
-          const p2 = procs.get(body.id);
-          if (p2) {
-            p2.kill("SIGTERM");
-            setTimeout(() => {
-              try {
-                p2.kill("SIGKILL");
-              } catch {
-              }
-            }, 5e3).unref();
-          }
-          return send(res, 200, { killed: !!p2 });
-        }
-        if (req.method !== "POST" || req.url !== "/exec") return send(res, 404, { error: "not found" });
-        const cwd = path2.resolve(body.cwd || "");
-        if (!roots().some((r) => cwd === r || cwd.startsWith(r + path2.sep))) return send(res, 403, { error: `cwd ${cwd} is outside the runner's folders (${roots().join(", ")})` });
-        const own = Object.fromEntries(Object.entries(process.env).filter(([k]) => KEEP_ENV.test(k)));
-        const env = { ...own, ...body.env || {}, ...Object.fromEntries(Object.entries(own).filter(([k]) => OWN.test(k))) };
-        res.writeHead(200, { "content-type": "application/x-ndjson" });
-        const started = Date.now();
-        let killed = false;
-        const p = spawn(body.cmd, body.args || [], { cwd, env, stdio: ["ignore", "pipe", "pipe"] });
-        const id = body.id || String(p.pid);
-        procs.set(id, p);
-        const timer = setTimeout(() => {
-          killed = true;
-          p.kill("SIGTERM");
-          setTimeout(() => {
-            try {
-              p.kill("SIGKILL");
-            } catch {
-            }
-          }, 5e3).unref();
-        }, Number(body.timeoutMs) || 9e5);
-        const out2 = (b) => res.write(JSON.stringify({ out: b.toString() }) + "\n");
-        p.stdout.on("data", out2);
-        p.stderr.on("data", out2);
-        res.on("close", () => {
-          if (p.exitCode === null && !res.writableEnded) {
-            try {
-              p.kill("SIGTERM");
-            } catch {
-            }
-          }
-        });
-        p.on("error", (e) => {
-          clearTimeout(timer);
-          procs.delete(id);
-          res.end(JSON.stringify({ done: true, code: -1, error: e.message, ms: Date.now() - started }) + "\n");
-        });
-        p.on("close", (code) => {
-          clearTimeout(timer);
-          procs.delete(id);
-          res.end(JSON.stringify({ done: true, code, killed, ms: Date.now() - started }) + "\n");
-        });
-      });
-      server.listen(port, host, () => console.error(`dt runner: ${host}:${port}${token ? "" : " (DT_RUNNER_TOKEN not set: refusing commands)"}; folders ${roots().join(", ")}`));
-      return server;
-    }
-    var url = () => require_config().getTests().runnerUrl;
-    var auth = () => ({ authorization: `Bearer ${require_config().getTests().runnerToken || ""}` });
-    var downUntil = 0;
-    var downWhy = "";
-    function exec(cmd, args, { cwd, env, timeoutMs = 9e5, log } = {}) {
-      const T = require_trace();
-      if (Date.now() < downUntil) return Promise.resolve({ code: -1, out: downWhy, ms: 0, runnerError: true, unreachable: true, quiet: true });
-      const id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
-      const handle = new EventEmitter();
-      handle.kill = () => {
-        fetch(`${url()}/kill`, { method: "POST", headers: { ...auth(), "content-type": "application/json" }, body: JSON.stringify({ id }) }).catch(() => {
-        });
-        return true;
-      };
-      T.child(handle);
-      return new Promise((resolve) => {
-        const started = Date.now();
-        const u = new URL("/exec", url());
-        let out2 = "", buf = "", done = null;
-        const req = http2.request({ hostname: u.hostname, port: u.port, path: u.pathname, method: "POST", headers: { ...auth(), "content-type": "application/json" } }, (res) => {
-          if (res.statusCode !== 200) {
-            let d = "";
-            res.on("data", (c) => {
-              d += c;
-            });
-            res.on("end", () => {
-              handle.emit("exit");
-              resolve({ code: -1, out: `runner: HTTP ${res.statusCode} ${d.slice(0, 300)}`, ms: Date.now() - started, runnerError: true });
-            });
-            return;
-          }
-          res.on("data", (c) => {
-            buf += c;
-            let i;
-            while ((i = buf.indexOf("\n")) >= 0) {
-              const line = buf.slice(0, i);
-              buf = buf.slice(i + 1);
-              let m;
-              try {
-                m = JSON.parse(line);
-              } catch {
-                continue;
-              }
-              if (m.out) {
-                out2 += m.out;
-                if (out2.length > 4e6) out2 = out2.slice(-3e6);
-                const last = m.out.trim().split("\n").pop();
-                if (last && log) log(last.slice(0, 200));
-              }
-              if (m.done) done = m;
-            }
-          });
-          res.on("end", () => {
-            handle.emit("exit");
-            resolve({ code: done ? done.code : -1, out: out2 + (done?.error ? `
-${done.error}` : ""), killed: done?.killed, ms: Date.now() - started, ...done ? {} : { runnerError: true } });
-          });
-        });
-        req.on("error", (e) => {
-          handle.emit("exit");
-          downUntil = Date.now() + 6e4;
-          downWhy = `runner ${url()}: ${e.code || e.message}`;
-          resolve({ code: -1, out: downWhy, ms: Date.now() - started, runnerError: true, unreachable: true });
-        });
-        req.end(JSON.stringify({ id, cmd, args, cwd, env, timeoutMs }));
-      });
-    }
-    async function remoteInfo() {
-      const res = await fetch(`${url()}/info`, { headers: auth(), signal: AbortSignal.timeout(3e4) });
-      if (!res.ok) throw new Error(`runner ${url()}: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
-      return res.json();
-    }
-    module2.exports = { serve, exec, remoteInfo, info, url };
-  }
-});
-
-// lib/buildenv.js
-var require_buildenv = __commonJS({
-  "lib/buildenv.js"(exports2, module2) {
-    var fs2 = require("fs");
-    var os = require("os");
-    var path2 = require("path");
-    function gradleFiles(cfg) {
-      const { HOME } = require_config();
-      const files = [...(cfg.gradleProperties || []).map((f) => path2.resolve(HOME, f)), path2.join(HOME, "gradle.properties")];
-      const userHome = path2.join(os.homedir(), ".gradle", "gradle.properties");
-      if (cfg.gradleHome && path2.resolve(cfg.gradleHome) !== path2.dirname(userHome)) files.push(userHome);
-      return [...new Set(files)].filter((f) => fs2.existsSync(f));
-    }
-    function gradleProperties(cfg) {
-      const { parseProperties } = require_extract();
-      const { load, interpolate } = require_config();
-      const lookup = load().lookup();
-      const props = {}, from = {};
-      for (const f of gradleFiles(cfg)) {
-        for (const [k, v] of Object.entries(parseProperties(fs2.readFileSync(f, "utf8")))) {
-          if (k in props) continue;
-          props[k] = String(interpolate(v, lookup));
-          from[k] = f;
-        }
-      }
-      return { props, from };
-    }
-    function forBuild(cfg, tool) {
-      const env = {}, args = [], secrets = [];
-      for (const [k, v] of Object.entries(cfg.env || {})) {
-        env[k] = String(v);
-        secrets.push(String(v));
-      }
-      const sources = [];
-      if (tool === "gradle") {
-        const { props, from } = gradleProperties(cfg);
-        for (const [k, v] of Object.entries(props)) {
-          if (k.startsWith("systemProp.")) args.push(`-D${k.slice(11)}=${v}`);
-          else if (k.startsWith("org.gradle.")) args.push(`-D${k}=${v}`);
-          else env[`ORG_GRADLE_PROJECT_${k}`] = v;
-          if (/pass|secret|token|key|user|cred|auth/i.test(k)) secrets.push(v);
-        }
-        sources.push(...new Set(Object.values(from)));
-      }
-      return { env, args, secrets: secrets.filter((s) => s && s.length >= 3), sources };
-    }
-    var mask = (text, secrets) => {
-      let t = String(text ?? "");
-      for (const s of [...secrets].sort((a, b) => b.length - a.length)) t = t.split(s).join("***");
-      return t;
-    };
-    module2.exports = { forBuild, gradleProperties, gradleFiles, mask };
-  }
-});
-
-// lib/doctor.js
-var require_doctor = __commonJS({
-  "lib/doctor.js"(exports2, module2) {
-    var fs2 = require("fs");
-    var os = require("os");
-    var path2 = require("path");
-    var { execFile } = require("child_process");
-    var run = (cmd, args, { timeout = 2e4, env, cwd } = {}) => new Promise((resolve) => {
-      const t0 = Date.now();
-      execFile(cmd, args, { timeout, env: env || process.env, cwd, maxBuffer: 8 << 20 }, (err, stdout, stderr) => resolve({ ok: !err, code: err?.code, out: `${stdout || ""}${stderr || ""}`.trim(), ms: Date.now() - t0, error: err?.message }));
-    });
-    async function head(url, { auth, timeout = 8e3 } = {}) {
-      const t0 = Date.now();
-      try {
-        const res = await fetch(url, { method: "GET", headers: auth ? { authorization: auth } : {}, signal: AbortSignal.timeout(timeout), redirect: "manual" });
-        return { status: res.status, ms: Date.now() - t0 };
-      } catch (e) {
-        return { error: e.cause?.code || e.cause?.message || e.message, ms: Date.now() - t0 };
-      }
-    }
-    function writable(dir) {
-      try {
-        fs2.mkdirSync(dir, { recursive: true });
-        const f = path2.join(dir, `.dt-doctor-${process.pid}`);
-        fs2.writeFileSync(f, "x");
-        let chmod = true;
-        try {
-          fs2.chmodSync(f, 384);
-        } catch {
-          chmod = false;
-        }
-        fs2.rmSync(f, { force: true });
-        return { ok: true, chmod };
-      } catch (e) {
-        return { ok: false, error: e.message };
-      }
-    }
-    var SHARED = /^(9p|drvfs|cifs|smb3?|smbfs|fakeowner|grpcfuse|fuse\.grpcfuse|virtiofs|osxfs|fuse\.osxfs|vboxsf|nfs4?|fuse\.sshfs|fuse)$/;
-    function mountOf(dir) {
-      let lines;
-      try {
-        lines = fs2.readFileSync("/proc/self/mountinfo", "utf8").split("\n");
-      } catch {
-        return null;
-      }
-      let best = null;
-      const target = path2.resolve(dir);
-      for (const l of lines) {
-        const parts = l.split(" ");
-        const dash = parts.indexOf("-");
-        if (dash < 0) continue;
-        const point = parts[4].replace(/\\040/g, " "), type = parts[dash + 1], source = parts[dash + 2];
-        if ((target === point || target.startsWith(point.endsWith("/") ? point : `${point}/`)) && (!best || point.length > best.point.length)) best = { point, type, source };
-      }
-      return best;
-    }
-    async function check({ repo, deep = false } = {}) {
-      const cfg = require_config();
-      const t = cfg.getTests();
-      const out2 = [];
-      const add = (group, name, status, detail, fix) => out2.push({ group, check: name, status, detail: String(detail ?? "").slice(0, 400), ...fix ? { fix } : {} });
-      for (const [name, dir] of [["config folder", cfg.HOME], ["repos", cfg.PATHS.repos], ["workspaces", cfg.PATHS.work], ["cache", cfg.PATHS.cache], ["git data (DT_GIT_DIR)", process.env.DT_GIT_DIR || path2.join(os.tmpdir(), "dt-git")]]) {
-        const w = writable(dir);
-        if (!w.ok) add("folders", name, "fail", `${dir}: ${w.error}`, "run dt as the owner of the folder (run.sh sets DT_UID/DT_GID), or point DT_HOME_DIR at a writable folder");
-        else add("folders", name, w.chmod ? "ok" : "warn", `${dir}${w.chmod ? "" : ": no chmod here (a Windows drive, SMB, some mounts): git keeps its data in DT_GIT_DIR"}`);
-      }
-      for (const [name, dir, what] of [["workspaces", cfg.PATHS.work, "DT_WORK_DIR=/var/dt-work"], ["Gradle home", cfg.getTests().gradleHome, "DT_GRADLE_USER_HOME=/var/dt-build/gradle"], ["Maven repository", cfg.getTests().mavenRepo, "DT_MAVEN_REPO=/var/dt-build/m2"], ["git data", process.env.DT_GIT_DIR || path2.join(os.tmpdir(), "dt-git"), "DT_GIT_DIR=/var/dt-git"]].filter(([, d]) => d)) {
-        const m = mountOf(dir);
-        if (!m) continue;
-        const shared = SHARED.test(m.type);
-        add("folders", `${name} filesystem`, shared ? name === "git data" ? "warn" : "fail" : "ok", `${dir} is on ${m.type} (${m.point}${m.source && m.source !== "none" ? ` from ${m.source}` : ""})${shared ? ": a host-shared mount: file locks and memory-mapped files do not work right there (Gradle's daemon hangs on its registry, builds slow down)" : ""}`, shared ? `put it on a Docker volume (compose does: ${what}) or a local disk` : null);
-      }
-      const gd = process.env.DT_GIT_DIR || path2.join(os.tmpdir(), "dt-git");
-      if (path2.resolve(gd).startsWith(path2.resolve(os.tmpdir()))) add("folders", "git data lasts", "warn", `${gd} is in the temporary folder: after a restart every repo is fetched again`, "set DT_GIT_DIR to a lasting folder git can chmod in (compose: the dt-git volume)");
-      try {
-        const st = fs2.statfsSync(cfg.PATHS.work.replace(/\/work$/, "") || cfg.HOME);
-        const free = st.bavail * st.bsize / 1e9;
-        add("folders", "free disk", free < 2 ? "fail" : free < 10 ? "warn" : "ok", `${free.toFixed(1)} GB free`, free < 10 ? "workspaces, Maven/Gradle caches and indexes need room: workspace_drop old workspaces" : null);
-      } catch {
-      }
-      const g = await run("git", ["--version"]);
-      add("git", "git", g.ok ? "ok" : "fail", g.ok ? g.out : g.error, g.ok ? null : "install git in the image (node:22-bookworm has it)");
-      const bb = cfg.getPersonal().bitbucket;
-      if (!bb.url) add("bitbucket", "Bitbucket URL", "fail", "not set", "bitbucket.url in config.json");
-      else {
-        add("bitbucket", "token", bb.token ? "ok" : "fail", bb.token ? `set (${bb.token.length} chars)` : "missing", bb.token ? null : "BITBUCKET_HTTP_TOKEN in .env (a personal access token with repository read)");
-        const api = await head(`${bb.url}/rest/api/1.0/repos?limit=1`, { auth: bb.token ? `Bearer ${bb.token}` : null });
-        add("bitbucket", "REST API", api.status === 200 ? "ok" : "fail", api.error ? `${bb.url}: ${api.error}` : `HTTP ${api.status} in ${api.ms} ms`, api.status === 401 ? "the token is wrong or expired" : api.error ? "dt cannot reach Bitbucket: DNS, proxy (HTTPS_PROXY), or the network of the container" : null);
-      }
-      if (repo) {
-        const [project, slug] = String(repo).split("/");
-        const G = require_git();
-        const url = `${bb.url}/scm/${String(project).toLowerCase()}/${slug}.git`;
-        const ls = await run("git", ["-c", `http.extraHeader=Authorization: Bearer ${bb.token || ""}`, "ls-remote", url, "HEAD"], { timeout: 3e4, env: { ...process.env, GIT_TERMINAL_PROMPT: "0" } });
-        add("bitbucket", `git ls-remote ${repo}`, ls.ok ? "ok" : "fail", ls.ok ? `${ls.out.slice(0, 12)} in ${ls.ms} ms` : ls.out.replace(bb.token || "\0", "***").slice(0, 300), ls.ok ? null : /401|403|Authentication/.test(ls.out) ? "the token cannot read this repo" : /Could not resolve|unable to access|timed out/i.test(ls.out) ? "git cannot reach Bitbucket from here (proxy: git uses HTTPS_PROXY / http.proxy)" : "check the project key and repo slug");
-        if (ls.ok && deep) {
-          const dir = fs2.mkdtempSync(path2.join(os.tmpdir(), "dt-doctor-"));
-          const t0 = Date.now();
-          try {
-            const info = await G.fetchRef(project, slug, "", { dir, gitKey: `doctor/${path2.basename(dir)}` });
-            add("bitbucket", `fetch ${repo}`, "ok", `${info.sha.slice(0, 10)} in ${Date.now() - t0} ms${info.fallback ? `; ${info.fallback}` : ""}`);
-          } catch (e) {
-            add("bitbucket", `fetch ${repo}`, "fail", e.message, "the fetch itself fails: see the message (disk, permissions, proxy)");
-          } finally {
-            fs2.rmSync(dir, { recursive: true, force: true });
-          }
-        }
-      }
-      let onRunner = false;
-      if (t.runnerUrl) {
-        try {
-          const i = await require_runner().remoteInfo();
-          onRunner = true;
-          add("runner", "runner", "ok", `${t.runnerUrl} (uid ${i.uid}), folders ${i.roots.join(", ")}`);
-          add("runner", "java", i.java?.ok ? "ok" : "fail", i.java?.out || i.java?.error, i.java?.ok ? null : "the runner needs the JDK: the jdk profile fills /opt/jdk");
-          add("runner", "javac (a JDK, not a JRE)", i.javac?.ok ? "ok" : "fail", i.javac?.out || i.javac?.error);
-          if (i.maven) add("runner", "Maven", i.maven.ok ? "ok" : "warn", i.maven.out || i.maven.error);
-          add("runner", "Docker (Testcontainers)", i.docker?.ok ? "ok" : "warn", i.docker?.ok ? `Docker ${i.docker.version} (${i.docker.platform || i.docker.os}); containers reached at ${i.testcontainersHost || "localhost"}` : i.docker?.error, i.docker?.ok ? null : /EACCES/.test(i.docker?.error || "") ? "set DT_DOCKER_GID to the group of the Docker socket (Docker Desktop: 0; Linux: getent group docker)" : "mount the Docker socket into the runner (compose does: DT_DOCKER_SOCKET)");
-        } catch (e) {
-          add("runner", "runner", "fail", `${t.runnerUrl}: ${e.cause?.code || e.message}`, /401|token/i.test(e.message) ? "DT_RUNNER_TOKEN must be the same for dt and the runner (run.sh writes one into .env)" : "start it: the jdk profile runs the runner (./run.sh up -d); builds run in dt meanwhile, without Docker");
-        }
-      }
-      const bin = (tool) => t.javaHome ? path2.join(t.javaHome, "bin", tool) : tool;
-      const java = await run(bin("java"), ["-version"]);
-      const javac = await run(bin("javac"), ["-version"]);
-      if (!onRunner) add("tests", "java", java.ok ? "ok" : "fail", java.ok ? `${java.out.split("\n")[0]}${t.javaHome ? ` (${t.javaHome})` : " (PATH)"}` : `${bin("java")}: ${java.error}`, java.ok ? null : "add jdk to COMPOSE_PROFILES (run.sh does by default) or set tests.javaHome");
-      if (!onRunner) add("tests", "javac (a JDK, not a JRE)", javac.ok ? "ok" : "fail", javac.ok ? javac.out : `${bin("javac")}: ${javac.error}`, javac.ok ? null : "tests need a JDK: the jdk compose profile, or tests.javaHome pointing at a JDK");
-      const mvn = t.maven || "mvn";
-      const mv = await run(mvn, ["-v"], { env: { ...process.env, ...t.javaHome ? { JAVA_HOME: t.javaHome } : {} } });
-      if (!onRunner) add("tests", "Maven", mv.ok ? "ok" : "warn", mv.ok ? mv.out.split("\n")[0] : `${mvn}: ${mv.error}`, mv.ok ? null : "Maven projects without mvnw need it: the jdk compose profile, or tests.maven");
-      if (t.gradle) {
-        const gr = await run(t.gradle, ["-v"], { timeout: 6e4 });
-        add("tests", "Gradle", gr.ok ? "ok" : "warn", gr.ok ? (gr.out.match(/Gradle [\d.]+/) || [gr.out])[0] : gr.error);
-      }
-      for (const [name, dir] of [["Maven repository", t.mavenRepo], ["Gradle home", t.gradleHome]].filter(([, d]) => d)) {
-        const w = writable(dir);
-        add("tests", name, w.ok ? "ok" : "fail", w.ok ? dir : `${dir}: ${w.error}`, w.ok ? null : "must be writable by dt's user");
-      }
-      const proxy = process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy;
-      add("network", "proxy", "ok", proxy ? `${proxy.replace(/\/\/[^@/]*@/, "//***@")} (git, Maven and Gradle read it differently: Maven from settings.xml <proxies>, Gradle from systemProp.https.proxyHost)` : "none set");
-      if (!t.offline) {
-        const central = await head("https://repo.maven.apache.org/maven2/");
-        add("network", "Maven Central", central.status && central.status < 400 ? "ok" : "warn", central.error ? central.error : `HTTP ${central.status} in ${central.ms} ms`, central.status && central.status < 400 ? null : "not reachable: builds need your company repository (maven-settings.xml / gradle.properties) or a proxy");
-        const wrapper = await head("https://services.gradle.org/distributions/");
-        add("network", "Gradle distributions (gradlew)", wrapper.status && wrapper.status < 400 ? "ok" : "warn", wrapper.error || `HTTP ${wrapper.status}`, wrapper.status && wrapper.status < 400 ? null : "gradlew downloads Gradle from here on first use: point distributionUrl at your mirror");
-      }
-      if (t.mavenSettings) {
-        let text = "";
-        try {
-          text = fs2.readFileSync(t.mavenSettings, "utf8");
-        } catch (e) {
-          add("repository", "maven settings", "fail", `${t.mavenSettings}: ${e.message}`);
-        }
-        for (const m of text.matchAll(/<url>\s*([^<]+?)\s*<\/url>/g)) {
-          const r = await head(m[1]);
-          add("repository", `Maven repository ${m[1]}`, r.status && r.status < 500 ? "ok" : "fail", r.error || `HTTP ${r.status} (401 without credentials is normal)`);
-        }
-      }
-      const { props, from } = require_buildenv().gradleProperties(t);
-      if (Object.keys(props).length) {
-        add("repository", "gradle.properties", "ok", `${Object.keys(props).length} properties from ${[...new Set(Object.values(from))].join(", ")}: ${Object.keys(props).map((k) => /pass|secret|token|key/i.test(k) ? `${k}=***` : k).join(", ")}`);
-        const url = Object.entries(props).find(([k, v]) => /url/i.test(k) && /^https?:/.test(v));
-        if (url) {
-          const user = Object.entries(props).find(([k]) => /user/i.test(k))?.[1], pass = Object.entries(props).find(([k]) => /pass|token/i.test(k))?.[1];
-          const r = await head(url[1], { auth: user && pass ? `Basic ${Buffer.from(`${user}:${pass}`).toString("base64")}` : null });
-          add("repository", `${url[0]} (${url[1]})`, r.status && r.status < 400 ? "ok" : r.status === 401 || r.status === 403 ? "fail" : r.status ? "ok" : "fail", r.error || `HTTP ${r.status} with the credentials`, r.status === 401 || r.status === 403 ? "the user/password in gradle.properties are refused" : r.error ? "not reachable from here" : null);
-        }
-      } else add("repository", "gradle.properties", "warn", `none found (looked in ${require_buildenv().gradleFiles({ ...t, gradleProperties: t.gradleProperties }).length ? "" : [...(t.gradleProperties || []).map((f) => path2.resolve(cfg.HOME, f)), path2.join(cfg.HOME, "gradle.properties"), ...t.gradleHome ? [path2.join(t.gradleHome, "gradle.properties")] : []].join(", ")}): builds that read nexusUrl/mavenUser/mavenPassword fail`, "copy the gradle.properties of your machine (Windows: %USERPROFILE%\\.gradle\\gradle.properties) into dt's config folder; passwords may be ${VAR} from .env");
-      if (t.pgUrl) {
-        try {
-          const postgres = require_src();
-          const sql = postgres(t.pgUrl, { max: 1, connect_timeout: 5, onnotice: () => {
-          } });
-          const t0 = Date.now();
-          await sql`select 1`;
-          await sql.end({ timeout: 2 });
-          add("tests", "test database", "ok", `${new URL(t.pgUrl).host} in ${Date.now() - t0} ms`);
-        } catch (e) {
-          add("tests", "test database", "warn", `${(() => {
-            try {
-              return new URL(t.pgUrl).host;
-            } catch {
-              return t.pgUrl;
-            }
-          })()}: ${e.code || e.message}`, "needed only for DB tests: the testdb compose profile, or tests.pgUrl");
-        }
-      } else add("tests", "test database", "warn", "not set", "needed only for DB tests: the testdb compose profile, or tests.pgUrl");
-      for (const j of require_jobs().list(100).filter((x) => x.state === "running")) {
-        const ms = Date.now() - Date.parse(j.startedAt);
-        if (ms > t.timeoutMs) add("jobs", `job ${j.id}`, "warn", `${j.title}: running for ${Math.round(ms / 6e4)} min`, `job_cancel job="${j.id}"`);
-      }
-      const counts = { ok: out2.filter((x) => x.status === "ok").length, warn: out2.filter((x) => x.status === "warn").length, fail: out2.filter((x) => x.status === "fail").length };
-      return { counts, checks: out2 };
-    }
-    module2.exports = { check };
-  }
-});
-
 // lib/workspace.js
 var require_workspace = __commonJS({
   "lib/workspace.js"(exports2, module2) {
@@ -30052,322 +29592,58 @@ new file mode`) ? "added" : "modified";
   }
 });
 
-// lib/showcase.js
-var require_showcase = __commonJS({
-  "lib/showcase.js"(exports2, module2) {
-    var T = () => require_tools();
-    function parseVersion(text) {
-      if (!text) return {};
-      try {
-        const v = JSON.parse(text);
-        const commit = v.git?.commit?.id || v.git?.commit || v.commit || v.sha || null;
-        return { version: v.build?.version || v.version || null, commit: typeof commit === "object" ? commit.id || null : commit, branch: v.git?.branch || v.branch || null };
-      } catch {
-        const sha = (String(text).match(/\b[0-9a-f]{7,40}\b/) || [])[0];
-        return { version: null, commit: sha || null, branch: null };
-      }
+// lib/buildenv.js
+var require_buildenv = __commonJS({
+  "lib/buildenv.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var os = require("os");
+    var path2 = require("path");
+    function gradleFiles(cfg) {
+      const { HOME } = require_config();
+      const files = [...(cfg.gradleProperties || []).map((f) => path2.resolve(HOME, f)), path2.join(HOME, "gradle.properties")];
+      const userHome = path2.join(os.homedir(), ".gradle", "gradle.properties");
+      if (cfg.gradleHome && path2.resolve(cfg.gradleHome) !== path2.dirname(userHome)) files.push(userHome);
+      return [...new Set(files)].filter((f) => fs2.existsSync(f));
     }
-    async function run({ service, target, envs, ref, test, refreshPassport = false, log = () => {
-    } } = {}) {
-      const cfg = require_config();
-      envs = (Array.isArray(envs) ? envs : String(envs || "").split(",")).map((s) => s.trim()).filter(Boolean);
-      if (!envs.length) envs = cfg.envNames();
-      const started = Date.now();
-      const steps = [];
-      const step = async (key, title, fn) => {
-        const t0 = Date.now();
-        log(`${title}...`);
-        try {
-          const r = await fn();
-          steps.push({ key, title, ok: r?.ok !== false, ms: Date.now() - t0, ...r });
-          log(`${title}: ${r?.ok === false ? "failed" : "ok"}${r?.summary ? ` (${r.summary})` : ""}`);
-          return r;
-        } catch (e) {
-          steps.push({ key, title, ok: false, ms: Date.now() - t0, error: e.message });
-          log(`${title}: ERROR ${e.message}`);
-          return null;
-        }
-      };
-      const versions = [];
-      for (const env of envs) {
-        await step(`health:${env}`, `Health of ${env}`, async () => {
-          const h = await T().call("health", { env }, { source: "showcase" });
-          const mine = h.rows.find((r) => r.service === service);
-          return { env, view: h.view, summary: `${h.summary.healthy}/${h.summary.services} healthy${h.summary.down ? `, ${h.summary.down} down` : ""}${h.summary.degraded ? `, ${h.summary.degraded} degraded` : ""}`, service: mine || null };
-        });
-        await step(`dashboard:${env}`, `Dashboard of ${env}`, async () => {
-          const o = await T().call("overview", { env }, { source: "showcase" });
-          return { env, view: o.dashboard, summary: o.summary ? Object.entries(o.summary).map(([k, v]) => `${k} ${typeof v === "object" ? JSON.stringify(v) : v}`).join(", ").slice(0, 160) : void 0 };
-        });
-        await step(`instances:${env}`, `${service} in ${env}`, async () => {
-          const s = await T().call("consul_service", { env, name: service }, { source: "showcase" });
-          if (!s.instances) throw new Error(`${service} is not in Consul of ${env}${s.matches?.length ? ` (did you mean ${s.matches.slice(0, 4).join(", ")}?)` : ""}`);
-          for (const i of s.instances) versions.push({ env, instance: `${i.node} ${i.address}:${i.port}`, status: i.status, ...parseVersion(i.version) });
-          const vs = [...new Set(s.instances.map((i) => parseVersion(i.version).version).filter(Boolean))];
-          return { env, instances: s.instances.length, passing: s.instances.filter((i) => i.status === "passing").length, versions: vs, summary: `${s.instances.filter((i) => i.status === "passing").length}/${s.instances.length} passing, version ${vs.join(", ") || "unknown"}` };
-        });
-      }
-      await step("versions", "Versions across environments", async () => {
-        const rows = versions.map((v) => ({ env: v.env, instance: v.instance, status: v.status, version: v.version || "", commit: v.commit || "", branch: v.branch || "" }));
-        const byEnv = {};
-        for (const v of versions) if (v.version) (byEnv[v.env] ||= /* @__PURE__ */ new Set()).add(`${v.version}@${v.commit || "?"}`);
-        const builds = Object.fromEntries(Object.entries(byEnv).map(([e, s]) => [e, [...s]]));
-        const distinct = new Set(Object.values(builds).flat());
-        const view = require_results().saveView("table", rows, { title: `${service}: versions in ${envs.join(", ")}` });
-        return { view, builds, same: distinct.size <= 1, summary: distinct.size <= 1 ? `the same build everywhere (${[...distinct][0] || "unknown"})` : Object.entries(builds).map(([e, b]) => `${e} ${b.join("/")}`).join(" vs ") };
-      });
-      const pp = await step("passport", `Passport of ${service}`, async () => {
-        const cached = require_passport().load(service);
-        const indexed = cached && require_codeindex().load(`${cached.repo.project}/${cached.repo.repo}`);
-        const p = await T().call("passport", { service, refresh: !!refreshPassport || !cached || !indexed }, { source: "showcase" });
-        return { view: p.view, repo: p.repo, cached: p.cached, summary: `${p.cached ? `as built ${String(p.builtAt).slice(0, 16).replace("T", " ")}: ` : ""}${p.summary.endpoints} endpoints, consumes ${p.summary.consumes.join(", ") || "-"}, produces ${p.summary.produces.join(", ") || "-"}, ${Object.keys(p.summary.tables).length} tables, ${(p.flows || []).length} flows`, flows: (p.flows || []).slice(0, 8) };
-      });
-      if (target) {
-        await step("impact", `Impact of ${target}`, async () => {
-          const i = await T().call("impact", { target, env: envs[0] }, { source: "showcase" });
-          if (!i.resolved?.length) throw new Error(i.note || `nothing named ${target}`);
-          return { view: i.view, summary: `${Object.values(i.counts || {}).reduce((a, b) => a + b, 0)} affected: ${Object.entries(i.counts || {}).map(([k, v]) => `${v} ${k}`).join(", ")}${i.endpoints?.length ? `; endpoints ${i.endpoints.join(", ")}` : ""}${i.tests?.length ? `; tests ${i.tests.join(", ")}` : ""}` };
-        });
-      }
-      if (target) {
-        const ws = await step("workspace", `Workspace on ${ref || "the default branch"}`, async () => {
-          const w = await T().call("workspace_open", { service, ...pp?.repo ? { project: pp.repo.project, repo: pp.repo.repo } : {}, ref: ref || "" }, { source: "showcase" });
-          return { workspace: w.id, ref: w.ref || "default branch", sha: w.sha, summary: `${w.project}/${w.repo} @ ${String(w.sha).slice(0, 10)}, ${w.files} files, ${(w.libs || []).length} libraries` };
-        });
-        if (ws?.workspace) {
-          const ctx = await step("test_context", `Test context of ${target}`, async () => {
-            const c = await T().call("test_context", { workspace: ws.workspace, target }, { source: "showcase" });
-            return { style: c.style, path: c.test.path, className: c.test.class.split(".").pop(), skeleton: c.skeleton, summary: `${c.style} test at ${c.test.path}${c.dependencies?.length ? `, mocks ${c.dependencies.map((d) => d.name).join(", ")}` : ""}${c.flow ? `, flow: ${c.flow.beans.map((b) => b.name).join(" -> ")}` : ""}` };
-          });
-          if (ctx?.path) {
-            const content = test || ctx.skeleton;
-            await step("test_run", `Run ${ctx.className}`, async () => {
-              if (!content) throw new Error("no skeleton for this test style: pass test= with the test source");
-              let r = await T().call("test_run", { workspace: ws.workspace, tests: [ctx.className], files: [{ path: ctx.path, content }] }, { source: "showcase" });
-              while (r.state === "running") r = await T().call("test_run", { workspace: ws.workspace, job: r.job }, { source: "showcase" });
-              if (r.error) throw new Error(r.error);
-              return { ok: r.outcome === "passed" || r.outcome === "failed", view: r.view, outcome: r.outcome, counts: r.counts, mode: r.mode, testMs: r.ms, failures: r.failures, written: test ? "given" : "skeleton", summary: `${r.outcome}: ${r.counts.passed}/${r.counts.tests} passed in ${(r.ms / 1e3).toFixed(1)} s (${r.mode})${r.failures?.length ? `; ${r.failures[0].test}: ${r.failures[0].expected != null ? `expected ${r.failures[0].expected}, got ${r.failures[0].actual}` : String(r.failures[0].message || "").split("\n")[0].slice(0, 120)}` : ""}` };
-            });
-            await step("patch", "Patch", async () => {
-              const p = await T().call("workspace_patch", { workspace: ws.workspace }, { source: "showcase" });
-              const verdicts = {};
-              for (const t of p.tests || []) {
-                const v = t.split(":")[0];
-                verdicts[v] = (verdicts[v] || 0) + 1;
-              }
-              return { view: p.view, download: p.download, files: (p.files || []).map((f) => f.path), tests: p.tests, summary: `${(p.files || []).length} file${(p.files || []).length === 1 ? "" : "s"}${Object.keys(verdicts).length ? `; tests ${Object.entries(verdicts).map(([v, n]) => `${n} ${v}`).join(", ")}` : ""}` };
-            });
-          }
+    function gradleProperties(cfg) {
+      const { parseProperties } = require_extract();
+      const { load, interpolate } = require_config();
+      const lookup = load().lookup();
+      const props = {}, from = {};
+      for (const f of gradleFiles(cfg)) {
+        for (const [k, v] of Object.entries(parseProperties(fs2.readFileSync(f, "utf8")))) {
+          if (k in props) continue;
+          props[k] = String(interpolate(v, lookup));
+          from[k] = f;
         }
       }
-      const result = { service, target: target || null, envs, ref: ref || null, at: (/* @__PURE__ */ new Date()).toISOString(), ms: Date.now() - started, ok: steps.every((s) => s.ok), steps };
-      result.view = require_results().saveView("showcase", result, { title: `${service}${target ? ` \xB7 ${target}` : ""}` }, { page: "showcase" });
-      return result;
+      return { props, from };
     }
-    function summary(r) {
-      return {
-        service: r.service,
-        target: r.target,
-        envs: r.envs,
-        ok: r.ok,
-        ms: r.ms,
-        steps: r.steps.map((s) => `${s.ok ? "ok" : "FAILED"}  ${s.title}${s.summary ? `: ${s.summary}` : ""}${s.error ? `: ${s.error}` : ""}`),
-        view: r.view
-      };
+    function forBuild(cfg, tool) {
+      const env = {}, args = [], secrets = [];
+      for (const [k, v] of Object.entries(cfg.env || {})) {
+        env[k] = String(v);
+        secrets.push(String(v));
+      }
+      const sources = [];
+      if (tool === "gradle") {
+        const { props, from } = gradleProperties(cfg);
+        for (const [k, v] of Object.entries(props)) {
+          if (k.startsWith("systemProp.")) args.push(`-D${k.slice(11)}=${v}`);
+          else if (k.startsWith("org.gradle.")) args.push(`-D${k}=${v}`);
+          else env[`ORG_GRADLE_PROJECT_${k}`] = v;
+          if (/pass|secret|token|key|user|cred|auth/i.test(k)) secrets.push(v);
+        }
+        sources.push(...new Set(Object.values(from)));
+      }
+      return { env, args, secrets: secrets.filter((s) => s && s.length >= 3), sources };
     }
-    module2.exports = { run, summary, parseVersion };
-  }
-});
-
-// lib/ddl.js
-var require_ddl = __commonJS({
-  "lib/ddl.js"(exports2, module2) {
-    var { resolve, namesOf } = require_pgindex();
-    var q = (name) => name.split(".").map((p) => /^[a-z_][a-z0-9_$]*$/.test(p) ? p : `"${p.replace(/"/g, '""')}"`).join(".");
-    var key = (schema, name) => `${schema}.${name}`.toLowerCase();
-    var lit = (s) => `'${String(s).replace(/'/g, "''")}'`;
-    function dollar(body) {
-      let tag = "$fn$";
-      for (let i = 0; body.includes(tag); i++) tag = `$fn${i}$`;
-      return `${tag}${body}${tag}`;
-    }
-    function select(cat, opts, env) {
-      const names = namesOf(cat);
-      const all = !opts.tables?.length && !opts.service && !opts.functions?.length && !opts.views?.length;
-      const tables = /* @__PURE__ */ new Set(), fns = /* @__PURE__ */ new Set(), views = /* @__PURE__ */ new Set(), missing = [];
-      const relOf = (n) => resolve(names.rel, names.relBy, n).keys;
-      const fnOf = (n) => resolve(names.fn, names.fnBy, n).keys;
-      if (all) {
-        for (const t of cat.tables) (t.kind === "table" || t.kind === "foreign" ? tables : views).add(key(t.schema, t.name));
-        for (const f of cat.functions || []) fns.add(key(f.schema, f.name));
-        return { tables, fns, views, missing };
-      }
-      const addRel = (n) => {
-        const ks = relOf(n);
-        if (!ks.length) {
-          missing.push(n);
-          return;
-        }
-        for (const k of ks) (names.rel.get(k) === "table" || names.rel.get(k) === "foreign" ? tables : views).add(k);
-      };
-      for (const n of opts.tables || []) addRel(n);
-      for (const n of opts.views || []) addRel(n);
-      for (const n of opts.functions || []) {
-        const ks = fnOf(n);
-        if (!ks.length) missing.push(n);
-        ks.forEach((k) => fns.add(k));
-      }
-      if (opts.service) {
-        const usage = require_pgindex().current(env).edges.filter((e) => e.db === cat.db && e.user === opts.service);
-        if (!usage.length) missing.push(`service ${opts.service} (no usage edges in ${cat.db}: build its passport, then catalog_sync what=index)`);
-        for (const e of usage) (e.targetKind === "function" || e.targetKind === "procedure" ? fns : names.rel.get(e.target) === "table" ? tables : views).add(e.target);
-      }
-      const edges = require_pgindex().current(env).edges.filter((e) => e.db === cat.db && e.source === "db");
-      for (let changed = true, guard = 0; changed && guard < 20; guard++) {
-        changed = false;
-        const add = (set, k) => {
-          if (!set.has(k)) {
-            set.add(k);
-            changed = true;
-          }
-        };
-        for (const t of cat.tables) {
-          const k = key(t.schema, t.name);
-          if (!tables.has(k)) continue;
-          for (const c of t.constraints || []) if (c.type === "f" && c.ref && names.rel.has(c.ref.toLowerCase())) add(tables, c.ref.toLowerCase());
-        }
-        for (const tr of cat.triggers || []) if (tables.has(tr.table.toLowerCase())) add(fns, tr.function.toLowerCase());
-        for (const d of cat.viewDeps || []) {
-          if (!views.has(d.view.toLowerCase())) continue;
-          const r = d.ref.toLowerCase();
-          if (d.ref_kind === "function") add(fns, r);
-          else if (names.rel.get(r) === "table") add(tables, r);
-          else add(views, r);
-        }
-        for (const e of edges) {
-          if (!fns.has(e.user)) continue;
-          if (e.role === "calls") add(fns, e.target);
-          else if (names.rel.get(e.target) === "table") add(tables, e.target);
-          else if (names.rel.has(e.target)) add(views, e.target);
-        }
-      }
-      return { tables, fns, views, missing };
-    }
-    function snapshot(env, db, opts = {}) {
-      const cat = require_pg().loadDb(env, db);
-      if (!cat) throw new Error(`no synced catalog for db "${db}" in ${env}: call catalog_sync what=pg only=${db}`);
-      const { tables, fns, views, missing } = select(cat, opts, env);
-      const st = [];
-      const relByKey = new Map(cat.tables.map((t) => [key(t.schema, t.name), t]));
-      const incTables = cat.tables.filter((t) => tables.has(key(t.schema, t.name)));
-      const incViews = cat.tables.filter((t) => views.has(key(t.schema, t.name)));
-      const incFns = (cat.functions || []).filter((f) => fns.has(key(f.schema, f.name)));
-      const schemas = new Set([...incTables, ...incViews, ...incFns].map((o) => o.schema));
-      const used = /* @__PURE__ */ new Set();
-      for (const t of [...incTables, ...incViews]) for (const c of t.columns) used.add(String(c.type).replace(/\[\]$/, "").toLowerCase());
-      for (const f of incFns) for (const a of f.arg_list || []) used.add(String(a.type).replace(/\[\]$/, "").toLowerCase());
-      const types = (cat.types || []).filter((t) => used.has(`${t.schema}.${t.name}`.toLowerCase()) || t.schema === "public" && used.has(t.name.toLowerCase()) || opts.all !== false && !opts.tables?.length && !opts.service);
-      for (const t of types) schemas.add(t.schema);
-      st.push("set check_function_bodies = false");
-      for (const e of cat.extensions || []) st.push(`create extension if not exists ${q(e.name)}`);
-      for (const s of [...schemas].sort()) if (s !== "public") st.push(`create schema if not exists ${q(s)}`);
-      for (const t of types) {
-        if (t.kind === "enum") st.push(`create type ${q(`${t.schema}.${t.name}`)} as enum (${(t.labels || []).map(lit).join(", ")})`);
-        else st.push(`create domain ${q(`${t.schema}.${t.name}`)} as ${t.base}${t.default ? ` default ${t.default}` : ""}${t.not_null ? " not null" : ""}${(t.checks || []).map((c) => ` ${c}`).join("")}`);
-      }
-      const seqs = /* @__PURE__ */ new Set();
-      for (const t of incTables) for (const c of t.columns) for (const m of String(c.default || "").matchAll(/nextval\('([^']+)'(?:::regclass)?\)/g)) seqs.add(m[1].replace(/"/g, ""));
-      for (const sname of seqs) {
-        const full = sname.includes(".") ? sname : `public.${sname}`;
-        const meta = (cat.sequences || []).find((x) => `${x.schema}.${x.name}` === full);
-        st.push(`create sequence if not exists ${q(full)}${meta && meta.type && meta.type !== "bigint" ? ` as ${meta.type}` : ""}`);
-      }
-      const fks = [];
-      for (const t of incTables) {
-        const cols = t.columns.map((c) => {
-          let s = `  ${q(c.name)} ${c.type}`;
-          if (c.generated === "s") s += ` generated always as (${c.default}) stored`;
-          else if (c.identity) s += ` generated ${c.identity === "a" ? "always" : "by default"} as identity`;
-          else if (c.default) s += ` default ${c.default}`;
-          if (!c.nullable) s += " not null";
-          return s;
-        });
-        for (const c of t.constraints || []) {
-          if (c.type === "n") continue;
-          if (c.type === "f") {
-            if (c.ref && tables.has(c.ref.toLowerCase())) fks.push(`alter table ${q(`${t.schema}.${t.name}`)} add constraint ${q(c.name)} ${c.def}`);
-            continue;
-          }
-          cols.push(`  constraint ${q(c.name)} ${c.def}`);
-        }
-        st.push(`create ${t.kind === "foreign" ? "table" : "table"} ${q(`${t.schema}.${t.name}`)} (
-${cols.join(",\n")}
-)`);
-        const conNames = new Set((t.constraints || []).map((c) => c.name));
-        for (const def of t.indexes || []) {
-          const name = (def.match(/INDEX\s+(?:CONCURRENTLY\s+)?(?:IF NOT EXISTS\s+)?("?[^"\s]+"?)\s+ON/i) || [])[1];
-          if (name && conNames.has(name.replace(/"/g, ""))) continue;
-          st.push(def);
-        }
-        if (t.comment) st.push(`comment on table ${q(`${t.schema}.${t.name}`)} is ${lit(t.comment)}`);
-        for (const c of t.columns) if (c.comment) st.push(`comment on column ${q(`${t.schema}.${t.name}`)}.${q(c.name)} is ${lit(c.comment)}`);
-      }
-      const owners = /* @__PURE__ */ new Map();
-      for (const t of incTables) for (const c of t.columns) for (const m of String(c.default || "").matchAll(/nextval\('([^']+)'/g)) {
-        const k = m[1].replace(/"/g, "");
-        if (!owners.has(k)) owners.set(k, `${q(`${t.schema}.${t.name}`)}.${q(c.name)}`);
-      }
-      for (const s of seqs) if (owners.has(s)) st.push(`alter sequence ${q(s.includes(".") ? s : `public.${s}`)} owned by ${owners.get(s)}`);
-      st.push(...fks);
-      for (const f of incFns) {
-        if (f.kind === "aggregate" || f.kind === "window") continue;
-        const head = f.kind === "procedure" ? `create or replace procedure ${q(`${f.schema}.${f.name}`)}(${f.signature ?? f.args})` : `create or replace function ${q(`${f.schema}.${f.name}`)}(${f.signature ?? f.args}) returns ${f.returns}`;
-        const opts2 = f.kind === "procedure" ? "" : ` ${f.volatility || "volatile"}${f.security_definer ? " security definer" : ""}`;
-        st.push(`${head} language ${f.lang}${opts2} as ${dollar(f.body || "")}`);
-      }
-      const order = [], seen = /* @__PURE__ */ new Set();
-      const deps = /* @__PURE__ */ new Map();
-      for (const d of cat.viewDeps || []) (deps.get(d.view.toLowerCase()) || deps.set(d.view.toLowerCase(), []).get(d.view.toLowerCase())).push(d.ref.toLowerCase());
-      const visit = (k, depth = 0) => {
-        if (seen.has(k) || depth > 50) return;
-        seen.add(k);
-        for (const r of deps.get(k) || []) if (views.has(r)) visit(r, depth + 1);
-        order.push(k);
-      };
-      for (const v of incViews) visit(key(v.schema, v.name));
-      for (const k of order) {
-        const v = relByKey.get(k);
-        if (!v || !v.definition) continue;
-        st.push(v.kind === "matview" ? `create materialized view ${q(k)} as ${v.definition.replace(/;\s*$/, "")} with no data` : `create view ${q(k)} as ${v.definition.replace(/;\s*$/, "")}`);
-        if (v.comment) st.push(`comment on ${v.kind === "matview" ? "materialized view" : "view"} ${q(k)} is ${lit(v.comment)}`);
-      }
-      for (const tr of cat.triggers || []) if (tables.has(tr.table.toLowerCase()) && fns.has(tr.function.toLowerCase())) st.push(tr.def + (tr.enabled ? "" : `;
-alter table ${q(tr.table)} disable trigger ${q(tr.name)}`));
-      const header = `-- DDL snapshot of ${env}/${db} (${cat.database || db}), synced ${cat.syncedAt} by dt.
--- ${incTables.length} tables, ${incViews.length} views, ${incFns.length} functions${opts.service ? `; for ${opts.service}` : ""}.
--- Regenerate with the ddl_snapshot tool; data is not included.
--- dt: tables=${[...tables].join(",")} views=${[...views].join(",")} functions=${[...fns].join(",")}
-`;
-      return {
-        env,
-        db,
-        syncedAt: cat.syncedAt,
-        statements: st,
-        sql: header + "\n" + st.map((s) => s + ";").join("\n\n") + "\n",
-        counts: { tables: incTables.length, views: incViews.length, functions: incFns.length, types: types.length, sequences: seqs.size },
-        tables: incTables.map((t) => key(t.schema, t.name)),
-        views: order,
-        functions: incFns.map((f) => key(f.schema, f.name)),
-        missing
-      };
-    }
-    function requested(text) {
-      const m = String(text || "").match(/^-- dt: tables=(\S*) views=(\S*) functions=(\S*)/m);
-      if (!m) return null;
-      const list = (x) => x.split(",").filter(Boolean);
-      return { tables: list(m[1]), views: list(m[2]), functions: list(m[3]) };
-    }
-    module2.exports = { snapshot, select, requested };
+    var mask = (text, secrets) => {
+      let t = String(text ?? "");
+      for (const s of [...secrets].sort((a, b) => b.length - a.length)) t = t.split(s).join("***");
+      return t;
+    };
+    module2.exports = { forBuild, gradleProperties, gradleFiles, mask };
   }
 });
 
@@ -30689,7 +29965,199 @@ ${e.message}`, ms: Date.now() - started });
       }
       return { code: r.code, out: out2, killed: r.killed, ms: Date.now() - started, cases, compiled: ch.mainChanged.length + ch.testChanged.length, prepared: p.prepared, prepareMs: p.ms };
     }
-    module2.exports = { run, supported, prepare, changed, LAUNCHER };
+    module2.exports = { run, supported, prepare, changed, exec, LAUNCHER };
+  }
+});
+
+// lib/ddl.js
+var require_ddl = __commonJS({
+  "lib/ddl.js"(exports2, module2) {
+    var { resolve, namesOf } = require_pgindex();
+    var q = (name) => name.split(".").map((p) => /^[a-z_][a-z0-9_$]*$/.test(p) ? p : `"${p.replace(/"/g, '""')}"`).join(".");
+    var key = (schema, name) => `${schema}.${name}`.toLowerCase();
+    var lit = (s) => `'${String(s).replace(/'/g, "''")}'`;
+    function dollar(body) {
+      let tag = "$fn$";
+      for (let i = 0; body.includes(tag); i++) tag = `$fn${i}$`;
+      return `${tag}${body}${tag}`;
+    }
+    function select(cat, opts, env) {
+      const names = namesOf(cat);
+      const all = !opts.tables?.length && !opts.service && !opts.functions?.length && !opts.views?.length;
+      const tables = /* @__PURE__ */ new Set(), fns = /* @__PURE__ */ new Set(), views = /* @__PURE__ */ new Set(), missing = [];
+      const relOf = (n) => resolve(names.rel, names.relBy, n).keys;
+      const fnOf = (n) => resolve(names.fn, names.fnBy, n).keys;
+      if (all) {
+        for (const t of cat.tables) (t.kind === "table" || t.kind === "foreign" ? tables : views).add(key(t.schema, t.name));
+        for (const f of cat.functions || []) fns.add(key(f.schema, f.name));
+        return { tables, fns, views, missing };
+      }
+      const addRel = (n) => {
+        const ks = relOf(n);
+        if (!ks.length) {
+          missing.push(n);
+          return;
+        }
+        for (const k of ks) (names.rel.get(k) === "table" || names.rel.get(k) === "foreign" ? tables : views).add(k);
+      };
+      for (const n of opts.tables || []) addRel(n);
+      for (const n of opts.views || []) addRel(n);
+      for (const n of opts.functions || []) {
+        const ks = fnOf(n);
+        if (!ks.length) missing.push(n);
+        ks.forEach((k) => fns.add(k));
+      }
+      if (opts.service) {
+        const usage = require_pgindex().current(env).edges.filter((e) => e.db === cat.db && e.user === opts.service);
+        if (!usage.length) missing.push(`service ${opts.service} (no usage edges in ${cat.db}: build its passport, then catalog_sync what=index)`);
+        for (const e of usage) (e.targetKind === "function" || e.targetKind === "procedure" ? fns : names.rel.get(e.target) === "table" ? tables : views).add(e.target);
+      }
+      const edges = require_pgindex().current(env).edges.filter((e) => e.db === cat.db && e.source === "db");
+      for (let changed = true, guard = 0; changed && guard < 20; guard++) {
+        changed = false;
+        const add = (set, k) => {
+          if (!set.has(k)) {
+            set.add(k);
+            changed = true;
+          }
+        };
+        for (const t of cat.tables) {
+          const k = key(t.schema, t.name);
+          if (!tables.has(k)) continue;
+          for (const c of t.constraints || []) if (c.type === "f" && c.ref && names.rel.has(c.ref.toLowerCase())) add(tables, c.ref.toLowerCase());
+        }
+        for (const tr of cat.triggers || []) if (tables.has(tr.table.toLowerCase())) add(fns, tr.function.toLowerCase());
+        for (const d of cat.viewDeps || []) {
+          if (!views.has(d.view.toLowerCase())) continue;
+          const r = d.ref.toLowerCase();
+          if (d.ref_kind === "function") add(fns, r);
+          else if (names.rel.get(r) === "table") add(tables, r);
+          else add(views, r);
+        }
+        for (const e of edges) {
+          if (!fns.has(e.user)) continue;
+          if (e.role === "calls") add(fns, e.target);
+          else if (names.rel.get(e.target) === "table") add(tables, e.target);
+          else if (names.rel.has(e.target)) add(views, e.target);
+        }
+      }
+      return { tables, fns, views, missing };
+    }
+    function snapshot(env, db, opts = {}) {
+      const cat = require_pg().loadDb(env, db);
+      if (!cat) throw new Error(`no synced catalog for db "${db}" in ${env}: call catalog_sync what=pg only=${db}`);
+      const { tables, fns, views, missing } = select(cat, opts, env);
+      const st = [];
+      const relByKey = new Map(cat.tables.map((t) => [key(t.schema, t.name), t]));
+      const incTables = cat.tables.filter((t) => tables.has(key(t.schema, t.name)));
+      const incViews = cat.tables.filter((t) => views.has(key(t.schema, t.name)));
+      const incFns = (cat.functions || []).filter((f) => fns.has(key(f.schema, f.name)));
+      const schemas = new Set([...incTables, ...incViews, ...incFns].map((o) => o.schema));
+      const used = /* @__PURE__ */ new Set();
+      for (const t of [...incTables, ...incViews]) for (const c of t.columns) used.add(String(c.type).replace(/\[\]$/, "").toLowerCase());
+      for (const f of incFns) for (const a of f.arg_list || []) used.add(String(a.type).replace(/\[\]$/, "").toLowerCase());
+      const types = (cat.types || []).filter((t) => used.has(`${t.schema}.${t.name}`.toLowerCase()) || t.schema === "public" && used.has(t.name.toLowerCase()) || opts.all !== false && !opts.tables?.length && !opts.service);
+      for (const t of types) schemas.add(t.schema);
+      st.push("set check_function_bodies = false");
+      for (const e of cat.extensions || []) st.push(`create extension if not exists ${q(e.name)}`);
+      for (const s of [...schemas].sort()) if (s !== "public") st.push(`create schema if not exists ${q(s)}`);
+      for (const t of types) {
+        if (t.kind === "enum") st.push(`create type ${q(`${t.schema}.${t.name}`)} as enum (${(t.labels || []).map(lit).join(", ")})`);
+        else st.push(`create domain ${q(`${t.schema}.${t.name}`)} as ${t.base}${t.default ? ` default ${t.default}` : ""}${t.not_null ? " not null" : ""}${(t.checks || []).map((c) => ` ${c}`).join("")}`);
+      }
+      const seqs = /* @__PURE__ */ new Set();
+      for (const t of incTables) for (const c of t.columns) for (const m of String(c.default || "").matchAll(/nextval\('([^']+)'(?:::regclass)?\)/g)) seqs.add(m[1].replace(/"/g, ""));
+      for (const sname of seqs) {
+        const full = sname.includes(".") ? sname : `public.${sname}`;
+        const meta = (cat.sequences || []).find((x) => `${x.schema}.${x.name}` === full);
+        st.push(`create sequence if not exists ${q(full)}${meta && meta.type && meta.type !== "bigint" ? ` as ${meta.type}` : ""}`);
+      }
+      const fks = [];
+      for (const t of incTables) {
+        const cols = t.columns.map((c) => {
+          let s = `  ${q(c.name)} ${c.type}`;
+          if (c.generated === "s") s += ` generated always as (${c.default}) stored`;
+          else if (c.identity) s += ` generated ${c.identity === "a" ? "always" : "by default"} as identity`;
+          else if (c.default) s += ` default ${c.default}`;
+          if (!c.nullable) s += " not null";
+          return s;
+        });
+        for (const c of t.constraints || []) {
+          if (c.type === "n") continue;
+          if (c.type === "f") {
+            if (c.ref && tables.has(c.ref.toLowerCase())) fks.push(`alter table ${q(`${t.schema}.${t.name}`)} add constraint ${q(c.name)} ${c.def}`);
+            continue;
+          }
+          cols.push(`  constraint ${q(c.name)} ${c.def}`);
+        }
+        st.push(`create ${t.kind === "foreign" ? "table" : "table"} ${q(`${t.schema}.${t.name}`)} (
+${cols.join(",\n")}
+)`);
+        const conNames = new Set((t.constraints || []).map((c) => c.name));
+        for (const def of t.indexes || []) {
+          const name = (def.match(/INDEX\s+(?:CONCURRENTLY\s+)?(?:IF NOT EXISTS\s+)?("?[^"\s]+"?)\s+ON/i) || [])[1];
+          if (name && conNames.has(name.replace(/"/g, ""))) continue;
+          st.push(def);
+        }
+        if (t.comment) st.push(`comment on table ${q(`${t.schema}.${t.name}`)} is ${lit(t.comment)}`);
+        for (const c of t.columns) if (c.comment) st.push(`comment on column ${q(`${t.schema}.${t.name}`)}.${q(c.name)} is ${lit(c.comment)}`);
+      }
+      const owners = /* @__PURE__ */ new Map();
+      for (const t of incTables) for (const c of t.columns) for (const m of String(c.default || "").matchAll(/nextval\('([^']+)'/g)) {
+        const k = m[1].replace(/"/g, "");
+        if (!owners.has(k)) owners.set(k, `${q(`${t.schema}.${t.name}`)}.${q(c.name)}`);
+      }
+      for (const s of seqs) if (owners.has(s)) st.push(`alter sequence ${q(s.includes(".") ? s : `public.${s}`)} owned by ${owners.get(s)}`);
+      st.push(...fks);
+      for (const f of incFns) {
+        if (f.kind === "aggregate" || f.kind === "window") continue;
+        const head = f.kind === "procedure" ? `create or replace procedure ${q(`${f.schema}.${f.name}`)}(${f.signature ?? f.args})` : `create or replace function ${q(`${f.schema}.${f.name}`)}(${f.signature ?? f.args}) returns ${f.returns}`;
+        const opts2 = f.kind === "procedure" ? "" : ` ${f.volatility || "volatile"}${f.security_definer ? " security definer" : ""}`;
+        st.push(`${head} language ${f.lang}${opts2} as ${dollar(f.body || "")}`);
+      }
+      const order = [], seen = /* @__PURE__ */ new Set();
+      const deps = /* @__PURE__ */ new Map();
+      for (const d of cat.viewDeps || []) (deps.get(d.view.toLowerCase()) || deps.set(d.view.toLowerCase(), []).get(d.view.toLowerCase())).push(d.ref.toLowerCase());
+      const visit = (k, depth = 0) => {
+        if (seen.has(k) || depth > 50) return;
+        seen.add(k);
+        for (const r of deps.get(k) || []) if (views.has(r)) visit(r, depth + 1);
+        order.push(k);
+      };
+      for (const v of incViews) visit(key(v.schema, v.name));
+      for (const k of order) {
+        const v = relByKey.get(k);
+        if (!v || !v.definition) continue;
+        st.push(v.kind === "matview" ? `create materialized view ${q(k)} as ${v.definition.replace(/;\s*$/, "")} with no data` : `create view ${q(k)} as ${v.definition.replace(/;\s*$/, "")}`);
+        if (v.comment) st.push(`comment on ${v.kind === "matview" ? "materialized view" : "view"} ${q(k)} is ${lit(v.comment)}`);
+      }
+      for (const tr of cat.triggers || []) if (tables.has(tr.table.toLowerCase()) && fns.has(tr.function.toLowerCase())) st.push(tr.def + (tr.enabled ? "" : `;
+alter table ${q(tr.table)} disable trigger ${q(tr.name)}`));
+      const header = `-- DDL snapshot of ${env}/${db} (${cat.database || db}), synced ${cat.syncedAt} by dt.
+-- ${incTables.length} tables, ${incViews.length} views, ${incFns.length} functions${opts.service ? `; for ${opts.service}` : ""}.
+-- Regenerate with the ddl_snapshot tool; data is not included.
+-- dt: tables=${[...tables].join(",")} views=${[...views].join(",")} functions=${[...fns].join(",")}
+`;
+      return {
+        env,
+        db,
+        syncedAt: cat.syncedAt,
+        statements: st,
+        sql: header + "\n" + st.map((s) => s + ";").join("\n\n") + "\n",
+        counts: { tables: incTables.length, views: incViews.length, functions: incFns.length, types: types.length, sequences: seqs.size },
+        tables: incTables.map((t) => key(t.schema, t.name)),
+        views: order,
+        functions: incFns.map((f) => key(f.schema, f.name)),
+        missing
+      };
+    }
+    function requested(text) {
+      const m = String(text || "").match(/^-- dt: tables=(\S*) views=(\S*) functions=(\S*)/m);
+      if (!m) return null;
+      const list = (x) => x.split(",").filter(Boolean);
+      return { tables: list(m[1]), views: list(m[2]), functions: list(m[3]) };
+    }
+    module2.exports = { snapshot, select, requested };
   }
 });
 
@@ -30985,8 +30453,26 @@ var require_testrun = __commonJS({
       for (const [k, v] of Object.entries(process.env)) if (KEEP_ENV.test(k) || cfg.passEnv.includes(k)) out2[k] = v;
       return out2;
     }
-    function command(root, p, tests, cfg) {
+    function gradleCmd(root, cfg) {
       const javaBin = cfg.javaHome ? [path2.join(cfg.javaHome, "bin")] : [];
+      const gr = fs2.existsSync(path2.join(root, "gradlew")) ? ["sh", ["gradlew"]] : [cfg.gradle || which("gradle", javaBin), []];
+      if (!gr[0]) throw new Error("no Gradle: the repo has no gradlew, and gradle is not on PATH (set tests.gradle in config.json)");
+      return gr;
+    }
+    async function envFor(p, cfg) {
+      const B = require_buildenv().forBuild(cfg, p.tool);
+      const env = { ...cleanEnv(cfg), MAVEN_OPTS: process.env.MAVEN_OPTS || "-Xmx1g", CI: "true", ...B.env };
+      if (cfg.javaHome) {
+        env.JAVA_HOME = cfg.javaHome;
+        env.PATH = `${path2.join(cfg.javaHome, "bin")}${path2.delimiter}${env.PATH}`;
+      }
+      if (cfg.gradleHome) env.GRADLE_USER_HOME = cfg.gradleHome;
+      const javaMajor = await jdkMajor(cfg);
+      if (cfg.javaToolOptions && javaMajor >= 22 && (p.tool !== "gradle" || cfg.javaToolOptionsGradle)) env.JAVA_TOOL_OPTIONS = [process.env.JAVA_TOOL_OPTIONS, cfg.javaToolOptions].filter(Boolean).join(" ");
+      else if (p.tool === "gradle") delete env.JAVA_TOOL_OPTIONS;
+      return { env, B, javaMajor, hide: (t) => require_buildenv().mask(t, B.secrets) };
+    }
+    function command(root, p, tests, cfg) {
       const sel = tests.map((t) => t.replace(/\.(java|kt)$/, "").split("/").pop());
       if (p.tool === "maven") {
         const mvn = mavenCmd(root, cfg);
@@ -31012,9 +30498,7 @@ var require_testrun = __commonJS({
         return { cmd: mvn[0], args: [...args, ...cfg.args], cwd: p.module !== "." && fs2.existsSync(path2.join(root, "pom.xml")) ? root : p.modDir };
       }
       if (p.tool === "gradle") {
-        const wrapper = fs2.existsSync(path2.join(root, "gradlew")) ? ["sh", ["gradlew"]] : null;
-        const gr = wrapper || [cfg.gradle || which("gradle", javaBin), []];
-        if (!gr[0]) throw new Error("no Gradle: the repo has no gradlew, and gradle is not on PATH (set tests.gradle in config.json)");
+        const gr = gradleCmd(root, cfg);
         const task = p.module === "." ? "test" : `:${p.module.split("/").join(":")}:test`;
         const fq = p.selectors || sel;
         const args = [...gr[1], "--console=plain", "-q", "--warning-mode=none", "--no-watch-fs", ...cfg.gradleBuildCache ? ["--build-cache"] : [], task, ...fq.flatMap((t) => ["--tests", t.replace("#", ".")])];
@@ -31142,6 +30626,30 @@ ${e.message}`, ms: Date.now() - started });
       const m = W.checkId(id);
       const root = m.path;
       const written = writes.map((f) => W.write(id, f.path, { content: f.content, edits: f.edits }));
+      const check = written.length ? await require_javacheck().check(id, written.map((w) => w.path)).catch((e) => ({ skipped: e.message })) : null;
+      if (check?.errors?.length) {
+        const compile2 = check.errors.map((e) => ({ file: e.file, line: e.line, message: e.message }));
+        return {
+          workspace: id,
+          tool: null,
+          mode: "check",
+          written: written.map((w) => w.path),
+          module: null,
+          command: `compile check (${check.compileMs} ms)`,
+          outcome: "compile-error",
+          exit: 1,
+          ms: check.ms,
+          counts: { tests: 0, passed: 0, failed: 0, errors: 0, skipped: 0 },
+          cases: [],
+          compile: compile2,
+          check,
+          parts: compile2.map((e) => ({ file: e.file, line: e.line, why: `compile: ${e.message}`, snippet: snippet(root, e.file, e.line) })),
+          hints: [],
+          database: null,
+          tail: "",
+          history: []
+        };
+      }
       const idx = W.index(id);
       const g = idx.graph_();
       if (!tests.length) throw new Error("name the tests to run (class names like FooTest, or Class#method)");
@@ -31159,18 +30667,8 @@ ${e.message}`, ms: Date.now() - started });
         return meth ? `${f.fqn}#${meth}` : f.fqn;
       });
       const c = why ? command(root, p, tests, cfg) : null;
-      const B = require_buildenv().forBuild(cfg, p.tool);
-      const env = { ...cleanEnv(cfg), MAVEN_OPTS: process.env.MAVEN_OPTS || "-Xmx1g", CI: "true", ...B.env };
+      const { env, B, hide } = await envFor(p, cfg);
       if (c) c.args.splice(c.args.indexOf("--console=plain") + 1 || 0, 0, ...p.tool === "gradle" ? B.args : []);
-      const hide = (t) => require_buildenv().mask(t, B.secrets);
-      if (cfg.javaHome) {
-        env.JAVA_HOME = cfg.javaHome;
-        env.PATH = `${path2.join(cfg.javaHome, "bin")}${path2.delimiter}${env.PATH}`;
-      }
-      if (cfg.gradleHome) env.GRADLE_USER_HOME = cfg.gradleHome;
-      const javaMajor = await jdkMajor(cfg);
-      if (cfg.javaToolOptions && javaMajor >= 22 && (p.tool !== "gradle" || cfg.javaToolOptionsGradle)) env.JAVA_TOOL_OPTIONS = [process.env.JAVA_TOOL_OPTIONS, cfg.javaToolOptions].filter(Boolean).join(" ");
-      else if (p.tool === "gradle") delete env.JAVA_TOOL_OPTIONS;
       let database = null;
       const runId = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
       if (db) {
@@ -31184,6 +30682,7 @@ ${e.message}`, ms: Date.now() - started });
         Object.assign(env, { SPRING_DATASOURCE_URL: database.jdbcUrl, SPRING_DATASOURCE_USERNAME: database.user, SPRING_DATASOURCE_PASSWORD: database.password, SPRING_JPA_HIBERNATE_DDL_AUTO: "none", SPRING_SQL_INIT_MODE: "never", SPRING_FLYWAY_ENABLED: "false", SPRING_LIQUIBASE_ENABLED: "false" });
       }
       const reportDirs = [path2.join(p.modDir, "target", "surefire-reports"), path2.join(p.modDir, "build", "test-results", "test")];
+      await require_javacheck().idle(id);
       const started = Date.now();
       let r, cases, fastInfo = null;
       if (!why) {
@@ -31251,6 +30750,13 @@ ${e.message}`, ms: Date.now() - started });
       const ok = r.code === 0 && counts.failed === 0 && counts.errors === 0 && !compile.length && counts.tests > 0;
       const outcome = ok ? "passed" : r.killed ? "timeout" : compile.length ? "compile-error" : counts.tests === 0 ? "no-tests-ran" : "failed";
       record(id, root, cases, why ? "build" : "fast");
+      const suggestions = (() => {
+        try {
+          return require_javacheck().runHints(id, root, cases);
+        } catch {
+          return [];
+        }
+      })();
       return {
         workspace: id,
         tool: p.tool,
@@ -31269,6 +30775,8 @@ ${e.message}`, ms: Date.now() - started });
         compile,
         parts,
         hints,
+        ...check ? { check } : {},
+        ...suggestions.length ? { suggestions } : {},
         database: database ? { name: database.database, failedStatements: database.errors } : null,
         tail: hide(require_testout().compactLog(r.out)),
         history: history(id, cases)
@@ -31358,7 +30866,1440 @@ ${e.message}`, ms: Date.now() - started });
       if (cur.trim()) out2.push(cur.trim());
       return out2;
     }
-    module2.exports = { run, findTest, jdkMajor, cleanEnv, proof, testName, fingerprint, plan, parseReports, compileErrors, codeParts, splitSql };
+    module2.exports = { run, envFor, gradleCmd, mavenCmd, findTest, jdkMajor, cleanEnv, proof, testName, fingerprint, plan, parseReports, compileErrors, codeParts, splitSql };
+  }
+});
+
+// lib/javacheck.js
+var require_javacheck = __commonJS({
+  "lib/javacheck.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var crypto = require("crypto");
+    var { spawn } = require("child_process");
+    var COMPILER = `
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import javax.tools.*;
+
+// dt compile checks: one request per line on stdin ("id\\toptions\\u0001...\\tfiles\\u0001..."),
+// one JSON answer per line on stdout. File managers are kept per classpath (their jars stay open).
+public class DtCompiler {
+    static String q(String s) {
+        if (s == null) return "null";
+        StringBuilder b = new StringBuilder("\\"");
+        for (char c : s.toCharArray()) {
+            if (c == '"' || c == '\\\\') b.append('\\\\').append(c);
+            else if (c < 0x20) b.append(String.format("\\\\u%04x", (int) c));
+            else b.append(c);
+        }
+        return b.append('"').toString();
+    }
+
+    public static void main(String[] args) throws Exception {
+        JavaCompiler javac = ToolProvider.getSystemJavaCompiler();
+        PrintStream out = new PrintStream(new FileOutputStream(FileDescriptor.out), true, StandardCharsets.UTF_8);
+        System.setOut(new PrintStream(OutputStream.nullOutputStream()));
+        if (javac == null) { out.println("{\\"fatal\\":\\"no compiler: this is a JRE, not a JDK\\"}"); return; }
+        BufferedReader in = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
+        Map<String, StandardJavaFileManager> managers = new LinkedHashMap<>(8, 0.75f, true);
+        String line;
+        while ((line = in.readLine()) != null) {
+            String[] p = line.split("\\t", -1);
+            String id = p[0];
+            List<String> opts = p[1].isEmpty() ? List.of() : Arrays.asList(p[1].split("\\u0001"));
+            List<String> files = Arrays.asList(p[2].split("\\u0001"));
+            long t0 = System.nanoTime();
+            StringBuilder b = new StringBuilder();
+            try {
+                String key = String.valueOf(opts.indexOf("-cp") >= 0 ? opts.get(opts.indexOf("-cp") + 1).hashCode() : 0);
+                StandardJavaFileManager fm = managers.get(key);
+                if (fm == null) {
+                    fm = javac.getStandardFileManager(null, Locale.ROOT, StandardCharsets.UTF_8);
+                    managers.put(key, fm);
+                    if (managers.size() > 4) { String old = managers.keySet().iterator().next(); managers.remove(old).close(); }
+                }
+                DiagnosticCollector<JavaFileObject> dc = new DiagnosticCollector<>();
+                boolean ok = javac.getTask(new StringWriter(), fm, dc, opts, null, fm.getJavaFileObjectsFromStrings(files)).call();
+                List<String> ds = new ArrayList<>();
+                for (Diagnostic<? extends JavaFileObject> d : dc.getDiagnostics()) {
+                    if (d.getKind() != Diagnostic.Kind.ERROR && d.getKind() != Diagnostic.Kind.WARNING) continue;
+                    ds.add("{\\"kind\\":" + q(d.getKind().name()) + ",\\"code\\":" + q(d.getCode()) + ",\\"file\\":" + q(d.getSource() == null ? null : d.getSource().getName())
+                        + ",\\"line\\":" + d.getLineNumber() + ",\\"col\\":" + d.getColumnNumber() + ",\\"message\\":" + q(d.getMessage(Locale.ROOT)) + "}");
+                }
+                b.append("{\\"id\\":").append(q(id)).append(",\\"ok\\":").append(ok).append(",\\"ms\\":").append((System.nanoTime() - t0) / 1000000).append(",\\"diagnostics\\":[").append(String.join(",", ds)).append("]}");
+            } catch (Throwable e) {
+                b.setLength(0);
+                b.append("{\\"id\\":").append(q(id)).append(",\\"ok\\":false,\\"error\\":").append(q(String.valueOf(e))).append("}");
+            }
+            out.println(b);
+        }
+    }
+}
+`;
+    var hash = (s) => crypto.createHash("sha1").update(s).digest("hex").slice(0, 12);
+    var daemons = /* @__PURE__ */ new Map();
+    function javaBin(javaHome, t) {
+      return javaHome ? path2.join(javaHome, "bin", t) : t;
+    }
+    async function compilerDir(javaHome) {
+      const { PATHS } = require_config();
+      const dir = path2.join(PATHS.build, "javacheck", `compiler-${hash(COMPILER)}-${hash(javaHome || "PATH")}`);
+      if (fs2.existsSync(path2.join(dir, "DtCompiler.class"))) return dir;
+      fs2.mkdirSync(dir, { recursive: true });
+      fs2.writeFileSync(path2.join(dir, "DtCompiler.java"), COMPILER);
+      await new Promise((resolve, reject) => {
+        const p = spawn(javaBin(javaHome, "javac"), ["-d", dir, path2.join(dir, "DtCompiler.java")], { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, JAVA_TOOL_OPTIONS: "" } });
+        let err = "";
+        p.stderr.on("data", (d) => {
+          err += d;
+        });
+        p.on("error", reject);
+        p.on("close", (code) => code === 0 ? resolve() : reject(new Error(`compiling dt's compiler failed: ${err.slice(0, 300)}`)));
+      });
+      return dir;
+    }
+    async function daemon(javaHome) {
+      const key = javaHome || "PATH";
+      const d = daemons.get(key);
+      if (d && d.proc.exitCode === null) return d;
+      const dir = await compilerDir(javaHome);
+      const proc = spawn(javaBin(javaHome, "java"), ["-Xss4m", "-XX:+UseSerialGC", "-Xshare:auto", "-cp", dir, "DtCompiler"], { stdio: ["pipe", "pipe", "pipe"], env: { ...process.env, JAVA_TOOL_OPTIONS: "" } });
+      const nd = { proc, waiting: /* @__PURE__ */ new Map(), buf: "" };
+      proc.unref();
+      proc.stdin.unref?.();
+      proc.stderr.unref?.();
+      proc.stdout.unref?.();
+      nd.hold = (on) => {
+        if (on) proc.stdout.ref?.();
+        else if (!nd.waiting.size) proc.stdout.unref?.();
+      };
+      proc.stdout.on("data", (c) => {
+        nd.buf += c;
+        let i;
+        while ((i = nd.buf.indexOf("\n")) >= 0) {
+          const line = nd.buf.slice(0, i);
+          nd.buf = nd.buf.slice(i + 1);
+          let m;
+          try {
+            m = JSON.parse(line);
+          } catch {
+            continue;
+          }
+          if (m.fatal) {
+            for (const [, w2] of nd.waiting) w2(m);
+            nd.waiting.clear();
+            continue;
+          }
+          const w = nd.waiting.get(m.id);
+          if (w) {
+            nd.waiting.delete(m.id);
+            nd.hold(false);
+            w(m);
+          }
+        }
+      });
+      proc.on("exit", () => {
+        for (const [, w] of nd.waiting) w({ ok: false, error: "the compiler stopped" });
+        nd.waiting.clear();
+      });
+      proc.stdin.on("error", () => {
+      });
+      daemons.set(key, nd);
+      return nd;
+    }
+    async function compileHere({ javaHome, options, files, timeoutMs = 12e4 }) {
+      const d = await daemon(javaHome);
+      const id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+      return new Promise((resolve) => {
+        const timer = setTimeout(() => {
+          d.waiting.delete(id);
+          d.hold(false);
+          try {
+            d.proc.kill();
+          } catch {
+          }
+          resolve({ ok: false, error: `compile check took over ${timeoutMs} ms` });
+        }, timeoutMs);
+        d.waiting.set(id, (m) => {
+          clearTimeout(timer);
+          resolve(m);
+        });
+        d.hold(true);
+        d.proc.stdin.write(`${id}	${options.join("")}	${files.join("")}
+`);
+      });
+    }
+    async function compile(req) {
+      const t = require_config().getTests();
+      if (t.runnerUrl) {
+        try {
+          const res = await fetch(`${t.runnerUrl}/compile`, { method: "POST", headers: { authorization: `Bearer ${t.runnerToken || ""}`, "content-type": "application/json" }, body: JSON.stringify(req), signal: AbortSignal.timeout(18e4) });
+          if (res.ok) return res.json();
+          if (res.status !== 404) return { ok: false, error: `runner: HTTP ${res.status} ${(await res.text()).slice(0, 200)}` };
+        } catch (e) {
+          if (!/ECONNREFUSED|ENOTFOUND|EAI_AGAIN/.test(`${e.cause?.code} ${e.message}`)) return { ok: false, error: `runner: ${e.message}` };
+        }
+      }
+      return compileHere(req);
+    }
+    function zipEntries(file) {
+      const fd = fs2.openSync(file, "r");
+      try {
+        const size = fs2.fstatSync(fd).size;
+        const tail = Buffer.alloc(Math.min(size, 66e3));
+        fs2.readSync(fd, tail, 0, tail.length, size - tail.length);
+        let eocd = -1;
+        for (let i = tail.length - 22; i >= 0; i--) if (tail.readUInt32LE(i) === 101010256) {
+          eocd = i;
+          break;
+        }
+        if (eocd < 0) return [];
+        const count = tail.readUInt16LE(eocd + 10), cdSize = tail.readUInt32LE(eocd + 12), cdOff = tail.readUInt32LE(eocd + 16);
+        const cd = Buffer.alloc(cdSize);
+        fs2.readSync(fd, cd, 0, cdSize, cdOff);
+        const names = [];
+        for (let p = 0, n = 0; n < count && p + 46 <= cd.length; n++) {
+          if (cd.readUInt32LE(p) !== 33639248) break;
+          const nl = cd.readUInt16LE(p + 28), el = cd.readUInt16LE(p + 30), cl = cd.readUInt16LE(p + 32);
+          names.push(cd.toString("utf8", p + 46, p + 46 + nl));
+          p += 46 + nl + el + cl;
+        }
+        return names;
+      } catch {
+        return [];
+      } finally {
+        fs2.closeSync(fd);
+      }
+    }
+    var SKIP_PKG = /(^|\.)(internal|impl|shaded|shade|repackaged|jdk\.internal|sun|com\.sun)(\.|$)|^META-INF|^module-info$/;
+    function jarIndex(classpath) {
+      const { PATHS } = require_config();
+      const file = path2.join(PATHS.build, "javacheck", `classes-${hash(classpath.join(path2.delimiter))}.json`);
+      try {
+        return JSON.parse(fs2.readFileSync(file, "utf8"));
+      } catch {
+      }
+      const idx = {};
+      for (const entry of classpath) {
+        let names = [];
+        try {
+          if (/\.jar$/.test(entry) && fs2.existsSync(entry)) names = zipEntries(entry);
+          else if (fs2.existsSync(entry) && fs2.statSync(entry).isDirectory()) continue;
+        } catch {
+          continue;
+        }
+        for (const n of names) {
+          if (!n.endsWith(".class") || n.includes("$") || n.startsWith("META-INF/")) continue;
+          const fqn = n.slice(0, -6).replace(/\//g, ".").replace(/^BOOT-INF\.classes\./, "");
+          if (SKIP_PKG.test(fqn)) continue;
+          const simple = fqn.split(".").pop();
+          (idx[simple] ||= []).push(fqn);
+        }
+      }
+      try {
+        fs2.mkdirSync(path2.dirname(file), { recursive: true });
+        fs2.writeFileSync(file, JSON.stringify(idx));
+      } catch {
+      }
+      return idx;
+    }
+    var JDK = Object.fromEntries(["java.util.List", "java.util.ArrayList", "java.util.Map", "java.util.HashMap", "java.util.Set", "java.util.HashSet", "java.util.Optional", "java.util.UUID", "java.util.Collection", "java.util.Collections", "java.util.Arrays", "java.util.Objects", "java.util.Comparator", "java.util.LinkedHashMap", "java.util.stream.Collectors", "java.util.stream.Stream", "java.util.stream.IntStream", "java.util.function.Function", "java.util.function.Supplier", "java.util.function.Consumer", "java.util.function.Predicate", "java.util.concurrent.TimeUnit", "java.util.concurrent.CompletableFuture", "java.math.BigDecimal", "java.math.BigInteger", "java.math.RoundingMode", "java.time.Instant", "java.time.LocalDate", "java.time.LocalDateTime", "java.time.OffsetDateTime", "java.time.ZonedDateTime", "java.time.Duration", "java.time.ZoneOffset", "java.time.Clock", "java.nio.charset.StandardCharsets", "java.nio.file.Files", "java.nio.file.Path", "java.io.IOException", "java.io.UncheckedIOException", "java.sql.Connection", "java.sql.Timestamp", "java.sql.DriverManager", "java.sql.ResultSet", "java.sql.SQLException"].map((f) => [f.split(".").pop(), [f]]));
+    var STATIC = {
+      assertThat: ["org.assertj.core.api.Assertions", "org.hamcrest.MatcherAssert"],
+      assertThatThrownBy: ["org.assertj.core.api.Assertions"],
+      assertThatCode: ["org.assertj.core.api.Assertions"],
+      assertThatExceptionOfType: ["org.assertj.core.api.Assertions"],
+      within: ["org.assertj.core.api.Assertions"],
+      tuple: ["org.assertj.core.api.Assertions"],
+      assertEquals: ["org.junit.jupiter.api.Assertions", "org.junit.Assert"],
+      assertTrue: ["org.junit.jupiter.api.Assertions", "org.junit.Assert"],
+      assertFalse: ["org.junit.jupiter.api.Assertions", "org.junit.Assert"],
+      assertNull: ["org.junit.jupiter.api.Assertions", "org.junit.Assert"],
+      assertNotNull: ["org.junit.jupiter.api.Assertions", "org.junit.Assert"],
+      assertThrows: ["org.junit.jupiter.api.Assertions"],
+      assertAll: ["org.junit.jupiter.api.Assertions"],
+      fail: ["org.junit.jupiter.api.Assertions"],
+      when: ["org.mockito.Mockito"],
+      verify: ["org.mockito.Mockito"],
+      mock: ["org.mockito.Mockito"],
+      spy: ["org.mockito.Mockito"],
+      times: ["org.mockito.Mockito"],
+      never: ["org.mockito.Mockito"],
+      atLeastOnce: ["org.mockito.Mockito"],
+      doThrow: ["org.mockito.Mockito"],
+      doReturn: ["org.mockito.Mockito"],
+      doNothing: ["org.mockito.Mockito"],
+      doAnswer: ["org.mockito.Mockito"],
+      lenient: ["org.mockito.Mockito"],
+      reset: ["org.mockito.Mockito"],
+      verifyNoInteractions: ["org.mockito.Mockito"],
+      verifyNoMoreInteractions: ["org.mockito.Mockito"],
+      inOrder: ["org.mockito.Mockito"],
+      any: ["org.mockito.ArgumentMatchers"],
+      eq: ["org.mockito.ArgumentMatchers"],
+      anyString: ["org.mockito.ArgumentMatchers"],
+      anyLong: ["org.mockito.ArgumentMatchers"],
+      anyInt: ["org.mockito.ArgumentMatchers"],
+      anyList: ["org.mockito.ArgumentMatchers"],
+      anyMap: ["org.mockito.ArgumentMatchers"],
+      argThat: ["org.mockito.ArgumentMatchers"],
+      isNull: ["org.mockito.ArgumentMatchers"],
+      contains: ["org.mockito.ArgumentMatchers"],
+      startsWith: ["org.mockito.ArgumentMatchers"],
+      get: ["org.springframework.test.web.servlet.request.MockMvcRequestBuilders"],
+      post: ["org.springframework.test.web.servlet.request.MockMvcRequestBuilders"],
+      put: ["org.springframework.test.web.servlet.request.MockMvcRequestBuilders"],
+      delete: ["org.springframework.test.web.servlet.request.MockMvcRequestBuilders"],
+      patch: ["org.springframework.test.web.servlet.request.MockMvcRequestBuilders"],
+      status: ["org.springframework.test.web.servlet.result.MockMvcResultMatchers"],
+      jsonPath: ["org.springframework.test.web.servlet.result.MockMvcResultMatchers"],
+      content: ["org.springframework.test.web.servlet.result.MockMvcResultMatchers"],
+      header: ["org.springframework.test.web.servlet.result.MockMvcResultMatchers"],
+      print: ["org.springframework.test.web.servlet.result.MockMvcResultHandlers"]
+    };
+    var tier = (f, own) => own.some((p) => f.startsWith(p)) ? 0 : /^java\./.test(f) ? 1 : /^(jakarta|javax)\./.test(f) ? 2 : /^(org\.springframework|org\.junit|org\.mockito|org\.assertj|org\.testcontainers|com\.fasterxml\.jackson|org\.hamcrest)\./.test(f) ? 3 : 4;
+    function rank(fqns, own) {
+      return [...new Set(fqns)].sort((a, b) => tier(a, own) - tier(b, own) || a.length - b.length || a.localeCompare(b));
+    }
+    function pick(fqns, own, text = "") {
+      const r = rank(fqns, own);
+      if (r.length === 1) return r[0];
+      if (r.length < 2) return null;
+      const pkgs = new Set([...text.matchAll(/^import\s+(?:static\s+)?([\w.]+)\.\w+\s*;/gm)].map((m) => m[1].split(".").slice(0, 3).join(".")));
+      const near = r.filter((f) => pkgs.has(f.split(".").slice(0, 3).join(".")));
+      if (near.length === 1) return near[0];
+      if (tier(r[0], own) <= 3 && tier(r[1], own) > tier(r[0], own)) return r[0];
+      return null;
+    }
+    function lev(a, b) {
+      if (Math.abs(a.length - b.length) > 2) return 9;
+      const d = Array.from({ length: b.length + 1 }, (_, i) => i);
+      for (let i = 1; i <= a.length; i++) {
+        let prev = d[0];
+        d[0] = i;
+        for (let j = 1; j <= b.length; j++) {
+          const t = d[j];
+          d[j] = Math.min(d[j] + 1, d[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+          prev = t;
+        }
+      }
+      return d[b.length];
+    }
+    var similar = (name, names, max = 5) => names.filter((n) => n !== name && (n.toLowerCase() === name.toLowerCase() || n[0] === name[0] && lev(n, name) <= 2)).slice(0, max);
+    function importEdit(text, fqn, isStatic) {
+      const line = `import ${isStatic ? "static " : ""}${fqn};`;
+      if (new RegExp(`^\\s*${line.replace(/[.*]/g, "\\$&")}`, "m").test(text)) return null;
+      const first = text.match(/^import\s[^\n]+$/m);
+      if (first && text.split(first[0]).length === 2) return { find: first[0], replace: `${line}
+${first[0]}` };
+      const pkg = text.match(/^package\s[^\n]+$/m);
+      if (pkg) return { find: pkg[0], replace: `${pkg[0]}
+
+${line}` };
+      return { find: text.split("\n")[0], replace: `${line}
+${text.split("\n")[0]}` };
+    }
+    var symbolOf = (msg) => {
+      const m = String(msg).match(/symbol:\s+(class|variable|method|interface)\s+([\w$]+)(?:\(([^)]*)\))?/);
+      const loc = String(msg).match(/location:\s+(?:(class|interface|variable)\s+([\w.$<>]+)(?:\s+of type\s+([\w.$<>]+))?)/);
+      return m ? { kind: m[1], name: m[2], args: m[3], location: loc ? { kind: loc[1], name: loc[2], type: loc[3] } : null } : null;
+    };
+    function enclosing(text, line) {
+      const lines = text.split("\n");
+      for (let i = line - 1; i >= 0; i--) {
+        const l = lines[i];
+        const m = l.match(/^\s*(?:@\w+(?:\([^)]*\))?\s+)*(?:(?:public|protected|private|static|final|synchronized|default)\s+)*(?:<[^>]+>\s+)?[\w.<>[\],?\s]+?\s+(\w+)\s*\([^;{}]*\)\s*(throws\s+[\w.,\s]+)?\{\s*$/);
+        if (m && !/^\s*(if|for|while|switch|catch|return|new|else)\b/.test(l)) return { line: i + 1, name: m[1], head: l, throws: !!m[2] };
+        if (/^\s*(public|protected|private)?\s*(final\s+)?(class|interface|record|enum)\s/.test(l)) return null;
+      }
+      return null;
+    }
+    function fixesFor(text, diags, { index, known, own, graph }) {
+      const fixed = [], suggestions = [];
+      const seen = /* @__PURE__ */ new Set();
+      const apply = (e, why) => {
+        if (!e || text.split(e.find).length !== 2) return false;
+        text = text.replace(e.find, () => e.replace);
+        fixed.push(why);
+        return true;
+      };
+      const classes = (name) => [...index[name] || [], ...JDK[name] || []];
+      const declared = new Set([...text.matchAll(/\b(?:class|interface|record|enum)\s+(\w+)/g)].map((m) => m[1]));
+      for (const d of diags) {
+        if (d.kind !== "ERROR") continue;
+        const sym = symbolOf(d.message);
+        const code = d.code || "";
+        if (/cant\.resolve/.test(code) && sym) {
+          const asType = sym.kind === "class" || sym.kind === "interface" || sym.kind === "variable" && /^[A-Z]/.test(sym.name) && !/^[A-Z0-9_]+$/.test(sym.name);
+          const key = `${asType ? "type" : sym.kind}:${sym.name}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          if (asType) {
+            const swap = { MockBean: ["MockitoBean", "org.springframework.test.context.bean.override.mockito.MockitoBean"], SpyBean: ["MockitoSpyBean", "org.springframework.test.context.bean.override.mockito.MockitoSpyBean"], MockitoBean: ["MockBean", "org.springframework.boot.test.mock.mockito.MockBean"], MockitoSpyBean: ["SpyBean", "org.springframework.boot.test.mock.mockito.SpyBean"] }[sym.name];
+            if (swap && !classes(sym.name).length && known.has(swap[1])) {
+              const before = text;
+              text = text.replace(new RegExp(`@${sym.name}\\b`, "g"), `@${swap[0]}`).replace(new RegExp(`^import\\s+[\\w.]+\\.${sym.name};\\n`, "m"), "");
+              if (text !== before) {
+                fixed.push(`@${sym.name} -> @${swap[0]} (this Spring Boot has only that one)`);
+                apply(importEdit(text, swap[1], false), `import ${swap[1]}`);
+              }
+              continue;
+            }
+            const cands = classes(sym.name);
+            const one = pick(cands, own, text);
+            if (one) {
+              apply(importEdit(text, one, false), `import ${one} (${sym.name}, line ${d.line})`);
+              continue;
+            }
+            if (cands.length) {
+              suggestions.push({ line: d.line, why: `${sym.name} is in ${new Set(cands).size} packages: import the one meant`, options: rank(cands, own).slice(0, 6).map((f) => ({ import: f, edits: [importEdit(text, f, false)].filter(Boolean) })) });
+              continue;
+            }
+            const near = similar(sym.name, Object.keys(index));
+            suggestions.push({ line: d.line, why: `no class ${sym.name} in the code or on the classpath${near.length ? `: did you mean ${near.join(", ")}?` : " (a typo, or a dependency this module lacks)"}` });
+            continue;
+          }
+          const here = !sym.location || sym.location.kind !== "variable" && declared.has(String(sym.location.name).split(".").pop().replace(/<.*/, ""));
+          if (here && STATIC[sym.name]) {
+            const from = STATIC[sym.name].find((c) => known.has(c)) || (known.size ? null : STATIC[sym.name][0]);
+            if (from) {
+              apply(importEdit(text, `${from}.${sym.name}`, true), `import static ${from}.${sym.name} (line ${d.line})`);
+              continue;
+            }
+          }
+          const owner = sym.location?.type || (sym.location?.kind !== "variable" ? sym.location?.name : null);
+          const cls = owner && graph ? graph.classes.find((c) => c.id === owner || c.name === String(owner).split(".").pop().replace(/<.*/, "")) : null;
+          if (cls) {
+            const names = [...new Set((cls.methods || []).filter((m) => !m.ctor).map((m) => m.name))];
+            const near = similar(sym.name, names);
+            const same = (cls.methods || []).filter((m) => m.name === sym.name);
+            suggestions.push({ line: d.line, why: same.length ? `${cls.name}.${sym.name} takes (${same.map((m) => (m.params || []).map((p) => p.type).join(", ")).join(") or (")})` : `${cls.name} has no ${sym.name}${near.length ? `: ${near.join(", ")}?` : ""} (it has ${names.slice(0, 12).join(", ")})` });
+          }
+          continue;
+        }
+        if (/doesnt\.exist/.test(code)) {
+          const line = text.split("\n")[d.line - 1] || "";
+          const im = line.match(/^\s*import\s+(static\s+)?([\w.]+)\.(\w+|\*)\s*;/);
+          if (!im || seen.has(line)) continue;
+          seen.add(line);
+          const pkg = im[2];
+          if (im[3] === "*") {
+            const jk2 = pkg.replace(/^javax\./, "jakarta.");
+            if (jk2 !== pkg && [...known].some((c) => c.startsWith(`${jk2}.`))) apply({ find: line, replace: line.replace(pkg, jk2) }, `${pkg} -> ${jk2} (line ${d.line})`);
+            continue;
+          }
+          if (im[1]) continue;
+          const cands = classes(im[3]).filter((f) => f !== `${pkg}.${im[3]}`);
+          const jk = `${pkg.replace(/^javax\./, "jakarta.")}.${im[3]}`;
+          const one = cands.includes(jk) ? jk : pick(cands, own, text);
+          if (one) apply({ find: line, replace: line.replace(`${pkg}.${im[3]}`, one) }, `import ${one} instead of ${pkg}.${im[3]} (line ${d.line})`);
+          else if (cands.length) suggestions.push({ line: d.line, why: `no package ${pkg}: ${im[3]} is in ${rank(cands, own).slice(0, 4).join(", ")}`, options: rank(cands, own).slice(0, 6).map((f) => ({ import: f, edits: [{ find: line, replace: line.replace(`${pkg}.${im[3]}`, f) }] })) });
+          else suggestions.push({ line: d.line, why: `no package ${pkg} on the classpath (a dependency this module lacks?)` });
+          continue;
+        }
+        if (/ref\.ambiguous/.test(code)) {
+          if (!seen.has(`amb:${d.line}`)) {
+            seen.add(`amb:${d.line}`);
+            suggestions.push({ line: d.line, why: `${short(d.message)}: give the type, any(Type.class) or (Type) null` });
+          }
+          continue;
+        }
+        if (/unreported\.exception/.test(code)) {
+          const m = enclosing(text, d.line);
+          if (!m || m.throws || seen.has(`throws:${m.line}`)) continue;
+          seen.add(`throws:${m.line}`);
+          const edit = { find: m.head, replace: m.head.replace(/\)\s*\{\s*$/, ") throws Exception {") };
+          const ex = (d.message.match(/exception ([\w.$]+)/) || [])[1] || "a checked exception";
+          const isTest = /(^|\n)\s*@(Test|ParameterizedTest|BeforeEach|AfterEach|BeforeAll|AfterAll|RepeatedTest)\b/.test(text.split("\n").slice(Math.max(0, m.line - 4), m.line).join("\n"));
+          if (isTest) apply(edit, `${m.name}() throws Exception (${ex.split(".").pop()} at line ${d.line})`);
+          else suggestions.push({ line: m.line, why: `${ex} is thrown in ${m.name}: declare it, or catch it`, edits: [edit] });
+        }
+      }
+      return { text, fixed, suggestions };
+    }
+    var GRADLE_INIT = `
+allprojects {
+  tasks.register('dtClasspath') {
+    def ss = project.extensions.findByName('sourceSets')
+    def jx = project.extensions.findByName('java')
+    def out = project.findProperty('dtOut')
+    doLast {
+      def files = { c -> c == null ? [] : c.files.collect { it.absolutePath } }
+      def t = ss?.findByName('test'), m = ss?.findByName('main')
+      def rel = null
+      try { rel = jx?.toolchain?.languageVersion?.getOrNull()?.asInt() } catch (ignored) {}
+      if (rel == null) try { rel = jx?.targetCompatibility?.majorVersion } catch (ignored) {}
+      // modules this one depends on (project(':core')): their sources, as they may not be compiled yet
+      def seen = [] as LinkedHashSet
+      def walk
+      walk = { p ->
+        ['compileClasspath', 'testCompileClasspath'].each { cn ->
+          def c = p.configurations.findByName(cn)
+          if (c == null) return
+          c.allDependencies.withType(org.gradle.api.artifacts.ProjectDependency).each { d ->
+            def path = null
+            try { path = d.path } catch (ignored) { try { path = d.dependencyProject.path } catch (ignored2) {} }
+            if (path != null && path != p.path && seen.add(path)) walk(p.project(path))
+          }
+        }
+      }
+      walk(project)
+      def deps = seen.collectMany { pp -> project.project(pp).extensions.findByName('sourceSets')?.findByName('main')?.java?.srcDirs ?: [] }
+      new File(out).text = groovy.json.JsonOutput.toJson([
+        classpath: files(t?.compileClasspath),
+        processorpath: (files(t?.annotationProcessorPath) + files(m?.annotationProcessorPath)).unique(),
+        sources: ((m?.java?.srcDirs ?: []) + (t?.java?.srcDirs ?: []) + deps).collect { it.absolutePath },
+        release: rel == null ? null : rel.toString(),
+      ])
+    }
+  }
+}
+`;
+    var { CACHE: CACHE2 } = require_util();
+    var stateFile = (id) => path2.join(CACHE2, "work", `${id}.check.json`);
+    var readJson = (f, d) => {
+      try {
+        return JSON.parse(fs2.readFileSync(f, "utf8"));
+      } catch {
+        return d;
+      }
+    };
+    function buildHash(root) {
+      const files = [];
+      (function rec(d, depth) {
+        let es;
+        try {
+          es = fs2.readdirSync(d, { withFileTypes: true });
+        } catch {
+          return;
+        }
+        for (const e of es) {
+          if (e.isDirectory()) {
+            if (depth < 6 && !/^(\.|build$|target$|node_modules$|src$|out$)/.test(e.name)) rec(path2.join(d, e.name), depth + 1);
+            continue;
+          }
+          if (/^(pom\.xml|build\.gradle(\.kts)?|settings\.gradle(\.kts)?|gradle\.properties|libs\.versions\.toml)$/.test(e.name)) files.push(path2.join(d, e.name));
+        }
+      })(root, 0);
+      return hash(files.sort().map((f) => `${f}
+${fs2.readFileSync(f, "utf8")}`).join("\n"));
+    }
+    async function gradleClasspath(root, p, cfg, env, B) {
+      const TR = require_testrun();
+      const dir = path2.join(root, ".dt");
+      fs2.mkdirSync(dir, { recursive: true });
+      const init = path2.join(dir, "dt-classpath.gradle");
+      fs2.writeFileSync(init, GRADLE_INIT);
+      const out2 = path2.join(dir, `check-${hash(p.module)}.json`);
+      fs2.rmSync(out2, { force: true });
+      const gr = TR.gradleCmd(root, cfg);
+      const task = p.module === "." ? "dtClasspath" : `:${p.module.split("/").join(":")}:dtClasspath`;
+      const args = [...gr[1], "--console=plain", "-q", "--warning-mode=none", "--no-watch-fs", "--no-configuration-cache", ...B.args, "--init-script", init, task, `-PdtOut=${out2}`, ...cfg.offline ? ["--offline"] : [], ...cfg.args];
+      const r = await require_trace().step("gradle classpath", () => require_fastrun().exec(gr[0], args, { cwd: root, env, timeoutMs: 6e5 }), p.module);
+      if (r.code !== 0 || !fs2.existsSync(out2)) return { error: `Gradle could not give the classpath: ${require_testout().compactLog(r.out).slice(-1500)}` };
+      const j = JSON.parse(fs2.readFileSync(out2, "utf8"));
+      return { classpath: j.classpath || [], processorpath: j.processorpath || [], sources: (j.sources || []).filter((d) => fs2.existsSync(d)), release: j.release ? Number(j.release) : null };
+    }
+    async function mavenClasspath(id, root, p, cfg, env) {
+      const sources = ["main", "test"].map((k) => path2.join(p.modDir, "src", k, "java")).filter((d) => fs2.existsSync(d));
+      const release = (() => {
+        for (const f of [path2.join(p.modDir, "pom.xml"), path2.join(root, "pom.xml")]) {
+          try {
+            const t = fs2.readFileSync(f, "utf8");
+            const m = t.match(/<maven\.compiler\.release>\s*(\d+)/) || t.match(/<java\.version>\s*(\d+)/) || t.match(/<maven\.compiler\.source>\s*(?:1\.)?(\d+)/);
+            if (m) return Number(m[1]);
+          } catch {
+          }
+        }
+        return null;
+      })();
+      const fast = readJson(path2.join(CACHE2, "work", `${id}.fast.json`), {})[p.module];
+      if (fast && fs2.existsSync(fast.classes)) return { classpath: [fast.classes, fast.testClasses, ...fast.classpath], processorpath: [], sources, release };
+      const TR = require_testrun();
+      const mvn = TR.mavenCmd(root, cfg);
+      fs2.mkdirSync(path2.join(root, ".dt"), { recursive: true });
+      const cpFile = path2.join(root, ".dt", `check-classpath-${hash(p.module)}.txt`);
+      fs2.rmSync(cpFile, { force: true });
+      const multi = p.module !== "." && fs2.existsSync(path2.join(root, "pom.xml"));
+      const args = [
+        ...mvn[1],
+        "-B",
+        "-ntp",
+        "-q",
+        `-Dmaven.repo.local=${cfg.mavenRepo}`,
+        ...cfg.offline ? ["-o"] : [],
+        ...cfg.mavenSettings ? ["-s", cfg.mavenSettings] : [],
+        ...cfg.args,
+        "compile",
+        "dependency:build-classpath",
+        `-Dmdep.outputFile=${cpFile}`,
+        "-Dmdep.includeScope=test",
+        "-Dmaven.compiler.failOnError=false",
+        "-Djacoco.skip=true",
+        "-Dcheckstyle.skip=true",
+        "-Dspotless.check.skip=true",
+        "-Denforcer.skip=true",
+        "-Dpmd.skip=true",
+        "-Dspotbugs.skip=true",
+        ...multi ? ["-pl", p.module, "-am"] : []
+      ];
+      const r = await require_trace().step("maven classpath", () => require_fastrun().exec(mvn[0], args, { cwd: multi ? root : p.modDir, env, timeoutMs: 9e5 }), p.module);
+      if (!fs2.existsSync(cpFile)) return { error: `Maven could not give the classpath: ${require_testout().compactLog(r.out).slice(-1500)}` };
+      const classpath = fs2.readFileSync(cpFile, "utf8").trim().split(path2.delimiter).filter(Boolean);
+      return { classpath: [path2.join(p.modDir, "target", "classes"), path2.join(p.modDir, "target", "test-classes"), ...classpath], processorpath: [], sources, release };
+    }
+    async function prepareModule(id, root, p) {
+      const cfg = require_config().getTests();
+      const TR = require_testrun();
+      const { env, B, javaMajor } = await TR.envFor(p, cfg);
+      const bh = buildHash(root);
+      const all = readJson(stateFile(id), {});
+      if (all[p.module] && all[p.module].buildHash === bh) return all[p.module];
+      let st;
+      if (p.tool === "maven") {
+        st = await mavenClasspath(id, root, p, cfg, env);
+        if (st.error) return st;
+      } else if (p.tool === "gradle") {
+        st = await gradleClasspath(root, p, cfg, env, B);
+        if (st.error) return st;
+      } else return { error: "no pom.xml or build.gradle" };
+      st = { ...st, buildHash: bh, javaMajor, javaHome: cfg.javaHome || null, at: Date.now() };
+      const now = readJson(stateFile(id), {});
+      now[p.module] = st;
+      fs2.mkdirSync(path2.dirname(stateFile(id)), { recursive: true });
+      fs2.writeFileSync(stateFile(id), JSON.stringify(now));
+      return st;
+    }
+    var preparing = /* @__PURE__ */ new Map();
+    function prepared(id, root, p) {
+      const key = `${id}:${p.module}`;
+      if (!preparing.has(key)) {
+        const pr = prepareModule(id, root, p).catch((e) => ({ error: e.message })).finally(() => setTimeout(() => preparing.delete(key), 0));
+        preparing.set(key, pr);
+      }
+      return preparing.get(key);
+    }
+    async function idle(id) {
+      await Promise.all([...preparing.entries()].filter(([k]) => k.startsWith(`${id}:`)).map(([, pr]) => pr));
+    }
+    function warm(id) {
+      const cfg = require_config().getTests();
+      if (!cfg.compileCheck) return;
+      const W = require_workspace();
+      let root;
+      try {
+        root = W.checkId(id).path;
+      } catch {
+        return;
+      }
+      const counts = /* @__PURE__ */ new Map();
+      (function rec(d, depth) {
+        let es;
+        try {
+          es = fs2.readdirSync(d, { withFileTypes: true });
+        } catch {
+          return;
+        }
+        for (const e of es) {
+          const f = path2.join(d, e.name);
+          if (e.isDirectory()) {
+            if (depth < 10 && !/^(\.|build$|target$|node_modules$|out$)/.test(e.name)) rec(f, depth + 1);
+            continue;
+          }
+          const m = path2.relative(root, f).split(path2.sep).join("/").match(/^(.*?)src\/(test|main)\/java\//);
+          if (m && e.name.endsWith(".java")) counts.set(m[1], (counts.get(m[1]) || 0) + (m[2] === "test" ? 3 : 1));
+        }
+      })(root, 0);
+      const best = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+      if (!best) return;
+      const p = require_testrun().plan(root, [`${best[0]}src/test/java/X.java`]);
+      if (!p.tool) return;
+      require_trace().call("compile_prepare", { workspace: id, module: p.module }, { kind: "job", source: "workspace_open" }, () => prepared(id, root, p)).then((st) => {
+        if (st?.error) require_trace().note(`compile checks in ${id}: ${st.error.slice(0, 200)}`);
+      }).catch(() => {
+      });
+    }
+    function classIndex(id, st) {
+      const index = {}, known = /* @__PURE__ */ new Set();
+      const add = (fqn) => {
+        if (known.has(fqn)) return;
+        known.add(fqn);
+        (index[fqn.split(".").pop()] ||= []).push(fqn);
+      };
+      const own = /* @__PURE__ */ new Set();
+      const W = require_workspace();
+      let graph = null;
+      for (const [i, key] of W.keys(id).entries()) {
+        const g = require_codeindex().load(key)?.graph_();
+        if (!g) continue;
+        if (i === 0) graph = g;
+        for (const c of g.classes || []) {
+          if (!c.id || c.id.startsWith("ext:")) continue;
+          add(c.id);
+          const pkg = c.id.split(".").slice(0, 2).join(".");
+          if (pkg.includes(".")) own.add(`${pkg}.`);
+        }
+      }
+      const jars = jarIndex(st.classpath.filter((e) => /\.jar$/.test(e)));
+      for (const fqns of Object.values(jars)) for (const f of fqns) add(f);
+      for (const fqns of Object.values(JDK)) for (const f of fqns) add(f);
+      return { index, known, own: [...own].filter((p) => !/^(java|javax|jakarta|org\.springframework|org\.junit)\./.test(p)), graph };
+    }
+    var short = (msg) => String(msg).split("\n").map((l) => l.trim()).filter(Boolean).join("; ").slice(0, 400);
+    function usersOf(graph, root, rels, max = 25) {
+      if (!graph) return [];
+      const ids = new Set(graph.classes.filter((c) => rels.includes(c.file) && /src\/main\//.test(c.file)).map((c) => c.id));
+      if (!ids.size) return [];
+      const files = /* @__PURE__ */ new Set();
+      for (const [from, to] of graph.edges || []) {
+        const cls = String(to).split("#")[0];
+        if (!ids.has(cls)) continue;
+        const c = graph.classes.find((x) => from === x.id || String(from).startsWith(`${x.id}#`));
+        if (c && !rels.includes(c.file) && /\.java$/.test(c.file)) files.add(c.file);
+        if (files.size >= max) break;
+      }
+      return [...files].filter((f) => fs2.existsSync(path2.join(root, f)));
+    }
+    async function check(id, rels, { waitMs } = {}) {
+      const cfg = require_config().getTests();
+      if (!cfg.compileCheck) return null;
+      const W = require_workspace();
+      const root = W.checkId(id).path;
+      const java = [...new Set(rels)].filter((f) => /\.java$/.test(f));
+      if (!java.length) return rels.some((f) => /\.kt$/.test(f)) ? { skipped: "Kotlin files are checked by test_run (the build compiles them)" } : null;
+      const T = require_trace();
+      const started = Date.now();
+      const p = require_testrun().plan(root, java);
+      if (!p.tool) return { skipped: "no pom.xml or build.gradle for these files" };
+      const pending = prepared(id, root, p);
+      let timer;
+      const st = await Promise.race([pending, new Promise((r2) => {
+        timer = setTimeout(() => r2(null), waitMs ?? cfg.compileWaitMs);
+      })]).finally(() => clearTimeout(timer));
+      if (!st) return { pending: `preparing the classpath of ${p.module} (${p.tool}, once per workspace): not checked yet; the next write is` };
+      if (st.error) return { skipped: st.error };
+      const { index, known, own, graph } = classIndex(id, st);
+      const out2 = path2.join(root, ".dt", "check");
+      fs2.mkdirSync(path2.join(out2, "classes"), { recursive: true });
+      fs2.mkdirSync(path2.join(out2, "gen"), { recursive: true });
+      const options = [
+        "-d",
+        path2.join(out2, "classes"),
+        "-s",
+        path2.join(out2, "gen"),
+        "-encoding",
+        "UTF-8",
+        "-nowarn",
+        "-Xlint:none",
+        "-Xmaxerrs",
+        "100",
+        "-implicit:none",
+        "-XDshould-stop.ifNoError=FLOW",
+        "-cp",
+        st.classpath.join(path2.delimiter),
+        ...st.sources.length ? ["-sourcepath", st.sources.join(path2.delimiter)] : [],
+        ...st.processorpath.length ? ["-processorpath", st.processorpath.join(path2.delimiter)] : []
+      ];
+      if (st.release && st.javaMajor && st.release <= st.javaMajor) options.push("--release", String(st.release));
+      if (st.javaMajor >= 21) options.push("-proc:full");
+      const users = usersOf(graph, root, java);
+      const fixed = [];
+      let r, errors = [], suggestions = [], alsoBroken = [];
+      for (let round = 0; round < 4; round++) {
+        r = await T.step("compile check", () => compile({ javaHome: st.javaHome, options, files: [...java, ...users].map((f) => path2.join(root, f)) }), `${java.length + users.length} files`);
+        if (r.error) return { skipped: `the compile check failed: ${r.error}` };
+        const relOf = (f) => f ? path2.relative(root, f).split(path2.sep).join("/") : null;
+        const errs = (r.diagnostics || []).filter((d) => d.kind === "ERROR").map((d) => ({ ...d, rel: relOf(d.file) }));
+        let changed = false;
+        suggestions = [];
+        for (const f of java) {
+          const mine = errs.filter((d) => d.rel === f);
+          if (!mine.length) continue;
+          const text = fs2.readFileSync(path2.join(root, f), "utf8");
+          const fx = fixesFor(text, mine, { index, known, own, graph });
+          if (fx.fixed.length && fx.text !== text) {
+            W.write(id, f, { content: fx.text });
+            fixed.push(...fx.fixed.map((w) => `${f}: ${w}`));
+            changed = true;
+          }
+          suggestions.push(...fx.suggestions.map((s) => ({ file: f, ...s })));
+        }
+        errors = errs.filter((d) => java.includes(d.rel)).map((d) => ({ file: d.rel, line: d.line, message: short(d.message) }));
+        alsoBroken = errs.filter((d) => !java.includes(d.rel)).map((d) => ({ file: d.rel, line: d.line, message: short(d.message) }));
+        if (!changed) break;
+      }
+      return { ok: !errors.length && !alsoBroken.filter((e) => users.includes(e.file)).length, ms: Date.now() - started, compileMs: r.ms, checked: java.length + users.length, errors, ...fixed.length ? { fixed } : {}, ...suggestions.length ? { suggestions } : {}, ...alsoBroken.length ? { alsoBroken: alsoBroken.slice(0, 10) } : {} };
+    }
+    function runHints(id, root, cases) {
+      const out2 = [];
+      const seen = /* @__PURE__ */ new Set();
+      const read = (f) => {
+        try {
+          return fs2.readFileSync(path2.join(root, f), "utf8");
+        } catch {
+          return null;
+        }
+      };
+      const fileOf = (cls) => {
+        for (const base of ["src/test/java", "src/main/java"]) {
+          const f = `${base}/${String(cls).split("$")[0].replace(/\./g, "/")}.java`;
+          if (fs2.existsSync(path2.join(root, f))) return f;
+        }
+        return null;
+      };
+      let known = null;
+      const knows = (fqn) => {
+        if (!known) {
+          known = /* @__PURE__ */ new Set();
+          try {
+            for (const st of Object.values(readJson(stateFile(id), {}))) for (const fs_ of Object.values(jarIndex((st.classpath || []).filter((e) => /\.jar$/.test(e))))) for (const f of fs_) known.add(f);
+          } catch {
+          }
+        }
+        return known.has(fqn);
+      };
+      const add = (key, s) => {
+        if (!seen.has(key)) {
+          seen.add(key);
+          out2.push(s);
+        }
+      };
+      for (const k of cases) {
+        if (k.status !== "failed" && k.status !== "error") continue;
+        const text = `${k.message || ""}
+${k.stack || ""}`;
+        const testFile = fileOf(k.class);
+        if (/UnnecessaryStubbingException|Unnecessary stubbings detected/.test(text)) {
+          for (const m of text.matchAll(/->\s+at\s+([\w.$]+)\.[\w$<>]+\(([\w$]+\.java):(\d+)\)/g)) {
+            const f = fileOf(m[1]);
+            const t = f && read(f);
+            if (!t) continue;
+            const line = t.split("\n")[Number(m[3]) - 1] || "";
+            if (!/\bwhen\(/.test(line) || /lenient\(\)/.test(line)) continue;
+            const edits = [{ find: line, replace: line.replace(/\b(Mockito\.)?when\(/, "lenient().when(") }, importEdit(t, "org.mockito.Mockito.lenient", true)].filter(Boolean);
+            add(`stub:${f}:${m[3]}`, { file: f, line: Number(m[3]), why: `${k.name}: this stubbing is never used (Mockito strict stubs): remove it, or keep it as lenient() when other tests of the class need it`, edits, remove: [{ find: `${line}
+`, replace: "" }] });
+          }
+          continue;
+        }
+        if (/PotentialStubbingProblem|Strict stubbing argument mismatch/.test(text)) {
+          const call = text.match(/this invocation of '[^']+' method:\s*\n\s*(.+)\n\s*->\s*at\s+[^\n]+\((\w+\.java:\d+)\)/) || [];
+          const stub = text.match(/has following stubbing\(s\) with different arguments:\s*\n\s*1\.\s*(.+)\n\s*->\s*at\s+[^\n]+\((\w+\.java:\d+)\)/) || [];
+          add(`mismatch:${k.class}#${k.name}`, { file: testFile, why: `${k.name}: the code calls ${call[1] || "the method"}${call[2] ? ` (${call[2]})` : ""} but the stubbing is ${stub[1] || "for other arguments"}${stub[2] ? ` (${stub[2]})` : ""}: stub what the code passes (eq(...) or any(Type.class) for a value built inside), or the code passes the wrong value` });
+          continue;
+        }
+        if (/InvalidUseOfMatchersException|Invalid use of argument matchers/.test(text)) {
+          const at = (text.match(/->\s+at\s+[^\n]+\((\w+\.java:\d+)\)/) || [])[1];
+          add(`matchers:${k.class}#${k.name}`, { file: testFile, why: `${k.name}: a call mixes matchers and plain values${at ? ` (${at})` : ""}: wrap each plain value in eq(...) once one argument is a matcher` });
+          continue;
+        }
+        const ph = text.match(/Could not resolve placeholder '([^']+)' in value/);
+        if (ph && testFile) {
+          const t = read(testFile);
+          const decl = t && t.match(/^(?:public\s+)?(?:final\s+)?class\s+\w+[^\n]*\{/m);
+          const value = propertyValue(root, ph[1]);
+          if (decl) {
+            const tps = t.match(/@TestPropertySource\(properties\s*=\s*(\{[^)]*\}|"[^"]*")\)/);
+            const entry = `"${ph[1]}=${value}"`;
+            const edits = tps ? [{ find: tps[0], replace: tps[1].startsWith("{") ? tps[0].replace("{", `{ ${entry},`) : `@TestPropertySource(properties = { ${entry}, ${tps[1]} })` }] : [{ find: decl[0], replace: `@TestPropertySource(properties = "${ph[1]}=${value}")
+${decl[0]}` }, importEdit(t, "org.springframework.test.context.TestPropertySource", false)].filter(Boolean);
+            add(`prop:${ph[1]}`, { file: testFile, why: `the test's context has no property ${ph[1]} (@Value): give it one${value === "TODO" ? " (no value in the application properties: put the one the test needs)" : ` (${value}, from the application properties)`}`, edits });
+          }
+          continue;
+        }
+        const nb = text.match(/No qualifying bean of type '([\w.$]+)'/);
+        if (nb && testFile) {
+          const t = read(testFile);
+          const decl = t && t.match(/^(?:public\s+)?(?:final\s+)?class\s+\w+[^\n]*\{/m);
+          if (!decl) continue;
+          const simple = nb[1].split(".").pop().replace(/\$/g, ".");
+          const mockito = /@MockitoBean\b/.test(t) || !/@MockBean\b/.test(t) && knows("org.springframework.test.context.bean.override.mockito.MockitoBean");
+          const anno = mockito ? "MockitoBean" : "MockBean";
+          const annoFqn = mockito ? "org.springframework.test.context.bean.override.mockito.MockitoBean" : "org.springframework.boot.test.mock.mockito.MockBean";
+          const field = `    @${anno} ${simple} ${simple[0].toLowerCase()}${simple.slice(1)};`;
+          const own = fs2.existsSync(path2.join(root, "src/main/java", `${nb[1].replace(/\./g, "/")}.java`));
+          add(`bean:${nb[1]}`, {
+            file: testFile,
+            why: `the test's context has no bean ${nb[1]}: ${own ? "a class of the service: @Import it when the test is about it, else mock it" : "mock it (it is at the edge of what the test covers)"}`,
+            edits: [{ find: decl[0], replace: `${decl[0]}
+${field}` }, importEdit(t, annoFqn, false), ...t.includes(`import ${nb[1]};`) || nb[1].startsWith(`${(t.match(/^package\s+([\w.]+)/m) || [])[1]}.`) ? [] : [importEdit(t, nb[1], false)]].filter(Boolean)
+          });
+        }
+      }
+      return out2;
+    }
+    function propertyValue(root, key) {
+      for (const dir of ["src/test/resources", "src/main/resources"]) {
+        let es;
+        try {
+          es = fs2.readdirSync(path2.join(root, dir));
+        } catch {
+          continue;
+        }
+        for (const f of es.filter((n) => /^application.*\.(properties|ya?ml)$/.test(n))) {
+          const t = fs2.readFileSync(path2.join(root, dir, f), "utf8");
+          if (f.endsWith(".properties")) {
+            const m = t.match(new RegExp(`^${key.replace(/\./g, "\\.")}\\s*[=:]\\s*(.*)$`, "m"));
+            if (m && !/\$\{/.test(m[1])) return m[1].trim();
+            continue;
+          }
+          const stack = [];
+          for (const l of t.split("\n")) {
+            const m = l.match(/^(\s*)([\w.-]+):\s*(.*)$/);
+            if (!m) continue;
+            const depth = m[1].length;
+            while (stack.length && stack[stack.length - 1].depth >= depth) stack.pop();
+            stack.push({ depth, key: m[2] });
+            const full = stack.map((x) => x.key).join(".");
+            if (full === key && m[3] && !/\$\{/.test(m[3])) return m[3].replace(/^["']|["']$/g, "").trim();
+          }
+        }
+      }
+      return "TODO";
+    }
+    module2.exports = { COMPILER, GRADLE_INIT, buildHash, runHints, propertyValue, compile, compileHere, zipEntries, jarIndex, rank, pick, importEdit, fixesFor, symbolOf, enclosing, similar, check, warm, prepared, idle, classIndex, STATIC, JDK };
+  }
+});
+
+// lib/runner.js
+var require_runner = __commonJS({
+  "lib/runner.js"(exports2, module2) {
+    var http2 = require("http");
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var { spawn, spawnSync } = require("child_process");
+    var { EventEmitter } = require("events");
+    var KEEP_ENV = /^(PATH|HOME|USER|LANG|LANGUAGE|LC_\w+|TZ|TMPDIR|JAVA_HOME|DOCKER_HOST|DOCKER_TLS_VERIFY|DOCKER_CERT_PATH|TESTCONTAINERS_\w+|(HTTPS?|NO|ALL)_PROXY|(https?|no|all)_proxy|SSL_CERT_FILE|SSL_CERT_DIR)$/;
+    var OWN = /^(DOCKER_HOST|DOCKER_TLS_VERIFY|DOCKER_CERT_PATH|TESTCONTAINERS_\w+)$/;
+    function roots() {
+      const { PATHS } = require_config();
+      return [PATHS.work, PATHS.build, ...String(process.env.DT_RUNNER_ROOTS || "").split(",").filter(Boolean)].map((p) => path2.resolve(p));
+    }
+    var ping = () => new Promise((resolve) => {
+      const sock = (process.env.DOCKER_HOST || "unix:///var/run/docker.sock").replace(/^unix:\/\//, "");
+      if (!fs2.existsSync(sock)) return resolve({ ok: false, error: `no Docker socket at ${sock}` });
+      const req = http2.get({ socketPath: sock, path: "/version", timeout: 5e3 }, (r) => {
+        let d = "";
+        r.on("data", (c) => {
+          d += c;
+        });
+        r.on("end", () => {
+          try {
+            const v = JSON.parse(d);
+            resolve({ ok: r.statusCode === 200, version: v.Version, os: v.Os, platform: v.Platform?.Name });
+          } catch {
+            resolve({ ok: false, error: `HTTP ${r.statusCode}` });
+          }
+        });
+      });
+      req.on("error", (e) => resolve({ ok: false, error: e.code === "EACCES" ? `EACCES on ${sock}: the runner's user is not in the socket's group (DT_DOCKER_GID)` : e.message }));
+    });
+    function info() {
+      const cfg = require_config().getTests();
+      const run = (cmd, args) => {
+        const r = spawnSync(cmd, args, { encoding: "utf8", timeout: 2e4, env: { ...process.env, JAVA_TOOL_OPTIONS: "" } });
+        return r.error ? { ok: false, error: r.error.message } : { ok: r.status === 0, out: `${r.stdout || ""}${r.stderr || ""}`.trim().split("\n")[0] };
+      };
+      const bin = (t) => cfg.javaHome ? path2.join(cfg.javaHome, "bin", t) : t;
+      return ping().then((docker) => ({
+        uid: process.getuid?.(),
+        java: run(bin("java"), ["-version"]),
+        javac: run(bin("javac"), ["-version"]),
+        maven: cfg.maven ? run(cfg.maven, ["-v"]) : null,
+        docker,
+        roots: roots(),
+        testcontainersHost: process.env.TESTCONTAINERS_HOST_OVERRIDE || null
+      }));
+    }
+    function serve({ port = 4100, host = "0.0.0.0" } = {}) {
+      const token = process.env.DT_RUNNER_TOKEN;
+      const procs = /* @__PURE__ */ new Map();
+      const send = (res, code, body) => {
+        res.writeHead(code, { "content-type": "application/json" });
+        res.end(JSON.stringify(body));
+      };
+      const server = http2.createServer(async (req, res) => {
+        if (req.url === "/health") return send(res, 200, { ok: true });
+        if (!token) return send(res, 503, { error: "DT_RUNNER_TOKEN is not set: the runner refuses commands" });
+        if (req.headers.authorization !== `Bearer ${token}`) return send(res, 401, { error: "bad token" });
+        const body = await new Promise((r) => {
+          let d = "";
+          req.on("data", (c) => {
+            d += c;
+          });
+          req.on("end", () => {
+            try {
+              r(JSON.parse(d || "{}"));
+            } catch {
+              r({});
+            }
+          });
+        });
+        if (req.method === "GET" && req.url === "/info") return send(res, 200, await info());
+        if (req.method === "POST" && req.url === "/kill") {
+          const p2 = procs.get(body.id);
+          if (p2) {
+            p2.kill("SIGTERM");
+            setTimeout(() => {
+              try {
+                p2.kill("SIGKILL");
+              } catch {
+              }
+            }, 5e3).unref();
+          }
+          return send(res, 200, { killed: !!p2 });
+        }
+        if (req.method === "POST" && req.url === "/compile") {
+          const bad = (body.files || []).map((f) => path2.resolve(f)).find((f) => !roots().some((r) => f.startsWith(r + path2.sep)));
+          if (bad) return send(res, 403, { error: `${bad} is outside the runner's folders` });
+          return send(res, 200, await require_javacheck().compileHere({ javaHome: body.javaHome, options: body.options || [], files: body.files || [] }));
+        }
+        if (req.method !== "POST" || req.url !== "/exec") return send(res, 404, { error: "not found" });
+        const cwd = path2.resolve(body.cwd || "");
+        if (!roots().some((r) => cwd === r || cwd.startsWith(r + path2.sep))) return send(res, 403, { error: `cwd ${cwd} is outside the runner's folders (${roots().join(", ")})` });
+        const own = Object.fromEntries(Object.entries(process.env).filter(([k]) => KEEP_ENV.test(k)));
+        const env = { ...own, ...body.env || {}, ...Object.fromEntries(Object.entries(own).filter(([k]) => OWN.test(k))) };
+        res.writeHead(200, { "content-type": "application/x-ndjson" });
+        const started = Date.now();
+        let killed = false;
+        const p = spawn(body.cmd, body.args || [], { cwd, env, stdio: ["ignore", "pipe", "pipe"] });
+        const id = body.id || String(p.pid);
+        procs.set(id, p);
+        const timer = setTimeout(() => {
+          killed = true;
+          p.kill("SIGTERM");
+          setTimeout(() => {
+            try {
+              p.kill("SIGKILL");
+            } catch {
+            }
+          }, 5e3).unref();
+        }, Number(body.timeoutMs) || 9e5);
+        const out2 = (b) => res.write(JSON.stringify({ out: b.toString() }) + "\n");
+        p.stdout.on("data", out2);
+        p.stderr.on("data", out2);
+        res.on("close", () => {
+          if (p.exitCode === null && !res.writableEnded) {
+            try {
+              p.kill("SIGTERM");
+            } catch {
+            }
+          }
+        });
+        p.on("error", (e) => {
+          clearTimeout(timer);
+          procs.delete(id);
+          res.end(JSON.stringify({ done: true, code: -1, error: e.message, ms: Date.now() - started }) + "\n");
+        });
+        p.on("close", (code) => {
+          clearTimeout(timer);
+          procs.delete(id);
+          res.end(JSON.stringify({ done: true, code, killed, ms: Date.now() - started }) + "\n");
+        });
+      });
+      server.listen(port, host, () => console.error(`dt runner: ${host}:${port}${token ? "" : " (DT_RUNNER_TOKEN not set: refusing commands)"}; folders ${roots().join(", ")}`));
+      return server;
+    }
+    var url = () => require_config().getTests().runnerUrl;
+    var auth = () => ({ authorization: `Bearer ${require_config().getTests().runnerToken || ""}` });
+    var downUntil = 0;
+    var downWhy = "";
+    function exec(cmd, args, { cwd, env, timeoutMs = 9e5, log } = {}) {
+      const T = require_trace();
+      if (Date.now() < downUntil) return Promise.resolve({ code: -1, out: downWhy, ms: 0, runnerError: true, unreachable: true, quiet: true });
+      const id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+      const handle = new EventEmitter();
+      handle.kill = () => {
+        fetch(`${url()}/kill`, { method: "POST", headers: { ...auth(), "content-type": "application/json" }, body: JSON.stringify({ id }) }).catch(() => {
+        });
+        return true;
+      };
+      T.child(handle);
+      return new Promise((resolve) => {
+        const started = Date.now();
+        const u = new URL("/exec", url());
+        let out2 = "", buf = "", done = null;
+        const req = http2.request({ hostname: u.hostname, port: u.port, path: u.pathname, method: "POST", headers: { ...auth(), "content-type": "application/json" } }, (res) => {
+          if (res.statusCode !== 200) {
+            let d = "";
+            res.on("data", (c) => {
+              d += c;
+            });
+            res.on("end", () => {
+              handle.emit("exit");
+              resolve({ code: -1, out: `runner: HTTP ${res.statusCode} ${d.slice(0, 300)}`, ms: Date.now() - started, runnerError: true });
+            });
+            return;
+          }
+          res.on("data", (c) => {
+            buf += c;
+            let i;
+            while ((i = buf.indexOf("\n")) >= 0) {
+              const line = buf.slice(0, i);
+              buf = buf.slice(i + 1);
+              let m;
+              try {
+                m = JSON.parse(line);
+              } catch {
+                continue;
+              }
+              if (m.out) {
+                out2 += m.out;
+                if (out2.length > 4e6) out2 = out2.slice(-3e6);
+                const last = m.out.trim().split("\n").pop();
+                if (last && log) log(last.slice(0, 200));
+              }
+              if (m.done) done = m;
+            }
+          });
+          res.on("end", () => {
+            handle.emit("exit");
+            resolve({ code: done ? done.code : -1, out: out2 + (done?.error ? `
+${done.error}` : ""), killed: done?.killed, ms: Date.now() - started, ...done ? {} : { runnerError: true } });
+          });
+        });
+        req.on("error", (e) => {
+          handle.emit("exit");
+          downUntil = Date.now() + 6e4;
+          downWhy = `runner ${url()}: ${e.code || e.message}`;
+          resolve({ code: -1, out: downWhy, ms: Date.now() - started, runnerError: true, unreachable: true });
+        });
+        req.end(JSON.stringify({ id, cmd, args, cwd, env, timeoutMs }));
+      });
+    }
+    async function remoteInfo() {
+      const res = await fetch(`${url()}/info`, { headers: auth(), signal: AbortSignal.timeout(3e4) });
+      if (!res.ok) throw new Error(`runner ${url()}: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
+      return res.json();
+    }
+    module2.exports = { serve, exec, remoteInfo, info, url };
+  }
+});
+
+// lib/doctor.js
+var require_doctor = __commonJS({
+  "lib/doctor.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var os = require("os");
+    var path2 = require("path");
+    var { execFile } = require("child_process");
+    var run = (cmd, args, { timeout = 2e4, env, cwd } = {}) => new Promise((resolve) => {
+      const t0 = Date.now();
+      execFile(cmd, args, { timeout, env: env || process.env, cwd, maxBuffer: 8 << 20 }, (err, stdout, stderr) => resolve({ ok: !err, code: err?.code, out: `${stdout || ""}${stderr || ""}`.trim(), ms: Date.now() - t0, error: err?.message }));
+    });
+    async function head(url, { auth, timeout = 8e3 } = {}) {
+      const t0 = Date.now();
+      try {
+        const res = await fetch(url, { method: "GET", headers: auth ? { authorization: auth } : {}, signal: AbortSignal.timeout(timeout), redirect: "manual" });
+        return { status: res.status, ms: Date.now() - t0 };
+      } catch (e) {
+        return { error: e.cause?.code || e.cause?.message || e.message, ms: Date.now() - t0 };
+      }
+    }
+    function writable(dir) {
+      try {
+        fs2.mkdirSync(dir, { recursive: true });
+        const f = path2.join(dir, `.dt-doctor-${process.pid}`);
+        fs2.writeFileSync(f, "x");
+        let chmod = true;
+        try {
+          fs2.chmodSync(f, 384);
+        } catch {
+          chmod = false;
+        }
+        fs2.rmSync(f, { force: true });
+        return { ok: true, chmod };
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    }
+    var SHARED = /^(9p|drvfs|cifs|smb3?|smbfs|fakeowner|grpcfuse|fuse\.grpcfuse|virtiofs|osxfs|fuse\.osxfs|vboxsf|nfs4?|fuse\.sshfs|fuse)$/;
+    function mountOf(dir) {
+      let lines;
+      try {
+        lines = fs2.readFileSync("/proc/self/mountinfo", "utf8").split("\n");
+      } catch {
+        return null;
+      }
+      let best = null;
+      const target = path2.resolve(dir);
+      for (const l of lines) {
+        const parts = l.split(" ");
+        const dash = parts.indexOf("-");
+        if (dash < 0) continue;
+        const point = parts[4].replace(/\\040/g, " "), type = parts[dash + 1], source = parts[dash + 2];
+        if ((target === point || target.startsWith(point.endsWith("/") ? point : `${point}/`)) && (!best || point.length > best.point.length)) best = { point, type, source };
+      }
+      return best;
+    }
+    async function check({ repo, deep = false } = {}) {
+      const cfg = require_config();
+      const t = cfg.getTests();
+      const out2 = [];
+      const add = (group, name, status, detail, fix) => out2.push({ group, check: name, status, detail: String(detail ?? "").slice(0, 400), ...fix ? { fix } : {} });
+      for (const [name, dir] of [["config folder", cfg.HOME], ["repos", cfg.PATHS.repos], ["workspaces", cfg.PATHS.work], ["cache", cfg.PATHS.cache], ["git data (DT_GIT_DIR)", process.env.DT_GIT_DIR || path2.join(os.tmpdir(), "dt-git")]]) {
+        const w = writable(dir);
+        if (!w.ok) add("folders", name, "fail", `${dir}: ${w.error}`, "run dt as the owner of the folder (run.sh sets DT_UID/DT_GID), or point DT_HOME_DIR at a writable folder");
+        else add("folders", name, w.chmod ? "ok" : "warn", `${dir}${w.chmod ? "" : ": no chmod here (a Windows drive, SMB, some mounts): git keeps its data in DT_GIT_DIR"}`);
+      }
+      for (const [name, dir, what] of [["workspaces", cfg.PATHS.work, "DT_WORK_DIR=/var/dt-work"], ["Gradle home", cfg.getTests().gradleHome, "DT_GRADLE_USER_HOME=/var/dt-build/gradle"], ["Maven repository", cfg.getTests().mavenRepo, "DT_MAVEN_REPO=/var/dt-build/m2"], ["git data", process.env.DT_GIT_DIR || path2.join(os.tmpdir(), "dt-git"), "DT_GIT_DIR=/var/dt-git"]].filter(([, d]) => d)) {
+        const m = mountOf(dir);
+        if (!m) continue;
+        const shared = SHARED.test(m.type);
+        add("folders", `${name} filesystem`, shared ? name === "git data" ? "warn" : "fail" : "ok", `${dir} is on ${m.type} (${m.point}${m.source && m.source !== "none" ? ` from ${m.source}` : ""})${shared ? ": a host-shared mount: file locks and memory-mapped files do not work right there (Gradle's daemon hangs on its registry, builds slow down)" : ""}`, shared ? `put it on a Docker volume (compose does: ${what}) or a local disk` : null);
+      }
+      const gd = process.env.DT_GIT_DIR || path2.join(os.tmpdir(), "dt-git");
+      if (path2.resolve(gd).startsWith(path2.resolve(os.tmpdir()))) add("folders", "git data lasts", "warn", `${gd} is in the temporary folder: after a restart every repo is fetched again`, "set DT_GIT_DIR to a lasting folder git can chmod in (compose: the dt-git volume)");
+      try {
+        const st = fs2.statfsSync(cfg.PATHS.work.replace(/\/work$/, "") || cfg.HOME);
+        const free = st.bavail * st.bsize / 1e9;
+        add("folders", "free disk", free < 2 ? "fail" : free < 10 ? "warn" : "ok", `${free.toFixed(1)} GB free`, free < 10 ? "workspaces, Maven/Gradle caches and indexes need room: workspace_drop old workspaces" : null);
+      } catch {
+      }
+      const g = await run("git", ["--version"]);
+      add("git", "git", g.ok ? "ok" : "fail", g.ok ? g.out : g.error, g.ok ? null : "install git in the image (node:22-bookworm has it)");
+      const bb = cfg.getPersonal().bitbucket;
+      if (!bb.url) add("bitbucket", "Bitbucket URL", "fail", "not set", "bitbucket.url in config.json");
+      else {
+        add("bitbucket", "token", bb.token ? "ok" : "fail", bb.token ? `set (${bb.token.length} chars)` : "missing", bb.token ? null : "BITBUCKET_HTTP_TOKEN in .env (a personal access token with repository read)");
+        const api = await head(`${bb.url}/rest/api/1.0/repos?limit=1`, { auth: bb.token ? `Bearer ${bb.token}` : null });
+        add("bitbucket", "REST API", api.status === 200 ? "ok" : "fail", api.error ? `${bb.url}: ${api.error}` : `HTTP ${api.status} in ${api.ms} ms`, api.status === 401 ? "the token is wrong or expired" : api.error ? "dt cannot reach Bitbucket: DNS, proxy (HTTPS_PROXY), or the network of the container" : null);
+      }
+      if (repo) {
+        const [project, slug] = String(repo).split("/");
+        const G = require_git();
+        const url = `${bb.url}/scm/${String(project).toLowerCase()}/${slug}.git`;
+        const ls = await run("git", ["-c", `http.extraHeader=Authorization: Bearer ${bb.token || ""}`, "ls-remote", url, "HEAD"], { timeout: 3e4, env: { ...process.env, GIT_TERMINAL_PROMPT: "0" } });
+        add("bitbucket", `git ls-remote ${repo}`, ls.ok ? "ok" : "fail", ls.ok ? `${ls.out.slice(0, 12)} in ${ls.ms} ms` : ls.out.replace(bb.token || "\0", "***").slice(0, 300), ls.ok ? null : /401|403|Authentication/.test(ls.out) ? "the token cannot read this repo" : /Could not resolve|unable to access|timed out/i.test(ls.out) ? "git cannot reach Bitbucket from here (proxy: git uses HTTPS_PROXY / http.proxy)" : "check the project key and repo slug");
+        if (ls.ok && deep) {
+          const dir = fs2.mkdtempSync(path2.join(os.tmpdir(), "dt-doctor-"));
+          const t0 = Date.now();
+          try {
+            const info = await G.fetchRef(project, slug, "", { dir, gitKey: `doctor/${path2.basename(dir)}` });
+            add("bitbucket", `fetch ${repo}`, "ok", `${info.sha.slice(0, 10)} in ${Date.now() - t0} ms${info.fallback ? `; ${info.fallback}` : ""}`);
+          } catch (e) {
+            add("bitbucket", `fetch ${repo}`, "fail", e.message, "the fetch itself fails: see the message (disk, permissions, proxy)");
+          } finally {
+            fs2.rmSync(dir, { recursive: true, force: true });
+          }
+        }
+      }
+      let onRunner = false;
+      if (t.runnerUrl) {
+        try {
+          const i = await require_runner().remoteInfo();
+          onRunner = true;
+          add("runner", "runner", "ok", `${t.runnerUrl} (uid ${i.uid}), folders ${i.roots.join(", ")}`);
+          add("runner", "java", i.java?.ok ? "ok" : "fail", i.java?.out || i.java?.error, i.java?.ok ? null : "the runner needs the JDK: the jdk profile fills /opt/jdk");
+          add("runner", "javac (a JDK, not a JRE)", i.javac?.ok ? "ok" : "fail", i.javac?.out || i.javac?.error);
+          if (i.maven) add("runner", "Maven", i.maven.ok ? "ok" : "warn", i.maven.out || i.maven.error);
+          add("runner", "Docker (Testcontainers)", i.docker?.ok ? "ok" : "warn", i.docker?.ok ? `Docker ${i.docker.version} (${i.docker.platform || i.docker.os}); containers reached at ${i.testcontainersHost || "localhost"}` : i.docker?.error, i.docker?.ok ? null : /EACCES/.test(i.docker?.error || "") ? "set DT_DOCKER_GID to the group of the Docker socket (Docker Desktop: 0; Linux: getent group docker)" : "mount the Docker socket into the runner (compose does: DT_DOCKER_SOCKET)");
+        } catch (e) {
+          add("runner", "runner", "fail", `${t.runnerUrl}: ${e.cause?.code || e.message}`, /401|token/i.test(e.message) ? "DT_RUNNER_TOKEN must be the same for dt and the runner (run.sh writes one into .env)" : "start it: the jdk profile runs the runner (./run.sh up -d); builds run in dt meanwhile, without Docker");
+        }
+      }
+      const bin = (tool) => t.javaHome ? path2.join(t.javaHome, "bin", tool) : tool;
+      const java = await run(bin("java"), ["-version"]);
+      const javac = await run(bin("javac"), ["-version"]);
+      if (!onRunner) add("tests", "java", java.ok ? "ok" : "fail", java.ok ? `${java.out.split("\n")[0]}${t.javaHome ? ` (${t.javaHome})` : " (PATH)"}` : `${bin("java")}: ${java.error}`, java.ok ? null : "add jdk to COMPOSE_PROFILES (run.sh does by default) or set tests.javaHome");
+      if (!onRunner) add("tests", "javac (a JDK, not a JRE)", javac.ok ? "ok" : "fail", javac.ok ? javac.out : `${bin("javac")}: ${javac.error}`, javac.ok ? null : "tests need a JDK: the jdk compose profile, or tests.javaHome pointing at a JDK");
+      const mvn = t.maven || "mvn";
+      const mv = await run(mvn, ["-v"], { env: { ...process.env, ...t.javaHome ? { JAVA_HOME: t.javaHome } : {} } });
+      if (!onRunner) add("tests", "Maven", mv.ok ? "ok" : "warn", mv.ok ? mv.out.split("\n")[0] : `${mvn}: ${mv.error}`, mv.ok ? null : "Maven projects without mvnw need it: the jdk compose profile, or tests.maven");
+      if (t.gradle) {
+        const gr = await run(t.gradle, ["-v"], { timeout: 6e4 });
+        add("tests", "Gradle", gr.ok ? "ok" : "warn", gr.ok ? (gr.out.match(/Gradle [\d.]+/) || [gr.out])[0] : gr.error);
+      }
+      for (const [name, dir] of [["Maven repository", t.mavenRepo], ["Gradle home", t.gradleHome]].filter(([, d]) => d)) {
+        const w = writable(dir);
+        add("tests", name, w.ok ? "ok" : "fail", w.ok ? dir : `${dir}: ${w.error}`, w.ok ? null : "must be writable by dt's user");
+      }
+      const proxy = process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy;
+      add("network", "proxy", "ok", proxy ? `${proxy.replace(/\/\/[^@/]*@/, "//***@")} (git, Maven and Gradle read it differently: Maven from settings.xml <proxies>, Gradle from systemProp.https.proxyHost)` : "none set");
+      if (!t.offline) {
+        const central = await head("https://repo.maven.apache.org/maven2/");
+        add("network", "Maven Central", central.status && central.status < 400 ? "ok" : "warn", central.error ? central.error : `HTTP ${central.status} in ${central.ms} ms`, central.status && central.status < 400 ? null : "not reachable: builds need your company repository (maven-settings.xml / gradle.properties) or a proxy");
+        const wrapper = await head("https://services.gradle.org/distributions/");
+        add("network", "Gradle distributions (gradlew)", wrapper.status && wrapper.status < 400 ? "ok" : "warn", wrapper.error || `HTTP ${wrapper.status}`, wrapper.status && wrapper.status < 400 ? null : "gradlew downloads Gradle from here on first use: point distributionUrl at your mirror");
+      }
+      if (t.mavenSettings) {
+        let text = "";
+        try {
+          text = fs2.readFileSync(t.mavenSettings, "utf8");
+        } catch (e) {
+          add("repository", "maven settings", "fail", `${t.mavenSettings}: ${e.message}`);
+        }
+        for (const m of text.matchAll(/<url>\s*([^<]+?)\s*<\/url>/g)) {
+          const r = await head(m[1]);
+          add("repository", `Maven repository ${m[1]}`, r.status && r.status < 500 ? "ok" : "fail", r.error || `HTTP ${r.status} (401 without credentials is normal)`);
+        }
+      }
+      const { props, from } = require_buildenv().gradleProperties(t);
+      if (Object.keys(props).length) {
+        add("repository", "gradle.properties", "ok", `${Object.keys(props).length} properties from ${[...new Set(Object.values(from))].join(", ")}: ${Object.keys(props).map((k) => /pass|secret|token|key/i.test(k) ? `${k}=***` : k).join(", ")}`);
+        const url = Object.entries(props).find(([k, v]) => /url/i.test(k) && /^https?:/.test(v));
+        if (url) {
+          const user = Object.entries(props).find(([k]) => /user/i.test(k))?.[1], pass = Object.entries(props).find(([k]) => /pass|token/i.test(k))?.[1];
+          const r = await head(url[1], { auth: user && pass ? `Basic ${Buffer.from(`${user}:${pass}`).toString("base64")}` : null });
+          add("repository", `${url[0]} (${url[1]})`, r.status && r.status < 400 ? "ok" : r.status === 401 || r.status === 403 ? "fail" : r.status ? "ok" : "fail", r.error || `HTTP ${r.status} with the credentials`, r.status === 401 || r.status === 403 ? "the user/password in gradle.properties are refused" : r.error ? "not reachable from here" : null);
+        }
+      } else add("repository", "gradle.properties", "warn", `none found (looked in ${require_buildenv().gradleFiles({ ...t, gradleProperties: t.gradleProperties }).length ? "" : [...(t.gradleProperties || []).map((f) => path2.resolve(cfg.HOME, f)), path2.join(cfg.HOME, "gradle.properties"), ...t.gradleHome ? [path2.join(t.gradleHome, "gradle.properties")] : []].join(", ")}): builds that read nexusUrl/mavenUser/mavenPassword fail`, "copy the gradle.properties of your machine (Windows: %USERPROFILE%\\.gradle\\gradle.properties) into dt's config folder; passwords may be ${VAR} from .env");
+      if (t.pgUrl) {
+        try {
+          const postgres = require_src();
+          const sql = postgres(t.pgUrl, { max: 1, connect_timeout: 5, onnotice: () => {
+          } });
+          const t0 = Date.now();
+          await sql`select 1`;
+          await sql.end({ timeout: 2 });
+          add("tests", "test database", "ok", `${new URL(t.pgUrl).host} in ${Date.now() - t0} ms`);
+        } catch (e) {
+          add("tests", "test database", "warn", `${(() => {
+            try {
+              return new URL(t.pgUrl).host;
+            } catch {
+              return t.pgUrl;
+            }
+          })()}: ${e.code || e.message}`, "needed only for DB tests: the testdb compose profile, or tests.pgUrl");
+        }
+      } else add("tests", "test database", "warn", "not set", "needed only for DB tests: the testdb compose profile, or tests.pgUrl");
+      for (const j of require_jobs().list(100).filter((x) => x.state === "running")) {
+        const ms = Date.now() - Date.parse(j.startedAt);
+        if (ms > t.timeoutMs) add("jobs", `job ${j.id}`, "warn", `${j.title}: running for ${Math.round(ms / 6e4)} min`, `job_cancel job="${j.id}"`);
+      }
+      const counts = { ok: out2.filter((x) => x.status === "ok").length, warn: out2.filter((x) => x.status === "warn").length, fail: out2.filter((x) => x.status === "fail").length };
+      return { counts, checks: out2 };
+    }
+    module2.exports = { check };
+  }
+});
+
+// lib/showcase.js
+var require_showcase = __commonJS({
+  "lib/showcase.js"(exports2, module2) {
+    var T = () => require_tools();
+    function parseVersion(text) {
+      if (!text) return {};
+      try {
+        const v = JSON.parse(text);
+        const commit = v.git?.commit?.id || v.git?.commit || v.commit || v.sha || null;
+        return { version: v.build?.version || v.version || null, commit: typeof commit === "object" ? commit.id || null : commit, branch: v.git?.branch || v.branch || null };
+      } catch {
+        const sha = (String(text).match(/\b[0-9a-f]{7,40}\b/) || [])[0];
+        return { version: null, commit: sha || null, branch: null };
+      }
+    }
+    async function run({ service, target, envs, ref, test, refreshPassport = false, log = () => {
+    } } = {}) {
+      const cfg = require_config();
+      envs = (Array.isArray(envs) ? envs : String(envs || "").split(",")).map((s) => s.trim()).filter(Boolean);
+      if (!envs.length) envs = cfg.envNames();
+      const started = Date.now();
+      const steps = [];
+      const step = async (key, title, fn) => {
+        const t0 = Date.now();
+        log(`${title}...`);
+        try {
+          const r = await fn();
+          steps.push({ key, title, ok: r?.ok !== false, ms: Date.now() - t0, ...r });
+          log(`${title}: ${r?.ok === false ? "failed" : "ok"}${r?.summary ? ` (${r.summary})` : ""}`);
+          return r;
+        } catch (e) {
+          steps.push({ key, title, ok: false, ms: Date.now() - t0, error: e.message });
+          log(`${title}: ERROR ${e.message}`);
+          return null;
+        }
+      };
+      const versions = [];
+      for (const env of envs) {
+        await step(`health:${env}`, `Health of ${env}`, async () => {
+          const h = await T().call("health", { env }, { source: "showcase" });
+          const mine = h.rows.find((r) => r.service === service);
+          return { env, view: h.view, summary: `${h.summary.healthy}/${h.summary.services} healthy${h.summary.down ? `, ${h.summary.down} down` : ""}${h.summary.degraded ? `, ${h.summary.degraded} degraded` : ""}`, service: mine || null };
+        });
+        await step(`dashboard:${env}`, `Dashboard of ${env}`, async () => {
+          const o = await T().call("overview", { env }, { source: "showcase" });
+          return { env, view: o.dashboard, summary: o.summary ? Object.entries(o.summary).map(([k, v]) => `${k} ${typeof v === "object" ? JSON.stringify(v) : v}`).join(", ").slice(0, 160) : void 0 };
+        });
+        await step(`instances:${env}`, `${service} in ${env}`, async () => {
+          const s = await T().call("consul_service", { env, name: service }, { source: "showcase" });
+          if (!s.instances) throw new Error(`${service} is not in Consul of ${env}${s.matches?.length ? ` (did you mean ${s.matches.slice(0, 4).join(", ")}?)` : ""}`);
+          for (const i of s.instances) versions.push({ env, instance: `${i.node} ${i.address}:${i.port}`, status: i.status, ...parseVersion(i.version) });
+          const vs = [...new Set(s.instances.map((i) => parseVersion(i.version).version).filter(Boolean))];
+          return { env, instances: s.instances.length, passing: s.instances.filter((i) => i.status === "passing").length, versions: vs, summary: `${s.instances.filter((i) => i.status === "passing").length}/${s.instances.length} passing, version ${vs.join(", ") || "unknown"}` };
+        });
+      }
+      await step("versions", "Versions across environments", async () => {
+        const rows = versions.map((v) => ({ env: v.env, instance: v.instance, status: v.status, version: v.version || "", commit: v.commit || "", branch: v.branch || "" }));
+        const byEnv = {};
+        for (const v of versions) if (v.version) (byEnv[v.env] ||= /* @__PURE__ */ new Set()).add(`${v.version}@${v.commit || "?"}`);
+        const builds = Object.fromEntries(Object.entries(byEnv).map(([e, s]) => [e, [...s]]));
+        const distinct = new Set(Object.values(builds).flat());
+        const view = require_results().saveView("table", rows, { title: `${service}: versions in ${envs.join(", ")}` });
+        return { view, builds, same: distinct.size <= 1, summary: distinct.size <= 1 ? `the same build everywhere (${[...distinct][0] || "unknown"})` : Object.entries(builds).map(([e, b]) => `${e} ${b.join("/")}`).join(" vs ") };
+      });
+      const pp = await step("passport", `Passport of ${service}`, async () => {
+        const cached = require_passport().load(service);
+        const indexed = cached && require_codeindex().load(`${cached.repo.project}/${cached.repo.repo}`);
+        const p = await T().call("passport", { service, refresh: !!refreshPassport || !cached || !indexed }, { source: "showcase" });
+        return { view: p.view, repo: p.repo, cached: p.cached, summary: `${p.cached ? `as built ${String(p.builtAt).slice(0, 16).replace("T", " ")}: ` : ""}${p.summary.endpoints} endpoints, consumes ${p.summary.consumes.join(", ") || "-"}, produces ${p.summary.produces.join(", ") || "-"}, ${Object.keys(p.summary.tables).length} tables, ${(p.flows || []).length} flows`, flows: (p.flows || []).slice(0, 8) };
+      });
+      if (target) {
+        await step("impact", `Impact of ${target}`, async () => {
+          const i = await T().call("impact", { target, env: envs[0] }, { source: "showcase" });
+          if (!i.resolved?.length) throw new Error(i.note || `nothing named ${target}`);
+          return { view: i.view, summary: `${Object.values(i.counts || {}).reduce((a, b) => a + b, 0)} affected: ${Object.entries(i.counts || {}).map(([k, v]) => `${v} ${k}`).join(", ")}${i.endpoints?.length ? `; endpoints ${i.endpoints.join(", ")}` : ""}${i.tests?.length ? `; tests ${i.tests.join(", ")}` : ""}` };
+        });
+      }
+      if (target) {
+        const ws = await step("workspace", `Workspace on ${ref || "the default branch"}`, async () => {
+          const w = await T().call("workspace_open", { service, ...pp?.repo ? { project: pp.repo.project, repo: pp.repo.repo } : {}, ref: ref || "" }, { source: "showcase" });
+          return { workspace: w.id, ref: w.ref || "default branch", sha: w.sha, summary: `${w.project}/${w.repo} @ ${String(w.sha).slice(0, 10)}, ${w.files} files, ${(w.libs || []).length} libraries` };
+        });
+        if (ws?.workspace) {
+          const ctx = await step("test_context", `Test context of ${target}`, async () => {
+            const c = await T().call("test_context", { workspace: ws.workspace, target }, { source: "showcase" });
+            return { style: c.style, path: c.test.path, className: c.test.class.split(".").pop(), skeleton: c.skeleton, summary: `${c.style} test at ${c.test.path}${c.dependencies?.length ? `, mocks ${c.dependencies.map((d) => d.name).join(", ")}` : ""}${c.flow ? `, flow: ${c.flow.beans.map((b) => b.name).join(" -> ")}` : ""}` };
+          });
+          if (ctx?.path) {
+            const content = test || ctx.skeleton;
+            await step("test_run", `Run ${ctx.className}`, async () => {
+              if (!content) throw new Error("no skeleton for this test style: pass test= with the test source");
+              let r = await T().call("test_run", { workspace: ws.workspace, tests: [ctx.className], files: [{ path: ctx.path, content }] }, { source: "showcase" });
+              while (r.state === "running") r = await T().call("test_run", { workspace: ws.workspace, job: r.job }, { source: "showcase" });
+              if (r.error) throw new Error(r.error);
+              return { ok: r.outcome === "passed" || r.outcome === "failed", view: r.view, outcome: r.outcome, counts: r.counts, mode: r.mode, testMs: r.ms, failures: r.failures, written: test ? "given" : "skeleton", summary: `${r.outcome}: ${r.counts.passed}/${r.counts.tests} passed in ${(r.ms / 1e3).toFixed(1)} s (${r.mode})${r.failures?.length ? `; ${r.failures[0].test}: ${r.failures[0].expected != null ? `expected ${r.failures[0].expected}, got ${r.failures[0].actual}` : String(r.failures[0].message || "").split("\n")[0].slice(0, 120)}` : ""}` };
+            });
+            await step("patch", "Patch", async () => {
+              const p = await T().call("workspace_patch", { workspace: ws.workspace }, { source: "showcase" });
+              const verdicts = {};
+              for (const t of p.tests || []) {
+                const v = t.split(":")[0];
+                verdicts[v] = (verdicts[v] || 0) + 1;
+              }
+              return { view: p.view, download: p.download, files: (p.files || []).map((f) => f.path), tests: p.tests, summary: `${(p.files || []).length} file${(p.files || []).length === 1 ? "" : "s"}${Object.keys(verdicts).length ? `; tests ${Object.entries(verdicts).map(([v, n]) => `${n} ${v}`).join(", ")}` : ""}` };
+            });
+          }
+        }
+      }
+      const result = { service, target: target || null, envs, ref: ref || null, at: (/* @__PURE__ */ new Date()).toISOString(), ms: Date.now() - started, ok: steps.every((s) => s.ok), steps };
+      result.view = require_results().saveView("showcase", result, { title: `${service}${target ? ` \xB7 ${target}` : ""}` }, { page: "showcase" });
+      return result;
+    }
+    function summary(r) {
+      return {
+        service: r.service,
+        target: r.target,
+        envs: r.envs,
+        ok: r.ok,
+        ms: r.ms,
+        steps: r.steps.map((s) => `${s.ok ? "ok" : "FAILED"}  ${s.title}${s.summary ? `: ${s.summary}` : ""}${s.error ? `: ${s.error}` : ""}`),
+        view: r.view
+      };
+    }
+    module2.exports = { run, summary, parseVersion };
   }
 });
 
@@ -32133,6 +33074,7 @@ var require_tools_code = __commonJS({
               if (!a.service && !(a.project && a.repo)) throw new Error("give service, or project and repo");
               job = J.start(`workspace:${a.service || `${a.project}/${a.repo}`}:${a.ref || ""}:${Date.now()}`, `workspace_open ${a.service || `${a.project}/${a.repo}`}${a.ref ? `@${a.ref}` : ""}`, async () => {
                 const w = await require_workspace().open({ service: a.service, project: a.project, repo: a.repo, ref: a.ref, env: a.env, fresh: a.fresh, libraries: a.libraries === true });
+                require_javacheck().warm(w.id);
                 const notes = require_trace().current()?.notes || [];
                 return { ...w, libs: (w.libs || []).map((l) => l.error ? `${l.artifactId}: ${String(l.error).slice(0, 160)}` : `${l.artifactId} ${l.repo}${l.module ? "/" + l.module : ""}`), ...notes.length ? { notes } : {} };
               });
@@ -32158,10 +33100,16 @@ var require_tools_code = __commonJS({
         {
           name: "workspace_write",
           group: "code",
-          description: "Write a file in a workspace: the whole content (new test files), or edits [{find, replace}] where each find matches exactly once (fixes in existing code). The change shows up in workspace_patch.",
+          description: "Write a file in a workspace: the whole content (new test files), or edits [{find, replace}] where each find matches exactly once (fixes in existing code). The change shows up in workspace_patch. A Java file is compiled right away against its module's classpath: the answer has compile.errors with their lines, compile.fixed (what was fixed in the file already: missing imports and static imports, throws Exception on tests, @MockBean/@MockitoBean for this Spring Boot, javax -> jakarta) and compile.suggestions (ready edits to choose from, e.g. which of several classes to import). Read compile before the next step; a file with errors does not need a test run to find them.",
           input: { workspace: str("Workspace id"), path: str("File path"), content: str("Whole file content"), edits: { type: "array", items: { type: "object", properties: { find: { type: "string" }, replace: { type: "string" } }, required: ["find", "replace"] }, description: "Replacements, applied in order" } },
           required: ["workspace", "path"],
-          run: (a) => require_workspace().write(a.workspace, a.path, { content: a.content, edits: a.edits })
+          // compiled at once against the module's classpath: errors with their lines, clear fixes applied (imports,
+          // throws Exception, @MockBean/@MockitoBean), the rest offered as ready edits
+          run: async (a) => {
+            const w = require_workspace().write(a.workspace, a.path, { content: a.content, edits: a.edits });
+            const compile = await require_javacheck().check(a.workspace, [w.path]).catch((e) => ({ skipped: e.message }));
+            return compile ? { ...w, compile } : w;
+          }
         },
         {
           name: "workspace_patch",
@@ -32255,6 +33203,10 @@ var require_tools_code = __commonJS({
                   }),
                   ...failing.length > 10 ? { moreFailures: failing.length - 10 } : {},
                   compile: r.compile.length ? r.compile.slice(0, 10) : void 0,
+                  // the compile check of what was written: fixed in the files already, and ready edits for the rest
+                  ...r.check?.fixed ? { fixed: r.check.fixed } : {},
+                  ...r.check?.suggestions || r.suggestions ? { suggestions: [...r.check?.suggestions || [], ...r.suggestions || []].slice(0, 8) } : {},
+                  ...r.check?.pending || r.check?.skipped ? { check: r.check.pending || r.check.skipped } : {},
                   parts: r.parts.slice(0, 4).map((p) => ({ file: p.file, line: p.line, why: p.why, code: p.snippet?.text.split("\n").filter((l, i, a2) => Math.abs(i - a2.findIndex((x) => x.startsWith(">"))) <= 3).join("\n") })),
                   ...r.parts.length > 4 ? { moreParts: r.parts.length - 4 } : {},
                   database: r.database || void 0,
@@ -32262,7 +33214,7 @@ var require_tools_code = __commonJS({
                   // the build log only when it is the answer: no test results, or the build itself failed
                   tail: r.outcome === "passed" || r.cases.length && !r.compile.length ? void 0 : r.tail,
                   view,
-                  next: r.outcome === "passed" ? r.mode === "fast" ? `before the patch: test_run mode="build" once (the project's own build), then workspace_patch` : "workspace_patch to take the changes" : "fix the test or the code at parts (test_run files=[{path, edits}] writes and runs in one call)"
+                  next: r.outcome === "passed" ? r.mode === "fast" ? `before the patch: test_run mode="build" once (the project's own build), then workspace_patch` : "workspace_patch to take the changes" : r.mode === "check" ? "not run: fix the compile errors first (suggestions has ready edits)" : "fix the test or the code at parts (test_run files=[{path, edits}] writes and runs in one call)"
                 };
               });
             }
