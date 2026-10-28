@@ -81,3 +81,17 @@ test('unsupported return encoding cannot masquerade as equivalent errors and spa
   assert.equal((await run()).outcome, 'different');
   assert.ok((await require('../lib/tools').call('test_targets', {})).targets.find(t => t.id === 'captured').required.includes('fixture_path'));
 });
+test('differential byte views and regexp state are exact; opaque or hidden state requires an adapter', async () => {
+  const run = () => call('differential_check', { profile: 'projection', baseline: 'before', candidate: 'after', inputs: [{ id: 'types', args: [] }] });
+  for (const text of ["exports.load=()=>new WeakMap()", "exports.load=()=>Object.defineProperty({},'hidden',{value:1})", "exports.load=()=>({get value(){return 1}})", "exports.load=()=>({[Symbol('hidden')]:1})", "exports.load=()=>new (class Result{constructor(){this.value=1}})()"]) {
+    for (const id of ['before', 'after']) W.write(id, 'src/projection.cjs', { content: text });
+    await assert.rejects(run(), /differential worker.*exit/);
+  }
+  for (const suffix of ['.buffer', '.buffer&&new DataView(a.buffer)', '']) {
+    for (const [id, number] of [['before', 1], ['after', 2]]) W.write(id, 'src/projection.cjs', { content: `exports.load=()=>{const a=new Uint8Array([${number},3]);return a${suffix}}` });
+    assert.equal((await run()).outcome, 'different');
+  }
+  W.write('before', 'src/projection.cjs', { content: "exports.load=()=>/orders/g" });
+  W.write('after', 'src/projection.cjs', { content: "exports.load=()=>{const r=/orders/g;r.lastIndex=3;return r}" });
+  assert.equal((await run()).outcome, 'different');
+});
