@@ -347,7 +347,10 @@ var require_config = __commonJS({
         maven: there(c.maven, e.DT_MAVEN),
         gradle: there(c.gradle, e.DT_GRADLE),
         mavenRepo: at(c.mavenRepo || e.DT_MAVEN_REPO) || (fs2.existsSync(m2) ? m2 : path2.join(PATHS.cache, "m2")),
-        mavenSettings: at(c.mavenSettings || e.DT_MAVEN_SETTINGS),
+        // a settings.xml for the company repository: tests.mavenSettings, or maven-settings.xml in the config folder
+        mavenSettings: at(c.mavenSettings || e.DT_MAVEN_SETTINGS) || (fs2.existsSync(path2.join(HOME, "maven-settings.xml")) ? path2.join(HOME, "maven-settings.xml") : null),
+        gradleProperties: [].concat(c.gradleProperties || []),
+        env: c.env && typeof c.env === "object" ? c.env : {},
         gradleHome: at(c.gradleUserHome || e.DT_GRADLE_USER_HOME),
         offline: String(e.DT_TESTS_OFFLINE || c.offline || "") === "true" || c.offline === true,
         timeoutMs: Number(e.DT_TESTS_TIMEOUT_MS || c.timeoutMs || 9e5),
@@ -29084,6 +29087,131 @@ new file mode`) ? "added" : "modified";
   }
 });
 
+// lib/showcase.js
+var require_showcase = __commonJS({
+  "lib/showcase.js"(exports2, module2) {
+    var T = () => require_tools();
+    function parseVersion(text) {
+      if (!text) return {};
+      try {
+        const v = JSON.parse(text);
+        const commit = v.git?.commit?.id || v.git?.commit || v.commit || v.sha || null;
+        return { version: v.build?.version || v.version || null, commit: typeof commit === "object" ? commit.id || null : commit, branch: v.git?.branch || v.branch || null };
+      } catch {
+        const sha = (String(text).match(/\b[0-9a-f]{7,40}\b/) || [])[0];
+        return { version: null, commit: sha || null, branch: null };
+      }
+    }
+    async function run({ service, target, envs, ref, test, log = () => {
+    } } = {}) {
+      const cfg = require_config();
+      envs = (Array.isArray(envs) ? envs : String(envs || "").split(",")).map((s) => s.trim()).filter(Boolean);
+      if (!envs.length) envs = cfg.envNames();
+      const started = Date.now();
+      const steps = [];
+      const step = async (key, title, fn) => {
+        const t0 = Date.now();
+        log(`${title}...`);
+        try {
+          const r = await fn();
+          steps.push({ key, title, ok: r?.ok !== false, ms: Date.now() - t0, ...r });
+          log(`${title}: ${r?.ok === false ? "failed" : "ok"}${r?.summary ? ` (${r.summary})` : ""}`);
+          return r;
+        } catch (e) {
+          steps.push({ key, title, ok: false, ms: Date.now() - t0, error: e.message });
+          log(`${title}: ERROR ${e.message}`);
+          return null;
+        }
+      };
+      const versions = [];
+      for (const env of envs) {
+        await step(`health:${env}`, `Health of ${env}`, async () => {
+          const h = await T().call("health", { env }, { source: "showcase" });
+          const mine = h.rows.find((r) => r.service === service);
+          return { env, view: h.view, summary: `${h.summary.healthy}/${h.summary.services} healthy${h.summary.down ? `, ${h.summary.down} down` : ""}${h.summary.degraded ? `, ${h.summary.degraded} degraded` : ""}`, service: mine || null };
+        });
+        await step(`dashboard:${env}`, `Dashboard of ${env}`, async () => {
+          const o = await T().call("overview", { env }, { source: "showcase" });
+          return { env, view: o.dashboard, summary: o.summary ? Object.entries(o.summary).map(([k, v]) => `${k} ${typeof v === "object" ? JSON.stringify(v) : v}`).join(", ").slice(0, 160) : void 0 };
+        });
+        await step(`instances:${env}`, `${service} in ${env}`, async () => {
+          const s = await T().call("consul_service", { env, name: service }, { source: "showcase" });
+          if (!s.instances) throw new Error(`${service} is not in Consul of ${env}${s.matches?.length ? ` (did you mean ${s.matches.slice(0, 4).join(", ")}?)` : ""}`);
+          for (const i of s.instances) versions.push({ env, instance: `${i.node} ${i.address}:${i.port}`, status: i.status, ...parseVersion(i.version) });
+          const vs = [...new Set(s.instances.map((i) => parseVersion(i.version).version).filter(Boolean))];
+          return { env, instances: s.instances.length, passing: s.instances.filter((i) => i.status === "passing").length, versions: vs, summary: `${s.instances.filter((i) => i.status === "passing").length}/${s.instances.length} passing, version ${vs.join(", ") || "unknown"}` };
+        });
+      }
+      await step("versions", "Versions across environments", async () => {
+        const rows = versions.map((v) => ({ env: v.env, instance: v.instance, status: v.status, version: v.version || "", commit: v.commit || "", branch: v.branch || "" }));
+        const byEnv = {};
+        for (const v of versions) if (v.version) (byEnv[v.env] ||= /* @__PURE__ */ new Set()).add(`${v.version}@${v.commit || "?"}`);
+        const builds = Object.fromEntries(Object.entries(byEnv).map(([e, s]) => [e, [...s]]));
+        const distinct = new Set(Object.values(builds).flat());
+        const view = require_results().saveView("table", rows, { title: `${service}: versions in ${envs.join(", ")}` });
+        return { view, builds, same: distinct.size <= 1, summary: distinct.size <= 1 ? `the same build everywhere (${[...distinct][0] || "unknown"})` : Object.entries(builds).map(([e, b]) => `${e} ${b.join("/")}`).join(" vs ") };
+      });
+      const pp = await step("passport", `Passport of ${service}`, async () => {
+        const p = await T().call("passport", { service, refresh: true }, { source: "showcase" });
+        return { view: p.view, repo: p.repo, summary: `${p.summary.endpoints} endpoints, consumes ${p.summary.consumes.join(", ") || "-"}, produces ${p.summary.produces.join(", ") || "-"}, ${Object.keys(p.summary.tables).length} tables, ${(p.flows || []).length} flows`, flows: (p.flows || []).slice(0, 8) };
+      });
+      if (target) {
+        await step("impact", `Impact of ${target}`, async () => {
+          const i = await T().call("impact", { target, env: envs[0] }, { source: "showcase" });
+          if (!i.resolved?.length) throw new Error(i.note || `nothing named ${target}`);
+          return { view: i.view, summary: `${Object.values(i.counts || {}).reduce((a, b) => a + b, 0)} affected: ${Object.entries(i.counts || {}).map(([k, v]) => `${v} ${k}`).join(", ")}${i.endpoints?.length ? `; endpoints ${i.endpoints.join(", ")}` : ""}${i.tests?.length ? `; tests ${i.tests.join(", ")}` : ""}` };
+        });
+      }
+      if (target) {
+        const ws = await step("workspace", `Workspace on ${ref || "the default branch"}`, async () => {
+          const w = await T().call("workspace_open", { service, ...pp?.repo ? { project: pp.repo.project, repo: pp.repo.repo } : {}, ref: ref || "" }, { source: "showcase" });
+          return { workspace: w.id, ref: w.ref || "default branch", sha: w.sha, summary: `${w.project}/${w.repo} @ ${String(w.sha).slice(0, 10)}, ${w.files} files, ${(w.libs || []).length} libraries` };
+        });
+        if (ws?.workspace) {
+          const ctx = await step("test_context", `Test context of ${target}`, async () => {
+            const c = await T().call("test_context", { workspace: ws.workspace, target }, { source: "showcase" });
+            return { style: c.style, path: c.test.path, className: c.test.class.split(".").pop(), skeleton: c.skeleton, summary: `${c.style} test at ${c.test.path}${c.dependencies?.length ? `, mocks ${c.dependencies.map((d) => d.name).join(", ")}` : ""}${c.flow ? `, flow: ${c.flow.beans.map((b) => b.name).join(" -> ")}` : ""}` };
+          });
+          if (ctx?.path) {
+            const content = test || ctx.skeleton;
+            await step("test_run", `Run ${ctx.className}`, async () => {
+              if (!content) throw new Error("no skeleton for this test style: pass test= with the test source");
+              let r = await T().call("test_run", { workspace: ws.workspace, tests: [ctx.className], files: [{ path: ctx.path, content }] }, { source: "showcase" });
+              while (r.state === "running") r = await T().call("test_run", { workspace: ws.workspace, job: r.job }, { source: "showcase" });
+              if (r.error) throw new Error(r.error);
+              return { ok: r.outcome === "passed" || r.outcome === "failed", view: r.view, outcome: r.outcome, counts: r.counts, mode: r.mode, testMs: r.ms, failures: r.failures, written: test ? "given" : "skeleton", summary: `${r.outcome}: ${r.counts.passed}/${r.counts.tests} passed in ${(r.ms / 1e3).toFixed(1)} s (${r.mode})${r.failures?.length ? `; ${r.failures[0].test}: ${r.failures[0].expected != null ? `expected ${r.failures[0].expected}, got ${r.failures[0].actual}` : String(r.failures[0].message || "").split("\n")[0].slice(0, 120)}` : ""}` };
+            });
+            await step("patch", "Patch", async () => {
+              const p = await T().call("workspace_patch", { workspace: ws.workspace }, { source: "showcase" });
+              const verdicts = {};
+              for (const t of p.tests || []) {
+                const v = t.split(":")[0];
+                verdicts[v] = (verdicts[v] || 0) + 1;
+              }
+              return { view: p.view, download: p.download, files: (p.files || []).map((f) => f.path), tests: p.tests, summary: `${(p.files || []).length} file${(p.files || []).length === 1 ? "" : "s"}${Object.keys(verdicts).length ? `; tests ${Object.entries(verdicts).map(([v, n]) => `${n} ${v}`).join(", ")}` : ""}` };
+            });
+          }
+        }
+      }
+      const result = { service, target: target || null, envs, ref: ref || null, at: (/* @__PURE__ */ new Date()).toISOString(), ms: Date.now() - started, ok: steps.every((s) => s.ok), steps };
+      result.view = require_results().saveView("showcase", result, { title: `${service}${target ? ` \xB7 ${target}` : ""}` }, { page: "showcase" });
+      return result;
+    }
+    function summary(r) {
+      return {
+        service: r.service,
+        target: r.target,
+        envs: r.envs,
+        ok: r.ok,
+        ms: r.ms,
+        steps: r.steps.map((s) => `${s.ok ? "ok" : "FAILED"}  ${s.title}${s.summary ? `: ${s.summary}` : ""}${s.error ? `: ${s.error}` : ""}`),
+        view: r.view
+      };
+    }
+    module2.exports = { run, summary, parseVersion };
+  }
+});
+
 // lib/ddl.js
 var require_ddl = __commonJS({
   "lib/ddl.js"(exports2, module2) {
@@ -29585,6 +29713,61 @@ ${e.message}`, ms: Date.now() - started });
   }
 });
 
+// lib/buildenv.js
+var require_buildenv = __commonJS({
+  "lib/buildenv.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var os = require("os");
+    var path2 = require("path");
+    function gradleFiles(cfg) {
+      const { HOME } = require_config();
+      const files = [...(cfg.gradleProperties || []).map((f) => path2.resolve(HOME, f)), path2.join(HOME, "gradle.properties")];
+      const userHome = path2.join(os.homedir(), ".gradle", "gradle.properties");
+      if (cfg.gradleHome && path2.resolve(cfg.gradleHome) !== path2.dirname(userHome)) files.push(userHome);
+      return [...new Set(files)].filter((f) => fs2.existsSync(f));
+    }
+    function gradleProperties(cfg) {
+      const { parseProperties } = require_extract();
+      const { load, interpolate } = require_config();
+      const lookup = load().lookup();
+      const props = {}, from = {};
+      for (const f of gradleFiles(cfg)) {
+        for (const [k, v] of Object.entries(parseProperties(fs2.readFileSync(f, "utf8")))) {
+          if (k in props) continue;
+          props[k] = String(interpolate(v, lookup));
+          from[k] = f;
+        }
+      }
+      return { props, from };
+    }
+    function forBuild(cfg, tool) {
+      const env = {}, args = [], secrets = [];
+      for (const [k, v] of Object.entries(cfg.env || {})) {
+        env[k] = String(v);
+        secrets.push(String(v));
+      }
+      const sources = [];
+      if (tool === "gradle") {
+        const { props, from } = gradleProperties(cfg);
+        for (const [k, v] of Object.entries(props)) {
+          if (k.startsWith("systemProp.")) args.push(`-D${k.slice(11)}=${v}`);
+          else if (k.startsWith("org.gradle.")) args.push(`-D${k}=${v}`);
+          else env[`ORG_GRADLE_PROJECT_${k}`] = v;
+          if (/pass|secret|token|key|user|cred|auth/i.test(k)) secrets.push(v);
+        }
+        sources.push(...new Set(Object.values(from)));
+      }
+      return { env, args, secrets: secrets.filter((s) => s && s.length >= 3), sources };
+    }
+    var mask = (text, secrets) => {
+      let t = String(text ?? "");
+      for (const s of [...secrets].sort((a, b) => b.length - a.length)) t = t.split(s).join("***");
+      return t;
+    };
+    module2.exports = { forBuild, gradleProperties, gradleFiles, mask };
+  }
+});
+
 // lib/testdb.js
 var require_testdb = __commonJS({
   "lib/testdb.js"(exports2, module2) {
@@ -29992,7 +30175,10 @@ ${e.message}`, ms: Date.now() - started });
         return meth ? `${fq}#${meth}` : fq;
       });
       const c = why ? command(root, p, tests, cfg) : null;
-      const env = { ...process.env, MAVEN_OPTS: process.env.MAVEN_OPTS || "-Xmx1g", CI: "true" };
+      const B = require_buildenv().forBuild(cfg, p.tool);
+      const env = { ...process.env, MAVEN_OPTS: process.env.MAVEN_OPTS || "-Xmx1g", CI: "true", ...B.env };
+      if (c) c.args.splice(c.args.indexOf("--console=plain") + 1 || 0, 0, ...p.tool === "gradle" ? B.args : []);
+      const hide = (t) => require_buildenv().mask(t, B.secrets);
       if (cfg.javaHome) {
         env.JAVA_HOME = cfg.javaHome;
         env.PATH = `${path2.join(cfg.javaHome, "bin")}${path2.delimiter}${env.PATH}`;
@@ -30065,6 +30251,7 @@ ${e.message}`, ms: Date.now() - started });
       for (const k of cases) for (const pt of k.parts || []) if (!parts.some((x) => x.file === pt.file && x.line === pt.line)) parts.push({ file: pt.file, line: pt.line, method: pt.method, test: pt.test, why: `${k.class.split(".").pop()}.${k.name}: ${((k.message || k.type || "").split("\n").find((l) => l.trim()) || "").trim().slice(0, 200)}`, snippet: pt.snippet });
       const hints = [];
       if (/Mockito cannot mock this class|Java \d+ \(\d+\) is not supported by the current version of Byte Buddy/.test(r.out + cases.map((k) => k.message).join("\n"))) hints.push('Mockito/Byte Buddy of this project does not support the JDK the tests ran on: point tests.javaHome at the JDK the project builds with (17 or 21), or keep tests.javaToolOptions = "-Dnet.bytebuddy.experimental=true".');
+      if (/Could not get unknown property '(\w+)'|Could not resolve all (files|dependencies)|Received status code 401|status code 401|Unauthorized/.test(r.out)) hints.push(`The build needs settings of this machine (a private repository and its credentials): put them in gradle.properties in dt's config folder (or tests.gradleProperties; values may be \${VAR} from .env), or tests.env for environment variables${p.tool === "maven" ? "; for Maven, maven-settings.xml in the config folder (or tests.mavenSettings)" : ""}.`);
       if (/Failed to determine a suitable driver class|Connection to .* refused|password authentication failed/.test(r.out)) hints.push("The tests wanted a database: run with db (env + db) so test_run loads the DDL snapshot into a throwaway database.");
       const ok = r.code === 0 && counts.failed === 0 && counts.errors === 0 && !compile.length && counts.tests > 0;
       const outcome = ok ? "passed" : r.killed ? "timeout" : compile.length ? "compile-error" : counts.tests === 0 ? "no-tests-ran" : "failed";
@@ -30077,7 +30264,8 @@ ${e.message}`, ms: Date.now() - started });
         ...fastInfo ? { fast: fastInfo } : {},
         written: written.length ? written.map((w) => w.path) : void 0,
         module: p.module,
-        command: c ? `${path2.basename(c.cmd)} ${c.args.filter((a) => !/^-Dmaven\.repo\.local/.test(a)).join(" ")}` : `javac (${fastInfo.compiled} changed) + JUnit launcher${fastInfo.prepared ? " (prepared with Maven first)" : ""}`,
+        command: hide(c ? `${path2.basename(c.cmd)} ${c.args.filter((a) => !/^-Dmaven\.repo\.local/.test(a)).join(" ")}` : `javac (${fastInfo.compiled} changed) + JUnit launcher${fastInfo.prepared ? " (prepared with Maven first)" : ""}`),
+        ...B.sources.length ? { gradleProperties: B.sources.map((f) => path2.basename(path2.dirname(f)) + "/" + path2.basename(f)) } : {},
         outcome,
         exit: r.code,
         ms: r.ms,
@@ -30087,7 +30275,7 @@ ${e.message}`, ms: Date.now() - started });
         parts,
         hints,
         database: database ? { name: database.database, failedStatements: database.errors } : null,
-        tail: require_testout().compactLog(r.out),
+        tail: hide(require_testout().compactLog(r.out)),
         history: history(id, cases)
       };
     }
@@ -30812,6 +31000,26 @@ var require_tools_code = __commonJS({
       }
       return [
         {
+          name: "showcase",
+          group: "showcase",
+          description: `Everything about one service on one page (and a check that all of dt works): health of every service and the dashboard in each environment, this service's instances with the version and commit deployed (and whether the environments run the same build), its passport, the impact of a code part, then a workspace on master (or ref) where an isolated test of that code part is written (the test_context skeleton, or test= with your own) and run, and its patch. Use it for "show everything for service X and test Class.method". Shown as one page with every view embedded; if it answers "running", call it again with the job id.`,
+          input: { service: str("Service name"), target: str("Code part to test: Class#method or Class"), envs: str("Environments, comma separated (default: all)"), ref: str("Branch, tag or sha for the workspace (default: the default branch)"), test: str("Test source to run instead of the skeleton"), job: str('A job id from an earlier "running" answer') },
+          required: [],
+          run: async (a) => {
+            const J = require_jobs();
+            let job = a.job ? J.find(a.job) : null;
+            if (a.job && !job) throw new Error(`no job ${a.job}`);
+            if (!job) {
+              if (!a.service) throw new Error("service: which service to show");
+              job = J.start(`showcase:${a.service}:${a.target || ""}`, `showcase ${a.service}${a.target ? ` ${a.target}` : ""}`, async (log) => {
+                const S = require_showcase();
+                return S.summary(await S.run({ service: a.service, target: a.target, envs: a.envs, ref: a.ref, test: a.test, log }));
+              });
+            }
+            return waitJob(job, require_config().getTests().waitMs, "showcase");
+          }
+        },
+        {
           name: "code_index",
           group: "code",
           description: "Fetch a repo (branch, tag or sha; or a service via its passport repo) and build its code index: a trigram index for code_search over every text file, and a symbol graph (classes, methods, fields, calls, Spring roles, tables, SQL, Kafka topics, endpoints, Feign calls) for impact and test_context. Passports and workspaces index their checkout automatically. Without arguments: lists the indexes.",
@@ -31020,6 +31228,7 @@ var require_tools_code = __commonJS({
                   ...r.fast ? { compiled: r.fast.compiled, prepared: r.fast.prepared || void 0 } : {},
                   written: r.written,
                   command: r.command,
+                  ...r.gradleProperties ? { gradleProperties: r.gradleProperties } : {},
                   // compact for the model: the message's first lines, expected/actual, the repo's frames; the view has the rest
                   failures: failing.slice(0, 10).map((c) => {
                     const O = require_testout();
@@ -32739,6 +32948,7 @@ var require_server2 = __commonJS({
         sites: require_config().getBrowser().sites.map(({ secrets, ...s }) => ({ ...s, secrets: secrets.length }))
       })],
       ["GET", "/dash", false, page("dash.html")],
+      ["GET", "/showcase/*", false, page("showcase.html")],
       ["GET", "/api/dash", false, async (req, res, url) => {
         const env = url.searchParams.get("env") || envNames2()[0];
         const ok = tokenOk(url, `dash:${env}`);
@@ -32865,6 +33075,8 @@ Live
   dt kafka <topic> [--n 5]                 last n messages
   dt consul [service]                      services, or instances + /version
   dt tool [name] ['{"json":"args"}']        call any agent tool (list without name)
+  dt showcase <service> [Class#method] [--envs a,b] [--ref branch] [--test-file Test.java]
+                                           health, versions, passport, impact, a test run on master: one page
 
 Serve
   dt serve [--port 4000] [--lan]           tools (MCP /mcp, OpenAPI /openapi.json), pages, /admin
@@ -33000,6 +33212,16 @@ var commands = {
     if (opts._[0]) return consul.service(opts.env, opts._[0]);
     const base = require_config().endpoint(opts.env, "consul");
     return Object.keys(await http(`${base}/v1/catalog/services`));
+  },
+  // dt showcase <service> [Class#method] [--envs dev,uat] [--ref master]: every view of one service, one page
+  async showcase(opts) {
+    const [service, target] = opts._;
+    if (!service) throw new Error("usage: dt showcase <service> [Class#method] [--envs a,b] [--ref branch]");
+    const S = require_showcase();
+    const test = opts["test-file"] ? require("fs").readFileSync(opts["test-file"], "utf8") : void 0;
+    const r = await S.run({ service, target, envs: opts.envs, ref: opts.ref, test, log: (l) => console.error(l) });
+    if (!r.ok) process.exitCode = 1;
+    return S.summary(r);
   },
   async tool(opts) {
     const [name, json] = opts._;

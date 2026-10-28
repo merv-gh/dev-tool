@@ -24,6 +24,8 @@ Live
   dt kafka <topic> [--n 5]                 last n messages
   dt consul [service]                      services, or instances + /version
   dt tool [name] ['{"json":"args"}']        call any agent tool (list without name)
+  dt showcase <service> [Class#method] [--envs a,b] [--ref branch] [--test-file Test.java]
+                                           health, versions, passport, impact, a test run on master: one page
 
 Serve
   dt serve [--port 4000] [--lan]           tools (MCP /mcp, OpenAPI /openapi.json), pages, /admin
@@ -157,6 +159,16 @@ const commands = {
     return Object.keys(await http(`${base}/v1/catalog/services`));
   },
 
+  // dt showcase <service> [Class#method] [--envs dev,uat] [--ref master]: every view of one service, one page
+  async showcase(opts) {
+    const [service, target] = opts._;
+    if (!service) throw new Error('usage: dt showcase <service> [Class#method] [--envs a,b] [--ref branch]');
+    const S = require('./lib/showcase');
+    const test = opts['test-file'] ? require('fs').readFileSync(opts['test-file'], 'utf8') : undefined;
+    const r = await S.run({ service, target, envs: opts.envs, ref: opts.ref, test, log: (l) => console.error(l) });
+    if (!r.ok) process.exitCode = 1;
+    return S.summary(r);
+  },
   async tool(opts) {
     const [name, json] = opts._;
     if (!name) return (await require('./lib/tools').schemas()).map(t => `${t.name}: ${t.description}`);

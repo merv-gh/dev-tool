@@ -5,7 +5,7 @@
 set -e
 cd "$(dirname "$0")/.."
 H=$(pwd)/demo/.home
-MOCK=${MOCK_PORT:-4900}; DT=${DT_DEMO_PORT:-4800}; PGP=${DEMO_PG_PORT:-55433}; SFTP=${DEMO_SFTP_PORT:-4922}
+MOCK=${MOCK_PORT:-4900}; UAT=${MOCK_UAT_PORT:-4901}; DT=${DT_DEMO_PORT:-4800}; PGP=${DEMO_PG_PORT:-55433}; SFTP=${DEMO_SFTP_PORT:-4922}
 mkdir -p "$H"
 if ! docker ps --format '{{.Names}}' | grep -qx dt-demo-pg; then
   docker rm -f dt-demo-pg >/dev/null 2>&1 || true
@@ -25,6 +25,11 @@ cat > "$H/config.json" <<JSON
       "schemaRegistry": "http://127.0.0.1:$MOCK",
       "consul": "http://127.0.0.1:$MOCK",
       "logs": { "index": "logs-*", "kibana": "http://kibana.example.com" }
+    },
+    "uat": {
+      "elasticsearch": { "hosts": ["http://127.0.0.1:$UAT"] },
+      "kafkaUi": "http://127.0.0.1:$UAT",
+      "consul": "http://127.0.0.1:$UAT"
     }
   },
   "bitbucket": { "url": "http://127.0.0.1:$MOCK", "token": "\${DEMO_BB_TOKEN}" },
@@ -50,15 +55,16 @@ cat > "$H/config.json" <<JSON
     "partner": { "type": "sftp", "host": "127.0.0.1", "port": $SFTP, "user": "demo", "password": "\${DEMO_SFTP_PASSWORD}", "root": "/upload", "write": true }
   },
   "scripts": { "http": { "allow": ["http://127.0.0.1:$MOCK/partner/api/"] } },
+  "tests": { "maven": "\${DEMO_MAVEN:-}", "gradle": "\${DEMO_GRADLE:-}" },
   "server": { "publicUrl": "http://127.0.0.1:$DT", "ratePerSec": 0 }
 }
 JSON
-printf 'DEMO_ORDERS_DB=postgres://postgres:demo@127.0.0.1:%s/orders\nDEMO_BB_TOKEN=demo\nSHOP_PASSWORD=demo\nDEMO_SFTP_PASSWORD=demo\n' "$PGP" > "$H/.env"
+printf 'DEMO_ORDERS_DB=postgres://postgres:demo@127.0.0.1:%s/orders\nDEMO_BB_TOKEN=demo\nSHOP_PASSWORD=demo\nDEMO_SFTP_PASSWORD=demo\nDEMO_MAVEN=%s\nDEMO_GRADLE=%s\n' "$PGP" "${DT_MAVEN:-$(command -v mvn || true)}" "${DT_GRADLE:-$(command -v gradle || true)}" > "$H/.env"
 mkdir -p "$H/scripts" "$H/files" && cp -R demo/scripts/. "$H/scripts/" && cp -R demo/files/. "$H/files/"   # example scripts and file templates
 echo '{ "sales.order_audit": "Written only by the orders_status_audit trigger. Kept 90 days." }' > "$H/notes.json"
 
 pkill -f "demo/mock.js" 2>/dev/null || true; pkill -f "cli.js serve --port $DT" 2>/dev/null || true
-nohup node demo/mock.js "$MOCK" > "$H/mock.log" 2>&1 &
+nohup node demo/mock.js "$MOCK" "$UAT" > "$H/mock.log" 2>&1 &
 pkill -f "demo/sftp.js" 2>/dev/null || true
 mkdir -p "$H/sftp" && find "$H/sftp" -mindepth 1 -delete   # a fresh SFTP folder each start
 mkdir -p "$H/sftp/upload" && cp -R demo/sftp/. "$H/sftp/upload/"   # nested demo folders and files
@@ -75,5 +81,5 @@ fi
 DT_HOME=$H nohup node cli.js serve --port "$DT" > "$H/dt.log" 2>&1 &
 until curl -fsS -o /dev/null "http://127.0.0.1:$DT/health" 2>/dev/null; do sleep 0.5; done
 DT_HOME=$H node cli.js sync all > /dev/null 2>"$H/sync.log"
-DT_HOME=$H node cli.js sync passports --only order-service,payment-service > /dev/null 2>>"$H/sync.log"
+DT_HOME=$H node cli.js sync passports --only order-service,payment-service,payments-service > /dev/null 2>>"$H/sync.log"
 echo "demo: http://127.0.0.1:$DT/admin   (stop: sh demo/stop.sh)"

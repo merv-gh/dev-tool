@@ -1,8 +1,9 @@
-// A fake environment for demos and screenshots, on one port:
+// A fake environment for demos and screenshots, on one port (and a second one for "uat": its own Consul
+// health and /version, older versions, other failures):
 //   Consul (/v1), Elasticsearch data + ELK logs (/, /_cat, /_mapping, /<index>/_search), kafka-ui (/api),
 //   Schema Registry (/subjects), Bitbucket REST (/rest) and git over HTTP (/scm, real repos made from
 //   test/fixtures plus a generated payment-service). Data is invented; names are generic.
-//   node demo/mock.js [port]
+//   node demo/mock.js [port] [uat-port]
 const http = require('http');
 const fs = require('fs');
 const os = require('os');
@@ -10,6 +11,7 @@ const path = require('path');
 const { spawn, execFileSync } = require('child_process');
 
 const PORT = Number(process.argv[2] || process.env.MOCK_PORT || 4900);
+const UAT_PORT = Number(process.argv[3] || process.env.MOCK_UAT_PORT || PORT + 1);
 const FIX = path.join(__dirname, '..', 'test', 'fixtures');
 
 // ── git repos served over smart HTTP ──
@@ -57,10 +59,21 @@ public class PaymentController {
 makeRepo('order-service', path.join(FIX, 'order-service'));
 makeRepo('common-lib', path.join(FIX, 'common-lib'), 'v1.4.2');
 makeRepo('payment-service', pay);
+makeRepo('payments-service', path.join(FIX, 'payments-service'));   // a real Spring Boot service: its tests compile and run
 const GIT_BACKEND = path.join(execFileSync('git', ['--exec-path']).toString().trim(), 'git-http-backend');
 
 // ── data ──
 const now = Date.now();
+const SERVICES_UAT = {
+  'api-gateway': [['passing', 'passing']],
+  'order-service': [['passing', 'warning', 'disk 91% used']],
+  'payment-service': [['passing', 'passing']],
+  'payments-service': [['critical', 'passing', 'HTTP GET http://10.1.3.7:8080/actuator/health: 503 {"status":"DOWN","components":{"kafka":{"status":"DOWN"}}}']],
+  'inventory-service': [['passing', 'passing']],
+  'notification-service': [['passing', 'passing']],
+};
+// what /version answers: per env, the build and commit deployed there
+const VERSIONS = { dev: { version: '1.1.0-SNAPSHOT', commit: 'c0ffee1', branch: 'main' }, uat: { version: '1.0.0', commit: 'ab2ce56', branch: 'release/1.0' } };
 const SERVICES = {
   'api-gateway': [['passing', 'passing']],
   'order-service': [['passing', 'passing']],
@@ -68,6 +81,7 @@ const SERVICES = {
   'inventory-service': [['critical', 'critical', 'HTTP GET http://10.0.3.7:8080/actuator/health: 503 {"status":"DOWN","components":{"db":{"status":"DOWN"}}}']],
   'notification-service': [['passing', 'passing']],
   'customer-service': [['passing', 'passing']],
+  'payments-service': [['passing', 'passing']],
 };
 const TOPICS = [
   { name: 'order_created', partitionCount: 6, replicationFactor: 3, cleanUpPolicy: 'DELETE', partitions: [0, 1, 2, 3, 4, 5].map(p => ({ partition: p, offsetMin: 0, offsetMax: 4200 + p * 37 })) },
@@ -146,7 +160,8 @@ const PR_ACTS = { values: [
 
 const html = (res, body) => { res.setHeader('content-type', 'text/html; charset=utf-8'); res.end(`<!doctype html><meta charset=utf-8><title>shop</title><body style="font:14px system-ui;margin:24px">${body}`); };
 
-http.createServer((req, res) => {
+const handle = (ENV) => (req, res) => {
+  const SVC = ENV === 'uat' ? SERVICES_UAT : SERVICES, PORT_ = ENV === 'uat' ? UAT_PORT : PORT;
   const u = new URL(req.url, 'http://x'), p = u.pathname;
   const chunks = [];
   req.on('data', c => chunks.push(c)).on('end', () => {
@@ -154,14 +169,17 @@ http.createServer((req, res) => {
     const j = (o) => { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify(o)); };
     let m;
     // Consul
-    if (p === '/v1/agent/self') return j({ Config: { Datacenter: 'demo-dc' } });
-    if (p === '/v1/catalog/services') return j(Object.fromEntries([['consul', []], ...Object.keys(SERVICES).map(s => [s, ['spring']])]));
-    if (p === '/v1/health/state/any') return j(Object.entries(SERVICES).flatMap(([s, inst]) => inst.flatMap(([a, b, out], k) => [
+    if (p === '/v1/agent/self') return j({ Config: { Datacenter: `${ENV}-dc` } });
+    if (p === '/v1/catalog/services') return j(Object.fromEntries([['consul', []], ...Object.keys(SVC).map(s => [s, ['spring']])]));
+    if (p === '/v1/health/state/any') return j(Object.entries(SVC).flatMap(([s, inst]) => inst.flatMap(([a, b, out], k) => [
       { Node: `node-${k + 1}`, CheckID: `${s}-1`, Name: 'http /actuator/health', Status: a, Output: a === 'passing' ? 'HTTP 200' : out, ServiceName: s, ServiceID: `${s}-1` },
       { Node: `node-${k + 2}`, CheckID: `${s}-2`, Name: 'http /actuator/health', Status: b, Output: b === 'passing' ? 'HTTP 200' : out, ServiceName: s, ServiceID: `${s}-2` },
     ])).concat([{ Node: 'node-1', CheckID: 'serfHealth', Name: 'Serf Health Status', Status: 'passing', ServiceName: '', ServiceID: '' }]));
-    if ((m = p.match(/^\/v1\/health\/service\/(.+)$/))) return j([1, 2].map(k => ({ Node: { Node: `node-${k}`, Address: '127.0.0.1' }, Service: { Address: '127.0.0.1', Port: PORT, Tags: ['spring'], Meta: { version: '2.1.0' } }, Checks: [{ Status: 'passing' }] })));
-    if (p === '/version') return j({ git: { branch: 'main', commit: { id: 'demo' } }, build: { version: '2.1.0' } });
+    if ((m = p.match(/^\/v1\/health\/service\/(.+)$/))) {
+      const states = (SVC[decodeURIComponent(m[1])] || [['passing', 'passing']])[0];
+      return j([1, 2].map(k => ({ Node: { Node: `${ENV}-node-${k}`, Address: '127.0.0.1' }, Service: { Address: '127.0.0.1', Port: PORT_, Tags: ['spring'], Meta: { version: VERSIONS[ENV].version } }, Checks: [{ Status: states[k - 1] || 'passing' }] })));
+    }
+    if (p === '/version') { const v = VERSIONS[ENV]; return j({ git: { branch: v.branch, commit: { id: v.commit } }, build: { version: v.version } }); }
     // kafka-ui + schema registry
     if (p === '/api/clusters') return j([{ name: 'demo', status: 'online' }]);
     if (p === '/api/clusters/demo/topics') return j({ pageCount: 1, topics: TOPICS });
@@ -207,7 +225,7 @@ http.createServer((req, res) => {
     // Bitbucket
     if (p === '/rest/api/1.0/repos') {
       const name = u.searchParams.get('name') || '';
-      return j({ isLastPage: true, values: ['order-service', 'payment-service', 'common-lib'].filter(r => r.includes(name)).map(slug => ({ slug, name: slug, project: { key: 'SHOP' } })) });
+      return j({ isLastPage: true, values: ['order-service', 'payment-service', 'payments-service', 'common-lib'].filter(r => r.includes(name)).map(slug => ({ slug, name: slug, project: { key: 'SHOP' } })) });
     }
     if (p === '/rest/api/1.0/dashboard/pull-requests') return j({ values: [PR, { ...PR, id: 41, title: 'Order history migration', reviewers: [{ user: { displayName: 'You' }, status: 'UNAPPROVED' }], toRef: { displayId: 'main', repository: { slug: 'order-service', project: { key: 'SHOP' } } }, updatedDate: now - 864e5 }] });
     if (p === '/rest/api/1.0/projects/SHOP/repos/payment-service/pull-requests/42') return j(PR);
@@ -248,7 +266,9 @@ http.createServer((req, res) => {
     }
     res.statusCode = 404; res.end('not in the demo');
   });
-}).listen(PORT, '0.0.0.0', () => console.error(`demo mock on :${PORT} (git repos in ${GIT})`));
+};
+http.createServer(handle('dev')).listen(PORT, '0.0.0.0', () => console.error(`demo mock on :${PORT} (git repos in ${GIT})`));
+http.createServer(handle('uat')).listen(UAT_PORT, '0.0.0.0', () => console.error(`demo mock uat on :${UAT_PORT}`));
 
 process.on('SIGTERM', () => { fs.rmSync(GIT, { recursive: true, force: true }); process.exit(0); });
 process.on('SIGINT', () => { fs.rmSync(GIT, { recursive: true, force: true }); process.exit(0); });

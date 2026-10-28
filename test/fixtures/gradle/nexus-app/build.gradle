@@ -1,0 +1,36 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.acme.app'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+}
+
+// The company repository, as real builds have it: the URL and credentials come from
+// ~/.gradle/gradle.properties (nexusUrl, mavenUser, mavenPassword); without them the build fails.
+repositories {
+    maven {
+        url = uri(nexusUrl)
+        allowInsecureProtocol = true
+        credentials {
+            username = mavenUser
+            password = mavenPassword
+        }
+    }
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.acme.libs:greeting:1.0.0'
+    testImplementation platform('org.springframework.boot:spring-boot-dependencies:3.3.5')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation 'org.assertj:assertj-core'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

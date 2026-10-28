@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dt showcase</title>
+<link rel="stylesheet" href="/static/ui.css">
+<style>
+  .steps { display: grid; gap: 2px; margin: 10px 0 14px; }
+  .st { display: grid; grid-template-columns: 18px minmax(0, 220px) minmax(0, 1fr) auto; gap: 8px; align-items: baseline; padding: 5px 10px; border-radius: 8px; font-size: 13px; text-decoration: none; color: inherit; }
+  .st:hover { background: var(--soft); }
+  .st .i { font-weight: 700; } .st .ok { color: var(--good); } .st .bad { color: var(--lv-error, #c0392b); }
+  .st .t { font-weight: 600; } .st .s { color: var(--muted); overflow: hidden; text-overflow: ellipsis; } .st .ms { color: var(--muted); font-size: 11.5px; }
+  @media (max-width: 640px) { .st { grid-template-columns: 18px 1fr auto; } .st .s { grid-column: 2 / 4; } }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 12px; }
+  section.sc { margin: 16px 0; }
+  section.sc > h2 { font-size: 15px; margin: 0 0 6px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  section.sc > h2 .s { font-weight: 400; color: var(--muted); font-size: 13px; }
+  .frame { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--panel); }
+  .frame iframe { width: 100%; border: 0; display: block; height: 380px; }
+  .frame .cap { display: flex; gap: 8px; padding: 5px 10px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--line); background: var(--soft); }
+  .frame .cap a { margin-left: auto; color: var(--muted); }
+  .err { color: var(--lv-error, #c0392b); font: 12.5px ui-monospace, Menlo, monospace; white-space: pre-wrap; padding: 8px 10px; }
+  .chip.ok { color: var(--good); } .chip.bad { color: var(--lv-error, #c0392b); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <span class="badge">showcase</span>
+    <h1 id="title"></h1>
+    <span id="state"></span>
+    <span class="muted" id="meta"></span>
+  </div>
+  <div class="steps card" id="steps"></div>
+  <div id="sections"></div>
+</div>
+<script src="/static/ui.js"></script>
+<script>
+(async () => {
+  const id = location.pathname.split('/').pop();
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const r = await fetch(`/api/result/${id}`).then(x => x.json());
+  if (r.error) { document.getElementById('title').textContent = r.error; return; }
+  const D = r.data, steps = D.steps || [];
+  document.title = `dt showcase: ${D.service}`;
+  document.getElementById('title').textContent = `${D.service}${D.target ? ` · ${D.target}` : ''}`;
+  const failed = steps.filter(s => !s.ok).length;
+  document.getElementById('state').innerHTML = `<span class="chip ${failed ? 'bad' : 'ok'}">${failed ? `${failed} of ${steps.length} steps failed` : `all ${steps.length} steps ok`}</span>`;
+  document.getElementById('meta').textContent = `${D.envs.join(', ')} · ${new Date(D.at).toLocaleString()} · ${(D.ms / 1000).toFixed(1)} s`;
+  const anchor = (s) => `s-${s.key.replace(/[^\w-]/g, '-')}`;
+  document.getElementById('steps').innerHTML = steps.map(s => `<a class="st" href="#${anchor(s)}"><span class="i ${s.ok ? 'ok' : 'bad'}">${s.ok ? '✓' : '✗'}</span><span class="t">${esc(s.title)}</span><span class="s">${esc(s.error || s.summary || '')}</span><span class="ms">${s.ms} ms</span></a>`).join('');
+
+  // embedded views, sized by what they report
+  const frame = (s, label) => {
+    if (!s) return '';
+    if (!s.ok && !s.view) return `<div class="frame" id="${anchor(s)}"><div class="cap">${esc(label || s.title)}</div><div class="err">${esc(s.error || 'failed')}</div></div>`;
+    if (!s.view) return `<div class="frame" id="${anchor(s)}"><div class="cap">${esc(label || s.title)}</div><div style="padding:8px 10px;font-size:13px">${esc(s.summary || '')}</div></div>`;
+    const src = s.view + (s.view.includes('?') ? '&' : '?') + 'embed=1';
+    return `<div class="frame" id="${anchor(s)}"><div class="cap">${esc(label || s.title)}${s.summary ? ` · ${esc(s.summary)}` : ''}<a href="${esc(s.view)}" target="_blank" rel="noopener">open ↗</a></div><iframe loading="lazy" src="${esc(src)}" title="${esc(s.title)}"></iframe></div>`;
+  };
+  const get = (key) => steps.find(s => s.key === key);
+  const section = (title, sub, body) => body ? `<section class="sc"><h2>${esc(title)}${sub ? `<span class="s">${esc(sub)}</span>` : ''}</h2>${body}</section>` : '';
+  const html = [];
+  html.push(section('Environments', D.envs.join(', '), `<div class="grid2">${D.envs.map(e => frame(get(`health:${e}`), `Health of ${e}`)).join('')}</div>`));
+  html.push(section('Dashboards', '', `<div class="grid2">${D.envs.map(e => frame(get(`dashboard:${e}`), `Dashboard of ${e}`)).join('')}</div>`));
+  const v = get('versions');
+  html.push(section(`${D.service} in each environment`, v?.summary, `${D.envs.map(e => get(`instances:${e}`)).filter(Boolean).filter(s => !s.ok).map(s => frame(s)).join('')}${frame(v, 'Instances, versions and commits')}`));
+  html.push(section('Passport', get('passport')?.summary, frame(get('passport'))));
+  if (D.target) {
+    html.push(section(`Impact of ${D.target}`, '', frame(get('impact'))));
+    const ws = get('workspace'), ctx = get('test_context');
+    html.push(section('An isolated test on ' + (ws?.ref || 'master'), [ws?.summary, ctx?.summary].filter(Boolean).join(' · '), [ws && !ws.ok ? frame(ws) : '', ctx && !ctx.ok ? frame(ctx) : '', frame(get('test_run'), 'Test run'), frame(get('patch'), 'Patch')].join('')));
+  }
+  document.getElementById('sections').innerHTML = html.join('');
+  addEventListener('message', (e) => {
+    if (!e.data || e.data.type !== 'iframe:height') return;
+    for (const f of document.querySelectorAll('iframe')) if (f.contentWindow === e.source) f.style.height = `${Math.min(Math.max(e.data.height + 4, 120), 2400)}px`;
+  });
+})();
+</script>
+</body>
+</html>

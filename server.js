@@ -245,6 +245,7 @@ const routes = [
   })],
 
   ['GET', '/dash', false, page('dash.html')],
+  ['GET', '/showcase/*', false, page('showcase.html')],
   ['GET', '/api/dash', false, async (req, res, url) => {
     const env = url.searchParams.get('env') || envNames()[0];
     const ok = tokenOk(url, `dash:${env}`);

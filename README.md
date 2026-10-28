@@ -446,6 +446,37 @@ Without Docker, dt uses `JAVA_HOME`/PATH and `~/.m2`. The `tests` section of `co
 - `pgUrl` is refused when it is one of the environments' databases. That is the only database dt ever writes to, and it only touches `dt_test_*` databases.
 - On a JDK newer than the project's Mockito/Byte Buddy (for example, Boot 3.3 on Java 24), runs set `-Dnet.bytebuddy.experimental=true` (`tests.javaToolOptions`).
 
+### Company repositories and build credentials
+
+Real builds read the company repository and its credentials from the machine. `build.gradle` uses `nexusUrl`, `mavenUser` and `mavenPassword` from `~/.gradle/gradle.properties`, and Maven uses `settings.xml`. Without them the build script fails before compiling anything. dt passes them to every test run, never writes them to disk, and masks their values in everything it shows:
+
+- **Gradle:** `gradle.properties` in the config folder (and `tests.gradleProperties` files, and `~/.gradle/gradle.properties` when `GRADLE_USER_HOME` points elsewhere, as in the container). Project properties go to Gradle as `ORG_GRADLE_PROJECT_<name>` env vars, and `systemProp.*`/`org.gradle.*` as `-D`. Values may be `${VAR}` from `.env`:
+  ```properties
+  nexusUrl=https://nexus.example.com/repository/maven-public
+  mavenUser=ci-reader
+  mavenPassword=${NEXUS_PASSWORD}
+  ```
+- **Maven:** `maven-settings.xml` in the config folder (or `tests.mavenSettings`).
+- **Env vars for any build:** `"tests": { "env": { "NEXUS_TOKEN": "${NEXUS_TOKEN}" } }`.
+
+When a build fails for a missing property, a 401 or unresolved dependencies, `test_run` says where these settings go. This is tested against a password-protected repository.
+
+## Showcase: everything about one service
+
+```bash
+sh demo/showcase.sh                                     # the demo: payments-service, FeeCalculator#fee
+dt showcase payments-service FeeCalculator#fee --envs dev,uat [--ref master] [--test-file FooTest.java]
+```
+
+In the chat: "show everything for payments-service and test FeeCalculator.fee". It runs these steps and shows them on one page (`/showcase/<id>`), each with its view embedded:
+
+1. For each environment: health of every service, the live dashboard, and this service's instances with the version, commit and branch deployed. A table then says whether the environments run the same build (`dev 1.1.0-SNAPSHOT@c0ffee1 vs uat 1.0.0@ab2ce56`).
+2. The passport, with its flows.
+3. The impact of the code part.
+4. A workspace on master (or `--ref`): `test_context`, the test written (the skeleton, or your file), run (fast on Maven), the results view and the patch.
+
+It doubles as an end-to-end check of dt: every step reports ok or why not, and the CLI exits non-zero when one fails. `test/showcase.live.test.js` runs it against the demo mock (two environments, Bitbucket with real git repos) with Maven. A test that finds a bug is a result, not a failed step: the demo's test finds the fee rounding bug (`expected 0.67, got 0.66`).
+
 ### How big, how fast
 
 `node test/stress/code-and-db.js [--repos 40 --files 400] [--pg <url> --tables 2000]` builds synthetic Spring services that call each other (Feign → endpoints) and share topics and tables. It checks every grep against a full scan of the same files and times ripgrep. With `--pg`, it creates, syncs, snapshots and restores a big schema.

@@ -5,14 +5,17 @@ A fake environment for trying dt and for the README screenshots. Everything runs
 | Part | What |
 | --- | --- |
 | Postgres (Docker, port 55433) | database `orders`: tables, a view, a materialized view, functions, a procedure, a trigger ([seed.sql](seed.sql)) |
-| [mock.js](mock.js) (port 4900) | Consul, Elasticsearch, ELK logs, kafka-ui, Schema Registry, and a Bitbucket API with real git repos. The repos are built from `test/fixtures`, plus a generated payment-service |
+| [mock.js](mock.js) (port 4900, uat on 4901) | Consul, Elasticsearch, ELK logs, kafka-ui, Schema Registry, and a Bitbucket API with real git repos. The repos are built from `test/fixtures` (including payments-service, a Spring Boot service whose tests compile and run), plus a generated payment-service. The second port is the "uat" environment: other health, older versions |
 | dt (port 4800) | config in `demo/.home/` (`config.json` + `.env`), indexed and with two passports built |
 | [mock-llm.js](mock-llm.js) (port 4910) | a scripted "model" for Open WebUI. It answers three questions with real tool calls |
 
 ```bash
 sh demo/start.sh            # Postgres + mock + dt, then sync and passports -> http://127.0.0.1:4800/admin
+sh demo/showcase.sh         # (starts the demo if needed) everything for payments-service on one page
 sh demo/stop.sh
 ```
+
+`showcase.sh` runs health, dashboards and versions of demo and uat, the passport, the impact of `FeeCalculator#fee`, then a test of it on master (`demo/showcase/FeeCalculatorTest.java`, which finds the rounding bug) and the patch. It prints one line per step and the page's link, and exits non-zero if a step fails. Running the test needs Maven and a JDK: `mvn` on PATH, or `DT_MAVEN=/path/to/mvn` before the first start.
 
 Chat in Open WebUI with the scripted model:
 ```bash
