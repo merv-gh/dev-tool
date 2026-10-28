@@ -1,0 +1,1 @@
+{"partition":0,"offset":"100","timestamp":"2026-10-28T00:00:00.000Z","key":"42","headers":{"authorization":"cd577fe2561"},"value":{"orderId":42,"email":"u69b1145a03@example.invalid","status":"PAID"}}

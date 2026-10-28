@@ -1,0 +1,15 @@
+{
+  "billing:pay.payments": [
+    {
+      "id": 80,
+      "order_id": 42,
+      "status": "PAID",
+      "amount": "12.50"
+    }
+  ],
+  "billing:pay.d_status": [
+    {
+      "code": "PAID"
+    }
+  ]
+}

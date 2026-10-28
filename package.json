@@ -9,6 +9,11 @@
     "serve": "node cli.js serve",
     "sync": "node cli.js sync",
     "test": "node --test test/*.test.js",
+    "test:local": "node dev/test.js --local",
+    "test:live": "node dev/test.js --live",
+    "test:changed": "node dev/test.js --local --changed",
+    "test:files": "node dev/test.js --local --files",
+    "bench:dev": "node dev/benchmark.js",
     "build": "node build.js",
     "build:check": "node build.js --check"
   },

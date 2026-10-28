@@ -1,0 +1,506 @@
+{
+  "version": 1,
+  "plan": {
+    "version": 1,
+    "env": "demo",
+    "seeds": [
+      {
+        "db": "orders",
+        "table": "sales.orders",
+        "where": {
+          "id": 42
+        }
+      }
+    ],
+    "relations": [
+      {
+        "from": {
+          "db": "orders",
+          "table": "sales.orders",
+          "columns": [
+            "tenant_id",
+            "customer_id"
+          ]
+        },
+        "to": {
+          "db": "orders",
+          "table": "sales.customers",
+          "columns": [
+            "tenant_id",
+            "id"
+          ]
+        },
+        "source": "foreign-key",
+        "evidence": "order_customer_fk",
+        "required": true
+      },
+      {
+        "from": {
+          "db": "billing",
+          "table": "pay.payments",
+          "columns": [
+            "status"
+          ]
+        },
+        "to": {
+          "db": "billing",
+          "table": "pay.d_status",
+          "columns": [
+            "code"
+          ]
+        },
+        "source": "foreign-key",
+        "evidence": "payment_status_fk",
+        "required": true
+      },
+      {
+        "from": {
+          "db": "orders",
+          "table": "sales.orders",
+          "columns": [
+            "id"
+          ]
+        },
+        "to": {
+          "db": "billing",
+          "table": "pay.payments",
+          "columns": [
+            "order_id"
+          ]
+        },
+        "source": "explicit",
+        "evidence": "synthetic PaymentListener: payment.order_id comes from order.id",
+        "required": true
+      }
+    ],
+    "topics": [
+      {
+        "topic": "order_paid",
+        "matches": [
+          {
+            "path": "value.orderId",
+            "from": {
+              "db": "orders",
+              "table": "sales.orders",
+              "column": "id"
+            }
+          }
+        ],
+        "match": "all",
+        "offsets": {},
+        "required": true,
+        "schema": {
+          "value": {
+            "type": "JSON",
+            "version": 1,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "orderId": {
+                  "type": "integer"
+                },
+                "email": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "orderId"
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "limits": {
+      "depth": 5,
+      "rowsPerTable": 20,
+      "totalRows": 50,
+      "messagesPerTopic": 10,
+      "queries": 20
+    },
+    "includeChildren": false,
+    "candidates": [],
+    "gaps": [],
+    "catalogs": [
+      {
+        "db": "orders",
+        "syncedAt": "2026-10-28T00:00:00.000Z",
+        "fingerprint": "63fa5240a65a7dba04e3e65dd4ae58fdb9b1f16f136554f1d974d74bbea19a46"
+      },
+      {
+        "db": "billing",
+        "syncedAt": "2026-10-28T00:00:00.000Z",
+        "fingerprint": "b5797d10901d1842ea6033adb853c9d1f634ffcdca46ae1610062e2bc8a7db01"
+      }
+    ],
+    "tables": [
+      {
+        "id": "orders:sales.orders",
+        "db": "orders",
+        "table": "sales.orders",
+        "columns": [
+          {
+            "name": "id",
+            "type": "bigint",
+            "nullable": false
+          },
+          {
+            "name": "tenant_id",
+            "type": "bigint",
+            "nullable": false
+          },
+          {
+            "name": "customer_id",
+            "type": "bigint",
+            "nullable": false
+          },
+          {
+            "name": "email",
+            "type": "text",
+            "nullable": false
+          },
+          {
+            "name": "tags",
+            "type": "text[]",
+            "nullable": false
+          }
+        ],
+        "constraints": [
+          {
+            "name": "orders_pk",
+            "type": "p",
+            "def": "PRIMARY KEY (id)"
+          },
+          {
+            "name": "order_customer_fk",
+            "type": "f",
+            "ref": "sales.customers",
+            "def": "FOREIGN KEY (tenant_id, customer_id) REFERENCES sales.customers(tenant_id, id)"
+          }
+        ],
+        "primaryKey": [
+          "id"
+        ]
+      },
+      {
+        "id": "orders:sales.customers",
+        "db": "orders",
+        "table": "sales.customers",
+        "columns": [
+          {
+            "name": "tenant_id",
+            "type": "bigint",
+            "nullable": false
+          },
+          {
+            "name": "id",
+            "type": "bigint",
+            "nullable": false
+          },
+          {
+            "name": "email",
+            "type": "text",
+            "nullable": false
+          }
+        ],
+        "constraints": [
+          {
+            "name": "customers_pk",
+            "type": "p",
+            "def": "PRIMARY KEY (tenant_id, id)"
+          }
+        ],
+        "primaryKey": [
+          "tenant_id",
+          "id"
+        ]
+      },
+      {
+        "id": "billing:pay.payments",
+        "db": "billing",
+        "table": "pay.payments",
+        "columns": [
+          {
+            "name": "id",
+            "type": "bigint",
+            "nullable": false
+          },
+          {
+            "name": "order_id",
+            "type": "bigint",
+            "nullable": false
+          },
+          {
+            "name": "status",
+            "type": "text",
+            "nullable": false
+          },
+          {
+            "name": "amount",
+            "type": "numeric(12,2)",
+            "nullable": false
+          }
+        ],
+        "constraints": [
+          {
+            "name": "payments_pk",
+            "type": "p",
+            "def": "PRIMARY KEY (id)"
+          },
+          {
+            "name": "payment_status_fk",
+            "type": "f",
+            "ref": "pay.d_status",
+            "def": "FOREIGN KEY (status) REFERENCES pay.d_status(code)"
+          }
+        ],
+        "primaryKey": [
+          "id"
+        ]
+      },
+      {
+        "id": "billing:pay.d_status",
+        "db": "billing",
+        "table": "pay.d_status",
+        "columns": [
+          {
+            "name": "code",
+            "type": "text",
+            "nullable": false
+          }
+        ],
+        "constraints": [
+          {
+            "name": "d_status_pk",
+            "type": "p",
+            "def": "PRIMARY KEY (code)"
+          }
+        ],
+        "primaryKey": [
+          "code"
+        ]
+      }
+    ],
+    "consistency": "Independent read-only statements across databases and Kafka; observation window and offsets are recorded, not a distributed snapshot."
+  },
+  "startedAt": "2026-10-28T19:55:15.110Z",
+  "finishedAt": "2026-10-28T19:55:15.117Z",
+  "rows": {
+    "orders:sales.orders": [
+      {
+        "id": 42,
+        "tenant_id": 7,
+        "customer_id": 9,
+        "email": "u69b1145a03@example.invalid",
+        "tags": [
+          "paid",
+          "demo"
+        ]
+      }
+    ],
+    "orders:sales.customers": [
+      {
+        "tenant_id": 7,
+        "id": 9,
+        "email": "u69b1145a03@example.invalid"
+      }
+    ],
+    "billing:pay.payments": [
+      {
+        "id": 80,
+        "order_id": 42,
+        "status": "PAID",
+        "amount": "12.50"
+      }
+    ],
+    "billing:pay.d_status": [
+      {
+        "code": "PAID"
+      }
+    ]
+  },
+  "events": {
+    "order_paid": {
+      "messages": [
+        {
+          "partition": 0,
+          "offset": "100",
+          "timestamp": "2026-10-28T00:00:00.000Z",
+          "key": "42",
+          "headers": {
+            "authorization": "cd577fe2561"
+          },
+          "value": {
+            "orderId": 42,
+            "email": "u69b1145a03@example.invalid",
+            "status": "PAID"
+          }
+        }
+      ],
+      "windows": [
+        {
+          "partition": 0,
+          "low": "100",
+          "from": "100",
+          "next": "101",
+          "highExclusive": "101",
+          "count": 1
+        },
+        {
+          "partition": 1,
+          "low": "200",
+          "from": "200",
+          "next": "201",
+          "highExclusive": "201",
+          "count": 1
+        }
+      ],
+      "schema": {
+        "value": {
+          "type": "JSON",
+          "version": 1,
+          "schema": {
+            "type": "object",
+            "properties": {
+              "orderId": {
+                "type": "integer"
+              },
+              "email": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "orderId"
+            ]
+          }
+        }
+      },
+      "matches": [
+        {
+          "path": "value.orderId",
+          "from": {
+            "db": "orders",
+            "table": "sales.orders",
+            "column": "id"
+          }
+        }
+      ],
+      "scanned": 3
+    }
+  },
+  "provenance": {
+    "orders:sales.orders": [
+      {
+        "key": "[\"42\"]",
+        "via": "seed",
+        "depth": 0
+      }
+    ],
+    "orders:sales.customers": [
+      {
+        "key": "[\"7\",\"9\"]",
+        "via": "foreign-key: order_customer_fk",
+        "depth": 1
+      }
+    ],
+    "billing:pay.payments": [
+      {
+        "key": "[\"80\"]",
+        "via": "explicit: synthetic PaymentListener: payment.order_id comes from order.id",
+        "depth": 1
+      }
+    ],
+    "billing:pay.d_status": [
+      {
+        "key": "[\"PAID\"]",
+        "via": "foreign-key: payment_status_fk",
+        "depth": 2
+      }
+    ]
+  },
+  "gaps": [],
+  "counts": {
+    "rows": 4,
+    "queries": 4,
+    "messages": 1
+  },
+  "redactions": {
+    "enabled": true,
+    "fields": 4,
+    "strategy": "deterministic value replacement; review CHECK/length constraints when personal fields participate in them"
+  },
+  "complete": true,
+  "name": "paid-order",
+  "files": {
+    "pg/62696c6c696e67/schema.sql": "7a7bc91e495c147d02062068a020aa88a04ce7eede8e41a7cb029c59cffc6b77",
+    "pg/62696c6c696e67/data.sql": "0d22f4a44a97b7a147ef6a55c0d3b4f2e06239bc4e88551e1861c8e449e4e671",
+    "pg/62696c6c696e67/constraints.sql": "3419950e4707a0da8584cd773dcdd7ef4de36ee88d3a8f9f51d949e9a9047bcd",
+    "pg/62696c6c696e67/schema.json": "4316cca6a7f038afa33d4bbeb3f6963aa37956450bc963434fe220c0161d22ac",
+    "pg/62696c6c696e67/rows.json": "154219fecb5a3f46953410ad14a78581a31097a72d6850e0a13996206203040e",
+    "pg/6f7264657273/schema.sql": "113efbabf0b77cc5430464d7d7ae0971340c15059c111474128462cf5875de25",
+    "pg/6f7264657273/data.sql": "81cb7b65e52d6607fbf157975cef8961d1f886cd8fc1f4fbc1ce441a525ea9df",
+    "pg/6f7264657273/constraints.sql": "e4581505d7eb12f2886f458c84a35913f0e443732362736d755bf1b34bc78260",
+    "pg/6f7264657273/schema.json": "08942f7f367ac86f902be11fddac55e6556abb63364b0f802c3fdffc1528d481",
+    "pg/6f7264657273/rows.json": "1dd7e20efa57266b114bd8aa32d5cea29f105b95b814e48c5a33d2bff6bfdb3a",
+    "kafka/6f726465725f70616964/messages.jsonl": "01cb9c45f8238549bff37fd64816ee7119742114b4393dcc7e28064619ebd600",
+    "kafka/6f726465725f70616964/schema.json": "adc1804586b0a1d474f29c05b979d04476c80e7615271d2f043228f70682f9af",
+    "kafka/6f726465725f70616964/offsets.json": "50ef653903a5f666ba883b0801053efa37c2cc6847a1c102cd8ec2043597ab81",
+    "README.txt": "cdca2606820c38b35df546d89d5679a525e3668063aa65df01245cf22c83d087"
+  },
+  "databases": {
+    "billing": {
+      "directory": "pg/62696c6c696e67",
+      "files": [
+        "schema.sql",
+        "data.sql",
+        "constraints.sql"
+      ],
+      "statements": {
+        "schema": [
+          "set check_function_bodies = false",
+          "create schema if not exists pay",
+          "create table pay.payments (\n  id bigint not null,\n  order_id bigint not null,\n  status text not null,\n  amount numeric(12,2) not null,\n  constraint payments_pk PRIMARY KEY (id)\n)",
+          "create table pay.d_status (\n  code text not null,\n  constraint d_status_pk PRIMARY KEY (code)\n)"
+        ],
+        "data": [
+          "set standard_conforming_strings = on",
+          "insert into \"pay\".\"d_status\" (\"code\") overriding system value values ('PAID')",
+          "insert into \"pay\".\"payments\" (\"id\", \"order_id\", \"status\", \"amount\") overriding system value values (80, 42, 'PAID', '12.50')"
+        ],
+        "constraints": [
+          "alter table pay.payments add constraint payment_status_fk FOREIGN KEY (status) REFERENCES pay.d_status(code)"
+        ]
+      }
+    },
+    "orders": {
+      "directory": "pg/6f7264657273",
+      "files": [
+        "schema.sql",
+        "data.sql",
+        "constraints.sql"
+      ],
+      "statements": {
+        "schema": [
+          "set check_function_bodies = false",
+          "create schema if not exists sales",
+          "create table sales.orders (\n  id bigint not null,\n  tenant_id bigint not null,\n  customer_id bigint not null,\n  email text not null,\n  tags text[] not null,\n  constraint orders_pk PRIMARY KEY (id)\n)",
+          "create table sales.customers (\n  tenant_id bigint not null,\n  id bigint not null,\n  email text not null,\n  constraint customers_pk PRIMARY KEY (tenant_id, id)\n)"
+        ],
+        "data": [
+          "set standard_conforming_strings = on",
+          "insert into \"sales\".\"customers\" (\"tenant_id\", \"id\", \"email\") overriding system value values (7, 9, 'u69b1145a03@example.invalid')",
+          "insert into \"sales\".\"orders\" (\"id\", \"tenant_id\", \"customer_id\", \"email\", \"tags\") overriding system value values (42, 7, 9, 'u69b1145a03@example.invalid', ARRAY['paid', 'demo']::text[])"
+        ],
+        "constraints": [
+          "alter table sales.orders add constraint order_customer_fk FOREIGN KEY (tenant_id, customer_id) REFERENCES sales.customers(tenant_id, id)"
+        ]
+      }
+    }
+  },
+  "topics": {
+    "order_paid": {
+      "directory": "kafka/6f726465725f70616964",
+      "messages": 1
+    }
+  }
+}

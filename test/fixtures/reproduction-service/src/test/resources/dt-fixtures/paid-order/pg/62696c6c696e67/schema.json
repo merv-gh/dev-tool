@@ -1,0 +1,67 @@
+[
+  {
+    "id": "billing:pay.payments",
+    "db": "billing",
+    "table": "pay.payments",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "order_id",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "amount",
+        "type": "numeric(12,2)",
+        "nullable": false
+      }
+    ],
+    "constraints": [
+      {
+        "name": "payments_pk",
+        "type": "p",
+        "def": "PRIMARY KEY (id)"
+      },
+      {
+        "name": "payment_status_fk",
+        "type": "f",
+        "ref": "pay.d_status",
+        "def": "FOREIGN KEY (status) REFERENCES pay.d_status(code)"
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ]
+  },
+  {
+    "id": "billing:pay.d_status",
+    "db": "billing",
+    "table": "pay.d_status",
+    "columns": [
+      {
+        "name": "code",
+        "type": "text",
+        "nullable": false
+      }
+    ],
+    "constraints": [
+      {
+        "name": "d_status_pk",
+        "type": "p",
+        "def": "PRIMARY KEY (code)"
+      }
+    ],
+    "primaryKey": [
+      "code"
+    ]
+  }
+]

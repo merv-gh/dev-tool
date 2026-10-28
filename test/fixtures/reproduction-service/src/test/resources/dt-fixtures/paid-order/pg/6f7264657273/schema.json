@@ -1,0 +1,83 @@
+[
+  {
+    "id": "orders:sales.orders",
+    "db": "orders",
+    "table": "sales.orders",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "tenant_id",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "customer_id",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "email",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "tags",
+        "type": "text[]",
+        "nullable": false
+      }
+    ],
+    "constraints": [
+      {
+        "name": "orders_pk",
+        "type": "p",
+        "def": "PRIMARY KEY (id)"
+      },
+      {
+        "name": "order_customer_fk",
+        "type": "f",
+        "ref": "sales.customers",
+        "def": "FOREIGN KEY (tenant_id, customer_id) REFERENCES sales.customers(tenant_id, id)"
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ]
+  },
+  {
+    "id": "orders:sales.customers",
+    "db": "orders",
+    "table": "sales.customers",
+    "columns": [
+      {
+        "name": "tenant_id",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "id",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "email",
+        "type": "text",
+        "nullable": false
+      }
+    ],
+    "constraints": [
+      {
+        "name": "customers_pk",
+        "type": "p",
+        "def": "PRIMARY KEY (tenant_id, id)"
+      }
+    ],
+    "primaryKey": [
+      "tenant_id",
+      "id"
+    ]
+  }
+]

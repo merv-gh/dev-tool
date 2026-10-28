@@ -504,6 +504,14 @@ var require_util = __commonJS({
         return fallback;
       }
     }
+    function fileStamp(file) {
+      try {
+        const s = fs2.statSync(file);
+        return `${s.dev}:${s.ino}:${s.size}:${s.mtimeMs}:${s.ctimeMs}`;
+      } catch {
+        return null;
+      }
+    }
     var safeName = (s) => s.replace(/[^\w.@-]/g, "_");
     function table2(rows) {
       if (!rows.length) return "(0 rows)";
@@ -517,7 +525,7 @@ var require_util = __commonJS({
       const line = (vals) => vals.map((v, i) => v.padEnd(w[i])).join(" | ");
       return [line(cols), w.map((n) => "-".repeat(n)).join("-+-"), ...rows.map((r) => line(cols.map((c) => cell(r[c]))))].join("\n");
     }
-    module2.exports = { CACHE: CACHE2, pool, http: http2, flattenTypes, tryJson, writeJson, readJson, safeName, table: table2 };
+    module2.exports = { CACHE: CACHE2, pool, http: http2, flattenTypes, tryJson, writeJson, readJson, fileStamp, safeName, table: table2 };
   }
 });
 
@@ -3373,7 +3381,7 @@ var require_kafka = __commonJS({
       const out2 = [];
       for (const line of text.split("\n")) {
         if (!line.startsWith("data:")) continue;
-        const ev = tryJson(line.slice(5).trim());
+        const ev = tryJson(line.slice(5).trim().replace(/"(offset|offsetMin|offsetMax)"\s*:\s*(-?\d{16,})/g, '"$1":"$2"'));
         if (ev && ev.type === "MESSAGE") out2.push(ev.message);
       }
       return out2;
@@ -3453,7 +3461,47 @@ var require_kafka = __commonJS({
     function cached(envName, topic) {
       return readJson(path2.join(CACHE2, envName, "kafka", `${safeName(topic)}.json`));
     }
-    module2.exports = { topics, lastMessages, sync, cached, cluster };
+    async function captureMessages(envName, topic, { maxMessages = 300, offsets = {} } = {}) {
+      if (!Number.isInteger(maxMessages) || maxMessages < 1 || maxMessages > 1e4) throw new Error("maxMessages must be 1..10000");
+      const c = await cluster(envName);
+      const base = `${ui(envName)}/api/clusters/${encodeURIComponent(c)}/topics/${encodeURIComponent(topic)}`;
+      const detail = JSON.parse((await http2(base, { raw: true })).replace(/"(offsetMin|offsetMax)"\s*:\s*(-?\d{16,})/g, '"$1":"$2"'));
+      const partitions = (detail.partitions || []).slice().sort((a, b) => a.partition - b.partition);
+      const windows = [], messages = [];
+      const quota = Math.floor(maxMessages / Math.max(1, partitions.length));
+      for (let i = 0; i < partitions.length; i++) {
+        const p = partitions[i], low = BigInt(p.offsetMin), high = BigInt(p.offsetMax);
+        const budget = quota + (i < maxMessages % partitions.length ? 1 : 0);
+        const supplied = offsets[String(p.partition)];
+        const wanted = supplied == null ? high - BigInt(budget) : BigInt(supplied);
+        const from = wanted < low ? low : wanted > high ? high : wanted;
+        let next = from, count = 0;
+        while (next < high && count < budget) {
+          await require_limit().take(`kafka:${envName}`);
+          const q = new URLSearchParams({ keySerde: "String", valueSerde: "String", limit: String(Math.min(500, budget - count)), partition: String(p.partition), offset: String(next) });
+          const batch = parseSse(await http2(`${base}/messages?${q}`, { raw: true, timeout: 2e4 })).map(toSample).filter((m) => m.partition === p.partition && BigInt(m.offset) >= next && BigInt(m.offset) < high);
+          if (!batch.length) break;
+          for (const m of batch.slice(0, budget - count)) {
+            messages.push(m);
+            count++;
+          }
+          const last = batch.reduce((a, m) => BigInt(m.offset) > a ? BigInt(m.offset) : a, next - 1n);
+          next = last + 1n;
+        }
+        windows.push({
+          partition: p.partition,
+          low: String(low),
+          highExclusive: String(high),
+          from: String(from),
+          next: String(next),
+          count,
+          truncated: from > low || next < high,
+          offsetExpired: supplied != null && wanted < low
+        });
+      }
+      return { topic, messages, windows, truncated: windows.some((w) => w.truncated) };
+    }
+    module2.exports = { topics, lastMessages, captureMessages, sync, cached, cluster };
   }
 });
 
@@ -5137,7 +5185,8 @@ var require_codeindex = __commonJS({
   "lib/codeindex.js"(exports2, module2) {
     var fs2 = require("fs");
     var path2 = require("path");
-    var { CACHE: CACHE2, readJson, writeJson } = require_util();
+    var crypto = require("crypto");
+    var { CACHE: CACHE2, readJson, writeJson, fileStamp } = require_util();
     var DIR = path2.join(CACHE2, "code");
     var SKIP_DIRS = /* @__PURE__ */ new Set([".git", "target", "build", "node_modules", ".gradle", ".idea", "out", ".mvn", "dist", ".next", "coverage", "__pycache__"]);
     var TEXT = /\.(java|kt|kts|groovy|scala|ya?ml|properties|xml|sql|gradle|toml|json|md|txt|conf|ts|js|tsx|jsx|py|go|sh|html|css|proto|avsc|graphql|feature|csv|env|ftl|vm|mustache|j2|tf)$|(^|\/)(Dockerfile|Jenkinsfile|Makefile|mvnw|gradlew)$/i;
@@ -5145,6 +5194,7 @@ var require_codeindex = __commonJS({
     var keyDir = (key) => path2.join(DIR, ...key.split("/").map((s) => s.replace(/[^\w.@-]/g, "_")));
     function walk(root) {
       const out2 = [];
+      let reusable = true;
       (function rec(dir) {
         let entries;
         try {
@@ -5154,6 +5204,7 @@ var require_codeindex = __commonJS({
         }
         for (const e of entries) {
           const full = path2.join(dir, e.name);
+          if (e.isSymbolicLink()) reusable = false;
           if (e.isDirectory()) {
             if (!SKIP_DIRS.has(e.name) && !e.name.startsWith(".")) rec(full);
             continue;
@@ -5161,9 +5212,10 @@ var require_codeindex = __commonJS({
           const rel = path2.relative(root, full).split(path2.sep).join("/");
           if (!e.isFile() || !TEXT.test(rel)) continue;
           const st = fs2.statSync(full);
-          if (st.size <= MAX_FILE) out2.push({ path: rel, size: st.size });
+          if (st.size <= MAX_FILE) out2.push({ path: rel, size: st.size, stamp: `${st.dev}:${st.ino}:${st.size}:${st.mtimeMs}:${st.ctimeMs}` });
         }
       })(root);
+      Object.defineProperty(out2, "reusable", { value: reusable });
       return out2.sort((a, b) => a.path < b.path ? -1 : 1);
     }
     var lower = (b) => b >= 65 && b <= 90 ? b + 32 : b;
@@ -5252,9 +5304,16 @@ var require_codeindex = __commonJS({
         throw e;
       }
     }
-    function buildIndex(root, key, meta = {}, { extracted } = {}) {
+    function buildIndex(root, key, meta = {}, { extracted, force = false } = {}) {
       const started = Date.now();
       const files = walk(root);
+      const dir = keyDir(key);
+      const input = crypto.createHash("sha256").update(JSON.stringify([1, path2.resolve(root), meta, extracted ?? null])).digest("hex");
+      const prev = !force && files.reusable ? load(key) : null;
+      if (prev?.input === input && prev.list.length === files.length && files.every((f, i) => f.path === prev.list[i].path && f.stamp === prev.list[i].stamp) && fs2.existsSync(path2.join(dir, "tri.bin")) && fs2.existsSync(path2.join(dir, "graph.json"))) {
+        const { list: _, dir: _dir, tri: _tri, graph: _graph, ...info2 } = prev;
+        return { ...info2, reused: true, ms: Date.now() - started };
+      }
       const postings = /* @__PURE__ */ new Map(), seen = /* @__PURE__ */ new Map();
       let bytes = 0;
       const texts = /* @__PURE__ */ new Map();
@@ -5275,12 +5334,11 @@ var require_codeindex = __commonJS({
         });
         if (/\.(java|kt|groovy)$/.test(f.path)) texts.set(f.path, buf.toString("utf8"));
       });
-      const dir = keyDir(key);
       fs2.mkdirSync(dir, { recursive: true });
       writeTrigrams(path2.join(dir, "tri.bin"), postings);
       const graph = require_codegraph().build(root, texts, meta, extracted);
       fs2.writeFileSync(path2.join(dir, "graph.json"), JSON.stringify(graph));
-      const info = { key, root, ...meta, builtAt: (/* @__PURE__ */ new Date()).toISOString(), files: files.length, bytes, trigrams: postings.size, classes: graph.classes.length, edges: graph.edges.length, ms: Date.now() - started };
+      const info = { key, root, ...meta, input, builtAt: (/* @__PURE__ */ new Date()).toISOString(), files: files.length, bytes, trigrams: postings.size, classes: graph.classes.length, edges: graph.edges.length, ms: Date.now() - started };
       writeJson(path2.join(dir, "files.json"), { ...info, list: files });
       memo.delete(key);
       return info;
@@ -5288,14 +5346,23 @@ var require_codeindex = __commonJS({
     var memo = /* @__PURE__ */ new Map();
     function load(key) {
       const dir = keyDir(key);
-      const files = readJson(path2.join(dir, "files.json"));
-      if (!files) return null;
+      const file = path2.join(dir, "files.json");
+      const stamp = fileStamp(file);
+      if (!stamp) {
+        memo.delete(key);
+        return null;
+      }
       const m = memo.get(key);
-      if (m && m.builtAt === files.builtAt) return m;
+      if (m && m.stamp === stamp) return m.value;
+      const files = readJson(file);
+      if (!files) {
+        memo.delete(key);
+        return null;
+      }
       const v = { ...files, dir, tri: null, graph: null };
       Object.defineProperty(v, "trigrams_", { value: () => v.tri ||= readTrigrams(path2.join(dir, "tri.bin")) });
       Object.defineProperty(v, "graph_", { value: () => v.graph ||= readJson(path2.join(dir, "graph.json"), { classes: [], edges: [] }) });
-      memo.set(key, v);
+      memo.set(key, { stamp, value: v });
       return v;
     }
     function list() {
@@ -5308,9 +5375,10 @@ var require_codeindex = __commonJS({
           return;
         }
         if (entries.some((e) => e.name === "files.json")) {
-          const f = readJson(path2.join(dir, "files.json"));
+          const key = path2.relative(DIR, dir).split(path2.sep).join("/");
+          const f = load(key);
           if (f) {
-            const { list: _, ...info } = f;
+            const { list: _, dir: _dir, tri: _tri, graph: _graph, ...info } = f;
             out2.push(info);
           }
           return;
@@ -5771,7 +5839,7 @@ var require_git = __commonJS({
 var require_pgindex = __commonJS({
   "lib/pgindex.js"(exports2, module2) {
     var path2 = require("path");
-    var { CACHE: CACHE2, readJson, writeJson } = require_util();
+    var { CACHE: CACHE2, readJson, writeJson, fileStamp } = require_util();
     var { sqlRefs, sqlCalls } = require_extract();
     var file = (env) => path2.join(CACHE2, env, "pg", "_usage.json");
     var norm = (s) => String(s || "").replace(/"/g, "").replace(/\s+/g, "").toLowerCase();
@@ -5906,11 +5974,19 @@ var require_pgindex = __commonJS({
     }
     var memo = /* @__PURE__ */ new Map();
     function load(env) {
-      const d = readJson(file(env));
-      if (!d) return { edges: [] };
+      const stamp = fileStamp(file(env));
+      if (!stamp) {
+        memo.delete(env);
+        return { edges: [] };
+      }
       const m = memo.get(env);
-      if (m && m.builtAt === d.builtAt) return m;
-      memo.set(env, d);
+      if (m && m.stamp === stamp) return m.data;
+      const d = readJson(file(env));
+      if (!d) {
+        memo.delete(env);
+        return { edges: [] };
+      }
+      memo.set(env, { stamp, data: d });
       return d;
     }
     function matcher(name) {
@@ -6468,6 +6544,234 @@ var require_notes = __commonJS({
   }
 });
 
+// lib/fixture-schema.js
+var require_fixture_schema = __commonJS({
+  "lib/fixture-schema.js"(exports2, module2) {
+    var MAX_DEPTH = 32;
+    var MAX_PATHS = 1e4;
+    var MAX_NODES = 5e4;
+    var validPath = (p) => typeof p === "string" && /^(value|key|headers)(\.[\w-]+|\[\])*$/.test(p);
+    var fieldName = (n) => typeof n === "string" && /^[\w-]+$/.test(n);
+    var normalized = (n) => String(n || "").replace(/[^a-z0-9]/gi, "").toLowerCase();
+    var scalar = (t) => ["string", "integer", "number", "boolean"].includes(t);
+    var PRIMITIVES = new Map(Object.entries({ null: "null", boolean: "boolean", int: "integer", long: "integer", float: "number", double: "number", bytes: "string", string: "string" }));
+    var primitive = (t) => PRIMITIVES.get(t);
+    var jsonType = (v) => v === null ? "null" : Array.isArray(v) ? "array" : typeof v === "number" && Number.isInteger(v) ? "integer" : typeof v;
+    function decoded(value) {
+      if (typeof value !== "string") return value;
+      if (value.length > 1e6) return null;
+      try {
+        return JSON.parse(value);
+      } catch {
+        return value;
+      }
+    }
+    function schemaOf(definition) {
+      if (!definition) return null;
+      const envelope = typeof definition === "object" && Object.hasOwn(definition, "schema");
+      const schema = decoded(envelope ? definition.schema : definition);
+      const kind = String(envelope ? definition.type || definition.schemaType || "" : "").toUpperCase();
+      if (kind && !["JSON", "JSONSCHEMA", "JSON_SCHEMA", "AVRO"].includes(kind)) return null;
+      const looksAvro = (s) => s && typeof s === "object" && (["record", "enum", "fixed", "int", "long", "float", "double", "bytes"].includes(s.type) || s.type === "array" && (typeof s.items === "string" || Array.isArray(s.items)));
+      const avro = kind === "AVRO" || !kind && (typeof schema === "string" || Array.isArray(schema) || looksAvro(schema));
+      return schema && (typeof schema === "object" || avro) ? { schema, kind: avro ? "avro-schema" : "json-schema" } : null;
+    }
+    function paths(topic = {}) {
+      if (!topic || typeof topic !== "object") return [];
+      const out2 = /* @__PURE__ */ new Map();
+      let work = 0;
+      const add = (p, type, source, detail) => {
+        if (!validPath(p) || out2.size >= MAX_PATHS && !out2.has(p)) return;
+        let entry = out2.get(p);
+        if (!entry) {
+          entry = { path: p, types: /* @__PURE__ */ new Set(), sources: /* @__PURE__ */ new Set(), evidence: /* @__PURE__ */ new Set() };
+          out2.set(p, entry);
+        }
+        for (const t of [].concat(type || "unknown")) entry.types.add(t);
+        entry.sources.add(source);
+        entry.evidence.add(detail || `${source}: ${p}`);
+      };
+      const walkSample = (v, p, source, detail, depth = 0, ancestors = /* @__PURE__ */ new Set()) => {
+        if (depth > MAX_DEPTH || ++work > MAX_NODES || ancestors.has(v)) return;
+        if (typeof v === "string" && /^[\s]*[\[{]/.test(v)) {
+          const parsed = decoded(v);
+          if (parsed !== v) v = parsed;
+        }
+        add(p, jsonType(v), source, detail);
+        if (!v || typeof v !== "object") return;
+        const next = new Set(ancestors);
+        next.add(v);
+        if (Array.isArray(v)) for (const x of v) walkSample(x, `${p}[]`, source, detail, depth + 1, next);
+        else for (const [name, x] of Object.entries(v)) if (fieldName(name)) walkSample(x, `${p}.${name}`, source, detail, depth + 1, next);
+      };
+      function jsonSchema(root, prefix) {
+        const resolve = (ref) => {
+          if (ref === "#") return root;
+          if (typeof ref !== "string" || !ref.startsWith("#/")) return null;
+          let node = root;
+          for (const part of ref.slice(2).split("/").map((s) => s.replace(/~1/g, "/").replace(/~0/g, "~"))) {
+            if (!node || typeof node !== "object" || !Object.hasOwn(node, part)) return null;
+            node = node[part];
+          }
+          return node;
+        };
+        function visit(node, p, depth = 0, ancestors = /* @__PURE__ */ new Set()) {
+          if (node === true) {
+            add(p, "unknown", "json-schema");
+            return;
+          }
+          if (!node || typeof node !== "object" || Array.isArray(node) || depth > MAX_DEPTH || ++work > MAX_NODES || ancestors.has(node)) return;
+          const next = new Set(ancestors);
+          next.add(node);
+          const types = [].concat(node.type || []).filter((t) => ["object", "array", "null", "string", "number", "integer", "boolean"].includes(t));
+          if (node.properties && typeof node.properties === "object" && !Array.isArray(node.properties)) types.push("object");
+          if (node.items || node.prefixItems) types.push("array");
+          if (Array.isArray(node.enum)) types.push(...node.enum.map(jsonType));
+          if (Object.hasOwn(node, "const")) types.push(jsonType(node.const));
+          if (node.nullable === true) types.push("null");
+          if (types.length) add(p, types, "json-schema");
+          if (node.$ref) visit(resolve(node.$ref), p, depth + 1, next);
+          for (const keyword of ["allOf", "anyOf", "oneOf"]) if (Array.isArray(node[keyword])) for (const variant of node[keyword]) visit(variant, p, depth + 1, next);
+          if (node.properties && typeof node.properties === "object" && !Array.isArray(node.properties)) {
+            for (const [name, definition] of Object.entries(node.properties)) if (fieldName(name)) visit(definition, `${p}.${name}`, depth + 1, next);
+          }
+          if (Array.isArray(node.items)) for (const item of node.items) visit(item, `${p}[]`, depth + 1, next);
+          else if (node.items) visit(node.items, `${p}[]`, depth + 1, next);
+          if (Array.isArray(node.prefixItems)) for (const item of node.prefixItems) visit(item, `${p}[]`, depth + 1, next);
+          if (!out2.has(p)) add(p, "unknown", "json-schema");
+        }
+        visit(root, prefix);
+      }
+      function avroSchema(root, prefix) {
+        const names = /* @__PURE__ */ new Map(), seen = /* @__PURE__ */ new Set();
+        const fullname = (node, namespace) => node.name?.includes(".") ? node.name : [node.namespace || namespace, node.name].filter(Boolean).join(".");
+        function collect(node, namespace = "", depth = 0) {
+          if (!node || typeof node !== "object" || seen.has(node) || depth > MAX_DEPTH || ++work > MAX_NODES) return;
+          seen.add(node);
+          if (Array.isArray(node)) {
+            for (const branch of node) collect(branch, namespace, depth + 1);
+            return;
+          }
+          if (["record", "enum", "fixed"].includes(node.type) && typeof node.name === "string") {
+            const full = fullname(node, namespace);
+            names.set(full, node);
+            namespace = full.split(".").slice(0, -1).join(".");
+          }
+          for (const f of Array.isArray(node.fields) ? node.fields : []) collect(f?.type, namespace, depth + 1);
+          collect(node.items, namespace, depth + 1);
+          collect(node.values, namespace, depth + 1);
+          if (typeof node.type === "object") collect(node.type, namespace, depth + 1);
+        }
+        collect(root);
+        function visit(node, p, namespace = "", depth = 0, ancestors = /* @__PURE__ */ new Set()) {
+          if (node == null || depth > MAX_DEPTH || ++work > MAX_NODES) return;
+          if (typeof node === "string") {
+            const type = primitive(node);
+            if (type) add(p, type, "avro-schema");
+            else {
+              const target = names.get(node.includes(".") ? node : [namespace, node].filter(Boolean).join("."));
+              if (target) visit(target, p, namespace, depth + 1, ancestors);
+              else add(p, "unknown", "avro-schema");
+            }
+            return;
+          }
+          if (typeof node !== "object" || ancestors.has(node)) return;
+          const next = new Set(ancestors);
+          next.add(node);
+          if (Array.isArray(node)) {
+            for (const branch of node) visit(branch, p, namespace, depth + 1, next);
+            return;
+          }
+          if (node.type === "record") {
+            add(p, "object", "avro-schema");
+            const full = fullname(node, namespace), ns = full.split(".").slice(0, -1).join(".");
+            for (const f of Array.isArray(node.fields) ? node.fields : []) if (f && fieldName(f.name)) visit(f.type, `${p}.${f.name}`, ns, depth + 1, next);
+          } else if (node.type === "array") {
+            add(p, "array", "avro-schema");
+            visit(node.items, `${p}[]`, namespace, depth + 1, next);
+          } else if (node.type === "map") add(p, "object", "avro-schema");
+          else if (node.type === "enum" || node.type === "fixed") add(p, "string", "avro-schema");
+          else visit(node.type, p, namespace, depth + 1, next);
+        }
+        visit(root, prefix);
+      }
+      for (const side of ["key", "value"]) {
+        const definition = schemaOf(topic[`${side}Schema`]);
+        if (definition) {
+          if (definition.kind === "avro-schema") avroSchema(definition.schema, side);
+          else jsonSchema(definition.schema, side);
+        }
+        const shaped = [...out2.values()].some((p) => p.path.startsWith(side) && [...p.types].some(scalar));
+        if (!shaped) {
+          if (side === "value" && topic.fields && typeof topic.fields === "object") {
+            const fields = Array.isArray(topic.fields) ? topic.fields.map((f) => [f?.path || f?.name, f?.type]) : Object.entries(topic.fields);
+            for (const [name, raw] of fields) if (typeof name === "string") {
+              const p = /^(value|key|headers)(\.|\[\])/.test(name) ? name : `value.${name}`;
+              const t = typeof raw === "object" && raw ? raw.type : raw;
+              add(p, [].concat(t || "unknown").map((x) => primitive(x) || (["object", "array", "null", "integer", "number", "boolean", "string"].includes(x) ? x : "unknown")), "cached-fields");
+              const tokens = p.match(/^(?:value|key|headers)|\.[\w-]+|\[\]/g) || [];
+              let parent = "";
+              for (let i = 0; i < tokens.length - 1; i++) {
+                parent += tokens[i];
+                add(parent, tokens[i + 1] === "[]" ? "array" : "object", "cached-fields");
+              }
+            }
+          }
+          for (const [i, sample] of (Array.isArray(topic.samples) ? topic.samples : []).entries()) if (sample && Object.hasOwn(sample, side)) walkSample(sample[side], side, "cached-sample", `cached sample[${i}]: ${side}`);
+        }
+      }
+      for (const [i, sample] of (Array.isArray(topic.samples) ? topic.samples : []).entries()) if (sample && Object.hasOwn(sample, "headers")) walkSample(sample.headers, "headers", "cached-sample", `cached sample[${i}]: headers`);
+      return [...out2.values()].sort((a, b) => a.path.localeCompare(b.path)).map((e) => ({ path: e.path, types: [...e.types].sort(), sources: [...e.sources].sort(), evidence: [...e.evidence].sort() }));
+    }
+    function validatePath(topic, path2) {
+      return validPath(path2) && (path2 === "headers" || path2.startsWith("headers.") || path2.startsWith("headers[]") || paths(topic).some((p) => p.path === path2));
+    }
+    function singular(name) {
+      if (/ies$/i.test(name)) return name.slice(0, -3) + "y";
+      if (/(?:sses|shes|ches|xes|zes|statuses)$/i.test(name)) return name.slice(0, -2);
+      return /s$/i.test(name) && !/(?:ss|us|is)$/i.test(name) ? name.slice(0, -1) : name;
+    }
+    function candidates(tables = [], topics = []) {
+      const columns = /* @__PURE__ */ new Map();
+      for (const t of tables) {
+        if (!t || typeof t !== "object") continue;
+        const table2 = t.table || (t.schema && t.name ? `${t.schema}.${t.name}` : null);
+        if (!table2 || !t.db) continue;
+        for (const c of t.columns || []) {
+          if (!c?.name) continue;
+          const aliases = /* @__PURE__ */ new Map([[normalized(c.name), `normalized field name equals column ${c.name}`]]);
+          if (normalized(c.name) === "id") {
+            const entity = table2.split(".").at(-1);
+            aliases.set(normalized(singular(entity) + "Id"), `table semantic id: ${table2}.id \u2192 ${singular(entity)}Id`);
+            aliases.set(normalized(entity + "Id"), `table semantic id: ${table2}.id \u2192 ${entity}Id`);
+          }
+          for (const [alias, evidence] of aliases) {
+            if (!alias) continue;
+            if (!columns.has(alias)) columns.set(alias, []);
+            columns.get(alias).push({ from: { db: t.db, table: table2, column: c.name }, evidence });
+          }
+        }
+      }
+      const out2 = /* @__PURE__ */ new Map();
+      for (const topic of topics) {
+        if (typeof topic?.topic !== "string" || !topic.topic) continue;
+        for (const p of paths(topic)) {
+          if (!p.types.some(scalar) || p.types.some((t) => t === "array" || t === "object")) continue;
+          const leaf = p.path.split(".").at(-1).replace(/(?:\[\])+$/, "");
+          for (const c of columns.get(normalized(leaf)) || []) {
+            const key = JSON.stringify([topic.topic, p.path, c.from]);
+            const evidence = [.../* @__PURE__ */ new Set([c.evidence, ...p.evidence, "Candidate only; confirm from service code or a schema contract before adding a match."])];
+            if (!out2.has(key)) out2.set(key, { topic: topic.topic, path: p.path, from: c.from, source: "candidate", verified: false, evidence });
+            else out2.get(key).evidence = [.../* @__PURE__ */ new Set([...out2.get(key).evidence, ...evidence])];
+          }
+        }
+      }
+      return [...out2.values()].sort((a, b) => JSON.stringify([a.topic, a.path, a.from]).localeCompare(JSON.stringify([b.topic, b.path, b.from])));
+    }
+    module2.exports = { paths, candidates, validatePath };
+  }
+});
+
 // lib/routes.js
 var require_routes = __commonJS({
   "lib/routes.js"(exports2, module2) {
@@ -6591,7 +6895,7 @@ var require_catalog = __commonJS({
   "lib/catalog.js"(exports2, module2) {
     var fs2 = require("fs");
     var path2 = require("path");
-    var { CACHE: CACHE2, readJson } = require_util();
+    var { CACHE: CACHE2, readJson, fileStamp } = require_util();
     var notes = require_notes();
     function list(dir) {
       try {
@@ -6639,7 +6943,8 @@ var require_catalog = __commonJS({
         const d = readJson(path2.join(kDir, f));
         if (!d) continue;
         const schema = d.valueSchema ? ` schema:${d.valueSchema.type}v${d.valueSchema.version}` : "";
-        lines.push(`kafka ${d.topic} ${d.messages}${schema}: ${Object.keys(d.fields).join(", ")}${note(d.topic)}`);
+        const fields = d.fields ? Object.keys(d.fields) : require_fixture_schema().paths(d).map((p) => p.path);
+        lines.push(`kafka ${d.topic} ${d.messages ?? "?"}${schema}: ${fields.join(", ")}${note(d.topic)}`);
       }
       const consul = readJson(path2.join(root, "consul.json"));
       for (const [name, s] of Object.entries(consul?.services || {})) {
@@ -6678,12 +6983,28 @@ var require_catalog = __commonJS({
       fs2.writeFileSync(path2.join(root, "catalog.txt"), lines.join("\n") + "\n");
       return lines.length;
     }
+    var prepared = /* @__PURE__ */ new Map();
     function find(env, q, { limit = 200 } = {}) {
-      let text;
-      try {
-        text = fs2.readFileSync(path2.join(CACHE2, env, "catalog.txt"), "utf8");
-      } catch {
+      const file = path2.join(CACHE2, env, "catalog.txt");
+      const stamp = fileStamp(file);
+      if (!stamp) {
+        prepared.delete(env);
         return [];
+      }
+      let cached = prepared.get(env);
+      if (cached?.stamp !== stamp) {
+        let text;
+        try {
+          text = fs2.readFileSync(file, "utf8");
+        } catch {
+          prepared.delete(env);
+          return [];
+        }
+        cached = { stamp, lines: text.split("\n").filter(Boolean).map((line) => {
+          const lower = line.toLowerCase(), cut = lower.indexOf(" | used by: ");
+          return { line, lower, main: cut < 0 ? lower : lower.slice(0, cut) };
+        }) };
+        prepared.set(env, cached);
       }
       let kind = null;
       const words = q.toLowerCase().split(/\s+/).filter(Boolean).filter((w) => {
@@ -6692,12 +7013,9 @@ var require_catalog = __commonJS({
         return !m;
       });
       const direct = [], related = [];
-      for (const line of text.split("\n")) {
-        if (!line || kind && !line.startsWith(kind + " ")) continue;
-        const l = line.toLowerCase();
-        if (!words.every((w) => l.includes(w))) continue;
-        const cut = l.indexOf(" | used by: ");
-        const main2 = cut < 0 ? l : l.slice(0, cut);
+      for (const { line, lower, main: main2 } of cached.lines) {
+        if (kind && !line.startsWith(kind + " ")) continue;
+        if (!words.every((w) => lower.includes(w))) continue;
         (words.every((w) => main2.includes(w)) ? direct : related).push(line);
         if (direct.length >= limit) break;
       }
@@ -29526,10 +29844,11 @@ ${BUILD_OUTPUT.join("\n")}
       return [`work/${id}`, ...(m.libs || []).map((l) => l.index).filter(Boolean)];
     }
     var W = () => module2.exports;
-    function touch(id) {
+    function touch(id, { dirty = false } = {}) {
       const m = readJson(metaFile(id));
       if (m) {
         m.usedAt = (/* @__PURE__ */ new Date()).toISOString();
+        if (dirty) m.dirty = true;
         writeJson(metaFile(id), m);
       }
     }
@@ -29779,7 +30098,7 @@ var require_fastrun = __commonJS({
     var path2 = require("path");
     var crypto = require("crypto");
     var { spawn } = require("child_process");
-    var { CACHE: CACHE2, readJson, writeJson } = require_util();
+    var { CACHE: CACHE2, readJson, writeJson, fileStamp } = require_util();
     var LAUNCHER = `
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -29970,18 +30289,64 @@ ${e.message}`, ms: Date.now() - started });
       }
       return null;
     }
+    function pomsIn(root) {
+      const out2 = [], skip = /* @__PURE__ */ new Set(["target", "build", "node_modules", "out", "dist", "coverage"]);
+      const visit = (dir) => {
+        for (const e of fs2.readdirSync(dir, { withFileTypes: true })) {
+          const full = path2.join(dir, e.name);
+          if (e.isDirectory() && !e.name.startsWith(".") && !skip.has(e.name)) visit(full);
+          else if (e.isFile() && e.name === "pom.xml") out2.push(full);
+        }
+      };
+      visit(root);
+      return out2.sort();
+    }
+    function preparationKey(root, plan, cfg, mvn, env = process.env) {
+      const descriptors = [...pomsIn(root), ...["jvm.config", "maven.config", "extensions.xml", "wrapper/maven-wrapper.properties"].map((f) => path2.join(root, ".mvn", f))];
+      if (cfg.mavenSettings) descriptors.push(cfg.mavenSettings);
+      const contents = descriptors.map((f) => [path2.relative(root, f), fs2.existsSync(f) ? fs2.readFileSync(f, "utf8") : null]);
+      const executable = javaBin(cfg, "javac");
+      const javaPath = path2.isAbsolute(executable) ? executable : String(env.PATH || "").split(path2.delimiter).map((p) => path2.join(p, executable)).find((f) => fs2.existsSync(f));
+      return hash(JSON.stringify({
+        root,
+        module: plan.module,
+        cfg: { javaHome: cfg.javaHome, mavenRepo: cfg.mavenRepo, mavenSettings: cfg.mavenSettings, offline: cfg.offline, args: cfg.args, runnerUrl: cfg.runnerUrl },
+        mvn,
+        contents,
+        java: javaPath ? fileStamp(javaPath) : null,
+        maven: fileStamp(mvn.cmd),
+        launcher: hash(LAUNCHER),
+        env: [env.JAVA_HOME, env.MAVEN_OPTS, env.JDK_JAVA_OPTIONS, env.JAVA_TOOL_OPTIONS, env.PATH]
+      }));
+    }
+    function preparedStateUsable(state, buildKey) {
+      return !!(state && state.buildKey === buildKey && Array.isArray(state.classpath) && [state.classes, state.testClasses, state.launcherJar, state.launcherDir && path2.join(state.launcherDir, "DtLauncher.class"), ...state.classpath].every((f) => f && fs2.existsSync(f)));
+    }
+    function sourceInventory(modDir) {
+      return [
+        ...walkJava(path2.join(modDir, "src", "main", "java")),
+        ...walkJava(path2.join(modDir, "src", "test", "java")),
+        ...walkFiles(path2.join(modDir, "src", "main", "resources")),
+        ...walkFiles(path2.join(modDir, "src", "test", "resources"))
+      ].map((f) => path2.relative(modDir, f).split(path2.sep).join("/")).sort();
+    }
+    function removedSources(state, sources) {
+      const present = new Set(sources);
+      return (state?.sources || []).filter((f) => !present.has(f));
+    }
     async function prepare({ id, root, plan, cfg, env, mvn, log }) {
       const st = readJson(stateFile(id), {});
-      const poms = walkFiles(root).filter((f) => /(^|\/)pom\.xml$/.test(f) && !/\/target\//.test(f)).sort();
-      const pomHash = hash(poms.map((f) => fs2.readFileSync(f, "utf8")).join("\n"));
+      const buildKey = preparationKey(root, plan, cfg, mvn, env);
       const key = plan.module;
       const prev = st[key];
-      if (prev && prev.pomHash === pomHash && fs2.existsSync(prev.classes) && fs2.existsSync(prev.testClasses)) return { state: prev, prepared: false };
+      const sources = sourceInventory(plan.modDir), removed = removedSources(prev, sources);
+      if (preparedStateUsable(prev, buildKey) && Array.isArray(prev.sources) && !removed.length) return { state: prev, prepared: false, sources };
+      const clean = !!prev && (removed.length > 0 || !Array.isArray(prev.sources) || prev.buildKey !== buildKey);
       fs2.mkdirSync(path2.join(root, ".dt"), { recursive: true });
       const cpFile = path2.join(root, ".dt", `classpath-${hash(key)}.txt`);
       const multi = plan.module !== "." && fs2.existsSync(path2.join(root, "pom.xml"));
-      const args = [...mvn.args, ...mavenArgs(cfg), "test-compile", "dependency:build-classpath", `-Dmdep.outputFile=${cpFile}`, "-Dmdep.includeScope=test", ...multi ? ["-pl", plan.module, "-am"] : []];
-      log(`fast: preparing ${key} with Maven (compile + classpath, once)`);
+      const args = [...mvn.args, ...mavenArgs(cfg), ...clean ? ["clean"] : [], "test-compile", "dependency:build-classpath", `-Dmdep.outputFile=${cpFile}`, "-Dmdep.includeScope=test", ...multi ? ["-pl", plan.module, "-am"] : []];
+      log(`fast: preparing ${key} with Maven (${clean ? `clean: ${removed.length ? `${removed.length} deleted source/resource files` : "build inputs changed"}; ` : ""}compile + classpath)`);
       const T = require_trace();
       const r = await T.step("maven prepare", () => exec(mvn.cmd, args, { cwd: multi ? root : plan.modDir, env, log }), "test-compile + dependency:build-classpath, once per workspace");
       if (r.code !== 0) return { error: r };
@@ -30004,7 +30369,8 @@ ${e.message}`, ms: Date.now() - started });
       }
       const javacVersion = await exec(javaBin(cfg, "javac"), ["-version"], { env }).then((x) => Number((x.out.match(/javac (\d+)/) || [])[1] || 0));
       const state = {
-        pomHash,
+        buildKey,
+        sources,
         classpath,
         launcherJar,
         launcherDir: ldir,
@@ -30017,7 +30383,7 @@ ${e.message}`, ms: Date.now() - started });
       };
       st[key] = state;
       writeJson(stateFile(id), st);
-      return { state, prepared: true, ms: r.ms };
+      return { state, prepared: true, sources, ms: r.ms };
     }
     function changed(modDir, stamp, graph, root) {
       const newer = (f) => fs2.statSync(f).mtimeMs > stamp;
@@ -30025,12 +30391,24 @@ ${e.message}`, ms: Date.now() - started });
       const mainChanged = main2.filter(newer), testChanged = test.filter(newer);
       if (mainChanged.length && graph) {
         const rel = (f) => path2.relative(root, f).split(path2.sep).join("/");
-        const changedIds = new Set(graph.classes.filter((c) => mainChanged.some((f) => rel(f) === c.file)).map((c) => c.id));
+        const paths = new Set(mainChanged.map(rel));
+        const changedIds = new Set(graph.classes.filter((c) => paths.has(c.file)).map((c) => c.id));
+        const byId = new Map(graph.classes.map((c) => [c.id, c]));
+        const owner = (node) => {
+          let id = String(node).split("#")[0];
+          while (id) {
+            if (byId.has(id)) return byId.get(id);
+            const dot = id.lastIndexOf(".");
+            if (dot < 0) break;
+            id = id.slice(0, dot);
+          }
+          return null;
+        };
         const users = /* @__PURE__ */ new Set();
         for (const [from, to] of graph.edges) {
           const cls = String(to).split(/[#]/)[0];
           if (changedIds.has(cls) || changedIds.has(to)) {
-            const c = graph.classes.find((x) => from === x.id || String(from).startsWith(`${x.id}#`) || String(from).startsWith(`${x.id}.`));
+            const c = owner(from);
             if (c) users.add(c.file);
           }
         }
@@ -30052,6 +30430,13 @@ ${e.message}`, ms: Date.now() - started });
       const p = await prepare({ id, root, plan, cfg, env, mvn, log });
       if (p.error) return { code: p.error.code || 1, out: p.error.out, ms: Date.now() - started, cases: [], phase: "prepare" };
       const st = p.state;
+      if (st.sources.length !== p.sources.length || st.sources.some((f, i) => f !== p.sources[i])) {
+        const inventory = readJson(stateFile(id), {});
+        if (inventory[plan.module]) {
+          inventory[plan.module].sources = p.sources;
+          writeJson(stateFile(id), inventory);
+        }
+      }
       const ch = changed(plan.modDir, p.prepared ? Date.now() + 1 : st.stamp, graph, root);
       const stampAt = Date.now();
       let out2 = "";
@@ -30090,7 +30475,7 @@ ${e.message}`, ms: Date.now() - started });
       }
       return { code: r.code, out: out2, killed: r.killed, ms: Date.now() - started, cases, compiled: ch.mainChanged.length + ch.testChanged.length, prepared: p.prepared, prepareMs: p.ms };
     }
-    module2.exports = { run, supported, prepare, changed, exec, LAUNCHER };
+    module2.exports = { run, supported, prepare, changed, exec, LAUNCHER, pomsIn, preparationKey, preparedStateUsable };
   }
 });
 
@@ -30098,7 +30483,8 @@ ${e.message}`, ms: Date.now() - started });
 var require_ddl = __commonJS({
   "lib/ddl.js"(exports2, module2) {
     var { resolve, namesOf } = require_pgindex();
-    var q = (name) => name.split(".").map((p) => /^[a-z_][a-z0-9_$]*$/.test(p) ? p : `"${p.replace(/"/g, '""')}"`).join(".");
+    var RESERVED = new Set("all analyse analyze and any array as asc asymmetric authorization binary both case cast check collate collation column concurrently constraint create cross current_catalog current_date current_role current_schema current_time current_timestamp current_user default deferrable desc distinct do else end except false fetch for foreign freeze from full grant group having ilike in initially inner intersect into is isnull join lateral leading left like limit localtime localtimestamp natural not notnull null offset on only or order outer overlaps placing primary references returning right select session_user similar some symmetric system_user table tablesample then to trailing true union unique user using variadic verbose when where window with".split(" "));
+    var q = (name) => name.split(".").map((p) => /^[a-z_][a-z0-9_$]*$/.test(p) && !RESERVED.has(p) ? p : `"${p.replace(/"/g, '""')}"`).join(".");
     var key = (schema, name) => `${schema}.${name}`.toLowerCase();
     var lit = (s) => `'${String(s).replace(/'/g, "''")}'`;
     function dollar(body) {
@@ -30364,6 +30750,504 @@ var require_testdb = __commonJS({
       }
     }
     module2.exports = { create, drop, server };
+  }
+});
+
+// lib/reproduction.js
+var require_reproduction = __commonJS({
+  "lib/reproduction.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var crypto = require("crypto");
+    var { CACHE: CACHE2, readJson, writeJson } = require_util();
+    var qi = (s) => `"${String(s).replace(/"/g, '""')}"`;
+    var qt = (s) => s.split(".").map(qi).join(".");
+    var stable = (v) => JSON.stringify(v, (_, x) => typeof x === "bigint" ? String(x) : x);
+    var hash = (s) => crypto.createHash("sha256").update(String(s)).digest("hex");
+    var idOf = (x) => `${x.db}:${x.table}`;
+    var same = (a, b) => a == null || b == null ? a === b : String(a) === String(b);
+    var list = (s) => s.split(",").map((x) => x.trim().replace(/^"|"$/g, "").replace(/""/g, '"'));
+    function number(v, def, max, name) {
+      v = v ?? def;
+      if (!Number.isInteger(v) || v < 1 || v > max) throw new Error(`${name} must be 1..${max}`);
+      return v;
+    }
+    function catalog(env) {
+      const cats = require_pg().loadAll(env), tables = /* @__PURE__ */ new Map();
+      for (const cat of cats) for (const t of cat.tables) if (t.kind === "table") tables.set(`${cat.db}:${t.schema}.${t.name}`, { ...t, db: cat.db, table: `${t.schema}.${t.name}` });
+      return { cats, tables };
+    }
+    function endpoint(x, tables) {
+      const t = tables.get(idOf(x));
+      if (!t) throw new Error(`no cached table ${idOf(x)}: sync its database first`);
+      const columns = x.columns || (x.column ? [x.column] : []);
+      if (!columns.length || columns.some((c) => !t.columns.some((k) => k.name === c))) throw new Error(`unknown or empty columns on ${idOf(x)}: ${columns.join(", ")}`);
+      if (new Set(columns).size !== columns.length) throw new Error(`duplicate columns on ${idOf(x)}`);
+      return { db: t.db, table: t.table, columns };
+    }
+    function primary(t) {
+      const c = (t.constraints || []).find((c2) => c2.type === "p");
+      return c && /PRIMARY KEY\s*\(([^)]+)\)/i.test(c.def) ? list(c.def.match(/PRIMARY KEY\s*\(([^)]+)\)/i)[1]) : [];
+    }
+    function foreignKeys(tables, gaps) {
+      const out2 = [];
+      for (const t of tables.values()) for (const c of t.constraints || []) if (c.type === "f") {
+        const m = c.def?.match(/FOREIGN KEY\s*\(([^)]+)\)\s+REFERENCES\s+.+?\(([^)]+)\)/i);
+        const ref = c.ref && tables.get(`${t.db}:${c.ref}`);
+        if (!m || !ref) {
+          gaps.push({ kind: "schema", table: idOf(t), detail: `cannot resolve FK ${c.name}` });
+          continue;
+        }
+        out2.push({ from: endpoint({ ...t, columns: list(m[1]) }, tables), to: endpoint({ ...ref, columns: list(m[2]) }, tables), source: "foreign-key", evidence: c.name, required: true });
+      }
+      return out2;
+    }
+    function plan({ env, service, seeds = [], relations = [], topics = [], limits = {}, includeChildren = false } = {}) {
+      env ||= require_config().envNames()[0];
+      require_config().getEnv(env);
+      if (seeds.length > 100 || relations.length > 1e3 || topics.length > 100) throw new Error("capture plan limit: 100 seeds, 1000 explicit relations and 100 topics");
+      if (new Set(topics.map((t) => t.topic)).size !== topics.length) throw new Error("duplicate capture topics");
+      const { cats, tables } = catalog(env), gaps = [];
+      const links = foreignKeys(tables, gaps);
+      for (const r of relations.filter((r2) => r2.source !== "foreign-key")) {
+        const from = endpoint(r.from, tables), to = endpoint(r.to, tables);
+        if (from.columns.length !== to.columns.length) throw new Error("relationship column counts differ");
+        links.push({ from, to, source: "explicit", evidence: String(r.evidence || "capture plan"), required: r.required === true });
+      }
+      const roots = seeds.map((s) => {
+        const t = tables.get(idOf(s));
+        if (!t) throw new Error(`no cached table ${idOf(s)}`);
+        if (!s.where || !Object.keys(s.where).length) throw new Error(`seed ${idOf(s)} needs equality filters in where`);
+        if (Object.keys(s.where).some((c) => !t.columns.some((x) => x.name === c))) throw new Error(`unknown seed column on ${idOf(s)}`);
+        if (Object.values(s.where).some((v) => v !== null && !["string", "number", "boolean"].includes(typeof v))) throw new Error("seed equality values must be JSON scalars");
+        return { db: s.db, table: s.table, where: s.where };
+      });
+      const eventPlans = topics.map((t) => {
+        const cached = require_kafka().cached(env, t.topic);
+        if (!cached) throw new Error(`no cached topic ${t.topic}`);
+        const matches = (t.matches || []).map((m) => {
+          if (!/^(value|key|headers)(\.[\w-]+|\[\])*$/.test(m.path || "")) throw new Error(`bad Kafka match path ${m.path}`);
+          const from = endpoint({ ...m.from, columns: [m.from.column] }, tables);
+          return { path: m.path, from: { db: from.db, table: from.table, column: from.columns[0] } };
+        });
+        if (!matches.length) throw new Error(`topic ${t.topic} needs matches against captured columns`);
+        return { topic: t.topic, matches, match: t.match === "any" ? "any" : "all", offsets: t.offsets || {}, required: t.required !== false, schema: { key: cached.keySchema, value: cached.valueSchema }, paths: require_fixture_schema().paths(cached) };
+      });
+      const reachable = new Set(roots.map(idOf));
+      if (service) {
+        for (const e of require_pgindex().current(env).edges) if (e.user === service && e.db && e.targetKind === "table") reachable.add(`${e.db}:${e.target}`);
+      }
+      for (let change = true; change; ) {
+        change = false;
+        for (const r of links) if (reachable.has(idOf(r.from)) || includeChildren && reachable.has(idOf(r.to))) {
+          for (const e of [r.from, r.to]) if (!reachable.has(idOf(e))) {
+            reachable.add(idOf(e));
+            change = true;
+          }
+        }
+      }
+      const candidates = [];
+      for (const a of tables.values()) if (reachable.has(idOf(a))) {
+        for (const b of tables.values()) if (a.db !== b.db) {
+          for (const c of a.columns) if (/_id$/.test(c.name) && b.columns.some((x) => x.name === c.name)) {
+            const r = { from: { db: a.db, table: a.table, columns: [c.name] }, to: { db: b.db, table: b.table, columns: [c.name] } };
+            if (!links.some((l) => stable(l.from) === stable(r.from) && stable(l.to) === stable(r.to))) candidates.push({ ...r, source: "candidate", evidence: `same column name ${c.name}; confirm from code or a schema contract` });
+          }
+        }
+      }
+      const reachableTables = [...reachable].map((id) => tables.get(id)).filter(Boolean);
+      let cachedTopics = [];
+      try {
+        cachedTopics = fs2.readdirSync(path2.join(CACHE2, env, "kafka")).filter((f) => f.endsWith(".json") && !f.startsWith("_")).sort().map((f) => readJson(path2.join(CACHE2, env, "kafka", f))).filter(Boolean);
+      } catch {
+      }
+      const topicCandidates = require_fixture_schema().candidates(reachableTables, cachedTopics);
+      return {
+        version: 1,
+        env,
+        service,
+        seeds: roots,
+        relations: links.filter((r) => reachable.has(idOf(r.from)) || reachable.has(idOf(r.to))),
+        topics: eventPlans,
+        limits: { depth: number(limits.depth, 8, 50, "depth"), rowsPerTable: number(limits.rowsPerTable, 200, 1e4, "rowsPerTable"), totalRows: number(limits.totalRows, 2e3, 5e4, "totalRows"), messagesPerTopic: number(limits.messagesPerTopic, 300, 1e4, "messagesPerTopic"), totalMessages: number(limits.totalMessages, 2e3, 5e4, "totalMessages"), queries: number(limits.queries, 200, 1e3, "queries") },
+        includeChildren: !!includeChildren,
+        candidates: candidates.slice(0, 100),
+        topicCandidates: topicCandidates.slice(0, 200),
+        topicCandidatesTotal: topicCandidates.length,
+        gaps: gaps.filter((g) => !g.table || reachable.has(g.table)),
+        catalogs: cats.map((c) => ({ db: c.db, syncedAt: c.syncedAt, fingerprint: hash(stable(c)) })),
+        tables: [...reachable].map((id) => tables.get(id)).filter(Boolean).map((t) => ({ id: idOf(t), db: t.db, table: t.table, columns: t.columns, constraints: t.constraints, primaryKey: primary(t) })),
+        consistency: "Independent read-only statements across databases and Kafka; observation window and offsets are recorded, not a distributed snapshot."
+      };
+    }
+    var tupleKey = (tuple) => stable(tuple.map((x) => x == null ? null : String(x)));
+    function jsonValue(v) {
+      if (v instanceof Date) return v.toISOString();
+      if (Buffer.isBuffer(v)) return `\\x${v.toString("hex")}`;
+      if (typeof v === "bigint") return String(v);
+      if (Array.isArray(v)) return v.map(jsonValue);
+      if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, jsonValue(x)]));
+      return v;
+    }
+    function valuesAt(obj, dotted) {
+      if (!dotted) return [obj];
+      const parts = dotted.replace(/\[\]/g, ".*").split(".");
+      function read(o, i) {
+        if (i === parts.length) return [o];
+        if (parts[i] === "*") return Array.isArray(o) ? o.flatMap((v) => read(v, i + 1)) : [];
+        return o != null && Object.hasOwn(Object(o), parts[i]) ? read(o[parts[i]], i + 1) : [];
+      }
+      return read(obj, 0);
+    }
+    function correlated(message, rules, row) {
+      const groups = /* @__PURE__ */ new Map();
+      for (const rule of rules) {
+        const i = rule.path.indexOf("[]"), prefix = i < 0 ? "" : rule.path.slice(0, i + 2);
+        if (!groups.has(prefix)) groups.set(prefix, []);
+        groups.get(prefix).push(rule);
+      }
+      for (const [prefix, group] of groups) {
+        if (!prefix) {
+          if (!group.every((rule) => valuesAt(message, rule.path).some((v) => v != null && same(row[rule.from.column], v)))) return false;
+        } else if (!valuesAt(message, prefix).some((item) => correlated(item, group.map((rule) => ({ ...rule, path: rule.path.slice(prefix.length).replace(/^\./, "") })), row))) return false;
+      }
+      return true;
+    }
+    async function capture(input, { query, messages, mask = true, log = () => {
+    } } = {}) {
+      const p = plan(input), { tables } = catalog(p.env);
+      if (!p.seeds.length) throw new Error("capture needs at least one seed");
+      const startedAt = (/* @__PURE__ */ new Date()).toISOString(), rows = {}, provenance = {}, gaps = [...p.gaps], seen = /* @__PURE__ */ new Map(), requested = /* @__PURE__ */ new Set();
+      let total = 0, queries = 0;
+      query ||= async (db, sql, params) => {
+        await require_limit().take(`pg:${p.env}`);
+        return (await require_pg().query(p.env, sql, { db, params })).rows;
+      };
+      messages ||= (topic, options) => require_kafka().captureMessages(p.env, topic, options);
+      const addGap = (g) => {
+        if (!gaps.some((x) => stable(x) === stable(g))) gaps.push(g);
+      };
+      async function fetchRows(e, tuples, why, depth) {
+        const id = idOf(e), t = tables.get(id);
+        const fresh = tuples.filter((tuple) => {
+          const k = `${id}:${e.columns.join(",")}:${tupleKey(tuple)}`;
+          if (requested.has(k)) return false;
+          requested.add(k);
+          return true;
+        });
+        if (!fresh.length) return [];
+        if (depth > p.limits.depth) {
+          addGap({ kind: "depth-limit", table: id, detail: why });
+          return [];
+        }
+        const added = [];
+        for (let i = 0; i < fresh.length; i += 100) {
+          const remaining = Math.min(p.limits.rowsPerTable - (rows[id]?.length || 0), p.limits.totalRows - total);
+          if (remaining < 1) {
+            addGap({ kind: "row-limit", table: id });
+            break;
+          }
+          if (queries >= p.limits.queries) {
+            addGap({ kind: "query-limit", table: id });
+            break;
+          }
+          const params = [], terms = fresh.slice(i, i + 100).map((vs) => "(" + e.columns.map((c, n) => {
+            if (vs[n] == null) return `${qi(c)} is null`;
+            params.push(vs[n]);
+            return `${qi(c)} = $${params.length}`;
+          }).join(" and ") + ")");
+          const pk = primary(t), order = pk.length ? pk.map(qi).join(", ") : "tableoid, ctid";
+          let identity = "__dt_capture_identity";
+          while (t.columns.some((c) => c.name === identity)) identity += "_";
+          const fields = pk.length ? "*" : `*, tableoid::text || ':' || ctid::text as ${qi(identity)}`;
+          const sql = `select ${fields} from ${qt(t.table)} where ${terms.join(" or ")} order by ${order} limit ${remaining + 1}`;
+          log(`read ${id}: up to ${remaining} rows, depth ${depth}`);
+          queries++;
+          const result2 = await query(t.db, sql, params);
+          if (result2.length > remaining) addGap({ kind: "row-limit", table: id });
+          if (!rows[id]) {
+            rows[id] = [];
+            provenance[id] = [];
+            seen.set(id, /* @__PURE__ */ new Set());
+          }
+          for (const r of result2.slice(0, remaining)) {
+            const row = { ...r }, key = pk.length ? tupleKey(pk.map((c) => r[c])) : r[identity] || stable(r);
+            if (!pk.length) delete row[identity];
+            if (seen.get(id).has(key)) continue;
+            seen.get(id).add(key);
+            rows[id].push(jsonValue(row));
+            total++;
+            added.push(row);
+            provenance[id].push({ key, via: why, depth });
+          }
+        }
+        return added;
+      }
+      let frontier = [];
+      for (const s of p.seeds) {
+        const e = { db: s.db, table: s.table, columns: Object.keys(s.where) };
+        const added = await fetchRows(e, [Object.values(s.where)], "seed", 0);
+        if (!(rows[idOf(s)] || []).some((row) => Object.entries(s.where).every(([column, value]) => same(row[column], value)))) addGap({ kind: "missing-seed", table: idOf(s), where: s.where });
+        frontier.push({ endpoint: e, rows: added, depth: 0 });
+      }
+      while (frontier.length) {
+        const next = [];
+        for (const node of frontier) for (const r of p.relations) {
+          const directions = [];
+          if (idOf(node.endpoint) === idOf(r.from)) directions.push([r.from, r.to]);
+          if (p.includeChildren && idOf(node.endpoint) === idOf(r.to)) directions.push([r.to, r.from]);
+          for (const [from, to] of directions) {
+            const tuples = node.rows.map((row) => from.columns.map((c) => row[c])).filter((vs) => vs.every((v) => v != null));
+            const added = await fetchRows(to, tuples, `${r.source}: ${r.evidence}`, node.depth + 1);
+            if (added.length) next.push({ endpoint: to, rows: added, depth: node.depth + 1 });
+          }
+        }
+        frontier = next;
+      }
+      const events = {};
+      let scannedTotal = 0;
+      for (const t of p.topics) {
+        const budget = Math.min(p.limits.messagesPerTopic, p.limits.totalMessages - scannedTotal);
+        if (budget < 1) {
+          addGap({ kind: "message-limit", topic: t.topic });
+          continue;
+        }
+        log(`scan ${t.topic}: up to ${budget} messages across partitions`);
+        const scan = await messages(t.topic, { maxMessages: budget, offsets: t.offsets });
+        scannedTotal += (scan.messages || []).length;
+        const matched = [], unique = /* @__PURE__ */ new Map();
+        for (const m of scan.messages || []) {
+          const key = `${m.partition}:${m.offset}`, envelope = stable(m);
+          if (unique.has(key)) {
+            if (unique.get(key) !== envelope) addGap({ kind: "conflicting-event", topic: t.topic, partition: m.partition, offset: String(m.offset), detail: "Different envelopes were returned for the same partition and offset" });
+            continue;
+          }
+          unique.set(key, envelope);
+          const groups = /* @__PURE__ */ new Map();
+          for (const rule of t.matches) {
+            const id = idOf(rule.from);
+            if (!groups.has(id)) groups.set(id, []);
+            groups.get(id).push(rule);
+          }
+          const hit = t.match === "any" ? t.matches.some((rule) => (rows[idOf(rule.from)] || []).some((row) => correlated(m, [rule], row))) : [...groups].every(([id, rules]) => (rows[id] || []).some((row) => correlated(m, rules, row)));
+          if (!hit) continue;
+          matched.push(jsonValue(m));
+        }
+        matched.sort((a, b) => a.partition - b.partition || (BigInt(a.offset) < BigInt(b.offset) ? -1 : BigInt(a.offset) > BigInt(b.offset) ? 1 : 0));
+        events[t.topic] = { messages: matched, windows: scan.windows || [], schema: t.schema, matches: t.matches, scanned: (scan.messages || []).length };
+        if (scan.truncated) addGap({ kind: "kafka-window", topic: t.topic, detail: "Only the bounded partition windows were scanned." });
+        if (!matched.length && t.required) addGap({ kind: "missing-events", topic: t.topic });
+      }
+      const result = { version: 1, plan: p, startedAt, finishedAt: (/* @__PURE__ */ new Date()).toISOString(), rows, events, provenance, gaps, counts: { rows: total, queries, messages: Object.values(events).reduce((n, e) => n + e.messages.length, 0) } };
+      if (mask !== false) result.redactions = redact(result);
+      else result.redactions = { enabled: false, fields: 0 };
+      result.gaps.push(...validate(result).gaps);
+      result.complete = result.gaps.length === 0;
+      return result;
+    }
+    function redact(capture2) {
+      const sensitive = /(^|[_-])(password|secret|token|authorization|email|phone|first_name|last_name|full_name|address|iban|ssn|api_key)($|[_-])/i;
+      const replacements = /* @__PURE__ */ new Map();
+      let fields = 0;
+      function discover(v) {
+        if (!v || typeof v !== "object") return;
+        for (const [k, x] of Object.entries(v)) {
+          if (sensitive.test(k.replace(/([a-z0-9])([A-Z])/g, "$1_$2").replace(/[.\s-]/g, "_")) && x != null && typeof x !== "object") {
+            const key = String(x), digest = hash(key);
+            const numeric = /^-?\d+(?:\.\d+)?$/.test(key);
+            let n = 0;
+            const replacement = numeric ? key.replace(/\d/g, () => String(1 + Number.parseInt(digest[n++ % digest.length], 16) % 9)) : typeof x === "boolean" ? x : /email/i.test(k) ? `u${digest.slice(0, 10)}@example.invalid` : digest.slice(0, Math.max(1, Math.min(key.length, 24)));
+            if (!replacements.has(key)) replacements.set(key, replacement);
+            fields++;
+          } else discover(x);
+        }
+      }
+      discover(capture2.rows);
+      discover(capture2.events);
+      discover(capture2.plan.seeds);
+      discover(capture2.gaps);
+      function replace(v) {
+        if (v == null) return v;
+        if (typeof v !== "object") {
+          const x = replacements.get(String(v));
+          return x === void 0 || typeof v === "boolean" ? v : typeof v === "string" ? String(x) : typeof v === "number" && Number.isFinite(Number(x)) ? Number(x) : v;
+        }
+        if (Array.isArray(v)) return v.map(replace);
+        return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, replace(x)]));
+      }
+      capture2.rows = replace(capture2.rows);
+      for (const e of Object.values(capture2.events)) e.messages = replace(e.messages);
+      capture2.plan.seeds = replace(capture2.plan.seeds);
+      if (capture2.gaps) capture2.gaps = replace(capture2.gaps);
+      for (const [id, records] of Object.entries(capture2.provenance)) {
+        const t = capture2.plan.tables.find((t2) => t2.id === id);
+        records.forEach((r, i) => {
+          const row = capture2.rows[id][i];
+          r.key = t?.primaryKey.length ? tupleKey(t.primaryKey.map((c) => row[c])) : `row:${i}`;
+        });
+      }
+      return { enabled: true, fields, strategy: "deterministic value replacement; review CHECK/length constraints when personal fields participate in them" };
+    }
+    function validate(capture2) {
+      const gaps = [];
+      for (const r of capture2.plan.relations) if (r.required) {
+        for (const row of capture2.rows[idOf(r.from)] || []) {
+          const values = r.from.columns.map((c) => row[c]);
+          if (values.some((v) => v == null)) continue;
+          if (!(capture2.rows[idOf(r.to)] || []).some((parent) => r.to.columns.every((c, i) => same(parent[c], values[i])))) gaps.push({ kind: "missing-parent", table: idOf(r.from), target: idOf(r.to), columns: r.from.columns, values });
+        }
+      }
+      return { ok: !gaps.length, gaps };
+    }
+    function literal(v, type = "") {
+      if (v == null) return "null";
+      if (typeof v === "boolean") return v ? "true" : "false";
+      if (typeof v === "number") {
+        if (!Number.isFinite(v)) throw new Error("non-finite numeric fixture value");
+        return String(v);
+      }
+      if (Buffer.isBuffer(v)) return `'\\x${v.toString("hex")}'`;
+      if (Array.isArray(v) && /\[\]$/.test(type)) {
+        const base = type.replace(/(?:\[\])+$/, "");
+        const array = (a) => `ARRAY[${a.map((x) => Array.isArray(x) ? array(x) : literal(x, base)).join(", ")}]`;
+        return v.length ? `${array(v)}::${type}` : `'{}'::${type}`;
+      }
+      const s = typeof v === "object" ? stable(v) : String(v);
+      return `'${s.replace(/'/g, "''")}'`;
+    }
+    function statements(capture2, db) {
+      const ids = Object.keys(capture2.rows).filter((id) => id.startsWith(`${db}:`));
+      if (!ids.length) return { schema: [], data: [], constraints: [] };
+      const cat = require_pg().loadDb(capture2.plan.env, db);
+      const original = capture2.plan.catalogs.find((c) => c.db === db);
+      if (!cat || !original || original.fingerprint !== hash(stable(cat))) throw new Error(`catalog for ${db} changed since capture; capture again before exporting`);
+      const ddl = require_ddl().snapshot(capture2.plan.env, db, { tables: ids.map((id) => id.slice(db.length + 1)), dictionaries: false });
+      const constraints = [], schema = [], data = ["set standard_conforming_strings = on"];
+      for (const s of ddl.statements) (/^alter table .* add constraint .*FOREIGN KEY|^CREATE (?:CONSTRAINT )?TRIGGER/i.test(s) ? constraints : schema).push(s);
+      for (const id of ids.sort()) {
+        const t = capture2.plan.tables.find((t2) => t2.id === id);
+        if (!t) throw new Error(`fixture metadata missing for ${id}`);
+        for (const row of capture2.rows[id]) {
+          const columns = t.columns.filter((c) => !c.generated && Object.hasOwn(row, c.name));
+          if (!columns.length) data.push(`insert into ${qt(t.table)} default values`);
+          else data.push(`insert into ${qt(t.table)} (${columns.map((c) => qi(c.name)).join(", ")}) overriding system value values (${columns.map((c) => literal(row[c.name], c.type)).join(", ")})`);
+        }
+        for (const c of t.columns) if (c.identity || /nextval\(/i.test(c.default || "")) data.push(`select setval(pg_get_serial_sequence(${literal(qt(t.table))}, ${literal(c.name)}), coalesce((select max(${qi(c.name)}) from ${qt(t.table)}), 1), exists(select 1 from ${qt(t.table)}))`);
+      }
+      return { schema, data, constraints };
+    }
+    function resourcePath(workspace, relative) {
+      const W = require_workspace(), m = W.checkId(workspace), full = W.resolvePath(m, relative).full;
+      const rel = path2.relative(m.path, full).split(path2.sep).join("/");
+      if (!/(^|\/)src\/test\/resources\/dt-fixtures\/[\w.-]+$/.test(rel)) throw new Error("fixture path must be [module/]src/test/resources/dt-fixtures/<name>");
+      let dir = full;
+      while (dir !== m.path) {
+        if (fs2.existsSync(dir) && fs2.lstatSync(dir).isSymbolicLink()) throw new Error("fixture paths cannot contain symlinks");
+        dir = path2.dirname(dir);
+      }
+      return { full, rel };
+    }
+    function exportFixture(workspace, capture2, { name = "scenario", directory, overwrite = false } = {}) {
+      if (!/^[a-z0-9][\w.-]{0,79}$/i.test(name) || name === "..") throw new Error("invalid fixture name");
+      if (capture2.version !== 1 || !capture2.plan || !capture2.rows) throw new Error("not a fixture capture");
+      const dest = resourcePath(workspace, directory || `src/test/resources/dt-fixtures/${name}`);
+      if (fs2.existsSync(dest.full) && !overwrite) throw new Error(`fixture already exists: ${dest.rel}; overwrite=true replaces it`);
+      const stage = `${dest.full}.tmp-${crypto.randomBytes(4).toString("hex")}`, files = {};
+      const put = (rel, text) => {
+        fs2.mkdirSync(path2.dirname(path2.join(stage, rel)), { recursive: true });
+        fs2.writeFileSync(path2.join(stage, rel), text);
+        files[rel] = hash(text);
+      };
+      const encoded = (s) => Buffer.from(s).toString("hex");
+      const manifest = { ...capture2, name, files, databases: {}, topics: {} };
+      try {
+        for (const db of [...new Set(Object.keys(capture2.rows).map((id) => id.split(":")[0]))].sort()) {
+          const prefix = `pg/${encoded(db)}`, sql = statements(capture2, db);
+          manifest.databases[db] = { directory: prefix, files: ["schema.sql", "data.sql", "constraints.sql"], statements: sql };
+          for (const [kind, items] of Object.entries(sql)) put(`${prefix}/${kind}.sql`, items.map((s) => `${s};`).join("\n\n") + "\n");
+          put(`${prefix}/schema.json`, JSON.stringify(capture2.plan.tables.filter((t) => t.db === db), null, 2) + "\n");
+          put(`${prefix}/rows.json`, JSON.stringify(Object.fromEntries(Object.entries(capture2.rows).filter(([id]) => id.startsWith(`${db}:`))), null, 2) + "\n");
+        }
+        for (const [topic, e] of Object.entries(capture2.events)) {
+          const prefix = `kafka/${encoded(topic)}`;
+          manifest.topics[topic] = { directory: prefix, messages: e.messages.length };
+          put(`${prefix}/messages.jsonl`, e.messages.map(stable).join("\n") + (e.messages.length ? "\n" : ""));
+          put(`${prefix}/schema.json`, JSON.stringify(e.schema, null, 2) + "\n");
+          put(`${prefix}/offsets.json`, JSON.stringify(e.windows, null, 2) + "\n");
+        }
+        put("README.txt", `Fixture ${name}
+
+Load each database's schema.sql, data.sql, constraints.sql in that order.
+The fixture_replay tool validates hashes and loads isolated scratch databases, dropping them on error.
+For test_run give fixture_path and (for multiple datasources) fixture_bindings.
+Kafka messages.jsonl preserves key, value, headers, partition, source offset and timestamp.
+Use the service's test producer to publish them to its test Kafka; no live publish tool is provided.
+Capture window: ${capture2.startedAt} .. ${capture2.finishedAt}
+${capture2.plan.consistency}
+Complete: ${capture2.complete}; gaps: ${capture2.gaps.length}. See manifest.json.
+`);
+        put("manifest.json", JSON.stringify({ ...manifest, files: { ...files } }, null, 2) + "\n");
+        if (fs2.existsSync(dest.full)) fs2.rmSync(dest.full, { recursive: true });
+        fs2.mkdirSync(path2.dirname(dest.full), { recursive: true });
+        fs2.renameSync(stage, dest.full);
+      } finally {
+        fs2.rmSync(stage, { recursive: true, force: true });
+      }
+      require_workspace().touch(workspace, { dirty: true });
+      return { workspace, path: dest.rel, files: Object.keys(files), counts: capture2.counts, complete: capture2.complete, gaps: capture2.gaps };
+    }
+    function loadFixture(workspace, directory) {
+      const dest = resourcePath(workspace, directory), m = readJson(path2.join(dest.full, "manifest.json"));
+      if (!m || m.version !== 1 || !m.files || !m.databases) throw new Error("invalid fixture manifest");
+      for (const [rel, digest] of Object.entries(m.files)) {
+        const file = path2.resolve(dest.full, rel);
+        if (!file.startsWith(dest.full + path2.sep) || fs2.lstatSync(file).isSymbolicLink() || fs2.realpathSync(file) !== path2.resolve(fs2.realpathSync(dest.full), rel)) throw new Error("fixture file escapes its directory");
+        if (hash(fs2.readFileSync(file)) !== digest) throw new Error(`fixture hash mismatch: ${rel}`);
+      }
+      for (const db of Object.values(m.databases)) {
+        if (!/^pg\/[0-9a-f]+$/.test(db.directory)) throw new Error("invalid fixture database directory");
+        db.statements = Object.fromEntries(["schema", "data", "constraints"].map((kind) => {
+          const rel = `${db.directory}/${kind}.sql`;
+          if (!Object.hasOwn(m.files, rel)) throw new Error(`missing hashed fixture file ${rel}`);
+          return [kind, require_testrun().splitSql(fs2.readFileSync(path2.join(dest.full, rel), "utf8"))];
+        }));
+      }
+      return m;
+    }
+    async function replay(workspace, directory, { allowIncomplete = false, runId = crypto.randomBytes(10).toString("hex") } = {}) {
+      const m = loadFixture(workspace, directory);
+      if (!m.complete && !allowIncomplete) throw new Error("fixture is incomplete: inspect gaps, or set allow_incomplete=true");
+      const databases = {};
+      try {
+        for (const [name, db] of Object.entries(m.databases)) {
+          const s = db.statements;
+          const created = await require_testdb().create(`${runId}${hash(name).slice(0, 8)}`, [...s.schema, ...s.data, ...s.constraints]);
+          databases[name] = created;
+          if (created.errors.length) throw new Error(`fixture ${name}: ${created.errors.map((e) => e.error).join("; ")}`);
+        }
+        return { databases, topics: m.topics, cleanup: async () => {
+          await Promise.all(Object.values(databases).map((db) => require_testdb().drop(db.database)));
+        } };
+      } catch (e) {
+        await Promise.allSettled(Object.values(databases).map((db) => require_testdb().drop(db.database)));
+        throw e;
+      }
+    }
+    var captureFile = (id) => {
+      if (!/^[a-f0-9]{24}$/.test(id || "")) throw new Error("invalid capture id");
+      return path2.join(CACHE2, "captures", `${id}.json`);
+    };
+    function save(capture2) {
+      const id = crypto.randomBytes(12).toString("hex");
+      writeJson(captureFile(id), capture2);
+      return id;
+    }
+    function load(id) {
+      const r = readJson(captureFile(id));
+      if (!r) throw new Error("capture not found");
+      return r;
+    }
+    module2.exports = { plan, capture, validate, redact, literal, statements, exportFixture, loadFixture, replay, resourcePath, save, load, valuesAt };
   }
 });
 
@@ -30756,8 +31640,9 @@ ${e.message}`, ms: Date.now() - started });
         });
       });
     }
-    async function run(id, { tests = [], db, log = () => {
+    async function run(id, { tests = [], db, fixturePath, fixtureBindings, allowIncomplete = false, log = () => {
     }, mode = "auto", files: writes = [], check: checkFiles = true, fix } = {}) {
+      if (db && fixturePath) throw new Error("choose fixture_path or db/ddl_path for the test database");
       const m = W.checkId(id);
       const root = m.path;
       const written = writes.map((f) => W.write(id, f.path, { content: f.content, edits: f.edits }));
@@ -30804,7 +31689,7 @@ ${e.message}`, ms: Date.now() - started });
       const c = why ? command(root, p, tests, cfg) : null;
       const { env, B, hide } = await envFor(p, cfg);
       if (c) c.args.splice(c.args.indexOf("--console=plain") + 1 || 0, 0, ...p.tool === "gradle" ? B.args : []);
-      let database = null;
+      let database = null, fixture = null;
       const runId = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
       if (db) {
         const opts = { tables: db.tables, service: db.service, functions: db.functions };
@@ -30816,33 +31701,53 @@ ${e.message}`, ms: Date.now() - started });
         if (database.errors.length) log(`test db: ${database.errors.length} statements failed`);
         Object.assign(env, { SPRING_DATASOURCE_URL: database.jdbcUrl, SPRING_DATASOURCE_USERNAME: database.user, SPRING_DATASOURCE_PASSWORD: database.password, SPRING_JPA_HIBERNATE_DDL_AUTO: "none", SPRING_SQL_INIT_MODE: "never", SPRING_FLYWAY_ENABLED: "false", SPRING_LIQUIBASE_ENABLED: "false" });
       }
-      const reportDirs = [path2.join(p.modDir, "target", "surefire-reports"), path2.join(p.modDir, "build", "test-results", "test")];
-      await require_javacheck().idle(id);
-      const started = Date.now();
-      let r, cases, fastInfo = null;
-      if (!why) {
-        const selectors = p.selectors;
-        log(`fast: ${selectors.join(" ")}`);
-        r = await fast.run({ id, root, plan: p, cfg, env, mvn: { cmd: mavenCmd(root, cfg)[0], args: mavenCmd(root, cfg)[1] }, selectors, graph: g, log: (l) => log(hide(l)) });
-        cases = r.cases;
-        fastInfo = { compiled: r.compiled, prepared: !!r.prepared, prepareMs: r.prepareMs, phase: r.phase };
-      } else {
-        for (const d of reportDirs) fs2.rmSync(d, { recursive: true, force: true });
-        log(`${p.tool}: ${path2.basename(c.cmd)} ${c.args.filter((a) => !/^-Dmaven\.repo\.local|^-s$/.test(a)).join(" ")}`);
-        r = await require_trace().step(`${p.tool} test`, () => exec(c.cmd, c.args, { cwd: c.cwd, env, timeoutMs: cfg.timeoutMs, log: (l) => log(hide(l)) }), `${p.module} ${tests.join(",")}`);
-        if (p.tool === "gradle" && (r.killed || r.code === null)) {
-          require_trace().note("the Gradle run was stopped: stopping its daemon (gradle --stop)");
-          await exec(c.cmd, [...c.args.filter((a, i) => i < c.args.indexOf("--console=plain") && !/^-D/.test(a)), "--stop"], { cwd: c.cwd, env, timeoutMs: 6e4 }).catch(() => {
-          });
-        }
-        if (r.code !== 0 && !r.out.trim()) require_trace().note(`${p.tool} exited ${r.code} with no output: is ${c.cmd} runnable here?`);
-        cases = parseReports(reportDirs, started);
-      }
-      if (database) {
+      if (fixturePath) {
+        fixture = await require_reproduction().replay(id, fixturePath, { allowIncomplete, runId });
         try {
-          await require_testdb().drop(database.database);
+          Object.assign(env, fixtureEnvironment(fixture.databases, fixtureBindings));
+          env.DT_FIXTURE_PATH = W.resolvePath(m, fixturePath).full;
         } catch (e) {
-          log(`test db: drop failed: ${e.message}`);
+          await fixture.cleanup();
+          throw e;
+        }
+      }
+      let r, cases, fastInfo = null;
+      try {
+        const reportDirs = [path2.join(p.modDir, "target", "surefire-reports"), path2.join(p.modDir, "build", "test-results", "test")];
+        await require_javacheck().idle(id);
+        const started = Date.now();
+        if (!why) {
+          const selectors = p.selectors;
+          log(`fast: ${selectors.join(" ")}`);
+          r = await fast.run({ id, root, plan: p, cfg, env, mvn: { cmd: mavenCmd(root, cfg)[0], args: mavenCmd(root, cfg)[1] }, selectors, graph: g, log: (l) => log(hide(l)) });
+          cases = r.cases;
+          fastInfo = { compiled: r.compiled, prepared: !!r.prepared, prepareMs: r.prepareMs, phase: r.phase };
+        } else {
+          for (const d of reportDirs) fs2.rmSync(d, { recursive: true, force: true });
+          log(`${p.tool}: ${path2.basename(c.cmd)} ${c.args.filter((a) => !/^-Dmaven\.repo\.local|^-s$/.test(a)).join(" ")}`);
+          r = await require_trace().step(`${p.tool} test`, () => exec(c.cmd, c.args, { cwd: c.cwd, env, timeoutMs: cfg.timeoutMs, log: (l) => log(hide(l)) }), `${p.module} ${tests.join(",")}`);
+          if (p.tool === "gradle" && (r.killed || r.code === null)) {
+            require_trace().note("the Gradle run was stopped: stopping its daemon (gradle --stop)");
+            await exec(c.cmd, [...c.args.filter((a, i) => i < c.args.indexOf("--console=plain") && !/^-D/.test(a)), "--stop"], { cwd: c.cwd, env, timeoutMs: 6e4 }).catch(() => {
+            });
+          }
+          if (r.code !== 0 && !r.out.trim()) require_trace().note(`${p.tool} exited ${r.code} with no output: is ${c.cmd} runnable here?`);
+          cases = parseReports(reportDirs, started);
+        }
+      } finally {
+        if (database) {
+          try {
+            await require_testdb().drop(database.database);
+          } catch (e) {
+            log(`test db: drop failed: ${e.message}`);
+          }
+        }
+        if (fixture) {
+          try {
+            await fixture.cleanup();
+          } catch (e) {
+            log(`fixture: drop failed: ${e.message}`);
+          }
         }
       }
       for (const k of cases) k.name = testName(k.name);
@@ -30913,9 +31818,24 @@ ${e.message}`, ms: Date.now() - started });
         ...check ? { check } : {},
         ...suggestions.length ? { suggestions } : {},
         database: database ? { name: database.database, failedStatements: database.errors } : null,
+        ...fixture ? { fixture: { path: fixturePath, databases: Object.keys(fixture.databases), topics: fixture.topics } } : {},
         tail: hide(require_testout().compactLog(r.out)),
         history: history(id, cases)
       };
+    }
+    function fixtureEnvironment(databases, bindings) {
+      const names = Object.keys(databases);
+      if (!bindings && names.length !== 1) throw new Error('multiple fixture databases need fixture_bindings: {db:"SPRING_DATASOURCE",other:"BILLING_DATASOURCE"}');
+      bindings ||= { [names[0]]: "SPRING_DATASOURCE" };
+      if (names.some((name) => !Object.hasOwn(bindings, name)) || Object.keys(bindings).some((name) => !Object.hasOwn(databases, name))) throw new Error("fixture_bindings must name every captured database exactly once");
+      if (new Set(Object.values(bindings)).size !== names.length) throw new Error("fixture datasource prefixes must be unique");
+      const env = { SPRING_JPA_HIBERNATE_DDL_AUTO: "none", SPRING_SQL_INIT_MODE: "never", SPRING_FLYWAY_ENABLED: "false", SPRING_LIQUIBASE_ENABLED: "false" };
+      for (const [name, prefix] of Object.entries(bindings)) {
+        if (!/^[A-Z][A-Z0-9_]*$/.test(prefix)) throw new Error(`invalid fixture datasource prefix ${prefix}`);
+        const db = databases[name];
+        Object.assign(env, { [`${prefix}_URL`]: db.jdbcUrl, [`${prefix}_USERNAME`]: db.user, [`${prefix}_PASSWORD`]: db.password });
+      }
+      return env;
     }
     var testName = (n) => String(n || "").replace(/\s*\[(\d+)\].*$/, "[$1]").replace(/\([^)]*\)(?=\[|$)/, "");
     var runsFile = (id) => path2.join(require_util().CACHE, "work", `${id}.runs.json`);
@@ -31001,7 +31921,7 @@ ${e.message}`, ms: Date.now() - started });
       if (cur.trim()) out2.push(cur.trim());
       return out2;
     }
-    module2.exports = { run, envFor, gradleCmd, mavenCmd, findTest, jdkMajor, cleanEnv, proof, testName, fingerprint, plan, parseReports, compileErrors, codeParts, splitSql };
+    module2.exports = { run, envFor, gradleCmd, mavenCmd, findTest, jdkMajor, cleanEnv, proof, testName, fingerprint, plan, parseReports, compileErrors, codeParts, splitSql, fixtureEnvironment };
   }
 });
 
@@ -34965,6 +35885,9 @@ var require_tools_code = __commonJS({
             env: str("With db: the environment of the DDL snapshot"),
             db: str("Database to snapshot into the throwaway test database"),
             ddl_path: str("Or: a DDL file in the workspace to load (e.g. src/test/resources/dt-schema/pay.sql)"),
+            fixture_path: str("Saved src/test/resources/dt-fixtures/<name>; replay its PG databases on scratch Postgres and expose Kafka files as DT_FIXTURE_PATH"),
+            fixture_bindings: { type: "object", additionalProperties: { type: "string" }, description: 'For multiple databases: {orders:"SPRING_DATASOURCE",billing:"BILLING_DATASOURCE"}; each prefix gets _URL, _USERNAME, _PASSWORD' },
+            allow_incomplete: bool("Replay a fixture with reported gaps (review fixture explorer first)"),
             job: str('A job id from an earlier "running" answer'),
             ...CHECK
           },
@@ -34978,7 +35901,7 @@ var require_tools_code = __commonJS({
               if (!a.tests?.length) throw new Error("tests: which test classes to run");
               const db = a.ddl_path || a.db ? { env: a.env || require_config().envNames()[0], db: a.db, ddlPath: a.ddl_path } : null;
               job = J.start(`tests:${a.workspace}:${a.tests.join(",")}`, `tests ${a.tests.join(", ")} in ${a.workspace}`, async (log) => {
-                const r = await require_testrun().run(a.workspace, { tests: a.tests, db, log, mode: a.mode || "auto", files: a.files || [], check: a.check, fix: a.fix });
+                const r = await require_testrun().run(a.workspace, { tests: a.tests, db, fixturePath: a.fixture_path, fixtureBindings: a.fixture_bindings, allowIncomplete: a.allow_incomplete, log, mode: a.mode || "auto", files: a.files || [], check: a.check, fix: a.fix });
                 const view = R().saveView("tests", r, { title: `${r.outcome}: ${a.tests.join(", ")}` });
                 const failing = r.cases.filter((c) => c.status === "failed" || c.status === "error");
                 return {
@@ -35016,6 +35939,7 @@ var require_tools_code = __commonJS({
                   ...r.parts.length > 4 ? { moreParts: r.parts.length - 4 } : {},
                   database: r.database || void 0,
                   hints: r.hints.length ? r.hints : void 0,
+                  fixture: r.fixture,
                   // the build log only when it is the answer: no test results, or the build itself failed
                   tail: r.outcome === "passed" || r.cases.length && !r.compile.length ? void 0 : r.tail,
                   view,
@@ -35026,6 +35950,1217 @@ var require_tools_code = __commonJS({
             return waitJob(job, cfg.waitMs, "test_run");
           }
         }
+      ];
+    };
+  }
+});
+
+// lib/offline-js.js
+var require_offline_js = __commonJS({
+  "lib/offline-js.js"(exports2, module2) {
+    var J = require_js();
+    var { diffLists, diffLines } = require_diff();
+    var BOOTSTRAP = String.raw`
+(function () {
+  'use strict';
+  const bridge = globalThis.__dtBridge;
+  const input = JSON.parse(globalThis.__dtInput);
+  delete globalThis.__dtBridge;
+  delete globalThis.__dtInput;
+  const jsonStringify = JSON.stringify.bind(JSON), jsonParse = JSON.parse.bind(JSON);
+  const entries = Object.entries, defineProperty = Object.defineProperty;
+  const logs = [], tests = [], output = [], pending = [], requests = new Map();
+  const out = { vars: input.vars, args: input.args, result: input.result, logs, tests, output };
+  let seq = 0;
+  const fmt = (v, pretty) => {
+    if (typeof v === 'string') return v;
+    try { return jsonStringify(v, null, pretty ? 2 : undefined) ?? String(v); }
+    catch { return String(v); }
+  };
+  const message = (e) => { try { return String(e && e.message || e); } catch { return 'program error'; } };
+  const check = (ok, msg) => { if (!ok) throw new Error(msg || 'assertion failed'); };
+  function expect(v) {
+    const matchers = (neg) => ({
+      toBe: (x) => check((v === x) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to be ' + fmt(x)),
+      toEqual: (x) => check((jsonStringify(v) === jsonStringify(x)) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to equal ' + fmt(x)),
+      toMatch: (re) => check(new RegExp(re).test(String(v)) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to match ' + re),
+      toContain: (x) => check((v != null && v.includes(x)) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to contain ' + fmt(x)),
+      toBeTruthy: () => check(!!v !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to be truthy'),
+      toBeGreaterThan: (x) => check((v > x) !== neg, 'expected ' + fmt(v) + (neg ? ' not' : '') + ' to be greater than ' + fmt(x)),
+      toHaveProperty: (k) => check((v != null && String(k).split('.').reduce((a, p) => a == null ? undefined : a[p], v) !== undefined) !== neg, 'expected ' + fmt(v).slice(0, 200) + (neg ? ' not' : '') + ' to have ' + k),
+    });
+    return Object.assign(matchers(false), { not: matchers(true) });
+  }
+  const rpc = (tool, args) => {
+    if (typeof tool !== 'string' || !tool) return Promise.reject(new Error('tool name must be a nonempty string'));
+    let payload;
+    try { payload = jsonStringify({ id: ++seq, tool, args: args === undefined ? {} : args }); }
+    catch (e) { return Promise.reject(new Error('tool arguments are not JSON: ' + message(e))); }
+    const id = seq;
+    let resolve, reject;
+    const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+    // Set a handler now so fire-and-forget RPC cannot create an unhandled host rejection.
+    promise.catch(() => {});
+    requests.set(id, { resolve, reject, promise });
+    bridge(payload);
+    return promise;
+  };
+  const tools = new Proxy(Object.create(null), { get: (_, name) => {
+    if (typeof name !== 'string' || name === 'then') return undefined;
+    if (name === 'call') return (name, args) => rpc(name, args);
+    if (name === 'list') return () => rpc('__list', {});
+    return (args) => rpc(name, args);
+  } });
+  const pad = (n, w = 2) => String(n).padStart(w, '0');
+  const date = (f = 'YYYY-MM-DD', d = new Date()) => f.replace(/YYYY|MM|DD|HH|mm|ss|SSS/g, t => ({ YYYY: d.getFullYear(), MM: pad(d.getMonth() + 1), DD: pad(d.getDate()), HH: pad(d.getHours()), mm: pad(d.getMinutes()), ss: pad(d.getSeconds()), SSS: pad(d.getMilliseconds(), 3) }[t]));
+  const hex = (n = 8) => Array.from({ length: n }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+  const rand = (n = 6) => Array.from({ length: n }, (_, i) => Math.floor(Math.random() * (i ? 10 : 9)) + (i ? 0 : 1)).join('');
+  const helpers = {
+    tools, expect, assert: check, date, hex, rand,
+    // UUIDs/random values are for fixtures, not cryptographic use.
+    uuid: () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const n = Math.floor(Math.random() * 16); return (c === 'x' ? n : (n & 3) | 8).toString(16); }),
+    now: () => new Date().toISOString(),
+    diffLists: ${diffLists.toString()},
+    diffLines: ${diffLines.toString()},
+    log: (...args) => { logs.push(args.map(v => fmt(v)).join(' ').slice(0, 2000)); },
+    text: (...args) => { output.push(args.map(v => fmt(v, true)).join(' ')); },
+    test: (name, fn) => {
+      const done = (ok, e) => tests.push(ok ? { name, ok: true } : { name, ok: false, error: message(e) });
+      try {
+        const r = fn();
+        if (r && typeof r.then === 'function') pending.push(Promise.resolve(r).then(() => done(true), e => done(false, e)));
+        else done(true);
+      } catch (e) { done(false, e); }
+    },
+  };
+  for (const [name, value] of entries(helpers)) defineProperty(globalThis, name, { value, enumerable: true });
+  defineProperty(globalThis, 'console', { value: Object.freeze({ log: helpers.log, info: helpers.log, warn: helpers.log, error: helpers.log }) });
+  return {
+    receive: (payload) => {
+      const reply = jsonParse(payload), request = requests.get(reply.id);
+      if (!request) return;
+      requests.delete(reply.id);
+      if (reply.error !== undefined) request.reject(new Error(String(reply.error)));
+      else request.resolve(reply.result);
+    },
+    execute: async (fn) => {
+      let returned;
+      try {
+        returned = await fn(out.vars, out.args, out.result);
+      } catch (e) { out.error = message(e); }
+      try {
+        // Tests can register other async tests, and unawaited RPC must settle before completion.
+        let done = 0;
+        while (done < pending.length || requests.size) {
+          const batch = pending.slice(done); done = pending.length;
+          await Promise.allSettled([...batch, ...Array.from(requests.values(), r => r.promise)]);
+        }
+        if (!out.error && returned !== undefined) { out.returned = returned; out.hasReturn = true; }
+      } catch (e) { out.error = message(e); }
+      try { return jsonStringify(out); }
+      catch (e) { return jsonStringify({ logs, tests, output, error: 'result is not JSON: ' + message(e) }); }
+    },
+  };
+})()
+`;
+    var PROGRAM = String.raw`
+'use strict';
+const vm = require('node:vm');
+const context = vm.createContext(Object.create(null), { codeGeneration: { strings: false, wasm: false } });
+let control;
+const stringify = JSON.stringify.bind(JSON), parse = JSON.parse.bind(JSON);
+const bridge = (payload) => {
+  if (typeof payload !== 'string') return;
+  let request;
+  try { request = parse(payload); } catch { return; }
+  const respond = (reply) => {
+    let serialized;
+    try { serialized = stringify(reply); }
+    catch { serialized = stringify({ id: request.id, error: 'tool result is not JSON' }); }
+    control.receive(serialized);
+  };
+  Promise.resolve().then(() => tools.call(request.tool, request.args)).then(
+    (result) => respond({ id: request.id, result }),
+    (error) => respond({ id: request.id, error: String(error && error.message || error) })
+  );
+};
+Object.setPrototypeOf(bridge, null);
+Object.freeze(bridge);
+context.__dtBridge = bridge;
+context.__dtInput = stringify(vars.data);
+control = new vm.Script(${JSON.stringify(BOOTSTRAP)}, { filename: 'offline-helpers.js' }).runInContext(context);
+const fn = new vm.Script('(async function(vars, args, result) { "use strict";\n' + vars.code + '\n})', { filename: 'offline-program.js' }).runInContext(context);
+return parse(await control.execute(fn));
+`;
+    async function run(code, data = {}, options = {}) {
+      code = String(code);
+      if (/\bimport\b/u.test(code)) {
+        return { vars: data.vars || {}, ...data.args === void 0 ? {} : { args: data.args }, ...data.result === void 0 ? {} : { result: data.result }, logs: [], tests: [], output: [], error: "offline code cannot contain the import keyword (including strings/comments)" };
+      }
+      const response = await J.run(PROGRAM, { vars: { code, data: { vars: {}, ...data } } }, options);
+      if (response.error) return { vars: data.vars || {}, ...data.args === void 0 ? {} : { args: data.args }, ...data.result === void 0 ? {} : { result: data.result }, logs: response.logs || [], tests: response.tests || [], output: response.output || [], error: response.error };
+      return response.returned;
+    }
+    module2.exports = { run };
+  }
+});
+
+// lib/experiments.js
+var require_experiments = __commonJS({
+  "lib/experiments.js"(exports2, module2) {
+    var path2 = require("path");
+    var fs2 = require("fs");
+    var crypto = require("crypto");
+    var { HOME } = require_config();
+    var { CACHE: CACHE2, readJson, writeJson } = require_util();
+    var ALLOWED = /* @__PURE__ */ new Set(["find", "pg_query", "pg_table", "pg_function", "pg_usage", "who_uses", "es_search", "kafka_last", "kafka_topic", "health", "logs_search", "logs_trace", "passports", "api_routes", "code_search", "code_symbols", "impact", "fixture_plan"]);
+    var valid = (id) => {
+      if (!/^[a-z0-9][\w-]{0,79}$/i.test(id || "")) throw new Error("experiment id: letters, digits, _ and -");
+      return id;
+    };
+    var definition = (id) => path2.join(HOME, "experiments", `${valid(id)}.json`);
+    var historyFile = (id) => path2.join(CACHE2, "experiments", `${valid(id)}.json`);
+    function save({ id, description = "", code, defaults = {}, tools = ["find"] }) {
+      if (typeof code !== "string" || !code.trim() || code.length > 1e5) throw new Error("experiment needs code (max 100k characters)");
+      if (!Array.isArray(tools) || tools.some((t) => !ALLOWED.has(t))) throw new Error(`read-only experiment tools: ${[...ALLOWED].join(", ")}`);
+      const d = { id: valid(id), description, code, defaults, tools: [...new Set(tools)] };
+      writeJson(definition(id), d);
+      return { ...d, path: path2.relative(HOME, definition(id)) };
+    }
+    function list(id) {
+      if (id) {
+        const d = readJson(definition(id));
+        if (!d) throw new Error(`no experiment ${id}`);
+        return { ...d, runs: readJson(historyFile(id), []).map((r) => ({ run: r.run, at: r.at, ok: r.ok, ms: r.ms, assertions: r.tests.length, codeHash: r.codeHash })) };
+      }
+      let files = [];
+      try {
+        files = fs2.readdirSync(path2.join(HOME, "experiments")).filter((f) => f.endsWith(".json"));
+      } catch {
+      }
+      return files.map((f) => readJson(path2.join(HOME, "experiments", f))).filter(Boolean).map((d) => ({ id: d.id, description: d.description, tools: d.tools }));
+    }
+    async function run(id, { params = {}, capture, timeoutMs = 3e4 } = {}, { call } = {}) {
+      const d = readJson(definition(id));
+      if (!d) throw new Error(`no experiment ${id}`);
+      if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 12e4) throw new Error("timeout_ms must be 1..120000");
+      const allowed = new Set((d.tools || []).filter((t) => ALLOWED.has(t))), calls = [];
+      const vars = { ...d.defaults, ...params };
+      if (capture) vars.fixture = require_reproduction().load(capture);
+      const started = Date.now();
+      let r;
+      try {
+        r = await require_offline_js().run(d.code, { vars }, {
+          timeoutMs,
+          onTool: async (name, args) => {
+            if (name === "__list") return [...allowed];
+            if (!allowed.has(name)) throw new Error(`experiment tool ${name} is not in its read-only allowlist`);
+            const start = Date.now();
+            try {
+              return await (call || require_tools().call)(name, args);
+            } finally {
+              calls.push({ tool: name, ms: Date.now() - start });
+            }
+          }
+        });
+      } catch (e) {
+        r = { error: e.message, tests: [], logs: [], output: [] };
+      }
+      const result = {
+        run: crypto.randomBytes(10).toString("hex"),
+        at: (/* @__PURE__ */ new Date()).toISOString(),
+        codeHash: crypto.createHash("sha256").update(d.code).digest("hex"),
+        params: { ...d.defaults, ...params },
+        capture,
+        ok: !r.error && r.tests.every((t) => t.ok),
+        ms: Date.now() - started,
+        tests: r.tests,
+        error: r.error,
+        logs: r.logs,
+        output: r.output,
+        value: r.hasReturn ? r.returned : r.result,
+        calls
+      };
+      const history = readJson(historyFile(id), []);
+      history.push(result);
+      writeJson(historyFile(id), history.slice(-100));
+      return result;
+    }
+    function compare(id, before, after) {
+      const history = readJson(historyFile(id), []);
+      const a = before ? history.find((r) => r.run === before) : history.at(-2), b = after ? history.find((r) => r.run === after) : history.at(-1);
+      if (!a || !b) throw new Error("need two experiment runs (or valid before/after run ids)");
+      const { diffLines, diffLists } = require_diff();
+      return {
+        before: a.run,
+        after: b.run,
+        sameCode: a.codeHash === b.codeHash,
+        beforeOk: a.ok,
+        afterOk: b.ok,
+        msDelta: b.ms - a.ms,
+        assertions: diffLists(a.tests, b.tests, { key: "name" }),
+        values: diffLines(JSON.stringify(a.value, null, 2) || "null", JSON.stringify(b.value, null, 2) || "null")
+      };
+    }
+    module2.exports = { save, list, run, compare, ALLOWED };
+  }
+});
+
+// lib/scenario.js
+var require_scenario = __commonJS({
+  "lib/scenario.js"(exports2, module2) {
+    var crypto = require("crypto");
+    var { isDeepStrictEqual } = require("util");
+    var fs2 = require("fs");
+    var path2 = require("path");
+    function canonical(v, seen = /* @__PURE__ */ new Set()) {
+      if (typeof v === "bigint") return String(v);
+      if (!v || typeof v !== "object") return v;
+      if (v instanceof Date) return v.toISOString();
+      if (seen.has(v)) throw new Error("scenario manifests must be acyclic JSON");
+      const next = new Set(seen);
+      next.add(v);
+      return Array.isArray(v) ? v.map((x) => canonical(x, next)) : Object.fromEntries(Object.keys(v).sort().filter((k) => v[k] !== void 0).map((k) => [k, canonical(v[k], next)]));
+    }
+    var json = (v) => JSON.stringify(canonical(v));
+    var copy = (v) => JSON.parse(json(v));
+    var id = (kind, value) => `${kind}:${crypto.createHash("sha256").update(json(value)).digest("hex").slice(0, 20)}`;
+    var array = (v) => Array.isArray(v) ? v : [];
+    var strings = (v) => [].concat(v || []).filter((x) => typeof x === "string");
+    var unique = (values) => [...new Map(values.map((v) => [json(v), v])).values()].sort((a, b) => json(a).localeCompare(json(b)));
+    var unresolved = (s) => !s || /\$\{|^\?|^\(|<unresolved|\bunknown\b/i.test(String(s));
+    var route = (s) => String(s || "").replace(/\{[^}]*\}/g, "{}");
+    var handler = (s) => String(s || "").includes("#") ? String(s) : String(s || "").replace(/\.([^.()]+)$/, "#$1");
+    var WRITE = /^(write|insert|update|delete|save|merge|persist|remove)$/i;
+    function provenance(source, action, item = {}) {
+      return copy({ source, ...action ? { action } : {}, ...item.file ? { file: item.file, line: item.line ?? null } : {}, ...item.at ? { at: item.at } : {}, ...item.via ? { via: item.via } : {}, ...item.source ? { library: item.source } : {} });
+    }
+    function externalKind(item) {
+      const s = `${item.kind || ""} ${item.type || ""} ${item.why || ""}`;
+      if (/cache|redis/i.test(s)) return "cache";
+      if (/queue|rabbit|jms|sqs|amqp/i.test(s)) return "queue";
+      if (/file|sftp|filesystem|FileStore|BlobStore|S3Client/i.test(s)) return "file";
+      if (/kafka|StreamBridge/i.test(s)) return "kafka";
+      if (/http|feign|RestTemplate|WebClient|RestClient|HttpClient/i.test(s)) return "http";
+      if (/\bes\b|elasticsearch/i.test(s)) return "es";
+      if (/\bdb\b|database|Jdbc|Repository|EntityManager|DataSource/i.test(s)) return "pg";
+      return "unknown";
+    }
+    function inventory({ service, passport, env, entry } = {}) {
+      const p = passport || service && require_passport().load(service);
+      if (!p || typeof p !== "object") throw new Error(`no cached passport for ${service || "(service required)"}`);
+      service ||= p.service;
+      if (!service) throw new Error("scenario inventory needs service or passport.service");
+      env ||= p.env || require_config().envNames()[0];
+      const gaps = [], states = /* @__PURE__ */ new Map(), effects = /* @__PURE__ */ new Map(), entries = /* @__PURE__ */ new Map(), methodShapes = /* @__PURE__ */ new Map(), methodIds = /* @__PURE__ */ new Set();
+      const configKeys = new Set(Object.keys(p.config?.merged || {}));
+      let cats = [], catalogError;
+      try {
+        cats = require_pg().loadAll(env);
+      } catch (e) {
+        catalogError = e.message;
+      }
+      const datasources = array(p.db?.datasources);
+      const wanted = new Set(datasources.map((d) => d.db).filter(Boolean));
+      const allowed = cats.filter((c) => !wanted.size || wanted.has(c.db) || wanted.has(c.database));
+      function resolveDb(name, item = {}, fn = false) {
+        const hinted = item.db || datasources.find((d) => item.datasource && (d.key === item.datasource || d.name === item.datasource))?.db;
+        const candidates = [];
+        for (const c of hinted ? cats.filter((c2) => c2.db === hinted || c2.database === hinted) : allowed) {
+          for (const t of fn ? array(c.functions) : array(c.tables)) {
+            const full = `${t.schema}.${t.name}`;
+            if (full.toLowerCase() === String(name).toLowerCase() || !String(name).includes(".") && t.name?.toLowerCase() === String(name).toLowerCase()) candidates.push({ db: c.db, [fn ? "function" : "table"]: full });
+          }
+        }
+        const matches = unique(candidates);
+        return { target: matches.length === 1 ? matches[0] : { db: hinted || (wanted.size === 1 ? [...wanted][0] : null), [fn ? "function" : "table"]: name || null }, resolution: { status: matches.length === 1 ? "resolved" : matches.length ? "ambiguous" : "unknown", ...matches.length ? { candidates: matches } : {} } };
+      }
+      const addState = (kind, target, action, evidence, resolution = { status: "resolved" }, required = true) => {
+        const sid = id("state", [service, kind, target]);
+        let s = states.get(sid);
+        if (!s) {
+          s = { id: sid, kind, target, required, actions: [], provenance: [], resolution };
+          states.set(sid, s);
+        }
+        s.required ||= required;
+        if (action && !s.actions.includes(action.id)) {
+          s.actions.push(action.id);
+          action.dependencies.push(sid);
+        }
+        s.provenance = unique([...s.provenance, evidence]);
+        if (resolution.status !== "resolved" && !gaps.some((g) => g.stateId === sid)) gaps.push({ id: id("gap", [sid, resolution.status]), kind: resolution.status === "ambiguous" ? "ambiguous-dependency" : "unresolved-dependency", stateId: sid, detail: `Resolve ${kind} dependency explicitly; static evidence does not identify its complete state.`, ...resolution.candidates ? { candidates: resolution.candidates } : {} });
+        return s;
+      };
+      const addEffect = (kind, target, action, evidence, direction = "write") => {
+        const eid = id("expectation", [service, action?.id || null, kind, target, direction]);
+        let e = effects.get(eid);
+        if (!e) {
+          e = { id: eid, kind, target, action: action?.id || null, required: true, direction, valueKnown: false, provenance: [] };
+          effects.set(eid, e);
+        }
+        e.provenance = unique([...e.provenance, evidence]);
+        if (action && !action.expectations.includes(eid)) action.expectations.push(eid);
+        return e;
+      };
+      const addAction = (kind, target, h, item, source) => {
+        target = kind === "http" ? route(target) : String(target);
+        const aid = id("action", [service, kind, target]);
+        let a = entries.get(aid);
+        if (!a) {
+          a = { id: aid, kind, target, entry: target, handler: h || null, handlers: [], required: true, input: { known: false, ...item?.inputSchema ? { schema: item.inputSchema, known: true } : {}, ...item?.inputType || item?.payloadType ? { type: item.inputType || item.payloadType } : {}, hints: ["Supply scenario-specific values; TestData factories provide type-valid objects, not expected behavior."] }, dependencies: [], expectations: [], provenance: [] };
+          entries.set(aid, a);
+        }
+        if (item?.inputSchema) {
+          a.input.schema = item.inputSchema;
+          a.input.known = true;
+        }
+        if (item?.inputType || item?.payloadType) a.input.type = item.inputType || item.payloadType;
+        if (item?.pattern) a.pattern = true;
+        const shapes = methodShapes.get(handler(h));
+        if (shapes?.length === 1) {
+          a.input.parameters = shapes[0].parameters;
+          a.returnType = shapes[0].returnType;
+        } else if (shapes?.length) a.input.overloads = shapes;
+        if (h) {
+          const same = a.handlers.find((old) => handler(old) === handler(h) || handler(old).endsWith(`.${handler(h)}`) || handler(h).endsWith(`.${handler(old)}`));
+          if (!same) a.handlers.push(h);
+          else if (h.length > same.length) {
+            a.handlers[a.handlers.indexOf(same)] = h;
+            a.handler = h;
+          }
+        }
+        a.provenance = unique([...a.provenance, provenance(source, aid, item)]);
+        return a;
+      };
+      const summaryFlows = array(p.flows);
+      if (catalogError) addState("unknown", { type: "catalog-analysis", detail: catalogError }, null, { source: "cached-catalog" }, { status: "unknown" });
+      let flows = summaryFlows;
+      const keys = [typeof p.codeIndex === "string" ? p.codeIndex : null, ...array(p.libraries).map((l) => l.index)].filter(Boolean);
+      if (keys.length) try {
+        const CI = require_codeindex();
+        if (keys.every((k) => CI.load(k))) {
+          for (const key of keys) for (const c of CI.load(key).graph_().classes || []) if (!c.test) for (const m of c.methods || []) {
+            methodIds.add(`${c.id}#${m.name}`);
+            const shape = { parameters: m.params || [], returnType: m.ret || null };
+            for (const name of [`${c.id}#${m.name}`, `${c.name}#${m.name}`]) methodShapes.set(name, unique([...methodShapes.get(name) || [], shape]));
+          }
+          const F = require_flows();
+          const repo = p.repo?.path && path2.resolve(require_config().ROOT, p.repo.path);
+          const config = repo && fs2.existsSync(repo) ? F.serviceConfig(repo) : {};
+          for (const key of Object.keys(config)) configKeys.add(key);
+          const detailed = F.flows(keys, { config });
+          if (detailed.length) flows = detailed;
+        }
+      } catch (e) {
+        addState("unknown", { type: "flow-analysis", detail: e.message }, null, { source: "code-index" }, { status: "unknown" });
+      }
+      for (const f of flows) if (f?.entry) addAction(f.kind || "method", f.entry, f.method || f.handler, f, "flow");
+      const effective = p.effective || {};
+      for (const e of [...array(effective.endpoints), ...array(p.endpoints)]) addAction("http", `${e.method || "ANY"} ${e.path || "?"}`, e.handler, e, "passport-endpoint");
+      for (const k of [...array(effective.consumes), ...array(p.kafka?.consumes)]) addAction(k.pattern ? "kafka" : "kafka", `kafka ${k.topic || "?"}`, k.handler, k, "passport-listener");
+      for (const f of [...array(p.scheduled), ...array(p.events), ...array(p.methods)]) if (f.entry || f.handler || f.method) addAction(f.kind || (array(p.scheduled).includes(f) ? "scheduled" : "method"), f.entry || f.handler || f.method, f.handler || f.method, f, "passport-action");
+      const selectors = entry == null ? [] : strings(entry);
+      let selected = [...entries.values()].filter((a) => !selectors.length || selectors.some((s) => s === a.id || route(s) === a.target || handler(a.handler).endsWith(handler(s))));
+      if (selectors.length && !selected.length && keys.length) try {
+        const F = require_flows();
+        for (const s of selectors) if (s.includes("#")) {
+          const matches = [...methodIds].filter((name) => name === s || name.endsWith(`.${s}`));
+          if (matches.length === 1) {
+            const f = F.from(keys, matches[0]);
+            flows = [...flows, f];
+            selected.push(addAction("method", f.entry, f.method, f, "code-method"));
+          }
+        }
+      } catch {
+      }
+      if (!selected.length) {
+        const unknown = addState("unknown", { type: "entrypoint-analysis", entry: entry || null, detail: p.flows?.error || "No matching cached entrypoints; provide method/endpoint evidence." }, null, { source: "passport" }, { status: "unknown" });
+        gaps.push({ id: id("gap", [unknown.id, "no-actions"]), kind: "no-actions", stateId: unknown.id, detail: "No selected action can be invoked without an explicit entrypoint binding." });
+      }
+      for (const selector of selectors) if (!selected.some((a) => selector === a.id || route(selector) === a.target || handler(a.handler).endsWith(handler(selector)))) addState("unknown", { type: "unmatched-action-selection", entry: selector }, null, { source: "action-selection" }, { status: "unknown" });
+      const selectedIds = new Set(selected.map((a) => a.id));
+      const actionFor = (f) => selected.find((a) => a.kind === (f.kind || "method") && a.target === (f.kind === "http" ? route(f.entry) : f.entry));
+      const found = /* @__PURE__ */ new Set();
+      function pg(item, action, source) {
+        const name = item.table || item.function || item.name;
+        const fn = !!item.function || item.access === "function" || source === "passport-function";
+        const resolved = resolveDb(name, item, fn), evidence = provenance(source, action?.id, item);
+        const key = json(["pg", fn ? "function" : item.access, resolved.target]);
+        found.add(key);
+        addState("pg", resolved.target, action, evidence, resolved.resolution, !/^(owner|entity|repository)$/.test(item.access || ""));
+        if (WRITE.test(item.access || "") || fn) addEffect("pg", resolved.target, action, evidence, fn ? "function-effects-unknown" : item.access);
+      }
+      function outgoing(item, action, source, kind) {
+        const evidence = provenance(source, action?.id, item);
+        if (kind === "kafka") {
+          const target = { topic: item.topic || null };
+          found.add(json(["kafka-out", item.topic]));
+          addEffect("kafka", target, action, evidence, "produce");
+          if (unresolved(item.topic)) addState("unknown", { type: "kafka-topic", topic: item.topic || null }, action, evidence, { status: "unknown" });
+        } else if (kind === "http") {
+          const call = item.call?.match(/^([A-Z]+)\s+(.+)$/);
+          const target = { method: item.method || call?.[1] || null, path: item.path || call?.[2] || item.url || item.target || null, ...item.client ? { client: item.client } : {} };
+          found.add(json(["http", target]));
+          addState("http", target, action, evidence, { status: unresolved(target.path) ? "unknown" : "resolved" });
+          addEffect("http", target, action, evidence, "call");
+        } else {
+          const target = { index: item.index || item.name || null };
+          found.add(json(["es", target.index]));
+          addState("es", target, action, evidence, { status: unresolved(target.index) ? "unknown" : "resolved" });
+          const access = item.access || item.operation;
+          if (!access || WRITE.test(access)) addEffect("es", target, action, evidence, access || "effects-unknown");
+        }
+      }
+      function mock(item, action, source) {
+        if (typeof item === "string") {
+          const split = item.indexOf(": "), decl = split < 0 ? item : item.slice(0, split), last = decl.lastIndexOf(" ");
+          item = { type: last < 0 ? decl : decl.slice(0, last), name: last < 0 ? null : decl.slice(last + 1), why: split < 0 ? null : item.slice(split + 2) };
+        }
+        const kind = externalKind(item), target = { type: item.type || item.name || "unknown", ...item.name ? { name: item.name } : {}, ...item.call ? { call: item.call } : {} };
+        addState(kind, target, action, provenance(source, action?.id, item), { status: "unknown" });
+        if (item.call && /^(send|publish|put|set|write|save|delete|remove|update|post|exchange|execute)/i.test(item.call)) addEffect(kind, target, action, provenance(source, action?.id, item), item.call);
+      }
+      for (const a of selected) {
+        if (a.handlers.length > 1 || a.input.overloads?.length > 1) addState("unknown", { type: "ambiguous-handler", entry: a.target, handlers: a.handlers, ...a.input.overloads ? { overloads: a.input.overloads } : {} }, a, { source: "entrypoint-analysis" }, { status: "ambiguous" });
+        if (a.kind === "http") {
+          addEffect("status", a.target, a, a.provenance[0], "respond");
+          addEffect("return", a.target, a, a.provenance[0], "respond");
+        }
+        if (a.kind === "kafka" || a.kind === "queue") {
+          const topic = a.target.replace(/^(?:kafka|queue)\s+/, "");
+          addState(a.kind, { topic, direction: "inbound", ...a.pattern ? { pattern: true } : {} }, a, a.provenance[0], { status: a.pattern || unresolved(topic) ? "unknown" : "resolved" });
+        }
+      }
+      for (const f of flows) {
+        const a = actionFor(f);
+        if (!a || !selectedIds.has(a.id)) continue;
+        for (const t of array(f.out?.tables)) pg(t, a, "flow-table");
+        for (const fn of array(f.out?.functions)) pg({ ...fn, access: "function" }, a, "flow-function");
+        for (const k of array(f.out?.produces)) outgoing(k, a, "flow-topic", "kafka");
+        for (const h of array(f.out?.http)) outgoing(h, a, "flow-http", "http");
+        for (const es of array(f.out?.es)) outgoing(es, a, "flow-es", "es");
+        for (const x of array(f.out?.external)) mock(x, a, "flow-external");
+        for (const x of array(f.mocks)) mock(x, a, "flow-mock");
+        for (const prop of array(f.properties)) {
+          const k = typeof prop === "string" ? prop : prop.key;
+          addState("config", { key: k || null }, a, provenance("flow-property", a.id, typeof prop === "string" ? {} : prop), { status: unresolved(k) ? "unknown" : "resolved" });
+        }
+      }
+      for (const t of [...array(effective.tables), ...array(p.db?.tables)]) if (!found.has(json(["pg", t.access === "function" ? "function" : t.access, resolveDb(t.table, t, t.access === "function").target]))) pg(t, null, "passport-table");
+      for (const fn of [...array(effective.dbCalls), ...array(p.db?.calls)]) if (!found.has(json(["pg", "function", resolveDb(fn.name || fn.function, fn, true).target]))) pg({ ...fn, function: fn.function || fn.name }, null, "passport-function");
+      for (const k of [...array(effective.produces), ...array(p.kafka?.produces)]) if (!found.has(json(["kafka-out", k.topic]))) outgoing(k, null, "passport-topic", "kafka");
+      for (const h of [...array(effective.calls), ...array(p.feign), ...array(p.http)]) {
+        const target = { method: h.method || null, path: h.path || h.url || h.target || null, ...h.client ? { client: h.client } : {} };
+        if (!found.has(json(["http", target]))) outgoing(h, null, "passport-http", "http");
+      }
+      for (const es of array(p.es)) if (!found.has(json(["es", es.index]))) outgoing(es, null, "passport-es", "es");
+      for (const prop of [...configKeys, ...strings(p.config?.unresolved), ...array(p.config?.properties).map((x) => typeof x === "string" ? x : x.key), ...datasources.map((d) => d.key).filter(Boolean)]) addState("config", { key: prop }, null, { source: "passport-config" }, { status: unresolved(prop) ? "unknown" : "resolved" });
+      for (const l of array(p.libraries)) if (l.error || l.found === false) addState("unknown", { type: "unread-library", library: l.artifactId || l.repo || null, detail: l.error || "Library was not inspected." }, null, { source: "passport-library" }, { status: "unknown" });
+      if (!flows.length || !Array.isArray(p.flows) && !keys.length) addState("unknown", { type: "call-graph-coverage", detail: p.flows?.error || "No cached transitive flow graph." }, null, { source: "passport" }, { status: "unknown" });
+      for (const s of states.values()) if (!s.actions.length && s.required && s.resolution.status === "resolved") gaps.push({ id: id("gap", [s.id, "attribution"]), kind: "unattributed-dependency", stateId: s.id, detail: "Dependency is present in the passport but is not attributed to a selected action." });
+      for (const e of effects.values()) if (!e.action) {
+        const s = addState("unknown", { type: "effect-attribution", expectationId: e.id, kind: e.kind, target: e.target }, null, { source: "passport-effect" }, { status: "unknown" });
+        gaps.push({ id: id("gap", [e.id, "attribution"]), kind: "unattributed-effect", stateId: s.id, expectationId: e.id, detail: "Bind the expected behavior explicitly; this effect is not attributed to a selected action." });
+      }
+      selected = selected.map((a) => ({ ...a, handlers: a.handlers.sort(), dependencies: [...new Set(a.dependencies)].sort(), expectations: a.expectations.sort() })).sort((a, b) => a.id.localeCompare(b.id));
+      return copy({ version: 1, service, env, source: { passportSha: p.repo?.sha || null, passportBuiltAt: p.builtAt || null }, states: [...states.values()].map((s) => ({ ...s, actions: s.actions.sort() })).sort((a, b) => a.id.localeCompare(b.id)), actions: selected, expectations: [...effects.values()].sort((a, b) => a.id.localeCompare(b.id)), gaps: unique(gaps), complete: false, coverage: { static: true, runtimeVerified: false, exhaustive: false, note: "Static analysis records observed dependencies; reflection, runtime branches and unresolved external behavior still require explicit evidence." } });
+    }
+    function actions(inv, { bindings = {} } = {}) {
+      const gaps = [];
+      const known = new Set(array(inv.actions).map((a) => a.id));
+      for (const key of Object.keys(bindings)) if (!known.has(key)) gaps.push({ kind: "unknown-action-binding", id: key });
+      const bound = array(inv.actions).map((a) => {
+        const present = Object.hasOwn(bindings, a.id);
+        if (a.required !== false && !present) gaps.push({ kind: "unbound-action", actionId: a.id, target: a.target });
+        return { ...a, bound: present, ...present ? { binding: copy(bindings[a.id]) } : {} };
+      });
+      return copy({ version: 1, service: inv.service, env: inv.env, actions: bound, gaps, complete: !gaps.length, ready: !gaps.length, coverage: inv.coverage });
+    }
+    var OPS = /* @__PURE__ */ new Set(["exact", "subset", "count", "forbidden", "ordered"]);
+    function descriptorError(match) {
+      if (!match || !OPS.has(match.op)) return "match.op must be exact, subset, count, forbidden or ordered";
+      if (["exact", "subset", "ordered"].includes(match.op) && !Object.hasOwn(match, "value")) return `${match.op} requires an explicit value`;
+      if (match.op === "ordered" && !Array.isArray(match.value)) return "ordered requires an array value";
+      if (match.op === "count") {
+        if (!Object.hasOwn(match, "value") && !Object.hasOwn(match, "min") && !Object.hasOwn(match, "max")) return "count requires value, min or max";
+        if (["value", "min", "max"].some((k) => Object.hasOwn(match, k) && (!Number.isInteger(match[k]) || match[k] < 0))) return "count bounds must be nonnegative integers";
+        if (match.min != null && match.max != null && match.min > match.max) return "count min exceeds max";
+      }
+      return null;
+    }
+    function expectations(inv, { bindings = {} } = {}) {
+      const gaps = [], known = new Set(array(inv.expectations).map((e) => e.id));
+      for (const key of Object.keys(bindings)) if (!known.has(key)) gaps.push({ kind: "unknown-expectation-binding", id: key });
+      const bound = array(inv.expectations).map((e) => {
+        const b = bindings[e.id], present = Object.hasOwn(bindings, e.id);
+        const match = b?.match || (b?.op ? b : void 0), error = present ? descriptorError(match) : null;
+        if (e.required !== false && !present) gaps.push({ kind: "unbound-expectation", expectationId: e.id });
+        if (error) gaps.push({ kind: "invalid-expectation", expectationId: e.id, detail: error });
+        return { ...e, bound: present && !error, select: b?.select || { kind: e.kind, target: e.target, ...e.action ? { action: e.action } : {} }, ...match ? { match } : {} };
+      });
+      return copy({ version: 1, service: inv.service, env: inv.env, expectations: bound, gaps, complete: !gaps.length, ready: !gaps.length, coverage: inv.coverage });
+    }
+    function subset(actual, expected) {
+      if (isDeepStrictEqual(actual, expected)) return true;
+      if (Array.isArray(expected)) {
+        let assign2 = function(n, seen) {
+          for (let i = 0; i < actual.length; i++) if (!seen.has(i) && subset(actual[i], expected[n])) {
+            seen.add(i);
+            if (!owner.has(i) || assign2(owner.get(i), seen)) {
+              owner.set(i, n);
+              return true;
+            }
+          }
+          return false;
+        };
+        var assign = assign2;
+        if (!Array.isArray(actual)) return false;
+        if (expected.length > actual.length) return false;
+        const owner = /* @__PURE__ */ new Map();
+        return expected.every((_, n) => assign2(n, /* @__PURE__ */ new Set()));
+      }
+      return !!expected && typeof expected === "object" && !!actual && typeof actual === "object" && !Array.isArray(actual) && Object.keys(expected).every((k) => Object.hasOwn(actual, k) && subset(actual[k], expected[k]));
+    }
+    function check(plan, observed, { allowUnexpected = false } = {}) {
+      const expected = array(plan?.expectations), gaps = [...array(plan?.gaps)], results = [];
+      const records = Array.isArray(observed) ? observed : null;
+      const map = !records && observed && typeof observed === "object" ? observed : {};
+      const used = /* @__PURE__ */ new Set();
+      const duplicates = expected.filter((e, i) => expected.findIndex((x) => x.id === e.id) !== i);
+      for (const e of duplicates) gaps.push({ kind: "duplicate-expectation", expectationId: e.id });
+      for (const e of expected) {
+        const error = descriptorError(e.match);
+        if (!e.bound || error) {
+          results.push({ id: e.id, ok: e.required === false, reason: error || "expectation has no explicit binding" });
+          continue;
+        }
+        const selector = e.select || { kind: e.kind, target: e.target, ...e.action ? { action: e.action } : {} };
+        let present, value, ambiguous = false;
+        if (records) {
+          const selected = records.filter((r) => r && (r.id === e.id || !r.id && Object.entries(selector).every(([key, wanted]) => key === "action" && r.action == null ? true : isDeepStrictEqual(r[key], wanted))));
+          for (const record of selected) used.add(record);
+          if (selector.action && selected.some((r) => r.action == null && !r.id)) {
+            const peers = expected.filter((other) => other.id !== e.id && other.select?.action !== selector.action && isDeepStrictEqual(other.select?.kind, selector.kind) && isDeepStrictEqual(other.select?.target, selector.target));
+            ambiguous = peers.length > 0;
+          }
+          present = selected.length > 0;
+          value = selected.length === 1 ? selected[0].value : selected.map((r) => r.value);
+        } else {
+          present = Object.hasOwn(map, e.id);
+          value = map[e.id];
+          if (present) used.add(e.id);
+        }
+        if (ambiguous) {
+          results.push({ id: e.id, ok: false, reason: "observation has no action id and matches multiple actions" });
+          continue;
+        }
+        if (!present && !(records && (e.match.op === "forbidden" || e.match.op === "count" && (e.match.value === 0 || e.match.max === 0)))) {
+          results.push({ id: e.id, ok: false, reason: "required observation is missing" });
+          continue;
+        }
+        const m = e.match, values = !present ? [] : Array.isArray(value) ? value : [value];
+        let ok = false;
+        if (m.op === "exact") ok = isDeepStrictEqual(value, m.value);
+        else if (m.op === "subset") ok = subset(value, m.value);
+        else if (m.op === "count") {
+          const n = values.length;
+          ok = (m.value == null || n === m.value) && (m.min == null || n >= m.min) && (m.max == null || n <= m.max);
+        } else if (m.op === "forbidden") ok = Object.hasOwn(m, "value") ? !values.some((v) => subset(v, m.value)) : !values.length;
+        else if (m.op === "ordered") {
+          let i = 0;
+          for (const v of values) if (i < m.value.length && subset(v, m.value[i])) i++;
+          ok = i === m.value.length && (m.exact === false || values.length === m.value.length);
+        }
+        results.push({ id: e.id, ok, reason: ok ? "matched" : `${m.op} expectation did not match`, ...m.op === "count" ? { count: values.length } : {} });
+      }
+      if (!allowUnexpected) {
+        if (records) records.forEach((record, index) => {
+          if (!used.has(record)) gaps.push({ kind: "unexpected-observation", observation: index, ...record?.id ? { id: record.id } : {} });
+        });
+        else for (const key of Object.keys(map)) if (!used.has(key)) gaps.push({ kind: "unexpected-observation", id: key });
+      }
+      if (!expected.length) gaps.push({ kind: "no-expectations", detail: "No explicit business expectations were checked." });
+      const passed = results.filter((r) => r.ok).length, failed = results.length - passed;
+      return { ok: failed === 0 && gaps.length === 0, passed, failed, results, gaps, coverage: { runtimeVerified: false, checked: results.length, note: "Checks apply to supplied observations; this function does not execute the service." } };
+    }
+    module2.exports = { inventory, actions, expectations, check };
+  }
+});
+
+// lib/scenario-state.js
+var require_scenario_state = __commonJS({
+  "lib/scenario-state.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var crypto = require("crypto");
+    var { isDeepStrictEqual } = require("util");
+    var { CACHE: CACHE2, readJson, writeJson, pool } = require_util();
+    var supported = /* @__PURE__ */ new Set(["pg", "kafka", "http", "es", "config", "cache", "queue", "file", "mock"]);
+    var canonical = (v) => JSON.stringify(v, (_, x) => typeof x === "bigint" ? String(x) : x);
+    var hash = (v) => crypto.createHash("sha256").update(canonical(v)).digest("hex");
+    var clone = (v) => JSON.parse(canonical(v));
+    var inventoryHash = (inv) => hash({ ...inv, builtAt: void 0 });
+    var problem = (kind, stateId, detail) => ({ kind, ...stateId ? { stateId } : {}, detail });
+    var unresolved = (dep) => ["ambiguous", "unresolved", "missing", "dynamic", "unknown"].includes(typeof dep.resolution === "string" ? dep.resolution : dep.resolution?.status);
+    var targetOf = (dep, binding) => unresolved(dep) ? { ...dep.target, ...Object.fromEntries(Object.entries(binding.resolve || {}).filter(([key]) => key !== "evidence")) } : dep.target;
+    function planState(inventory, bindings = {}) {
+      if (!inventory || inventory.version !== 1 || !Array.isArray(inventory.states)) throw new Error("scenario inventory required");
+      const known = new Set(inventory.states.map((s) => s.id));
+      for (const id of Object.keys(bindings)) if (!known.has(id)) throw new Error(`unknown state binding ${id}`);
+      const gaps = [], resolved = /* @__PURE__ */ new Set();
+      const states = inventory.states.map((dep) => {
+        const binding = bindings[dep.id];
+        if (!binding) {
+          if (dep.required !== false) gaps.push(problem("unbound-state", dep.id, `Bind ${dep.kind} ${canonical(dep.target)}`));
+          return { ...dep, binding: null };
+        }
+        const mode = binding.mode || (binding.capture ? "fixture" : Object.hasOwn(binding, "value") ? "provided" : "capture");
+        const needsResolution = unresolved(dep);
+        const hasResolution = binding.resolve && typeof binding.resolve.evidence === "string" && binding.resolve.evidence.trim();
+        const candidates = dep.resolution?.candidates || [];
+        const validResolution = hasResolution && (!candidates.length || candidates.some((c) => Object.entries(c).every(([key, value]) => isDeepStrictEqual(binding.resolve[key], value))));
+        if (dep.kind === "unknown" || !supported.has(dep.kind)) gaps.push(problem("unsupported-state", dep.id, "Model this dependency as a concrete supported read before emulating it"));
+        else if (needsResolution && !validResolution) gaps.push(problem("unresolved-state", dep.id, "An explicit candidate target resolution with evidence is required"));
+        else if (needsResolution && validResolution) resolved.add(dep.id);
+        if (!needsResolution && binding.resolve && Object.entries(binding.resolve).some(([key, value]) => key !== "evidence" && !isDeepStrictEqual(dep.target[key], value))) gaps.push(problem("resolved-target-override", dep.id, "A known dependency cannot be replaced by another target"));
+        if (!["provided", "capture", "fixture"].includes(mode)) gaps.push(problem("state-mode", dep.id, `Unsupported state mode ${mode}`));
+        if (mode === "provided" && !Object.hasOwn(binding, "value")) gaps.push(problem("missing-value", dep.id, "Provided state must include value (null and empty collections are explicit values)"));
+        return { ...dep, binding: { ...binding, mode } };
+      });
+      for (const gap of inventory.gaps || []) {
+        const id = gap.stateId || gap.state;
+        if (!id || !resolved.has(id)) gaps.push(gap);
+      }
+      return {
+        version: 1,
+        service: inventory.service,
+        env: inventory.env,
+        inventoryHash: inventoryHash(inventory),
+        inventory,
+        states,
+        gaps,
+        complete: !gaps.length,
+        coverage: { required: inventory.states.filter((s) => s.required !== false).length, bound: states.filter((s) => s.binding).length, runtimeVerified: false }
+      };
+    }
+    function bounded(v, def, max) {
+      const n = v ?? def;
+      if (!Number.isInteger(n) || n < 1 || n > max) throw new Error(`limit must be 1..${max}`);
+      return n;
+    }
+    var adapters = {
+      pg: async (dep, binding, plan) => {
+        const q = binding.query || {}, db = targetOf(dep, binding).db;
+        if (!db || !q.sql) throw new Error("Postgres capture needs an exact database and query.sql with bound params");
+        if (q.db && q.db !== db) throw new Error("query database differs from the resolved dependency");
+        const max = bounded(q.maxRows, 200, 1e4);
+        await require_limit().take(`pg:${plan.env}`);
+        const r = await require_pg().query(plan.env, `select * from (${q.sql.replace(/;\s*$/, "")}) as dt_state_rows limit ${max + 1}`, { db, params: q.params || [] });
+        return { value: r.rows.slice(0, max), complete: r.rows.length <= max, truncated: r.rows.length > max };
+      },
+      kafka: async (dep, binding, plan) => {
+        const q = binding.query || {};
+        const r = await require_kafka().captureMessages(plan.env, targetOf(dep, binding).topic, { maxMessages: bounded(q.maxMessages, 300, 1e4), offsets: q.offsets || {} });
+        return { value: r.messages, complete: !r.truncated, truncated: r.truncated, windows: r.windows };
+      },
+      es: async (dep, binding, plan) => {
+        const q = binding.query || {}, size = bounded(q.maxRows, 200, 1e3);
+        if (!q.query) throw new Error("Elasticsearch capture needs an explicit query");
+        await require_limit().take(`es:${plan.env}`);
+        const r = await require_es().search(plan.env, targetOf(dep, binding).index, typeof q.query === "string" ? q.query : JSON.stringify({ ...q.query, size }), { size });
+        return { value: r.hits.slice(0, size), complete: r.total <= size, truncated: r.total > size };
+      },
+      http: async (dep, binding, plan) => {
+        const q = binding.query || {}, method = String(q.method || dep.target.method || "GET").toUpperCase();
+        if (!["GET", "HEAD"].includes(method)) throw new Error("Live HTTP state capture supports GET/HEAD; provide response fixtures for other methods");
+        const url = new URL(q.url), allow = require_config().getScripts().http.allow || [];
+        const allowed = (u) => allow.some((prefix) => {
+          const p = String(prefix).replace(/\/$/, "");
+          return u === p || u.startsWith(p + "/") || u.startsWith(p + "?");
+        });
+        if (!allowed(url.href) || url.username || url.password) throw new Error("HTTP state URL must be in scripts.http.allow and contain no credentials");
+        await require_limit().take(`http:${url.host}:${plan.env}`);
+        const r = await fetch(url, { method, headers: q.headers || {}, redirect: "manual", signal: AbortSignal.timeout(3e4) });
+        if (r.status >= 300 && r.status < 400) throw new Error("HTTP state redirects must be captured explicitly as another allowed URL");
+        let size = 0, chunks = [];
+        for await (const chunk of r.body || []) {
+          size += chunk.length;
+          if (size > 2 * 1024 * 1024) throw new Error("HTTP state exceeds 2 MiB");
+          chunks.push(chunk);
+        }
+        let body = Buffer.concat(chunks).toString("utf8");
+        try {
+          body = JSON.parse(body);
+        } catch {
+        }
+        return { value: { status: r.status, headers: Object.fromEntries(r.headers), body }, complete: true };
+      }
+    };
+    function fixtureState(dep, binding) {
+      const capture = require_reproduction().load(binding.capture);
+      const resolved = targetOf(dep, binding);
+      let value;
+      if (dep.kind === "pg") {
+        const target = binding.table || `${resolved.db}:${resolved.table}`;
+        if (target !== `${resolved.db}:${resolved.table}`) throw new Error("fixture table differs from the declared read dependency");
+        if (!Object.hasOwn(capture.rows, target)) throw new Error(`capture does not contain ${target}`);
+        value = capture.rows[target];
+      } else if (dep.kind === "kafka") {
+        const target = binding.topic || resolved.topic;
+        if (target !== resolved.topic) throw new Error("fixture topic differs from the declared read dependency");
+        if (!Object.hasOwn(capture.events, target)) throw new Error(`capture does not contain ${target}`);
+        value = capture.events[target].messages;
+      } else throw new Error("Fixture captures contain PostgreSQL and Kafka; provide other dependencies separately");
+      return { value, complete: capture.complete === true, gaps: capture.gaps, fixture: binding.capture };
+    }
+    async function captureState(plan, { adapters: supplied = {}, mask = true } = {}) {
+      if (!plan || plan.version !== 1 || !Array.isArray(plan.states)) throw new Error("scenario state plan required");
+      if (!plan.inventory || inventoryHash(plan.inventory) !== plan.inventoryHash) throw new Error("state plan inventory fingerprint changed");
+      const seen = /* @__PURE__ */ new Set();
+      for (const dep of plan.states) {
+        const original = plan.inventory.states.find((d) => d.id === dep.id), { binding, ...metadata } = dep;
+        if (!original || seen.has(dep.id) || !isDeepStrictEqual(metadata, original)) throw new Error("state plan dependency differs from its inventory");
+        seen.add(dep.id);
+      }
+      plan = planState(plan.inventory, Object.fromEntries(plan.states.filter((d) => d.binding).map((d) => [d.id, d.binding])));
+      const gaps = [...plan.gaps], states = {}, trace = [];
+      const results = await pool(plan.states, 4, async (dep) => {
+        const binding = dep.binding, start = Date.now();
+        if (!binding) return { id: dep.id, status: "missing" };
+        try {
+          let r;
+          if (binding.mode === "provided") r = { value: binding.value, complete: Object.hasOwn(binding, "value") };
+          else if (binding.mode === "fixture") r = fixtureState(dep, binding);
+          else {
+            const adapter = supplied[dep.kind] || adapters[dep.kind];
+            if (!adapter) throw new Error(`No ${dep.kind} live reader; bind explicit provided state`);
+            r = await adapter(dep, binding, plan);
+          }
+          if (!r || !Object.hasOwn(r, "value")) throw new Error("State adapter did not provide value");
+          const complete = r.complete === true && !r.truncated && !(r.gaps || []).length;
+          trace.push({ stateId: dep.id, mode: binding.mode, ms: Date.now() - start });
+          return {
+            id: dep.id,
+            kind: dep.kind,
+            target: dep.target,
+            required: dep.required !== false,
+            value: clone(r.value),
+            status: complete ? "captured" : "partial",
+            complete,
+            source: { mode: binding.mode, ...binding.resolve ? { resolve: binding.resolve } : {}, ...r.fixture ? { capture: r.fixture } : {}, ...r.windows ? { windows: r.windows } : {} },
+            gaps: r.gaps || []
+          };
+        } catch (e) {
+          return { id: dep.id, kind: dep.kind, target: dep.target, status: "failed", complete: false, error: String(e.message).slice(0, 500) };
+        }
+      });
+      for (const result of results) {
+        const state = result.value;
+        if (!state) {
+          gaps.push(problem("state-error", result.item.id, result.error?.message || "State capture failed"));
+          continue;
+        }
+        states[state.id] = state;
+        if (result.item.required !== false && state.status !== "captured") gaps.push(problem("state-incomplete", state.id, state.error || `State is ${state.status}`));
+      }
+      if (mask) {
+        const rows = {};
+        for (const state of Object.values(states)) if (Object.hasOwn(state, "value")) {
+          const dep = plan.states.find((d) => d.id === state.id), key = dep?.kind === "config" ? dep.target.key : null;
+          rows[state.id] = [{ value: state.value, ...key ? { [key]: state.value } : {} }];
+        }
+        const masked = { rows, events: {}, plan: { seeds: [], tables: [] }, provenance: {}, gaps };
+        require_reproduction().redact(masked);
+        for (const [id, values] of Object.entries(masked.rows)) states[id].value = values[0].value;
+        gaps.splice(0, gaps.length, ...masked.gaps);
+      }
+      return {
+        version: 1,
+        service: plan.service,
+        env: plan.env,
+        inventoryHash: plan.inventoryHash,
+        inventory: plan.inventory,
+        states,
+        gaps,
+        complete: !gaps.length,
+        capturedAt: (/* @__PURE__ */ new Date()).toISOString(),
+        trace,
+        coverage: { required: plan.states.filter((s) => s.required !== false).length, captured: Object.values(states).filter((s) => s.status === "captured").length, runtimeVerified: false }
+      };
+    }
+    function getState(state, id, { where, key, request } = {}) {
+      const item = state.states[id];
+      if (!item || item.status !== "captured" || !Object.hasOwn(item, "value")) throw new Error(`state ${id} is not captured`);
+      let value = item.value;
+      const subset = (expected, actual) => expected && typeof expected === "object" ? actual && typeof actual === "object" && Object.entries(expected).every(([k, v]) => subset(v, actual[k])) : expected === actual;
+      if (key !== void 0) {
+        if (!value || !Object.hasOwn(value, key)) throw new Error(`state ${id} has no key ${key}`);
+        value = value[key];
+      }
+      if (where) {
+        if (!Array.isArray(value)) throw new Error("where requires array state");
+        value = value.filter((row) => subset(where, row));
+      }
+      if (request) {
+        if (!Array.isArray(value?.exchanges)) throw new Error("request matching requires explicit exchanges [{request,response}]");
+        const matches = value.exchanges.filter((e) => subset(e.request, request));
+        if (matches.length !== 1) throw new Error(`request for ${id} matched ${matches.length} exchanges`);
+        value = matches[0].response;
+      }
+      return clone(value);
+    }
+    async function emulate({ inventory, state, actions, expectations, code, timeoutMs = 3e4, requireAllReads = true } = {}) {
+      const S = require_scenario(), gaps = contractGaps(inventory, state, actions, expectations), reads = [], performed = [], observed = {}, violations = [];
+      const fail = (detail) => {
+        violations.push(detail);
+        throw new Error(detail);
+      };
+      const actionList = actions?.actions || [], expectationList = expectations?.expectations || [];
+      if (gaps.length) return { ok: false, gaps, checks: { ok: false, passed: 0, failed: gaps.length, results: [] }, reads, actions: performed, observed, coverage: { runtimeVerified: false, proof: "contract-emulation" } };
+      let active = null, calls = 0, result;
+      try {
+        result = await require_offline_js().run(code, { vars: { service: inventory.service, actions: actionList.map((a) => ({ id: a.id, kind: a.kind, target: a.target, dependencies: a.dependencies, expectations: a.expectations })) } }, {
+          timeoutMs,
+          onTool: async (name, args = {}) => {
+            if (++calls > 2e3) return fail("scenario exceeds 2000 local operations");
+            if (name === "action_input") {
+              const action = actionList.find((a) => a.id === args.id);
+              if (!action) return fail(`unknown scenario action ${args.id}`);
+              if (!action.bound || !Object.hasOwn(action, "binding")) return fail(`action ${args.id} has no input binding`);
+              active = action.id;
+              performed.push({ id: action.id });
+              return clone(action.binding);
+            }
+            if (name === "state_read") {
+              const action = actionList.find((a) => a.id === (args.action || active)), dep = inventory.states.find((d) => d.id === args.id);
+              if (!dep) return fail(`unknown scenario state ${args.id}`);
+              if (!action || !action.dependencies.includes(dep.id)) return fail(`state ${args.id} is not declared for this action`);
+              const value = getState(state, dep.id, args);
+              reads.push({ id: dep.id, action: action.id, ...args.key !== void 0 ? { key: args.key } : {} });
+              return value;
+            }
+            if (name === "observe") {
+              const e = expectationList.find((e2) => e2.id === args.id);
+              if (!e) return fail(`unknown scenario expectation ${args.id}`);
+              if (e.action && !performed.some((a) => a.id === e.action)) return fail("observe requires its action_input first");
+              if (Object.hasOwn(observed, args.id)) return fail(`duplicate scenario observation ${args.id}; aggregate ordered/count effects explicitly`);
+              observed[args.id] = clone(args.value);
+              return { observed: args.id };
+            }
+            return fail(`only local scenario tools are available; refused ${name}`);
+          }
+        });
+      } catch (e) {
+        result = { error: e.message, tests: [], logs: [], output: [] };
+      }
+      for (const action of actionList) {
+        if (!performed.some((a) => a.id === action.id)) gaps.push(problem("unperformed-action", null, action.id));
+        if (requireAllReads) {
+          for (const id of action.dependencies || []) if (!reads.some((r) => r.id === id && r.action === action.id)) gaps.push(problem("unread-state", id, `No read observed for action ${action.id}`));
+        }
+      }
+      const checks = S.check(expectations, observed);
+      return {
+        ok: !result.error && !violations.length && !gaps.length && checks.ok && (result.tests || []).every((t) => t.ok),
+        checks,
+        gaps,
+        violations,
+        reads,
+        actions: performed,
+        observed,
+        tests: result.tests || [],
+        logs: result.logs || [],
+        output: result.output || [],
+        error: result.error,
+        value: result.returned,
+        coverage: { states: new Set(reads.map((r) => r.id)).size, required: inventory.states.filter((s) => s.required !== false).length, runtimeVerified: false, proof: "contract-emulation", allReadsChecked: requireAllReads }
+      };
+    }
+    function contractGaps(inventory, state, actions, expectations) {
+      const gaps = [], S = require_scenario();
+      if (!inventory?.states || !state?.states || state.inventoryHash !== inventoryHash(inventory)) return [problem("inventory-mismatch", null, "Captured state must match this exact passport inventory")];
+      if (!state.complete || state.gaps?.length) gaps.push(problem("state-incomplete", null, "Capture every required dependency first"));
+      for (const dep of inventory.states) {
+        const captured = state.states[dep.id];
+        if (dep.required !== false && (captured?.status !== "captured" || !Object.hasOwn(captured, "value"))) gaps.push(problem("missing-state", dep.id, "Required state is absent"));
+        if (captured && (!isDeepStrictEqual(captured.target, dep.target) || captured.kind !== dep.kind)) gaps.push(problem("state-target-mismatch", dep.id, "Captured state names another dependency"));
+        if (!supported.has(dep.kind)) gaps.push(problem("unsupported-state", dep.id, "Unknown read dependencies must be modeled before running"));
+      }
+      const readBindings = Object.fromEntries(inventory.states.filter((dep) => Object.hasOwn(state.states[dep.id] || {}, "value")).map((dep) => [dep.id, { mode: "provided", value: state.states[dep.id].value, ...state.states[dep.id].source?.resolve ? { resolve: state.states[dep.id].source.resolve } : {} }]));
+      gaps.push(...planState(inventory, readBindings).gaps);
+      const actionList = actions?.actions || [], expectationList = expectations?.expectations || [];
+      const actionBindings = {}, expectationBindings = {};
+      for (const action of actionList) {
+        const original = inventory.actions.find((a) => a.id === action.id);
+        if (!original || ["kind", "target", "dependencies", "expectations"].some((key) => !isDeepStrictEqual(action[key], original[key]))) gaps.push(problem("action-mismatch", null, action.id));
+        if (Object.hasOwn(actionBindings, action.id)) gaps.push(problem("duplicate-action", null, action.id));
+        if (action.bound && Object.hasOwn(action, "binding")) actionBindings[action.id] = action.binding;
+      }
+      for (const e of expectationList) {
+        const original = inventory.expectations.find((x) => x.id === e.id);
+        if (!original || ["kind", "target", "action", "required"].some((key) => !isDeepStrictEqual(e[key], original[key]))) gaps.push(problem("expectation-mismatch", null, e.id));
+        if (Object.hasOwn(expectationBindings, e.id)) gaps.push(problem("duplicate-expectation", null, e.id));
+        if (e.bound && e.match) expectationBindings[e.id] = { match: e.match, select: e.select };
+      }
+      gaps.push(...S.actions(inventory, { bindings: actionBindings }).gaps, ...S.expectations(inventory, { bindings: expectationBindings }).gaps);
+      return gaps;
+    }
+    var file = (id) => {
+      if (!/^[a-f0-9]{24}$/.test(id || "")) throw new Error("invalid scenario state id");
+      return path2.join(CACHE2, "scenarios", `${id}.json`);
+    };
+    function save(state) {
+      const id = crypto.randomBytes(12).toString("hex");
+      writeJson(file(id), state);
+      return id;
+    }
+    function load(id) {
+      const value = readJson(file(id));
+      if (!value) throw new Error("scenario state not found");
+      return value;
+    }
+    function exportScenario(workspace, { inventory, state, actions, expectations }, { name = "scenario", directory, overwrite = false } = {}) {
+      const R = require_reproduction(), dest = R.resourcePath(workspace, directory || `src/test/resources/dt-fixtures/${name}`);
+      if (!/^[a-z0-9][\w.-]{0,79}$/i.test(name)) throw new Error("invalid scenario name");
+      if (contractGaps(inventory, state, actions, expectations).length) throw new Error("Only complete, bound scenario contracts can be exported");
+      if (fs2.existsSync(dest.full) && !overwrite) throw new Error("scenario resources exist; overwrite=true to replace");
+      const stage = `${dest.full}.tmp-${crypto.randomBytes(4).toString("hex")}`, files = {};
+      try {
+        fs2.mkdirSync(stage, { recursive: true });
+        for (const [filename, value] of Object.entries({ "inventory.json": inventory, "state.json": state, "actions.json": actions, "expectations.json": expectations })) {
+          const text = JSON.stringify(value, null, 2) + "\n";
+          fs2.writeFileSync(path2.join(stage, filename), text);
+          files[filename] = crypto.createHash("sha256").update(text).digest("hex");
+        }
+        const instructions = "Scenario contract resources. Arrange every state.json dependency with a real test container or a mock. Apply each actions.json input to the service. Observe each effects/return value and check expectations.json. scenario_emulate checks a local model; run the real application tests with test_run for application proof.\n";
+        fs2.writeFileSync(path2.join(stage, "README.txt"), instructions);
+        fs2.writeFileSync(path2.join(stage, "scenario.json"), JSON.stringify({ version: 1, name, inventoryHash: inventoryHash(inventory), files, coverage: state.coverage }, null, 2) + "\n");
+        if (fs2.existsSync(dest.full)) fs2.rmSync(dest.full, { recursive: true });
+        fs2.mkdirSync(path2.dirname(dest.full), { recursive: true });
+        fs2.renameSync(stage, dest.full);
+        require_workspace().touch(workspace, { dirty: true });
+        return { workspace, path: dest.rel, files: [...Object.keys(files), "scenario.json", "README.txt"] };
+      } finally {
+        fs2.rmSync(stage, { recursive: true, force: true });
+      }
+    }
+    module2.exports = { inventoryHash, planState, captureState, getState, emulate, exportScenario, save, load };
+  }
+});
+
+// lib/tools-scenario.js
+var require_tools_scenario = __commonJS({
+  "lib/tools-scenario.js"(exports2, module2) {
+    module2.exports = ({ str, env }) => {
+      const obj = (description) => ({ type: "object", additionalProperties: true, description });
+      const bool = (description, def = false) => ({ type: "boolean", default: def, description });
+      const S = () => require_scenario(), State = () => require_scenario_state();
+      const stateOf = (a) => a.state || State().load(a.capture);
+      const tools = [
+        {
+          name: "scenario_inventory",
+          description: "Compile a cached or supplied service passport into every known read-state dependency, action entrypoint and expected-effect obligation, with source evidence. Optional entry selects one exact flow. Covers PG, Kafka, HTTP/Feign, ES, config and external cache/queue/file/mock edges; ambiguities and dynamic/unavailable-library gaps remain explicit. Static discovery is not runtime proof.",
+          input: { service: str("Cached passport service"), passport: obj("Or an explicit passport JSON"), env, entry: str("Optional exact flow entry, e.g. POST /orders/{id}/release or kafka orders.paid") },
+          run: (a) => S().inventory(a)
+        },
+        {
+          name: "scenario_state_plan",
+          description: 'Bind every passport read independently before emulation. Bindings by dependency id: {mode:"provided",value} for explicit fixtures, {capture:"fixture capture id",table:"db:schema.table"|topic:"name"}, or {mode:"capture",query:{...}}. No invented empty state. Ambiguous targets require resolve:{db,...,evidence}; unknown dependencies remain incomplete until modeled.',
+          input: { inventory: obj("scenario_inventory result"), bindings: obj("Dependency id -> explicit state binding") },
+          required: ["inventory"],
+          run: (a) => State().planState(a.inventory, a.bindings)
+        },
+        {
+          name: "scenario_state_capture",
+          description: "Materialize the independently inspectable state plan. Provided fixtures and PG/Kafka captures are local; explicit capture readers support parameterized PG, bounded Kafka/ES, and allowlisted GET/HEAD HTTP. Missing, failed or truncated dependencies keep complete=false. Mask personal/secret fields by default. Returns saved state id and a view.",
+          input: { plan: obj("scenario_state_plan result"), mask: bool("Mask sensitive fields across all dependencies", true) },
+          required: ["plan"],
+          run: async (a) => {
+            const r = await State().captureState(a.plan, { mask: a.mask !== false });
+            const id = State().save(r);
+            let view;
+            try {
+              view = require_results().saveView("json", r, { title: `Scenario state: ${r.service}` });
+            } catch {
+            }
+            return { capture: id, complete: r.complete, gaps: r.gaps, coverage: r.coverage, view };
+          }
+        },
+        {
+          name: "scenario_state_get",
+          description: "Inspect one captured read dependency separately, without running an action. Optional where filters row/document arrays, key selects a captured cache entry, request selects exactly one explicitly provided HTTP exchange. Never calls live systems.",
+          input: { capture: str("Saved scenario state id"), state: obj("Or inline captured state"), id: str("Dependency id"), where: obj("Exact/subset row filter"), key: str("Exact cache key"), request: obj("Request matched against provided exchanges [{request,response}]") },
+          required: ["id"],
+          run: (a) => State().getState(stateOf(a), a.id, a)
+        },
+        {
+          name: "scenario_actions",
+          description: "Bind concrete inputs to each selected passport action independently. Bindings map action id to payload: HTTP method/path/body, listener envelope, scheduled/event input. Values/types are caller-controlled and source hints are retained; absent bindings are gaps.",
+          input: { inventory: obj("scenario_inventory result"), bindings: obj("Action id -> payload") },
+          required: ["inventory"],
+          run: (a) => S().actions(a.inventory, { bindings: a.bindings })
+        },
+        {
+          name: "scenario_expectations",
+          description: 'Bind independent business assertions to every expected write/event/HTTP effect and action return/status. Bindings map expectation id to {match:{op:"exact|subset|count|forbidden|ordered",value:...},select?:{kind,target,action}}. Never invents business outcomes from a passport.',
+          input: { inventory: obj("scenario_inventory result"), bindings: obj("Expectation id -> independent predicate") },
+          required: ["inventory"],
+          run: (a) => S().expectations(a.inventory, { bindings: a.bindings })
+        },
+        {
+          name: "scenario_check",
+          description: "Check expected effects independently of execution. Observed is an id->value map or [{id?,kind,target,action?,value}] records. Fails missing required assertions/effects, ambiguous action matching, mismatches, forbidden effects and unexpected observations.",
+          input: { expectations: obj("scenario_expectations result"), observed: { description: "Observed value map or array of observation records" } },
+          required: ["expectations", "observed"],
+          run: (a) => S().check(a.expectations, a.observed)
+        },
+        {
+          name: "scenario_emulate",
+          description: "Emulate the complete bound passport contract using only captured local state. Sandboxed JS sees vars.actions and ONLY await tools.action_input({id}), tools.state_read({id,action?,where?,key?,request?}), tools.observe({id,value}). Every selected action, required dependency read and expected effect is checked; no live dt tools are exposed. This verifies an explicit local model; run real service tests with test_run for application proof.",
+          input: { inventory: obj("scenario_inventory result"), capture: str("Saved state id"), state: obj("Or inline captured state"), actions: obj("Bound scenario_actions result"), expectations: obj("Bound scenario_expectations result"), code: str("Local emulation program; independently implement the action behavior"), timeout_ms: { type: "integer", default: 3e4 } },
+          required: ["inventory", "actions", "expectations", "code"],
+          run: (a) => State().emulate({ ...a, state: stateOf(a), timeoutMs: a.timeout_ms })
+        },
+        {
+          name: "scenario_export",
+          description: "Export complete state, action and expectation contracts as separately hashed JSON test resources in [module/]src/test/resources/dt-fixtures/<name>. Arrange them with mocks/containers, apply actions to the actual service, and assert the independently bound effects. Use fixture_export too for replayable PG SQL/Kafka files.",
+          input: { workspace: str("Writable workspace id"), inventory: obj("Inventory"), capture: str("Saved state id"), state: obj("Or inline state"), actions: obj("Bound actions"), expectations: obj("Bound expectations"), name: str("Scenario name"), directory: str("Optional module resource directory"), overwrite: bool("Replace existing resources") },
+          required: ["workspace", "inventory", "actions", "expectations"],
+          run: (a) => State().exportScenario(a.workspace, { ...a, state: stateOf(a) }, a)
+        }
+      ];
+      return tools.map((t) => ({ ...t, group: "code" }));
+    };
+  }
+});
+
+// lib/tools-dev.js
+var require_tools_dev = __commonJS({
+  "lib/tools-dev.js"(exports2, module2) {
+    module2.exports = ({ str, int, env }) => {
+      const obj = (description) => ({ type: "object", additionalProperties: true, description });
+      const arr = (description) => ({ type: "array", items: { type: "object", additionalProperties: true }, description });
+      const bool = (description, def = false) => ({ type: "boolean", default: def, description });
+      const R = () => require_reproduction();
+      async function waitCapture(job) {
+        let done = job;
+        if (job.state === "running") {
+          let timer;
+          try {
+            done = await Promise.race([job.promise, new Promise((resolve) => {
+              timer = setTimeout(() => resolve(null), Math.min(5e4, require_config().getTests().waitMs));
+            })]);
+          } finally {
+            clearTimeout(timer);
+          }
+        }
+        if (!done) return { job: job.id, state: "running", log: job.log.slice(-3), next: "Call fixture_capture with job to wait for the result; progress is on /admin." };
+        return { job: done.id, state: done.state, ms: done.ms, ...done.error ? { error: done.error } : done.result };
+      }
+      return [
+        {
+          name: "fixture_schema",
+          group: "code",
+          description: "Inspect Kafka correlation paths independently from capture. Reads cached JSON Schema, Avro, flattened fields and samples, with evidence and types. An optional path is checked against the known shape; unknown schemas do not establish a missing path. Headers may have undeclared keys.",
+          input: { env, topic: str("Exact cached topic"), path: str("Optional value/key/headers path, including []") },
+          required: ["topic"],
+          run: (a) => {
+            const environment = a.env || require_config().envNames()[0], cached = require_kafka().cached(environment, a.topic);
+            if (!cached) throw new Error(`no cached topic ${a.topic}`);
+            const S = require_fixture_schema();
+            return { env: environment, topic: a.topic, paths: S.paths(cached), ...a.path ? { path: a.path, known: S.validatePath(cached, a.path) } : {} };
+          }
+        },
+        {
+          name: "fixture_plan",
+          group: "code",
+          description: "Offline plan for related test data across Postgres databases and Kafka. Reads cached schemas, FKs and usage indexes first. Seeds use explicit db/schema.table and equality filters. Follows schema FKs; cross-database joins are explicit relations. Returns candidates for review, never guesses them as facts. Inspect then pass the inputs to fixture_capture.",
+          input: { env, service: str("Service whose usage informs candidates"), seeds: arr('Roots: [{db, table:"sales.orders", where:{id:42}}]'), relations: arr('Cross-DB relationships: [{from:{db,table,columns:[...]},to:{db,table,columns:[...]},required:true,evidence:"file:line"}]'), topics: arr('Topics: [{topic,matches:[{path:"value.orderId",from:{db,table,column:"id"}}],match:"all|any",offsets:{partition:offset}}]'), limits: obj("depth, rowsPerTable, totalRows, messagesPerTopic, totalMessages, queries"), includeChildren: bool("Also follow reverse FKs (bounded); default only required parents") },
+          run: (a) => R().plan(a)
+        },
+        {
+          name: "fixture_capture",
+          group: "code",
+          description: "Capture one reproducible scenario with bounded, parameterized, read-only reads. Input is fixture_plan inputs or its returned plan. Captures every Kafka partition window, correlation matches, offsets and provenance. Masks sensitive values consistently by default. Returns capture id + interactive explorer; gaps/truncation prevent a claim of completeness. Never writes to the environment.",
+          input: { plan: obj("fixture_plan result or input"), mask: bool("Mask personal/secret fields consistently across PG and Kafka", true), job: str("Poll a running capture instead of starting another") },
+          run: async (a) => {
+            const J = require_jobs();
+            let job = a.job ? J.find(a.job) : null;
+            if (a.job && (!job || !job.key.startsWith("capture:"))) throw new Error("capture job not found");
+            if (!job) {
+              if (!a.plan) throw new Error("plan is required to start a capture");
+              const key = require("crypto").createHash("sha256").update(JSON.stringify([a.plan, a.mask !== false])).digest("hex");
+              job = J.start(`capture:${key}`, `fixture capture ${a.plan.env || ""}`, async (log) => {
+                const r = await R().capture(a.plan, { mask: a.mask !== false, log: (line) => {
+                  if (job.state !== "running") throw new Error("capture cancelled");
+                  log(line);
+                } });
+                const id = R().save(r);
+                let view, viewError;
+                try {
+                  view = require_results().saveView("reproduction", r, { title: "Reproduction capture" });
+                } catch (e) {
+                  viewError = e.message;
+                }
+                return { capture: id, counts: r.counts, complete: r.complete, gaps: r.gaps, view, ...viewError ? { viewError } : {} };
+              });
+            }
+            return waitCapture(job);
+          }
+        },
+        {
+          name: "fixture_validate",
+          group: "code",
+          description: "Inspect one saved fixture capture separately: recheck captured parent relationships and return all capture gaps, completeness and counts. Does not query the environment or write scratch databases; fixture_replay separately validates real SQL and constraints.",
+          input: { capture: str("Saved fixture capture id") },
+          required: ["capture"],
+          run: (a) => {
+            const capture = R().load(a.capture), validation = R().validate(capture), gaps = [...capture.gaps, ...validation.gaps];
+            return { capture: a.capture, ok: capture.complete && validation.ok && !gaps.length, counts: capture.counts, gaps };
+          }
+        },
+        {
+          name: "fixture_export",
+          group: "code",
+          description: "Save a capture into [module/]src/test/resources/dt-fixtures/<name>: per-DB schema/data/constraints SQL + JSON, Kafka JSONL/schema/offsets, hashed manifest and loading instructions. Existing fixtures are preserved unless overwrite=true. Generated resources can be committed with tests.",
+          input: { workspace: str("Writable workspace id"), capture: str("Capture id"), name: str("Scenario name"), directory: str("Optional resource directory (for a multi-module project)"), overwrite: bool("Replace this fixture if it exists") },
+          required: ["workspace", "capture"],
+          run: (a) => R().exportFixture(a.workspace, R().load(a.capture), a)
+        },
+        {
+          name: "fixture_replay",
+          group: "code",
+          description: "Verify fixture hashes and load its databases on the configured scratch Postgres, check real constraints, then drop all throwaway databases. No writes to configured environment databases. Kafka files are for the service test producer. For actual tests use test_run fixture_path.",
+          input: { workspace: str("Workspace id"), directory: str("Fixture resource directory"), allow_incomplete: bool("Replay despite reported capture gaps") },
+          required: ["workspace", "directory"],
+          run: async (a) => {
+            const replay = await R().replay(a.workspace, a.directory, { allowIncomplete: a.allow_incomplete });
+            try {
+              return { validated: true, databases: Object.keys(replay.databases), topics: replay.topics };
+            } finally {
+              await replay.cleanup();
+            }
+          }
+        },
+        {
+          name: "experiment_save",
+          group: "code",
+          description: "Save a repeatable read-only investigation with parameters, constrained JS, assertions and an explicit tool allowlist. Code supports await tools.pg_query(...), vars, test/expect/assert and return. No filesystem, subprocess, direct fetch, process or import capability. For trusted project investigations.",
+          input: { id: str("Experiment id"), description: str("Question or hypothesis"), code: str("Sandbox JavaScript"), defaults: obj("Default vars"), tools: { type: "array", items: { type: "string" }, description: "Explicit read-only tools, default [find]" } },
+          required: ["id", "code"],
+          run: (a) => require_experiments().save(a)
+        },
+        {
+          name: "experiment_run",
+          group: "code",
+          description: "Run a saved read-only experiment. Retains assertions, returned value, calls and timings for comparison; optionally exposes a masked fixture capture as vars.fixture.",
+          input: { id: str("Experiment id"), params: obj("Override vars"), capture: str("Optional fixture capture id"), timeout_ms: int("Time limit, at most 120000", 3e4) },
+          required: ["id"],
+          run: (a) => require_experiments().run(a.id, { ...a, timeoutMs: a.timeout_ms })
+        },
+        { name: "experiment_list", group: "code", description: "List saved investigation experiments; with id show its code, parameter defaults and retained run summaries.", input: { id: str("Optional experiment id") }, run: (a) => require_experiments().list(a.id) },
+        { name: "experiment_compare", group: "code", description: "Compare two retained experiment runs: assertion changes, returned-value diff, code identity and elapsed-time difference. Defaults to the latest two runs.", input: { id: str("Experiment id"), before: str("Earlier run id"), after: str("Later run id") }, required: ["id"], run: (a) => require_experiments().compare(a.id, a.before, a.after) },
+        ...require_tools_scenario()({ str, int, env })
       ];
     };
   }
@@ -35161,7 +37296,7 @@ var require_tools = __commonJS({
       {
         name: "pg_query",
         description: "Run read-only SQL. The database is chosen from the schema in the query (or pass db). Always use WHERE and LIMIT." + VIEW_NOTE,
-        input: { sql: str("SQL"), env, db: str("Database name from envs.json (optional)"), limit: int("Rows in the preview", PREVIEW), all: { type: "boolean", default: false, description: "Return every row (up to 10000) instead of a preview: for scripts that compare or process them" } },
+        input: { sql: str("SQL"), env, db: str("Database name from envs.json (optional)"), params: { type: "array", items: {}, description: "Bound values for $1, $2, ... placeholders (recommended for repeatable experiments)" }, limit: int("Rows in the preview", PREVIEW), all: { type: "boolean", default: false, description: "Return every row (up to 10000) instead of a preview: for scripts that compare or process them" } },
         required: ["sql"],
         limit: (a) => `pg:${a.env}`,
         run: async (a) => {
@@ -35171,7 +37306,7 @@ var require_tools = __commonJS({
             const missing = [...new Set(used)].filter((x) => !known[x] && !["pg_catalog", "information_schema"].includes(x));
             if (missing.length) throw new Error(`schema ${missing.join(", ")} is not in the ${a.env} catalog. Use find to get the exact schema.table (or catalog_sync if it is new).`);
           }
-          const r = await require_pg().query(a.env, a.sql, { db: a.db });
+          const r = await require_pg().query(a.env, a.sql, { db: a.db, params: a.params });
           return { db: r.db, route: r.route, ms: r.ms, ...tabular("pg", r.rows, { env: a.env, db: r.db, query: a.sql, ms: r.ms }, { preview: a.all ? 1e4 : Math.min(a.limit || PREVIEW, 200) }) };
         }
       },
@@ -35843,6 +37978,7 @@ var require_tools = __commonJS({
       t.group = t.group || GROUP[t.name] || "other";
       t.origin = "built-in";
     }
+    TOOLS.push(...require_tools_dev()({ str, int, env }).map((t) => ({ ...t, origin: "built-in" })));
     var ctx = { tabular, clip, getEnv: (e) => require_config().getEnv(e), pg: () => require_pg(), http: require_util().http, limit };
     var PARAM_TYPES = /* @__PURE__ */ new Set(["string", "integer", "number", "boolean"]);
     function paramsSchema(params = {}) {
@@ -36230,6 +38366,11 @@ var require_package2 = __commonJS({
         serve: "node cli.js serve",
         sync: "node cli.js sync",
         test: "node --test test/*.test.js",
+        "test:local": "node dev/test.js --local",
+        "test:live": "node dev/test.js --live",
+        "test:changed": "node dev/test.js --local --changed",
+        "test:files": "node dev/test.js --local --files",
+        "bench:dev": "node dev/benchmark.js",
         build: "node build.js",
         "build:check": "node build.js --check"
       },

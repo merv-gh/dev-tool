@@ -1,0 +1,18 @@
+[
+  {
+    "partition": 0,
+    "low": "100",
+    "from": "100",
+    "next": "101",
+    "highExclusive": "101",
+    "count": 1
+  },
+  {
+    "partition": 1,
+    "low": "200",
+    "from": "200",
+    "next": "201",
+    "highExclusive": "201",
+    "count": 1
+  }
+]

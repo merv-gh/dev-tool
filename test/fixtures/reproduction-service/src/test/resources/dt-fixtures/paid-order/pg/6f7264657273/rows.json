@@ -1,0 +1,21 @@
+{
+  "orders:sales.orders": [
+    {
+      "id": 42,
+      "tenant_id": 7,
+      "customer_id": 9,
+      "email": "u69b1145a03@example.invalid",
+      "tags": [
+        "paid",
+        "demo"
+      ]
+    }
+  ],
+  "orders:sales.customers": [
+    {
+      "tenant_id": 7,
+      "id": 9,
+      "email": "u69b1145a03@example.invalid"
+    }
+  ]
+}

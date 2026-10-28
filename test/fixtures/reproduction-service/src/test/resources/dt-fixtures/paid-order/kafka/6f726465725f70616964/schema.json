@@ -1,0 +1,20 @@
+{
+  "value": {
+    "type": "JSON",
+    "version": 1,
+    "schema": {
+      "type": "object",
+      "properties": {
+        "orderId": {
+          "type": "integer"
+        },
+        "email": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "orderId"
+      ]
+    }
+  }
+}

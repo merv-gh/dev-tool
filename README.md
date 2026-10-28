@@ -6,6 +6,8 @@ Read-only tools that let an AI agent (or you) investigate a microservice environ
 - **Service passports.** Static analysis of a Spring service's repo and its internal libraries: HTTP endpoints, Feign and HTTP calls, Kafka in/out, tables and functions used, datasources, dependencies.
 - **Live tools.** Read-only SQL, ES search, the last Kafka messages, health of all services in one call, consumer lag, ELK log search and traces, Bitbucket PRs, Confluence. A headless browser and a code graph are optional.
 - **Results you can use.** Tables, dashboards, logs, diffs and passports render as pages; in Open WebUI they appear inside the chat.
+- **Reproducible investigations.** Capture related PostgreSQL rows across databases and matching Kafka events, inspect their relationships, and save replayable resources with tests. Run saved sandbox experiments with assertions and compare results ([guide](docs/reproduction.md)).
+- **Passport scenarios.** Inspect and bind read state, action inputs and expected effects independently; emulate the bound contract and export the pieces as hashed test resources. Unknown dependencies remain explicit gaps ([guide](docs/scenario-testing.md)).
 - **`/admin`.** Watch what is indexed, refresh all or one source, browse objects and their usages, edit config and notes.
 
 It plugs into **Open WebUI** (bundled, or one you already run) or any **MCP client** (Claude Code, Cursor, ...), and runs as a single Node process with one dependency.
@@ -64,6 +66,8 @@ DT_HOME=~/dt node dist/dt.js sync      # index the first env (Node 22+, nothing 
 DT_HOME=~/dt node dist/dt.js serve     # http://127.0.0.1:4000 (add --lan to listen on all interfaces)
 ```
 From the sources instead: `npm ci`, then `node cli.js …`. After changing them, `npm run build` rebuilds `dist/` (a test fails while it is stale).
+
+The development loop has `npm run test:local`, `npm run test:changed -- --list`, targeted `npm run test:files -- lib/fastrun.js`, and `npm run bench:dev`. Final verification stays `npm run build && npm test`. See the [performance plan and measurements](docs/dev-performance-plan.md), or run `node demo/reproduction.js` for an isolated related-data example.
 
 ## Plug it in
 
