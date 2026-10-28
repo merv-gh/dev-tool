@@ -1,0 +1,11 @@
+{
+  "case": "C01",
+  "stage": "independent submitted-test execution before source fix, recorded in author tool transcript",
+  "runner": "node --test test/regression.test.cjs",
+  "tests": 2,
+  "passed": 0,
+  "failed": 2,
+  "skipped": 0,
+  "publicFailure": "gross cents actual357 expected356",
+  "note": "Full console output retained in task tool transcript; no reconstructed baseline is represented as an original log."
+}

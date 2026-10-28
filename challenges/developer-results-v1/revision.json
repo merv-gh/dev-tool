@@ -1,10 +1,17 @@
 {
   "version": 1,
-  "sha256": "5fe46c6fc609145ebf99fa96dccb269ffea84d5937c8c0be0ef1a71f8a3f8001",
+  "sha256": "c3879c9b985eca4eca75e5a80d4b997dfd7eff3e889c5cee7764b19212f75cea",
   "files": {
     "README.md": "2202cf089d0adc6960e04b5f3498905e93086c27cdb222db77e1cd430808a9b7",
     "artifacts.json": "d0bba0dc2be86694aa64a77b19174767f2a053a9c372ce3eab002fe387ad5d2a",
+    "baselines/C01.json": "95b2ed3d104e25a7bc599971c3e986275783dec624554b14c942bc0b30ccf07a",
+    "baselines/C02.json": "dee0644390128f7c8edbc1af0096c4f9157135ed69ced5604fdac7a3d01e80e8",
+    "baselines/C03.json": "0bed0d4668bd2b6f983c9bd9f3f0ab40eabf59eda838c5b6e9f7f0534eca8944",
+    "baselines/C04.json": "9e5e1d4c336852c448abfe300f2608508975853f7d80ad23e321ede9347a5861",
+    "baselines/C05.json": "f92133ac3c02071d429963c66dab90c49460bf057799ee77d2851e5a01745a44",
+    "baselines/C06.tap": "e54974e027a5d84b57388c1461db59cbc88731fa07f0e52d3c4c67d833c80ce3",
+    "baselines/C07.json": "9edd63fc0f836d2b8731bec91926cb04734cd82b902f5348509049b29267c227",
     "observations.json": "7e7bd1e6031a5db7c3176333cf05716512f4f4804fe49ed037a864590323351e",
-    "summary.json": "aa328f19de6e91ab56a392a31b4a82c33cef14758cb5244508151c73ccca9aff"
+    "summary.json": "5353931ff0c3169ff75eb945ff1006d6b9dee27dbf2aa9b8cd84ecda0ec781bb"
   }
 }

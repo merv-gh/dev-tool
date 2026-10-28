@@ -283,5 +283,11 @@
     "One existing author smoke placeholder is skipped per Node case; all submitted regression tests execute.",
     "C06 establishes tenant/state behavior in two databases, not distributed atomic commit under network failure.",
     "No live Elasticsearch or Kafka broker is configured for supplementary state recreation."
-  ]
+  ],
+  "freezeProvenance": {
+    "publicPack": "Frozen and hashed before solver handoff",
+    "businessOracle": "Frozen and hashed before solver handoff; unchanged in dev/challenge-oracle-v1.json",
+    "graderImplementation": "Completed during solver work and published only after all8 initial submissions froze",
+    "qualification": "Independent authored experiment with precommitted business requirements; not a fully sealed benchmark with grader code frozen before solving"
+  }
 }

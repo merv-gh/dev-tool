@@ -1,0 +1,186 @@
+TAP version 13
+# Subtest: own credit releases selected tenant despite blocked neighbor; retry has no writes
+not ok 1 - own credit releases selected tenant despite blocked neighbor; retry has no writes
+  ---
+  duration_ms: 1143.976987
+  type: 'test'
+  location: '<solver-workspace>/test/regression.test.cjs:9:1'
+  failureType: 'testCodeFailure'
+  error: 'credit unavailable'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    <solver-workspace>/src/release.cjs:8:68
+    process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    async scope (<solver-tool-root>/node_modules/postgres/cjs/src/index.js:260:18)
+    async sql.begin (<solver-tool-root>/node_modules/postgres/cjs/src/index.js:243:14)
+    async scope (<solver-tool-root>/node_modules/postgres/cjs/src/index.js:260:18)
+    async sql.begin (<solver-tool-root>/node_modules/postgres/cjs/src/index.js:243:14)
+    async assertOnlySelectedReleased (<solver-workspace>/test/regression.test.cjs:8:261)
+    async withCaseDatabases (<author-tool-root>/challenges/developer-support-v1.1/pg-case.cjs:28:10)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+  ...
+# Subtest: approved neighbor cannot be captured by another tenant release
+not ok 2 - approved neighbor cannot be captured by another tenant release
+  ---
+  duration_ms: 907.822497
+  type: 'test'
+  location: '<solver-workspace>/test/regression.test.cjs:10:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+    
+      {
+        accounts: [
+          {
+            enabled: true,
+            id: '7',
+    ...
+            order_id: '420',
+    +       status: 'CAPTURED',
+    -       status: 'PENDING',
+            tenant_id: '11'
+          },
+          {
+            amount: '100.000001',
+            order_id: '420',
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    orders:
+      0:
+        tenant_id: '11'
+        id: '420'
+        account_id: '7'
+        status: 'PAID'
+        amount: '17.000001'
+      1:
+        tenant_id: '22'
+        id: '420'
+        account_id: '7'
+        status: 'RELEASED'
+        amount: '100.000001'
+    accounts:
+      0:
+        tenant_id: '11'
+        id: '7'
+        enabled: true
+      1:
+        tenant_id: '22'
+        id: '7'
+        enabled: true
+    risk:
+      0:
+        tenant_id: '11'
+        id: '7'
+        status: 'APPROVED'
+        credit_limit: '1000.000000'
+      1:
+        tenant_id: '22'
+        id: '7'
+        status: 'APPROVED'
+        credit_limit: '150.000001'
+    payments:
+      0:
+        tenant_id: '11'
+        order_id: '420'
+        status: 'PENDING'
+        amount: '17.000001'
+      1:
+        tenant_id: '22'
+        order_id: '420'
+        status: 'CAPTURED'
+        amount: '100.000001'
+  actual:
+    orders:
+      0:
+        tenant_id: '11'
+        id: '420'
+        account_id: '7'
+        status: 'PAID'
+        amount: '17.000001'
+      1:
+        tenant_id: '22'
+        id: '420'
+        account_id: '7'
+        status: 'RELEASED'
+        amount: '100.000001'
+    accounts:
+      0:
+        tenant_id: '11'
+        id: '7'
+        enabled: true
+      1:
+        tenant_id: '22'
+        id: '7'
+        enabled: true
+    risk:
+      0:
+        tenant_id: '11'
+        id: '7'
+        status: 'APPROVED'
+        credit_limit: '1000.000000'
+      1:
+        tenant_id: '22'
+        id: '7'
+        status: 'APPROVED'
+        credit_limit: '150.000001'
+    payments:
+      0:
+        tenant_id: '11'
+        order_id: '420'
+        status: 'CAPTURED'
+        amount: '17.000001'
+      1:
+        tenant_id: '22'
+        order_id: '420'
+        status: 'CAPTURED'
+        amount: '100.000001'
+  operator: 'deepStrictEqual'
+  stack: |-
+    assertOnlySelectedReleased (<solver-workspace>/test/regression.test.cjs:8:366)
+    process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    async <solver-workspace>/test/regression.test.cjs:10:181
+    async withCaseDatabases (<author-tool-root>/challenges/developer-support-v1.1/pg-case.cjs:28:10)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# Subtest: exact credit boundary succeeds without changing decimal amounts
+not ok 3 - exact credit boundary succeeds without changing decimal amounts
+  ---
+  duration_ms: 799.614459
+  type: 'test'
+  location: '<solver-workspace>/test/regression.test.cjs:11:1'
+  failureType: 'testCodeFailure'
+  error: 'credit unavailable'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    <solver-workspace>/src/release.cjs:8:68
+    process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    async scope (<solver-tool-root>/node_modules/postgres/cjs/src/index.js:260:18)
+    async sql.begin (<solver-tool-root>/node_modules/postgres/cjs/src/index.js:243:14)
+    async scope (<solver-tool-root>/node_modules/postgres/cjs/src/index.js:260:18)
+    async sql.begin (<solver-tool-root>/node_modules/postgres/cjs/src/index.js:243:14)
+    async assertOnlySelectedReleased (<solver-workspace>/test/regression.test.cjs:8:261)
+    async <solver-workspace>/test/regression.test.cjs:11:188
+    async withCaseDatabases (<author-tool-root>/challenges/developer-support-v1.1/pg-case.cjs:28:10)
+    async Test.run (node:internal/test_runner/test:1409:7)
+  ...
+# Subtest: every business rejection preserves all four tables in both databases
+ok 4 - every business rejection preserves all four tables in both databases
+  ---
+  duration_ms: 10164.792694
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 1
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 13277.606366

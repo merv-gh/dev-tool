@@ -1,0 +1,9 @@
+{
+  "case": "C03",
+  "stage": "final unchanged submitted tests re-executed against original library source after candidate freeze; tool-run baseline also recorded by independent solver",
+  "runner": "independent real Maven/JUnit",
+  "tests": 2,
+  "passed": 0,
+  "failed": 2,
+  "skipped": 0
+}

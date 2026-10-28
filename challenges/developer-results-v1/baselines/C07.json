@@ -1,0 +1,7 @@
+{
+  "case": "C07",
+  "stage": "submitted tests executed before source fix",
+  "exitCode": 1,
+  "runner": "independent node:test",
+  "tap": "TAP version 13\n# Subtest: cancellation thresholds and odd cents follow the contract\nnot ok 1 - cancellation thresholds and odd cents follow the contract\n  ---\n  duration_ms: 2.404685\n  type: 'test'\n  location: '<solver-workspace>/test/regression.test.cjs:4:1'\n  failureType: 'testCodeFailure'\n  error: 'cancellation quotation is not implemented'\n  code: 'ERR_TEST_FAILURE'\n  stack: |-\n    exports.quoteCancellation (<solver-workspace>/src/cancellation.cjs:2:9)\n    TestContext.<anonymous> (<solver-workspace>/test/regression.test.cjs:6:101)\n    Test.runInAsyncScope (node:async_hooks:227:14)\n    Test.run (node:internal/test_runner/test:1402:25)\n    Test.start (node:internal/test_runner/test:1262:17)\n    startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17)\n  ...\n# Subtest: invalid inputs fail without changing booking\nok 2 - invalid inputs fail without changing booking\n  ---\n  duration_ms: 3.80627\n  type: 'test'\n  ...\n1..2\n# tests 2\n# suites 0\n# pass 1\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 401.829641\n"
+}
