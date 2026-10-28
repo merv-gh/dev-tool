@@ -86,3 +86,15 @@ test('configured file reads reject symlinks and oversized sources before replaci
   assert.throws(() => K.inputs({ path: 'sources/large.json' }), /budget/);
   assert.throws(() => K.sync('../escape'), /Unknown/);
 });
+test('knowledge retains canonical scoped aliases, separates PG overloads and excludes another environment passport', () => {
+  put('passports/stage-only/passport.json', { service: 'stage-only', env: 'staging', repo: { project: 'K', repo: 'stage', sha: 'staging-sha' }, summary: {}, effective: { endpoints: [{ method: 'GET', path: '/stage' }] } });
+  put('passports/unbound/passport.json', { service: 'unbound', repo: { project: 'K', repo: 'unbound', sha: 'unknown-deployment' }, summary: {}, effective: {} });
+  put('cache/dev/pg/commerce.json', { db: 'commerce', syncedAt: '2026-10-29', tables: [{ schema: 'public', name: 'orders', columns: [] }, { schema: 'public', name: 'Orders', columns: [] }], functions: [{ schema: 'public', name: 'lookup', arguments: 'integer' }, { schema: 'public', name: 'lookup', arguments: 'text' }] });
+  const g = K.graph('dev');
+  assert.ok(!g.nodes.some(n => n.id === 'service:stage-only'));
+  assert.ok(g.gaps.some(g => g.kind === 'passport-environment-unknown' && g.service === 'unbound'));
+  const ordinary = K.query({ env: 'dev', entity: 'table:dev:commerce:public.orders', hops: 0 });
+  assert.equal(ordinary.nodes.length, 1); assert.equal(ordinary.nodes[0].id, 'table:commerce:public.orders');
+  assert.equal(g.nodes.find(n => n.id === 'table:commerce:public.Orders').canonicalId, 'table:dev:commerce:public."Orders"');
+  assert.equal(K.query({ env: 'dev', entity: 'function:commerce:public.lookup', hops: 0 }).candidates.length, 2);
+});
