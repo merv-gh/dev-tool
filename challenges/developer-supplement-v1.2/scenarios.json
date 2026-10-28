@@ -1,0 +1,156 @@
+[
+  {
+    "id": "S01",
+    "prompt": "find all places across functions and repositories, where this column gets read and gets written",
+    "setup": {
+      "column": "sales.orders.amount",
+      "env": "fixture",
+      "database": "orders",
+      "sources": [
+        "source.sql",
+        "src/main/java/com/lumen/orders/OrderProjectionService.java"
+      ]
+    },
+    "task": "Inventory evidenced read and write usage of sales.orders.amount. Include PostgreSQL functions, trigger functions, views and source repositories. Report direct/indirect usage and unresolved dynamic SQL separately; every claimed result needs object or repository/file/line evidence.",
+    "tools": [
+      "find",
+      "pg_table",
+      "pg_function",
+      "pg_usage",
+      "code_search",
+      "impact"
+    ],
+    "proof": [
+      "Column filter, not table-only mentions",
+      "Function SELECT and UPDATE distinction",
+      "Trigger NEW/OLD field evidence and view dependency evidence",
+      "Repository SQL and source line evidence",
+      "Explicit uncertainty for dynamic SQL or unindexed repositories"
+    ],
+    "knownGaps": [
+      "Table-level dependency analysis may not prove individual columns",
+      "Static repository graphs cannot guarantee all dynamically assembled SQL"
+    ]
+  },
+  {
+    "id": "S02",
+    "prompt": "recreate bug locally - find all related entities in databases,es,kafka messages to recreate state that would recreate bug",
+    "setup": {
+      "seed": {
+        "db": "orders",
+        "table": "sales.orders",
+        "where": {
+          "tenant_id": "22",
+          "id": "420"
+        }
+      },
+      "env": "fixture",
+      "databaseFixtures": "frozen developer-v1/C06/fixture.json",
+      "elasticsearch": "es/orders-read-model.json",
+      "kafka": "kafka/orders.paid.jsonl"
+    },
+    "task": "Build a bounded incident fixture for tenant22/order420 across orders and billing DBs, the search read model and paid events. Explain relation evidence, capture windows and any missing part. Preserve tenant and decimal identifiers. Export only sources actually captured by available tools and execute the reproduction against real local resources where supported.",
+    "tools": [
+      "fixture_schema",
+      "fixture_plan",
+      "fixture_capture",
+      "fixture_validate",
+      "fixture_export",
+      "fixture_replay",
+      "es_search",
+      "kafka_topic",
+      "kafka_last"
+    ],
+    "proof": [
+      "Real SELECT-only database source reads",
+      "Explicit tenant-qualified cross-database relations",
+      "Captured Kafka topic/partition/offset evidence",
+      "ES mapping/document provenance and freshness stated",
+      "Actual replay output plus omitted/unsupported resources"
+    ],
+    "knownGaps": [
+      "Public local ES/Kafka records are saved evidence, not live engine/broker proof",
+      "Existing fixture replay may not restore ES documents",
+      "A bounded fixture cannot prove discovery of every related entity"
+    ]
+  },
+  {
+    "id": "S03",
+    "prompt": "refactor method that takes postgres function results, but fills some fields from other functions, check it still same locally and on dev environment",
+    "setup": {
+      "env": "fixture",
+      "database": "orders",
+      "functions": [
+        "sales.order_projection(bigint,bigint)",
+        "sales.account_label(bigint,bigint)",
+        "sales.release_label(bigint,bigint)"
+      ],
+      "consumer": "src/main/java/com/lumen/orders/OrderProjectionService.java",
+      "inputs": [
+        {
+          "tenant": "11",
+          "orderId": "420"
+        },
+        {
+          "tenant": "22",
+          "orderId": "420"
+        },
+        {
+          "tenant": "22",
+          "orderId": "999"
+        }
+      ]
+    },
+    "task": "Refactor OrderProjectionService.load without changing its enrichment behavior. Establish pre-change observations from the read-only source and a replay fixture, then compare candidate local output over the same inputs. A dev comparison must identify the actual target process/deployment and credentials; source-env capture alone is not remote test execution. Do not invent writes or deploy without authorization.",
+    "tools": [
+      "code_read",
+      "pg_function",
+      "pg_query",
+      "pg_usage",
+      "fixture_capture",
+      "fixture_export",
+      "test_context",
+      "test_run",
+      "workspace_patch"
+    ],
+    "proof": [
+      "Same tenant/order passed to every enrichment function",
+      "Missing projection and nullable label behavior preserved",
+      "Exact decimal strings preserved",
+      "Before/after actual output comparison locally",
+      "Separate evidence/gap for a genuinely remote dev process"
+    ],
+    "knownGaps": [
+      "test_run env may select DDL/fixture sources rather than a remote build/test target",
+      "No automatic safe differential executor against arbitrary remote deployments"
+    ]
+  },
+  {
+    "id": "S04",
+    "prompt": "run this test on dev environment",
+    "setup": {
+      "test": "OrderProjectionContractTest",
+      "repository": "the submitted Java workspace",
+      "requestedEnvironment": "dev",
+      "sourceEnvironmentAvailable": "fixture"
+    },
+    "task": "Resolve what execution target exists, then attempt the requested test using the existing tools. Report the real build host/runner, source fixture env and database bindings separately. If dev is not a configured execution target, report that exact gap and the closest test that actually ran; do not label a local JVM test against captured dev data as a remote dev run.",
+    "tools": [
+      "doctor",
+      "test_context",
+      "test_run",
+      "testdb_resources"
+    ],
+    "proof": [
+      "Exact test selector and executed count",
+      "Actual local or configured remote runner identity",
+      "Explicit test database binding provenance",
+      "No production/source database writes",
+      "Unsupported target is an honest partial/gap result"
+    ],
+    "knownGaps": [
+      "A data-source env argument does not establish execution on that environment",
+      "No arbitrary deploy-and-run or remote shell capability may be assumed"
+    ]
+  }
+]

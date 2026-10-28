@@ -1,0 +1,17 @@
+{
+  "orders": [
+    "create schema sales",
+    "create table sales.accounts(tenant_id bigint,id bigint,enabled boolean not null,primary key(tenant_id,id))",
+    "create table sales.orders(tenant_id bigint,id bigint,account_id bigint,status text,amount numeric(20,6),primary key(tenant_id,id),foreign key(tenant_id,account_id) references sales.accounts(tenant_id,id))",
+    "insert into sales.accounts values(11,7,true),(22,7,true)",
+    "insert into sales.orders values(11,420,7,'PAID',17.000001),(22,420,7,'PAID',100.000001)"
+  ],
+  "billing": [
+    "create schema risk",
+    "create schema pay",
+    "create table risk.accounts(tenant_id bigint,id bigint,status text,credit_limit numeric(20,6),primary key(tenant_id,id))",
+    "create table pay.payments(tenant_id bigint,order_id bigint,status text,amount numeric(20,6),primary key(tenant_id,order_id))",
+    "insert into risk.accounts values(11,7,'BLOCKED',1000),(22,7,'APPROVED',150.000001)",
+    "insert into pay.payments values(11,420,'PENDING',17.000001),(22,420,'PENDING',100.000001)"
+  ]
+}

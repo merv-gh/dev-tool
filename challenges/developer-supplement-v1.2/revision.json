@@ -1,0 +1,14 @@
+{
+  "version": "1.2",
+  "extends": "developer-v1",
+  "sha256": "9dcf58669f5ca130e76bc0182073a8c6ea6ce25485898050b6afd0c025d2fcba",
+  "files": {
+    "README.md": "fd2321c601ebc2915de387bc6c0e559265e22c0ae81e6dbcaa52c6d74ebeb474",
+    "es/orders-read-model.json": "fb95d475bf5df529a58fc8b75652495e1389b4cb263a37161752fea3cce4bf33",
+    "kafka/orders.paid.jsonl": "a20904a0e4db98fe9350cbf37a85e06035001ff3360fb1744e3d3f33ca5567a6",
+    "provision.cjs": "f7f2e76a080deae10e174010f660f9f87bca4fe4a5d538009ded1d3b7d2e89da",
+    "scenarios.json": "251d7a17087aec7fb44dec0fa440a6f102b0c5ca61c331b555a5e462be7cc186",
+    "source.sql": "2ad453095a8bfbebe3d32fc422679a814c8d1ef05dcab42fd4d84c3c1bc42711",
+    "src/main/java/com/lumen/orders/OrderProjectionService.java": "85cb749976f97ed774d4d6a2462c68dcdeb953f3b2bb00722138ff6607c1f171"
+  }
+}

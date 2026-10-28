@@ -1,0 +1,30 @@
+{
+  "index": "orders-read-model",
+  "provenance": "saved synthetic public incident evidence; not a live ES capture",
+  "mapping": {
+    "tenantId": "keyword",
+    "orderId": "keyword",
+    "status": "keyword",
+    "amount": "keyword"
+  },
+  "documents": [
+    {
+      "_id": "22:420",
+      "_source": {
+        "tenantId": "22",
+        "orderId": "420",
+        "status": "PAID",
+        "amount": "100.000001"
+      }
+    },
+    {
+      "_id": "11:420",
+      "_source": {
+        "tenantId": "11",
+        "orderId": "420",
+        "status": "PAID",
+        "amount": "17.000001"
+      }
+    }
+  ]
+}

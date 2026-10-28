@@ -1,0 +1,221 @@
+[
+  {
+    "case": "C01",
+    "baseline": {
+      "case": "C01",
+      "observed": 357
+    },
+    "candidate": {
+      "case": "C01",
+      "observed": 356
+    }
+  },
+  {
+    "case": "C02",
+    "baseline": {
+      "case": "C02",
+      "observed": {
+        "orderId": "ord-42",
+        "amountCents": 12,
+        "currency": "EUR",
+        "status": "RESERVED"
+      }
+    },
+    "candidate": {
+      "case": "C02",
+      "observed": {
+        "orderId": "ord-42",
+        "amountCents": 1250,
+        "currency": "EUR",
+        "status": "RESERVED"
+      }
+    }
+  },
+  {
+    "case": "C03",
+    "baseline": {
+      "case": "C03",
+      "observed": "101"
+    },
+    "candidate": {
+      "case": "C03",
+      "observed": "1005"
+    }
+  },
+  {
+    "case": "C04",
+    "baseline": {
+      "case": "C04",
+      "observed": {
+        "reserved": false
+      }
+    },
+    "candidate": {
+      "case": "C04",
+      "observed": {
+        "reserved": true
+      }
+    }
+  },
+  {
+    "case": "C05",
+    "baseline": {
+      "case": "C05",
+      "observed": {
+        "results": [
+          {
+            "applied": true,
+            "key": "11:9007199254740992"
+          },
+          {
+            "applied": false,
+            "key": "11:9007199254740992"
+          }
+        ],
+        "state": {
+          "seen": [
+            "11:9007199254740992"
+          ]
+        }
+      }
+    },
+    "candidate": {
+      "case": "C05",
+      "observed": {
+        "results": [
+          {
+            "applied": true,
+            "key": "11:9007199254740992"
+          },
+          {
+            "applied": true,
+            "key": "11:9007199254740993"
+          }
+        ],
+        "state": {
+          "seen": [
+            "11:9007199254740992",
+            "11:9007199254740993"
+          ]
+        }
+      }
+    }
+  },
+  {
+    "case": "C06",
+    "baseline": {
+      "case": "C06",
+      "observed": {
+        "result": {
+          "error": "credit unavailable"
+        },
+        "orders": [
+          {
+            "tenant_id": "11",
+            "id": "420",
+            "account_id": "7",
+            "status": "PAID",
+            "amount": "17.000001"
+          },
+          {
+            "tenant_id": "22",
+            "id": "420",
+            "account_id": "7",
+            "status": "PAID",
+            "amount": "100.000001"
+          }
+        ],
+        "payments": [
+          {
+            "tenant_id": "11",
+            "order_id": "420",
+            "status": "PENDING",
+            "amount": "17.000001"
+          },
+          {
+            "tenant_id": "22",
+            "order_id": "420",
+            "status": "PENDING",
+            "amount": "100.000001"
+          }
+        ]
+      }
+    },
+    "candidate": {
+      "case": "C06",
+      "observed": {
+        "result": {
+          "tenantId": "22",
+          "orderId": "420",
+          "amount": "100.000001",
+          "status": "RELEASED"
+        },
+        "orders": [
+          {
+            "tenant_id": "11",
+            "id": "420",
+            "account_id": "7",
+            "status": "PAID",
+            "amount": "17.000001"
+          },
+          {
+            "tenant_id": "22",
+            "id": "420",
+            "account_id": "7",
+            "status": "RELEASED",
+            "amount": "100.000001"
+          }
+        ],
+        "payments": [
+          {
+            "tenant_id": "11",
+            "order_id": "420",
+            "status": "PENDING",
+            "amount": "17.000001"
+          },
+          {
+            "tenant_id": "22",
+            "order_id": "420",
+            "status": "CAPTURED",
+            "amount": "100.000001"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "case": "C07",
+    "baseline": {
+      "case": "C07",
+      "error": "cancellation quotation is not implemented"
+    },
+    "candidate": {
+      "case": "C07",
+      "observed": {
+        "refundCents": 500,
+        "retainedCents": 501
+      }
+    }
+  },
+  {
+    "case": "C08",
+    "baseline": {
+      "case": "C08",
+      "observed": {
+        "stock": 2,
+        "seen": [
+          "[\"sku-a\",\"ev-1\"]"
+        ]
+      }
+    },
+    "candidate": {
+      "case": "C08",
+      "observed": {
+        "stock": 2,
+        "seen": [
+          "[\"sku-a\",\"ev-1\"]"
+        ]
+      }
+    }
+  }
+]

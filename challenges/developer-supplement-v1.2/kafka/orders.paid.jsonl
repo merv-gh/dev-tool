@@ -1,0 +1,2 @@
+{"topic": "orders.paid", "partition": 0, "offset": "100", "key": {"tenantId": "11", "orderId": "420"}, "value": {"tenantId": "11", "orderId": "420", "type": "PAID", "amount": "17.000001"}}
+{"topic": "orders.paid", "partition": 0, "offset": "101", "key": {"tenantId": "22", "orderId": "420"}, "value": {"tenantId": "22", "orderId": "420", "type": "PAID", "amount": "100.000001"}}

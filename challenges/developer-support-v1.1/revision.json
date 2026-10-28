@@ -1,0 +1,11 @@
+{
+  "version": "v1.1",
+  "sha256": "8cc2b73f3fd37be3b432f47d57ff774234e562b174fe0e76bc5e618e75abfd6d",
+  "files": {
+    "ERRATA.md": "54f3b9f7485c524fb66bd9d9595e2db81c200590bea18a222ac33b8d469a2cb6",
+    "c03-build.cjs": "0ad6892907be6895a69f321039394ef908a2aa7d72e53fe1f84ffb94cda438aa",
+    "c06-source.cjs": "75c908b5ad3515d4b05edc12805f29164f3e02a52603074ee04c3e7b194a1c6c",
+    "git-routing.cjs": "cfee67579881f7657b0a6b9db0fba0f4724dbafa296e930c37fb7c470af26b68",
+    "pg-case.cjs": "3d316132e66dbf3a44e8ad98a77de80697391f0356c9fdb6b2daf356ecfc67bd"
+  }
+}

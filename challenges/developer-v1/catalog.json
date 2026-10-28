@@ -1,0 +1,363 @@
+[
+  {
+    "id": "W01",
+    "task": "Invoice total differs by a cent",
+    "case": "C01",
+    "complexity": "small",
+    "tools": [
+      "code_search",
+      "code_read",
+      "workspace_open",
+      "workspace_write",
+      "workspace_patch"
+    ],
+    "proof": "Reproduce invoice output; regression tests cover quantity, VAT and input validation.",
+    "risk": "rounding",
+    "status": "executable"
+  },
+  {
+    "id": "W02",
+    "task": "One checkout amount changes across service boundary",
+    "case": "C02",
+    "complexity": "medium",
+    "tools": [
+      "code_search",
+      "code_read",
+      "api_routes",
+      "workspace_patch"
+    ],
+    "proof": "Record outgoing request and downstream accepted cents; malformed totals never call downstream.",
+    "risk": "contract units",
+    "status": "executable"
+  },
+  {
+    "id": "W03",
+    "task": "Library-owned currency behavior differs from service invoice",
+    "case": "C03",
+    "complexity": "medium",
+    "tools": [
+      "bitbucket_repos",
+      "repo_fetch",
+      "passport",
+      "code_symbols",
+      "impact",
+      "workspace_open"
+    ],
+    "proof": "Resolve exact artifact/version to source module; execute compiled service with patched actual library.",
+    "risk": "dependency resolution",
+    "status": "executable"
+  },
+  {
+    "id": "W04",
+    "task": "Only production reservations expire",
+    "case": "C04",
+    "complexity": "small",
+    "tools": [
+      "code_search",
+      "consul_service",
+      "logs_search",
+      "workspace_patch"
+    ],
+    "proof": "Compare deployed config and duration parsing; regressions exercise both profiles.",
+    "risk": "configuration drift",
+    "status": "executable"
+  },
+  {
+    "id": "W05",
+    "task": "Replay loses one large order identifier",
+    "case": "C05",
+    "complexity": "medium",
+    "tools": [
+      "kafka_topic",
+      "kafka_last",
+      "code_search",
+      "test_data"
+    ],
+    "proof": "Distinct large IDs and tenants each process once; invalid identity leaves state untouched.",
+    "risk": "precision",
+    "status": "executable"
+  },
+  {
+    "id": "W06",
+    "task": "Tenant release depends on unrelated tenant rows",
+    "case": "C06",
+    "complexity": "large",
+    "tools": [
+      "find",
+      "pg_usage",
+      "pg_query",
+      "fixture_plan",
+      "fixture_capture",
+      "fixture_validate",
+      "fixture_export",
+      "testdb_create",
+      "workspace_patch"
+    ],
+    "proof": "Two real database snapshots plus successful/denied multi-state runs; no cross-tenant writes.",
+    "risk": "isolation",
+    "status": "executable"
+  },
+  {
+    "id": "W07",
+    "task": "Implement cancellation business rules and tests",
+    "case": "C07",
+    "complexity": "medium",
+    "tools": [
+      "code_search",
+      "test_context",
+      "workspace_write",
+      "test_run",
+      "workspace_patch"
+    ],
+    "proof": "Boundary/invalid-input tests execute function and preserve booking; report runner support accurately.",
+    "risk": "boundary conditions",
+    "status": "executable"
+  },
+  {
+    "id": "W08",
+    "task": "Write inventory replay tests before refactoring",
+    "case": "C08",
+    "complexity": "large",
+    "tools": [
+      "code_read",
+      "test_context",
+      "workspace_write",
+      "workspace_patch"
+    ],
+    "proof": "Tests pass unchanged production and kill independent identity/arithmetic/atomicity mutations.",
+    "risk": "weak assertions",
+    "status": "executable"
+  },
+  {
+    "id": "W09",
+    "task": "Scheduled reconciliation missed a settled order",
+    "case": null,
+    "complexity": "medium",
+    "tools": [
+      "passport",
+      "code_symbols",
+      "impact",
+      "test_context",
+      "test_run"
+    ],
+    "proof": "Invoke real scheduled entry on controlled edge mocks; exact paid row changes and unpaid row stays.",
+    "risk": "scheduler wiring",
+    "status": "catalog-workflow"
+  },
+  {
+    "id": "W10",
+    "task": "Endpoint defined in an internal web starter",
+    "case": null,
+    "complexity": "large",
+    "tools": [
+      "passport",
+      "repo_fetch",
+      "code_search",
+      "impact",
+      "test_context"
+    ],
+    "proof": "Dependency version/source provenance and library-to-service dispatch executed under JUnit.",
+    "risk": "hidden entry point",
+    "status": "catalog-workflow"
+  },
+  {
+    "id": "W11",
+    "task": "Shared publisher change might break other services",
+    "case": null,
+    "complexity": "large",
+    "tools": [
+      "who_uses",
+      "impact",
+      "code_search",
+      "passport"
+    ],
+    "proof": "List concrete consumers/reachable endpoints and tests for affected topic contract.",
+    "risk": "blast radius",
+    "status": "catalog-workflow"
+  },
+  {
+    "id": "W12",
+    "task": "Database function change has unknown callers",
+    "case": null,
+    "complexity": "medium",
+    "tools": [
+      "find",
+      "pg_function",
+      "pg_usage",
+      "ddl_snapshot"
+    ],
+    "proof": "Definition plus services/functions/triggers/views edges with source evidence.",
+    "risk": "incomplete static edges",
+    "status": "catalog-workflow"
+  },
+  {
+    "id": "W13",
+    "task": "Foreign key fixture misses a tenant-qualified parent",
+    "case": null,
+    "complexity": "large",
+    "tools": [
+      "fixture_schema",
+      "fixture_plan",
+      "fixture_capture",
+      "fixture_validate"
+    ],
+    "proof": "Composite FK closure and negative missing-parent detection on real fixture.",
+    "risk": "bad seed closure",
+    "status": "catalog-workflow"
+  },
+  {
+    "id": "W14",
+    "task": "Cross-database correlation needs explicit business relation",
+    "case": null,
+    "complexity": "large",
+    "tools": [
+      "fixture_plan",
+      "fixture_capture",
+      "fixture_export"
+    ],
+    "proof": "Explicit relation evidence joins matching tenant/ID rows and excludes distractors.",
+    "risk": "unsupported inference",
+    "status": "catalog-workflow"
+  },
+  {
+    "id": "W15",
+    "task": "Inspect DLQ event schema without consuming a group",
+    "case": null,
+    "complexity": "small",
+    "tools": [
+      "kafka_topic",
+      "kafka_last"
+    ],
+    "proof": "Read-only sample/offset evidence and schema mismatch; no claim of delivery proof.",
+    "risk": "bounded window",
+    "status": "catalog-workflow"
+  },
+  {
+    "id": "W16",
+    "task": "Find API used by a browser workflow",
+    "case": null,
+    "complexity": "medium",
+    "tools": [
+      "browser_sites",
+      "site_url",
+      "routes_discover",
+      "api_routes"
+    ],
+    "proof": "Observed request mapped to code handler; browser prerequisite reported.",
+    "risk": "runtime route gaps",
+    "status": "catalog-workflow"
+  },
+  {
+    "id": "W17",
+    "task": "Repeat a known operational investigation",
+    "case": null,
+    "complexity": "medium",
+    "tools": [
+      "script_list",
+      "script_get",
+      "script_run",
+      "call_patterns"
+    ],
+    "proof": "Saved parameterized script output with trace provenance and secret masking.",
+    "risk": "stale scripts",
+    "status": "catalog-workflow"
+  },
+  {
+    "id": "W18",
+    "task": "Service unavailable only on one instance",
+    "case": null,
+    "complexity": "medium",
+    "tools": [
+      "health",
+      "consul_service",
+      "logs_search",
+      "logs_trace"
+    ],
+    "proof": "Unhealthy instance/version/log correlation; no repair claim from read-only health.",
+    "risk": "sampling",
+    "status": "catalog-workflow"
+  },
+  {
+    "id": "W19",
+    "task": "Open isolated fix checkout and inspect final patch",
+    "case": null,
+    "complexity": "small",
+    "tools": [
+      "workspace_open",
+      "workspace_write",
+      "workspace_patch"
+    ],
+    "proof": "Git patch against recorded SHA; no unrelated source changes.",
+    "risk": "dirty shared checkout",
+    "status": "catalog-workflow"
+  },
+  {
+    "id": "W20",
+    "task": "Run JVM regression and prove red then green",
+    "case": null,
+    "complexity": "large",
+    "tools": [
+      "test_context",
+      "test_run",
+      "workspace_patch"
+    ],
+    "proof": "Actual compiled test fails before fix, passes after, report captures test count and no skips.",
+    "risk": "expectation weakening",
+    "status": "catalog-workflow"
+  },
+  {
+    "id": "W21",
+    "task": "Cancel long build and clean owned database lease",
+    "case": null,
+    "complexity": "large",
+    "tools": [
+      "job_cancel",
+      "testdb_resources",
+      "testdb_drop",
+      "doctor"
+    ],
+    "proof": "Cancellation observed; registry/ownership checks and release cleanup confirmed.",
+    "risk": "destructive cleanup",
+    "status": "catalog-workflow"
+  },
+  {
+    "id": "W22",
+    "task": "Run Node tests through the JVM test runner",
+    "case": null,
+    "complexity": "small",
+    "tools": [
+      "test_run",
+      "doctor"
+    ],
+    "proof": "Expected gap probe: explicit unsupported-build result; terminal execution is separate evidence.",
+    "risk": "expected-gap",
+    "status": "expected-gap"
+  },
+  {
+    "id": "W23",
+    "task": "Guarantee exactly-once delivery across live Kafka and RPC",
+    "case": null,
+    "complexity": "large",
+    "tools": [
+      "kafka_lag",
+      "kafka_last",
+      "logs_trace"
+    ],
+    "proof": "Expected gap probe: bounded samples and logs cannot establish delivery or ordering guarantees.",
+    "risk": "expected-gap",
+    "status": "expected-gap"
+  },
+  {
+    "id": "W24",
+    "task": "Guarantee atomic commit across independent database servers",
+    "case": null,
+    "complexity": "large",
+    "tools": [
+      "fixture_capture",
+      "test_run"
+    ],
+    "proof": "Expected gap probe: local business fixture cannot prove distributed commit under partition.",
+    "risk": "expected-gap",
+    "status": "expected-gap"
+  }
+]

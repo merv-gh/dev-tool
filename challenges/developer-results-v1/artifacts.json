@@ -1,0 +1,7 @@
+{
+  "dev/challenge-grade.cjs": "746141f8bad9d72f495eae88a74e6357ebdc2e3d2500706b685411dfa4a26027",
+  "dev/challenge-oracle-v1.json": "fcb0ebc9cae781bbce0e05d36556d895f736955605fea71158497fb71cca8b9a",
+  "dev/challenge-mutations.cjs": "9ed51df96ec3bd28d758d13d974f889eb922d06599f8af421e1b2fa209b931f3",
+  "dev/challenge-assemble.cjs": "01fd7e755150c2eb2e8722bc1d97aac38d929b62fe4476224fe3dd7404f97e25",
+  "test/challenges.test.js": "384501bbd1f2f10b0cd2c24762ec55e255a59f328920dd8ff6cae7791e3005c3"
+}

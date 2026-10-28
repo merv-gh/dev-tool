@@ -1,0 +1,15 @@
+# Developer incidents, revision 1
+
+Eight isolated cases. Treat each directory as a separate project: reproduce the reported behavior, diagnose it using dev-tool where useful, make a minimal fix or requested test implementation, and retain an executable regression test. Do not change another case to make a case pass. `node run.cjs <case>` executes the public report against actual source. Public reports are observations, not complete acceptance tests.
+
+Copy this whole pack into your own checkout before editing. Source changes belong in case source/config files; add tests under each case's `test/`. Keep report inputs, run.cjs, harness files, contract documents and existing test expectations intact. Fixes must generalize beyond the report. A private independent acceptance grader covers additional business states and checks patch scope.
+
+Requirements: Node 22+, project dependencies (`npm install` in dev-tool), JDK 17+ for C03. C06 needs `DT_TEST_PG_URL` pointing to a disposable Postgres control database with CREATEDB. Its harness uses dt's scratch database ownership registry and creates/drops two owned databases; it never writes the configured application databases. Missing prerequisites are recorded as gaps, never a passing case. `DT_JAVAC` and `DT_JAVA` may name explicit JDK binaries.
+
+`node harness.cjs prepare <absolute-empty-directory>` copies cases, indexes every source with existing dt code indexing, initializes independent local Git remotes and dt workspace records, and writes a tool-ready `dt-home/config.json`. `node harness.cjs serve <prepared-directory>` exposes the case projects through the repository's fake Bitbucket; it prints the URL and updates dt config. Leave it running for repo/passport discovery. No external Bitbucket, Maven repository or broker is needed. For Java library lookup, `LIB/common-primitives` contains the artifact named by the service POM. The Java report compiles that actual library and service separately and executes the service with the resulting classpath.
+
+Use `DT_HOME=<prepared>/dt-home node /path/to/dev-tool/cli.js tool code_index '{}'` to list prepared indexes. `code_search`, `code_read`, `code_symbols`, `impact`, `workspace_*`, `bb_*`, `fixture_*`, `testdb_*`, `test_*` are existing product tools; discover their actual schemas instead of assuming them. Node case reports are executable via the terminal; dt's Maven/Gradle test runner does not claim Node support. Keep evidence of both working tool paths and unsupported paths.
+
+Expected gap probes: automatic causal inference from an arbitrary incident, Node test execution via the JVM runner, live Kafka delivery/order guarantees, arbitrary service RPC orchestration, and a distributed atomic commit across two PostgreSQL servers. Do not count these as supported because a local report ran. C06 tests ordinary business validation and tenant isolation; it cannot establish distributed commit under a network partition.
+
+See cases.json for incident requirements and catalog.json for 24 representative workflows with tool mappings and proof obligations. No solutions or expected patches are included.

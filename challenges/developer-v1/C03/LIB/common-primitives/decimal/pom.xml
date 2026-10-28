@@ -1,0 +1,1 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion><parent><groupId>com.lumen.money</groupId><artifactId>primitives-parent</artifactId><version>2.4.1</version></parent><artifactId>ledger-amounts</artifactId><properties><maven.compiler.release>17</maven.compiler.release></properties></project>

@@ -1,0 +1,116 @@
+[
+  {
+    "id": "C01",
+    "title": "Checkout totals drift on multi-unit promotions",
+    "domain": "inside-service",
+    "complexity": "small",
+    "request": "The checkout report for a three-unit basket differs from finance. Compute gross cents by extending the unit net price for each line, summing net cents, then applying invoice VAT once with half-up rounding. Inputs are nonnegative integer cents/quantities; reject invalid values and noninteger VAT basis points. Implement a fix and regression tests.",
+    "report": {
+      "lines": [
+        {
+          "unitCents": 99,
+          "quantity": 3
+        }
+      ],
+      "vatBps": 2000
+    }
+  },
+  {
+    "id": "C02",
+    "title": "Reservation authorized for the wrong amount",
+    "domain": "cross-service",
+    "complexity": "medium",
+    "request": "Checkout 12.50 EUR appears in reservation history as 0.12 EUR. The reservations API contract is POST /reservations {orderId:string, amountCents:nonnegative-safe-integer, currency:three-uppercase-letters}. Checkout accepts {id:string,total:string,currency:string}; total is an exact decimal amount in major units with at most two fractional digits. Preserve cents and identity end to end. Fix the faulty side of this integration and add tests; malformed totals must cause no downstream request.",
+    "report": {
+      "id": "ord-42",
+      "total": "12.50",
+      "currency": "EUR"
+    }
+  },
+  {
+    "id": "C03",
+    "title": "Foreign-currency ledger posting disagrees with invoice",
+    "domain": "internal-library",
+    "complexity": "medium",
+    "request": "Ledger posting of KWD 1.005 records 101 minor units. The invoice contract is USD/EUR two decimals, JPY zero and KWD three. The service accepts exact nonnegative decimal major amounts and returns minor units with half-up rounding; values outside signed long range must fail. Diagnose across the service dependency and add regression coverage.",
+    "report": {
+      "amount": "1.005",
+      "currency": "KWD"
+    }
+  },
+  {
+    "id": "C04",
+    "title": "Production reservations expire during checkout",
+    "domain": "environment-specific",
+    "complexity": "small",
+    "request": "Staging checkout remains reserved for 90 seconds. Production expires almost immediately after a configuration rollout. Reservation TTL accepts a positive integer millisecond value or a string consisting of a positive integer plus ms, s or m. Invalid/missing values must fail configuration loading. Preserve configured duration in both environments and add tests.",
+    "report": {
+      "profile": "production",
+      "createdAt": 1000,
+      "now": 1100
+    }
+  },
+  {
+    "id": "C05",
+    "title": "Reconciliation skips a neighboring order",
+    "domain": "event-identity",
+    "complexity": "medium",
+    "request": "Two paid events with different decimal order identifiers are present, but the second reconciliation is skipped. Order IDs are decimal strings, including values larger than JavaScript safe integers. Deduplicate only an identical tenant and order pair; equal order IDs in different tenants are independent. Accept safe integer numeric IDs for compatibility, reject unsafe numbers and malformed identities before mutating state. Add a fix and tests.",
+    "report": {
+      "events": [
+        {
+          "tenantId": "11",
+          "orderId": "9007199254740992"
+        },
+        {
+          "tenantId": "11",
+          "orderId": "9007199254740993"
+        }
+      ]
+    }
+  },
+  {
+    "id": "C06",
+    "title": "Release eligibility changes when another tenant is onboarded",
+    "domain": "two-database-multitable-state",
+    "complexity": "large",
+    "request": "Tenant 22 order 420 cannot release even though its own enabled account has approved credit. A different tenant uses the same account and order IDs. Release only the selected tenant/order when sales.orders is PAID, sales.accounts is enabled, risk.accounts is APPROVED with enough credit, and pay.payments is PENDING with matching amount. All identity checks use tenant plus local ID; exact decimal amounts are preserved. A rejected release must leave both databases unchanged. A successful release changes only that order to RELEASED and that payment to CAPTURED. Retry of an already released order is rejected without writes. Diagnose using the real two-database fixture, fix the application code and add multi-state tests.",
+    "report": {
+      "tenantId": "22",
+      "orderId": "420"
+    }
+  },
+  {
+    "id": "C07",
+    "title": "Implement cancellation quotation",
+    "domain": "feature-and-tests",
+    "complexity": "medium",
+    "request": "Implement quoteCancellation(booking, minutesToDeparture) and tests. Only CONFIRMED bookings may be quoted. Nonrefundable bookings always refund 0. For refundable bookings: at least 48 hours remaining refunds 100% of paidCents; at least 24 but under 48 hours refunds 50% rounded down; otherwise refunds 0. Retained cents equal paid minus refund. Accept nonnegative safe integer paid cents and nonnegative finite minutes, reject everything else without modifying booking. Return {refundCents,retainedCents}.",
+    "report": {
+      "booking": {
+        "status": "CONFIRMED",
+        "refundable": true,
+        "paidCents": 1001
+      },
+      "minutesToDeparture": 1440
+    }
+  },
+  {
+    "id": "C08",
+    "title": "Add behavioral regression tests for inventory event replay",
+    "domain": "tests-only",
+    "complexity": "large",
+    "request": "Production inventory.cjs is the reference implementation for this test-writing task. Add executable node:test tests under test/ without changing production. stock is a nonnegative safe integer. An event has id (nonempty string), sku (nonempty string), delta (safe integer). apply(state,event) returns a new state; neither input is mutated. A duplicate event ID is ignored only for the same SKU. A new event records its SKU/id after a successful nonnegative-safe-integer stock adjustment. Invalid input or an adjustment below zero/above MAX_SAFE_INTEGER throws without changing input or recording the event. Tests must pass on the reference and detect meaningful behavioral regressions across identity, arithmetic and failure atomicity; importing the actual module is required.",
+    "report": {
+      "state": {
+        "stock": 3,
+        "seen": []
+      },
+      "event": {
+        "id": "ev-1",
+        "sku": "sku-a",
+        "delta": -1
+      }
+    }
+  }
+]

@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "publicPackSha256": "bce05d24eb9c9d45e96c26f8ca01d09276b9a048e2db5879ee86d80034e71d73",
+  "causes": {
+    "C01": "VAT rounded on units before extension/invoice summation",
+    "C02": "checkout truncates major amount but labels it cents",
+    "C03": "dependency hardcodes two digits for all supported currencies",
+    "C04": "parseInt ignores configured duration suffix",
+    "C05": "numeric normalization collapses distinct decimal string IDs",
+    "C06": "risk lookup omits tenant and payment update fans out by local order ID",
+    "C07": "implementation absent",
+    "C08": "tests absent; immutable reference should be mutation-tested"
+  },
+  "hiddenRequirements": {
+    "C01": [
+      "aggregate VAT",
+      "half-up",
+      "invalid safe integers"
+    ],
+    "C02": [
+      "exact cents",
+      "strict decimal parser",
+      "no calls on invalid input"
+    ],
+    "C03": [
+      "JPY/USD/KWD scales",
+      "half-up",
+      "long overflow",
+      "negative validation"
+    ],
+    "C04": [
+      "ms/s/m and numeric",
+      "reject junk/fractional/missing"
+    ],
+    "C05": [
+      "same tenant+order duplicate",
+      "cross tenant independent",
+      "unsafe number rejection",
+      "no mutation on error"
+    ],
+    "C06": [
+      "tenant-scoped reads/writes",
+      "blocked/disabled/credit/payment/order states",
+      "rejected state unchanged",
+      "exact decimals"
+    ],
+    "C07": [
+      "48h/24h boundaries",
+      "odd cents",
+      "nonrefundable",
+      "booking immutable"
+    ],
+    "C08": [
+      "SKU identity mutation",
+      "negative adjustment mutation",
+      "aliasing mutation",
+      "failure side effect mutation",
+      "overflow mutation"
+    ]
+  },
+  "protected": [
+    "public report inputs",
+    "harness",
+    "contracts",
+    "C08 production"
+  ],
+  "gradingPolicy": "Execute actual candidate source and added tests. Existing reports/docs/harness remain byte-identical. Run negative states and semantic mutations. No test weakening accepted."
+}

@@ -1,0 +1,8 @@
+{
+  "version": "v1.3",
+  "sha256": "e9ff4be9e5f30827e3e303a08b0ca7f40e4f0a16c65b852263d356dfc387eca0",
+  "files": {
+    "README.md": "d0feb1dd9f031cb6303e4bdd416f95c8cfa871c0e612f68faebe40e2756b9f70",
+    "supplement-project.cjs": "5750c80ad390db1a55931ebf78c0b4ee208884166d115efd8f779f663217ae0d"
+  }
+}

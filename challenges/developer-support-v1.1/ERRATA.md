@@ -1,0 +1,11 @@
+# Setup and tool-map errata for frozen developer-v1
+
+The case source, requirements, fixture and v1 revision remain unchanged. This support revision corrects setup metadata only.
+
+1. `workspace_open`'s public tool schema does not expose the internal module's `url` option. The original README was wrong about passing that option. Run `node git-routing.cjs <prepared-directory>` after the fake Bitbucket server starts, then export the printed `GIT_CONFIG_GLOBAL` in each dev-tool process. This task-local Git configuration maps the fake server's Git URLs to the prepared local Git remotes. Normal tool calls use `workspace_open {project:"CASES",repo:"c01",ref:"main"}`. C03 project/repo pairs are `FIN/ledger-service` and `LIB/common-primitives`. The library has tag `v2.4.1`. The routing configuration changes transport only, and the fake Bitbucket REST service remains available for metadata discovery.
+
+2. Catalog W06 listed `testdb_create` and W21 listed `testdb_drop`; these names are not tools. W06 lifecycle mapping is `testdb_initialize`, `testdb_template_build`, `testdb_clone`, `fixture_replay`, `testdb_release`. W21 cleanup mapping is `testdb_resources`, `testdb_release`, with `job_cancel` and `doctor`. The low-level JavaScript module has create/drop methods but those are not public tools.
+
+3. The original C03 POMs are source/dependency metadata, and rely on toolchain defaults. `node c03-build.cjs <prepared-directory>` adds pinned compiler/Surefire/JUnit build metadata to C03 local remotes and commits a separate build-only setup revision. It adds no implementation, regression test or acceptance expectation. Run this before opening the C03 workspaces (or use the new printed commit hashes). JUnit tests belong under Java `src/test/java`; Node tests may still be used under `C03/test/` for independent harness checks. The hidden grader accepts this exact build-only overlay without treating it as a solver patch and recognizes non-skipped JUnit tests when their actual Maven run succeeds.
+
+The JVM runner still cannot execute Node tests. Record its unsupported-build result for Node cases. Independent acceptance grading and terminal reports are separate evidence from product tool test execution.

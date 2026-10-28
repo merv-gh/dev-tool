@@ -1,0 +1,287 @@
+{
+  "version": 1,
+  "publicPackSha256": "bce05d24eb9c9d45e96c26f8ca01d09276b9a048e2db5879ee86d80034e71d73",
+  "privateOracleFrozenBeforeHandoffSha256": "fcb0ebc9cae781bbce0e05d36556d895f736955605fea71158497fb71cca8b9a",
+  "status": "all eight frozen candidates passed independent acceptance",
+  "independence": "Author froze public pack and private business oracle before solver handoff; solver source/test writes used existing product workspace tools. Author acceptance execution is separate from tool runner evidence.",
+  "cases": [
+    {
+      "case": "C01",
+      "domain": "inside-service",
+      "baseline": {
+        "tests": 2,
+        "passed": 0,
+        "failed": 2
+      },
+      "candidate": {
+        "tests": 2,
+        "passed": 2,
+        "failed": 0,
+        "authorSmokeSkipped": 1
+      },
+      "independentAcceptancePassed": true,
+      "acceptanceChecks": {
+        "passed": 2,
+        "total": 2
+      },
+      "submittedRegressionUnchangedSinceInitialWrite": true,
+      "testSha256": "ba3a99b990d3f470dcae34635b3c501d42794f6b917011a3dbde9176788a4925",
+      "productionHashes": [
+        {
+          "path": "C01/src/checkout.cjs",
+          "baseline": "63656dd66ff6aded5945792595e6126eec2295894cb2a1c16fc0b4ef5cb74e2f",
+          "candidate": "e7ce9e1c6389d9f6a247a279dc039a75675210665036ef4e07a150aa02fd4b5f"
+        }
+      ],
+      "executionEvidence": "Actual node:test and independently executed business code",
+      "productToolRunnerSupport": "Node test selection is unsupported by test_run; independent grader execution is separate proof"
+    },
+    {
+      "case": "C02",
+      "domain": "cross-service",
+      "baseline": {
+        "tests": 2,
+        "passed": 0,
+        "failed": 2
+      },
+      "candidate": {
+        "tests": 2,
+        "passed": 2,
+        "failed": 0,
+        "authorSmokeSkipped": 1
+      },
+      "independentAcceptancePassed": true,
+      "acceptanceChecks": {
+        "passed": 2,
+        "total": 2
+      },
+      "submittedRegressionUnchangedSinceInitialWrite": true,
+      "testSha256": "bbb482b07976f47c0842a390e43e6ef25f02e58569eacc495e6283230b7a8aae",
+      "productionHashes": [
+        {
+          "path": "C02/checkout/src/checkout.cjs",
+          "baseline": "1407eeb4f12b46cb451145d6a2882c90a00e89843bc452c16fb63b7c3c5be1eb",
+          "candidate": "8c4b5ee5150520bbb7a656f486da45c1e17979d31c693e371b1b494476040b97"
+        },
+        {
+          "path": "C02/reservations/src/api.cjs",
+          "baseline": "f1f949b0eac82b4b93bccdd21fe6340860edc5f5e927cd6172622f1d685c6fd2",
+          "candidate": "f1f949b0eac82b4b93bccdd21fe6340860edc5f5e927cd6172622f1d685c6fd2"
+        }
+      ],
+      "executionEvidence": "Actual node:test and independently executed business code",
+      "productToolRunnerSupport": "Node test selection is unsupported by test_run; independent grader execution is separate proof"
+    },
+    {
+      "case": "C03",
+      "domain": "internal-library",
+      "baseline": {
+        "tests": 2,
+        "passed": 0,
+        "failed": 2
+      },
+      "candidate": {
+        "tests": 2,
+        "passed": 2,
+        "failed": 0,
+        "authorSmokeSkipped": 0
+      },
+      "independentAcceptancePassed": true,
+      "acceptanceChecks": {
+        "passed": 2,
+        "total": 2
+      },
+      "submittedRegressionUnchangedSinceInitialWrite": true,
+      "testSha256": "73cbeca8483c6b5c77e86c85e92cdae413cee3f237ac363dc8c27f4c40ec60b6",
+      "productionHashes": [
+        {
+          "path": "C03/FIN/ledger-service/src/main/java/com/lumen/ledger/PostingService.java",
+          "baseline": "f6cac7caed498a7acd3a893df0ce3675c0c88541ea2810bb9d30350ac8fed25e",
+          "candidate": "f6cac7caed498a7acd3a893df0ce3675c0c88541ea2810bb9d30350ac8fed25e"
+        },
+        {
+          "path": "C03/LIB/common-primitives/decimal/src/main/java/com/lumen/money/LedgerAmount.java",
+          "baseline": "1ca911253216f9e00773cd5afb43cb434ee38f732e55e0f2549414ac6cd963e8",
+          "candidate": "9504d4f27165c53b018c517936131e1ded5a5f3affef18fa7e83b8fbefb008a5"
+        }
+      ],
+      "executionEvidence": "Actual Maven/JUnit plus separately compiled Java service and real library",
+      "productToolRunnerSupport": "Maven/JUnit supported; solver captured actual tool red-green"
+    },
+    {
+      "case": "C04",
+      "domain": "environment-specific",
+      "baseline": {
+        "tests": 2,
+        "passed": 0,
+        "failed": 2
+      },
+      "candidate": {
+        "tests": 2,
+        "passed": 2,
+        "failed": 0,
+        "authorSmokeSkipped": 1
+      },
+      "independentAcceptancePassed": true,
+      "acceptanceChecks": {
+        "passed": 2,
+        "total": 2
+      },
+      "submittedRegressionUnchangedSinceInitialWrite": true,
+      "testSha256": "a260ba135bc646d1b9a749f197beb16dc298ef451beeb231ff1e7d0aa82d0889",
+      "productionHashes": [
+        {
+          "path": "C04/src/reservations.cjs",
+          "baseline": "6b2a0b1880d746053953bcc90514c7c497723442178274745497877b0d731231",
+          "candidate": "38821fb18360ed4917215cd35cffe711c0005f7ca475d4dc19c6a4098ac77b7d"
+        }
+      ],
+      "executionEvidence": "Actual node:test and independently executed business code",
+      "productToolRunnerSupport": "Node test selection is unsupported by test_run; independent grader execution is separate proof"
+    },
+    {
+      "case": "C05",
+      "domain": "event-identity",
+      "baseline": {
+        "tests": 2,
+        "passed": 0,
+        "failed": 2
+      },
+      "candidate": {
+        "tests": 2,
+        "passed": 2,
+        "failed": 0,
+        "authorSmokeSkipped": 1
+      },
+      "independentAcceptancePassed": true,
+      "acceptanceChecks": {
+        "passed": 2,
+        "total": 2
+      },
+      "submittedRegressionUnchangedSinceInitialWrite": true,
+      "testSha256": "3454af4d5a465c03e8dc178c2f417a5dbba3d65285c0cb5e3976ce6326c29c66",
+      "productionHashes": [
+        {
+          "path": "C05/src/reconcile.cjs",
+          "baseline": "04b052ab717a2a4d4a03404a142bc5e5e49718d8158314807a40527712cc3138",
+          "candidate": "e1c54b355c99bc632052ebc670f4c3105e384528362108c2d779ed4515881f7a"
+        }
+      ],
+      "executionEvidence": "Actual node:test and independently executed business code",
+      "productToolRunnerSupport": "Node test selection is unsupported by test_run; independent grader execution is separate proof"
+    },
+    {
+      "case": "C06",
+      "domain": "two-database-multitable-state",
+      "baseline": {
+        "tests": 4,
+        "passed": 1,
+        "failed": 3
+      },
+      "candidate": {
+        "tests": 4,
+        "passed": 4,
+        "failed": 0,
+        "authorSmokeSkipped": 1
+      },
+      "independentAcceptancePassed": true,
+      "acceptanceChecks": {
+        "passed": 8,
+        "total": 8
+      },
+      "submittedRegressionUnchangedSinceInitialWrite": true,
+      "testSha256": "3c25a4df7f31ed8088bc45217b6a3ee80f43fadf09683dd7b5a7c31d3f9d6ddc",
+      "productionHashes": [
+        {
+          "path": "C06/src/release.cjs",
+          "baseline": "e3fc1ccf21012230e64cc0f93b8f9e795ac88acd0c841a6a8e3c97ee154b8b21",
+          "candidate": "95d18ba989128f588cc50e907f7aa6d65b80a2824ab37a9e7644afcf117515e7"
+        }
+      ],
+      "executionEvidence": "Actual Node test suite and business code against two owned PostgreSQL16 replay databases",
+      "productToolRunnerSupport": "Node test selection is unsupported by test_run; independent grader execution is separate proof"
+    },
+    {
+      "case": "C07",
+      "domain": "feature-and-tests",
+      "baseline": {
+        "tests": 2,
+        "passed": 1,
+        "failed": 1
+      },
+      "candidate": {
+        "tests": 2,
+        "passed": 2,
+        "failed": 0,
+        "authorSmokeSkipped": 1
+      },
+      "independentAcceptancePassed": true,
+      "acceptanceChecks": {
+        "passed": 2,
+        "total": 2
+      },
+      "submittedRegressionUnchangedSinceInitialWrite": true,
+      "testSha256": "6be309b92e40d2dab4b1e9398748b259e8f8876f487bfa804555314214c1d94f",
+      "productionHashes": [
+        {
+          "path": "C07/src/cancellation.cjs",
+          "baseline": "015045414654460faa9481cce589906911863811bc65bf86fcd5fee83cad87d2",
+          "candidate": "7b73cb6c5c6956598eb2471ab494c858f367698206ecbcc1360f119389cef761"
+        }
+      ],
+      "executionEvidence": "Actual node:test and independently executed business code",
+      "productToolRunnerSupport": "Node test selection is unsupported by test_run; independent grader execution is separate proof"
+    },
+    {
+      "case": "C08",
+      "domain": "tests-only",
+      "baseline": {
+        "tests": 2,
+        "passed": 2,
+        "failed": 0,
+        "kind": "tests-only reference"
+      },
+      "candidate": {
+        "tests": 2,
+        "passed": 2,
+        "failed": 0,
+        "authorSmokeSkipped": 1
+      },
+      "independentAcceptancePassed": true,
+      "acceptanceChecks": {
+        "passed": 8,
+        "total": 8
+      },
+      "submittedRegressionUnchangedSinceInitialWrite": false,
+      "testSha256": "d779a4c97ba99cc36a7a04e37f2bb4e85285267d55c5cb3dea6c619350e3adaf",
+      "productionHashes": [
+        {
+          "path": "C08/src/inventory.cjs",
+          "baseline": "e9123cc99c3eb573ca928ec92ed33ab4ce3c62738caf678369203cbed3484556",
+          "candidate": "e9123cc99c3eb573ca928ec92ed33ab4ce3c62738caf678369203cbed3484556"
+        }
+      ],
+      "executionEvidence": "Actual node:test reference execution plus eight behavioral mutations",
+      "productToolRunnerSupport": "Node test selection is unsupported by test_run; independent grader execution is separate proof",
+      "regressionRevisionNote": "Tests-only candidate removed an assertion of the internal serialized key; final reference and all8 behavioral mutations rerun after refreeze."
+    }
+  ],
+  "mutationChecks": {
+    "C07": {
+      "killed": 4,
+      "total": 4,
+      "status": "separately requested test-strength check after feature submission frozen"
+    },
+    "C08": {
+      "killed": 8,
+      "total": 8,
+      "status": "frozen private oracle mutation classes; original production bytes unchanged"
+    }
+  },
+  "limitations": [
+    "Seven Node cases were not executable via the existing JVM-only test_run; their execution evidence is independent acceptance, not tool-only proof.",
+    "One existing author smoke placeholder is skipped per Node case; all submitted regression tests execute.",
+    "C06 establishes tenant/state behavior in two databases, not distributed atomic commit under network failure.",
+    "No live Elasticsearch or Kafka broker is configured for supplementary state recreation."
+  ]
+}
