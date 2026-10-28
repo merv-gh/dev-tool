@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "runAt": "2026-10-28T22:43:36.501Z",
+  "runAt": "2026-10-28T22:51:06.243Z",
   "proofType": "real-owned-containers",
   "preflight": {
     "version": 1,
@@ -15,7 +15,7 @@
     "capabilities": {
       "postgres": "SQL/constraints, exact numeric strings",
       "es": "mappings/documents",
-      "kafka": "JSON/string keys/values, headers, partitions; offsets/timestamps remapped",
+      "kafka": "decoded JSON/untouched UTF-8 string keys/values, headers, partitions; offsets/timestamps remapped",
       "distributedSnapshot": false
     }
   },
@@ -31,17 +31,19 @@
     "source write rejection",
     "TRUNCATE statement audit",
     "exact successful SQL effects",
+    "owned Kafka action primitive with raw string key",
+    "ES transient create/delete and index recreation evidence",
     "owned cleanup and repeated stop"
   ],
   "applicationExecution": "test harness operations; arbitrary service execution is caller-owned",
   "runtime": {
     "version": 1,
     "adapter": "native-containers/v1",
-    "id": "7e968dbca4d5422d8230a82e",
+    "id": "3b538a935eec6a5408d880f3",
     "workspace": "app",
     "directory": "src/test/resources/dt-fixtures/native-live",
     "status": "ready",
-    "expiresAt": "2026-10-28T22:53:37.233Z",
+    "expiresAt": "2026-10-28T23:01:07.089Z",
     "proof": {
       "level": "native-dependencies",
       "applicationExecuted": false,
@@ -72,7 +74,7 @@
       ]
     },
     "timings": {
-      "startMs": 177158
+      "startMs": 149245
     }
   },
   "initialEffectsPassed": true,
@@ -93,24 +95,24 @@
           "adapter": "postgres-snapshot/v1",
           "database": "billing",
           "sourceDatabase": "fixture_62696c6c696e67",
-          "snapshot": "751:751:",
+          "snapshot": "756:756:",
           "isolation": "repeatable read",
           "readOnly": true,
-          "startedAt": "2026-10-28 22:47:31.764904+00",
-          "finishedAt": "2026-10-28T22:47:36.601Z",
-          "identity": "f86d9cf63f5dd622ca0f152b06f27622ca0ff7f656d60c7fd99ab0545509c695"
+          "startedAt": "2026-10-28 22:54:20.933834+00",
+          "finishedAt": "2026-10-28T22:54:27.621Z",
+          "identity": "cd6c5ee0b75da0b649a930a98650a5100a9a3a5c1b76d807b9e95b114d8595c8"
         },
         "orders": {
           "version": 1,
           "adapter": "postgres-snapshot/v1",
           "database": "orders",
           "sourceDatabase": "fixture_6f7264657273",
-          "snapshot": "751:751:",
+          "snapshot": "756:756:",
           "isolation": "repeatable read",
           "readOnly": true,
-          "startedAt": "2026-10-28 22:47:31.838232+00",
-          "finishedAt": "2026-10-28T22:47:36.601Z",
-          "identity": "32a21e1b27de3fdd9e271191845052f4f7329a82641f25e00da3ca55ef67c52d"
+          "startedAt": "2026-10-28 22:54:21.033864+00",
+          "finishedAt": "2026-10-28T22:54:27.621Z",
+          "identity": "c5a7fc6b786cf94948473a02d3644018e5045830811130d6af9719624688e712"
         }
       },
       "mode": "snapshot",
@@ -120,9 +122,9 @@
       "version": 1,
       "adapter": "elasticsearch-pit/v1",
       "pointInTimeVerified": true,
-      "pitFingerprint": "720dd7274eb8fa32cfd59b8154f16dc805069d5e488f7def231c51ff93e2da0b",
-      "startedAt": "2026-10-28T22:47:36.336Z",
-      "finishedAt": "2026-10-28T22:47:36.563Z",
+      "pitFingerprint": "10fadafb5ab333b871770be2e3a4ae71ff8ca450f78565b3f7cd851d8e3d14d9",
+      "startedAt": "2026-10-28T22:54:27.030Z",
+      "finishedAt": "2026-10-28T22:54:27.573Z",
       "exactTotal": 1,
       "mappingFingerprint": "5c62f879d77156197b4f809c70119330ccea4bed0c5ffacae8cf010dc8c45037",
       "reviewedMappingFingerprint": "a4a845406bbaf245bccce5a58ffd1a7f1950340d2bb90a81bcfd417c7fd09159",
@@ -132,7 +134,7 @@
   },
   "successfulEffects": {
     "version": 1,
-    "id": "af665346f8b6cd8efc4895dd",
+    "id": "54153223583b499645a93276",
     "ok": true,
     "checks": [
       {
@@ -161,8 +163,8 @@
       }
     ],
     "expectationDigest": "f5c914c3ed63e62dda1973a1ce75b2f5886516d7c6c6836e2ebf600486de7969",
-    "baselineDigest": "e9993c6530d6e0e03bf49c6a73a364ab9dbb4eff1d9f93748b49c67ca55d9da8",
-    "observationDigest": "792590476b369deb14d8586b0bb0f8a59b66623db3637b4de2e1d9936ae4ab38",
+    "baselineDigest": "09f1c8f5193ed71ac742d558f3d16cff53355c9f85d8cdb74c6eb8bfc7394637",
+    "observationDigest": "dd61b9da0d6685f2f1976e4cda64871febd0ea744cf50d3553f15c6f4d254cb2",
     "changes": {
       "pg:billing:public.accounts": {
         "added": [],
