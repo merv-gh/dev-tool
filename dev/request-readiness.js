@@ -30,7 +30,7 @@ const calls=[];
    envOnly=await call('test_run',{workspace:'routing-probe',tests:['EnvOnlyTest'],env:'dev'});
    for(const finish of finishes.splice(0))finish();await require('../lib/jobs').find(envOnly.job).promise;
  } finally {runner.run=original;}
- const rows=byTable.preview||byTable.rows||[],columnRows=byColumn.preview||byColumn.rows||[],envOnlyOptions=seen.at(-1)?.options;
+ const rows=byTable.preview||byTable.rows||[],columnRows=byColumn.edges||byColumn.preview||byColumn.rows||[],envOnlyOptions=seen.at(-1)?.options;
  const observations={
   columnAccess:{proof:'executed-cached-index-tools',columnUsageTotal:byColumn.total,tableUsageTotal:byTable.total,tableUsers:rows.map(r=>({user:r.user,role:r.role})),columnUsers:columnRows.map(r=>({user:r.user,access:r.access||r.role})),columnImpact:impact.nearest||[],coverage:byColumn.coverage,exhaustiveStaticClaim:false,gap:!columnRows.some(r=>r.user==='public.read_status'&&(r.access||r.role)==='read')||!columnRows.some(r=>r.user==='public.write_status'&&(r.access||r.role)==='write')||columnRows.some(r=>r.user==='public.read_total')},
   relatedEsState:{proof:'executed-tool-plan-only-not-native-runtime',fixtureInputHasEs:Object.hasOwn(fixtureDescription.inputSchema.properties,'es'),unsupportedInputRejected:unknownRejected,plannedStateKinds:[...new Set((fixture.obligations||[]).map(o=>o.kind))],esPreserved:fixture.es?.[0]?.index==='orders',gaps:fixture.gaps,scenarioStatePlanAvailable:!!stateDescription.inputSchema.properties.inventory,gap:!unknownRejected||fixture.es?.[0]?.index!=='orders'||!(fixture.obligations||[]).some(o=>o.kind==='es'&&o.id==='orders')},

@@ -1,0 +1,193 @@
+{
+  "protocol": "dt.user-request-readiness/v1",
+  "generatedAt": "2026-10-28T22:56:42.188Z",
+  "networkUsed": false,
+  "observations": {
+    "columnAccess": {
+      "proof": "executed-cached-index-tools",
+      "columnUsageTotal": 2,
+      "tableUsageTotal": 3,
+      "tableUsers": [
+        {
+          "user": "public.read_status",
+          "role": "read"
+        },
+        {
+          "user": "public.read_total",
+          "role": "read"
+        },
+        {
+          "user": "public.write_status",
+          "role": "write"
+        }
+      ],
+      "columnUsers": [
+        {
+          "user": "public.read_status",
+          "access": "read"
+        },
+        {
+          "user": "public.write_status",
+          "access": "write"
+        }
+      ],
+      "columnImpact": [
+        "1 pgfn pgfn:public.read_status <- read column:dev:orders:public.orders.status",
+        "1 pgfn pgfn:public.write_status <- write column:dev:orders:public.orders.status"
+      ],
+      "coverage": {
+        "source": "cached-catalog-and-indexed-source",
+        "exhaustive": false,
+        "parser": "bounded-sql-lexer/v1",
+        "unknowns": [
+          "dynamic-sql",
+          "unindexed-repositories",
+          "generated-code",
+          "reflection",
+          "ORM runtime persistence"
+        ]
+      },
+      "exhaustiveStaticClaim": false,
+      "gap": false
+    },
+    "relatedEsState": {
+      "proof": "executed-tool-plan-only-not-native-runtime",
+      "fixtureInputHasEs": true,
+      "unsupportedInputRejected": true,
+      "plannedStateKinds": [
+        "pg",
+        "es"
+      ],
+      "esPreserved": true,
+      "gaps": [],
+      "scenarioStatePlanAvailable": true,
+      "gap": false
+    },
+    "devTarget": {
+      "proof": "argument-routing-with-stubbed-project-runner",
+      "realProjectExecuted": false,
+      "hasTargetSelector": true,
+      "envSchema": "Source catalog environment for db DDL; runtime is selected separately by target",
+      "envOnlyForwardedDb": null,
+      "envOnlyForwardedTarget": "local",
+      "sourceEnvironment": "dev",
+      "explanation": "env=dev remains source context; the default actual target is explicitly local. Reviewed live-dev manifests are separate and fail closed. Actual Node target execution is verified by test/node-targets.test.js; this probe inspects routing only.",
+      "gap": false
+    },
+    "concurrentTestIdentity": {
+      "proof": "argument-routing-with-stubbed-project-runner",
+      "realProjectExecuted": false,
+      "firstJob": "mvsprs829cd0b0",
+      "secondJob": "mvsprs8gcea815",
+      "executionsForDifferentEnvironments": 2,
+      "firstForwardedDb": {
+        "env": "dev",
+        "db": "orders"
+      },
+      "secondForwardedDb": {
+        "env": "staging",
+        "db": "another-database"
+      },
+      "gap": false
+    }
+  },
+  "calls": [
+    {
+      "name": "pg_usage",
+      "arguments": {
+        "name": "orders:public.orders.status",
+        "env": "dev"
+      },
+      "ms": 97.25,
+      "outputBytes": 1579
+    },
+    {
+      "name": "pg_usage",
+      "arguments": {
+        "name": "orders:public.orders",
+        "env": "dev"
+      },
+      "ms": 55.731,
+      "outputBytes": 607
+    },
+    {
+      "name": "impact",
+      "arguments": {
+        "target": "public.orders.status",
+        "env": "dev"
+      },
+      "ms": 31.505,
+      "outputBytes": 1099
+    },
+    {
+      "name": "fixture_plan",
+      "arguments": {
+        "env": "dev",
+        "seeds": [
+          {
+            "db": "orders",
+            "table": "public.orders",
+            "where": {
+              "id": 42
+            }
+          }
+        ],
+        "es": [
+          {
+            "index": "orders",
+            "matches": [
+              {
+                "path": "_source.id",
+                "from": {
+                  "db": "orders",
+                  "table": "public.orders",
+                  "column": "id"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "ms": 49.09,
+      "outputBytes": 1365
+    },
+    {
+      "name": "test_run",
+      "arguments": {
+        "workspace": "routing-probe",
+        "tests": [
+          "ProbeTest"
+        ],
+        "env": "dev",
+        "db": "orders"
+      },
+      "ms": 18.098,
+      "outputBytes": 143
+    },
+    {
+      "name": "test_run",
+      "arguments": {
+        "workspace": "routing-probe",
+        "tests": [
+          "ProbeTest"
+        ],
+        "env": "staging",
+        "db": "another-database"
+      },
+      "ms": 11.764,
+      "outputBytes": 143
+    },
+    {
+      "name": "test_run",
+      "arguments": {
+        "workspace": "routing-probe",
+        "tests": [
+          "EnvOnlyTest"
+        ],
+        "env": "dev"
+      },
+      "ms": 15.286,
+      "outputBytes": 143
+    }
+  ]
+}

@@ -24,7 +24,9 @@
   .capture svg .minor { fill:var(--muted); font-size:11px; }
   .capture svg path { stroke:var(--muted); fill:none; }
   .capture .legend { color:var(--muted); font-size:12px; margin-top:7px; }
-  .capture .detail { min-width:0; display:grid; gap:14px; }
+  .capture .detail { min-width:0; display:grid; grid-template-columns:minmax(0,1fr); gap:14px; }
+  .capture .detail > * { min-width:0; max-width:100%; }
+  .capture .detail .scroll { max-width:100%; overflow:auto; }
   .capture .detail pre { max-height:400px; }
   .capture .gaps { margin:0; padding-left:20px; display:grid; gap:6px; font-size:13px; }
   .capture .warning { color:var(--bad); }
@@ -71,7 +73,7 @@
       return `<path d="M${x1} ${y1} C${x1} ${y1+35},${x2} ${y2-35},${x2} ${y2}" ${r.solid?'':'stroke-dasharray="5 4"'} marker-end="url(#capture-arrow)"><title>${E(r.label)}</title></path>`;
     }).join('');
     const nodes = sources.map((s,i) => { const p=coords.get(s.id); const label=s.id.split(':').slice(1).join(':'); return `<g role="button" tabindex="0" data-source="${i}" aria-label="${E(s.id)}, ${s.rows.length} records" aria-pressed="${s.id===selected}"><title>${E(s.id)}</title><rect x="${p.x}" y="${p.y}" width="225" height="52" rx="6"/><text x="${p.x+10}" y="${p.y+21}">${E(label.length>29?label.slice(0,27)+'…':label)}</text><text class="minor" x="${p.x+10}" y="${p.y+40}">${s.rows.length} ${s.topic?'messages':s.index?'documents':'rows'}</text></g>`; }).join('');
-    dt.$('#graph').innerHTML=`<svg viewBox="0 0 ${width} ${height}" aria-label="Capture relationships"><defs><marker id="capture-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10" style="fill:var(--muted);stroke:none"/></marker></defs>${groups.map((g,i)=>`<text class="minor" x="${18+i*265}" y="23">${E(g)}</text>`).join('')}${edges}${nodes}</svg>`;
+    dt.$('#graph').innerHTML=`<svg viewBox="0 0 ${width} ${height}" style="min-width:${width}px" aria-label="Capture relationships"><defs><marker id="capture-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10" style="fill:var(--muted);stroke:none"/></marker></defs>${groups.map((g,i)=>`<text class="minor" x="${18+i*265}" y="23">${E(g)}</text>`).join('')}${edges}${nodes}</svg>`;
     for(const node of dt.$('#graph').querySelectorAll('[data-source]')) {
       const choose=()=>{selected=sources[Number(node.dataset.source)].id;draw();};
       node.onclick=choose; node.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();choose();}};
