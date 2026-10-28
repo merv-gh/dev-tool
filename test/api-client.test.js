@@ -71,3 +71,21 @@ test('invalid capture batches are atomic and damaged passports retain exchanges 
 test('network capture failures do not persist raw exception URLs or credentials',()=>{
   const e=C().normalize({...entry(),error:'request failed https://example.test/?token=private-failure-token'});assert.ok(e.gaps.some(g=>g.kind==='network-error'));assert.doesNotMatch(JSON.stringify(e),/private-failure-token/);
 });
+test('native MCP numbered requests/details parse actual current wire format without inventing missing bodies',()=>{
+  const list='### Result\n2. [GET] https://shop.dev/api/orders/42 => [200] OK\n3. [POST] https://shop.dev/api/orders => [201] Created\n';
+  const rows=C().nativeList(list);assert.equal(rows.length,2);assert.equal(rows[0].index,2);
+  const detail='### Result\n#2 [GET] https://shop.dev/api/orders/42\n\n  General\n    status:    [200] OK\n    duration:  7ms\n    type:      fetch\n    mimeType:  application/json\n\n  Request headers\n    authorization: Bearer runtime\n    referer: https://shop.dev/orders\n\n  Response headers\n    content-length: 25\n    content-type: application/json\n    x-request-id: trace:42\n\nCall browser_network_request with part="response-body" to read the response body.';
+  const e=C().nativeDetails(detail,rows[0]);assert.equal(e.sequence,2);assert.equal(e.request.method,'GET');assert.equal(e.request.headers.authorization,'Bearer runtime');assert.equal(e.response.status,200);assert.equal(e.response.headers['x-request-id'],'trace:42');assert.equal(e.time,7);assert.equal(e.response.body,undefined);
+});
+test('current native MCP adapter uses detail bodies and maps ref from advertised schema',async()=>{
+  let clicked;const native=http.createServer((req,res)=>{if(req.method==='DELETE')return res.end();let raw='';req.on('data',c=>raw+=c).on('end',()=>{const m=JSON.parse(raw);res.setHeader('content-type','application/json');if(m.method==='initialize'){res.setHeader('mcp-session-id','native');return res.end(JSON.stringify({id:m.id,result:{}}));}if(m.id===undefined)return res.end();let result;
+    if(m.method==='tools/list')result={tools:[{name:'browser_network_request'},{name:'browser_click',inputSchema:{type:'object',properties:{target:{type:'string'}},required:['target']}}]};
+    else{const n=m.params.name,a=m.params.arguments;let text='';if(n==='browser_network_requests')text=`### Result\n2. [GET] ${origin}/api/orders/42 => [200] OK`;
+      else if(n==='browser_network_request')text=a.part==='response-body'?'### Result\n{"id":42,"status":"paid"}':`### Result\n#2 [GET] ${origin}/api/orders/42\n\n  General\n    status:    [200] OK\n    duration:  12ms\n\n  Request headers\n    accept: application/json\n\n  Response headers\n    content-type: application/json\n    content-length: 25`;
+      else if(n==='browser_click'){assert.equal(a.ref,undefined);clicked=a.target;text='Clicked';}
+      else text='Page';result={content:[{type:'text',text}]};}
+    res.end(JSON.stringify({id:m.id,result}));});});
+  await new Promise(r=>native.listen(0,'127.0.0.1',r));const prior=process.env.DT_BROWSER_MCP;process.env.DT_BROWSER_MCP=`http://127.0.0.1:${native.address().port}/mcp`;let session;
+  try{const opened=await C().browserOpen({url:origin+'/orders'});session=opened.session;assert.equal(opened.adapter,'native-network');assert.equal(opened.mode,'exchanges');const schema=await C().browserAction({session,action:'click',describe:true});assert.deepEqual(schema.inputSchema.required,['target']);await C().browserAction({session,action:'click',args:{ref:'e2'}});assert.equal(clicked,'e2');const capture=await C().browserCapture({session});assert.equal(capture.count,1);assert.equal(capture.exchanges[0].response.body.kind,'json');assert.equal(capture.exchanges[0].response.body.value.status,'paid');assert.equal((await C().browserCapture({session})).count,0);}
+  finally{if(session)await C().browserClose({session});if(prior===undefined)delete process.env.DT_BROWSER_MCP;else process.env.DT_BROWSER_MCP=prior;await new Promise(r=>native.close(r));}
+});
