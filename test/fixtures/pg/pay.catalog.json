@@ -1,0 +1,463 @@
+{
+ "db": "pay",
+ "database": "postgres",
+ "version": "PostgreSQL 16 (fixture)",
+ "syncedAt": "2026-10-28T00:00:00.000Z",
+ "ms": 0,
+ "tables": [
+  {
+   "schema": "pay",
+   "name": "customer_totals",
+   "kind": "view",
+   "comment": null,
+   "est_rows": "0",
+   "columns": [
+    {
+     "name": "customer_id",
+     "type": "bigint",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "total",
+     "type": "numeric",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    }
+   ],
+   "constraints": [],
+   "indexes": [],
+   "definition": " SELECT customer_id,\n    sum(amount) AS total\n   FROM pay.settled_payments\n  GROUP BY customer_id;"
+  },
+  {
+   "schema": "pay",
+   "name": "customers",
+   "kind": "table",
+   "comment": "Who pays",
+   "est_rows": "0",
+   "columns": [
+    {
+     "name": "id",
+     "type": "bigint",
+     "nullable": false,
+     "default": "nextval('pay.customers_id_seq'::regclass)",
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "email",
+     "type": "text",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "name",
+     "type": "text",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    }
+   ],
+   "constraints": [
+    {
+     "name": "customers_pkey",
+     "type": "p",
+     "def": "PRIMARY KEY (id)",
+     "ref": null
+    },
+    {
+     "name": "customers_email_key",
+     "type": "u",
+     "def": "UNIQUE (email)",
+     "ref": null
+    }
+   ],
+   "indexes": [
+    "CREATE UNIQUE INDEX customers_pkey ON pay.customers USING btree (id)",
+    "CREATE UNIQUE INDEX customers_email_key ON pay.customers USING btree (email)"
+   ],
+   "definition": null
+  },
+  {
+   "schema": "pay",
+   "name": "payments",
+   "kind": "table",
+   "comment": null,
+   "est_rows": "0",
+   "columns": [
+    {
+     "name": "id",
+     "type": "bigint",
+     "nullable": false,
+     "default": null,
+     "identity": "d",
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "customer_id",
+     "type": "bigint",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "amount",
+     "type": "numeric(12,2)",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "fee",
+     "type": "numeric(12,2)",
+     "nullable": false,
+     "default": "0",
+     "identity": null,
+     "generated": null,
+     "comment": "Card fee: 2.9% + 0.30, at least 0.50"
+    },
+    {
+     "name": "status",
+     "type": "text",
+     "nullable": false,
+     "default": "'NEW'::text",
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "created_at",
+     "type": "timestamp with time zone",
+     "nullable": false,
+     "default": "now()",
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "updated_at",
+     "type": "timestamp with time zone",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    }
+   ],
+   "constraints": [
+    {
+     "name": "payments_amount_check",
+     "type": "c",
+     "def": "CHECK ((amount > (0)::numeric))",
+     "ref": null
+    },
+    {
+     "name": "payments_status_check",
+     "type": "c",
+     "def": "CHECK ((status = ANY (ARRAY['NEW'::text, 'SETTLED'::text, 'FAILED'::text])))",
+     "ref": null
+    },
+    {
+     "name": "payments_pkey",
+     "type": "p",
+     "def": "PRIMARY KEY (id)",
+     "ref": null
+    },
+    {
+     "name": "payments_customer_id_fkey",
+     "type": "f",
+     "def": "FOREIGN KEY (customer_id) REFERENCES pay.customers(id)",
+     "ref": "pay.customers"
+    }
+   ],
+   "indexes": [
+    "CREATE UNIQUE INDEX payments_pkey ON pay.payments USING btree (id)",
+    "CREATE INDEX payments_customer_status ON pay.payments USING btree (customer_id, status)"
+   ],
+   "definition": null
+  },
+  {
+   "schema": "pay",
+   "name": "refunds",
+   "kind": "table",
+   "comment": null,
+   "est_rows": "0",
+   "columns": [
+    {
+     "name": "id",
+     "type": "bigint",
+     "nullable": false,
+     "default": "nextval('pay.refunds_id_seq'::regclass)",
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "payment_id",
+     "type": "bigint",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "reason",
+     "type": "pay.refund_reason",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "amount",
+     "type": "pay.money",
+     "nullable": false,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    }
+   ],
+   "constraints": [
+    {
+     "name": "refunds_pkey",
+     "type": "p",
+     "def": "PRIMARY KEY (id)",
+     "ref": null
+    },
+    {
+     "name": "refunds_payment_id_fkey",
+     "type": "f",
+     "def": "FOREIGN KEY (payment_id) REFERENCES pay.payments(id)",
+     "ref": "pay.payments"
+    }
+   ],
+   "indexes": [
+    "CREATE UNIQUE INDEX refunds_pkey ON pay.refunds USING btree (id)"
+   ],
+   "definition": null
+  },
+  {
+   "schema": "pay",
+   "name": "settled_payments",
+   "kind": "view",
+   "comment": null,
+   "est_rows": "0",
+   "columns": [
+    {
+     "name": "id",
+     "type": "bigint",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "customer_id",
+     "type": "bigint",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "amount",
+     "type": "numeric(12,2)",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "fee",
+     "type": "numeric(12,2)",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    }
+   ],
+   "constraints": [],
+   "indexes": [],
+   "definition": " SELECT id,\n    customer_id,\n    amount,\n    fee\n   FROM pay.payments p\n  WHERE (status = 'SETTLED'::text);"
+  },
+  {
+   "schema": "pay",
+   "name": "unrelated_audit",
+   "kind": "table",
+   "comment": null,
+   "est_rows": "0",
+   "columns": [
+    {
+     "name": "id",
+     "type": "bigint",
+     "nullable": false,
+     "default": "nextval('pay.unrelated_audit_id_seq'::regclass)",
+     "identity": null,
+     "generated": null,
+     "comment": null
+    },
+    {
+     "name": "note",
+     "type": "text",
+     "nullable": true,
+     "default": null,
+     "identity": null,
+     "generated": null,
+     "comment": null
+    }
+   ],
+   "constraints": [
+    {
+     "name": "unrelated_audit_pkey",
+     "type": "p",
+     "def": "PRIMARY KEY (id)",
+     "ref": null
+    }
+   ],
+   "indexes": [
+    "CREATE UNIQUE INDEX unrelated_audit_pkey ON pay.unrelated_audit USING btree (id)"
+   ],
+   "definition": null
+  }
+ ],
+ "functions": [
+  {
+   "schema": "pay",
+   "name": "customer_balance",
+   "kind": "function",
+   "args": "p_customer bigint",
+   "signature": "p_customer bigint",
+   "returns": "numeric",
+   "arg_list": [
+    {
+     "name": "p_customer",
+     "type": "bigint",
+     "mode": "in"
+    }
+   ],
+   "lang": "plpgsql",
+   "volatility": "stable",
+   "security_definer": false,
+   "comment": null,
+   "body": "\ndeclare settled numeric; refunded numeric;\nbegin\n  select coalesce(sum(amount - fee), 0) into settled from pay.payments where customer_id = p_customer and status = 'SETTLED';\n  select coalesce(sum(r.amount), 0) into refunded from pay.refunds r join pay.payments p on p.id = r.payment_id where p.customer_id = p_customer;\n  return settled - refunded;\nend "
+  },
+  {
+   "schema": "pay",
+   "name": "touch",
+   "kind": "function",
+   "args": "",
+   "signature": "",
+   "returns": "trigger",
+   "arg_list": [],
+   "lang": "plpgsql",
+   "volatility": "volatile",
+   "security_definer": false,
+   "comment": null,
+   "body": "\nbegin\n  NEW.updated_at := now();\n  return NEW;\nend "
+  }
+ ],
+ "viewDeps": [
+  {
+   "view": "pay.customer_totals",
+   "ref": "pay.settled_payments",
+   "ref_kind": "relation"
+  },
+  {
+   "view": "pay.settled_payments",
+   "ref": "pay.payments",
+   "ref_kind": "relation"
+  }
+ ],
+ "triggers": [
+  {
+   "table": "pay.payments",
+   "name": "payments_touch",
+   "function": "pay.touch",
+   "def": "CREATE TRIGGER payments_touch BEFORE UPDATE ON pay.payments FOR EACH ROW EXECUTE FUNCTION pay.touch()",
+   "enabled": true
+  }
+ ],
+ "types": [
+  {
+   "schema": "pay",
+   "name": "money",
+   "kind": "domain",
+   "labels": [],
+   "base": "numeric(12,2)",
+   "not_null": false,
+   "default": null,
+   "checks": [
+    "CHECK ((VALUE >= (0)::numeric))"
+   ]
+  },
+  {
+   "schema": "pay",
+   "name": "refund_reason",
+   "kind": "enum",
+   "labels": [
+    "duplicate",
+    "fraud",
+    "customer_request"
+   ],
+   "base": null,
+   "not_null": false,
+   "default": null,
+   "checks": []
+  }
+ ],
+ "sequences": [
+  {
+   "schema": "pay",
+   "name": "customers_id_seq",
+   "type": "bigint",
+   "start": "1",
+   "increment": "1"
+  },
+  {
+   "schema": "pay",
+   "name": "payments_id_seq",
+   "type": "bigint",
+   "start": "1",
+   "increment": "1"
+  },
+  {
+   "schema": "pay",
+   "name": "refunds_id_seq",
+   "type": "bigint",
+   "start": "1",
+   "increment": "1"
+  },
+  {
+   "schema": "pay",
+   "name": "unrelated_audit_id_seq",
+   "type": "bigint",
+   "start": "1",
+   "increment": "1"
+  }
+ ],
+ "extensions": []
+}

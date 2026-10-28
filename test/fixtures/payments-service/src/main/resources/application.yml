@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: payments-service
+  datasource:
+    url: ${PAY_DB_URL:jdbc:postgresql://localhost:5432/pay}
+    username: ${PAY_DB_USER:pay}
+    password: ${PAY_DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+  kafka:
+    bootstrap-servers: ${KAFKA:localhost:9092}
+app:
+  topics:
+    created: payments.created

@@ -305,6 +305,135 @@ for (const [s, xs] of Object.entries(by)) text(s, xs.length, (xs.reduce((a, b) =
 - The answer has the output for the model and a `code` view for the user (code, output, the tools it called, links to their views).
 - Script `js` steps and hooks can call tools the same way.
 
+## Code: index, impact, tests, patches
+
+Every fetched repo gets a **code index** in `cache/code/<PROJECT>/<repo>/`: passports, `repo_fetch`, `code_index` and workspaces build it with no extra network. It has two parts.
+
+- **Trigram index** (`tri.bin`) over every text file (Java, Kotlin, yml, properties, SQL, XML, …).
+  - `code_search` greps all indexed repos at once. It takes text or a regex, and a path glob.
+  - The literal parts of the pattern (`jdbc\.update\("update s\d` → `jdbc.update("update s`; `(ledger|coupon)Op1` → `ledgerOp1` or `couponOp1`) pick the files that can match. Only those files are read and matched.
+  - It works the way Google's codesearch and zoekt do, and it is built in, so the container needs no ripgrep.
+- **Symbol graph** (`graph.json`), regex and brace level like the passport:
+  - classes, fields, constructors and methods with line ranges, and Spring roles;
+  - injected dependencies, and calls typed through fields, parameters and locals (including `new X(...).m()`);
+  - interface-to-implementation dispatch;
+  - entity fields mapped to columns (`@Table`, `@Column`, snake case), and the SQL inside methods;
+  - plus the passport findings (tables, Kafka topics consumed and produced, endpoints, Feign calls, ES indices, database functions), each attached to the method it is in.
+
+**`impact`** answers "what is affected if this changes". It walks "who uses it" back through:
+
+- the graphs of every indexed repo and workspace;
+- the Postgres usage index of an env (functions, views, triggers, FKs);
+- the passports of services that are not indexed.
+
+The target can be:
+
+- a method or class (`PaymentService#create`, an FQN, `File.java:42`);
+- a table (`pay.payments`);
+- a column (`pay.payments.fee`): entity fields mapped to it, getters and setters called on them, SQL naming it, function bodies and views that read the table and mention it, and indexes and constraints on it;
+- a database function;
+- a topic (`topic:payments.created`): producer, then the consumers in every service;
+- an ES index;
+- an endpoint (`POST /payments/7/settle`): its handler, plus the Feign clients calling it from other services.
+
+The answer comes in layers by distance, with file:line and the reason for each step. It lists the endpoints, topics, tables and services reached, and the tests that exercise the code (run those). Text mentions in config and SQL files come from the trigram index. The user sees it as the `impact` view.
+
+| Question | Tool |
+| --- | --- |
+| Where is this string, key, SQL, log message? | `code_search` |
+| Which class/method is it? | `code_symbols` |
+| What breaks if I change it? Which tests cover it? | `impact` |
+| Schema for a test database | `ddl_snapshot` |
+
+### Tests and patches
+
+The flow is `workspace_open` → `test_context` → `workspace_write` → `test_run` → `workspace_write` (fix) → `test_run` → `workspace_patch`.
+
+1. **`workspace_open`** checks out master/main, a branch, a tag, a commit, or what is deployed in an env (`service` + `env`) into `work/<id>`. The checkout is writable and indexed.
+2. **`test_context`** collects what the agent needs for an isolated test of a class or method:
+   - its source, its Spring role and the style that fits it:
+     - plain JUnit for logic;
+     - Mockito (`@Mock` each dependency, `@InjectMocks`) for services, components and Kafka listeners (call the listener method directly);
+     - `@WebMvcTest` + MockMvc with `@MockBean`, or `@MockitoBean` on Boot 3.4+, for controllers;
+     - `@DataJpaTest` / `@JdbcTest` against the real schema for repositories and DAOs;
+   - the dependencies with their methods, and what each method calls on them (what to stub);
+   - the project's test setup (JUnit 4 or 5, AssertJ, Boot version, Testcontainers), an existing test to copy the style from, and rules;
+   - a skeleton that compiles.
+   With `env`, it also writes a **DDL snapshot** of the tables the class touches to `src/test/resources/dt-schema/<db>.sql`, and suggests inserts (parents first, only columns that need a value). The snapshot grows as more tests need more tables.
+3. **`test_run`** runs the named tests with the repo's own build (Maven or Gradle; the wrapper when there is one) and answers with:
+   - each test with its status and time;
+   - failures with their messages;
+   - **code parts to work on**: the frames of the stack trace that are in the repo, with the lines around them;
+   - compile errors with their lines.
+   With `env` + `db` (or `ddl_path`), the run gets a throwaway database on the test Postgres, loaded with the snapshot. Spring gets it as `SPRING_DATASOURCE_*` env vars, which reach the test JVM under both Maven and Gradle; Flyway, Liquibase and `spring.sql.init` are off. Long runs answer "running" with a job id, like `catalog_sync`.
+4. **`workspace_patch`** returns one git patch against the commit the workspace was opened at: new tests, the snapshot, fixes. The user sees it as a colored diff with **Download .patch** (`/patch/<id>.patch`). Apply it with `git apply --index`. **Nothing is committed or pushed.**
+
+`ddl_snapshot` writes the DDL of a synced database: extensions, schemas, enum and domain types, sequences, tables (defaults, identity, generated columns, constraints, indexes, comments), functions and procedures, views in dependency order, and triggers. It can do all of it, or only some tables or functions, or what a service uses, closed over what they need (FK targets, trigger functions, called functions and the tables they touch). A snapshot of a whole database loads into an empty one and reproduces the same catalog. The stress test checks that on 2,000 tables.
+
+**Running tests needs a JDK and a scratch Postgres.** With compose, the `jdk` and `testdb` profiles provide them (on by default in `run.sh`):
+
+- `jdk` copies JDK 21 and Maven from the official `maven` image into a volume that dt mounts at `/opt/jdk`. It's a one-shot, still with no Dockerfile.
+- `testdb` is Postgres on tmpfs, reachable only on the compose network.
+- The Maven and Gradle caches live in `cache/m2` and `cache/gradle` of the config folder.
+
+Without Docker, dt uses `JAVA_HOME`/PATH and `~/.m2`. The `tests` section of `config.json` overrides any of it:
+
+```json
+"tests": {
+  "javaHome": "/usr/lib/jvm/temurin-21",
+  "maven": "/opt/maven/bin/mvn",
+  "mavenSettings": "maven-settings.xml",
+  "pgUrl": "postgres://dt:dt@localhost:55432/postgres",
+  "offline": false, "timeoutMs": 900000
+}
+```
+
+- `mavenSettings` is relative to the config folder; use it for your Nexus mirror.
+- `pgUrl` is refused when it is one of the environments' databases. That is the only database dt ever writes to, and it only touches `dt_test_*` databases.
+- On a JDK newer than the project's Mockito/Byte Buddy (for example, Boot 3.3 on Java 24), runs set `-Dnet.bytebuddy.experimental=true` (`tests.javaToolOptions`).
+
+### How big, how fast
+
+`node test/stress/code-and-db.js [--repos 40 --files 400] [--pg <url> --tables 2000]` builds synthetic Spring services that call each other (Feign → endpoints) and share topics and tables. It checks every grep against a full scan of the same files and times ripgrep. With `--pg`, it creates, syncs, snapshots and restores a big schema.
+
+On a laptop (M-series, Node 22), with 40 services, 18,200 files (101 MB) and a 2,000-table database:
+
+**Building the index**
+
+| | |
+| --- | --- |
+| Index build | 36 s in all, 0.9 s per service (median), 2.8 MB/s |
+| Index size | 70 MB (trigrams 11 MB, graph 56 MB) |
+
+**Grep**
+
+| | |
+| --- | --- |
+| Rare literal, class name, config key | 12–46 ms (reads 1–75 of the 18,200 files) |
+| Topic name, annotation, regex with a literal | 35–140 ms |
+| Full scan in Node, for comparison | 1.2–4.4 s |
+| ripgrep, for comparison | 0.42–0.51 s |
+| Common word (`return`) or regex without a literal | ~1.3 s: about a full scan. The index can't help, which is where ripgrep wins. |
+
+**Impact**
+
+| | |
+| --- | --- |
+| Per question | 0.4–0.55 s: hot method, table across 16 services, column, topic through 6 services, endpoint with Feign callers in other services |
+| Loading all 40 graphs | 1.2 s, ~370 MB heap. Kept until an index changes. |
+
+**Database**
+
+| | |
+| --- | --- |
+| `catalog_sync` | 5.9 s (2,200 relations, 501 functions) |
+| Usage index | 0.1 s |
+| `catalog.txt` | 0.4 s |
+| `find` | 2–5 ms |
+| DDL of the whole database | 0.4 s (7,500 statements, 2.7 MB) |
+| Loading it into an empty database | 71 s, with identical catalogs |
+| Snapshot of one function closed over its tables | 0.14 s |
+
 ## Views: how results are shown
 
 Every result can be shown in the chat (Open WebUI embeds it) or on its own page. Tables use the result viewer; everything else uses **views**:
@@ -374,6 +503,7 @@ Secrets (`.env`) are never shown or edited there.
 | bitbucket | `bitbucket_repos`, `bitbucket_files`, `bitbucket_file`, `bitbucket_prs`, `bitbucket_pr`, `bitbucket_my_prs`, `repo_fetch` |
 | confluence | `confluence_search`, `confluence_page` |
 | passport | `passport`, `passports`, `who_uses` |
+| code | `code_index`, `code_search`, `code_symbols`, `code_read`, `impact`, `ddl_snapshot`, `workspace_open`, `workspace_list`, `workspace_read`, `workspace_write`, `workspace_patch`, `workspace_drop`, `test_context`, `test_run` |
 | browser | `browser_sites`, `site_url` (plus the Playwright MCP tools when the `browser` profile runs) |
 | api | `api_routes`, `routes_learn`, `routes_discover` |
 | scripts | `code`, `script_list`, `script_get`, `script_save`, `script_run`, `script_collection`, `js_run`, plus each script or collection exposed as a tool |
@@ -410,7 +540,11 @@ Every picture comes from the bundled demo, a fake environment with real Postgres
 ## Safety
 - Views run in sandboxed pages without network access (`connect-src 'none'`); their data is in the page.
 - Script JavaScript runs sandboxed (no files, no secrets, time and memory limits); `scripts.js: false` turns it off.
-- Writing is limited to file stores marked `"write": true` (never overwriting unless asked) and script `http` steps to the prefixes in `scripts.http.allow`.
+- Writing is limited to:
+  - file stores marked `"write": true` (never overwriting unless asked);
+  - script `http` steps to the prefixes in `scripts.http.allow`;
+  - workspaces (`work/<id>`, checkouts of their own; their changes leave only as a patch, never committed or pushed);
+  - the `dt_test_*` databases of the test Postgres (`tests.pgUrl`, refused when it is an environment's database).
 - Postgres statements run in read-only transactions with their own `statement_timeout` (`SET LOCAL`, so it also holds behind PgBouncer): 60 s for queries, 2 min for indexing (`timeouts`); the other sources are only read.
 - Ports are published on 127.0.0.1 unless you change `DT_BIND`. Set `DT_API_KEY` before exposing dt.
 - Result pages load their data by unguessable ids or signed tokens, so embeds in a sandboxed chat iframe work. Everything else needs a trusted client.
@@ -423,6 +557,8 @@ Every picture comes from the bundled demo, a fake environment with real Postgres
 **Indexing a big database is cancelled (`canceling statement due to statement timeout`).** Each catalog query may take `timeouts.pgIndexMs` (2 minutes by default); raise it in `config.json` (or `DT_PG_INDEX_TIMEOUT_MS`). In the chat, `catalog_sync` answers "running" with a job id after ~50 s instead of making the client time out; asking again with that id returns the result.
 
 **Kibana (or another link) opened from an embedded view fails: `Failed to read the 'sessionStorage' property … document is sandboxed and lacks the 'allow-same-origin' flag`.** Open WebUI embeds tool results in a sandboxed iframe, and a tab opened from it inherits that sandbox. The link itself is fine. Open it from the chat answer instead (the agent puts Kibana links there) or with **Copy Kibana link** on the logs view. If you want links in embeds to work directly, turn on Open WebUI's *Settings → Interface → iframe Sandbox Allow Same Origin* (as admin, also the default for everyone under *Admin → Settings → Interface*). That is your call: it lets embedded pages use their own origin (dt's, which differs from Open WebUI's), so they can keep storage and open working tabs. dt's custom views stay sandboxed either way (`/show/…` sends its own CSP sandbox).
+
+**`test_run`: `no Maven` / `no Gradle` / `the test database … is not reachable`.** Add `jdk` and `testdb` to `COMPOSE_PROFILES` (run.sh has them by default), or point `tests.maven` / `tests.javaHome` / `tests.pgUrl` at yours. Behind a corporate mirror, put a Maven `settings.xml` in the config folder and set `tests.mavenSettings`. For Gradle wrappers, point `distributionUrl` at your mirror. The first run downloads the project's dependencies (Spring Boot tests: ~100 MB into `cache/m2`), so it may answer "running"; ask again with the job id. `Mockito cannot mock this class` on a JDK newer than the project's Mockito: use the JDK the project builds with (`tests.javaHome`), or keep the default `tests.javaToolOptions`.
 
 **A library of a passport has `error: no Bitbucket repo for …`.** dt looks for the library's repo by its artifactId, shorter forms of it (`acme-starter-kafka` → `acme-starter`, for a module of a bigger repo), the name without suffixes like `-starter`/`-core`, and the end of its groupId; in the repo it reads only the module that declares the artifact. When the repo is named otherwise, map it: `"passports": { "libraryRepos": { "acme-starter-*": "LIB/platform-starters" } }` (artifactId or `groupId:artifactId` globs). Gradle versions may come from `gradle.properties`, `ext { }` / `ext.x`, `def`/`val`, `extra[...]`, and maps like `$versions.kafka`.
 

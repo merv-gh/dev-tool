@@ -4,6 +4,8 @@
 #   webui:   Open WebUI chat + one-shot setup              -> http://127.0.0.1:3000
 #   browser: Playwright MCP (headless Chromium); logins use secrets from .env.browser
 #   graph:   code-review-graph over repos/ (fetched by passports / repo_fetch), via mcpo as OpenAPI
+#   jdk:     JDK 21 + Maven for test_run, copied once from the official Maven image into a volume dt mounts
+#   testdb:  scratch Postgres for test_run: each run gets a throwaway database loaded with a DDL snapshot
 # Config and data live in one folder (DT_HOME_DIR, set by run.sh --home; default: this folder):
 #   config.json, .env, notes.json, plugins/, scripts/, cache/, repos/, passports/
 # Only the tool server, for an Open WebUI or MCP client you already run:  ./run.sh --tools-only up -d
@@ -26,12 +28,21 @@ services:
       GRAPH_URL: ${GRAPH_URL:-http://graph:8000}
       DT_BROWSER_MCP: ${DT_BROWSER_MCP:-http://browser:8931/mcp}  # dt drives the browser for saved scripts / route discovery
       DT_HOME: /dt
+      # test_run: the jdk profile's JDK + Maven (used when present), caches kept in the home folder
+      DT_JAVA_HOME: ${DT_JAVA_HOME:-/opt/jdk/java}
+      DT_MAVEN: ${DT_MAVEN:-/opt/jdk/maven/bin/mvn}
+      DT_MAVEN_REPO: ${DT_MAVEN_REPO:-/dt/cache/m2}
+      DT_GRADLE_USER_HOME: ${DT_GRADLE_USER_HOME:-/dt/cache/gradle}
+      DT_TEST_DB_URL: ${DT_TEST_DB_URL:-postgres://dt:dt@testdb:5432/postgres}
       PORT: 4000
       NODE_ENV: production
       HOME: /tmp                                           # git needs a writable home; the uid may not exist in the image
     volumes:
       - ./dist:/app:ro          # the code: bundle + web pages (npm run build); a restart picks up a rebuild
-      - ${DT_HOME_DIR:-.}:/dt   # config.json, .env, notes, plugins, scripts/, cache/, repos/, passports/
+      - ${DT_HOME_DIR:-.}:/dt   # config.json, .env, notes, plugins, scripts/, cache/, repos/, passports/, work/
+      - jdk:/opt/jdk:ro         # filled by the jdk profile; empty otherwise
+    depends_on:
+      jdk: { condition: service_completed_successfully, required: false }
     ports:
       - "${DT_BIND:-127.0.0.1}:${DT_PORT:-4000}:4000"
     healthcheck:
@@ -76,6 +87,37 @@ services:
       - ${DT_HOME_DIR:-.}/repos:/repos   # graph data is written next to each repo (.code-review-graph/)
     restart: unless-stopped
 
+  # One-shot: copy the JDK and Maven of the official image into the jdk volume (again when the image changes).
+  # glibc builds, so they run in the node (Debian) image of dt.
+  jdk:
+    profiles: [jdk]
+    image: maven:${MAVEN_IMAGE_TAG:-3.9-eclipse-temurin-21}
+    command:
+      - sh
+      - -c
+      - |
+        set -e
+        v=$$(cat /opt/java/openjdk/release /usr/share/maven/lib/maven-core-*.jar | md5sum | cut -c1-12)
+        if [ ! -f /jdk/.v-$$v ]; then
+          rm -rf /jdk/java /jdk/maven /jdk/.v-*
+          cp -a /opt/java/openjdk /jdk/java && cp -a /usr/share/maven /jdk/maven && touch /jdk/.v-$$v
+        fi
+        echo "jdk ready: $$(/jdk/java/bin/java -version 2>&1 | head -1)"
+    volumes:
+      - jdk:/jdk
+    restart: "no"
+
+  testdb:
+    profiles: [testdb]
+    image: postgres:${TESTDB_POSTGRES_VERSION:-16-alpine}
+    environment:
+      POSTGRES_USER: dt
+      POSTGRES_PASSWORD: dt
+    tmpfs:
+      - /var/lib/postgresql/data      # throwaway: nothing to keep
+    command: ["postgres", "-c", "fsync=off", "-c", "full_page_writes=off", "-c", "synchronous_commit=off"]
+    restart: unless-stopped           # no ports: only dt reaches it on the compose network
+
   webui:
     profiles: [webui]
     image: ghcr.io/open-webui/open-webui:${OPEN_WEBUI_VERSION:-v0.12.4}
@@ -93,7 +135,7 @@ services:
       TOOL_SEARCH_DEFER_THRESHOLD: "0"
       TOOL_SEARCH_ALWAYS_LOADED: >-
         find,catalog_sync,pg_table,pg_function,pg_usage,pg_query,es_search,kafka_topic,kafka_last,kafka_lag,health,es_health,overview,consul_service,
-        logs_search,logs_trace,passport,who_uses,bitbucket_pr,browser_sites,site_url,api_routes,routes_learn,script_list,script_run,call_patterns,files_stores,files_search,files_read,files_show,files_browse,show,diff,code,
+        logs_search,logs_trace,passport,who_uses,bitbucket_pr,code_search,impact,workspace_open,test_context,test_run,workspace_write,workspace_patch,browser_sites,site_url,api_routes,routes_learn,script_list,script_run,call_patterns,files_stores,files_search,files_read,files_show,files_browse,show,diff,code,
         browser_browser_navigate,browser_browser_snapshot,browser_browser_click,browser_browser_type,browser_browser_fill_form,
         browser_browser_press_key,browser_browser_take_screenshot,browser_browser_wait_for
       # dt over OpenAPI so results can embed the viewer/dashboard in the chat; browser over MCP.
@@ -136,3 +178,4 @@ services:
 
 volumes:
   webui-data: {}
+  jdk: {}

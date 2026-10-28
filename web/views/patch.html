@@ -1,0 +1,35 @@
+<!-- {"description": "A git patch of a workspace: files with +/- counts and the unified diff, colored, with copy and download. DATA: the workspace_patch result { id, repo, base, ref, files[{path,added,removed,status}], patch, apply }", "sample": {"id": "payments-service-main-1a2b", "repo": "PAY/payments-service", "base": "ab2ce56eef167859519122e848171604c0fbef78", "ref": "main", "files": [{"path": "src/main/java/com/acme/pay/FeeCalculator.java", "added": 1, "removed": 1, "status": "modified"}], "patch": "diff --git a/src/main/java/com/acme/pay/FeeCalculator.java b/src/main/java/com/acme/pay/FeeCalculator.java\n--- a/src/main/java/com/acme/pay/FeeCalculator.java\n+++ b/src/main/java/com/acme/pay/FeeCalculator.java\n@@ -15,1 +15,1 @@\n-        BigDecimal fee = amount.multiply(RATE).add(FIXED).setScale(2, RoundingMode.DOWN);\n+        BigDecimal fee = amount.multiply(RATE).add(FIXED).setScale(2, RoundingMode.HALF_UP);\n", "apply": "git checkout ab2ce56eef16 && git apply --index payments-service-main-1a2b.patch"}} -->
+<style>
+  .pt { display: grid; gap: 10px; }
+  .files { display: grid; gap: 2px; font: 12.5px ui-monospace, Menlo, monospace; }
+  .files a { color: inherit; text-decoration: none; } .files a:hover { text-decoration: underline; }
+  .add { color: var(--good); } .del { color: var(--bad); }
+  .fd { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .fd h4 { margin: 0; padding: 6px 10px; font: 600 12.5px ui-monospace, Menlo, monospace; background: var(--soft); border-bottom: 1px solid var(--line); }
+  .fd pre { margin: 0; padding: 6px 0; font: 12px/1.5 ui-monospace, Menlo, monospace; overflow: auto; max-height: 520px; }
+  .fd pre span { display: block; padding: 0 10px; white-space: pre; }
+  .fd .l-add { background: color-mix(in srgb, var(--good) 13%, transparent); }
+  .fd .l-del { background: color-mix(in srgb, var(--bad) 12%, transparent); }
+  .fd .l-hunk { color: var(--accent); background: var(--soft); }
+  .apply { font: 12px ui-monospace, Menlo, monospace; }
+</style>
+<div class="pt">
+  <div class="vhead"><h1 data-title></h1><span class="spacer"></span><button class="small" id="copy">Copy patch</button><a class="chip" id="dl" target="_blank" rel="noopener">Download .patch</a></div>
+  <div class="muted apply" id="apply"></div>
+  <div class="card files" id="files"></div>
+  <div id="diffs" class="pt"></div>
+</div>
+<script>
+  const D = DATA;
+  dt.title(META.title || `${D.repo} patch`);
+  dt.$('#apply').textContent = D.apply ? `Apply: ${D.apply}` : '';
+  dt.$('#dl').href = location.pathname.replace('/show/', '/patch/') + '.patch';
+  dt.$('#copy').onclick = (e) => dt.copy(D.patch || '', e.target);
+  dt.$('#files').innerHTML = (D.files || []).map((f, i) => `<a href="#f${i}">${f.status === 'added' ? '<span class="add">A</span>' : '<span class="muted">M</span>'} ${dt.esc(f.path)} <span class="add">+${f.added}</span> <span class="del">-${f.removed}</span></a>`).join('');
+  const chunks = String(D.patch || '').split(/^(?=diff --git )/m).filter(Boolean);
+  dt.$('#diffs').innerHTML = chunks.map((ch, i) => {
+    const name = (ch.match(/^diff --git a\/(\S+)/) || [])[1] || '';
+    const body = ch.split('\n').filter(l => !/^(diff --git|index |new file mode|--- |\+\+\+ )/.test(l)).map(l => `<span class="${l.startsWith('@@') ? 'l-hunk' : l.startsWith('+') ? 'l-add' : l.startsWith('-') ? 'l-del' : ''}">${dt.esc(l) || ' '}</span>`).join('');
+    return `<div class="fd" id="f${i}"><h4>${dt.esc(name)}</h4><pre>${body}</pre></div>`;
+  }).join('');
+</script>

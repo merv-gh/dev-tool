@@ -282,6 +282,13 @@ const routes = [
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'content-security-policy': require('./lib/views').CSP, 'cache-control': 'no-cache', 'x-content-type-options': 'nosniff' });
     res.end(html);
   }],
+  // a workspace patch as a file (the unguessable result id is the key, like /show)
+  ['GET', '/patch/*', false, (req, res, url) => {
+    const r = results.load(url.pathname.split('/').pop().replace(/\.patch$/, ''));
+    if (!r || r.kind !== 'view' || r.view !== 'patch') return send(res, 404, { error: 'No such patch' });
+    res.writeHead(200, { 'content-type': 'text/x-diff; charset=utf-8', 'content-disposition': `attachment; filename="${String(r.data.id || 'dt').replace(/[^\w.-]/g, '_')}.patch"`, 'cache-control': 'no-cache', 'x-content-type-options': 'nosniff' });
+    res.end(r.data.patch || '');
+  }],
   // the file browser: a stored listing of one store directory; previews only inside it
   ['GET', '/files/*', false, page('files.html')],
   ['GET', '/api/files/*', false, async (req, res, url) => {

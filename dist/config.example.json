@@ -93,5 +93,7 @@
 
   "timeouts": { "pgQueryMs": 60000, "pgIndexMs": 120000, "catalogSyncWaitMs": 50000 },
 
+  "tests": { "mavenSettings": "", "pgUrl": "${DT_TEST_DB_URL:-}", "offline": false, "timeoutMs": 900000 },
+
   "server": { "publicUrl": "http://127.0.0.1:4000", "apiKey": "${DT_API_KEY}", "ratePerSec": 1 }
 }

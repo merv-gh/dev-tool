@@ -10,6 +10,7 @@ notes.json
 /cache/
 /repos/
 /passports/
+/work/
 plugins/*.js
 /scripts/
 /files/

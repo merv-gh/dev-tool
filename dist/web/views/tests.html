@@ -1,0 +1,47 @@
+<!-- {"description": "Test run of a workspace: outcome, counts, each test with status and time, failures with message, stack and the code parts to work on (lines around the failing frames), compile errors, output tail. DATA: the test_run result { outcome, counts, cases[{class,name,status,ms,message,stack,parts}], compile, parts[{file,line,why,snippet}], command, tail }", "sample": {"workspace": "payments-service-main-1a2b", "outcome": "failed", "ms": 14200, "command": "mvn -B -ntp test -Dtest=FeeCalculatorTest", "counts": {"tests": 2, "passed": 1, "failed": 1, "errors": 0, "skipped": 0}, "cases": [{"class": "com.acme.pay.FeeCalculatorTest", "name": "roundsHalfUp", "status": "failed", "ms": 12, "message": "expected: 0.59 but was: 0.58", "stack": "org.opentest4j.AssertionFailedError: expected: 0.59 but was: 0.58\n\tat com.acme.pay.FeeCalculatorTest.roundsHalfUp(FeeCalculatorTest.java:14)"}, {"class": "com.acme.pay.FeeCalculatorTest", "name": "minimumFee", "status": "passed", "ms": 3}], "compile": [], "parts": [{"file": "src/main/java/com/acme/pay/FeeCalculator.java", "line": 18, "why": "FeeCalculatorTest.roundsHalfUp: expected: 0.59 but was: 0.58", "snippet": {"from": 16, "to": 20, "text": "   16          }\n>  18          BigDecimal fee = amount.multiply(RATE).add(FIXED).setScale(2, RoundingMode.DOWN);\n   19          return fee.max(MIN);"}}], "tail": "[INFO] BUILD FAILURE"}} -->
+<style>
+  .tr { display: grid; gap: 10px; }
+  .tr-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .tr-head b { font-size: 15px; }
+  .big { font-weight: 700; padding: 3px 10px; border-radius: 999px; font-size: 13px; }
+  .big.passed { background: color-mix(in srgb, var(--good) 18%, transparent); color: var(--good); }
+  .big.bad { background: color-mix(in srgb, var(--bad) 16%, transparent); color: var(--bad); }
+  .cmd { font: 12px ui-monospace, Menlo, monospace; color: var(--muted); word-break: break-all; }
+  .case { display: flex; gap: 8px; align-items: baseline; padding: 5px 10px; border-top: 1px solid var(--line); font-size: 13px; }
+  .case:first-child { border-top: 0; }
+  .case .st { width: 16px; text-align: center; font-weight: 700; }
+  .case .passed { color: var(--good); } .case .failed, .case .error { color: var(--bad); } .case .skipped { color: var(--muted); }
+  .case .nm { flex: 1; } .case .ms { color: var(--muted); font-size: 12px; }
+  .msg { margin: 2px 10px 8px 34px; font: 12px/1.5 ui-monospace, Menlo, monospace; color: var(--bad); white-space: pre-wrap; word-break: break-word; }
+  details.stack { margin: 0 10px 8px 34px; } details.stack pre { max-height: 240px; }
+  .part h4 { margin: 0 0 4px; font-size: 13px; } .part .why { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+  pre.src .hl { background: color-mix(in srgb, var(--bad) 14%, transparent); display: inline-block; width: 100%; }
+</style>
+<div class="tr">
+  <div class="tr-head"><b data-title></b><span id="outcome"></span><span id="counts" class="muted"></span><span class="spacer"></span><span class="muted" id="ms"></span></div>
+  <div class="cmd" id="cmd"></div>
+  <div class="card" id="parts-card"><h3 style="margin:0 0 8px;font-size:14px">Code to work on</h3><div id="parts"></div></div>
+  <div class="card" style="padding:0" id="cases"></div>
+  <details class="card"><summary>Build output (last lines)</summary><pre class="src" id="tail"></pre></details>
+</div>
+<script>
+  const D = DATA, icon = { passed: '✓', failed: '✗', error: '!', skipped: '–' };
+  dt.title(META.title || 'Test run');
+  const bad = D.outcome !== 'passed';
+  dt.$('#outcome').innerHTML = `<span class="big ${bad ? 'bad' : 'passed'}">${dt.esc(D.outcome)}</span>`;
+  const c = D.counts || {};
+  dt.$('#counts').textContent = `${c.tests || 0} tests: ${c.passed || 0} passed${c.failed ? `, ${c.failed} failed` : ''}${c.errors ? `, ${c.errors} errors` : ''}${c.skipped ? `, ${c.skipped} skipped` : ''}`;
+  dt.$('#ms').textContent = D.ms ? `${(D.ms / 1000).toFixed(1)} s` : '';
+  dt.$('#cmd').textContent = D.command || '';
+  const src = (s) => !s ? '' : `<pre class="src">${s.text.split('\n').map(l => l.startsWith('>') ? `<span class="hl">${dt.esc(l)}</span>` : dt.esc(l)).join('\n')}</pre>`;
+  const parts = D.parts || [];
+  dt.$('#parts').innerHTML = parts.length ? parts.map(p => `<div class="part" style="margin-bottom:10px"><h4>${dt.esc(p.file)}:${p.line}${p.test ? ' <span class="chip">test</span>' : ''}</h4><div class="why">${dt.esc(p.why || '')}</div>${src(p.snippet)}</div>`).join('') : '<span class="muted">Nothing failed.</span>';
+  if (!parts.length && !bad) dt.$('#parts-card').style.display = 'none';
+  const cases = (D.cases || []).slice().sort((a, b) => (a.status === 'passed') - (b.status === 'passed'));
+  dt.$('#cases').innerHTML = cases.map(k => `<div class="case"><span class="st ${k.status}">${icon[k.status] || '?'}</span><span class="nm">${dt.esc(k.class.split('.').pop())}.<b>${dt.esc(k.name)}</b></span><span class="ms">${k.ms} ms</span></div>`
+    + (k.message ? `<div class="msg">${dt.esc(k.message.slice(0, 2000))}</div>` : '')
+    + (k.stack ? `<details class="stack"><summary class="muted">stack</summary><pre class="src">${dt.esc(k.stack.slice(0, 8000))}</pre></details>` : '')).join('')
+    || (D.compile || []).map(e => `<div class="case"><span class="st error">!</span><span class="nm">${dt.esc(e.file)}:${e.line} ${dt.esc(e.message)}</span></div>`).join('')
+    || '<div class="case muted">No test reports (see the build output).</div>';
+  dt.$('#tail').textContent = D.tail || '';
+</script>

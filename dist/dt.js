@@ -23,7 +23,8 @@ var require_config = __commonJS({
       passports: path2.resolve(process.env.DT_PASSPORTS_DIR || path2.join(HOME, "passports")),
       plugins: path2.resolve(process.env.DT_PLUGINS_DIR || path2.join(HOME, "plugins")),
       scripts: path2.resolve(process.env.DT_SCRIPTS_DIR || path2.join(HOME, "scripts")),
-      views: path2.resolve(process.env.DT_VIEWS_DIR || path2.join(HOME, "views"))
+      views: path2.resolve(process.env.DT_VIEWS_DIR || path2.join(HOME, "views")),
+      work: path2.resolve(process.env.DT_WORK_DIR || path2.join(HOME, "work"))
     };
     var LOG_FIELDS = { time: "@timestamp", message: "message", service: "service.name", level: "log.level", trace: "trace.id" };
     function parseEnvFile(file) {
@@ -333,6 +334,27 @@ var require_config = __commonJS({
         catalogSyncWaitMs: n("DT_CATALOG_SYNC_WAIT_MS", c.catalogSyncWaitMs, 5e4)
       };
     }
+    function getTests() {
+      const c = resolved("tests"), e = process.env;
+      const os = require("os");
+      const m2 = path2.join(os.homedir(), ".m2", "repository");
+      const at = (p) => p ? path2.resolve(HOME, p) : null;
+      const there = (...ps) => ps.map(at).find((p) => p && fs2.existsSync(p)) || null;
+      return {
+        javaHome: there(c.javaHome, e.DT_JAVA_HOME, e.JAVA_HOME),
+        maven: there(c.maven, e.DT_MAVEN),
+        gradle: there(c.gradle, e.DT_GRADLE),
+        mavenRepo: at(c.mavenRepo || e.DT_MAVEN_REPO) || (fs2.existsSync(m2) ? m2 : path2.join(PATHS.cache, "m2")),
+        mavenSettings: at(c.mavenSettings || e.DT_MAVEN_SETTINGS),
+        gradleHome: at(c.gradleUserHome || e.DT_GRADLE_USER_HOME),
+        offline: String(e.DT_TESTS_OFFLINE || c.offline || "") === "true" || c.offline === true,
+        timeoutMs: Number(e.DT_TESTS_TIMEOUT_MS || c.timeoutMs || 9e5),
+        waitMs: Number(e.DT_TESTS_WAIT_MS || c.waitMs || 5e4),
+        pgUrl: c.pgUrl || e.DT_TEST_DB_URL || null,
+        javaToolOptions: c.javaToolOptions !== void 0 ? c.javaToolOptions : "-Dnet.bytebuddy.experimental=true",
+        args: [].concat(c.args || [])
+      };
+    }
     function getServer() {
       const c = resolved("server");
       const e = process.env;
@@ -365,6 +387,7 @@ var require_config = __commonJS({
       getScripts,
       getFiles,
       getTimeouts,
+      getTests,
       getServer,
       endpoint,
       reload,
@@ -2824,13 +2847,14 @@ select n.nspname as schema, c.relname as name,
   (select coalesce(json_agg(json_build_object(
       'name', a.attname, 'type', format_type(a.atttypid, a.atttypmod),
       'nullable', not a.attnotnull, 'default', pg_get_expr(d.adbin, d.adrelid),
+      'identity', nullif(a.attidentity, ''), 'generated', nullif(a.attgenerated, ''),
       'comment', col_description(c.oid, a.attnum)) order by a.attnum), '[]')
      from pg_attribute a left join pg_attrdef d on d.adrelid = a.attrelid and d.adnum = a.attnum
     where a.attrelid = c.oid and a.attnum > 0 and not a.attisdropped) as columns,
   (select coalesce(json_agg(json_build_object('name', k.conname, 'type', k.contype, 'def', pg_get_constraintdef(k.oid),
-      'ref', (select rn.nspname || '.' || rc.relname from pg_class rc join pg_namespace rn on rn.oid = rc.relnamespace where rc.oid = k.confrelid))), '[]')
+      'ref', (select rn.nspname || '.' || rc.relname from pg_class rc join pg_namespace rn on rn.oid = rc.relnamespace where rc.oid = k.confrelid)) order by k.conname), '[]')
      from pg_constraint k where k.conrelid = c.oid) as constraints,
-  (select coalesce(json_agg(pg_get_indexdef(i.indexrelid)), '[]')
+  (select coalesce(json_agg(pg_get_indexdef(i.indexrelid) order by i.indexrelid::regclass::text), '[]')
      from pg_index i where i.indrelid = c.oid) as indexes,
   case when c.relkind in ('v', 'm') then pg_get_viewdef(c.oid) end as definition
 from pg_class c join pg_namespace n on n.oid = c.relnamespace
@@ -2884,17 +2908,34 @@ join pg_class tc on tc.oid = t.tgrelid join pg_namespace tn on tn.oid = tc.relna
 join pg_proc p on p.oid = t.tgfoid join pg_namespace pn on pn.oid = p.pronamespace
 where not t.tgisinternal and tn.nspname not in ('pg_catalog', 'information_schema')
 order by 1, 2`;
+    var TYPES_SQL = `
+select n.nspname as schema, t.typname as name, case t.typtype when 'e' then 'enum' else 'domain' end as kind,
+  (select coalesce(json_agg(e.enumlabel order by e.enumsortorder), '[]') from pg_enum e where e.enumtypid = t.oid) as labels,
+  case when t.typtype = 'd' then format_type(t.typbasetype, t.typtypmod) end as base,
+  t.typnotnull as not_null, t.typdefault as default,
+  (select coalesce(json_agg(pg_get_constraintdef(c.oid)), '[]') from pg_constraint c where c.contypid = t.oid) as checks
+from pg_type t join pg_namespace n on n.oid = t.typnamespace
+where t.typtype in ('e', 'd') and n.nspname not in ('pg_catalog', 'information_schema') and n.nspname not like 'pg\\_%'
+  and not exists (select 1 from pg_depend d where d.objid = t.oid and d.deptype = 'e')
+order by 1, 2`;
+    var SEQUENCES_SQL = `
+select schemaname as schema, sequencename as name, data_type::text as type, start_value::text as start, increment_by::text as increment
+from pg_sequences where schemaname not in ('pg_catalog', 'information_schema') order by 1, 2`;
+    var EXTENSIONS_SQL = `select extname as name, extversion as version from pg_extension where extname <> 'plpgsql' order by 1`;
     var dbFile = (envName, name) => path2.join(CACHE2, envName, "pg", `${name}.json`);
     async function syncDb(envName, { name, url }) {
       const sql = connect(url);
       const started = Date.now();
       const ms = getTimeouts().pgIndexMs;
       const q = (text) => guarded(sql, ms, "index", (t) => t.unsafe(text));
-      const [tables, functions, viewDeps, triggers, [meta]] = await Promise.all([
+      const [tables, functions, viewDeps, triggers, types, sequences, extensions, [meta]] = await Promise.all([
         q(CATALOG_SQL),
         q(FUNCTIONS_SQL),
         q(VIEW_DEPS_SQL),
         q(TRIGGERS_SQL),
+        q(TYPES_SQL).catch(() => []),
+        q(SEQUENCES_SQL).catch(() => []),
+        q(EXTENSIONS_SQL).catch(() => []),
         q("select current_database() as database, version() as version")
       ]);
       writeJson(dbFile(envName, name), {
@@ -2906,7 +2947,10 @@ order by 1, 2`;
         tables: [...tables],
         functions: [...functions],
         viewDeps: [...viewDeps],
-        triggers: [...triggers]
+        triggers: [...triggers],
+        types: [...types],
+        sequences: [...sequences],
+        extensions: [...extensions]
       });
       return { tables: tables.length, functions: functions.length, viewDeps: viewDeps.length, triggers: triggers.length, ms: Date.now() - started };
     }
@@ -3235,10 +3279,22 @@ var require_extract = __commonJS({
       })(root);
       return out2;
     }
+    var lineCache = /* @__PURE__ */ new Map();
     var lineAt = (text, idx) => {
-      let n = 1;
-      for (let i = 0; i < idx && i < text.length; i++) if (text.charCodeAt(i) === 10) n++;
-      return n;
+      let nl = lineCache.get(text);
+      if (!nl) {
+        nl = [];
+        for (let i = 0; i < text.length; i++) if (text.charCodeAt(i) === 10) nl.push(i);
+        lineCache.set(text, nl);
+        if (lineCache.size > 64) lineCache.delete(lineCache.keys().next().value);
+      }
+      let lo = 0, hi = nl.length;
+      while (lo < hi) {
+        const m = lo + hi >> 1;
+        if (nl[m] < idx) lo = m + 1;
+        else hi = m;
+      }
+      return lo + 1;
     };
     function parseProperties(text) {
       const out2 = {};
@@ -3347,53 +3403,48 @@ var require_extract = __commonJS({
       return resolve;
     }
     function stripComments(t) {
-      let out2 = "", i = 0, q = null;
+      const parts = [];
+      let i = 0, from = 0, q = null;
+      const blank = (a, b) => t.slice(a, b).replace(/[^\n]/g, " ");
       while (i < t.length) {
-        const c = t[i], n = t[i + 1];
+        const c = t[i];
         if (q) {
-          out2 += c;
           if (c === "\\") {
-            out2 += n || "";
             i += 2;
             continue;
           }
-          if (c === q) q = null;
+          if (c === q || c === "\n") q = null;
           i++;
           continue;
         }
         if (c === '"' && t.startsWith('"""', i)) {
           const e = t.indexOf('"""', i + 3);
-          const end = e < 0 ? t.length : e + 3;
-          out2 += t.slice(i, end);
-          i = end;
+          i = e < 0 ? t.length : e + 3;
           continue;
         }
         if (c === '"' || c === "'") {
           q = c;
-          out2 += c;
           i++;
           continue;
         }
-        if (c === "/" && n === "/") {
-          while (i < t.length && t[i] !== "\n") {
-            out2 += " ";
-            i++;
-          }
+        if (c === "/" && t[i + 1] === "/") {
+          const e = t.indexOf("\n", i);
+          const end = e < 0 ? t.length : e;
+          parts.push(t.slice(from, i), blank(i, end));
+          i = from = end;
           continue;
         }
-        if (c === "/" && n === "*") {
-          while (i < t.length && !(t[i] === "*" && t[i + 1] === "/")) {
-            out2 += t[i] === "\n" ? "\n" : " ";
-            i++;
-          }
-          out2 += "  ";
-          i += 2;
+        if (c === "/" && t[i + 1] === "*") {
+          const e = t.indexOf("*/", i + 2);
+          const end = e < 0 ? t.length : e + 2;
+          parts.push(t.slice(from, i), blank(i, end));
+          i = from = end;
           continue;
         }
-        out2 += c;
         i++;
       }
-      return out2;
+      parts.push(t.slice(from));
+      return parts.join("");
     }
     function balanced(t, idx, open = "(", close = ")") {
       let depth = 0, q = null;
@@ -3870,7 +3921,7 @@ var require_extract = __commonJS({
         stats: { files: files.length, sourceFiles: code.length, ms: Date.now() - started }
       };
     }
-    module2.exports = { extract, parseYaml, parseProperties, parsePom, parseGradle, gradleVars, gradleResolve, sqlRefs, sqlCalls, stripComments, annoArgs, methodAfter, stringLiterals, loadConfig, resolver };
+    module2.exports = { extract, parseYaml, parseProperties, parsePom, parseGradle, gradleVars, gradleResolve, sqlRefs, sqlCalls, stripComments, splitTop, balanced, annoArgs, methodAfter, stringLiterals, loadConfig, resolver };
   }
 });
 
@@ -4042,7 +4093,7 @@ var require_git = __commonJS({
       const url = opts.url || remote(project, repo);
       const auth = authArgs(url);
       fs2.mkdirSync(dir, { recursive: true });
-      await ensureRepo(dir, url, project, repo);
+      await ensureRepo(dir, url, opts.gitKey || `${project.toUpperCase()}/${repo}`);
       const want = ref || "HEAD";
       let fallback = null;
       try {
@@ -4066,7 +4117,7 @@ var require_git = __commonJS({
       return info;
     }
     var NO_CHMOD = /core\.filemode|operation not permitted|chmod on|permission denied|could not (lock|write|set)|unable to (create|write)/i;
-    async function ensureRepo(dir, url, project, repo) {
+    async function ensureRepo(dir, url, gitKey) {
       const dotgit = path2.join(dir, ".git");
       if (fs2.existsSync(dotgit)) {
         try {
@@ -4084,7 +4135,7 @@ var require_git = __commonJS({
       } catch (e) {
         if (!NO_CHMOD.test(e.message)) throw e;
         fs2.rmSync(dotgit, { recursive: true, force: true });
-        const gitDir = path2.join(LOCAL_GIT, project.toUpperCase(), repo);
+        const gitDir = path2.join(LOCAL_GIT, ...gitKey.split("/"));
         fs2.rmSync(gitDir, { recursive: true, force: true });
         fs2.mkdirSync(path2.dirname(gitDir), { recursive: true });
         try {
@@ -4107,7 +4158,1050 @@ var require_git = __commonJS({
       }
       throw last;
     }
-    module2.exports = { fetchRef, fetchFirst, repoDir, REPOS, isSha };
+    module2.exports = { fetchRef, fetchFirst, repoDir, REPOS, isSha, git };
+  }
+});
+
+// lib/codegraph.js
+var require_codegraph = __commonJS({
+  "lib/codegraph.js"(exports2, module2) {
+    var path2 = require("path");
+    var X = require_extract();
+    var KEYWORDS = new Set("if for while switch catch return synchronized new super this assert throw try else do case default when in is as fun val var it typeof sizeof yield await".split(" "));
+    var STEREO = { RestController: "controller", Controller: "controller", Service: "service", Repository: "repository", Component: "component", Configuration: "configuration", Entity: "entity", FeignClient: "feign", KafkaListener: "listener", Document: "document", Embeddable: "embeddable", MappedSuperclass: "entity", ControllerAdvice: "controller-advice", RestControllerAdvice: "controller-advice", SpringBootApplication: "application", ConfigurationProperties: "properties" };
+    var INJECT = /* @__PURE__ */ new Set(["Autowired", "Inject", "Resource", "Value"]);
+    var LOMBOK_CTOR = /* @__PURE__ */ new Set(["RequiredArgsConstructor", "AllArgsConstructor"]);
+    var BEAN = /* @__PURE__ */ new Set(["controller", "service", "repository", "component", "configuration", "listener", "controller-advice", "application", "feign"]);
+    function blankStrings(t) {
+      const parts = [];
+      let i = 0, from = 0;
+      const blank = (a, b) => t.slice(a, b).replace(/[^\n]/g, " ");
+      while (i < t.length) {
+        const c = t[i];
+        if (c === '"' && t.startsWith('"""', i)) {
+          const e = t.indexOf('"""', i + 3);
+          const end = e < 0 ? t.length : e;
+          parts.push(t.slice(from, i + 3), blank(i + 3, end));
+          i = from = end;
+          if (e >= 0) {
+            parts.push('"""');
+            i = from = e + 3;
+          }
+          continue;
+        }
+        if (c === '"' || c === "'") {
+          let j = i + 1;
+          while (j < t.length && t[j] !== c && t[j] !== "\n") {
+            if (t[j] === "\\") j++;
+            j++;
+          }
+          j = Math.min(j, t.length);
+          parts.push(t.slice(from, i + 1), blank(i + 1, j));
+          i = from = j;
+          if (t[j] === c) i++, parts.push(c), from = i;
+          continue;
+        }
+        i++;
+      }
+      parts.push(t.slice(from));
+      return parts.join("");
+    }
+    function lineIndex(s) {
+      const nl = [];
+      for (let i = 0; i < s.length; i++) if (s.charCodeAt(i) === 10) nl.push(i);
+      return (idx) => {
+        let lo = 0, hi = nl.length;
+        while (lo < hi) {
+          const m = lo + hi >> 1;
+          if (nl[m] < idx) lo = m + 1;
+          else hi = m;
+        }
+        return lo + 1;
+      };
+    }
+    function closeBrace(s, open) {
+      let d = 0;
+      for (let i = open; i < s.length; i++) {
+        if (s[i] === "{") d++;
+        else if (s[i] === "}" && --d === 0) return i;
+      }
+      return s.length - 1;
+    }
+    function closeParen(s, open) {
+      let d = 0;
+      for (let i = open; i < s.length; i++) {
+        if (s[i] === "(") d++;
+        else if (s[i] === ")" && --d === 0) return i;
+      }
+      return s.length - 1;
+    }
+    function stripAnnotations(h) {
+      const annos = [];
+      let out2 = "", i = 0;
+      while (i < h.length) {
+        if (h[i] === "@" && /[A-Za-z]/.test(h[i + 1] || "")) {
+          const m = h.slice(i).match(/^@([\w.]+)/);
+          annos.push(m[1].split(".").pop());
+          i += m[0].length;
+          const p = h.slice(i).match(/^\s*\(/);
+          if (p) i = closeParen(h, i + p[0].length - 1) + 1;
+          continue;
+        }
+        out2 += h[i++];
+      }
+      return { annos, rest: out2 };
+    }
+    function splitTop(s) {
+      const out2 = [];
+      let d = 0, cur = "";
+      for (const c of s || "") {
+        if ("(<[{".includes(c)) d++;
+        else if (")>]}".includes(c)) d--;
+        if (c === "," && d === 0) {
+          out2.push(cur);
+          cur = "";
+          continue;
+        }
+        cur += c;
+      }
+      if (cur.trim()) out2.push(cur);
+      return out2.map((x) => x.trim());
+    }
+    function params(text, kt) {
+      return splitTop((text || "").replace(/->/g, "  ")).map((p) => {
+        const r = stripAnnotations(p).rest.replace(/\b(final|private|protected|public|internal|override|val|var|vararg)\b/g, " ").trim();
+        if (!r) return null;
+        if (kt) {
+          const m2 = r.match(/^([\w$]+)\s*:\s*([^=]+?)\s*(=.*)?$/s);
+          return m2 ? { name: m2[1], type: m2[2].trim() } : null;
+        }
+        const m = r.match(/^([\s\S]+?)\s*(?:\.\.\.)?\s+([\w$]+)$/);
+        return m ? { name: m[2], type: m[1].replace(/\s+/g, " ").trim() } : null;
+      }).filter(Boolean);
+    }
+    var baseType = (t) => String(t || "").replace(/<[\s\S]*$/, "").replace(/\[\]|\?|\.\.\./g, "").trim();
+    var typeArgs = (t) => {
+      const m = String(t || "").match(/<([\s\S]*)>/);
+      return m ? splitTop(m[1]).map((x) => baseType(x.replace(/^\?\s*(extends|super)\s+/, ""))) : [];
+    };
+    var ktComplete = (h) => {
+      const t = h.trim();
+      return t && !/[,(=.:+\-*/&|?]$|->$/.test(t) && !/^(@[\w.]+(\([^)]*\))?\s*)+$/.test(t);
+    };
+    function segments(s, from, to, kt) {
+      const out2 = [];
+      let depth = 0, paren = 0, seg = from, open = -1;
+      for (let i = from; i < to; i++) {
+        const c = s[i];
+        if (c === "(") paren++;
+        else if (c === ")") paren--;
+        else if (c === "{") {
+          if (depth === 0 && paren === 0) open = i;
+          depth++;
+        } else if (c === "}") {
+          depth--;
+          if (depth === 0 && open >= 0 && paren === 0) {
+            out2.push({ header: s.slice(seg, open), start: seg, open, close: i });
+            seg = i + 1;
+            open = -1;
+            const after = s.slice(i + 1).match(/^\s*;/);
+            if (after) {
+              i += after[0].length;
+              seg = i + 1;
+            }
+          }
+        } else if (depth === 0 && paren === 0 && (c === ";" || kt && c === "\n")) {
+          const h = s.slice(seg, i);
+          if (c === ";" || ktComplete(h)) {
+            if (h.trim()) out2.push({ header: h, start: seg, open: -1, close: i });
+            seg = i + 1;
+          }
+        }
+      }
+      if (s.slice(seg, to).trim()) out2.push({ header: s.slice(seg, to), start: seg, open: -1, close: to });
+      return out2;
+    }
+    var TYPE_RE = /(?<![\w$.@])(class|interface|enum|record|object|@interface)\s+([A-Za-z_$][\w$]*)/g;
+    function parseFile(rel, text) {
+      const kt = /\.kts?$/.test(rel);
+      const clean = X.stripComments(text);
+      const s = blankStrings(clean);
+      const lineOf = lineIndex(s);
+      const pkg = (s.match(/^\s*package\s+([\w.]+)/m) || [])[1] || "";
+      const imports = {}, wild = [];
+      for (const m of s.matchAll(/^\s*import\s+(static\s+)?([\w.]+?)(\.\*)?(?:\s+as\s+(\w+))?\s*;?\s*$/gm)) {
+        if (m[3]) {
+          if (!m[1]) wild.push(m[2]);
+          continue;
+        }
+        imports[m[4] || m[2].split(".").pop()] = m[1] ? m[2].split(".").slice(0, -1).join(".") : m[2];
+      }
+      const test = /(^|\/)src\/(test|it|integrationTest|testFixtures)\//.test(rel);
+      const types = [];
+      for (const m of s.matchAll(TYPE_RE)) {
+        if (m[2] === "object" || m[1] === "object" && /companion\s*$/.test(s.slice(Math.max(0, m.index - 12), m.index))) continue;
+        let h = m.index;
+        while (h > 0 && !";{}".includes(s[h - 1])) h--;
+        const { annos, rest } = stripAnnotations(s.slice(h, m.index));
+        let j = m.index + m[0].length;
+        const g = s.slice(j).match(/^\s*</);
+        if (g) {
+          let d = 0;
+          for (j += g[0].length - 1; j < s.length; j++) {
+            if (s[j] === "<") d++;
+            else if (s[j] === ">" && --d === 0) {
+              j++;
+              break;
+            }
+          }
+        }
+        let ctor = null;
+        const p = s.slice(j).match(/^\s*(?:(?:private|protected|internal|public)\s+)?(?:constructor\s*)?(?:@\w+\s*)*\(/);
+        if (p) {
+          const close = closeParen(s, j + p[0].length - 1);
+          ctor = params(clean.slice(j + p[0].length, close), kt);
+          j = close + 1;
+        }
+        let k = j, supers = "";
+        for (; k < s.length; k++) {
+          if (s[k] === "{" || s[k] === ";") break;
+          if (kt && s[k] === "\n" && ktComplete(supers) && !/^\s*[:,{]/.test(s.slice(k + 1, k + 40)) && supers.trim()) break;
+          if (s[k] === "(") {
+            const c = closeParen(s, k);
+            supers += s.slice(k, c + 1).replace(/[^\n]/g, " ");
+            k = c;
+            continue;
+          }
+          supers += s[k];
+        }
+        const hasBody = s[k] === "{";
+        const bodyEnd = hasBody ? closeBrace(s, k) : k;
+        const ext = [], impl = [];
+        if (kt) {
+          for (const part of splitTop(supers.replace(/^\s*:/, ""))) {
+            const n = baseType(part.replace(/\(.*$/, "").replace(/\bby\b[\s\S]*$/, ""));
+            if (/^[A-Z][\w.]*$/.test(n)) (/\(/.test(part) ? ext : impl).push(n);
+          }
+        } else {
+          const em = supers.match(/\bextends\s+([\s\S]+?)(?=\bimplements\b|$)/);
+          const im = supers.match(/\bimplements\s+([\s\S]+)$/);
+          if (em) for (const part of splitTop(em[1])) ext.push(baseType(part));
+          if (im) for (const part of splitTop(im[1])) impl.push(baseType(part));
+        }
+        const superArgs = [...supers.matchAll(/<([^{]*)>/g)].flatMap((x) => splitTop(x[1]).map(baseType)).filter((x) => /^[A-Z]/.test(x));
+        types.push({
+          name: m[2],
+          kind: m[1] === "@interface" ? "annotation" : m[1],
+          annos,
+          mods: rest.trim().split(/\s+/).filter(Boolean),
+          start: h,
+          nameAt: m.index,
+          line: lineOf(m.index),
+          endLine: lineOf(bodyEnd),
+          body: hasBody ? [k, bodyEnd] : null,
+          ctor,
+          ext,
+          impl,
+          superArgs
+        });
+      }
+      for (const t of types) {
+        const outer = types.filter((o) => o !== t && o.body && o.body[0] < t.nameAt && t.nameAt < o.body[1]).sort((a, b) => b.body[0] - a.body[0])[0];
+        t.outer = outer || null;
+      }
+      const fqn = (t) => t.outer ? `${fqn(t.outer)}.${t.name}` : pkg ? `${pkg}.${t.name}` : t.name;
+      const classes = [];
+      for (const t of types) {
+        const c = {
+          id: fqn(t),
+          name: t.name,
+          pkg,
+          file: rel,
+          line: t.line,
+          endLine: t.endLine,
+          kind: t.kind,
+          annos: t.annos,
+          mods: t.mods,
+          role: t.annos.map((a) => STEREO[a]).find(Boolean) || (test ? "test" : null),
+          test,
+          ext: t.ext,
+          impl: t.impl,
+          superArgs: t.superArgs,
+          fields: [],
+          ctorParams: [],
+          methods: [],
+          uses: /* @__PURE__ */ new Set()
+        };
+        if (/Repository$/.test(t.name) && t.kind === "interface" && t.ext.some((e) => /Repository$|CrudRepository|JpaRepository/.test(e))) c.role = "repository";
+        if (t.ctor) {
+          if (kt || t.kind === "record") for (const p of t.ctor) c.fields.push({ name: p.name, type: p.type, annos: [], final: true, line: t.line });
+          c.ctorParams.push(...t.ctor);
+        }
+        if (t.body) {
+          for (const seg of segments(s, t.body[0] + 1, t.body[1], kt)) member(c, seg, s, clean, lineOf, kt, t.name);
+        }
+        const lombokCtor = t.annos.some((a) => LOMBOK_CTOR.has(a));
+        const bean = BEAN.has(c.role) || t.annos.some((a) => /^(Service|Component|Repository|Controller|RestController|Configuration)$/.test(a));
+        for (const f of c.fields) {
+          if (f.annos.some((a) => INJECT.has(a)) || bean && (lombokCtor && f.final && !f.static || c.ctorParams.some((p) => p.name === f.name && baseType(p.type) === baseType(f.type)))) f.inject = true;
+        }
+        c.bean = bean;
+        c.lombok = t.annos.filter((a) => /^(Data|Getter|Setter|Builder|Value|RequiredArgsConstructor|AllArgsConstructor|NoArgsConstructor|Slf4j)$/.test(a));
+        classes.push(c);
+      }
+      return { file: rel, pkg, imports, wild, kt, test, classes, text: s, clean };
+    }
+    function member(c, seg, s, clean, lineOf, kt, className) {
+      const { annos, rest } = stripAnnotations(seg.header);
+      const h = rest.trim();
+      if (!h || /(?<![\w$.@])(class|interface|enum|record|object)\s+[A-Za-z_$]/.test(h) || /^(companion\s+object|init|static)$/.test(h)) return;
+      const words = h.split(/\s+/);
+      const mods = words.filter((w) => /^(public|protected|private|internal|static|final|abstract|default|synchronized|override|open|suspend|transient|volatile|native|lateinit|const)$/.test(w));
+      let m;
+      const block = seg.open >= 0;
+      if (kt && (m = h.match(/\bfun\s+(?:<[^>]*>\s*)?(?:[\w.]+\.)?([\w$]+)\s*\(/))) {
+        const po = seg.start + seg.header.indexOf("(", seg.header.indexOf(m[0]) + m[0].length - 1);
+        const pc = closeParen(s, po);
+        const ret = (s.slice(pc + 1, block ? seg.open : seg.close).match(/^\s*:\s*([^={]+)/) || [])[1];
+        const at = seg.start + seg.header.indexOf(m[1], seg.header.indexOf("fun"));
+        c.methods.push(method(m[1], params(clean.slice(po + 1, pc), true), ret ? ret.trim() : "Unit", annos, mods, seg, lineOf, at, block ? [seg.open, seg.close] : [pc, seg.close]));
+        return;
+      }
+      if (kt && (m = h.match(/\b(val|var)\s+([\w$]+)\s*(?::\s*([^=]+?))?\s*(?:=\s*([\s\S]*))?$/))) {
+        let type = m[3] && m[3].trim();
+        if (!type && m[4]) {
+          const call = m[4].match(/^([A-Z][\w$.]*)\s*[(<]/);
+          if (call) type = call[1];
+        }
+        c.fields.push({ name: m[2], type: type || "?", annos, final: m[1] === "val", static: false, line: lineOf(seg.start + seg.header.indexOf(m[2])), lateinit: mods.includes("lateinit") });
+        return;
+      }
+      if (!kt) {
+        const eq = h.indexOf("=");
+        m = h.match(/(?:^|[\s>\]])([\w$]+)\s*\(([\s\S]*)\)\s*(?:throws\s+[\w.,\s]+)?\s*(?:default\s+[\s\S]*)?$/);
+        if (m && (eq < 0 || eq > h.indexOf(m[1] + "(")) && !/\bnew\s*$/.test(h.slice(0, h.lastIndexOf(m[1], h.indexOf("("))))) {
+          const name = m[1];
+          if (KEYWORDS.has(name)) return;
+          const before = h.slice(0, h.indexOf(name + (h[h.indexOf(name) + name.length] === "(" ? "(" : ""))).trim();
+          let ret = before;
+          for (let changed = true; changed; ) {
+            const r2 = ret.replace(/^\s*(public|protected|private|static|final|abstract|default|synchronized|native|strictfp)\b/, "").replace(/^\s*<[^()]*?>(?=\s)/, "");
+            changed = r2 !== ret;
+            ret = r2;
+          }
+          ret = ret.trim();
+          const pIdx = seg.start + seg.header.indexOf("(", seg.header.indexOf(name));
+          const pc = closeParen(s, pIdx);
+          const ps = params(clean.slice(pIdx + 1, pc), false);
+          const at = seg.start + seg.header.indexOf(name);
+          if (name === className && (!ret || ret === className || mods.includes(ret))) {
+            c.ctorParams.push(...ps);
+            c.methods.push({ ...method("<init>", ps, "", annos, mods, seg, lineOf, at, block ? [seg.open, seg.close] : null), ctor: true });
+            return;
+          }
+          c.methods.push(method(name, ps, ret, annos, mods, seg, lineOf, at, block ? [seg.open, seg.close] : null));
+          return;
+        }
+        m = h.match(/^((?:(?:public|protected|private|static|final|transient|volatile)\s+)*)([\w$.]+(?:\s*<[\s\S]*>)?(?:\s*\[\])*)\s+([\w$]+)\s*(=[\s\S]*)?$/);
+        if (m && !KEYWORDS.has(m[3]) && !/^(return|throw|package|import)$/.test(m[2])) {
+          c.fields.push({ name: m[3], type: m[2].replace(/\s+/g, ""), annos, final: /\bfinal\b/.test(m[1]), static: /\bstatic\b/.test(m[1]), line: lineOf(seg.start + seg.header.lastIndexOf(m[3])) });
+        }
+      }
+    }
+    function method(name, ps, ret, annos, mods, seg, lineOf, at, body) {
+      return { name, params: ps, ret: (ret || "").trim(), annos, mods, line: lineOf(at), startLine: lineOf(seg.start + seg.header.search(/\S/)), endLine: lineOf(seg.close), body };
+    }
+    function build(root, texts, meta = {}, extracted = null) {
+      const files = [];
+      for (const [rel, text] of texts) {
+        try {
+          files.push(parseFile(rel, text));
+        } catch (e) {
+          files.push({ file: rel, error: e.message, classes: [] });
+        }
+      }
+      const byId = /* @__PURE__ */ new Map(), bySimple = /* @__PURE__ */ new Map();
+      for (const f of files) for (const c of f.classes) {
+        byId.set(c.id, c);
+        (bySimple.get(c.name) || bySimple.set(c.name, []).get(c.name)).push(c.id);
+      }
+      const edges = [];
+      const edge = (from, to, kind, where) => edges.push([from, to, kind, where || ""]);
+      for (const f of files) {
+        const local = new Map(f.classes.map((c) => [c.name, c.id]));
+        const resolveType = (name) => {
+          const n = baseType(name);
+          if (!n || !/^[A-Z_$]/.test(n.split(".").pop())) return null;
+          if (n.includes(".")) {
+            if (byId.has(n)) return n;
+            const [head, ...tail] = n.split(".");
+            const h = resolveType(head);
+            if (h && byId.has(`${h}.${tail.join(".")}`)) return `${h}.${tail.join(".")}`;
+            return /^[a-z]/.test(n) ? `ext:${n}` : null;
+          }
+          if (local.has(n)) return local.get(n);
+          if (f.imports[n]) return byId.has(f.imports[n]) ? f.imports[n] : `ext:${f.imports[n]}`;
+          if (f.pkg && byId.has(`${f.pkg}.${n}`)) return `${f.pkg}.${n}`;
+          for (const w of f.wild) if (byId.has(`${w}.${n}`)) return `${w}.${n}`;
+          const all = bySimple.get(n);
+          if (all && all.length === 1) return all[0];
+          return null;
+        };
+        f.resolveType = resolveType;
+        for (const c of f.classes) {
+          const where = `${f.file}:${c.line}`;
+          for (const e of c.ext) {
+            const id = resolveType(e);
+            if (id) {
+              edge(c.id, id, "extends", where);
+              c.extIds = [...c.extIds || [], id];
+            }
+          }
+          for (const e of c.impl) {
+            const id = resolveType(e);
+            if (id) {
+              edge(c.id, id, "implements", where);
+              c.implIds = [...c.implIds || [], id];
+            }
+          }
+          for (const a of c.superArgs) {
+            const id = resolveType(a);
+            if (id && byId.has(id)) edge(c.id, id, c.role === "repository" ? "repository" : "uses", where);
+          }
+          for (const fl of c.fields) {
+            fl.typeId = resolveType(fl.type);
+            for (const t of [fl.typeId, ...typeArgs(fl.type).map(resolveType)]) if (t) edge(c.id, t, fl.inject ? "injects" : "uses", `${f.file}:${fl.line}`);
+          }
+          for (const p of c.ctorParams) {
+            p.typeId = resolveType(p.type);
+            if (p.typeId) edge(c.id, p.typeId, c.bean ? "injects" : "uses", where);
+          }
+          for (const m of c.methods) {
+            m.id = `${c.id}#${m.name}`;
+            edge(m.id, c.id, "member", `${f.file}:${m.line}`);
+            for (const p of m.params) {
+              p.typeId = resolveType(p.type);
+              for (const t of [p.typeId, ...typeArgs(p.type).map(resolveType)]) if (t) edge(m.id, t, "uses", `${f.file}:${m.line}`);
+            }
+            const r = resolveType(m.ret);
+            if (r) edge(m.id, r, "uses", `${f.file}:${m.line}`);
+            if (m.body) calls(f, c, m, byId, resolveType, edge);
+          }
+        }
+      }
+      for (const c of byId.values()) {
+        for (const sup of [...c.implIds || [], ...c.extIds || []]) {
+          const sc = byId.get(sup);
+          if (!sc) continue;
+          for (const m of c.methods) if (sc.methods.some((x) => x.name === m.name)) edge(`${sup}#${m.name}`, m.id, "dispatch", `${c.file}:${m.line}`);
+        }
+      }
+      const declared = new Set(edges.filter((e) => e[2] === "member").map((e) => e[0]));
+      for (const e of [...edges]) if (e[2] === "calls" && !declared.has(e[1])) {
+        const cls = e[1].split("#")[0];
+        if (byId.has(cls)) {
+          declared.add(e[1]);
+          edge(e[1], cls, "member", "inherited");
+        }
+      }
+      const entityTable = /* @__PURE__ */ new Map();
+      for (const f of files) for (const c of f.classes) {
+        if (!c.annos.includes("Entity") && !c.annos.includes("MappedSuperclass") && !c.annos.includes("Embeddable")) continue;
+        const ann = annoArgsOf(f.clean, c.line, "Table");
+        const table2 = ((ann.schema ? `${ann.schema}.` : "") + (ann.name || snake(c.name))).toLowerCase();
+        if (c.annos.includes("Entity")) {
+          entityTable.set(c.id, table2);
+          edge(c.id, `table:${table2}`, "entity", `${f.file}:${c.line}`);
+        }
+        c.table = table2;
+        for (const fl of c.fields) {
+          if (fl.static || fl.annos.includes("Transient")) continue;
+          const col = annoArgsOf(f.clean, fl.line, "Column", "JoinColumn").name || snake(fl.name) + (fl.annos.some((a) => /^(ManyToOne|OneToOne)$/.test(a)) ? "_id" : "");
+          if (fl.annos.some((a) => /^(OneToMany|ManyToMany)$/.test(a))) continue;
+          fl.column = col.toLowerCase();
+          edge(`${c.id}.${fl.name}`, `column:${table2}.${fl.column}`, "column", `${f.file}:${fl.line}`);
+        }
+      }
+      let passport = null;
+      try {
+        passport = extracted || X.extract(root);
+      } catch (e) {
+        passport = { error: e.message };
+      }
+      const enclosing = memberAt(files);
+      const at = (x) => x.file && x.file !== "config" ? enclosing(x.file, x.line) : null;
+      const norm = (p) => String(p || "").replace(/\{[^}]*\}/g, "{}").replace(/\/+$/, "") || "/";
+      if (passport && !passport.error) {
+        for (const e of passport.endpoints || []) {
+          const m = at(e);
+          if (m) edge(`endpoint:${e.method} ${norm(e.path)}`, m, "handler", `${e.file}:${e.line}`);
+        }
+        for (const e of passport.feign || []) {
+          const m = at(e);
+          if (m) edge(m, `endpoint:${e.method} ${norm(e.path)}`, "calls-http", `${e.file}:${e.line}`);
+        }
+        for (const k of passport.kafka?.consumes || []) {
+          const m = at(k);
+          if (m && !/^\?/.test(k.topic)) edge(m, `topic:${k.topic}`, "consumes", `${k.file}:${k.line}`);
+        }
+        for (const k of passport.kafka?.produces || []) {
+          const m = at(k);
+          if (m && !/^\?|^\(/.test(k.topic)) edge(`topic:${k.topic}`, m, "produced-by", `${k.file}:${k.line}`);
+        }
+        for (const t of passport.db?.tables || []) {
+          if (!t.table || t.access === "entity" || t.access === "repository") continue;
+          const m = at(t);
+          if (t.access === "function") {
+            if (m) edge(m, `pgfn:${t.table}`, "calls", `${t.file}:${t.line}`);
+            continue;
+          }
+          edge(m || `file:${t.file}`, `table:${t.table}`, t.access, `${t.file}:${t.line}`);
+        }
+        for (const c of passport.db?.calls || []) {
+          const m = at(c);
+          if (m) edge(m, `pgfn:${c.name}`, "calls", `${c.file}:${c.line}`);
+        }
+        for (const e of passport.es || []) {
+          const m = at(e);
+          if (m && !/^\?/.test(e.index)) edge(m, `es:${e.index}`, "es", `${e.file}:${e.line}`);
+        }
+      }
+      const sql = [];
+      for (const f of files) for (const c of f.classes) for (const m of c.methods) {
+        if (!m.body) continue;
+        for (const lit of X.stringLiterals(f.clean.slice(m.body[0], m.body[1] + 1))) {
+          if (/\b(select|insert|update|delete|merge|call)\b/i.test(lit.value) && lit.value.length > 12) sql.push({ m: m.id, sql: lit.value.slice(0, 2e3), tables: X.sqlRefs(lit.value).map((r) => r.table.toLowerCase()) });
+        }
+      }
+      const classes = [];
+      for (const f of files) for (const c of f.classes) {
+        classes.push({
+          id: c.id,
+          name: c.name,
+          file: c.file,
+          line: c.line,
+          endLine: c.endLine,
+          kind: c.kind,
+          role: c.role,
+          bean: !!c.bean,
+          test: c.test,
+          annos: c.annos,
+          lombok: c.lombok,
+          table: c.table,
+          ext: c.extIds || [],
+          impl: c.implIds || [],
+          fields: c.fields.map((x) => ({ name: x.name, type: x.type, typeId: x.typeId || null, annos: x.annos, inject: !!x.inject, final: !!x.final, static: !!x.static, line: x.line, column: x.column })),
+          ctor: c.ctorParams.map((p) => ({ name: p.name, type: p.type, typeId: p.typeId || null })),
+          methods: c.methods.map((m) => ({ name: m.name, params: m.params.map((p) => ({ name: p.name, type: p.type, typeId: p.typeId || null })), ret: m.ret, annos: m.annos, mods: m.mods, line: m.line, startLine: m.startLine, endLine: m.endLine, ctor: !!m.ctor, abstract: !m.body }))
+        });
+      }
+      return {
+        ...meta,
+        builtAt: (/* @__PURE__ */ new Date()).toISOString(),
+        classes,
+        edges: dedupe(edges),
+        sql,
+        app: passport && !passport.error ? { ...passport.app, dependencies: passport.dependencies } : null,
+        errors: files.filter((f) => f.error).map((f) => ({ file: f.file, error: f.error }))
+      };
+    }
+    function calls(f, c, m, byId, resolveType, edge) {
+      const body = f.text.slice(m.body[0], m.body[1] + 1);
+      const where = `${f.file}:${m.line}`;
+      const vars = /* @__PURE__ */ new Map();
+      for (const fl of c.fields) vars.set(fl.name, fl.type);
+      for (const p of c.ctorParams) if (!vars.has(p.name)) vars.set(p.name, p.type);
+      for (const p of m.params) vars.set(p.name, p.type);
+      for (const x of body.matchAll(/(?<![\w$.])([A-Z][\w$.]*(?:<[^;(){}=]*?>)?(?:\[\])?)\s+([a-z_$][\w$]*)\s*[=;:,)]/g)) vars.set(x[2], x[1]);
+      for (const x of body.matchAll(/\b(?:val|var)\s+([a-z_$][\w$]*)\s*(?::\s*([A-Z][\w$.<>?, ]*?))?\s*=\s*([A-Z][\w$.]*)?/g)) vars.set(x[1], x[2] || x[3] || "?");
+      const self2 = new Set(c.methods.map((x) => x.name));
+      const seen = /* @__PURE__ */ new Set();
+      const once = (to, kind) => {
+        const k = to + kind;
+        if (!seen.has(k)) {
+          seen.add(k);
+          edge(m.id, to, kind, where);
+        }
+      };
+      for (const x of body.matchAll(/(?<![\w$])([\w$]+)\s*(?:\?\.|\.|::)\s*([\w$]+)\s*(\(|\{)?/g)) {
+        const [, recv, name, paren] = x;
+        if (recv === "this" || recv === "super") {
+          if (paren && self2.has(name)) once(`${c.id}#${name}`, "calls");
+          continue;
+        }
+        const t = vars.has(recv) ? vars.get(recv) : /^[A-Z]/.test(recv) ? recv : null;
+        if (!t) continue;
+        const id = resolveType(t);
+        if (!id) continue;
+        if (paren || x[0].includes("::")) once(`${id}#${name}`, "calls");
+        else if (!/^[A-Z]/.test(name) && name !== "class") once(`${id}.${name}`, "reads");
+        const g = name.match(/^(get|set|is)([A-Z][\w$]*)$/);
+        if (g && byId.has(id)) {
+          const fn = g[2][0].toLowerCase() + g[2].slice(1);
+          if (byId.get(id).fields.some((fl) => fl.name === fn)) once(`${id}.${fn}`, g[1] === "set" ? "writes" : "reads");
+        }
+      }
+      for (const x of body.matchAll(/(?<![\w$.])([a-z_$][\w$]*)\s*\(/g)) if (self2.has(x[1]) && !KEYWORDS.has(x[1])) once(`${c.id}#${x[1]}`, "calls");
+      for (const x of body.matchAll(/\bnew\s+([A-Z][\w$.]*)\s*(?:<[^>]*>)?\s*(\()?/g)) {
+        const id = resolveType(x[1]);
+        if (!id) continue;
+        once(id, "uses");
+        if (x[2]) {
+          const close = closeParen(body, x.index + x[0].length - 1);
+          const after = body.slice(close + 1).match(/^\s*\.\s*([\w$]+)\s*\(/);
+          if (after) once(`${id}#${after[1]}`, "calls");
+        }
+      }
+      for (const x of body.matchAll(/(?<![\w$.])([A-Z][\w$]*)\b/g)) {
+        const id = resolveType(x[1]);
+        if (id && byId.has(id) && id !== c.id) once(id, "uses");
+      }
+    }
+    function annoArgsOf(clean, line, ...names) {
+      const lines = clean.split("\n");
+      const before = lines.slice(Math.max(0, line - 8), line).join("\n");
+      const cut = Math.max(before.lastIndexOf(";", before.length - lines[line - 1].length - 1), before.lastIndexOf("}", before.length - lines[line - 1].length - 1), before.lastIndexOf("{", before.length - lines[line - 1].length - 1));
+      const chunk = before.slice(cut + 1);
+      for (const n of names) {
+        const re = new RegExp(`@${n}\\s*\\(([^)]*)\\)`, "g");
+        let m, last = null;
+        while (m = re.exec(chunk)) last = m;
+        if (last) {
+          const out2 = {};
+          for (const a of last[1].matchAll(/(\w+)\s*=\s*"([^"]*)"/g)) out2[a[1]] = a[2];
+          const bare = last[1].match(/^\s*"([^"]*)"\s*$/);
+          if (bare && !out2.name) out2.name = bare[1];
+          return out2;
+        }
+      }
+      return {};
+    }
+    var snake = (s) => s.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
+    function memberAt(files) {
+      const by = /* @__PURE__ */ new Map();
+      for (const f of files) {
+        const ranges = [];
+        for (const c of f.classes) {
+          ranges.push({ id: c.id, from: c.line, to: c.endLine, size: c.endLine - c.line });
+          for (const m of c.methods) ranges.push({ id: `${c.id}#${m.name}`, from: m.startLine, to: m.endLine, size: m.endLine - m.startLine });
+        }
+        by.set(f.file, ranges);
+      }
+      return (file, line) => {
+        const r = (by.get(file) || []).filter((x) => x.from <= line && line <= x.to).sort((a, b) => a.size - b.size)[0];
+        if (r) return r.id;
+        const next = (by.get(file) || []).filter((x) => x.id.includes("#") && x.from > line && x.from - line <= 3).sort((a, b) => a.from - b.from)[0];
+        return next ? next.id : null;
+      };
+    }
+    function dedupe(edges) {
+      const seen = /* @__PURE__ */ new Set();
+      return edges.filter((e) => {
+        const k = `${e[0]}|${e[1]}|${e[2]}`;
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+    }
+    module2.exports = { build, parseFile, blankStrings, segments, snake, baseType };
+  }
+});
+
+// lib/codeindex.js
+var require_codeindex = __commonJS({
+  "lib/codeindex.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var { CACHE: CACHE2, readJson, writeJson } = require_util();
+    var DIR = path2.join(CACHE2, "code");
+    var SKIP_DIRS = /* @__PURE__ */ new Set([".git", "target", "build", "node_modules", ".gradle", ".idea", "out", ".mvn", "dist", ".next", "coverage", "__pycache__"]);
+    var TEXT = /\.(java|kt|kts|groovy|scala|ya?ml|properties|xml|sql|gradle|toml|json|md|txt|conf|ts|js|tsx|jsx|py|go|sh|html|css|proto|avsc|graphql|feature|csv|env|ftl|vm|mustache|j2|tf)$|(^|\/)(Dockerfile|Jenkinsfile|Makefile|mvnw|gradlew)$/i;
+    var MAX_FILE = 1 << 20;
+    var keyDir = (key) => path2.join(DIR, ...key.split("/").map((s) => s.replace(/[^\w.@-]/g, "_")));
+    function walk(root) {
+      const out2 = [];
+      (function rec(dir) {
+        let entries;
+        try {
+          entries = fs2.readdirSync(dir, { withFileTypes: true });
+        } catch {
+          return;
+        }
+        for (const e of entries) {
+          const full = path2.join(dir, e.name);
+          if (e.isDirectory()) {
+            if (!SKIP_DIRS.has(e.name) && !e.name.startsWith(".")) rec(full);
+            continue;
+          }
+          const rel = path2.relative(root, full).split(path2.sep).join("/");
+          if (!e.isFile() || !TEXT.test(rel)) continue;
+          const st = fs2.statSync(full);
+          if (st.size <= MAX_FILE) out2.push({ path: rel, size: st.size });
+        }
+      })(root);
+      return out2.sort((a, b) => a.path < b.path ? -1 : 1);
+    }
+    var lower = (b) => b >= 65 && b <= 90 ? b + 32 : b;
+    function trigramsOf(buf, seen, fileId, add) {
+      if (buf.length < 3) return;
+      let a = lower(buf[0]), b = lower(buf[1]);
+      for (let i = 2; i < buf.length; i++) {
+        const c = lower(buf[i]);
+        const k = a << 16 | b << 8 | c;
+        if (seen.get(k) !== fileId) {
+          seen.set(k, fileId);
+          add(k);
+        }
+        a = b;
+        b = c;
+      }
+    }
+    function varint(out2, n) {
+      while (n > 127) {
+        out2.push(n & 127 | 128);
+        n >>>= 7;
+      }
+      out2.push(n);
+    }
+    function writeTrigrams(file, postings) {
+      const keys = [...postings.keys()].sort((x, y) => x - y);
+      const data = [];
+      const offsets = new Uint32Array(keys.length + 1);
+      keys.forEach((k, i) => {
+        offsets[i] = data.length;
+        let prev = -1;
+        for (const id of postings.get(k)) {
+          varint(data, id - prev);
+          prev = id;
+        }
+      });
+      offsets[keys.length] = data.length;
+      const head = Buffer.alloc(8);
+      head.write("DTG1", 0);
+      head.writeUInt32LE(keys.length, 4);
+      fs2.writeFileSync(file, Buffer.concat([head, Buffer.from(new Uint32Array(keys).buffer), Buffer.from(offsets.buffer), Buffer.from(data)]));
+    }
+    function readTrigrams(file) {
+      const buf = fs2.readFileSync(file);
+      if (buf.toString("latin1", 0, 4) !== "DTG1") throw new Error(`${file}: not a trigram index`);
+      const n = buf.readUInt32LE(4);
+      const copy = (off, len) => new Uint32Array(buf.buffer.slice(buf.byteOffset + off, buf.byteOffset + off + len * 4));
+      return { keys: copy(8, n), offsets: copy(8 + n * 4, n + 1), data: buf.subarray(8 + n * 8 + 4) };
+    }
+    function posting(t, key) {
+      let lo = 0, hi = t.keys.length - 1;
+      while (lo <= hi) {
+        const mid = lo + hi >> 1, k = t.keys[mid];
+        if (k === key) {
+          const out2 = [];
+          let p = t.offsets[mid], prev = -1;
+          const end = t.offsets[mid + 1];
+          while (p < end) {
+            let n = 0, shift = 0, b;
+            do {
+              b = t.data[p++];
+              n |= (b & 127) << shift;
+              shift += 7;
+            } while (b & 128);
+            prev += n;
+            out2.push(prev);
+          }
+          return out2;
+        }
+        if (k < key) lo = mid + 1;
+        else hi = mid - 1;
+      }
+      return [];
+    }
+    function build(root, key, meta = {}, { extracted } = {}) {
+      const started = Date.now();
+      const files = walk(root);
+      const postings = /* @__PURE__ */ new Map(), seen = /* @__PURE__ */ new Map();
+      let bytes = 0;
+      const texts = /* @__PURE__ */ new Map();
+      files.forEach((f, id) => {
+        const buf = fs2.readFileSync(path2.join(root, f.path));
+        if (buf.includes(0)) {
+          f.binary = true;
+          return;
+        }
+        bytes += buf.length;
+        let lines = 1;
+        for (let i = 0; i < buf.length; i++) if (buf[i] === 10) lines++;
+        f.lines = lines;
+        trigramsOf(buf, seen, id, (k) => {
+          const p = postings.get(k);
+          if (p) p.push(id);
+          else postings.set(k, [id]);
+        });
+        if (/\.(java|kt|groovy)$/.test(f.path)) texts.set(f.path, buf.toString("utf8"));
+      });
+      const dir = keyDir(key);
+      fs2.mkdirSync(dir, { recursive: true });
+      writeTrigrams(path2.join(dir, "tri.bin"), postings);
+      const graph = require_codegraph().build(root, texts, meta, extracted);
+      fs2.writeFileSync(path2.join(dir, "graph.json"), JSON.stringify(graph));
+      const info = { key, root, ...meta, builtAt: (/* @__PURE__ */ new Date()).toISOString(), files: files.length, bytes, trigrams: postings.size, classes: graph.classes.length, edges: graph.edges.length, ms: Date.now() - started };
+      writeJson(path2.join(dir, "files.json"), { ...info, list: files });
+      memo.delete(key);
+      return info;
+    }
+    var memo = /* @__PURE__ */ new Map();
+    function load(key) {
+      const dir = keyDir(key);
+      const files = readJson(path2.join(dir, "files.json"));
+      if (!files) return null;
+      const m = memo.get(key);
+      if (m && m.builtAt === files.builtAt) return m;
+      const v = { ...files, dir, tri: null, graph: null };
+      Object.defineProperty(v, "trigrams_", { value: () => v.tri ||= readTrigrams(path2.join(dir, "tri.bin")) });
+      Object.defineProperty(v, "graph_", { value: () => v.graph ||= readJson(path2.join(dir, "graph.json"), { classes: [], edges: [] }) });
+      memo.set(key, v);
+      return v;
+    }
+    function list() {
+      const out2 = [];
+      (function rec(dir, depth) {
+        let entries;
+        try {
+          entries = fs2.readdirSync(dir, { withFileTypes: true });
+        } catch {
+          return;
+        }
+        if (entries.some((e) => e.name === "files.json")) {
+          const f = readJson(path2.join(dir, "files.json"));
+          if (f) {
+            const { list: _, ...info } = f;
+            out2.push(info);
+          }
+          return;
+        }
+        if (depth < 3) {
+          for (const e of entries) if (e.isDirectory()) rec(path2.join(dir, e.name), depth + 1);
+        }
+      })(DIR, 0);
+      return out2.sort((a, b) => a.key.localeCompare(b.key));
+    }
+    function remove(key) {
+      fs2.rmSync(keyDir(key), { recursive: true, force: true });
+      memo.delete(key);
+    }
+    function select(spec) {
+      const all = list();
+      const pats = [].concat(spec || []).flatMap((s) => String(s).split(",")).map((s) => s.trim()).filter(Boolean);
+      if (!pats.length) return all.filter((i) => !i.key.startsWith("work/")).map((i) => i.key);
+      const re = (p) => new RegExp("^" + p.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".") + "$", "i");
+      return all.filter((i) => pats.some((p) => re(p).test(i.key) || re(p).test(i.repo || "") || i.workspace && re(p).test(i.workspace))).map((i) => i.key);
+    }
+    function required(pattern, regex) {
+      if (!regex) return pattern.length >= 3 ? [[pattern]] : null;
+      const alts = splitAlternatives(pattern).flatMap(expandGroups);
+      const out2 = [];
+      for (const alt of alts) {
+        const pieces = literalRuns(alt).filter((p) => p.length >= 3);
+        if (!pieces.length) return null;
+        out2.push(pieces);
+      }
+      return out2;
+    }
+    function splitAlternatives(p) {
+      const out2 = [];
+      let depth = 0, cls = false, cur = "";
+      for (let i = 0; i < p.length; i++) {
+        const c = p[i];
+        if (c === "\\") {
+          cur += c + (p[i + 1] || "");
+          i++;
+          continue;
+        }
+        if (cls) {
+          if (c === "]") cls = false;
+          cur += c;
+          continue;
+        }
+        if (c === "[") cls = true;
+        else if (c === "(") depth++;
+        else if (c === ")") depth--;
+        else if (c === "|" && depth === 0) {
+          out2.push(cur);
+          cur = "";
+          continue;
+        }
+        cur += c;
+      }
+      out2.push(cur);
+      return out2;
+    }
+    function expandGroups(p) {
+      const m = p.match(/\(((?:\?:)?)((?:[\w-]+\|)+[\w-]+)\)(?![?*{])/);
+      if (!m) return [p];
+      const out2 = m[2].split("|").map((a) => p.slice(0, m.index) + a + p.slice(m.index + m[0].length));
+      return out2.length > 16 ? [p] : out2.flatMap(expandGroups).slice(0, 16);
+    }
+    function literalRuns(p) {
+      const runs = [];
+      let cur = "";
+      const end = () => {
+        if (cur) runs.push(cur);
+        cur = "";
+      };
+      for (let i = 0; i < p.length; i++) {
+        const c = p[i];
+        const next = p[i + 1];
+        const optional = next === "*" || next === "?" || next === "{" && /^\{0/.test(p.slice(i + 1));
+        if (c === "\\") {
+          const e = p[i + 1];
+          i++;
+          if (/[wWdDsSbBnrtfvux0-9pPk]/.test(e)) {
+            end();
+            continue;
+          }
+          if (p[i + 1] === "*" || p[i + 1] === "?") {
+            end();
+            continue;
+          }
+          cur += e;
+          continue;
+        }
+        if (c === "[") {
+          end();
+          while (i < p.length && p[i] !== "]") {
+            if (p[i] === "\\") i++;
+            i++;
+          }
+          continue;
+        }
+        if (c === "(") {
+          end();
+          let d = 0;
+          for (; i < p.length; i++) {
+            if (p[i] === "\\") {
+              i++;
+              continue;
+            }
+            if (p[i] === "(") d++;
+            if (p[i] === ")" && --d === 0) break;
+          }
+          continue;
+        }
+        if (".^$|)".includes(c)) {
+          end();
+          continue;
+        }
+        if ("*+?".includes(c)) {
+          end();
+          continue;
+        }
+        if (c === "{") {
+          end();
+          while (i < p.length && p[i] !== "}") i++;
+          continue;
+        }
+        if (optional) {
+          end();
+          continue;
+        }
+        cur += c;
+      }
+      end();
+      return runs;
+    }
+    function candidates(idx, plan, ignoreCase = true) {
+      const all = idx.list;
+      if (!plan) return all.map((_, i) => i).filter((i) => !all[i].binary);
+      const t = idx.trigrams_();
+      const set = /* @__PURE__ */ new Set();
+      for (const pieces of plan) {
+        let cur = null;
+        for (const piece of pieces) {
+          const b = Buffer.from(piece, "utf8");
+          for (let i = 0; i + 2 < b.length; i++) {
+            if (ignoreCase && (b[i] > 127 || b[i + 1] > 127 || b[i + 2] > 127)) continue;
+            const ids = posting(t, lower(b[i]) << 16 | lower(b[i + 1]) << 8 | lower(b[i + 2]));
+            cur = cur ? intersect(cur, ids) : ids;
+            if (!cur.length) break;
+          }
+          if (cur && !cur.length) break;
+        }
+        if (cur === null) return all.map((_, i) => i).filter((i) => !all[i].binary);
+        for (const id of cur) set.add(id);
+      }
+      return [...set].sort((a, b) => a - b);
+    }
+    function intersect(a, b) {
+      const out2 = [];
+      let i = 0, j = 0;
+      while (i < a.length && j < b.length) {
+        if (a[i] === b[j]) {
+          out2.push(a[i]);
+          i++;
+          j++;
+        } else if (a[i] < b[j]) i++;
+        else j++;
+      }
+      return out2;
+    }
+    var globRe = (g) => new RegExp("(^|/)" + g.split(",").map((x) => x.trim()).filter(Boolean).map((x) => x.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*\*\//g, "(.*/)?").replace(/\*\*/g, ".*").replace(/\*/g, "[^/]*").replace(/\?/g, "[^/]")).join("|") + "$");
+    function grep(keys, pattern, { regex = false, ignoreCase = true, glob, context = 0, limit = 200, perFile = 20, tests = true } = {}) {
+      if (!pattern) throw new Error("pattern is empty");
+      const flags = ignoreCase ? "i" : "";
+      const re = regex ? new RegExp(pattern, flags) : new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), flags);
+      const reFile = new RegExp(re.source, flags + "m");
+      const plan = required(pattern, regex);
+      const pathRe = glob ? globRe(glob) : null;
+      const hits = [];
+      let scanned = 0, candidateCount = 0, filesWithHits = 0, truncated = false;
+      const started = Date.now();
+      outer:
+        for (const key of keys) {
+          const idx = load(key);
+          if (!idx) continue;
+          const ids = candidates(idx, plan, ignoreCase);
+          candidateCount += ids.length;
+          for (const id of ids) {
+            const f = idx.list[id];
+            if (f.binary || pathRe && !pathRe.test(f.path) || !tests && /(^|\/)src\/(test|it)\//.test(f.path)) continue;
+            let text;
+            try {
+              text = fs2.readFileSync(path2.join(idx.root, f.path), "utf8");
+            } catch {
+              continue;
+            }
+            scanned++;
+            if (!reFile.test(text)) continue;
+            const lines = text.split("\n");
+            let n = 0;
+            for (let i = 0; i < lines.length; i++) {
+              if (!re.test(lines[i])) continue;
+              const h = { repo: key, path: f.path, line: i + 1, text: lines[i].trim().slice(0, 300) };
+              if (context) h.context = lines.slice(Math.max(0, i - context), i + context + 1).join("\n");
+              hits.push(h);
+              if (++n >= perFile) break;
+              if (hits.length >= limit) {
+                truncated = true;
+                filesWithHits++;
+                break outer;
+              }
+            }
+            if (n) filesWithHits++;
+            if (!n && regex && /\\n|\[\\s/.test(pattern)) {
+              hits.push({ repo: key, path: f.path, line: 0, text: "(match spans lines)" });
+              filesWithHits++;
+            }
+          }
+        }
+      return { hits, files: filesWithHits, candidates: candidateCount, scanned, truncated, ms: Date.now() - started, plan: plan ? plan.map((p) => p.join(" & ")).join(" | ") : "all files" };
+    }
+    function read(key, rel, { from = 1, to } = {}) {
+      const idx = load(key);
+      if (!idx) throw new Error(`no index ${key}`);
+      const full = path2.resolve(idx.root, rel);
+      if (!full.startsWith(path2.resolve(idx.root) + path2.sep)) throw new Error("path outside the repo");
+      const lines = fs2.readFileSync(full, "utf8").split("\n");
+      const end = Math.min(lines.length, to || from + 299);
+      return { repo: key, path: rel, from, to: end, lines: lines.length, text: lines.slice(from - 1, end).map((l, i) => `${String(from + i).padStart(5)}  ${l}`).join("\n") };
+    }
+    module2.exports = { build, load, list, select, remove, grep, read, walk, required, keyDir, DIR };
   }
 });
 
@@ -4266,6 +5360,15 @@ var require_pgindex = __commonJS({
       memo.delete(env);
       return { edges: edges.length, dbs: data.dbs.length };
     }
+    function current(env) {
+      const d = load(env);
+      const synced = require_pg().loadAll(env).map((c) => c.syncedAt).sort().pop();
+      if (synced && (!d.builtAt || d.builtAt < synced)) {
+        build(env);
+        return load(env);
+      }
+      return d;
+    }
     var memo = /* @__PURE__ */ new Map();
     function load(env) {
       const d = readJson(file(env));
@@ -4337,7 +5440,7 @@ var require_pgindex = __commonJS({
       }
       return out2;
     }
-    module2.exports = { build, load, usages, uses, describe, usedBySummary, resolve, namesOf };
+    module2.exports = { build, load, current, usages, uses, describe, usedBySummary, resolve, namesOf };
   }
 });
 
@@ -4888,6 +5991,11 @@ var require_passport = __commonJS({
       passport.stats.totalMs = Date.now() - started;
       writeJson(file(service), passport);
       fs2.writeFileSync(path2.join(DIR, safe(service), "passport.md"), markdown(passport));
+      try {
+        passport.codeIndex = require_codeindex().build(info.path, `${info.project}/${info.repo}`, { project: info.project, repo: info.repo, ref: info.ref, sha: info.sha, service }, { extracted: ex }).builtAt;
+      } catch (e) {
+        passport.codeIndex = { error: e.message };
+      }
       if (graph) passport.graph = await graphBuild(info.path).catch((e) => ({ error: e.message }));
       if (rebuildCatalog) try {
         for (const e of require_config().envNames()) require_catalog().build(e);
@@ -27163,6 +28271,1643 @@ var require_calls = __commonJS({
   }
 });
 
+// lib/workspace.js
+var require_workspace = __commonJS({
+  "lib/workspace.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var crypto = require("crypto");
+    var { PATHS } = require_config();
+    var { CACHE: CACHE2, readJson, writeJson } = require_util();
+    var G = require_git();
+    var WORK = PATHS.work;
+    var META = path2.join(CACHE2, "work");
+    var metaFile = (id) => path2.join(META, `${id}.json`);
+    var BUILD_OUTPUT = ["target/", "build/", ".gradle/", "out/", "*.class", ".idea/", "bin/"];
+    function checkId(id) {
+      if (!/^[\w.-]+$/.test(id || "")) throw new Error(`bad workspace id "${id}"`);
+      const m = readJson(metaFile(id));
+      if (!m) throw new Error(`no workspace "${id}" (workspace_list shows them)`);
+      return m;
+    }
+    async function open({ service, project, repo, ref, env, url } = {}) {
+      if (service && !(project && repo)) {
+        const pp = require_passport();
+        const r = await pp.resolveRepo(service, project && repo ? `${project}/${repo}` : void 0);
+        project = r.project;
+        repo = r.repo;
+        if (env && !ref) ref = await pp.deployedSha(env, service);
+      }
+      if (!project || !repo) throw new Error("give service, or project and repo");
+      const slug = String(ref || "default").replace(/[^\w.-]+/g, "-").slice(0, 40);
+      const id = `${repo}-${slug}-${crypto.randomBytes(2).toString("hex")}`;
+      const dir = path2.join(WORK, id);
+      fs2.mkdirSync(dir, { recursive: true });
+      const info = await G.fetchRef(project, repo, ref, { dir, url, gitKey: `work/${id}` });
+      try {
+        const gitDir = await G.git(["rev-parse", "--absolute-git-dir"], dir);
+        fs2.mkdirSync(path2.join(gitDir, "info"), { recursive: true });
+        fs2.appendFileSync(path2.join(gitDir, "info", "exclude"), `
+# dt workspace
+${BUILD_OUTPUT.join("\n")}
+`);
+      } catch {
+      }
+      const meta = { id, project: info.project, repo, ref: ref || null, sha: info.sha, commitDate: info.commitDate, service: service || null, env: env || null, path: dir, createdAt: (/* @__PURE__ */ new Date()).toISOString(), fallback: info.fallback || void 0 };
+      writeJson(metaFile(id), meta);
+      const index2 = reindex(id);
+      return { ...meta, path: path2.relative(require_config().HOME, dir), files: index2.files, classes: index2.classes, build: buildFiles(dir) };
+    }
+    function reindex(id) {
+      const m = checkId(id);
+      const r = require_codeindex().build(m.path, `work/${id}`, { project: m.project, repo: m.repo, ref: m.ref, sha: m.sha, workspace: id });
+      m.indexedAt = r.builtAt;
+      m.dirty = false;
+      writeJson(metaFile(id), m);
+      return r;
+    }
+    function index(id) {
+      const m = checkId(id);
+      if (m.dirty || !require_codeindex().load(`work/${id}`)) reindex(id);
+      return require_codeindex().load(`work/${id}`);
+    }
+    function list() {
+      let files = [];
+      try {
+        files = fs2.readdirSync(META).filter((f) => f.endsWith(".json"));
+      } catch {
+      }
+      return files.map((f) => readJson(path2.join(META, f))).filter(Boolean).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((m) => ({ id: m.id, repo: `${m.project}/${m.repo}`, ref: m.ref, sha: m.sha?.slice(0, 12), service: m.service, createdAt: m.createdAt, exists: fs2.existsSync(m.path) }));
+    }
+    function resolvePath(m, rel) {
+      const r = String(rel || "").replace(/^\/+/, "");
+      const full = path2.resolve(m.path, r);
+      if (!full.startsWith(path2.resolve(m.path) + path2.sep)) throw new Error(`path outside the workspace: ${rel}`);
+      if (/(^|[\\/])\.git([\\/]|$)/.test(r)) throw new Error("the .git folder is off limits");
+      return { full, rel: path2.relative(m.path, full).split(path2.sep).join("/") };
+    }
+    function read(id, rel, { from = 1, to } = {}) {
+      const m = checkId(id);
+      const { full, rel: r } = resolvePath(m, rel);
+      if (!fs2.existsSync(full)) throw new Error(`no file ${r} in ${id}`);
+      if (fs2.statSync(full).isDirectory()) return { id, path: r, entries: fs2.readdirSync(full, { withFileTypes: true }).map((e) => e.name + (e.isDirectory() ? "/" : "")).sort() };
+      const lines = fs2.readFileSync(full, "utf8").split("\n");
+      const end = Math.min(lines.length, to || from + 399);
+      return { id, path: r, from, to: end, lines: lines.length, text: lines.slice(from - 1, end).map((l, i) => `${String(from + i).padStart(5)}  ${l}`).join("\n") };
+    }
+    function write(id, rel, { content, edits } = {}) {
+      const m = checkId(id);
+      const { full, rel: r } = resolvePath(m, rel);
+      let text;
+      const existed = fs2.existsSync(full);
+      if (edits && edits.length) {
+        if (!existed) throw new Error(`no file ${r} to edit (give content to create it)`);
+        text = fs2.readFileSync(full, "utf8");
+        for (const [i, e] of edits.entries()) {
+          const n = e.find ? text.split(e.find).length - 1 : 0;
+          if (n !== 1) throw new Error(`edit ${i + 1}: "find" must match exactly once in ${r}, matched ${n} times${n === 0 ? " (read the file again: it may have changed)" : ""}`);
+          text = text.replace(e.find, () => e.replace ?? "");
+        }
+      } else if (typeof content === "string") text = content;
+      else throw new Error("give content, or edits");
+      fs2.mkdirSync(path2.dirname(full), { recursive: true });
+      fs2.writeFileSync(full, text);
+      m.dirty = true;
+      writeJson(metaFile(id), m);
+      return { id, path: r, created: !existed, bytes: Buffer.byteLength(text), lines: text.split("\n").length };
+    }
+    async function patch(id) {
+      const m = checkId(id);
+      await G.git(["add", "-A", "-N", "."], m.path).catch(() => {
+      });
+      const diff = await G.git(["-c", "core.quotepath=off", "diff", "--binary", "--no-color", "--no-ext-diff", "HEAD"], m.path);
+      const stat = await G.git(["-c", "core.quotepath=off", "diff", "--numstat", "HEAD"], m.path);
+      const files = stat.split("\n").filter(Boolean).map((l) => {
+        const [a, d, p] = l.split("	");
+        return { path: p, added: Number(a) || 0, removed: Number(d) || 0 };
+      });
+      for (const f of files) f.status = diff.includes(`diff --git a/${f.path} b/${f.path}
+new file mode`) ? "added" : "modified";
+      const text = diff ? diff + "\n" : "";
+      fs2.writeFileSync(path2.join(META, `${id}.patch`), text);
+      return { id, repo: `${m.project}/${m.repo}`, base: m.sha, ref: m.ref, files, patch: text, apply: `git checkout ${m.sha.slice(0, 12)} && git apply --index ${id}.patch` };
+    }
+    async function drop(id) {
+      const m = checkId(id);
+      fs2.rmSync(m.path, { recursive: true, force: true });
+      fs2.rmSync(path2.join(process.env.DT_GIT_DIR || path2.join(require("os").tmpdir(), "dt-git"), "work", id), { recursive: true, force: true });
+      require_codeindex().remove(`work/${id}`);
+      for (const f of [metaFile(id), path2.join(META, `${id}.patch`)]) fs2.rmSync(f, { force: true });
+      return { dropped: id };
+    }
+    function buildFiles(dir) {
+      const out2 = [];
+      (function rec(d, depth) {
+        let es;
+        try {
+          es = fs2.readdirSync(d, { withFileTypes: true });
+        } catch {
+          return;
+        }
+        for (const e of es) {
+          if (e.isDirectory()) {
+            if (depth < 4 && !/^(\.|target$|build$|node_modules$|src$)/.test(e.name)) rec(path2.join(d, e.name), depth + 1);
+            continue;
+          }
+          if (/^(pom\.xml|build\.gradle(\.kts)?|settings\.gradle(\.kts)?|mvnw|gradlew)$/.test(e.name)) out2.push(path2.relative(dir, path2.join(d, e.name)).split(path2.sep).join("/"));
+        }
+      })(dir, 0);
+      return out2.sort();
+    }
+    module2.exports = { open, list, read, write, patch, drop, reindex, index, checkId, resolvePath, buildFiles, WORK };
+  }
+});
+
+// lib/impact.js
+var require_impact = __commonJS({
+  "lib/impact.js"(exports2, module2) {
+    var CI = require_codeindex();
+    var kindOf = (id) => {
+      const m = id.match(/^(table|column|topic|es|pgfn|endpoint|svc|file|ext):/);
+      if (m) return m[1];
+      if (id.includes("#")) return "method";
+      return "class-or-field";
+    };
+    var memo = { sig: null, G: null };
+    function load({ repos, env } = {}) {
+      const keys = CI.select(repos);
+      let sig = null;
+      try {
+        const pdir = require_passport().DIR;
+        const pm = require("fs").existsSync(pdir) ? require("fs").statSync(pdir).mtimeMs : 0;
+        sig = JSON.stringify([keys.map((k) => `${k}@${CI.load(k)?.builtAt}`), env, env ? require_pgindex().current(env).builtAt : null, pm]);
+      } catch {
+      }
+      if (sig && memo.sig === sig) return memo.G;
+      const G = build(keys, env);
+      if (sig) Object.assign(memo, { sig, G });
+      return G;
+    }
+    function build(keys, env) {
+      const rev = /* @__PURE__ */ new Map(), fwd = /* @__PURE__ */ new Map(), nodes = /* @__PURE__ */ new Map(), sql = [];
+      const add = (from, to, kind, where, repo) => {
+        const e = { from, to, kind, where, repo };
+        (rev.get(to) || rev.set(to, []).get(to)).push(e);
+        (fwd.get(from) || fwd.set(from, []).get(from)).push(e);
+      };
+      const indexed = /* @__PURE__ */ new Set();
+      for (const key of keys) {
+        const idx = CI.load(key);
+        const g = idx && idx.graph_();
+        if (!g) continue;
+        if (g.app?.name) indexed.add(g.app.name);
+        indexed.add(idx.repo || key.split("/").pop());
+        for (const c of g.classes) {
+          nodes.set(c.id, { id: c.id, kind: "class", repo: key, file: c.file, line: c.line, role: c.role, test: c.test, name: c.name });
+          for (const m of c.methods) nodes.set(`${c.id}#${m.name}`, { id: `${c.id}#${m.name}`, kind: "method", repo: key, file: c.file, line: m.line, endLine: m.endLine, role: c.role, test: c.test, name: `${c.name}#${m.name}` });
+          for (const f of c.fields) nodes.set(`${c.id}.${f.name}`, { id: `${c.id}.${f.name}`, kind: "field", repo: key, file: c.file, line: f.line, role: c.role, test: c.test, name: `${c.name}.${f.name}`, column: f.column });
+        }
+        for (const [from, to, kind, where] of g.edges) add(from, to, kind, where, key);
+        for (const s of g.sql || []) sql.push({ ...s, repo: key });
+      }
+      let cats = [];
+      if (env) {
+        try {
+          cats = require_pg().loadAll(env);
+        } catch {
+        }
+        try {
+          for (const e of require_pgindex().current(env).edges) {
+            const t = e.targetKind === "function" || e.targetKind === "procedure" ? `pgfn:${e.target}` : `table:${e.target}`;
+            if (e.source === "db") {
+              if (e.role === "trigger") continue;
+              const u = e.userKind === "function" || e.userKind === "procedure" ? `pgfn:${e.user}` : `table:${e.user}`;
+              add(u, t, e.role, e.where || e.detail || "", `db:${e.db}`);
+            } else if (!indexed.has(e.user)) add(`svc:${e.user}`, t, e.role, e.where, `svc:${e.user}`);
+          }
+        } catch {
+        }
+      }
+      try {
+        const pp = require_passport();
+        for (const s of pp.list()) {
+          if (indexed.has(s.service)) continue;
+          const p = pp.load(s.service);
+          const e = p?.effective || p || {};
+          for (const k of e.kafka?.consumes || []) if (k.topic && !/^\?/.test(k.topic)) add(`svc:${s.service}`, `topic:${k.topic}`, "consumes", `${k.file}:${k.line}`, `svc:${s.service}`);
+          for (const k of e.kafka?.produces || []) if (k.topic && !/^[?(]/.test(k.topic)) add(`topic:${k.topic}`, `svc:${s.service}`, "produced-by", `${k.file}:${k.line}`, `svc:${s.service}`);
+          for (const x of e.feign || []) add(`svc:${s.service}`, `endpoint:${x.method} ${normPath(x.path)}`, "calls-http", `${x.file}:${x.line}`, `svc:${s.service}`);
+          for (const x of e.endpoints || []) add(`endpoint:${x.method} ${normPath(x.path)}`, `svc:${s.service}`, "handler", `${x.file}:${x.line}`, `svc:${s.service}`);
+          for (const x of e.es || []) if (x.index && !/^\?/.test(x.index)) add(`svc:${s.service}`, `es:${x.index}`, "es", `${x.file}:${x.line}`, `svc:${s.service}`);
+        }
+      } catch {
+      }
+      const relNames = /* @__PURE__ */ new Map();
+      for (const cat of cats) for (const t of cat.tables) {
+        const k = `${t.schema}.${t.name}`.toLowerCase();
+        (relNames.get(t.name.toLowerCase()) || relNames.set(t.name.toLowerCase(), /* @__PURE__ */ new Set()).get(t.name.toLowerCase())).add(k);
+      }
+      for (const id of [...rev.keys(), ...fwd.keys()]) {
+        const m = id.match(/^(table|column):([^.]+)(?:\.([^.]+))?$/);
+        if (!m) continue;
+        const isCol = m[1] === "column";
+        const tname = m[2], col = m[3];
+        if (isCol ? !col : col) continue;
+        const full = relNames.get(tname);
+        if (full && full.size === 1) {
+          const q = [...full][0];
+          add(id, isCol ? `column:${q}.${col}` : `table:${q}`, "alias", "catalog", "catalog");
+        }
+      }
+      return { keys, rev, fwd, nodes, sql, cats };
+    }
+    var normPath = (p) => String(p || "").replace(/\{[^}]*\}/g, "{}").replace(/\/+$/, "") || "/";
+    function resolveTarget(G, target) {
+      const t = String(target || "").trim();
+      if (!t) throw new Error("target is empty");
+      const pre = t.match(/^(table|column|topic|kafka|es|pgfn|fn|function|endpoint|svc|service|class|method):\s*(.+)$/i);
+      const known = (id) => G.rev.has(id) || G.fwd.has(id) || G.nodes.has(id);
+      if (pre) {
+        const k = { kafka: "topic", fn: "pgfn", function: "pgfn", service: "svc" }[pre[1].toLowerCase()] || pre[1].toLowerCase();
+        const v = pre[2].trim();
+        if (k === "endpoint") return endpointNodes(G, v);
+        if (k === "class" || k === "method") return codeNodes(G, v);
+        if (k === "table" || k === "column" || k === "pgfn") return { start: [`${k}:${v.toLowerCase().replace(/"/g, "")}`], kind: k };
+        return { start: [`${k}:${v}`], kind: k };
+      }
+      if (/^(GET|POST|PUT|DELETE|PATCH|ANY)\s+\//i.test(t)) return endpointNodes(G, t);
+      const file = t.match(/^([\w./-]+\.(?:java|kt|groovy))(?::(\d+))?$/);
+      if (file) return fileNodes(G, file[1], file[2] ? Number(file[2]) : null);
+      const low = t.toLowerCase().replace(/"/g, "");
+      const parts = low.split(".");
+      for (const cat of G.cats) {
+        for (const r of cat.tables) {
+          const k = `${r.schema}.${r.name}`.toLowerCase();
+          if (parts.length === 2 && low === k) return { start: [`table:${k}`], kind: "table", db: cat.db };
+          if (parts.length === 3 && `${parts[0]}.${parts[1]}` === k && r.columns.some((c) => c.name.toLowerCase() === parts[2])) return { start: [`column:${low}`], kind: "column", db: cat.db };
+          if (parts.length === 2 && r.name.toLowerCase() === parts[0] && r.columns.some((c) => c.name.toLowerCase() === parts[1])) return { start: [`column:${k}.${parts[1]}`], kind: "column", db: cat.db };
+        }
+        for (const f of cat.functions || []) if (`${f.schema}.${f.name}`.toLowerCase() === low || parts.length === 1 && f.name.toLowerCase() === low) return { start: [`pgfn:${f.schema}.${f.name}`.toLowerCase()], kind: "pgfn", db: cat.db };
+        if (parts.length === 1) {
+          const ts = cat.tables.filter((r) => r.name.toLowerCase() === low);
+          if (ts.length === 1) return { start: [`table:${ts[0].schema}.${ts[0].name}`.toLowerCase()], kind: "table", db: cat.db };
+        }
+      }
+      for (const k of ["topic", "es", "table", "pgfn"]) if (known(`${k}:${t}`) || known(`${k}:${low}`)) return { start: [known(`${k}:${t}`) ? `${k}:${t}` : `${k}:${low}`], kind: k };
+      const code = codeNodes(G, t);
+      if (code.start.length) return code;
+      return { start: [], kind: "unknown", candidates: code.candidates };
+    }
+    function codeNodes(G, t) {
+      const [cls, member] = t.split(/#|::/);
+      const all = [...G.nodes.values()];
+      let classes = all.filter((n) => n.kind === "class" && (n.id === cls || n.id.endsWith(`.${cls}`) || n.name === cls));
+      let m = member;
+      if (!classes.length && !member && cls.includes(".")) {
+        const i = cls.lastIndexOf(".");
+        const c2 = cls.slice(0, i);
+        classes = all.filter((n) => n.kind === "class" && (n.id === c2 || n.id.endsWith(`.${c2}`) || n.name === c2));
+        m = classes.length ? cls.slice(i + 1) : void 0;
+      }
+      if (!classes.length) {
+        const words = t.toLowerCase().split(/[#.\s]+/).filter(Boolean);
+        const candidates = all.filter((n) => n.kind !== "field" && words.every((w) => n.id.toLowerCase().includes(w))).slice(0, 15).map((n) => n.id);
+        return { start: [], kind: "code", candidates };
+      }
+      if (m) {
+        const ids = classes.map((c) => `${c.id}#${m}`).filter((id) => G.nodes.has(id) || G.rev.has(id));
+        const fields = classes.map((c) => `${c.id}.${m}`).filter((id) => G.nodes.has(id));
+        return { start: [...ids, ...fields], kind: ids.length ? "method" : "field" };
+      }
+      const start = [];
+      for (const c of classes) {
+        start.push(c.id);
+        for (const n of all) if (n.id.startsWith(`${c.id}#`) || n.id.startsWith(`${c.id}.`) && n.kind === "field") start.push(n.id);
+      }
+      return { start, kind: "class" };
+    }
+    function endpointNodes(G, t) {
+      const [method, p] = t.trim().split(/\s+/);
+      const want = normPath(p.replace(/\?.*$/, "")).split("/");
+      const start = [.../* @__PURE__ */ new Set([...G.rev.keys(), ...G.fwd.keys()])].filter((id) => {
+        const m = id.match(/^endpoint:(\w+) (.*)$/);
+        if (!m || m[1] !== method.toUpperCase() && m[1] !== "ANY") return false;
+        const have = m[2].split("/");
+        return have.length === want.length && have.every((s, i) => s === "{}" || want[i] === "{}" || s === want[i]);
+      });
+      return { start, kind: "endpoint" };
+    }
+    function fileNodes(G, file, line) {
+      const inFile = [...G.nodes.values()].filter((n) => n.file === file || n.file.endsWith("/" + file) || file.endsWith("/" + n.file));
+      if (line == null) return { start: inFile.filter((n) => n.kind === "class").flatMap((c) => [c.id, ...inFile.filter((n) => n.id.startsWith(c.id + "#")).map((n) => n.id)]), kind: "file" };
+      const m = inFile.filter((n) => n.kind === "method" && n.line <= line + 3 && line <= (n.endLine || n.line)).sort((a, b) => a.endLine - a.line - (b.endLine - b.line))[0];
+      return m ? { start: [m.id], kind: "method" } : { start: inFile.filter((n) => n.kind === "class").map((n) => n.id), kind: "file" };
+    }
+    function columnEdges(G, col) {
+      const [, s, t, c] = col.match(/^column:([^.]+)\.([^.]+)\.(.+)$/) || [];
+      if (!c) return { edges: [], facts: [] };
+      const table2 = `${s}.${t}`, word = new RegExp(`\\b${c.replace(/[^\w$]/g, "")}\\b`, "i");
+      const out2 = [];
+      const tableNames = /* @__PURE__ */ new Set([table2, t]);
+      for (const x of G.sql) if (x.tables.some((n) => tableNames.has(n)) && (word.test(x.sql) || /select\s+\*|returning\s+\*/i.test(x.sql))) out2.push({ from: x.m, to: col, kind: word.test(x.sql) ? "sql" : "sql select *", where: x.sql.replace(/\s+/g, " ").slice(0, 160), repo: x.repo });
+      const facts = [];
+      for (const cat of G.cats) {
+        const r = cat.tables.find((x) => `${x.schema}.${x.name}`.toLowerCase() === table2);
+        if (!r) continue;
+        for (const ix of r.indexes || []) if (word.test(ix.replace(/^.*?\(/, "("))) facts.push({ db: cat.db, kind: "index", def: ix });
+        for (const k of r.constraints || []) if (word.test(k.def)) facts.push({ db: cat.db, kind: { p: "primary key", u: "unique", f: "foreign key", c: "check" }[k.type] || k.type, name: k.name, def: k.def });
+        for (const fk of cat.tables) for (const k of fk.constraints || []) if (k.type === "f" && k.ref?.toLowerCase() === table2 && word.test(k.def.replace(/^.*REFERENCES/i, ""))) facts.push({ db: cat.db, kind: "referenced by", name: `${fk.schema}.${fk.name}.${k.name}`, def: k.def });
+        for (const f of cat.functions || []) {
+          const fid = `pgfn:${f.schema}.${f.name}`.toLowerCase();
+          const touches = (G.fwd.get(fid) || []).some((e) => e.to === `table:${table2}`);
+          if (touches && word.test(f.body || "")) out2.push({ from: fid, to: col, kind: "body", where: `${f.schema}.${f.name}`, repo: `db:${cat.db}` });
+        }
+        for (const v of cat.tables) {
+          if (!v.definition) continue;
+          const vid = `table:${v.schema}.${v.name}`.toLowerCase();
+          if ((cat.viewDeps || []).some((d) => d.view.toLowerCase() === vid.slice(6) && d.ref.toLowerCase() === table2) && word.test(v.definition)) out2.push({ from: vid, to: col, kind: "view", where: `${v.schema}.${v.name}`, repo: `db:${cat.db}` });
+        }
+      }
+      return { edges: out2, facts };
+    }
+    function impact(target, { repos, env, depth = 4, limit = 400, grep = true } = {}) {
+      const G = load({ repos, env });
+      const r = resolveTarget(G, target);
+      if (!r.start.length) return { target, resolved: [], note: `nothing named "${target}" in ${G.keys.length} indexed repos${env ? ` or the ${env} catalog` : ""}`, candidates: r.candidates || [], repos: G.keys };
+      let facts = [];
+      const extra = /* @__PURE__ */ new Map();
+      for (const s of r.start.filter((x) => x.startsWith("column:"))) {
+        const ce = columnEdges(G, s);
+        for (const e of ce.edges) (extra.get(e.to) || extra.set(e.to, []).get(e.to)).push(e);
+        facts = facts.concat(ce.facts);
+      }
+      const seen = new Map(r.start.map((s) => [s, { depth: 0, via: null }]));
+      let frontier = [...r.start];
+      for (let d = 1; d <= depth && frontier.length; d++) {
+        let visit2 = function(n, e, from) {
+          if (seen.has(n) || /^ext:/.test(n)) return;
+          seen.set(n, { depth: d, via: { from, kind: e.kind, where: e.where, repo: e.repo } });
+          next.push(n);
+        };
+        var visit = visit2;
+        const next = [];
+        for (const id of frontier) {
+          const ins = [...G.rev.get(id) || [], ...extra.get(id) || []];
+          const outs = d === 1 && /^(table|topic|es|column|endpoint|pgfn):/.test(id) ? (G.fwd.get(id) || []).filter((e) => /produced-by|handler/.test(e.kind)) : [];
+          for (const e of ins) visit2(e.from, e, id);
+          for (const e of outs) visit2(e.to, e, id);
+        }
+        frontier = next;
+        if (seen.size > limit * 4) break;
+      }
+      const items = [];
+      for (const [id, s] of seen) {
+        if (s.depth === 0) continue;
+        const n = G.nodes.get(id) || { id, kind: kindOf(id) };
+        if (n.kind === "class-or-field") n.kind = "other";
+        items.push({ depth: s.depth, kind: n.kind, id, name: n.name || id, repo: n.repo || s.via.repo, file: n.file || null, line: n.line || null, role: n.role || null, test: !!n.test, via: `${s.via.kind} ${short(s.via.from)}`, where: s.via.where });
+      }
+      items.sort((a, b) => a.depth - b.depth || a.test - b.test || a.kind.localeCompare(b.kind) || a.id.localeCompare(b.id));
+      const pick = (k) => items.filter((i) => i.kind === k).map((i) => i.id.replace(/^\w+:/, ""));
+      const tests = [...new Set(items.filter((i) => i.test).map((i) => i.id.split(/[#]/)[0]))];
+      const out2 = {
+        target,
+        resolved: r.start.slice(0, 20),
+        kind: r.kind,
+        depth,
+        repos: G.keys.length,
+        counts: Object.fromEntries(Object.entries(items.reduce((m, i) => {
+          m[i.kind] = (m[i.kind] || 0) + 1;
+          return m;
+        }, {}))),
+        endpoints: pick("endpoint"),
+        topics: pick("topic"),
+        tables: pick("table"),
+        functions: pick("pgfn"),
+        services: pick("svc"),
+        es: pick("es"),
+        tests,
+        db: facts,
+        items: items.slice(0, limit),
+        truncated: items.length > limit || void 0
+      };
+      if (grep) out2.mentions = textMentions(G, target, r, items);
+      return out2;
+    }
+    var short = (id) => (id || "").replace(/^[\w.]+\.(?=[A-Z][\w$]*(?:[#.]|$))/, "");
+    function textMentions(G, target, r, items) {
+      const name = r.kind === "column" ? r.start[0].split(".").pop() : r.kind === "class" ? r.start[0].split(".").pop() : r.kind === "method" || r.kind === "field" ? r.start[0].split(/[#.]/).pop() : String(r.start[0] || target).replace(/^\w+:/, "").replace(/^(GET|POST|PUT|DELETE|PATCH|ANY) /, "").replace(/\{\}/g, "");
+      if (!name || name.length < 3) return [];
+      const known = new Set(items.filter((i) => i.file).map((i) => `${i.repo}|${i.file}`));
+      const pattern = /^[\w$]+$/.test(name) ? `\\b${name}\\b` : name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      try {
+        const g = CI.grep(G.keys, pattern, { regex: true, ignoreCase: false, limit: 60, perFile: 3 });
+        return g.hits.filter((h) => !known.has(`${h.repo}|${h.path}`) && !/\.(java|kt)$/.test(h.path)).slice(0, 30);
+      } catch {
+        return [];
+      }
+    }
+    module2.exports = { impact, load, resolveTarget };
+  }
+});
+
+// lib/ddl.js
+var require_ddl = __commonJS({
+  "lib/ddl.js"(exports2, module2) {
+    var { resolve, namesOf } = require_pgindex();
+    var q = (name) => name.split(".").map((p) => /^[a-z_][a-z0-9_$]*$/.test(p) ? p : `"${p.replace(/"/g, '""')}"`).join(".");
+    var key = (schema, name) => `${schema}.${name}`.toLowerCase();
+    var lit = (s) => `'${String(s).replace(/'/g, "''")}'`;
+    function dollar(body) {
+      let tag = "$fn$";
+      for (let i = 0; body.includes(tag); i++) tag = `$fn${i}$`;
+      return `${tag}${body}${tag}`;
+    }
+    function select(cat, opts, env) {
+      const names = namesOf(cat);
+      const all = !opts.tables?.length && !opts.service && !opts.functions?.length && !opts.views?.length;
+      const tables = /* @__PURE__ */ new Set(), fns = /* @__PURE__ */ new Set(), views = /* @__PURE__ */ new Set(), missing = [];
+      const relOf = (n) => resolve(names.rel, names.relBy, n).keys;
+      const fnOf = (n) => resolve(names.fn, names.fnBy, n).keys;
+      if (all) {
+        for (const t of cat.tables) (t.kind === "table" || t.kind === "foreign" ? tables : views).add(key(t.schema, t.name));
+        for (const f of cat.functions || []) fns.add(key(f.schema, f.name));
+        return { tables, fns, views, missing };
+      }
+      const addRel = (n) => {
+        const ks = relOf(n);
+        if (!ks.length) {
+          missing.push(n);
+          return;
+        }
+        for (const k of ks) (names.rel.get(k) === "table" || names.rel.get(k) === "foreign" ? tables : views).add(k);
+      };
+      for (const n of opts.tables || []) addRel(n);
+      for (const n of opts.views || []) addRel(n);
+      for (const n of opts.functions || []) {
+        const ks = fnOf(n);
+        if (!ks.length) missing.push(n);
+        ks.forEach((k) => fns.add(k));
+      }
+      if (opts.service) {
+        const usage = require_pgindex().current(env).edges.filter((e) => e.db === cat.db && e.user === opts.service);
+        if (!usage.length) missing.push(`service ${opts.service} (no usage edges in ${cat.db}: build its passport, then catalog_sync what=index)`);
+        for (const e of usage) (e.targetKind === "function" || e.targetKind === "procedure" ? fns : names.rel.get(e.target) === "table" ? tables : views).add(e.target);
+      }
+      const edges = require_pgindex().current(env).edges.filter((e) => e.db === cat.db && e.source === "db");
+      for (let changed = true, guard = 0; changed && guard < 20; guard++) {
+        changed = false;
+        const add = (set, k) => {
+          if (!set.has(k)) {
+            set.add(k);
+            changed = true;
+          }
+        };
+        for (const t of cat.tables) {
+          const k = key(t.schema, t.name);
+          if (!tables.has(k)) continue;
+          for (const c of t.constraints || []) if (c.type === "f" && c.ref && names.rel.has(c.ref.toLowerCase())) add(tables, c.ref.toLowerCase());
+        }
+        for (const tr of cat.triggers || []) if (tables.has(tr.table.toLowerCase())) add(fns, tr.function.toLowerCase());
+        for (const d of cat.viewDeps || []) {
+          if (!views.has(d.view.toLowerCase())) continue;
+          const r = d.ref.toLowerCase();
+          if (d.ref_kind === "function") add(fns, r);
+          else if (names.rel.get(r) === "table") add(tables, r);
+          else add(views, r);
+        }
+        for (const e of edges) {
+          if (!fns.has(e.user)) continue;
+          if (e.role === "calls") add(fns, e.target);
+          else if (names.rel.get(e.target) === "table") add(tables, e.target);
+          else if (names.rel.has(e.target)) add(views, e.target);
+        }
+      }
+      return { tables, fns, views, missing };
+    }
+    function snapshot(env, db, opts = {}) {
+      const cat = require_pg().loadDb(env, db);
+      if (!cat) throw new Error(`no synced catalog for db "${db}" in ${env}: call catalog_sync what=pg only=${db}`);
+      const { tables, fns, views, missing } = select(cat, opts, env);
+      const st = [];
+      const relByKey = new Map(cat.tables.map((t) => [key(t.schema, t.name), t]));
+      const incTables = cat.tables.filter((t) => tables.has(key(t.schema, t.name)));
+      const incViews = cat.tables.filter((t) => views.has(key(t.schema, t.name)));
+      const incFns = (cat.functions || []).filter((f) => fns.has(key(f.schema, f.name)));
+      const schemas = new Set([...incTables, ...incViews, ...incFns].map((o) => o.schema));
+      const used = /* @__PURE__ */ new Set();
+      for (const t of [...incTables, ...incViews]) for (const c of t.columns) used.add(String(c.type).replace(/\[\]$/, "").toLowerCase());
+      for (const f of incFns) for (const a of f.arg_list || []) used.add(String(a.type).replace(/\[\]$/, "").toLowerCase());
+      const types = (cat.types || []).filter((t) => used.has(`${t.schema}.${t.name}`.toLowerCase()) || t.schema === "public" && used.has(t.name.toLowerCase()) || opts.all !== false && !opts.tables?.length && !opts.service);
+      for (const t of types) schemas.add(t.schema);
+      st.push("set check_function_bodies = false");
+      for (const e of cat.extensions || []) st.push(`create extension if not exists ${q(e.name)}`);
+      for (const s of [...schemas].sort()) if (s !== "public") st.push(`create schema if not exists ${q(s)}`);
+      for (const t of types) {
+        if (t.kind === "enum") st.push(`create type ${q(`${t.schema}.${t.name}`)} as enum (${(t.labels || []).map(lit).join(", ")})`);
+        else st.push(`create domain ${q(`${t.schema}.${t.name}`)} as ${t.base}${t.default ? ` default ${t.default}` : ""}${t.not_null ? " not null" : ""}${(t.checks || []).map((c) => ` ${c}`).join("")}`);
+      }
+      const seqs = /* @__PURE__ */ new Set();
+      for (const t of incTables) for (const c of t.columns) for (const m of String(c.default || "").matchAll(/nextval\('([^']+)'(?:::regclass)?\)/g)) seqs.add(m[1].replace(/"/g, ""));
+      for (const sname of seqs) {
+        const full = sname.includes(".") ? sname : `public.${sname}`;
+        const meta = (cat.sequences || []).find((x) => `${x.schema}.${x.name}` === full);
+        st.push(`create sequence if not exists ${q(full)}${meta && meta.type && meta.type !== "bigint" ? ` as ${meta.type}` : ""}`);
+      }
+      const fks = [];
+      for (const t of incTables) {
+        const cols = t.columns.map((c) => {
+          let s = `  ${q(c.name)} ${c.type}`;
+          if (c.generated === "s") s += ` generated always as (${c.default}) stored`;
+          else if (c.identity) s += ` generated ${c.identity === "a" ? "always" : "by default"} as identity`;
+          else if (c.default) s += ` default ${c.default}`;
+          if (!c.nullable) s += " not null";
+          return s;
+        });
+        for (const c of t.constraints || []) {
+          if (c.type === "n") continue;
+          if (c.type === "f") {
+            if (c.ref && tables.has(c.ref.toLowerCase())) fks.push(`alter table ${q(`${t.schema}.${t.name}`)} add constraint ${q(c.name)} ${c.def}`);
+            continue;
+          }
+          cols.push(`  constraint ${q(c.name)} ${c.def}`);
+        }
+        st.push(`create ${t.kind === "foreign" ? "table" : "table"} ${q(`${t.schema}.${t.name}`)} (
+${cols.join(",\n")}
+)`);
+        const conNames = new Set((t.constraints || []).map((c) => c.name));
+        for (const def of t.indexes || []) {
+          const name = (def.match(/INDEX\s+(?:CONCURRENTLY\s+)?(?:IF NOT EXISTS\s+)?("?[^"\s]+"?)\s+ON/i) || [])[1];
+          if (name && conNames.has(name.replace(/"/g, ""))) continue;
+          st.push(def);
+        }
+        if (t.comment) st.push(`comment on table ${q(`${t.schema}.${t.name}`)} is ${lit(t.comment)}`);
+        for (const c of t.columns) if (c.comment) st.push(`comment on column ${q(`${t.schema}.${t.name}`)}.${q(c.name)} is ${lit(c.comment)}`);
+      }
+      const owners = /* @__PURE__ */ new Map();
+      for (const t of incTables) for (const c of t.columns) for (const m of String(c.default || "").matchAll(/nextval\('([^']+)'/g)) {
+        const k = m[1].replace(/"/g, "");
+        if (!owners.has(k)) owners.set(k, `${q(`${t.schema}.${t.name}`)}.${q(c.name)}`);
+      }
+      for (const s of seqs) if (owners.has(s)) st.push(`alter sequence ${q(s.includes(".") ? s : `public.${s}`)} owned by ${owners.get(s)}`);
+      st.push(...fks);
+      for (const f of incFns) {
+        if (f.kind === "aggregate" || f.kind === "window") continue;
+        const head = f.kind === "procedure" ? `create or replace procedure ${q(`${f.schema}.${f.name}`)}(${f.signature ?? f.args})` : `create or replace function ${q(`${f.schema}.${f.name}`)}(${f.signature ?? f.args}) returns ${f.returns}`;
+        const opts2 = f.kind === "procedure" ? "" : ` ${f.volatility || "volatile"}${f.security_definer ? " security definer" : ""}`;
+        st.push(`${head} language ${f.lang}${opts2} as ${dollar(f.body || "")}`);
+      }
+      const order = [], seen = /* @__PURE__ */ new Set();
+      const deps = /* @__PURE__ */ new Map();
+      for (const d of cat.viewDeps || []) (deps.get(d.view.toLowerCase()) || deps.set(d.view.toLowerCase(), []).get(d.view.toLowerCase())).push(d.ref.toLowerCase());
+      const visit = (k, depth = 0) => {
+        if (seen.has(k) || depth > 50) return;
+        seen.add(k);
+        for (const r of deps.get(k) || []) if (views.has(r)) visit(r, depth + 1);
+        order.push(k);
+      };
+      for (const v of incViews) visit(key(v.schema, v.name));
+      for (const k of order) {
+        const v = relByKey.get(k);
+        if (!v || !v.definition) continue;
+        st.push(v.kind === "matview" ? `create materialized view ${q(k)} as ${v.definition.replace(/;\s*$/, "")} with no data` : `create view ${q(k)} as ${v.definition.replace(/;\s*$/, "")}`);
+        if (v.comment) st.push(`comment on ${v.kind === "matview" ? "materialized view" : "view"} ${q(k)} is ${lit(v.comment)}`);
+      }
+      for (const tr of cat.triggers || []) if (tables.has(tr.table.toLowerCase()) && fns.has(tr.function.toLowerCase())) st.push(tr.def + (tr.enabled ? "" : `;
+alter table ${q(tr.table)} disable trigger ${q(tr.name)}`));
+      const header = `-- DDL snapshot of ${env}/${db} (${cat.database || db}), synced ${cat.syncedAt} by dt.
+-- ${incTables.length} tables, ${incViews.length} views, ${incFns.length} functions${opts.service ? `; for ${opts.service}` : ""}.
+-- Regenerate with the ddl_snapshot tool; data is not included.
+-- dt: tables=${[...tables].join(",")} views=${[...views].join(",")} functions=${[...fns].join(",")}
+`;
+      return {
+        env,
+        db,
+        syncedAt: cat.syncedAt,
+        statements: st,
+        sql: header + "\n" + st.map((s) => s + ";").join("\n\n") + "\n",
+        counts: { tables: incTables.length, views: incViews.length, functions: incFns.length, types: types.length, sequences: seqs.size },
+        tables: incTables.map((t) => key(t.schema, t.name)),
+        views: order,
+        functions: incFns.map((f) => key(f.schema, f.name)),
+        missing
+      };
+    }
+    function requested(text) {
+      const m = String(text || "").match(/^-- dt: tables=(\S*) views=(\S*) functions=(\S*)/m);
+      if (!m) return null;
+      const list = (x) => x.split(",").filter(Boolean);
+      return { tables: list(m[1]), views: list(m[2]), functions: list(m[3]) };
+    }
+    module2.exports = { snapshot, select, requested };
+  }
+});
+
+// lib/testgen.js
+var require_testgen = __commonJS({
+  "lib/testgen.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var W = require_workspace();
+    var findClass = (g, t) => {
+      const [cls] = String(t).split(/#|::/);
+      const all = g.classes.filter((c) => c.id === cls || c.id.endsWith(`.${cls}`) || c.name === cls || c.file === cls || c.file.endsWith(`/${cls}`));
+      return all.filter((c) => !c.test).concat(all.filter((c) => c.test));
+    };
+    function style(c, g, deps) {
+      if (c.role === "controller") return "webmvc";
+      if (c.role === "repository" && c.kind === "interface") return "jpa";
+      if (deps.some((d) => /^(JdbcTemplate|NamedParameterJdbcTemplate|JdbcClient|DataSource|EntityManager)$/.test(baseName(d.type)))) return "jdbc";
+      if (deps.length) return "mockito";
+      return "unit";
+    }
+    var baseName = (t) => String(t || "").replace(/<[\s\S]*$/, "").split(".").pop().trim();
+    function moduleOf(root, file) {
+      let dir = path2.dirname(path2.join(root, file));
+      while (dir.startsWith(root)) {
+        for (const f of ["pom.xml", "build.gradle.kts", "build.gradle"]) if (fs2.existsSync(path2.join(dir, f))) return { dir: path2.relative(root, dir).split(path2.sep).join("/") || ".", buildFile: f, text: fs2.readFileSync(path2.join(dir, f), "utf8") };
+        if (dir === root) break;
+        dir = path2.dirname(dir);
+      }
+      return { dir: ".", buildFile: null, text: "" };
+    }
+    function setup(root, mod, app) {
+      const all = [mod.text, fs2.existsSync(path2.join(root, "pom.xml")) ? fs2.readFileSync(path2.join(root, "pom.xml"), "utf8") : "", ...["build.gradle", "build.gradle.kts"].filter((f) => fs2.existsSync(path2.join(root, f))).map((f) => fs2.readFileSync(path2.join(root, f), "utf8"))].join("\n");
+      const boot = app?.springBoot || (all.match(/spring-boot-starter-parent<\/artifactId>\s*<version>([^<]+)/) || all.match(/org\.springframework\.boot['"]?\s*\)?\s*version\s*['"]([^'"]+)/) || [])[1] || null;
+      const [maj, min] = String(boot || "0.0").split(".").map(Number);
+      const has = (re) => re.test(all);
+      return {
+        springBoot: boot,
+        starterTest: has(/spring-boot-starter-test/),
+        junit: has(/junit:junit|junit<\/artifactId>\s*<version>4/) && !has(/junit-jupiter|spring-boot-starter-test/) ? 4 : 5,
+        mockito: has(/mockito|spring-boot-starter-test/),
+        assertj: has(/assertj|spring-boot-starter-test/),
+        testcontainers: has(/testcontainers/),
+        mockk: has(/mockk/),
+        mockBean: maj > 3 || maj === 3 && min >= 4 ? "MockitoBean" : "MockBean",
+        buildTool: mod.buildFile ? mod.buildFile === "pom.xml" ? "maven" : "gradle" : null
+      };
+    }
+    function argFor(type, ctx) {
+      const t = String(type).trim();
+      const b = baseName(t);
+      const imported = (n) => ctx.imports.has(n) || ctx.samePkg.has(n);
+      const fq = (pkg, n) => imported(n) ? n : `${pkg}.${n}`;
+      const P = { long: "1L", Long: "1L", int: "1", Integer: "1", short: "(short) 1", Short: "(short) 1", byte: "(byte) 1", double: "1.0", Double: "1.0", float: "1.0f", Float: "1.0f", boolean: "false", Boolean: "false", char: "'a'", String: '"test"', Object: "new Object()", CharSequence: '"test"' };
+      if (/\[\]$/.test(t)) return `new ${t.replace(/\[\]$/, "[0]")}`;
+      if (P[b] && !t.includes("<")) return P[b];
+      const J = {
+        BigDecimal: () => `new ${fq("java.math", "BigDecimal")}("10.00")`,
+        BigInteger: () => `${fq("java.math", "BigInteger")}.ONE`,
+        UUID: () => `${fq("java.util", "UUID")}.randomUUID()`,
+        List: () => `${fq("java.util", "List")}.of()`,
+        Set: () => `${fq("java.util", "Set")}.of()`,
+        Collection: () => `${fq("java.util", "List")}.of()`,
+        Map: () => `${fq("java.util", "Map")}.of()`,
+        Optional: () => `${fq("java.util", "Optional")}.empty()`,
+        LocalDate: () => `${fq("java.time", "LocalDate")}.of(2026, 1, 15)`,
+        LocalDateTime: () => `${fq("java.time", "LocalDateTime")}.of(2026, 1, 15, 10, 0)`,
+        Instant: () => `${fq("java.time", "Instant")}.parse("2026-01-15T10:00:00Z")`,
+        OffsetDateTime: () => `${fq("java.time", "OffsetDateTime")}.parse("2026-01-15T10:00:00Z")`,
+        ZonedDateTime: () => `${fq("java.time", "ZonedDateTime")}.parse("2026-01-15T10:00:00Z")`,
+        Duration: () => `${fq("java.time", "Duration")}.ofSeconds(1)`
+      };
+      if (J[b]) return J[b]();
+      const c = ctx.byName.get(b);
+      if (c) {
+        if (c.kind === "enum") return `${b}.values()[0]`;
+        if (c.kind === "interface") return `mock(${b}.class)`;
+        if (c.kind === "record" && c.ctor.length) return `new ${b}(${c.ctor.map((p) => argFor(p.type, ctx)).join(", ")})`;
+        const ctors = c.methods.filter((m) => m.ctor && !m.mods.includes("private") && !m.mods.includes("protected"));
+        const easiest = ctors.sort((x, y) => x.params.length - y.params.length)[0];
+        if (easiest) return `new ${b}(${easiest.params.map((p) => argFor(p.type, ctx)).join(", ")})`;
+        if (!c.methods.some((m) => m.ctor)) return `new ${b}()`;
+      }
+      return "null";
+    }
+    var indent = (s, n) => s.split("\n").map((l) => l ? " ".repeat(n) + l : l).join("\n");
+    var STATIC = /* @__PURE__ */ new Set(["get", "post", "put", "delete", "patch", "status", "content", "jsonPath", "when", "verify", "mock", "spy", "reset", "times", "never", "any", "eq", "assertThat", "request", "header"]);
+    var testName = (m, i, all, suffix = "") => {
+      let n = m.name + suffix;
+      if (STATIC.has(n)) n += "Test";
+      return all.filter((x) => x.name === m.name).length > 1 ? `${n}${i}` : n;
+    };
+    function javaSkeleton({ c, g, s, st, methods, deps, ctx, calls, ddl, db }) {
+      const imports = new Set(ctx.fileImports.filter((i) => !/^static /.test(i)).map((i) => `import ${i};`));
+      const add = (...xs) => xs.forEach((x) => imports.add(`import ${x};`));
+      const statics = /* @__PURE__ */ new Set();
+      const lines = [];
+      const name = `${c.name}Test`;
+      const fields = [];
+      const ann = [];
+      const mockBean = s.mockBean === "MockitoBean" ? "org.springframework.test.context.bean.override.mockito.MockitoBean" : "org.springframework.boot.test.mock.mockito.MockBean";
+      add("org.junit.jupiter.api.Test");
+      if (s.assertj) statics.add("import static org.assertj.core.api.Assertions.assertThat;");
+      statics.add("import static org.mockito.ArgumentMatchers.any;");
+      statics.add("import static org.mockito.Mockito.*;");
+      if (st === "mockito") {
+        add("org.junit.jupiter.api.extension.ExtendWith", "org.mockito.InjectMocks", "org.mockito.Mock", "org.mockito.junit.jupiter.MockitoExtension");
+        ann.push("@ExtendWith(MockitoExtension.class)");
+        for (const d of deps) {
+          if (/^(String|int|long|Integer|Long|boolean|Boolean)$/.test(baseName(d.type))) continue;
+          fields.push(`@Mock
+${d.type} ${d.name};`);
+        }
+        fields.push(`@InjectMocks
+${c.name} subject;`);
+      } else if (st === "webmvc") {
+        add("org.springframework.beans.factory.annotation.Autowired", "org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest", "org.springframework.test.web.servlet.MockMvc", "org.springframework.http.MediaType", mockBean);
+        statics.add("import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;");
+        statics.add("import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;");
+        ann.push(`@WebMvcTest(${c.name}.class)`);
+        fields.push("@Autowired\nMockMvc mvc;");
+        for (const d of deps) fields.push(`@${s.mockBean}
+${d.type} ${d.name};`);
+      } else if (st === "jpa" || st === "jdbc") {
+        add("org.springframework.beans.factory.annotation.Autowired", "org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase", "org.springframework.jdbc.core.JdbcTemplate");
+        if (st === "jpa") {
+          add("org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest");
+          ann.push("@DataJpaTest");
+        } else {
+          add("org.springframework.boot.test.autoconfigure.jdbc.JdbcTest", "org.springframework.context.annotation.Import");
+          ann.push("@JdbcTest", `@Import(${c.name}.class)`);
+        }
+        ann.push("@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)");
+        if (s.testcontainers && ddl) {
+          add("org.testcontainers.containers.PostgreSQLContainer", "org.testcontainers.junit.jupiter.Container", "org.testcontainers.junit.jupiter.Testcontainers", "org.springframework.test.context.DynamicPropertyRegistry", "org.springframework.test.context.DynamicPropertySource");
+          ann.push("@Testcontainers");
+          fields.push(`@Container
+static PostgreSQLContainer<?> pg = new PostgreSQLContainer<>("postgres:16-alpine").withInitScript("${ddl.resource}");`);
+          fields.push('@DynamicPropertySource\nstatic void db(DynamicPropertyRegistry r) {\n    r.add("spring.datasource.url", pg::getJdbcUrl);\n    r.add("spring.datasource.username", pg::getUsername);\n    r.add("spring.datasource.password", pg::getPassword);\n}');
+        }
+        fields.push(`@Autowired
+${c.name} subject;`, "@Autowired\nJdbcTemplate jdbc;");
+      } else {
+        fields.push(`${c.name} subject = ${argFor(c.name, ctx).replace(/^null$/, `new ${c.name}()`)};`);
+      }
+      const body = [];
+      methods.forEach((m, i) => {
+        const call = `subject.${m.name}(${m.params.map((p) => argFor(p.type, ctx)).join(", ")})`;
+        const ret = m.ret && m.ret !== "void";
+        const hint = (calls.get(m.name) || []).map((x) => `//   ${x}`).join("\n");
+        const throwsChecked = /throws\s/.test(m.throws || "");
+        const t = [];
+        t.push("@Test");
+        if (st === "webmvc") {
+          const ep = (g.endpointsOf.get(m.name) || [])[0];
+          if (!ep) return;
+          const [verb, p] = ep.split(" ");
+          const args = (p.match(/\{[^}]*\}/g) || []).map(() => "1");
+          const builder = { GET: "get", POST: "post", PUT: "put", DELETE: "delete", PATCH: "patch" }[verb] || "get";
+          const bodyParam = m.params.find((x) => x.annos?.includes("RequestBody")) || (/(POST|PUT|PATCH)/.test(verb) ? m.params.find((x) => !/^(Long|long|String|Integer|int|UUID)$/.test(baseName(x.type))) : null);
+          const expect = m.annos.includes("ResponseStatus") ? m.status || "isCreated" : "isOk";
+          t.push(`void ${testName(m, i, methods, `Returns${expect.replace(/^is/, "")}`)}() throws Exception {`);
+          t.push(`    // given${hint ? ": the controller calls\n" + indent(hint, 4) : ""}`);
+          t.push(`    mvc.perform(${builder}("${p.replace(/\{[^}]*\}/g, "{id}")}"${args.length ? ", " + args.join(", ") : ""})${bodyParam ? '\n            .contentType(MediaType.APPLICATION_JSON)\n            .content("{}")' : ""})`);
+          t.push(`        .andExpect(status().${expect}());`);
+          t.push("    // then: verify(...) the service call, check the JSON with jsonPath(...)");
+          t.push("}");
+        } else {
+          t.push(`void ${testName(m, i, methods)}()${throwsChecked ? " throws Exception" : ""} {`);
+          if (st === "jpa" || st === "jdbc") {
+            t.push(`    // given: rows the query needs (the test runs in a transaction that is rolled back)`);
+            for (const ins of (db?.inserts || []).slice(0, 4)) t.push(`    // jdbc.update(${JSON.stringify(ins.sql)}${ins.args.length ? ", " + ins.args.join(", ") : ""});`);
+          } else t.push(`    // given${hint ? `: ${m.name} calls
+${indent(hint, 4)}` : ""}`);
+          t.push(`    ${ret ? `var result = ${call};` : `${call};`}`);
+          if (st === "mockito") t.push("    // then: assertThat(result)... and verify(...) the calls that matter");
+          else if (ret && s.assertj) t.push("    // then", "    assertThat(result).isNotNull();");
+          else t.push("    // then");
+          t.push("}");
+        }
+        body.push(indent(t.join("\n"), 4));
+      });
+      const note = {
+        mockito: `Unit test of ${c.name}: its dependencies are mocks (Mockito strict stubs: stub only what the method uses).`,
+        webmvc: `Web layer test of ${c.name}: MockMvc against the controller only; its dependencies are ${s.mockBean}s.`,
+        jpa: `Repository test of ${c.name} against the real schema${s.testcontainers ? ` (Testcontainers + ${ddl?.resource})` : ` from SPRING_DATASOURCE_URL (dt test_run loads ${ddl?.resource || "the DDL snapshot"} into a throwaway database)`}.`,
+        jdbc: `JDBC test of ${c.name} against the real schema${s.testcontainers ? ` (Testcontainers + ${ddl?.resource})` : ` from SPRING_DATASOURCE_URL (dt test_run loads ${ddl?.resource || "the DDL snapshot"} into a throwaway database)`}.`,
+        unit: `Unit test of ${c.name}.`
+      }[st];
+      const pkg = c.id.slice(0, c.id.length - c.name.length - 1);
+      return [
+        pkg ? `package ${pkg};
+` : "",
+        [...imports].sort().join("\n"),
+        "",
+        [...statics].sort().join("\n"),
+        "",
+        `// ${note}`,
+        ...ann,
+        `class ${name} {`,
+        indent(fields.join("\n\n"), 4),
+        "",
+        body.join("\n\n"),
+        "}",
+        ""
+      ].join("\n").replace(/\n{3,}/g, "\n\n");
+    }
+    function inserts(cat, tables) {
+      const by = new Map(cat.tables.map((t) => [`${t.schema}.${t.name}`.toLowerCase(), t]));
+      const order = [], seen = /* @__PURE__ */ new Set();
+      const visit = (k) => {
+        if (seen.has(k) || !by.has(k)) return;
+        seen.add(k);
+        for (const c of by.get(k).constraints || []) if (c.type === "f" && c.ref) visit(c.ref.toLowerCase());
+        order.push(k);
+      };
+      tables.forEach(visit);
+      const val = (type) => /int|serial/.test(type) ? "1L" : /numeric|decimal|double|real/.test(type) ? 'new java.math.BigDecimal("10.00")' : /bool/.test(type) ? "true" : /timestamp|date/.test(type) ? "java.sql.Timestamp.from(java.time.Instant.now())" : /uuid/.test(type) ? "java.util.UUID.randomUUID()" : /json/.test(type) ? '"{}"' : '"test"';
+      return order.map((k) => {
+        const t = by.get(k);
+        const cols = t.columns.filter((c) => !c.nullable && !c.default && !c.identity);
+        const checks = (t.constraints || []).filter((c) => c.type === "c").map((c) => c.def);
+        return { table: k, sql: `insert into ${k} (${cols.map((c) => c.name).join(", ")}) values (${cols.map(() => "?").join(", ")})`, args: cols.map((c) => val(c.type)), checks };
+      });
+    }
+    function context(id, target, { env, db: dbName, writeDdl = true } = {}) {
+      const m = W.checkId(id);
+      const idx = W.index(id);
+      const g = idx.graph_();
+      const found = findClass(g, target);
+      if (!found.length) {
+        const words = String(target).toLowerCase().split(/[#.\s/]+/).filter(Boolean);
+        const cands = g.classes.filter((c2) => words.some((w) => c2.id.toLowerCase().includes(w))).slice(0, 15).map((c2) => c2.id);
+        throw new Error(`no class "${target}" in workspace ${id}${cands.length ? `; similar: ${cands.join(", ")}` : ""}`);
+      }
+      const c = found[0];
+      const member = String(target).split(/#|::/)[1];
+      const root = m.path;
+      const src = fs2.readFileSync(path2.join(root, c.file), "utf8");
+      const srcLines = src.split("\n");
+      const byName = new Map(g.classes.filter((x) => !x.test).map((x) => [x.name, x]));
+      const deps = [];
+      const seenDep = /* @__PURE__ */ new Set();
+      for (const p of c.bean ? c.ctor : []) if (!seenDep.has(p.name)) {
+        seenDep.add(p.name);
+        deps.push({ name: p.name, type: p.type, typeId: p.typeId });
+      }
+      for (const f of c.fields) if (f.inject && !seenDep.has(f.name)) {
+        seenDep.add(f.name);
+        deps.push({ name: f.name, type: f.type, typeId: f.typeId });
+      }
+      const st = style(c, g, deps);
+      const pub = (x) => !x.ctor && !x.mods.includes("private") && x.name !== "main";
+      let methods = c.methods.filter((x) => pub(x) && !x.abstract || c.kind === "interface" && !x.ctor);
+      if (member) methods = c.methods.filter((x) => x.name === member);
+      if (member && !methods.length) throw new Error(`no method ${member} in ${c.id}; it has ${c.methods.filter((x) => !x.ctor).map((x) => x.name).join(", ")}`);
+      const calls = /* @__PURE__ */ new Map();
+      const depByType = new Map(deps.map((d) => [d.typeId, d]));
+      for (const x of methods) {
+        const out2 = [];
+        for (const [from2, to2, kind] of g.edges) {
+          if (from2 !== `${c.id}#${x.name}` || kind !== "calls") continue;
+          const [tid, mname] = to2.split("#");
+          const d = depByType.get(tid) || deps.find((dd) => `ext:${dd.type.replace(/<.*$/, "")}` === tid || dd.typeId === tid);
+          if (!d) continue;
+          const dc = g.classes.find((k) => k.id === tid);
+          const dm = dc?.methods.find((k) => k.name === mname);
+          out2.push(`${d.name}.${mname}(${dm ? dm.params.map((p) => `${p.type} ${p.name}`).join(", ") : "..."})${dm?.ret ? ` -> ${dm.ret}` : ""}`);
+        }
+        calls.set(x.name, [...new Set(out2)]);
+      }
+      const depApi = deps.map((d) => {
+        const dc = g.classes.find((k) => k.id === d.typeId);
+        return { name: d.name, type: d.type, internal: !!dc, file: dc?.file, kind: dc?.kind, methods: dc ? dc.methods.filter(pub).map((k) => `${k.ret ? k.ret + " " : ""}${k.name}(${k.params.map((p) => `${p.type} ${p.name}`).join(", ")})`) : void 0 };
+      });
+      g.endpointsOf = /* @__PURE__ */ new Map();
+      for (const [from2, to2, kind] of g.edges) if (kind === "handler" && to2.startsWith(`${c.id}#`)) {
+        const mn = to2.split("#")[1];
+        (g.endpointsOf.get(mn) || g.endpointsOf.set(mn, []).get(mn)).push(from2.replace(/^endpoint:/, ""));
+      }
+      for (const x of methods) {
+        const raw = srcLines.slice(Math.max(0, x.startLine - 1), x.line).join("\n");
+        const mm = raw.match(/@(Get|Post|Put|Delete|Patch)Mapping\s*(?:\(\s*(?:value\s*=\s*|path\s*=\s*)?"([^"]*)")?/);
+        const base = (src.match(/@RequestMapping\s*\(\s*(?:value\s*=\s*|path\s*=\s*)?"([^"]*)"/) || [])[1] || "";
+        if (mm && g.endpointsOf.has(x.name)) g.endpointsOf.set(x.name, [`${mm[1].toUpperCase()} ${(base + "/" + (mm[2] || "")).replace(/\/+/g, "/").replace(/(.)\/$/, "$1")}`]);
+        const rs = raw.match(/@ResponseStatus\s*\(\s*(?:value\s*=\s*|code\s*=\s*)?HttpStatus\.(\w+)/);
+        if (rs) x.status = { CREATED: "isCreated", NO_CONTENT: "isNoContent", ACCEPTED: "isAccepted", OK: "isOk" }[rs[1]] || "is2xxSuccessful";
+        const ps = raw.match(/\(([\s\S]*)\)\s*(throws[^{]*)?\{?\s*$/);
+        if (ps) {
+          x.throws = ps[2] || "";
+          for (const p of x.params) p.annos = (ps[1].match(new RegExp(`((?:@\\w+(?:\\([^)]*\\))?\\s+)*)(?:final\\s+)?[\\w.<>,\\s\\[\\]?]+\\s+${p.name}\\b`)) || ["", ""])[1].match(/@(\w+)/g)?.map((a) => a.slice(1)) || [];
+        }
+      }
+      const tables = /* @__PURE__ */ new Set();
+      const own = (from2) => from2 === c.id || from2.startsWith(`${c.id}#`) || from2.startsWith(`${c.id}.`);
+      for (const [from2, to2] of g.edges) if (own(from2) && to2.startsWith("table:")) tables.add(to2.slice(6));
+      if (c.role === "repository") {
+        for (const [from2, to2, kind] of g.edges) if (from2 === c.id && kind === "repository") {
+          const ent = g.classes.find((k) => k.id === to2);
+          if (ent?.table) tables.add(ent.table);
+        }
+      }
+      const fnCalls = /* @__PURE__ */ new Set();
+      for (const [from2, to2] of g.edges) if (own(from2) && to2.startsWith("pgfn:")) fnCalls.add(to2.slice(5));
+      const mod = moduleOf(root, c.file);
+      const s = setup(root, mod, g.app);
+      let ddl = null, db = null;
+      if ((st === "jpa" || st === "jdbc" || tables.size) && env) {
+        const pg = require_pg();
+        const cats = pg.loadAll(env);
+        const { namesOf, resolve } = require_pgindex();
+        const has = (cat2) => [...tables].some((t) => resolve(namesOf(cat2).rel, namesOf(cat2).relBy, t).keys.length) || [...fnCalls].some((f) => resolve(namesOf(cat2).fn, namesOf(cat2).fnBy, f).keys.length);
+        const cat = dbName ? cats.find((x) => x.db === dbName) : cats.find(has);
+        if (cat) {
+          const resource = `dt-schema/${cat.db}.sql`;
+          const rel = `${mod.dir === "." ? "" : mod.dir + "/"}src/test/resources/${resource}`;
+          const D = require_ddl();
+          const prev = fs2.existsSync(path2.join(root, rel)) ? D.requested(fs2.readFileSync(path2.join(root, rel), "utf8")) : null;
+          const want = { tables: [...tables].filter((t) => resolve(namesOf(cat).rel, namesOf(cat).relBy, t).keys.length), functions: [...fnCalls].filter((f) => resolve(namesOf(cat).fn, namesOf(cat).fnBy, f).keys.length), views: [] };
+          if (prev) for (const k of ["tables", "functions", "views"]) want[k] = [.../* @__PURE__ */ new Set([...prev[k], ...want[k]])];
+          const snap = D.snapshot(env, cat.db, want);
+          if (writeDdl) W.write(id, rel, { content: snap.sql });
+          ddl = { db: cat.db, env, resource, path: rel, written: writeDdl, counts: snap.counts, tables: snap.tables, functions: snap.functions };
+          db = { inserts: inserts(cat, snap.tables.filter((t) => [...tables].some((x) => t === x || t.endsWith(`.${x}`)))) };
+        } else ddl = { note: `no synced database in ${env} has ${[...tables].join(", ")}: catalog_sync what=pg, then pass db=` };
+      } else if (st === "jpa" || st === "jdbc") ddl = { note: "pass env (and db) to get the DDL snapshot for this test" };
+      const kt = /\.kt$/.test(c.file);
+      const fileImports = [...src.matchAll(/^\s*import\s+(static\s+)?([\w.*]+)\s*;?\s*$/gm)].map((x) => (x[1] ? "static " : "") + x[2]);
+      const ctx = { imports: new Set(fileImports.map((i) => i.split(".").pop())), samePkg: new Set(g.classes.filter((x) => x.id === `${c.id.slice(0, c.id.length - c.name.length)}${x.name}`).map((x) => x.name)), byName, fileImports };
+      const testDir = c.file.replace(/(^|\/)src\/main\/(java|kotlin)\//, `$1src/test/$2/`);
+      const testPath = testDir.replace(/\.(java|kt)$/, `Test.$1`);
+      const existing = fs2.existsSync(path2.join(root, testPath));
+      const skeleton = kt ? null : javaSkeleton({ c, g, s, st, methods, deps, ctx, calls, ddl, db });
+      const example = exampleTest(root, mod.dir, c.file);
+      const focus = member ? methods[0] : null;
+      const from = focus ? Math.max(1, focus.startLine - 2) : 1;
+      const to = focus ? focus.endLine + 1 : srcLines.length;
+      return {
+        workspace: id,
+        class: c.id,
+        file: c.file,
+        role: c.role,
+        kind: c.kind,
+        style: st,
+        source: (focus ? srcLines.slice(0, Math.min(srcLines.length, c.line + 1)).join("\n") + "\n    ...\n" : "") + srcLines.slice(from - 1, to).map((l, i) => `${String(from + i).padStart(4)}  ${l}`).join("\n"),
+        methods: methods.map((x) => ({ name: x.name, signature: `${x.ret ? x.ret + " " : ""}${x.name}(${x.params.map((p) => `${p.type} ${p.name}`).join(", ")})`, lines: `${x.startLine}-${x.endLine}`, calls: calls.get(x.name) || [], endpoint: g.endpointsOf.get(x.name)?.[0] })),
+        dependencies: depApi,
+        tables: [...tables],
+        functions: [...fnCalls],
+        setup: { ...s, module: mod.dir, buildFile: mod.buildFile },
+        ddl,
+        inserts: db?.inserts,
+        test: { path: testPath, exists: existing, class: `${c.id}Test` },
+        skeleton: skeleton || void 0,
+        example,
+        rules: rules(st, s, kt),
+        next: `Write the test with workspace_write path="${testPath}"${existing ? " (it exists: read it first and add to it, or use another name)" : ""}, then test_run tests=["${c.name}Test"]${ddl?.db ? ` env="${env}"` : ""}.`
+      };
+    }
+    function exampleTest(root, modDir, file) {
+      const testRoot = path2.join(root, modDir === "." ? "" : modDir, "src", "test");
+      const near = path2.join(root, path2.dirname(file).replace(/src\/main\//, "src/test/"));
+      const pick = (dir) => {
+        try {
+          return fs2.readdirSync(dir).filter((f2) => /Test\.(java|kt)$/.test(f2)).map((f2) => path2.join(dir, f2))[0];
+        } catch {
+          return null;
+        }
+      };
+      let f = pick(near);
+      if (!f) {
+        (function rec(d, depth) {
+          if (f || depth > 8) return;
+          let es;
+          try {
+            es = fs2.readdirSync(d, { withFileTypes: true });
+          } catch {
+            return;
+          }
+          for (const e of es) {
+            if (f) return;
+            if (e.isDirectory()) rec(path2.join(d, e.name), depth + 1);
+            else if (/Test\.(java|kt)$/.test(e.name)) f = path2.join(d, e.name);
+          }
+        })(testRoot, 0);
+      }
+      if (!f) return null;
+      const text = fs2.readFileSync(f, "utf8").split("\n").slice(0, 60).join("\n");
+      return { path: path2.relative(root, f).split(path2.sep).join("/"), head: text };
+    }
+    function rules(st, s, kt) {
+      const r = [
+        s.junit === 4 ? "JUnit 4 project: use org.junit.Test, @RunWith(MockitoJUnitRunner.class) / @RunWith(SpringRunner.class)." : "JUnit 5 (org.junit.jupiter.api.Test); test classes and methods package-private.",
+        "One behaviour per test; name it after the behaviour (createChargesTheFee, settleRejectsSettled).",
+        s.assertj ? "Assert with AssertJ assertThat(...); exceptions with assertThatThrownBy(...).isInstanceOf(...).hasMessageContaining(...)." : "Assert with org.junit.jupiter.api.Assertions."
+      ];
+      if (st === "mockito") r.push("MockitoExtension uses strict stubs: an unused when(...) fails the test; stub only what the method calls. Use any()/eq() matchers consistently in one call.", "Verify interactions that are the behaviour (verify(events).created(saved)); use ArgumentCaptor to check what was passed.", "Do not start Spring (@SpringBootTest) for unit tests.");
+      if (st === "webmvc") r.push(`@WebMvcTest starts only the web layer: every bean the controller needs must be a @${s.mockBean}.`, 'Check status, JSON (jsonPath("$.id").value(1)) and that the service got the right arguments.', s.mockBean === "MockitoBean" ? "Boot 3.4+: @MockBean is deprecated, use @MockitoBean." : "Boot < 3.4: @MockBean (org.springframework.boot.test.mock.mockito).");
+      if (st === "jpa" || st === "jdbc") r.push("Runs against the real schema (the DDL snapshot), not H2: native SQL, functions and constraints behave as in production.", "Insert the rows the test needs (parents first, see inserts); @DataJpaTest/@JdbcTest roll back after each test.", "With JPA, flush (entityManager.flush() / repo.saveAndFlush) before asserting on SQL results.");
+      if (kt) r.push("Kotlin: no skeleton is generated; follow the example test. With Mockito use `whenever` from mockito-kotlin if present, or MockK if the project uses it.");
+      return r;
+    }
+    module2.exports = { context, setup, moduleOf, argFor, inserts };
+  }
+});
+
+// lib/testdb.js
+var require_testdb = __commonJS({
+  "lib/testdb.js"(exports2, module2) {
+    var postgres = require_src();
+    var { getTests, envNames: envNames2, getEnv: getEnv2 } = require_config();
+    var same = (a, b) => {
+      try {
+        const x = new URL(a), y = new URL(b);
+        return x.hostname === y.hostname && (x.port || "5432") === (y.port || "5432") && x.pathname === y.pathname;
+      } catch {
+        return false;
+      }
+    };
+    function server() {
+      const url = getTests().pgUrl;
+      if (!url) throw new Error("no test database: set tests.pgUrl in config.json (or DT_TEST_DB_URL), e.g. the compose testdb profile: postgres://dt:dt@testdb:5432/postgres");
+      for (const e of envNames2()) for (const [db, u] of Object.entries(getEnv2(e).pg)) if (u && same(u, url)) throw new Error(`tests.pgUrl is the ${e} database "${db}": use a scratch Postgres for tests`);
+      return url;
+    }
+    async function create(runId, statements) {
+      const url = server();
+      const name = `dt_test_${String(runId).replace(/[^a-z0-9]/gi, "").toLowerCase().slice(0, 40)}`;
+      const admin = postgres(url, { max: 1, onnotice: () => {
+      }, connect_timeout: 10 });
+      try {
+        await admin.unsafe(`drop database if exists ${name}`);
+        await admin.unsafe(`create database ${name}`);
+      } catch (e) {
+        if (/ENOTFOUND|ECONNREFUSED|EAI_AGAIN|getaddrinfo/.test(`${e.code} ${e.message}`)) throw new Error(`the test database at ${new URL(url).host} is not reachable (${e.code || e.message}): with compose add testdb to COMPOSE_PROFILES, or set tests.pgUrl`);
+        throw e;
+      } finally {
+        await admin.end({ timeout: 2 });
+      }
+      const u = new URL(url);
+      u.pathname = `/${name}`;
+      const sql = postgres(u.toString(), { max: 1, onnotice: () => {
+      }, connect_timeout: 10 });
+      const errors = [];
+      try {
+        for (const s of statements) {
+          try {
+            await sql.unsafe(s);
+          } catch (e) {
+            errors.push({ statement: s.split("\n")[0].slice(0, 160), error: e.message });
+          }
+        }
+      } finally {
+        await sql.end({ timeout: 2 });
+      }
+      return {
+        database: name,
+        jdbcUrl: `jdbc:postgresql://${u.hostname}:${u.port || 5432}/${name}`,
+        user: decodeURIComponent(u.username),
+        password: decodeURIComponent(u.password),
+        errors
+      };
+    }
+    async function drop(name) {
+      if (!/^dt_test_[a-z0-9]+$/.test(name)) throw new Error(`not a dt test database: ${name}`);
+      const admin = postgres(server(), { max: 1, onnotice: () => {
+      } });
+      try {
+        await admin.unsafe(`drop database if exists ${name} with (force)`);
+      } finally {
+        await admin.end({ timeout: 2 });
+      }
+    }
+    module2.exports = { create, drop, server };
+  }
+});
+
+// lib/testrun.js
+var require_testrun = __commonJS({
+  "lib/testrun.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var { spawn } = require("child_process");
+    var W = require_workspace();
+    var { getTests } = require_config();
+    function plan(root, testFiles) {
+      const near = (file) => {
+        let dir = path2.dirname(path2.join(root, file));
+        while (dir.startsWith(root)) {
+          if (["pom.xml", "build.gradle", "build.gradle.kts"].some((f) => fs2.existsSync(path2.join(dir, f)))) return dir;
+          if (dir === root) break;
+          dir = path2.dirname(dir);
+        }
+        return root;
+      };
+      const modDir = testFiles.length ? near(testFiles[0]) : root;
+      const mod = path2.relative(root, modDir).split(path2.sep).join("/") || ".";
+      const gradle = fs2.existsSync(path2.join(root, "settings.gradle")) || fs2.existsSync(path2.join(root, "settings.gradle.kts")) || fs2.existsSync(path2.join(modDir, "build.gradle")) || fs2.existsSync(path2.join(modDir, "build.gradle.kts"));
+      const maven = fs2.existsSync(path2.join(modDir, "pom.xml"));
+      return { tool: maven ? "maven" : gradle ? "gradle" : null, module: mod, modDir };
+    }
+    function which(cmd, extra = []) {
+      for (const d of [...extra, ...(process.env.PATH || "").split(path2.delimiter)]) {
+        if (!d) continue;
+        const f = path2.join(d, cmd);
+        try {
+          fs2.accessSync(f, fs2.constants.X_OK);
+          return f;
+        } catch {
+        }
+      }
+      return null;
+    }
+    function command(root, p, tests, cfg) {
+      const javaBin = cfg.javaHome ? [path2.join(cfg.javaHome, "bin")] : [];
+      const sel = tests.map((t) => t.replace(/\.(java|kt)$/, "").split("/").pop());
+      if (p.tool === "maven") {
+        const wrapper = fs2.existsSync(path2.join(root, "mvnw")) ? ["sh", ["mvnw"]] : null;
+        const mvn = wrapper || [cfg.maven || which("mvn", [...javaBin, ...process.env.MAVEN_HOME ? [path2.join(process.env.MAVEN_HOME, "bin")] : []]), []];
+        if (!mvn[0]) throw new Error("no Maven: the repo has no mvnw, and mvn is not on PATH (set tests.maven in config.json, or run with the compose jdk profile)");
+        const args = [
+          ...mvn[1],
+          "-B",
+          "-ntp",
+          "test",
+          `-Dtest=${sel.join(",")}`,
+          "-Dsurefire.failIfNoSpecifiedTests=false",
+          "-DfailIfNoTests=false",
+          "-Djacoco.skip=true",
+          "-Dcheckstyle.skip=true",
+          "-Dspotless.check.skip=true",
+          "-Denforcer.skip=true",
+          "-Dpmd.skip=true",
+          "-Dspotbugs.skip=true",
+          `-Dmaven.repo.local=${cfg.mavenRepo}`
+        ];
+        if (p.module !== "." && fs2.existsSync(path2.join(root, "pom.xml"))) args.push("-pl", p.module, "-am");
+        if (cfg.offline) args.push("-o");
+        if (cfg.mavenSettings) args.push("-s", cfg.mavenSettings);
+        return { cmd: mvn[0], args: [...args, ...cfg.args], cwd: p.module !== "." && fs2.existsSync(path2.join(root, "pom.xml")) ? root : p.modDir };
+      }
+      if (p.tool === "gradle") {
+        const wrapper = fs2.existsSync(path2.join(root, "gradlew")) ? ["sh", ["gradlew"]] : null;
+        const gr = wrapper || [cfg.gradle || which("gradle", javaBin), []];
+        if (!gr[0]) throw new Error("no Gradle: the repo has no gradlew, and gradle is not on PATH (set tests.gradle in config.json)");
+        const task = p.module === "." ? "test" : `:${p.module.split("/").join(":")}:test`;
+        const args = [...gr[1], "--console=plain", task, ...sel.flatMap((t) => ["--tests", t.includes("#") ? t.replace("#", ".") : t.includes(".") ? t : `*${t}`])];
+        if (cfg.offline) args.push("--offline");
+        return { cmd: gr[0], args: [...args, ...cfg.args], cwd: root };
+      }
+      throw new Error("no pom.xml or build.gradle for these tests");
+    }
+    function parseReports(dirs, since) {
+      const cases = [];
+      for (const d of dirs) {
+        let files = [];
+        try {
+          files = fs2.readdirSync(d).filter((f) => /^TEST-.*\.xml$/.test(f)).map((f) => path2.join(d, f));
+        } catch {
+          continue;
+        }
+        for (const f of files) {
+          if (fs2.statSync(f).mtimeMs < since - 1e3) continue;
+          const x = fs2.readFileSync(f, "utf8");
+          for (const m of x.matchAll(/<testcase\b([^>]*?)(\/>|>([\s\S]*?)<\/testcase>)/g)) {
+            const attr = (n) => {
+              const a = m[1].match(new RegExp(`\\b${n}="([^"]*)"`));
+              return a ? unxml(a[1]) : null;
+            };
+            const inner = m[3] || "";
+            const fail = inner.match(/<(failure|error)\b([^>]*?)(?:\/>|>([\s\S]*?)<\/\1>)/);
+            const skipped = /<skipped\b/.test(inner);
+            const msg = fail ? unxml((fail[2].match(/\bmessage="([^"]*)"/) || [])[1] || "") : null;
+            const stack = fail ? unxml((fail[3] || "").replace(/^<!\[CDATA\[|\]\]>$/g, "")) : null;
+            const out2 = unxml(((inner.match(/<system-out>([\s\S]*?)<\/system-out>/) || [])[1] || "").replace(/^<!\[CDATA\[|\]\]>$/g, ""));
+            cases.push({ class: attr("classname"), name: attr("name"), ms: Math.round(Number(attr("time") || 0) * 1e3), status: fail ? fail[1] === "error" ? "error" : "failed" : skipped ? "skipped" : "passed", message: msg, type: fail ? (fail[2].match(/\btype="([^"]*)"/) || [])[1] || null : null, stack, output: out2 ? out2.slice(-4e3) : void 0 });
+          }
+        }
+      }
+      return cases;
+    }
+    var unxml = (s) => String(s || "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#(\d+);/g, (_, n) => String.fromCharCode(n)).replace(/&amp;/g, "&");
+    function compileErrors(output, root) {
+      const out2 = [];
+      const rel = (f) => {
+        const p = f.replace(/^file:\/\//, "");
+        return p.startsWith(root) ? path2.relative(root, p).split(path2.sep).join("/") : p;
+      };
+      for (const m of output.matchAll(/\[ERROR\]\s+(\/[^\s:]+\.(?:java|kt)):\[(\d+),(\d+)\]\s*(.*)/g)) out2.push({ file: rel(m[1]), line: +m[2], col: +m[3], message: m[4].trim() });
+      for (const m of output.matchAll(/^(\/[^\s:]+\.java):(\d+): error: (.*)$/gm)) out2.push({ file: rel(m[1]), line: +m[2], message: m[3].trim() });
+      for (const m of output.matchAll(/^e: (?:file:\/\/)?(\/[^\s:]+\.kts?):(\d+):(\d+):? (.*)$/gm)) out2.push({ file: rel(m[1]), line: +m[2], col: +m[3], message: m[4].trim() });
+      const seen = /* @__PURE__ */ new Set();
+      return out2.filter((e) => {
+        const k = `${e.file}:${e.line}:${e.message}`;
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+    }
+    function codeParts(root, g, stack, max = 3) {
+      const byClass = new Map(g.classes.map((c) => [c.id, c.file]));
+      const parts = [];
+      for (const m of String(stack || "").matchAll(/at ([\w$.]+)\.([\w$<>]+)\(([\w$]+\.(?:java|kt)):(\d+)\)/g)) {
+        const cls = m[1].replace(/\$.*$/, "");
+        const file = byClass.get(cls) || byClass.get(m[1].replace(/\$/g, "."));
+        if (!file) continue;
+        const line = Number(m[4]);
+        if (parts.some((p) => p.file === file && p.line === line)) continue;
+        parts.push({ file, line, method: `${cls.split(".").pop()}#${m[2]}`, test: /(^|\/)src\/test\//.test(file), snippet: snippet(root, file, line) });
+        if (parts.length >= max) break;
+      }
+      return parts;
+    }
+    function snippet(root, file, line, around = 4) {
+      try {
+        const lines = fs2.readFileSync(path2.join(root, file), "utf8").split("\n");
+        const from = Math.max(1, line - around), to = Math.min(lines.length, line + around);
+        return { from, to, text: lines.slice(from - 1, to).map((l, i) => `${from + i === line ? ">" : " "}${String(from + i).padStart(4)}  ${l}`).join("\n") };
+      } catch {
+        return null;
+      }
+    }
+    function exec(cmd, args, { cwd, env, timeoutMs, log }) {
+      return new Promise((resolve) => {
+        const started = Date.now();
+        const p = spawn(cmd, args, { cwd, env, stdio: ["ignore", "pipe", "pipe"] });
+        let out2 = "", killed = false;
+        const keep = (b) => {
+          out2 += b.toString();
+          if (out2.length > 4e6) out2 = out2.slice(-3e6);
+          const last = b.toString().trim().split("\n").pop();
+          if (last && log) log(last.slice(0, 200));
+        };
+        p.stdout.on("data", keep);
+        p.stderr.on("data", keep);
+        const timer = setTimeout(() => {
+          killed = true;
+          p.kill("SIGTERM");
+          setTimeout(() => p.kill("SIGKILL"), 5e3);
+        }, timeoutMs);
+        p.on("error", (e) => {
+          clearTimeout(timer);
+          resolve({ code: -1, out: out2 + `
+${e.message}`, ms: Date.now() - started });
+        });
+        p.on("close", (code) => {
+          clearTimeout(timer);
+          resolve({ code, out: out2, killed, ms: Date.now() - started });
+        });
+      });
+    }
+    async function run(id, { tests = [], db, log = () => {
+    } } = {}) {
+      const m = W.checkId(id);
+      const root = m.path;
+      const idx = W.index(id);
+      const g = idx.graph_();
+      if (!tests.length) throw new Error("name the tests to run (class names like FooTest, or Class#method)");
+      const files = tests.map((t) => {
+        const cls = t.split("#")[0].replace(/\.(java|kt)$/, "").split("/").pop();
+        const c2 = g.classes.find((x) => x.test && (x.name === cls || x.id === cls));
+        return c2 ? c2.file : /\//.test(t) ? t : null;
+      });
+      const missing = tests.filter((t, i) => !files[i]);
+      if (missing.length) throw new Error(`no test class ${missing.join(", ")} in ${id} (write it with workspace_write first)`);
+      const p = plan(root, files);
+      const cfg = getTests();
+      const c = command(root, p, tests, cfg);
+      const env = { ...process.env, MAVEN_OPTS: process.env.MAVEN_OPTS || "-Xmx1g", CI: "true" };
+      if (cfg.javaHome) {
+        env.JAVA_HOME = cfg.javaHome;
+        env.PATH = `${path2.join(cfg.javaHome, "bin")}${path2.delimiter}${env.PATH}`;
+      }
+      if (cfg.gradleHome) env.GRADLE_USER_HOME = cfg.gradleHome;
+      if (cfg.javaToolOptions) env.JAVA_TOOL_OPTIONS = [process.env.JAVA_TOOL_OPTIONS, cfg.javaToolOptions].filter(Boolean).join(" ");
+      let database = null;
+      const runId = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+      if (db) {
+        const opts = { tables: db.tables, service: db.service, functions: db.functions };
+        let statements;
+        if (db.ddlPath) statements = splitSql(fs2.readFileSync(W.resolvePath(m, db.ddlPath).full, "utf8"));
+        else statements = require_ddl().snapshot(db.env, db.db, opts).statements;
+        log(`test db: loading ${statements.length} statements`);
+        database = await require_testdb().create(runId, statements);
+        if (database.errors.length) log(`test db: ${database.errors.length} statements failed`);
+        Object.assign(env, { SPRING_DATASOURCE_URL: database.jdbcUrl, SPRING_DATASOURCE_USERNAME: database.user, SPRING_DATASOURCE_PASSWORD: database.password, SPRING_JPA_HIBERNATE_DDL_AUTO: "none", SPRING_SQL_INIT_MODE: "never", SPRING_FLYWAY_ENABLED: "false", SPRING_LIQUIBASE_ENABLED: "false" });
+      }
+      const reportDirs = [path2.join(p.modDir, "target", "surefire-reports"), path2.join(p.modDir, "build", "test-results", "test")];
+      for (const d of reportDirs) fs2.rmSync(d, { recursive: true, force: true });
+      const started = Date.now();
+      log(`${p.tool}: ${path2.basename(c.cmd)} ${c.args.filter((a) => !/^-Dmaven\.repo\.local|^-s$/.test(a)).join(" ")}`);
+      const r = await exec(c.cmd, c.args, { cwd: c.cwd, env, timeoutMs: cfg.timeoutMs, log });
+      if (database) {
+        try {
+          await require_testdb().drop(database.database);
+        } catch (e) {
+          log(`test db: drop failed: ${e.message}`);
+        }
+      }
+      const cases = parseReports(reportDirs, started);
+      const compile = cases.length ? [] : compileErrors(r.out, root);
+      for (const k of cases) if (k.status === "failed" || k.status === "error") k.parts = codeParts(root, g, k.stack);
+      const counts = { tests: cases.length, passed: cases.filter((k) => k.status === "passed").length, failed: cases.filter((k) => k.status === "failed").length, errors: cases.filter((k) => k.status === "error").length, skipped: cases.filter((k) => k.status === "skipped").length };
+      const parts = [];
+      for (const e of compile) parts.push({ file: e.file, line: e.line, why: `compile: ${e.message}`, snippet: snippet(root, e.file, e.line) });
+      for (const k of cases) for (const pt of k.parts || []) if (!parts.some((x) => x.file === pt.file && x.line === pt.line)) parts.push({ file: pt.file, line: pt.line, method: pt.method, test: pt.test, why: `${k.class.split(".").pop()}.${k.name}: ${(k.message || k.type || "").split("\n")[0].slice(0, 200)}`, snippet: pt.snippet });
+      const hints = [];
+      if (/Mockito cannot mock this class|Java \d+ \(\d+\) is not supported by the current version of Byte Buddy/.test(r.out + cases.map((k) => k.message).join("\n"))) hints.push('Mockito/Byte Buddy of this project does not support the JDK the tests ran on: point tests.javaHome at the JDK the project builds with (17 or 21), or keep tests.javaToolOptions = "-Dnet.bytebuddy.experimental=true".');
+      if (/Failed to determine a suitable driver class|Connection to .* refused|password authentication failed/.test(r.out)) hints.push("The tests wanted a database: run with db (env + db) so test_run loads the DDL snapshot into a throwaway database.");
+      const ok = r.code === 0 && counts.failed === 0 && counts.errors === 0 && !compile.length && counts.tests > 0;
+      const outcome = ok ? "passed" : r.killed ? "timeout" : compile.length ? "compile-error" : counts.tests === 0 ? "no-tests-ran" : "failed";
+      return {
+        workspace: id,
+        tool: p.tool,
+        module: p.module,
+        command: `${path2.basename(c.cmd)} ${c.args.filter((a) => !/^-Dmaven\.repo\.local/.test(a)).join(" ")}`,
+        outcome,
+        exit: r.code,
+        ms: r.ms,
+        counts,
+        cases,
+        compile,
+        parts,
+        hints,
+        database: database ? { name: database.database, failedStatements: database.errors } : null,
+        tail: r.out.split("\n").filter((l) => l.trim()).slice(-60).join("\n")
+      };
+    }
+    function splitSql(text) {
+      const out2 = [];
+      let cur = "", dollar = null, q = false;
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        if (!q && !dollar && ch === "-" && text[i + 1] === "-") {
+          const e = text.indexOf("\n", i);
+          i = e < 0 ? text.length : e;
+          cur += "\n";
+          continue;
+        }
+        if (!q && ch === "$") {
+          const m = text.slice(i).match(/^\$[\w]*\$/);
+          if (m) {
+            if (!dollar) dollar = m[0];
+            else if (dollar === m[0]) dollar = null;
+            cur += m[0];
+            i += m[0].length - 1;
+            continue;
+          }
+        }
+        if (!dollar && ch === "'") q = !q;
+        if (!q && !dollar && ch === ";") {
+          if (cur.trim()) out2.push(cur.trim());
+          cur = "";
+          continue;
+        }
+        cur += ch;
+      }
+      if (cur.trim()) out2.push(cur.trim());
+      return out2;
+    }
+    module2.exports = { run, plan, parseReports, compileErrors, codeParts, splitSql };
+  }
+});
+
+// lib/tools-code.js
+var require_tools_code = __commonJS({
+  "lib/tools-code.js"(exports2, module2) {
+    module2.exports = ({ tabular, str, int, env, clip }) => {
+      const bool = (description, def = false) => ({ type: "boolean", default: def, description });
+      const list = (description) => ({ type: "array", items: { type: "string" }, description });
+      const repos = { description: 'Which indexes: PROJECT/repo, a repo name, globs ("SHOP/*"), a workspace id, comma separated. Empty: all fetched repos.', type: "string" };
+      const R = () => require_results();
+      const keysOf = (spec) => {
+        const keys = require_codeindex().select(spec);
+        for (const k of keys) if (k.startsWith("work/")) try {
+          require_workspace().index(k.slice(5));
+        } catch {
+        }
+        return keys;
+      };
+      async function waitJob(job, wait, again) {
+        const J = require_jobs();
+        if (job.state !== "running") {
+          const v = J.get(job.id);
+          return v.error ? { job: v.id, state: v.state, error: v.error } : { job: v.id, state: v.state, ...v.result };
+        }
+        let timer;
+        const done = await Promise.race([job.promise, new Promise((r) => {
+          timer = setTimeout(() => r(null), wait);
+        })]);
+        clearTimeout(timer);
+        if (!done) return { job: job.id, state: "running", log: (J.get(job.id).log || []).slice(-5), note: `Still running after ${Math.round(wait / 1e3)} s. Call ${again} with job="${job.id}" to wait for it.` };
+        return done.error ? { job: done.id, state: done.state, error: done.error } : { job: done.id, state: done.state, ...done.result };
+      }
+      return [
+        {
+          name: "code_index",
+          group: "code",
+          description: "Fetch a repo (branch, tag or sha; or a service via its passport repo) and build its code index: a trigram index for code_search over every text file, and a symbol graph (classes, methods, fields, calls, Spring roles, tables, SQL, Kafka topics, endpoints, Feign calls) for impact and test_context. Passports and workspaces index their checkout automatically. Without arguments: lists the indexes.",
+          input: { service: str("Service (resolved like passport)"), project: str("Project key"), repo: str("Repo slug"), ref: str("Branch, tag or sha (default branch if empty)") },
+          limit: (a) => a.service || a.repo ? "bitbucket" : null,
+          run: async (a) => {
+            const CI = require_codeindex();
+            if (!a.service && !a.repo) return tabular("code-indexes", CI.list().map((i) => ({ key: i.key, ref: i.ref || "", sha: (i.sha || "").slice(0, 12), files: i.files, classes: i.classes, edges: i.edges, trigrams: i.trigrams, builtAt: i.builtAt, ms: i.ms })), { query: "code indexes" }, { preview: 30 });
+            let { project, repo } = a;
+            if (a.service && !(project && repo)) ({ project, repo } = await require_passport().resolveRepo(a.service));
+            const info = await require_git().fetchRef(project, repo, a.ref);
+            const r = CI.build(info.path, `${info.project}/${repo}`, { project: info.project, repo, ref: info.ref, sha: info.sha, service: a.service || null });
+            const { root, ...rest } = r;
+            return rest;
+          }
+        },
+        {
+          name: "code_search",
+          group: "code",
+          description: 'Grep the indexed repos and workspaces (trigram index: fast over all of them at once). Text or a JavaScript regex; filter by path glob ("*.java", "src/main/**", "*.yml,*.sql"). Returns file:line hits with the line (and context lines when asked); the full list is a view. Use impact for "what uses X", this for anything textual (config keys, SQL, log messages, names in yml/xml).',
+          input: { pattern: str("Text, or a regex when regex=true"), regex: bool("pattern is a regex"), repos, glob: str("Path glob(s), comma separated"), ignore_case: bool("Ignore case", true), context: int("Lines around each hit", 0), tests: bool("Include test sources", true), limit: int("Max hits", 100) },
+          required: ["pattern"],
+          run: (a) => {
+            const CI = require_codeindex();
+            const keys = keysOf(a.repos);
+            if (!keys.length) return { hits: [], note: a.repos ? `no index matches "${a.repos}" (code_index lists them)` : "nothing indexed yet: code_index, passport or workspace_open fetch and index repos" };
+            const r = CI.grep(keys, a.pattern, { regex: a.regex, ignoreCase: a.ignore_case !== false, glob: a.glob, context: Math.min(a.context || 0, 10), limit: Math.min(a.limit || 100, 2e3), tests: a.tests !== false });
+            const t = tabular("code-search", r.hits.map((h) => ({ repo: h.repo, file: `${h.path}:${h.line}`, text: h.text, ...h.context ? { context: h.context } : {} })), { query: `${a.regex ? "/" + a.pattern + "/" : a.pattern}${a.glob ? ` in ${a.glob}` : ""}` }, { preview: 30 });
+            return { ...t, files: r.files, repos: keys.length, scanned: r.scanned, candidates: r.candidates, truncated: r.truncated || void 0, ms: r.ms, prefilter: r.plan };
+          }
+        },
+        {
+          name: "code_symbols",
+          group: "code",
+          description: 'Find classes, methods and fields by name words in the code graphs ("payment service create", "FeeCalculator"): id, kind, Spring role, file:line, signature. Use the ids with impact and test_context.',
+          input: { q: str("Words, all must match (case-insensitive)"), repos, kind: { type: "string", enum: ["", "class", "method", "field"], default: "" }, limit: int("Max results", 50) },
+          required: ["q"],
+          run: (a) => {
+            const CI = require_codeindex();
+            const words = a.q.toLowerCase().split(/[\s#.]+/).filter(Boolean);
+            const rows = [];
+            for (const key of keysOf(a.repos)) {
+              const g = CI.load(key)?.graph_();
+              for (const c of g?.classes || []) {
+                const hit = (s) => words.every((w) => s.toLowerCase().includes(w));
+                if ((!a.kind || a.kind === "class") && hit(c.id)) rows.push({ id: c.id, kind: c.kind, role: c.role || "", repo: key, file: `${c.file}:${c.line}`, signature: `${c.annos.map((x) => "@" + x).join(" ")} ${c.kind} ${c.name}`.trim() });
+                if (!a.kind || a.kind === "method") {
+                  for (const m of c.methods) if (hit(`${c.id}#${m.name}`)) rows.push({ id: `${c.id}#${m.name}`, kind: m.ctor ? "constructor" : "method", role: c.role || "", repo: key, file: `${c.file}:${m.line}`, signature: `${m.ret ? m.ret + " " : ""}${m.name}(${m.params.map((p) => `${p.type} ${p.name}`).join(", ")})` });
+                }
+                if (!a.kind || a.kind === "field") {
+                  for (const f of c.fields) if (hit(`${c.id}.${f.name}`)) rows.push({ id: `${c.id}.${f.name}`, kind: "field", role: c.role || "", repo: key, file: `${c.file}:${f.line}`, signature: `${f.type} ${f.name}${f.column ? ` -> column ${f.column}` : ""}${f.inject ? " (injected)" : ""}` });
+                }
+                if (rows.length > 2e3) break;
+              }
+            }
+            rows.sort((x, y) => (x.kind === "class" ? 0 : 1) - (y.kind === "class" ? 0 : 1) || x.id.length - y.id.length);
+            return tabular("code-symbols", rows.slice(0, a.limit || 50), { query: `symbols: ${a.q}` }, { preview: 25 });
+          }
+        },
+        {
+          name: "code_read",
+          group: "code",
+          description: "Read a file of an indexed repo or workspace with line numbers (from..to, 400 lines at most).",
+          input: { repo: str("PROJECT/repo or work/<workspace id>"), path: str("File path in the repo"), from: int("First line", 1), to: int("Last line (default from+299)") },
+          required: ["repo", "path"],
+          run: (a) => {
+            const CI = require_codeindex();
+            const key = CI.select(a.repo)[0] || a.repo;
+            return CI.read(key, a.path, { from: a.from || 1, to: a.to ? Math.min(a.to, (a.from || 1) + 399) : void 0 });
+          }
+        },
+        {
+          name: "impact",
+          group: "code",
+          description: 'Impact radius: what is affected when something changes, walking "who uses it" back through the code graphs of all indexed repos and workspaces, the Postgres usage index of env, and service passports. Target: a class or method ("PaymentService#create", FQN, file.java:42), a table ("pay.payments"), a column ("pay.payments.fee": entity fields, SQL naming it, function bodies, views, indexes/constraints), a database function, a Kafka topic ("topic:payments.created"), an ES index ("es:orders"), an endpoint ("POST /payments/{id}/settle": handlers and Feign callers in other services). Returns layers by distance with file:line and why, the endpoints/topics/tables/services reached, the tests that exercise it (run those), and text mentions in config/SQL files. Shown as a view.',
+          input: { target: str("What changes"), env, repos, depth: int("Steps back to walk", 4), limit: int("Max items", 300) },
+          required: ["target"],
+          run: (a) => {
+            keysOf(a.repos);
+            const r = require_impact().impact(a.target, { env: a.env, repos: a.repos, depth: Math.min(a.depth || 4, 8), limit: Math.min(a.limit || 300, 2e3) });
+            if (!r.resolved?.length) return r;
+            const view = R().saveView("impact", r, { title: `impact of ${a.target}` });
+            const near = r.items.filter((i) => i.depth <= 2).slice(0, 25).map((i) => `${i.depth} ${i.kind} ${i.name}${i.file ? ` (${i.file}:${i.line})` : ""} <- ${i.via}`);
+            return { target: r.target, resolved: r.resolved, counts: r.counts, endpoints: r.endpoints, topics: r.topics, tables: r.tables, functions: r.functions, services: r.services, tests: r.tests, db: r.db, nearest: near, mentions: (r.mentions || []).slice(0, 10).map((m) => `${m.repo} ${m.path}:${m.line} ${m.text}`), truncated: r.truncated, view };
+          }
+        },
+        {
+          name: "ddl_snapshot",
+          group: "code",
+          description: "DDL of a synced database (schemas, extensions, enum/domain types, sequences, tables with defaults, identity, constraints, indexes, comments, functions, procedures, views in order, triggers) for tests: all of it, or only some tables, functions or what a service uses, closed over what they need (FK targets, trigger functions, called functions and their tables). With workspace, written to <module>/src/test/resources/dt-schema/<db>.sql (or path).",
+          input: { env, db: str("Database name from the env"), tables: list("Tables (schema.name or name)"), functions: list("Functions/procedures"), service: str("A service: the objects its passport uses in this db"), workspace: str("Write it into this workspace"), path: str("File path in the workspace") },
+          required: ["db"],
+          run: (a) => {
+            const s = require_ddl().snapshot(a.env, a.db, { tables: a.tables, functions: a.functions, service: a.service });
+            const out2 = { env: a.env, db: a.db, syncedAt: s.syncedAt, counts: s.counts, tables: s.tables, views: s.views, functions: s.functions, missing: s.missing.length ? s.missing : void 0 };
+            if (a.workspace) {
+              const p = a.path || `src/test/resources/dt-schema/${a.db}.sql`;
+              out2.written = require_workspace().write(a.workspace, p, { content: s.sql });
+            } else out2.sql = clip(s.sql, 12e3);
+            return out2;
+          }
+        },
+        {
+          name: "workspace_open",
+          group: "code",
+          description: "Check out a repo at master/main, a branch, tag or commit (or what is deployed in env) into a new writable workspace, indexed for code_search, impact and test_context. Write tests and fixes there with workspace_write, run them with test_run, take the result with workspace_patch. Nothing is committed or pushed.",
+          input: { service: str("Service (resolved like passport)"), project: str("Project key"), repo: str("Repo slug"), ref: str("Branch, tag or sha (default branch if empty)"), env: str("Check out the commit deployed in this env (with service)") },
+          limit: () => "bitbucket",
+          run: async (a) => require_workspace().open({ service: a.service, project: a.project, repo: a.repo, ref: a.ref, env: a.env })
+        },
+        {
+          name: "workspace_list",
+          group: "code",
+          description: "Open workspaces: id, repo, ref, commit.",
+          input: {},
+          run: () => require_workspace().list()
+        },
+        {
+          name: "workspace_read",
+          group: "code",
+          description: "Read a file of a workspace with line numbers (or list a folder).",
+          input: { workspace: str("Workspace id"), path: str("File or folder path"), from: int("First line", 1), to: int("Last line") },
+          required: ["workspace", "path"],
+          run: (a) => require_workspace().read(a.workspace, a.path, { from: a.from || 1, to: a.to })
+        },
+        {
+          name: "workspace_write",
+          group: "code",
+          description: "Write a file in a workspace: the whole content (new test files), or edits [{find, replace}] where each find matches exactly once (fixes in existing code). The change shows up in workspace_patch.",
+          input: { workspace: str("Workspace id"), path: str("File path"), content: str("Whole file content"), edits: { type: "array", items: { type: "object", properties: { find: { type: "string" }, replace: { type: "string" } }, required: ["find", "replace"] }, description: "Replacements, applied in order" } },
+          required: ["workspace", "path"],
+          run: (a) => require_workspace().write(a.workspace, a.path, { content: a.content, edits: a.edits })
+        },
+        {
+          name: "workspace_patch",
+          group: "code",
+          description: "The changes of a workspace as one git patch against the commit it was opened at (new tests, DDL snapshot, fixes): files with +/- counts, the patch shown to the user as a diff with a download link, and how to apply it (git apply). Nothing is pushed.",
+          input: { workspace: str("Workspace id") },
+          required: ["workspace"],
+          run: async (a) => {
+            const p = await require_workspace().patch(a.workspace);
+            if (!p.files.length) return { ...p, patch: "", note: "no changes yet" };
+            const view = R().saveView("patch", p, { title: `${p.repo} @ ${p.base.slice(0, 10)}: ${p.files.length} files` });
+            return { workspace: p.id, repo: p.repo, base: p.base, files: p.files, apply: p.apply, view, download: `${view.replace("/show/", "/patch/")}.patch`, patch: clip(p.patch, 6e3) };
+          }
+        },
+        {
+          name: "workspace_drop",
+          group: "code",
+          description: "Delete a workspace (its files, git data and index). Take the patch first.",
+          input: { workspace: str("Workspace id") },
+          required: ["workspace"],
+          run: (a) => require_workspace().drop(a.workspace)
+        },
+        {
+          name: "test_context",
+          group: "code",
+          description: 'Everything needed to write an isolated test for a class or method of a workspace ("PaymentService", "PaymentService#settle", a file path): its source, Spring role and the test style that fits (unit, Mockito with @Mock/@InjectMocks, @WebMvcTest + MockMvc, @DataJpaTest / @JdbcTest against the real schema), its dependencies and their methods, what each method calls on them (what to stub), endpoints, tables and functions it touches, the project test setup (JUnit, Mockito, AssertJ, Spring Boot version: @MockBean or @MockitoBean, Testcontainers), an existing test to copy the style from, rules, and a skeleton test that compiles. With env, writes the DDL snapshot of the tables it touches into the test resources and suggests insert statements (parents first).',
+          input: { workspace: str("Workspace id"), target: str("Class, Class#method or file path"), env: { ...env, description: "Environment whose synced database gives the DDL snapshot (for repository/DAO tests)" }, db: str("Database (default: the one that has the tables)") },
+          required: ["workspace", "target"],
+          run: (a) => require_testgen().context(a.workspace, a.target, { env: a.env, db: a.db })
+        },
+        {
+          name: "test_run",
+          group: "code",
+          description: 'Run tests of a workspace with its own build (Maven or Gradle, the wrapper when there is one): each test, its status and time, failures with message and the code parts to work on (the repo frames of the stack trace with the lines around them), compile errors with their lines, and the output tail. With env + db (or ddl_path), the run gets a throwaway Postgres database loaded with the DDL snapshot, passed to Spring as SPRING_DATASOURCE_*. Shown as a view. Takes a while: if it answers "running", call it again with that job id.',
+          input: {
+            workspace: str("Workspace id"),
+            tests: list("Test classes (FooTest) or Class#method"),
+            env: str("With db: the environment of the DDL snapshot"),
+            db: str("Database to snapshot into the throwaway test database"),
+            ddl_path: str("Or: a DDL file in the workspace to load (e.g. src/test/resources/dt-schema/pay.sql)"),
+            job: str('A job id from an earlier "running" answer')
+          },
+          required: ["workspace"],
+          run: async (a) => {
+            const J = require_jobs();
+            const cfg = require_config().getTests();
+            let job = a.job ? J.find(a.job) : null;
+            if (a.job && !job) throw new Error(`no job ${a.job}`);
+            if (!job) {
+              if (!a.tests?.length) throw new Error("tests: which test classes to run");
+              const db = a.ddl_path || a.db ? { env: a.env || require_config().envNames()[0], db: a.db, ddlPath: a.ddl_path } : null;
+              job = J.start(`tests:${a.workspace}:${a.tests.join(",")}`, `tests ${a.tests.join(", ")} in ${a.workspace}`, async (log) => {
+                const r = await require_testrun().run(a.workspace, { tests: a.tests, db, log });
+                const view = R().saveView("tests", r, { title: `${r.outcome}: ${a.tests.join(", ")}` });
+                const failing = r.cases.filter((c) => c.status === "failed" || c.status === "error");
+                return {
+                  workspace: r.workspace,
+                  outcome: r.outcome,
+                  counts: r.counts,
+                  ms: r.ms,
+                  command: r.command,
+                  failures: failing.slice(0, 10).map((c) => ({ test: `${c.class.split(".").pop()}#${c.name}`, status: c.status, message: (c.message || c.type || "").slice(0, 500), at: (c.parts || []).map((p) => `${p.file}:${p.line}`) })),
+                  compile: r.compile.slice(0, 10),
+                  parts: r.parts.slice(0, 8).map((p) => ({ file: p.file, line: p.line, why: p.why, code: p.snippet?.text })),
+                  database: r.database,
+                  hints: r.hints.length ? r.hints : void 0,
+                  tail: r.outcome === "passed" ? void 0 : clip(r.tail.split("\n").slice(-25).join("\n"), 3e3),
+                  view,
+                  next: r.outcome === "passed" ? "workspace_patch to take the changes" : "fix the test or the code at parts (workspace_write edits), then test_run again"
+                };
+              });
+            }
+            return waitJob(job, cfg.waitMs, "test_run");
+          }
+        }
+      ];
+    };
+  }
+});
+
 // lib/browser.js
 var require_browser = __commonJS({
   "lib/browser.js"(exports2, module2) {
@@ -27901,7 +30646,8 @@ var require_tools = __commonJS({
         input: { from_store: str("Source store"), from: str("Source path"), to_store: str("Target store"), to: str("Target path"), overwrite: { type: "boolean", default: false } },
         required: ["from_store", "from", "to_store", "to"],
         run: (a) => require_files().copy(a.from_store, a.from, a.to_store, a.to, { overwrite: a.overwrite })
-      }
+      },
+      ...require_tools_code()({ tabular, str, int, env, clip })
     ];
     function browserSites(only) {
       const { sites } = require_config().getBrowser();
@@ -28884,6 +31630,13 @@ var require_server2 = __commonJS({
         }
         res.writeHead(200, { "content-type": "text/html; charset=utf-8", "content-security-policy": require_views().CSP, "cache-control": "no-cache", "x-content-type-options": "nosniff" });
         res.end(html);
+      }],
+      // a workspace patch as a file (the unguessable result id is the key, like /show)
+      ["GET", "/patch/*", false, (req, res, url) => {
+        const r = results.load(url.pathname.split("/").pop().replace(/\.patch$/, ""));
+        if (!r || r.kind !== "view" || r.view !== "patch") return send(res, 404, { error: "No such patch" });
+        res.writeHead(200, { "content-type": "text/x-diff; charset=utf-8", "content-disposition": `attachment; filename="${String(r.data.id || "dt").replace(/[^\w.-]/g, "_")}.patch"`, "cache-control": "no-cache", "x-content-type-options": "nosniff" });
+        res.end(r.data.patch || "");
       }],
       // the file browser: a stored listing of one store directory; previews only inside it
       ["GET", "/files/*", false, page("files.html")],

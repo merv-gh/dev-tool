@@ -40,6 +40,6 @@ export DT_HOME_DIR="$HOME_DIR"
 [ -n "${DT_UID:-}" ] || grep -q '^DT_UID=' "$ENV_FILE" || export DT_UID=$(id -u)
 [ -n "${DT_GID:-}" ] || grep -q '^DT_GID=' "$ENV_FILE" || export DT_GID=$(id -g)
 if [ -n "$TOOLS_ONLY" ]; then export COMPOSE_PROFILES=
-elif [ -z "${COMPOSE_PROFILES+set}" ] && ! grep -q '^COMPOSE_PROFILES=' "$ENV_FILE"; then export COMPOSE_PROFILES=webui,browser,graph
+elif [ -z "${COMPOSE_PROFILES+set}" ] && ! grep -q '^COMPOSE_PROFILES=' "$ENV_FILE"; then export COMPOSE_PROFILES=webui,browser,graph,jdk,testdb
 fi
 exec docker compose --project-directory "$CODE" -f "$CODE/docker-compose.yml" --env-file "$ENV_FILE" "$@"

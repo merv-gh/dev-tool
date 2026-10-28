@@ -1,0 +1,43 @@
+<!-- {"description": "Impact radius of a change: what uses the target, layer by layer (distance), grouped by kind, with file:line and why; endpoints, topics, tables, services and tests reached; database facts for columns; text mentions. DATA: the impact result { target, resolved, counts, items[{depth,kind,id,name,repo,file,line,test,via,where}], endpoints, topics, tables, functions, services, tests, db, mentions }", "sample": {"target": "pay.payments.fee", "resolved": ["column:pay.payments.fee"], "counts": {"field": 1, "pgfn": 1, "method": 1, "table": 1}, "items": [{"depth": 1, "kind": "field", "id": "com.acme.pay.Payment.fee", "name": "Payment.fee", "repo": "PAY/payments-service", "file": "src/main/java/com/acme/pay/Payment.java", "line": 19, "via": "column column:pay.payments.fee"}, {"depth": 1, "kind": "pgfn", "id": "pgfn:pay.customer_balance", "name": "pgfn:pay.customer_balance", "repo": "db:pay", "via": "body column:pay.payments.fee"}, {"depth": 1, "kind": "table", "id": "table:pay.settled_payments", "name": "table:pay.settled_payments", "repo": "db:pay", "via": "view column:pay.payments.fee"}, {"depth": 2, "kind": "method", "id": "com.acme.pay.BalanceDao#balance", "name": "BalanceDao#balance", "repo": "PAY/payments-service", "file": "src/main/java/com/acme/pay/BalanceDao.java", "line": 17, "via": "calls pgfn:pay.customer_balance"}], "endpoints": [], "topics": [], "tables": ["pay.settled_payments"], "functions": ["pay.customer_balance"], "services": [], "tests": [], "db": [], "mentions": []}} -->
+<style>
+  .im { display: grid; gap: 10px; }
+  .sum { display: flex; gap: 6px; flex-wrap: wrap; }
+  .layer h3 { font-size: 13px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
+  .it { display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 2px 10px; padding: 5px 10px; border-top: 1px solid var(--line); font-size: 13px; }
+  .it:first-of-type { border-top: 0; }
+  .it .k { color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .03em; padding-top: 2px; }
+  .it .n { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; word-break: break-all; }
+  .it .w { grid-column: 2; color: var(--muted); font-size: 12px; word-break: break-word; }
+  .it.test .n::after { content: ' test'; color: var(--good); font-family: inherit; font-size: 11px; }
+  .filt { display: flex; gap: 6px; flex-wrap: wrap; }
+  .filt button.on { background: var(--accent); color: #fff; }
+</style>
+<div class="im">
+  <div class="vhead"><h1 data-title></h1><span class="spacer"></span><span class="muted" id="res"></span></div>
+  <div class="sum" id="sum"></div>
+  <div class="filt" id="filt"></div>
+  <div id="layers" class="im"></div>
+  <div class="card" id="db-card"><h3 style="margin:0 0 6px;font-size:13px">Database</h3><div id="db"></div></div>
+  <div class="card" id="m-card"><h3 style="margin:0 0 6px;font-size:13px">Also named in</h3><div id="mentions"></div></div>
+</div>
+<script>
+  const D = DATA;
+  dt.title(META.title || `Impact of ${D.target}`);
+  dt.$('#res').textContent = (D.resolved || []).slice(0, 3).join(', ') + ((D.resolved || []).length > 3 ? ` +${D.resolved.length - 3}` : '');
+  const chips = [['endpoints', 'endpoint'], ['topics', 'topic'], ['tables', 'table'], ['functions', 'function'], ['services', 'service'], ['tests', 'test']];
+  dt.$('#sum').innerHTML = chips.flatMap(([k, label]) => (D[k] || []).map(x => `<span class="chip" title="${label}">${label}: ${dt.esc(x.split('.').slice(k === 'tests' ? -1 : 0).join('.'))}</span>`)).join('') || '<span class="muted">No endpoints, topics, tables or tests reached.</span>';
+  const kinds = [...new Set((D.items || []).map(i => i.kind))];
+  let only = null;
+  const draw = () => {
+    const by = {};
+    for (const i of D.items || []) if (!only || i.kind === only) (by[i.depth] ||= []).push(i);
+    dt.$('#layers').innerHTML = Object.entries(by).map(([d, xs]) => `<div class="layer"><h3>${d === '1' ? 'Uses it directly' : `${d} steps away`} · ${xs.length}</h3><div class="card" style="padding:0">${xs.map(i => `<div class="it ${i.test ? 'test' : ''}"><span class="k">${dt.esc(i.kind)}</span><span class="n">${dt.esc(i.name)}</span><span class="w">${dt.esc(i.via)}${i.file ? ` · ${dt.esc(i.repo)} ${dt.esc(i.file)}:${i.line}` : i.repo ? ` · ${dt.esc(i.repo)}` : ''}${i.where && !i.file && i.where !== 'catalog' ? ` · ${dt.esc(String(i.where).slice(0, 160))}` : ''}</span></div>`).join('')}</div></div>`).join('') || '<p class="muted">Nothing uses it.</p>';
+  };
+  dt.$('#filt').innerHTML = kinds.length > 1 ? ['all', ...kinds].map(k => `<button class="small ${k === 'all' ? 'on' : ''}" data-k="${k}">${k} ${k === 'all' ? (D.items || []).length : (D.counts || {})[k] || ''}</button>`).join('') : '';
+  dt.$('#filt').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; only = b.dataset.k === 'all' ? null : b.dataset.k; for (const x of dt.$('#filt').children) x.classList.toggle('on', x === b); draw(); };
+  draw();
+  const db = D.db || [];
+  if (db.length) dt.$('#db').innerHTML = db.map(f => `<div class="it"><span class="k">${dt.esc(f.kind)}</span><span class="n">${dt.esc(f.name || f.db)}</span><span class="w">${dt.esc(f.def)}</span></div>`).join(''); else dt.$('#db-card').style.display = 'none';
+  const m = D.mentions || [];
+  if (m.length) dt.$('#mentions').innerHTML = m.map(h => `<div class="it"><span class="k">${dt.esc(h.path.split('.').pop())}</span><span class="n">${dt.esc(h.repo)} ${dt.esc(h.path)}:${h.line}</span><span class="w">${dt.esc(h.text)}</span></div>`).join(''); else dt.$('#m-card').style.display = 'none';
+</script>
