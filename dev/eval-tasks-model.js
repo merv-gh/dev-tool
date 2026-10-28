@@ -8,7 +8,7 @@ const fs = require("fs"),
 const { validateEndpoint } = require("./eval-discovery-model");
 const E = require("../lib/evaluation-evidence");
 const hash = E.digest;
-const assertion = f => f && (f.failureKind ? f.failureKind === 'assertion' : /AssertionError|ERR_ASSERTION|AssertionFailedError|ComparisonFailure/i.test([f.type, f.stack].filter(Boolean).join(' ')));
+const assertion = f => f && (f.failureKind ? f.failureKind === 'assertion' : /(?:^|\.)(?:AssertionError|AssertionFailedError|ComparisonFailure)$/.test(String(f.type || (f.stack || '').split('\n')[0].split(':')[0]).trim()));
 function observedTestFailures(r) {
   const failures = r.failures || [];
   if (r.failureKinds) {
@@ -346,7 +346,13 @@ class Sandbox {
   exportCandidate(workspace, destination) {
     fs.mkdirSync(destination, { recursive: true });
     docker(["cp", this.id + ":/case/work/" + workspace + "/.", destination]);
-    return E.snapshot(destination);
+    const manifest = E.snapshot(destination);
+    // Generated reports can quote private mutant source/errors. They are not
+    // candidate inputs and must not escape in the copied public source tree.
+    const reports = path.join(destination, '.dt/node-reports');
+    if (fs.existsSync(reports)) for (const name of fs.readdirSync(reports))
+      if (/^(?:TEST-[a-z0-9]+\.jsonl|reporter-[a-z0-9]+\.cjs)$/.test(name)) fs.rmSync(path.join(reports, name));
+    return manifest;
   }
   close() {
     if (this.cleanup?.complete) return this.cleanup;
@@ -821,6 +827,7 @@ async function run(o) {
         );
         samples.push({
           id: task.id,
+          kind: task.kind,
           finish,
           turns: Math.min(turns + 1, o.maxTurns),
           modelCalls,
@@ -885,6 +892,7 @@ async function run(o) {
         );
         samples.push({
           id: task.id,
+          kind: task.kind,
           finish: "infrastructure-error",
           error: e.message,
           claim,
@@ -934,6 +942,11 @@ async function run(o) {
     usage,
     metrics: {
       cases: samples.length,
+      selectedCases: Math.min(o.limit, pack.tasks.length),
+      unattemptedCases: Math.min(o.limit, pack.tasks.length) - samples.length,
+      supportedSelectedCases: pack.tasks.slice(0, o.limit).filter(t => t.kind !== 'expected-gap').length,
+      expectedGapSelectedCases: pack.tasks.slice(0, o.limit).filter(t => t.kind === 'expected-gap').length,
+      expectedGapCorrect: samples.filter(s => s.assessment.expectedGapCorrect).length,
       complete: samples.filter((s) => s.assessment.modelComplete).length,
       supportedToolComplete: samples.filter((s) => s.assessment.toolComplete).length,
       falseSuccess: samples.filter((s) => s.assessment.falseSuccess).length,

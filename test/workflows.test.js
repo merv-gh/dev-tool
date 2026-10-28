@@ -25,6 +25,11 @@ test('compound requests route to explicit multi-stage guides without changing le
   assert.deepEqual(r.workflows, []);
   await assert.rejects(T.call('workflow_plan', { id: 'not-a-workflow' }), /Unknown workflow/);
 });
+test('built-in guides reference actual registered capability names', async () => {
+  const enabled = new Set((await T.schemas({ metadata: true })).map(t => t.name));
+  for (const guide of W.definitions()) for (const stage of guide.stages) for (const name of stage.tools)
+    assert.ok(enabled.has(name), `${guide.id}/${stage.id} references unknown capability ${name}`);
+});
 test('disabled tools cannot appear as executable guide candidates and unknown profiles fail closed', async () => {
   fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ envs: { dev: {} }, tools: { disable: ['test_run'] } }));
   await T.reload();

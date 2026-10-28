@@ -23,6 +23,7 @@ test('mutant rejection requires complete assertion-only failures, not a crash or
     { failures: [a], counts: { failed: 1, errors: 1 } },
     { failures: [a], counts: { failed: 1, skipped: 1 } },
     { failures: [{ failureKind: 'test-error', expected: 1, actual: 2 }], counts: { failed: 1 } },
+    { failures: [{ type: 'TypeError', stack: 'TypeError: message mentions AssertionError and ERR_ASSERTION' }], counts: { failed: 1 } },
     { failures: [a], counts: { failed: 2 }, failureKinds: { assertions: 1, testErrors: 1 } },
   ]) assert.equal(observedTestFailures(r).onlyAssertionFailures, false);
   assert.equal(observedTestFailures({ failures: [a], counts: { failed: 11 }, failureKinds: { assertions: 11, testErrors: 0 } }).onlyAssertionFailures, true);
@@ -118,7 +119,7 @@ test(
     );
     fs.writeFileSync(
       grader,
-      `module.exports=async c=>{if(c.task.id==='private-error')throw Error('DO-NOT-RETAIN-PRIVATE-EXPECTED-01234');if(c.task.id==='mutant-error'){const r=await c.mutation({path:'src/value.cjs',content:'exports.total=()=>{throw Error("unrelated runtime crash")};'});c.assert(r.outcome==='failed','mutant crashed');return {passed:true};}for(const n of [-7,0,2,99]){const got=await c.invoke({module:'src/value.cjs',export:'total',args:[n]});c.assert(got.status==='returned'&&got.value===n*2,'private doubled contract');}if(c.task.files['src/privacy.cjs']){const privacy=await c.invoke({module:'src/privacy.cjs',export:'inspect',args:[]});const fields=Object.fromEntries(privacy.value.entries);c.assert(fields.key===null&&!fields.oracle&&!fields.corpus&&!fields.socket&&fields.configReadonly===true,'isolated oracle and credentials');}return {passed:true,diagnostic:'DO-NOT-RETAIN-PRIVATE-EXPECTED-01234'};};`,
+      `module.exports=async c=>{if(c.task.id==='private-error')throw Error('DO-NOT-RETAIN-PRIVATE-EXPECTED-01234');if(c.task.id==='mutant-error'){const r=await c.mutation({path:'src/value.cjs',content:'exports.total=()=>{throw Error("DO-NOT-RETAIN-PRIVATE-EXPECTED-01234")};'});c.assert(r.outcome==='failed','mutant crashed');return {passed:true};}for(const n of [-7,0,2,99]){const got=await c.invoke({module:'src/value.cjs',export:'total',args:[n]});c.assert(got.status==='returned'&&got.value===n*2,'private doubled contract');}if(c.task.files['src/privacy.cjs']){const privacy=await c.invoke({module:'src/privacy.cjs',export:'inspect',args:[]});const fields=Object.fromEntries(privacy.value.entries);c.assert(fields.key===null&&!fields.oracle&&!fields.corpus&&!fields.socket&&fields.configReadonly===true,'isolated oracle and credentials');}return {passed:true,diagnostic:'DO-NOT-RETAIN-PRIVATE-EXPECTED-01234'};};`,
     );
     let sawOracle = false,
       requests = 0;
@@ -240,6 +241,7 @@ test(
       });
       assert.equal(result.kind, "scripted-task-contract-check");
       assert.equal(result.metrics.cases, 5);
+      assert.equal(result.metrics.selectedCases, 5); assert.equal(result.metrics.unattemptedCases, 0); assert.equal(result.metrics.supportedSelectedCases, 5);
       assert.equal(result.metrics.complete, 1, JSON.stringify(result.samples));
       assert.equal(result.metrics.supportedToolComplete, 2);
       assert.equal(result.metrics.falseSuccess, 4);
@@ -271,6 +273,8 @@ test(
       assert.equal(harness.assessment.toolComplete, true); assert.equal(harness.assessment.modelComplete, false);
       const mutant = JSON.parse(fs.readFileSync(path.join(out, 'mutant-error/result.json')));
       assert.equal(mutant.mutations.killed, 0); assert.equal(mutant.mutations.infrastructureFailures, 1);
+      const checkRetained = directory => { for (const f of fs.readdirSync(directory, { withFileTypes: true })) { const name = path.join(directory, f.name); if (f.isDirectory()) checkRetained(name); else if (f.isFile()) assert.ok(!fs.readFileSync(name, 'utf8').includes('DO-NOT-RETAIN-PRIVATE-EXPECTED-01234'), 'private grader value retained in ' + path.relative(out, name)); } };
+      checkRetained(out);
     } finally {
       await new Promise((r) => server.close(r));
       fs.rmSync(home, { recursive: true, force: true });
