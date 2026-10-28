@@ -1,4 +1,4 @@
-<!-- {"description": "A git patch of a workspace: files with +/- counts and the unified diff, colored, with copy and download. DATA: the workspace_patch result { id, repo, base, ref, files[{path,added,removed,status}], patch, apply }", "sample": {"id": "payments-service-main-1a2b", "repo": "PAY/payments-service", "base": "ab2ce56eef167859519122e848171604c0fbef78", "ref": "main", "files": [{"path": "src/main/java/com/acme/pay/FeeCalculator.java", "added": 1, "removed": 1, "status": "modified"}], "patch": "diff --git a/src/main/java/com/acme/pay/FeeCalculator.java b/src/main/java/com/acme/pay/FeeCalculator.java\n--- a/src/main/java/com/acme/pay/FeeCalculator.java\n+++ b/src/main/java/com/acme/pay/FeeCalculator.java\n@@ -15,1 +15,1 @@\n-        BigDecimal fee = amount.multiply(RATE).add(FIXED).setScale(2, RoundingMode.DOWN);\n+        BigDecimal fee = amount.multiply(RATE).add(FIXED).setScale(2, RoundingMode.HALF_UP);\n", "apply": "git checkout ab2ce56eef16 && git apply --index payments-service-main-1a2b.patch"}} -->
+<!-- {"description": "A git patch of a workspace: files with +/- counts, the tests in it with their proof (red-green, green-only, failing), and the unified diff, colored, with copy and download. DATA: the workspace_patch result { id, repo, base, ref, files[{path,added,removed,status}], tests[{test,verdict,fullBuild}], notes, patch, apply }", "sample": {"id": "payments-service-main-1a2b", "repo": "PAY/payments-service", "base": "ab2ce56eef167859519122e848171604c0fbef78", "ref": "main", "files": [{"path": "src/main/java/com/acme/pay/FeeCalculator.java", "added": 1, "removed": 1, "status": "modified"}], "patch": "diff --git a/src/main/java/com/acme/pay/FeeCalculator.java b/src/main/java/com/acme/pay/FeeCalculator.java\n--- a/src/main/java/com/acme/pay/FeeCalculator.java\n+++ b/src/main/java/com/acme/pay/FeeCalculator.java\n@@ -15,1 +15,1 @@\n-        BigDecimal fee = amount.multiply(RATE).add(FIXED).setScale(2, RoundingMode.DOWN);\n+        BigDecimal fee = amount.multiply(RATE).add(FIXED).setScale(2, RoundingMode.HALF_UP);\n", "apply": "git checkout ab2ce56eef16 && git apply --index payments-service-main-1a2b.patch", "tests": [{"test": "com.acme.pay.FeeCalculatorTest#feeIsRoundedHalfUp[1]", "verdict": "red-green", "fullBuild": true}, {"test": "com.acme.pay.FeeCalculatorTest#feeIsRoundedHalfUp[2]", "verdict": "green-only", "fullBuild": true}], "notes": []}} -->
 <style>
   .pt { display: grid; gap: 10px; }
   .files { display: grid; gap: 2px; font: 12.5px ui-monospace, Menlo, monospace; }
@@ -17,6 +17,7 @@
   <div class="vhead"><h1 data-title></h1><span class="spacer"></span><button class="small" id="copy">Copy patch</button><a class="chip" id="dl" target="_blank" rel="noopener">Download .patch</a></div>
   <div class="muted apply" id="apply"></div>
   <div class="card files" id="files"></div>
+  <div class="card" id="proof-card"><h3 style="margin:0 0 6px;font-size:13px">Tests in this patch</h3><div id="proof" class="files"></div><div id="notes" class="muted" style="font-size:12px;margin-top:6px"></div></div>
   <div id="diffs" class="pt"></div>
 </div>
 <script>
@@ -26,6 +27,12 @@
   dt.$('#dl').href = location.pathname.replace('/show/', '/patch/') + '.patch';
   dt.$('#copy').onclick = (e) => dt.copy(D.patch || '', e.target);
   dt.$('#files').innerHTML = (D.files || []).map((f, i) => `<a href="#f${i}">${f.status === 'added' ? '<span class="add">A</span>' : '<span class="muted">M</span>'} ${dt.esc(f.path)} <span class="add">+${f.added}</span> <span class="del">-${f.removed}</span></a>`).join('');
+  const V = { 'red-green': ['add', 'failed before the fix, passes after'], 'green-only': ['muted', 'never seen failing'], failing: ['del', 'still failing'] };
+  const tests = D.tests || [];
+  if (tests.length) {
+    dt.$('#proof').innerHTML = tests.map(t => { const [cls, why] = V[t.verdict] || ['muted', t.verdict]; return `<span><span class="${cls}">${dt.esc(t.verdict)}</span> ${dt.esc(t.test.replace(/^.*\.(?=[^.#]+#)/, ''))} <span class="muted">${why}${t.fullBuild ? ', full build passed' : ', fast runs only'}</span></span>`; }).join('');
+    dt.$('#notes').textContent = (D.notes || []).filter(n => !/never failed/.test(n)).join(' · ');
+  } else dt.$('#proof-card').style.display = 'none';
   const chunks = String(D.patch || '').split(/^(?=diff --git )/m).filter(Boolean);
   dt.$('#diffs').innerHTML = chunks.map((ch, i) => {
     const name = (ch.match(/^diff --git a\/(\S+)/) || [])[1] || '';

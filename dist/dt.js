@@ -29276,6 +29276,724 @@ alter table ${q(tr.table)} disable trigger ${q(tr.name)}`));
   }
 });
 
+// lib/fastrun.js
+var require_fastrun = __commonJS({
+  "lib/fastrun.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var crypto = require("crypto");
+    var { spawn } = require("child_process");
+    var { CACHE: CACHE2, readJson, writeJson } = require_util();
+    var LAUNCHER = `
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
+import java.util.*;
+import org.junit.platform.engine.*;
+import org.junit.platform.engine.discovery.DiscoverySelectors;
+import org.junit.platform.engine.support.descriptor.MethodSource;
+import org.junit.platform.launcher.*;
+import org.junit.platform.launcher.core.*;
+
+// dt fast runs: runs the selected tests, writes [{class, name, status, ms, message, type, stack}] as JSON
+public class DtLauncher {
+    static String q(String s) {
+        if (s == null) return "null";
+        StringBuilder b = new StringBuilder("\\"");
+        for (char c : s.toCharArray()) {
+            if (c == '"' || c == '\\\\') b.append('\\\\').append(c);
+            else if (c < 0x20) b.append(String.format("\\\\u%04x", (int) c));
+            else b.append(c);
+        }
+        return b.append('"').toString();
+    }
+
+    public static void main(String[] args) throws Exception {
+        List<DiscoverySelector> sel = new ArrayList<>();
+        for (int i = 1; i < args.length; i++) {
+            String a = args[i];
+            sel.add(a.contains("#") ? DiscoverySelectors.selectMethod(a) : DiscoverySelectors.selectClass(a));
+        }
+        List<String> out = Collections.synchronizedList(new ArrayList<>());
+        Map<String, Long> started = new HashMap<>();
+        TestExecutionListener l = new TestExecutionListener() {
+            String[] where(TestIdentifier id) {
+                Optional<TestSource> s = id.getSource();
+                if (s.isPresent() && s.get() instanceof MethodSource m) {
+                    String name = m.getMethodName() + (id.getUniqueId().contains("-invocation:") ? " " + id.getDisplayName() : "");
+                    return new String[] { m.getClassName(), name };
+                }
+                return new String[] { id.getLegacyReportingName(), id.getDisplayName() };
+            }
+            public void executionStarted(TestIdentifier id) { started.put(id.getUniqueId(), System.nanoTime()); }
+            public void executionSkipped(TestIdentifier id, String reason) {
+                if (!id.isTest()) return;
+                String[] w = where(id);
+                out.add("{\\"class\\":" + q(w[0]) + ",\\"name\\":" + q(w[1]) + ",\\"status\\":\\"skipped\\",\\"ms\\":0,\\"message\\":" + q(reason) + "}");
+            }
+            public void executionFinished(TestIdentifier id, TestExecutionResult r) {
+                Throwable t = r.getThrowable().orElse(null);
+                if (!id.isTest() && t == null) return;
+                String[] w = where(id);
+                long ms = (System.nanoTime() - started.getOrDefault(id.getUniqueId(), System.nanoTime())) / 1000000;
+                String status = r.getStatus() == TestExecutionResult.Status.SUCCESSFUL ? "passed" : (t instanceof AssertionError ? "failed" : "error");
+                String stack = null;
+                if (t != null) { StringWriter sw = new StringWriter(); t.printStackTrace(new PrintWriter(sw)); stack = sw.toString(); }
+                out.add("{\\"class\\":" + q(w[0]) + ",\\"name\\":" + q(id.isTest() ? w[1] : "(" + id.getDisplayName() + ")") + ",\\"status\\":" + q(status) + ",\\"ms\\":" + ms
+                    + ",\\"message\\":" + q(t == null ? null : String.valueOf(t.getMessage())) + ",\\"type\\":" + q(t == null ? null : t.getClass().getName()) + ",\\"stack\\":" + q(stack) + "}");
+            }
+        };
+        LauncherDiscoveryRequest req = LauncherDiscoveryRequestBuilder.request().selectors(sel).build();
+        LauncherFactory.create().execute(req, l);
+        Files.writeString(Path.of(args[0]), "[" + String.join(",", out) + "]", StandardCharsets.UTF_8);
+        System.exit(0);
+    }
+}
+`;
+    var stateFile = (id) => path2.join(CACHE2, "work", `${id}.fast.json`);
+    var hash = (s) => crypto.createHash("sha1").update(s).digest("hex").slice(0, 16);
+    function exec(cmd, args, { cwd, env, timeoutMs = 9e5, log } = {}) {
+      return new Promise((resolve) => {
+        const started = Date.now();
+        const p = spawn(cmd, args, { cwd, env, stdio: ["ignore", "pipe", "pipe"] });
+        let out2 = "", killed = false;
+        const keep = (b) => {
+          out2 += b.toString();
+          if (out2.length > 4e6) out2 = out2.slice(-3e6);
+          const last = b.toString().trim().split("\n").pop();
+          if (last && log) log(last.slice(0, 200));
+        };
+        p.stdout.on("data", keep);
+        p.stderr.on("data", keep);
+        const timer = setTimeout(() => {
+          killed = true;
+          p.kill("SIGTERM");
+        }, timeoutMs);
+        p.on("error", (e) => {
+          clearTimeout(timer);
+          resolve({ code: -1, out: out2 + `
+${e.message}`, ms: Date.now() - started });
+        });
+        p.on("close", (code) => {
+          clearTimeout(timer);
+          resolve({ code, out: out2, killed, ms: Date.now() - started });
+        });
+      });
+    }
+    function supported(root, plan, testFiles) {
+      if (plan.tool !== "maven") return "the build is not Maven";
+      if (testFiles.some((f) => /\.kt$/.test(f)) || fs2.existsSync(path2.join(plan.modDir, "src", "main", "kotlin"))) return "Kotlin sources";
+      return null;
+    }
+    var walkJava = (dir, out2 = []) => {
+      let es;
+      try {
+        es = fs2.readdirSync(dir, { withFileTypes: true });
+      } catch {
+        return out2;
+      }
+      for (const e of es) {
+        const f = path2.join(dir, e.name);
+        if (e.isDirectory()) walkJava(f, out2);
+        else if (/\.java$/.test(e.name)) out2.push(f);
+      }
+      return out2;
+    };
+    var walkFiles = (dir, out2 = []) => {
+      let es;
+      try {
+        es = fs2.readdirSync(dir, { withFileTypes: true });
+      } catch {
+        return out2;
+      }
+      for (const e of es) {
+        const f = path2.join(dir, e.name);
+        if (e.isDirectory()) walkFiles(f, out2);
+        else out2.push(f);
+      }
+      return out2;
+    };
+    function tails(cfg) {
+      return cfg.args.map((a) => (a.match(/^-Dmaven\.repo\.local\.tail=(.+)$/) || [])[1]).filter(Boolean).flatMap((x) => x.split(","));
+    }
+    function findJar(cfg, group, artifact, version) {
+      for (const repo of [cfg.mavenRepo, ...tails(cfg)]) {
+        const f = path2.join(repo, ...group.split("."), artifact, version, `${artifact}-${version}.jar`);
+        if (fs2.existsSync(f)) return f;
+      }
+      return null;
+    }
+    function javaBin(cfg, tool) {
+      return cfg.javaHome ? path2.join(cfg.javaHome, "bin", tool) : tool;
+    }
+    function mavenArgs(cfg) {
+      const a = ["-B", "-ntp", `-Dmaven.repo.local=${cfg.mavenRepo}`];
+      if (cfg.offline) a.push("-o");
+      if (cfg.mavenSettings) a.push("-s", cfg.mavenSettings);
+      return [...a, ...cfg.args];
+    }
+    function release(modDir, root) {
+      for (const f of [path2.join(modDir, "pom.xml"), path2.join(root, "pom.xml")]) {
+        try {
+          const t = fs2.readFileSync(f, "utf8");
+          const m = t.match(/<maven\.compiler\.release>\s*(\d+)/) || t.match(/<java\.version>\s*(\d+)/) || t.match(/<maven\.compiler\.source>\s*(?:1\.)?(\d+)/);
+          if (m) return Number(m[1]);
+        } catch {
+        }
+      }
+      return null;
+    }
+    async function prepare({ id, root, plan, cfg, env, mvn, log }) {
+      const st = readJson(stateFile(id), {});
+      const poms = walkFiles(root).filter((f) => /(^|\/)pom\.xml$/.test(f) && !/\/target\//.test(f)).sort();
+      const pomHash = hash(poms.map((f) => fs2.readFileSync(f, "utf8")).join("\n"));
+      const key = plan.module;
+      const prev = st[key];
+      if (prev && prev.pomHash === pomHash && fs2.existsSync(prev.classes) && fs2.existsSync(prev.testClasses)) return { state: prev, prepared: false };
+      const cpFile = path2.join(CACHE2, "work", `${id}.${hash(key)}.classpath`);
+      const multi = plan.module !== "." && fs2.existsSync(path2.join(root, "pom.xml"));
+      const args = [...mvn.args, ...mavenArgs(cfg), "test-compile", "dependency:build-classpath", `-Dmdep.outputFile=${cpFile}`, "-Dmdep.includeScope=test", ...multi ? ["-pl", plan.module, "-am"] : []];
+      log(`fast: preparing ${key} with Maven (compile + classpath, once)`);
+      const r = await exec(mvn.cmd, args, { cwd: multi ? root : plan.modDir, env, log });
+      if (r.code !== 0) return { error: r };
+      const classpath = fs2.readFileSync(cpFile, "utf8").trim().split(path2.delimiter).filter(Boolean);
+      const engine = classpath.map((j) => path2.basename(j).match(/^junit-platform-engine-(.+)\.jar$/)).find(Boolean);
+      if (!engine) return { error: { code: 1, out: 'no JUnit Platform on the test classpath (JUnit 4 only?): use mode="build"', ms: r.ms } };
+      const v = engine[1];
+      let launcherJar = classpath.find((j) => /junit-platform-launcher-/.test(path2.basename(j))) || findJar(cfg, "org.junit.platform", "junit-platform-launcher", v);
+      if (!launcherJar) {
+        await exec(mvn.cmd, [...mvn.args, ...mavenArgs(cfg), "dependency:get", `-Dartifact=org.junit.platform:junit-platform-launcher:${v}`, "-Dtransitive=false"], { cwd: plan.modDir, env, log });
+        launcherJar = findJar(cfg, "org.junit.platform", "junit-platform-launcher", v);
+        if (!launcherJar) return { error: { code: 1, out: `could not get org.junit.platform:junit-platform-launcher:${v}`, ms: r.ms } };
+      }
+      const ldir = path2.join(CACHE2, "fastrun", `launcher-${v}`);
+      if (!fs2.existsSync(path2.join(ldir, "DtLauncher.class"))) {
+        fs2.mkdirSync(ldir, { recursive: true });
+        fs2.writeFileSync(path2.join(ldir, "DtLauncher.java"), LAUNCHER);
+        const c = await exec(javaBin(cfg, "javac"), ["-d", ldir, "-cp", [launcherJar, ...classpath].join(path2.delimiter), path2.join(ldir, "DtLauncher.java")], { env });
+        if (c.code !== 0) return { error: c };
+      }
+      const javacVersion = await exec(javaBin(cfg, "javac"), ["-version"], { env }).then((x) => Number((x.out.match(/javac (\d+)/) || [])[1] || 0));
+      const state = {
+        pomHash,
+        classpath,
+        launcherJar,
+        launcherDir: ldir,
+        javacVersion,
+        release: release(plan.modDir, root),
+        classes: path2.join(plan.modDir, "target", "classes"),
+        testClasses: path2.join(plan.modDir, "target", "test-classes"),
+        stamp: Date.now(),
+        preparedMs: r.ms
+      };
+      st[key] = state;
+      writeJson(stateFile(id), st);
+      return { state, prepared: true, ms: r.ms };
+    }
+    function changed(modDir, stamp, graph, root) {
+      const newer = (f) => fs2.statSync(f).mtimeMs > stamp;
+      const main2 = walkJava(path2.join(modDir, "src", "main", "java")), test = walkJava(path2.join(modDir, "src", "test", "java"));
+      const mainChanged = main2.filter(newer), testChanged = test.filter(newer);
+      if (mainChanged.length && graph) {
+        const rel = (f) => path2.relative(root, f).split(path2.sep).join("/");
+        const changedIds = new Set(graph.classes.filter((c) => mainChanged.some((f) => rel(f) === c.file)).map((c) => c.id));
+        const users = /* @__PURE__ */ new Set();
+        for (const [from, to] of graph.edges) {
+          const cls = String(to).split(/[#]/)[0];
+          if (changedIds.has(cls) || changedIds.has(to)) {
+            const c = graph.classes.find((x) => from === x.id || String(from).startsWith(`${x.id}#`) || String(from).startsWith(`${x.id}.`));
+            if (c) users.add(c.file);
+          }
+        }
+        for (const f of main2) if (users.has(rel(f)) && !mainChanged.includes(f)) mainChanged.push(f);
+        for (const f of test) if (users.has(rel(f)) && !testChanged.includes(f)) testChanged.push(f);
+      }
+      const res = (kind) => walkFiles(path2.join(modDir, "src", kind, "resources")).filter(newer).map((f) => ({ from: f, rel: path2.relative(path2.join(modDir, "src", kind, "resources"), f) }));
+      return { mainChanged, testChanged, mainRes: res("main"), testRes: res("test") };
+    }
+    async function javac(state, files, outDir, extraCp, cfg, env) {
+      if (!files.length) return { code: 0, out: "", ms: 0 };
+      const args = ["-d", outDir, "-encoding", "UTF-8", "-parameters", "-g", "-nowarn", "-cp", [...extraCp, ...state.classpath].join(path2.delimiter)];
+      if (state.release && state.javacVersion && state.release <= state.javacVersion) args.push("--release", String(state.release));
+      if (state.javacVersion >= 21) args.push("-proc:full");
+      return exec(javaBin(cfg, "javac"), [...args, ...files], { env });
+    }
+    async function run({ id, root, plan, cfg, env, mvn, selectors, graph, log }) {
+      const started = Date.now();
+      const p = await prepare({ id, root, plan, cfg, env, mvn, log });
+      if (p.error) return { code: p.error.code || 1, out: p.error.out, ms: Date.now() - started, cases: [], phase: "prepare" };
+      const st = p.state;
+      const ch = changed(plan.modDir, p.prepared ? Date.now() + 1 : st.stamp, graph, root);
+      const stampAt = Date.now();
+      let out2 = "";
+      fs2.mkdirSync(st.classes, { recursive: true });
+      fs2.mkdirSync(st.testClasses, { recursive: true });
+      for (const r2 of ch.mainRes) {
+        fs2.mkdirSync(path2.dirname(path2.join(st.classes, r2.rel)), { recursive: true });
+        fs2.copyFileSync(r2.from, path2.join(st.classes, r2.rel));
+      }
+      for (const r2 of ch.testRes) {
+        fs2.mkdirSync(path2.dirname(path2.join(st.testClasses, r2.rel)), { recursive: true });
+        fs2.copyFileSync(r2.from, path2.join(st.testClasses, r2.rel));
+      }
+      const cm = await javac(st, ch.mainChanged, st.classes, [st.classes], cfg, env);
+      out2 += cm.out;
+      if (cm.code !== 0) return { code: cm.code, out: out2, ms: Date.now() - started, cases: [], phase: "compile", compiled: ch.mainChanged.length };
+      const ct = await javac(st, ch.testChanged, st.testClasses, [st.testClasses, st.classes], cfg, env);
+      out2 += ct.out;
+      if (ct.code !== 0) return { code: ct.code, out: out2, ms: Date.now() - started, cases: [], phase: "compile", compiled: ch.mainChanged.length + ch.testChanged.length };
+      const all = readJson(stateFile(id), {});
+      if (all[plan.module]) {
+        all[plan.module].stamp = stampAt;
+        writeJson(stateFile(id), all);
+      }
+      const results = path2.join(CACHE2, "work", `${id}.results-${Date.now().toString(36)}.json`);
+      const cp = [st.testClasses, st.classes, ...st.classpath, st.launcherJar, st.launcherDir].join(path2.delimiter);
+      const r = await exec(javaBin(cfg, "java"), ["-cp", cp, "DtLauncher", results, ...selectors], { cwd: plan.modDir, env, timeoutMs: cfg.timeoutMs, log });
+      out2 += r.out;
+      let cases = [];
+      try {
+        cases = JSON.parse(fs2.readFileSync(results, "utf8"));
+        fs2.rmSync(results, { force: true });
+      } catch {
+      }
+      return { code: r.code, out: out2, killed: r.killed, ms: Date.now() - started, cases, compiled: ch.mainChanged.length + ch.testChanged.length, prepared: p.prepared, prepareMs: p.ms };
+    }
+    module2.exports = { run, supported, prepare, changed, LAUNCHER };
+  }
+});
+
+// lib/testdb.js
+var require_testdb = __commonJS({
+  "lib/testdb.js"(exports2, module2) {
+    var postgres = require_src();
+    var { getTests, envNames: envNames2, getEnv: getEnv2 } = require_config();
+    var same = (a, b) => {
+      try {
+        const x = new URL(a), y = new URL(b);
+        return x.hostname === y.hostname && (x.port || "5432") === (y.port || "5432") && x.pathname === y.pathname;
+      } catch {
+        return false;
+      }
+    };
+    function server() {
+      const url = getTests().pgUrl;
+      if (!url) throw new Error("no test database: set tests.pgUrl in config.json (or DT_TEST_DB_URL), e.g. the compose testdb profile: postgres://dt:dt@testdb:5432/postgres");
+      for (const e of envNames2()) for (const [db, u] of Object.entries(getEnv2(e).pg)) if (u && same(u, url)) throw new Error(`tests.pgUrl is the ${e} database "${db}": use a scratch Postgres for tests`);
+      return url;
+    }
+    async function create(runId, statements) {
+      const url = server();
+      const name = `dt_test_${String(runId).replace(/[^a-z0-9]/gi, "").toLowerCase().slice(0, 40)}`;
+      const admin = postgres(url, { max: 1, onnotice: () => {
+      }, connect_timeout: 10 });
+      try {
+        await admin.unsafe(`drop database if exists ${name}`);
+        await admin.unsafe(`create database ${name}`);
+      } catch (e) {
+        if (/ENOTFOUND|ECONNREFUSED|EAI_AGAIN|getaddrinfo/.test(`${e.code} ${e.message}`)) throw new Error(`the test database at ${new URL(url).host} is not reachable (${e.code || e.message}): with compose add testdb to COMPOSE_PROFILES, or set tests.pgUrl`);
+        throw e;
+      } finally {
+        await admin.end({ timeout: 2 });
+      }
+      const u = new URL(url);
+      u.pathname = `/${name}`;
+      const sql = postgres(u.toString(), { max: 1, onnotice: () => {
+      }, connect_timeout: 10 });
+      const errors = [];
+      try {
+        for (const s of statements) {
+          try {
+            await sql.unsafe(s);
+          } catch (e) {
+            errors.push({ statement: s.split("\n")[0].slice(0, 160), error: e.message });
+          }
+        }
+      } finally {
+        await sql.end({ timeout: 2 });
+      }
+      return {
+        database: name,
+        jdbcUrl: `jdbc:postgresql://${u.hostname}:${u.port || 5432}/${name}`,
+        user: decodeURIComponent(u.username),
+        password: decodeURIComponent(u.password),
+        errors
+      };
+    }
+    async function drop(name) {
+      if (!/^dt_test_[a-z0-9]+$/.test(name)) throw new Error(`not a dt test database: ${name}`);
+      const admin = postgres(server(), { max: 1, onnotice: () => {
+      } });
+      try {
+        await admin.unsafe(`drop database if exists ${name} with (force)`);
+      } finally {
+        await admin.end({ timeout: 2 });
+      }
+    }
+    module2.exports = { create, drop, server };
+  }
+});
+
+// lib/testrun.js
+var require_testrun = __commonJS({
+  "lib/testrun.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var { spawn } = require("child_process");
+    var W = require_workspace();
+    var { getTests } = require_config();
+    function plan(root, testFiles) {
+      const near = (file) => {
+        let dir = path2.dirname(path2.join(root, file));
+        while (dir.startsWith(root)) {
+          if (["pom.xml", "build.gradle", "build.gradle.kts"].some((f) => fs2.existsSync(path2.join(dir, f)))) return dir;
+          if (dir === root) break;
+          dir = path2.dirname(dir);
+        }
+        return root;
+      };
+      const modDir = testFiles.length ? near(testFiles[0]) : root;
+      const mod = path2.relative(root, modDir).split(path2.sep).join("/") || ".";
+      const gradle = fs2.existsSync(path2.join(root, "settings.gradle")) || fs2.existsSync(path2.join(root, "settings.gradle.kts")) || fs2.existsSync(path2.join(modDir, "build.gradle")) || fs2.existsSync(path2.join(modDir, "build.gradle.kts"));
+      const maven = fs2.existsSync(path2.join(modDir, "pom.xml"));
+      return { tool: maven ? "maven" : gradle ? "gradle" : null, module: mod, modDir };
+    }
+    function which(cmd, extra = []) {
+      for (const d of [...extra, ...(process.env.PATH || "").split(path2.delimiter)]) {
+        if (!d) continue;
+        const f = path2.join(d, cmd);
+        try {
+          fs2.accessSync(f, fs2.constants.X_OK);
+          return f;
+        } catch {
+        }
+      }
+      return null;
+    }
+    function mavenCmd(root, cfg) {
+      const javaBin = cfg.javaHome ? [path2.join(cfg.javaHome, "bin")] : [];
+      if (fs2.existsSync(path2.join(root, "mvnw"))) return ["sh", ["mvnw"]];
+      const m = cfg.maven || which("mvn", [...javaBin, ...process.env.MAVEN_HOME ? [path2.join(process.env.MAVEN_HOME, "bin")] : []]);
+      if (!m) throw new Error("no Maven: the repo has no mvnw, and mvn is not on PATH (set tests.maven in config.json, or run with the compose jdk profile)");
+      return [m, []];
+    }
+    function command(root, p, tests, cfg) {
+      const javaBin = cfg.javaHome ? [path2.join(cfg.javaHome, "bin")] : [];
+      const sel = tests.map((t) => t.replace(/\.(java|kt)$/, "").split("/").pop());
+      if (p.tool === "maven") {
+        const mvn = mavenCmd(root, cfg);
+        const args = [
+          ...mvn[1],
+          "-B",
+          "-ntp",
+          "test",
+          `-Dtest=${sel.join(",")}`,
+          "-Dsurefire.failIfNoSpecifiedTests=false",
+          "-DfailIfNoTests=false",
+          "-Djacoco.skip=true",
+          "-Dcheckstyle.skip=true",
+          "-Dspotless.check.skip=true",
+          "-Denforcer.skip=true",
+          "-Dpmd.skip=true",
+          "-Dspotbugs.skip=true",
+          `-Dmaven.repo.local=${cfg.mavenRepo}`
+        ];
+        if (p.module !== "." && fs2.existsSync(path2.join(root, "pom.xml"))) args.push("-pl", p.module, "-am");
+        if (cfg.offline) args.push("-o");
+        if (cfg.mavenSettings) args.push("-s", cfg.mavenSettings);
+        return { cmd: mvn[0], args: [...args, ...cfg.args], cwd: p.module !== "." && fs2.existsSync(path2.join(root, "pom.xml")) ? root : p.modDir };
+      }
+      if (p.tool === "gradle") {
+        const wrapper = fs2.existsSync(path2.join(root, "gradlew")) ? ["sh", ["gradlew"]] : null;
+        const gr = wrapper || [cfg.gradle || which("gradle", javaBin), []];
+        if (!gr[0]) throw new Error("no Gradle: the repo has no gradlew, and gradle is not on PATH (set tests.gradle in config.json)");
+        const task = p.module === "." ? "test" : `:${p.module.split("/").join(":")}:test`;
+        const args = [...gr[1], "--console=plain", task, ...sel.flatMap((t) => ["--tests", t.includes("#") ? t.replace("#", ".") : t.includes(".") ? t : `*${t}`])];
+        if (cfg.offline) args.push("--offline");
+        return { cmd: gr[0], args: [...args, ...cfg.args], cwd: root };
+      }
+      throw new Error("no pom.xml or build.gradle for these tests");
+    }
+    function parseReports(dirs, since) {
+      const cases = [];
+      for (const d of dirs) {
+        let files = [];
+        try {
+          files = fs2.readdirSync(d).filter((f) => /^TEST-.*\.xml$/.test(f)).map((f) => path2.join(d, f));
+        } catch {
+          continue;
+        }
+        for (const f of files) {
+          if (fs2.statSync(f).mtimeMs < since - 1e3) continue;
+          const x = fs2.readFileSync(f, "utf8");
+          for (const m of x.matchAll(/<testcase\b([^>]*?)(\/>|>([\s\S]*?)<\/testcase>)/g)) {
+            const attr = (n) => {
+              const a = m[1].match(new RegExp(`\\b${n}="([^"]*)"`));
+              return a ? unxml(a[1]) : null;
+            };
+            const inner = m[3] || "";
+            const fail = inner.match(/<(failure|error)\b([^>]*?)(?:\/>|>([\s\S]*?)<\/\1>)/);
+            const skipped = /<skipped\b/.test(inner);
+            const msg = fail ? unxml((fail[2].match(/\bmessage="([^"]*)"/) || [])[1] || "") : null;
+            const stack = fail ? unxml((fail[3] || "").replace(/^<!\[CDATA\[|\]\]>$/g, "")) : null;
+            const out2 = unxml(((inner.match(/<system-out>([\s\S]*?)<\/system-out>/) || [])[1] || "").replace(/^<!\[CDATA\[|\]\]>$/g, ""));
+            cases.push({ class: attr("classname"), name: attr("name"), ms: Math.round(Number(attr("time") || 0) * 1e3), status: fail ? fail[1] === "error" ? "error" : "failed" : skipped ? "skipped" : "passed", message: msg, type: fail ? (fail[2].match(/\btype="([^"]*)"/) || [])[1] || null : null, stack, output: out2 ? out2.slice(-4e3) : void 0 });
+          }
+        }
+      }
+      return cases;
+    }
+    var unxml = (s) => String(s || "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#(\d+);/g, (_, n) => String.fromCharCode(n)).replace(/&amp;/g, "&");
+    function compileErrors(output, root) {
+      const out2 = [];
+      const rel = (f) => {
+        const p = f.replace(/^file:\/\//, "");
+        return p.startsWith(root) ? path2.relative(root, p).split(path2.sep).join("/") : p;
+      };
+      for (const m of output.matchAll(/\[ERROR\]\s+(\/[^\s:]+\.(?:java|kt)):\[(\d+),(\d+)\]\s*(.*)/g)) out2.push({ file: rel(m[1]), line: +m[2], col: +m[3], message: m[4].trim() });
+      for (const m of output.matchAll(/^(\/[^\s:]+\.java):(\d+): error: (.*)$/gm)) out2.push({ file: rel(m[1]), line: +m[2], message: m[3].trim() });
+      for (const m of output.matchAll(/^e: (?:file:\/\/)?(\/[^\s:]+\.kts?):(\d+):(\d+):? (.*)$/gm)) out2.push({ file: rel(m[1]), line: +m[2], col: +m[3], message: m[4].trim() });
+      const seen = /* @__PURE__ */ new Set();
+      return out2.filter((e) => {
+        const k = `${e.file}:${e.line}:${e.message}`;
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+    }
+    function codeParts(root, g, stack, max = 3) {
+      const byClass = new Map(g.classes.map((c) => [c.id, c.file]));
+      const parts = [];
+      for (const m of String(stack || "").matchAll(/at ([\w$.]+)\.([\w$<>]+)\(([\w$]+\.(?:java|kt)):(\d+)\)/g)) {
+        const cls = m[1].replace(/\$.*$/, "");
+        const file = byClass.get(cls) || byClass.get(m[1].replace(/\$/g, "."));
+        if (!file) continue;
+        const line = Number(m[4]);
+        if (parts.some((p) => p.file === file && p.line === line)) continue;
+        parts.push({ file, line, method: `${cls.split(".").pop()}#${m[2]}`, test: /(^|\/)src\/test\//.test(file), snippet: snippet(root, file, line) });
+        if (parts.length >= max) break;
+      }
+      return parts;
+    }
+    function snippet(root, file, line, around = 4) {
+      try {
+        const lines = fs2.readFileSync(path2.join(root, file), "utf8").split("\n");
+        const from = Math.max(1, line - around), to = Math.min(lines.length, line + around);
+        return { from, to, text: lines.slice(from - 1, to).map((l, i) => `${from + i === line ? ">" : " "}${String(from + i).padStart(4)}  ${l}`).join("\n") };
+      } catch {
+        return null;
+      }
+    }
+    function exec(cmd, args, { cwd, env, timeoutMs, log }) {
+      return new Promise((resolve) => {
+        const started = Date.now();
+        const p = spawn(cmd, args, { cwd, env, stdio: ["ignore", "pipe", "pipe"] });
+        let out2 = "", killed = false;
+        const keep = (b) => {
+          out2 += b.toString();
+          if (out2.length > 4e6) out2 = out2.slice(-3e6);
+          const last = b.toString().trim().split("\n").pop();
+          if (last && log) log(last.slice(0, 200));
+        };
+        p.stdout.on("data", keep);
+        p.stderr.on("data", keep);
+        const timer = setTimeout(() => {
+          killed = true;
+          p.kill("SIGTERM");
+          setTimeout(() => p.kill("SIGKILL"), 5e3);
+        }, timeoutMs);
+        p.on("error", (e) => {
+          clearTimeout(timer);
+          resolve({ code: -1, out: out2 + `
+${e.message}`, ms: Date.now() - started });
+        });
+        p.on("close", (code) => {
+          clearTimeout(timer);
+          resolve({ code, out: out2, killed, ms: Date.now() - started });
+        });
+      });
+    }
+    async function run(id, { tests = [], db, log = () => {
+    }, mode = "auto", files: writes = [] } = {}) {
+      const m = W.checkId(id);
+      const root = m.path;
+      const written = writes.map((f) => W.write(id, f.path, { content: f.content, edits: f.edits }));
+      const idx = W.index(id);
+      const g = idx.graph_();
+      if (!tests.length) throw new Error("name the tests to run (class names like FooTest, or Class#method)");
+      const files = tests.map((t) => {
+        const cls = t.split("#")[0].replace(/\.(java|kt)$/, "").split("/").pop();
+        const c2 = g.classes.find((x) => x.test && (x.name === cls || x.id === cls));
+        return c2 ? c2.file : /\//.test(t) ? t : null;
+      });
+      const missing = tests.filter((t, i) => !files[i]);
+      if (missing.length) throw new Error(`no test class ${missing.join(", ")} in ${id} (write it with workspace_write first)`);
+      const p = plan(root, files);
+      const cfg = getTests();
+      const fast = require_fastrun();
+      const why = mode === "build" ? "mode=build" : fast.supported(root, p, files);
+      if (mode === "fast" && why) throw new Error(`no fast run here: ${why} (use mode="build")`);
+      const c = why ? command(root, p, tests, cfg) : null;
+      const env = { ...process.env, MAVEN_OPTS: process.env.MAVEN_OPTS || "-Xmx1g", CI: "true" };
+      if (cfg.javaHome) {
+        env.JAVA_HOME = cfg.javaHome;
+        env.PATH = `${path2.join(cfg.javaHome, "bin")}${path2.delimiter}${env.PATH}`;
+      }
+      if (cfg.gradleHome) env.GRADLE_USER_HOME = cfg.gradleHome;
+      if (cfg.javaToolOptions) env.JAVA_TOOL_OPTIONS = [process.env.JAVA_TOOL_OPTIONS, cfg.javaToolOptions].filter(Boolean).join(" ");
+      let database = null;
+      const runId = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+      if (db) {
+        const opts = { tables: db.tables, service: db.service, functions: db.functions };
+        let statements;
+        if (db.ddlPath) statements = splitSql(fs2.readFileSync(W.resolvePath(m, db.ddlPath).full, "utf8"));
+        else statements = require_ddl().snapshot(db.env, db.db, opts).statements;
+        log(`test db: loading ${statements.length} statements`);
+        database = await require_testdb().create(runId, statements);
+        if (database.errors.length) log(`test db: ${database.errors.length} statements failed`);
+        Object.assign(env, { SPRING_DATASOURCE_URL: database.jdbcUrl, SPRING_DATASOURCE_USERNAME: database.user, SPRING_DATASOURCE_PASSWORD: database.password, SPRING_JPA_HIBERNATE_DDL_AUTO: "none", SPRING_SQL_INIT_MODE: "never", SPRING_FLYWAY_ENABLED: "false", SPRING_LIQUIBASE_ENABLED: "false" });
+      }
+      const reportDirs = [path2.join(p.modDir, "target", "surefire-reports"), path2.join(p.modDir, "build", "test-results", "test")];
+      const started = Date.now();
+      let r, cases, fastInfo = null;
+      if (!why) {
+        const selectors = tests.map((t, i) => {
+          const [cls, meth] = t.split("#");
+          const k = g.classes.find((x) => x.test && x.file === files[i]);
+          const fq = k ? k.id : cls;
+          return meth ? `${fq}#${meth}` : fq;
+        });
+        log(`fast: ${selectors.join(" ")}`);
+        r = await fast.run({ id, root, plan: p, cfg, env, mvn: { cmd: mavenCmd(root, cfg)[0], args: mavenCmd(root, cfg)[1] }, selectors, graph: g, log });
+        cases = r.cases;
+        fastInfo = { compiled: r.compiled, prepared: !!r.prepared, prepareMs: r.prepareMs, phase: r.phase };
+      } else {
+        for (const d of reportDirs) fs2.rmSync(d, { recursive: true, force: true });
+        log(`${p.tool}: ${path2.basename(c.cmd)} ${c.args.filter((a) => !/^-Dmaven\.repo\.local|^-s$/.test(a)).join(" ")}`);
+        r = await exec(c.cmd, c.args, { cwd: c.cwd, env, timeoutMs: cfg.timeoutMs, log });
+        cases = parseReports(reportDirs, started);
+      }
+      if (database) {
+        try {
+          await require_testdb().drop(database.database);
+        } catch (e) {
+          log(`test db: drop failed: ${e.message}`);
+        }
+      }
+      for (const k of cases) k.name = testName(k.name);
+      const compile = cases.length ? [] : compileErrors(r.out, root);
+      for (const k of cases) if (k.status === "failed" || k.status === "error") k.parts = codeParts(root, g, k.stack);
+      const counts = { tests: cases.length, passed: cases.filter((k) => k.status === "passed").length, failed: cases.filter((k) => k.status === "failed").length, errors: cases.filter((k) => k.status === "error").length, skipped: cases.filter((k) => k.status === "skipped").length };
+      const parts = [];
+      for (const e of compile) parts.push({ file: e.file, line: e.line, why: `compile: ${e.message}`, snippet: snippet(root, e.file, e.line) });
+      for (const k of cases) for (const pt of k.parts || []) if (!parts.some((x) => x.file === pt.file && x.line === pt.line)) parts.push({ file: pt.file, line: pt.line, method: pt.method, test: pt.test, why: `${k.class.split(".").pop()}.${k.name}: ${((k.message || k.type || "").split("\n").find((l) => l.trim()) || "").trim().slice(0, 200)}`, snippet: pt.snippet });
+      const hints = [];
+      if (/Mockito cannot mock this class|Java \d+ \(\d+\) is not supported by the current version of Byte Buddy/.test(r.out + cases.map((k) => k.message).join("\n"))) hints.push('Mockito/Byte Buddy of this project does not support the JDK the tests ran on: point tests.javaHome at the JDK the project builds with (17 or 21), or keep tests.javaToolOptions = "-Dnet.bytebuddy.experimental=true".');
+      if (/Failed to determine a suitable driver class|Connection to .* refused|password authentication failed/.test(r.out)) hints.push("The tests wanted a database: run with db (env + db) so test_run loads the DDL snapshot into a throwaway database.");
+      const ok = r.code === 0 && counts.failed === 0 && counts.errors === 0 && !compile.length && counts.tests > 0;
+      const outcome = ok ? "passed" : r.killed ? "timeout" : compile.length ? "compile-error" : counts.tests === 0 ? "no-tests-ran" : "failed";
+      record(id, root, cases, why ? "build" : "fast");
+      return {
+        workspace: id,
+        tool: p.tool,
+        mode: why ? "build" : "fast",
+        ...why && mode !== "build" ? { buildBecause: why } : {},
+        ...fastInfo ? { fast: fastInfo } : {},
+        written: written.length ? written.map((w) => w.path) : void 0,
+        module: p.module,
+        command: c ? `${path2.basename(c.cmd)} ${c.args.filter((a) => !/^-Dmaven\.repo\.local/.test(a)).join(" ")}` : `javac (${fastInfo.compiled} changed) + JUnit launcher${fastInfo.prepared ? " (prepared with Maven first)" : ""}`,
+        outcome,
+        exit: r.code,
+        ms: r.ms,
+        counts,
+        cases,
+        compile,
+        parts,
+        hints,
+        database: database ? { name: database.database, failedStatements: database.errors } : null,
+        tail: r.out.split("\n").filter((l) => l.trim()).slice(-60).join("\n")
+      };
+    }
+    var testName = (n) => String(n || "").replace(/\s*\[(\d+)\].*$/, "[$1]").replace(/\([^)]*\)(?=\[|$)/, "");
+    var runsFile = (id) => path2.join(require_util().CACHE, "work", `${id}.runs.json`);
+    function fingerprint(root) {
+      const parts = [];
+      (function rec(d) {
+        let es;
+        try {
+          es = fs2.readdirSync(d, { withFileTypes: true });
+        } catch {
+          return;
+        }
+        for (const e of es) {
+          const f = path2.join(d, e.name), rel = path2.relative(root, f).split(path2.sep).join("/");
+          if (e.isDirectory()) {
+            if (!/^(\.git|target|build|node_modules|\.gradle)$/.test(e.name) && !/(^|\/)src\/(test|it)$/.test(rel)) rec(f);
+          } else if (/\.(java|kt|groovy|ya?ml|properties|xml|sql)$/.test(e.name)) {
+            const st = fs2.statSync(f);
+            parts.push(`${rel}:${st.size}:${Math.round(st.mtimeMs)}`);
+          }
+        }
+      })(root);
+      return require("crypto").createHash("sha1").update(parts.sort().join("\n")).digest("hex").slice(0, 12);
+    }
+    function record(id, root, cases, mode) {
+      const { readJson, writeJson } = require_util();
+      const runs = readJson(runsFile(id), []);
+      const fp = fingerprint(root), at = (/* @__PURE__ */ new Date()).toISOString();
+      for (const k of cases) runs.push({ test: `${k.class}#${k.name}`, status: k.status, fp, at, mode });
+      writeJson(runsFile(id), runs.slice(-2e3));
+    }
+    function proof(id) {
+      const runs = require_util().readJson(runsFile(id), []);
+      const by = /* @__PURE__ */ new Map();
+      for (const r of runs) (by.get(r.test) || by.set(r.test, []).get(r.test)).push(r);
+      const out2 = [];
+      for (const [test, rs] of by) {
+        const last = rs[rs.length - 1];
+        const red = rs.find((r) => r.status === "failed" || r.status === "error");
+        const greenAfter = red && rs.some((r) => r.status === "passed" && r.at > red.at && r.fp !== red.fp);
+        const verdict = last.status !== "passed" ? "failing" : greenAfter ? "red-green" : red ? "green (failed only while the test itself changed)" : "green-only";
+        out2.push({ test, verdict, runs: rs.length, last: last.status, fullBuild: rs.some((r) => r.mode === "build" && r.status === "passed" && r.at >= (rs.filter((x) => x.status !== "passed").pop()?.at || "")) });
+      }
+      return out2;
+    }
+    function splitSql(text) {
+      const out2 = [];
+      let cur = "", dollar = null, q = false;
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        if (!q && !dollar && ch === "-" && text[i + 1] === "-") {
+          const e = text.indexOf("\n", i);
+          i = e < 0 ? text.length : e;
+          cur += "\n";
+          continue;
+        }
+        if (!q && ch === "$") {
+          const m = text.slice(i).match(/^\$[\w]*\$/);
+          if (m) {
+            if (!dollar) dollar = m[0];
+            else if (dollar === m[0]) dollar = null;
+            cur += m[0];
+            i += m[0].length - 1;
+            continue;
+          }
+        }
+        if (!dollar && ch === "'") q = !q;
+        if (!q && !dollar && ch === ";") {
+          if (cur.trim()) out2.push(cur.trim());
+          cur = "";
+          continue;
+        }
+        cur += ch;
+      }
+      if (cur.trim()) out2.push(cur.trim());
+      return out2;
+    }
+    module2.exports = { run, proof, testName, fingerprint, plan, parseReports, compileErrors, codeParts, splitSql };
+  }
+});
+
 // lib/testgen.js
 var require_testgen = __commonJS({
   "lib/testgen.js"(exports2, module2) {
@@ -29358,6 +30076,7 @@ var require_testgen = __commonJS({
       }
       return "null";
     }
+    var BOUNDS = { BigDecimal: ["0.00", "0.01", "1.00", "12.345", "-1.00"], int: ["0", "1", "-1", "2147483647"], Integer: ["0", "1", "-1"], long: ["0", "1", "-1"], Long: ["0", "1", "-1"], String: ["''", "' '", "x"], boolean: ["true", "false"], Boolean: ["true", "false"], double: ["0.0", "0.1", "-1.0"] };
     var indent = (s, n) => s.split("\n").map((l) => l ? " ".repeat(n) + l : l).join("\n");
     var STATIC = /* @__PURE__ */ new Set(["get", "post", "put", "delete", "patch", "status", "content", "jsonPath", "when", "verify", "mock", "spy", "reset", "times", "never", "any", "eq", "assertThat", "request", "header"]);
     var testName = (m, i, all, suffix = "") => {
@@ -29454,6 +30173,20 @@ ${indent(hint, 4)}` : ""}`);
           t.push("}");
         }
         body.push(indent(t.join("\n"), 4));
+        const simple = m.params.length && m.params.every((p) => BOUNDS[baseName(p.type)]);
+        if ((st === "unit" || st === "mockito" && !(calls.get(m.name) || []).length) && simple && m.ret && m.ret !== "void") {
+          const rows = BOUNDS[baseName(m.params[0].type)].map((v) => `"${[v, ...m.params.slice(1).map((p) => BOUNDS[baseName(p.type)][1])].join(", ")}, ?"`);
+          const conv = (p) => baseName(p.type) === "BigDecimal" ? `new BigDecimal(${p.name})` : p.name;
+          const typ = (p) => baseName(p.type) === "BigDecimal" ? "String" : p.type;
+          body.push(indent([
+            `// Boundaries of ${m.name} in one test (needs junit-jupiter-params, in spring-boot-starter-test): fill in the expected values`,
+            "// @ParameterizedTest",
+            `// @CsvSource({ ${rows.join(", ")} })`,
+            `// void ${m.name}Cases(${[...m.params.map((p) => `${typ(p)} ${p.name}`), `String expected`].join(", ")}) {`,
+            `//     assertThat(subject.${m.name}(${m.params.map(conv).join(", ")})${baseName(m.ret) === "BigDecimal" ? ".toPlainString()" : ""}).isEqualTo(${/^(int|long|Integer|Long)$/.test(baseName(m.ret)) ? "Long.parseLong(expected)" : baseName(m.ret) === "boolean" || baseName(m.ret) === "Boolean" ? "Boolean.parseBoolean(expected)" : "expected"});`,
+            "// }"
+          ].join("\n"), 4));
+        }
       });
       const note = {
         mockito: `Unit test of ${c.name}: its dependencies are mocks (Mockito strict stubs: stub only what the method uses).`,
@@ -29627,6 +30360,7 @@ ${indent(hint, 4)}` : ""}`);
         source: (focus ? srcLines.slice(0, Math.min(srcLines.length, c.line + 1)).join("\n") + "\n    ...\n" : "") + srcLines.slice(from - 1, to).map((l, i) => `${String(from + i).padStart(4)}  ${l}`).join("\n"),
         methods: methods.map((x) => ({ name: x.name, signature: `${x.ret ? x.ret + " " : ""}${x.name}(${x.params.map((p) => `${p.type} ${p.name}`).join(", ")})`, lines: `${x.startLine}-${x.endLine}`, calls: calls.get(x.name) || [], endpoint: g.endpointsOf.get(x.name)?.[0] })),
         dependencies: depApi,
+        callees: callees(g, root, c, methods),
         tables: [...tables],
         functions: [...fnCalls],
         setup: { ...s, module: mod.dir, buildFile: mod.buildFile },
@@ -29638,6 +30372,30 @@ ${indent(hint, 4)}` : ""}`);
         rules: rules(st, s, kt),
         next: `Write the test with workspace_write path="${testPath}"${existing ? " (it exists: read it first and add to it, or use another name)" : ""}, then test_run tests=["${c.name}Test"]${ddl?.db ? ` env="${env}"` : ""}.`
       };
+    }
+    function callees(g, root, c, methods, max = 6) {
+      const out2 = [], seen = /* @__PURE__ */ new Set();
+      const files = /* @__PURE__ */ new Map();
+      const lines = (file) => {
+        if (!files.has(file)) {
+          try {
+            files.set(file, fs2.readFileSync(path2.join(root, file), "utf8").split("\n"));
+          } catch {
+            files.set(file, []);
+          }
+        }
+        return files.get(file);
+      };
+      for (const m of methods) for (const [from, to, kind] of g.edges) {
+        if (from !== `${c.id}#${m.name}` || kind !== "calls" || seen.has(to) || out2.length >= max) continue;
+        seen.add(to);
+        const [cid, name] = to.split("#");
+        const k = g.classes.find((x) => x.id === cid);
+        const mm = k?.methods.find((x) => x.name === name && !x.abstract);
+        if (!mm || mm.endLine - mm.startLine > 40) continue;
+        out2.push({ method: `${k.name}#${name}`, file: `${k.file}:${mm.startLine}`, code: lines(k.file).slice(mm.startLine - 1, mm.endLine).join("\n") });
+      }
+      return out2;
     }
     function exampleTest(root, modDir, file) {
       const testRoot = path2.join(root, modDir === "." ? "" : modDir, "src", "test");
@@ -29837,364 +30595,6 @@ ${k.type} ${k.name};`);
   }
 });
 
-// lib/testdb.js
-var require_testdb = __commonJS({
-  "lib/testdb.js"(exports2, module2) {
-    var postgres = require_src();
-    var { getTests, envNames: envNames2, getEnv: getEnv2 } = require_config();
-    var same = (a, b) => {
-      try {
-        const x = new URL(a), y = new URL(b);
-        return x.hostname === y.hostname && (x.port || "5432") === (y.port || "5432") && x.pathname === y.pathname;
-      } catch {
-        return false;
-      }
-    };
-    function server() {
-      const url = getTests().pgUrl;
-      if (!url) throw new Error("no test database: set tests.pgUrl in config.json (or DT_TEST_DB_URL), e.g. the compose testdb profile: postgres://dt:dt@testdb:5432/postgres");
-      for (const e of envNames2()) for (const [db, u] of Object.entries(getEnv2(e).pg)) if (u && same(u, url)) throw new Error(`tests.pgUrl is the ${e} database "${db}": use a scratch Postgres for tests`);
-      return url;
-    }
-    async function create(runId, statements) {
-      const url = server();
-      const name = `dt_test_${String(runId).replace(/[^a-z0-9]/gi, "").toLowerCase().slice(0, 40)}`;
-      const admin = postgres(url, { max: 1, onnotice: () => {
-      }, connect_timeout: 10 });
-      try {
-        await admin.unsafe(`drop database if exists ${name}`);
-        await admin.unsafe(`create database ${name}`);
-      } catch (e) {
-        if (/ENOTFOUND|ECONNREFUSED|EAI_AGAIN|getaddrinfo/.test(`${e.code} ${e.message}`)) throw new Error(`the test database at ${new URL(url).host} is not reachable (${e.code || e.message}): with compose add testdb to COMPOSE_PROFILES, or set tests.pgUrl`);
-        throw e;
-      } finally {
-        await admin.end({ timeout: 2 });
-      }
-      const u = new URL(url);
-      u.pathname = `/${name}`;
-      const sql = postgres(u.toString(), { max: 1, onnotice: () => {
-      }, connect_timeout: 10 });
-      const errors = [];
-      try {
-        for (const s of statements) {
-          try {
-            await sql.unsafe(s);
-          } catch (e) {
-            errors.push({ statement: s.split("\n")[0].slice(0, 160), error: e.message });
-          }
-        }
-      } finally {
-        await sql.end({ timeout: 2 });
-      }
-      return {
-        database: name,
-        jdbcUrl: `jdbc:postgresql://${u.hostname}:${u.port || 5432}/${name}`,
-        user: decodeURIComponent(u.username),
-        password: decodeURIComponent(u.password),
-        errors
-      };
-    }
-    async function drop(name) {
-      if (!/^dt_test_[a-z0-9]+$/.test(name)) throw new Error(`not a dt test database: ${name}`);
-      const admin = postgres(server(), { max: 1, onnotice: () => {
-      } });
-      try {
-        await admin.unsafe(`drop database if exists ${name} with (force)`);
-      } finally {
-        await admin.end({ timeout: 2 });
-      }
-    }
-    module2.exports = { create, drop, server };
-  }
-});
-
-// lib/testrun.js
-var require_testrun = __commonJS({
-  "lib/testrun.js"(exports2, module2) {
-    var fs2 = require("fs");
-    var path2 = require("path");
-    var { spawn } = require("child_process");
-    var W = require_workspace();
-    var { getTests } = require_config();
-    function plan(root, testFiles) {
-      const near = (file) => {
-        let dir = path2.dirname(path2.join(root, file));
-        while (dir.startsWith(root)) {
-          if (["pom.xml", "build.gradle", "build.gradle.kts"].some((f) => fs2.existsSync(path2.join(dir, f)))) return dir;
-          if (dir === root) break;
-          dir = path2.dirname(dir);
-        }
-        return root;
-      };
-      const modDir = testFiles.length ? near(testFiles[0]) : root;
-      const mod = path2.relative(root, modDir).split(path2.sep).join("/") || ".";
-      const gradle = fs2.existsSync(path2.join(root, "settings.gradle")) || fs2.existsSync(path2.join(root, "settings.gradle.kts")) || fs2.existsSync(path2.join(modDir, "build.gradle")) || fs2.existsSync(path2.join(modDir, "build.gradle.kts"));
-      const maven = fs2.existsSync(path2.join(modDir, "pom.xml"));
-      return { tool: maven ? "maven" : gradle ? "gradle" : null, module: mod, modDir };
-    }
-    function which(cmd, extra = []) {
-      for (const d of [...extra, ...(process.env.PATH || "").split(path2.delimiter)]) {
-        if (!d) continue;
-        const f = path2.join(d, cmd);
-        try {
-          fs2.accessSync(f, fs2.constants.X_OK);
-          return f;
-        } catch {
-        }
-      }
-      return null;
-    }
-    function command(root, p, tests, cfg) {
-      const javaBin = cfg.javaHome ? [path2.join(cfg.javaHome, "bin")] : [];
-      const sel = tests.map((t) => t.replace(/\.(java|kt)$/, "").split("/").pop());
-      if (p.tool === "maven") {
-        const wrapper = fs2.existsSync(path2.join(root, "mvnw")) ? ["sh", ["mvnw"]] : null;
-        const mvn = wrapper || [cfg.maven || which("mvn", [...javaBin, ...process.env.MAVEN_HOME ? [path2.join(process.env.MAVEN_HOME, "bin")] : []]), []];
-        if (!mvn[0]) throw new Error("no Maven: the repo has no mvnw, and mvn is not on PATH (set tests.maven in config.json, or run with the compose jdk profile)");
-        const args = [
-          ...mvn[1],
-          "-B",
-          "-ntp",
-          "test",
-          `-Dtest=${sel.join(",")}`,
-          "-Dsurefire.failIfNoSpecifiedTests=false",
-          "-DfailIfNoTests=false",
-          "-Djacoco.skip=true",
-          "-Dcheckstyle.skip=true",
-          "-Dspotless.check.skip=true",
-          "-Denforcer.skip=true",
-          "-Dpmd.skip=true",
-          "-Dspotbugs.skip=true",
-          `-Dmaven.repo.local=${cfg.mavenRepo}`
-        ];
-        if (p.module !== "." && fs2.existsSync(path2.join(root, "pom.xml"))) args.push("-pl", p.module, "-am");
-        if (cfg.offline) args.push("-o");
-        if (cfg.mavenSettings) args.push("-s", cfg.mavenSettings);
-        return { cmd: mvn[0], args: [...args, ...cfg.args], cwd: p.module !== "." && fs2.existsSync(path2.join(root, "pom.xml")) ? root : p.modDir };
-      }
-      if (p.tool === "gradle") {
-        const wrapper = fs2.existsSync(path2.join(root, "gradlew")) ? ["sh", ["gradlew"]] : null;
-        const gr = wrapper || [cfg.gradle || which("gradle", javaBin), []];
-        if (!gr[0]) throw new Error("no Gradle: the repo has no gradlew, and gradle is not on PATH (set tests.gradle in config.json)");
-        const task = p.module === "." ? "test" : `:${p.module.split("/").join(":")}:test`;
-        const args = [...gr[1], "--console=plain", task, ...sel.flatMap((t) => ["--tests", t.includes("#") ? t.replace("#", ".") : t.includes(".") ? t : `*${t}`])];
-        if (cfg.offline) args.push("--offline");
-        return { cmd: gr[0], args: [...args, ...cfg.args], cwd: root };
-      }
-      throw new Error("no pom.xml or build.gradle for these tests");
-    }
-    function parseReports(dirs, since) {
-      const cases = [];
-      for (const d of dirs) {
-        let files = [];
-        try {
-          files = fs2.readdirSync(d).filter((f) => /^TEST-.*\.xml$/.test(f)).map((f) => path2.join(d, f));
-        } catch {
-          continue;
-        }
-        for (const f of files) {
-          if (fs2.statSync(f).mtimeMs < since - 1e3) continue;
-          const x = fs2.readFileSync(f, "utf8");
-          for (const m of x.matchAll(/<testcase\b([^>]*?)(\/>|>([\s\S]*?)<\/testcase>)/g)) {
-            const attr = (n) => {
-              const a = m[1].match(new RegExp(`\\b${n}="([^"]*)"`));
-              return a ? unxml(a[1]) : null;
-            };
-            const inner = m[3] || "";
-            const fail = inner.match(/<(failure|error)\b([^>]*?)(?:\/>|>([\s\S]*?)<\/\1>)/);
-            const skipped = /<skipped\b/.test(inner);
-            const msg = fail ? unxml((fail[2].match(/\bmessage="([^"]*)"/) || [])[1] || "") : null;
-            const stack = fail ? unxml((fail[3] || "").replace(/^<!\[CDATA\[|\]\]>$/g, "")) : null;
-            const out2 = unxml(((inner.match(/<system-out>([\s\S]*?)<\/system-out>/) || [])[1] || "").replace(/^<!\[CDATA\[|\]\]>$/g, ""));
-            cases.push({ class: attr("classname"), name: attr("name"), ms: Math.round(Number(attr("time") || 0) * 1e3), status: fail ? fail[1] === "error" ? "error" : "failed" : skipped ? "skipped" : "passed", message: msg, type: fail ? (fail[2].match(/\btype="([^"]*)"/) || [])[1] || null : null, stack, output: out2 ? out2.slice(-4e3) : void 0 });
-          }
-        }
-      }
-      return cases;
-    }
-    var unxml = (s) => String(s || "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#(\d+);/g, (_, n) => String.fromCharCode(n)).replace(/&amp;/g, "&");
-    function compileErrors(output, root) {
-      const out2 = [];
-      const rel = (f) => {
-        const p = f.replace(/^file:\/\//, "");
-        return p.startsWith(root) ? path2.relative(root, p).split(path2.sep).join("/") : p;
-      };
-      for (const m of output.matchAll(/\[ERROR\]\s+(\/[^\s:]+\.(?:java|kt)):\[(\d+),(\d+)\]\s*(.*)/g)) out2.push({ file: rel(m[1]), line: +m[2], col: +m[3], message: m[4].trim() });
-      for (const m of output.matchAll(/^(\/[^\s:]+\.java):(\d+): error: (.*)$/gm)) out2.push({ file: rel(m[1]), line: +m[2], message: m[3].trim() });
-      for (const m of output.matchAll(/^e: (?:file:\/\/)?(\/[^\s:]+\.kts?):(\d+):(\d+):? (.*)$/gm)) out2.push({ file: rel(m[1]), line: +m[2], col: +m[3], message: m[4].trim() });
-      const seen = /* @__PURE__ */ new Set();
-      return out2.filter((e) => {
-        const k = `${e.file}:${e.line}:${e.message}`;
-        if (seen.has(k)) return false;
-        seen.add(k);
-        return true;
-      });
-    }
-    function codeParts(root, g, stack, max = 3) {
-      const byClass = new Map(g.classes.map((c) => [c.id, c.file]));
-      const parts = [];
-      for (const m of String(stack || "").matchAll(/at ([\w$.]+)\.([\w$<>]+)\(([\w$]+\.(?:java|kt)):(\d+)\)/g)) {
-        const cls = m[1].replace(/\$.*$/, "");
-        const file = byClass.get(cls) || byClass.get(m[1].replace(/\$/g, "."));
-        if (!file) continue;
-        const line = Number(m[4]);
-        if (parts.some((p) => p.file === file && p.line === line)) continue;
-        parts.push({ file, line, method: `${cls.split(".").pop()}#${m[2]}`, test: /(^|\/)src\/test\//.test(file), snippet: snippet(root, file, line) });
-        if (parts.length >= max) break;
-      }
-      return parts;
-    }
-    function snippet(root, file, line, around = 4) {
-      try {
-        const lines = fs2.readFileSync(path2.join(root, file), "utf8").split("\n");
-        const from = Math.max(1, line - around), to = Math.min(lines.length, line + around);
-        return { from, to, text: lines.slice(from - 1, to).map((l, i) => `${from + i === line ? ">" : " "}${String(from + i).padStart(4)}  ${l}`).join("\n") };
-      } catch {
-        return null;
-      }
-    }
-    function exec(cmd, args, { cwd, env, timeoutMs, log }) {
-      return new Promise((resolve) => {
-        const started = Date.now();
-        const p = spawn(cmd, args, { cwd, env, stdio: ["ignore", "pipe", "pipe"] });
-        let out2 = "", killed = false;
-        const keep = (b) => {
-          out2 += b.toString();
-          if (out2.length > 4e6) out2 = out2.slice(-3e6);
-          const last = b.toString().trim().split("\n").pop();
-          if (last && log) log(last.slice(0, 200));
-        };
-        p.stdout.on("data", keep);
-        p.stderr.on("data", keep);
-        const timer = setTimeout(() => {
-          killed = true;
-          p.kill("SIGTERM");
-          setTimeout(() => p.kill("SIGKILL"), 5e3);
-        }, timeoutMs);
-        p.on("error", (e) => {
-          clearTimeout(timer);
-          resolve({ code: -1, out: out2 + `
-${e.message}`, ms: Date.now() - started });
-        });
-        p.on("close", (code) => {
-          clearTimeout(timer);
-          resolve({ code, out: out2, killed, ms: Date.now() - started });
-        });
-      });
-    }
-    async function run(id, { tests = [], db, log = () => {
-    } } = {}) {
-      const m = W.checkId(id);
-      const root = m.path;
-      const idx = W.index(id);
-      const g = idx.graph_();
-      if (!tests.length) throw new Error("name the tests to run (class names like FooTest, or Class#method)");
-      const files = tests.map((t) => {
-        const cls = t.split("#")[0].replace(/\.(java|kt)$/, "").split("/").pop();
-        const c2 = g.classes.find((x) => x.test && (x.name === cls || x.id === cls));
-        return c2 ? c2.file : /\//.test(t) ? t : null;
-      });
-      const missing = tests.filter((t, i) => !files[i]);
-      if (missing.length) throw new Error(`no test class ${missing.join(", ")} in ${id} (write it with workspace_write first)`);
-      const p = plan(root, files);
-      const cfg = getTests();
-      const c = command(root, p, tests, cfg);
-      const env = { ...process.env, MAVEN_OPTS: process.env.MAVEN_OPTS || "-Xmx1g", CI: "true" };
-      if (cfg.javaHome) {
-        env.JAVA_HOME = cfg.javaHome;
-        env.PATH = `${path2.join(cfg.javaHome, "bin")}${path2.delimiter}${env.PATH}`;
-      }
-      if (cfg.gradleHome) env.GRADLE_USER_HOME = cfg.gradleHome;
-      if (cfg.javaToolOptions) env.JAVA_TOOL_OPTIONS = [process.env.JAVA_TOOL_OPTIONS, cfg.javaToolOptions].filter(Boolean).join(" ");
-      let database = null;
-      const runId = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-      if (db) {
-        const opts = { tables: db.tables, service: db.service, functions: db.functions };
-        let statements;
-        if (db.ddlPath) statements = splitSql(fs2.readFileSync(W.resolvePath(m, db.ddlPath).full, "utf8"));
-        else statements = require_ddl().snapshot(db.env, db.db, opts).statements;
-        log(`test db: loading ${statements.length} statements`);
-        database = await require_testdb().create(runId, statements);
-        if (database.errors.length) log(`test db: ${database.errors.length} statements failed`);
-        Object.assign(env, { SPRING_DATASOURCE_URL: database.jdbcUrl, SPRING_DATASOURCE_USERNAME: database.user, SPRING_DATASOURCE_PASSWORD: database.password, SPRING_JPA_HIBERNATE_DDL_AUTO: "none", SPRING_SQL_INIT_MODE: "never", SPRING_FLYWAY_ENABLED: "false", SPRING_LIQUIBASE_ENABLED: "false" });
-      }
-      const reportDirs = [path2.join(p.modDir, "target", "surefire-reports"), path2.join(p.modDir, "build", "test-results", "test")];
-      for (const d of reportDirs) fs2.rmSync(d, { recursive: true, force: true });
-      const started = Date.now();
-      log(`${p.tool}: ${path2.basename(c.cmd)} ${c.args.filter((a) => !/^-Dmaven\.repo\.local|^-s$/.test(a)).join(" ")}`);
-      const r = await exec(c.cmd, c.args, { cwd: c.cwd, env, timeoutMs: cfg.timeoutMs, log });
-      if (database) {
-        try {
-          await require_testdb().drop(database.database);
-        } catch (e) {
-          log(`test db: drop failed: ${e.message}`);
-        }
-      }
-      const cases = parseReports(reportDirs, started);
-      const compile = cases.length ? [] : compileErrors(r.out, root);
-      for (const k of cases) if (k.status === "failed" || k.status === "error") k.parts = codeParts(root, g, k.stack);
-      const counts = { tests: cases.length, passed: cases.filter((k) => k.status === "passed").length, failed: cases.filter((k) => k.status === "failed").length, errors: cases.filter((k) => k.status === "error").length, skipped: cases.filter((k) => k.status === "skipped").length };
-      const parts = [];
-      for (const e of compile) parts.push({ file: e.file, line: e.line, why: `compile: ${e.message}`, snippet: snippet(root, e.file, e.line) });
-      for (const k of cases) for (const pt of k.parts || []) if (!parts.some((x) => x.file === pt.file && x.line === pt.line)) parts.push({ file: pt.file, line: pt.line, method: pt.method, test: pt.test, why: `${k.class.split(".").pop()}.${k.name}: ${((k.message || k.type || "").split("\n").find((l) => l.trim()) || "").trim().slice(0, 200)}`, snippet: pt.snippet });
-      const hints = [];
-      if (/Mockito cannot mock this class|Java \d+ \(\d+\) is not supported by the current version of Byte Buddy/.test(r.out + cases.map((k) => k.message).join("\n"))) hints.push('Mockito/Byte Buddy of this project does not support the JDK the tests ran on: point tests.javaHome at the JDK the project builds with (17 or 21), or keep tests.javaToolOptions = "-Dnet.bytebuddy.experimental=true".');
-      if (/Failed to determine a suitable driver class|Connection to .* refused|password authentication failed/.test(r.out)) hints.push("The tests wanted a database: run with db (env + db) so test_run loads the DDL snapshot into a throwaway database.");
-      const ok = r.code === 0 && counts.failed === 0 && counts.errors === 0 && !compile.length && counts.tests > 0;
-      const outcome = ok ? "passed" : r.killed ? "timeout" : compile.length ? "compile-error" : counts.tests === 0 ? "no-tests-ran" : "failed";
-      return {
-        workspace: id,
-        tool: p.tool,
-        module: p.module,
-        command: `${path2.basename(c.cmd)} ${c.args.filter((a) => !/^-Dmaven\.repo\.local/.test(a)).join(" ")}`,
-        outcome,
-        exit: r.code,
-        ms: r.ms,
-        counts,
-        cases,
-        compile,
-        parts,
-        hints,
-        database: database ? { name: database.database, failedStatements: database.errors } : null,
-        tail: r.out.split("\n").filter((l) => l.trim()).slice(-60).join("\n")
-      };
-    }
-    function splitSql(text) {
-      const out2 = [];
-      let cur = "", dollar = null, q = false;
-      for (let i = 0; i < text.length; i++) {
-        const ch = text[i];
-        if (!q && !dollar && ch === "-" && text[i + 1] === "-") {
-          const e = text.indexOf("\n", i);
-          i = e < 0 ? text.length : e;
-          cur += "\n";
-          continue;
-        }
-        if (!q && ch === "$") {
-          const m = text.slice(i).match(/^\$[\w]*\$/);
-          if (m) {
-            if (!dollar) dollar = m[0];
-            else if (dollar === m[0]) dollar = null;
-            cur += m[0];
-            i += m[0].length - 1;
-            continue;
-          }
-        }
-        if (!dollar && ch === "'") q = !q;
-        if (!q && !dollar && ch === ";") {
-          if (cur.trim()) out2.push(cur.trim());
-          cur = "";
-          continue;
-        }
-        cur += ch;
-      }
-      if (cur.trim()) out2.push(cur.trim());
-      return out2;
-    }
-    module2.exports = { run, plan, parseReports, compileErrors, codeParts, splitSql };
-  }
-});
-
 // lib/tools-code.js
 var require_tools_code = __commonJS({
   "lib/tools-code.js"(exports2, module2) {
@@ -30363,14 +30763,23 @@ var require_tools_code = __commonJS({
         {
           name: "workspace_patch",
           group: "code",
-          description: "The changes of a workspace as one git patch against the commit it was opened at (new tests, DDL snapshot, fixes): files with +/- counts, the patch shown to the user as a diff with a download link, and how to apply it (git apply). Nothing is pushed.",
+          description: "The changes of a workspace as one git patch against the commit it was opened at (new tests, DDL snapshot, fixes): files with +/- counts, each test in it with its proof (red-green: failed before the fix and passes after; green-only; failing), the patch shown to the user as a diff with a download link, and how to apply it (git apply). Nothing is pushed.",
           input: { workspace: str("Workspace id") },
           required: ["workspace"],
           run: async (a) => {
             const p = await require_workspace().patch(a.workspace);
             if (!p.files.length) return { ...p, patch: "", note: "no changes yet" };
+            const testClasses = p.files.filter((f) => /(^|\/)src\/test\/(java|kotlin)\/.+\.(java|kt)$/.test(f.path)).map((f) => f.path.replace(/^.*src\/test\/(java|kotlin)\//, "").replace(/\.(java|kt)$/, "").replace(/\//g, "."));
+            p.tests = require_testrun().proof(a.workspace).filter((t) => testClasses.includes(t.test.split("#")[0]));
+            const never = testClasses.filter((c) => !p.tests.some((t) => t.test.startsWith(`${c}#`)));
+            p.notes = [
+              ...p.tests.filter((t) => t.verdict === "green-only").map((t) => `${t.test} never failed: it may not test the bug (fine for a test of behaviour that already worked)`),
+              ...p.tests.filter((t) => t.verdict === "failing").map((t) => `${t.test} still fails`),
+              ...never.map((c) => `${c} was never run`),
+              ...p.tests.length && !p.tests.every((t) => t.fullBuild) ? ['not every test has passed in a full build (test_run mode="build")'] : []
+            ];
             const view = R().saveView("patch", p, { title: `${p.repo} @ ${p.base.slice(0, 10)}: ${p.files.length} files` });
-            return { workspace: p.id, repo: p.repo, base: p.base, files: p.files, apply: p.apply, view, download: `${view.replace("/show/", "/patch/")}.patch`, patch: clip(p.patch, 6e3) };
+            return { workspace: p.id, repo: p.repo, base: p.base, files: p.files, tests: p.tests.map((t) => `${t.verdict}: ${t.test.replace(/^.*\.(?=[^.#]+#)/, "")}${t.fullBuild ? "" : " (fast runs only)"}`), notes: p.notes.length ? p.notes : void 0, apply: p.apply, view, download: `${view.replace("/show/", "/patch/")}.patch`, patch: clip(p.patch, 6e3) };
           }
         },
         {
@@ -30392,10 +30801,12 @@ var require_tools_code = __commonJS({
         {
           name: "test_run",
           group: "code",
-          description: 'Run tests of a workspace with its own build (Maven or Gradle, the wrapper when there is one): each test, its status and time, failures with message and the code parts to work on (the repo frames of the stack trace with the lines around them), compile errors with their lines, and the output tail. With env + db (or ddl_path), the run gets a throwaway Postgres database loaded with the DDL snapshot, passed to Spring as SPRING_DATASOURCE_*. Shown as a view. Takes a while: if it answers "running", call it again with that job id.',
+          description: `Run tests of a workspace. Fast by default on Maven projects: after one Maven prepare per workspace, only changed sources are compiled and the tests run in one JVM (seconds); mode="build" runs the project's Maven/Gradle (the final check). files=[{path, content|edits}] writes before running, so a try is one call. Every result is kept per test, so workspace_patch can show which tests failed before the fix and pass after it (red-green). The answer has: each test, its status and time, failures with message and the code parts to work on (the repo frames of the stack trace with the lines around them), compile errors with their lines, and the output tail. With env + db (or ddl_path), the run gets a throwaway Postgres database loaded with the DDL snapshot, passed to Spring as SPRING_DATASOURCE_*. Shown as a view. Takes a while: if it answers "running", call it again with that job id.`,
           input: {
             workspace: str("Workspace id"),
             tests: list("Test classes (FooTest) or Class#method"),
+            files: { type: "array", items: { type: "object", properties: { path: { type: "string" }, content: { type: "string" }, edits: { type: "array", items: { type: "object", properties: { find: { type: "string" }, replace: { type: "string" } } } } }, required: ["path"] }, description: "Write these first (like workspace_write), then run: one call per try" },
+            mode: { type: "string", enum: ["auto", "fast", "build"], default: "auto", description: "fast: compile only what changed and run in one JVM (Maven projects; a few seconds); build: the project's Maven/Gradle (the final check before the patch); auto: fast where it fits" },
             env: str("With db: the environment of the DDL snapshot"),
             db: str("Database to snapshot into the throwaway test database"),
             ddl_path: str("Or: a DDL file in the workspace to load (e.g. src/test/resources/dt-schema/pay.sql)"),
@@ -30411,7 +30822,7 @@ var require_tools_code = __commonJS({
               if (!a.tests?.length) throw new Error("tests: which test classes to run");
               const db = a.ddl_path || a.db ? { env: a.env || require_config().envNames()[0], db: a.db, ddlPath: a.ddl_path } : null;
               job = J.start(`tests:${a.workspace}:${a.tests.join(",")}`, `tests ${a.tests.join(", ")} in ${a.workspace}`, async (log) => {
-                const r = await require_testrun().run(a.workspace, { tests: a.tests, db, log });
+                const r = await require_testrun().run(a.workspace, { tests: a.tests, db, log, mode: a.mode || "auto", files: a.files || [] });
                 const view = R().saveView("tests", r, { title: `${r.outcome}: ${a.tests.join(", ")}` });
                 const failing = r.cases.filter((c) => c.status === "failed" || c.status === "error");
                 return {
@@ -30419,6 +30830,10 @@ var require_tools_code = __commonJS({
                   outcome: r.outcome,
                   counts: r.counts,
                   ms: r.ms,
+                  mode: r.mode,
+                  ...r.buildBecause ? { buildBecause: r.buildBecause } : {},
+                  ...r.fast ? { compiled: r.fast.compiled, prepared: r.fast.prepared || void 0 } : {},
+                  written: r.written,
                   command: r.command,
                   failures: failing.slice(0, 10).map((c) => ({ test: `${c.class.split(".").pop()}#${c.name}`, status: c.status, message: (c.message || c.type || "").slice(0, 500), at: (c.parts || []).map((p) => `${p.file}:${p.line}`) })),
                   compile: r.compile.slice(0, 10),
@@ -30427,7 +30842,7 @@ var require_tools_code = __commonJS({
                   hints: r.hints.length ? r.hints : void 0,
                   tail: r.outcome === "passed" ? void 0 : clip(r.tail.split("\n").slice(-25).join("\n"), 3e3),
                   view,
-                  next: r.outcome === "passed" ? "workspace_patch to take the changes" : "fix the test or the code at parts (workspace_write edits), then test_run again"
+                  next: r.outcome === "passed" ? r.mode === "fast" ? `before the patch: test_run mode="build" once (the project's own build), then workspace_patch` : "workspace_patch to take the changes" : "fix the test or the code at parts (test_run files=[{path, edits}] writes and runs in one call)"
                 };
               });
             }

@@ -408,7 +408,19 @@ The flow is `workspace_open` → `test_context` → `workspace_write` → `test_
    - **code parts to work on**: the frames of the stack trace that are in the repo, with the lines around them;
    - compile errors with their lines.
    With `env` + `db` (or `ddl_path`), the run gets a throwaway database on the test Postgres, loaded with the snapshot. Spring gets it as `SPRING_DATASOURCE_*` env vars, which reach the test JVM under both Maven and Gradle; Flyway, Liquibase and `spring.sql.init` are off. Long runs answer "running" with a job id, like `catalog_sync`.
-4. **`workspace_patch`** returns one git patch against the commit the workspace was opened at: new tests, the snapshot, fixes. The user sees it as a colored diff with **Download .patch** (`/patch/<id>.patch`). Apply it with `git apply --index`. **Nothing is committed or pushed.**
+   **Fast by default.** On a Maven project, the first run of a workspace module calls Maven once to compile everything and write the test classpath. After that, each run compiles only the changed sources, plus the classes that use a changed class (from the code graph), with `javac`. The selected tests then run in one JVM through a small JUnit Platform launcher of dt's own. A rerun takes about a second, a fix plus run about 5 s, a Spring slice 5–9 s; a full Maven build of the same tests takes 11–14 s (measured on the fixture).
+   - `files: [{path, content | edits}]` writes before running, so each try is one call.
+   - `mode: "build"` runs the project's own Maven/Gradle: do it once before the patch. Gradle and Kotlin projects always use the build.
+   - Every result is kept per test, with a fingerprint of the code under test (not the tests).
+4. **`workspace_patch`** lists each test in the patch with its proof:
+   - **red-green**: it failed, the code changed, then it passed, so it catches the bug;
+   - **green-only**: never seen failing. That's fine for behaviour that already worked, suspicious for a bug fix;
+   - **failing**.
+
+   It also says whether the tests passed in a full build. The patch view shows the same.
+
+   **For small bugs:** write one test that reproduces the bug, see it fail (`test_run`), fix with `test_run files=[{path, edits}]`, see it pass, run `mode: "build"` once, then take the patch. For pure logic (rounding, limits, parsing) the skeleton suggests a `@ParameterizedTest` with boundary values. The context also includes the bodies of the methods the target calls, so less reading is needed first.
+5. **`workspace_patch`** returns one git patch against the commit the workspace was opened at: new tests, the snapshot, fixes. The user sees it as a colored diff with **Download .patch** (`/patch/<id>.patch`). Apply it with `git apply --index`. **Nothing is committed or pushed.**
 
 `ddl_snapshot` writes the DDL of a synced database: extensions, schemas, enum and domain types, sequences, tables (defaults, identity, generated columns, constraints, indexes, comments), functions and procedures, views in dependency order, and triggers. It can do all of it, or only some tables or functions, or what a service uses, closed over what they need (FK targets, trigger functions, called functions and the tables they touch). A snapshot of a whole database loads into an empty one and reproduces the same catalog. The stress test checks that on 2,000 tables.
 
