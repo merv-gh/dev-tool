@@ -1,0 +1,102 @@
+{
+  "version": 1,
+  "purpose": "Untouched public symptom texts; only id and task fields were read. Relevance mappings are maintained independently by the challenge author.",
+  "cases": [
+    {
+      "id": "W01",
+      "query": "Invoice total differs by a cent"
+    },
+    {
+      "id": "W02",
+      "query": "One checkout amount changes across service boundary"
+    },
+    {
+      "id": "W03",
+      "query": "Library-owned currency behavior differs from service invoice"
+    },
+    {
+      "id": "W04",
+      "query": "Only production reservations expire"
+    },
+    {
+      "id": "W05",
+      "query": "Replay loses one large order identifier"
+    },
+    {
+      "id": "W06",
+      "query": "Tenant release depends on unrelated tenant rows"
+    },
+    {
+      "id": "W07",
+      "query": "Implement cancellation business rules and tests"
+    },
+    {
+      "id": "W08",
+      "query": "Write inventory replay tests before refactoring"
+    },
+    {
+      "id": "W09",
+      "query": "Scheduled reconciliation missed a settled order"
+    },
+    {
+      "id": "W10",
+      "query": "Endpoint defined in an internal web starter"
+    },
+    {
+      "id": "W11",
+      "query": "Shared publisher change might break other services"
+    },
+    {
+      "id": "W12",
+      "query": "Database function change has unknown callers"
+    },
+    {
+      "id": "W13",
+      "query": "Foreign key fixture misses a tenant-qualified parent"
+    },
+    {
+      "id": "W14",
+      "query": "Cross-database correlation needs explicit business relation"
+    },
+    {
+      "id": "W15",
+      "query": "Inspect DLQ event schema without consuming a group"
+    },
+    {
+      "id": "W16",
+      "query": "Find API used by a browser workflow"
+    },
+    {
+      "id": "W17",
+      "query": "Repeat a known operational investigation"
+    },
+    {
+      "id": "W18",
+      "query": "Service unavailable only on one instance"
+    },
+    {
+      "id": "W19",
+      "query": "Open isolated fix checkout and inspect final patch"
+    },
+    {
+      "id": "W20",
+      "query": "Run JVM regression and prove red then green"
+    },
+    {
+      "id": "W21",
+      "query": "Cancel long build and clean owned database lease"
+    },
+    {
+      "id": "W22",
+      "query": "Run Node tests through the JVM test runner"
+    },
+    {
+      "id": "W23",
+      "query": "Guarantee exactly-once delivery across live Kafka and RPC"
+    },
+    {
+      "id": "W24",
+      "query": "Guarantee atomic commit across independent database servers"
+    }
+  ]
+}

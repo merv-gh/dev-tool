@@ -1,0 +1,763 @@
+{
+  "version": 1,
+  "kind": "untouched-query-discovery-comparison",
+  "baseline": "4b6dc31 deterministic substring ranking algorithm replay over original built-in descriptions",
+  "current": "real tool_search registry calls; temporary synthetic config; no external systems or LLM",
+  "corpusSha256": "2282f6098c2dc9ba48e55b6066205c78c8cb12d10c2ddbcd7c2955947cfeda48",
+  "cases": [
+    {
+      "id": "W01",
+      "query": "Invoice total differs by a cent",
+      "baselineAlgorithmReplay": [
+        "code",
+        "api_exchange_import",
+        "api_exchange_list",
+        "call_history",
+        "code_search"
+      ],
+      "improvedRealRegistry": [
+        "code"
+      ],
+      "lexical": {
+        "mode": "normalized-keywords",
+        "matchedTerms": [
+          "total"
+        ],
+        "unmatchedTerms": [
+          "invoice",
+          "differ",
+          "cent"
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "id": "W02",
+      "query": "One checkout amount changes across service boundary",
+      "baselineAlgorithmReplay": [
+        "logs_trace",
+        "consul_service",
+        "api_exchange_list",
+        "code_index",
+        "health"
+      ],
+      "improvedRealRegistry": [
+        "logs_trace",
+        "health",
+        "code_index",
+        "who_uses",
+        "consul_service"
+      ],
+      "lexical": {
+        "mode": "normalized-keywords",
+        "matchedTerms": [
+          "one",
+          "checkout",
+          "change",
+          "across",
+          "service",
+          "boundary"
+        ],
+        "unmatchedTerms": [
+          "amount"
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "id": "W03",
+      "query": "Library-owned currency behavior differs from service invoice",
+      "baselineAlgorithmReplay": [
+        "passport",
+        "test_context",
+        "catalog_sync",
+        "find",
+        "health"
+      ],
+      "improvedRealRegistry": [
+        "passport",
+        "test_context",
+        "scenario_inventory",
+        "scenario_stop",
+        "testdb_resources"
+      ],
+      "lexical": {
+        "mode": "normalized-keywords",
+        "matchedTerms": [
+          "library",
+          "owned",
+          "service"
+        ],
+        "unmatchedTerms": [
+          "currency",
+          "behavior",
+          "differ",
+          "invoice"
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "id": "W04",
+      "query": "Only production reservations expire",
+      "baselineAlgorithmReplay": [
+        "api_browser_open",
+        "scenario_cleanup",
+        "api_exchange_import",
+        "api_request_replay",
+        "call_patterns"
+      ],
+      "improvedRealRegistry": [
+        "api_browser_open",
+        "diff",
+        "scenario_stop",
+        "api_request_replay",
+        "experiment_run"
+      ],
+      "lexical": {
+        "mode": "normalized-keywords",
+        "matchedTerms": [
+          "only",
+          "expire"
+        ],
+        "unmatchedTerms": [
+          "production",
+          "reservation"
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "id": "W05",
+      "query": "Replay loses one large order identifier",
+      "baselineAlgorithmReplay": [
+        "api_request_replay",
+        "fixture_validate",
+        "kafka_lag",
+        "logs_trace",
+        "script_list"
+      ],
+      "improvedRealRegistry": [
+        "fixture_validate",
+        "logs_trace",
+        "fixture_replay",
+        "api_browser_capture",
+        "script_save"
+      ],
+      "lexical": {
+        "mode": "normalized-keywords",
+        "matchedTerms": [
+          "replay",
+          "one",
+          "order"
+        ],
+        "unmatchedTerms": [
+          "lose",
+          "large",
+          "identifier"
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "id": "W06",
+      "query": "Tenant release depends on unrelated tenant rows",
+      "baselineAlgorithmReplay": [
+        "api_browser_action",
+        "api_browser_capture",
+        "api_browser_close",
+        "api_browser_open",
+        "browser_sites"
+      ],
+      "improvedRealRegistry": [
+        "testdb_release",
+        "testdb_lease_inspect",
+        "testdb_template_invalidate",
+        "show",
+        "docs_search"
+      ],
+      "lexical": {
+        "mode": "normalized-keywords",
+        "matchedTerms": [
+          "release",
+          "rows"
+        ],
+        "unmatchedTerms": [
+          "tenant",
+          "depend",
+          "unrelated"
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "id": "W07",
+      "query": "Implement cancellation business rules and tests",
+      "baselineAlgorithmReplay": [
+        "test_context",
+        "collection_cancel",
+        "ddl_snapshot",
+        "doctor",
+        "fixture_export"
+      ],
+      "improvedRealRegistry": [
+        "scenario_expectations",
+        "collection_cancel",
+        "testdb_capabilities",
+        "test_context",
+        "docs_search"
+      ],
+      "lexical": {
+        "mode": "normalized-keywords",
+        "matchedTerms": [
+          "implement",
+          "cancellation",
+          "business",
+          "rule",
+          "test"
+        ],
+        "unmatchedTerms": [],
+        "truncated": false
+      }
+    },
+    {
+      "id": "W08",
+      "query": "Write inventory replay tests before refactoring",
+      "baselineAlgorithmReplay": [
+        "fixture_replay",
+        "workspace_write",
+        "script_save",
+        "test_run",
+        "api_request_save"
+      ],
+      "improvedRealRegistry": [
+        "fixture_replay",
+        "fixture_validate",
+        "scenario_import",
+        "workspace_open",
+        "test_context"
+      ],
+      "lexical": {
+        "mode": "normalized-keywords",
+        "matchedTerms": [
+          "write",
+          "inventory",
+          "replay",
+          "test"
+        ],
+        "unmatchedTerms": [
+          "refactoring"
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "id": "W09",
+      "query": "Scheduled reconciliation missed a settled order",
+      "baselineAlgorithmReplay": [
+        "collection_plan",
+        "collection_save",
+        "ddl_snapshot",
+        "impact",
+        "kafka_lag"
+      ],
+      "improvedRealRegistry": [
+        "scenario_actions",
+        "logs_trace",
+        "docs_verify",
+        "script_list",
+        "knowledge_verify"
+      ],
+      "lexical": {
+        "mode": "normalized-keywords",
+        "matchedTerms": [
+          "scheduled",
+          "order"
+        ],
+        "unmatchedTerms": [
+          "reconciliation",
+          "missed",
+          "settled"
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "id": "W10",
+      "query": "Endpoint defined in an internal web starter",
+      "baselineAlgorithmReplay": [
+        "passport",
+        "test_context",
+        "code_index",
+        "api_browser_action",
+        "api_browser_open"
+      ],
+      "improvedRealRegistry": [
+        "passport",
+        "testdb_capabilities",
+        "passports",
+        "api_routes",
+        "knowledge_graph"
+      ],
+      "lexical": {
+        "mode": "normalized-keywords",
+        "matchedTerms": [
+          "endpoint",
+          "internal"
+        ],
+        "unmatchedTerms": [
+          "defined",
+          "web",
+          "starter"
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "id": "W11",
+      "query": "Shared publisher change might break other services",
+      "baselineAlgorithmReplay": [
+        "impact",
+        "pg_function",
+        "script_save",
+        "api_exchange_get",
+        "api_exchange_import"
+      ],
+      "improvedRealRegistry": [
+        "impact",
+        "pg_function",
+        "routes_discover",
+        "collection_save",
+        "testdb_clone"
+      ],
+      "lexical": {
+        "mode": "normalized-keywords",
+        "matchedTerms": [
+          "shared",
+          "change",
+          "other",
+          "service"
+        ],
+        "unmatchedTerms": [
+          "publisher",
+          "might",
+          "break"
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "id": "W12",
+      "query": "Database function change has unknown callers",
+      "baselineAlgorithmReplay": [
+        "impact",
+        "test_run",
+        "testdb_template_build",
+        "api_exchange_import",
+        "catalog_sync"
+      ],
+      "improvedRealRegistry": [
+        "impact",
+        "who_uses",
+        "ddl_snapshot",
+        "pg_usage",
+        "pg_function"
+      ],
+      "lexical": {
+        "mode": "normalized-keywords",
+        "matchedTerms": [
+          "database",
+          "function",
+          "change",
+          "has",
+          "unknown",
+          "caller"
+        ],
+        "unmatchedTerms": [],
+        "truncated": false
+      }
+    },
+    {
+      "id": "W13",
+      "query": "Foreign key fixture misses a tenant-qualified parent",
+      "baselineAlgorithmReplay": [
+        "fixture_schema",
+        "fixture_validate",
+        "pg_table",
+        "pg_usage",
+        "testdb_template_build"
+      ],
+      "improvedRealRegistry": [
+        "fixture_validate",
+        "testdb_template_build",
+        "testdb_template_plan",
+        "pg_table",
+        "fixture_replay"
+      ],
+      "lexical": {
+        "mode": "normalized-keywords",
+        "matchedTerms": [
+          "foreign",
+          "key",
+          "fixture",
+          "parent"
+        ],
+        "unmatchedTerms": [
+          "misse",
+          "tenant",
+          "qualified"
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "id": "W14",
+      "query": "Cross-database correlation needs explicit business relation",
+      "baselineAlgorithmReplay": [
+        "fixture_plan",
+        "logs_trace",
+        "fixture_capture",
+        "fixture_schema",
+        "fixture_validate"
+      ],
+      "improvedRealRegistry": [
+        "fixture_plan",
+        "scenario_expectations",
+        "testdb_lease_renew",
+        "ddl_snapshot",
+        "testdb_template_invalidate"
+      ],
+      "lexical": {
+        "mode": "normalized-keywords",
+        "matchedTerms": [
+          "cross",
+          "database",
+          "correlation",
+          "need",
+          "explicit",
+          "business",
+          "relation"
+        ],
+        "unmatchedTerms": [],
+        "truncated": false
+      }
+    },
+    {
+      "id": "W15",
+      "query": "Inspect DLQ event schema without consuming a group",
+      "baselineAlgorithmReplay": [
+        "api_browser_action",
+        "knowledge_graph",
+        "fixture_schema",
+        "scenario_inspect",
+        "fixture_plan"
+      ],
+      "improvedRealRegistry": [
+        "tool_contracts",
+        "fixture_schema",
+        "knowledge_graph",
+        "fixture_plan",
+        "tool_describe"
+      ],
+      "lexical": {
+        "mode": "normalized-keywords",
+        "matchedTerms": [
+          "inspect",
+          "event",
+          "schema",
+          "group"
+        ],
+        "unmatchedTerms": [
+          "dlq",
+          "consuming"
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "id": "W16",
+      "query": "Find API used by a browser workflow",
+      "baselineAlgorithmReplay": [
+        "script_save",
+        "api_exchange_import",
+        "api_request_replay",
+        "api_routes",
+        "find"
+      ],
+      "improvedRealRegistry": [
+        "routes_learn",
+        "api_request_replay",
+        "find",
+        "api_browser_open",
+        "api_routes"
+      ],
+      "lexical": {
+        "mode": "normalized-keywords",
+        "matchedTerms": [
+          "find",
+          "api",
+          "used",
+          "browser",
+          "workflow"
+        ],
+        "unmatchedTerms": [],
+        "truncated": false
+      }
+    },
+    {
+      "id": "W17",
+      "query": "Repeat a known operational investigation",
+      "baselineAlgorithmReplay": [
+        "experiment_save",
+        "call_patterns",
+        "collection_cancel",
+        "fixture_schema",
+        "scenario_inventory"
+      ],
+      "improvedRealRegistry": [
+        "experiment_save",
+        "experiment_list",
+        "testdb_release",
+        "fixture_schema",
+        "scenario_inventory"
+      ],
+      "lexical": {
+        "mode": "normalized-keywords",
+        "matchedTerms": [
+          "repeat",
+          "known",
+          "investigation"
+        ],
+        "unmatchedTerms": [
+          "operational"
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "id": "W18",
+      "query": "Service unavailable only on one instance",
+      "baselineAlgorithmReplay": [
+        "consul_service",
+        "scenario_inventory",
+        "showcase",
+        "test_context",
+        "api_request_replay"
+      ],
+      "improvedRealRegistry": [
+        "consul_service",
+        "showcase",
+        "scenario_inventory",
+        "health",
+        "logs_trace"
+      ],
+      "lexical": {
+        "mode": "normalized-keywords",
+        "matchedTerms": [
+          "service",
+          "unavailable",
+          "only",
+          "one",
+          "instance"
+        ],
+        "unmatchedTerms": [],
+        "truncated": false
+      }
+    },
+    {
+      "id": "W19",
+      "query": "Open isolated fix checkout and inspect final patch",
+      "baselineAlgorithmReplay": [
+        "api_browser_open",
+        "workspace_open",
+        "workspace_patch",
+        "test_run",
+        "fixture_plan"
+      ],
+      "improvedRealRegistry": [
+        "workspace_patch",
+        "api_browser_open",
+        "test_run",
+        "showcase",
+        "workspace_open"
+      ],
+      "lexical": {
+        "mode": "normalized-keywords",
+        "matchedTerms": [
+          "open",
+          "isolated",
+          "fix",
+          "checkout",
+          "inspect",
+          "final",
+          "patch"
+        ],
+        "unmatchedTerms": [],
+        "truncated": false
+      }
+    },
+    {
+      "id": "W20",
+      "query": "Run JVM regression and prove red then green",
+      "baselineAlgorithmReplay": [
+        "test_run",
+        "api_request_save",
+        "fixture_replay",
+        "testdb_gc",
+        "collection_run"
+      ],
+      "improvedRealRegistry": [
+        "test_run",
+        "workspace_patch",
+        "workspace_push",
+        "es_health",
+        "script_run"
+      ],
+      "lexical": {
+        "mode": "normalized-keywords",
+        "matchedTerms": [
+          "run",
+          "jvm",
+          "red",
+          "green"
+        ],
+        "unmatchedTerms": [
+          "regression",
+          "prove"
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "id": "W21",
+      "query": "Cancel long build and clean owned database lease",
+      "baselineAlgorithmReplay": [
+        "testdb_release",
+        "testdb_resources",
+        "testdb_lease_inspect",
+        "testdb_clone",
+        "testdb_gc"
+      ],
+      "improvedRealRegistry": [
+        "testdb_release",
+        "testdb_resources",
+        "testdb_clone",
+        "job_cancel",
+        "testdb_gc"
+      ],
+      "lexical": {
+        "mode": "normalized-keywords",
+        "matchedTerms": [
+          "cancel",
+          "long",
+          "build",
+          "clean",
+          "owned",
+          "database",
+          "lease"
+        ],
+        "unmatchedTerms": [],
+        "truncated": false
+      }
+    },
+    {
+      "id": "W22",
+      "query": "Run Node tests through the JVM test runner",
+      "baselineAlgorithmReplay": [
+        "test_run",
+        "scenario_run",
+        "impact",
+        "js_run",
+        "doctor"
+      ],
+      "improvedRealRegistry": [
+        "scenario_run",
+        "test_run",
+        "scenario_preflight",
+        "showcase",
+        "fixture_replay"
+      ],
+      "lexical": {
+        "mode": "normalized-keywords",
+        "matchedTerms": [
+          "run",
+          "node",
+          "test",
+          "jvm"
+        ],
+        "unmatchedTerms": [
+          "runner"
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "id": "W23",
+      "query": "Guarantee exactly-once delivery across live Kafka and RPC",
+      "baselineAlgorithmReplay": [
+        "kafka_lag",
+        "fixture_plan",
+        "overview",
+        "test_data",
+        "who_uses"
+      ],
+      "improvedRealRegistry": [
+        "scenario_state_get",
+        "kafka_last",
+        "overview",
+        "kafka_lag",
+        "who_uses"
+      ],
+      "lexical": {
+        "mode": "normalized-keywords",
+        "matchedTerms": [
+          "exactly",
+          "once",
+          "across",
+          "live",
+          "kafka"
+        ],
+        "unmatchedTerms": [
+          "guarantee",
+          "delivery",
+          "rpc"
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "id": "W24",
+      "query": "Guarantee atomic commit across independent database servers",
+      "baselineAlgorithmReplay": [
+        "fixture_plan",
+        "knowledge_search",
+        "pg_usage",
+        "testdb_lease_inspect",
+        "who_uses"
+      ],
+      "improvedRealRegistry": [
+        "files_stores",
+        "who_uses",
+        "fixture_plan",
+        "workspace_push",
+        "bitbucket_my_prs"
+      ],
+      "lexical": {
+        "mode": "normalized-keywords",
+        "matchedTerms": [
+          "commit",
+          "across",
+          "independent",
+          "database",
+          "server"
+        ],
+        "unmatchedTerms": [
+          "guarantee",
+          "atomic"
+        ],
+        "truncated": false
+      }
+    }
+  ],
+  "limits": "Lexical ranking is not symptom diagnosis, semantic recall, permission to act or application proof. No unsupported-operation success is inferred from returned tools."
+}

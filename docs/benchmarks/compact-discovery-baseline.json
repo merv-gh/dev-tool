@@ -1,0 +1,888 @@
+{
+  "version": 1,
+  "kind": "deterministic-registry-retrieval",
+  "corpusVersion": 1,
+  "corpusSha256": "1a2b1440a4d16192b612bb533e6986aad675e4fa46f92eee1f1e6d4eea987968",
+  "registrySha256": "19e0679b00594f21ff1d042bf20425d6f9dddb81515b2d63e60cc70cc03ccb28",
+  "runtime": "v24.22.0",
+  "environment": "temporary local config; dev/staging/prod; built-in enabled tools only; no remote systems",
+  "modelEvaluation": {
+    "performed": false,
+    "reason": "Registry retrieval and scripted contract checks do not evaluate a language model"
+  },
+  "profiles": {
+    "compact": {
+      "count": 11,
+      "utf8Bytes": 7042,
+      "estimatedTokens": 1761,
+      "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+    },
+    "all": {
+      "count": 159,
+      "utf8Bytes": 114995,
+      "estimatedTokens": 28749,
+      "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+    }
+  },
+  "metrics": {
+    "cases": 32,
+    "meanRecallAt3": 0.8854166666666666,
+    "meanRecallAt5": 0.9635416666666666,
+    "hitAt3": 0.9375,
+    "hitAt5": 1
+  },
+  "latencyMs": {
+    "kind": "warm in-process real registry calls including local trace/history; no HTTP or model inference",
+    "samples": 32,
+    "p50": 3.7851989999999205,
+    "p95": 9.550791000000004,
+    "max": 31.188163000000003
+  },
+  "context": {
+    "meanSearchBytes": 2475.46875,
+    "maxSearchBytes": 2973,
+    "meanTop3DescriptionBytes": 3838.5
+  },
+  "cases": [
+    {
+      "id": "ops-env",
+      "query": "Why is checkout broken in staging? Show service health and consumer lag for that environment.",
+      "relevant": [
+        "overview",
+        "health",
+        "kafka_lag"
+      ],
+      "ranked": [
+        "overview",
+        "showcase",
+        "dt_log",
+        "impact",
+        "test_data"
+      ],
+      "recallAt3": 0.3333333333333333,
+      "recallAt5": 0.3333333333333333,
+      "search": {
+        "utf8Bytes": 2540,
+        "estimatedTokens": 635,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 2724,
+        "estimatedTokens": 681,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "ops-errors",
+      "query": "Find payment-service exceptions in prod over the last hour.",
+      "relevant": [
+        "logs_search"
+      ],
+      "ranked": [
+        "find",
+        "overview",
+        "catalog_sync",
+        "code_symbols",
+        "logs_search"
+      ],
+      "recallAt3": 0,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 2471,
+        "estimatedTokens": 618,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 3094,
+        "estimatedTokens": 774,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "ops-trace",
+      "query": "Follow correlation id tr-51842 through every service in dev.",
+      "relevant": [
+        "logs_trace"
+      ],
+      "ranked": [
+        "logs_trace",
+        "test_data",
+        "scenario_inventory",
+        "fixture_capture",
+        "impact"
+      ],
+      "recallAt3": 1,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 2543,
+        "estimatedTokens": 636,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 3283,
+        "estimatedTokens": 821,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "ops-lag",
+      "query": "Which Kafka consumers are falling behind and by how many messages?",
+      "relevant": [
+        "kafka_lag"
+      ],
+      "ranked": [
+        "kafka_lag",
+        "test_run",
+        "api_routes",
+        "diff",
+        "impact"
+      ],
+      "recallAt3": 1,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 2571,
+        "estimatedTokens": 643,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 4733,
+        "estimatedTokens": 1184,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "ops-deployed",
+      "query": "Which commit and version of order-service is deployed in staging?",
+      "relevant": [
+        "consul_service"
+      ],
+      "ranked": [
+        "showcase",
+        "passport",
+        "consul_service",
+        "impact",
+        "knowledge_graph"
+      ],
+      "recallAt3": 1,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 2530,
+        "estimatedTokens": 633,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 3407,
+        "estimatedTokens": 852,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "ops-fetch",
+      "query": "Fetching repository sources and running tests fails here; diagnose JDK Maven credentials and network setup.",
+      "relevant": [
+        "doctor"
+      ],
+      "ranked": [
+        "doctor",
+        "test_run",
+        "scenario_start",
+        "api_browser_action",
+        "api_exchange_import"
+      ],
+      "recallAt3": 1,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 2664,
+        "estimatedTokens": 666,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 4929,
+        "estimatedTokens": 1233,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "impact-library",
+      "query": "If an internal library method changes, which callers endpoints and tests are affected?",
+      "relevant": [
+        "impact"
+      ],
+      "ranked": [
+        "impact",
+        "test_context",
+        "api_routes",
+        "test_run",
+        "experiment_compare"
+      ],
+      "recallAt3": 1,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 2686,
+        "estimatedTokens": 672,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 4498,
+        "estimatedTokens": 1125,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "impact-column",
+      "query": "Find the impact of changing the payments fee column across SQL functions views and service code.",
+      "relevant": [
+        "impact",
+        "pg_usage"
+      ],
+      "ranked": [
+        "impact",
+        "find",
+        "ddl_snapshot",
+        "pg_usage",
+        "catalog_sync"
+      ],
+      "recallAt3": 0.5,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 2950,
+        "estimatedTokens": 738,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 3843,
+        "estimatedTokens": 961,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "impact-topic",
+      "query": "Who produces and consumes payments.created across our services?",
+      "relevant": [
+        "who_uses",
+        "impact"
+      ],
+      "ranked": [
+        "who_uses",
+        "impact",
+        "knowledge_graph",
+        "knowledge_search",
+        "pg_usage"
+      ],
+      "recallAt3": 1,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 2581,
+        "estimatedTokens": 646,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 5037,
+        "estimatedTokens": 1260,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "code-log",
+      "query": "Find the source line for the literal error message pool exhausted in all indexed repositories.",
+      "relevant": [
+        "code_search"
+      ],
+      "ranked": [
+        "test_run",
+        "code_search",
+        "logs_search",
+        "testdb_template_plan",
+        "workspace_write"
+      ],
+      "recallAt3": 1,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 2785,
+        "estimatedTokens": 697,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 5727,
+        "estimatedTokens": 1432,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "code-symbol",
+      "query": "Find the full method identity and signature for FeeCalculator before following callers.",
+      "relevant": [
+        "code_symbols"
+      ],
+      "ranked": [
+        "code_symbols",
+        "api_routes",
+        "script_save",
+        "tool_search",
+        "workspace_write"
+      ],
+      "recallAt3": 1,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 2551,
+        "estimatedTokens": 638,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 4754,
+        "estimatedTokens": 1189,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "fixture-plan",
+      "query": "Plan related orders and payments test data across two databases with foreign keys and explicit cross database relations.",
+      "relevant": [
+        "fixture_plan"
+      ],
+      "ranked": [
+        "fixture_plan",
+        "pg_usage",
+        "impact",
+        "testdb_release",
+        "test_data"
+      ],
+      "recallAt3": 1,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 2604,
+        "estimatedTokens": 651,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 4109,
+        "estimatedTokens": 1028,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "fixture-capture",
+      "query": "Capture bounded rows and correlated Kafka messages read only, retaining offsets and provenance and masking secrets.",
+      "relevant": [
+        "fixture_capture"
+      ],
+      "ranked": [
+        "fixture_capture",
+        "scenario_state_capture",
+        "api_browser_capture",
+        "fixture_export",
+        "fixture_plan"
+      ],
+      "recallAt3": 1,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 2431,
+        "estimatedTokens": 608,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 2313,
+        "estimatedTokens": 579,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "fixture-export",
+      "query": "Export the saved related data capture as portable PostgreSQL SQL and Kafka files for replay.",
+      "relevant": [
+        "fixture_export"
+      ],
+      "ranked": [
+        "scenario_package",
+        "scenario_export",
+        "fixture_plan",
+        "testdb_template_plan",
+        "fixture_export"
+      ],
+      "recallAt3": 0,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 2472,
+        "estimatedTokens": 618,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 4521,
+        "estimatedTokens": 1131,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "fixture-validation",
+      "query": "Check whether a saved fixture capture has missing parent relationships or truncated reads without querying production.",
+      "relevant": [
+        "fixture_validate"
+      ],
+      "ranked": [
+        "fixture_validate",
+        "fixture_schema",
+        "scenario_state_capture",
+        "scenario_package",
+        "fixture_capture"
+      ],
+      "recallAt3": 1,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 2435,
+        "estimatedTokens": 609,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 2037,
+        "estimatedTokens": 510,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "api-route",
+      "query": "Which service and controller handles GET /api/orders/42 observed in the browser?",
+      "relevant": [
+        "api_routes"
+      ],
+      "ranked": [
+        "api_routes",
+        "test_data",
+        "ddl_snapshot",
+        "impact",
+        "overview"
+      ],
+      "recallAt3": 1,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 2717,
+        "estimatedTokens": 680,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 3880,
+        "estimatedTokens": 970,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "api-capture",
+      "query": "Inspect captured sanitized HTTP requests and JSON responses without sending any requests.",
+      "relevant": [
+        "api_exchange_get",
+        "api_exchange_list"
+      ],
+      "ranked": [
+        "api_exchange_list",
+        "api_request_prepare",
+        "api_browser_action",
+        "api_browser_capture",
+        "api_request_replay"
+      ],
+      "recallAt3": 0.5,
+      "recallAt5": 0.5,
+      "search": {
+        "utf8Bytes": 2475,
+        "estimatedTokens": 619,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 2780,
+        "estimatedTokens": 695,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "api-prepare",
+      "query": "Prepare an editable parameterized API request from a captured exchange but do not send it.",
+      "relevant": [
+        "api_request_prepare"
+      ],
+      "ranked": [
+        "api_request_prepare",
+        "api_browser_capture",
+        "api_request_save",
+        "api_exchange_list",
+        "api_request_replay"
+      ],
+      "recallAt3": 1,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 2389,
+        "estimatedTokens": 598,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 3604,
+        "estimatedTokens": 901,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "api-save",
+      "query": "Save this prepared request as a reusable script with assertions and runtime secret parameters.",
+      "relevant": [
+        "api_request_save"
+      ],
+      "ranked": [
+        "api_request_save",
+        "api_request_prepare",
+        "script_save",
+        "api_request_replay",
+        "collection_save"
+      ],
+      "recallAt3": 1,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 2724,
+        "estimatedTokens": 681,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 5978,
+        "estimatedTokens": 1495,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "test-flow",
+      "query": "Get an isolated test skeleton for an endpoint flowing through internal libraries, with beans and mocks.",
+      "relevant": [
+        "test_context"
+      ],
+      "ranked": [
+        "test_context",
+        "test_data",
+        "impact",
+        "showcase",
+        "test_run"
+      ],
+      "recallAt3": 1,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 2973,
+        "estimatedTokens": 744,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 5269,
+        "estimatedTokens": 1318,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "test-objects",
+      "query": "Generate valid request bodies events and entity rows whose IDs agree and validation edge cases.",
+      "relevant": [
+        "test_data"
+      ],
+      "ranked": [
+        "test_data",
+        "api_browser_capture",
+        "knowledge_graph",
+        "routes_learn",
+        "knowledge_entity"
+      ],
+      "recallAt3": 1,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 2274,
+        "estimatedTokens": 569,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 5176,
+        "estimatedTokens": 1294,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "test-poll",
+      "query": "The workspace test run returned running and a job id. Wait for that exact run rather than starting another.",
+      "relevant": [
+        "test_run"
+      ],
+      "ranked": [
+        "test_run",
+        "showcase",
+        "scenario_start",
+        "workspace_open",
+        "workspace_write"
+      ],
+      "recallAt3": 1,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 2823,
+        "estimatedTokens": 706,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 5599,
+        "estimatedTokens": 1400,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "test-red-green",
+      "query": "Show the patch and evidence that each regression test failed before the fix and passed after it.",
+      "relevant": [
+        "workspace_patch"
+      ],
+      "ranked": [
+        "test_run",
+        "workspace_patch",
+        "workspace_write",
+        "showcase",
+        "doctor"
+      ],
+      "recallAt3": 1,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 2875,
+        "estimatedTokens": 719,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 5481,
+        "estimatedTokens": 1371,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "test-async",
+      "query": "Observe asynchronous HTTP and file effects until a deadline with an explicit quiet window.",
+      "relevant": [
+        "scenario_observe"
+      ],
+      "ranked": [
+        "scenario_observe",
+        "api_routes",
+        "scenario_inventory",
+        "scenario_preflight",
+        "scenario_run"
+      ],
+      "recallAt3": 1,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 2516,
+        "estimatedTokens": 629,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 2688,
+        "estimatedTokens": 672,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "test-leases",
+      "query": "Inspect expired scratch database leases and visible cleanup failures without exposing passwords.",
+      "relevant": [
+        "testdb_resources",
+        "testdb_lease_inspect"
+      ],
+      "ranked": [
+        "testdb_resources",
+        "scenario_inspect",
+        "testdb_lease_inspect",
+        "testdb_gc",
+        "scenario_cleanup"
+      ],
+      "recallAt3": 1,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 1770,
+        "estimatedTokens": 443,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 1663,
+        "estimatedTokens": 416,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "test-cleanup",
+      "query": "Reclaim abandoned test database leases but protect active leases and pinned templates; preview cleanup.",
+      "relevant": [
+        "testdb_gc"
+      ],
+      "ranked": [
+        "testdb_gc",
+        "testdb_resources",
+        "testdb_template_list",
+        "testdb_lease_renew",
+        "pg_query"
+      ],
+      "recallAt3": 1,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 1674,
+        "estimatedTokens": 419,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 1850,
+        "estimatedTokens": 463,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "test-reset",
+      "query": "Reset committed asynchronous writes between test cases by replacing private database copies.",
+      "relevant": [
+        "testdb_reset"
+      ],
+      "ranked": [
+        "testdb_reset",
+        "test_run",
+        "testdb_clone",
+        "test_data",
+        "testdb_initialize"
+      ],
+      "recallAt3": 1,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 2479,
+        "estimatedTokens": 620,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 4867,
+        "estimatedTokens": 1217,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "suite-proof",
+      "query": "A collection HTTP request returned 200. Independently check every case assertions and cleanup before claiming success.",
+      "relevant": [
+        "collection_check"
+      ],
+      "ranked": [
+        "collection_check",
+        "collection_report",
+        "api_request_save",
+        "collection_plan",
+        "collection_history"
+      ],
+      "recallAt3": 1,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 2116,
+        "estimatedTokens": 529,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 2750,
+        "estimatedTokens": 688,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "knowledge-stale",
+      "query": "Inspect which knowledge sources have stale cached revisions and failed updates.",
+      "relevant": [
+        "knowledge_sources"
+      ],
+      "ranked": [
+        "knowledge_sources",
+        "knowledge_search",
+        "knowledge_sync",
+        "knowledge_verify",
+        "fixture_schema"
+      ],
+      "recallAt3": 1,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 2110,
+        "estimatedTokens": 528,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 2413,
+        "estimatedTokens": 604,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "knowledge-ambiguity",
+      "query": "Inspect a semantic entity by exact identity and preserve ambiguous aliases as candidates.",
+      "relevant": [
+        "knowledge_entity",
+        "knowledge_graph"
+      ],
+      "ranked": [
+        "knowledge_entity",
+        "knowledge_graph",
+        "testdb_template_plan",
+        "testdb_lease_inspect",
+        "api_exchange_import"
+      ],
+      "recallAt3": 1,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 2176,
+        "estimatedTokens": 544,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 4931,
+        "estimatedTokens": 1233,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "knowledge-quote",
+      "query": "Verify this exact quote against its historical source revision before citing it.",
+      "relevant": [
+        "knowledge_verify",
+        "docs_verify"
+      ],
+      "ranked": [
+        "knowledge_verify",
+        "docs_verify",
+        "workspace_write",
+        "test_context",
+        "collection_history"
+      ],
+      "recallAt3": 1,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 2490,
+        "estimatedTokens": 623,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 3468,
+        "estimatedTokens": 867,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    },
+    {
+      "id": "tool-exact",
+      "query": "testdb_lease_renew",
+      "relevant": [
+        "testdb_lease_renew"
+      ],
+      "ranked": [
+        "testdb_lease_renew",
+        "testdb_lease_inspect",
+        "testdb_release",
+        "testdb_clone",
+        "testdb_gc"
+      ],
+      "recallAt3": 1,
+      "recallAt5": 1,
+      "search": {
+        "utf8Bytes": 1820,
+        "estimatedTokens": 455,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      },
+      "top3Descriptions": {
+        "utf8Bytes": 1426,
+        "estimatedTokens": 357,
+        "tokenEstimateMethod": "UTF-8 bytes / 4; not a tokenizer measurement"
+      }
+    }
+  ]
+}

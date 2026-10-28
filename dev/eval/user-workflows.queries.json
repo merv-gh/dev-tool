@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "purpose": "Supplementary user questions. Judgments fixed before ranking, independently of the 32-query development corpus. Retrieval relevance does not establish capability completeness.",
+  "cases": [
+    {
+      "id": "U01",
+      "query": "find all places across functions and repositories, where this column gets read and gets written",
+      "relevant": ["impact", "code_search", "pg_usage"],
+      "boundary": "impact supports a column target and code_search can recover exact textual evidence. pg_usage supplies table/function context; table-level usage is not column-level read/write proof. Dynamic SQL, reflection and stale/missing indexes require explicit gaps."
+    },
+    {
+      "id": "U02",
+      "query": "recreate bug locally - find all related entities in databases,es,kafka messages to recreate state that would recreate bug",
+      "relevant": ["fixture_plan", "fixture_capture", "scenario_inventory", "scenario_state_capture"],
+      "boundary": "PG/Kafka related fixtures and bounded ES read-state capture are separate stages. Correlation, complete cross-system state and reproduction of the actual bug require evidence and a runnable adapter; a capture alone proves neither."
+    },
+    {
+      "id": "U03",
+      "query": "refactor method that takes postgres function results, but fills some fields from other functions, check it still same locally and on dev environment",
+      "relevant": ["impact", "test_context", "test_run", "experiment_save", "experiment_run"],
+      "boundary": "Inspect exact function/method identities, preserve representative state and independently compare old/new return values and effects. test_run is local/scratch execution; a dev query or read-only experiment does not deploy the refactor or prove its behavior in the dev service."
+    },
+    {
+      "id": "U04",
+      "query": "run this test on dev environment",
+      "relevant": ["test_run", "doctor"],
+      "expectedDisposition": "clarify-execution-target",
+      "boundary": "test_run env selects source schema/fixture inputs and can arrange scratch databases. It does not run the test against the deployed dev application. Ask which test, runner and target resources are intended; preserve existing push and live mutation boundaries."
+    }
+  ]
+}
