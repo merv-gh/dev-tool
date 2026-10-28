@@ -39,6 +39,10 @@ services:
       DT_MAVEN_REPO: ${DT_MAVEN_REPO:-/var/dt-build/m2}
       DT_GRADLE_USER_HOME: ${DT_GRADLE_USER_HOME:-/var/dt-build/gradle}
       DT_TEST_DB_URL: ${DT_TEST_DB_URL:-postgres://dt:dt@testdb:5432/postgres}
+      # builds run on the runner (jdk profile): Docker for Testcontainers there, no dt secrets; without it, here
+      DT_RUNNER_URL: ${DT_RUNNER_URL:-http://runner:4100}
+      DT_RUNNER_TOKEN: ${DT_RUNNER_TOKEN:-}
+      DT_BUILD_DIR: /var/dt-build
       PORT: 4000
       NODE_ENV: production
       HOME: /tmp                                           # git needs a writable home; the uid may not exist in the image
@@ -94,6 +98,40 @@ services:
       HOME: /tmp
     volumes:
       - ${DT_HOME_DIR:-.}/repos:/repos   # graph data is written next to each repo (.code-review-graph/)
+    restart: unless-stopped
+
+  # Runs the builds of test_run (Maven, Gradle, javac, the test JVM) for dt: the JDK, the workspaces and build
+  # caches, and the host's Docker for Testcontainers. No config folder, no secrets: dt sends each command with
+  # what that build needs. Reachable only on this network, and only with DT_RUNNER_TOKEN (run.sh makes one).
+  runner:
+    profiles: [jdk]
+    image: ${DT_NODE_IMAGE:-node:22-bookworm}
+    command: ["node", "/app/dt.js", "runner", "--port", "4100"]
+    user: "${DT_UID:-1000}:${DT_GID:-1000}"
+    group_add: ["${DT_DOCKER_GID:-0}"]   # the Docker socket's group (Docker Desktop: 0)
+    environment:
+      HOME: /tmp
+      DT_HOME: /tmp/dt-runner
+      DT_RUNNER_TOKEN: ${DT_RUNNER_TOKEN:-}
+      DT_WORK_DIR: ${DT_WORK_DIR:-/var/dt-work}
+      DT_BUILD_DIR: /var/dt-build
+      DT_JAVA_HOME: ${DT_JAVA_HOME:-/opt/jdk/java}
+      DT_MAVEN: ${DT_MAVEN:-/opt/jdk/maven/bin/mvn}
+      DOCKER_HOST: unix:///var/run/docker.sock
+      # Testcontainers starts containers on the host's Docker; the tests reach their ports through the host
+      TESTCONTAINERS_HOST_OVERRIDE: ${TESTCONTAINERS_HOST_OVERRIDE:-host.docker.internal}
+      TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE: /var/run/docker.sock
+      TESTCONTAINERS_HUB_IMAGE_NAME_PREFIX: ${TESTCONTAINERS_HUB_IMAGE_NAME_PREFIX:-}
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    volumes:
+      - ./dist:/app:ro
+      - jdk:/opt/jdk:ro
+      - dt-work:/var/dt-work
+      - dt-build:/var/dt-build
+      - ${DT_DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+    depends_on:
+      jdk: { condition: service_completed_successfully }
+      init: { condition: service_completed_successfully }
     restart: unless-stopped
 
   # One-shot: the volumes belong to dt's user (a new volume belongs to root)

@@ -4,7 +4,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-function start({ dir, user, password }) {
+function start({ dir, user, password, host = '127.0.0.1' }) {
   const requests = [];
   const want = 'Basic ' + Buffer.from(`${user}:${password}`).toString('base64');
   const server = http.createServer((req, res) => {
@@ -17,7 +17,8 @@ function start({ dir, user, password }) {
     if (req.method === 'HEAD') return res.end();
     fs.createReadStream(f).pipe(res);
   });
-  return new Promise(r => server.listen(0, '127.0.0.1', () => r({ url: `http://127.0.0.1:${server.address().port}/repository/maven-releases`, requests, close: () => server.close() })));
+  // host: where the build reaches it (with a build runner in another container: this container's address)
+  return new Promise(r => server.listen(0, host === '127.0.0.1' ? '127.0.0.1' : '0.0.0.0', () => r({ url: `http://${host}:${server.address().port}/repository/maven-releases`, requests, close: () => server.close() })));
 }
 
 module.exports = { start };

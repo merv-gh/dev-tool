@@ -133,7 +133,9 @@ test('a private repository: credentials from gradle.properties in the config fol
   fs.mkdirSync(art, { recursive: true });
   execFileSync(bin('jar'), ['cf', path.join(art, 'greeting-1.0.0.jar'), '-C', path.join(lib, 'out'), '.']);
   fs.writeFileSync(path.join(art, 'greeting-1.0.0.pom'), '<project><modelVersion>4.0.0</modelVersion><groupId>com.acme.libs</groupId><artifactId>greeting</artifactId><version>1.0.0</version></project>');
-  const nexus = await require('./fake-nexus').start({ dir: repoDir, user: 'ci-reader', password: 'n3xus-s3cret' });
+  // builds on a runner container reach this container by its network address
+  const ip = process.env.DT_RUNNER_URL ? Object.values(os.networkInterfaces()).flat().find(i => i && i.family === 'IPv4' && !i.internal)?.address : null;
+  const nexus = await require('./fake-nexus').start({ dir: repoDir, user: 'ci-reader', password: 'n3xus-s3cret', host: ip || '127.0.0.1' });
   try {
     fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ envs: { dev: {} }, tests: { gradle: GRADLE } }));
     require('../lib/config').reload();

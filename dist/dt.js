@@ -24,7 +24,9 @@ var require_config = __commonJS({
       plugins: path2.resolve(process.env.DT_PLUGINS_DIR || path2.join(HOME, "plugins")),
       scripts: path2.resolve(process.env.DT_SCRIPTS_DIR || path2.join(HOME, "scripts")),
       views: path2.resolve(process.env.DT_VIEWS_DIR || path2.join(HOME, "views")),
-      work: path2.resolve(process.env.DT_WORK_DIR || path2.join(HOME, "work"))
+      work: path2.resolve(process.env.DT_WORK_DIR || path2.join(HOME, "work")),
+      // build helpers the runner needs too (dt's JUnit launcher); a volume shared with it in compose
+      build: path2.resolve(process.env.DT_BUILD_DIR || path2.join(process.env.DT_CACHE_DIR || path2.join(HOME, "cache"), "build"))
     };
     var LOG_FIELDS = { time: "@timestamp", message: "message", service: "service.name", level: "log.level", trace: "trace.id" };
     function parseEnvFile(file) {
@@ -362,6 +364,9 @@ var require_config = __commonJS({
         pgUrl: c.pgUrl || e.DT_TEST_DB_URL || null,
         javaToolOptions: c.javaToolOptions !== void 0 ? c.javaToolOptions : "-Dnet.bytebuddy.experimental=true",
         javaToolOptionsGradle: c.javaToolOptionsGradle === true,
+        // the runner container that runs builds (compose: http://runner:4100); empty: builds run in dt itself
+        runnerUrl: (c.runnerUrl !== void 0 ? c.runnerUrl : e.DT_RUNNER_URL) || null,
+        runnerToken: c.runnerToken || e.DT_RUNNER_TOKEN || null,
         args: [].concat(c.args || [])
       };
     }
@@ -29371,6 +29376,216 @@ var require_calls = __commonJS({
   }
 });
 
+// lib/runner.js
+var require_runner = __commonJS({
+  "lib/runner.js"(exports2, module2) {
+    var http2 = require("http");
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var { spawn, spawnSync } = require("child_process");
+    var { EventEmitter } = require("events");
+    var KEEP_ENV = /^(PATH|HOME|USER|LANG|LANGUAGE|LC_\w+|TZ|TMPDIR|JAVA_HOME|DOCKER_HOST|DOCKER_TLS_VERIFY|DOCKER_CERT_PATH|TESTCONTAINERS_\w+|(HTTPS?|NO|ALL)_PROXY|(https?|no|all)_proxy|SSL_CERT_FILE|SSL_CERT_DIR)$/;
+    var OWN = /^(DOCKER_HOST|DOCKER_TLS_VERIFY|DOCKER_CERT_PATH|TESTCONTAINERS_\w+)$/;
+    function roots() {
+      const { PATHS } = require_config();
+      return [PATHS.work, PATHS.build, ...String(process.env.DT_RUNNER_ROOTS || "").split(",").filter(Boolean)].map((p) => path2.resolve(p));
+    }
+    var ping = () => new Promise((resolve) => {
+      const sock = (process.env.DOCKER_HOST || "unix:///var/run/docker.sock").replace(/^unix:\/\//, "");
+      if (!fs2.existsSync(sock)) return resolve({ ok: false, error: `no Docker socket at ${sock}` });
+      const req = http2.get({ socketPath: sock, path: "/version", timeout: 5e3 }, (r) => {
+        let d = "";
+        r.on("data", (c) => {
+          d += c;
+        });
+        r.on("end", () => {
+          try {
+            const v = JSON.parse(d);
+            resolve({ ok: r.statusCode === 200, version: v.Version, os: v.Os, platform: v.Platform?.Name });
+          } catch {
+            resolve({ ok: false, error: `HTTP ${r.statusCode}` });
+          }
+        });
+      });
+      req.on("error", (e) => resolve({ ok: false, error: e.code === "EACCES" ? `EACCES on ${sock}: the runner's user is not in the socket's group (DT_DOCKER_GID)` : e.message }));
+    });
+    function info() {
+      const cfg = require_config().getTests();
+      const run = (cmd, args) => {
+        const r = spawnSync(cmd, args, { encoding: "utf8", timeout: 2e4, env: { ...process.env, JAVA_TOOL_OPTIONS: "" } });
+        return r.error ? { ok: false, error: r.error.message } : { ok: r.status === 0, out: `${r.stdout || ""}${r.stderr || ""}`.trim().split("\n")[0] };
+      };
+      const bin = (t) => cfg.javaHome ? path2.join(cfg.javaHome, "bin", t) : t;
+      return ping().then((docker) => ({
+        uid: process.getuid?.(),
+        java: run(bin("java"), ["-version"]),
+        javac: run(bin("javac"), ["-version"]),
+        maven: cfg.maven ? run(cfg.maven, ["-v"]) : null,
+        docker,
+        roots: roots(),
+        testcontainersHost: process.env.TESTCONTAINERS_HOST_OVERRIDE || null
+      }));
+    }
+    function serve({ port = 4100, host = "0.0.0.0" } = {}) {
+      const token = process.env.DT_RUNNER_TOKEN;
+      const procs = /* @__PURE__ */ new Map();
+      const send = (res, code, body) => {
+        res.writeHead(code, { "content-type": "application/json" });
+        res.end(JSON.stringify(body));
+      };
+      const server = http2.createServer(async (req, res) => {
+        if (req.url === "/health") return send(res, 200, { ok: true });
+        if (!token) return send(res, 503, { error: "DT_RUNNER_TOKEN is not set: the runner refuses commands" });
+        if (req.headers.authorization !== `Bearer ${token}`) return send(res, 401, { error: "bad token" });
+        const body = await new Promise((r) => {
+          let d = "";
+          req.on("data", (c) => {
+            d += c;
+          });
+          req.on("end", () => {
+            try {
+              r(JSON.parse(d || "{}"));
+            } catch {
+              r({});
+            }
+          });
+        });
+        if (req.method === "GET" && req.url === "/info") return send(res, 200, await info());
+        if (req.method === "POST" && req.url === "/kill") {
+          const p2 = procs.get(body.id);
+          if (p2) {
+            p2.kill("SIGTERM");
+            setTimeout(() => {
+              try {
+                p2.kill("SIGKILL");
+              } catch {
+              }
+            }, 5e3).unref();
+          }
+          return send(res, 200, { killed: !!p2 });
+        }
+        if (req.method !== "POST" || req.url !== "/exec") return send(res, 404, { error: "not found" });
+        const cwd = path2.resolve(body.cwd || "");
+        if (!roots().some((r) => cwd === r || cwd.startsWith(r + path2.sep))) return send(res, 403, { error: `cwd ${cwd} is outside the runner's folders (${roots().join(", ")})` });
+        const own = Object.fromEntries(Object.entries(process.env).filter(([k]) => KEEP_ENV.test(k)));
+        const env = { ...own, ...body.env || {}, ...Object.fromEntries(Object.entries(own).filter(([k]) => OWN.test(k))) };
+        res.writeHead(200, { "content-type": "application/x-ndjson" });
+        const started = Date.now();
+        let killed = false;
+        const p = spawn(body.cmd, body.args || [], { cwd, env, stdio: ["ignore", "pipe", "pipe"] });
+        const id = body.id || String(p.pid);
+        procs.set(id, p);
+        const timer = setTimeout(() => {
+          killed = true;
+          p.kill("SIGTERM");
+          setTimeout(() => {
+            try {
+              p.kill("SIGKILL");
+            } catch {
+            }
+          }, 5e3).unref();
+        }, Number(body.timeoutMs) || 9e5);
+        const out2 = (b) => res.write(JSON.stringify({ out: b.toString() }) + "\n");
+        p.stdout.on("data", out2);
+        p.stderr.on("data", out2);
+        res.on("close", () => {
+          if (p.exitCode === null && !res.writableEnded) {
+            try {
+              p.kill("SIGTERM");
+            } catch {
+            }
+          }
+        });
+        p.on("error", (e) => {
+          clearTimeout(timer);
+          procs.delete(id);
+          res.end(JSON.stringify({ done: true, code: -1, error: e.message, ms: Date.now() - started }) + "\n");
+        });
+        p.on("close", (code) => {
+          clearTimeout(timer);
+          procs.delete(id);
+          res.end(JSON.stringify({ done: true, code, killed, ms: Date.now() - started }) + "\n");
+        });
+      });
+      server.listen(port, host, () => console.error(`dt runner: ${host}:${port}${token ? "" : " (DT_RUNNER_TOKEN not set: refusing commands)"}; folders ${roots().join(", ")}`));
+      return server;
+    }
+    var url = () => require_config().getTests().runnerUrl;
+    var auth = () => ({ authorization: `Bearer ${require_config().getTests().runnerToken || ""}` });
+    var downUntil = 0;
+    var downWhy = "";
+    function exec(cmd, args, { cwd, env, timeoutMs = 9e5, log } = {}) {
+      const T = require_trace();
+      if (Date.now() < downUntil) return Promise.resolve({ code: -1, out: downWhy, ms: 0, runnerError: true, unreachable: true, quiet: true });
+      const id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+      const handle = new EventEmitter();
+      handle.kill = () => {
+        fetch(`${url()}/kill`, { method: "POST", headers: { ...auth(), "content-type": "application/json" }, body: JSON.stringify({ id }) }).catch(() => {
+        });
+        return true;
+      };
+      T.child(handle);
+      return new Promise((resolve) => {
+        const started = Date.now();
+        const u = new URL("/exec", url());
+        let out2 = "", buf = "", done = null;
+        const req = http2.request({ hostname: u.hostname, port: u.port, path: u.pathname, method: "POST", headers: { ...auth(), "content-type": "application/json" } }, (res) => {
+          if (res.statusCode !== 200) {
+            let d = "";
+            res.on("data", (c) => {
+              d += c;
+            });
+            res.on("end", () => {
+              handle.emit("exit");
+              resolve({ code: -1, out: `runner: HTTP ${res.statusCode} ${d.slice(0, 300)}`, ms: Date.now() - started, runnerError: true });
+            });
+            return;
+          }
+          res.on("data", (c) => {
+            buf += c;
+            let i;
+            while ((i = buf.indexOf("\n")) >= 0) {
+              const line = buf.slice(0, i);
+              buf = buf.slice(i + 1);
+              let m;
+              try {
+                m = JSON.parse(line);
+              } catch {
+                continue;
+              }
+              if (m.out) {
+                out2 += m.out;
+                if (out2.length > 4e6) out2 = out2.slice(-3e6);
+                const last = m.out.trim().split("\n").pop();
+                if (last && log) log(last.slice(0, 200));
+              }
+              if (m.done) done = m;
+            }
+          });
+          res.on("end", () => {
+            handle.emit("exit");
+            resolve({ code: done ? done.code : -1, out: out2 + (done?.error ? `
+${done.error}` : ""), killed: done?.killed, ms: Date.now() - started, ...done ? {} : { runnerError: true } });
+          });
+        });
+        req.on("error", (e) => {
+          handle.emit("exit");
+          downUntil = Date.now() + 6e4;
+          downWhy = `runner ${url()}: ${e.code || e.message}`;
+          resolve({ code: -1, out: downWhy, ms: Date.now() - started, runnerError: true, unreachable: true });
+        });
+        req.end(JSON.stringify({ id, cmd, args, cwd, env, timeoutMs }));
+      });
+    }
+    async function remoteInfo() {
+      const res = await fetch(`${url()}/info`, { headers: auth(), signal: AbortSignal.timeout(3e4) });
+      if (!res.ok) throw new Error(`runner ${url()}: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
+      return res.json();
+    }
+    module2.exports = { serve, exec, remoteInfo, info, url };
+  }
+});
+
 // lib/buildenv.js
 var require_buildenv = __commonJS({
   "lib/buildenv.js"(exports2, module2) {
@@ -29534,14 +29749,28 @@ var require_doctor = __commonJS({
           }
         }
       }
+      let onRunner = false;
+      if (t.runnerUrl) {
+        try {
+          const i = await require_runner().remoteInfo();
+          onRunner = true;
+          add("runner", "runner", "ok", `${t.runnerUrl} (uid ${i.uid}), folders ${i.roots.join(", ")}`);
+          add("runner", "java", i.java?.ok ? "ok" : "fail", i.java?.out || i.java?.error, i.java?.ok ? null : "the runner needs the JDK: the jdk profile fills /opt/jdk");
+          add("runner", "javac (a JDK, not a JRE)", i.javac?.ok ? "ok" : "fail", i.javac?.out || i.javac?.error);
+          if (i.maven) add("runner", "Maven", i.maven.ok ? "ok" : "warn", i.maven.out || i.maven.error);
+          add("runner", "Docker (Testcontainers)", i.docker?.ok ? "ok" : "warn", i.docker?.ok ? `Docker ${i.docker.version} (${i.docker.platform || i.docker.os}); containers reached at ${i.testcontainersHost || "localhost"}` : i.docker?.error, i.docker?.ok ? null : /EACCES/.test(i.docker?.error || "") ? "set DT_DOCKER_GID to the group of the Docker socket (Docker Desktop: 0; Linux: getent group docker)" : "mount the Docker socket into the runner (compose does: DT_DOCKER_SOCKET)");
+        } catch (e) {
+          add("runner", "runner", "fail", `${t.runnerUrl}: ${e.cause?.code || e.message}`, /401|token/i.test(e.message) ? "DT_RUNNER_TOKEN must be the same for dt and the runner (run.sh writes one into .env)" : "start it: the jdk profile runs the runner (./run.sh up -d); builds run in dt meanwhile, without Docker");
+        }
+      }
       const bin = (tool) => t.javaHome ? path2.join(t.javaHome, "bin", tool) : tool;
       const java = await run(bin("java"), ["-version"]);
       const javac = await run(bin("javac"), ["-version"]);
-      add("tests", "java", java.ok ? "ok" : "fail", java.ok ? `${java.out.split("\n")[0]}${t.javaHome ? ` (${t.javaHome})` : " (PATH)"}` : `${bin("java")}: ${java.error}`, java.ok ? null : "add jdk to COMPOSE_PROFILES (run.sh does by default) or set tests.javaHome");
-      add("tests", "javac (a JDK, not a JRE)", javac.ok ? "ok" : "fail", javac.ok ? javac.out : `${bin("javac")}: ${javac.error}`, javac.ok ? null : "tests need a JDK: the jdk compose profile, or tests.javaHome pointing at a JDK");
+      if (!onRunner) add("tests", "java", java.ok ? "ok" : "fail", java.ok ? `${java.out.split("\n")[0]}${t.javaHome ? ` (${t.javaHome})` : " (PATH)"}` : `${bin("java")}: ${java.error}`, java.ok ? null : "add jdk to COMPOSE_PROFILES (run.sh does by default) or set tests.javaHome");
+      if (!onRunner) add("tests", "javac (a JDK, not a JRE)", javac.ok ? "ok" : "fail", javac.ok ? javac.out : `${bin("javac")}: ${javac.error}`, javac.ok ? null : "tests need a JDK: the jdk compose profile, or tests.javaHome pointing at a JDK");
       const mvn = t.maven || "mvn";
       const mv = await run(mvn, ["-v"], { env: { ...process.env, ...t.javaHome ? { JAVA_HOME: t.javaHome } : {} } });
-      add("tests", "Maven", mv.ok ? "ok" : "warn", mv.ok ? mv.out.split("\n")[0] : `${mvn}: ${mv.error}`, mv.ok ? null : "Maven projects without mvnw need it: the jdk compose profile, or tests.maven");
+      if (!onRunner) add("tests", "Maven", mv.ok ? "ok" : "warn", mv.ok ? mv.out.split("\n")[0] : `${mvn}: ${mv.error}`, mv.ok ? null : "Maven projects without mvnw need it: the jdk compose profile, or tests.maven");
       if (t.gradle) {
         const gr = await run(t.gradle, ["-v"], { timeout: 6e4 });
         add("tests", "Gradle", gr.ok ? "ok" : "warn", gr.ok ? (gr.out.match(/Gradle [\d.]+/) || [gr.out])[0] : gr.error);
@@ -29622,7 +29851,7 @@ var require_workspace = __commonJS({
     var WORK = PATHS.work;
     var META = path2.join(CACHE2, "work");
     var metaFile = (id) => path2.join(META, `${id}.json`);
-    var BUILD_OUTPUT = ["target/", "build/", ".gradle/", "out/", "*.class", ".idea/", "bin/"];
+    var BUILD_OUTPUT = ["target/", "build/", ".gradle/", "out/", "*.class", ".idea/", "bin/", ".dt/"];
     function checkId(id) {
       if (!/^[\w.-]+$/.test(id || "")) throw new Error(`bad workspace id "${id}"`);
       const m = readJson(metaFile(id));
@@ -29762,10 +29991,11 @@ ${BUILD_OUTPUT.join("\n")}
     }
     async function patch(id) {
       const m = checkId(id);
-      await G.git(["add", "-A", "-N", "."], m.path).catch(() => {
+      const not = [":(exclude).dt", ":(exclude)**/.dt"];
+      await G.git(["add", "-A", "-N", "--", ".", ...not], m.path).catch(() => {
       });
-      const diff = await G.git(["-c", "core.quotepath=off", "diff", "--binary", "--no-color", "--no-ext-diff", "HEAD"], m.path);
-      const stat = await G.git(["-c", "core.quotepath=off", "diff", "--numstat", "HEAD"], m.path);
+      const diff = await G.git(["-c", "core.quotepath=off", "diff", "--binary", "--no-color", "--no-ext-diff", "HEAD", "--", ".", ...not], m.path);
+      const stat = await G.git(["-c", "core.quotepath=off", "diff", "--numstat", "HEAD", "--", ".", ...not], m.path);
       const files = stat.split("\n").filter(Boolean).map((l) => {
         const [a, d, p] = l.split("	");
         return { path: p, added: Number(a) || 0, removed: Number(d) || 0 };
@@ -30239,7 +30469,15 @@ public class DtLauncher {
 `;
     var stateFile = (id) => path2.join(CACHE2, "work", `${id}.fast.json`);
     var hash = (s) => crypto.createHash("sha1").update(s).digest("hex").slice(0, 16);
-    function exec(cmd, args, { cwd, env, timeoutMs = 9e5, log } = {}) {
+    async function exec(cmd, args, opts = {}) {
+      if (require_config().getTests().runnerUrl) {
+        const r = await require_runner().exec(cmd, args, { ...opts, cwd: opts.cwd || require_config().PATHS.build });
+        if (!r.unreachable) return r;
+        if (!r.quiet) require_trace().note(`${r.out}: running the build in dt itself (Testcontainers has no Docker here)`);
+      }
+      return execLocal(cmd, args, opts);
+    }
+    function execLocal(cmd, args, { cwd, env, timeoutMs = 9e5, log } = {}) {
       return new Promise((resolve) => {
         const started = Date.now();
         const p = require_trace().child(spawn(cmd, args, { cwd, env, stdio: ["ignore", "pipe", "pipe"] }));
@@ -30269,7 +30507,8 @@ ${e.message}`, ms: Date.now() - started });
     }
     function supported(root, plan, testFiles) {
       if (plan.tool !== "maven") return "the build is not Maven";
-      if (testFiles.some((f) => /\.kt$/.test(f)) || fs2.existsSync(path2.join(plan.modDir, "src", "main", "kotlin"))) return "Kotlin sources";
+      if (testFiles.some((f) => !/\.java$/.test(f))) return "tests in Kotlin, Groovy or Scala";
+      if (fs2.existsSync(path2.join(plan.modDir, "src", "main", "kotlin")) || fs2.existsSync(path2.join(plan.modDir, "src", "main", "groovy"))) return "Kotlin or Groovy sources";
       return null;
     }
     var walkJava = (dir, out2 = []) => {
@@ -30337,7 +30576,8 @@ ${e.message}`, ms: Date.now() - started });
       const key = plan.module;
       const prev = st[key];
       if (prev && prev.pomHash === pomHash && fs2.existsSync(prev.classes) && fs2.existsSync(prev.testClasses)) return { state: prev, prepared: false };
-      const cpFile = path2.join(CACHE2, "work", `${id}.${hash(key)}.classpath`);
+      fs2.mkdirSync(path2.join(root, ".dt"), { recursive: true });
+      const cpFile = path2.join(root, ".dt", `classpath-${hash(key)}.txt`);
       const multi = plan.module !== "." && fs2.existsSync(path2.join(root, "pom.xml"));
       const args = [...mvn.args, ...mavenArgs(cfg), "test-compile", "dependency:build-classpath", `-Dmdep.outputFile=${cpFile}`, "-Dmdep.includeScope=test", ...multi ? ["-pl", plan.module, "-am"] : []];
       log(`fast: preparing ${key} with Maven (compile + classpath, once)`);
@@ -30354,7 +30594,7 @@ ${e.message}`, ms: Date.now() - started });
         launcherJar = findJar(cfg, "org.junit.platform", "junit-platform-launcher", v);
         if (!launcherJar) return { error: { code: 1, out: `could not get org.junit.platform:junit-platform-launcher:${v}`, ms: r.ms } };
       }
-      const ldir = path2.join(CACHE2, "fastrun", `launcher-${v}-${hash(LAUNCHER)}`);
+      const ldir = path2.join(require_config().PATHS.build, "fastrun", `launcher-${v}-${hash(LAUNCHER)}`);
       if (!fs2.existsSync(path2.join(ldir, "DtLauncher.class"))) {
         fs2.mkdirSync(ldir, { recursive: true });
         fs2.writeFileSync(path2.join(ldir, "DtLauncher.java"), LAUNCHER);
@@ -30436,7 +30676,8 @@ ${e.message}`, ms: Date.now() - started });
         all[plan.module].stamp = stampAt;
         writeJson(stateFile(id), all);
       }
-      const results = path2.join(CACHE2, "work", `${id}.results-${Date.now().toString(36)}.json`);
+      fs2.mkdirSync(path2.join(root, ".dt"), { recursive: true });
+      const results = path2.join(root, ".dt", `results-${Date.now().toString(36)}.json`);
       const cp = [st.testClasses, st.classes, ...st.classpath, st.launcherJar, st.launcherDir].join(path2.delimiter);
       const r = await T.step("run tests", () => exec(javaBin(cfg, "java"), ["-cp", cp, "DtLauncher", results, ...selectors], { cwd: plan.modDir, env, timeoutMs: cfg.timeoutMs, log }), selectors.join(" "));
       out2 += r.out;
@@ -30688,12 +30929,53 @@ var require_testrun = __commonJS({
       if (!m) throw new Error("no Maven: the repo has no mvnw, and mvn is not on PATH (set tests.maven in config.json, or run with the compose jdk profile)");
       return [m, []];
     }
+    var TEST_EXT = /\.(java|kt|groovy|scala)$/;
+    function findTest(root, g, t) {
+      const name = t.split("#")[0].replace(TEST_EXT, "");
+      const simple = name.split("/").pop().split(".").pop();
+      const c = g.classes.find((x) => x.test && (x.id === name || x.name === name || x.file === t.split("#")[0]));
+      if (c) return { file: c.file, fqn: c.id };
+      const want = name.includes(".") && !name.includes("/") ? name : null;
+      const hits = [];
+      (function rec(d, depth) {
+        let es;
+        try {
+          es = fs2.readdirSync(d, { withFileTypes: true });
+        } catch {
+          return;
+        }
+        for (const e of es) {
+          const f = path2.join(d, e.name);
+          if (e.isDirectory()) {
+            if (depth < 12 && !/^(\.|build$|target$|node_modules$|out$)/.test(e.name)) rec(f, depth + 1);
+            continue;
+          }
+          if (!TEST_EXT.test(e.name) || e.name.replace(TEST_EXT, "") !== simple) continue;
+          const rel = path2.relative(root, f).split(path2.sep).join("/");
+          if (!/(^|\/)src\/(test|it|integrationTest)\//.test(rel)) continue;
+          const pkg = (fs2.readFileSync(f, "utf8").match(/^\s*package\s+([\w.]+)/m) || [])[1];
+          const fqn = pkg ? `${pkg}.${simple}` : simple;
+          if (!want || want === fqn) hits.push({ file: rel, fqn });
+        }
+      })(root, 0);
+      return hits[0] || null;
+    }
     var jdkSeen = null;
-    function jdkMajor(cfg) {
-      const key = cfg.javaHome || "PATH";
+    async function jdkMajor(cfg) {
+      const key = `${cfg.runnerUrl || ""}|${cfg.javaHome || "PATH"}`;
       if (jdkSeen && jdkSeen.key === key) return jdkSeen.major;
-      const r = require("child_process").spawnSync(cfg.javaHome ? path2.join(cfg.javaHome, "bin", "java") : "java", ["-version"], { encoding: "utf8", timeout: 15e3, env: { ...process.env, JAVA_TOOL_OPTIONS: "" } });
-      const major = Number((`${r.stderr || ""}${r.stdout || ""}`.match(/version "(?:1\.)?(\d+)/) || [])[1] || 0);
+      let text = "";
+      if (cfg.runnerUrl) {
+        try {
+          text = (await require_runner().remoteInfo()).java?.out || "";
+        } catch {
+        }
+      }
+      if (!text) {
+        const r = require("child_process").spawnSync(cfg.javaHome ? path2.join(cfg.javaHome, "bin", "java") : "java", ["-version"], { encoding: "utf8", timeout: 15e3, env: { ...process.env, JAVA_TOOL_OPTIONS: "" } });
+        text = `${r.stderr || ""}${r.stdout || ""}`;
+      }
+      const major = Number((text.match(/version "(?:1\.)?(\d+)/) || [])[1] || 0);
       jdkSeen = { key, major };
       return major;
     }
@@ -30735,7 +31017,7 @@ var require_testrun = __commonJS({
         if (!gr[0]) throw new Error("no Gradle: the repo has no gradlew, and gradle is not on PATH (set tests.gradle in config.json)");
         const task = p.module === "." ? "test" : `:${p.module.split("/").join(":")}:test`;
         const fq = p.selectors || sel;
-        const args = [...gr[1], "--console=plain", "-q", "--warning-mode=none", "--no-watch-fs", ...cfg.gradleBuildCache ? ["--build-cache"] : [], task, ...fq.flatMap((t) => ["--tests", t.includes("#") ? t.replace("#", ".") : t.includes(".") ? t : `*.${t}`])];
+        const args = [...gr[1], "--console=plain", "-q", "--warning-mode=none", "--no-watch-fs", ...cfg.gradleBuildCache ? ["--build-cache"] : [], task, ...fq.flatMap((t) => ["--tests", t.replace("#", ".")])];
         if (cfg.offline) args.push("--offline");
         return { cmd: gr[0], args: [...args, ...cfg.args], cwd: root };
       }
@@ -30818,7 +31100,15 @@ var require_testrun = __commonJS({
         return null;
       }
     }
-    function exec(cmd, args, { cwd, env, timeoutMs, log }) {
+    async function exec(cmd, args, opts = {}) {
+      if (getTests().runnerUrl) {
+        const r = await require_runner().exec(cmd, args, { ...opts, cwd: opts.cwd || require_config().PATHS.build });
+        if (!r.unreachable) return r;
+        if (!r.quiet) require_trace().note(`${r.out}: running the build in dt itself (Testcontainers has no Docker here)`);
+      }
+      return execLocal(cmd, args, opts);
+    }
+    function execLocal(cmd, args, { cwd, env, timeoutMs, log }) {
       return new Promise((resolve) => {
         const started = Date.now();
         const p = require_trace().child(spawn(cmd, args, { cwd, env, stdio: ["ignore", "pipe", "pipe"] }));
@@ -30855,23 +31145,18 @@ ${e.message}`, ms: Date.now() - started });
       const idx = W.index(id);
       const g = idx.graph_();
       if (!tests.length) throw new Error("name the tests to run (class names like FooTest, or Class#method)");
-      const files = tests.map((t) => {
-        const cls = t.split("#")[0].replace(/\.(java|kt)$/, "").split("/").pop();
-        const c2 = g.classes.find((x) => x.test && (x.name === cls || x.id === cls));
-        return c2 ? c2.file : /\//.test(t) ? t : null;
-      });
-      const missing = tests.filter((t, i) => !files[i]);
-      if (missing.length) throw new Error(`no test class ${missing.join(", ")} in ${id} (write it with workspace_write first)`);
+      const found = tests.map((t) => findTest(root, g, t));
+      const missing = tests.filter((t, i) => !found[i]);
+      if (missing.length) throw new Error(`no test class ${missing.join(", ")} in ${id} (write it with workspace_write first, or give the full name com.acme.FooTest)`);
+      const files = found.map((f) => f.file);
       const p = plan(root, files);
       const cfg = getTests();
       const fast = require_fastrun();
       const why = mode === "build" ? "mode=build" : fast.supported(root, p, files);
       if (mode === "fast" && why && p.tool !== "gradle") throw new Error(`no fast run here: ${why} (use mode="build")`);
-      p.selectors = tests.map((t, i) => {
-        const meth = t.split("#")[1];
-        const k = g.classes.find((x) => x.test && x.file === files[i]);
-        const fq = k ? k.id : t.split("#")[0];
-        return meth ? `${fq}#${meth}` : fq;
+      p.selectors = found.map((f, i) => {
+        const meth = tests[i].split("#")[1];
+        return meth ? `${f.fqn}#${meth}` : f.fqn;
       });
       const c = why ? command(root, p, tests, cfg) : null;
       const B = require_buildenv().forBuild(cfg, p.tool);
@@ -30883,7 +31168,7 @@ ${e.message}`, ms: Date.now() - started });
         env.PATH = `${path2.join(cfg.javaHome, "bin")}${path2.delimiter}${env.PATH}`;
       }
       if (cfg.gradleHome) env.GRADLE_USER_HOME = cfg.gradleHome;
-      const javaMajor = jdkMajor(cfg);
+      const javaMajor = await jdkMajor(cfg);
       if (cfg.javaToolOptions && javaMajor >= 22 && (p.tool !== "gradle" || cfg.javaToolOptionsGradle)) env.JAVA_TOOL_OPTIONS = [process.env.JAVA_TOOL_OPTIONS, cfg.javaToolOptions].filter(Boolean).join(" ");
       else if (p.tool === "gradle") delete env.JAVA_TOOL_OPTIONS;
       let database = null;
@@ -30961,6 +31246,7 @@ ${e.message}`, ms: Date.now() - started });
       if (/registry\.bin|Timeout waiting to lock|Could not (write|read) cache value|could not acquire lock|Gradle could not start your build|Unable to lock|DaemonRegistry/i.test(r.out)) hints.push(`Gradle cannot lock its files in ${cfg.gradleHome || "~/.gradle"} or the workspace: that folder is on a mount without working file locks (a Windows drive, SMB, some Docker Desktop mounts). Keep the Gradle home and the workspaces on a local disk or a Docker volume (compose: DT_GRADLE_USER_HOME=/var/dt-build/gradle, DT_WORK_DIR=/var/dt-work); doctor shows which folders are on such mounts.`);
       if (/Picked up JAVA_TOOL_OPTIONS/.test(r.out) && p.tool === "gradle" && r.code !== 0) hints.push(`JAVA_TOOL_OPTIONS is set in dt's environment and every JVM prints it; Gradle may choke on that: unset it for dt, or set tests.javaToolOptions to "".`);
       if (/Could not get unknown property '(\w+)'|Could not resolve all (files|dependencies)|Received status code 401|status code 401|Unauthorized/.test(r.out)) hints.push(`The build needs settings of this machine (a private repository and its credentials): put them in gradle.properties in dt's config folder (or tests.gradleProperties; values may be \${VAR} from .env), or tests.env for environment variables${p.tool === "maven" ? "; for Maven, maven-settings.xml in the config folder (or tests.mavenSettings)" : ""}.`);
+      if (/Could not find a valid Docker environment|DockerClientProviderStrategy|Previous attempts to find a Docker environment failed/.test(r.out)) hints.push(getTests().runnerUrl ? "Testcontainers found no Docker on the runner: doctor shows its Docker check (the socket mount, DT_DOCKER_GID)." : "Testcontainers needs Docker: run builds on the runner (compose: the jdk profile starts it with the host's Docker socket), or give dt a DOCKER_HOST.");
       if (/Failed to determine a suitable driver class|Connection to .* refused|password authentication failed/.test(r.out)) hints.push("The tests wanted a database: run with db (env + db) so test_run loads the DDL snapshot into a throwaway database.");
       const ok = r.code === 0 && counts.failed === 0 && counts.errors === 0 && !compile.length && counts.tests > 0;
       const outcome = ok ? "passed" : r.killed ? "timeout" : compile.length ? "compile-error" : counts.tests === 0 ? "no-tests-ran" : "failed";
@@ -30973,7 +31259,7 @@ ${e.message}`, ms: Date.now() - started });
         ...fastInfo ? { fast: fastInfo } : {},
         written: written.length ? written.map((w) => w.path) : void 0,
         module: p.module,
-        command: hide(c ? `${path2.basename(c.cmd)} ${c.args.filter((a) => !/^-Dmaven\.repo\.local/.test(a)).join(" ")}` : `javac (${fastInfo.compiled} changed) + JUnit launcher${fastInfo.prepared ? " (prepared with Maven first)" : ""}`),
+        command: hide(c ? `${path2.basename(c.cmd)} ${c.args.filter((a) => !/^-Dmaven\.repo\.local/.test(a)).join(" ")}` : `javac (${fastInfo.compiled ?? 0} changed) + JUnit launcher${fastInfo.prepared ? " (prepared with Maven first)" : ""}`),
         ...B.sources.length ? { gradleProperties: B.sources.map((f) => path2.basename(path2.dirname(f)) + "/" + path2.basename(f)) } : {},
         outcome,
         exit: r.code,
@@ -31072,7 +31358,7 @@ ${e.message}`, ms: Date.now() - started });
       if (cur.trim()) out2.push(cur.trim());
       return out2;
     }
-    module2.exports = { run, jdkMajor, cleanEnv, proof, testName, fingerprint, plan, parseReports, compileErrors, codeParts, splitSql };
+    module2.exports = { run, findTest, jdkMajor, cleanEnv, proof, testName, fingerprint, plan, parseReports, compileErrors, codeParts, splitSql };
   }
 });
 
@@ -33997,6 +34283,12 @@ var commands = {
     if (opts._[0]) return consul.service(opts.env, opts._[0]);
     const base = require_config().endpoint(opts.env, "consul");
     return Object.keys(await http(`${base}/v1/catalog/services`));
+  },
+  // dt runner [--port 4100]: the build runner (compose service "runner")
+  async runner(opts) {
+    require_runner().serve({ port: Number(opts.port || 4100) });
+    return new Promise(() => {
+    });
   },
   // dt doctor [--repo PROJECT/slug] [--deep]: what fetching and test runs need, checked
   async doctor(opts) {

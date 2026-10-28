@@ -440,9 +440,20 @@ The flow is `workspace_open` → `test_context` → `workspace_write` → `test_
 
 `ddl_snapshot` writes the DDL of a synced database: extensions, schemas, enum and domain types, sequences, tables (defaults, identity, generated columns, constraints, indexes, comments), functions and procedures, views in dependency order, and triggers. It can do all of it, or only some tables or functions, or what a service uses, closed over what they need (FK targets, trigger functions, called functions and the tables they touch). A snapshot of a whole database loads into an empty one and reproduces the same catalog. The stress test checks that on 2,000 tables.
 
+**Where builds run: the runner.** With compose, test builds don't run in dt. The `runner` service (in the `jdk` profile) runs them: Maven, Gradle, javac and the test JVM. It has:
+- the JDK and Maven of the `jdk` profile;
+- the workspace and build-cache volumes;
+- the **host's Docker socket**, so **Testcontainers works**. Its containers start on your Docker (Docker Desktop's image cache included), and tests reach them through `host.docker.internal`.
+
+It has no config folder and no secrets: dt sends each command with the environment that build needs (repository credentials included). It answers only on the compose network and only with `DT_RUNNER_TOKEN`, which `run.sh` writes into `.env` the first time. Other containers there, such as the browser, must not reach a service with Docker access. It runs commands only inside the workspace and build folders, and cancelling a job stops the command on the runner.
+
+The runner's user gets the socket's group through `DT_DOCKER_GID`: `run.sh` sets 0 for Docker Desktop and the socket's group for a Linux engine. `TESTCONTAINERS_HUB_IMAGE_NAME_PREFIX` points Testcontainers at your registry mirror. `doctor` checks the runner, its JDK, Maven and Docker. Without a runner (no compose, or the `jdk` profile off), builds run in dt itself, with a note that Testcontainers has no Docker there.
+
+Giving the runner the host's Docker means test code can start and stop containers on that host, so only run tests of code you'd also build on your own machine.
+
 **Running tests needs a JDK and a scratch Postgres.** With compose, the `jdk` and `testdb` profiles provide them (on by default in `run.sh`):
 
-- `jdk` copies JDK 21 and Maven from the official `maven` image into a volume that dt mounts at `/opt/jdk`. It's a one-shot, still with no Dockerfile.
+- `jdk` copies JDK 21 and Maven from the official `maven` image into a volume that dt and the runner mount at `/opt/jdk` (a one-shot, still with no Dockerfile), and starts the runner.
 - `testdb` is Postgres on tmpfs, reachable only on the compose network.
 - The Maven and Gradle caches live in `cache/m2` and `cache/gradle` of the config folder.
 

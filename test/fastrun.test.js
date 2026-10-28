@@ -87,7 +87,7 @@ test('context: bodies of what the method calls; parameterized boundaries for pur
   assert.match(fee.skeleton, /\/\/ void feeCases\(String amount, String expected\)/);
 });
 
-test('the JDK version is read (java -version writes to stderr): it decides the Byte Buddy flag', { skip: require('child_process').spawnSync('java', ['-version']).error && 'no java' }, () => {
-  const major = require('../lib/testrun').jdkMajor({ javaHome: null });
+test('the JDK version is read (java -version writes to stderr): it decides the Byte Buddy flag', { skip: require('child_process').spawnSync('java', ['-version']).error && 'no java' }, async () => {
+  const major = await require('../lib/testrun').jdkMajor({ javaHome: null });
   assert.ok(major >= 8, `major ${major}`);
 });

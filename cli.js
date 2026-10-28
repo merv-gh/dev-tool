@@ -160,6 +160,11 @@ const commands = {
     return Object.keys(await http(`${base}/v1/catalog/services`));
   },
 
+  // dt runner [--port 4100]: the build runner (compose service "runner")
+  async runner(opts) {
+    require('./lib/runner').serve({ port: Number(opts.port || 4100) });
+    return new Promise(() => {});
+  },
   // dt doctor [--repo PROJECT/slug] [--deep]: what fetching and test runs need, checked
   async doctor(opts) {
     const d = await require('./lib/doctor').check({ repo: opts.repo, deep: !!opts.deep });

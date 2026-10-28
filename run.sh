@@ -39,6 +39,16 @@ export DT_HOME_DIR="$HOME_DIR"
 # run the containers as you, so files in the config folder (repos/, cache/) are yours and git can manage them
 [ -n "${DT_UID:-}" ] || grep -q '^DT_UID=' "$ENV_FILE" || export DT_UID=$(id -u)
 [ -n "${DT_GID:-}" ] || grep -q '^DT_GID=' "$ENV_FILE" || export DT_GID=$(id -g)
+# dt and the build runner share a token (the runner has Docker access: nothing else may send it commands)
+if ! grep -q '^DT_RUNNER_TOKEN=' "$ENV_FILE"; then
+  printf '\n# dt <-> build runner (written by run.sh)\nDT_RUNNER_TOKEN=%s\n' "$(od -An -N24 -tx1 /dev/urandom | tr -d ' \n')" >> "$ENV_FILE"
+fi
+# the group of the Docker socket as the runner sees it: Docker Desktop 0, a Linux engine its docker group
+if [ -z "${DT_DOCKER_GID:-}" ] && ! grep -q '^DT_DOCKER_GID=' "$ENV_FILE"; then
+  if docker info --format '{{.OperatingSystem}}' 2>/dev/null | grep -qi 'docker desktop'; then export DT_DOCKER_GID=0
+  elif [ -S /var/run/docker.sock ]; then export DT_DOCKER_GID=$(stat -c %g /var/run/docker.sock 2>/dev/null || stat -f %g /var/run/docker.sock)
+  fi
+fi
 if [ -n "$TOOLS_ONLY" ]; then export COMPOSE_PROFILES=
 elif [ -z "${COMPOSE_PROFILES+set}" ] && ! grep -q '^COMPOSE_PROFILES=' "$ENV_FILE"; then export COMPOSE_PROFILES=webui,browser,graph,jdk,testdb
 fi
