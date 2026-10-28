@@ -8,6 +8,46 @@ const fs = require("fs"),
 const { validateEndpoint } = require("./eval-discovery-model");
 const E = require("../lib/evaluation-evidence");
 const hash = E.digest;
+const assertion = f => f && (f.failureKind ? f.failureKind === 'assertion' : /AssertionError|ERR_ASSERTION|AssertionFailedError|ComparisonFailure/i.test([f.type, f.stack].filter(Boolean).join(' ')));
+function observedTestFailures(r) {
+  const failures = r.failures || [];
+  if (r.failureKinds) {
+    const { assertions, testErrors } = r.failureKinds;
+    const valid = Number.isSafeInteger(assertions) && assertions >= 0 && Number.isSafeInteger(testErrors) && testErrors >= 0 && assertions + testErrors === (r.counts?.failed || 0) + (r.counts?.errors || 0);
+    return { assertionFailure: valid && assertions > 0, onlyAssertionFailures: valid && assertions > 0 && testErrors === 0 && !r.counts?.skipped };
+  }
+  return {
+    assertionFailure: failures.some(assertion),
+    onlyAssertionFailures: failures.length > 0 && failures.every(assertion) && failures.length === (r.counts?.failed || 0) + (r.counts?.errors || 0) && !r.counts?.errors && !r.counts?.skipped,
+  };
+}
+function safeEvent(event) {
+  if (event.caller !== 'mutation-harness') return event;
+  const input = event.input || {}, result = event.result;
+  return { ...event,
+    input: { ...input, ...(typeof input.content === 'string' ? { content: undefined, contentSha256: hash(input.content), contentBytes: Buffer.byteLength(input.content) } : {}) },
+    ...(result !== undefined ? { result: { job: result?.job, state: result?.state, outcome: result?.outcome, counts: result?.counts, failureKinds: result?.failureKinds, resultSha256: hash(result), privateDetailsWithheld: true } } : {}),
+    ...(event.error ? { error: { code: 'DT_EVAL_PRIVATE_OPERATION', message: 'Private mutation operation failed; details withheld' } } : {}),
+  };
+}
+const privateGradeFailure = () => ({
+  independent: true,
+  passed: false,
+  code: 'DT_EVAL_PRIVATE_GRADE_FAILED',
+  error: 'Independent grading failed; private assertions and diagnostic details are withheld',
+});
+function actualTool(name, input) {
+  return name === 'tool_execute' ? { name: input?.name, input: input?.arguments } : { name, input };
+}
+function modelInteraction(events, finalSha256, changed) {
+  const tests = events.filter(e => e.caller === 'model' && e.name && actualTool(e.name, e.input).name === 'test_run');
+  return {
+    testCalls: tests.length,
+    passingTestObserved: tests.some(e => e.result?.outcome === 'passed' && e.candidateSha256 === finalSha256),
+    candidateChanged: changed.length > 0,
+    scope: 'Explicit model calls, including tool_execute; verification-harness calls do not count as model-observed execution',
+  };
+}
 function options(argv) {
   const out = {
     profile: "lean-find",
@@ -149,6 +189,8 @@ function stageCode() {
     path.join(__dirname, "eval-task-worker.cjs"),
     path.join(stage, "dev/eval-task-worker.cjs"),
   );
+  fs.mkdirSync(path.join(stage, 'evaluation-config'));
+  fs.writeFileSync(path.join(stage, 'evaluation-config/config.json'), JSON.stringify({ envs: { evaluation: {} }, tools: { profile: 'lean-find' }, tests: { waitMs: 50, timeoutMs: 30000, compileCheck: false } }));
   return stage;
 }
 class Sandbox {
@@ -203,7 +245,11 @@ class Sandbox {
         "--user",
         "65534:65534",
         "-e",
-        "DT_HOME=/case",
+        "DT_HOME=/opt/dt/evaluation-config",
+        '-e', 'DT_SCRIPTS_DIR=/case/scripts',
+        '-e', 'DT_VIEWS_DIR=/case/views',
+        '-e', 'DT_REPOS_DIR=/case/repos',
+        '-e', 'DT_PASSPORTS_DIR=/case/passports',
         "-e",
         "DT_WORK_DIR=/case/work",
         "-e",
@@ -303,14 +349,18 @@ class Sandbox {
     return E.snapshot(destination);
   }
   close() {
+    if (this.cleanup?.complete) return this.cleanup;
     this.fail(Error("sandbox closed"));
+    const errors = [];
     try {
       docker(["rm", "-f", this.id]);
-    } catch {}
+    } catch (e) { if (!/No such container/i.test(String(e.stderr || e.message))) errors.push({ resource: 'container', code: 'DT_EVAL_CLEANUP_FAILED' }); }
     try {
       docker(["volume", "rm", "-f", this.id]);
-    } catch {}
+    } catch (e) { if (!/No such volume/i.test(String(e.stderr || e.message))) errors.push({ resource: 'volume', code: 'DT_EVAL_CLEANUP_FAILED' }); }
     this.proc?.kill();
+    this.cleanup = { complete: errors.length === 0, errors };
+    return this.cleanup;
   }
 }
 async function run(o) {
@@ -352,7 +402,7 @@ async function run(o) {
     JSON.stringify({ envs: { evaluation: {} } }),
   );
   const stage = stageCode(),
-    toolCodeSha256 = hash(E.snapshot(stage)),
+    toolCodeSha256 = hash(E.snapshot(stage, { excludeDependencies: true })),
     dependencyLockSha256 = hash(
       fs.readFileSync(path.join(stage, "package-lock.json")),
     ),
@@ -414,16 +464,19 @@ async function run(o) {
             { op: "tool", name, arguments: input },
             Math.max(1, Math.min(60000, deadline - Date.now())),
           );
-          events.push({ caller, name, input, result, ms: Date.now() - t });
+          const invoked = actualTool(name, input);
+          const candidateSha256 = caller === 'model' && invoked.name === 'test_run' && result?.outcome === 'passed'
+            ? hash(await box.rpc({ op: 'snapshot', workspace: task.id })) : undefined;
+          events.push(safeEvent({ caller, name, input, result, candidateSha256, ms: Date.now() - t }));
           return result;
         } catch (e) {
-          events.push({
+          events.push(safeEvent({
             caller,
             name,
             input,
             error: { message: e.message, code: e.code },
             ms: Date.now() - t,
-          });
+          }));
           throw e;
         }
       };
@@ -444,16 +497,7 @@ async function run(o) {
           through: "tool",
           tool: "test_run",
           outcome: r.outcome,
-          assertionFailure:
-            r.failures?.some(
-              (f) =>
-                f.failureKind === "assertion" ||
-                f.expected !== undefined ||
-                f.actual !== undefined ||
-                /AssertionError|ERR_ASSERTION|assertion failed/i.test(
-                  [f.type, f.message, f.stack].filter(Boolean).join(" "),
-                ),
-            ) === true,
+          ...observedTestFailures(r),
           counts: r.counts,
           target: r.execution,
           revision: {
@@ -594,7 +638,7 @@ async function run(o) {
             }
             messages.push({
               role: "tool",
-              tool_call_id: c.id || "invalid",
+              tool_call_id: c?.id || "invalid",
               content: JSON.stringify(result),
             });
           }
@@ -602,9 +646,11 @@ async function run(o) {
         if (task.kind !== "expected-gap") post = await tests("post-harness");
         if (hash(fs.readFileSync(graderPath)) !== oracleSha256)
           throw Error("private grader changed after freeze");
-        const grader = require(graderPath);
-        if (typeof grader !== "function")
-          throw Error("private grader must export an async grading function");
+        const grader = (...args) => Promise.resolve().then(() => {
+          const evaluate = require(graderPath);
+          if (typeof evaluate !== 'function') throw Error('private grader must export an async grading function');
+          return evaluate(...args);
+        });
         let asserts = 0;
         const observedMutations = [];
         const context = {
@@ -670,9 +716,15 @@ async function run(o) {
           },
         };
         try {
-          const judged = await grader(context);
+          let gradeTimer;
+          const judged = await Promise.race([
+            Promise.resolve().then(() => grader(context)),
+            new Promise((_, reject) => { gradeTimer = setTimeout(() => reject(Error('private grading deadline exceeded')), Math.max(1, deadline - Date.now())); }),
+          ]).finally(() => clearTimeout(gradeTimer));
           grade = {
-            ...judged,
+            // A private grader may return arbitrary diagnostics containing expected
+            // values. Only its public verdict fields may enter retained artifacts.
+            expectedUnsupported: judged?.expectedUnsupported === true,
             independent: true,
             passed: judged?.passed !== false,
             assertions: asserts,
@@ -685,27 +737,22 @@ async function run(o) {
                 killed: observedMutations.filter(
                   (r) =>
                     r.outcome === "failed" &&
-                    ((r.counts?.failed || 0) > 0 ||
-                      (r.counts?.errors || 0) > 0),
+                    r.onlyAssertionFailures === true &&
+                    (r.counts?.failed || 0) > 0,
                 ).length,
                 infrastructureFailures: observedMutations.filter(
                   (r) =>
                     r.outcome !== "passed" &&
                     !(
                       r.outcome === "failed" &&
-                      ((r.counts?.failed || 0) > 0 ||
-                        (r.counts?.errors || 0) > 0)
+                      r.onlyAssertionFailures === true &&
+                      (r.counts?.failed || 0) > 0
                     ),
                 ).length,
               }
             : undefined;
         } catch (e) {
-          grade = {
-            independent: true,
-            passed: false,
-            assertions: asserts,
-            error: e.message,
-          };
+          grade = { ...privateGradeFailure(), assertions: asserts };
         }
         const candidateDir = path.join(caseDir, "candidate");
         const after = box.exportCandidate(task.id, candidateDir),
@@ -752,7 +799,9 @@ async function run(o) {
             baseline: task.kind === "tests" ? post : baseline,
             post,
             isolation,
+            cleanup: box.close(),
           },
+          modelInteraction: modelInteraction(events, hash(after), protection.changed),
           grade,
           mutations,
           transcript: {
@@ -811,7 +860,8 @@ async function run(o) {
             oracleFrozenAt,
             graderFrozenAt: oracleFrozenAt,
           },
-          execution: { baseline, post },
+          execution: { baseline, post, cleanup: box.close() },
+          modelInteraction: { testCalls: 0, passingTestObserved: false, candidateChanged: false },
           grade: {
             independent: true,
             passed: false,
@@ -884,7 +934,8 @@ async function run(o) {
     usage,
     metrics: {
       cases: samples.length,
-      complete: samples.filter((s) => s.assessment.complete).length,
+      complete: samples.filter((s) => s.assessment.modelComplete).length,
+      supportedToolComplete: samples.filter((s) => s.assessment.toolComplete).length,
       falseSuccess: samples.filter((s) => s.assessment.falseSuccess).length,
       infrastructureErrors: samples.filter(
         (s) => s.finish === "infrastructure-error",
@@ -908,4 +959,4 @@ if (require.main === module)
       console.error(e.message);
       process.exitCode = 1;
     });
-module.exports = { options, validateTask, run, Sandbox, stageCode };
+module.exports = { options, validateTask, run, Sandbox, stageCode, observedTestFailures, safeEvent };

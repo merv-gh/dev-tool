@@ -27,19 +27,6 @@ async function handle(r) {
       fs.mkdirSync(path.dirname(file), { recursive: true });
       fs.writeFileSync(file, text);
     }
-    fs.writeFileSync(
-      "/case/config.json",
-      JSON.stringify({
-        envs: { evaluation: {} },
-        tools: { profile: "lean-find" },
-        tests: {
-          waitMs: 50,
-          timeoutMs: 30000,
-          compileCheck: false,
-          node: process.execPath,
-        },
-      }),
-    );
     fs.mkdirSync("/case/cache/work", { recursive: true });
     fs.writeFileSync(
       "/case/cache/work/" + r.task.id + ".json",

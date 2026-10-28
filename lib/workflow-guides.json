@@ -4,7 +4,7 @@
     {
       "id": "column-lineage", "title": "Locate column reads and writes", "terms": "column field read write written reads writes functions repositories lineage usage impact", "required": ["environment", "database", "schema.table.column"],
       "stages": [
-        { "id": "resolve", "goal": "Resolve the exact cached database/table/column; keep ambiguity explicit", "tools": ["find", "describe"] },
+        { "id": "resolve", "goal": "Resolve the exact cached database/table/column; keep ambiguity explicit", "tools": ["find", "pg_table"] },
         { "id": "lineage", "goal": "Inspect classified column accesses, caller chains, revisions and incomplete coverage", "tools": ["pg_usage", "impact"] },
         { "id": "verify", "goal": "Read exact function/source evidence, including dynamic SQL and generated-code gaps", "tools": ["pg_function", "code_search", "code_read"] }
       ], "boundaries": ["A text hit is not proof of read/write access. Unknown dynamic SQL, missing revisions or bounded traversal prevent an exhaustive claim."]
@@ -14,7 +14,7 @@
       "stages": [
         { "id": "inventory", "goal": "Inventory every known read and action from the selected service/passport", "tools": ["scenario_inventory", "passport"] },
         { "id": "plan", "goal": "Bind scoped relational tuples and explicit PG/ES/Kafka obligations, schemas and windows", "tools": ["fixture_plan", "scenario_state_plan"] },
-        { "id": "capture", "goal": "Capture read-only source state and inspect completeness, precision, hashes and consistency", "tools": ["fixture_capture", "fixture_inspect", "scenario_state_capture"] },
+        { "id": "capture", "goal": "Capture read-only source state and inspect completeness, precision, hashes and consistency", "tools": ["fixture_capture", "fixture_validate", "scenario_state_capture"] },
         { "id": "export", "goal": "Export hashed test resources and independently verify SQL constraints", "tools": ["fixture_export", "fixture_replay"] },
         { "id": "replay", "goal": "Preflight reviewed native dependency adapters, start isolated replay and inspect connection bindings", "tools": ["fixture_runtime_preflight", "fixture_runtime_start", "fixture_runtime_bindings"] },
         { "id": "effects", "goal": "Freeze independent effects, execute actual application tests, then observe and check writes or rejected-action no-writes", "tools": ["fixture_runtime_arm", "test_run", "fixture_runtime_observe", "fixture_runtime_check", "scenario_run"] },

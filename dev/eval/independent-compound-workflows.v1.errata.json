@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "corpusSha256": "5a897b532c550cd2dcfb30056b98c5a2d9d96fda0caf20e7616ee835964d1d61",
+  "reason": "After the frozen first measurement, independent review found two guide and expected-capability labels naming nonexistent tools. Original corpus and first report remain unchanged. These exact capability corrections do not change queries, guide relevance judgments, vocabulary or rankings.",
+  "capabilities": { "describe": "pg_table", "fixture_inspect": "fixture_validate" }
+}

@@ -1,0 +1,1100 @@
+{
+  "version": 1,
+  "kind": "independent-frozen-workflow-guide-check",
+  "observedAt": "2026-10-28T22:42:20.605Z",
+  "frozenAt": "2026-10-28T22:39:45.057Z",
+  "corpusSha256": "5a897b532c550cd2dcfb30056b98c5a2d9d96fda0caf20e7616ee835964d1d61",
+  "sourceRevision": "b426e973c116d4f91f384827e4c7bbfec82b7695",
+  "guidesSha256": "ef8dca250b0fb513b7b1a02d17b7b25b15827ff3aaf962874c04a6683353811d",
+  "ranker": "legacy",
+  "initial": {
+    "tools": 5,
+    "utf8Bytes": 2989
+  },
+  "metrics": {
+    "cases": 26,
+    "positiveCases": 24,
+    "guideHitsAt2": 22,
+    "guideRecallAt2": 0.9166666666666666,
+    "declaredStages": 62,
+    "stagesWithAllExpectedEnabledCapabilities": 55,
+    "unrelatedCasesWithoutGuide": 2,
+    "boundaryCases": 7,
+    "boundaryCasesWithExplicitGuideLimits": 6,
+    "maxSearchBytes": 3780,
+    "disabledChecksPassed": 3
+  },
+  "cases": [
+    {
+      "id": "L01",
+      "query": "Before removing payment_state from billing.invoice, enumerate readers, assignments, predicates and trigger propagation in every repository and stored routine.",
+      "expectedGuide": "column-lineage",
+      "returnedGuides": [],
+      "guideHit": false,
+      "rankedTools": [
+        "test_context",
+        "find",
+        "scenario_inventory",
+        "docs_verify",
+        "doctor"
+      ],
+      "responseBytes": 2978,
+      "stages": {
+        "resolve": {
+          "expected": [
+            "find",
+            "describe"
+          ],
+          "missing": [
+            "describe"
+          ]
+        },
+        "lineage": {
+          "expected": [
+            "pg_usage",
+            "impact"
+          ],
+          "missing": []
+        },
+        "verify": {
+          "expected": [
+            "pg_function",
+            "code_search",
+            "code_read"
+          ],
+          "missing": []
+        }
+      },
+      "boundaryRequired": null,
+      "boundaries": [
+        "A text hit is not proof of read/write access. Unknown dynamic SQL, missing revisions or bounded traversal prevent an exhaustive claim."
+      ],
+      "executionPerformed": false
+    },
+    {
+      "id": "L02",
+      "query": "Which services write orders.total and which functions read it? Include overloaded library methods and exact deployment revisions.",
+      "expectedGuide": "column-lineage",
+      "returnedGuides": [
+        "column-lineage",
+        "differential-refactor"
+      ],
+      "guideHit": true,
+      "rankedTools": [
+        "who_uses",
+        "workspace_write",
+        "pg_function",
+        "pg_usage",
+        "test_context"
+      ],
+      "responseBytes": 3528,
+      "stages": {
+        "lineage": {
+          "expected": [
+            "pg_usage",
+            "impact"
+          ],
+          "missing": []
+        },
+        "verify": {
+          "expected": [
+            "code_read"
+          ],
+          "missing": []
+        }
+      },
+      "boundaryRequired": null,
+      "boundaries": [
+        "A text hit is not proof of read/write access. Unknown dynamic SQL, missing revisions or bounded traversal prevent an exhaustive claim."
+      ],
+      "executionPerformed": false
+    },
+    {
+      "id": "L03",
+      "query": "Prove nobody reads customer.secret_token anymore, including generated ORM expressions and runtime assembled SQL across two databases.",
+      "expectedGuide": "column-lineage",
+      "returnedGuides": [],
+      "guideHit": false,
+      "rankedTools": [
+        "api_request_save",
+        "pg_usage",
+        "scenario_diff",
+        "api_browser_action",
+        "code"
+      ],
+      "responseBytes": 2988,
+      "stages": {
+        "lineage": {
+          "expected": [
+            "pg_usage",
+            "impact"
+          ],
+          "missing": []
+        },
+        "verify": {
+          "expected": [
+            "code_search"
+          ],
+          "missing": []
+        }
+      },
+      "boundaryRequired": "Cannot prove exhaustive absence when dynamic/generated coverage is unknown.",
+      "boundaries": [
+        "A text hit is not proof of read/write access. Unknown dynamic SQL, missing revisions or bounded traversal prevent an exhaustive claim."
+      ],
+      "executionPerformed": false
+    },
+    {
+      "id": "R01",
+      "query": "The same order number exists for two tenants; reproduce the incorrect reservation with its billing rows, search document and paid events without mixing tenant identities.",
+      "expectedGuide": "reproduce-state",
+      "returnedGuides": [
+        "reproduce-state"
+      ],
+      "guideHit": true,
+      "rankedTools": [
+        "code",
+        "test_data",
+        "code_index",
+        "knowledge_graph",
+        "script_save"
+      ],
+      "responseBytes": 3415,
+      "stages": {
+        "inventory": {
+          "expected": [
+            "scenario_inventory"
+          ],
+          "missing": []
+        },
+        "plan": {
+          "expected": [
+            "fixture_plan"
+          ],
+          "missing": []
+        },
+        "capture": {
+          "expected": [
+            "fixture_capture"
+          ],
+          "missing": []
+        },
+        "replay": {
+          "expected": [
+            "fixture_runtime_start"
+          ],
+          "missing": [
+            "fixture_runtime_start"
+          ]
+        },
+        "effects": {
+          "expected": [
+            "fixture_runtime_check"
+          ],
+          "missing": [
+            "fixture_runtime_check"
+          ]
+        }
+      },
+      "boundaryRequired": null,
+      "boundaries": [
+        "Separate per-source snapshots do not establish a distributed atomic snapshot or exactly-once delivery.",
+        "Truncated windows, missing schemas/codecs or unbound reads must remain gaps."
+      ],
+      "executionPerformed": false
+    },
+    {
+      "id": "R02",
+      "query": "Create test resources from the checkout passport's postgres reads, elasticsearch documents and kafka offsets, then boot isolated dependencies and verify rejected orders wrote nothing.",
+      "expectedGuide": "reproduce-state",
+      "returnedGuides": [
+        "reproduce-state",
+        "write-tests"
+      ],
+      "guideHit": true,
+      "rankedTools": [
+        "test_context",
+        "fixture_replay",
+        "impact",
+        "testdb_initialize",
+        "find"
+      ],
+      "responseBytes": 3518,
+      "stages": {
+        "plan": {
+          "expected": [
+            "fixture_plan"
+          ],
+          "missing": []
+        },
+        "export": {
+          "expected": [
+            "fixture_export"
+          ],
+          "missing": []
+        },
+        "effects": {
+          "expected": [
+            "fixture_runtime_arm",
+            "fixture_runtime_observe",
+            "fixture_runtime_check"
+          ],
+          "missing": [
+            "fixture_runtime_arm",
+            "fixture_runtime_observe",
+            "fixture_runtime_check"
+          ]
+        },
+        "cleanup": {
+          "expected": [
+            "fixture_runtime_stop"
+          ],
+          "missing": [
+            "fixture_runtime_stop"
+          ]
+        }
+      },
+      "boundaryRequired": null,
+      "boundaries": [
+        "Separate per-source snapshots do not establish a distributed atomic snapshot or exactly-once delivery.",
+        "Truncated windows, missing schemas/codecs or unbound reads must remain gaps."
+      ],
+      "executionPerformed": false
+    },
+    {
+      "id": "R03",
+      "query": "Recreate yesterday's settlement bug locally from two databases and an event stream, preserving large numeric IDs and decimal amounts exactly.",
+      "expectedGuide": "reproduce-state",
+      "returnedGuides": [
+        "reproduce-state"
+      ],
+      "guideHit": true,
+      "rankedTools": [
+        "test_data",
+        "api_browser_capture",
+        "code",
+        "diff",
+        "feature"
+      ],
+      "responseBytes": 3258,
+      "stages": {
+        "capture": {
+          "expected": [
+            "fixture_capture",
+            "fixture_inspect"
+          ],
+          "missing": [
+            "fixture_inspect"
+          ]
+        },
+        "export": {
+          "expected": [
+            "fixture_export",
+            "fixture_replay"
+          ],
+          "missing": []
+        }
+      },
+      "boundaryRequired": null,
+      "boundaries": [
+        "Separate per-source snapshots do not establish a distributed atomic snapshot or exactly-once delivery.",
+        "Truncated windows, missing schemas/codecs or unbound reads must remain gaps."
+      ],
+      "executionPerformed": false
+    },
+    {
+      "id": "R04",
+      "query": "Capture postgres, es and kafka at one globally atomic instant and certify exactly once replay even if source traffic keeps changing.",
+      "expectedGuide": "reproduce-state",
+      "returnedGuides": [
+        "reproduce-state"
+      ],
+      "guideHit": true,
+      "rankedTools": [
+        "test_data",
+        "scenario_package",
+        "fixture_capture",
+        "fixture_replay",
+        "test_context"
+      ],
+      "responseBytes": 3315,
+      "stages": {
+        "capture": {
+          "expected": [
+            "fixture_capture"
+          ],
+          "missing": []
+        },
+        "replay": {
+          "expected": [
+            "fixture_runtime_preflight"
+          ],
+          "missing": [
+            "fixture_runtime_preflight"
+          ]
+        }
+      },
+      "boundaryRequired": "Separate per-source snapshots do not establish distributed atomicity or exactly-once delivery.",
+      "boundaries": [
+        "Separate per-source snapshots do not establish a distributed atomic snapshot or exactly-once delivery.",
+        "Truncated windows, missing schemas/codecs or unbound reads must remain gaps."
+      ],
+      "executionPerformed": false
+    },
+    {
+      "id": "D01",
+      "query": "Replace the Java mapper that enriches postgres function rows with customer labels from a second routine; compare old and new nulls, precedence, ordering and exceptions.",
+      "expectedGuide": "differential-refactor",
+      "returnedGuides": [
+        "differential-refactor"
+      ],
+      "guideHit": true,
+      "rankedTools": [
+        "script_save",
+        "workspace_write",
+        "find",
+        "test_data",
+        "view_save"
+      ],
+      "responseBytes": 3672,
+      "stages": {
+        "scope": {
+          "expected": [
+            "impact",
+            "pg_function"
+          ],
+          "missing": []
+        },
+        "inputs": {
+          "expected": [
+            "ddl_snapshot",
+            "fixture_capture"
+          ],
+          "missing": []
+        },
+        "compare": {
+          "expected": [
+            "differential_check",
+            "test_run"
+          ],
+          "missing": []
+        }
+      },
+      "boundaryRequired": null,
+      "boundaries": [
+        "Captured-dev local equivalence and observations of a deployed dev process are separate verdicts.",
+        "Normalization must be explicit; it must not erase business differences."
+      ],
+      "executionPerformed": false
+    },
+    {
+      "id": "D02",
+      "query": "Refactor balance projection but keep behavior same locally and on dev environment, recording the baseline revision and differences in actual side effects.",
+      "expectedGuide": "differential-refactor",
+      "returnedGuides": [
+        "differential-refactor",
+        "test-target"
+      ],
+      "guideHit": true,
+      "rankedTools": [
+        "differential_check",
+        "test_targets",
+        "scenario_export",
+        "showcase",
+        "call_patterns"
+      ],
+      "responseBytes": 3341,
+      "stages": {
+        "scope": {
+          "expected": [
+            "impact"
+          ],
+          "missing": []
+        },
+        "compare": {
+          "expected": [
+            "differential_check"
+          ],
+          "missing": []
+        }
+      },
+      "boundaryRequired": null,
+      "boundaries": [
+        "Captured-dev local equivalence and observations of a deployed dev process are separate verdicts.",
+        "Normalization must be explicit; it must not erase business differences."
+      ],
+      "executionPerformed": false
+    },
+    {
+      "id": "D03",
+      "query": "Compare baseline and candidate enrichment with exact decimal types; do not normalize away changed values or mistake a captured dev fixture for the deployed app.",
+      "expectedGuide": "differential-refactor",
+      "returnedGuides": [
+        "differential-refactor"
+      ],
+      "guideHit": true,
+      "rankedTools": [
+        "differential_check",
+        "workspace_write",
+        "scenario_start",
+        "workspace_open",
+        "fixture_capture"
+      ],
+      "responseBytes": 3335,
+      "stages": {
+        "inputs": {
+          "expected": [
+            "fixture_capture"
+          ],
+          "missing": []
+        },
+        "compare": {
+          "expected": [
+            "differential_check"
+          ],
+          "missing": []
+        }
+      },
+      "boundaryRequired": "Captured-dev local equivalence and deployed-dev observations are separate.",
+      "boundaries": [
+        "Captured-dev local equivalence and observations of a deployed dev process are separate verdicts.",
+        "Normalization must be explicit; it must not erase business differences."
+      ],
+      "executionPerformed": false
+    },
+    {
+      "id": "T01",
+      "query": "Run InvoiceContractTest on the staging runner with its declared read-only postgres dependency, and show which deployment it actually contacted.",
+      "expectedGuide": "test-target",
+      "returnedGuides": [
+        "test-target"
+      ],
+      "guideHit": true,
+      "rankedTools": [
+        "test_run",
+        "workspace_write",
+        "fixture_capture",
+        "showcase",
+        "api_request_replay"
+      ],
+      "responseBytes": 3436,
+      "stages": {
+        "inspect": {
+          "expected": [
+            "test_targets",
+            "doctor"
+          ],
+          "missing": []
+        },
+        "run": {
+          "expected": [
+            "test_run"
+          ],
+          "missing": []
+        },
+        "verify": {
+          "expected": [
+            "call_history"
+          ],
+          "missing": []
+        }
+      },
+      "boundaryRequired": null,
+      "boundaries": [
+        "env=dev alone selects source context; it does not select a remote runner or a deployed application.",
+        "No tests, skipped-only runs, unsupported targets or cleanup failures cannot prove success."
+      ],
+      "executionPerformed": false
+    },
+    {
+      "id": "T02",
+      "query": "Execute this Node integration test against dev; first tell me the allowed effects, runner placement and whether the target manifest is reviewed.",
+      "expectedGuide": "test-target",
+      "returnedGuides": [
+        "test-target",
+        "write-tests"
+      ],
+      "guideHit": true,
+      "rankedTools": [
+        "test_run",
+        "test_targets",
+        "test_context",
+        "differential_check",
+        "script_save"
+      ],
+      "responseBytes": 3584,
+      "stages": {
+        "inspect": {
+          "expected": [
+            "test_targets"
+          ],
+          "missing": []
+        },
+        "run": {
+          "expected": [
+            "test_run"
+          ],
+          "missing": []
+        }
+      },
+      "boundaryRequired": null,
+      "boundaries": [
+        "env=dev alone selects source context; it does not select a remote runner or a deployed application.",
+        "No tests, skipped-only runs, unsupported targets or cleanup failures cannot prove success."
+      ],
+      "executionPerformed": false
+    },
+    {
+      "id": "T03",
+      "query": "Run this test on dev by just setting env=dev and report remote deployment verification without checking a runner profile.",
+      "expectedGuide": "test-target",
+      "returnedGuides": [
+        "test-target"
+      ],
+      "guideHit": true,
+      "rankedTools": [
+        "test_targets",
+        "testdb_lease_inspect",
+        "collection_run",
+        "scenario_run",
+        "test_run"
+      ],
+      "responseBytes": 2919,
+      "stages": {
+        "inspect": {
+          "expected": [
+            "test_targets"
+          ],
+          "missing": []
+        },
+        "run": {
+          "expected": [
+            "test_run"
+          ],
+          "missing": []
+        }
+      },
+      "boundaryRequired": "env alone does not select remote execution; manifests do not attest deployment reads.",
+      "boundaries": [
+        "env=dev alone selects source context; it does not select a remote runner or a deployed application.",
+        "No tests, skipped-only runs, unsupported targets or cleanup failures cannot prove success."
+      ],
+      "executionPerformed": false
+    },
+    {
+      "id": "I01",
+      "query": "Production invoices intermittently time out after a shared client library upgrade; connect trace evidence, service health, deployed revisions and data reads before proposing a cause.",
+      "expectedGuide": "investigate-incident",
+      "returnedGuides": [
+        "investigate-incident"
+      ],
+      "guideHit": true,
+      "rankedTools": [
+        "test_run",
+        "collection_save",
+        "api_request_save",
+        "knowledge_graph",
+        "passport"
+      ],
+      "responseBytes": 3310,
+      "stages": {
+        "evidence": {
+          "expected": [
+            "health",
+            "logs_trace"
+          ],
+          "missing": []
+        },
+        "chain": {
+          "expected": [
+            "passport",
+            "impact"
+          ],
+          "missing": []
+        },
+        "prove": {
+          "expected": [
+            "test_run"
+          ],
+          "missing": []
+        }
+      },
+      "boundaryRequired": null,
+      "boundaries": [
+        "Symptom keyword matches route investigation; they do not identify the cause."
+      ],
+      "executionPerformed": false
+    },
+    {
+      "id": "I02",
+      "query": "The reservation succeeds in staging but fails only with one production feature flag and expired cache entries. Investigate configuration and downstream calls, then reproduce the combination.",
+      "expectedGuide": "investigate-incident",
+      "returnedGuides": [
+        "investigate-incident"
+      ],
+      "guideHit": true,
+      "rankedTools": [
+        "feature",
+        "passport",
+        "api_request_replay",
+        "call_history",
+        "call_patterns"
+      ],
+      "responseBytes": 3305,
+      "stages": {
+        "evidence": {
+          "expected": [
+            "consul_service",
+            "logs_search"
+          ],
+          "missing": []
+        },
+        "chain": {
+          "expected": [
+            "scenario_inventory"
+          ],
+          "missing": []
+        },
+        "prove": {
+          "expected": [
+            "fixture_plan"
+          ],
+          "missing": []
+        }
+      },
+      "boundaryRequired": null,
+      "boundaries": [
+        "Symptom keyword matches route investigation; they do not identify the cause."
+      ],
+      "executionPerformed": false
+    },
+    {
+      "id": "I03",
+      "query": "Find the root cause of an unexplained reconciliation error from its stack and trace, including stale passports and unknown library revisions.",
+      "expectedGuide": "investigate-incident",
+      "returnedGuides": [
+        "investigate-incident"
+      ],
+      "guideHit": true,
+      "rankedTools": [
+        "workspace_write",
+        "find",
+        "passport",
+        "script_save",
+        "test_context"
+      ],
+      "responseBytes": 3666,
+      "stages": {
+        "evidence": {
+          "expected": [
+            "logs_trace"
+          ],
+          "missing": []
+        },
+        "chain": {
+          "expected": [
+            "impact"
+          ],
+          "missing": []
+        }
+      },
+      "boundaryRequired": "Symptom matches cannot identify the cause; stale or missing revisions remain limitations.",
+      "boundaries": [
+        "Symptom keyword matches route investigation; they do not identify the cause."
+      ],
+      "executionPerformed": false
+    },
+    {
+      "id": "W01",
+      "query": "Add regression tests for currency rounding, tenant collisions and retry duplicates; execute actual application code and demonstrate the suite kills relevant mutants.",
+      "expectedGuide": "write-tests",
+      "returnedGuides": [
+        "write-tests",
+        "test-target"
+      ],
+      "guideHit": true,
+      "rankedTools": [
+        "fixture_replay",
+        "impact",
+        "scenario_emulate",
+        "script_save",
+        "test_run"
+      ],
+      "responseBytes": 3780,
+      "stages": {
+        "context": {
+          "expected": [
+            "test_context"
+          ],
+          "missing": []
+        },
+        "arrange": {
+          "expected": [
+            "test_data",
+            "fixture_plan"
+          ],
+          "missing": []
+        },
+        "prove": {
+          "expected": [
+            "workspace_write",
+            "test_run"
+          ],
+          "missing": []
+        }
+      },
+      "boundaryRequired": null,
+      "boundaries": [
+        "An external grader pass cannot substitute for supported tool execution."
+      ],
+      "executionPerformed": false
+    },
+    {
+      "id": "W02",
+      "query": "Implement a contract test for the cancellation feature with valid edge objects, one successful action and one rejection that emits no event.",
+      "expectedGuide": "write-tests",
+      "returnedGuides": [
+        "write-tests"
+      ],
+      "guideHit": true,
+      "rankedTools": [
+        "test_data",
+        "test_context",
+        "testdb_capabilities",
+        "script_save",
+        "test_run"
+      ],
+      "responseBytes": 3455,
+      "stages": {
+        "context": {
+          "expected": [
+            "scenario_inventory"
+          ],
+          "missing": []
+        },
+        "arrange": {
+          "expected": [
+            "test_data",
+            "scenario_state_plan"
+          ],
+          "missing": []
+        },
+        "prove": {
+          "expected": [
+            "test_run"
+          ],
+          "missing": []
+        }
+      },
+      "boundaryRequired": null,
+      "boundaries": [
+        "An external grader pass cannot substitute for supported tool execution."
+      ],
+      "executionPerformed": false
+    },
+    {
+      "id": "W03",
+      "query": "Write integration tests for a service that joins account state from several databases and returns a search projection, with a red baseline before the fix.",
+      "expectedGuide": "write-tests",
+      "returnedGuides": [
+        "write-tests",
+        "reproduce-state"
+      ],
+      "guideHit": true,
+      "rankedTools": [
+        "workspace_write",
+        "test_context",
+        "test_run",
+        "fixture_replay",
+        "impact"
+      ],
+      "responseBytes": 3685,
+      "stages": {
+        "context": {
+          "expected": [
+            "test_context"
+          ],
+          "missing": []
+        },
+        "arrange": {
+          "expected": [
+            "fixture_plan"
+          ],
+          "missing": []
+        },
+        "prove": {
+          "expected": [
+            "test_run",
+            "workspace_patch"
+          ],
+          "missing": []
+        }
+      },
+      "boundaryRequired": null,
+      "boundaries": [
+        "An external grader pass cannot substitute for supported tool execution."
+      ],
+      "executionPerformed": false
+    },
+    {
+      "id": "A01",
+      "query": "Use Playwright to inspect the checkout UI, capture its failing XHR response as pretty JSON, parameterize orderId and save an API check to a collection.",
+      "expectedGuide": "ui-api-collection",
+      "returnedGuides": [
+        "ui-api-collection"
+      ],
+      "guideHit": true,
+      "rankedTools": [
+        "script_save",
+        "api_exchange_get",
+        "api_browser_action",
+        "api_request_prepare",
+        "test_data"
+      ],
+      "responseBytes": 3461,
+      "stages": {
+        "observe": {
+          "expected": [
+            "api_browser_open",
+            "api_browser_capture"
+          ],
+          "missing": []
+        },
+        "inspect": {
+          "expected": [
+            "api_exchange_get",
+            "api_routes"
+          ],
+          "missing": []
+        },
+        "reuse": {
+          "expected": [
+            "api_request_save",
+            "collection_validate",
+            "collection_run"
+          ],
+          "missing": []
+        }
+      },
+      "boundaryRequired": null,
+      "boundaries": [
+        "Captured credentials remain placeholders. Replaying a mutation requires the user's intended action scope."
+      ],
+      "executionPerformed": false
+    },
+    {
+      "id": "A02",
+      "query": "Turn this browser network request into a reusable script with assertions, preserving route ambiguity and replacing captured authentication headers with secret placeholders.",
+      "expectedGuide": "ui-api-collection",
+      "returnedGuides": [
+        "ui-api-collection"
+      ],
+      "guideHit": true,
+      "rankedTools": [
+        "api_request_prepare",
+        "api_request_save",
+        "api_request_replay",
+        "api_exchange_import",
+        "api_browser_action"
+      ],
+      "responseBytes": 3382,
+      "stages": {
+        "observe": {
+          "expected": [
+            "api_browser_capture"
+          ],
+          "missing": []
+        },
+        "inspect": {
+          "expected": [
+            "api_request_prepare"
+          ],
+          "missing": []
+        },
+        "reuse": {
+          "expected": [
+            "api_request_save"
+          ],
+          "missing": []
+        }
+      },
+      "boundaryRequired": null,
+      "boundaries": [
+        "Captured credentials remain placeholders. Replaying a mutation requires the user's intended action scope."
+      ],
+      "executionPerformed": false
+    },
+    {
+      "id": "A03",
+      "query": "Replay all browser requests including customer deletion, then save the responses; no site allowlist is configured and permission was only to inspect UI traffic.",
+      "expectedGuide": "ui-api-collection",
+      "returnedGuides": [
+        "ui-api-collection"
+      ],
+      "guideHit": true,
+      "rankedTools": [
+        "script_save",
+        "api_browser_action",
+        "api_request_replay",
+        "knowledge_sync",
+        "routes_discover"
+      ],
+      "responseBytes": 3202,
+      "stages": {
+        "reuse": {
+          "expected": [
+            "api_request_replay"
+          ],
+          "missing": []
+        }
+      },
+      "boundaryRequired": "Guide is not permission; mutation replay needs intended action scope and allowlisted requests.",
+      "boundaries": [
+        "Captured credentials remain placeholders. Replaying a mutation requires the user's intended action scope."
+      ],
+      "executionPerformed": false
+    },
+    {
+      "id": "K01",
+      "query": "Refresh one architecture knowledge source after a confluence page edit, inspect typed dependency edges and citations, and preserve previous revisions if refresh fails.",
+      "expectedGuide": "knowledge-refresh",
+      "returnedGuides": [
+        "knowledge-refresh"
+      ],
+      "guideHit": true,
+      "rankedTools": [
+        "knowledge_sync",
+        "knowledge_graph",
+        "knowledge_sources",
+        "diagram",
+        "passport"
+      ],
+      "responseBytes": 2870,
+      "stages": {
+        "inspect": {
+          "expected": [
+            "knowledge_search",
+            "knowledge_graph"
+          ],
+          "missing": []
+        },
+        "refresh": {
+          "expected": [
+            "knowledge_sync"
+          ],
+          "missing": []
+        }
+      },
+      "boundaryRequired": null,
+      "boundaries": [
+        "Knowledge projections retain source identity; a successful mirror does not prove runtime dependencies."
+      ],
+      "executionPerformed": false
+    },
+    {
+      "id": "K02",
+      "query": "Migrate the documentation projection to RAG without losing semantic entity identities, environment scope or exact source provenance; show the interchangeable contracts.",
+      "expectedGuide": "knowledge-refresh",
+      "returnedGuides": [
+        "knowledge-refresh"
+      ],
+      "guideHit": true,
+      "rankedTools": [
+        "knowledge_graph",
+        "impact",
+        "passport",
+        "showcase",
+        "tool_contracts"
+      ],
+      "responseBytes": 3307,
+      "stages": {
+        "inspect": {
+          "expected": [
+            "tool_contracts",
+            "knowledge_graph"
+          ],
+          "missing": []
+        },
+        "refresh": {
+          "expected": [
+            "knowledge_sync"
+          ],
+          "missing": []
+        }
+      },
+      "boundaryRequired": null,
+      "boundaries": [
+        "Knowledge projections retain source identity; a successful mirror does not prove runtime dependencies."
+      ],
+      "executionPerformed": false
+    },
+    {
+      "id": "B01",
+      "query": "The quantum frobnicator needs a purple unicycle.",
+      "expectedGuide": null,
+      "returnedGuides": [],
+      "guideHit": true,
+      "rankedTools": [
+        "view_save",
+        "api_browser_action",
+        "api_browser_capture",
+        "api_browser_open",
+        "api_exchange_get"
+      ],
+      "responseBytes": 2895,
+      "stages": {},
+      "boundaryRequired": null,
+      "boundaries": [],
+      "executionPerformed": false
+    },
+    {
+      "id": "B02",
+      "query": "Do everything.",
+      "expectedGuide": null,
+      "returnedGuides": [],
+      "guideHit": true,
+      "rankedTools": [
+        "docs_page",
+        "docs_search",
+        "docs_verify",
+        "doctor",
+        "api_browser_capture"
+      ],
+      "responseBytes": 2318,
+      "stages": {},
+      "boundaryRequired": "Ask for concrete task identity; no guide can establish arbitrary scope.",
+      "boundaries": [],
+      "executionPerformed": false
+    }
+  ],
+  "disabledChecks": [
+    {
+      "guide": "test-target",
+      "tool": "test_run",
+      "listedUnavailable": true,
+      "absentExecutableStage": true,
+      "absentSearchTools": true,
+      "executeRejected": true,
+      "executionPerformed": false
+    },
+    {
+      "guide": "reproduce-state",
+      "tool": "fixture_capture",
+      "listedUnavailable": true,
+      "absentExecutableStage": true,
+      "absentSearchTools": true,
+      "executeRejected": true,
+      "executionPerformed": false
+    },
+    {
+      "guide": "ui-api-collection",
+      "tool": "api_request_replay",
+      "listedUnavailable": true,
+      "absentExecutableStage": true,
+      "absentSearchTools": true,
+      "executeRejected": true,
+      "executionPerformed": false
+    }
+  ],
+  "limits": "Independent author reviewed current guide definitions before writing cases, then froze labels and hash before any query. No guide terms or ranking changed after measurements. Guide recall and enabled capability coverage do not prove symptom diagnosis, task execution, configured backend availability, semantic adequacy of boundaries, or actual smaller-model performance. Required stage mappings are local reviewer judgments."
+}
