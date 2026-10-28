@@ -1,0 +1,159 @@
+{
+  "protocol": "dt.user-request-readiness/v1",
+  "generatedAt": "2026-10-28T21:51:33.002Z",
+  "networkUsed": false,
+  "observations": {
+    "columnAccess": {
+      "proof": "executed-cached-index-tools",
+      "columnUsageTotal": 0,
+      "tableUsageTotal": 3,
+      "tableUsers": [
+        {
+          "user": "public.read_status",
+          "role": "read"
+        },
+        {
+          "user": "public.read_total",
+          "role": "read"
+        },
+        {
+          "user": "public.write_status",
+          "role": "write"
+        }
+      ],
+      "columnImpact": [
+        "1 pgfn pgfn:public.read_status <- body column:public.orders.status",
+        "1 pgfn pgfn:public.write_status <- body column:public.orders.status"
+      ],
+      "missingReadWriteClassification": true,
+      "gap": true
+    },
+    "relatedEsState": {
+      "proof": "executed-tool-plan",
+      "fixtureInputHasEs": false,
+      "unsupportedEsArgumentWasRejected": false,
+      "plannedStateKinds": [
+        "pg"
+      ],
+      "esPreserved": false,
+      "gaps": [],
+      "scenarioStatePlanAvailable": true,
+      "gap": true
+    },
+    "devTarget": {
+      "proof": "argument-routing-with-stubbed-project-runner",
+      "realProjectExecuted": false,
+      "hasTargetEnvironmentSelector": false,
+      "envSchema": "With db: the environment of the DDL snapshot",
+      "envOnlyForwardedDb": null,
+      "envOnlyForwardedTarget": null,
+      "explanation": "env alone does not target a deployed service; env+db selects a DDL snapshot copied to scratch. The runner was intentionally stubbed to inspect routing without touching dev.",
+      "gap": true
+    },
+    "concurrentTestIdentity": {
+      "proof": "argument-routing-with-stubbed-project-runner",
+      "realProjectExecuted": false,
+      "firstJob": "mvsnfzw308e951",
+      "secondJob": "mvsnfzw308e951",
+      "executionsForDifferentEnvironments": 1,
+      "firstForwardedDb": {
+        "env": "dev",
+        "db": "orders"
+      },
+      "secondRequestDb": "another-database",
+      "gap": true
+    }
+  },
+  "calls": [
+    {
+      "name": "pg_usage",
+      "arguments": {
+        "name": "orders:public.orders.status",
+        "env": "dev"
+      },
+      "ms": 31.513,
+      "outputBytes": 169
+    },
+    {
+      "name": "pg_usage",
+      "arguments": {
+        "name": "orders:public.orders",
+        "env": "dev"
+      },
+      "ms": 36.164,
+      "outputBytes": 607
+    },
+    {
+      "name": "impact",
+      "arguments": {
+        "target": "public.orders.status",
+        "env": "dev"
+      },
+      "ms": 19.509,
+      "outputBytes": 453
+    },
+    {
+      "name": "fixture_plan",
+      "arguments": {
+        "env": "dev",
+        "seeds": [
+          {
+            "db": "orders",
+            "table": "public.orders",
+            "where": {
+              "id": 42
+            }
+          }
+        ],
+        "es": [
+          {
+            "index": "orders",
+            "where": {
+              "id": 42
+            }
+          }
+        ]
+      },
+      "ms": 13.681,
+      "outputBytes": 835
+    },
+    {
+      "name": "test_run",
+      "arguments": {
+        "workspace": "routing-probe",
+        "tests": [
+          "ProbeTest"
+        ],
+        "env": "dev",
+        "db": "orders"
+      },
+      "ms": 8.743,
+      "outputBytes": 143
+    },
+    {
+      "name": "test_run",
+      "arguments": {
+        "workspace": "routing-probe",
+        "tests": [
+          "ProbeTest"
+        ],
+        "env": "staging",
+        "db": "another-database"
+      },
+      "ms": 6.87,
+      "outputBytes": 143
+    },
+    {
+      "name": "test_run",
+      "arguments": {
+        "workspace": "routing-probe",
+        "tests": [
+          "EnvOnlyTest"
+        ],
+        "env": "dev"
+      },
+      "ms": 6.645,
+      "outputBytes": 143
+    }
+  ]
+}

@@ -25,7 +25,7 @@ services:
       DT_PUBLISHED_PORT: ${DT_PORT:-4000}                  # default public URL: http://127.0.0.1:<this>
       DT_RATE_PER_SEC: ${DT_RATE_PER_SEC:-}
       DT_TOOLS: ${DT_TOOLS:-}
-      DT_TOOL_PROFILE: ${DT_TOOL_PROFILE:-compact}          # small initial Open WebUI tool list; discover exact tools on demand
+      DT_TOOL_PROFILE: ${DT_TOOL_PROFILE:-lean-find}          # small initial Open WebUI tool list; discover exact tools on demand
       GRAPH_URL: ${GRAPH_URL:-http://graph:8000}
       DT_BROWSER_MCP: ${DT_BROWSER_MCP:-http://browser:8931/mcp}  # dt drives the browser for saved scripts / route discovery
       DT_HOME: /dt

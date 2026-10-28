@@ -7,12 +7,14 @@ backend uses to call dt can be different. For example, its backend may call
 
 ## Choose a small starting tool list
 
-The bundled compose sets `DT_TOOL_PROFILE=compact`. Existing standalone installations
+The bundled compose sets `DT_TOOL_PROFILE=lean-find`: five starting definitions (`find`, `tool_search`, `tool_describe`, `tool_execute`, `tool_profiles`). The four-tool `lean` profile omits the initial `find` definition; it remains discoverable. The existing 11-tool `compact` profile is still available. Existing standalone installations
 remain on their configured profile, or `all` when none is configured. The profile
 can also be selected per connection:
 
 | OpenAPI path | Starting workflow |
 | --- | --- |
+| `openapi/lean-find.json` | Five starting tools; cached system names plus expandable discovery |
+| `openapi/lean.json` | Four discovery tools; retrieve each capability on request |
 | `openapi/compact.json` | Find capabilities on demand, then execute exact tools |
 | `openapi/lean.json` | Four discovery tools; request more capabilities when needed |
 | `openapi/lean-find.json` | Five tools: cached catalog search plus discovery |
