@@ -1,0 +1,247 @@
+[
+  {
+    "case": "C01",
+    "artifact": "2026-10-28T21-45-44-560Z-c01-patch.json",
+    "workspace": "c01-main-a04c",
+    "base": "632a0fdc240ca8052c7c92e257c69594d08f77f4",
+    "files": [
+      {
+        "path": "src/checkout.cjs",
+        "added": 5,
+        "removed": 4,
+        "status": "modified"
+      },
+      {
+        "path": "test/regression.test.cjs",
+        "added": 18,
+        "removed": 0,
+        "status": "added"
+      }
+    ],
+    "redGreen": [],
+    "truncated": false
+  },
+  {
+    "case": "C03",
+    "artifact": "2026-10-28T21-50-09-743Z-c03-patch.json",
+    "workspace": "common-primitives-main-7397",
+    "base": "6f76bff2c5c699a70e64b591799200a3f142f544",
+    "files": [
+      {
+        "path": "decimal/src/main/java/com/lumen/money/LedgerAmount.java",
+        "added": 1,
+        "removed": 1,
+        "status": "modified"
+      },
+      {
+        "path": "decimal/src/test/java/com/lumen/money/LedgerAmountTest.java",
+        "added": 22,
+        "removed": 0,
+        "status": "added"
+      }
+    ],
+    "redGreen": [
+      "red-green: LedgerAmountTest#respectsCurrencyScaleAndHalfUpTies",
+      "red-green: LedgerAmountTest#preservesLongBoundaryAndRejectsOverflowAndInvalidInputs"
+    ],
+    "truncated": false
+  },
+  {
+    "case": "C08",
+    "artifact": "2026-10-28T21-51-35-987Z-c08-patch.json",
+    "workspace": "c08-main-476f",
+    "base": "e034f2cfa31df5ec6c8d838d2f67f27e6497dd6d",
+    "files": [
+      {
+        "path": "test/regression.test.cjs",
+        "added": 18,
+        "removed": 0,
+        "status": "added"
+      }
+    ],
+    "redGreen": [],
+    "truncated": false
+  },
+  {
+    "case": "C05",
+    "artifact": "2026-10-28T21-51-36-004Z-c05-patch.json",
+    "workspace": "c05-main-8261",
+    "base": "fb856dd357ce41129c7284f9f0c4540688ef6a36",
+    "files": [
+      {
+        "path": "src/reconcile.cjs",
+        "added": 11,
+        "removed": 2,
+        "status": "modified"
+      },
+      {
+        "path": "test/regression.test.cjs",
+        "added": 16,
+        "removed": 0,
+        "status": "added"
+      }
+    ],
+    "redGreen": [],
+    "truncated": false
+  },
+  {
+    "case": "C07",
+    "artifact": "2026-10-28T21-51-36-004Z-c07-patch.json",
+    "workspace": "c07-main-49cc",
+    "base": "3a0b29fbf683c57cb2ad929cdd658b6be85b927e",
+    "files": [
+      {
+        "path": "src/cancellation.cjs",
+        "added": 3,
+        "removed": 1,
+        "status": "modified"
+      },
+      {
+        "path": "test/regression.test.cjs",
+        "added": 15,
+        "removed": 0,
+        "status": "added"
+      }
+    ],
+    "redGreen": [],
+    "truncated": false
+  },
+  {
+    "case": "C04",
+    "artifact": "2026-10-28T21-51-36-011Z-c04-patch.json",
+    "workspace": "c04-main-43a5",
+    "base": "637246d07986be76bfa479e0e3d9efce2da41b11",
+    "files": [
+      {
+        "path": "src/reservations.cjs",
+        "added": 9,
+        "removed": 4,
+        "status": "modified"
+      },
+      {
+        "path": "test/regression.test.cjs",
+        "added": 13,
+        "removed": 0,
+        "status": "added"
+      }
+    ],
+    "redGreen": [],
+    "truncated": false
+  },
+  {
+    "case": "C06",
+    "artifact": "2026-10-28T21-51-36-021Z-c06-patch.json",
+    "workspace": "c06-main-a358",
+    "base": "1220a889a7718475828bfdd82c727b51a7a58f29",
+    "files": [
+      {
+        "path": "src/release.cjs",
+        "added": 2,
+        "removed": 2,
+        "status": "modified"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/tenant-release/README.txt",
+        "added": 10,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/tenant-release/manifest.json",
+        "added": 672,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/constraints.sql",
+        "added": 1,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/data.sql",
+        "added": 9,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/rows.json",
+        "added": 30,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/schema.json",
+        "added": 112,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/schema.sql",
+        "added": 21,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/constraints.sql",
+        "added": 1,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/data.sql",
+        "added": 9,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/rows.json",
+        "added": 30,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/schema.json",
+        "added": 118,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/schema.sql",
+        "added": 19,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "test/regression.test.cjs",
+        "added": 16,
+        "removed": 0,
+        "status": "added"
+      }
+    ],
+    "redGreen": [],
+    "truncated": true
+  },
+  {
+    "case": "C02",
+    "artifact": "2026-10-28T21-51-36-034Z-c02-patch.json",
+    "workspace": "c02-main-728a",
+    "base": "53a2705aa73bc39b5a9b3f46265390b4b9f7101b",
+    "files": [
+      {
+        "path": "checkout/src/checkout.cjs",
+        "added": 6,
+        "removed": 4,
+        "status": "modified"
+      },
+      {
+        "path": "test/regression.test.cjs",
+        "added": 19,
+        "removed": 0,
+        "status": "added"
+      }
+    ],
+    "redGreen": [],
+    "truncated": false
+  }
+]

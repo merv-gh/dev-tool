@@ -1,0 +1,29 @@
+{
+  "started": "2026-10-28T21:47:23.305Z",
+  "ended": "2026-10-28T21:47:23.766Z",
+  "durationMs": 461,
+  "tool": "workspace_read",
+  "args": {
+    "workspace": "ledger-service-main-81bf",
+    "path": "pom.xml"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 1033,
+  "stderrBytes": 152,
+  "stdout": "{\n  \"id\": \"ledger-service-main-81bf\",\n  \"path\": \"pom.xml\",\n  \"from\": 1,\n  \"to\": 2,\n  \"lines\": 2,\n  \"text\": \"    1  <project xmlns=\\\"http://maven.apache.org/POM/4.0.0\\\"><modelVersion>4.0.0</modelVersion><groupId>com.lumen</groupId><artifactId>ledger-service</artifactId><version>1.0.0</version><properties><maven.compiler.release>17</maven.compiler.release></properties><dependencies><dependency><groupId>com.lumen.money</groupId><artifactId>ledger-amounts</artifactId><version>2.4.1</version></dependency><dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><version>5.10.0</version><scope>test</scope></dependency></dependencies><build><plugins><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.13.0</version><configuration><release>17</release></configuration></plugin><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>3.2.5</version></plugin></plugins></build></project>\\n    2  \"\n}\n",
+  "stderr": "21:47:23 dt call workspace_read#1nht start {\"workspace\":\"ledger-service-main-81bf\",\"path\":\"pom.xml\"} (cli)\n21:47:23 dt call workspace_read#1nht ok 33ms\n",
+  "result": {
+    "id": "ledger-service-main-81bf",
+    "path": "pom.xml",
+    "from": 1,
+    "to": 2,
+    "lines": 2,
+    "text": "    1  <project xmlns=\"http://maven.apache.org/POM/4.0.0\"><modelVersion>4.0.0</modelVersion><groupId>com.lumen</groupId><artifactId>ledger-service</artifactId><version>1.0.0</version><properties><maven.compiler.release>17</maven.compiler.release></properties><dependencies><dependency><groupId>com.lumen.money</groupId><artifactId>ledger-amounts</artifactId><version>2.4.1</version></dependency><dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><version>5.10.0</version><scope>test</scope></dependency></dependencies><build><plugins><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.13.0</version><configuration><release>17</release></configuration></plugin><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>3.2.5</version></plugin></plugins></build></project>\n    2  "
+  }
+}

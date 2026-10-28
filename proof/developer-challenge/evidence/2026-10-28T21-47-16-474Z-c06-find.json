@@ -1,0 +1,28 @@
+{
+  "started": "2026-10-28T21:47:16.474Z",
+  "ended": "2026-10-28T21:47:16.918Z",
+  "durationMs": 444,
+  "tool": "find",
+  "args": {
+    "q": "pg:",
+    "env": "fixture",
+    "limit": 20
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 440,
+  "stderrBytes": 113,
+  "stdout": "[\n  \"pg orders sales.accounts ~0: tenant_id bigint, id bigint, enabled boolean | used by: fk sales.orders(references)\",\n  \"pg orders sales.orders ~0: tenant_id bigint, id bigint, account_id bigint, status text, amount numeric(20,6)\",\n  \"pg billing pay.payments ~0: tenant_id bigint, order_id bigint, status text, amount numeric(20,6)\",\n  \"pg billing risk.accounts ~0: tenant_id bigint, id bigint, status text, credit_limit numeric(20,6)\"\n]\n",
+  "stderr": "21:47:16 dt call find#1i84 start {\"q\":\"pg:\",\"env\":\"fixture\",\"limit\":20} (cli)\n21:47:16 dt call find#1i84 ok 28ms\n",
+  "result": [
+    "pg orders sales.accounts ~0: tenant_id bigint, id bigint, enabled boolean | used by: fk sales.orders(references)",
+    "pg orders sales.orders ~0: tenant_id bigint, id bigint, account_id bigint, status text, amount numeric(20,6)",
+    "pg billing pay.payments ~0: tenant_id bigint, order_id bigint, status text, amount numeric(20,6)",
+    "pg billing risk.accounts ~0: tenant_id bigint, id bigint, status text, credit_limit numeric(20,6)"
+  ]
+}

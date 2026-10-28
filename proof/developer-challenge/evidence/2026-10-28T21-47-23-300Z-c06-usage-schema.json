@@ -1,0 +1,59 @@
+{
+  "started": "2026-10-28T21:47:23.300Z",
+  "ended": "2026-10-28T21:47:23.782Z",
+  "durationMs": 482,
+  "tool": "tool_describe",
+  "args": {
+    "name": "pg_usage"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 1316,
+  "stderrBytes": 112,
+  "stdout": "{\n  \"name\": \"pg_usage\",\n  \"description\": \"What uses a Postgres table/view/function, or what an object/service uses, across database objects AND code: services (passports: reads, writes, entity, repository, migration owner, SQL calls, with file:line), functions/procedures (bodies), triggers, views, foreign keys. direction=used_by (default) answers \\\"who touches X\\\"; direction=uses answers \\\"what does X touch\\\" (X can be a function, view or service name). Returns a preview plus `view`, a link to the full result as an interactive table (shown to the user inline). Mention the link.\",\n  \"group\": \"pg\",\n  \"origin\": \"built-in\",\n  \"execution\": {\n    \"protocol\": \"dt.tool/v1\",\n    \"transport\": \"in-process\"\n  },\n  \"inputSchema\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"name\": {\n        \"type\": \"string\",\n        \"description\": \"schema.table, schema.function, plain name, db:schema.name, or a service (direction=uses)\"\n      },\n      \"env\": {\n        \"type\": \"string\",\n        \"enum\": [\n          \"dev\",\n          \"fixture\"\n        ],\n        \"default\": \"dev\",\n        \"description\": \"Environment\"\n      },\n      \"direction\": {\n        \"type\": \"string\",\n        \"enum\": [\n          \"used_by\",\n          \"uses\"\n        ],\n        \"default\": \"used_by\"\n      }\n    },\n    \"required\": [\n      \"name\"\n    ]\n  }\n}\n",
+  "stderr": "21:47:23 dt call tool_describe#1nhz start {\"name\":\"pg_usage\"} (cli)\n21:47:23 dt call tool_describe#1nhz ok 40ms\n",
+  "result": {
+    "name": "pg_usage",
+    "description": "What uses a Postgres table/view/function, or what an object/service uses, across database objects AND code: services (passports: reads, writes, entity, repository, migration owner, SQL calls, with file:line), functions/procedures (bodies), triggers, views, foreign keys. direction=used_by (default) answers \"who touches X\"; direction=uses answers \"what does X touch\" (X can be a function, view or service name). Returns a preview plus `view`, a link to the full result as an interactive table (shown to the user inline). Mention the link.",
+    "group": "pg",
+    "origin": "built-in",
+    "execution": {
+      "protocol": "dt.tool/v1",
+      "transport": "in-process"
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "schema.table, schema.function, plain name, db:schema.name, or a service (direction=uses)"
+        },
+        "env": {
+          "type": "string",
+          "enum": [
+            "dev",
+            "fixture"
+          ],
+          "default": "dev",
+          "description": "Environment"
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "used_by",
+            "uses"
+          ],
+          "default": "used_by"
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  }
+}

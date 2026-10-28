@@ -1,0 +1,191 @@
+{
+  "started": "2026-10-28T21:41:32.413Z",
+  "ended": "2026-10-28T21:41:32.636Z",
+  "durationMs": 223,
+  "tool": "tool_search",
+  "args": {
+    "query": "scenario fixture capture snapshot read query environment",
+    "limit": 12
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/dev-tool",
+    "JAVA_HOME": null
+  },
+  "exitCode": 0,
+  "stdoutBytes": 7126,
+  "stderrBytes": 168,
+  "stdout": "{\n  \"total\": 76,\n  \"tools\": [\n    {\n      \"name\": \"fixture_capture\",\n      \"group\": \"code\",\n      \"description\": \"Capture one reproducible scenario with bounded, parameterized, read-only reads. Input is fixture_plan inputs or its returned plan. Captures every Kafka partition window, correlation matches, offsets and provenance. Masks sensitive values consistently by default. Returns capture id + interactive explorer; gaps/truncation prevent a claim of completeness. Never writes to the environment.\",\n      \"required\": [],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"fixture_capture\"\n        }\n      }\n    },\n    {\n      \"name\": \"scenario_state_plan\",\n      \"group\": \"code\",\n      \"description\": \"Bind every passport read independently before emulation. Bindings by dependency id: {mode:\\\"provided\\\",value} for explicit fixtures, {capture:\\\"fixture capture id\\\",table:\\\"db:schema.table\\\"|topic:\\\"name\\\"}, or {mode:\\\"capture\\\",query:{...}}. No invented empty state. Ambiguous targets require resolve:{db,...,evidence}; unknown dependencies remain incomplete until modeled.\",\n      \"required\": [\n        \"inventory\"\n      ],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"scenario_state_plan\"\n        }\n      }\n    },\n    {\n      \"name\": \"scenario_state_capture\",\n      \"group\": \"code\",\n      \"description\": \"Materialize the independently inspectable state plan. Provided fixtures and PG/Kafka captures are local; explicit capture readers support parameterized PG, bounded Kafka/ES, and allowlisted GET/HEAD HTTP. Missing, failed or truncated dependencies keep complete=false. Mask personal/secret fields by default. Returns saved state id and a view.\",\n      \"required\": [\n        \"plan\"\n      ],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"scenario_state_capture\"\n        }\n      }\n    },\n    {\n      \"name\": \"fixture_validate\",\n      \"group\": \"code\",\n      \"description\": \"Inspect one saved fixture capture separately: recheck captured parent relationships and return all capture gaps, completeness and counts. Does not query the environment or write scratch databases; fixture_replay separately validates real SQL and constraints.\",\n      \"required\": [\n        \"capture\"\n      ],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"fixture_validate\"\n        }\n      }\n    },\n    {\n      \"name\": \"scenario_package\",\n      \"group\": \"code\",\n      \"description\": \"Package a complete passport scenario: captured reads, bound action inputs, independent expectations, optional PG/Kafka fixture files, and a reviewed runtime profile. Writes portable versioned test resources and returns their path/hash. Full data stays in the default visualization; include_artifact=true returns it for transfer. No application execution.\",\n      \"required\": [\n        \"workspace\",\n        \"inventory\",\n        \"state\",\n        \"actions\",\n        \"expectations\"\n      ],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"scenario_package\"\n        }\n      }\n    },\n    {\n      \"name\": \"scenario_start\",\n      \"group\": \"code\",\n      \"description\": \"Start the unchanged Node service in a private Docker network-none container, arrange exact HTTP fixtures/config/files, wait for readiness and return a leased session. No host ports, sockets, environment credentials or live HTTP fallback. Poll with job if still running. Use scenario_stop when finished.\",\n      \"required\": [],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"scenario_start\"\n        }\n      }\n    },\n    {\n      \"name\": \"fixture_plan\",\n      \"group\": \"code\",\n      \"description\": \"Offline plan for related test data across Postgres databases and Kafka. Reads cached schemas, FKs and usage indexes first. Seeds use explicit db/schema.table and equality filters. Follows schema FKs; cross-database joins are explicit relations. Returns candidates for review, never guesses them as facts. Inspect then pass the inputs to fixture_capture.\",\n      \"required\": [],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"fixture_plan\"\n        }\n      }\n    },\n    {\n      \"name\": \"fixture_schema\",\n      \"group\": \"code\",\n      \"description\": \"Inspect Kafka correlation paths independently from capture. Reads cached JSON Schema, Avro, flattened fields and samples, with evidence and types. An optional path is checked against the known shape; unknown schemas do not establish a missing path. Headers may have undeclared keys.\",\n      \"required\": [\n        \"topic\"\n      ],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"fixture_schema\"\n        }\n      }\n    },\n    {\n      \"name\": \"scenario_emulate\",\n      \"group\": \"code\",\n      \"description\": \"Emulate the complete bound passport contract using only captured local state. Sandboxed JS sees vars.actions and ONLY await tools.action_input({id}), tools.state_read({id,action?,where?,key?,request?}), tools.observe({id,value}). Every selected action, required dependency read and expected effect is checked; no live dt tools are exposed. This verifies an explicit local model; run real service tests with test_run for application proof.\",\n      \"required\": [\n        \"inventory\",\n        \"actions\",\n        \"expectations\",\n        \"code\"\n      ],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"scenario_emulate\"\n        }\n      }\n    },\n    {\n      \"name\": \"scenario_run\",\n      \"group\": \"code\",\n      \"description\": \"Run a verified scenario end to end. The node-container adapter arranges isolated reads, starts the actual service, invokes actions, independently observes effects and always stops. The test-run adapter runs reviewed real project tests with verified multi-DB fixtures and checks the independent observation report. Poll with job if still running; proof levels and unsupported boundaries remain explicit.\",\n      \"required\": [],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"scenario_run\"\n        }\n      }\n    },\n    {\n      \"name\": \"scenario_state_get\",\n      \"group\": \"code\",\n      \"description\": \"Inspect one captured read dependency separately, without running an action. Optional where filters row/document arrays, key selects a captured cache entry, request selects exactly one explicitly provided HTTP exchange. Never calls live systems.\",\n      \"required\": [\n        \"id\"\n      ],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"scenario_state_get\"\n        }\n      }\n    },\n    {\n      \"name\": \"experiment_run\",\n      \"group\": \"code\",\n      \"description\": \"Run a saved read-only experiment. Retains assertions, returned value, calls and timings for comparison; optionally exposes a masked fixture capture as vars.fixture.\",\n      \"required\": [\n        \"id\"\n      ],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"experiment_run\"\n        }\n      }\n    }\n  ]\n}\n",
+  "stderr": "21:41:32 dt call tool_search#14lw start {\"query\":\"scenario fixture capture snapshot read query environment\",\"limit\":12} (cli)\n21:41:32 dt call tool_search#14lw ok 32ms\n",
+  "result": {
+    "total": 76,
+    "tools": [
+      {
+        "name": "fixture_capture",
+        "group": "code",
+        "description": "Capture one reproducible scenario with bounded, parameterized, read-only reads. Input is fixture_plan inputs or its returned plan. Captures every Kafka partition window, correlation matches, offsets and provenance. Masks sensitive values consistently by default. Returns capture id + interactive explorer; gaps/truncation prevent a claim of completeness. Never writes to the environment.",
+        "required": [],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "fixture_capture"
+          }
+        }
+      },
+      {
+        "name": "scenario_state_plan",
+        "group": "code",
+        "description": "Bind every passport read independently before emulation. Bindings by dependency id: {mode:\"provided\",value} for explicit fixtures, {capture:\"fixture capture id\",table:\"db:schema.table\"|topic:\"name\"}, or {mode:\"capture\",query:{...}}. No invented empty state. Ambiguous targets require resolve:{db,...,evidence}; unknown dependencies remain incomplete until modeled.",
+        "required": [
+          "inventory"
+        ],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "scenario_state_plan"
+          }
+        }
+      },
+      {
+        "name": "scenario_state_capture",
+        "group": "code",
+        "description": "Materialize the independently inspectable state plan. Provided fixtures and PG/Kafka captures are local; explicit capture readers support parameterized PG, bounded Kafka/ES, and allowlisted GET/HEAD HTTP. Missing, failed or truncated dependencies keep complete=false. Mask personal/secret fields by default. Returns saved state id and a view.",
+        "required": [
+          "plan"
+        ],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "scenario_state_capture"
+          }
+        }
+      },
+      {
+        "name": "fixture_validate",
+        "group": "code",
+        "description": "Inspect one saved fixture capture separately: recheck captured parent relationships and return all capture gaps, completeness and counts. Does not query the environment or write scratch databases; fixture_replay separately validates real SQL and constraints.",
+        "required": [
+          "capture"
+        ],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "fixture_validate"
+          }
+        }
+      },
+      {
+        "name": "scenario_package",
+        "group": "code",
+        "description": "Package a complete passport scenario: captured reads, bound action inputs, independent expectations, optional PG/Kafka fixture files, and a reviewed runtime profile. Writes portable versioned test resources and returns their path/hash. Full data stays in the default visualization; include_artifact=true returns it for transfer. No application execution.",
+        "required": [
+          "workspace",
+          "inventory",
+          "state",
+          "actions",
+          "expectations"
+        ],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "scenario_package"
+          }
+        }
+      },
+      {
+        "name": "scenario_start",
+        "group": "code",
+        "description": "Start the unchanged Node service in a private Docker network-none container, arrange exact HTTP fixtures/config/files, wait for readiness and return a leased session. No host ports, sockets, environment credentials or live HTTP fallback. Poll with job if still running. Use scenario_stop when finished.",
+        "required": [],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "scenario_start"
+          }
+        }
+      },
+      {
+        "name": "fixture_plan",
+        "group": "code",
+        "description": "Offline plan for related test data across Postgres databases and Kafka. Reads cached schemas, FKs and usage indexes first. Seeds use explicit db/schema.table and equality filters. Follows schema FKs; cross-database joins are explicit relations. Returns candidates for review, never guesses them as facts. Inspect then pass the inputs to fixture_capture.",
+        "required": [],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "fixture_plan"
+          }
+        }
+      },
+      {
+        "name": "fixture_schema",
+        "group": "code",
+        "description": "Inspect Kafka correlation paths independently from capture. Reads cached JSON Schema, Avro, flattened fields and samples, with evidence and types. An optional path is checked against the known shape; unknown schemas do not establish a missing path. Headers may have undeclared keys.",
+        "required": [
+          "topic"
+        ],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "fixture_schema"
+          }
+        }
+      },
+      {
+        "name": "scenario_emulate",
+        "group": "code",
+        "description": "Emulate the complete bound passport contract using only captured local state. Sandboxed JS sees vars.actions and ONLY await tools.action_input({id}), tools.state_read({id,action?,where?,key?,request?}), tools.observe({id,value}). Every selected action, required dependency read and expected effect is checked; no live dt tools are exposed. This verifies an explicit local model; run real service tests with test_run for application proof.",
+        "required": [
+          "inventory",
+          "actions",
+          "expectations",
+          "code"
+        ],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "scenario_emulate"
+          }
+        }
+      },
+      {
+        "name": "scenario_run",
+        "group": "code",
+        "description": "Run a verified scenario end to end. The node-container adapter arranges isolated reads, starts the actual service, invokes actions, independently observes effects and always stops. The test-run adapter runs reviewed real project tests with verified multi-DB fixtures and checks the independent observation report. Poll with job if still running; proof levels and unsupported boundaries remain explicit.",
+        "required": [],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "scenario_run"
+          }
+        }
+      },
+      {
+        "name": "scenario_state_get",
+        "group": "code",
+        "description": "Inspect one captured read dependency separately, without running an action. Optional where filters row/document arrays, key selects a captured cache entry, request selects exactly one explicitly provided HTTP exchange. Never calls live systems.",
+        "required": [
+          "id"
+        ],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "scenario_state_get"
+          }
+        }
+      },
+      {
+        "name": "experiment_run",
+        "group": "code",
+        "description": "Run a saved read-only experiment. Retains assertions, returned value, calls and timings for comparison; optionally exposes a masked fixture capture as vars.fixture.",
+        "required": [
+          "id"
+        ],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "experiment_run"
+          }
+        }
+      }
+    ]
+  }
+}

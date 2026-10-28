@@ -1,0 +1,68 @@
+{
+  "started": "2026-10-28T21:41:51.270Z",
+  "ended": "2026-10-28T21:41:51.483Z",
+  "durationMs": 213,
+  "tool": "tool_search",
+  "args": {
+    "query": "fixture export persist",
+    "limit": 3
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/dev-tool",
+    "JAVA_HOME": null
+  },
+  "exitCode": 0,
+  "stdoutBytes": 1874,
+  "stderrBytes": 133,
+  "stdout": "{\n  \"total\": 19,\n  \"tools\": [\n    {\n      \"name\": \"fixture_export\",\n      \"group\": \"code\",\n      \"description\": \"Save a capture into [module/]src/test/resources/dt-fixtures/<name>: per-DB schema/data/constraints SQL + JSON, Kafka JSONL/schema/offsets, hashed manifest and loading instructions. Existing fixtures are preserved unless overwrite=true. Generated resources can be committed with tests.\",\n      \"required\": [\n        \"workspace\",\n        \"capture\"\n      ],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"fixture_export\"\n        }\n      }\n    },\n    {\n      \"name\": \"scenario_export\",\n      \"group\": \"code\",\n      \"description\": \"Export complete state, action and expectation contracts as separately hashed JSON test resources in [module/]src/test/resources/dt-fixtures/<name>. Arrange them with mocks/containers, apply actions to the actual service, and assert the independently bound effects. Use fixture_export too for replayable PG SQL/Kafka files.\",\n      \"required\": [\n        \"workspace\",\n        \"inventory\",\n        \"actions\",\n        \"expectations\"\n      ],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"scenario_export\"\n        }\n      }\n    },\n    {\n      \"name\": \"fixture_capture\",\n      \"group\": \"code\",\n      \"description\": \"Capture one reproducible scenario with bounded, parameterized, read-only reads. Input is fixture_plan inputs or its returned plan. Captures every Kafka partition window, correlation matches, offsets and provenance. Masks sensitive values consistently by default. Returns capture id + interactive explorer; gaps/truncation prevent a claim of completeness. Never writes to the environment.\",\n      \"required\": [],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"fixture_capture\"\n        }\n      }\n    }\n  ]\n}\n",
+  "stderr": "21:41:51 dt call tool_search#1j5g start {\"query\":\"fixture export persist\",\"limit\":3} (cli)\n21:41:51 dt call tool_search#1j5g ok 34ms\n",
+  "result": {
+    "total": 19,
+    "tools": [
+      {
+        "name": "fixture_export",
+        "group": "code",
+        "description": "Save a capture into [module/]src/test/resources/dt-fixtures/<name>: per-DB schema/data/constraints SQL + JSON, Kafka JSONL/schema/offsets, hashed manifest and loading instructions. Existing fixtures are preserved unless overwrite=true. Generated resources can be committed with tests.",
+        "required": [
+          "workspace",
+          "capture"
+        ],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "fixture_export"
+          }
+        }
+      },
+      {
+        "name": "scenario_export",
+        "group": "code",
+        "description": "Export complete state, action and expectation contracts as separately hashed JSON test resources in [module/]src/test/resources/dt-fixtures/<name>. Arrange them with mocks/containers, apply actions to the actual service, and assert the independently bound effects. Use fixture_export too for replayable PG SQL/Kafka files.",
+        "required": [
+          "workspace",
+          "inventory",
+          "actions",
+          "expectations"
+        ],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "scenario_export"
+          }
+        }
+      },
+      {
+        "name": "fixture_capture",
+        "group": "code",
+        "description": "Capture one reproducible scenario with bounded, parameterized, read-only reads. Input is fixture_plan inputs or its returned plan. Captures every Kafka partition window, correlation matches, offsets and provenance. Masks sensitive values consistently by default. Returns capture id + interactive explorer; gaps/truncation prevent a claim of completeness. Never writes to the environment.",
+        "required": [],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "fixture_capture"
+          }
+        }
+      }
+    ]
+  }
+}

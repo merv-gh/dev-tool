@@ -1,0 +1,47 @@
+{
+  "started": "2026-10-28T21:51:36.004Z",
+  "ended": "2026-10-28T21:51:36.398Z",
+  "durationMs": 394,
+  "tool": "workspace_patch",
+  "args": {
+    "workspace": "c05-main-8261"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 3148,
+  "stderrBytes": 127,
+  "stdout": "{\n  \"workspace\": \"c05-main-8261\",\n  \"repo\": \"CASES/c05\",\n  \"base\": \"fb856dd357ce41129c7284f9f0c4540688ef6a36\",\n  \"files\": [\n    {\n      \"path\": \"src/reconcile.cjs\",\n      \"added\": 11,\n      \"removed\": 2,\n      \"status\": \"modified\"\n    },\n    {\n      \"path\": \"test/regression.test.cjs\",\n      \"added\": 16,\n      \"removed\": 0,\n      \"status\": \"added\"\n    }\n  ],\n  \"tests\": [],\n  \"apply\": \"git checkout fb856dd357ce && git apply --index c05-main-8261.patch\",\n  \"view\": \"http://127.0.0.1:4000/show/mvsng2hh40935e31f9cc23228d\",\n  \"download\": \"http://127.0.0.1:4000/patch/mvsng2hh40935e31f9cc23228d.patch\",\n  \"patch\": \"diff --git a/src/reconcile.cjs b/src/reconcile.cjs\\nindex ba4ca51..7d5629d 100644\\n--- a/src/reconcile.cjs\\n+++ b/src/reconcile.cjs\\n@@ -1,6 +1,15 @@\\n+function identity(value) {\\n+  if (typeof value === 'number') {\\n+    if (!Number.isSafeInteger(value) || value < 0) throw new Error('invalid identity');\\n+    return String(value);\\n+  }\\n+  if (typeof value !== 'string' || !/^[0-9]+$/.test(value)) throw new Error('invalid identity');\\n+  return BigInt(value).toString();\\n+}\\n exports.reconcile = function(state, event) {\\n-  if (!event || !/^[0-9]+$/.test(String(event.tenantId)) || !/^[0-9]+$/.test(String(event.orderId))) throw new Error('invalid identity');\\n-  const key = `${Number(event.tenantId)}:${Number(event.orderId)}`;\\n+  if (!event) throw new Error('invalid identity');\\n+  const key = identity(event.tenantId) + ':' + identity(event.orderId);\\n+  if (!state || !Array.isArray(state.seen)) throw new Error('invalid state');\\n   if (state.seen.includes(key)) return { applied: false, key };\\n   state.seen.push(key);\\n   return { applied: true, key };\\ndiff --git a/test/regression.test.cjs b/test/regression.test.cjs\\nnew file mode 100644\\nindex 0000000..26bf418\\n--- /dev/null\\n+++ b/test/regression.test.cjs\\n@@ -0,0 +1,16 @@\\n+const {test}=require('node:test');\\n+const assert=require('node:assert/strict');\\n+const {reconcile}=require('../src/reconcile.cjs');\\n+test('large adjacent IDs and tenants remain independent',()=>{\\n+ const state={seen:[]};const event={tenantId:'11',orderId:'9007199254740992'};const before=structuredClone(event);\\n+ assert.equal(reconcile(state,event).applied,true);assert.deepEqual(event,before);\\n+ assert.equal(reconcile(state,{tenantId:'11',orderId:'9007199254740993'}).applied,true);\\n+ assert.equal(reconcile(state,{tenantId:'12',orderId:'9007199254740992'}).applied,true);\\n+ assert.equal(reconcile(state,event).applied,false);assert.equal(state.seen.length,3);\\n+ const compatible={seen:[]};assert.equal(reconcile(compatible,{tenantId:11,orderId:42}).applied,true);assert.equal(reconcile(compatible,{tenantId:'11',orderId:'42'}).applied,false);\\n+});\\n+test('invalid identities cannot poison deduplication state',()=>{\\n+ for(const value of [9007199254740992,-1,1.5,NaN,Infinity,null,undefined,{},true,'','-1','1.2','1e2',' 42']){\\n+  for(const field of ['tenantId','orderId']){const state={seen:['existing']};const before=structuredClone(state);assert.throws(()=>reconcile(state,{tenantId:'11',orderId:'42',[field]:value}));assert.deepEqual(state,before);}\\n+ }\\n+});\\n\"\n}\n",
+  "stderr": "21:51:36 dt call workspace_patch#12dt start {\"workspace\":\"c05-main-8261\"} (cli)\n21:51:36 dt call workspace_patch#12dt ok 132ms\n",
+  "result": {
+    "workspace": "c05-main-8261",
+    "repo": "CASES/c05",
+    "base": "fb856dd357ce41129c7284f9f0c4540688ef6a36",
+    "files": [
+      {
+        "path": "src/reconcile.cjs",
+        "added": 11,
+        "removed": 2,
+        "status": "modified"
+      },
+      {
+        "path": "test/regression.test.cjs",
+        "added": 16,
+        "removed": 0,
+        "status": "added"
+      }
+    ],
+    "tests": [],
+    "apply": "git checkout fb856dd357ce && git apply --index c05-main-8261.patch",
+    "view": "http://127.0.0.1:4000/show/mvsng2hh40935e31f9cc23228d",
+    "download": "http://127.0.0.1:4000/patch/mvsng2hh40935e31f9cc23228d.patch",
+    "patch": "diff --git a/src/reconcile.cjs b/src/reconcile.cjs\nindex ba4ca51..7d5629d 100644\n--- a/src/reconcile.cjs\n+++ b/src/reconcile.cjs\n@@ -1,6 +1,15 @@\n+function identity(value) {\n+  if (typeof value === 'number') {\n+    if (!Number.isSafeInteger(value) || value < 0) throw new Error('invalid identity');\n+    return String(value);\n+  }\n+  if (typeof value !== 'string' || !/^[0-9]+$/.test(value)) throw new Error('invalid identity');\n+  return BigInt(value).toString();\n+}\n exports.reconcile = function(state, event) {\n-  if (!event || !/^[0-9]+$/.test(String(event.tenantId)) || !/^[0-9]+$/.test(String(event.orderId))) throw new Error('invalid identity');\n-  const key = `${Number(event.tenantId)}:${Number(event.orderId)}`;\n+  if (!event) throw new Error('invalid identity');\n+  const key = identity(event.tenantId) + ':' + identity(event.orderId);\n+  if (!state || !Array.isArray(state.seen)) throw new Error('invalid state');\n   if (state.seen.includes(key)) return { applied: false, key };\n   state.seen.push(key);\n   return { applied: true, key };\ndiff --git a/test/regression.test.cjs b/test/regression.test.cjs\nnew file mode 100644\nindex 0000000..26bf418\n--- /dev/null\n+++ b/test/regression.test.cjs\n@@ -0,0 +1,16 @@\n+const {test}=require('node:test');\n+const assert=require('node:assert/strict');\n+const {reconcile}=require('../src/reconcile.cjs');\n+test('large adjacent IDs and tenants remain independent',()=>{\n+ const state={seen:[]};const event={tenantId:'11',orderId:'9007199254740992'};const before=structuredClone(event);\n+ assert.equal(reconcile(state,event).applied,true);assert.deepEqual(event,before);\n+ assert.equal(reconcile(state,{tenantId:'11',orderId:'9007199254740993'}).applied,true);\n+ assert.equal(reconcile(state,{tenantId:'12',orderId:'9007199254740992'}).applied,true);\n+ assert.equal(reconcile(state,event).applied,false);assert.equal(state.seen.length,3);\n+ const compatible={seen:[]};assert.equal(reconcile(compatible,{tenantId:11,orderId:42}).applied,true);assert.equal(reconcile(compatible,{tenantId:'11',orderId:'42'}).applied,false);\n+});\n+test('invalid identities cannot poison deduplication state',()=>{\n+ for(const value of [9007199254740992,-1,1.5,NaN,Infinity,null,undefined,{},true,'','-1','1.2','1e2',' 42']){\n+  for(const field of ['tenantId','orderId']){const state={seen:['existing']};const before=structuredClone(state);assert.throws(()=>reconcile(state,{tenantId:'11',orderId:'42',[field]:value}));assert.deepEqual(state,before);}\n+ }\n+});\n"
+  },
+  "requestSha256": "ef8f5cf4b7cd0f4f10749097d45e97783125195d9aa752762e255a1a78a23c52",
+  "stdoutSha256": "daed7aa73aebacb62ad503166a9d4350b595ac5b1c772e98b2710e136a4abe4f",
+  "stderrSha256": "337fc76ab7fba3daa4939ddf0b4164652771638837f1edd3a3299eb3a5557841"
+}

@@ -1,0 +1,26 @@
+{
+  "started": "2026-10-28T21:47:44.707Z",
+  "ended": "2026-10-28T21:47:45.319Z",
+  "durationMs": 612,
+  "tool": "pg_usage",
+  "args": {
+    "name": "orders:sales.orders",
+    "env": "fixture",
+    "direction": "uses"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 178,
+  "stderrBytes": 148,
+  "stdout": "{\n  \"total\": 0,\n  \"hint\": \"nothing used by \\\"orders:sales.orders\\\" in the fixture index. Check the name with find; code usages need a passport of the service (passport tool).\"\n}\n",
+  "stderr": "21:47:45 dt call pg_usage#143d start {\"name\":\"orders:sales.orders\",\"env\":\"fixture\",\"direction\":\"uses\"} (cli)\n21:47:45 dt call pg_usage#143d ok 38ms\n",
+  "result": {
+    "total": 0,
+    "hint": "nothing used by \"orders:sales.orders\" in the fixture index. Check the name with find; code usages need a passport of the service (passport tool)."
+  }
+}

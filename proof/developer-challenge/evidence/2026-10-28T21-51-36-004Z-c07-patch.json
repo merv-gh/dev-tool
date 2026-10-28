@@ -1,0 +1,47 @@
+{
+  "started": "2026-10-28T21:51:36.004Z",
+  "ended": "2026-10-28T21:51:36.399Z",
+  "durationMs": 395,
+  "tool": "workspace_patch",
+  "args": {
+    "workspace": "c07-main-49cc"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 3088,
+  "stderrBytes": 127,
+  "stdout": "{\n  \"workspace\": \"c07-main-49cc\",\n  \"repo\": \"CASES/c07\",\n  \"base\": \"3a0b29fbf683c57cb2ad929cdd658b6be85b927e\",\n  \"files\": [\n    {\n      \"path\": \"src/cancellation.cjs\",\n      \"added\": 3,\n      \"removed\": 1,\n      \"status\": \"modified\"\n    },\n    {\n      \"path\": \"test/regression.test.cjs\",\n      \"added\": 15,\n      \"removed\": 0,\n      \"status\": \"added\"\n    }\n  ],\n  \"tests\": [],\n  \"apply\": \"git checkout 3a0b29fbf683 && git apply --index c07-main-49cc.patch\",\n  \"view\": \"http://127.0.0.1:4000/show/mvsng2hga59cc3ba9021406f67\",\n  \"download\": \"http://127.0.0.1:4000/patch/mvsng2hga59cc3ba9021406f67.patch\",\n  \"patch\": \"diff --git a/src/cancellation.cjs b/src/cancellation.cjs\\nindex 5472c4d..9b03fa3 100644\\n--- a/src/cancellation.cjs\\n+++ b/src/cancellation.cjs\\n@@ -1,3 +1,5 @@\\n exports.quoteCancellation = function(booking, minutesToDeparture) {\\n-  throw new Error('cancellation quotation is not implemented');\\n+  if (!booking || booking.status !== 'CONFIRMED' || typeof booking.refundable !== 'boolean' || !Number.isSafeInteger(booking.paidCents) || booking.paidCents < 0 || typeof minutesToDeparture !== 'number' || !Number.isFinite(minutesToDeparture) || minutesToDeparture < 0) throw new Error('invalid cancellation quotation');\\n+  const refundCents = !booking.refundable ? 0 : minutesToDeparture >= 2880 ? booking.paidCents : minutesToDeparture >= 1440 ? Math.floor(booking.paidCents / 2) : 0;\\n+  return { refundCents, retainedCents: booking.paidCents - refundCents };\\n };\\ndiff --git a/test/regression.test.cjs b/test/regression.test.cjs\\nnew file mode 100644\\nindex 0000000..f76595d\\n--- /dev/null\\n+++ b/test/regression.test.cjs\\n@@ -0,0 +1,15 @@\\n+const {test}=require('node:test');\\n+const assert=require('node:assert/strict');\\n+const {quoteCancellation}=require('../src/cancellation.cjs');\\n+test('cancellation thresholds and odd cents follow the contract',()=>{\\n+ for(const [minutes,refund] of [[2880,1001],[2880.1,1001],[2879.9,500],[1440,500],[1439.9,0],[0,0]]){\\n+  const booking=Object.freeze({status:'CONFIRMED',refundable:true,paidCents:1001});assert.deepEqual(quoteCancellation(booking,minutes),{refundCents:refund,retainedCents:1001-refund});\\n+ }\\n+ for(const minutes of [0,1440,2880,100000])assert.deepEqual(quoteCancellation({status:'CONFIRMED',refundable:false,paidCents:1001},minutes),{refundCents:0,retainedCents:1001});\\n+ assert.deepEqual(quoteCancellation({status:'CONFIRMED',refundable:true,paidCents:0},2880),{refundCents:0,retainedCents:0});\\n+});\\n+test('invalid inputs fail without changing booking',()=>{\\n+ const good={status:'CONFIRMED',refundable:true,paidCents:1001};\\n+ for(const bad of [null,{...good,status:'CANCELLED'},{...good,refundable:'yes'},...[NaN,Infinity,-1,1.1,Number.MAX_SAFE_INTEGER+1].map(paidCents=>({...good,paidCents}))]){const before=structuredClone(bad);assert.throws(()=>quoteCancellation(bad,2880));assert.deepEqual(bad,before);}\\n+ for(const minutes of [-1,NaN,Infinity,'1440',undefined]){const before=structuredClone(good);assert.throws(()=>quoteCancellation(good,minutes));assert.deepEqual(good,before);}\\n+});\\n\"\n}\n",
+  "stderr": "21:51:36 dt call workspace_patch#12du start {\"workspace\":\"c07-main-49cc\"} (cli)\n21:51:36 dt call workspace_patch#12du ok 129ms\n",
+  "result": {
+    "workspace": "c07-main-49cc",
+    "repo": "CASES/c07",
+    "base": "3a0b29fbf683c57cb2ad929cdd658b6be85b927e",
+    "files": [
+      {
+        "path": "src/cancellation.cjs",
+        "added": 3,
+        "removed": 1,
+        "status": "modified"
+      },
+      {
+        "path": "test/regression.test.cjs",
+        "added": 15,
+        "removed": 0,
+        "status": "added"
+      }
+    ],
+    "tests": [],
+    "apply": "git checkout 3a0b29fbf683 && git apply --index c07-main-49cc.patch",
+    "view": "http://127.0.0.1:4000/show/mvsng2hga59cc3ba9021406f67",
+    "download": "http://127.0.0.1:4000/patch/mvsng2hga59cc3ba9021406f67.patch",
+    "patch": "diff --git a/src/cancellation.cjs b/src/cancellation.cjs\nindex 5472c4d..9b03fa3 100644\n--- a/src/cancellation.cjs\n+++ b/src/cancellation.cjs\n@@ -1,3 +1,5 @@\n exports.quoteCancellation = function(booking, minutesToDeparture) {\n-  throw new Error('cancellation quotation is not implemented');\n+  if (!booking || booking.status !== 'CONFIRMED' || typeof booking.refundable !== 'boolean' || !Number.isSafeInteger(booking.paidCents) || booking.paidCents < 0 || typeof minutesToDeparture !== 'number' || !Number.isFinite(minutesToDeparture) || minutesToDeparture < 0) throw new Error('invalid cancellation quotation');\n+  const refundCents = !booking.refundable ? 0 : minutesToDeparture >= 2880 ? booking.paidCents : minutesToDeparture >= 1440 ? Math.floor(booking.paidCents / 2) : 0;\n+  return { refundCents, retainedCents: booking.paidCents - refundCents };\n };\ndiff --git a/test/regression.test.cjs b/test/regression.test.cjs\nnew file mode 100644\nindex 0000000..f76595d\n--- /dev/null\n+++ b/test/regression.test.cjs\n@@ -0,0 +1,15 @@\n+const {test}=require('node:test');\n+const assert=require('node:assert/strict');\n+const {quoteCancellation}=require('../src/cancellation.cjs');\n+test('cancellation thresholds and odd cents follow the contract',()=>{\n+ for(const [minutes,refund] of [[2880,1001],[2880.1,1001],[2879.9,500],[1440,500],[1439.9,0],[0,0]]){\n+  const booking=Object.freeze({status:'CONFIRMED',refundable:true,paidCents:1001});assert.deepEqual(quoteCancellation(booking,minutes),{refundCents:refund,retainedCents:1001-refund});\n+ }\n+ for(const minutes of [0,1440,2880,100000])assert.deepEqual(quoteCancellation({status:'CONFIRMED',refundable:false,paidCents:1001},minutes),{refundCents:0,retainedCents:1001});\n+ assert.deepEqual(quoteCancellation({status:'CONFIRMED',refundable:true,paidCents:0},2880),{refundCents:0,retainedCents:0});\n+});\n+test('invalid inputs fail without changing booking',()=>{\n+ const good={status:'CONFIRMED',refundable:true,paidCents:1001};\n+ for(const bad of [null,{...good,status:'CANCELLED'},{...good,refundable:'yes'},...[NaN,Infinity,-1,1.1,Number.MAX_SAFE_INTEGER+1].map(paidCents=>({...good,paidCents}))]){const before=structuredClone(bad);assert.throws(()=>quoteCancellation(bad,2880));assert.deepEqual(bad,before);}\n+ for(const minutes of [-1,NaN,Infinity,'1440',undefined]){const before=structuredClone(good);assert.throws(()=>quoteCancellation(good,minutes));assert.deepEqual(good,before);}\n+});\n"
+  },
+  "requestSha256": "69451982635d9a0786222da8412f5a0db4b3120808a10e1630f255a433ddfe03",
+  "stdoutSha256": "eff590afc355feb43c355aff8e556c83d79cbd52d90e23ab9d48e39d04bbd81e",
+  "stderrSha256": "27e1e0806229cd47e9dbf0abe1994fdd468323d2046cf84e64bcf4ed017e4f23"
+}

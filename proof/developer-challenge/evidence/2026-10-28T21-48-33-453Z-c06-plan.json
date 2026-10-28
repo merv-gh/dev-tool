@@ -1,0 +1,555 @@
+{
+  "started": "2026-10-28T21:48:33.453Z",
+  "ended": "2026-10-28T21:48:34.085Z",
+  "durationMs": 632,
+  "tool": "fixture_plan",
+  "args": {
+    "env": "fixture",
+    "seeds": [
+      {
+        "db": "orders",
+        "table": "sales.orders",
+        "where": {
+          "id": "420"
+        }
+      }
+    ],
+    "relations": [
+      {
+        "from": {
+          "db": "orders",
+          "table": "sales.orders",
+          "columns": [
+            "tenant_id",
+            "account_id"
+          ]
+        },
+        "to": {
+          "db": "billing",
+          "table": "risk.accounts",
+          "columns": [
+            "tenant_id",
+            "id"
+          ]
+        },
+        "required": true,
+        "evidence": "C06/src/release.cjs:7 and cases.json C06 tenant/account contract"
+      },
+      {
+        "from": {
+          "db": "orders",
+          "table": "sales.orders",
+          "columns": [
+            "tenant_id",
+            "id"
+          ]
+        },
+        "to": {
+          "db": "billing",
+          "table": "pay.payments",
+          "columns": [
+            "tenant_id",
+            "order_id"
+          ]
+        },
+        "required": true,
+        "evidence": "C06/src/release.cjs:9 and composite identity contract"
+      }
+    ],
+    "limits": {
+      "depth": 4,
+      "rowsPerTable": 20,
+      "totalRows": 100,
+      "queries": 20
+    }
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 10756,
+  "stderrBytes": 256,
+  "stdout": "{\n  \"version\": 1,\n  \"env\": \"fixture\",\n  \"seeds\": [\n    {\n      \"db\": \"orders\",\n      \"table\": \"sales.orders\",\n      \"where\": {\n        \"id\": \"420\"\n      }\n    }\n  ],\n  \"relations\": [\n    {\n      \"from\": {\n        \"db\": \"orders\",\n        \"table\": \"sales.orders\",\n        \"columns\": [\n          \"tenant_id\",\n          \"account_id\"\n        ]\n      },\n      \"to\": {\n        \"db\": \"orders\",\n        \"table\": \"sales.accounts\",\n        \"columns\": [\n          \"tenant_id\",\n          \"id\"\n        ]\n      },\n      \"source\": \"foreign-key\",\n      \"evidence\": \"orders_tenant_id_account_id_fkey\",\n      \"required\": true\n    },\n    {\n      \"from\": {\n        \"db\": \"orders\",\n        \"table\": \"sales.orders\",\n        \"columns\": [\n          \"tenant_id\",\n          \"account_id\"\n        ]\n      },\n      \"to\": {\n        \"db\": \"billing\",\n        \"table\": \"risk.accounts\",\n        \"columns\": [\n          \"tenant_id\",\n          \"id\"\n        ]\n      },\n      \"source\": \"explicit\",\n      \"evidence\": \"C06/src/release.cjs:7 and cases.json C06 tenant/account contract\",\n      \"required\": true\n    },\n    {\n      \"from\": {\n        \"db\": \"orders\",\n        \"table\": \"sales.orders\",\n        \"columns\": [\n          \"tenant_id\",\n          \"id\"\n        ]\n      },\n      \"to\": {\n        \"db\": \"billing\",\n        \"table\": \"pay.payments\",\n        \"columns\": [\n          \"tenant_id\",\n          \"order_id\"\n        ]\n      },\n      \"source\": \"explicit\",\n      \"evidence\": \"C06/src/release.cjs:9 and composite identity contract\",\n      \"required\": true\n    }\n  ],\n  \"topics\": [],\n  \"limits\": {\n    \"depth\": 4,\n    \"rowsPerTable\": 20,\n    \"totalRows\": 100,\n    \"messagesPerTopic\": 300,\n    \"totalMessages\": 2000,\n    \"queries\": 20\n  },\n  \"includeChildren\": false,\n  \"candidates\": [\n    {\n      \"from\": {\n        \"db\": \"orders\",\n        \"table\": \"sales.accounts\",\n        \"columns\": [\n          \"tenant_id\"\n        ]\n      },\n      \"to\": {\n        \"db\": \"billing\",\n        \"table\": \"pay.payments\",\n        \"columns\": [\n          \"tenant_id\"\n        ]\n      },\n      \"source\": \"candidate\",\n      \"evidence\": \"same column name tenant_id; confirm from code or a schema contract\"\n    },\n    {\n      \"from\": {\n        \"db\": \"orders\",\n        \"table\": \"sales.accounts\",\n        \"columns\": [\n          \"tenant_id\"\n        ]\n      },\n      \"to\": {\n        \"db\": \"billing\",\n        \"table\": \"risk.accounts\",\n        \"columns\": [\n          \"tenant_id\"\n        ]\n      },\n      \"source\": \"candidate\",\n      \"evidence\": \"same column name tenant_id; confirm from code or a schema contract\"\n    },\n    {\n      \"from\": {\n        \"db\": \"orders\",\n        \"table\": \"sales.orders\",\n        \"columns\": [\n          \"tenant_id\"\n        ]\n      },\n      \"to\": {\n        \"db\": \"billing\",\n        \"table\": \"pay.payments\",\n        \"columns\": [\n          \"tenant_id\"\n        ]\n      },\n      \"source\": \"candidate\",\n      \"evidence\": \"same column name tenant_id; confirm from code or a schema contract\"\n    },\n    {\n      \"from\": {\n        \"db\": \"orders\",\n        \"table\": \"sales.orders\",\n        \"columns\": [\n          \"tenant_id\"\n        ]\n      },\n      \"to\": {\n        \"db\": \"billing\",\n        \"table\": \"risk.accounts\",\n        \"columns\": [\n          \"tenant_id\"\n        ]\n      },\n      \"source\": \"candidate\",\n      \"evidence\": \"same column name tenant_id; confirm from code or a schema contract\"\n    },\n    {\n      \"from\": {\n        \"db\": \"billing\",\n        \"table\": \"pay.payments\",\n        \"columns\": [\n          \"tenant_id\"\n        ]\n      },\n      \"to\": {\n        \"db\": \"orders\",\n        \"table\": \"sales.accounts\",\n        \"columns\": [\n          \"tenant_id\"\n        ]\n      },\n      \"source\": \"candidate\",\n      \"evidence\": \"same column name tenant_id; confirm from code or a schema contract\"\n    },\n    {\n      \"from\": {\n        \"db\": \"billing\",\n        \"table\": \"pay.payments\",\n        \"columns\": [\n          \"tenant_id\"\n        ]\n      },\n      \"to\": {\n        \"db\": \"orders\",\n        \"table\": \"sales.orders\",\n        \"columns\": [\n          \"tenant_id\"\n        ]\n      },\n      \"source\": \"candidate\",\n      \"evidence\": \"same column name tenant_id; confirm from code or a schema contract\"\n    },\n    {\n      \"from\": {\n        \"db\": \"billing\",\n        \"table\": \"risk.accounts\",\n        \"columns\": [\n          \"tenant_id\"\n        ]\n      },\n      \"to\": {\n        \"db\": \"orders\",\n        \"table\": \"sales.accounts\",\n        \"columns\": [\n          \"tenant_id\"\n        ]\n      },\n      \"source\": \"candidate\",\n      \"evidence\": \"same column name tenant_id; confirm from code or a schema contract\"\n    },\n    {\n      \"from\": {\n        \"db\": \"billing\",\n        \"table\": \"risk.accounts\",\n        \"columns\": [\n          \"tenant_id\"\n        ]\n      },\n      \"to\": {\n        \"db\": \"orders\",\n        \"table\": \"sales.orders\",\n        \"columns\": [\n          \"tenant_id\"\n        ]\n      },\n      \"source\": \"candidate\",\n      \"evidence\": \"same column name tenant_id; confirm from code or a schema contract\"\n    }\n  ],\n  \"topicCandidates\": [],\n  \"topicCandidatesTotal\": 0,\n  \"gaps\": [],\n  \"catalogs\": [\n    {\n      \"db\": \"orders\",\n      \"syncedAt\": \"2026-10-28T21:46:55.548Z\",\n      \"fingerprint\": \"caee06a09532c420afcbca260162bbbfed3d17ae8b0092a7d7c9c2aadf365a1e\"\n    },\n    {\n      \"db\": \"billing\",\n      \"syncedAt\": \"2026-10-28T21:46:55.550Z\",\n      \"fingerprint\": \"b5a2cde1baba958ab6e90b198296b196df758de361749a7a84359baf85f79626\"\n    }\n  ],\n  \"tables\": [\n    {\n      \"id\": \"orders:sales.orders\",\n      \"db\": \"orders\",\n      \"table\": \"sales.orders\",\n      \"columns\": [\n        {\n          \"name\": \"tenant_id\",\n          \"type\": \"bigint\",\n          \"nullable\": false,\n          \"default\": null,\n          \"identity\": null,\n          \"generated\": null,\n          \"comment\": null\n        },\n        {\n          \"name\": \"id\",\n          \"type\": \"bigint\",\n          \"nullable\": false,\n          \"default\": null,\n          \"identity\": null,\n          \"generated\": null,\n          \"comment\": null\n        },\n        {\n          \"name\": \"account_id\",\n          \"type\": \"bigint\",\n          \"nullable\": true,\n          \"default\": null,\n          \"identity\": null,\n          \"generated\": null,\n          \"comment\": null\n        },\n        {\n          \"name\": \"status\",\n          \"type\": \"text\",\n          \"nullable\": true,\n          \"default\": null,\n          \"identity\": null,\n          \"generated\": null,\n          \"comment\": null\n        },\n        {\n          \"name\": \"amount\",\n          \"type\": \"numeric(20,6)\",\n          \"nullable\": true,\n          \"default\": null,\n          \"identity\": null,\n          \"generated\": null,\n          \"comment\": null\n        }\n      ],\n      \"constraints\": [\n        {\n          \"name\": \"orders_pkey\",\n          \"type\": \"p\",\n          \"def\": \"PRIMARY KEY (tenant_id, id)\",\n          \"ref\": null\n        },\n        {\n          \"name\": \"orders_tenant_id_account_id_fkey\",\n          \"type\": \"f\",\n          \"def\": \"FOREIGN KEY (tenant_id, account_id) REFERENCES sales.accounts(tenant_id, id)\",\n          \"ref\": \"sales.accounts\"\n        }\n      ],\n      \"primaryKey\": [\n        \"tenant_id\",\n        \"id\"\n      ]\n    },\n    {\n      \"id\": \"orders:sales.accounts\",\n      \"db\": \"orders\",\n      \"table\": \"sales.accounts\",\n      \"columns\": [\n        {\n          \"name\": \"tenant_id\",\n          \"type\": \"bigint\",\n          \"nullable\": false,\n          \"default\": null,\n          \"identity\": null,\n          \"generated\": null,\n          \"comment\": null\n        },\n        {\n          \"name\": \"id\",\n          \"type\": \"bigint\",\n          \"nullable\": false,\n          \"default\": null,\n          \"identity\": null,\n          \"generated\": null,\n          \"comment\": null\n        },\n        {\n          \"name\": \"enabled\",\n          \"type\": \"boolean\",\n          \"nullable\": false,\n          \"default\": null,\n          \"identity\": null,\n          \"generated\": null,\n          \"comment\": null\n        }\n      ],\n      \"constraints\": [\n        {\n          \"name\": \"accounts_pkey\",\n          \"type\": \"p\",\n          \"def\": \"PRIMARY KEY (tenant_id, id)\",\n          \"ref\": null\n        }\n      ],\n      \"primaryKey\": [\n        \"tenant_id\",\n        \"id\"\n      ]\n    },\n    {\n      \"id\": \"billing:risk.accounts\",\n      \"db\": \"billing\",\n      \"table\": \"risk.accounts\",\n      \"columns\": [\n        {\n          \"name\": \"tenant_id\",\n          \"type\": \"bigint\",\n          \"nullable\": false,\n          \"default\": null,\n          \"identity\": null,\n          \"generated\": null,\n          \"comment\": null\n        },\n        {\n          \"name\": \"id\",\n          \"type\": \"bigint\",\n          \"nullable\": false,\n          \"default\": null,\n          \"identity\": null,\n          \"generated\": null,\n          \"comment\": null\n        },\n        {\n          \"name\": \"status\",\n          \"type\": \"text\",\n          \"nullable\": true,\n          \"default\": null,\n          \"identity\": null,\n          \"generated\": null,\n          \"comment\": null\n        },\n        {\n          \"name\": \"credit_limit\",\n          \"type\": \"numeric(20,6)\",\n          \"nullable\": true,\n          \"default\": null,\n          \"identity\": null,\n          \"generated\": null,\n          \"comment\": null\n        }\n      ],\n      \"constraints\": [\n        {\n          \"name\": \"accounts_pkey\",\n          \"type\": \"p\",\n          \"def\": \"PRIMARY KEY (tenant_id, id)\",\n          \"ref\": null\n        }\n      ],\n      \"primaryKey\": [\n        \"tenant_id\",\n        \"id\"\n      ]\n    },\n    {\n      \"id\": \"billing:pay.payments\",\n      \"db\": \"billing\",\n      \"table\": \"pay.payments\",\n      \"columns\": [\n        {\n          \"name\": \"tenant_id\",\n          \"type\": \"bigint\",\n          \"nullable\": false,\n          \"default\": null,\n          \"identity\": null,\n          \"generated\": null,\n          \"comment\": null\n        },\n        {\n          \"name\": \"order_id\",\n          \"type\": \"bigint\",\n          \"nullable\": false,\n          \"default\": null,\n          \"identity\": null,\n          \"generated\": null,\n          \"comment\": null\n        },\n        {\n          \"name\": \"status\",\n          \"type\": \"text\",\n          \"nullable\": true,\n          \"default\": null,\n          \"identity\": null,\n          \"generated\": null,\n          \"comment\": null\n        },\n        {\n          \"name\": \"amount\",\n          \"type\": \"numeric(20,6)\",\n          \"nullable\": true,\n          \"default\": null,\n          \"identity\": null,\n          \"generated\": null,\n          \"comment\": null\n        }\n      ],\n      \"constraints\": [\n        {\n          \"name\": \"payments_pkey\",\n          \"type\": \"p\",\n          \"def\": \"PRIMARY KEY (tenant_id, order_id)\",\n          \"ref\": null\n        }\n      ],\n      \"primaryKey\": [\n        \"tenant_id\",\n        \"order_id\"\n      ]\n    }\n  ],\n  \"consistency\": \"Independent read-only statements across databases and Kafka; observation window and offsets are recorded, not a distributed snapshot.\"\n}\n",
+  "stderr": "21:48:33 dt call fixture_plan#15qc start {\"env\":\"fixture\",\"seeds\":[{\"db\":\"orders\",\"table\":\"sales.orders\",\"where\":{\"id\":\"420\"}}],\"relations\":[{\"from\":{\"db\":\"orders\",\"table\":\"sales.orders\",\"columns\":[\"te…} (cli)\n21:48:34 dt call fixture_plan#15qc ok 103ms\n",
+  "result": {
+    "version": 1,
+    "env": "fixture",
+    "seeds": [
+      {
+        "db": "orders",
+        "table": "sales.orders",
+        "where": {
+          "id": "420"
+        }
+      }
+    ],
+    "relations": [
+      {
+        "from": {
+          "db": "orders",
+          "table": "sales.orders",
+          "columns": [
+            "tenant_id",
+            "account_id"
+          ]
+        },
+        "to": {
+          "db": "orders",
+          "table": "sales.accounts",
+          "columns": [
+            "tenant_id",
+            "id"
+          ]
+        },
+        "source": "foreign-key",
+        "evidence": "orders_tenant_id_account_id_fkey",
+        "required": true
+      },
+      {
+        "from": {
+          "db": "orders",
+          "table": "sales.orders",
+          "columns": [
+            "tenant_id",
+            "account_id"
+          ]
+        },
+        "to": {
+          "db": "billing",
+          "table": "risk.accounts",
+          "columns": [
+            "tenant_id",
+            "id"
+          ]
+        },
+        "source": "explicit",
+        "evidence": "C06/src/release.cjs:7 and cases.json C06 tenant/account contract",
+        "required": true
+      },
+      {
+        "from": {
+          "db": "orders",
+          "table": "sales.orders",
+          "columns": [
+            "tenant_id",
+            "id"
+          ]
+        },
+        "to": {
+          "db": "billing",
+          "table": "pay.payments",
+          "columns": [
+            "tenant_id",
+            "order_id"
+          ]
+        },
+        "source": "explicit",
+        "evidence": "C06/src/release.cjs:9 and composite identity contract",
+        "required": true
+      }
+    ],
+    "topics": [],
+    "limits": {
+      "depth": 4,
+      "rowsPerTable": 20,
+      "totalRows": 100,
+      "messagesPerTopic": 300,
+      "totalMessages": 2000,
+      "queries": 20
+    },
+    "includeChildren": false,
+    "candidates": [
+      {
+        "from": {
+          "db": "orders",
+          "table": "sales.accounts",
+          "columns": [
+            "tenant_id"
+          ]
+        },
+        "to": {
+          "db": "billing",
+          "table": "pay.payments",
+          "columns": [
+            "tenant_id"
+          ]
+        },
+        "source": "candidate",
+        "evidence": "same column name tenant_id; confirm from code or a schema contract"
+      },
+      {
+        "from": {
+          "db": "orders",
+          "table": "sales.accounts",
+          "columns": [
+            "tenant_id"
+          ]
+        },
+        "to": {
+          "db": "billing",
+          "table": "risk.accounts",
+          "columns": [
+            "tenant_id"
+          ]
+        },
+        "source": "candidate",
+        "evidence": "same column name tenant_id; confirm from code or a schema contract"
+      },
+      {
+        "from": {
+          "db": "orders",
+          "table": "sales.orders",
+          "columns": [
+            "tenant_id"
+          ]
+        },
+        "to": {
+          "db": "billing",
+          "table": "pay.payments",
+          "columns": [
+            "tenant_id"
+          ]
+        },
+        "source": "candidate",
+        "evidence": "same column name tenant_id; confirm from code or a schema contract"
+      },
+      {
+        "from": {
+          "db": "orders",
+          "table": "sales.orders",
+          "columns": [
+            "tenant_id"
+          ]
+        },
+        "to": {
+          "db": "billing",
+          "table": "risk.accounts",
+          "columns": [
+            "tenant_id"
+          ]
+        },
+        "source": "candidate",
+        "evidence": "same column name tenant_id; confirm from code or a schema contract"
+      },
+      {
+        "from": {
+          "db": "billing",
+          "table": "pay.payments",
+          "columns": [
+            "tenant_id"
+          ]
+        },
+        "to": {
+          "db": "orders",
+          "table": "sales.accounts",
+          "columns": [
+            "tenant_id"
+          ]
+        },
+        "source": "candidate",
+        "evidence": "same column name tenant_id; confirm from code or a schema contract"
+      },
+      {
+        "from": {
+          "db": "billing",
+          "table": "pay.payments",
+          "columns": [
+            "tenant_id"
+          ]
+        },
+        "to": {
+          "db": "orders",
+          "table": "sales.orders",
+          "columns": [
+            "tenant_id"
+          ]
+        },
+        "source": "candidate",
+        "evidence": "same column name tenant_id; confirm from code or a schema contract"
+      },
+      {
+        "from": {
+          "db": "billing",
+          "table": "risk.accounts",
+          "columns": [
+            "tenant_id"
+          ]
+        },
+        "to": {
+          "db": "orders",
+          "table": "sales.accounts",
+          "columns": [
+            "tenant_id"
+          ]
+        },
+        "source": "candidate",
+        "evidence": "same column name tenant_id; confirm from code or a schema contract"
+      },
+      {
+        "from": {
+          "db": "billing",
+          "table": "risk.accounts",
+          "columns": [
+            "tenant_id"
+          ]
+        },
+        "to": {
+          "db": "orders",
+          "table": "sales.orders",
+          "columns": [
+            "tenant_id"
+          ]
+        },
+        "source": "candidate",
+        "evidence": "same column name tenant_id; confirm from code or a schema contract"
+      }
+    ],
+    "topicCandidates": [],
+    "topicCandidatesTotal": 0,
+    "gaps": [],
+    "catalogs": [
+      {
+        "db": "orders",
+        "syncedAt": "2026-10-28T21:46:55.548Z",
+        "fingerprint": "caee06a09532c420afcbca260162bbbfed3d17ae8b0092a7d7c9c2aadf365a1e"
+      },
+      {
+        "db": "billing",
+        "syncedAt": "2026-10-28T21:46:55.550Z",
+        "fingerprint": "b5a2cde1baba958ab6e90b198296b196df758de361749a7a84359baf85f79626"
+      }
+    ],
+    "tables": [
+      {
+        "id": "orders:sales.orders",
+        "db": "orders",
+        "table": "sales.orders",
+        "columns": [
+          {
+            "name": "tenant_id",
+            "type": "bigint",
+            "nullable": false,
+            "default": null,
+            "identity": null,
+            "generated": null,
+            "comment": null
+          },
+          {
+            "name": "id",
+            "type": "bigint",
+            "nullable": false,
+            "default": null,
+            "identity": null,
+            "generated": null,
+            "comment": null
+          },
+          {
+            "name": "account_id",
+            "type": "bigint",
+            "nullable": true,
+            "default": null,
+            "identity": null,
+            "generated": null,
+            "comment": null
+          },
+          {
+            "name": "status",
+            "type": "text",
+            "nullable": true,
+            "default": null,
+            "identity": null,
+            "generated": null,
+            "comment": null
+          },
+          {
+            "name": "amount",
+            "type": "numeric(20,6)",
+            "nullable": true,
+            "default": null,
+            "identity": null,
+            "generated": null,
+            "comment": null
+          }
+        ],
+        "constraints": [
+          {
+            "name": "orders_pkey",
+            "type": "p",
+            "def": "PRIMARY KEY (tenant_id, id)",
+            "ref": null
+          },
+          {
+            "name": "orders_tenant_id_account_id_fkey",
+            "type": "f",
+            "def": "FOREIGN KEY (tenant_id, account_id) REFERENCES sales.accounts(tenant_id, id)",
+            "ref": "sales.accounts"
+          }
+        ],
+        "primaryKey": [
+          "tenant_id",
+          "id"
+        ]
+      },
+      {
+        "id": "orders:sales.accounts",
+        "db": "orders",
+        "table": "sales.accounts",
+        "columns": [
+          {
+            "name": "tenant_id",
+            "type": "bigint",
+            "nullable": false,
+            "default": null,
+            "identity": null,
+            "generated": null,
+            "comment": null
+          },
+          {
+            "name": "id",
+            "type": "bigint",
+            "nullable": false,
+            "default": null,
+            "identity": null,
+            "generated": null,
+            "comment": null
+          },
+          {
+            "name": "enabled",
+            "type": "boolean",
+            "nullable": false,
+            "default": null,
+            "identity": null,
+            "generated": null,
+            "comment": null
+          }
+        ],
+        "constraints": [
+          {
+            "name": "accounts_pkey",
+            "type": "p",
+            "def": "PRIMARY KEY (tenant_id, id)",
+            "ref": null
+          }
+        ],
+        "primaryKey": [
+          "tenant_id",
+          "id"
+        ]
+      },
+      {
+        "id": "billing:risk.accounts",
+        "db": "billing",
+        "table": "risk.accounts",
+        "columns": [
+          {
+            "name": "tenant_id",
+            "type": "bigint",
+            "nullable": false,
+            "default": null,
+            "identity": null,
+            "generated": null,
+            "comment": null
+          },
+          {
+            "name": "id",
+            "type": "bigint",
+            "nullable": false,
+            "default": null,
+            "identity": null,
+            "generated": null,
+            "comment": null
+          },
+          {
+            "name": "status",
+            "type": "text",
+            "nullable": true,
+            "default": null,
+            "identity": null,
+            "generated": null,
+            "comment": null
+          },
+          {
+            "name": "credit_limit",
+            "type": "numeric(20,6)",
+            "nullable": true,
+            "default": null,
+            "identity": null,
+            "generated": null,
+            "comment": null
+          }
+        ],
+        "constraints": [
+          {
+            "name": "accounts_pkey",
+            "type": "p",
+            "def": "PRIMARY KEY (tenant_id, id)",
+            "ref": null
+          }
+        ],
+        "primaryKey": [
+          "tenant_id",
+          "id"
+        ]
+      },
+      {
+        "id": "billing:pay.payments",
+        "db": "billing",
+        "table": "pay.payments",
+        "columns": [
+          {
+            "name": "tenant_id",
+            "type": "bigint",
+            "nullable": false,
+            "default": null,
+            "identity": null,
+            "generated": null,
+            "comment": null
+          },
+          {
+            "name": "order_id",
+            "type": "bigint",
+            "nullable": false,
+            "default": null,
+            "identity": null,
+            "generated": null,
+            "comment": null
+          },
+          {
+            "name": "status",
+            "type": "text",
+            "nullable": true,
+            "default": null,
+            "identity": null,
+            "generated": null,
+            "comment": null
+          },
+          {
+            "name": "amount",
+            "type": "numeric(20,6)",
+            "nullable": true,
+            "default": null,
+            "identity": null,
+            "generated": null,
+            "comment": null
+          }
+        ],
+        "constraints": [
+          {
+            "name": "payments_pkey",
+            "type": "p",
+            "def": "PRIMARY KEY (tenant_id, order_id)",
+            "ref": null
+          }
+        ],
+        "primaryKey": [
+          "tenant_id",
+          "order_id"
+        ]
+      }
+    ],
+    "consistency": "Independent read-only statements across databases and Kafka; observation window and offsets are recorded, not a distributed snapshot."
+  }
+}

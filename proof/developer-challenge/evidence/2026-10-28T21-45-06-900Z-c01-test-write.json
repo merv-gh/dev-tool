@@ -1,0 +1,29 @@
+{
+  "started": "2026-10-28T21:45:06.900Z",
+  "ended": "2026-10-28T21:45:07.128Z",
+  "durationMs": 228,
+  "tool": "workspace_write",
+  "args": {
+    "workspace": "c01-main-a04c",
+    "path": "test/regression.test.cjs",
+    "content": "const {test}=require('node:test');\nconst assert=require('node:assert/strict');\nconst {grossCents}=require('../src/checkout.cjs');\ntest('extends quantities before invoice VAT rounding',()=>{\n assert.equal(grossCents([{unitCents:99,quantity:3}],2000),356);\n assert.equal(grossCents([{unitCents:1,quantity:1},{unitCents:1,quantity:1}],5000),3);\n assert.equal(grossCents([{unitCents:1,quantity:1}],5000),2);\n assert.equal(grossCents([{unitCents:999,quantity:0}],2000),0);\n assert.equal(grossCents([],2000),0);\n});\ntest('safe bounds are exact and invalid baskets fail',()=>{\n assert.equal(grossCents([{unitCents:Number.MAX_SAFE_INTEGER,quantity:1}],0),Number.MAX_SAFE_INTEGER);\n for(const vat of [-1,1.5,NaN,Infinity,undefined]) assert.throws(()=>grossCents([],vat));\n for(const line of [{unitCents:-1,quantity:1},{unitCents:1.2,quantity:1},{unitCents:1,quantity:-1},{unitCents:1,quantity:1.1},{unitCents:1,quantity:Number.MAX_SAFE_INTEGER+1},null]) assert.throws(()=>grossCents([line],2000));\n assert.throws(()=>grossCents([{unitCents:Number.MAX_SAFE_INTEGER,quantity:2}],0));\n assert.throws(()=>grossCents([{unitCents:Number.MAX_SAFE_INTEGER,quantity:1}],1));\n assert.throws(()=>grossCents(null,0));\n});\n"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 117,
+  "stderrBytes": 261,
+  "stdout": "{\n  \"id\": \"c01-main-a04c\",\n  \"path\": \"test/regression.test.cjs\",\n  \"created\": true,\n  \"bytes\": 1201,\n  \"lines\": 19\n}\n",
+  "stderr": "21:45:07 dt call workspace_write#1q4a start {\"workspace\":\"c01-main-a04c\",\"path\":\"test/regression.test.cjs\",\"content\":\"const {test}=require('node:test');\\nconst assert=require('node:assert/strict');\\nconst…} (cli)\n21:45:07 dt call workspace_write#1q4a ok 19ms\n",
+  "result": {
+    "id": "c01-main-a04c",
+    "path": "test/regression.test.cjs",
+    "created": true,
+    "bytes": 1201,
+    "lines": 19
+  }
+}

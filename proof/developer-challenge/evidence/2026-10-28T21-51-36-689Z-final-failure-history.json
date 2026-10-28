@@ -1,0 +1,40 @@
+{
+  "started": "2026-10-28T21:51:36.689Z",
+  "ended": "2026-10-28T21:51:36.993Z",
+  "durationMs": 304,
+  "tool": "call_history",
+  "args": {
+    "failed": true,
+    "limit": 8
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 300,
+  "stderrBytes": 116,
+  "stdout": "{\n  \"total\": 1,\n  \"rows\": [\n    {\n      \"at\": \"2026-10-28T21:51:36.921Z\",\n      \"tool\": \"call_history\",\n      \"source\": \"cli\",\n      \"ok\": \"running\",\n      \"ms\": 14,\n      \"steps\": \"\",\n      \"args\": \"\",\n      \"error\": \"\"\n    }\n  ],\n  \"view\": \"http://127.0.0.1:4000/view/mvsng2y3b78798c9154e807169\"\n}\n",
+  "stderr": "21:51:36 dt call call_history#12xj start {\"failed\":true,\"limit\":8} (cli)\n21:51:36 dt call call_history#12xj ok 21ms\n",
+  "result": {
+    "total": 1,
+    "rows": [
+      {
+        "at": "2026-10-28T21:51:36.921Z",
+        "tool": "call_history",
+        "source": "cli",
+        "ok": "running",
+        "ms": 14,
+        "steps": "",
+        "args": "",
+        "error": ""
+      }
+    ],
+    "view": "http://127.0.0.1:4000/view/mvsng2y3b78798c9154e807169"
+  },
+  "requestSha256": "1e6e55a5eca06a2b8ef6a4761efbbb5c5fb43fb90399e1d2f6fe92ae99f81665",
+  "stdoutSha256": "5755232e21eef6e84aa89737318b85ba9d031a1373f8741c606568f5a1d21b82",
+  "stderrSha256": "a69de173c981be1626fe58ff20600b8956c2ada9168d85545513e44336f9078b"
+}

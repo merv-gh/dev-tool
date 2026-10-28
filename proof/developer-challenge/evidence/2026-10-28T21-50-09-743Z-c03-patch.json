@@ -1,0 +1,47 @@
+{
+  "started": "2026-10-28T21:50:09.743Z",
+  "ended": "2026-10-28T21:50:10.316Z",
+  "durationMs": 573,
+  "tool": "workspace_patch",
+  "args": {
+    "workspace": "common-primitives-main-7397"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 3485,
+  "stderrBytes": 141,
+  "stdout": "{\n  \"workspace\": \"common-primitives-main-7397\",\n  \"repo\": \"LIB/common-primitives\",\n  \"base\": \"6f76bff2c5c699a70e64b591799200a3f142f544\",\n  \"files\": [\n    {\n      \"path\": \"decimal/src/main/java/com/lumen/money/LedgerAmount.java\",\n      \"added\": 1,\n      \"removed\": 1,\n      \"status\": \"modified\"\n    },\n    {\n      \"path\": \"decimal/src/test/java/com/lumen/money/LedgerAmountTest.java\",\n      \"added\": 22,\n      \"removed\": 0,\n      \"status\": \"added\"\n    }\n  ],\n  \"tests\": [\n    \"red-green: LedgerAmountTest#respectsCurrencyScaleAndHalfUpTies\",\n    \"red-green: LedgerAmountTest#preservesLongBoundaryAndRejectsOverflowAndInvalidInputs\"\n  ],\n  \"apply\": \"git checkout 6f76bff2c5c6 && git apply --index common-primitives-main-7397.patch\",\n  \"view\": \"http://127.0.0.1:4000/show/mvsne80g0bf197a9142f45bde8\",\n  \"download\": \"http://127.0.0.1:4000/patch/mvsne80g0bf197a9142f45bde8.patch\",\n  \"patch\": \"diff --git a/decimal/src/main/java/com/lumen/money/LedgerAmount.java b/decimal/src/main/java/com/lumen/money/LedgerAmount.java\\nindex 2e5bef2..fc6ce4b 100644\\n--- a/decimal/src/main/java/com/lumen/money/LedgerAmount.java\\n+++ b/decimal/src/main/java/com/lumen/money/LedgerAmount.java\\n@@ -6,6 +6,6 @@ public final class LedgerAmount {\\n   private static final Map<String,Integer> SCALE = Map.of(\\\"USD\\\",2,\\\"EUR\\\",2,\\\"JPY\\\",0,\\\"KWD\\\",3);\\n   public static long minorUnits(BigDecimal amount, String currency) {\\n     if (amount == null || amount.signum()<0 || !SCALE.containsKey(currency)) throw new IllegalArgumentException(\\\"invalid amount or currency\\\");\\n-    return amount.movePointRight(2).setScale(0,RoundingMode.HALF_UP).longValueExact();\\n+    return amount.movePointRight(SCALE.get(currency)).setScale(0,RoundingMode.HALF_UP).longValueExact();\\n   }\\n }\\ndiff --git a/decimal/src/test/java/com/lumen/money/LedgerAmountTest.java b/decimal/src/test/java/com/lumen/money/LedgerAmountTest.java\\nnew file mode 100644\\nindex 0000000..0784ace\\n--- /dev/null\\n+++ b/decimal/src/test/java/com/lumen/money/LedgerAmountTest.java\\n@@ -0,0 +1,22 @@\\n+package com.lumen.money;\\n+import java.math.BigDecimal;\\n+import org.junit.jupiter.api.Test;\\n+import static org.junit.jupiter.api.Assertions.*;\\n+class LedgerAmountTest {\\n+ @Test void respectsCurrencyScaleAndHalfUpTies() {\\n+  assertEquals(1005L, LedgerAmount.minorUnits(new BigDecimal(\\\"1.005\\\"),\\\"KWD\\\"));\\n+  assertEquals(1L, LedgerAmount.minorUnits(new BigDecimal(\\\"1.4\\\"),\\\"JPY\\\"));\\n+  assertEquals(2L, LedgerAmount.minorUnits(new BigDecimal(\\\"1.5\\\"),\\\"JPY\\\"));\\n+  assertEquals(101L, LedgerAmount.minorUnits(new BigDecimal(\\\"1.005\\\"),\\\"USD\\\"));\\n+  assertEquals(101L, LedgerAmount.minorUnits(new BigDecimal(\\\"1.005\\\"),\\\"EUR\\\"));\\n+  assertEquals(0L, LedgerAmount.minorUnits(BigDecimal.ZERO,\\\"KWD\\\"));\\n+ }\\n+ @Test void preservesLongBoundaryAndRejectsOverflowAndInvalidInputs() {\\n+  assertEquals(Long.MAX_VALUE,LedgerAmount.minorUnits(new BigDecimal(\\\"92233720368547758.07\\\"),\\\"USD\\\"));\\n+  assertEquals(Long.MAX_VALUE,LedgerAmount.minorUnits(new BigDecimal(\\\"9223372036854775.807\\\"),\\\"KWD\\\"));\\n+  assertThrows(ArithmeticException.class,()->LedgerAmount.minorUnits(new BigDecimal(\\\"92233720368547758.075\\\"),\\\"USD\\\"));\\n+  assertThrows(IllegalArgumentException.class,()->LedgerAmount.minorUnits(new BigDecimal(\\\"-0.001\\\"),\\\"KWD\\\"));\\n+  assertThrows(IllegalArgumentException.class,()->LedgerAmount.minorUnits(BigDecimal.ONE,\\\"XXX\\\"));\\n+  assertThrows(IllegalArgumentException.class,()->LedgerAmount.minorUnits(null,\\\"EUR\\\"));\\n+ }\\n+}\\n\"\n}\n",
+  "stderr": "21:50:09 dt call workspace_patch#17u3 start {\"workspace\":\"common-primitives-main-7397\"} (cli)\n21:50:10 dt call workspace_patch#17u3 ok 231ms\n",
+  "result": {
+    "workspace": "common-primitives-main-7397",
+    "repo": "LIB/common-primitives",
+    "base": "6f76bff2c5c699a70e64b591799200a3f142f544",
+    "files": [
+      {
+        "path": "decimal/src/main/java/com/lumen/money/LedgerAmount.java",
+        "added": 1,
+        "removed": 1,
+        "status": "modified"
+      },
+      {
+        "path": "decimal/src/test/java/com/lumen/money/LedgerAmountTest.java",
+        "added": 22,
+        "removed": 0,
+        "status": "added"
+      }
+    ],
+    "tests": [
+      "red-green: LedgerAmountTest#respectsCurrencyScaleAndHalfUpTies",
+      "red-green: LedgerAmountTest#preservesLongBoundaryAndRejectsOverflowAndInvalidInputs"
+    ],
+    "apply": "git checkout 6f76bff2c5c6 && git apply --index common-primitives-main-7397.patch",
+    "view": "http://127.0.0.1:4000/show/mvsne80g0bf197a9142f45bde8",
+    "download": "http://127.0.0.1:4000/patch/mvsne80g0bf197a9142f45bde8.patch",
+    "patch": "diff --git a/decimal/src/main/java/com/lumen/money/LedgerAmount.java b/decimal/src/main/java/com/lumen/money/LedgerAmount.java\nindex 2e5bef2..fc6ce4b 100644\n--- a/decimal/src/main/java/com/lumen/money/LedgerAmount.java\n+++ b/decimal/src/main/java/com/lumen/money/LedgerAmount.java\n@@ -6,6 +6,6 @@ public final class LedgerAmount {\n   private static final Map<String,Integer> SCALE = Map.of(\"USD\",2,\"EUR\",2,\"JPY\",0,\"KWD\",3);\n   public static long minorUnits(BigDecimal amount, String currency) {\n     if (amount == null || amount.signum()<0 || !SCALE.containsKey(currency)) throw new IllegalArgumentException(\"invalid amount or currency\");\n-    return amount.movePointRight(2).setScale(0,RoundingMode.HALF_UP).longValueExact();\n+    return amount.movePointRight(SCALE.get(currency)).setScale(0,RoundingMode.HALF_UP).longValueExact();\n   }\n }\ndiff --git a/decimal/src/test/java/com/lumen/money/LedgerAmountTest.java b/decimal/src/test/java/com/lumen/money/LedgerAmountTest.java\nnew file mode 100644\nindex 0000000..0784ace\n--- /dev/null\n+++ b/decimal/src/test/java/com/lumen/money/LedgerAmountTest.java\n@@ -0,0 +1,22 @@\n+package com.lumen.money;\n+import java.math.BigDecimal;\n+import org.junit.jupiter.api.Test;\n+import static org.junit.jupiter.api.Assertions.*;\n+class LedgerAmountTest {\n+ @Test void respectsCurrencyScaleAndHalfUpTies() {\n+  assertEquals(1005L, LedgerAmount.minorUnits(new BigDecimal(\"1.005\"),\"KWD\"));\n+  assertEquals(1L, LedgerAmount.minorUnits(new BigDecimal(\"1.4\"),\"JPY\"));\n+  assertEquals(2L, LedgerAmount.minorUnits(new BigDecimal(\"1.5\"),\"JPY\"));\n+  assertEquals(101L, LedgerAmount.minorUnits(new BigDecimal(\"1.005\"),\"USD\"));\n+  assertEquals(101L, LedgerAmount.minorUnits(new BigDecimal(\"1.005\"),\"EUR\"));\n+  assertEquals(0L, LedgerAmount.minorUnits(BigDecimal.ZERO,\"KWD\"));\n+ }\n+ @Test void preservesLongBoundaryAndRejectsOverflowAndInvalidInputs() {\n+  assertEquals(Long.MAX_VALUE,LedgerAmount.minorUnits(new BigDecimal(\"92233720368547758.07\"),\"USD\"));\n+  assertEquals(Long.MAX_VALUE,LedgerAmount.minorUnits(new BigDecimal(\"9223372036854775.807\"),\"KWD\"));\n+  assertThrows(ArithmeticException.class,()->LedgerAmount.minorUnits(new BigDecimal(\"92233720368547758.075\"),\"USD\"));\n+  assertThrows(IllegalArgumentException.class,()->LedgerAmount.minorUnits(new BigDecimal(\"-0.001\"),\"KWD\"));\n+  assertThrows(IllegalArgumentException.class,()->LedgerAmount.minorUnits(BigDecimal.ONE,\"XXX\"));\n+  assertThrows(IllegalArgumentException.class,()->LedgerAmount.minorUnits(null,\"EUR\"));\n+ }\n+}\n"
+  }
+}

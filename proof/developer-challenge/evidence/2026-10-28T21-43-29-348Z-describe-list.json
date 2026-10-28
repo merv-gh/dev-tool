@@ -1,0 +1,33 @@
+{
+  "started": "2026-10-28T21:43:29.348Z",
+  "ended": "2026-10-28T21:43:29.563Z",
+  "durationMs": 215,
+  "tool": "tool_describe",
+  "args": {
+    "name": "workspace_list"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null
+  },
+  "exitCode": 0,
+  "stdoutBytes": 303,
+  "stderrBytes": 118,
+  "stdout": "{\n  \"name\": \"workspace_list\",\n  \"description\": \"Open workspaces: id, repo, ref, commit.\",\n  \"group\": \"code\",\n  \"origin\": \"built-in\",\n  \"execution\": {\n    \"protocol\": \"dt.tool/v1\",\n    \"transport\": \"in-process\"\n  },\n  \"inputSchema\": {\n    \"type\": \"object\",\n    \"properties\": {},\n    \"required\": []\n  }\n}\n",
+  "stderr": "21:43:29 dt call tool_describe#1mu8 start {\"name\":\"workspace_list\"} (cli)\n21:43:29 dt call tool_describe#1mu8 ok 17ms\n",
+  "result": {
+    "name": "workspace_list",
+    "description": "Open workspaces: id, repo, ref, commit.",
+    "group": "code",
+    "origin": "built-in",
+    "execution": {
+      "protocol": "dt.tool/v1",
+      "transport": "in-process"
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  }
+}

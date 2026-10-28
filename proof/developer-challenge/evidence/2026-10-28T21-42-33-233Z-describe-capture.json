@@ -1,0 +1,48 @@
+{
+  "started": "2026-10-28T21:42:33.233Z",
+  "ended": "2026-10-28T21:42:33.448Z",
+  "durationMs": 215,
+  "tool": "tool_describe",
+  "args": {
+    "name": "fixture_capture"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/dev-tool",
+    "JAVA_HOME": null
+  },
+  "exitCode": 0,
+  "stdoutBytes": 1088,
+  "stderrBytes": 119,
+  "stdout": "{\n  \"name\": \"fixture_capture\",\n  \"description\": \"Capture one reproducible scenario with bounded, parameterized, read-only reads. Input is fixture_plan inputs or its returned plan. Captures every Kafka partition window, correlation matches, offsets and provenance. Masks sensitive values consistently by default. Returns capture id + interactive explorer; gaps/truncation prevent a claim of completeness. Never writes to the environment.\",\n  \"group\": \"code\",\n  \"origin\": \"built-in\",\n  \"execution\": {\n    \"protocol\": \"dt.tool/v1\",\n    \"transport\": \"in-process\"\n  },\n  \"inputSchema\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"plan\": {\n        \"type\": \"object\",\n        \"additionalProperties\": true,\n        \"description\": \"fixture_plan result or input\"\n      },\n      \"mask\": {\n        \"type\": \"boolean\",\n        \"default\": true,\n        \"description\": \"Mask personal/secret fields consistently across PG and Kafka\"\n      },\n      \"job\": {\n        \"type\": \"string\",\n        \"description\": \"Poll a running capture instead of starting another\"\n      }\n    },\n    \"required\": []\n  }\n}\n",
+  "stderr": "21:42:33 dt call tool_describe#1fjk start {\"name\":\"fixture_capture\"} (cli)\n21:42:33 dt call tool_describe#1fjk ok 18ms\n",
+  "result": {
+    "name": "fixture_capture",
+    "description": "Capture one reproducible scenario with bounded, parameterized, read-only reads. Input is fixture_plan inputs or its returned plan. Captures every Kafka partition window, correlation matches, offsets and provenance. Masks sensitive values consistently by default. Returns capture id + interactive explorer; gaps/truncation prevent a claim of completeness. Never writes to the environment.",
+    "group": "code",
+    "origin": "built-in",
+    "execution": {
+      "protocol": "dt.tool/v1",
+      "transport": "in-process"
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "plan": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "fixture_plan result or input"
+        },
+        "mask": {
+          "type": "boolean",
+          "default": true,
+          "description": "Mask personal/secret fields consistently across PG and Kafka"
+        },
+        "job": {
+          "type": "string",
+          "description": "Poll a running capture instead of starting another"
+        }
+      },
+      "required": []
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "started": "2026-10-28T21:45:23.370Z",
+  "ended": "2026-10-28T21:45:24.203Z",
+  "durationMs": 833,
+  "tool": "workspace_open",
+  "args": {
+    "project": "CASES",
+    "repo": "c02",
+    "ref": "main"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 455,
+  "stderrBytes": 364,
+  "stdout": "{\n  \"job\": \"mvsn82uic15b67\",\n  \"state\": \"done\",\n  \"id\": \"c02-main-728a\",\n  \"project\": \"CASES\",\n  \"repo\": \"c02\",\n  \"ref\": \"main\",\n  \"sha\": \"53a2705aa73bc39b5a9b3f46265390b4b9f7101b\",\n  \"commitDate\": \"2026-10-29T00:43:02+03:00\",\n  \"service\": null,\n  \"env\": null,\n  \"path\": \"work/c02-main-728a\",\n  \"createdAt\": \"2026-10-28T21:45:24.093Z\",\n  \"usedAt\": \"2026-10-28T21:45:24.093Z\",\n  \"session\": null,\n  \"libs\": [],\n  \"files\": 2,\n  \"classes\": 0,\n  \"build\": []\n}\n",
+  "stderr": "21:45:23 dt call workspace_open#12u3 start {\"project\":\"CASES\",\"repo\":\"c02\",\"ref\":\"main\"} (cli)\n21:45:23 dt job workspace_open CASES/c02@main#22um start {\"job\":\"mvsn82uic15b67\"} (job)\n21:45:24 dt job workspace_open CASES/c02@main#22um ok 578ms  git init 103ms · git fetch 249ms · git checkout 46ms · code index 31ms\n21:45:24 dt call workspace_open#12u3 ok 598ms\n",
+  "result": {
+    "job": "mvsn82uic15b67",
+    "state": "done",
+    "id": "c02-main-728a",
+    "project": "CASES",
+    "repo": "c02",
+    "ref": "main",
+    "sha": "53a2705aa73bc39b5a9b3f46265390b4b9f7101b",
+    "commitDate": "2026-10-29T00:43:02+03:00",
+    "service": null,
+    "env": null,
+    "path": "work/c02-main-728a",
+    "createdAt": "2026-10-28T21:45:24.093Z",
+    "usedAt": "2026-10-28T21:45:24.093Z",
+    "session": null,
+    "libs": [],
+    "files": 2,
+    "classes": 0,
+    "build": []
+  }
+}

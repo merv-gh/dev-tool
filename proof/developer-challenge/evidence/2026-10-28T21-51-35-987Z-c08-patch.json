@@ -1,0 +1,41 @@
+{
+  "started": "2026-10-28T21:51:35.987Z",
+  "ended": "2026-10-28T21:51:36.387Z",
+  "durationMs": 400,
+  "tool": "workspace_patch",
+  "args": {
+    "workspace": "c08-main-476f"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 2801,
+  "stderrBytes": 127,
+  "stdout": "{\n  \"workspace\": \"c08-main-476f\",\n  \"repo\": \"CASES/c08\",\n  \"base\": \"e034f2cfa31df5ec6c8d838d2f67f27e6497dd6d\",\n  \"files\": [\n    {\n      \"path\": \"test/regression.test.cjs\",\n      \"added\": 18,\n      \"removed\": 0,\n      \"status\": \"added\"\n    }\n  ],\n  \"tests\": [],\n  \"apply\": \"git checkout e034f2cfa31d && git apply --index c08-main-476f.patch\",\n  \"view\": \"http://127.0.0.1:4000/show/mvsng2h23501e12c82396f817c\",\n  \"download\": \"http://127.0.0.1:4000/patch/mvsng2h23501e12c82396f817c.patch\",\n  \"patch\": \"diff --git a/test/regression.test.cjs b/test/regression.test.cjs\\nnew file mode 100644\\nindex 0000000..0413d5e\\n--- /dev/null\\n+++ b/test/regression.test.cjs\\n@@ -0,0 +1,18 @@\\n+const {test}=require('node:test');\\n+const assert=require('node:assert/strict');\\n+const {apply}=require('../src/inventory.cjs');\\n+test('new events, duplicate identities, and all inputs are immutable',()=>{\\n+ const state=Object.freeze({stock:3,seen:Object.freeze([])});const event=Object.freeze({id:'e',sku:'a',delta:-1});\\n+ const next=apply(state,event);assert.equal(next.stock,2);assert.equal(next.seen.length,1);assert.notStrictEqual(next,state);assert.notStrictEqual(next.seen,state.seen);assert.deepEqual(state,{stock:3,seen:[]});\\n+ const duplicate=apply(next,{id:'e',sku:'a',delta:100});assert.deepEqual(duplicate,next);assert.notStrictEqual(duplicate,next);assert.notStrictEqual(duplicate.seen,next.seen);\\n+ const otherSku=apply(next,{id:'e',sku:'b',delta:4});assert.equal(otherSku.stock,6);assert.equal(otherSku.seen.length,2);\\n+ assert.equal(apply({stock:0,seen:[]},{id:'z',sku:'a',delta:0}).seen.length,1);\\n+});\\n+test('safe arithmetic and failed event retry remain atomic',()=>{\\n+ const cases=[[{stock:0,seen:[]},{id:'e',sku:'a',delta:-1}],[{stock:Number.MAX_SAFE_INTEGER,seen:[]},{id:'e',sku:'a',delta:1}]];\\n+ for(const [state,event] of cases){const before=structuredClone(state),ev=structuredClone(event);assert.throws(()=>apply(state,event));assert.deepEqual(state,before);assert.deepEqual(event,ev);assert.equal(apply(state,{...event,delta:0}).seen.length,1);}\\n+ assert.equal(apply({stock:1,seen:[]},{id:'e',sku:'a',delta:-1}).stock,0);\\n+ assert.equal(apply({stock:Number.MAX_SAFE_INTEGER-1,seen:[]},{id:'e',sku:'a',delta:1}).stock,Number.MAX_SAFE_INTEGER);\\n+ for(const bad of [{id:'',sku:'a',delta:1},{id:'e',sku:'',delta:1},{id:'e',sku:'a',delta:1.1},{id:'e',sku:'a',delta:NaN},{id:'e',sku:'a',delta:Number.MAX_SAFE_INTEGER+1},null]){const state={stock:3,seen:[]};assert.throws(()=>apply(state,bad));assert.deepEqual(state,{stock:3,seen:[]});}\\n+ for(const state of [null,{stock:-1,seen:[]},{stock:1.5,seen:[]},{stock:Infinity,seen:[]},{stock:3,seen:null}]){const before=structuredClone(state);assert.throws(()=>apply(state,{id:'e',sku:'a',delta:1}));assert.deepEqual(state,before);}\\n+});\\n\"\n}\n",
+  "stderr": "21:51:36 dt call workspace_patch#12de start {\"workspace\":\"c08-main-476f\"} (cli)\n21:51:36 dt call workspace_patch#12de ok 132ms\n",
+  "result": {
+    "workspace": "c08-main-476f",
+    "repo": "CASES/c08",
+    "base": "e034f2cfa31df5ec6c8d838d2f67f27e6497dd6d",
+    "files": [
+      {
+        "path": "test/regression.test.cjs",
+        "added": 18,
+        "removed": 0,
+        "status": "added"
+      }
+    ],
+    "tests": [],
+    "apply": "git checkout e034f2cfa31d && git apply --index c08-main-476f.patch",
+    "view": "http://127.0.0.1:4000/show/mvsng2h23501e12c82396f817c",
+    "download": "http://127.0.0.1:4000/patch/mvsng2h23501e12c82396f817c.patch",
+    "patch": "diff --git a/test/regression.test.cjs b/test/regression.test.cjs\nnew file mode 100644\nindex 0000000..0413d5e\n--- /dev/null\n+++ b/test/regression.test.cjs\n@@ -0,0 +1,18 @@\n+const {test}=require('node:test');\n+const assert=require('node:assert/strict');\n+const {apply}=require('../src/inventory.cjs');\n+test('new events, duplicate identities, and all inputs are immutable',()=>{\n+ const state=Object.freeze({stock:3,seen:Object.freeze([])});const event=Object.freeze({id:'e',sku:'a',delta:-1});\n+ const next=apply(state,event);assert.equal(next.stock,2);assert.equal(next.seen.length,1);assert.notStrictEqual(next,state);assert.notStrictEqual(next.seen,state.seen);assert.deepEqual(state,{stock:3,seen:[]});\n+ const duplicate=apply(next,{id:'e',sku:'a',delta:100});assert.deepEqual(duplicate,next);assert.notStrictEqual(duplicate,next);assert.notStrictEqual(duplicate.seen,next.seen);\n+ const otherSku=apply(next,{id:'e',sku:'b',delta:4});assert.equal(otherSku.stock,6);assert.equal(otherSku.seen.length,2);\n+ assert.equal(apply({stock:0,seen:[]},{id:'z',sku:'a',delta:0}).seen.length,1);\n+});\n+test('safe arithmetic and failed event retry remain atomic',()=>{\n+ const cases=[[{stock:0,seen:[]},{id:'e',sku:'a',delta:-1}],[{stock:Number.MAX_SAFE_INTEGER,seen:[]},{id:'e',sku:'a',delta:1}]];\n+ for(const [state,event] of cases){const before=structuredClone(state),ev=structuredClone(event);assert.throws(()=>apply(state,event));assert.deepEqual(state,before);assert.deepEqual(event,ev);assert.equal(apply(state,{...event,delta:0}).seen.length,1);}\n+ assert.equal(apply({stock:1,seen:[]},{id:'e',sku:'a',delta:-1}).stock,0);\n+ assert.equal(apply({stock:Number.MAX_SAFE_INTEGER-1,seen:[]},{id:'e',sku:'a',delta:1}).stock,Number.MAX_SAFE_INTEGER);\n+ for(const bad of [{id:'',sku:'a',delta:1},{id:'e',sku:'',delta:1},{id:'e',sku:'a',delta:1.1},{id:'e',sku:'a',delta:NaN},{id:'e',sku:'a',delta:Number.MAX_SAFE_INTEGER+1},null]){const state={stock:3,seen:[]};assert.throws(()=>apply(state,bad));assert.deepEqual(state,{stock:3,seen:[]});}\n+ for(const state of [null,{stock:-1,seen:[]},{stock:1.5,seen:[]},{stock:Infinity,seen:[]},{stock:3,seen:null}]){const before=structuredClone(state);assert.throws(()=>apply(state,{id:'e',sku:'a',delta:1}));assert.deepEqual(state,before);}\n+});\n"
+  },
+  "requestSha256": "6c9e56ef25b754327f408c0c6fa3c16f69d000c734ce31434e8ebf5076ea9ec2",
+  "stdoutSha256": "befa754dd932f93c566665df0f25ffa83e33d6dedc617e47119fb1c85f15b4d6",
+  "stderrSha256": "6535d06ca96e1bbbcca47cad470e0c52d0469a530d4326d7803f193e08c2b0c1"
+}

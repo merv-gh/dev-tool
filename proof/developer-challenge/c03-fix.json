@@ -1,0 +1,5 @@
+{
+  "workspace":"common-primitives-main-7397",
+  "path":"decimal/src/main/java/com/lumen/money/LedgerAmount.java",
+  "edits":[{"find":"amount.movePointRight(2)","replace":"amount.movePointRight(SCALE.get(currency))"}]
+}

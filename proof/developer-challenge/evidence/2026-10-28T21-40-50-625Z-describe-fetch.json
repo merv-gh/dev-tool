@@ -1,0 +1,54 @@
+{
+  "started": "2026-10-28T21:40:50.625Z",
+  "ended": "2026-10-28T21:40:50.879Z",
+  "durationMs": 254,
+  "tool": "tool_describe",
+  "args": {
+    "name": "repo_fetch"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/dev-tool",
+    "JAVA_HOME": null
+  },
+  "exitCode": 0,
+  "stdoutBytes": 881,
+  "stderrBytes": 114,
+  "stdout": "{\n  \"name\": \"repo_fetch\",\n  \"description\": \"Shallow-fetch a repo at a branch, tag or commit into repos/<PROJECT>/<repo> (for reading code, review, graph). Optionally build its code-review-graph.\",\n  \"group\": \"bitbucket\",\n  \"origin\": \"built-in\",\n  \"execution\": {\n    \"protocol\": \"dt.tool/v1\",\n    \"transport\": \"in-process\"\n  },\n  \"inputSchema\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"project\": {\n        \"type\": \"string\",\n        \"description\": \"Project key\"\n      },\n      \"repo\": {\n        \"type\": \"string\",\n        \"description\": \"Repo slug\"\n      },\n      \"ref\": {\n        \"type\": \"string\",\n        \"description\": \"Branch, tag or sha (default branch if empty)\"\n      },\n      \"graph\": {\n        \"type\": \"boolean\",\n        \"default\": false,\n        \"description\": \"Also build the code graph\"\n      }\n    },\n    \"required\": [\n      \"project\",\n      \"repo\"\n    ]\n  }\n}\n",
+  "stderr": "21:40:50 dt call tool_describe#18e3 start {\"name\":\"repo_fetch\"} (cli)\n21:40:50 dt call tool_describe#18e3 ok 20ms\n",
+  "result": {
+    "name": "repo_fetch",
+    "description": "Shallow-fetch a repo at a branch, tag or commit into repos/<PROJECT>/<repo> (for reading code, review, graph). Optionally build its code-review-graph.",
+    "group": "bitbucket",
+    "origin": "built-in",
+    "execution": {
+      "protocol": "dt.tool/v1",
+      "transport": "in-process"
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project": {
+          "type": "string",
+          "description": "Project key"
+        },
+        "repo": {
+          "type": "string",
+          "description": "Repo slug"
+        },
+        "ref": {
+          "type": "string",
+          "description": "Branch, tag or sha (default branch if empty)"
+        },
+        "graph": {
+          "type": "boolean",
+          "default": false,
+          "description": "Also build the code graph"
+        }
+      },
+      "required": [
+        "project",
+        "repo"
+      ]
+    }
+  }
+}

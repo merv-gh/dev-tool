@@ -1,0 +1,34 @@
+{
+  "started": "2026-10-28T21:49:47.989Z",
+  "ended": "2026-10-28T21:49:48.432Z",
+  "durationMs": 443,
+  "tool": "test_run",
+  "args": {
+    "workspace": "c06-main-a358",
+    "tests": [
+      "test/regression.test.cjs"
+    ],
+    "mode": "build",
+    "fixture_path": "src/test/resources/dt-fixtures/tenant-release",
+    "fixture_bindings": {
+      "orders": "ORDERS_DATASOURCE",
+      "billing": "BILLING_DATASOURCE"
+    }
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 199,
+  "stderrBytes": 570,
+  "stdout": "{\n  \"job\": \"mvsndr3aa04293\",\n  \"state\": \"failed\",\n  \"error\": \"no test class test/regression.test.cjs in c06-main-a358 (write it with workspace_write first, or give the full name com.acme.FooTest)\"\n}\n",
+  "stderr": "21:49:48 dt call test_run#1r2n start {\"workspace\":\"c06-main-a358\",\"tests\":[\"test/regression.test.cjs\"],\"mode\":\"build\",\"fixture_path\":\"src/test/resources/dt-fixtures/tenant-release\",\"fixture_binding…} (cli)\n21:49:48 dt job tests test/regression.test.cjs in c06-main-a358#2r3d start {\"job\":\"mvsndr3aa04293\"} (job)\n21:49:48 dt job tests test/regression.test.cjs in c06-main-a358#2r3d FAILED 84ms: no test class test/regression.test.cjs in c06-main-a358 (write it with workspace_write first, or give the full name com.acme.FooTest)\n21:49:48 dt call test_run#1r2n ok 112ms\n",
+  "result": {
+    "job": "mvsndr3aa04293",
+    "state": "failed",
+    "error": "no test class test/regression.test.cjs in c06-main-a358 (write it with workspace_write first, or give the full name com.acme.FooTest)"
+  }
+}

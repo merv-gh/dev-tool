@@ -1,0 +1,44 @@
+{
+  "started": "2026-10-28T21:49:31.211Z",
+  "ended": "2026-10-28T21:49:44.551Z",
+  "durationMs": 13340,
+  "tool": "test_run",
+  "args": {
+    "workspace": "common-primitives-main-7397",
+    "tests": [
+      "LedgerAmountTest"
+    ],
+    "mode": "build"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 666,
+  "stderrBytes": 522,
+  "stdout": "{\n  \"job\": \"mvsnde9t6fcf18\",\n  \"state\": \"done\",\n  \"workspace\": \"common-primitives-main-7397\",\n  \"outcome\": \"passed\",\n  \"counts\": {\n    \"tests\": 2,\n    \"passed\": 2,\n    \"failed\": 0,\n    \"errors\": 0,\n    \"skipped\": 0\n  },\n  \"ms\": 12115,\n  \"mode\": \"build\",\n  \"command\": \"mvn -B -ntp test -Dtest=LedgerAmountTest -Dsurefire.failIfNoSpecifiedTests=false -DfailIfNoTests=false -Djacoco.skip=true -Dcheckstyle.skip=true -Dspotless.check.skip=true -Denforcer.skip=true -Dpmd.skip=true -Dspotbugs.skip=true -pl decimal -am\",\n  \"failures\": [],\n  \"parts\": [],\n  \"view\": \"http://127.0.0.1:4000/show/mvsndo6e398e85b29b3712a9dd\",\n  \"next\": \"workspace_patch to take the changes\"\n}\n",
+  "stderr": "21:49:31 dt call test_run#1e8u start {\"workspace\":\"common-primitives-main-7397\",\"tests\":[\"LedgerAmountTest\"],\"mode\":\"build\"} (cli)\n21:49:31 dt job tests LedgerAmountTest in common-primitives-main-7397#2e9w start {\"job\":\"mvsnde9t6fcf18\"} (job)\n21:49:44 dt   tests LedgerAmountTest in common-primitives-main-7397#2e9w maven test (decimal LedgerAmountTest) 12.1s\n21:49:44 dt job tests LedgerAmountTest in common-primitives-main-7397#2e9w ok 12.8s  code index 111ms · maven test 12.1s\n21:49:44 dt call test_run#1e8u ok 12.9s\n",
+  "result": {
+    "job": "mvsnde9t6fcf18",
+    "state": "done",
+    "workspace": "common-primitives-main-7397",
+    "outcome": "passed",
+    "counts": {
+      "tests": 2,
+      "passed": 2,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "ms": 12115,
+    "mode": "build",
+    "command": "mvn -B -ntp test -Dtest=LedgerAmountTest -Dsurefire.failIfNoSpecifiedTests=false -DfailIfNoTests=false -Djacoco.skip=true -Dcheckstyle.skip=true -Dspotless.check.skip=true -Denforcer.skip=true -Dpmd.skip=true -Dspotbugs.skip=true -pl decimal -am",
+    "failures": [],
+    "parts": [],
+    "view": "http://127.0.0.1:4000/show/mvsndo6e398e85b29b3712a9dd",
+    "next": "workspace_patch to take the changes"
+  }
+}

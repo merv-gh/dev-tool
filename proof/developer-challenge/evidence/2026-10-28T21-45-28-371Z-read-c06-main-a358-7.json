@@ -1,0 +1,29 @@
+{
+  "started": "2026-10-28T21:45:28.371Z",
+  "ended": "2026-10-28T21:45:28.733Z",
+  "durationMs": 362,
+  "tool": "workspace_read",
+  "args": {
+    "workspace": "c06-main-a358",
+    "path": "fixture.json"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 1326,
+  "stderrBytes": 146,
+  "stdout": "{\n  \"id\": \"c06-main-a358\",\n  \"path\": \"fixture.json\",\n  \"from\": 1,\n  \"to\": 18,\n  \"lines\": 18,\n  \"text\": \"    1  {\\n    2    \\\"orders\\\": [\\n    3      \\\"create schema sales\\\",\\n    4      \\\"create table sales.accounts(tenant_id bigint,id bigint,enabled boolean not null,primary key(tenant_id,id))\\\",\\n    5      \\\"create table sales.orders(tenant_id bigint,id bigint,account_id bigint,status text,amount numeric(20,6),primary key(tenant_id,id),foreign key(tenant_id,account_id) references sales.accounts(tenant_id,id))\\\",\\n    6      \\\"insert into sales.accounts values(11,7,true),(22,7,true)\\\",\\n    7      \\\"insert into sales.orders values(11,420,7,'PAID',17.000001),(22,420,7,'PAID',100.000001)\\\"\\n    8    ],\\n    9    \\\"billing\\\": [\\n   10      \\\"create schema risk\\\",\\n   11      \\\"create schema pay\\\",\\n   12      \\\"create table risk.accounts(tenant_id bigint,id bigint,status text,credit_limit numeric(20,6),primary key(tenant_id,id))\\\",\\n   13      \\\"create table pay.payments(tenant_id bigint,order_id bigint,status text,amount numeric(20,6),primary key(tenant_id,order_id))\\\",\\n   14      \\\"insert into risk.accounts values(11,7,'BLOCKED',1000),(22,7,'APPROVED',150.000001)\\\",\\n   15      \\\"insert into pay.payments values(11,420,'PENDING',17.000001),(22,420,'PENDING',100.000001)\\\"\\n   16    ]\\n   17  }\\n   18  \"\n}\n",
+  "stderr": "21:45:28 dt call workspace_read#16rc start {\"workspace\":\"c06-main-a358\",\"path\":\"fixture.json\"} (cli)\n21:45:28 dt call workspace_read#16rc ok 25ms\n",
+  "result": {
+    "id": "c06-main-a358",
+    "path": "fixture.json",
+    "from": 1,
+    "to": 18,
+    "lines": 18,
+    "text": "    1  {\n    2    \"orders\": [\n    3      \"create schema sales\",\n    4      \"create table sales.accounts(tenant_id bigint,id bigint,enabled boolean not null,primary key(tenant_id,id))\",\n    5      \"create table sales.orders(tenant_id bigint,id bigint,account_id bigint,status text,amount numeric(20,6),primary key(tenant_id,id),foreign key(tenant_id,account_id) references sales.accounts(tenant_id,id))\",\n    6      \"insert into sales.accounts values(11,7,true),(22,7,true)\",\n    7      \"insert into sales.orders values(11,420,7,'PAID',17.000001),(22,420,7,'PAID',100.000001)\"\n    8    ],\n    9    \"billing\": [\n   10      \"create schema risk\",\n   11      \"create schema pay\",\n   12      \"create table risk.accounts(tenant_id bigint,id bigint,status text,credit_limit numeric(20,6),primary key(tenant_id,id))\",\n   13      \"create table pay.payments(tenant_id bigint,order_id bigint,status text,amount numeric(20,6),primary key(tenant_id,order_id))\",\n   14      \"insert into risk.accounts values(11,7,'BLOCKED',1000),(22,7,'APPROVED',150.000001)\",\n   15      \"insert into pay.payments values(11,420,'PENDING',17.000001),(22,420,'PENDING',100.000001)\"\n   16    ]\n   17  }\n   18  "
+  }
+}

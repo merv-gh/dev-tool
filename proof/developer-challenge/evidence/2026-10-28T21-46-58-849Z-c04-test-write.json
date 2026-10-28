@@ -1,0 +1,29 @@
+{
+  "started": "2026-10-28T21:46:58.849Z",
+  "ended": "2026-10-28T21:46:59.340Z",
+  "durationMs": 491,
+  "tool": "workspace_write",
+  "args": {
+    "workspace": "c04-main-43a5",
+    "path": "test/regression.test.cjs",
+    "content": "const {test}=require('node:test');\nconst assert=require('node:assert/strict');\nconst {ttlMillis,isReserved}=require('../src/reservations.cjs');\ntest('production and staging preserve reservation duration',()=>{\n for(const config of [require('../config/production.json'),require('../config/staging.json')]){\n  assert.equal(ttlMillis(config.reservationTtl),90000);assert.equal(isReserved(1000,1100,config),true);\n  assert.equal(isReserved(1000,90999,config),true);assert.equal(isReserved(1000,91000,config),false);\n }\n assert.equal(ttlMillis('2m'),120000);assert.equal(ttlMillis('125ms'),125);assert.equal(ttlMillis(1),1);\n});\ntest('invalid or overflowing TTL fails before use',()=>{\n for(const value of [undefined,null,'','90','90s junk','1.5s','0s','-1s','1h',0,-1,1.5,Infinity,NaN,'9007199254740991m'])assert.throws(()=>ttlMillis(value));\n});\n"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 116,
+  "stderrBytes": 261,
+  "stdout": "{\n  \"id\": \"c04-main-43a5\",\n  \"path\": \"test/regression.test.cjs\",\n  \"created\": true,\n  \"bytes\": 843,\n  \"lines\": 14\n}\n",
+  "stderr": "21:46:59 dt call workspace_write#14n2 start {\"workspace\":\"c04-main-43a5\",\"path\":\"test/regression.test.cjs\",\"content\":\"const {test}=require('node:test');\\nconst assert=require('node:assert/strict');\\nconst…} (cli)\n21:46:59 dt call workspace_write#14n2 ok 41ms\n",
+  "result": {
+    "id": "c04-main-43a5",
+    "path": "test/regression.test.cjs",
+    "created": true,
+    "bytes": 843,
+    "lines": 14
+  }
+}

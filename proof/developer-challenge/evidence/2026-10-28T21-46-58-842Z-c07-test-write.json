@@ -1,0 +1,29 @@
+{
+  "started": "2026-10-28T21:46:58.842Z",
+  "ended": "2026-10-28T21:46:59.309Z",
+  "durationMs": 467,
+  "tool": "workspace_write",
+  "args": {
+    "workspace": "c07-main-49cc",
+    "path": "test/regression.test.cjs",
+    "content": "const {test}=require('node:test');\nconst assert=require('node:assert/strict');\nconst {quoteCancellation}=require('../src/cancellation.cjs');\ntest('cancellation thresholds and odd cents follow the contract',()=>{\n for(const [minutes,refund] of [[2880,1001],[2880.1,1001],[2879.9,500],[1440,500],[1439.9,0],[0,0]]){\n  const booking=Object.freeze({status:'CONFIRMED',refundable:true,paidCents:1001});assert.deepEqual(quoteCancellation(booking,minutes),{refundCents:refund,retainedCents:1001-refund});\n }\n for(const minutes of [0,1440,2880,100000])assert.deepEqual(quoteCancellation({status:'CONFIRMED',refundable:false,paidCents:1001},minutes),{refundCents:0,retainedCents:1001});\n assert.deepEqual(quoteCancellation({status:'CONFIRMED',refundable:true,paidCents:0},2880),{refundCents:0,retainedCents:0});\n});\ntest('invalid inputs fail without changing booking',()=>{\n const good={status:'CONFIRMED',refundable:true,paidCents:1001};\n for(const bad of [null,{...good,status:'CANCELLED'},{...good,refundable:'yes'},...[NaN,Infinity,-1,1.1,Number.MAX_SAFE_INTEGER+1].map(paidCents=>({...good,paidCents}))]){const before=structuredClone(bad);assert.throws(()=>quoteCancellation(bad,2880));assert.deepEqual(bad,before);}\n for(const minutes of [-1,NaN,Infinity,'1440',undefined]){const before=structuredClone(good);assert.throws(()=>quoteCancellation(good,minutes));assert.deepEqual(good,before);}\n});\n"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 117,
+  "stderrBytes": 261,
+  "stdout": "{\n  \"id\": \"c07-main-49cc\",\n  \"path\": \"test/regression.test.cjs\",\n  \"created\": true,\n  \"bytes\": 1393,\n  \"lines\": 16\n}\n",
+  "stderr": "21:46:59 dt call workspace_write#14m4 start {\"workspace\":\"c07-main-49cc\",\"path\":\"test/regression.test.cjs\",\"content\":\"const {test}=require('node:test');\\nconst assert=require('node:assert/strict');\\nconst…} (cli)\n21:46:59 dt call workspace_write#14m4 ok 47ms\n",
+  "result": {
+    "id": "c07-main-49cc",
+    "path": "test/regression.test.cjs",
+    "created": true,
+    "bytes": 1393,
+    "lines": 16
+  }
+}

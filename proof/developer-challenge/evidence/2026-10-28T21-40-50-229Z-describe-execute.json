@@ -1,0 +1,46 @@
+{
+  "started": "2026-10-28T21:40:50.229Z",
+  "ended": "2026-10-28T21:40:50.484Z",
+  "durationMs": 255,
+  "tool": "tool_describe",
+  "args": {
+    "name": "tool_execute"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/dev-tool",
+    "JAVA_HOME": null
+  },
+  "exitCode": 0,
+  "stdoutBytes": 834,
+  "stderrBytes": 116,
+  "stdout": "{\n  \"name\": \"tool_execute\",\n  \"description\": \"Execute one discovered enabled tool with its exact arguments. Uses the same validation, rate limits, trace and permissions as calling that tool directly, and preserves its visualization. Call tool_describe first. Cannot recursively call discovery dispatchers.\",\n  \"group\": \"catalog\",\n  \"origin\": \"built-in\",\n  \"execution\": {\n    \"protocol\": \"dt.tool/v1\",\n    \"transport\": \"in-process\"\n  },\n  \"inputSchema\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"name\": {\n        \"type\": \"string\",\n        \"description\": \"Exact enabled tool name\"\n      },\n      \"arguments\": {\n        \"type\": \"object\",\n        \"additionalProperties\": true,\n        \"description\": \"Arguments conforming to tool_describe inputSchema\"\n      }\n    },\n    \"required\": [\n      \"name\",\n      \"arguments\"\n    ]\n  }\n}\n",
+  "stderr": "21:40:50 dt call tool_describe#1837 start {\"name\":\"tool_execute\"} (cli)\n21:40:50 dt call tool_describe#1837 ok 21ms\n",
+  "result": {
+    "name": "tool_execute",
+    "description": "Execute one discovered enabled tool with its exact arguments. Uses the same validation, rate limits, trace and permissions as calling that tool directly, and preserves its visualization. Call tool_describe first. Cannot recursively call discovery dispatchers.",
+    "group": "catalog",
+    "origin": "built-in",
+    "execution": {
+      "protocol": "dt.tool/v1",
+      "transport": "in-process"
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Exact enabled tool name"
+        },
+        "arguments": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Arguments conforming to tool_describe inputSchema"
+        }
+      },
+      "required": [
+        "name",
+        "arguments"
+      ]
+    }
+  }
+}

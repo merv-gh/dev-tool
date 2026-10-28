@@ -1,0 +1,47 @@
+{
+  "started": "2026-10-28T21:51:36.034Z",
+  "ended": "2026-10-28T21:51:36.420Z",
+  "durationMs": 386,
+  "tool": "workspace_patch",
+  "args": {
+    "workspace": "c02-main-728a"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 3260,
+  "stderrBytes": 127,
+  "stdout": "{\n  \"workspace\": \"c02-main-728a\",\n  \"repo\": \"CASES/c02\",\n  \"base\": \"53a2705aa73bc39b5a9b3f46265390b4b9f7101b\",\n  \"files\": [\n    {\n      \"path\": \"checkout/src/checkout.cjs\",\n      \"added\": 6,\n      \"removed\": 4,\n      \"status\": \"modified\"\n    },\n    {\n      \"path\": \"test/regression.test.cjs\",\n      \"added\": 19,\n      \"removed\": 0,\n      \"status\": \"added\"\n    }\n  ],\n  \"tests\": [],\n  \"apply\": \"git checkout 53a2705aa73b && git apply --index c02-main-728a.patch\",\n  \"view\": \"http://127.0.0.1:4000/show/mvsng2i151f890561d59baf50d\",\n  \"download\": \"http://127.0.0.1:4000/patch/mvsng2i151f890561d59baf50d.patch\",\n  \"patch\": \"diff --git a/checkout/src/checkout.cjs b/checkout/src/checkout.cjs\\nindex b81ab5f..1934cbf 100644\\n--- a/checkout/src/checkout.cjs\\n+++ b/checkout/src/checkout.cjs\\n@@ -1,6 +1,8 @@\\n exports.place = async function(order, reservations) {\\n-  if (!order || typeof order.id !== 'string' || !order.id || !/^[A-Z]{3}$/.test(order.currency)) throw new Error('invalid order');\\n-  const total = Number(order.total);\\n-  if (!Number.isFinite(total) || total < 0) throw new Error('invalid total');\\n-  return reservations({ orderId: order.id, amountCents: Math.trunc(total), currency: order.currency });\\n+  if (!order || typeof order.id !== 'string' || !order.id || typeof order.currency !== 'string' || !/^[A-Z]{3}$/.test(order.currency)) throw new Error('invalid order');\\n+  if (typeof order.total !== 'string' || !/^[0-9]+(?:\\\\.[0-9]{1,2})?$/.test(order.total)) throw new Error('invalid total');\\n+  const [whole, fraction = ''] = order.total.split('.');\\n+  const cents = BigInt(whole) * 100n + BigInt(fraction.padEnd(2, '0'));\\n+  if (cents > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error('invalid total');\\n+  return reservations({ orderId: order.id, amountCents: Number(cents), currency: order.currency });\\n };\\ndiff --git a/test/regression.test.cjs b/test/regression.test.cjs\\nnew file mode 100644\\nindex 0000000..d8348c9\\n--- /dev/null\\n+++ b/test/regression.test.cjs\\n@@ -0,0 +1,19 @@\\n+const {test}=require('node:test');\\n+const assert=require('node:assert/strict');\\n+const {place}=require('../checkout/src/checkout.cjs');\\n+const {reserve}=require('../reservations/src/api.cjs');\\n+test('real reservation API receives exact cents and identity',async()=>{\\n+ for(const [total,expected] of [['12.50',1250],['0.01',1],['19.99',1999],['12',1200],['0',0],['90071992547409.91',Number.MAX_SAFE_INTEGER]]){\\n+  const body={id:'ord-42',total,currency:'EUR'};const before=structuredClone(body);const calls=[];\\n+  const result=await place(body,p=>{calls.push(p);return reserve(p)});\\n+  assert.deepEqual(calls,[{orderId:'ord-42',amountCents:expected,currency:'EUR'}]);assert.equal(result.status,'RESERVED');assert.deepEqual(body,before);\\n+ }\\n+});\\n+test('malformed totals and identities never call downstream',async()=>{\\n+ for(const total of ['', ' 1.00','1.001','1e2','-1','Infinity','1.','90071992547409.92',null,12.5]){\\n+  let calls=0;await assert.rejects(place({id:'ord',total,currency:'EUR'},()=>{calls++;}));assert.equal(calls,0);\\n+ }\\n+ for(const bad of [{id:'',total:'1',currency:'EUR'},{id:'x',total:'1',currency:'eur'}]){\\n+  let calls=0;await assert.rejects(place(bad,()=>{calls++;}));assert.equal(calls,0);\\n+ }\\n+});\\n\"\n}\n",
+  "stderr": "21:51:36 dt call workspace_patch#12ea start {\"workspace\":\"c02-main-728a\"} (cli)\n21:51:36 dt call workspace_patch#12ea ok 136ms\n",
+  "result": {
+    "workspace": "c02-main-728a",
+    "repo": "CASES/c02",
+    "base": "53a2705aa73bc39b5a9b3f46265390b4b9f7101b",
+    "files": [
+      {
+        "path": "checkout/src/checkout.cjs",
+        "added": 6,
+        "removed": 4,
+        "status": "modified"
+      },
+      {
+        "path": "test/regression.test.cjs",
+        "added": 19,
+        "removed": 0,
+        "status": "added"
+      }
+    ],
+    "tests": [],
+    "apply": "git checkout 53a2705aa73b && git apply --index c02-main-728a.patch",
+    "view": "http://127.0.0.1:4000/show/mvsng2i151f890561d59baf50d",
+    "download": "http://127.0.0.1:4000/patch/mvsng2i151f890561d59baf50d.patch",
+    "patch": "diff --git a/checkout/src/checkout.cjs b/checkout/src/checkout.cjs\nindex b81ab5f..1934cbf 100644\n--- a/checkout/src/checkout.cjs\n+++ b/checkout/src/checkout.cjs\n@@ -1,6 +1,8 @@\n exports.place = async function(order, reservations) {\n-  if (!order || typeof order.id !== 'string' || !order.id || !/^[A-Z]{3}$/.test(order.currency)) throw new Error('invalid order');\n-  const total = Number(order.total);\n-  if (!Number.isFinite(total) || total < 0) throw new Error('invalid total');\n-  return reservations({ orderId: order.id, amountCents: Math.trunc(total), currency: order.currency });\n+  if (!order || typeof order.id !== 'string' || !order.id || typeof order.currency !== 'string' || !/^[A-Z]{3}$/.test(order.currency)) throw new Error('invalid order');\n+  if (typeof order.total !== 'string' || !/^[0-9]+(?:\\.[0-9]{1,2})?$/.test(order.total)) throw new Error('invalid total');\n+  const [whole, fraction = ''] = order.total.split('.');\n+  const cents = BigInt(whole) * 100n + BigInt(fraction.padEnd(2, '0'));\n+  if (cents > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error('invalid total');\n+  return reservations({ orderId: order.id, amountCents: Number(cents), currency: order.currency });\n };\ndiff --git a/test/regression.test.cjs b/test/regression.test.cjs\nnew file mode 100644\nindex 0000000..d8348c9\n--- /dev/null\n+++ b/test/regression.test.cjs\n@@ -0,0 +1,19 @@\n+const {test}=require('node:test');\n+const assert=require('node:assert/strict');\n+const {place}=require('../checkout/src/checkout.cjs');\n+const {reserve}=require('../reservations/src/api.cjs');\n+test('real reservation API receives exact cents and identity',async()=>{\n+ for(const [total,expected] of [['12.50',1250],['0.01',1],['19.99',1999],['12',1200],['0',0],['90071992547409.91',Number.MAX_SAFE_INTEGER]]){\n+  const body={id:'ord-42',total,currency:'EUR'};const before=structuredClone(body);const calls=[];\n+  const result=await place(body,p=>{calls.push(p);return reserve(p)});\n+  assert.deepEqual(calls,[{orderId:'ord-42',amountCents:expected,currency:'EUR'}]);assert.equal(result.status,'RESERVED');assert.deepEqual(body,before);\n+ }\n+});\n+test('malformed totals and identities never call downstream',async()=>{\n+ for(const total of ['', ' 1.00','1.001','1e2','-1','Infinity','1.','90071992547409.92',null,12.5]){\n+  let calls=0;await assert.rejects(place({id:'ord',total,currency:'EUR'},()=>{calls++;}));assert.equal(calls,0);\n+ }\n+ for(const bad of [{id:'',total:'1',currency:'EUR'},{id:'x',total:'1',currency:'eur'}]){\n+  let calls=0;await assert.rejects(place(bad,()=>{calls++;}));assert.equal(calls,0);\n+ }\n+});\n"
+  },
+  "requestSha256": "bcc090806a46de55acfe99629ea5e54038124ddba7bc1791da2b66897797e6da",
+  "stdoutSha256": "88ad132770d97ab136b56dace8fdb9af3ca49525c375693f9ce4ffad0b68d7c2",
+  "stderrSha256": "b9e38d5e24d597239bed2ae4ea14bd5df93d208c3c5ad89406bc4bff64a6edf4"
+}

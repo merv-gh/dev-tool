@@ -1,0 +1,9 @@
+{
+  "env":"fixture",
+  "seeds":[{"db":"orders","table":"sales.orders","where":{"id":"420"}}],
+  "relations":[
+    {"from":{"db":"orders","table":"sales.orders","columns":["tenant_id","account_id"]},"to":{"db":"billing","table":"risk.accounts","columns":["tenant_id","id"]},"required":true,"evidence":"C06/src/release.cjs:7 and cases.json C06 tenant/account contract"},
+    {"from":{"db":"orders","table":"sales.orders","columns":["tenant_id","id"]},"to":{"db":"billing","table":"pay.payments","columns":["tenant_id","order_id"]},"required":true,"evidence":"C06/src/release.cjs:9 and composite identity contract"}
+  ],
+  "limits":{"depth":4,"rowsPerTable":20,"totalRows":100,"queries":20}
+}

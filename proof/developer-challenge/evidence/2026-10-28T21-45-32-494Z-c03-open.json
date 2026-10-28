@@ -1,0 +1,50 @@
+{
+  "started": "2026-10-28T21:45:32.494Z",
+  "ended": "2026-10-28T21:45:36.861Z",
+  "durationMs": 4367,
+  "tool": "workspace_open",
+  "args": {
+    "project": "FIN",
+    "repo": "ledger-service",
+    "ref": "main",
+    "libraries": true
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 938,
+  "stderrBytes": 899,
+  "stdout": "{\n  \"job\": \"mvsn89vbcb6277\",\n  \"state\": \"done\",\n  \"id\": \"ledger-service-main-8df9\",\n  \"project\": \"FIN\",\n  \"repo\": \"ledger-service\",\n  \"ref\": \"main\",\n  \"sha\": \"f834b8e1b1b74eec2c09069d665c1188c5c9bf06\",\n  \"commitDate\": \"2026-10-29T00:43:03+03:00\",\n  \"service\": null,\n  \"env\": null,\n  \"path\": \"work/ledger-service-main-8df9\",\n  \"createdAt\": \"2026-10-28T21:45:33.086Z\",\n  \"usedAt\": \"2026-10-28T21:45:33.086Z\",\n  \"session\": null,\n  \"libs\": [\n    \"ledger-amounts: no Bitbucket repo declares ledger-amounts (searched ledger-amounts, ledger, money, lumen-money; looked inside FIN/ledger-service: none has a module with that ar\"\n  ],\n  \"files\": 2,\n  \"classes\": 1,\n  \"build\": [\n    \"pom.xml\"\n  ],\n  \"notes\": [\n    \"library ledger-amounts: no Bitbucket repo declares ledger-amounts (searched ledger-amounts, ledger, money, lumen-money; looked inside FIN/ledger-service: none has a module with that artifactId). Index all repos and their fol\"\n  ]\n}\n",
+  "stderr": "21:45:32 dt call workspace_open#19ux start {\"project\":\"FIN\",\"repo\":\"ledger-service\",\"ref\":\"main\",\"libraries\":true} (cli)\n21:45:32 dt job workspace_open FIN/ledger-service@main#29ve start {\"job\":\"mvsn89vbcb6277\"} (job)\n21:45:36 dt   workspace_open FIN/ledger-service@main#29ve · library ledger-amounts (2.4.1) 3.7s\n21:45:36 dt   workspace_open FIN/ledger-service@main#29ve libraries (ledger-amounts) 3.7s\n21:45:36 dt   workspace_open FIN/ledger-service@main#29ve note: library ledger-amounts: no Bitbucket repo declares ledger-amounts (searched ledger-amounts, ledger, money, lumen-money; looked inside FIN/ledger-service: none has a module with that artifactId). Index all repos and their fol\n21:45:36 dt job workspace_open FIN/ledger-service@main#29ve ok 4.2s  git init 74ms · git fetch 187ms · git checkout 38ms · libraries 3.7s · code index 19ms\n21:45:36 dt call workspace_open#19ux ok 4.2s\n",
+  "result": {
+    "job": "mvsn89vbcb6277",
+    "state": "done",
+    "id": "ledger-service-main-8df9",
+    "project": "FIN",
+    "repo": "ledger-service",
+    "ref": "main",
+    "sha": "f834b8e1b1b74eec2c09069d665c1188c5c9bf06",
+    "commitDate": "2026-10-29T00:43:03+03:00",
+    "service": null,
+    "env": null,
+    "path": "work/ledger-service-main-8df9",
+    "createdAt": "2026-10-28T21:45:33.086Z",
+    "usedAt": "2026-10-28T21:45:33.086Z",
+    "session": null,
+    "libs": [
+      "ledger-amounts: no Bitbucket repo declares ledger-amounts (searched ledger-amounts, ledger, money, lumen-money; looked inside FIN/ledger-service: none has a module with that ar"
+    ],
+    "files": 2,
+    "classes": 1,
+    "build": [
+      "pom.xml"
+    ],
+    "notes": [
+      "library ledger-amounts: no Bitbucket repo declares ledger-amounts (searched ledger-amounts, ledger, money, lumen-money; looked inside FIN/ledger-service: none has a module with that artifactId). Index all repos and their fol"
+    ]
+  }
+}

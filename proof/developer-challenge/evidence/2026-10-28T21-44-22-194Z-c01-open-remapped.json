@@ -1,0 +1,25 @@
+{
+  "started": "2026-10-28T21:44:22.194Z",
+  "ended": "2026-10-28T21:44:22.520Z",
+  "durationMs": 326,
+  "tool": "workspace_open",
+  "args": {
+    "project": "CASES",
+    "repo": "c01",
+    "ref": "master"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null
+  },
+  "exitCode": 0,
+  "stdoutBytes": 180,
+  "stderrBytes": 577,
+  "stdout": "{\n  \"job\": \"mvsn6rmbd0f732\",\n  \"state\": \"failed\",\n  \"error\": \"git fetch: fatal: couldn't find remote ref master (CASES/c01@master from http://127.0.0.1:51992/scm/cases/c01.git)\"\n}\n",
+  "stderr": "21:44:22 dt call workspace_open#1rm0 start {\"project\":\"CASES\",\"repo\":\"c01\",\"ref\":\"master\"} (cli)\n21:44:22 dt job workspace_open CASES/c01@master#2rmd start {\"job\":\"mvsn6rmbd0f732\"} (job)\n21:44:22 dt   workspace_open CASES/c01@master#2rmd git fetch (CASES/c01@master) FAILED after 54ms: git fetch: fatal: couldn't find remote ref master\n21:44:22 dt job workspace_open CASES/c01@master#2rmd FAILED 126ms in git fetch: git fetch: fatal: couldn't find remote ref master (CASES/c01@master from http://127.0.0.1:51992/scm/cases/c01.git)\n21:44:22 dt call workspace_open#1rm0 ok 141ms\n",
+  "result": {
+    "job": "mvsn6rmbd0f732",
+    "state": "failed",
+    "error": "git fetch: fatal: couldn't find remote ref master (CASES/c01@master from http://127.0.0.1:51992/scm/cases/c01.git)"
+  }
+}

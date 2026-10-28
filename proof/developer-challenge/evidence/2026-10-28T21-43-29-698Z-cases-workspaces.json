@@ -1,0 +1,17 @@
+{
+  "started": "2026-10-28T21:43:29.698Z",
+  "ended": "2026-10-28T21:43:29.967Z",
+  "durationMs": 269,
+  "tool": "workspace_list",
+  "args": {},
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null
+  },
+  "exitCode": 0,
+  "stdoutBytes": 3,
+  "stderrBytes": 97,
+  "stdout": "[]\n",
+  "stderr": "21:43:29 dt call workspace_list#1n4e start {} (cli)\n21:43:29 dt call workspace_list#1n4e ok 25ms\n",
+  "result": []
+}

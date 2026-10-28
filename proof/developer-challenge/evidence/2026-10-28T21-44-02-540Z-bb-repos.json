@@ -1,0 +1,67 @@
+{
+  "started": "2026-10-28T21:44:02.540Z",
+  "ended": "2026-10-28T21:44:02.796Z",
+  "durationMs": 256,
+  "tool": "bitbucket_repos",
+  "args": {},
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null
+  },
+  "exitCode": 0,
+  "stdoutBytes": 866,
+  "stderrBytes": 99,
+  "stdout": "{\n  \"total\": 9,\n  \"rows\": [\n    {\n      \"project\": \"CASES\",\n      \"repo\": \"c01\",\n      \"name\": \"c01\"\n    },\n    {\n      \"project\": \"CASES\",\n      \"repo\": \"c02\",\n      \"name\": \"c02\"\n    },\n    {\n      \"project\": \"CASES\",\n      \"repo\": \"c04\",\n      \"name\": \"c04\"\n    },\n    {\n      \"project\": \"CASES\",\n      \"repo\": \"c05\",\n      \"name\": \"c05\"\n    },\n    {\n      \"project\": \"CASES\",\n      \"repo\": \"c06\",\n      \"name\": \"c06\"\n    },\n    {\n      \"project\": \"CASES\",\n      \"repo\": \"c07\",\n      \"name\": \"c07\"\n    },\n    {\n      \"project\": \"CASES\",\n      \"repo\": \"c08\",\n      \"name\": \"c08\"\n    },\n    {\n      \"project\": \"FIN\",\n      \"repo\": \"ledger-service\",\n      \"name\": \"ledger-service\"\n    },\n    {\n      \"project\": \"LIB\",\n      \"repo\": \"common-primitives\",\n      \"name\": \"common-primitives\"\n    }\n  ],\n  \"view\": \"http://127.0.0.1:4000/view/mvsn6ci73f506e7dc5796dc7a5\"\n}\n",
+  "stderr": "21:44:02 dt call bitbucket_repos#1cg0 start {} (cli)\n21:44:02 dt call bitbucket_repos#1cg0 ok 80ms\n",
+  "result": {
+    "total": 9,
+    "rows": [
+      {
+        "project": "CASES",
+        "repo": "c01",
+        "name": "c01"
+      },
+      {
+        "project": "CASES",
+        "repo": "c02",
+        "name": "c02"
+      },
+      {
+        "project": "CASES",
+        "repo": "c04",
+        "name": "c04"
+      },
+      {
+        "project": "CASES",
+        "repo": "c05",
+        "name": "c05"
+      },
+      {
+        "project": "CASES",
+        "repo": "c06",
+        "name": "c06"
+      },
+      {
+        "project": "CASES",
+        "repo": "c07",
+        "name": "c07"
+      },
+      {
+        "project": "CASES",
+        "repo": "c08",
+        "name": "c08"
+      },
+      {
+        "project": "FIN",
+        "repo": "ledger-service",
+        "name": "ledger-service"
+      },
+      {
+        "project": "LIB",
+        "repo": "common-primitives",
+        "name": "common-primitives"
+      }
+    ],
+    "view": "http://127.0.0.1:4000/view/mvsn6ci73f506e7dc5796dc7a5"
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "started": "2026-10-28T21:47:44.730Z",
+  "ended": "2026-10-28T21:47:45.398Z",
+  "durationMs": 668,
+  "tool": "test_context",
+  "args": {
+    "workspace": "common-primitives-main-7397",
+    "target": "LedgerAmount#minorUnits"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 3302,
+  "stderrBytes": 169,
+  "stdout": "{\n  \"workspace\": \"common-primitives-main-7397\",\n  \"class\": \"com.lumen.money.LedgerAmount\",\n  \"file\": \"decimal/src/main/java/com/lumen/money/LedgerAmount.java\",\n  \"role\": null,\n  \"kind\": \"class\",\n  \"style\": \"unit\",\n  \"source\": \"package com.lumen.money;\\nimport java.math.BigDecimal;\\nimport java.math.RoundingMode;\\nimport java.util.Map;\\npublic final class LedgerAmount {\\n  private static final Map<String,Integer> SCALE = Map.of(\\\"USD\\\",2,\\\"EUR\\\",2,\\\"JPY\\\",0,\\\"KWD\\\",3);\\n    ...\\n   5  public final class LedgerAmount {\\n   6    private static final Map<String,Integer> SCALE = Map.of(\\\"USD\\\",2,\\\"EUR\\\",2,\\\"JPY\\\",0,\\\"KWD\\\",3);\\n   7    public static long minorUnits(BigDecimal amount, String currency) {\\n   8      if (amount == null || amount.signum()<0 || !SCALE.containsKey(currency)) throw new IllegalArgumentException(\\\"invalid amount or currency\\\");\\n   9      return amount.movePointRight(2).setScale(0,RoundingMode.HALF_UP).longValueExact();\\n  10    }\\n  11  }\",\n  \"methods\": [\n    {\n      \"name\": \"minorUnits\",\n      \"signature\": \"long minorUnits(BigDecimal amount, String currency)\",\n      \"lines\": \"7-10\",\n      \"calls\": []\n    }\n  ],\n  \"dependencies\": [],\n  \"callees\": [],\n  \"tables\": [],\n  \"functions\": [],\n  \"setup\": {\n    \"springBoot\": null,\n    \"starterTest\": false,\n    \"junit\": 5,\n    \"mockito\": false,\n    \"assertj\": false,\n    \"testcontainers\": false,\n    \"mockk\": false,\n    \"mockBean\": \"MockBean\",\n    \"buildTool\": \"maven\",\n    \"module\": \"decimal\",\n    \"buildFile\": \"pom.xml\"\n  },\n  \"ddl\": null,\n  \"test\": {\n    \"path\": \"decimal/src/test/java/com/lumen/money/LedgerAmountTest.java\",\n    \"exists\": false,\n    \"class\": \"com.lumen.money.LedgerAmountTest\"\n  },\n  \"skeleton\": \"package com.lumen.money;\\n\\nimport java.math.BigDecimal;\\nimport java.math.RoundingMode;\\nimport java.util.Map;\\nimport org.junit.jupiter.api.Test;\\n\\nimport static org.mockito.ArgumentMatchers.any;\\nimport static org.mockito.Mockito.*;\\n\\n// Unit test of LedgerAmount.\\nclass LedgerAmountTest {\\n    LedgerAmount subject = new LedgerAmount();\\n\\n    @Test\\n    void minorUnits() {\\n        // given\\n        var result = subject.minorUnits(new BigDecimal(\\\"10.00\\\"), \\\"test\\\");\\n        // then\\n    }\\n\\n    // Boundaries of minorUnits in one test (needs junit-jupiter-params, in spring-boot-starter-test): fill in the expected values\\n    // @ParameterizedTest\\n    // @CsvSource({ \\\"0.00, ' ', ?\\\", \\\"0.01, ' ', ?\\\", \\\"1.00, ' ', ?\\\", \\\"12.345, ' ', ?\\\", \\\"-1.00, ' ', ?\\\" })\\n    // void minorUnitsCases(String amount, String currency, String expected) {\\n    //     assertThat(subject.minorUnits(new BigDecimal(amount), currency)).isEqualTo(Long.parseLong(expected));\\n    // }\\n}\\n\",\n  \"example\": null,\n  \"testData\": {\n    \"note\": \"no TestData in this module: test_data generates valid objects for the service's bodies, events and rows (with env: from the database)\"\n  },\n  \"rules\": [\n    \"JUnit 5 (org.junit.jupiter.api.Test); test classes and methods package-private.\",\n    \"One behaviour per test; name it after the behaviour (createChargesTheFee, settleRejectsSettled).\",\n    \"Assert with org.junit.jupiter.api.Assertions.\"\n  ],\n  \"next\": \"Write the test with workspace_write path=\\\"decimal/src/test/java/com/lumen/money/LedgerAmountTest.java\\\", then test_run tests=[\\\"LedgerAmountTest\\\"].\"\n}\n",
+  "stderr": "21:47:45 dt call test_context#1440 start {\"workspace\":\"common-primitives-main-7397\",\"target\":\"LedgerAmount#minorUnits\"} (cli)\n21:47:45 dt call test_context#1440 ok 93ms\n",
+  "result": {
+    "workspace": "common-primitives-main-7397",
+    "class": "com.lumen.money.LedgerAmount",
+    "file": "decimal/src/main/java/com/lumen/money/LedgerAmount.java",
+    "role": null,
+    "kind": "class",
+    "style": "unit",
+    "source": "package com.lumen.money;\nimport java.math.BigDecimal;\nimport java.math.RoundingMode;\nimport java.util.Map;\npublic final class LedgerAmount {\n  private static final Map<String,Integer> SCALE = Map.of(\"USD\",2,\"EUR\",2,\"JPY\",0,\"KWD\",3);\n    ...\n   5  public final class LedgerAmount {\n   6    private static final Map<String,Integer> SCALE = Map.of(\"USD\",2,\"EUR\",2,\"JPY\",0,\"KWD\",3);\n   7    public static long minorUnits(BigDecimal amount, String currency) {\n   8      if (amount == null || amount.signum()<0 || !SCALE.containsKey(currency)) throw new IllegalArgumentException(\"invalid amount or currency\");\n   9      return amount.movePointRight(2).setScale(0,RoundingMode.HALF_UP).longValueExact();\n  10    }\n  11  }",
+    "methods": [
+      {
+        "name": "minorUnits",
+        "signature": "long minorUnits(BigDecimal amount, String currency)",
+        "lines": "7-10",
+        "calls": []
+      }
+    ],
+    "dependencies": [],
+    "callees": [],
+    "tables": [],
+    "functions": [],
+    "setup": {
+      "springBoot": null,
+      "starterTest": false,
+      "junit": 5,
+      "mockito": false,
+      "assertj": false,
+      "testcontainers": false,
+      "mockk": false,
+      "mockBean": "MockBean",
+      "buildTool": "maven",
+      "module": "decimal",
+      "buildFile": "pom.xml"
+    },
+    "ddl": null,
+    "test": {
+      "path": "decimal/src/test/java/com/lumen/money/LedgerAmountTest.java",
+      "exists": false,
+      "class": "com.lumen.money.LedgerAmountTest"
+    },
+    "skeleton": "package com.lumen.money;\n\nimport java.math.BigDecimal;\nimport java.math.RoundingMode;\nimport java.util.Map;\nimport org.junit.jupiter.api.Test;\n\nimport static org.mockito.ArgumentMatchers.any;\nimport static org.mockito.Mockito.*;\n\n// Unit test of LedgerAmount.\nclass LedgerAmountTest {\n    LedgerAmount subject = new LedgerAmount();\n\n    @Test\n    void minorUnits() {\n        // given\n        var result = subject.minorUnits(new BigDecimal(\"10.00\"), \"test\");\n        // then\n    }\n\n    // Boundaries of minorUnits in one test (needs junit-jupiter-params, in spring-boot-starter-test): fill in the expected values\n    // @ParameterizedTest\n    // @CsvSource({ \"0.00, ' ', ?\", \"0.01, ' ', ?\", \"1.00, ' ', ?\", \"12.345, ' ', ?\", \"-1.00, ' ', ?\" })\n    // void minorUnitsCases(String amount, String currency, String expected) {\n    //     assertThat(subject.minorUnits(new BigDecimal(amount), currency)).isEqualTo(Long.parseLong(expected));\n    // }\n}\n",
+    "example": null,
+    "testData": {
+      "note": "no TestData in this module: test_data generates valid objects for the service's bodies, events and rows (with env: from the database)"
+    },
+    "rules": [
+      "JUnit 5 (org.junit.jupiter.api.Test); test classes and methods package-private.",
+      "One behaviour per test; name it after the behaviour (createChargesTheFee, settleRejectsSettled).",
+      "Assert with org.junit.jupiter.api.Assertions."
+    ],
+    "next": "Write the test with workspace_write path=\"decimal/src/test/java/com/lumen/money/LedgerAmountTest.java\", then test_run tests=[\"LedgerAmountTest\"]."
+  }
+}

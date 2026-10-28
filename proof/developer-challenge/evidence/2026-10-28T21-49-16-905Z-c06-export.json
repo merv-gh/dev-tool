@@ -1,0 +1,47 @@
+{
+  "started": "2026-10-28T21:49:16.905Z",
+  "ended": "2026-10-28T21:49:17.539Z",
+  "durationMs": 634,
+  "tool": "fixture_export",
+  "args": {
+    "workspace": "c06-main-a358",
+    "capture": "743f53f27d985165ee1a8585",
+    "name": "tenant-release"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 610,
+  "stderrBytes": 186,
+  "stdout": "{\n  \"workspace\": \"c06-main-a358\",\n  \"path\": \"src/test/resources/dt-fixtures/tenant-release\",\n  \"files\": [\n    \"pg/62696c6c696e67/schema.sql\",\n    \"pg/62696c6c696e67/data.sql\",\n    \"pg/62696c6c696e67/constraints.sql\",\n    \"pg/62696c6c696e67/schema.json\",\n    \"pg/62696c6c696e67/rows.json\",\n    \"pg/6f7264657273/schema.sql\",\n    \"pg/6f7264657273/data.sql\",\n    \"pg/6f7264657273/constraints.sql\",\n    \"pg/6f7264657273/schema.json\",\n    \"pg/6f7264657273/rows.json\",\n    \"README.txt\",\n    \"manifest.json\"\n  ],\n  \"counts\": {\n    \"rows\": 8,\n    \"queries\": 4,\n    \"messages\": 0\n  },\n  \"complete\": true,\n  \"gaps\": []\n}\n",
+  "stderr": "21:49:17 dt call fixture_export#138d start {\"workspace\":\"c06-main-a358\",\"capture\":\"743f53f27d985165ee1a8585\",\"name\":\"tenant-release\"} (cli)\n21:49:17 dt call fixture_export#138d ok 148ms\n",
+  "result": {
+    "workspace": "c06-main-a358",
+    "path": "src/test/resources/dt-fixtures/tenant-release",
+    "files": [
+      "pg/62696c6c696e67/schema.sql",
+      "pg/62696c6c696e67/data.sql",
+      "pg/62696c6c696e67/constraints.sql",
+      "pg/62696c6c696e67/schema.json",
+      "pg/62696c6c696e67/rows.json",
+      "pg/6f7264657273/schema.sql",
+      "pg/6f7264657273/data.sql",
+      "pg/6f7264657273/constraints.sql",
+      "pg/6f7264657273/schema.json",
+      "pg/6f7264657273/rows.json",
+      "README.txt",
+      "manifest.json"
+    ],
+    "counts": {
+      "rows": 8,
+      "queries": 4,
+      "messages": 0
+    },
+    "complete": true,
+    "gaps": []
+  }
+}

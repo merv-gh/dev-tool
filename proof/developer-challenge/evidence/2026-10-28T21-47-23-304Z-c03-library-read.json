@@ -1,0 +1,29 @@
+{
+  "started": "2026-10-28T21:47:23.304Z",
+  "ended": "2026-10-28T21:47:23.768Z",
+  "durationMs": 464,
+  "tool": "workspace_read",
+  "args": {
+    "workspace": "common-primitives-main-7397",
+    "path": "decimal/src/main/java/com/lumen/money/LedgerAmount.java"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 809,
+  "stderrBytes": 203,
+  "stdout": "{\n  \"id\": \"common-primitives-main-7397\",\n  \"path\": \"decimal/src/main/java/com/lumen/money/LedgerAmount.java\",\n  \"from\": 1,\n  \"to\": 12,\n  \"lines\": 12,\n  \"text\": \"    1  package com.lumen.money;\\n    2  import java.math.BigDecimal;\\n    3  import java.math.RoundingMode;\\n    4  import java.util.Map;\\n    5  public final class LedgerAmount {\\n    6    private static final Map<String,Integer> SCALE = Map.of(\\\"USD\\\",2,\\\"EUR\\\",2,\\\"JPY\\\",0,\\\"KWD\\\",3);\\n    7    public static long minorUnits(BigDecimal amount, String currency) {\\n    8      if (amount == null || amount.signum()<0 || !SCALE.containsKey(currency)) throw new IllegalArgumentException(\\\"invalid amount or currency\\\");\\n    9      return amount.movePointRight(2).setScale(0,RoundingMode.HALF_UP).longValueExact();\\n   10    }\\n   11  }\\n   12  \"\n}\n",
+  "stderr": "21:47:23 dt call workspace_read#1nhv start {\"workspace\":\"common-primitives-main-7397\",\"path\":\"decimal/src/main/java/com/lumen/money/LedgerAmount.java\"} (cli)\n21:47:23 dt call workspace_read#1nhv ok 35ms\n",
+  "result": {
+    "id": "common-primitives-main-7397",
+    "path": "decimal/src/main/java/com/lumen/money/LedgerAmount.java",
+    "from": 1,
+    "to": 12,
+    "lines": 12,
+    "text": "    1  package com.lumen.money;\n    2  import java.math.BigDecimal;\n    3  import java.math.RoundingMode;\n    4  import java.util.Map;\n    5  public final class LedgerAmount {\n    6    private static final Map<String,Integer> SCALE = Map.of(\"USD\",2,\"EUR\",2,\"JPY\",0,\"KWD\",3);\n    7    public static long minorUnits(BigDecimal amount, String currency) {\n    8      if (amount == null || amount.signum()<0 || !SCALE.containsKey(currency)) throw new IllegalArgumentException(\"invalid amount or currency\");\n    9      return amount.movePointRight(2).setScale(0,RoundingMode.HALF_UP).longValueExact();\n   10    }\n   11  }\n   12  "
+  }
+}

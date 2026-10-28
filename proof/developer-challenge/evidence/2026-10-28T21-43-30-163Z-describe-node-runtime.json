@@ -1,0 +1,57 @@
+{
+  "started": "2026-10-28T21:43:30.163Z",
+  "ended": "2026-10-28T21:43:30.486Z",
+  "durationMs": 323,
+  "tool": "tool_describe",
+  "args": {
+    "name": "scenario_start"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null
+  },
+  "exitCode": 0,
+  "stdoutBytes": 1213,
+  "stderrBytes": 118,
+  "stdout": "{\n  \"name\": \"scenario_start\",\n  \"description\": \"Start the unchanged Node service in a private Docker network-none container, arrange exact HTTP fixtures/config/files, wait for readiness and return a leased session. No host ports, sockets, environment credentials or live HTTP fallback. Poll with job if still running. Use scenario_stop when finished.\",\n  \"group\": \"code\",\n  \"origin\": \"built-in\",\n  \"execution\": {\n    \"protocol\": \"dt.tool/v1\",\n    \"transport\": \"in-process\"\n  },\n  \"inputSchema\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"workspace\": {\n        \"type\": \"string\",\n        \"description\": \"Writable workspace id\"\n      },\n      \"package\": {\n        \"type\": \"string\",\n        \"description\": \"Repository-relative path to scenario.json\"\n      },\n      \"view\": {\n        \"type\": \"boolean\",\n        \"description\": \"Include an interactive result view; default true\",\n        \"default\": true\n      },\n      \"job\": {\n        \"type\": \"string\",\n        \"description\": \"Poll a scenario_start job; workspace/package may be omitted\"\n      },\n      \"ttl_ms\": {\n        \"type\": \"integer\",\n        \"default\": 300000,\n        \"minimum\": 1000,\n        \"maximum\": 3600000\n      }\n    },\n    \"required\": []\n  }\n}\n",
+  "stderr": "21:43:30 dt call tool_describe#1njo start {\"name\":\"scenario_start\"} (cli)\n21:43:30 dt call tool_describe#1njo ok 21ms\n",
+  "result": {
+    "name": "scenario_start",
+    "description": "Start the unchanged Node service in a private Docker network-none container, arrange exact HTTP fixtures/config/files, wait for readiness and return a leased session. No host ports, sockets, environment credentials or live HTTP fallback. Poll with job if still running. Use scenario_stop when finished.",
+    "group": "code",
+    "origin": "built-in",
+    "execution": {
+      "protocol": "dt.tool/v1",
+      "transport": "in-process"
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "workspace": {
+          "type": "string",
+          "description": "Writable workspace id"
+        },
+        "package": {
+          "type": "string",
+          "description": "Repository-relative path to scenario.json"
+        },
+        "view": {
+          "type": "boolean",
+          "description": "Include an interactive result view; default true",
+          "default": true
+        },
+        "job": {
+          "type": "string",
+          "description": "Poll a scenario_start job; workspace/package may be omitted"
+        },
+        "ttl_ms": {
+          "type": "integer",
+          "default": 300000,
+          "minimum": 1000,
+          "maximum": 3600000
+        }
+      },
+      "required": []
+    }
+  }
+}

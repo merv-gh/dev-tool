@@ -1,0 +1,40 @@
+{
+  "started": "2026-10-28T21:44:31.995Z",
+  "ended": "2026-10-28T21:44:32.507Z",
+  "durationMs": 512,
+  "tool": "workspace_open",
+  "args": {
+    "project": "CASES",
+    "repo": "c01",
+    "ref": "main"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null
+  },
+  "exitCode": 0,
+  "stdoutBytes": 455,
+  "stderrBytes": 363,
+  "stdout": "{\n  \"job\": \"mvsn6z641831eb\",\n  \"state\": \"done\",\n  \"id\": \"c01-main-a04c\",\n  \"project\": \"CASES\",\n  \"repo\": \"c01\",\n  \"ref\": \"main\",\n  \"sha\": \"632a0fdc240ca8052c7c92e257c69594d08f77f4\",\n  \"commitDate\": \"2026-10-29T00:43:02+03:00\",\n  \"service\": null,\n  \"env\": null,\n  \"path\": \"work/c01-main-a04c\",\n  \"createdAt\": \"2026-10-28T21:44:32.448Z\",\n  \"usedAt\": \"2026-10-28T21:44:32.448Z\",\n  \"session\": null,\n  \"libs\": [],\n  \"files\": 1,\n  \"classes\": 0,\n  \"build\": []\n}\n",
+  "stderr": "21:44:32 dt call workspace_open#1z5t start {\"project\":\"CASES\",\"repo\":\"c01\",\"ref\":\"main\"} (cli)\n21:44:32 dt job workspace_open CASES/c01@main#2z66 start {\"job\":\"mvsn6z641831eb\"} (job)\n21:44:32 dt job workspace_open CASES/c01@main#2z66 ok 328ms  git init 55ms · git fetch 145ms · git checkout 27ms · code index 12ms\n21:44:32 dt call workspace_open#1z5t ok 340ms\n",
+  "result": {
+    "job": "mvsn6z641831eb",
+    "state": "done",
+    "id": "c01-main-a04c",
+    "project": "CASES",
+    "repo": "c01",
+    "ref": "main",
+    "sha": "632a0fdc240ca8052c7c92e257c69594d08f77f4",
+    "commitDate": "2026-10-29T00:43:02+03:00",
+    "service": null,
+    "env": null,
+    "path": "work/c01-main-a04c",
+    "createdAt": "2026-10-28T21:44:32.448Z",
+    "usedAt": "2026-10-28T21:44:32.448Z",
+    "session": null,
+    "libs": [],
+    "files": 1,
+    "classes": 0,
+    "build": []
+  }
+}

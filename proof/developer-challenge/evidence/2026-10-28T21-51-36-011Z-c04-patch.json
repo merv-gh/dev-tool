@@ -1,0 +1,47 @@
+{
+  "started": "2026-10-28T21:51:36.011Z",
+  "ended": "2026-10-28T21:51:36.398Z",
+  "durationMs": 387,
+  "tool": "workspace_patch",
+  "args": {
+    "workspace": "c04-main-43a5"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 2642,
+  "stderrBytes": 127,
+  "stdout": "{\n  \"workspace\": \"c04-main-43a5\",\n  \"repo\": \"CASES/c04\",\n  \"base\": \"637246d07986be76bfa479e0e3d9efce2da41b11\",\n  \"files\": [\n    {\n      \"path\": \"src/reservations.cjs\",\n      \"added\": 9,\n      \"removed\": 4,\n      \"status\": \"modified\"\n    },\n    {\n      \"path\": \"test/regression.test.cjs\",\n      \"added\": 13,\n      \"removed\": 0,\n      \"status\": \"added\"\n    }\n  ],\n  \"tests\": [],\n  \"apply\": \"git checkout 637246d07986 && git apply --index c04-main-43a5.patch\",\n  \"view\": \"http://127.0.0.1:4000/show/mvsng2hh4291fc24e2f08c01d0\",\n  \"download\": \"http://127.0.0.1:4000/patch/mvsng2hh4291fc24e2f08c01d0.patch\",\n  \"patch\": \"diff --git a/src/reservations.cjs b/src/reservations.cjs\\nindex 8f8bccf..b6199f1 100644\\n--- a/src/reservations.cjs\\n+++ b/src/reservations.cjs\\n@@ -1,7 +1,12 @@\\n exports.ttlMillis = function(value) {\\n-  const ttl = Number.parseInt(value, 10);\\n-  if (!Number.isSafeInteger(ttl) || ttl <= 0) throw new Error('invalid reservation TTL');\\n-  return ttl;\\n+  if (typeof value === 'number') {\\n+    if (!Number.isSafeInteger(value) || value <= 0) throw new Error('invalid reservation TTL');\\n+    return value;\\n+  }\\n+  const match = typeof value === 'string' && /^([0-9]+)(ms|s|m)$/.exec(value);\\n+  if (!match) throw new Error('invalid reservation TTL');\\n+  const ttl = BigInt(match[1]) * ({ms:1n,s:1000n,m:60000n}[match[2]]);\\n+  if (ttl <= 0n || ttl > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error('invalid reservation TTL');\\n+  return Number(ttl);\\n };\\n exports.isReserved = (createdAt, now, config) => now - createdAt < exports.ttlMillis(config.reservationTtl);\\n-\\ndiff --git a/test/regression.test.cjs b/test/regression.test.cjs\\nnew file mode 100644\\nindex 0000000..e6ada97\\n--- /dev/null\\n+++ b/test/regression.test.cjs\\n@@ -0,0 +1,13 @@\\n+const {test}=require('node:test');\\n+const assert=require('node:assert/strict');\\n+const {ttlMillis,isReserved}=require('../src/reservations.cjs');\\n+test('production and staging preserve reservation duration',()=>{\\n+ for(const config of [require('../config/production.json'),require('../config/staging.json')]){\\n+  assert.equal(ttlMillis(config.reservationTtl),90000);assert.equal(isReserved(1000,1100,config),true);\\n+  assert.equal(isReserved(1000,90999,config),true);assert.equal(isReserved(1000,91000,config),false);\\n+ }\\n+ assert.equal(ttlMillis('2m'),120000);assert.equal(ttlMillis('125ms'),125);assert.equal(ttlMillis(1),1);\\n+});\\n+test('invalid or overflowing TTL fails before use',()=>{\\n+ for(const value of [undefined,null,'','90','90s junk','1.5s','0s','-1s','1h',0,-1,1.5,Infinity,NaN,'9007199254740991m'])assert.throws(()=>ttlMillis(value));\\n+});\\n\"\n}\n",
+  "stderr": "21:51:36 dt call workspace_patch#12dm start {\"workspace\":\"c04-main-43a5\"} (cli)\n21:51:36 dt call workspace_patch#12dm ok 138ms\n",
+  "result": {
+    "workspace": "c04-main-43a5",
+    "repo": "CASES/c04",
+    "base": "637246d07986be76bfa479e0e3d9efce2da41b11",
+    "files": [
+      {
+        "path": "src/reservations.cjs",
+        "added": 9,
+        "removed": 4,
+        "status": "modified"
+      },
+      {
+        "path": "test/regression.test.cjs",
+        "added": 13,
+        "removed": 0,
+        "status": "added"
+      }
+    ],
+    "tests": [],
+    "apply": "git checkout 637246d07986 && git apply --index c04-main-43a5.patch",
+    "view": "http://127.0.0.1:4000/show/mvsng2hh4291fc24e2f08c01d0",
+    "download": "http://127.0.0.1:4000/patch/mvsng2hh4291fc24e2f08c01d0.patch",
+    "patch": "diff --git a/src/reservations.cjs b/src/reservations.cjs\nindex 8f8bccf..b6199f1 100644\n--- a/src/reservations.cjs\n+++ b/src/reservations.cjs\n@@ -1,7 +1,12 @@\n exports.ttlMillis = function(value) {\n-  const ttl = Number.parseInt(value, 10);\n-  if (!Number.isSafeInteger(ttl) || ttl <= 0) throw new Error('invalid reservation TTL');\n-  return ttl;\n+  if (typeof value === 'number') {\n+    if (!Number.isSafeInteger(value) || value <= 0) throw new Error('invalid reservation TTL');\n+    return value;\n+  }\n+  const match = typeof value === 'string' && /^([0-9]+)(ms|s|m)$/.exec(value);\n+  if (!match) throw new Error('invalid reservation TTL');\n+  const ttl = BigInt(match[1]) * ({ms:1n,s:1000n,m:60000n}[match[2]]);\n+  if (ttl <= 0n || ttl > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error('invalid reservation TTL');\n+  return Number(ttl);\n };\n exports.isReserved = (createdAt, now, config) => now - createdAt < exports.ttlMillis(config.reservationTtl);\n-\ndiff --git a/test/regression.test.cjs b/test/regression.test.cjs\nnew file mode 100644\nindex 0000000..e6ada97\n--- /dev/null\n+++ b/test/regression.test.cjs\n@@ -0,0 +1,13 @@\n+const {test}=require('node:test');\n+const assert=require('node:assert/strict');\n+const {ttlMillis,isReserved}=require('../src/reservations.cjs');\n+test('production and staging preserve reservation duration',()=>{\n+ for(const config of [require('../config/production.json'),require('../config/staging.json')]){\n+  assert.equal(ttlMillis(config.reservationTtl),90000);assert.equal(isReserved(1000,1100,config),true);\n+  assert.equal(isReserved(1000,90999,config),true);assert.equal(isReserved(1000,91000,config),false);\n+ }\n+ assert.equal(ttlMillis('2m'),120000);assert.equal(ttlMillis('125ms'),125);assert.equal(ttlMillis(1),1);\n+});\n+test('invalid or overflowing TTL fails before use',()=>{\n+ for(const value of [undefined,null,'','90','90s junk','1.5s','0s','-1s','1h',0,-1,1.5,Infinity,NaN,'9007199254740991m'])assert.throws(()=>ttlMillis(value));\n+});\n"
+  },
+  "requestSha256": "68535105387c8926e0cdc9c8f4be4f77ce9197bc93cd9e3a82e7228679ac5e27",
+  "stdoutSha256": "ed6f243a6c3599fe375c891e6768baf6be06875041087978f486c5720e8689f6",
+  "stderrSha256": "b262f6d152eeff46b11428096fc724521cd55db7a526edbf05f5a4e0093e4c88"
+}

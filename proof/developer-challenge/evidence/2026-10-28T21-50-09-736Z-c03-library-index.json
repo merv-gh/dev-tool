@@ -1,0 +1,40 @@
+{
+  "started": "2026-10-28T21:50:09.736Z",
+  "ended": "2026-10-28T21:50:13.397Z",
+  "durationMs": 3661,
+  "tool": "catalog_sync",
+  "args": {
+    "env": "fixture",
+    "what": "bitbucket"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 277,
+  "stderrBytes": 234,
+  "stdout": "{\n  \"job\": \"mvsne7uof9a5eb\",\n  \"state\": \"done\",\n  \"ms\": 3388,\n  \"bitbucket\": {\n    \"repos\": 9,\n    \"indexed\": 8,\n    \"failed\": 0,\n    \"modules\": 17\n  },\n  \"dev\": {\n    \"catalogLines\": 9,\n    \"usageEdges\": 0\n  },\n  \"fixture\": {\n    \"catalogLines\": 13,\n    \"usageEdges\": 1\n  }\n}\n",
+  "stderr": "21:50:09 dt call catalog_sync#17tz start {\"env\":\"fixture\",\"what\":\"bitbucket\"} (cli)\n21:50:09 dt job bitbucket#27ur start {\"job\":\"mvsne7uof9a5eb\"} (job)\n21:50:13 dt job bitbucket#27ur ok 3.4s\n21:50:13 dt call catalog_sync#17tz ok 3.4s\n",
+  "result": {
+    "job": "mvsne7uof9a5eb",
+    "state": "done",
+    "ms": 3388,
+    "bitbucket": {
+      "repos": 9,
+      "indexed": 8,
+      "failed": 0,
+      "modules": 17
+    },
+    "dev": {
+      "catalogLines": 9,
+      "usageEdges": 0
+    },
+    "fixture": {
+      "catalogLines": 13,
+      "usageEdges": 1
+    }
+  }
+}

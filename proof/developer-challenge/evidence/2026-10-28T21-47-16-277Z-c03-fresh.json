@@ -1,0 +1,45 @@
+{
+  "started": "2026-10-28T21:47:16.277Z",
+  "ended": "2026-10-28T21:47:17.614Z",
+  "durationMs": 1337,
+  "tool": "workspace_open",
+  "args": {
+    "project": "FIN",
+    "repo": "ledger-service",
+    "ref": "main",
+    "fresh": true
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 503,
+  "stderrBytes": 427,
+  "stdout": "{\n  \"job\": \"mvsnai23904e43\",\n  \"state\": \"done\",\n  \"id\": \"ledger-service-main-81bf\",\n  \"project\": \"FIN\",\n  \"repo\": \"ledger-service\",\n  \"ref\": \"main\",\n  \"sha\": \"852ff1d184c20785f38aa3e9e070c403e1c987e4\",\n  \"commitDate\": \"2026-10-29T00:47:00+03:00\",\n  \"service\": null,\n  \"env\": null,\n  \"path\": \"work/ledger-service-main-81bf\",\n  \"createdAt\": \"2026-10-28T21:47:17.486Z\",\n  \"usedAt\": \"2026-10-28T21:47:17.486Z\",\n  \"session\": null,\n  \"libs\": [],\n  \"files\": 2,\n  \"classes\": 1,\n  \"build\": [\n    \"pom.xml\"\n  ]\n}\n",
+  "stderr": "21:47:16 dt call workspace_open#1i1f start {\"project\":\"FIN\",\"repo\":\"ledger-service\",\"ref\":\"main\",\"fresh\":true} (cli)\n21:47:16 dt job workspace_open FIN/ledger-service@main#2i28 start {\"job\":\"mvsnai23904e43\"} (job)\n21:47:17 dt job workspace_open FIN/ledger-service@main#2i28 ok 955ms  git ls-remote 158ms · git init 106ms · git fetch 316ms · git checkout 53ms · code index 43ms\n21:47:17 dt call workspace_open#1i1f ok 985ms\n",
+  "result": {
+    "job": "mvsnai23904e43",
+    "state": "done",
+    "id": "ledger-service-main-81bf",
+    "project": "FIN",
+    "repo": "ledger-service",
+    "ref": "main",
+    "sha": "852ff1d184c20785f38aa3e9e070c403e1c987e4",
+    "commitDate": "2026-10-29T00:47:00+03:00",
+    "service": null,
+    "env": null,
+    "path": "work/ledger-service-main-81bf",
+    "createdAt": "2026-10-28T21:47:17.486Z",
+    "usedAt": "2026-10-28T21:47:17.486Z",
+    "session": null,
+    "libs": [],
+    "files": 2,
+    "classes": 1,
+    "build": [
+      "pom.xml"
+    ]
+  }
+}

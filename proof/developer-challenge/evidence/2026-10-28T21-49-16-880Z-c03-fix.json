@@ -1,0 +1,34 @@
+{
+  "started": "2026-10-28T21:49:16.880Z",
+  "ended": "2026-10-28T21:49:17.441Z",
+  "durationMs": 561,
+  "tool": "workspace_write",
+  "args": {
+    "workspace": "common-primitives-main-7397",
+    "path": "decimal/src/main/java/com/lumen/money/LedgerAmount.java",
+    "edits": [
+      {
+        "find": "amount.movePointRight(2)",
+        "replace": "amount.movePointRight(SCALE.get(currency))"
+      }
+    ]
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 162,
+  "stderrBytes": 261,
+  "stdout": "{\n  \"id\": \"common-primitives-main-7397\",\n  \"path\": \"decimal/src/main/java/com/lumen/money/LedgerAmount.java\",\n  \"created\": false,\n  \"bytes\": 557,\n  \"lines\": 12\n}\n",
+  "stderr": "21:49:17 dt call workspace_write#136a start {\"workspace\":\"common-primitives-main-7397\",\"path\":\"decimal/src/main/java/com/lumen/money/LedgerAmount.java\",\"edits\":[{\"find\":\"amount.movePointRight(2)\",\"replace…} (cli)\n21:49:17 dt call workspace_write#136a ok 64ms\n",
+  "result": {
+    "id": "common-primitives-main-7397",
+    "path": "decimal/src/main/java/com/lumen/money/LedgerAmount.java",
+    "created": false,
+    "bytes": 557,
+    "lines": 12
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "started": "2026-10-28T21:45:28.383Z",
+  "ended": "2026-10-28T21:45:28.733Z",
+  "durationMs": 350,
+  "tool": "workspace_read",
+  "args": {
+    "workspace": "c04-main-43a5",
+    "path": "config/production.json"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 161,
+  "stderrBytes": 156,
+  "stdout": "{\n  \"id\": \"c04-main-43a5\",\n  \"path\": \"config/production.json\",\n  \"from\": 1,\n  \"to\": 2,\n  \"lines\": 2,\n  \"text\": \"    1  {\\\"reservationTtl\\\": \\\"90s\\\"}\\n    2  \"\n}\n",
+  "stderr": "21:45:28 dt call workspace_read#16rb start {\"workspace\":\"c04-main-43a5\",\"path\":\"config/production.json\"} (cli)\n21:45:28 dt call workspace_read#16rb ok 31ms\n",
+  "result": {
+    "id": "c04-main-43a5",
+    "path": "config/production.json",
+    "from": 1,
+    "to": 2,
+    "lines": 2,
+    "text": "    1  {\"reservationTtl\": \"90s\"}\n    2  "
+  }
+}

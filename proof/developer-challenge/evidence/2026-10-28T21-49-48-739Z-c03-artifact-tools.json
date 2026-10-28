@@ -1,0 +1,52 @@
+{
+  "started": "2026-10-28T21:49:48.739Z",
+  "ended": "2026-10-28T21:49:49.050Z",
+  "durationMs": 311,
+  "tool": "tool_search",
+  "args": {
+    "query": "artifactId repository module folder index",
+    "limit": 2
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 1363,
+  "stderrBytes": 152,
+  "stdout": "{\n  \"total\": 32,\n  \"tools\": [\n    {\n      \"name\": \"ddl_snapshot\",\n      \"group\": \"code\",\n      \"description\": \"DDL of a synced database (schemas, extensions, enum/domain types, sequences, tables with defaults, identity, constraints, indexes, comments, functions, procedures, views in order, triggers) for tests: all of it, or only some tables, functions or what a service uses, closed over what they need (FK targets, trigger functions, called functions and their tables). With workspace, written to <module>/src/test/resources/dt-schema/<db>.sql (or path).\",\n      \"required\": [\n        \"db\"\n      ],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"ddl_snapshot\"\n        }\n      }\n    },\n    {\n      \"name\": \"doctor\",\n      \"group\": \"history\",\n      \"description\": \"Why fetching repos or running tests fails here: folders writable (and chmod), disk, git, Bitbucket (token, API, a repo's refs; deep=true also fetches it), JDK (java and javac), Maven, Gradle and its wrapper download, the company repository with the credentials from maven-settings.xml / gradle.properties, Maven Central, proxy, the test database, stuck jobs. Each problem says how to fix it. Shown as a table.\",\n      \"required\": [],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"doctor\"\n        }\n      }\n    }\n  ]\n}\n",
+  "stderr": "21:49:48 dt call tool_search#1rm8 start {\"query\":\"artifactId repository module folder index\",\"limit\":2} (cli)\n21:49:48 dt call tool_search#1rm8 ok 45ms\n",
+  "result": {
+    "total": 32,
+    "tools": [
+      {
+        "name": "ddl_snapshot",
+        "group": "code",
+        "description": "DDL of a synced database (schemas, extensions, enum/domain types, sequences, tables with defaults, identity, constraints, indexes, comments, functions, procedures, views in order, triggers) for tests: all of it, or only some tables, functions or what a service uses, closed over what they need (FK targets, trigger functions, called functions and their tables). With workspace, written to <module>/src/test/resources/dt-schema/<db>.sql (or path).",
+        "required": [
+          "db"
+        ],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "ddl_snapshot"
+          }
+        }
+      },
+      {
+        "name": "doctor",
+        "group": "history",
+        "description": "Why fetching repos or running tests fails here: folders writable (and chmod), disk, git, Bitbucket (token, API, a repo's refs; deep=true also fetches it), JDK (java and javac), Maven, Gradle and its wrapper download, the company repository with the credentials from maven-settings.xml / gradle.properties, Maven Central, proxy, the test database, stuck jobs. Each problem says how to fix it. Shown as a table.",
+        "required": [],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "doctor"
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "workspace": "c04-main-43a5",
+  "path": "test/regression.test.cjs",
+  "content": "const {test}=require('node:test');\nconst assert=require('node:assert/strict');\nconst {ttlMillis,isReserved}=require('../src/reservations.cjs');\ntest('production and staging preserve reservation duration',()=>{\n for(const config of [require('../config/production.json'),require('../config/staging.json')]){\n  assert.equal(ttlMillis(config.reservationTtl),90000);assert.equal(isReserved(1000,1100,config),true);\n  assert.equal(isReserved(1000,90999,config),true);assert.equal(isReserved(1000,91000,config),false);\n }\n assert.equal(ttlMillis('2m'),120000);assert.equal(ttlMillis('125ms'),125);assert.equal(ttlMillis(1),1);\n});\ntest('invalid or overflowing TTL fails before use',()=>{\n for(const value of [undefined,null,'','90','90s junk','1.5s','0s','-1s','1h',0,-1,1.5,Infinity,NaN,'9007199254740991m'])assert.throws(()=>ttlMillis(value));\n});\n"
+}

@@ -1,0 +1,62 @@
+{
+  "started": "2026-10-28T21:40:38.063Z",
+  "ended": "2026-10-28T21:40:40.143Z",
+  "durationMs": 2080,
+  "tool": "doctor",
+  "args": {},
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/dev-tool",
+    "JAVA_HOME": null
+  },
+  "exitCode": 0,
+  "stdoutBytes": 1545,
+  "stderrBytes": 81,
+  "stdout": "{\n  \"summary\": {\n    \"ok\": 13,\n    \"warn\": 4,\n    \"fail\": 1\n  },\n  \"total\": 18,\n  \"rows\": [\n    {\n      \"group\": \"bitbucket\",\n      \"check\": \"Bitbucket URL\",\n      \"status\": \"fail\",\n      \"detail\": \"not set\",\n      \"fix\": \"bitbucket.url in config.json\"\n    },\n    {\n      \"group\": \"folders\",\n      \"check\": \"git data lasts\",\n      \"status\": \"warn\",\n      \"detail\": \"/var/folders/45/h2f0gc4n25dcmbn0yq3rnvsm0000gn/T/dt-git is in the temporary folder: after a restart every repo is fetched again\",\n      \"fix\": \"set DT_GIT_DIR to a lasting folder git can chmod in (compose: the dt-git volume)\"\n    },\n    {\n      \"group\": \"tests\",\n      \"check\": \"Maven\",\n      \"status\": \"warn\",\n      \"detail\": \"mvn: spawn mvn ENOENT\",\n      \"fix\": \"Maven projects without mvnw need it: the jdk compose profile, or tests.maven\"\n    },\n    {\n      \"group\": \"repository\",\n      \"check\": \"gradle.properties\",\n      \"status\": \"warn\",\n      \"detail\": \"none found (looked in /Users/user/.codex/worktrees/developer-challenge-proof/dev-tool/gradle.properties): builds that read nexusUrl/mavenUser/mavenPassword fail\",\n      \"fix\": \"copy the gradle.properties of your machine (Windows: %USERPROFILE%\\\\.gradle\\\\gradle.properties) into dt's config folder; passwords may be ${VAR} from .env\"\n    },\n    {\n      \"group\": \"tests\",\n      \"check\": \"test database\",\n      \"status\": \"warn\",\n      \"detail\": \"not set\",\n      \"fix\": \"needed only for DB tests: the testdb compose profile, or tests.pgUrl\"\n    }\n  ],\n  \"view\": \"http://127.0.0.1:4000/view/mvsn203cf67d02d250856a7792\"\n}\n",
+  "stderr": "21:40:38 dt call doctor#1ynv start {} (cli)\n21:40:40 dt call doctor#1ynv ok 1.9s\n",
+  "result": {
+    "summary": {
+      "ok": 13,
+      "warn": 4,
+      "fail": 1
+    },
+    "total": 18,
+    "rows": [
+      {
+        "group": "bitbucket",
+        "check": "Bitbucket URL",
+        "status": "fail",
+        "detail": "not set",
+        "fix": "bitbucket.url in config.json"
+      },
+      {
+        "group": "folders",
+        "check": "git data lasts",
+        "status": "warn",
+        "detail": "/var/folders/45/h2f0gc4n25dcmbn0yq3rnvsm0000gn/T/dt-git is in the temporary folder: after a restart every repo is fetched again",
+        "fix": "set DT_GIT_DIR to a lasting folder git can chmod in (compose: the dt-git volume)"
+      },
+      {
+        "group": "tests",
+        "check": "Maven",
+        "status": "warn",
+        "detail": "mvn: spawn mvn ENOENT",
+        "fix": "Maven projects without mvnw need it: the jdk compose profile, or tests.maven"
+      },
+      {
+        "group": "repository",
+        "check": "gradle.properties",
+        "status": "warn",
+        "detail": "none found (looked in /Users/user/.codex/worktrees/developer-challenge-proof/dev-tool/gradle.properties): builds that read nexusUrl/mavenUser/mavenPassword fail",
+        "fix": "copy the gradle.properties of your machine (Windows: %USERPROFILE%\\.gradle\\gradle.properties) into dt's config folder; passwords may be ${VAR} from .env"
+      },
+      {
+        "group": "tests",
+        "check": "test database",
+        "status": "warn",
+        "detail": "not set",
+        "fix": "needed only for DB tests: the testdb compose profile, or tests.pgUrl"
+      }
+    ],
+    "view": "http://127.0.0.1:4000/view/mvsn203cf67d02d250856a7792"
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "workspace": "c05-main-8261",
+  "path": "src/reconcile.cjs",
+  "content": "function identity(value) {\n  if (typeof value === 'number') {\n    if (!Number.isSafeInteger(value) || value < 0) throw new Error('invalid identity');\n    return String(value);\n  }\n  if (typeof value !== 'string' || !/^[0-9]+$/.test(value)) throw new Error('invalid identity');\n  return BigInt(value).toString();\n}\nexports.reconcile = function(state, event) {\n  if (!event) throw new Error('invalid identity');\n  const key = identity(event.tenantId) + ':' + identity(event.orderId);\n  if (!state || !Array.isArray(state.seen)) throw new Error('invalid state');\n  if (state.seen.includes(key)) return { applied: false, key };\n  state.seen.push(key);\n  return { applied: true, key };\n};\n"
+}

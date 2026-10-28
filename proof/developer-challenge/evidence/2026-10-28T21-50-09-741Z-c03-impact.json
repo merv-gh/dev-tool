@@ -1,0 +1,43 @@
+{
+  "started": "2026-10-28T21:50:09.741Z",
+  "ended": "2026-10-28T21:50:10.257Z",
+  "durationMs": 516,
+  "tool": "impact",
+  "args": {
+    "target": "LedgerAmount#minorUnits",
+    "env": "fixture"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 607,
+  "stderrBytes": 132,
+  "stdout": "{\n  \"target\": \"LedgerAmount#minorUnits\",\n  \"resolved\": [\n    \"com.lumen.money.LedgerAmount#minorUnits\"\n  ],\n  \"counts\": {\n    \"method\": 2\n  },\n  \"endpoints\": [],\n  \"topics\": [],\n  \"tables\": [],\n  \"functions\": [],\n  \"services\": [],\n  \"tests\": [],\n  \"db\": [],\n  \"nearest\": [\n    \"1 method PostingService#post (src/main/java/com/lumen/ledger/PostingService.java:5) <- calls LedgerAmount#minorUnits\",\n    \"2 method PostingService#main (src/main/java/com/lumen/ledger/PostingService.java:6) <- calls PostingService#post\"\n  ],\n  \"mentions\": [],\n  \"view\": \"http://127.0.0.1:4000/show/mvsne80gf22bbda5de9d115140\"\n}\n",
+  "stderr": "21:50:09 dt call impact#17u3 start {\"target\":\"LedgerAmount#minorUnits\",\"env\":\"fixture\"} (cli)\n21:50:10 dt call impact#17u3 ok 230ms\n",
+  "result": {
+    "target": "LedgerAmount#minorUnits",
+    "resolved": [
+      "com.lumen.money.LedgerAmount#minorUnits"
+    ],
+    "counts": {
+      "method": 2
+    },
+    "endpoints": [],
+    "topics": [],
+    "tables": [],
+    "functions": [],
+    "services": [],
+    "tests": [],
+    "db": [],
+    "nearest": [
+      "1 method PostingService#post (src/main/java/com/lumen/ledger/PostingService.java:5) <- calls LedgerAmount#minorUnits",
+      "2 method PostingService#main (src/main/java/com/lumen/ledger/PostingService.java:6) <- calls PostingService#post"
+    ],
+    "mentions": [],
+    "view": "http://127.0.0.1:4000/show/mvsne80gf22bbda5de9d115140"
+  }
+}

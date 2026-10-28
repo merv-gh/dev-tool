@@ -1,0 +1,29 @@
+{
+  "started": "2026-10-28T21:46:58.846Z",
+  "ended": "2026-10-28T21:46:59.320Z",
+  "durationMs": 474,
+  "tool": "workspace_write",
+  "args": {
+    "workspace": "c05-main-8261",
+    "path": "test/regression.test.cjs",
+    "content": "const {test}=require('node:test');\nconst assert=require('node:assert/strict');\nconst {reconcile}=require('../src/reconcile.cjs');\ntest('large adjacent IDs and tenants remain independent',()=>{\n const state={seen:[]};const event={tenantId:'11',orderId:'9007199254740992'};const before=structuredClone(event);\n assert.equal(reconcile(state,event).applied,true);assert.deepEqual(event,before);\n assert.equal(reconcile(state,{tenantId:'11',orderId:'9007199254740993'}).applied,true);\n assert.equal(reconcile(state,{tenantId:'12',orderId:'9007199254740992'}).applied,true);\n assert.equal(reconcile(state,event).applied,false);assert.equal(state.seen.length,3);\n const compatible={seen:[]};assert.equal(reconcile(compatible,{tenantId:11,orderId:42}).applied,true);assert.equal(reconcile(compatible,{tenantId:'11',orderId:'42'}).applied,false);\n});\ntest('invalid identities cannot poison deduplication state',()=>{\n for(const value of [9007199254740992,-1,1.5,NaN,Infinity,null,undefined,{},true,'','-1','1.2','1e2',' 42']){\n  for(const field of ['tenantId','orderId']){const state={seen:['existing']};const before=structuredClone(state);assert.throws(()=>reconcile(state,{tenantId:'11',orderId:'42',[field]:value}));assert.deepEqual(state,before);}\n }\n});\n"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 117,
+  "stderrBytes": 261,
+  "stdout": "{\n  \"id\": \"c05-main-8261\",\n  \"path\": \"test/regression.test.cjs\",\n  \"created\": true,\n  \"bytes\": 1250,\n  \"lines\": 17\n}\n",
+  "stderr": "21:46:59 dt call workspace_write#14mk start {\"workspace\":\"c05-main-8261\",\"path\":\"test/regression.test.cjs\",\"content\":\"const {test}=require('node:test');\\nconst assert=require('node:assert/strict');\\nconst…} (cli)\n21:46:59 dt call workspace_write#14mk ok 42ms\n",
+  "result": {
+    "id": "c05-main-8261",
+    "path": "test/regression.test.cjs",
+    "created": true,
+    "bytes": 1250,
+    "lines": 17
+  }
+}

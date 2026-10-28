@@ -1,0 +1,58 @@
+{
+  "started": "2026-10-28T21:42:32.893Z",
+  "ended": "2026-10-28T21:42:33.107Z",
+  "durationMs": 214,
+  "tool": "tool_describe",
+  "args": {
+    "name": "fixture_export"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/dev-tool",
+    "JAVA_HOME": null
+  },
+  "exitCode": 0,
+  "stdoutBytes": 1155,
+  "stderrBytes": 118,
+  "stdout": "{\n  \"name\": \"fixture_export\",\n  \"description\": \"Save a capture into [module/]src/test/resources/dt-fixtures/<name>: per-DB schema/data/constraints SQL + JSON, Kafka JSONL/schema/offsets, hashed manifest and loading instructions. Existing fixtures are preserved unless overwrite=true. Generated resources can be committed with tests.\",\n  \"group\": \"code\",\n  \"origin\": \"built-in\",\n  \"execution\": {\n    \"protocol\": \"dt.tool/v1\",\n    \"transport\": \"in-process\"\n  },\n  \"inputSchema\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"workspace\": {\n        \"type\": \"string\",\n        \"description\": \"Writable workspace id\"\n      },\n      \"capture\": {\n        \"type\": \"string\",\n        \"description\": \"Capture id\"\n      },\n      \"name\": {\n        \"type\": \"string\",\n        \"description\": \"Scenario name\"\n      },\n      \"directory\": {\n        \"type\": \"string\",\n        \"description\": \"Optional resource directory (for a multi-module project)\"\n      },\n      \"overwrite\": {\n        \"type\": \"boolean\",\n        \"default\": false,\n        \"description\": \"Replace this fixture if it exists\"\n      }\n    },\n    \"required\": [\n      \"workspace\",\n      \"capture\"\n    ]\n  }\n}\n",
+  "stderr": "21:42:33 dt call tool_describe#1f9x start {\"name\":\"fixture_export\"} (cli)\n21:42:33 dt call tool_describe#1f9x ok 19ms\n",
+  "result": {
+    "name": "fixture_export",
+    "description": "Save a capture into [module/]src/test/resources/dt-fixtures/<name>: per-DB schema/data/constraints SQL + JSON, Kafka JSONL/schema/offsets, hashed manifest and loading instructions. Existing fixtures are preserved unless overwrite=true. Generated resources can be committed with tests.",
+    "group": "code",
+    "origin": "built-in",
+    "execution": {
+      "protocol": "dt.tool/v1",
+      "transport": "in-process"
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "workspace": {
+          "type": "string",
+          "description": "Writable workspace id"
+        },
+        "capture": {
+          "type": "string",
+          "description": "Capture id"
+        },
+        "name": {
+          "type": "string",
+          "description": "Scenario name"
+        },
+        "directory": {
+          "type": "string",
+          "description": "Optional resource directory (for a multi-module project)"
+        },
+        "overwrite": {
+          "type": "boolean",
+          "default": false,
+          "description": "Replace this fixture if it exists"
+        }
+      },
+      "required": [
+        "workspace",
+        "capture"
+      ]
+    }
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "started": "2026-10-28T21:40:51.122Z",
+  "ended": "2026-10-28T21:40:51.320Z",
+  "durationMs": 198,
+  "tool": "tool_describe",
+  "args": {
+    "name": "find"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/dev-tool",
+    "JAVA_HOME": null
+  },
+  "exitCode": 0,
+  "stdoutBytes": 1362,
+  "stderrBytes": 108,
+  "stdout": "{\n  \"name\": \"find\",\n  \"description\": \"ALWAYS START HERE. Search the cached catalog: Postgres tables/columns and functions with their arguments (each line also says who uses it: services, functions, triggers, views), Elasticsearch indices/fields, Kafka topics/fields, Consul services, service passports, HTTP API routes (from code and seen in the browser) and the browser site map (direct links). All words must match; prefix a word with a kind to filter: \\\"pg:\\\", \\\"pgfn:\\\", \\\"es:\\\", \\\"kafka:\\\", \\\"consul:\\\", \\\"svc:\\\", \\\"api:\\\", \\\"site:\\\". \\\"pg: order-service\\\" lists the tables that service touches. Use the exact names you find here in queries. If the catalog is empty or stale, call catalog_sync.\",\n  \"group\": \"catalog\",\n  \"origin\": \"built-in\",\n  \"execution\": {\n    \"protocol\": \"dt.tool/v1\",\n    \"transport\": \"in-process\"\n  },\n  \"inputSchema\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"q\": {\n        \"type\": \"string\",\n        \"description\": \"Words to search, e.g. \\\"order_id\\\" or \\\"kafka: payment\\\" or \\\"svc: order_created\\\"\"\n      },\n      \"env\": {\n        \"type\": \"string\",\n        \"enum\": [\n          \"dev\"\n        ],\n        \"default\": \"dev\",\n        \"description\": \"Environment\"\n      },\n      \"limit\": {\n        \"type\": \"integer\",\n        \"description\": \"Max lines\",\n        \"default\": 50\n      }\n    },\n    \"required\": [\n      \"q\"\n    ]\n  }\n}\n",
+  "stderr": "21:40:51 dt call tool_describe#18qm start {\"name\":\"find\"} (cli)\n21:40:51 dt call tool_describe#18qm ok 16ms\n",
+  "result": {
+    "name": "find",
+    "description": "ALWAYS START HERE. Search the cached catalog: Postgres tables/columns and functions with their arguments (each line also says who uses it: services, functions, triggers, views), Elasticsearch indices/fields, Kafka topics/fields, Consul services, service passports, HTTP API routes (from code and seen in the browser) and the browser site map (direct links). All words must match; prefix a word with a kind to filter: \"pg:\", \"pgfn:\", \"es:\", \"kafka:\", \"consul:\", \"svc:\", \"api:\", \"site:\". \"pg: order-service\" lists the tables that service touches. Use the exact names you find here in queries. If the catalog is empty or stale, call catalog_sync.",
+    "group": "catalog",
+    "origin": "built-in",
+    "execution": {
+      "protocol": "dt.tool/v1",
+      "transport": "in-process"
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "q": {
+          "type": "string",
+          "description": "Words to search, e.g. \"order_id\" or \"kafka: payment\" or \"svc: order_created\""
+        },
+        "env": {
+          "type": "string",
+          "enum": [
+            "dev"
+          ],
+          "default": "dev",
+          "description": "Environment"
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Max lines",
+          "default": 50
+        }
+      },
+      "required": [
+        "q"
+      ]
+    }
+  }
+}

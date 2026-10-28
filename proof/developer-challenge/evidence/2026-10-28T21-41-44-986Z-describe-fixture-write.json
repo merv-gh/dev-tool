@@ -1,0 +1,18 @@
+{
+  "started": "2026-10-28T21:41:44.986Z",
+  "ended": "2026-10-28T21:41:45.199Z",
+  "durationMs": 213,
+  "tool": "tool_describe",
+  "args": {
+    "name": "fixture_write"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/dev-tool",
+    "JAVA_HOME": null
+  },
+  "exitCode": 1,
+  "stdoutBytes": 0,
+  "stderrBytes": 207,
+  "stdout": "",
+  "stderr": "21:41:45 dt call tool_describe#1ebb start {\"name\":\"fixture_write\"} (cli)\n21:41:45 dt call tool_describe#1ebb FAILED 17ms: Unknown or disabled tool fixture_write\nERROR: Unknown or disabled tool fixture_write\n"
+}

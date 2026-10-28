@@ -1,0 +1,28 @@
+{
+  "started": "2026-10-28T21:43:19.847Z",
+  "ended": "2026-10-28T21:43:20.583Z",
+  "durationMs": 736,
+  "tool": "tool_execute",
+  "args": {
+    "name": "workspace_open",
+    "arguments": {
+      "project": "CASES",
+      "repo": "c01",
+      "ref": "master"
+    }
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null
+  },
+  "exitCode": 0,
+  "stdoutBytes": 213,
+  "stderrBytes": 1231,
+  "stdout": "{\n  \"job\": \"mvsn5flybd56f9\",\n  \"state\": \"failed\",\n  \"error\": \"git fetch: fatal: repository 'http://127.0.0.1:51992/scm/cases/c01.git/' not found (CASES/c01@master from http://127.0.0.1:51992/scm/cases/c01.git)\"\n}\n",
+  "stderr": "21:43:20 dt call tool_execute#1fla start {\"name\":\"workspace_open\",\"arguments\":{\"project\":\"CASES\",\"repo\":\"c01\",\"ref\":\"master\"}} (cli)\n21:43:20 dt call workspace_open#2flu start {\"project\":\"CASES\",\"repo\":\"c01\",\"ref\":\"master\"} (tool_execute)\n21:43:20 dt job workspace_open CASES/c01@master#3fm1 start {\"job\":\"mvsn5flybd56f9\"} (job)\n21:43:20 dt   workspace_open CASES/c01@master#3fm1 git fetch (CASES/c01@master) FAILED after 115ms: git fetch: fatal: repository 'http://127.0.0.1:51992/scm/cases/c01.git/' not found\n21:43:20 dt   workspace_open CASES/c01@master#3fm1 note: the local copy of CASES/c01 did not match the remote any more (git fetch: fatal: repository 'http://127.0.0.1:51992/scm/cases/c01.git/' not found): fetched fresh\n21:43:20 dt   workspace_open CASES/c01@master#3fm1 git fetch (CASES/c01@master) FAILED after 77ms: git fetch: fatal: repository 'http://127.0.0.1:51992/scm/cases/c01.git/' not found\n21:43:20 dt job workspace_open CASES/c01@master#3fm1 FAILED 398ms in git fetch: git fetch: fatal: repository 'http://127.0.0.1:51992/scm/cases/c01.git/' not found (CASES/c01@master from http://127.0.0.1:51992/scm/cases/c01.git)\n21:43:20 dt call workspace_open#2flu ok 407ms\n21:43:20 dt call tool_execute#1fla ok 426ms\n",
+  "result": {
+    "job": "mvsn5flybd56f9",
+    "state": "failed",
+    "error": "git fetch: fatal: repository 'http://127.0.0.1:51992/scm/cases/c01.git/' not found (CASES/c01@master from http://127.0.0.1:51992/scm/cases/c01.git)"
+  }
+}

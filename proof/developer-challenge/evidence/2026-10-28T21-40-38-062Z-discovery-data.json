@@ -1,0 +1,159 @@
+{
+  "started": "2026-10-28T21:40:38.062Z",
+  "ended": "2026-10-28T21:40:38.276Z",
+  "durationMs": 214,
+  "tool": "tool_search",
+  "args": {
+    "query": "find postgres fixtures repository library config logs",
+    "limit": 10
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/dev-tool",
+    "JAVA_HOME": null
+  },
+  "exitCode": 0,
+  "stdoutBytes": 6525,
+  "stderrBytes": 165,
+  "stdout": "{\n  \"total\": 48,\n  \"tools\": [\n    {\n      \"name\": \"find\",\n      \"group\": \"catalog\",\n      \"description\": \"ALWAYS START HERE. Search the cached catalog: Postgres tables/columns and functions with their arguments (each line also says who uses it: services, functions, triggers, views), Elasticsearch indices/fields, Kafka topics/fields, Consul services, service passports, HTTP API routes (from code and seen in the browser) and the browser site map (direct links). All words must match; prefix a word with a kind to filter: \\\"pg:\\\", \\\"pgfn:\\\", \\\"es:\\\", \\\"kafka:\\\", \",\n      \"required\": [\n        \"q\"\n      ],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"find\"\n        }\n      }\n    },\n    {\n      \"name\": \"catalog_sync\",\n      \"group\": \"catalog\",\n      \"description\": \"Refresh the cached catalog of an environment from the live systems: Postgres schemas, functions, views, triggers (all databases), ES mappings, Kafka topics + schemas + last messages, Consul services; then the usage index. \\\"passports\\\" rebuilds the cached service passports, \\\"index\\\" only rebuilds catalog + usage from the cache. Takes seconds to minutes; if it answers \\\"running\\\", call it again with that job id. Run it when find says the catalog is emp\",\n      \"required\": [],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"catalog_sync\"\n        }\n      }\n    },\n    {\n      \"name\": \"feature\",\n      \"group\": \"confluence\",\n      \"description\": \"Explain a feature from documentation joined to cached code, flows, PostgreSQL and Kafka. Returns at most 20 verified exact quotes with block IDs/links, an architecture model, C4 context/container and sequence diagrams in Mermaid/PlantUML/Structurizr, provenance and documentation/code gaps. Mention the diagram view link; quote only supplied evidence with block ID and citation URL. Dashed relations are stated in docs; verified edges are from code/c\",\n      \"required\": [\n        \"text\"\n      ],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"feature\"\n        }\n      }\n    },\n    {\n      \"name\": \"fixture_replay\",\n      \"group\": \"code\",\n      \"description\": \"Verify fixture hashes and load its databases on the configured scratch Postgres, check real constraints, then drop all throwaway databases. No writes to configured environment databases. Kafka files are for the service test producer. For actual tests use test_run fixture_path.\",\n      \"required\": [\n        \"workspace\",\n        \"directory\"\n      ],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"fixture_replay\"\n        }\n      }\n    },\n    {\n      \"name\": \"impact\",\n      \"group\": \"code\",\n      \"description\": \"Impact radius: what is affected when something changes, walking \\\"who uses it\\\" back through the code graphs of all indexed repos and workspaces, the Postgres usage index of env, and service passports. Target: a class or method (\\\"PaymentService#create\\\", FQN, file.java:42), a table (\\\"pay.payments\\\"), a column (\\\"pay.payments.fee\\\": entity fields, SQL naming it, function bodies, views, indexes/constraints), a database function, a Kafka topic (\\\"topic:pay\",\n      \"required\": [\n        \"target\"\n      ],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"impact\"\n        }\n      }\n    },\n    {\n      \"name\": \"knowledge_sources\",\n      \"group\": \"knowledge\",\n      \"description\": \"Inspect independent knowledge providers, cached revisions, update failures and semantic conventions. Works without Confluence. Configured local JSON, Markdown, OpenAPI and AsyncAPI sources update individually; system passports/catalogs are included automatically.\",\n      \"required\": [],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"knowledge_sources\"\n        }\n      }\n    },\n    {\n      \"name\": \"pg_usage\",\n      \"group\": \"pg\",\n      \"description\": \"What uses a Postgres table/view/function, or what an object/service uses, across database objects AND code: services (passports: reads, writes, entity, repository, migration owner, SQL calls, with file:line), functions/procedures (bodies), triggers, views, foreign keys. direction=used_by (default) answers \\\"who touches X\\\"; direction=uses answers \\\"what does X touch\\\" (X can be a function, view or service name). Returns a preview plus `view`, a link \",\n      \"required\": [\n        \"name\"\n      ],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"pg_usage\"\n        }\n      }\n    },\n    {\n      \"name\": \"scenario_inventory\",\n      \"group\": \"code\",\n      \"description\": \"Compile a cached or supplied service passport into every known read-state dependency, action entrypoint and expected-effect obligation, with source evidence. Optional entry selects one exact flow. Covers PG, Kafka, HTTP/Feign, ES, config and external cache/queue/file/mock edges; ambiguities and dynamic/unavailable-library gaps remain explicit. Static discovery is not runtime proof.\",\n      \"required\": [],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"scenario_inventory\"\n        }\n      }\n    },\n    {\n      \"name\": \"scenario_start\",\n      \"group\": \"code\",\n      \"description\": \"Start the unchanged Node service in a private Docker network-none container, arrange exact HTTP fixtures/config/files, wait for readiness and return a leased session. No host ports, sockets, environment credentials or live HTTP fallback. Poll with job if still running. Use scenario_stop when finished.\",\n      \"required\": [],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"scenario_start\"\n        }\n      }\n    },\n    {\n      \"name\": \"script_save\",\n      \"group\": \"scripts\",\n      \"description\": \"Save (or replace) a script so a repeatable action runs in one call next time. id is \\\"collection/sub/name\\\". steps run in order; each is one of: {\\\"tool\\\": \\\"<dt tool>\\\", \\\"args\\\": {...}}, {\\\"script\\\": \\\"<other script id>\\\", \\\"params\\\": {...}}, {\\\"open\\\": \\\"site.link\\\"} (a site map link; its <params> come from the script params), {\\\"browser\\\": \\\"<browser tool, e.g. click, type, snapshot>\\\", \\\"args\\\": {...}}, {\\\"wait\\\": seconds or \\\"text\\\"}. Add \\\"as\\\": \\\"name\\\" to keep a result\",\n      \"required\": [\n        \"id\",\n        \"description\",\n        \"steps\"\n      ],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"script_save\"\n        }\n      }\n    }\n  ]\n}\n",
+  "stderr": "21:40:38 dt call tool_search#1ynv start {\"query\":\"find postgres fixtures repository library config logs\",\"limit\":10} (cli)\n21:40:38 dt call tool_search#1ynv ok 34ms\n",
+  "result": {
+    "total": 48,
+    "tools": [
+      {
+        "name": "find",
+        "group": "catalog",
+        "description": "ALWAYS START HERE. Search the cached catalog: Postgres tables/columns and functions with their arguments (each line also says who uses it: services, functions, triggers, views), Elasticsearch indices/fields, Kafka topics/fields, Consul services, service passports, HTTP API routes (from code and seen in the browser) and the browser site map (direct links). All words must match; prefix a word with a kind to filter: \"pg:\", \"pgfn:\", \"es:\", \"kafka:\", ",
+        "required": [
+          "q"
+        ],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "find"
+          }
+        }
+      },
+      {
+        "name": "catalog_sync",
+        "group": "catalog",
+        "description": "Refresh the cached catalog of an environment from the live systems: Postgres schemas, functions, views, triggers (all databases), ES mappings, Kafka topics + schemas + last messages, Consul services; then the usage index. \"passports\" rebuilds the cached service passports, \"index\" only rebuilds catalog + usage from the cache. Takes seconds to minutes; if it answers \"running\", call it again with that job id. Run it when find says the catalog is emp",
+        "required": [],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "catalog_sync"
+          }
+        }
+      },
+      {
+        "name": "feature",
+        "group": "confluence",
+        "description": "Explain a feature from documentation joined to cached code, flows, PostgreSQL and Kafka. Returns at most 20 verified exact quotes with block IDs/links, an architecture model, C4 context/container and sequence diagrams in Mermaid/PlantUML/Structurizr, provenance and documentation/code gaps. Mention the diagram view link; quote only supplied evidence with block ID and citation URL. Dashed relations are stated in docs; verified edges are from code/c",
+        "required": [
+          "text"
+        ],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "feature"
+          }
+        }
+      },
+      {
+        "name": "fixture_replay",
+        "group": "code",
+        "description": "Verify fixture hashes and load its databases on the configured scratch Postgres, check real constraints, then drop all throwaway databases. No writes to configured environment databases. Kafka files are for the service test producer. For actual tests use test_run fixture_path.",
+        "required": [
+          "workspace",
+          "directory"
+        ],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "fixture_replay"
+          }
+        }
+      },
+      {
+        "name": "impact",
+        "group": "code",
+        "description": "Impact radius: what is affected when something changes, walking \"who uses it\" back through the code graphs of all indexed repos and workspaces, the Postgres usage index of env, and service passports. Target: a class or method (\"PaymentService#create\", FQN, file.java:42), a table (\"pay.payments\"), a column (\"pay.payments.fee\": entity fields, SQL naming it, function bodies, views, indexes/constraints), a database function, a Kafka topic (\"topic:pay",
+        "required": [
+          "target"
+        ],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "impact"
+          }
+        }
+      },
+      {
+        "name": "knowledge_sources",
+        "group": "knowledge",
+        "description": "Inspect independent knowledge providers, cached revisions, update failures and semantic conventions. Works without Confluence. Configured local JSON, Markdown, OpenAPI and AsyncAPI sources update individually; system passports/catalogs are included automatically.",
+        "required": [],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "knowledge_sources"
+          }
+        }
+      },
+      {
+        "name": "pg_usage",
+        "group": "pg",
+        "description": "What uses a Postgres table/view/function, or what an object/service uses, across database objects AND code: services (passports: reads, writes, entity, repository, migration owner, SQL calls, with file:line), functions/procedures (bodies), triggers, views, foreign keys. direction=used_by (default) answers \"who touches X\"; direction=uses answers \"what does X touch\" (X can be a function, view or service name). Returns a preview plus `view`, a link ",
+        "required": [
+          "name"
+        ],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "pg_usage"
+          }
+        }
+      },
+      {
+        "name": "scenario_inventory",
+        "group": "code",
+        "description": "Compile a cached or supplied service passport into every known read-state dependency, action entrypoint and expected-effect obligation, with source evidence. Optional entry selects one exact flow. Covers PG, Kafka, HTTP/Feign, ES, config and external cache/queue/file/mock edges; ambiguities and dynamic/unavailable-library gaps remain explicit. Static discovery is not runtime proof.",
+        "required": [],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "scenario_inventory"
+          }
+        }
+      },
+      {
+        "name": "scenario_start",
+        "group": "code",
+        "description": "Start the unchanged Node service in a private Docker network-none container, arrange exact HTTP fixtures/config/files, wait for readiness and return a leased session. No host ports, sockets, environment credentials or live HTTP fallback. Poll with job if still running. Use scenario_stop when finished.",
+        "required": [],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "scenario_start"
+          }
+        }
+      },
+      {
+        "name": "script_save",
+        "group": "scripts",
+        "description": "Save (or replace) a script so a repeatable action runs in one call next time. id is \"collection/sub/name\". steps run in order; each is one of: {\"tool\": \"<dt tool>\", \"args\": {...}}, {\"script\": \"<other script id>\", \"params\": {...}}, {\"open\": \"site.link\"} (a site map link; its <params> come from the script params), {\"browser\": \"<browser tool, e.g. click, type, snapshot>\", \"args\": {...}}, {\"wait\": seconds or \"text\"}. Add \"as\": \"name\" to keep a result",
+        "required": [
+          "id",
+          "description",
+          "steps"
+        ],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "script_save"
+          }
+        }
+      }
+    ]
+  }
+}

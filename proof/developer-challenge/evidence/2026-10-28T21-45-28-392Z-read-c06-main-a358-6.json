@@ -1,0 +1,29 @@
+{
+  "started": "2026-10-28T21:45:28.392Z",
+  "ended": "2026-10-28T21:45:28.784Z",
+  "durationMs": 392,
+  "tool": "workspace_read",
+  "args": {
+    "workspace": "c06-main-a358",
+    "path": "src/release.cjs"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 1686,
+  "stderrBytes": 149,
+  "stdout": "{\n  \"id\": \"c06-main-a358\",\n  \"path\": \"src/release.cjs\",\n  \"from\": 1,\n  \"to\": 16,\n  \"lines\": 16,\n  \"text\": \"    1  exports.release = async function({orders, billing}, tenantId, orderId) {\\n    2    return orders.begin(async o => billing.begin(async b => {\\n    3      const [order] = await o.unsafe(\\\"select account_id,status,amount::text from sales.orders where tenant_id=$1 and id=$2\\\", [tenantId, orderId]);\\n    4      if (!order || order.status !== 'PAID') throw new Error('order not paid');\\n    5      const [account] = await o.unsafe(\\\"select enabled from sales.accounts where tenant_id=$1 and id=$2\\\", [tenantId, order.account_id]);\\n    6      if (!account?.enabled) throw new Error('account disabled');\\n    7      const [risk] = await b.unsafe(\\\"select status,credit_limit >= $2::numeric as enough from risk.accounts where id=$1 order by tenant_id limit 1\\\", [order.account_id, order.amount]);\\n    8      if (!risk || risk.status !== 'APPROVED' || !risk.enough) throw new Error('credit unavailable');\\n    9      const [payment] = await b.unsafe(\\\"select status,amount=$3::numeric as agrees from pay.payments where tenant_id=$1 and order_id=$2\\\", [tenantId,orderId,order.amount]);\\n   10      if (!payment || payment.status !== 'PENDING' || !payment.agrees) throw new Error('payment unavailable');\\n   11      await o.unsafe(\\\"update sales.orders set status='RELEASED' where tenant_id=$1 and id=$2\\\", [tenantId,orderId]);\\n   12      await b.unsafe(\\\"update pay.payments set status='CAPTURED' where order_id=$1\\\", [orderId]);\\n   13      return {tenantId:String(tenantId),orderId:String(orderId),amount:order.amount,status:'RELEASED'};\\n   14    }));\\n   15  };\\n   16  \"\n}\n",
+  "stderr": "21:45:28 dt call workspace_read#16s1 start {\"workspace\":\"c06-main-a358\",\"path\":\"src/release.cjs\"} (cli)\n21:45:28 dt call workspace_read#16s1 ok 28ms\n",
+  "result": {
+    "id": "c06-main-a358",
+    "path": "src/release.cjs",
+    "from": 1,
+    "to": 16,
+    "lines": 16,
+    "text": "    1  exports.release = async function({orders, billing}, tenantId, orderId) {\n    2    return orders.begin(async o => billing.begin(async b => {\n    3      const [order] = await o.unsafe(\"select account_id,status,amount::text from sales.orders where tenant_id=$1 and id=$2\", [tenantId, orderId]);\n    4      if (!order || order.status !== 'PAID') throw new Error('order not paid');\n    5      const [account] = await o.unsafe(\"select enabled from sales.accounts where tenant_id=$1 and id=$2\", [tenantId, order.account_id]);\n    6      if (!account?.enabled) throw new Error('account disabled');\n    7      const [risk] = await b.unsafe(\"select status,credit_limit >= $2::numeric as enough from risk.accounts where id=$1 order by tenant_id limit 1\", [order.account_id, order.amount]);\n    8      if (!risk || risk.status !== 'APPROVED' || !risk.enough) throw new Error('credit unavailable');\n    9      const [payment] = await b.unsafe(\"select status,amount=$3::numeric as agrees from pay.payments where tenant_id=$1 and order_id=$2\", [tenantId,orderId,order.amount]);\n   10      if (!payment || payment.status !== 'PENDING' || !payment.agrees) throw new Error('payment unavailable');\n   11      await o.unsafe(\"update sales.orders set status='RELEASED' where tenant_id=$1 and id=$2\", [tenantId,orderId]);\n   12      await b.unsafe(\"update pay.payments set status='CAPTURED' where order_id=$1\", [orderId]);\n   13      return {tenantId:String(tenantId),orderId:String(orderId),amount:order.amount,status:'RELEASED'};\n   14    }));\n   15  };\n   16  "
+  }
+}

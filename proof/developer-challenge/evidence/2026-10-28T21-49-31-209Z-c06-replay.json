@@ -1,0 +1,29 @@
+{
+  "started": "2026-10-28T21:49:31.209Z",
+  "ended": "2026-10-28T21:49:33.418Z",
+  "durationMs": 2209,
+  "tool": "fixture_replay",
+  "args": {
+    "workspace": "c06-main-a358",
+    "directory": "src/test/resources/dt-fixtures/tenant-release"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 90,
+  "stderrBytes": 184,
+  "stdout": "{\n  \"validated\": true,\n  \"databases\": [\n    \"billing\",\n    \"orders\"\n  ],\n  \"topics\": {}\n}\n",
+  "stderr": "21:49:31 dt call fixture_replay#1e8t start {\"workspace\":\"c06-main-a358\",\"directory\":\"src/test/resources/dt-fixtures/tenant-release\"} (cli)\n21:49:33 dt call fixture_replay#1e8t ok 1.8s\n",
+  "result": {
+    "validated": true,
+    "databases": [
+      "billing",
+      "orders"
+    ],
+    "topics": {}
+  }
+}

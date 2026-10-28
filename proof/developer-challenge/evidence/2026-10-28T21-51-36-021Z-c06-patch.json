@@ -1,0 +1,119 @@
+{
+  "started": "2026-10-28T21:51:36.021Z",
+  "ended": "2026-10-28T21:51:36.430Z",
+  "durationMs": 409,
+  "tool": "workspace_patch",
+  "args": {
+    "workspace": "c06-main-a358"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 9063,
+  "stderrBytes": 127,
+  "stdout": "{\n  \"workspace\": \"c06-main-a358\",\n  \"repo\": \"CASES/c06\",\n  \"base\": \"1220a889a7718475828bfdd82c727b51a7a58f29\",\n  \"files\": [\n    {\n      \"path\": \"src/release.cjs\",\n      \"added\": 2,\n      \"removed\": 2,\n      \"status\": \"modified\"\n    },\n    {\n      \"path\": \"src/test/resources/dt-fixtures/tenant-release/README.txt\",\n      \"added\": 10,\n      \"removed\": 0,\n      \"status\": \"added\"\n    },\n    {\n      \"path\": \"src/test/resources/dt-fixtures/tenant-release/manifest.json\",\n      \"added\": 672,\n      \"removed\": 0,\n      \"status\": \"added\"\n    },\n    {\n      \"path\": \"src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/constraints.sql\",\n      \"added\": 1,\n      \"removed\": 0,\n      \"status\": \"added\"\n    },\n    {\n      \"path\": \"src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/data.sql\",\n      \"added\": 9,\n      \"removed\": 0,\n      \"status\": \"added\"\n    },\n    {\n      \"path\": \"src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/rows.json\",\n      \"added\": 30,\n      \"removed\": 0,\n      \"status\": \"added\"\n    },\n    {\n      \"path\": \"src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/schema.json\",\n      \"added\": 112,\n      \"removed\": 0,\n      \"status\": \"added\"\n    },\n    {\n      \"path\": \"src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/schema.sql\",\n      \"added\": 21,\n      \"removed\": 0,\n      \"status\": \"added\"\n    },\n    {\n      \"path\": \"src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/constraints.sql\",\n      \"added\": 1,\n      \"removed\": 0,\n      \"status\": \"added\"\n    },\n    {\n      \"path\": \"src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/data.sql\",\n      \"added\": 9,\n      \"removed\": 0,\n      \"status\": \"added\"\n    },\n    {\n      \"path\": \"src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/rows.json\",\n      \"added\": 30,\n      \"removed\": 0,\n      \"status\": \"added\"\n    },\n    {\n      \"path\": \"src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/schema.json\",\n      \"added\": 118,\n      \"removed\": 0,\n      \"status\": \"added\"\n    },\n    {\n      \"path\": \"src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/schema.sql\",\n      \"added\": 19,\n      \"removed\": 0,\n      \"status\": \"added\"\n    },\n    {\n      \"path\": \"test/regression.test.cjs\",\n      \"added\": 16,\n      \"removed\": 0,\n      \"status\": \"added\"\n    }\n  ],\n  \"tests\": [],\n  \"apply\": \"git checkout 1220a889a771 && git apply --index c06-main-a358.patch\",\n  \"view\": \"http://127.0.0.1:4000/show/mvsng2ic12b9b68cc0d007e2cd\",\n  \"download\": \"http://127.0.0.1:4000/patch/mvsng2ic12b9b68cc0d007e2cd.patch\",\n  \"patch\": \"diff --git a/src/release.cjs b/src/release.cjs\\nindex 2a2f9bb..158a9e3 100644\\n--- a/src/release.cjs\\n+++ b/src/release.cjs\\n@@ -4,12 +4,12 @@ exports.release = async function({orders, billing}, tenantId, orderId) {\\n     if (!order || order.status !== 'PAID') throw new Error('order not paid');\\n     const [account] = await o.unsafe(\\\"select enabled from sales.accounts where tenant_id=$1 and id=$2\\\", [tenantId, order.account_id]);\\n     if (!account?.enabled) throw new Error('account disabled');\\n-    const [risk] = await b.unsafe(\\\"select status,credit_limit >= $2::numeric as enough from risk.accounts where id=$1 order by tenant_id limit 1\\\", [order.account_id, order.amount]);\\n+    const [risk] = await b.unsafe(\\\"select status,credit_limit >= $3::numeric as enough from risk.accounts where tenant_id=$1 and id=$2\\\", [tenantId, order.account_id, order.amount]);\\n     if (!risk || risk.status !== 'APPROVED' || !risk.enough) throw new Error('credit unavailable');\\n     const [payment] = await b.unsafe(\\\"select status,amount=$3::numeric as agrees from pay.payments where tenant_id=$1 and order_id=$2\\\", [tenantId,orderId,order.amount]);\\n     if (!payment || payment.status !== 'PENDING' || !payment.agrees) throw new Error('payment unavailable');\\n     await o.unsafe(\\\"update sales.orders set status='RELEASED' where tenant_id=$1 and id=$2\\\", [tenantId,orderId]);\\n-    await b.unsafe(\\\"update pay.payments set status='CAPTURED' where order_id=$1\\\", [orderId]);\\n+    await b.unsafe(\\\"update pay.payments set status='CAPTURED' where tenant_id=$1 and order_id=$2\\\", [tenantId,orderId]);\\n     return {tenantId:String(tenantId),orderId:String(orderId),amount:order.amount,status:'RELEASED'};\\n   }));\\n };\\ndiff --git a/src/test/resources/dt-fixtures/tenant-release/README.txt b/src/test/resources/dt-fixtures/tenant-release/README.txt\\nnew file mode 100644\\nindex 0000000..4bd560f\\n--- /dev/null\\n+++ b/src/test/resources/dt-fixtures/tenant-release/README.txt\\n@@ -0,0 +1,10 @@\\n+Fixture tenant-release\\n+\\n+Load each database's schema.sql, data.sql, constraints.sql in that order.\\n+The fixture_replay tool validates hashes and loads isolated scratch databases, dropping them on error.\\n+For test_run give fixture_path and (for multiple datasources) fixture_bindings.\\n+Kafka messages.jsonl preserves key, value, headers, partition, source offset and timestamp.\\n+Use the service's test producer to publish them to its test Kafka; no live publish tool is provided.\\n+Capture window: 2026-10-28T21:48:35.226Z .. 2026-10-28T21:48:38.253Z\\n+Independent read-only statements across databases and Kafka; observation window and offsets are recorded, not a distributed snapshot.\\n+Complete: true; gaps: 0. See manifest.json.\\ndiff --git a/src/test/resources/dt-fixtures/tenant-release/manifest.json b/src/test/resources/dt-fixtures/tenant-release/manifest.json\\nnew file mode 100644\\nindex 0000000..73633c4\\n--- /dev/null\\n+++ b/src/test/resources/dt-fixtures/tenant-release/manifest.json\\n@@ -0,0 +1,672 @@\\n+{\\n+  \\\"version\\\": 1,\\n+  \\\"plan\\\": {\\n+    \\\"version\\\": 1,\\n+    \\\"env\\\": \\\"fixture\\\",\\n+    \\\"seeds\\\": [\\n+      {\\n+        \\\"db\\\": \\\"orders\\\",\\n+        \\\"table\\\": \\\"sales.orders\\\",\\n+        \\\"where\\\": {\\n+          \\\"id\\\": \\\"420\\\"\\n+        }\\n+      }\\n+    ],\\n+    \\\"relations\\\": [\\n+      {\\n+        \\\"from\\\": {\\n+          \\\"db\\\": \\\"orders\\\",\\n+          \\\"table\\\": \\\"sales.orders\\\",\\n+          \\\"columns\\\": [\\n+            \\\"tenant_id\\\",\\n+            \\\"account_id\\\"\\n+          ]\\n+        },\\n+        \\\"to\\\": {\\n+          \\\"db\\\": \\\"orders\\\",\\n+          \\\"table\\\": \\\"sales.accounts\\\",\\n+          \\\"columns\\\": [\\n+            \\\"tenant_id\\\",\\n+            \\\"id\\\"\\n+          ]\\n+        },\\n+        \\\"source\\\": \\\"foreign-key\\\",\\n+        \\\"evidence\\\": \\\"orders_tenant_id_account_id_fkey\\\",\\n+        \\\"required\\\": true\\n+      },\\n+      {\\n+        \\\"from\\\": {\\n+          \\\"db\\\": \\\"orders\\\",\\n+          \\\"table\\\": \\\"sales.orders\\\",\\n+          \\\"columns\\\": [\\n+            \\\"tenant_id\\\",\\n+            \\\"account_id\\\"\\n+          ]\\n+        },\\n+        \\\"to\\\": {\\n+          \\\"db\\\": \\\"billing\\\",\\n+          \\\"table\\\": \\\"risk.accounts\\\",\\n+          \\\"columns\\\": [\\n+            \\\"tenant_id\\\",\\n+            \\\"id\\\"\\n+          ]\\n+        },\\n+        \\\"source\\\": \\\"explicit\\\",\\n+        \\\"evidence\\\": \\\"release.cjs:7 composite identity\\\",\\n+        \\\"required\\\": true\\n+      },\\n+      {\\n+        \\\"from\\\": {\\n+          \\\"db\\\": \\\"orders\\\",\\n+          \\\"table\\\": \\\"sales.orders\\\",\\n+          \\\"columns\\\": [\\n+            \\\"tenant_id\\\",\\n+            \\\"id\\\"\\n+          ]\\n+        },\\n+        \\\"to\\\": {\\n+          \\\"db\\\": \\\"billing\\\",\\n+          \\\"table\\\": \\\"pay.payments\\\",\\n+          \\\"columns\\\": [\\n+            \\\"tenant_id\\\",\\n+            \\\"order_id\\\"\\n+          ]\\n+        },\\n+        \\\"source\\\": \\\"explicit\\\",\\n+        \\\"evidence\\\": \\\"release.cjs:9 composite identity\\\",\\n+        \\\"required\\\": true\\n+      }\\n+    ],\\n+    \\\"topics\\\": [],\\n+    \\\"limits\\\": {\\n+      \\\"depth\\\": 4,\\n+      \\\"rowsPerTable\\\": 20,\\n+      \\\"totalRows\\\": 100,\\n+      \\\"messagesPerTopic\\\": 300,\\n+      \\\"totalMessages\\\": 2000,\\n+      \\\"queries\\\": 20\\n+    },\\n+    \\\"includeChildren\\\": false,\\n+    \\\"candidates\\\": [\\n+      {\\n+        \\\"from\\\": {\\n+          \\\"db\\\": \\\"orders\\\",\\n+          \\\"table\\\": \\\"sales.accounts\\\",\\n+          \\\"columns\\\": [\\n+            \\\"tenant_id\\\"\\n+          ]\\n+        },\\n+        \\\"to\\\": {\\n+          \\\"db\\\": \\\"billing\\\",\\n+          \\\"table\\\": \\\"pay.payments\\\",\\n+          \\\"columns\\\": [\\n+            \\\"tenant_id\\\"\\n+          ]\\n+        },\\n+        \\\"source\\\": \\\"candidate\\\",\\n+        \\\"evidence\\\": \\\"same column name tenant_id; confirm from code or a schema contract\\\"\\n+      },\\n+      {\\n+        \\\"from\\\": {\\n+          \\\"db\\\": \\\"orders\\\",\\n+          \\\"table\\\": \\\"sales.accounts\\\",\\n+          \\\"columns\\\": [\\n+            \\\"tenant_id\\\"\\n+          ]\\n+        },\\n+        \\\"to\\\": {\\n+          \\\"db\\\": \\\"billing\\\",\\n+          \\\"table\\\": \\\"risk.accounts\\\",\\n+          \\\"columns\\\": [\\n+            \\\"tenant_id\\\"\\n+          ]\\n+        },\\n+        \\\"source\\\": \\\"candidate\\\",\\n+        \\\"evidence\\\": \\\"same column name tenant_id; confirm from code or a schema contract\\\"\\n+      },\\n+      {\\n+        \\\"from\\\": {\\n+          \\\"db\\\": \\\"orders\\\",\\n+          \\\"table\\\": \\\"sales.orders\\\",\\n+          \\\"columns\\\": [\\n+            \\\"tenant_id\\\"\\n+         \\n... [31231 more chars]\"\n}\n",
+  "stderr": "21:51:36 dt call workspace_patch#12ec start {\"workspace\":\"c06-main-a358\"} (cli)\n21:51:36 dt call workspace_patch#12ec ok 144ms\n",
+  "result": {
+    "workspace": "c06-main-a358",
+    "repo": "CASES/c06",
+    "base": "1220a889a7718475828bfdd82c727b51a7a58f29",
+    "files": [
+      {
+        "path": "src/release.cjs",
+        "added": 2,
+        "removed": 2,
+        "status": "modified"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/tenant-release/README.txt",
+        "added": 10,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/tenant-release/manifest.json",
+        "added": 672,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/constraints.sql",
+        "added": 1,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/data.sql",
+        "added": 9,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/rows.json",
+        "added": 30,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/schema.json",
+        "added": 112,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/tenant-release/pg/62696c6c696e67/schema.sql",
+        "added": 21,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/constraints.sql",
+        "added": 1,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/data.sql",
+        "added": 9,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/rows.json",
+        "added": 30,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/schema.json",
+        "added": 118,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "src/test/resources/dt-fixtures/tenant-release/pg/6f7264657273/schema.sql",
+        "added": 19,
+        "removed": 0,
+        "status": "added"
+      },
+      {
+        "path": "test/regression.test.cjs",
+        "added": 16,
+        "removed": 0,
+        "status": "added"
+      }
+    ],
+    "tests": [],
+    "apply": "git checkout 1220a889a771 && git apply --index c06-main-a358.patch",
+    "view": "http://127.0.0.1:4000/show/mvsng2ic12b9b68cc0d007e2cd",
+    "download": "http://127.0.0.1:4000/patch/mvsng2ic12b9b68cc0d007e2cd.patch",
+    "patch": "diff --git a/src/release.cjs b/src/release.cjs\nindex 2a2f9bb..158a9e3 100644\n--- a/src/release.cjs\n+++ b/src/release.cjs\n@@ -4,12 +4,12 @@ exports.release = async function({orders, billing}, tenantId, orderId) {\n     if (!order || order.status !== 'PAID') throw new Error('order not paid');\n     const [account] = await o.unsafe(\"select enabled from sales.accounts where tenant_id=$1 and id=$2\", [tenantId, order.account_id]);\n     if (!account?.enabled) throw new Error('account disabled');\n-    const [risk] = await b.unsafe(\"select status,credit_limit >= $2::numeric as enough from risk.accounts where id=$1 order by tenant_id limit 1\", [order.account_id, order.amount]);\n+    const [risk] = await b.unsafe(\"select status,credit_limit >= $3::numeric as enough from risk.accounts where tenant_id=$1 and id=$2\", [tenantId, order.account_id, order.amount]);\n     if (!risk || risk.status !== 'APPROVED' || !risk.enough) throw new Error('credit unavailable');\n     const [payment] = await b.unsafe(\"select status,amount=$3::numeric as agrees from pay.payments where tenant_id=$1 and order_id=$2\", [tenantId,orderId,order.amount]);\n     if (!payment || payment.status !== 'PENDING' || !payment.agrees) throw new Error('payment unavailable');\n     await o.unsafe(\"update sales.orders set status='RELEASED' where tenant_id=$1 and id=$2\", [tenantId,orderId]);\n-    await b.unsafe(\"update pay.payments set status='CAPTURED' where order_id=$1\", [orderId]);\n+    await b.unsafe(\"update pay.payments set status='CAPTURED' where tenant_id=$1 and order_id=$2\", [tenantId,orderId]);\n     return {tenantId:String(tenantId),orderId:String(orderId),amount:order.amount,status:'RELEASED'};\n   }));\n };\ndiff --git a/src/test/resources/dt-fixtures/tenant-release/README.txt b/src/test/resources/dt-fixtures/tenant-release/README.txt\nnew file mode 100644\nindex 0000000..4bd560f\n--- /dev/null\n+++ b/src/test/resources/dt-fixtures/tenant-release/README.txt\n@@ -0,0 +1,10 @@\n+Fixture tenant-release\n+\n+Load each database's schema.sql, data.sql, constraints.sql in that order.\n+The fixture_replay tool validates hashes and loads isolated scratch databases, dropping them on error.\n+For test_run give fixture_path and (for multiple datasources) fixture_bindings.\n+Kafka messages.jsonl preserves key, value, headers, partition, source offset and timestamp.\n+Use the service's test producer to publish them to its test Kafka; no live publish tool is provided.\n+Capture window: 2026-10-28T21:48:35.226Z .. 2026-10-28T21:48:38.253Z\n+Independent read-only statements across databases and Kafka; observation window and offsets are recorded, not a distributed snapshot.\n+Complete: true; gaps: 0. See manifest.json.\ndiff --git a/src/test/resources/dt-fixtures/tenant-release/manifest.json b/src/test/resources/dt-fixtures/tenant-release/manifest.json\nnew file mode 100644\nindex 0000000..73633c4\n--- /dev/null\n+++ b/src/test/resources/dt-fixtures/tenant-release/manifest.json\n@@ -0,0 +1,672 @@\n+{\n+  \"version\": 1,\n+  \"plan\": {\n+    \"version\": 1,\n+    \"env\": \"fixture\",\n+    \"seeds\": [\n+      {\n+        \"db\": \"orders\",\n+        \"table\": \"sales.orders\",\n+        \"where\": {\n+          \"id\": \"420\"\n+        }\n+      }\n+    ],\n+    \"relations\": [\n+      {\n+        \"from\": {\n+          \"db\": \"orders\",\n+          \"table\": \"sales.orders\",\n+          \"columns\": [\n+            \"tenant_id\",\n+            \"account_id\"\n+          ]\n+        },\n+        \"to\": {\n+          \"db\": \"orders\",\n+          \"table\": \"sales.accounts\",\n+          \"columns\": [\n+            \"tenant_id\",\n+            \"id\"\n+          ]\n+        },\n+        \"source\": \"foreign-key\",\n+        \"evidence\": \"orders_tenant_id_account_id_fkey\",\n+        \"required\": true\n+      },\n+      {\n+        \"from\": {\n+          \"db\": \"orders\",\n+          \"table\": \"sales.orders\",\n+          \"columns\": [\n+            \"tenant_id\",\n+            \"account_id\"\n+          ]\n+        },\n+        \"to\": {\n+          \"db\": \"billing\",\n+          \"table\": \"risk.accounts\",\n+          \"columns\": [\n+            \"tenant_id\",\n+            \"id\"\n+          ]\n+        },\n+        \"source\": \"explicit\",\n+        \"evidence\": \"release.cjs:7 composite identity\",\n+        \"required\": true\n+      },\n+      {\n+        \"from\": {\n+          \"db\": \"orders\",\n+          \"table\": \"sales.orders\",\n+          \"columns\": [\n+            \"tenant_id\",\n+            \"id\"\n+          ]\n+        },\n+        \"to\": {\n+          \"db\": \"billing\",\n+          \"table\": \"pay.payments\",\n+          \"columns\": [\n+            \"tenant_id\",\n+            \"order_id\"\n+          ]\n+        },\n+        \"source\": \"explicit\",\n+        \"evidence\": \"release.cjs:9 composite identity\",\n+        \"required\": true\n+      }\n+    ],\n+    \"topics\": [],\n+    \"limits\": {\n+      \"depth\": 4,\n+      \"rowsPerTable\": 20,\n+      \"totalRows\": 100,\n+      \"messagesPerTopic\": 300,\n+      \"totalMessages\": 2000,\n+      \"queries\": 20\n+    },\n+    \"includeChildren\": false,\n+    \"candidates\": [\n+      {\n+        \"from\": {\n+          \"db\": \"orders\",\n+          \"table\": \"sales.accounts\",\n+          \"columns\": [\n+            \"tenant_id\"\n+          ]\n+        },\n+        \"to\": {\n+          \"db\": \"billing\",\n+          \"table\": \"pay.payments\",\n+          \"columns\": [\n+            \"tenant_id\"\n+          ]\n+        },\n+        \"source\": \"candidate\",\n+        \"evidence\": \"same column name tenant_id; confirm from code or a schema contract\"\n+      },\n+      {\n+        \"from\": {\n+          \"db\": \"orders\",\n+          \"table\": \"sales.accounts\",\n+          \"columns\": [\n+            \"tenant_id\"\n+          ]\n+        },\n+        \"to\": {\n+          \"db\": \"billing\",\n+          \"table\": \"risk.accounts\",\n+          \"columns\": [\n+            \"tenant_id\"\n+          ]\n+        },\n+        \"source\": \"candidate\",\n+        \"evidence\": \"same column name tenant_id; confirm from code or a schema contract\"\n+      },\n+      {\n+        \"from\": {\n+          \"db\": \"orders\",\n+          \"table\": \"sales.orders\",\n+          \"columns\": [\n+            \"tenant_id\"\n+         \n... [31231 more chars]"
+  },
+  "requestSha256": "aeda79bdde86c6cae3dac645163e24dda07fce4d00d16e06a12a691153f88fe9",
+  "stdoutSha256": "7353f35f5b36383598580abb85a182c411b98720e6dd71c0d07904171bba594d",
+  "stderrSha256": "67be17772427e541c752954be3f9099cb86430437894f11e9a0344ec26eb0230"
+}

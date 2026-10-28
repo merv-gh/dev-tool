@@ -1,0 +1,29 @@
+{
+  "started": "2026-10-28T21:47:23.318Z",
+  "ended": "2026-10-28T21:47:23.763Z",
+  "durationMs": 445,
+  "tool": "workspace_read",
+  "args": {
+    "workspace": "ledger-service-main-81bf",
+    "path": "src/main/java/com/lumen/ledger/PostingService.java"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 564,
+  "stderrBytes": 195,
+  "stdout": "{\n  \"id\": \"ledger-service-main-81bf\",\n  \"path\": \"src/main/java/com/lumen/ledger/PostingService.java\",\n  \"from\": 1,\n  \"to\": 8,\n  \"lines\": 8,\n  \"text\": \"    1  package com.lumen.ledger;\\n    2  import java.math.BigDecimal;\\n    3  import com.lumen.money.LedgerAmount;\\n    4  public final class PostingService {\\n    5    public static long post(String amount, String currency) { return LedgerAmount.minorUnits(new BigDecimal(amount), currency); }\\n    6    public static void main(String[] args) { System.out.println(post(args[0],args[1])); }\\n    7  }\\n    8  \"\n}\n",
+  "stderr": "21:47:23 dt call workspace_read#1nhr start {\"workspace\":\"ledger-service-main-81bf\",\"path\":\"src/main/java/com/lumen/ledger/PostingService.java\"} (cli)\n21:47:23 dt call workspace_read#1nhr ok 32ms\n",
+  "result": {
+    "id": "ledger-service-main-81bf",
+    "path": "src/main/java/com/lumen/ledger/PostingService.java",
+    "from": 1,
+    "to": 8,
+    "lines": 8,
+    "text": "    1  package com.lumen.ledger;\n    2  import java.math.BigDecimal;\n    3  import com.lumen.money.LedgerAmount;\n    4  public final class PostingService {\n    5    public static long post(String amount, String currency) { return LedgerAmount.minorUnits(new BigDecimal(amount), currency); }\n    6    public static void main(String[] args) { System.out.println(post(args[0],args[1])); }\n    7  }\n    8  "
+  }
+}

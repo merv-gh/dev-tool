@@ -1,0 +1,25 @@
+{
+  "started": "2026-10-28T21:43:45.740Z",
+  "ended": "2026-10-28T21:43:46.198Z",
+  "durationMs": 458,
+  "tool": "workspace_open",
+  "args": {
+    "project": "url",
+    "repo": "file:///Users/user/.codex/worktrees/developer-challenge-proof/prepared/C01",
+    "ref": "master"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null
+  },
+  "exitCode": 0,
+  "stdoutBytes": 420,
+  "stderrBytes": 1964,
+  "stdout": "{\n  \"job\": \"mvsn5zhh0c68f7\",\n  \"state\": \"failed\",\n  \"error\": \"git fetch: fatal: repository 'http://127.0.0.1:51992/scm/url/file:///Users/user/.codex/worktrees/developer-challenge-proof/prepared/C01.git/' not found (url/file:///Users/user/.codex/worktrees/developer-challenge-proof/prepared/C01@master from http://127.0.0.1:51992/scm/url/file:///Users/user/.codex/worktrees/developer-challenge-proof/prepared/C01.git)\"\n}\n",
+  "stderr": "21:43:45 dt call workspace_open#1zh5 start {\"project\":\"url\",\"repo\":\"file:///Users/user/.codex/worktrees/developer-challenge-proof/prepared/C01\",\"ref\":\"master\"} (cli)\n21:43:45 dt job workspace_open url/file:///Users/user/.codex/worktrees/developer-challenge-proof/prepared/C01@master#2zhj start {\"job\":\"mvsn5zhh0c68f7\"} (job)\n21:43:46 dt   workspace_open url/file:///Users/user/.codex/worktrees/developer-challenge-proof/prepared/C01@master#2zhj git fetch (url/file:///Users/user/.codex/worktrees/developer-challenge-proof/prepared/C01@m) FAILED after 61ms: git fetch: fatal: repository 'http://127.0.0.1:51992/scm/url/file:///Users/user/.codex/worktrees/developer-challenge-proof/prepared/C01.git/' not found\n21:43:46 dt   workspace_open url/file:///Users/user/.codex/worktrees/developer-challenge-proof/prepared/C01@master#2zhj note: the local copy of url/file:///Users/user/.codex/worktrees/developer-challenge-proof/prepared/C01 did not match the remote any more (git fetch: fatal: repository 'http://127.0.0.1:51992/scm/url/file:///Users/user/.codex/worktrees/dev): fetched fresh\n21:43:46 dt   workspace_open url/file:///Users/user/.codex/worktrees/developer-challenge-proof/prepared/C01@master#2zhj git fetch (url/file:///Users/user/.codex/worktrees/developer-challenge-proof/prepared/C01@m) FAILED after 62ms: git fetch: fatal: repository 'http://127.0.0.1:51992/scm/url/file:///Users/user/.codex/worktrees/developer-challenge-proof/prepared/C01.git/' not found\n21:43:46 dt job workspace_open url/file:///Users/user/.codex/worktrees/developer-challenge-proof/prepared/C01@master#2zhj FAILED 265ms in git fetch: git fetch: fatal: repository 'http://127.0.0.1:51992/scm/url/file:///Users/user/.codex/worktrees/developer-challenge-proof/prepared/C01.git/' not found (url/file:///Users/user/.codex/worktrees/developer-challenge-proof/prepared/C01@master from http://127.0.0.1:51992/scm/url/file:///Users/user/.codex\n21:43:46 dt call workspace_open#1zh5 ok 279ms\n",
+  "result": {
+    "job": "mvsn5zhh0c68f7",
+    "state": "failed",
+    "error": "git fetch: fatal: repository 'http://127.0.0.1:51992/scm/url/file:///Users/user/.codex/worktrees/developer-challenge-proof/prepared/C01.git/' not found (url/file:///Users/user/.codex/worktrees/developer-challenge-proof/prepared/C01@master from http://127.0.0.1:51992/scm/url/file:///Users/user/.codex/worktrees/developer-challenge-proof/prepared/C01.git)"
+  }
+}

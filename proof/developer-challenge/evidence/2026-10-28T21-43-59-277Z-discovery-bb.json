@@ -1,0 +1,51 @@
+{
+  "started": "2026-10-28T21:43:59.277Z",
+  "ended": "2026-10-28T21:43:59.625Z",
+  "durationMs": 348,
+  "tool": "tool_search",
+  "args": {
+    "query": "Bitbucket repos list",
+    "limit": 2
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null
+  },
+  "exitCode": 0,
+  "stdoutBytes": 737,
+  "stderrBytes": 131,
+  "stdout": "{\n  \"total\": 36,\n  \"tools\": [\n    {\n      \"name\": \"bitbucket_repos\",\n      \"group\": \"bitbucket\",\n      \"description\": \"List Bitbucket repositories, optionally filtered by name.\",\n      \"required\": [],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"bitbucket_repos\"\n        }\n      }\n    },\n    {\n      \"name\": \"bitbucket_files\",\n      \"group\": \"bitbucket\",\n      \"description\": \"List file paths in a Bitbucket repo (default branch unless `at`). Filter by substring, e.g. \\\"application\\\" or \\\".yml\\\".\",\n      \"required\": [\n        \"project\",\n        \"repo\"\n      ],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"bitbucket_files\"\n        }\n      }\n    }\n  ]\n}\n",
+  "stderr": "21:43:59 dt call tool_search#19z2 start {\"query\":\"Bitbucket repos list\",\"limit\":2} (cli)\n21:43:59 dt call tool_search#19z2 ok 55ms\n",
+  "result": {
+    "total": 36,
+    "tools": [
+      {
+        "name": "bitbucket_repos",
+        "group": "bitbucket",
+        "description": "List Bitbucket repositories, optionally filtered by name.",
+        "required": [],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "bitbucket_repos"
+          }
+        }
+      },
+      {
+        "name": "bitbucket_files",
+        "group": "bitbucket",
+        "description": "List file paths in a Bitbucket repo (default branch unless `at`). Filter by substring, e.g. \"application\" or \".yml\".",
+        "required": [
+          "project",
+          "repo"
+        ],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "bitbucket_files"
+          }
+        }
+      }
+    ]
+  }
+}

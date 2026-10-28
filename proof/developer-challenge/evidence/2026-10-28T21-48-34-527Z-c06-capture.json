@@ -1,0 +1,93 @@
+{
+  "started": "2026-10-28T21:48:34.527Z",
+  "ended": "2026-10-28T21:48:38.318Z",
+  "durationMs": 3791,
+  "tool": "fixture_capture",
+  "args": {
+    "plan": {
+      "env": "fixture",
+      "seeds": [
+        {
+          "db": "orders",
+          "table": "sales.orders",
+          "where": {
+            "id": "420"
+          }
+        }
+      ],
+      "relations": [
+        {
+          "from": {
+            "db": "orders",
+            "table": "sales.orders",
+            "columns": [
+              "tenant_id",
+              "account_id"
+            ]
+          },
+          "to": {
+            "db": "billing",
+            "table": "risk.accounts",
+            "columns": [
+              "tenant_id",
+              "id"
+            ]
+          },
+          "required": true,
+          "evidence": "release.cjs:7 composite identity"
+        },
+        {
+          "from": {
+            "db": "orders",
+            "table": "sales.orders",
+            "columns": [
+              "tenant_id",
+              "id"
+            ]
+          },
+          "to": {
+            "db": "billing",
+            "table": "pay.payments",
+            "columns": [
+              "tenant_id",
+              "order_id"
+            ]
+          },
+          "required": true,
+          "evidence": "release.cjs:9 composite identity"
+        }
+      ],
+      "limits": {
+        "depth": 4,
+        "rowsPerTable": 20,
+        "totalRows": 100,
+        "queries": 20
+      }
+    }
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 275,
+  "stderrBytes": 396,
+  "stdout": "{\n  \"job\": \"mvsnc6oddb5d15\",\n  \"state\": \"done\",\n  \"ms\": 3117,\n  \"capture\": \"743f53f27d985165ee1a8585\",\n  \"counts\": {\n    \"rows\": 8,\n    \"queries\": 4,\n    \"messages\": 0\n  },\n  \"complete\": true,\n  \"gaps\": [],\n  \"view\": \"http://127.0.0.1:4000/show/mvsnc92sec54158a23c7cd818e\"\n}\n",
+  "stderr": "21:48:35 dt call fixture_capture#16nc start {\"plan\":{\"env\":\"fixture\",\"seeds\":[{\"db\":\"orders\",\"table\":\"sales.orders\",\"where\":{\"id\":\"420\"}}],\"relations\":[{\"from\":{\"db\":\"orders\",\"table\":\"sales.orders\",\"colum…} (cli)\n21:48:35 dt job fixture capture fixture#26oj start {\"job\":\"mvsnc6oddb5d15\"} (job)\n21:48:38 dt job fixture capture fixture#26oj ok 3.1s\n21:48:38 dt call fixture_capture#16nc ok 3.2s\n",
+  "result": {
+    "job": "mvsnc6oddb5d15",
+    "state": "done",
+    "ms": 3117,
+    "capture": "743f53f27d985165ee1a8585",
+    "counts": {
+      "rows": 8,
+      "queries": 4,
+      "messages": 0
+    },
+    "complete": true,
+    "gaps": [],
+    "view": "http://127.0.0.1:4000/show/mvsnc92sec54158a23c7cd818e"
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "started": "2026-10-28T21:41:04.952Z",
+  "ended": "2026-10-28T21:41:05.146Z",
+  "durationMs": 194,
+  "tool": "tool_describe",
+  "args": {
+    "name": "catalog_sync"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/dev-tool",
+    "JAVA_HOME": null
+  },
+  "exitCode": 0,
+  "stdoutBytes": 1846,
+  "stderrBytes": 116,
+  "stdout": "{\n  \"name\": \"catalog_sync\",\n  \"description\": \"Refresh the cached catalog of an environment from the live systems: Postgres schemas, functions, views, triggers (all databases), ES mappings, Kafka topics + schemas + last messages, Consul services; then the usage index. \\\"passports\\\" rebuilds the cached service passports, \\\"index\\\" only rebuilds catalog + usage from the cache. Takes seconds to minutes; if it answers \\\"running\\\", call it again with that job id. Run it when find says the catalog is empty or something is missing.\",\n  \"group\": \"catalog\",\n  \"origin\": \"built-in\",\n  \"execution\": {\n    \"protocol\": \"dt.tool/v1\",\n    \"transport\": \"in-process\"\n  },\n  \"inputSchema\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"env\": {\n        \"type\": \"string\",\n        \"enum\": [\n          \"dev\"\n        ],\n        \"default\": \"dev\",\n        \"description\": \"Environment\"\n      },\n      \"what\": {\n        \"type\": \"string\",\n        \"enum\": [\n          \"pg\",\n          \"es\",\n          \"kafka\",\n          \"consul\",\n          \"passports\",\n          \"bitbucket\",\n          \"confluence\",\n          \"index\",\n          \"all\"\n        ],\n        \"default\": \"all\"\n      },\n      \"only\": {\n        \"type\": \"string\",\n        \"description\": \"Comma list to limit: db names for pg, name parts for es/kafka, services for passports, spaces for confluence\"\n      },\n      \"spaces\": {\n        \"type\": \"string\",\n        \"description\": \"Confluence space keys, comma-separated (what=confluence)\"\n      },\n      \"full\": {\n        \"type\": \"boolean\",\n        \"default\": false,\n        \"description\": \"Reconcile all Confluence page IDs and refresh every cached version\"\n      },\n      \"job\": {\n        \"type\": \"string\",\n        \"description\": \"A job id from an earlier \\\"running\\\" answer: wait for that job instead of starting a sync\"\n      }\n    },\n    \"required\": []\n  }\n}\n",
+  "stderr": "21:41:05 dt call tool_describe#1jet start {\"name\":\"catalog_sync\"} (cli)\n21:41:05 dt call tool_describe#1jet ok 16ms\n",
+  "result": {
+    "name": "catalog_sync",
+    "description": "Refresh the cached catalog of an environment from the live systems: Postgres schemas, functions, views, triggers (all databases), ES mappings, Kafka topics + schemas + last messages, Consul services; then the usage index. \"passports\" rebuilds the cached service passports, \"index\" only rebuilds catalog + usage from the cache. Takes seconds to minutes; if it answers \"running\", call it again with that job id. Run it when find says the catalog is empty or something is missing.",
+    "group": "catalog",
+    "origin": "built-in",
+    "execution": {
+      "protocol": "dt.tool/v1",
+      "transport": "in-process"
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "env": {
+          "type": "string",
+          "enum": [
+            "dev"
+          ],
+          "default": "dev",
+          "description": "Environment"
+        },
+        "what": {
+          "type": "string",
+          "enum": [
+            "pg",
+            "es",
+            "kafka",
+            "consul",
+            "passports",
+            "bitbucket",
+            "confluence",
+            "index",
+            "all"
+          ],
+          "default": "all"
+        },
+        "only": {
+          "type": "string",
+          "description": "Comma list to limit: db names for pg, name parts for es/kafka, services for passports, spaces for confluence"
+        },
+        "spaces": {
+          "type": "string",
+          "description": "Confluence space keys, comma-separated (what=confluence)"
+        },
+        "full": {
+          "type": "boolean",
+          "default": false,
+          "description": "Reconcile all Confluence page IDs and refresh every cached version"
+        },
+        "job": {
+          "type": "string",
+          "description": "A job id from an earlier \"running\" answer: wait for that job instead of starting a sync"
+        }
+      },
+      "required": []
+    }
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "started": "2026-10-28T21:48:23.301Z",
+  "ended": "2026-10-28T21:48:47.509Z",
+  "durationMs": 24208,
+  "tool": "test_run",
+  "args": {
+    "workspace": "common-primitives-main-7397",
+    "tests": [
+      "LedgerAmountTest"
+    ],
+    "mode": "build"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 3262,
+  "stderrBytes": 521,
+  "stdout": "{\n  \"job\": \"mvsnbxuo423e01\",\n  \"state\": \"done\",\n  \"workspace\": \"common-primitives-main-7397\",\n  \"outcome\": \"failed\",\n  \"counts\": {\n    \"tests\": 2,\n    \"passed\": 0,\n    \"failed\": 2,\n    \"errors\": 0,\n    \"skipped\": 0\n  },\n  \"ms\": 22736,\n  \"mode\": \"build\",\n  \"command\": \"mvn -B -ntp test -Dtest=LedgerAmountTest -Dsurefire.failIfNoSpecifiedTests=false -DfailIfNoTests=false -Djacoco.skip=true -Dcheckstyle.skip=true -Dspotless.check.skip=true -Denforcer.skip=true -Dpmd.skip=true -Dspotbugs.skip=true -pl decimal -am\",\n  \"failures\": [\n    {\n      \"test\": \"LedgerAmountTest#respectsCurrencyScaleAndHalfUpTies\",\n      \"status\": \"failed\",\n      \"expected\": \"1005\",\n      \"actual\": \"101\",\n      \"type\": \"AssertionFailedError\",\n      \"stack\": \"\\t... 6 frames: org.junit.jupiter\\n\\tat com.lumen.money.LedgerAmountTest.respectsCurrencyScaleAndHalfUpTies(LedgerAmountTest.java:7)\\n\\t... 3 frames: java.lang.reflect, java.util\"\n    },\n    {\n      \"test\": \"LedgerAmountTest#preservesLongBoundaryAndRejectsOverflowAndInvalidInputs\",\n      \"status\": \"failed\",\n      \"expected\": \"9223372036854775807\",\n      \"actual\": \"922337203685477581\",\n      \"type\": \"AssertionFailedError\",\n      \"stack\": \"\\t... 6 frames: org.junit.jupiter\\n\\tat com.lumen.money.LedgerAmountTest.preservesLongBoundaryAndRejectsOverflowAndInvalidInputs(LedgerAmountTest.java:16)\\n\\t... 3 frames: java.lang.reflect, java.util\"\n    }\n  ],\n  \"parts\": [\n    {\n      \"file\": \"decimal/src/test/java/com/lumen/money/LedgerAmountTest.java\",\n      \"line\": 7,\n      \"why\": \"LedgerAmountTest.respectsCurrencyScaleAndHalfUpTies: expected: <1005> but was: <101>\",\n      \"code\": \"    4  import static org.junit.jupiter.api.Assertions.*;\\n    5  class LedgerAmountTest {\\n    6   @Test void respectsCurrencyScaleAndHalfUpTies() {\\n>   7    assertEquals(1005L, LedgerAmount.minorUnits(new BigDecimal(\\\"1.005\\\"),\\\"KWD\\\"));\\n    8    assertEquals(1L, LedgerAmount.minorUnits(new BigDecimal(\\\"1.4\\\"),\\\"JPY\\\"));\\n    9    assertEquals(2L, LedgerAmount.minorUnits(new BigDecimal(\\\"1.5\\\"),\\\"JPY\\\"));\\n   10    assertEquals(101L, LedgerAmount.minorUnits(new BigDecimal(\\\"1.005\\\"),\\\"USD\\\"));\"\n    },\n    {\n      \"file\": \"decimal/src/test/java/com/lumen/money/LedgerAmountTest.java\",\n      \"line\": 16,\n      \"why\": \"LedgerAmountTest.preservesLongBoundaryAndRejectsOverflowAndInvalidInputs: expected: <9223372036854775807> but was: <922337203685477581>\",\n      \"code\": \"   13   }\\n   14   @Test void preservesLongBoundaryAndRejectsOverflowAndInvalidInputs() {\\n   15    assertEquals(Long.MAX_VALUE,LedgerAmount.minorUnits(new BigDecimal(\\\"92233720368547758.07\\\"),\\\"USD\\\"));\\n>  16    assertEquals(Long.MAX_VALUE,LedgerAmount.minorUnits(new BigDecimal(\\\"9223372036854775.807\\\"),\\\"KWD\\\"));\\n   17    assertThrows(ArithmeticException.class,()->LedgerAmount.minorUnits(new BigDecimal(\\\"92233720368547758.075\\\"),\\\"USD\\\"));\\n   18    assertThrows(IllegalArgumentException.class,()->LedgerAmount.minorUnits(new BigDecimal(\\\"-0.001\\\"),\\\"KWD\\\"));\\n   19    assertThrows(IllegalArgumentException.class,()->LedgerAmount.minorUnits(BigDecimal.ONE,\\\"XXX\\\"));\"\n    }\n  ],\n  \"view\": \"http://127.0.0.1:4000/show/mvsncg4n8ce2532408611ed2b4\",\n  \"next\": \"fix the test or the code at parts (test_run files=[{path, edits}] writes and runs in one call)\"\n}\n",
+  "stderr": "21:48:23 dt call test_run#1xtw start {\"workspace\":\"common-primitives-main-7397\",\"tests\":[\"LedgerAmountTest\"],\"mode\":\"build\"} (cli)\n21:48:23 dt job tests LedgerAmountTest in common-primitives-main-7397#2xus start {\"job\":\"mvsnbxuo423e01\"} (job)\n21:48:47 dt   tests LedgerAmountTest in common-primitives-main-7397#2xus maven test (decimal LedgerAmountTest) 22.7s\n21:48:47 dt job tests LedgerAmountTest in common-primitives-main-7397#2xus ok 23.7s  code index 81ms · maven test 22.7s\n21:48:47 dt call test_run#1xtw ok 23.7s\n",
+  "result": {
+    "job": "mvsnbxuo423e01",
+    "state": "done",
+    "workspace": "common-primitives-main-7397",
+    "outcome": "failed",
+    "counts": {
+      "tests": 2,
+      "passed": 0,
+      "failed": 2,
+      "errors": 0,
+      "skipped": 0
+    },
+    "ms": 22736,
+    "mode": "build",
+    "command": "mvn -B -ntp test -Dtest=LedgerAmountTest -Dsurefire.failIfNoSpecifiedTests=false -DfailIfNoTests=false -Djacoco.skip=true -Dcheckstyle.skip=true -Dspotless.check.skip=true -Denforcer.skip=true -Dpmd.skip=true -Dspotbugs.skip=true -pl decimal -am",
+    "failures": [
+      {
+        "test": "LedgerAmountTest#respectsCurrencyScaleAndHalfUpTies",
+        "status": "failed",
+        "expected": "1005",
+        "actual": "101",
+        "type": "AssertionFailedError",
+        "stack": "\t... 6 frames: org.junit.jupiter\n\tat com.lumen.money.LedgerAmountTest.respectsCurrencyScaleAndHalfUpTies(LedgerAmountTest.java:7)\n\t... 3 frames: java.lang.reflect, java.util"
+      },
+      {
+        "test": "LedgerAmountTest#preservesLongBoundaryAndRejectsOverflowAndInvalidInputs",
+        "status": "failed",
+        "expected": "9223372036854775807",
+        "actual": "922337203685477581",
+        "type": "AssertionFailedError",
+        "stack": "\t... 6 frames: org.junit.jupiter\n\tat com.lumen.money.LedgerAmountTest.preservesLongBoundaryAndRejectsOverflowAndInvalidInputs(LedgerAmountTest.java:16)\n\t... 3 frames: java.lang.reflect, java.util"
+      }
+    ],
+    "parts": [
+      {
+        "file": "decimal/src/test/java/com/lumen/money/LedgerAmountTest.java",
+        "line": 7,
+        "why": "LedgerAmountTest.respectsCurrencyScaleAndHalfUpTies: expected: <1005> but was: <101>",
+        "code": "    4  import static org.junit.jupiter.api.Assertions.*;\n    5  class LedgerAmountTest {\n    6   @Test void respectsCurrencyScaleAndHalfUpTies() {\n>   7    assertEquals(1005L, LedgerAmount.minorUnits(new BigDecimal(\"1.005\"),\"KWD\"));\n    8    assertEquals(1L, LedgerAmount.minorUnits(new BigDecimal(\"1.4\"),\"JPY\"));\n    9    assertEquals(2L, LedgerAmount.minorUnits(new BigDecimal(\"1.5\"),\"JPY\"));\n   10    assertEquals(101L, LedgerAmount.minorUnits(new BigDecimal(\"1.005\"),\"USD\"));"
+      },
+      {
+        "file": "decimal/src/test/java/com/lumen/money/LedgerAmountTest.java",
+        "line": 16,
+        "why": "LedgerAmountTest.preservesLongBoundaryAndRejectsOverflowAndInvalidInputs: expected: <9223372036854775807> but was: <922337203685477581>",
+        "code": "   13   }\n   14   @Test void preservesLongBoundaryAndRejectsOverflowAndInvalidInputs() {\n   15    assertEquals(Long.MAX_VALUE,LedgerAmount.minorUnits(new BigDecimal(\"92233720368547758.07\"),\"USD\"));\n>  16    assertEquals(Long.MAX_VALUE,LedgerAmount.minorUnits(new BigDecimal(\"9223372036854775.807\"),\"KWD\"));\n   17    assertThrows(ArithmeticException.class,()->LedgerAmount.minorUnits(new BigDecimal(\"92233720368547758.075\"),\"USD\"));\n   18    assertThrows(IllegalArgumentException.class,()->LedgerAmount.minorUnits(new BigDecimal(\"-0.001\"),\"KWD\"));\n   19    assertThrows(IllegalArgumentException.class,()->LedgerAmount.minorUnits(BigDecimal.ONE,\"XXX\"));"
+      }
+    ],
+    "view": "http://127.0.0.1:4000/show/mvsncg4n8ce2532408611ed2b4",
+    "next": "fix the test or the code at parts (test_run files=[{path, edits}] writes and runs in one call)"
+  }
+}

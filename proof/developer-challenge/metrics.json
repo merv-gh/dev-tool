@@ -1,0 +1,84 @@
+{
+  "all": {
+    "calls": 103,
+    "durationSumMs": 97516,
+    "stdoutBytes": 115792,
+    "stderrBytes": 27831,
+    "started": "2026-10-28T21:40:38.062Z",
+    "ended": "2026-10-28T21:51:55.592Z"
+  },
+  "cases": {
+    "C01": {
+      "calls": 12,
+      "durationSumMs": 5358,
+      "stdoutBytes": 5836,
+      "stderrBytes": 7123,
+      "started": "2026-10-28T21:43:19.847Z",
+      "ended": "2026-10-28T21:49:48.392Z"
+    },
+    "C02": {
+      "calls": 7,
+      "durationSumMs": 3677,
+      "stdoutBytes": 5176,
+      "stderrBytes": 1817,
+      "started": "2026-10-28T21:45:23.370Z",
+      "ended": "2026-10-28T21:51:36.420Z"
+    },
+    "C03": {
+      "calls": 18,
+      "durationSumMs": 53915,
+      "stdoutBytes": 19355,
+      "stderrBytes": 5115,
+      "started": "2026-10-28T21:45:32.494Z",
+      "ended": "2026-10-28T21:51:07.346Z"
+    },
+    "C04": {
+      "calls": 8,
+      "durationSumMs": 4079,
+      "stdoutBytes": 4316,
+      "stderrBytes": 1963,
+      "started": "2026-10-28T21:45:23.354Z",
+      "ended": "2026-10-28T21:51:36.398Z"
+    },
+    "C05": {
+      "calls": 6,
+      "durationSumMs": 3264,
+      "stdoutBytes": 4578,
+      "stderrBytes": 1651,
+      "started": "2026-10-28T21:45:23.361Z",
+      "ended": "2026-10-28T21:51:36.398Z"
+    },
+    "C06": {
+      "calls": 16,
+      "durationSumMs": 13534,
+      "stdoutBytes": 27635,
+      "stderrBytes": 3769,
+      "started": "2026-10-28T21:45:23.361Z",
+      "ended": "2026-10-28T21:51:36.430Z"
+    },
+    "C07": {
+      "calls": 6,
+      "durationSumMs": 3311,
+      "stdoutBytes": 4251,
+      "stderrBytes": 1654,
+      "started": "2026-10-28T21:45:23.362Z",
+      "ended": "2026-10-28T21:51:36.399Z"
+    },
+    "C08": {
+      "calls": 6,
+      "durationSumMs": 2682,
+      "stdoutBytes": 4555,
+      "stderrBytes": 1649,
+      "started": "2026-10-28T21:45:23.364Z",
+      "ended": "2026-10-28T21:51:36.387Z"
+    }
+  },
+  "unassigned": {
+    "calls": 24,
+    "durationSumMs": 7696,
+    "stdoutBytes": 40090,
+    "stderrBytes": 3090,
+    "started": "2026-10-28T21:40:38.062Z",
+    "ended": "2026-10-28T21:51:55.592Z"
+  }
+}

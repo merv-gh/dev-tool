@@ -1,0 +1,38 @@
+{
+  "started": "2026-10-28T21:44:02.235Z",
+  "ended": "2026-10-28T21:44:02.424Z",
+  "durationMs": 189,
+  "tool": "tool_describe",
+  "args": {
+    "name": "bitbucket_repos"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null
+  },
+  "exitCode": 0,
+  "stdoutBytes": 427,
+  "stderrBytes": 119,
+  "stdout": "{\n  \"name\": \"bitbucket_repos\",\n  \"description\": \"List Bitbucket repositories, optionally filtered by name.\",\n  \"group\": \"bitbucket\",\n  \"origin\": \"built-in\",\n  \"execution\": {\n    \"protocol\": \"dt.tool/v1\",\n    \"transport\": \"in-process\"\n  },\n  \"inputSchema\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"filter\": {\n        \"type\": \"string\",\n        \"description\": \"Part of repo name\"\n      }\n    },\n    \"required\": []\n  }\n}\n",
+  "stderr": "21:44:02 dt call tool_describe#1c76 start {\"name\":\"bitbucket_repos\"} (cli)\n21:44:02 dt call tool_describe#1c76 ok 14ms\n",
+  "result": {
+    "name": "bitbucket_repos",
+    "description": "List Bitbucket repositories, optionally filtered by name.",
+    "group": "bitbucket",
+    "origin": "built-in",
+    "execution": {
+      "protocol": "dt.tool/v1",
+      "transport": "in-process"
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filter": {
+          "type": "string",
+          "description": "Part of repo name"
+        }
+      },
+      "required": []
+    }
+  }
+}

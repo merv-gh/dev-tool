@@ -1,0 +1,135 @@
+{
+  "started": "2026-10-28T21:43:04.082Z",
+  "ended": "2026-10-28T21:43:04.301Z",
+  "durationMs": 219,
+  "tool": "tool_search",
+  "args": {
+    "query": "execute shell command Node tests",
+    "limit": 8
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/dev-tool",
+    "JAVA_HOME": null
+  },
+  "exitCode": 0,
+  "stdoutBytes": 4599,
+  "stderrBytes": 143,
+  "stdout": "{\n  \"total\": 25,\n  \"tools\": [\n    {\n      \"name\": \"scenario_run\",\n      \"group\": \"code\",\n      \"description\": \"Run a verified scenario end to end. The node-container adapter arranges isolated reads, starts the actual service, invokes actions, independently observes effects and always stops. The test-run adapter runs reviewed real project tests with verified multi-DB fixtures and checks the independent observation report. Poll with job if still running; proof levels and unsupported boundaries remain explicit.\",\n      \"required\": [],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"scenario_run\"\n        }\n      }\n    },\n    {\n      \"name\": \"tool_execute\",\n      \"group\": \"catalog\",\n      \"description\": \"Execute one discovered enabled tool with its exact arguments. Uses the same validation, rate limits, trace and permissions as calling that tool directly, and preserves its visualization. Call tool_describe first. Cannot recursively call discovery dispatchers.\",\n      \"required\": [\n        \"name\",\n        \"arguments\"\n      ],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"tool_execute\"\n        }\n      }\n    },\n    {\n      \"name\": \"api_request_save\",\n      \"group\": \"api\",\n      \"description\": \"Save a prepared/captured request as a reusable normal script in collection/name. Preserves route/source provenance, typed params, assertions, captures and supplied hooks. Collection vars/before/after/finally work through the existing script engine. Does not execute. Cookies are omitted and secrets become required runtime placeholders. Existing script requires overwrite=true.\",\n      \"required\": [\n        \"id\"\n      ],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"api_request_save\"\n        }\n      }\n    },\n    {\n      \"name\": \"collection_cancel\",\n      \"group\": \"scripts\",\n      \"description\": \"Cancel a running collection. Stops new actions and interrupts JS/HTTP operations, then executes finally hooks with separate cleanup deadlines. Generic in-flight tools may finish with an unknown outcome; their actions are never retried on cancellation.\",\n      \"required\": [\n        \"run\"\n      ],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"collection_cancel\"\n        }\n      }\n    },\n    {\n      \"name\": \"collection_check\",\n      \"group\": \"scripts\",\n      \"description\": \"Check a durable collection run independently. Success requires a finished passed run with every selected case executed and no failed assertions, infrastructure errors, skipped cases or cleanup failures.\",\n      \"required\": [\n        \"run\"\n      ],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"collection_check\"\n        }\n      }\n    },\n    {\n      \"name\": \"collection_plan\",\n      \"group\": \"scripts\",\n      \"description\": \"Build an offline ordered plan of nested suite cases. Expands datasets and matrix values with isolated per-case vars, records tags, selection exclusions, source revisions and seed. Maximum 1000 cases. No hooks, tool calls or HTTP requests execute.\",\n      \"required\": [\n        \"collection\"\n      ],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"collection_plan\"\n        }\n      }\n    },\n    {\n      \"name\": \"collection_save\",\n      \"group\": \"scripts\",\n      \"description\": \"Update collection metadata without clearing omitted fields. Suite uses the existing script language: ordered script/collection references, tags, datasets, matrix, shared params and before/after/finally JavaScript hooks. Collection hooks remain per-script; suite hooks execute once per selected scope.\",\n      \"required\": [\n        \"collection\"\n      ],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"collection_save\"\n        }\n      }\n    },\n    {\n      \"name\": \"ddl_snapshot\",\n      \"group\": \"code\",\n      \"description\": \"DDL of a synced database (schemas, extensions, enum/domain types, sequences, tables with defaults, identity, constraints, indexes, comments, functions, procedures, views in order, triggers) for tests: all of it, or only some tables, functions or what a service uses, closed over what they need (FK targets, trigger functions, called functions and their tables). With workspace, written to <module>/src/test/resources/dt-schema/<db>.sql (or path).\",\n      \"required\": [\n        \"db\"\n      ],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"ddl_snapshot\"\n        }\n      }\n    }\n  ]\n}\n",
+  "stderr": "21:43:04 dt call tool_search#13c7 start {\"query\":\"execute shell command Node tests\",\"limit\":8} (cli)\n21:43:04 dt call tool_search#13c7 ok 33ms\n",
+  "result": {
+    "total": 25,
+    "tools": [
+      {
+        "name": "scenario_run",
+        "group": "code",
+        "description": "Run a verified scenario end to end. The node-container adapter arranges isolated reads, starts the actual service, invokes actions, independently observes effects and always stops. The test-run adapter runs reviewed real project tests with verified multi-DB fixtures and checks the independent observation report. Poll with job if still running; proof levels and unsupported boundaries remain explicit.",
+        "required": [],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "scenario_run"
+          }
+        }
+      },
+      {
+        "name": "tool_execute",
+        "group": "catalog",
+        "description": "Execute one discovered enabled tool with its exact arguments. Uses the same validation, rate limits, trace and permissions as calling that tool directly, and preserves its visualization. Call tool_describe first. Cannot recursively call discovery dispatchers.",
+        "required": [
+          "name",
+          "arguments"
+        ],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "tool_execute"
+          }
+        }
+      },
+      {
+        "name": "api_request_save",
+        "group": "api",
+        "description": "Save a prepared/captured request as a reusable normal script in collection/name. Preserves route/source provenance, typed params, assertions, captures and supplied hooks. Collection vars/before/after/finally work through the existing script engine. Does not execute. Cookies are omitted and secrets become required runtime placeholders. Existing script requires overwrite=true.",
+        "required": [
+          "id"
+        ],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "api_request_save"
+          }
+        }
+      },
+      {
+        "name": "collection_cancel",
+        "group": "scripts",
+        "description": "Cancel a running collection. Stops new actions and interrupts JS/HTTP operations, then executes finally hooks with separate cleanup deadlines. Generic in-flight tools may finish with an unknown outcome; their actions are never retried on cancellation.",
+        "required": [
+          "run"
+        ],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "collection_cancel"
+          }
+        }
+      },
+      {
+        "name": "collection_check",
+        "group": "scripts",
+        "description": "Check a durable collection run independently. Success requires a finished passed run with every selected case executed and no failed assertions, infrastructure errors, skipped cases or cleanup failures.",
+        "required": [
+          "run"
+        ],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "collection_check"
+          }
+        }
+      },
+      {
+        "name": "collection_plan",
+        "group": "scripts",
+        "description": "Build an offline ordered plan of nested suite cases. Expands datasets and matrix values with isolated per-case vars, records tags, selection exclusions, source revisions and seed. Maximum 1000 cases. No hooks, tool calls or HTTP requests execute.",
+        "required": [
+          "collection"
+        ],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "collection_plan"
+          }
+        }
+      },
+      {
+        "name": "collection_save",
+        "group": "scripts",
+        "description": "Update collection metadata without clearing omitted fields. Suite uses the existing script language: ordered script/collection references, tags, datasets, matrix, shared params and before/after/finally JavaScript hooks. Collection hooks remain per-script; suite hooks execute once per selected scope.",
+        "required": [
+          "collection"
+        ],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "collection_save"
+          }
+        }
+      },
+      {
+        "name": "ddl_snapshot",
+        "group": "code",
+        "description": "DDL of a synced database (schemas, extensions, enum/domain types, sequences, tables with defaults, identity, constraints, indexes, comments, functions, procedures, views in order, triggers) for tests: all of it, or only some tables, functions or what a service uses, closed over what they need (FK targets, trigger functions, called functions and their tables). With workspace, written to <module>/src/test/resources/dt-schema/<db>.sql (or path).",
+        "required": [
+          "db"
+        ],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "ddl_snapshot"
+          }
+        }
+      }
+    ]
+  }
+}

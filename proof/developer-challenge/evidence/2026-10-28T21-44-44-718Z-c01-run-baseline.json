@@ -1,0 +1,21 @@
+{
+  "started": "2026-10-28T21:44:44.718Z",
+  "ended": "2026-10-28T21:44:44.973Z",
+  "durationMs": 255,
+  "tool": "test_run",
+  "args": {
+    "workspace": "c01-main-a04c",
+    "mode": "build"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 1,
+  "stdoutBytes": 0,
+  "stderrBytes": 205,
+  "stdout": "",
+  "stderr": "21:44:44 dt call test_run#190l start {\"workspace\":\"c01-main-a04c\",\"mode\":\"build\"} (cli)\n21:44:44 dt call test_run#190l FAILED 21ms: tests: which test classes to run\nERROR: tests: which test classes to run\n"
+}

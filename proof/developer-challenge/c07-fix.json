@@ -1,0 +1,5 @@
+{
+  "workspace": "c07-main-49cc",
+  "path": "src/cancellation.cjs",
+  "content": "exports.quoteCancellation = function(booking, minutesToDeparture) {\n  if (!booking || booking.status !== 'CONFIRMED' || typeof booking.refundable !== 'boolean' || !Number.isSafeInteger(booking.paidCents) || booking.paidCents < 0 || typeof minutesToDeparture !== 'number' || !Number.isFinite(minutesToDeparture) || minutesToDeparture < 0) throw new Error('invalid cancellation quotation');\n  const refundCents = !booking.refundable ? 0 : minutesToDeparture >= 2880 ? booking.paidCents : minutesToDeparture >= 1440 ? Math.floor(booking.paidCents / 2) : 0;\n  return { refundCents, retainedCents: booking.paidCents - refundCents };\n};\n"
+}

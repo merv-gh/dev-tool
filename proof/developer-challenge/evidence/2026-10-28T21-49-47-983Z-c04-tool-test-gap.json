@@ -1,0 +1,29 @@
+{
+  "started": "2026-10-28T21:49:47.983Z",
+  "ended": "2026-10-28T21:49:48.405Z",
+  "durationMs": 422,
+  "tool": "test_run",
+  "args": {
+    "workspace": "c04-main-43a5",
+    "tests": [
+      "test/regression.test.cjs"
+    ],
+    "mode": "build"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 199,
+  "stderrBytes": 486,
+  "stdout": "{\n  \"job\": \"mvsndr3y4a089a\",\n  \"state\": \"failed\",\n  \"error\": \"no test class test/regression.test.cjs in c04-main-43a5 (write it with workspace_write first, or give the full name com.acme.FooTest)\"\n}\n",
+  "stderr": "21:49:48 dt call test_run#1r39 start {\"workspace\":\"c04-main-43a5\",\"tests\":[\"test/regression.test.cjs\"],\"mode\":\"build\"} (cli)\n21:49:48 dt job tests test/regression.test.cjs in c04-main-43a5#2r40 start {\"job\":\"mvsndr3y4a089a\"} (job)\n21:49:48 dt job tests test/regression.test.cjs in c04-main-43a5#2r40 FAILED 28ms: no test class test/regression.test.cjs in c04-main-43a5 (write it with workspace_write first, or give the full name com.acme.FooTest)\n21:49:48 dt call test_run#1r39 ok 57ms\n",
+  "result": {
+    "job": "mvsndr3y4a089a",
+    "state": "failed",
+    "error": "no test class test/regression.test.cjs in c04-main-43a5 (write it with workspace_write first, or give the full name com.acme.FooTest)"
+  }
+}

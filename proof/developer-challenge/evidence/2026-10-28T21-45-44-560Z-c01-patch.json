@@ -1,0 +1,44 @@
+{
+  "started": "2026-10-28T21:45:44.560Z",
+  "ended": "2026-10-28T21:45:44.875Z",
+  "durationMs": 315,
+  "tool": "workspace_patch",
+  "args": {
+    "workspace": "c01-main-a04c"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 2999,
+  "stderrBytes": 126,
+  "stdout": "{\n  \"workspace\": \"c01-main-a04c\",\n  \"repo\": \"CASES/c01\",\n  \"base\": \"632a0fdc240ca8052c7c92e257c69594d08f77f4\",\n  \"files\": [\n    {\n      \"path\": \"src/checkout.cjs\",\n      \"added\": 5,\n      \"removed\": 4,\n      \"status\": \"modified\"\n    },\n    {\n      \"path\": \"test/regression.test.cjs\",\n      \"added\": 18,\n      \"removed\": 0,\n      \"status\": \"added\"\n    }\n  ],\n  \"tests\": [],\n  \"apply\": \"git checkout 632a0fdc240c && git apply --index c01-main-a04c.patch\",\n  \"view\": \"http://127.0.0.1:4000/show/mvsn8j9a6edf48c7619aa43b3c\",\n  \"download\": \"http://127.0.0.1:4000/patch/mvsn8j9a6edf48c7619aa43b3c.patch\",\n  \"patch\": \"diff --git a/src/checkout.cjs b/src/checkout.cjs\\nindex 6e1daa3..35d9502 100644\\n--- a/src/checkout.cjs\\n+++ b/src/checkout.cjs\\n@@ -1,10 +1,11 @@\\n exports.grossCents = function(lines, vatBps) {\\n   if (!Array.isArray(lines) || !Number.isSafeInteger(vatBps) || vatBps < 0) throw new Error('invalid basket');\\n-  let gross = 0;\\n+  let net = 0n;\\n   for (const {unitCents, quantity} of lines) {\\n     if (!Number.isSafeInteger(unitCents) || unitCents < 0 || !Number.isSafeInteger(quantity) || quantity < 0) throw new Error('invalid line');\\n-    gross += Math.round(unitCents * (10000 + vatBps) / 10000) * quantity;\\n+    net += BigInt(unitCents) * BigInt(quantity);\\n   }\\n-  if (!Number.isSafeInteger(gross)) throw new Error('total outside safe range');\\n-  return gross;\\n+  const gross = (net * (10000n + BigInt(vatBps)) + 5000n) / 10000n;\\n+  if (gross > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error('total outside safe range');\\n+  return Number(gross);\\n };\\ndiff --git a/test/regression.test.cjs b/test/regression.test.cjs\\nnew file mode 100644\\nindex 0000000..0377707\\n--- /dev/null\\n+++ b/test/regression.test.cjs\\n@@ -0,0 +1,18 @@\\n+const {test}=require('node:test');\\n+const assert=require('node:assert/strict');\\n+const {grossCents}=require('../src/checkout.cjs');\\n+test('extends quantities before invoice VAT rounding',()=>{\\n+ assert.equal(grossCents([{unitCents:99,quantity:3}],2000),356);\\n+ assert.equal(grossCents([{unitCents:1,quantity:1},{unitCents:1,quantity:1}],5000),3);\\n+ assert.equal(grossCents([{unitCents:1,quantity:1}],5000),2);\\n+ assert.equal(grossCents([{unitCents:999,quantity:0}],2000),0);\\n+ assert.equal(grossCents([],2000),0);\\n+});\\n+test('safe bounds are exact and invalid baskets fail',()=>{\\n+ assert.equal(grossCents([{unitCents:Number.MAX_SAFE_INTEGER,quantity:1}],0),Number.MAX_SAFE_INTEGER);\\n+ for(const vat of [-1,1.5,NaN,Infinity,undefined]) assert.throws(()=>grossCents([],vat));\\n+ for(const line of [{unitCents:-1,quantity:1},{unitCents:1.2,quantity:1},{unitCents:1,quantity:-1},{unitCents:1,quantity:1.1},{unitCents:1,quantity:Number.MAX_SAFE_INTEGER+1},null]) assert.throws(()=>grossCents([line],2000));\\n+ assert.throws(()=>grossCents([{unitCents:Number.MAX_SAFE_INTEGER,quantity:2}],0));\\n+ assert.throws(()=>grossCents([{unitCents:Number.MAX_SAFE_INTEGER,quantity:1}],1));\\n+ assert.throws(()=>grossCents(null,0));\\n+});\\n\"\n}\n",
+  "stderr": "21:45:44 dt call workspace_patch#1j6l start {\"workspace\":\"c01-main-a04c\"} (cli)\n21:45:44 dt call workspace_patch#1j6l ok 96ms\n",
+  "result": {
+    "workspace": "c01-main-a04c",
+    "repo": "CASES/c01",
+    "base": "632a0fdc240ca8052c7c92e257c69594d08f77f4",
+    "files": [
+      {
+        "path": "src/checkout.cjs",
+        "added": 5,
+        "removed": 4,
+        "status": "modified"
+      },
+      {
+        "path": "test/regression.test.cjs",
+        "added": 18,
+        "removed": 0,
+        "status": "added"
+      }
+    ],
+    "tests": [],
+    "apply": "git checkout 632a0fdc240c && git apply --index c01-main-a04c.patch",
+    "view": "http://127.0.0.1:4000/show/mvsn8j9a6edf48c7619aa43b3c",
+    "download": "http://127.0.0.1:4000/patch/mvsn8j9a6edf48c7619aa43b3c.patch",
+    "patch": "diff --git a/src/checkout.cjs b/src/checkout.cjs\nindex 6e1daa3..35d9502 100644\n--- a/src/checkout.cjs\n+++ b/src/checkout.cjs\n@@ -1,10 +1,11 @@\n exports.grossCents = function(lines, vatBps) {\n   if (!Array.isArray(lines) || !Number.isSafeInteger(vatBps) || vatBps < 0) throw new Error('invalid basket');\n-  let gross = 0;\n+  let net = 0n;\n   for (const {unitCents, quantity} of lines) {\n     if (!Number.isSafeInteger(unitCents) || unitCents < 0 || !Number.isSafeInteger(quantity) || quantity < 0) throw new Error('invalid line');\n-    gross += Math.round(unitCents * (10000 + vatBps) / 10000) * quantity;\n+    net += BigInt(unitCents) * BigInt(quantity);\n   }\n-  if (!Number.isSafeInteger(gross)) throw new Error('total outside safe range');\n-  return gross;\n+  const gross = (net * (10000n + BigInt(vatBps)) + 5000n) / 10000n;\n+  if (gross > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error('total outside safe range');\n+  return Number(gross);\n };\ndiff --git a/test/regression.test.cjs b/test/regression.test.cjs\nnew file mode 100644\nindex 0000000..0377707\n--- /dev/null\n+++ b/test/regression.test.cjs\n@@ -0,0 +1,18 @@\n+const {test}=require('node:test');\n+const assert=require('node:assert/strict');\n+const {grossCents}=require('../src/checkout.cjs');\n+test('extends quantities before invoice VAT rounding',()=>{\n+ assert.equal(grossCents([{unitCents:99,quantity:3}],2000),356);\n+ assert.equal(grossCents([{unitCents:1,quantity:1},{unitCents:1,quantity:1}],5000),3);\n+ assert.equal(grossCents([{unitCents:1,quantity:1}],5000),2);\n+ assert.equal(grossCents([{unitCents:999,quantity:0}],2000),0);\n+ assert.equal(grossCents([],2000),0);\n+});\n+test('safe bounds are exact and invalid baskets fail',()=>{\n+ assert.equal(grossCents([{unitCents:Number.MAX_SAFE_INTEGER,quantity:1}],0),Number.MAX_SAFE_INTEGER);\n+ for(const vat of [-1,1.5,NaN,Infinity,undefined]) assert.throws(()=>grossCents([],vat));\n+ for(const line of [{unitCents:-1,quantity:1},{unitCents:1.2,quantity:1},{unitCents:1,quantity:-1},{unitCents:1,quantity:1.1},{unitCents:1,quantity:Number.MAX_SAFE_INTEGER+1},null]) assert.throws(()=>grossCents([line],2000));\n+ assert.throws(()=>grossCents([{unitCents:Number.MAX_SAFE_INTEGER,quantity:2}],0));\n+ assert.throws(()=>grossCents([{unitCents:Number.MAX_SAFE_INTEGER,quantity:1}],1));\n+ assert.throws(()=>grossCents(null,0));\n+});\n"
+  }
+}

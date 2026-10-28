@@ -1,0 +1,50 @@
+{
+  "started": "2026-10-28T21:42:33.568Z",
+  "ended": "2026-10-28T21:42:33.779Z",
+  "durationMs": 211,
+  "tool": "tool_describe",
+  "args": {
+    "name": "fixture_replay"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/dev-tool",
+    "JAVA_HOME": null
+  },
+  "exitCode": 0,
+  "stdoutBytes": 941,
+  "stderrBytes": 118,
+  "stdout": "{\n  \"name\": \"fixture_replay\",\n  \"description\": \"Verify fixture hashes and load its databases on the configured scratch Postgres, check real constraints, then drop all throwaway databases. No writes to configured environment databases. Kafka files are for the service test producer. For actual tests use test_run fixture_path.\",\n  \"group\": \"code\",\n  \"origin\": \"built-in\",\n  \"execution\": {\n    \"protocol\": \"dt.tool/v1\",\n    \"transport\": \"in-process\"\n  },\n  \"inputSchema\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"workspace\": {\n        \"type\": \"string\",\n        \"description\": \"Workspace id\"\n      },\n      \"directory\": {\n        \"type\": \"string\",\n        \"description\": \"Fixture resource directory\"\n      },\n      \"allow_incomplete\": {\n        \"type\": \"boolean\",\n        \"default\": false,\n        \"description\": \"Replay despite reported capture gaps\"\n      }\n    },\n    \"required\": [\n      \"workspace\",\n      \"directory\"\n    ]\n  }\n}\n",
+  "stderr": "21:42:33 dt call tool_describe#1fsq start {\"name\":\"fixture_replay\"} (cli)\n21:42:33 dt call tool_describe#1fsq ok 16ms\n",
+  "result": {
+    "name": "fixture_replay",
+    "description": "Verify fixture hashes and load its databases on the configured scratch Postgres, check real constraints, then drop all throwaway databases. No writes to configured environment databases. Kafka files are for the service test producer. For actual tests use test_run fixture_path.",
+    "group": "code",
+    "origin": "built-in",
+    "execution": {
+      "protocol": "dt.tool/v1",
+      "transport": "in-process"
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "workspace": {
+          "type": "string",
+          "description": "Workspace id"
+        },
+        "directory": {
+          "type": "string",
+          "description": "Fixture resource directory"
+        },
+        "allow_incomplete": {
+          "type": "boolean",
+          "default": false,
+          "description": "Replay despite reported capture gaps"
+        }
+      },
+      "required": [
+        "workspace",
+        "directory"
+      ]
+    }
+  }
+}

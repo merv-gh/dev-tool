@@ -1,0 +1,29 @@
+{
+  "started": "2026-10-28T21:48:22.283Z",
+  "ended": "2026-10-28T21:48:22.910Z",
+  "durationMs": 627,
+  "tool": "workspace_write",
+  "args": {
+    "workspace": "common-primitives-main-7397",
+    "path": "decimal/src/test/java/com/lumen/money/LedgerAmountTest.java",
+    "content": "package com.lumen.money;\nimport java.math.BigDecimal;\nimport org.junit.jupiter.api.Test;\nimport static org.junit.jupiter.api.Assertions.*;\nclass LedgerAmountTest {\n @Test void respectsCurrencyScaleAndHalfUpTies() {\n  assertEquals(1005L, LedgerAmount.minorUnits(new BigDecimal(\"1.005\"),\"KWD\"));\n  assertEquals(1L, LedgerAmount.minorUnits(new BigDecimal(\"1.4\"),\"JPY\"));\n  assertEquals(2L, LedgerAmount.minorUnits(new BigDecimal(\"1.5\"),\"JPY\"));\n  assertEquals(101L, LedgerAmount.minorUnits(new BigDecimal(\"1.005\"),\"USD\"));\n  assertEquals(101L, LedgerAmount.minorUnits(new BigDecimal(\"1.005\"),\"EUR\"));\n  assertEquals(0L, LedgerAmount.minorUnits(BigDecimal.ZERO,\"KWD\"));\n }\n @Test void preservesLongBoundaryAndRejectsOverflowAndInvalidInputs() {\n  assertEquals(Long.MAX_VALUE,LedgerAmount.minorUnits(new BigDecimal(\"92233720368547758.07\"),\"USD\"));\n  assertEquals(Long.MAX_VALUE,LedgerAmount.minorUnits(new BigDecimal(\"9223372036854775.807\"),\"KWD\"));\n  assertThrows(ArithmeticException.class,()->LedgerAmount.minorUnits(new BigDecimal(\"92233720368547758.075\"),\"USD\"));\n  assertThrows(IllegalArgumentException.class,()->LedgerAmount.minorUnits(new BigDecimal(\"-0.001\"),\"KWD\"));\n  assertThrows(IllegalArgumentException.class,()->LedgerAmount.minorUnits(BigDecimal.ONE,\"XXX\"));\n  assertThrows(IllegalArgumentException.class,()->LedgerAmount.minorUnits(null,\"EUR\"));\n }\n}\n"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 166,
+  "stderrBytes": 261,
+  "stdout": "{\n  \"id\": \"common-primitives-main-7397\",\n  \"path\": \"decimal/src/test/java/com/lumen/money/LedgerAmountTest.java\",\n  \"created\": true,\n  \"bytes\": 1362,\n  \"lines\": 23\n}\n",
+  "stderr": "21:48:22 dt call workspace_write#1x3t start {\"workspace\":\"common-primitives-main-7397\",\"path\":\"decimal/src/test/java/com/lumen/money/LedgerAmountTest.java\",\"content\":\"package com.lumen.money;\\nimport java…} (cli)\n21:48:22 dt call workspace_write#1x3t ok 50ms\n",
+  "result": {
+    "id": "common-primitives-main-7397",
+    "path": "decimal/src/test/java/com/lumen/money/LedgerAmountTest.java",
+    "created": true,
+    "bytes": 1362,
+    "lines": 23
+  }
+}

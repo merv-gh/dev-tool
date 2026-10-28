@@ -1,0 +1,80 @@
+{
+  "started": "2026-10-28T21:41:44.676Z",
+  "ended": "2026-10-28T21:41:44.875Z",
+  "durationMs": 199,
+  "tool": "tool_describe",
+  "args": {
+    "name": "fixture_plan"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/dev-tool",
+    "JAVA_HOME": null
+  },
+  "exitCode": 0,
+  "stdoutBytes": 2091,
+  "stderrBytes": 116,
+  "stdout": "{\n  \"name\": \"fixture_plan\",\n  \"description\": \"Offline plan for related test data across Postgres databases and Kafka. Reads cached schemas, FKs and usage indexes first. Seeds use explicit db/schema.table and equality filters. Follows schema FKs; cross-database joins are explicit relations. Returns candidates for review, never guesses them as facts. Inspect then pass the inputs to fixture_capture.\",\n  \"group\": \"code\",\n  \"origin\": \"built-in\",\n  \"execution\": {\n    \"protocol\": \"dt.tool/v1\",\n    \"transport\": \"in-process\"\n  },\n  \"inputSchema\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"env\": {\n        \"type\": \"string\",\n        \"enum\": [\n          \"dev\"\n        ],\n        \"default\": \"dev\",\n        \"description\": \"Environment\"\n      },\n      \"service\": {\n        \"type\": \"string\",\n        \"description\": \"Service whose usage informs candidates\"\n      },\n      \"seeds\": {\n        \"type\": \"array\",\n        \"items\": {\n          \"type\": \"object\",\n          \"additionalProperties\": true\n        },\n        \"description\": \"Roots: [{db, table:\\\"sales.orders\\\", where:{id:42}}]\"\n      },\n      \"relations\": {\n        \"type\": \"array\",\n        \"items\": {\n          \"type\": \"object\",\n          \"additionalProperties\": true\n        },\n        \"description\": \"Cross-DB relationships: [{from:{db,table,columns:[...]},to:{db,table,columns:[...]},required:true,evidence:\\\"file:line\\\"}]\"\n      },\n      \"topics\": {\n        \"type\": \"array\",\n        \"items\": {\n          \"type\": \"object\",\n          \"additionalProperties\": true\n        },\n        \"description\": \"Topics: [{topic,matches:[{path:\\\"value.orderId\\\",from:{db,table,column:\\\"id\\\"}}],match:\\\"all|any\\\",offsets:{partition:offset}}]\"\n      },\n      \"limits\": {\n        \"type\": \"object\",\n        \"additionalProperties\": true,\n        \"description\": \"depth, rowsPerTable, totalRows, messagesPerTopic, totalMessages, queries\"\n      },\n      \"includeChildren\": {\n        \"type\": \"boolean\",\n        \"default\": false,\n        \"description\": \"Also follow reverse FKs (bounded); default only required parents\"\n      }\n    },\n    \"required\": []\n  }\n}\n",
+  "stderr": "21:41:44 dt call tool_describe#1e2a start {\"name\":\"fixture_plan\"} (cli)\n21:41:44 dt call tool_describe#1e2a ok 16ms\n",
+  "result": {
+    "name": "fixture_plan",
+    "description": "Offline plan for related test data across Postgres databases and Kafka. Reads cached schemas, FKs and usage indexes first. Seeds use explicit db/schema.table and equality filters. Follows schema FKs; cross-database joins are explicit relations. Returns candidates for review, never guesses them as facts. Inspect then pass the inputs to fixture_capture.",
+    "group": "code",
+    "origin": "built-in",
+    "execution": {
+      "protocol": "dt.tool/v1",
+      "transport": "in-process"
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "env": {
+          "type": "string",
+          "enum": [
+            "dev"
+          ],
+          "default": "dev",
+          "description": "Environment"
+        },
+        "service": {
+          "type": "string",
+          "description": "Service whose usage informs candidates"
+        },
+        "seeds": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "description": "Roots: [{db, table:\"sales.orders\", where:{id:42}}]"
+        },
+        "relations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "description": "Cross-DB relationships: [{from:{db,table,columns:[...]},to:{db,table,columns:[...]},required:true,evidence:\"file:line\"}]"
+        },
+        "topics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "description": "Topics: [{topic,matches:[{path:\"value.orderId\",from:{db,table,column:\"id\"}}],match:\"all|any\",offsets:{partition:offset}}]"
+        },
+        "limits": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "depth, rowsPerTable, totalRows, messagesPerTopic, totalMessages, queries"
+        },
+        "includeChildren": {
+          "type": "boolean",
+          "default": false,
+          "description": "Also follow reverse FKs (bounded); default only required parents"
+        }
+      },
+      "required": []
+    }
+  }
+}

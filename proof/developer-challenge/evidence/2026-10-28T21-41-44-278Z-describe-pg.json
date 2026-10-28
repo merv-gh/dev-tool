@@ -1,0 +1,67 @@
+{
+  "started": "2026-10-28T21:41:44.278Z",
+  "ended": "2026-10-28T21:41:44.549Z",
+  "durationMs": 271,
+  "tool": "tool_describe",
+  "args": {
+    "name": "pg_query"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/dev-tool",
+    "JAVA_HOME": null
+  },
+  "exitCode": 0,
+  "stdoutBytes": 1365,
+  "stderrBytes": 112,
+  "stdout": "{\n  \"name\": \"pg_query\",\n  \"description\": \"Run read-only SQL. The database is chosen from the schema in the query (or pass db). Always use WHERE and LIMIT. Returns a preview plus `view`, a link to the full result as an interactive table (shown to the user inline). Mention the link.\",\n  \"group\": \"pg\",\n  \"origin\": \"built-in\",\n  \"execution\": {\n    \"protocol\": \"dt.tool/v1\",\n    \"transport\": \"in-process\"\n  },\n  \"inputSchema\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"sql\": {\n        \"type\": \"string\",\n        \"description\": \"SQL\"\n      },\n      \"env\": {\n        \"type\": \"string\",\n        \"enum\": [\n          \"dev\"\n        ],\n        \"default\": \"dev\",\n        \"description\": \"Environment\"\n      },\n      \"db\": {\n        \"type\": \"string\",\n        \"description\": \"Database name from envs.json (optional)\"\n      },\n      \"params\": {\n        \"type\": \"array\",\n        \"items\": {},\n        \"description\": \"Bound values for $1, $2, ... placeholders (recommended for repeatable experiments)\"\n      },\n      \"limit\": {\n        \"type\": \"integer\",\n        \"description\": \"Rows in the preview\",\n        \"default\": 10\n      },\n      \"all\": {\n        \"type\": \"boolean\",\n        \"default\": false,\n        \"description\": \"Return every row (up to 10000) instead of a preview: for scripts that compare or process them\"\n      }\n    },\n    \"required\": [\n      \"sql\"\n    ]\n  }\n}\n",
+  "stderr": "21:41:44 dt call tool_describe#1dsq start {\"name\":\"pg_query\"} (cli)\n21:41:44 dt call tool_describe#1dsq ok 22ms\n",
+  "result": {
+    "name": "pg_query",
+    "description": "Run read-only SQL. The database is chosen from the schema in the query (or pass db). Always use WHERE and LIMIT. Returns a preview plus `view`, a link to the full result as an interactive table (shown to the user inline). Mention the link.",
+    "group": "pg",
+    "origin": "built-in",
+    "execution": {
+      "protocol": "dt.tool/v1",
+      "transport": "in-process"
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sql": {
+          "type": "string",
+          "description": "SQL"
+        },
+        "env": {
+          "type": "string",
+          "enum": [
+            "dev"
+          ],
+          "default": "dev",
+          "description": "Environment"
+        },
+        "db": {
+          "type": "string",
+          "description": "Database name from envs.json (optional)"
+        },
+        "params": {
+          "type": "array",
+          "items": {},
+          "description": "Bound values for $1, $2, ... placeholders (recommended for repeatable experiments)"
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Rows in the preview",
+          "default": 10
+        },
+        "all": {
+          "type": "boolean",
+          "default": false,
+          "description": "Return every row (up to 10000) instead of a preview: for scripts that compare or process them"
+        }
+      },
+      "required": [
+        "sql"
+      ]
+    }
+  }
+}

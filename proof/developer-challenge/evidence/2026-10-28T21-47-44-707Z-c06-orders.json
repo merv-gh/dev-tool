@@ -1,0 +1,51 @@
+{
+  "started": "2026-10-28T21:47:44.707Z",
+  "ended": "2026-10-28T21:47:45.443Z",
+  "durationMs": 736,
+  "tool": "pg_query",
+  "args": {
+    "env": "fixture",
+    "db": "orders",
+    "sql": "select o.tenant_id::text,o.id::text,o.account_id::text,o.status,o.amount::text,a.enabled from sales.orders o join sales.accounts a on a.tenant_id=o.tenant_id and a.id=o.account_id where o.id=$1 order by o.tenant_id limit 10",
+    "params": [
+      "420"
+    ],
+    "all": true
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 469,
+  "stderrBytes": 248,
+  "stdout": "{\n  \"db\": \"orders\",\n  \"route\": \"explicit\",\n  \"ms\": 152,\n  \"total\": 2,\n  \"rows\": [\n    {\n      \"tenant_id\": \"11\",\n      \"id\": \"420\",\n      \"account_id\": \"7\",\n      \"status\": \"PAID\",\n      \"amount\": \"17.000001\",\n      \"enabled\": true\n    },\n    {\n      \"tenant_id\": \"22\",\n      \"id\": \"420\",\n      \"account_id\": \"7\",\n      \"status\": \"PAID\",\n      \"amount\": \"100.000001\",\n      \"enabled\": true\n    }\n  ],\n  \"view\": \"http://127.0.0.1:4000/view/mvsnb49q83eff26a456c350910\"\n}\n",
+  "stderr": "21:47:45 dt call pg_query#1439 start {\"env\":\"fixture\",\"db\":\"orders\",\"sql\":\"select o.tenant_id::text,o.id::text,o.account_id::text,o.status,o.amount::text,a.enabled from sales.orders o join sales.ac…} (cli)\n21:47:45 dt call pg_query#1439 ok 231ms\n",
+  "result": {
+    "db": "orders",
+    "route": "explicit",
+    "ms": 152,
+    "total": 2,
+    "rows": [
+      {
+        "tenant_id": "11",
+        "id": "420",
+        "account_id": "7",
+        "status": "PAID",
+        "amount": "17.000001",
+        "enabled": true
+      },
+      {
+        "tenant_id": "22",
+        "id": "420",
+        "account_id": "7",
+        "status": "PAID",
+        "amount": "100.000001",
+        "enabled": true
+      }
+    ],
+    "view": "http://127.0.0.1:4000/view/mvsnb49q83eff26a456c350910"
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "started": "2026-10-28T21:47:16.282Z",
+  "ended": "2026-10-28T21:47:16.730Z",
+  "durationMs": 448,
+  "tool": "tool_search",
+  "args": {
+    "query": "Bitbucket modules artifact library index",
+    "limit": 3
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 1098,
+  "stderrBytes": 151,
+  "stdout": "{\n  \"total\": 32,\n  \"tools\": [\n    {\n      \"name\": \"bitbucket_file\",\n      \"group\": \"bitbucket\",\n      \"description\": \"Raw content of a file in a Bitbucket repo.\",\n      \"required\": [\n        \"project\",\n        \"repo\",\n        \"path\"\n      ],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"bitbucket_file\"\n        }\n      }\n    },\n    {\n      \"name\": \"bitbucket_files\",\n      \"group\": \"bitbucket\",\n      \"description\": \"List file paths in a Bitbucket repo (default branch unless `at`). Filter by substring, e.g. \\\"application\\\" or \\\".yml\\\".\",\n      \"required\": [\n        \"project\",\n        \"repo\"\n      ],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"bitbucket_files\"\n        }\n      }\n    },\n    {\n      \"name\": \"bitbucket_my_prs\",\n      \"group\": \"bitbucket\",\n      \"description\": \"Pull requests across all repos where you are REVIEWER, AUTHOR or PARTICIPANT.\",\n      \"required\": [],\n      \"next\": {\n        \"tool\": \"tool_describe\",\n        \"args\": {\n          \"name\": \"bitbucket_my_prs\"\n        }\n      }\n    }\n  ]\n}\n",
+  "stderr": "21:47:16 dt call tool_search#1i1g start {\"query\":\"Bitbucket modules artifact library index\",\"limit\":3} (cli)\n21:47:16 dt call tool_search#1i1g ok 69ms\n",
+  "result": {
+    "total": 32,
+    "tools": [
+      {
+        "name": "bitbucket_file",
+        "group": "bitbucket",
+        "description": "Raw content of a file in a Bitbucket repo.",
+        "required": [
+          "project",
+          "repo",
+          "path"
+        ],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "bitbucket_file"
+          }
+        }
+      },
+      {
+        "name": "bitbucket_files",
+        "group": "bitbucket",
+        "description": "List file paths in a Bitbucket repo (default branch unless `at`). Filter by substring, e.g. \"application\" or \".yml\".",
+        "required": [
+          "project",
+          "repo"
+        ],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "bitbucket_files"
+          }
+        }
+      },
+      {
+        "name": "bitbucket_my_prs",
+        "group": "bitbucket",
+        "description": "Pull requests across all repos where you are REVIEWER, AUTHOR or PARTICIPANT.",
+        "required": [],
+        "next": {
+          "tool": "tool_describe",
+          "args": {
+            "name": "bitbucket_my_prs"
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "workspace": "c04-main-43a5",
+  "path": "src/reservations.cjs",
+  "content": "exports.ttlMillis = function(value) {\n  if (typeof value === 'number') {\n    if (!Number.isSafeInteger(value) || value <= 0) throw new Error('invalid reservation TTL');\n    return value;\n  }\n  const match = typeof value === 'string' && /^([0-9]+)(ms|s|m)$/.exec(value);\n  if (!match) throw new Error('invalid reservation TTL');\n  const ttl = BigInt(match[1]) * ({ms:1n,s:1000n,m:60000n}[match[2]]);\n  if (ttl <= 0n || ttl > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error('invalid reservation TTL');\n  return Number(ttl);\n};\nexports.isReserved = (createdAt, now, config) => now - createdAt < exports.ttlMillis(config.reservationTtl);\n"
+}

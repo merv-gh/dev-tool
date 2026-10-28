@@ -1,0 +1,27 @@
+{
+  "started": "2026-10-28T21:51:07.083Z",
+  "ended": "2026-10-28T21:51:07.346Z",
+  "durationMs": 263,
+  "tool": "find",
+  "args": {
+    "q": "repo: ledger-amounts",
+    "env": "fixture"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 117,
+  "stderrBytes": 119,
+  "stdout": "[\n  \"repo LIB/common-primitives com.lumen.money:primitives-parent: modules decimal (ledger-amounts); dirs decimal\"\n]\n",
+  "stderr": "21:51:07 dt call find#1g25 start {\"q\":\"repo: ledger-amounts\",\"env\":\"fixture\"} (cli)\n21:51:07 dt call find#1g25 ok 18ms\n",
+  "result": [
+    "repo LIB/common-primitives com.lumen.money:primitives-parent: modules decimal (ledger-amounts); dirs decimal"
+  ],
+  "requestSha256": "599fb9e84b531884e0821f0aa1cde5e39370d8e17753b7553e95ae536c39fec7",
+  "stdoutSha256": "45839c0bebcedf2104a74b30c4cf629265257bb5629de40f66c69ea6a0aa12bb",
+  "stderrSha256": "bfaf6859884bd15812e86012a56b3d89dbd9ece1ddb8a005759ab36ce6345274"
+}

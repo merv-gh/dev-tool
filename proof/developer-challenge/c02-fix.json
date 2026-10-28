@@ -1,0 +1,5 @@
+{
+  "workspace": "c02-main-728a",
+  "path": "checkout/src/checkout.cjs",
+  "content": "exports.place = async function(order, reservations) {\n  if (!order || typeof order.id !== 'string' || !order.id || typeof order.currency !== 'string' || !/^[A-Z]{3}$/.test(order.currency)) throw new Error('invalid order');\n  if (typeof order.total !== 'string' || !/^[0-9]+(?:\\.[0-9]{1,2})?$/.test(order.total)) throw new Error('invalid total');\n  const [whole, fraction = ''] = order.total.split('.');\n  const cents = BigInt(whole) * 100n + BigInt(fraction.padEnd(2, '0'));\n  if (cents > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error('invalid total');\n  return reservations({ orderId: order.id, amountCents: Number(cents), currency: order.currency });\n};\n"
+}

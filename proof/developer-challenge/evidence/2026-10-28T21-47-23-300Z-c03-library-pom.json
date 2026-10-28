@@ -1,0 +1,29 @@
+{
+  "started": "2026-10-28T21:47:23.300Z",
+  "ended": "2026-10-28T21:47:23.765Z",
+  "durationMs": 465,
+  "tool": "workspace_read",
+  "args": {
+    "workspace": "common-primitives-main-7397",
+    "path": "decimal/pom.xml"
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 468,
+  "stderrBytes": 163,
+  "stdout": "{\n  \"id\": \"common-primitives-main-7397\",\n  \"path\": \"decimal/pom.xml\",\n  \"from\": 1,\n  \"to\": 2,\n  \"lines\": 2,\n  \"text\": \"    1  <project xmlns=\\\"http://maven.apache.org/POM/4.0.0\\\"><modelVersion>4.0.0</modelVersion><parent><groupId>com.lumen.money</groupId><artifactId>primitives-parent</artifactId><version>2.4.1</version></parent><artifactId>ledger-amounts</artifactId><properties><maven.compiler.release>17</maven.compiler.release></properties></project>\\n    2  \"\n}\n",
+  "stderr": "21:47:23 dt call workspace_read#1nhr start {\"workspace\":\"common-primitives-main-7397\",\"path\":\"decimal/pom.xml\"} (cli)\n21:47:23 dt call workspace_read#1nhr ok 34ms\n",
+  "result": {
+    "id": "common-primitives-main-7397",
+    "path": "decimal/pom.xml",
+    "from": 1,
+    "to": 2,
+    "lines": 2,
+    "text": "    1  <project xmlns=\"http://maven.apache.org/POM/4.0.0\"><modelVersion>4.0.0</modelVersion><parent><groupId>com.lumen.money</groupId><artifactId>primitives-parent</artifactId><version>2.4.1</version></parent><artifactId>ledger-amounts</artifactId><properties><maven.compiler.release>17</maven.compiler.release></properties></project>\n    2  "
+  }
+}

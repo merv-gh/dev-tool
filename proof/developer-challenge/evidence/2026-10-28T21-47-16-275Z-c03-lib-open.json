@@ -1,0 +1,46 @@
+{
+  "started": "2026-10-28T21:47:16.275Z",
+  "ended": "2026-10-28T21:47:17.475Z",
+  "durationMs": 1200,
+  "tool": "workspace_open",
+  "args": {
+    "project": "LIB",
+    "repo": "common-primitives",
+    "ref": "main",
+    "fresh": true
+  },
+  "env": {
+    "DT_HOME": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/dt-home",
+    "JAVA_HOME": null,
+    "GIT_CONFIG_GLOBAL": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/gitconfig",
+    "DT_PROOF_SETUP": "/Users/user/.codex/worktrees/developer-challenge-proof/prepared/setup.json"
+  },
+  "exitCode": 0,
+  "stdoutBytes": 535,
+  "stderrBytes": 413,
+  "stdout": "{\n  \"job\": \"mvsnai1tcb9372\",\n  \"state\": \"done\",\n  \"id\": \"common-primitives-main-7397\",\n  \"project\": \"LIB\",\n  \"repo\": \"common-primitives\",\n  \"ref\": \"main\",\n  \"sha\": \"6f76bff2c5c699a70e64b591799200a3f142f544\",\n  \"commitDate\": \"2026-10-29T00:47:00+03:00\",\n  \"service\": null,\n  \"env\": null,\n  \"path\": \"work/common-primitives-main-7397\",\n  \"createdAt\": \"2026-10-28T21:47:17.341Z\",\n  \"usedAt\": \"2026-10-28T21:47:17.341Z\",\n  \"session\": null,\n  \"libs\": [],\n  \"files\": 3,\n  \"classes\": 1,\n  \"build\": [\n    \"decimal/pom.xml\",\n    \"pom.xml\"\n  ]\n}\n",
+  "stderr": "21:47:16 dt call workspace_open#1i18 start {\"project\":\"LIB\",\"repo\":\"common-primitives\",\"ref\":\"main\",\"fresh\":true} (cli)\n21:47:16 dt job workspace_open LIB/common-primitives@main#2i1z start {\"job\":\"mvsnai1tcb9372\"} (job)\n21:47:17 dt job workspace_open LIB/common-primitives@main#2i1z ok 826ms  git init 148ms · git fetch 351ms · git checkout 67ms · code index 50ms\n21:47:17 dt call workspace_open#1i18 ok 854ms\n",
+  "result": {
+    "job": "mvsnai1tcb9372",
+    "state": "done",
+    "id": "common-primitives-main-7397",
+    "project": "LIB",
+    "repo": "common-primitives",
+    "ref": "main",
+    "sha": "6f76bff2c5c699a70e64b591799200a3f142f544",
+    "commitDate": "2026-10-29T00:47:00+03:00",
+    "service": null,
+    "env": null,
+    "path": "work/common-primitives-main-7397",
+    "createdAt": "2026-10-28T21:47:17.341Z",
+    "usedAt": "2026-10-28T21:47:17.341Z",
+    "session": null,
+    "libs": [],
+    "files": 3,
+    "classes": 1,
+    "build": [
+      "decimal/pom.xml",
+      "pom.xml"
+    ]
+  }
+}
