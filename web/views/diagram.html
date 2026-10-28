@@ -1,0 +1,200 @@
+<!-- {"description":"Architecture diagrams with source exports, provenance, pan and zoom. DATA: {model:{nodes,relations,flows}, diagrams:[{name,format,view,source,svg?}]}; Mermaid is rendered locally in this sandbox after loading the CDN library. No diagram data leaves the page.","sample":{"model":{"title":"Order flow","nodes":[{"id":"buyer","name":"Customer","kind":"person"},{"id":"orders","name":"Order service","kind":"service","technology":"Java","provenance":[{"source":"passport","file":"OrderController.java","line":32}]},{"id":"created","name":"order_created","kind":"topic","technology":"Kafka"}],"relations":[{"from":"buyer","to":"orders","label":"Place order","technology":"HTTP","provenance":[{"source":"code","file":"OrderController.java","line":32}]},{"from":"orders","to":"created","label":"Publish","provenance":[{"source":"docs","block":"p812.b14"}]}]}}} -->
+<style>
+  .diagram { display:grid; gap:10px; }
+  .diagram .vhead { margin:0; }
+  .diagram button:focus-visible, .diagram select:focus-visible, .diagram-stage:focus-visible, .diagram summary:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+  .diagram ::selection { background:var(--accent-soft); color:var(--fg); }
+  .diagram-tabs { display:flex; gap:2px; overflow-x:auto; border-bottom:1px solid var(--line); padding-bottom:6px; }
+  .diagram-tabs button { border-color:transparent; background:transparent; }
+  .diagram-tabs [aria-selected="true"] { background:var(--accent-soft); color:var(--accent); border-color:var(--accent); }
+  .diagram-tools { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .diagram-tools .zoom-level { min-width:44px; text-align:center; font-variant-numeric:tabular-nums; }
+  .diagram-tools label { display:flex; gap:6px; align-items:center; }
+  .diagram-stage { min-height:420px; height:min(64vh,700px); position:relative; overflow:hidden; border:1px solid var(--line); border-radius:8px; background:var(--panel); touch-action:none; cursor:grab; }
+  .diagram-stage.dragging { cursor:grabbing; }
+  .diagram-stage svg { display:block; max-width:none; overflow:visible; color:var(--fg); font-family:ui-sans-serif,system-ui,sans-serif; }
+  .diagram-stage svg text:not([fill]), .diagram-stage svg tspan:not([fill]) { fill:var(--fg); }
+  .diagram-stage svg .node rect, .diagram-stage svg .node polygon, .diagram-stage svg .node circle, .diagram-stage svg .node path, .diagram-stage svg .actor, .diagram-stage svg .labelBox { fill:var(--accent-soft); stroke:var(--accent); }
+  .diagram-stage svg .node.person rect, .diagram-stage svg .node.person path, .diagram-stage svg .node.person polygon, .diagram-stage svg .node.system rect { fill:#2457c5; stroke:#173d8b; }
+  .diagram-stage svg .node.person text, .diagram-stage svg .node.system text { fill:#fff; }
+  .diagram-stage svg .node.database path { fill:var(--good-bg); stroke:var(--good); }
+  .diagram-stage svg .node.topic rect { fill:var(--warn-bg); stroke:var(--warn); }
+  .diagram-stage svg .cluster rect, .diagram-stage svg .note { fill:var(--soft); stroke:var(--line); }
+  .diagram-stage svg .flowchart-link, .diagram-stage svg .messageLine0, .diagram-stage svg .messageLine1, .diagram-stage svg .actor-line { stroke:var(--muted); }
+  .diagram-stage svg marker path { fill:var(--muted); stroke:var(--muted); }
+  .diagram-stage svg .edgeLabel rect, .diagram-stage svg .labelBkg { fill:var(--panel); }
+  .diagram-transform { transform-origin:0 0; position:absolute; top:0; left:0; }
+  .diagram-message { position:absolute; inset:0; display:grid; align-content:center; justify-items:center; gap:8px; padding:28px; color:var(--muted); text-align:center; }
+  .diagram-message strong { color:var(--fg); font-weight:600; }
+  .diagram-status { min-height:20px; font-size:12px; color:var(--muted); overflow-wrap:anywhere; }
+  .diagram-legend { display:flex; gap:18px; align-items:center; flex-wrap:wrap; font-size:12px; color:var(--muted); }
+  .diagram-legend span { display:flex; align-items:center; gap:6px; }
+  .diagram-legend i { display:block; width:24px; height:0; border-top:2px solid var(--muted); }
+  .diagram-legend .stated { border-top-style:dashed; }
+  .diagram-legend .conflict { border-top-color:var(--bad); }
+  .diagram details { border-top:1px solid var(--line); padding-top:10px; }
+  .diagram summary { cursor:pointer; margin-bottom:8px; }
+  .diagram-source { max-height:340px; }
+  .diagram-provenance { margin:0; padding-left:20px; max-height:240px; overflow:auto; font-size:12px; }
+  .diagram-provenance li { margin:5px 0; overflow-wrap:anywhere; }
+  .diagram[data-theme="light"] { --panel:#fff; --fg:#1d1d1b; --muted:#6b6b66; --line:#e4e3df; --soft:#f2f1ee; --accent:#2457c5; --accent-soft:#e8eefb; --good:#2f7d32; --good-bg:#e3f1e4; --warn:#8a5300; --warn-bg:#fdf0d5; --bad:#a3231a; }
+  .diagram[data-theme="dark"] { --panel:#1b1b1a; --fg:#e8e7e3; --muted:#a8a79f; --line:#343431; --soft:#232321; --accent:#8eb0f7; --accent-soft:#1f2a44; --good:#8fd092; --good-bg:#1d3a1f; --warn:#f0cf8a; --warn-bg:#43330f; --bad:#f6b8b1; }
+  .diagram-stage, .diagram-source { scrollbar-color:var(--muted) var(--soft); }
+  @media(max-width:600px) { .diagram-stage { min-height:330px; height:52vh; } .diagram-tools .spacer { display:none; } .diagram-tools { gap:5px; } .diagram-tools button { padding:6px 8px; } }
+</style>
+<div class="diagram" id="diagram">
+  <div class="vhead"><h1 data-title>Architecture</h1><span class="spacer"></span><span id="diagram-count" class="muted"></span></div>
+  <div class="diagram-tabs" id="diagram-tabs" role="tablist" aria-label="Diagrams"></div>
+  <div class="diagram-tools" aria-label="Diagram controls">
+    <button type="button" id="diagram-out" aria-label="Zoom out">−</button><output class="zoom-level" id="diagram-zoom">100%</output><button type="button" id="diagram-in" aria-label="Zoom in">+</button><button type="button" id="diagram-fit">Fit</button>
+    <span class="spacer"></span>
+    <label>Theme <select id="diagram-theme"><option value="auto">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+    <button type="button" id="diagram-download-svg" disabled>Download SVG</button><button type="button" id="diagram-download-source">Download source</button>
+  </div>
+  <div class="diagram-stage" id="diagram-stage" tabindex="0" role="tabpanel" aria-label="Architecture diagram. Drag to pan. Use plus and minus to zoom, zero to fit, or arrow keys to pan."><div id="diagram-canvas" class="diagram-transform"></div><div id="diagram-message" class="diagram-message" role="status">Preparing diagram…</div></div>
+  <div class="diagram-legend" aria-label="Provenance legend"><span><i></i>Verified in code</span><span><i class="stated"></i>Docs only</span><span><i class="conflict"></i>Conflict</span></div>
+  <div id="diagram-status" class="diagram-status" aria-live="polite">Hover over an element to see its source. Drag to pan; use + / − to zoom.</div>
+  <details><summary>Diagram source</summary><pre class="src diagram-source" id="diagram-source"></pre></details>
+  <details id="diagram-evidence"><summary>Element provenance</summary><ul id="diagram-provenance" class="diagram-provenance"></ul></details>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+(() => {
+  const D = DATA || {}, model = D.model || (D.nodes ? D : {}), root = dt.$('#diagram'), stage = dt.$('#diagram-stage'), canvas = dt.$('#diagram-canvas');
+  const message = dt.$('#diagram-message'), status = dt.$('#diagram-status'), sourceEl = dt.$('#diagram-source'), svgButton = dt.$('#diagram-download-svg');
+  const text = value => String(value ?? '');
+  const singleLine = value => text(value).replace(/[\u0000-\u001f\u007f\u2028\u2029]/g, ' ');
+  const quote = value => singleLine(value).replace(/[&"<>\[\]{}|;:#\\]/g, ch => `#${ch.codePointAt(0)};`);
+  const nodes = model.nodes || [], aliases = new Map(nodes.map((n, i) => [text(n.id), `n${i + 1}`]));
+  const verified = r => r.verified || r.confidence === 'verified' || (Array.isArray(r.provenance) ? r.provenance : [r.provenance]).filter(Boolean).some(p => /verified|code|passport|catalog/i.test(typeof p === 'string' ? p : `${p.source || p.kind || p.type || ''} ${p.weight || p.confidence || p.status || ''}`));
+  function metadata(n) {
+    const parts = [n.technology, n.owner ? `Owner: ${n.owner}` : '', n.version ? `Version: ${n.version}` : ''];
+    if (/topic|queue|kafka/.test(text(n.kind))) {
+      let schema = n.schema || {}; if (typeof schema === 'string') { try { schema = JSON.parse(schema); } catch { schema = {name:schema}; } }
+      let definition = schema.schema || {}; if (typeof definition === 'string') { try { definition = JSON.parse(definition); } catch { definition = {}; } }
+      const name = schema.name || schema.subject || definition.name || definition.title || schema.type;
+      if (name) parts.push(`Schema: ${name}${schema.version != null ? ` v${schema.version}` : ''}`);
+      if (n.partitions != null) parts.push(`Partitions: ${n.partitions}`);
+      const timestamp = new Date(n.lastMessageAt).getTime();
+      if (n.lastMessageAge != null) parts.push(`Last message age: ${n.lastMessageAge}`);
+      else if (n.lastMessageAt && Number.isFinite(timestamp)) { const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000)); parts.push(`Last message: ${seconds < 60 ? seconds + 's' : seconds < 3600 ? Math.floor(seconds / 60) + 'm' : seconds < 86400 ? Math.floor(seconds / 3600) + 'h' : Math.floor(seconds / 86400) + 'd'} ago (${n.lastMessageAt})`); }
+    }
+    parts.push(...(n.tables || []).map(t => typeof t === 'string' ? t : t.name)); return parts.filter(Boolean);
+  }
+  function build(view, flow) {
+    const relations = flow ? flow.steps || [] : model.relations || [];
+    const lines = [view === 'sequence' ? 'sequenceDiagram' : 'flowchart LR'];
+    if (view === 'sequence') lines.push('autonumber');
+    for (const n of nodes) {
+      const id = aliases.get(text(n.id)), label = quote(n.name || n.label || n.id), kind = text(n.kind);
+      if (view === 'sequence') lines.push(`${/person|actor/.test(kind) ? 'actor' : 'participant'} ${id} as ${label}`);
+      else lines.push(`${id}${/database|table/.test(kind) ? '[("' : '["'}${[label,...metadata(n).map(quote)].join('<br/>')}${/database|table/.test(kind) ? '")]' : '"]'}`);
+    }
+    for (const [index, r] of relations.entries()) {
+      const from = aliases.get(text(r.from)), to = aliases.get(text(r.to)); if (!from || !to) continue;
+      const label = quote(`${r.label || ''}${r.technology ? ` [${r.technology}]` : ''}${r.conflict ? ' [CONFLICT]' : ''}`);
+      if (view === 'sequence') {
+        if (r.conflict) lines.push('rect rgb(255, 228, 225)');
+        lines.push(`${from}${verified(r) ? '->>' : '-->>'}${to}: ${label}`);
+        if (r.conflict) lines.push('end');
+      } else {
+        lines.push(`${from} ${verified(r) || r.conflict ? '-->' : '-.->'}|"${label}"| ${to}`);
+        if (r.conflict) lines.push(`linkStyle ${index} stroke:#b42318,stroke-width:3px,color:#b42318`);
+      }
+    }
+    return lines.join('\n');
+  }
+  let diagrams = (D.diagrams || []).filter(d => d && (d.source || d.svg));
+  if (!diagrams.length && nodes.length) diagrams = [{ name:'Context', format:'mermaid', view:'context', source:build('context') }, { name:'Container', format:'mermaid', view:'container', source:build('container') }, ...(model.flows || []).map(flow => ({ name:`Sequence: ${flow.name || 'Flow'}`, format:'mermaid', view:'sequence', source:build('sequence', flow) }))];
+  let active = 0, zoom = 1, panX = 0, panY = 0, width = 800, height = 500, revision = 0, currentSvg = null, gesture = null;
+  dt.title(META.title || model.title || model.name || 'Architecture');
+  dt.$('#diagram-count').textContent = `${nodes.length} elements · ${(model.relations || []).length} relations`;
+  function transform() { canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`; dt.$('#diagram-zoom').textContent = `${Math.round(zoom * 100)}%`; }
+  function fit() { zoom = Math.min(3, Math.max(.1, Math.min((stage.clientWidth - 36) / width, (stage.clientHeight - 36) / height))); panX = (stage.clientWidth - width * zoom) / 2; panY = (stage.clientHeight - height * zoom) / 2; transform(); }
+  function changeZoom(factor, x = stage.clientWidth / 2, y = stage.clientHeight / 2) { const next = Math.min(8, Math.max(.1, zoom * factor)); panX = x - (x - panX) * next / zoom; panY = y - (y - panY) * next / zoom; zoom = next; transform(); }
+  function provenance(value) {
+    return (Array.isArray(value) ? value : [value]).filter(Boolean).map(p => typeof p === 'string' ? p : [p.source || p.kind || p.type, p.pageTitle || p.title, p.block || p.blockId, p.file && `${p.file}${p.line ? ':' + p.line : ''}`, p.url].filter(Boolean).join(' · ')).join('\n');
+  }
+  // Renderer output is untrusted. DOM allowlisting discards active/embedded HTML and all URLs.
+  function safeSvg(value) {
+    if (text(value).length > 8 * 1024 * 1024 || /<!DOCTYPE|<!ENTITY/i.test(value)) throw new Error('The SVG contains unsupported markup. Download its source to inspect it.');
+    const doc = new DOMParser().parseFromString(text(value), 'image/svg+xml');
+    if (doc.querySelector('parsererror') || doc.documentElement.localName !== 'svg') throw new Error('The renderer returned invalid SVG.');
+    const allowedTags = new Set('svg g path rect circle ellipse line polyline polygon text tspan defs marker linearGradient radialGradient stop clipPath mask pattern title desc'.split(' '));
+    const allowedAttrs = new Set('id class x y x1 x2 y1 y2 cx cy r rx ry dx dy d points width height viewBox preserveAspectRatio transform fill fill-opacity fill-rule stroke stroke-width stroke-opacity stroke-dasharray stroke-dashoffset stroke-linecap stroke-linejoin stroke-miterlimit opacity font-family font-size font-weight font-style text-anchor dominant-baseline alignment-baseline letter-spacing textLength lengthAdjust marker-start marker-mid marker-end markerWidth markerHeight markerUnits refX refY orient gradientUnits gradientTransform offset stop-color stop-opacity clip-path clip-rule clipPathUnits mask maskUnits patternUnits patternTransform role aria-label aria-labelledby aria-describedby data-node-id xmlns'.split(' '));
+    const svg = doc.documentElement;
+    for (const el of [svg, ...svg.querySelectorAll('*')]) {
+      if (!allowedTags.has(el.localName) || el.namespaceURI !== 'http://www.w3.org/2000/svg') { if (el.localName === 'a') el.replaceWith(...el.childNodes); else el.remove(); continue; }
+      for (const attr of [...el.attributes]) {
+        const v = attr.value;
+        if (attr.name === 'style') { const safe = v.split(';').map(part => part.trim()).filter(part => /^(?:fill|fill-opacity|stroke|stroke-width|stroke-opacity|stroke-dasharray|font-family|font-size|font-weight|font-style|text-anchor|opacity)\s*:\s*[-#(),.%\w\s]+$/.test(part) && !/url\s*\(|expression\s*\(|javascript/i.test(part)); if (safe.length) el.setAttribute('style',safe.join(';')); else el.removeAttribute('style'); continue; }
+        if (!allowedAttrs.has(attr.name) || (/url\s*\(/i.test(v) && !/^url\(#[\w:.-]+\)$/.test(v.trim())) || /javascript:|data:|https?:|@import|expression\s*\(|[\\]/i.test(v) && attr.name !== 'xmlns') el.removeAttribute(attr.name);
+      }
+    }
+    return document.importNode(svg, true);
+  }
+  function attachProvenance(svg) {
+    const entries = [];
+    nodes.forEach((n, i) => {
+      const details = [n.name || n.label || n.id, n.kind, ...metadata(n), provenance(n.provenance)].filter(Boolean).join('\n');
+      entries.push({ aliases:[`n${i + 1}`, text(n.id)], details });
+    });
+    for (const r of model.relations || []) entries.push({ relation:true, aliases:[`${aliases.get(text(r.from))}_${aliases.get(text(r.to))}`, `${aliases.get(text(r.from))}-${aliases.get(text(r.to))}`], details:[`${r.from} → ${r.to}`, r.label, r.conflict ? 'Documented relation lacks matching cached code evidence' : verified(r) ? 'Verified in code' : 'Stated in docs', provenance(r.provenance)].filter(Boolean).join('\n') });
+    for (const el of svg.querySelectorAll('[id], [data-node-id]')) {
+      const id = el.id || el.getAttribute('data-node-id') || '';
+      const entry = entries.find(e => e.aliases.some(a => a && (id === a || (e.relation ? id.includes(a) : new RegExp(`(?:^|[-_])${a.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:$|[-_])`).test(id)))));
+      if (!entry) continue;
+      const title = document.createElementNS('http://www.w3.org/2000/svg','title'); title.textContent = entry.details; el.prepend(title);
+      el.addEventListener('pointerenter', () => { status.textContent = entry.details.replace(/\n/g, ' · '); });
+      el.addEventListener('pointerleave', () => { status.textContent = 'Hover over an element to see its source. Drag to pan; use + / − to zoom.'; });
+    }
+  }
+  function showMessage(title, detail) { message.replaceChildren(); const strong = document.createElement('strong'); strong.textContent = title; message.append(strong); if (detail) { const span = document.createElement('span'); span.textContent = detail; message.append(span); } message.hidden = false; message.style.display = 'grid'; }
+  async function draw(index) {
+    active = index; const mine = ++revision, diagram = diagrams[index]; currentSvg = null; canvas.replaceChildren(); svgButton.disabled = true;
+    for (const [i, tab] of [...dt.$('#diagram-tabs').children].entries()) { tab.setAttribute('aria-selected', String(i === index)); tab.tabIndex = i === index ? 0 : -1; }
+    stage.setAttribute('aria-labelledby', `diagram-tab-${index}`);
+    sourceEl.textContent = diagram?.source || '';
+    if (!diagram) { showMessage('No diagram data', 'Pass a model with nodes and relations, or a diagrams array containing Mermaid source or SVG.'); return; }
+    showMessage('Rendering diagram…');
+    try {
+      let raw = diagram.svg;
+      if (!raw && diagram.format === 'mermaid') {
+        if (!window.mermaid) throw new Error('The Mermaid library could not load. Download the source, or provide a rendered SVG.');
+        const dark = root.dataset.theme === 'dark' || (root.dataset.theme === 'auto' && matchMedia('(prefers-color-scheme:dark)').matches);
+        mermaid.initialize({ startOnLoad:false, securityLevel:'strict', theme:dark ? 'dark' : 'default', suppressErrorRendering:true, maxTextSize:100000, flowchart:{ htmlLabels:false }, secure:['securityLevel','startOnLoad','maxTextSize','suppressErrorRendering'] });
+        // Remove per-document configuration and interaction directives; labels stay as data.
+        const input = text(diagram.source).trimStart().replace(/^---\s*\n[\s\S]*?\n---\s*\n/, '').replace(/%%\{[\s\S]*?\}%%/g,'').replace(/^\s*(?:click|link)\s+.*$/gm,'');
+        raw = (await mermaid.render(`dt-diagram-${mine}`, input)).svg;
+      }
+      if (mine !== revision) return;
+      if (!raw) { showMessage('Source ready to export', diagram.reason || 'This format needs server-side SVG rendering. Choose a Mermaid tab to view the same model here.'); return; }
+      const svg = safeSvg(raw); attachProvenance(svg); const vb = (svg.getAttribute('viewBox') || '').split(/[ ,]+/).map(Number);
+      width = vb[2] > 0 ? vb[2] : parseFloat(svg.getAttribute('width')) || 800; height = vb[3] > 0 ? vb[3] : parseFloat(svg.getAttribute('height')) || 500;
+      svg.setAttribute('width', String(width)); svg.setAttribute('height', String(height)); svg.setAttribute('role','img'); svg.setAttribute('aria-label', diagram.name || 'Architecture diagram'); canvas.append(svg); currentSvg = svg;
+      message.hidden = true; message.style.display = 'none'; svgButton.disabled = false; fit();
+    } catch (error) { if (mine === revision) showMessage('Diagram could not render', `${error.message} The source remains available below.`); }
+  }
+  function download(contents, type, extension) {
+    const blob = new Blob([contents], { type }), url = URL.createObjectURL(blob), anchor = document.createElement('a');
+    anchor.href = url; anchor.download = `${text(diagrams[active]?.name || 'architecture').replace(/[^a-z0-9_-]+/gi,'-').replace(/^-|-$/g,'') || 'diagram'}.${extension}`; document.body.append(anchor); anchor.click(); anchor.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  dt.$('#diagram-tabs').replaceChildren(...diagrams.map((d, i) => { const button = document.createElement('button'); button.type = 'button'; button.id = `diagram-tab-${i}`; button.role = 'tab'; button.setAttribute('aria-controls','diagram-stage'); button.textContent = `${d.name || d.view || 'Diagram'}${diagrams.some(x => x !== d && x.name === d.name) ? ` · ${d.format}` : ''}`; button.onclick = () => draw(i); return button; }));
+  dt.$('#diagram-tabs').addEventListener('keydown', event => { if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key) || !diagrams.length) return; event.preventDefault(); const next = event.key === 'Home' ? 0 : event.key === 'End' ? diagrams.length - 1 : (active + (event.key === 'ArrowRight' ? 1 : -1) + diagrams.length) % diagrams.length; draw(next); dt.$(`#diagram-tab-${next}`).focus(); });
+  dt.$('#diagram-in').onclick = () => changeZoom(1.25); dt.$('#diagram-out').onclick = () => changeZoom(.8); dt.$('#diagram-fit').onclick = fit;
+  dt.$('#diagram-theme').onchange = event => { root.dataset.theme = event.target.value; draw(active); };
+  root.dataset.theme = 'auto';
+  dt.$('#diagram-download-source').onclick = () => { const d = diagrams[active]; if (d) download(d.source || '', 'text/plain;charset=utf-8', ({mermaid:'mmd',plantuml:'puml','c4-plantuml':'puml',structurizr:'dsl'})[d.format] || 'txt'); };
+  svgButton.onclick = () => { if (!currentSvg) return; const svg = currentSvg.cloneNode(true), css = document.createElementNS('http://www.w3.org/2000/svg','style'); css.textContent = 'text,tspan{font-family:system-ui,sans-serif;fill:#1d1d1b}.node rect,.actor,.labelBox{fill:#e8eefb;stroke:#2457c5}.cluster rect,.note{fill:#f2f1ee;stroke:#e4e3df}.flowchart-link,.messageLine0,.messageLine1,.actor-line{stroke:#6b6b66}.edgeLabel rect,.labelBkg{fill:#fff}'; svg.prepend(css); download(new XMLSerializer().serializeToString(svg),'image/svg+xml;charset=utf-8','svg'); };
+  stage.addEventListener('pointerdown', event => { if (event.button !== 0) return; gesture = { id:event.pointerId, x:event.clientX, y:event.clientY, left:panX, top:panY }; stage.setPointerCapture(event.pointerId); stage.classList.add('dragging'); });
+  stage.addEventListener('pointermove', event => { if (!gesture || gesture.id !== event.pointerId) return; panX = gesture.left + event.clientX - gesture.x; panY = gesture.top + event.clientY - gesture.y; transform(); });
+  const finish = () => { gesture = null; stage.classList.remove('dragging'); }; stage.addEventListener('pointerup', finish); stage.addEventListener('pointercancel', finish);
+  stage.addEventListener('wheel', event => { if (!event.ctrlKey && !event.metaKey) return; event.preventDefault(); const bounds = stage.getBoundingClientRect(); changeZoom(Math.exp(-event.deltaY * .002), event.clientX - bounds.left, event.clientY - bounds.top); }, { passive:false });
+  stage.addEventListener('keydown', event => { if (event.key === '+' || event.key === '=') changeZoom(1.25); else if (event.key === '-') changeZoom(.8); else if (event.key === '0') fit(); else if (/^Arrow/.test(event.key)) { panX += event.key === 'ArrowLeft' ? 30 : event.key === 'ArrowRight' ? -30 : 0; panY += event.key === 'ArrowUp' ? 30 : event.key === 'ArrowDown' ? -30 : 0; transform(); } else return; event.preventDefault(); });
+  let lastWidth = 0; new ResizeObserver(() => { if (stage.clientWidth !== lastWidth) { lastWidth = stage.clientWidth; if (currentSvg) fit(); } }).observe(stage);
+  const evidence = nodes.map(n => ({ label:n.name || n.label || n.id, source:provenance(n.provenance) })).filter(n => n.source);
+  dt.$('#diagram-provenance').replaceChildren(...evidence.map(n => { const li = document.createElement('li'); li.textContent = `${n.label}: ${n.source.replace(/\n/g,' · ')}`; return li; }));
+  dt.$('#diagram-evidence').hidden = !evidence.length; dt.$('#diagram-download-source').disabled = !diagrams.length;
+  draw(0);
+})();
+</script>
