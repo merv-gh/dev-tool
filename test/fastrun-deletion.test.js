@@ -25,6 +25,7 @@ if (fs.existsSync(${JSON.stringify(compileFailure)})) process.exit(1);
 `);
 program(path.join(javaHome, 'bin', 'java'), `
 const fs = require('fs'), args = process.argv.slice(2);
+if (args.includes('-version')) { process.stderr.write('openjdk version \"21.0.1\"'); process.exit(0); }
 fs.writeFileSync(args[args.indexOf('DtLauncher') + 1], '[]');
 `);
 const fakeMaven = path.join(home, 'maven.js');
@@ -53,7 +54,7 @@ put(path.join(resources, 'old.properties'), 'old');
 put(path.join(resources, 'keep.properties'), 'keep');
 const out = (...p) => path.join(root, 'target', ...p);
 const logs = [];
-const run = () => require('../lib/fastrun').run({ id: 'deletions', root, plan: { tool: 'maven', module: '.', modDir: root }, cfg: { javaHome, mavenRepo: path.join(home, 'm2'), args: [], timeoutMs: 30000 }, env: process.env, mvn: { cmd: process.execPath, args: [fakeMaven] }, selectors: ['OldTest'], graph: { classes: [], edges: [] }, log: s => logs.push(s) });
+const run = (executionTarget) => require('../lib/fastrun').run({ executionTarget, id: 'deletions', root, plan: { tool: 'maven', module: '.', modDir: root }, cfg: { javaHome, mavenRepo: path.join(home, 'm2'), args: [], timeoutMs: 30000 }, env: process.env, mvn: { cmd: process.execPath, args: [fakeMaven] }, selectors: ['OldTest'], graph: { classes: [], edges: [] }, log: s => logs.push(s) });
 const addIncremental = (file, text) => { put(file, text); const future = new Date(Date.now() + 2000); fs.utimesSync(file, future, future); };
 
 test('deleted original, incrementally added and failed-compile inputs force a clean preparation', async () => {
@@ -94,4 +95,33 @@ test('deleted original, incrementally added and failed-compile inputs force a cl
   assert.equal(commands.length, 3, 'normal edits use javac without another Maven invocation');
   assert.equal(commands[0].includes('clean'), false);
   assert.ok(commands.slice(1).every(args => args.includes('clean')));
+});
+
+
+test('reviewed local transport governs Maven prepare, compiler and launcher despite a global remote runner', async t => {
+  process.env.DT_RUNNER_URL = 'http://configured-remote.invalid:4100';
+  require('../lib/config').reload();
+  const runner = require('../lib/runner'); let remoteCalls = 0, infoCalls = 0;
+  t.mock.method(runner, 'remoteInfo', async () => { infoCalls++; throw new Error('unexpected remote JDK probe'); });
+  t.mock.method(runner, 'exec', async () => { remoteCalls++; throw new Error('unexpected remote command'); });
+  try {
+    const preparedEnv = await require('../lib/testrun').envFor({ tool: 'maven' }, { ...require('../lib/config').getTests(), javaHome }, { forceLocal: true, runnerUrl: null });
+    assert.equal(preparedEnv.javaMajor, 21); assert.equal(infoCalls, 0);
+    const result = await run({ forceLocal: true, requireRunner: false, runnerUrl: null, metadata: { manifestSha256: 'explicit-local' } });
+    assert.equal(result.code, 0, result.out);
+    assert.equal(result.prepared, true, 'target identity invalidates preparation from another placement');
+    assert.equal(remoteCalls, 0, 'all real fake-toolchain subprocesses executed locally');
+  } finally { delete process.env.DT_RUNNER_URL; require('../lib/config').reload(); }
+});
+
+test('fast command dispatch preserves strict remote failure and independent concurrent target contexts', async t => {
+  const fast = require('../lib/fastrun'), remote = require('../lib/runner'); const seen = [];
+  t.mock.method(remote, 'exec', async (cmd, args, opts) => { seen.push(opts); return { code: -1, unreachable: true, out: 'deliberate remote outage', ms: 0 }; });
+  const [local, failure] = await Promise.all([
+    fast.withExecutionTarget({ forceLocal: true }, () => fast.exec(process.execPath, ['-e', 'console.log("local-target")'], { cwd: home, env: { PATH: process.env.PATH }, timeoutMs: 5000 })),
+    fast.withExecutionTarget({ runnerUrl: 'http://reviewed-remote.invalid:4100', requireRunner: true, forceLocal: false }, () => fast.exec(process.execPath, ['-e', 'throw new Error("must not fall back locally")'], { cwd: home, env: {}, timeoutMs: 5000 })),
+  ]);
+  assert.equal(local.code, 0); assert.match(local.out, /local-target/);
+  assert.equal(failure.unreachable, true); assert.equal(failure.code, -1);
+  assert.equal(seen.length, 1); assert.equal(seen[0].runnerUrl, 'http://reviewed-remote.invalid:4100'); assert.equal(seen[0].requireRunner, true);
 });
