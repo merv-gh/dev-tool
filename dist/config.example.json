@@ -26,7 +26,12 @@
   },
 
   "bitbucket": { "url": "https://bitbucket.example.com", "token": "${BITBUCKET_TOKEN}" },
-  "confluence": { "url": "https://confluence.example.com", "user": "${CONFLUENCE_USER}", "token": "${CONFLUENCE_TOKEN}" },
+  "confluence": {
+    "url": "https://confluence.example.com", "type": "server", "user": "${CONFLUENCE_USER}", "token": "${CONFLUENCE_TOKEN}",
+    "spaces": ["SHOP", "PAY"], "vision": false, "rerank": false, "extractRelations": false,
+    "embeddings": { "enabled": false, "baseUrl": "${LLM_BASE_URL}", "model": "${EMBEDDING_MODEL}", "key": "${LLM_API_KEY}" },
+    "diagrams": { "plantumlJar": "${PLANTUML_JAR}", "krokiUrl": "${KROKI_URL}", "java": "java", "runner": false }
+  },
   "passports": { "internalGroups": ["com.example.libs"], "libraryRepos": { "example-starter-*": "LIB/example-starters", "example-audit-core": "LIB/commons/audit" }, "indexRatePerSec": 8 },
   "graph": { "url": "${GRAPH_URL:-http://graph:8000}" },
 

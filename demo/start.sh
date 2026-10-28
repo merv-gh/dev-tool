@@ -33,6 +33,7 @@ cat > "$H/config.json" <<JSON
     }
   },
   "bitbucket": { "url": "http://127.0.0.1:$MOCK", "token": "\${DEMO_BB_TOKEN}" },
+  "confluence": { "url": "http://127.0.0.1:$MOCK", "token": "\${DEMO_BB_TOKEN}", "type": "server", "spaces": ["SHOP"] },
   "passports": { "internalGroups": ["com.acme.libs"] },
   "tools": {
     "custom": [{
@@ -82,4 +83,5 @@ DT_HOME=$H nohup node cli.js serve --port "$DT" > "$H/dt.log" 2>&1 &
 until curl -fsS -o /dev/null "http://127.0.0.1:$DT/health" 2>/dev/null; do sleep 0.5; done
 DT_HOME=$H node cli.js sync all > /dev/null 2>"$H/sync.log"
 DT_HOME=$H node cli.js sync passports --only order-service,payment-service,payments-service > /dev/null 2>>"$H/sync.log"
+DT_HOME=$H node cli.js sync confluence --spaces SHOP > /dev/null 2>>"$H/sync.log"
 echo "demo: http://127.0.0.1:$DT/admin   (stop: sh demo/stop.sh)"

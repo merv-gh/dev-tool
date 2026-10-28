@@ -14,6 +14,7 @@ const QUESTIONS = [
   ['chat-files', 'Browse the partner sftp'],
   ['chat-file', 'Show me the order file from the partner inbox'],
   ['chat-code', 'Compute the average order total per status'],
+  ['chat-refunds', 'How do refunds work?'],
 ].filter(([name]) => !process.env.ONLY || process.env.ONLY.split(',').includes(name));
 
 (async () => {

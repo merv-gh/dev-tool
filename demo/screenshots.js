@@ -55,6 +55,7 @@ const tool = async (name, args) => {
       first: fs.readFileSync(path.join(__dirname, 'files/templates/orders/order-basic.json'), 'utf8'),
       last: (await tool('script_run', { id: 'partner/send-order-js', params: { customerId: 'C-42' } })).results.order })).view],
     ['view-xml', (await tool('show', { view: 'xml', data: fs.readFileSync(path.join(__dirname, 'sftp/partner/inbox/order-1042.xml'), 'utf8'), title: 'partner/inbox/order-1042.xml' })).view],
+    ['feature-refunds', (await tool('feature', { text: 'How do refunds work?', spaces: 'SHOP', env })).view, async p => { await p.waitForSelector('#diagram-canvas svg', { timeout: 30000 }); }],
     ['files', (await tool('files_browse', { store: 'partner' })).view + '?open=reports%2F2026%2F10%2Fsummary.json', async (p) => { await p.waitForSelector('#body .j-tree'); }],
     ['files-xml', (await tool('files_show', { store: 'partner', path: 'partner/inbox/order-1042.xml' })).view, async (p) => { await p.waitForSelector('#body pre.src'); }],
     ['admin-history', `${BASE}/admin#history`, async (p) => { await p.waitForSelector('#patterns .step'); }],
@@ -78,7 +79,7 @@ const tool = async (name, args) => {
   for (const scheme of ['light', 'dark']) {
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 820 }, deviceScaleFactor: 2, colorScheme: scheme });
     for (const [name, url, act] of shots) {
-      if (scheme === 'dark' && !['admin-explore-table', 'dashboard', 'logs', 'passport', 'view-list-diff', 'files'].includes(name)) continue;
+      if (scheme === 'dark' && !['admin-explore-table', 'dashboard', 'logs', 'passport', 'view-list-diff', 'files', 'feature-refunds'].includes(name)) continue;
       const p = await ctx.newPage();
       await p.goto(url, { waitUntil: 'networkidle' });
       await p.addStyleTag({ content: '.pm-side { position: static !important; }' }); // sticky sidebars look misplaced in full-page shots

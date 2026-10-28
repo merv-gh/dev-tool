@@ -5,6 +5,7 @@ Read-only tools that let an AI agent (or you) investigate a microservice environ
 - **An index of your databases.** Postgres tables, columns, views, functions and procedures with their arguments, and **who uses what**: which services read or write a table (from their code, with file:line), which functions, triggers and views touch it, and what calls a function. Also Elasticsearch mappings, Kafka topics (schemas and sample messages), and Consul services.
 - **Service passports.** Static analysis of a Spring service's repo and its internal libraries: HTTP endpoints, Feign and HTTP calls, Kafka in/out, tables and functions used, datasources, dependencies.
 - **Live tools.** Read-only SQL, ES search, the last Kafka messages, health of all services in one call, consumer lag, ELK log search and traces, Bitbucket PRs, Confluence. A headless browser and a code graph are optional.
+- **Documentation knowledge.** Incremental Confluence Server/DC and Cloud cache, structured search, exact versioned quotes, entity/provenance graph and a one-call `feature` investigation with C4/sequence diagrams. [Configuration, tools and demo](docs/confluence-knowledge.md).
 - **Results you can use.** Tables, dashboards, logs, diffs and passports render as pages; in Open WebUI they appear inside the chat.
 - **`/admin`.** Watch what is indexed, refresh all or one source, browse objects and their usages, edit config and notes.
 
@@ -683,7 +684,7 @@ Secrets (`.env`) are never shown or edited there.
 | consul | `health` (every service, one call), `consul_service`, `overview` (live dashboard) |
 | logs | `logs_search`, `logs_trace` |
 | bitbucket | `bitbucket_repos`, `bitbucket_files`, `bitbucket_file`, `bitbucket_prs`, `bitbucket_pr`, `bitbucket_my_prs`, `repo_fetch` |
-| confluence | `confluence_search`, `confluence_page` |
+| confluence | `confluence_search`, `confluence_page`, `docs_search`, `docs_page`, `docs_verify`, `feature`, `diagram` |
 | passport | `passport`, `passports`, `who_uses` |
 | code | `code_index`, `code_search`, `code_symbols`, `code_read`, `impact`, `ddl_snapshot`, `workspace_open`, `workspace_list`, `workspace_read`, `workspace_write`, `workspace_patch`, `workspace_drop`, `test_data`, `test_context`, `test_run` |
 | browser | `browser_sites`, `site_url` (plus the Playwright MCP tools when the `browser` profile runs) |

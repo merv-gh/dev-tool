@@ -160,6 +160,7 @@ const PR_ACTS = { values: [
 
 const html = (res, body) => { res.setHeader('content-type', 'text/html; charset=utf-8'); res.end(`<!doctype html><meta charset=utf-8><title>shop</title><body style="font:14px system-ui;margin:24px">${body}`); };
 
+const confluence = require('./confluence').createMock();
 const handle = (ENV) => (req, res) => {
   const SVC = ENV === 'uat' ? SERVICES_UAT : SERVICES, PORT_ = ENV === 'uat' ? UAT_PORT : PORT;
   const u = new URL(req.url, 'http://x'), p = u.pathname;
@@ -168,6 +169,7 @@ const handle = (ENV) => (req, res) => {
     const raw = Buffer.concat(chunks), body = raw.toString();
     const j = (o) => { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify(o)); };
     let m;
+    if (confluence.handle(req, res)) return;
     // Consul
     if (p === '/v1/agent/self') return j({ Config: { Datacenter: `${ENV}-dc` } });
     if (p === '/v1/catalog/services') return j(Object.fromEntries([['consul', []], ...Object.keys(SVC).map(s => [s, ['spring']])]));
