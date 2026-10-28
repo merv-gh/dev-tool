@@ -10,6 +10,19 @@ const ctx = (r) => (Array.isArray(r) && r[0] === 'embed' ? r[1] : r); // OpenAPI
 
 const SCENARIOS = [
   {
+    match: /refund/i,
+    steps: [{ tool: 'feature', args: { text: 'How do refunds work?', spaces: 'SHOP', env: 'demo' } }],
+    answer: rs => {
+      const r = ctx(rs[0]) || {}, evidence = (r.evidence || []).filter(q => q.verified).slice(0, 7);
+      const quotes = evidence.map(q => `> ${q.text}\n\n[${q.blockId}](${q.url})`).join('\n\n');
+      const diagram = (r.diagrams || []).find(d => d.format === 'mermaid' && d.name === 'container');
+      const sequence = (r.diagrams || []).find(d => d.format === 'mermaid' && d.name.startsWith('sequence'));
+      return `Refunds are handled by **payment-service** at \`POST /api/payments/{orderId}/refund\`. The cached documentation provides this exact evidence:\n\n${quotes}\n\n` +
+        (diagram ? `\`\`\`mermaid\n${diagram.source}\n\`\`\`\n\n` : '') + (sequence ? `\`\`\`mermaid\n${sequence.source}\n\`\`\`\n\n` : '') +
+        (r.gaps?.length ? `Documentation gaps: ${r.gaps.map(g => g.message + (g.to ? ` (${g.from} → ${g.to})` : '')).join('; ')}.\n\n` : '') + (r.view ? `[Explore the diagrams and provenance](${r.view})` : '');
+    },
+  },
+  {
     match: /(compute|calculate|average|per status)/i,
     steps: [{ tool: 'code', args: { title: 'Average order total per status', code: [
       "const r = await tools.pg_query({ env: 'demo', sql: 'select status, total from sales.orders', all: true });",

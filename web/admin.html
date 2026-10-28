@@ -271,7 +271,7 @@ function renderSources() {
   const e = S.envs.find(x => x.env === env());
   if (!e) return;
   if (e.error) { $('sources').innerHTML = `<tr><td colspan="7" class="err-text">${esc(e.error)}</td></tr>`; return; }
-  const k = (what, only) => `${e.env}:${what}:${only || ''}`;
+  const k = (what, only) => what === 'confluence' ? 'confluence:::false' : `${e.env}:${what}:${only || ''}`;
   const btn = (what, only, label = 'Refresh', disabled) => `<button class="small" data-refresh="${what}" ${only ? `data-only="${esc(only)}"` : ''} ${disabled ? 'disabled' : ''}>${label}</button>`;
   const rows = [];
   const pgOk = e.pg.filter(d => d.configured);
@@ -282,7 +282,7 @@ function renderSources() {
       <td class="mono muted">${esc(d.host || '')}</td><td class="num">${d.tables != null ? `${d.tables} tables · ${d.functions ?? 0} fn · ${d.triggers ?? 0} trg` : ''}</td><td>${d.configured ? ago(d.syncedAt) : ''}</td><td class="num">${dur(d.ms)}</td>
       <td>${d.configured ? btn('pg', d.db) : ''}</td></tr>`);
   }
-  for (const [what, label, unit] of [['es', 'Elasticsearch', 'indices'], ['kafka', 'Kafka', 'topics'], ['consul', 'Consul', 'services']]) {
+  for (const [what, label, unit] of [['es', 'Elasticsearch', 'indices'], ['kafka', 'Kafka', 'topics'], ['consul', 'Consul', 'services'], ['confluence', 'Confluence', 'pages']]) {
     const x = e[what];
     rows.push(`<tr class="group ${x.configured ? '' : 'off'}"><td>${label}</td><td>${statusOf(x, k(what))}${x.error ? `<div class="err-text">${esc(x.error)}</div>` : ''}</td><td></td>
       <td class="num">${x.count != null ? `${x.count} ${unit}` : ''}</td><td>${x.configured ? ago(x.syncedAt) : ''}</td><td class="num">${dur(x.ms)}</td><td>${x.configured ? btn(what) : ''}</td></tr>`);

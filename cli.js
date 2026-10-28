@@ -10,7 +10,7 @@ const HELP = `
 dt — read-only dev environment toolkit (JSON output; add --pretty for tables)
 
 Index (cached, no network to query)
-  dt sync [all|pg|es|kafka|consul|passports|index] [--only a,b]
+  dt sync [all|pg|es|kafka|consul|passports|bitbucket|confluence|index] [--only a,b] [--spaces SHOP,PAY] [--full]
                                            refresh the index; "index" rebuilds catalog + usage from the cache
   dt find <words...>                       search the catalog (prefix kind: pg: pgfn: es: kafka: consul: svc: api: site:)
   dt usage <schema.table|schema.fn>        who uses it: services, functions, triggers, views, FKs
@@ -92,7 +92,7 @@ const commands = {
   },
 
   async sync(opts) {
-    const job = require('./lib/indexer').refresh({ env: opts.env, what: opts._[0] || 'all', only: typeof opts.only === 'string' ? opts.only : undefined });
+    const job = require('./lib/indexer').refresh({ env: opts.env, what: opts._[0] || 'all', only: typeof opts.only === 'string' ? opts.only : undefined, spaces: opts.spaces, full: !!opts.full });
     // stream the job log to stderr while it runs
     let shown = 0;
     const tick = setInterval(() => { while (shown < job.log.length) console.error(job.log[shown++]); }, 200);

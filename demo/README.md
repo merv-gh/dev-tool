@@ -27,7 +27,7 @@ docker run -d --name dt-demo-webui -p 127.0.0.1:3480:8080 \
   ghcr.io/open-webui/open-webui:v0.12.4
 DT_HOME=demo/.home node cli.js webui-setup --url http://127.0.0.1:3480 --model demo-model
 ```
-Then open http://127.0.0.1:3480 and ask "Who writes sales.orders?", "How is demo doing?" or "Any errors in the last hour?".
+Then open http://127.0.0.1:3480 and ask "Who writes sales.orders?", "How is demo doing?", "Any errors in the last hour?" or "How do refunds work?". The refund example joins ten mock Confluence pages with the cached service model, exact linked quotes, C4/sequence diagrams and the planted fraud-service documentation gap. See [Confluence knowledge](../docs/confluence-knowledge.md).
 
 Screenshots (needs the `playwright` package and its Chromium; `CHROMIUM=<path>` uses another build):
 ```bash
