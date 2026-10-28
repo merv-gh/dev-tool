@@ -267,6 +267,8 @@ var require_config = __commonJS({
         internalGroups: list(pp.internalGroups),
         // artifactId (glob) or groupId:artifactId (glob) -> "PROJECT/repo", for libraries that are modules of a bigger repo
         libraryRepos: pp.libraryRepos && typeof pp.libraryRepos === "object" ? pp.libraryRepos : {},
+        // requests per second while indexing every Bitbucket repo (catalog_sync what=bitbucket)
+        indexRatePerSec: Number(pp.indexRatePerSec) || 8,
         graphUrl: trimUrl(g.url)
       };
     }
@@ -3921,7 +3923,7 @@ var require_extract = __commonJS({
         stats: { files: files.length, sourceFiles: code.length, ms: Date.now() - started }
       };
     }
-    module2.exports = { extract, parseYaml, parseProperties, parsePom, parseGradle, gradleVars, gradleResolve, sqlRefs, sqlCalls, stripComments, splitTop, balanced, annoArgs, methodAfter, stringLiterals, loadConfig, resolver };
+    module2.exports = { extract, walk, parseYaml, parseProperties, parsePom, parseGradle, gradleVars, gradleResolve, sqlRefs, sqlCalls, stripComments, splitTop, balanced, annoArgs, methodAfter, stringLiterals, loadConfig, resolver };
   }
 });
 
@@ -3956,6 +3958,11 @@ var require_atlassian = __commonJS({
     async function file(project, repo, filePath, { at } = {}) {
       const q = at ? `?at=${encodeURIComponent(at)}` : "";
       return bb(`/rest/api/1.0/projects/${project}/repos/${repo}/raw/${filePath.split("/").map(encodeURIComponent).join("/")}${q}`, { raw: true });
+    }
+    async function browse(project, repo, dir = "", { at } = {}) {
+      const q = `?limit=1000${at ? `&at=${encodeURIComponent(at)}` : ""}`;
+      const res = await bb(`/rest/api/1.0/projects/${project}/repos/${repo}/browse${dir ? "/" + dir.split("/").map(encodeURIComponent).join("/") : ""}${q}`);
+      return (res.children?.values || []).map((v) => ({ name: v.path?.name || v.path?.toString, type: v.type }));
     }
     async function prs(project, repo, { state = "OPEN" } = {}) {
       const res = await bb(`/rest/api/1.0/projects/${project}/repos/${repo}/pull-requests?state=${state}&limit=50`);
@@ -4056,109 +4063,130 @@ var require_atlassian = __commonJS({
       const p = await cf(`/rest/api/content/${encodeURIComponent(id)}?expand=body.storage,version,space`);
       return { id: p.id, title: p.title, space: p.space?.key, version: p.version?.number, text: stripHtml(p.body?.storage?.value || "") };
     }
-    module2.exports = { repos, files, file, prs, myPrs, prDetails, unified, confluenceSearch, confluencePage, bb };
+    module2.exports = { browse, repos, files, file, prs, myPrs, prDetails, unified, confluenceSearch, confluencePage, bb };
   }
 });
 
-// lib/git.js
-var require_git = __commonJS({
-  "lib/git.js"(exports2, module2) {
-    var fs2 = require("fs");
-    var os = require("os");
+// lib/bbindex.js
+var require_bbindex = __commonJS({
+  "lib/bbindex.js"(exports2, module2) {
     var path2 = require("path");
-    var { execFile } = require("child_process");
-    var { getPersonal } = require_config();
-    var REPOS = require_config().PATHS.repos;
-    var LOCAL_GIT = process.env.DT_GIT_DIR || path2.join(os.tmpdir(), "dt-git");
-    function git(args, cwd, extra = []) {
-      return new Promise((resolve, reject) => {
-        execFile("git", ["-c", "safe.directory=*", ...extra, ...args], { cwd, env: { ...process.env, GIT_TERMINAL_PROMPT: "0" }, maxBuffer: 64 << 20, timeout: 6e5 }, (err, stdout, stderr) => {
-          if (err) reject(new Error(`git ${args[0]}: ${(stderr || err.message).trim().split("\n").slice(-3).join(" | ")}`));
-          else resolve(stdout.trim());
-        });
+    var { CACHE: CACHE2, readJson, writeJson, pool } = require_util();
+    var FILE = path2.join(CACHE2, "bitbucket", "_index.json");
+    var norm = (s) => String(s || "").toLowerCase().replace(/[-_.]/g, "");
+    var own = (xml) => String(xml).replace(/<(parent|dependencies|dependencyManagement|build|profiles|reporting|modules)>[\s\S]*?<\/\1>/g, "");
+    var tag = (xml, name) => {
+      const m = own(xml).match(new RegExp(`<${name}>\\s*([^<]*?)\\s*</${name}>`));
+      return m ? m[1] : null;
+    };
+    var parentGroup = (xml) => {
+      const m = String(xml).match(/<parent>[\s\S]*?<groupId>\s*([^<]*?)\s*<\/groupId>[\s\S]*?<\/parent>/);
+      return m ? m[1] : null;
+    };
+    function load() {
+      return readJson(FILE, { builtAt: null, repos: [] });
+    }
+    function throttle(perSec) {
+      let next = 0;
+      return async () => {
+        const now = Date.now();
+        const at = Math.max(now, next);
+        next = at + 1e3 / perSec;
+        if (at > now) await new Promise((r) => setTimeout(r, at - now));
+      };
+    }
+    async function indexRepo(r, atl, wait) {
+      const call = async (fn) => {
+        await wait();
+        return fn();
+      };
+      const raw = (p) => call(() => atl.file(r.project, r.repo, p)).catch(() => null);
+      const children = await call(() => atl.browse(r.project, r.repo));
+      const files = children.filter((c) => c.type === "FILE").map((c) => c.name);
+      const dirs = children.filter((c) => c.type === "DIRECTORY" && !c.name.startsWith(".")).map((c) => c.name);
+      const out2 = { project: r.project, repo: r.repo, root: files.filter((f) => /^(pom\.xml|build\.gradle(\.kts)?|settings\.gradle(\.kts)?|gradle\.properties|package\.json)$/.test(f)), dirs, modules: [] };
+      let wanted = [];
+      if (files.includes("pom.xml")) {
+        const pom = await raw("pom.xml");
+        if (pom) {
+          out2.self = { groupId: tag(pom, "groupId") || parentGroup(pom), artifactId: tag(pom, "artifactId") };
+          wanted = [...pom.matchAll(/<module>\s*([^<]+?)\s*<\/module>/g)].map((m) => m[1]);
+        }
+      }
+      const settings = files.find((f) => /^settings\.gradle(\.kts)?$/.test(f));
+      if (settings) {
+        const text = await raw(settings) || "";
+        const name = text.match(/rootProject\.name\s*=\s*["']([^"']+)["']/);
+        if (name) out2.self = { ...out2.self || {}, artifactId: out2.self?.artifactId || name[1] };
+        for (const m of text.matchAll(/include\s*\(?([^\n)]*)/g)) for (const x of m[1].matchAll(/["']:?([^"']+)["']/g)) out2.modules.push({ dir: x[1].replace(/:/g, "/"), artifactId: x[1].split(":").pop(), build: "gradle" });
+      }
+      if (!out2.root.length && dirs.length <= 30) wanted = dirs;
+      for (const dir of wanted.slice(0, 40)) {
+        const pom = await raw(`${dir}/pom.xml`);
+        if (pom) out2.modules.push({ dir, artifactId: tag(pom, "artifactId"), groupId: tag(pom, "groupId") || parentGroup(pom), build: "maven" });
+        else if (!out2.modules.some((m) => m.dir === dir)) out2.modules.push({ dir, artifactId: null, build: null });
+      }
+      out2.indexedAt = (/* @__PURE__ */ new Date()).toISOString();
+      return out2;
+    }
+    async function build({ log = () => {
+    }, force = false, only, perSec, maxAgeDays = 7, atl = require_atlassian() } = {}) {
+      const prev = load();
+      const byKey = new Map(prev.repos.map((r) => [`${r.project}/${r.repo}`, r]));
+      let all = await atl.repos("");
+      if (only && only.length) all = all.filter((r) => only.some((o) => `${r.project}/${r.repo}`.toLowerCase().includes(String(o).toLowerCase())));
+      const fresh = (r) => r && !r.error && Date.now() - Date.parse(r.indexedAt) < maxAgeDays * 864e5;
+      const todo = all.filter((r) => force || !fresh(byKey.get(`${r.project}/${r.repo}`)));
+      log(`bitbucket: ${all.length} repos, indexing ${todo.length}`);
+      const wait = throttle(perSec || require_config().getPersonal().indexRatePerSec || 8);
+      let done = 0;
+      const results = await pool(todo, 4, async (r) => {
+        const x = await indexRepo(r, atl, wait);
+        if (++done % 50 === 0) log(`bitbucket: ${done}/${todo.length}`);
+        return x;
+      });
+      for (const r of results) byKey.set(`${r.item.project}/${r.item.repo}`, r.error ? { project: r.item.project, repo: r.item.repo, error: r.error.message, indexedAt: (/* @__PURE__ */ new Date()).toISOString() } : r.value);
+      if (!only) {
+        for (const k of [...byKey.keys()]) if (!all.some((r) => `${r.project}/${r.repo}` === k)) byKey.delete(k);
+      }
+      const data = { builtAt: (/* @__PURE__ */ new Date()).toISOString(), repos: [...byKey.values()].sort((a, b) => `${a.project}/${a.repo}`.localeCompare(`${b.project}/${b.repo}`)) };
+      writeJson(FILE, data);
+      const failed = results.filter((r) => r.error).length;
+      log(`bitbucket: ${data.repos.length} repos in the index, ${data.repos.reduce((n, r) => n + (r.modules || []).length, 0)} modules${failed ? `, ${failed} failed` : ""}`);
+      return { repos: data.repos.length, indexed: todo.length - failed, failed, modules: data.repos.reduce((n, r) => n + (r.modules || []).length, 0) };
+    }
+    function lookup(dep, index = load()) {
+      const a = dep.artifactId, na = norm(a);
+      const out2 = [];
+      for (const r of index.repos || []) {
+        if (r.error) continue;
+        const g = (x) => dep.groupId && x && x === dep.groupId ? 5 : 0;
+        const add = (score, module3, why, group) => out2.push({ project: r.project, repo: r.repo, module: module3 || null, score: score + g(group), why });
+        for (const m of r.modules || []) {
+          if (m.artifactId === a) add(100, m.dir, `module ${m.dir} declares ${a}`, m.groupId || r.self?.groupId);
+          else if (m.dir === a || norm(m.dir.split("/").pop()) === na) add(85, m.dir, `folder ${m.dir}`, m.groupId || r.self?.groupId);
+        }
+        if (r.self?.artifactId === a) add(95, null, `${r.repo} is ${a}`, r.self.groupId);
+        if (r.repo === a || norm(r.repo) === na) add(90, null, "same name", r.self?.groupId);
+        for (const d of r.dirs || []) {
+          if (d === a) add(80, d, `folder ${d}`, r.self?.groupId);
+          else if (d.length >= 3 && a.endsWith(`-${d}`) && !(r.modules || []).some((m) => m.dir === d && m.artifactId && m.artifactId !== a)) add(50, d, `folder ${d} (${a} without its prefix)`, r.self?.groupId);
+        }
+      }
+      const best = /* @__PURE__ */ new Map();
+      for (const c of out2.sort((x, y) => y.score - x.score)) {
+        const k = `${c.project}/${c.repo}/${c.module}`;
+        if (!best.has(k)) best.set(k, c);
+      }
+      return [...best.values()];
+    }
+    function catalogLines() {
+      return (load().repos || []).filter((r) => !r.error).map((r) => {
+        const mods = (r.modules || []).map((m) => m.artifactId && m.artifactId !== m.dir ? `${m.dir} (${m.artifactId})` : m.dir);
+        return `repo ${r.project}/${r.repo}${r.self?.artifactId ? ` ${r.self.groupId || ""}:${r.self.artifactId}` : ""}: ${mods.length ? `modules ${mods.join(", ")}; ` : ""}dirs ${(r.dirs || []).join(", ")}`;
       });
     }
-    var isSha = (ref) => /^[0-9a-f]{7,40}$/i.test(ref || "");
-    var repoDir = (project, repo) => path2.join(REPOS, project.toUpperCase(), repo);
-    function remote(project, repo) {
-      const { url } = getPersonal().bitbucket;
-      return `${url}/scm/${project.toLowerCase()}/${repo}.git`;
-    }
-    function authArgs(remoteUrl) {
-      const { token } = getPersonal().bitbucket;
-      return token && /^https?:/.test(remoteUrl) ? ["-c", `http.extraHeader=Authorization: Bearer ${token}`] : [];
-    }
-    async function fetchRef(project, repo, ref, opts = {}) {
-      const dir = opts.dir || repoDir(project, repo);
-      const url = opts.url || remote(project, repo);
-      const auth = authArgs(url);
-      fs2.mkdirSync(dir, { recursive: true });
-      await ensureRepo(dir, url, opts.gitKey || `${project.toUpperCase()}/${repo}`);
-      const want = ref || "HEAD";
-      let fallback = null;
-      try {
-        await git(["fetch", "-q", "--depth", "1", "--no-tags", "origin", want], dir, auth);
-        await git(["checkout", "-q", "--detach", "--force", "FETCH_HEAD"], dir);
-      } catch (e) {
-        if (!isSha(want)) throw e;
-        await git(["fetch", "-q", "--depth", "300", "--no-tags", "origin", "HEAD"], dir, auth);
-        try {
-          await git(["checkout", "-q", "--detach", "--force", want], dir);
-          fallback = "found in last 300 commits of default branch";
-        } catch {
-          await git(["checkout", "-q", "--detach", "--force", "FETCH_HEAD"], dir);
-          fallback = `sha ${want} not fetchable; using default branch head`;
-        }
-      }
-      const sha = await git(["rev-parse", "HEAD"], dir);
-      const date = await git(["log", "-1", "--format=%cI"], dir).catch(() => null);
-      const info = { project: project.toUpperCase(), repo, ref: want, sha, commitDate: date, fetchedAt: (/* @__PURE__ */ new Date()).toISOString(), path: dir, fallback };
-      fs2.writeFileSync(path2.join(await git(["rev-parse", "--absolute-git-dir"], dir), "dt-ref.json"), JSON.stringify(info, null, 2));
-      return info;
-    }
-    var NO_CHMOD = /core\.filemode|operation not permitted|chmod on|permission denied|could not (lock|write|set)|unable to (create|write)/i;
-    async function ensureRepo(dir, url, gitKey) {
-      const dotgit = path2.join(dir, ".git");
-      if (fs2.existsSync(dotgit)) {
-        try {
-          if (await git(["rev-parse", "--show-toplevel"], dir).then((t) => path2.resolve(t) === path2.resolve(fs2.realpathSync(dir)))) {
-            await git(["remote", "set-url", "origin", url], dir).catch(() => git(["remote", "add", "origin", url], dir));
-            return;
-          }
-        } catch {
-        }
-        fs2.rmSync(dotgit, { recursive: true, force: true });
-      }
-      try {
-        await git(["init", "-q"], dir);
-        await git(["remote", "add", "origin", url], dir);
-      } catch (e) {
-        if (!NO_CHMOD.test(e.message)) throw e;
-        fs2.rmSync(dotgit, { recursive: true, force: true });
-        const gitDir = path2.join(LOCAL_GIT, ...gitKey.split("/"));
-        fs2.rmSync(gitDir, { recursive: true, force: true });
-        fs2.mkdirSync(path2.dirname(gitDir), { recursive: true });
-        try {
-          await git(["init", "-q", `--separate-git-dir=${gitDir}`], dir);
-          await git(["config", "core.filemode", "false"], dir);
-          await git(["remote", "add", "origin", url], dir);
-        } catch (e2) {
-          throw new Error(`${e.message}; also with the git dir in ${gitDir}: ${e2.message}. git cannot write in ${dir}: run the containers as your user (run.sh sets DT_UID/DT_GID) or put the config folder on a local disk`);
-        }
-      }
-    }
-    async function fetchFirst(project, repo, refs, opts = {}) {
-      let last;
-      for (const ref of refs) {
-        try {
-          return await fetchRef(project, repo, ref, opts);
-        } catch (e) {
-          last = e;
-        }
-      }
-      throw last;
-    }
-    module2.exports = { fetchRef, fetchFirst, repoDir, REPOS, isSha, git };
+    module2.exports = { build, lookup, load, catalogLines, indexRepo, FILE };
   }
 });
 
@@ -4271,13 +4299,18 @@ var require_codegraph = __commonJS({
       return splitTop((text || "").replace(/->/g, "  ")).map((p) => {
         const r = stripAnnotations(p).rest.replace(/\b(final|private|protected|public|internal|override|val|var|vararg)\b/g, " ").trim();
         if (!r) return null;
+        const value = valueKey(p);
         if (kt) {
           const m2 = r.match(/^([\w$]+)\s*:\s*([^=]+?)\s*(=.*)?$/s);
-          return m2 ? { name: m2[1], type: m2[2].trim() } : null;
+          return m2 ? { name: m2[1], type: m2[2].trim(), ...value } : null;
         }
         const m = r.match(/^([\s\S]+?)\s*(?:\.\.\.)?\s+([\w$]+)$/);
-        return m ? { name: m[2], type: m[1].replace(/\s+/g, " ").trim() } : null;
+        return m ? { name: m[2], type: m[1].replace(/\s+/g, " ").trim(), ...value } : null;
       }).filter(Boolean);
+    }
+    function valueKey(text) {
+      const m = String(text || "").match(/@Value\s*\(\s*(?:value\s*=\s*)?"\$\{([^}:"]+)(:[^}"]*)?\}"/);
+      return m ? { value: m[1].trim(), ...m[2] !== void 0 ? { valueDefault: true } : {} } : {};
     }
     var baseType = (t) => String(t || "").replace(/<[\s\S]*$/, "").replace(/\[\]|\?|\.\.\./g, "").trim();
     var typeArgs = (t) => {
@@ -4504,7 +4537,7 @@ var require_codegraph = __commonJS({
         }
         m = h.match(/^((?:(?:public|protected|private|static|final|transient|volatile)\s+)*)([\w$.]+(?:\s*<[\s\S]*>)?(?:\s*\[\])*)\s+([\w$]+)\s*(=[\s\S]*)?$/);
         if (m && !KEYWORDS.has(m[3]) && !/^(return|throw|package|import)$/.test(m[2])) {
-          c.fields.push({ name: m[3], type: m[2].replace(/\s+/g, ""), annos, final: /\bfinal\b/.test(m[1]), static: /\bstatic\b/.test(m[1]), line: lineOf(seg.start + seg.header.lastIndexOf(m[3])) });
+          c.fields.push({ name: m[3], type: m[2].replace(/\s+/g, ""), annos, final: /\bfinal\b/.test(m[1]), static: /\bstatic\b/.test(m[1]), line: lineOf(seg.start + seg.header.lastIndexOf(m[3])), ...valueKey(clean.slice(seg.start, seg.close)) });
         }
       }
     }
@@ -4526,7 +4559,7 @@ var require_codegraph = __commonJS({
         (bySimple.get(c.name) || bySimple.set(c.name, []).get(c.name)).push(c.id);
       }
       const edges = [];
-      const edge = (from, to, kind, where) => edges.push([from, to, kind, where || ""]);
+      const edge = (from, to, kind, where, arity) => edges.push(arity === void 0 ? [from, to, kind, where || ""] : [from, to, kind, where || "", arity]);
       for (const f of files) {
         const local = new Map(f.classes.map((c) => [c.name, c.id]));
         const resolveType = (name) => {
@@ -4690,8 +4723,8 @@ var require_codegraph = __commonJS({
           table: c.table,
           ext: c.extIds || [],
           impl: c.implIds || [],
-          fields: c.fields.map((x) => ({ name: x.name, type: x.type, typeId: x.typeId || null, annos: x.annos, inject: !!x.inject, final: !!x.final, static: !!x.static, line: x.line, column: x.column })),
-          ctor: c.ctorParams.map((p) => ({ name: p.name, type: p.type, typeId: p.typeId || null })),
+          fields: c.fields.map((x) => ({ name: x.name, type: x.type, typeId: x.typeId || null, annos: x.annos, inject: !!x.inject, final: !!x.final, static: !!x.static, line: x.line, column: x.column, value: x.value, valueDefault: x.valueDefault })),
+          ctor: c.ctorParams.map((p) => ({ name: p.name, type: p.type, typeId: p.typeId || null, value: p.value, valueDefault: p.valueDefault })),
           methods: c.methods.map((m) => ({ name: m.name, params: m.params.map((p) => ({ name: p.name, type: p.type, typeId: p.typeId || null })), ret: m.ret, annos: m.annos, mods: m.mods, line: m.line, startLine: m.startLine, endLine: m.endLine, ctor: !!m.ctor, abstract: !m.body }))
         });
       }
@@ -4716,13 +4749,28 @@ var require_codegraph = __commonJS({
       for (const x of body.matchAll(/\b(?:val|var)\s+([a-z_$][\w$]*)\s*(?::\s*([A-Z][\w$.<>?, ]*?))?\s*=\s*([A-Z][\w$.]*)?/g)) vars.set(x[1], x[2] || x[3] || "?");
       const self2 = new Set(c.methods.map((x) => x.name));
       const seen = /* @__PURE__ */ new Set();
-      const once = (to, kind) => {
+      const once = (to, kind, arity) => {
         const k = to + kind;
         if (!seen.has(k)) {
           seen.add(k);
-          edge(m.id, to, kind, where);
+          edge(m.id, to, kind, where, arity);
         }
       };
+      const argc = (open) => {
+        const inner = body.slice(open + 1, closeParen(body, open));
+        return inner.trim() ? splitTop(inner).length : 0;
+      };
+      const elems = /* @__PURE__ */ new Set();
+      for (const t of vars.values()) {
+        const em = String(t).match(/^(?:java\.util\.)?(?:List|Set|Collection|Iterable|Optional|ObjectProvider|Provider|Stream|Supplier)\s*<\s*(?:\?\s*extends\s+)?([\w$.]+)/) || String(t).match(/^(?:java\.util\.)?Map\s*<[^,]+,\s*(?:\?\s*extends\s+)?([\w$.]+)/) || String(t).match(/^([\w$.]+)\[\]$/);
+        if (em) {
+          const id = resolveType(em[1]);
+          if (id && byId.has(id)) elems.add(id);
+        }
+      }
+      if (elems.size) {
+        for (const x of body.matchAll(/\.\s*([\w$]+)\s*\(/g)) for (const id of elems) if (byId.get(id).methods.some((mm) => mm.name === x[1])) once(`${id}#${x[1]}`, "calls", argc(x.index + x[0].length - 1));
+      }
       for (const x of body.matchAll(/(?<![\w$])([\w$]+)\s*(?:\?\.|\.|::)\s*([\w$]+)\s*(\(|\{)?/g)) {
         const [, recv, name, paren] = x;
         if (recv === "this" || recv === "super") {
@@ -4733,7 +4781,7 @@ var require_codegraph = __commonJS({
         if (!t) continue;
         const id = resolveType(t);
         if (!id) continue;
-        if (paren || x[0].includes("::")) once(`${id}#${name}`, "calls");
+        if (paren || x[0].includes("::")) once(`${id}#${name}`, "calls", paren === "(" ? argc(x.index + x[0].length - 1) : void 0);
         else if (!/^[A-Z]/.test(name) && name !== "class") once(`${id}.${name}`, "reads");
         const g = name.match(/^(get|set|is)([A-Z][\w$]*)$/);
         if (g && byId.has(id)) {
@@ -5205,30 +5253,105 @@ var require_codeindex = __commonJS({
   }
 });
 
-// lib/notes.js
-var require_notes = __commonJS({
-  "lib/notes.js"(exports2, module2) {
+// lib/git.js
+var require_git = __commonJS({
+  "lib/git.js"(exports2, module2) {
     var fs2 = require("fs");
+    var os = require("os");
     var path2 = require("path");
-    var { CONFIG_DIR } = require_config();
-    var { readJson, writeJson } = require_util();
-    var FILE = path2.join(CONFIG_DIR, "notes.json");
-    var norm = (k) => String(k || "").trim().toLowerCase();
-    var all = () => readJson(FILE, {});
-    function get(name, db) {
-      const n = all();
-      return n[norm(db ? `${db}:${name}` : name)] || (db ? n[norm(name)] : void 0) || null;
+    var { execFile } = require("child_process");
+    var { getPersonal } = require_config();
+    var REPOS = require_config().PATHS.repos;
+    var LOCAL_GIT = process.env.DT_GIT_DIR || path2.join(os.tmpdir(), "dt-git");
+    function git(args, cwd, extra = []) {
+      return new Promise((resolve, reject) => {
+        execFile("git", ["-c", "safe.directory=*", ...extra, ...args], { cwd, env: { ...process.env, GIT_TERMINAL_PROMPT: "0" }, maxBuffer: 64 << 20, timeout: 6e5 }, (err, stdout, stderr) => {
+          if (err) reject(new Error(`git ${args[0]}: ${(stderr || err.message).trim().split("\n").slice(-3).join(" | ")}`));
+          else resolve(stdout.trim());
+        });
+      });
     }
-    function set(name, text) {
-      const n = all();
-      const k = norm(name);
-      if (!k) throw new Error("note needs an object name");
-      if (text && String(text).trim()) n[k] = String(text).trim();
-      else delete n[k];
-      writeJson(FILE, Object.fromEntries(Object.entries(n).sort()));
-      return { name: k, note: n[k] || null };
+    var isSha = (ref) => /^[0-9a-f]{7,40}$/i.test(ref || "");
+    var repoDir = (project, repo) => path2.join(REPOS, project.toUpperCase(), repo);
+    function remote(project, repo) {
+      const { url } = getPersonal().bitbucket;
+      return `${url}/scm/${project.toLowerCase()}/${repo}.git`;
     }
-    module2.exports = { all, get, set, FILE, exists: () => fs2.existsSync(FILE) };
+    function authArgs(remoteUrl) {
+      const { token } = getPersonal().bitbucket;
+      return token && /^https?:/.test(remoteUrl) ? ["-c", `http.extraHeader=Authorization: Bearer ${token}`] : [];
+    }
+    async function fetchRef(project, repo, ref, opts = {}) {
+      const dir = opts.dir || repoDir(project, repo);
+      const url = opts.url || remote(project, repo);
+      const auth = authArgs(url);
+      fs2.mkdirSync(dir, { recursive: true });
+      await ensureRepo(dir, url, opts.gitKey || `${project.toUpperCase()}/${repo}`);
+      const want = ref || "HEAD";
+      let fallback = null;
+      try {
+        await git(["fetch", "-q", "--depth", "1", "--no-tags", "origin", want], dir, auth);
+        await git(["checkout", "-q", "--detach", "--force", "FETCH_HEAD"], dir);
+      } catch (e) {
+        if (!isSha(want)) throw e;
+        await git(["fetch", "-q", "--depth", "300", "--no-tags", "origin", "HEAD"], dir, auth);
+        try {
+          await git(["checkout", "-q", "--detach", "--force", want], dir);
+          fallback = "found in last 300 commits of default branch";
+        } catch {
+          await git(["checkout", "-q", "--detach", "--force", "FETCH_HEAD"], dir);
+          fallback = `sha ${want} not fetchable; using default branch head`;
+        }
+      }
+      const sha = await git(["rev-parse", "HEAD"], dir);
+      const date = await git(["log", "-1", "--format=%cI"], dir).catch(() => null);
+      const info = { project: project.toUpperCase(), repo, ref: want, sha, commitDate: date, fetchedAt: (/* @__PURE__ */ new Date()).toISOString(), path: dir, fallback };
+      fs2.writeFileSync(path2.join(await git(["rev-parse", "--absolute-git-dir"], dir), "dt-ref.json"), JSON.stringify(info, null, 2));
+      return info;
+    }
+    var NO_CHMOD = /core\.filemode|operation not permitted|chmod on|permission denied|could not (lock|write|set)|unable to (create|write)/i;
+    async function ensureRepo(dir, url, gitKey) {
+      const dotgit = path2.join(dir, ".git");
+      if (fs2.existsSync(dotgit)) {
+        try {
+          if (await git(["rev-parse", "--show-toplevel"], dir).then((t) => path2.resolve(t) === path2.resolve(fs2.realpathSync(dir)))) {
+            await git(["remote", "set-url", "origin", url], dir).catch(() => git(["remote", "add", "origin", url], dir));
+            return;
+          }
+        } catch {
+        }
+        fs2.rmSync(dotgit, { recursive: true, force: true });
+      }
+      try {
+        await git(["init", "-q"], dir);
+        await git(["remote", "add", "origin", url], dir);
+      } catch (e) {
+        if (!NO_CHMOD.test(e.message)) throw e;
+        fs2.rmSync(dotgit, { recursive: true, force: true });
+        const gitDir = path2.join(LOCAL_GIT, ...gitKey.split("/"));
+        fs2.rmSync(gitDir, { recursive: true, force: true });
+        fs2.mkdirSync(path2.dirname(gitDir), { recursive: true });
+        try {
+          await git(["init", "-q", `--separate-git-dir=${gitDir}`], dir);
+          await git(["config", "core.filemode", "false"], dir);
+          await git(["remote", "add", "origin", url], dir);
+        } catch (e2) {
+          throw new Error(`${e.message}; also with the git dir in ${gitDir}: ${e2.message}. git cannot write in ${dir}: run the containers as your user (run.sh sets DT_UID/DT_GID) or put the config folder on a local disk`);
+        }
+      }
+    }
+    async function fetchFirst(project, repo, refs, opts = {}) {
+      let last;
+      for (const ref of refs) {
+        try {
+          return await fetchRef(project, repo, ref, opts);
+        } catch (e) {
+          last = e;
+        }
+      }
+      throw last;
+    }
+    module2.exports = { fetchRef, fetchFirst, repoDir, REPOS, isSha, git };
   }
 });
 
@@ -5444,6 +5567,482 @@ var require_pgindex = __commonJS({
   }
 });
 
+// lib/impact.js
+var require_impact = __commonJS({
+  "lib/impact.js"(exports2, module2) {
+    var CI = require_codeindex();
+    var kindOf = (id) => {
+      const m = id.match(/^(table|column|topic|es|pgfn|endpoint|svc|file|ext):/);
+      if (m) return m[1];
+      if (id.includes("#")) return "method";
+      return "class-or-field";
+    };
+    var memo = { sig: null, G: null };
+    function load({ repos, env } = {}) {
+      const keys = CI.select(repos);
+      let sig = null;
+      try {
+        const pdir = require_passport().DIR;
+        const pm = require("fs").existsSync(pdir) ? require("fs").statSync(pdir).mtimeMs : 0;
+        sig = JSON.stringify([keys.map((k) => `${k}@${CI.load(k)?.builtAt}`), env, env ? require_pgindex().current(env).builtAt : null, pm]);
+      } catch {
+      }
+      if (sig && memo.sig === sig) return memo.G;
+      const G = build(keys, env);
+      if (sig) Object.assign(memo, { sig, G });
+      return G;
+    }
+    function build(keys, env) {
+      const rev = /* @__PURE__ */ new Map(), fwd = /* @__PURE__ */ new Map(), nodes = /* @__PURE__ */ new Map(), sql = [], classes = /* @__PURE__ */ new Map();
+      const add = (from, to, kind, where, repo, arity) => {
+        const e = { from, to, kind, where, repo, ...arity !== void 0 ? { arity } : {} };
+        (rev.get(to) || rev.set(to, []).get(to)).push(e);
+        (fwd.get(from) || fwd.set(from, []).get(from)).push(e);
+      };
+      const graphs = [];
+      for (const key of keys) {
+        const idx = CI.load(key);
+        const g = idx && idx.graph_();
+        if (g) graphs.push({ key, idx, g });
+      }
+      for (const { key, g } of graphs) for (const c of g.classes) if (!classes.has(c.id) || classes.get(c.id).test) classes.set(c.id, { ...c, repo: key });
+      const own = (id) => {
+        if (!id || !id.startsWith("ext:")) return id;
+        const x = id.slice(4), cls = x.replace(/[#].*$/, "");
+        if (classes.has(cls)) return x;
+        const dot = cls.lastIndexOf(".");
+        return dot > 0 && classes.has(cls.slice(0, dot)) ? x : id;
+      };
+      const indexed = /* @__PURE__ */ new Set();
+      for (const { key, idx, g } of graphs) {
+        if (g.app?.name) indexed.add(g.app.name);
+        indexed.add(idx.repo || key.split("/").pop());
+        for (const c of g.classes) {
+          nodes.set(c.id, { id: c.id, kind: "class", repo: key, file: c.file, line: c.line, role: c.role, test: c.test, name: c.name });
+          for (const m of c.methods) nodes.set(`${c.id}#${m.name}`, { id: `${c.id}#${m.name}`, kind: "method", repo: key, file: c.file, line: m.line, endLine: m.endLine, role: c.role, test: c.test, name: `${c.name}#${m.name}`, annos: m.annos });
+          for (const f of c.fields) nodes.set(`${c.id}.${f.name}`, { id: `${c.id}.${f.name}`, kind: "field", repo: key, file: c.file, line: f.line, role: c.role, test: c.test, name: `${c.name}.${f.name}`, column: f.column });
+        }
+        for (const [from, to, kind, where, arity] of g.edges) add(own(from), own(to), kind, where, key, arity);
+        for (const s of g.sql || []) sql.push({ ...s, repo: key });
+      }
+      const declared = /* @__PURE__ */ new Set();
+      for (const [from, list] of fwd) if (list.some((e) => e.kind === "member")) declared.add(from);
+      for (const c of classes.values()) {
+        for (const sup of [...c.impl || [], ...c.ext || []].map(own)) {
+          const sc = classes.get(sup);
+          if (!sc || sc.repo === c.repo) continue;
+          for (const m of c.methods) if (sc.methods.some((x) => x.name === m.name)) add(`${sup}#${m.name}`, `${c.id}#${m.name}`, "dispatch", `${c.file}:${m.line}`, c.repo);
+        }
+      }
+      for (const [to] of rev) {
+        const cls = to.split("#")[0];
+        if (to.includes("#") && classes.has(cls) && !declared.has(to)) {
+          declared.add(to);
+          add(to, cls, "member", "inherited", classes.get(cls).repo);
+        }
+      }
+      let cats = [];
+      if (env) {
+        try {
+          cats = require_pg().loadAll(env);
+        } catch {
+        }
+        try {
+          for (const e of require_pgindex().current(env).edges) {
+            const t = e.targetKind === "function" || e.targetKind === "procedure" ? `pgfn:${e.target}` : `table:${e.target}`;
+            if (e.source === "db") {
+              if (e.role === "trigger") continue;
+              const u = e.userKind === "function" || e.userKind === "procedure" ? `pgfn:${e.user}` : `table:${e.user}`;
+              add(u, t, e.role, e.where || e.detail || "", `db:${e.db}`);
+            } else if (!indexed.has(e.user)) add(`svc:${e.user}`, t, e.role, e.where, `svc:${e.user}`);
+          }
+        } catch {
+        }
+      }
+      try {
+        const pp = require_passport();
+        for (const s of pp.list()) {
+          if (indexed.has(s.service)) continue;
+          const p = pp.load(s.service);
+          const e = p?.effective || p || {};
+          for (const k of e.kafka?.consumes || []) if (k.topic && !/^\?/.test(k.topic)) add(`svc:${s.service}`, `topic:${k.topic}`, "consumes", `${k.file}:${k.line}`, `svc:${s.service}`);
+          for (const k of e.kafka?.produces || []) if (k.topic && !/^[?(]/.test(k.topic)) add(`topic:${k.topic}`, `svc:${s.service}`, "produced-by", `${k.file}:${k.line}`, `svc:${s.service}`);
+          for (const x of e.feign || []) add(`svc:${s.service}`, `endpoint:${x.method} ${normPath(x.path)}`, "calls-http", `${x.file}:${x.line}`, `svc:${s.service}`);
+          for (const x of e.endpoints || []) add(`endpoint:${x.method} ${normPath(x.path)}`, `svc:${s.service}`, "handler", `${x.file}:${x.line}`, `svc:${s.service}`);
+          for (const x of e.es || []) if (x.index && !/^\?/.test(x.index)) add(`svc:${s.service}`, `es:${x.index}`, "es", `${x.file}:${x.line}`, `svc:${s.service}`);
+        }
+      } catch {
+      }
+      const relNames = /* @__PURE__ */ new Map();
+      for (const cat of cats) for (const t of cat.tables) {
+        const k = `${t.schema}.${t.name}`.toLowerCase();
+        (relNames.get(t.name.toLowerCase()) || relNames.set(t.name.toLowerCase(), /* @__PURE__ */ new Set()).get(t.name.toLowerCase())).add(k);
+      }
+      for (const id of [...rev.keys(), ...fwd.keys()]) {
+        const m = id.match(/^(table|column):([^.]+)(?:\.([^.]+))?$/);
+        if (!m) continue;
+        const isCol = m[1] === "column";
+        const tname = m[2], col = m[3];
+        if (isCol ? !col : col) continue;
+        const full = relNames.get(tname);
+        if (full && full.size === 1) {
+          const q = [...full][0];
+          add(id, isCol ? `column:${q}.${col}` : `table:${q}`, "alias", "catalog", "catalog");
+        }
+      }
+      return { keys, rev, fwd, nodes, sql, cats, classes };
+    }
+    var normPath = (p) => String(p || "").replace(/\{[^}]*\}/g, "{}").replace(/\/+$/, "") || "/";
+    function resolveTarget(G, target) {
+      const t = String(target || "").trim();
+      if (!t) throw new Error("target is empty");
+      const pre = t.match(/^(table|column|topic|kafka|es|pgfn|fn|function|endpoint|svc|service|class|method):\s*(.+)$/i);
+      const known = (id) => G.rev.has(id) || G.fwd.has(id) || G.nodes.has(id);
+      if (pre) {
+        const k = { kafka: "topic", fn: "pgfn", function: "pgfn", service: "svc" }[pre[1].toLowerCase()] || pre[1].toLowerCase();
+        const v = pre[2].trim();
+        if (k === "endpoint") return endpointNodes(G, v);
+        if (k === "class" || k === "method") return codeNodes(G, v);
+        if (k === "table" || k === "column" || k === "pgfn") return { start: [`${k}:${v.toLowerCase().replace(/"/g, "")}`], kind: k };
+        return { start: [`${k}:${v}`], kind: k };
+      }
+      if (/^(GET|POST|PUT|DELETE|PATCH|ANY)\s+\//i.test(t)) return endpointNodes(G, t);
+      const file = t.match(/^([\w./-]+\.(?:java|kt|groovy))(?::(\d+))?$/);
+      if (file) return fileNodes(G, file[1], file[2] ? Number(file[2]) : null);
+      const low = t.toLowerCase().replace(/"/g, "");
+      const parts = low.split(".");
+      for (const cat of G.cats) {
+        for (const r of cat.tables) {
+          const k = `${r.schema}.${r.name}`.toLowerCase();
+          if (parts.length === 2 && low === k) return { start: [`table:${k}`], kind: "table", db: cat.db };
+          if (parts.length === 3 && `${parts[0]}.${parts[1]}` === k && r.columns.some((c) => c.name.toLowerCase() === parts[2])) return { start: [`column:${low}`], kind: "column", db: cat.db };
+          if (parts.length === 2 && r.name.toLowerCase() === parts[0] && r.columns.some((c) => c.name.toLowerCase() === parts[1])) return { start: [`column:${k}.${parts[1]}`], kind: "column", db: cat.db };
+        }
+        for (const f of cat.functions || []) if (`${f.schema}.${f.name}`.toLowerCase() === low || parts.length === 1 && f.name.toLowerCase() === low) return { start: [`pgfn:${f.schema}.${f.name}`.toLowerCase()], kind: "pgfn", db: cat.db };
+        if (parts.length === 1) {
+          const ts = cat.tables.filter((r) => r.name.toLowerCase() === low);
+          if (ts.length === 1) return { start: [`table:${ts[0].schema}.${ts[0].name}`.toLowerCase()], kind: "table", db: cat.db };
+        }
+      }
+      for (const k of ["topic", "es", "table", "pgfn"]) if (known(`${k}:${t}`) || known(`${k}:${low}`)) return { start: [known(`${k}:${t}`) ? `${k}:${t}` : `${k}:${low}`], kind: k };
+      const code = codeNodes(G, t);
+      if (code.start.length) return code;
+      return { start: [], kind: "unknown", candidates: code.candidates };
+    }
+    function codeNodes(G, t) {
+      const [cls, member] = t.split(/#|::/);
+      const all = [...G.nodes.values()];
+      let classes = all.filter((n) => n.kind === "class" && (n.id === cls || n.id.endsWith(`.${cls}`) || n.name === cls));
+      let m = member;
+      if (!classes.length && !member && cls.includes(".")) {
+        const i = cls.lastIndexOf(".");
+        const c2 = cls.slice(0, i);
+        classes = all.filter((n) => n.kind === "class" && (n.id === c2 || n.id.endsWith(`.${c2}`) || n.name === c2));
+        m = classes.length ? cls.slice(i + 1) : void 0;
+      }
+      if (!classes.length) {
+        const words = t.toLowerCase().split(/[#.\s]+/).filter(Boolean);
+        const candidates = all.filter((n) => n.kind !== "field" && words.every((w) => n.id.toLowerCase().includes(w))).slice(0, 15).map((n) => n.id);
+        return { start: [], kind: "code", candidates };
+      }
+      if (m) {
+        const ids = classes.map((c) => `${c.id}#${m}`).filter((id) => G.nodes.has(id) || G.rev.has(id));
+        const fields = classes.map((c) => `${c.id}.${m}`).filter((id) => G.nodes.has(id));
+        return { start: [...ids, ...fields], kind: ids.length ? "method" : "field" };
+      }
+      const start = [];
+      for (const c of classes) {
+        start.push(c.id);
+        for (const n of all) if (n.id.startsWith(`${c.id}#`) || n.id.startsWith(`${c.id}.`) && n.kind === "field") start.push(n.id);
+      }
+      return { start, kind: "class" };
+    }
+    function endpointNodes(G, t) {
+      const [method, p] = t.trim().split(/\s+/);
+      const want = normPath(p.replace(/\?.*$/, "")).split("/");
+      const start = [.../* @__PURE__ */ new Set([...G.rev.keys(), ...G.fwd.keys()])].filter((id) => {
+        const m = id.match(/^endpoint:(\w+) (.*)$/);
+        if (!m || m[1] !== method.toUpperCase() && m[1] !== "ANY") return false;
+        const have = m[2].split("/");
+        return have.length === want.length && have.every((s, i) => s === "{}" || want[i] === "{}" || s === want[i]);
+      });
+      return { start, kind: "endpoint" };
+    }
+    function fileNodes(G, file, line) {
+      const inFile = [...G.nodes.values()].filter((n) => n.file === file || n.file.endsWith("/" + file) || file.endsWith("/" + n.file));
+      if (line == null) return { start: inFile.filter((n) => n.kind === "class").flatMap((c) => [c.id, ...inFile.filter((n) => n.id.startsWith(c.id + "#")).map((n) => n.id)]), kind: "file" };
+      const m = inFile.filter((n) => n.kind === "method" && n.line <= line + 3 && line <= (n.endLine || n.line)).sort((a, b) => a.endLine - a.line - (b.endLine - b.line))[0];
+      return m ? { start: [m.id], kind: "method" } : { start: inFile.filter((n) => n.kind === "class").map((n) => n.id), kind: "file" };
+    }
+    function columnEdges(G, col) {
+      const [, s, t, c] = col.match(/^column:([^.]+)\.([^.]+)\.(.+)$/) || [];
+      if (!c) return { edges: [], facts: [] };
+      const table2 = `${s}.${t}`, word = new RegExp(`\\b${c.replace(/[^\w$]/g, "")}\\b`, "i");
+      const out2 = [];
+      const tableNames = /* @__PURE__ */ new Set([table2, t]);
+      for (const x of G.sql) if (x.tables.some((n) => tableNames.has(n)) && (word.test(x.sql) || /select\s+\*|returning\s+\*/i.test(x.sql))) out2.push({ from: x.m, to: col, kind: word.test(x.sql) ? "sql" : "sql select *", where: x.sql.replace(/\s+/g, " ").slice(0, 160), repo: x.repo });
+      const facts = [];
+      for (const cat of G.cats) {
+        const r = cat.tables.find((x) => `${x.schema}.${x.name}`.toLowerCase() === table2);
+        if (!r) continue;
+        for (const ix of r.indexes || []) if (word.test(ix.replace(/^.*?\(/, "("))) facts.push({ db: cat.db, kind: "index", def: ix });
+        for (const k of r.constraints || []) if (word.test(k.def)) facts.push({ db: cat.db, kind: { p: "primary key", u: "unique", f: "foreign key", c: "check" }[k.type] || k.type, name: k.name, def: k.def });
+        for (const fk of cat.tables) for (const k of fk.constraints || []) if (k.type === "f" && k.ref?.toLowerCase() === table2 && word.test(k.def.replace(/^.*REFERENCES/i, ""))) facts.push({ db: cat.db, kind: "referenced by", name: `${fk.schema}.${fk.name}.${k.name}`, def: k.def });
+        for (const f of cat.functions || []) {
+          const fid = `pgfn:${f.schema}.${f.name}`.toLowerCase();
+          const touches = (G.fwd.get(fid) || []).some((e) => e.to === `table:${table2}`);
+          if (touches && word.test(f.body || "")) out2.push({ from: fid, to: col, kind: "body", where: `${f.schema}.${f.name}`, repo: `db:${cat.db}` });
+        }
+        for (const v of cat.tables) {
+          if (!v.definition) continue;
+          const vid = `table:${v.schema}.${v.name}`.toLowerCase();
+          if ((cat.viewDeps || []).some((d) => d.view.toLowerCase() === vid.slice(6) && d.ref.toLowerCase() === table2) && word.test(v.definition)) out2.push({ from: vid, to: col, kind: "view", where: `${v.schema}.${v.name}`, repo: `db:${cat.db}` });
+        }
+      }
+      return { edges: out2, facts };
+    }
+    function impact(target, { repos, env, depth = 4, limit = 400, grep = true } = {}) {
+      const G = load({ repos, env });
+      const r = resolveTarget(G, target);
+      if (!r.start.length) return { target, resolved: [], note: `nothing named "${target}" in ${G.keys.length} indexed repos${env ? ` or the ${env} catalog` : ""}`, candidates: r.candidates || [], repos: G.keys };
+      let facts = [];
+      const extra = /* @__PURE__ */ new Map();
+      for (const s of r.start.filter((x) => x.startsWith("column:"))) {
+        const ce = columnEdges(G, s);
+        for (const e of ce.edges) (extra.get(e.to) || extra.set(e.to, []).get(e.to)).push(e);
+        facts = facts.concat(ce.facts);
+      }
+      const seen = new Map(r.start.map((s) => [s, { depth: 0, via: null }]));
+      let frontier = [...r.start];
+      for (let d = 1; d <= depth && frontier.length; d++) {
+        let visit2 = function(n, e, from) {
+          if (seen.has(n) || /^ext:/.test(n)) return;
+          seen.set(n, { depth: d, via: { from, kind: e.kind, where: e.where, repo: e.repo } });
+          next.push(n);
+        };
+        var visit = visit2;
+        const next = [];
+        for (const id of frontier) {
+          const ins = [...G.rev.get(id) || [], ...extra.get(id) || []];
+          const outs = d === 1 && /^(table|topic|es|column|endpoint|pgfn):/.test(id) ? (G.fwd.get(id) || []).filter((e) => /produced-by|handler/.test(e.kind)) : [];
+          for (const e of ins) visit2(e.from, e, id);
+          for (const e of outs) visit2(e.to, e, id);
+        }
+        frontier = next;
+        if (seen.size > limit * 4) break;
+      }
+      const items = [];
+      for (const [id, s] of seen) {
+        if (s.depth === 0) continue;
+        const n = G.nodes.get(id) || { id, kind: kindOf(id) };
+        if (n.kind === "class-or-field") n.kind = "other";
+        items.push({ depth: s.depth, kind: n.kind, id, name: n.name || id, repo: n.repo || s.via.repo, file: n.file || null, line: n.line || null, role: n.role || null, test: !!n.test, via: `${s.via.kind} ${short(s.via.from)}`, where: s.via.where });
+      }
+      items.sort((a, b) => a.depth - b.depth || a.test - b.test || a.kind.localeCompare(b.kind) || a.id.localeCompare(b.id));
+      const pick = (k) => items.filter((i) => i.kind === k).map((i) => i.id.replace(/^\w+:/, ""));
+      const tests = [...new Set(items.filter((i) => i.test).map((i) => i.id.split(/[#]/)[0]))];
+      const out2 = {
+        target,
+        resolved: r.start.slice(0, 20),
+        kind: r.kind,
+        depth,
+        repos: G.keys.length,
+        counts: Object.fromEntries(Object.entries(items.reduce((m, i) => {
+          m[i.kind] = (m[i.kind] || 0) + 1;
+          return m;
+        }, {}))),
+        endpoints: pick("endpoint"),
+        topics: pick("topic"),
+        tables: pick("table"),
+        functions: pick("pgfn"),
+        services: pick("svc"),
+        es: pick("es"),
+        tests,
+        db: facts,
+        items: items.slice(0, limit),
+        truncated: items.length > limit || void 0
+      };
+      if (grep) out2.mentions = textMentions(G, target, r, items);
+      return out2;
+    }
+    var short = (id) => (id || "").replace(/^[\w.]+\.(?=[A-Z][\w$]*(?:[#.]|$))/, "");
+    function textMentions(G, target, r, items) {
+      const name = r.kind === "column" ? r.start[0].split(".").pop() : r.kind === "class" ? r.start[0].split(".").pop() : r.kind === "method" || r.kind === "field" ? r.start[0].split(/[#.]/).pop() : String(r.start[0] || target).replace(/^\w+:/, "").replace(/^(GET|POST|PUT|DELETE|PATCH|ANY) /, "").replace(/\{\}/g, "");
+      if (!name || name.length < 3) return [];
+      const known = new Set(items.filter((i) => i.file).map((i) => `${i.repo}|${i.file}`));
+      const pattern = /^[\w$]+$/.test(name) ? `\\b${name}\\b` : name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      try {
+        const g = CI.grep(G.keys, pattern, { regex: true, ignoreCase: false, limit: 60, perFile: 3 });
+        return g.hits.filter((h) => !known.has(`${h.repo}|${h.path}`) && !/\.(java|kt)$/.test(h.path)).slice(0, 30);
+      } catch {
+        return [];
+      }
+    }
+    module2.exports = { impact, load, resolveTarget };
+  }
+});
+
+// lib/flows.js
+var require_flows = __commonJS({
+  "lib/flows.js"(exports2, module2) {
+    var X = require_extract();
+    var ENTRY_ANNOS = { Scheduled: "scheduled", EventListener: "event", TransactionalEventListener: "event", RabbitListener: "queue", JmsListener: "queue", SqsListener: "queue" };
+    var EXT = [
+      [/kafka\.core\.KafkaTemplate|StreamBridge|KafkaProducer|ReactiveKafkaProducerTemplate/, "kafka"],
+      [/RestTemplate|WebClient|RestClient|HttpClient|OkHttpClient|feign\./, "http"],
+      [/JdbcTemplate|JdbcClient|EntityManager|DataSource|JdbcOperations|MongoTemplate|R2dbcEntityTemplate/, "db"],
+      [/ElasticsearchOperations|ElasticsearchClient|RestHighLevelClient/, "es"],
+      [/RabbitTemplate|JmsTemplate|AmqpTemplate|SqsTemplate/, "queue"],
+      [/RedisTemplate|StringRedisTemplate|CacheManager/, "cache"],
+      [/ApplicationEventPublisher/, "event"]
+    ];
+    var SKIP_TYPES = /^(String|int|long|boolean|Integer|Long|Boolean|double|Double|Duration|BigDecimal)$/;
+    var base = (t) => String(t || "").replace(/<[\s\S]*$/, "").trim();
+    var elem = (t) => (String(t).match(/^(?:java\.util\.)?(?:List|Set|Collection|Iterable|Optional|ObjectProvider|Provider)\s*<\s*(?:\?\s*extends\s+)?([\w$.]+)/) || [])[1];
+    function flows(keys, { config = {}, maxDepth = 14 } = {}) {
+      const G = require_impact().load({ repos: keys });
+      const unresolved = /* @__PURE__ */ new Set();
+      const resolve = X.resolver(config, unresolved);
+      const own = (id) => id && id.startsWith("ext:") && G.classes.has(id.slice(4)) ? id.slice(4) : id;
+      const cls = (methodId) => G.classes.get(methodId.split("#")[0]);
+      const entries = [];
+      for (const [from2, list] of G.fwd) {
+        for (const e of list) {
+          if (e.kind === "handler" && from2.startsWith("endpoint:")) entries.push({ entry: from2.slice(9), kind: "http", method: e.to });
+          if (e.kind === "consumes") entries.push({ entry: `kafka ${resolve(e.to.slice(6))}`, kind: "kafka", method: from2, topic: resolve(e.to.slice(6)) });
+        }
+      }
+      for (const c of G.classes.values()) {
+        if (c.test) continue;
+        for (const m of c.methods) for (const a of m.annos || []) if (ENTRY_ANNOS[a]) entries.push({ entry: `${ENTRY_ANNOS[a]} ${c.name}#${m.name}`, kind: ENTRY_ANNOS[a], method: `${c.id}#${m.name}` });
+      }
+      const seenEntry = /* @__PURE__ */ new Set();
+      return entries.filter((e) => {
+        const k = `${e.entry}|${e.method}`;
+        if (seenEntry.has(k)) return false;
+        seenEntry.add(k);
+        return true;
+      }).map((e) => ({ ...e, ...walk(G, e.method, { resolve, own, cls, maxDepth, config }) }));
+    }
+    function walk(G, start, { resolve, own, cls, maxDepth = 14 }) {
+      const depth = /* @__PURE__ */ new Map([[start, 0]]);
+      const order = [start];
+      for (let i = 0; i < order.length; i++) {
+        const id = order[i];
+        if (depth.get(id) >= maxDepth) continue;
+        for (const e of G.fwd.get(id) || []) {
+          if (e.kind !== "calls" && e.kind !== "dispatch") continue;
+          const to = own(e.to);
+          if (!to.includes("#") || to.startsWith("ext:") || depth.has(to) || !cls(to)) continue;
+          depth.set(to, depth.get(id) + 1);
+          order.push(to);
+        }
+      }
+      const out2 = { produces: [], http: [], tables: [], functions: [], es: [], external: [] };
+      const push = (list, v) => {
+        if (!list.some((x) => JSON.stringify(x) === JSON.stringify(v))) list.push(v);
+      };
+      const table2 = (v) => {
+        const x = out2.tables.find((t) => t.table === v.table && t.access === v.access);
+        if (x) {
+          if (v.at && !x.at.includes(v.at)) x.at.push(v.at);
+          if (v.via && !x.via.includes(v.via)) x.via.push(v.via);
+        } else out2.tables.push({ table: v.table, access: v.access, via: v.via ? [v.via] : [], at: v.at ? [v.at] : [] });
+      };
+      for (const m of order) {
+        for (const e of G.fwd.get(m) || []) {
+          const to = own(e.to);
+          if (to.startsWith("table:")) table2({ table: to.slice(6), access: e.kind, at: e.where });
+          else if (to.startsWith("pgfn:")) push(out2.functions, { function: to.slice(5), at: e.where });
+          else if (to.startsWith("es:")) push(out2.es, { index: resolve(to.slice(3)), at: e.where });
+          else if (to.startsWith("endpoint:")) push(out2.http, { call: to.slice(9), via: m.split(".").pop(), at: e.where });
+          else if (e.kind === "calls" && to.startsWith("ext:")) {
+            const t = to.slice(4).replace(/#.*$/, ""), kind = (EXT.find(([re]) => re.test(t)) || [])[1];
+            if (kind) push(out2.external, { kind, type: t.split(".").pop(), call: to.split("#")[1], arity: e.arity, from: m.split(".").pop(), at: e.where });
+          } else if (e.kind === "calls" && cls(to)?.role === "repository") {
+            const repo = cls(to);
+            for (const r of G.fwd.get(repo.id) || []) if (r.kind === "repository") {
+              const ent = G.classes.get(own(r.to));
+              if (ent?.table) table2({ table: ent.table, access: /^(save|delete|update|insert|persist|remove)/i.test(to.split("#")[1]) ? "write" : "read", via: `${repo.name}.${to.split("#")[1]}`, at: e.where });
+            }
+          }
+        }
+        for (const e of G.rev.get(m) || []) if (e.kind === "produced-by") push(out2.produces, { topic: resolve(e.from.slice(6)), raw: e.from.slice(6) !== resolve(e.from.slice(6)) ? e.from.slice(6) : void 0, from: m.split(".").pop(), at: e.where });
+      }
+      const beans = [];
+      for (const m of order) {
+        const c = cls(m);
+        if (c && c.kind === "class" && (c.bean || c.role === "controller" || c.role === "listener") && !beans.some((b) => b.id === c.id)) beans.push(c);
+      }
+      const beanIds = new Set(beans.map((b) => b.id));
+      const implemented = (typeId) => beans.some((b) => (b.impl || []).map(own).includes(typeId) || (b.ext || []).map(own).includes(typeId));
+      const mocks = [], properties = [];
+      for (const b of beans) {
+        const deps = [...b.bean ? b.ctor || [] : [], ...(b.fields || []).filter((f) => f.inject)];
+        for (const d of deps) {
+          if (d.value) {
+            if (!properties.some((p) => p.key === d.value)) {
+              const v = resolve(`\${${d.value}}`);
+              properties.push({ key: d.value, value: v === `\${${d.value}}` ? null : v, hasDefault: !!d.valueDefault, bean: b.name });
+            }
+            continue;
+          }
+          if (SKIP_TYPES.test(base(d.type))) continue;
+          const tid = own(d.typeId);
+          const el = elem(d.type);
+          if (el) {
+            continue;
+          }
+          if (tid && (beanIds.has(tid) || implemented(tid))) continue;
+          const dc = tid && G.classes.get(tid);
+          const why = dc ? dc.role === "repository" ? "repository (database)" : dc.role === "feign" ? "Feign client (HTTP)" : dc.kind === "interface" ? "interface with no implementation on this flow" : "bean not on this flow" : `external (${(EXT.find(([re]) => re.test(String(tid || d.type))) || [, "library"])[1]})`;
+          if (!mocks.some((x) => base(x.type) === base(d.type))) mocks.push({ type: d.type, typeId: tid || null, name: d.name, why, for: b.name });
+        }
+      }
+      const chain = order.map((m) => ({ method: m, depth: depth.get(m), repo: G.nodes.get(m)?.repo || cls(m)?.repo, at: G.nodes.get(m) ? `${G.nodes.get(m).file}:${G.nodes.get(m).line}` : null }));
+      return { chain, out: out2, beans: beans.map((b) => ({ id: b.id, name: b.name, role: b.role, repo: b.repo, file: b.file })), mocks, properties };
+    }
+    function from(keys, methodId, { config = {} } = {}) {
+      const G = require_impact().load({ repos: keys });
+      const resolve = X.resolver(config, /* @__PURE__ */ new Set());
+      const own = (id) => id && id.startsWith("ext:") && G.classes.has(id.slice(4)) ? id.slice(4) : id;
+      return { entry: methodId, kind: "method", method: methodId, ...walk(G, methodId, { resolve, own, cls: (m) => G.classes.get(m.split("#")[0]) }) };
+    }
+    function serviceConfig(root) {
+      const files = X.walk(root).filter((f) => /\.(ya?ml|properties)$/.test(f.path));
+      return X.loadConfig(files).merged;
+    }
+    module2.exports = { flows, from, walk, serviceConfig };
+  }
+});
+
+// lib/notes.js
+var require_notes = __commonJS({
+  "lib/notes.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var { CONFIG_DIR } = require_config();
+    var { readJson, writeJson } = require_util();
+    var FILE = path2.join(CONFIG_DIR, "notes.json");
+    var norm = (k) => String(k || "").trim().toLowerCase();
+    var all = () => readJson(FILE, {});
+    function get(name, db) {
+      const n = all();
+      return n[norm(db ? `${db}:${name}` : name)] || (db ? n[norm(name)] : void 0) || null;
+    }
+    function set(name, text) {
+      const n = all();
+      const k = norm(name);
+      if (!k) throw new Error("note needs an object name");
+      if (text && String(text).trim()) n[k] = String(text).trim();
+      else delete n[k];
+      writeJson(FILE, Object.fromEntries(Object.entries(n).sort()));
+      return { name: k, note: n[k] || null };
+    }
+    module2.exports = { all, get, set, FILE, exists: () => fs2.existsSync(FILE) };
+  }
+});
+
 // lib/routes.js
 var require_routes = __commonJS({
   "lib/routes.js"(exports2, module2) {
@@ -5633,6 +6232,11 @@ var require_catalog = __commonJS({
         lines.push(`svc ${p.service} ${p.repo}@${(p.sha || "").slice(0, 10)}: ${parts.join("; ")}${note(p.service)}`);
       }
       try {
+        lines.push(...require_bbindex().catalogLines());
+      } catch (e) {
+        console.error(`bitbucket index: ${e.message}`);
+      }
+      try {
         lines.push(...require_routes().catalogLines());
       } catch (e) {
         console.error(`api routes: ${e.message}`);
@@ -5658,7 +6262,7 @@ var require_catalog = __commonJS({
       }
       let kind = null;
       const words = q.toLowerCase().split(/\s+/).filter(Boolean).filter((w) => {
-        const m = w.match(/^(pg|pgfn|es|kafka|consul|svc|api|site):$/);
+        const m = w.match(/^(pg|pgfn|es|kafka|consul|svc|api|site|repo):$/);
         if (m) kind = m[1];
         return !m;
       });
@@ -5821,8 +6425,8 @@ var require_passport = __commonJS({
       for (const [pat, repo] of Object.entries(map)) {
         const hit = pat.includes(":") ? glob(pat).test(`${dep.groupId}:${dep.artifactId}`) : glob(pat).test(dep.artifactId);
         if (hit) {
-          const [project, slug] = String(repo).split("/");
-          if (project && slug) return { project: project.toUpperCase(), repo: slug, via: `passports.libraryRepos "${pat}"` };
+          const [project, slug, ...mod] = String(repo).split("/");
+          if (project && slug) return { project: project.toUpperCase(), repo: slug, module: mod.join("/") || null, via: `passports.libraryRepos "${pat}"` };
         }
       }
       return null;
@@ -5830,6 +6434,12 @@ var require_passport = __commonJS({
     async function findLibraryRepo(dep, searches) {
       const mapped = mappedRepo(dep);
       if (mapped) return mapped;
+      const hits = require_bbindex().lookup(dep);
+      if (hits.length && hits[0].score >= 50) {
+        const h = hits[0];
+        const close = hits.filter((x) => x.score === h.score && (x.project !== h.project || x.repo !== h.repo));
+        return { project: h.project, repo: h.repo, module: h.module, via: `bitbucket index: ${h.why}${close.length ? ` (also ${close.slice(0, 3).map((x) => `${x.project}/${x.repo}${x.module ? "/" + x.module : ""}`).join(", ")}; map one in passports.libraryRepos)` : ""}` };
+      }
       const atl = require_atlassian();
       const norm = (x) => x.toLowerCase().replace(/[-_.]/g, "");
       const tried = [];
@@ -5841,7 +6451,8 @@ var require_passport = __commonJS({
         if (hit) return { project: hit.project, repo: hit.repo, via: name === dep.artifactId ? "same name" : `repo "${hit.repo}" (module of a bigger repo?)` };
       }
       const candidates = [...new Set(tried.flatMap((n) => searches.get(n) || []).map((r) => `${r.project}/${r.repo}`))].slice(0, 8);
-      const err = new Error(`no Bitbucket repo for ${dep.artifactId} (tried ${tried.join(", ")})${candidates.length ? `; similar: ${candidates.join(", ")}` : ""}. Map it in config.json: passports.libraryRepos { "${dep.artifactId}": "PROJECT/repo" }`);
+      const indexed = require_bbindex().load().builtAt;
+      const err = new Error(`no Bitbucket repo for ${dep.artifactId} (tried ${tried.join(", ")}${indexed ? `, and the folders of every repo indexed ${indexed.slice(0, 10)}` : ""})${candidates.length ? `; similar: ${candidates.join(", ")}` : ""}. ${indexed ? "" : "Index all repos and their folders with catalog_sync what=bitbucket, or map"}${indexed ? "Map" : ""} it in config.json: passports.libraryRepos { "${dep.artifactId}": "PROJECT/repo" }`);
       err.candidates = candidates;
       throw err;
     }
@@ -5894,11 +6505,20 @@ var require_passport = __commonJS({
       const refs = v ? [`v${v}`, v, `${dep.artifactId}-${v}`, `${repo.repo}-${v}`, `release/${v}`, void 0] : [void 0];
       await limit.take("bitbucket");
       const info = await git.fetchFirst(repo.project, repo.repo, refs);
-      const mod = findModule(info.path, dep.artifactId, repo.repo);
+      const hinted = repo.module && fs2.existsSync(path2.join(info.path, repo.module)) ? repo.module : null;
+      const mod = hinted || findModule(info.path, dep.artifactId, repo.repo);
       const notes = [];
       if (!mod && repo.repo !== dep.artifactId) notes.push(`no module declaring ${dep.artifactId} found in ${repo.repo}: read the whole repo`);
       if (dep.version && /\$/.test(dep.version)) notes.push(`version ${dep.version} could not be resolved: used the default branch`);
-      const ex = underModule(extract(mod ? path2.join(info.path, mod) : info.path, { internalGroups: getPersonal().internalGroups }), mod);
+      const dir = mod ? path2.join(info.path, mod) : info.path;
+      const raw = extract(dir, { internalGroups: getPersonal().internalGroups });
+      const ex = underModule(raw, mod);
+      const indexKey = `${repo.project}/${repo.repo}${mod ? `/${mod}` : ""}`;
+      try {
+        require_codeindex().build(dir, indexKey, { project: repo.project, repo: repo.repo, module: mod || null, ref: info.ref, sha: info.sha, library: dep.artifactId, version: dep.version || null }, { extracted: raw });
+      } catch (e) {
+        notes.push(`code index: ${e.message}`);
+      }
       return {
         ...dep,
         repo: `${repo.project}/${repo.repo}`,
@@ -5906,6 +6526,7 @@ var require_passport = __commonJS({
         found: repo.via,
         ref: info.ref,
         sha: info.sha,
+        index: indexKey,
         exactVersion: !!v && info.ref !== "HEAD",
         path: path2.relative(ROOT, mod ? path2.join(info.path, mod) : info.path),
         ...notes.length ? { note: notes.join("; ") } : {},
@@ -5917,6 +6538,26 @@ var require_passport = __commonJS({
         dbCalls: ex.db.calls || [],
         internal: ex.dependencies.internal
       };
+    }
+    async function fetchLibraries(internal, git = require_git()) {
+      const libs = [];
+      const queue = [...internal];
+      const seen = /* @__PURE__ */ new Set();
+      const searches = /* @__PURE__ */ new Map();
+      while (queue.length && libs.length < MAX_LIBS) {
+        const d = queue.shift();
+        const k = `${d.groupId}:${d.artifactId}`;
+        if (seen.has(k)) continue;
+        seen.add(k);
+        try {
+          const lib = await fetchLibrary(d, git, searches);
+          libs.push(lib);
+          for (const sub of lib.internal || []) queue.push({ ...sub, via: d.artifactId });
+        } catch (e) {
+          libs.push({ ...d, error: e.message });
+        }
+      }
+      return libs;
     }
     async function build(service, { repo, ref, env, libraries = true, graph = false, gitImpl, rebuildCatalog = true } = {}) {
       const git = gitImpl || require_git();
@@ -5931,25 +6572,7 @@ var require_passport = __commonJS({
       const info = await git.fetchRef(target.project, target.repo, ref);
       rememberRepo(service, target.project, target.repo);
       const ex = extract(info.path, { internalGroups: getPersonal().internalGroups });
-      const libs = [];
-      if (libraries) {
-        const queue = [...ex.dependencies.internal];
-        const seen = /* @__PURE__ */ new Set();
-        const searches = /* @__PURE__ */ new Map();
-        while (queue.length && libs.length < MAX_LIBS) {
-          const d = queue.shift();
-          const k = `${d.groupId}:${d.artifactId}`;
-          if (seen.has(k)) continue;
-          seen.add(k);
-          try {
-            const lib = await fetchLibrary(d, git, searches);
-            libs.push(lib);
-            for (const sub of lib.internal || []) queue.push({ ...sub, via: d.artifactId });
-          } catch (e) {
-            libs.push({ ...d, error: e.message });
-          }
-        }
-      }
+      const libs = libraries ? await fetchLibraries(ex.dependencies.internal, git) : [];
       const from = (lib) => (x) => ({ ...x, source: lib.artifactId });
       const effective = {
         endpoints: [...ex.endpoints, ...libs.flatMap((l) => (l.endpoints || []).map(from(l)))],
@@ -5985,23 +6608,44 @@ var require_passport = __commonJS({
           unresolved: ex.config.unresolved.length
         }
       };
+      const key = `${info.project}/${info.repo}`;
+      try {
+        require_codeindex().build(info.path, key, { project: info.project, repo: info.repo, ref: info.ref, sha: info.sha, service }, { extracted: ex });
+        passport.codeIndex = key;
+      } catch (e) {
+        passport.codeIndex = { error: e.message };
+      }
+      try {
+        const F = require_flows();
+        passport.flows = F.flows([key, ...libs.filter((l) => l.index).map((l) => l.index)], { config: F.serviceConfig(info.path) }).map(flowSummary);
+      } catch (e) {
+        passport.flows = { error: e.message };
+      }
       const prev = load(service);
       passport.changes = diff(prev, passport);
       if (prev) writeJson(path2.join(DIR, safe(service), "history", `${prev.builtAt.replace(/[:.]/g, "-")}.json`), prev);
       passport.stats.totalMs = Date.now() - started;
       writeJson(file(service), passport);
       fs2.writeFileSync(path2.join(DIR, safe(service), "passport.md"), markdown(passport));
-      try {
-        passport.codeIndex = require_codeindex().build(info.path, `${info.project}/${info.repo}`, { project: info.project, repo: info.repo, ref: info.ref, sha: info.sha, service }, { extracted: ex }).builtAt;
-      } catch (e) {
-        passport.codeIndex = { error: e.message };
-      }
       if (graph) passport.graph = await graphBuild(info.path).catch((e) => ({ error: e.message }));
       if (rebuildCatalog) try {
         for (const e of require_config().envNames()) require_catalog().build(e);
       } catch {
       }
       return passport;
+    }
+    function flowSummary(f) {
+      return {
+        entry: f.entry,
+        kind: f.kind,
+        handler: f.method,
+        ...f.topic ? { topic: f.topic } : {},
+        via: [...new Set(f.chain.map((c) => `${c.method.split("#")[0].split(".").pop()}${c.repo ? ` (${c.repo})` : ""}`))],
+        out: Object.fromEntries(Object.entries(f.out).filter(([, v]) => v.length)),
+        beans: f.beans.map((b) => b.name),
+        mocks: f.mocks.map((m) => `${m.type} ${m.name}: ${m.why}`),
+        properties: f.properties.filter((p) => p.value === null && !p.hasDefault).map((p) => p.key)
+      };
     }
     async function graphBuild(repoPath) {
       const url = getPersonal().graphUrl;
@@ -6088,7 +6732,7 @@ var require_passport = __commonJS({
       }
       return rows;
     }
-    module2.exports = { build, load, list, whoUses, libraryRepoNames, findModule, resolveRepo, deployedSha, diff, markdown, graphBuild, DIR };
+    module2.exports = { build, fetchLibraries, flowSummary, load, list, whoUses, libraryRepoNames, findModule, resolveRepo, deployedSha, diff, markdown, graphBuild, DIR };
   }
 });
 
@@ -6101,7 +6745,7 @@ var require_indexer = __commonJS({
     var limit = require_limit();
     var jobs = require_jobs();
     var LIVE = ["pg", "es", "kafka", "consul"];
-    var WHAT = [...LIVE, "passports", "index", "all"];
+    var WHAT = [...LIVE, "passports", "bitbucket", "index", "all"];
     var sourcesFile = (env) => path2.join(CACHE2, env, "_sources.json");
     function record(env, key, value) {
       const s = readJson(sourcesFile(env), {});
@@ -6162,10 +6806,16 @@ var require_indexer = __commonJS({
       if (!WHAT.includes(what)) throw new Error(`what must be one of ${WHAT.join(", ")}`);
       getEnv2(env);
       only = typeof only === "string" ? only.split(",").map((s) => s.trim()).filter(Boolean) : only;
-      const title = `${what}${only?.length ? ` (${only.join(", ")})` : ""} ${what === "passports" ? "" : env}`.trim();
-      const key = what === "passports" ? `passports:${(only || []).join(",")}` : `${env}:${what}:${(only || []).join(",")}`;
+      const global = what === "passports" || what === "bitbucket";
+      const title = `${what}${only?.length ? ` (${only.join(", ")})` : ""} ${global ? "" : env}`.trim();
+      const key = global ? `${what}:${(only || []).join(",")}` : `${env}:${what}:${(only || []).join(",")}`;
       return jobs.start(key, title, async (log) => {
         const out2 = {};
+        if (what === "bitbucket") {
+          out2.bitbucket = await require_bbindex().build({ log, only, force: !!only });
+          for (const e of envNames2()) out2[e] = rebuildIndex(e, log);
+          return out2;
+        }
         if (what === "passports") {
           out2.passports = await rebuildPassports(only, log);
           for (const e of envNames2()) out2[e] = rebuildIndex(e, log);
@@ -28290,7 +28940,7 @@ var require_workspace = __commonJS({
       if (!m) throw new Error(`no workspace "${id}" (workspace_list shows them)`);
       return m;
     }
-    async function open({ service, project, repo, ref, env, url } = {}) {
+    async function open({ service, project, repo, ref, env, url, libraries = true, git } = {}) {
       if (service && !(project && repo)) {
         const pp = require_passport();
         const r = await pp.resolveRepo(service, project && repo ? `${project}/${repo}` : void 0);
@@ -28314,6 +28964,12 @@ ${BUILD_OUTPUT.join("\n")}
       } catch {
       }
       const meta = { id, project: info.project, repo, ref: ref || null, sha: info.sha, commitDate: info.commitDate, service: service || null, env: env || null, path: dir, createdAt: (/* @__PURE__ */ new Date()).toISOString(), fallback: info.fallback || void 0 };
+      meta.libs = [];
+      if (libraries) {
+        const ex = require_extract().extract(dir, { internalGroups: require_config().getPersonal().internalGroups });
+        const libs = await require_passport().fetchLibraries(ex.dependencies.internal, git || G);
+        meta.libs = libs.map((l) => ({ artifactId: l.artifactId, version: l.version || null, repo: l.repo || null, module: l.module || null, ref: l.ref || null, index: l.index || null, found: l.found, error: l.error }));
+      }
       writeJson(metaFile(id), meta);
       const index2 = reindex(id);
       return { ...meta, path: path2.relative(require_config().HOME, dir), files: index2.files, classes: index2.classes, build: buildFiles(dir) };
@@ -28330,6 +28986,11 @@ ${BUILD_OUTPUT.join("\n")}
       const m = checkId(id);
       if (m.dirty || !require_codeindex().load(`work/${id}`)) reindex(id);
       return require_codeindex().load(`work/${id}`);
+    }
+    function keys(id) {
+      const m = checkId(id);
+      index(id);
+      return [`work/${id}`, ...(m.libs || []).map((l) => l.index).filter(Boolean)];
     }
     function list() {
       let files = [];
@@ -28419,295 +29080,7 @@ new file mode`) ? "added" : "modified";
       })(dir, 0);
       return out2.sort();
     }
-    module2.exports = { open, list, read, write, patch, drop, reindex, index, checkId, resolvePath, buildFiles, WORK };
-  }
-});
-
-// lib/impact.js
-var require_impact = __commonJS({
-  "lib/impact.js"(exports2, module2) {
-    var CI = require_codeindex();
-    var kindOf = (id) => {
-      const m = id.match(/^(table|column|topic|es|pgfn|endpoint|svc|file|ext):/);
-      if (m) return m[1];
-      if (id.includes("#")) return "method";
-      return "class-or-field";
-    };
-    var memo = { sig: null, G: null };
-    function load({ repos, env } = {}) {
-      const keys = CI.select(repos);
-      let sig = null;
-      try {
-        const pdir = require_passport().DIR;
-        const pm = require("fs").existsSync(pdir) ? require("fs").statSync(pdir).mtimeMs : 0;
-        sig = JSON.stringify([keys.map((k) => `${k}@${CI.load(k)?.builtAt}`), env, env ? require_pgindex().current(env).builtAt : null, pm]);
-      } catch {
-      }
-      if (sig && memo.sig === sig) return memo.G;
-      const G = build(keys, env);
-      if (sig) Object.assign(memo, { sig, G });
-      return G;
-    }
-    function build(keys, env) {
-      const rev = /* @__PURE__ */ new Map(), fwd = /* @__PURE__ */ new Map(), nodes = /* @__PURE__ */ new Map(), sql = [];
-      const add = (from, to, kind, where, repo) => {
-        const e = { from, to, kind, where, repo };
-        (rev.get(to) || rev.set(to, []).get(to)).push(e);
-        (fwd.get(from) || fwd.set(from, []).get(from)).push(e);
-      };
-      const indexed = /* @__PURE__ */ new Set();
-      for (const key of keys) {
-        const idx = CI.load(key);
-        const g = idx && idx.graph_();
-        if (!g) continue;
-        if (g.app?.name) indexed.add(g.app.name);
-        indexed.add(idx.repo || key.split("/").pop());
-        for (const c of g.classes) {
-          nodes.set(c.id, { id: c.id, kind: "class", repo: key, file: c.file, line: c.line, role: c.role, test: c.test, name: c.name });
-          for (const m of c.methods) nodes.set(`${c.id}#${m.name}`, { id: `${c.id}#${m.name}`, kind: "method", repo: key, file: c.file, line: m.line, endLine: m.endLine, role: c.role, test: c.test, name: `${c.name}#${m.name}` });
-          for (const f of c.fields) nodes.set(`${c.id}.${f.name}`, { id: `${c.id}.${f.name}`, kind: "field", repo: key, file: c.file, line: f.line, role: c.role, test: c.test, name: `${c.name}.${f.name}`, column: f.column });
-        }
-        for (const [from, to, kind, where] of g.edges) add(from, to, kind, where, key);
-        for (const s of g.sql || []) sql.push({ ...s, repo: key });
-      }
-      let cats = [];
-      if (env) {
-        try {
-          cats = require_pg().loadAll(env);
-        } catch {
-        }
-        try {
-          for (const e of require_pgindex().current(env).edges) {
-            const t = e.targetKind === "function" || e.targetKind === "procedure" ? `pgfn:${e.target}` : `table:${e.target}`;
-            if (e.source === "db") {
-              if (e.role === "trigger") continue;
-              const u = e.userKind === "function" || e.userKind === "procedure" ? `pgfn:${e.user}` : `table:${e.user}`;
-              add(u, t, e.role, e.where || e.detail || "", `db:${e.db}`);
-            } else if (!indexed.has(e.user)) add(`svc:${e.user}`, t, e.role, e.where, `svc:${e.user}`);
-          }
-        } catch {
-        }
-      }
-      try {
-        const pp = require_passport();
-        for (const s of pp.list()) {
-          if (indexed.has(s.service)) continue;
-          const p = pp.load(s.service);
-          const e = p?.effective || p || {};
-          for (const k of e.kafka?.consumes || []) if (k.topic && !/^\?/.test(k.topic)) add(`svc:${s.service}`, `topic:${k.topic}`, "consumes", `${k.file}:${k.line}`, `svc:${s.service}`);
-          for (const k of e.kafka?.produces || []) if (k.topic && !/^[?(]/.test(k.topic)) add(`topic:${k.topic}`, `svc:${s.service}`, "produced-by", `${k.file}:${k.line}`, `svc:${s.service}`);
-          for (const x of e.feign || []) add(`svc:${s.service}`, `endpoint:${x.method} ${normPath(x.path)}`, "calls-http", `${x.file}:${x.line}`, `svc:${s.service}`);
-          for (const x of e.endpoints || []) add(`endpoint:${x.method} ${normPath(x.path)}`, `svc:${s.service}`, "handler", `${x.file}:${x.line}`, `svc:${s.service}`);
-          for (const x of e.es || []) if (x.index && !/^\?/.test(x.index)) add(`svc:${s.service}`, `es:${x.index}`, "es", `${x.file}:${x.line}`, `svc:${s.service}`);
-        }
-      } catch {
-      }
-      const relNames = /* @__PURE__ */ new Map();
-      for (const cat of cats) for (const t of cat.tables) {
-        const k = `${t.schema}.${t.name}`.toLowerCase();
-        (relNames.get(t.name.toLowerCase()) || relNames.set(t.name.toLowerCase(), /* @__PURE__ */ new Set()).get(t.name.toLowerCase())).add(k);
-      }
-      for (const id of [...rev.keys(), ...fwd.keys()]) {
-        const m = id.match(/^(table|column):([^.]+)(?:\.([^.]+))?$/);
-        if (!m) continue;
-        const isCol = m[1] === "column";
-        const tname = m[2], col = m[3];
-        if (isCol ? !col : col) continue;
-        const full = relNames.get(tname);
-        if (full && full.size === 1) {
-          const q = [...full][0];
-          add(id, isCol ? `column:${q}.${col}` : `table:${q}`, "alias", "catalog", "catalog");
-        }
-      }
-      return { keys, rev, fwd, nodes, sql, cats };
-    }
-    var normPath = (p) => String(p || "").replace(/\{[^}]*\}/g, "{}").replace(/\/+$/, "") || "/";
-    function resolveTarget(G, target) {
-      const t = String(target || "").trim();
-      if (!t) throw new Error("target is empty");
-      const pre = t.match(/^(table|column|topic|kafka|es|pgfn|fn|function|endpoint|svc|service|class|method):\s*(.+)$/i);
-      const known = (id) => G.rev.has(id) || G.fwd.has(id) || G.nodes.has(id);
-      if (pre) {
-        const k = { kafka: "topic", fn: "pgfn", function: "pgfn", service: "svc" }[pre[1].toLowerCase()] || pre[1].toLowerCase();
-        const v = pre[2].trim();
-        if (k === "endpoint") return endpointNodes(G, v);
-        if (k === "class" || k === "method") return codeNodes(G, v);
-        if (k === "table" || k === "column" || k === "pgfn") return { start: [`${k}:${v.toLowerCase().replace(/"/g, "")}`], kind: k };
-        return { start: [`${k}:${v}`], kind: k };
-      }
-      if (/^(GET|POST|PUT|DELETE|PATCH|ANY)\s+\//i.test(t)) return endpointNodes(G, t);
-      const file = t.match(/^([\w./-]+\.(?:java|kt|groovy))(?::(\d+))?$/);
-      if (file) return fileNodes(G, file[1], file[2] ? Number(file[2]) : null);
-      const low = t.toLowerCase().replace(/"/g, "");
-      const parts = low.split(".");
-      for (const cat of G.cats) {
-        for (const r of cat.tables) {
-          const k = `${r.schema}.${r.name}`.toLowerCase();
-          if (parts.length === 2 && low === k) return { start: [`table:${k}`], kind: "table", db: cat.db };
-          if (parts.length === 3 && `${parts[0]}.${parts[1]}` === k && r.columns.some((c) => c.name.toLowerCase() === parts[2])) return { start: [`column:${low}`], kind: "column", db: cat.db };
-          if (parts.length === 2 && r.name.toLowerCase() === parts[0] && r.columns.some((c) => c.name.toLowerCase() === parts[1])) return { start: [`column:${k}.${parts[1]}`], kind: "column", db: cat.db };
-        }
-        for (const f of cat.functions || []) if (`${f.schema}.${f.name}`.toLowerCase() === low || parts.length === 1 && f.name.toLowerCase() === low) return { start: [`pgfn:${f.schema}.${f.name}`.toLowerCase()], kind: "pgfn", db: cat.db };
-        if (parts.length === 1) {
-          const ts = cat.tables.filter((r) => r.name.toLowerCase() === low);
-          if (ts.length === 1) return { start: [`table:${ts[0].schema}.${ts[0].name}`.toLowerCase()], kind: "table", db: cat.db };
-        }
-      }
-      for (const k of ["topic", "es", "table", "pgfn"]) if (known(`${k}:${t}`) || known(`${k}:${low}`)) return { start: [known(`${k}:${t}`) ? `${k}:${t}` : `${k}:${low}`], kind: k };
-      const code = codeNodes(G, t);
-      if (code.start.length) return code;
-      return { start: [], kind: "unknown", candidates: code.candidates };
-    }
-    function codeNodes(G, t) {
-      const [cls, member] = t.split(/#|::/);
-      const all = [...G.nodes.values()];
-      let classes = all.filter((n) => n.kind === "class" && (n.id === cls || n.id.endsWith(`.${cls}`) || n.name === cls));
-      let m = member;
-      if (!classes.length && !member && cls.includes(".")) {
-        const i = cls.lastIndexOf(".");
-        const c2 = cls.slice(0, i);
-        classes = all.filter((n) => n.kind === "class" && (n.id === c2 || n.id.endsWith(`.${c2}`) || n.name === c2));
-        m = classes.length ? cls.slice(i + 1) : void 0;
-      }
-      if (!classes.length) {
-        const words = t.toLowerCase().split(/[#.\s]+/).filter(Boolean);
-        const candidates = all.filter((n) => n.kind !== "field" && words.every((w) => n.id.toLowerCase().includes(w))).slice(0, 15).map((n) => n.id);
-        return { start: [], kind: "code", candidates };
-      }
-      if (m) {
-        const ids = classes.map((c) => `${c.id}#${m}`).filter((id) => G.nodes.has(id) || G.rev.has(id));
-        const fields = classes.map((c) => `${c.id}.${m}`).filter((id) => G.nodes.has(id));
-        return { start: [...ids, ...fields], kind: ids.length ? "method" : "field" };
-      }
-      const start = [];
-      for (const c of classes) {
-        start.push(c.id);
-        for (const n of all) if (n.id.startsWith(`${c.id}#`) || n.id.startsWith(`${c.id}.`) && n.kind === "field") start.push(n.id);
-      }
-      return { start, kind: "class" };
-    }
-    function endpointNodes(G, t) {
-      const [method, p] = t.trim().split(/\s+/);
-      const want = normPath(p.replace(/\?.*$/, "")).split("/");
-      const start = [.../* @__PURE__ */ new Set([...G.rev.keys(), ...G.fwd.keys()])].filter((id) => {
-        const m = id.match(/^endpoint:(\w+) (.*)$/);
-        if (!m || m[1] !== method.toUpperCase() && m[1] !== "ANY") return false;
-        const have = m[2].split("/");
-        return have.length === want.length && have.every((s, i) => s === "{}" || want[i] === "{}" || s === want[i]);
-      });
-      return { start, kind: "endpoint" };
-    }
-    function fileNodes(G, file, line) {
-      const inFile = [...G.nodes.values()].filter((n) => n.file === file || n.file.endsWith("/" + file) || file.endsWith("/" + n.file));
-      if (line == null) return { start: inFile.filter((n) => n.kind === "class").flatMap((c) => [c.id, ...inFile.filter((n) => n.id.startsWith(c.id + "#")).map((n) => n.id)]), kind: "file" };
-      const m = inFile.filter((n) => n.kind === "method" && n.line <= line + 3 && line <= (n.endLine || n.line)).sort((a, b) => a.endLine - a.line - (b.endLine - b.line))[0];
-      return m ? { start: [m.id], kind: "method" } : { start: inFile.filter((n) => n.kind === "class").map((n) => n.id), kind: "file" };
-    }
-    function columnEdges(G, col) {
-      const [, s, t, c] = col.match(/^column:([^.]+)\.([^.]+)\.(.+)$/) || [];
-      if (!c) return { edges: [], facts: [] };
-      const table2 = `${s}.${t}`, word = new RegExp(`\\b${c.replace(/[^\w$]/g, "")}\\b`, "i");
-      const out2 = [];
-      const tableNames = /* @__PURE__ */ new Set([table2, t]);
-      for (const x of G.sql) if (x.tables.some((n) => tableNames.has(n)) && (word.test(x.sql) || /select\s+\*|returning\s+\*/i.test(x.sql))) out2.push({ from: x.m, to: col, kind: word.test(x.sql) ? "sql" : "sql select *", where: x.sql.replace(/\s+/g, " ").slice(0, 160), repo: x.repo });
-      const facts = [];
-      for (const cat of G.cats) {
-        const r = cat.tables.find((x) => `${x.schema}.${x.name}`.toLowerCase() === table2);
-        if (!r) continue;
-        for (const ix of r.indexes || []) if (word.test(ix.replace(/^.*?\(/, "("))) facts.push({ db: cat.db, kind: "index", def: ix });
-        for (const k of r.constraints || []) if (word.test(k.def)) facts.push({ db: cat.db, kind: { p: "primary key", u: "unique", f: "foreign key", c: "check" }[k.type] || k.type, name: k.name, def: k.def });
-        for (const fk of cat.tables) for (const k of fk.constraints || []) if (k.type === "f" && k.ref?.toLowerCase() === table2 && word.test(k.def.replace(/^.*REFERENCES/i, ""))) facts.push({ db: cat.db, kind: "referenced by", name: `${fk.schema}.${fk.name}.${k.name}`, def: k.def });
-        for (const f of cat.functions || []) {
-          const fid = `pgfn:${f.schema}.${f.name}`.toLowerCase();
-          const touches = (G.fwd.get(fid) || []).some((e) => e.to === `table:${table2}`);
-          if (touches && word.test(f.body || "")) out2.push({ from: fid, to: col, kind: "body", where: `${f.schema}.${f.name}`, repo: `db:${cat.db}` });
-        }
-        for (const v of cat.tables) {
-          if (!v.definition) continue;
-          const vid = `table:${v.schema}.${v.name}`.toLowerCase();
-          if ((cat.viewDeps || []).some((d) => d.view.toLowerCase() === vid.slice(6) && d.ref.toLowerCase() === table2) && word.test(v.definition)) out2.push({ from: vid, to: col, kind: "view", where: `${v.schema}.${v.name}`, repo: `db:${cat.db}` });
-        }
-      }
-      return { edges: out2, facts };
-    }
-    function impact(target, { repos, env, depth = 4, limit = 400, grep = true } = {}) {
-      const G = load({ repos, env });
-      const r = resolveTarget(G, target);
-      if (!r.start.length) return { target, resolved: [], note: `nothing named "${target}" in ${G.keys.length} indexed repos${env ? ` or the ${env} catalog` : ""}`, candidates: r.candidates || [], repos: G.keys };
-      let facts = [];
-      const extra = /* @__PURE__ */ new Map();
-      for (const s of r.start.filter((x) => x.startsWith("column:"))) {
-        const ce = columnEdges(G, s);
-        for (const e of ce.edges) (extra.get(e.to) || extra.set(e.to, []).get(e.to)).push(e);
-        facts = facts.concat(ce.facts);
-      }
-      const seen = new Map(r.start.map((s) => [s, { depth: 0, via: null }]));
-      let frontier = [...r.start];
-      for (let d = 1; d <= depth && frontier.length; d++) {
-        let visit2 = function(n, e, from) {
-          if (seen.has(n) || /^ext:/.test(n)) return;
-          seen.set(n, { depth: d, via: { from, kind: e.kind, where: e.where, repo: e.repo } });
-          next.push(n);
-        };
-        var visit = visit2;
-        const next = [];
-        for (const id of frontier) {
-          const ins = [...G.rev.get(id) || [], ...extra.get(id) || []];
-          const outs = d === 1 && /^(table|topic|es|column|endpoint|pgfn):/.test(id) ? (G.fwd.get(id) || []).filter((e) => /produced-by|handler/.test(e.kind)) : [];
-          for (const e of ins) visit2(e.from, e, id);
-          for (const e of outs) visit2(e.to, e, id);
-        }
-        frontier = next;
-        if (seen.size > limit * 4) break;
-      }
-      const items = [];
-      for (const [id, s] of seen) {
-        if (s.depth === 0) continue;
-        const n = G.nodes.get(id) || { id, kind: kindOf(id) };
-        if (n.kind === "class-or-field") n.kind = "other";
-        items.push({ depth: s.depth, kind: n.kind, id, name: n.name || id, repo: n.repo || s.via.repo, file: n.file || null, line: n.line || null, role: n.role || null, test: !!n.test, via: `${s.via.kind} ${short(s.via.from)}`, where: s.via.where });
-      }
-      items.sort((a, b) => a.depth - b.depth || a.test - b.test || a.kind.localeCompare(b.kind) || a.id.localeCompare(b.id));
-      const pick = (k) => items.filter((i) => i.kind === k).map((i) => i.id.replace(/^\w+:/, ""));
-      const tests = [...new Set(items.filter((i) => i.test).map((i) => i.id.split(/[#]/)[0]))];
-      const out2 = {
-        target,
-        resolved: r.start.slice(0, 20),
-        kind: r.kind,
-        depth,
-        repos: G.keys.length,
-        counts: Object.fromEntries(Object.entries(items.reduce((m, i) => {
-          m[i.kind] = (m[i.kind] || 0) + 1;
-          return m;
-        }, {}))),
-        endpoints: pick("endpoint"),
-        topics: pick("topic"),
-        tables: pick("table"),
-        functions: pick("pgfn"),
-        services: pick("svc"),
-        es: pick("es"),
-        tests,
-        db: facts,
-        items: items.slice(0, limit),
-        truncated: items.length > limit || void 0
-      };
-      if (grep) out2.mentions = textMentions(G, target, r, items);
-      return out2;
-    }
-    var short = (id) => (id || "").replace(/^[\w.]+\.(?=[A-Z][\w$]*(?:[#.]|$))/, "");
-    function textMentions(G, target, r, items) {
-      const name = r.kind === "column" ? r.start[0].split(".").pop() : r.kind === "class" ? r.start[0].split(".").pop() : r.kind === "method" || r.kind === "field" ? r.start[0].split(/[#.]/).pop() : String(r.start[0] || target).replace(/^\w+:/, "").replace(/^(GET|POST|PUT|DELETE|PATCH|ANY) /, "").replace(/\{\}/g, "");
-      if (!name || name.length < 3) return [];
-      const known = new Set(items.filter((i) => i.file).map((i) => `${i.repo}|${i.file}`));
-      const pattern = /^[\w$]+$/.test(name) ? `\\b${name}\\b` : name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      try {
-        const g = CI.grep(G.keys, pattern, { regex: true, ignoreCase: false, limit: 60, perFile: 3 });
-        return g.hits.filter((h) => !known.has(`${h.repo}|${h.path}`) && !/\.(java|kt)$/.test(h.path)).slice(0, 30);
-      } catch {
-        return [];
-      }
-    }
-    module2.exports = { impact, load, resolveTarget };
+    module2.exports = { open, keys, list, read, write, patch, drop, reindex, index, checkId, resolvePath, buildFiles, WORK };
   }
 });
 
@@ -29125,8 +29498,15 @@ ${indent(hint, 4)}` : ""}`);
         return { table: k, sql: `insert into ${k} (${cols.map((c) => c.name).join(", ")}) values (${cols.map(() => "?").join(", ")})`, args: cols.map((c) => val(c.type)), checks };
       });
     }
-    function context(id, target, { env, db: dbName, writeDdl = true } = {}) {
+    function context(id, target, { env, db: dbName, writeDdl = true, flow } = {}) {
       const m = W.checkId(id);
+      const wg = W.index(id).graph_();
+      const [tc, tm] = String(target).split(/#|::/);
+      const entryMethod = tm && findClass(wg, tc)[0]?.methods.find((x) => x.name === tm && x.annos.some((a) => /^(Scheduled|KafkaListener|EventListener|TransactionalEventListener|RabbitListener|JmsListener|SqsListener)$/.test(a)));
+      if (flow !== false && (flow || entryMethod || /^(GET|POST|PUT|DELETE|PATCH|ANY)\s+\//i.test(String(target)) || /^(kafka|scheduled|event|queue)\s/.test(String(target)) || !findClass(wg, target).length)) {
+        const fc = flowContext(id, target);
+        if (fc) return fc;
+      }
       const idx = W.index(id);
       const g = idx.graph_();
       const found = findClass(g, target);
@@ -29302,7 +29682,158 @@ ${indent(hint, 4)}` : ""}`);
       if (kt) r.push("Kotlin: no skeleton is generated; follow the example test. With Mockito use `whenever` from mockito-kotlin if present, or MockK if the project uses it.");
       return r;
     }
-    module2.exports = { context, setup, moduleOf, argFor, inserts };
+    function flowContext(id, target) {
+      const m = W.checkId(id);
+      const keys = W.keys(id);
+      const F = require_flows();
+      const config = F.serviceConfig(m.path);
+      const G = require_impact().load({ repos: keys });
+      const t = String(target).trim();
+      const normPath = (p) => p.replace(/\{[^}]*\}/g, "{}").replace(/\/+$/, "");
+      const all = F.flows(keys, { config });
+      let f = null;
+      const ep = t.match(/^(GET|POST|PUT|DELETE|PATCH|ANY)\s+(\S+)/i);
+      if (ep) {
+        const want = normPath(ep[2]).split("/");
+        f = all.find((x) => {
+          if (x.kind !== "http") return false;
+          const [v, p] = x.entry.split(" ");
+          const have = p.split("/");
+          return v === ep[1].toUpperCase() && have.length === want.length && have.every((seg, i) => seg === "{}" || want[i] === "{}" || seg === want[i]);
+        });
+      }
+      if (!f) f = all.find((x) => x.entry === t);
+      const [cls, meth] = t.split(/#|::/);
+      const classes = [...G.classes.values()].filter((c) => !c.test && (c.id === cls || c.name === cls || c.id.endsWith(`.${cls}`)));
+      if (!f && classes.length) {
+        const ids = classes.flatMap((c) => meth ? [`${c.id}#${meth}`] : c.methods.filter((x) => !x.ctor && !x.mods.includes("private")).map((x) => `${c.id}#${x.name}`));
+        f = all.find((x) => ids.includes(x.method)) || (ids[0] ? F.from(keys, ids[0], { config }) : null);
+      }
+      if (!f) return null;
+      const entryCls = G.classes.get(f.method.split("#")[0]);
+      const entryMethod = entryCls.methods.find((x) => x.name === f.method.split("#")[1]);
+      const g = W.index(id).graph_();
+      const app = g.classes.find((c) => c.role === "application") || g.classes.find((c) => !c.test);
+      const pkg = app ? app.id.slice(0, app.id.length - app.name.length - 1) : "";
+      const testFile = app ? app.file.replace(/(^|\/)src\/main\/(java|kotlin)\//, "$1src/test/$2/").replace(/[^/]+\.(java|kt)$/, `${entryCls.name}${cap(entryMethod.name)}FlowTest.java`) : `src/test/java/${entryCls.name}FlowTest.java`;
+      const s = setup(m.path, moduleOf(m.path, app ? app.file : entryCls.file), g.app);
+      const web = f.kind === "http";
+      const imports = /* @__PURE__ */ new Set(["org.junit.jupiter.api.Test", "org.springframework.beans.factory.annotation.Autowired", "org.springframework.context.annotation.Import"]);
+      const useType = (typeId) => {
+        if (typeId && !typeId.startsWith("ext:") && typeId.slice(0, typeId.lastIndexOf(".")) !== pkg && !/^java\.lang\.[A-Z]/.test(typeId)) imports.add(typeId);
+        if (typeId && typeId.startsWith("ext:") && !/^ext:java\.lang\./.test(typeId)) imports.add(typeId.slice(4).replace(/#.*$/, ""));
+      };
+      const beans = f.beans.map((b) => G.classes.get(b.id)).filter(Boolean);
+      for (const b of beans) useType(b.id);
+      for (const k of f.mocks) useType(k.typeId);
+      for (const a of [...entryMethod.params || []]) useType(a.typeId);
+      const mockAnno = s.mockBean === "MockitoBean" ? "org.springframework.test.context.bean.override.mockito.MockitoBean" : "org.springframework.boot.test.mock.mockito.MockBean";
+      imports.add(mockAnno);
+      const ann = [];
+      if (web) {
+        imports.add("org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest");
+        imports.add("org.springframework.test.web.servlet.MockMvc");
+        imports.add("org.springframework.http.MediaType");
+        ann.push(`@WebMvcTest(controllers = ${entryCls.name}.class)`);
+      } else {
+        imports.add("org.springframework.test.context.junit.jupiter.SpringJUnitConfig");
+        ann.push(`@SpringJUnitConfig`);
+      }
+      ann.push(`@Import({${beans.map((b) => `${b.name}.class`).join(", ")}})`);
+      const props = [...f.properties].sort((a, b) => a.key.localeCompare(b.key)).map((p) => `"${p.key}=${p.value ?? (p.hasDefault ? "" : "TODO")}"`).filter((x) => !x.endsWith('="'));
+      if (props.length) {
+        imports.add("org.springframework.test.context.TestPropertySource");
+        ann.push(`@TestPropertySource(properties = {${props.join(", ")}})`);
+      }
+      const chainIds = new Set(f.chain.map((c) => c.method));
+      const callsOn = (mock) => {
+        const ids = [mock.typeId].filter(Boolean);
+        const out2 = [];
+        for (const cm of chainIds) for (const e of G.fwd.get(cm) || []) if (e.kind === "calls" && ids.some((i) => e.to === `${i}#${e.to.split("#")[1]}` && e.to.startsWith(`${i}#`))) out2.push({ method: e.to.split("#")[1], arity: e.arity, from: cm.split(".").pop() });
+        return out2.filter((x, i) => out2.findIndex((y) => y.method === x.method && y.arity === x.arity) === i);
+      };
+      const fields = [web ? "@Autowired\nMockMvc mvc;" : `@Autowired
+${entryCls.name} entry;`];
+      const given = [], then = [];
+      const topics = f.out.produces.map((p) => p.topic);
+      for (const k of f.mocks) {
+        fields.push(`@${s.mockBean}
+${k.type} ${k.name};`);
+        for (const c of callsOn(k)) {
+          const args = Array.from({ length: c.arity ?? 1 }, () => "any()");
+          if (/KafkaTemplate|StreamBridge/.test(k.type) && topics.length === 1 && args.length) args[0] = `eq("${topics[0]}")`;
+          const dc = G.classes.get(k.typeId);
+          const ret = dc?.methods.find((x) => x.name === c.method)?.ret;
+          if (ret && ret !== "void") given.push(`// when(${k.name}.${c.method}(${args.join(", ")})).thenReturn(...);  // ${ret}, used by ${c.from}`);
+          else if (!dc && /^(find|get|load|query|exchange|retrieve|postFor|getFor|select)/.test(c.method)) given.push(`// when(${k.name}.${c.method}(${args.join(", ")})).thenReturn(...);  // used by ${c.from}`);
+          then.push(`// verify(${k.name}).${c.method}(${args.join(", ")});  // ${k.why}, from ${c.from}`);
+        }
+      }
+      const call = web ? (() => {
+        const [verb, p] = f.entry.split(" ");
+        let i = 0;
+        const path3 = p.replace(/\{\}/g, () => `{p${++i}}`);
+        const vars = Array.from({ length: i }, () => '"1"');
+        const body = /POST|PUT|PATCH/.test(verb) ? '\n            .contentType(MediaType.APPLICATION_JSON)\n            .content("{}")' : "";
+        return `mvc.perform(${{ GET: "get", POST: "post", PUT: "put", DELETE: "delete", PATCH: "patch" }[verb] || "get"}("${path3}"${vars.length ? ", " + vars.join(", ") : ""})${body})
+        .andExpect(status().is2xxSuccessful());`;
+      })() : `entry.${entryMethod.name}(${entryMethod.params.map((p) => argFor(p.type, { imports: /* @__PURE__ */ new Set(), samePkg: /* @__PURE__ */ new Set(), byName: new Map([...G.classes.values()].map((c) => [c.name, c])), fileImports: [] })).join(", ")});`;
+      const statics = ["import static org.mockito.ArgumentMatchers.any;", "import static org.mockito.ArgumentMatchers.eq;", "import static org.mockito.Mockito.*;", ...s.assertj ? ["import static org.assertj.core.api.Assertions.assertThat;"] : [], ...web ? ["import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;", "import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;"] : []];
+      const outLines = [
+        ...f.out.produces.map((p) => `topic ${p.topic}${p.raw ? ` (${p.raw})` : ""} from ${p.from}`),
+        ...f.out.http.map((h) => `HTTP ${h.call} via ${h.via}`),
+        ...f.out.external.filter((x) => x.kind !== "kafka").map((x) => `${x.kind} ${x.type}.${x.call} from ${x.from}`),
+        ...f.out.tables.map((x) => `table ${x.table} (${x.access}${x.via.length ? ` via ${x.via.join(", ")}` : ""})`),
+        ...f.out.functions.map((x) => `db function ${x.function}`)
+      ];
+      const skeleton = [
+        pkg ? `package ${pkg};
+` : "",
+        [...imports].sort().map((i) => `import ${i};`).join("\n"),
+        "",
+        statics.sort().join("\n"),
+        "",
+        `// Flow test of ${f.entry}: ${[...new Set(f.chain.map((c) => c.method.split("#")[0].split(".").pop()))].join(" -> ")}.`,
+        `// Real beans: ${beans.map((b) => b.name).join(", ")}. Mocked at the edge: ${f.mocks.map((k) => k.name).join(", ") || "nothing"}.`,
+        ...outLines.length ? [`// What leaves the service: ${outLines.join("; ")}.`] : [],
+        ...ann,
+        `class ${path2.basename(testFile, ".java")} {`,
+        indent(fields.join("\n\n"), 4),
+        "",
+        indent(["@Test", `void ${entryMethod.name}Flow() throws Exception {`, ...given.length ? ["    // given", ...given.map((x) => "    " + x)] : [], `    ${call}`, "    // then: what leaves the service", ...then.map((x) => "    " + x), "}"].join("\n"), 4),
+        "}",
+        ""
+      ].join("\n").replace(/\n{3,}/g, "\n\n");
+      return {
+        workspace: id,
+        style: "flow",
+        entry: f.entry,
+        kind: f.kind,
+        handler: f.method,
+        flow: { chain: f.chain.map((c) => `${c.method.split(".").slice(-1)[0]}${c.repo ? ` [${c.repo}]` : ""}${c.at ? ` ${c.at}` : ""}`), out: f.out, beans: f.beans, mocks: f.mocks, properties: f.properties },
+        libraries: (m.libs || []).map((l) => ({ artifactId: l.artifactId, repo: l.repo, module: l.module, error: l.error })),
+        setup: s,
+        test: { path: testFile, exists: fs2.existsSync(path2.join(m.path, testFile)), class: `${pkg ? pkg + "." : ""}${path2.basename(testFile, ".java")}` },
+        sources: [...new Set(f.chain.map((c) => c.method.split("#")[0]))].slice(0, 8).map((cid) => {
+          const c = G.classes.get(cid);
+          return { class: cid, repo: c.repo, file: c.file };
+        }),
+        skeleton,
+        rules: [
+          "Flow test: the beans on the chain are real (also the library ones), everything at its edge is a mock. Keep @Import to the chain; a missing bean fails the context with the bean it lacks: mock it or import it.",
+          "Stub what the flow reads from its mocks (when ... thenReturn), then check what leaves the service: verify the topic sends, HTTP calls and writes (ArgumentCaptor for the payload).",
+          'The verify/when hints use any() for every argument: where the method is overloaded (JdbcTemplate.update, RestTemplate.postForObject with String or URI) use typed matchers (anyString(), any(Map.class), eq("...")) so the right overload is checked.',
+          "Mocks of framework beans (KafkaTemplate, RestTemplate) may see calls while the context starts (lifecycle, metrics): verify the calls that matter (never().send(...)) rather than verifyNoInteractions on them.",
+          "Give the request what the handler needs to be chosen (path variables, body fields): read the entry and the handler before writing it.",
+          web ? `@WebMvcTest(controllers = X) only scans controllers of the application; a library controller must also be in @Import. Its other controllers are not loaded.` : "Call the entry method directly (listener, job), as the framework would.",
+          `@${s.mockBean} for every mock (${s.mockBean === "MockitoBean" ? "Boot 3.4+" : "Boot < 3.4"}); generic types (KafkaTemplate<String, String>) as the bean declares them.`,
+          "Read the chain's sources (code_read / workspace_read; library files are in the libraries' indexes) before writing assertions."
+        ],
+        next: `Write it with workspace_write path="${testFile}", then test_run tests=["${path2.basename(testFile, ".java")}"]. The libraries must be resolvable by the build (your Maven/Gradle repository).`
+      };
+    }
+    var cap = (x) => x[0].toUpperCase() + x.slice(1);
+    module2.exports = { context, flowContext, setup, moduleOf, argFor, inserts };
   }
 });
 
@@ -29605,7 +30136,7 @@ ${e.message}`, ms: Date.now() - started });
       const counts = { tests: cases.length, passed: cases.filter((k) => k.status === "passed").length, failed: cases.filter((k) => k.status === "failed").length, errors: cases.filter((k) => k.status === "error").length, skipped: cases.filter((k) => k.status === "skipped").length };
       const parts = [];
       for (const e of compile) parts.push({ file: e.file, line: e.line, why: `compile: ${e.message}`, snippet: snippet(root, e.file, e.line) });
-      for (const k of cases) for (const pt of k.parts || []) if (!parts.some((x) => x.file === pt.file && x.line === pt.line)) parts.push({ file: pt.file, line: pt.line, method: pt.method, test: pt.test, why: `${k.class.split(".").pop()}.${k.name}: ${(k.message || k.type || "").split("\n")[0].slice(0, 200)}`, snippet: pt.snippet });
+      for (const k of cases) for (const pt of k.parts || []) if (!parts.some((x) => x.file === pt.file && x.line === pt.line)) parts.push({ file: pt.file, line: pt.line, method: pt.method, test: pt.test, why: `${k.class.split(".").pop()}.${k.name}: ${((k.message || k.type || "").split("\n").find((l) => l.trim()) || "").trim().slice(0, 200)}`, snippet: pt.snippet });
       const hints = [];
       if (/Mockito cannot mock this class|Java \d+ \(\d+\) is not supported by the current version of Byte Buddy/.test(r.out + cases.map((k) => k.message).join("\n"))) hints.push('Mockito/Byte Buddy of this project does not support the JDK the tests ran on: point tests.javaHome at the JDK the project builds with (17 or 21), or keep tests.javaToolOptions = "-Dnet.bytebuddy.experimental=true".');
       if (/Failed to determine a suitable driver class|Connection to .* refused|password authentication failed/.test(r.out)) hints.push("The tests wanted a database: run with db (env + db) so test_run loads the DDL snapshot into a throwaway database.");
@@ -29853,10 +30384,10 @@ var require_tools_code = __commonJS({
         {
           name: "test_context",
           group: "code",
-          description: 'Everything needed to write an isolated test for a class or method of a workspace ("PaymentService", "PaymentService#settle", a file path): its source, Spring role and the test style that fits (unit, Mockito with @Mock/@InjectMocks, @WebMvcTest + MockMvc, @DataJpaTest / @JdbcTest against the real schema), its dependencies and their methods, what each method calls on them (what to stub), endpoints, tables and functions it touches, the project test setup (JUnit, Mockito, AssertJ, Spring Boot version: @MockBean or @MockitoBean, Testcontainers), an existing test to copy the style from, rules, and a skeleton test that compiles. With env, writes the DDL snapshot of the tables it touches into the test resources and suggests insert statements (parents first).',
-          input: { workspace: str("Workspace id"), target: str("Class, Class#method or file path"), env: { ...env, description: "Environment whose synced database gives the DDL snapshot (for repository/DAO tests)" }, db: str("Database (default: the one that has the tables)") },
+          description: `Everything needed to write an isolated test for a class or method of a workspace ("PaymentService", "PaymentService#settle", a file path), or for a whole flow from an entry point (an endpoint, also one a library controller serves; a Kafka listener; a @Scheduled job): for a flow, the chain through the service and its libraries (interface dispatch into the service's implementations), what leaves the service (topics, HTTP, tables), the real beans to @Import, the mocks at its edge, the @Value properties, and a @WebMvcTest / @SpringJUnitConfig skeleton with what to verify. For a class or method: its source, Spring role and the test style that fits (unit, Mockito with @Mock/@InjectMocks, @WebMvcTest + MockMvc, @DataJpaTest / @JdbcTest against the real schema), its dependencies and their methods, what each method calls on them (what to stub), endpoints, tables and functions it touches, the project test setup (JUnit, Mockito, AssertJ, Spring Boot version: @MockBean or @MockitoBean, Testcontainers), an existing test to copy the style from, rules, and a skeleton test that compiles. With env, writes the DDL snapshot of the tables it touches into the test resources and suggests insert statements (parents first).`,
+          input: { workspace: str("Workspace id"), target: str('Class, Class#method, file path, or an entry point: "POST /process/order", "kafka payments.settled"'), env: { ...env, description: "Environment whose synced database gives the DDL snapshot (for repository/DAO tests)" }, db: str("Database (default: the one that has the tables)"), flow: { type: "boolean", description: "true: a flow test from this method (real beans on the chain, the edge mocked); false: a unit test. Default: flow for endpoints, listeners, jobs and library classes" } },
           required: ["workspace", "target"],
-          run: (a) => require_testgen().context(a.workspace, a.target, { env: a.env, db: a.db })
+          run: (a) => require_testgen().context(a.workspace, a.target, { env: a.env, db: a.db, flow: a.flow })
         },
         {
           name: "test_run",
@@ -30258,7 +30789,7 @@ var require_tools = __commonJS({
       },
       {
         name: "passport",
-        description: "Static passport of a service from its code: HTTP endpoints (incl. controllers from internal libraries), Feign/HTTP calls, Kafka topics consumed/produced, datasources and tables read/written/owned, ES indices, internal libraries (fetched at their versions) and external dependencies, each with file:line. Cached; refresh=true rebuilds and reports what changed. With env, analyzes the commit deployed there (from /version). Shown to the user as a passport page.",
+        description: "Static passport of a service from its code: flows (each entry point, also one a library serves, with the chain through service and libraries and what leaves the service: topics, HTTP, tables), HTTP endpoints (incl. controllers from internal libraries), Feign/HTTP calls, Kafka topics consumed/produced, datasources and tables read/written/owned, ES indices, internal libraries (fetched at their versions) and external dependencies, each with file:line. Cached; refresh=true rebuilds and reports what changed. With env, analyzes the commit deployed there (from /version). Shown to the user as a passport page.",
         input: {
           service: str("Service name (Consul / spring.application.name / repo slug)"),
           env: str("Analyze the commit deployed in this env (optional)"),
@@ -30285,6 +30816,7 @@ var require_tools = __commonJS({
             summary: p.summary,
             changes: p.changes,
             graph: p.graph,
+            flows: Array.isArray(p.flows) ? p.flows.map((f) => ({ entry: f.entry, via: f.via.map((v) => v.split(" ")[0]).join(" -> "), out: Object.fromEntries(Object.entries(f.out).map(([k, v]) => [k, v.map((x) => x.topic || x.call || x.table && `${x.table} ${x.access}` || x.function || x.index || `${x.kind} ${x.type}.${x.call}`)])), mocks: f.mocks.map((m) => m.split(":")[0]) })) : p.flows,
             view: `${r.publicUrl()}/passport/${encodeURIComponent(p.service)}?t=${r.sign(`passport:${p.service}`)}`
           };
         }

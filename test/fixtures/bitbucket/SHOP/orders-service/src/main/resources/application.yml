@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: orders-service
+acme:
+  events:
+    topic: orders.placed
+orders:
+  topics:
+    settled: payments.settled
+  payments-url: http://payments-service/api

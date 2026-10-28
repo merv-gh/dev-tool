@@ -1,0 +1,2 @@
+plugins { id 'java' }
+group = 'com.acme.platform'

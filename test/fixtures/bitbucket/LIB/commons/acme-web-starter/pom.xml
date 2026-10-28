@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <parent><groupId>com.acme.libs</groupId><artifactId>commons-parent</artifactId><version>1.2.0</version></parent>
+  <artifactId>acme-web-starter</artifactId>
+  <dependencies>
+    <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>
+    <dependency><groupId>com.acme.libs</groupId><artifactId>acme-audit-core</artifactId><version>${project.version}</version></dependency>
+  </dependencies>
+</project>

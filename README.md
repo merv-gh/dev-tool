@@ -340,10 +340,52 @@ The answer comes in layers by distance, with file:line and the reason for each s
 
 | Question | Tool |
 | --- | --- |
+| Which repo and folder holds library X? | `find "repo: X"` (after `catalog_sync what=bitbucket`) |
+| What happens when this endpoint/listener/job runs, and what leaves the service? | `passport` (flows) |
 | Where is this string, key, SQL, log message? | `code_search` |
 | Which class/method is it? | `code_symbols` |
 | What breaks if I change it? Which tests cover it? | `impact` |
 | Schema for a test database | `ddl_snapshot` |
+
+### Libraries and flows
+
+Internal libraries often live in a repo called `commons` or `starter`, and only the folders inside it carry the real names. Sometimes a folder isn't even named like its artifact: `audit/` builds `acme-audit-core`.
+
+**`catalog_sync what=bitbucket`** indexes every Bitbucket repo once. For each repo it reads:
+
+- the root build files and the first-level folders;
+- the Maven `<modules>`, with each module's own `artifactId` (its pom, not a dependency's);
+- the Gradle `settings.gradle` includes.
+
+It runs at 8 requests/s (`passports.indexRatePerSec`). Repos indexed in the last 7 days are kept, so later runs only ask Bitbucket for the repo list. The result goes to `cache/bitbucket/_index.json` and to the catalog (`find "repo: acme-audit-core"`).
+
+Passports and workspaces look libraries up there first: a module declaring the artifact, then the repo itself, then a folder with the name. Only after that do they guess by name. A mapping can name a module too: `"acme-audit-core": "LIB/commons/audit"`.
+
+Each library module a passport or workspace pulls gets its own code index (`cache/code/LIB/commons/audit`). The service's graph and its libraries' graphs join:
+
+- a type a library declares is that class, not an external one;
+- an interface of a library reaches the service's implementations.
+
+So a **controller of a starter** that calls a `ProcessHandler` the service implements leads into the service's code, and from there to what leaves the service.
+
+The passport now has **flows**: every entry point (endpoints, also the ones a library serves; Kafka listeners; `@Scheduled` jobs; event listeners). For each one it shows:
+
+- the chain of classes through service and libraries;
+- what leaves: topics produced (a library publisher's `${acme.events.topic}` resolved with the service's config), HTTP (Feign, RestTemplate, WebClient), tables read and written (SQL, JDBC, Spring Data repositories), database functions;
+- the beans on the chain;
+- the dependencies at its edge.
+
+`impact` crosses the same line. Changing `OrderService#place` reaches `POST /process/{type}` served by the library.
+
+**Flow tests.** `test_context` with an endpoint (`"POST /process/order"`), a listener, a job, a library class or `flow: true` gives the context for one isolated test of the whole flow:
+
+- the **real beans of the chain** in `@Import`, including the library's;
+- `@WebMvcTest(controllers = …)` for endpoints (a library controller also needs the `@Import`), or `@SpringJUnitConfig` for listeners and jobs, which are called as the framework would;
+- **everything at the edge mocked**: repositories, clients, `KafkaTemplate`, `RestTemplate`, `JdbcTemplate`, and beans not on the flow;
+- the `@Value` properties the chain needs, from the service's config (`@TestPropertySource`);
+- what to stub, and what to `verify` on what leaves (`send(eq("orders.placed"), …)`).
+
+The libraries must be resolvable by the build (your Nexus). Their sources come from Bitbucket.
 
 ### Tests and patches
 
@@ -560,7 +602,7 @@ Every picture comes from the bundled demo, a fake environment with real Postgres
 
 **`test_run`: `no Maven` / `no Gradle` / `the test database … is not reachable`.** Add `jdk` and `testdb` to `COMPOSE_PROFILES` (run.sh has them by default), or point `tests.maven` / `tests.javaHome` / `tests.pgUrl` at yours. Behind a corporate mirror, put a Maven `settings.xml` in the config folder and set `tests.mavenSettings`. For Gradle wrappers, point `distributionUrl` at your mirror. The first run downloads the project's dependencies (Spring Boot tests: ~100 MB into `cache/m2`), so it may answer "running"; ask again with the job id. `Mockito cannot mock this class` on a JDK newer than the project's Mockito: use the JDK the project builds with (`tests.javaHome`), or keep the default `tests.javaToolOptions`.
 
-**A library of a passport has `error: no Bitbucket repo for …`.** dt looks for the library's repo by its artifactId, shorter forms of it (`acme-starter-kafka` → `acme-starter`, for a module of a bigger repo), the name without suffixes like `-starter`/`-core`, and the end of its groupId; in the repo it reads only the module that declares the artifact. When the repo is named otherwise, map it: `"passports": { "libraryRepos": { "acme-starter-*": "LIB/platform-starters" } }` (artifactId or `groupId:artifactId` globs). Gradle versions may come from `gradle.properties`, `ext { }` / `ext.x`, `def`/`val`, `extra[...]`, and maps like `$versions.kafka`.
+**A library of a passport has `error: no Bitbucket repo for …`.** First run `catalog_sync what=bitbucket` once: it indexes every repo's folders and modules, so a library in `commons/audit` is found by its artifactId. Without the index, dt looks for the library's repo by its artifactId, shorter forms of it (`acme-starter-kafka` → `acme-starter`, for a module of a bigger repo), the name without suffixes like `-starter`/`-core`, and the end of its groupId; in the repo it reads only the module that declares the artifact. When the repo is named otherwise, map it: `"passports": { "libraryRepos": { "acme-starter-*": "LIB/platform-starters" } }` (artifactId or `groupId:artifactId` globs). Gradle versions may come from `gradle.properties`, `ext { }` / `ext.x`, `def`/`val`, `extra[...]`, and maps like `$versions.kafka`.
 
 ## Development
 ```bash
