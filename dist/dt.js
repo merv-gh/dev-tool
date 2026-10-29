@@ -288,6 +288,8 @@ var require_config = __commonJS({
         profiles: t.profiles && typeof t.profiles === "object" ? t.profiles : {},
         discoveryRanker: t.discoveryRanker === "bm25" ? "bm25" : "legacy",
         backends: t.backends && typeof t.backends === "object" ? t.backends : {},
+        workerHeapMb: Number.isInteger(t.workerHeapMb) && t.workerHeapMb >= 0 ? t.workerHeapMb : void 0,
+        // lib/isolate.js
         maxInputBytes: Number.isInteger(t.maxInputBytes) && t.maxInputBytes > 0 && t.maxInputBytes <= 50 * 1024 * 1024 ? t.maxInputBytes : 2 * 1024 * 1024
       };
     }
@@ -505,7 +507,15 @@ var require_util = __commonJS({
     }
     function writeJson(file, data) {
       fs2.mkdirSync(path2.dirname(file), { recursive: true });
-      fs2.writeFileSync(file, JSON.stringify(data, null, 2));
+      const cache = path2.resolve(file).startsWith(path2.resolve(CACHE2) + path2.sep);
+      const tmp = `${file}.${process.pid}.tmp`;
+      try {
+        fs2.writeFileSync(tmp, cache ? JSON.stringify(data) : JSON.stringify(data, null, 2));
+        fs2.renameSync(tmp, file);
+      } catch (e) {
+        fs2.rmSync(tmp, { force: true });
+        throw e;
+      }
     }
     function readJson(file, fallback = null) {
       try {
@@ -3249,6 +3259,9 @@ from pg_sequences where schemaname not in ('pg_catalog', 'information_schema') o
         q("select current_database() as database, version() as version")
       ]);
       const dictionaries = await dictionaryRows(q, tables);
+      const fs2 = require("fs"), side = dictFile(envName, name);
+      fs2.mkdirSync(path2.dirname(side), { recursive: true });
+      fs2.writeFileSync(side, JSON.stringify(Object.fromEntries(Object.entries(dictionaries).filter(([, d]) => d.rows).map(([k, d]) => [k, { columns: d.columns, rows: d.rows }]))));
       writeJson(dbFile(envName, name), {
         db: name,
         database: meta.database,
@@ -3262,7 +3275,7 @@ from pg_sequences where schemaname not in ('pg_catalog', 'information_schema') o
         types: [...types],
         sequences: [...sequences],
         extensions: [...extensions],
-        dictionaries
+        dictionaries: Object.fromEntries(Object.entries(dictionaries).map(([k, { rows, columns, ...d }]) => [k, { ...d, ...rows ? { count: rows.length } : {} }]))
       });
       return { tables: tables.length, functions: functions.length, viewDeps: viewDeps.length, triggers: triggers.length, dictionaries: Object.keys(dictionaries).length, ms: Date.now() - started };
     }
@@ -3272,24 +3285,85 @@ from pg_sequences where schemaname not in ('pg_catalog', 'information_schema') o
         c = require_config().load().raw.pg || {};
       } catch {
       }
-      return { re: new RegExp(process.env.DT_PG_DICTIONARIES || c.dictionaries || "^d_", "i"), max: Number(process.env.DT_PG_DICTIONARY_ROWS || c.dictionaryRows || 1e4) };
+      return {
+        re: new RegExp(process.env.DT_PG_DICTIONARIES || c.dictionaries || "^d_", "i"),
+        max: Number(process.env.DT_PG_DICTIONARY_ROWS || c.dictionaryRows || 1e4),
+        bytes: Number(process.env.DT_PG_DICTIONARY_BYTES || c.dictionaryBytes || 32e6)
+      };
     }
     async function dictionaryRows(q, tables) {
-      const { re, max } = dictionaryConfig();
+      const { re, max, bytes } = dictionaryConfig();
       const out2 = {};
       const qi = (n) => `"${String(n).replace(/"/g, '""')}"`;
+      const cell = (v) => v instanceof Date ? v.toISOString() : typeof v === "bigint" ? String(v) : v;
+      let size = 0;
       for (const t of tables) {
         if (t.kind !== "table" || !re.test(t.name)) continue;
+        const k = `${t.schema}.${t.name}`.toLowerCase();
+        if (size >= bytes) {
+          out2[k] = { skipped: `over pg.dictionaryBytes (${bytes})` };
+          continue;
+        }
         try {
-          const rows = await q(`select * from ${qi(t.schema)}.${qi(t.name)} order by 1 limit ${max + 1}`);
-          out2[`${t.schema}.${t.name}`.toLowerCase()] = { rows: [...rows].slice(0, max).map((r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v instanceof Date ? v.toISOString() : typeof v === "bigint" ? String(v) : v]))), ...rows.length > max ? { truncated: true } : {} };
+          const rows = [...await q(`select * from ${qi(t.schema)}.${qi(t.name)} order by 1 limit ${max + 1}`)];
+          const columns = rows.length ? Object.keys(rows[0]) : [], values = rows.slice(0, max).map((r) => columns.map((c) => cell(r[c])));
+          size += JSON.stringify(values).length;
+          out2[k] = { columns, rows: values, ...rows.length > max ? { truncated: true } : {} };
         } catch (e) {
-          out2[`${t.schema}.${t.name}`.toLowerCase()] = { error: e.message };
+          out2[k] = { error: e.message };
         }
       }
       return out2;
     }
-    var loadDb = (envName, name) => readJson(dbFile(envName, name));
+    var dictFile = (envName, name) => path2.join(CACHE2, envName, "pg", `${name}.dictionaries.json`);
+    var dictMemo = /* @__PURE__ */ new Map();
+    function dictionaryData(envName, name) {
+      const f = dictFile(envName, name), fs2 = require("fs");
+      let stamp;
+      try {
+        const st = fs2.statSync(f);
+        stamp = `${st.mtimeMs}:${st.size}`;
+      } catch {
+        return {};
+      }
+      const m = dictMemo.get(f);
+      if (m?.stamp === stamp) return m.data;
+      const data = readJson(f) || {};
+      dictMemo.set(f, { stamp, data });
+      return data;
+    }
+    var BIG = () => Number(process.env.DT_PG_SLIM_BYTES || 32e6);
+    function slim(file) {
+      const fs2 = require("fs");
+      let size;
+      try {
+        size = fs2.statSync(file).size;
+      } catch {
+        return;
+      }
+      if (size < BIG()) return;
+      const buf = fs2.readFileSync(file), at = Math.max(buf.lastIndexOf('\n  "dictionaries": '), buf.lastIndexOf(',"dictionaries":'));
+      if (at < 0) return;
+      const head = buf.subarray(0, at).toString("utf8").replace(/,\s*$/, ""), cat = JSON.parse(head + "\n}");
+      writeJson(file, { ...cat, dictionaries: {}, dictionariesNote: "Rows of an older catalog were dropped to keep lookups small; catalog_sync what=pg stores them next to it" });
+      console.error(`pg catalog ${path2.basename(file)}: ${Math.round(size / 1e6)} MB with dictionary rows inline; rewrote it without them (catalog_sync what=pg brings them back)`);
+    }
+    function loadDb(envName, name) {
+      const file = dbFile(envName, name);
+      slim(file);
+      const cat = readJson(file);
+      if (!cat) return null;
+      for (const [k, d] of Object.entries(cat.dictionaries || {})) {
+        if (!d || d.rows) continue;
+        let rows;
+        Object.defineProperty(d, "rows", { enumerable: false, configurable: true, get() {
+          if (rows) return rows;
+          const x = dictionaryData(envName, name)[k];
+          return rows = x ? x.rows.map((r) => Object.fromEntries(x.columns.map((c, i) => [c, r[i]]))) : void 0;
+        } });
+      }
+      return cat;
+    }
     function loadAll(envName) {
       return databases(envName).map((d) => loadDb(envName, d.name)).filter(Boolean);
     }
@@ -5535,10 +5609,31 @@ var require_codeindex = __commonJS({
         return null;
       }
       const v = { ...files, dir, tri: null, graph: null };
-      Object.defineProperty(v, "trigrams_", { value: () => v.tri ||= readTrigrams(path2.join(dir, "tri.bin")) });
-      Object.defineProperty(v, "graph_", { value: () => v.graph ||= readJson(path2.join(dir, "graph.json"), { classes: [], edges: [] }) });
+      Object.defineProperty(v, "trigrams_", { value: () => v.tri || (v.tri = held(v, "tri", path2.join(dir, "tri.bin"), readTrigrams)) });
+      Object.defineProperty(v, "graph_", { value: () => v.graph || (v.graph = held(v, "graph", path2.join(dir, "graph.json"), (f) => readJson(f, { classes: [], edges: [] }))) });
       memo.set(key, { stamp, value: v });
       return v;
+    }
+    var heldLru = /* @__PURE__ */ new Map();
+    function held(v, field, file, read2) {
+      const value = read2(file), budget = Number(process.env.DT_GRAPH_CACHE_MB || 256) * 1e6;
+      let size = 0;
+      try {
+        size = fs2.statSync(file).size;
+      } catch {
+      }
+      const k = `${file}`;
+      heldLru.delete(k);
+      heldLru.set(k, { v, field, size });
+      let total = 0;
+      for (const x of heldLru.values()) total += x.size;
+      for (const [key, x] of heldLru) {
+        if (total <= budget || key === k) break;
+        x.v[x.field] = null;
+        heldLru.delete(key);
+        total -= x.size;
+      }
+      return value;
     }
     function list() {
       const out2 = [];
@@ -6413,13 +6508,15 @@ var require_pgindex = __commonJS({
       memo.delete(env);
       return { edges: edges.length, dbs: data.dbs.length };
     }
-    function current(env) {
+    function current(env, { rebuild = false } = {}) {
       const d = load(env);
       const synced = require_pg().loadAll(env).map((c) => c.syncedAt).sort().pop();
-      if (synced && (!d.builtAt || d.builtAt < synced) || d.passportSignature !== void 0 && d.passportSignature !== require_edges().snapshot().signature) {
+      const stale = synced && (!d.builtAt || d.builtAt < synced) || d.passportSignature !== void 0 && d.passportSignature !== require_edges().snapshot().signature;
+      if (stale && (rebuild || !d.builtAt)) {
         build(env);
         return load(env);
       }
+      if (stale) Object.defineProperty(d, "stale", { value: `usage index built ${d.builtAt}, before the latest database sync or passport change: catalog_sync what=index rebuilds it`, configurable: true });
       return d;
     }
     var memo = /* @__PURE__ */ new Map();
@@ -6505,7 +6602,7 @@ var require_pgindex = __commonJS({
       return String(name).replace(/^column:/, "").split(":").pop().split(".").length >= 3;
     }
     function columnLineage(env, name) {
-      const I = require_impact(), G = I.load({ env }), r = I.resolveTarget(G, `column:${String(name).replace(/^column:/, "")}`);
+      const I = require_impact(), G = I.load({ env, target: `column:${String(name).replace(/^column:/, "")}` }), r = I.resolveTarget(G, `column:${String(name).replace(/^column:/, "")}`);
       if (!r.start.length) return { protocol: "dt.column-lineage/v1", env, target: name, edges: [], complete: false, ambiguous: r.ambiguous || void 0, candidates: r.candidates || [], gaps: [{ kind: r.ambiguous ? "ambiguous-target" : "unknown-column" }] };
       const edges = [], gaps = [...G.gaps], callers = [];
       for (const id of r.start) {
@@ -6553,8 +6650,53 @@ var require_impact = __commonJS({
     var crypto = require("crypto");
     var digest = (x) => crypto.createHash("sha256").update(JSON.stringify(x)).digest("hex");
     var memo = /* @__PURE__ */ new Map();
-    function load({ repos, env } = {}) {
-      const keys = CI.select(repos), passports = require_edges().snapshot();
+    var SCOPE_MIN = 16;
+    var SCOPE_MAX = 24;
+    function scope(target, keys) {
+      const t = String(target || "").replace(/^(table|column|pgfn|fn|function|topic|kafka|es|endpoint|svc|service|class|method):\s*/i, "").replace(/^[\w%-]+:(?=[\w%-]+:)/, "").replace(/^[\w-]+:/, "");
+      const parts = t.split(/[#:/\s()]+/).flatMap((x) => {
+        const d = x.split(".");
+        return [x, ...d.slice(1).map((_, i) => d.slice(i + 1).join("."))];
+      });
+      const names = [...new Set(parts)].filter((w) => w.length >= 3 && !/^(get|post|put|delete|patch|api|public|db\d*)$/i.test(w));
+      if (!names.length) return { keys, scoped: false };
+      const counts = (n, among) => {
+        const c = /* @__PURE__ */ new Map();
+        try {
+          for (const h of CI.grep(among, `\\b${n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, { regex: true, limit: 5e3, perFile: 1, tests: false }).hits || []) c.set(h.repo, (c.get(h.repo) || 0) + 1);
+        } catch {
+        }
+        return c;
+      };
+      let chosen = /* @__PURE__ */ new Set(), used = null, cut = false;
+      for (const n of names) {
+        const c = counts(n, keys);
+        if (!c.size) continue;
+        used = n;
+        if (c.size <= SCOPE_MAX) {
+          chosen = new Set(c.keys());
+          break;
+        }
+        if (n === names.at(-1)) {
+          chosen = new Set([...c].sort((x, y) => y[1] - x[1]).slice(0, SCOPE_MAX).map((x) => x[0]));
+          cut = true;
+        }
+      }
+      for (let round = 0; round < 2 && chosen.size && chosen.size < SCOPE_MAX; round++) {
+        const services = [...new Set([...chosen].flatMap((k) => {
+          const i = CI.load(k);
+          return [i?.service, i?.repo].filter((x) => x && x.length >= 4);
+        }))];
+        for (const svc of services) for (const k of counts(svc, keys.filter((k2) => !chosen.has(k2))).keys()) if (chosen.size < SCOPE_MAX) chosen.add(k);
+        else cut = true;
+      }
+      return { keys: keys.filter((k) => chosen.has(k)), scoped: true, of: keys.length, words: used ? [used] : names.slice(0, 2), cut };
+    }
+    function load({ repos, env, target } = {}) {
+      let keys = CI.select(repos);
+      const sc = !repos && target && keys.length > SCOPE_MIN ? scope(target, keys) : { keys, scoped: false };
+      keys = sc.keys;
+      const passports = require_edges().snapshot();
       const cats = env ? require_pg().loadAll(env) : [];
       const usage = env ? require_pgindex().current(env) : { edges: [] };
       const info = keys.map((k) => ({ key: k, idx: CI.load(k) })).filter((x) => x.idx);
@@ -6563,8 +6705,9 @@ var require_impact = __commonJS({
       if (memo.get(key)?.signature === signature) return memo.get(key);
       const G = build(info, env, cats, usage, passports);
       G.signature = signature;
+      if (sc.scoped) G.gaps.push({ kind: "impact-scoped", detail: `${keys.length} of ${sc.of} indexed repos: those naming ${sc.words.join(", ")} and their callers by service name${sc.cut ? ` (cut at ${SCOPE_MAX})` : ""}. Pass repos to choose others.` });
       memo.set(key, G);
-      if (memo.size > 8) memo.delete(memo.keys().next().value);
+      if (memo.size > 2) memo.delete(memo.keys().next().value);
       return G;
     }
     function build(info, env, cats, usage, passports) {
@@ -6588,7 +6731,6 @@ var require_impact = __commonJS({
         for (const t of cat.tables || []) {
           const name = ID.qualified(t.schema, t.name);
           node(pgid("table", cat.db, name), { kind: "table", name: `table:${name}`, legacyId: `table:${name}`, env, db: cat.db, object: name, revision: cat.syncedAt });
-          for (const c of t.columns || []) node(pgid("column", cat.db, `${name}.${ID.identifier(c.name)}`), { kind: "column", legacyId: `column:${name}.${c.name}`, env, db: cat.db, object: `${name}.${ID.identifier(c.name)}`, revision: cat.syncedAt });
         }
         for (const [ordinal, f] of (cat.functions || []).entries()) {
           const name = ID.qualified(f.schema, f.name), overloaded = cat.functions.filter((x) => x.schema === f.schema && x.name === f.name).length > 1;
@@ -6597,6 +6739,31 @@ var require_impact = __commonJS({
           node(fid, { kind: "pgfn", name: `pgfn:${name}`, legacyId: `pgfn:${name}`, env, db: cat.db, object: name, revision: cat.syncedAt });
         }
       }
+      const dataIdx = /* @__PURE__ */ new Map(), fnCount = /* @__PURE__ */ new Map();
+      for (const n of nodes.values()) {
+        for (const k of /* @__PURE__ */ new Set([n.object, String(n.object).split(".").pop()])) (dataIdx.get(`${n.kind}|${k}`) || dataIdx.set(`${n.kind}|${k}`, []).get(`${n.kind}|${k}`)).push(n);
+        if (n.kind === "pgfn") fnCount.set(`${n.db}|${n.object}`, (fnCount.get(`${n.db}|${n.object}`) || 0) + 1);
+      }
+      let colIdx = null;
+      const columns = (name, db) => {
+        if (!colIdx) {
+          colIdx = /* @__PURE__ */ new Map();
+          for (const cat of cats) for (const t of cat.tables || []) {
+            const tn = ID.qualified(t.schema, t.name);
+            for (const c of t.columns || []) {
+              const k = ID.identifier(c.name);
+              (colIdx.get(k) || colIdx.set(k, []).get(k)).push({ db: cat.db, object: `${tn}.${k}`, legacy: `column:${tn}.${c.name}`, revision: cat.syncedAt });
+            }
+          }
+        }
+        return (colIdx.get(String(name).split(".").pop()) || []).filter((x) => (!db || x.db === db) && (x.object === name || x.object.endsWith("." + name))).map((x) => {
+          const id = pgid("column", x.db, x.object);
+          if (!nodes.has(id)) node(id, { kind: "column", legacyId: x.legacy, env, db: x.db, object: x.object, revision: x.revision });
+          return nodes.get(id);
+        });
+      };
+      const dataNodes = (kind, name) => kind === "column" ? columns(name) : (dataIdx.get(`${kind}|${name}`) || dataIdx.get(`${kind}|${String(name).split(".").pop()}`) || []).filter((n) => n.object === name || n.object?.endsWith("." + name));
+      const methodsByFile = /* @__PURE__ */ new Map();
       const indexed = /* @__PURE__ */ new Set(), perRepo = /* @__PURE__ */ new Map(), byClass = /* @__PURE__ */ new Map();
       for (const { key, idx } of info) {
         const revision = ID.revision(idx);
@@ -6622,6 +6789,8 @@ var require_impact = __commonJS({
             alias(symbol, mid);
             put(`${c.id}#${m.name}`, mid);
             put(symbol, mid);
+            const fk = `${key}|${c.file}`;
+            (methodsByFile.get(fk) || methodsByFile.set(fk, []).get(fk)).push(nodes.get(mid));
           }
           for (const f of c.fields) {
             const fid = ID.code(key, ID.revision(idx), `${c.id}.${f.name}`);
@@ -6637,7 +6806,7 @@ var require_impact = __commonJS({
         const m = raw.match(/^(table|column|pgfn):(.+)$/);
         if (!m) return [raw];
         const kind = m[1], name = ID.norm(m[2]);
-        let ns = [...nodes.values()].filter((n) => n.kind === kind && (n.object === name || n.object?.endsWith("." + name)));
+        let ns = dataNodes(kind, name);
         const i = info.find((x) => x.key === key), p = servicePassports.get(i?.idx.graph_().app?.name) || servicePassports.get(i?.idx.repo);
         const dbs = new Set((p?.db?.datasources || []).map((d) => String(d.db || "").toLowerCase()));
         if (dbs.size) ns = ns.filter((n) => dbs.has(n.db) || dbs.has(cats.find((c) => c.db === n.db)?.database));
@@ -6731,7 +6900,7 @@ var require_impact = __commonJS({
           const literals = /\.sql$/.test(f.path) ? [{ value: text, index: 0 }] : require_extract().stringLiterals(require_extract().stripComments(text));
           for (const lit of literals) if (/\b(select|insert|update|delete|merge|execute)\b/i.test(lit.value)) {
             const line = text.slice(0, lit.index).split("\n").length;
-            const enclosing = [...nodes.values()].filter((n) => n.repo === key && n.file === f.path && n.kind === "method" && n.line <= line && line <= (n.endLine || n.line)).sort((a, b) => a.endLine - a.line - (b.endLine - b.line))[0];
+            const enclosing = (methodsByFile.get(`${key}|${f.path}`) || []).filter((n) => n.line <= line && line <= (n.endLine || n.line)).sort((a, b) => a.endLine - a.line - (b.endLine - b.line))[0];
             sql.push({ m: enclosing?.id || `file:${key}/${f.path}`, sql: lit.value, repo: key, file: f.path, line, revision: ID.revision(idx) });
           }
         }
@@ -6739,8 +6908,8 @@ var require_impact = __commonJS({
       }
       for (const e of usage.edges || []) {
         if (e.targetKind === "column") continue;
-        if (["function", "procedure"].includes(e.targetKind) && [...nodes.values()].filter((n) => n.kind === "pgfn" && n.db === e.db && n.object === e.target).length > 1) continue;
-        if (["function", "procedure"].includes(e.userKind) && [...nodes.values()].filter((n) => n.kind === "pgfn" && n.db === e.db && n.object === e.user).length > 1) continue;
+        if (["function", "procedure"].includes(e.targetKind) && (fnCount.get(`${e.db}|${e.target}`) || 0) > 1) continue;
+        if (["function", "procedure"].includes(e.userKind) && (fnCount.get(`${e.db}|${e.user}`) || 0) > 1) continue;
         const kind = ["function", "procedure"].includes(e.targetKind) ? "pgfn" : "table", to = e.db ? pgid(kind, e.db, e.target) : `${kind}:${e.target}`;
         if (e.source === "db") {
           if (e.role === "trigger") continue;
@@ -6769,7 +6938,7 @@ var require_impact = __commonJS({
           }
         }
       }
-      return { keys: info.map((x) => x.key), env, cats, nodes, classes, rev, fwd, aliases, sql, gaps };
+      return { keys: info.map((x) => x.key), env, cats, nodes, classes, rev, fwd, aliases, sql, gaps, columns, dataNodes };
     }
     function unique(G, ids, kind) {
       ids = [...new Set(ids)];
@@ -6806,7 +6975,8 @@ var require_impact = __commonJS({
           wantedDb = decodeURIComponent(ps[0]);
           n = ps[1];
         }
-        const found = [...G.nodes.values()].filter((x) => (!kind || x.kind === kind) && ["table", "column", "pgfn"].includes(x.kind) && (!wantedDb || x.db === wantedDb) && (!wantedEnv || x.env === wantedEnv) && (x.object === n || x.object?.endsWith("." + n)));
+        const pool = G.dataNodes ? (kind ? [kind] : ["table", "column", "pgfn"]).flatMap((k) => G.dataNodes(k, n)) : [...G.nodes.values()];
+        const found = pool.filter((x) => (!kind || x.kind === kind) && ["table", "column", "pgfn"].includes(x.kind) && (!wantedDb || x.db === wantedDb) && (!wantedEnv || x.env === wantedEnv) && (x.object === n || x.object?.endsWith("." + n)));
         if (found.length) {
           const ks = new Set(found.map((x) => x.kind));
           if (!kind && ks.has("table") && ks.has("pgfn")) return { start: [], kind: "database", ambiguous: true, candidates: found.map((x) => x.id) };
@@ -6876,7 +7046,7 @@ var require_impact = __commonJS({
       node_limit = Math.max(1, Math.min(1e5, node_limit));
       time_ms = Math.max(1, Math.min(5e3, time_ms));
       max_output_bytes = Math.max(4096, Math.min(262144, max_output_bytes));
-      const G = load({ repos, env }), r = resolveTarget(G, target, { db }), query = digest([target, repos, env, db, depth, node_limit, time_ms, max_output_bytes]), cuts = [];
+      const G = load({ repos, env, target }), r = resolveTarget(G, target, { db }), query = digest([target, repos, env, db, depth, node_limit, time_ms, max_output_bytes]), cuts = [];
       let offset = 0;
       if (cursor) {
         let c;
@@ -17107,637 +17277,6 @@ var require_results = __commonJS({
   }
 });
 
-// lib/knowledge.js
-var require_knowledge = __commonJS({
-  "lib/knowledge.js"(exports2, module2) {
-    var fs2 = require("fs");
-    var path2 = require("path");
-    var { CACHE: CACHE2, readJson, writeJson } = require_util();
-    var docs = require_docs_cache();
-    var { hash } = require_docs_parse();
-    var escape = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    var variants = (name) => [.../* @__PURE__ */ new Set([name, name.replace(/-/g, "_"), name.replace(/_/g, "-")])].filter(Boolean);
-    var provenance = (p, b, source = "docs:prose") => ({ source, status: "stated", space: p.space, pageId: p.id, version: p.version, blockId: b?.id, url: p.url });
-    function entityMatcher(entities) {
-      const words = (text) => [...String(text).toLowerCase().matchAll(/[\p{L}\p{N}_./{}:-]+/gu)].map((m) => m[0].replace(/^[.:]+|[.:]+$/g, "")).filter(Boolean);
-      const buckets = /* @__PURE__ */ new Map();
-      for (const n of entities) for (const alias of n.aliases || [n.name]) {
-        if (alias.length < 2) continue;
-        const sequence = words(alias);
-        if (!sequence.length) continue;
-        const key = sequence.join("\0"), bucket = buckets.get(sequence[0]) || /* @__PURE__ */ new Map();
-        const entry = bucket.get(key) || { name: alias.toLowerCase(), sequence, candidates: [] };
-        if (!entry.candidates.includes(n.id)) entry.candidates.push(n.id);
-        bucket.set(key, entry);
-        buckets.set(sequence[0], bucket);
-      }
-      return (text) => {
-        const tokens = words(text), found = /* @__PURE__ */ new Map();
-        for (let i = 0; i < tokens.length; i++) for (const [key, m] of buckets.get(tokens[i]) || []) if (m.sequence.every((t, n) => tokens[i + n] === t)) found.set(key, { name: m.name, candidates: [...m.candidates], ...m.candidates.length === 1 ? { entity: m.candidates[0] } : {} });
-        return [...found.values()];
-      };
-    }
-    function system(env) {
-      const nodes = /* @__PURE__ */ new Map(), relations = [], passports = [], gaps = [];
-      const consul = readJson(path2.join(CACHE2, env, "consul.json"), {});
-      const add = (n) => {
-        const old = nodes.get(n.id);
-        nodes.set(n.id, { ...old, ...n, aliases: [.../* @__PURE__ */ new Set([...old?.aliases || [], ...n.aliases || [], n.name])].filter(Boolean) });
-        return n.id;
-      };
-      const relation = (from, to, kind, src = {}, extra = {}) => relations.push({ from, to, kind, label: kind, confidence: "verified", provenance: { source: "code", status: "verified", ...src }, ...extra });
-      const cachedPassports = require_edges().snapshot();
-      gaps.push(...cachedPassports.gaps);
-      for (const { passport: full, stale, digest } of cachedPassports.rows) {
-        if (!full || full.env && full.env !== env) continue;
-        passports.push(full);
-        const p = { service: full.service, repo: `${full.repo?.project || "?"}/${full.repo?.repo || "?"}` };
-        if (!full.env) gaps.push({ kind: "passport-environment-unknown", service: p.service });
-        const aliases = [p.service, full.repo?.repo, full.app?.name, full.config?.values?.["spring.application.name"], full.config?.merged?.["spring.application.name"], full.kubernetes?.name, ...full.aliases || []].filter((x) => typeof x === "string");
-        add({ id: "service:" + p.service, name: p.service, kind: "service", aliases: aliases.flatMap(variants), version: full.deployed?.version || full.app?.version || full.version || full.repo?.sha?.slice(0, 10), owner: full.owner || full.repo?.project, env: full.env, provenance: { source: "passport", status: "verified", sha: full.repo?.sha, repo: p.repo, stale, digest } });
-        const deployed = consul.services?.[p.service]?.instances || [];
-        const versions = [...new Set(deployed.map((i) => i.meta?.version || i.version).filter(Boolean))];
-        if (versions.length) Object.assign(nodes.get("service:" + p.service), { version: versions.join(", "), versions: { [env]: versions }, env, deploymentProvenance: { source: "catalog:consul", syncedAt: consul.syncedAt } });
-      }
-      const cachedDbs = new Map(require_pg().loadAll(env).map((db) => [db.db, db]));
-      try {
-        for (const f of fs2.readdirSync(path2.join(CACHE2, env, "pg")).filter((f2) => f2.endsWith(".json") && !f2.startsWith("_"))) {
-          const db = readJson(path2.join(CACHE2, env, "pg", f));
-          if (db?.db && Array.isArray(db.tables)) cachedDbs.set(db.db, db);
-        }
-      } catch {
-      }
-      for (const db of cachedDbs.values()) {
-        add({ id: `database:${db.db}`, name: db.db, kind: "database", technology: "PostgreSQL", aliases: [db.db], tables: (db.tables || []).map((t) => `${t.schema}.${t.name}`), provenance: { source: "catalog:pg", status: "verified", syncedAt: db.syncedAt } });
-        for (const t of db.tables || []) {
-          const ID = require_semantic_identity(), object = `${t.schema}.${t.name}`, canonicalId = ID.pg("table", env, db.db, ID.qualified(t.schema, t.name));
-          add({ id: `table:${db.db}:${object}`, canonicalId, identityVersion: "dt.identity/v1", scope: { env, db: db.db, schema: t.schema, name: t.name }, name: object, kind: "table", db: db.db, aliases: [canonicalId, object, t.name], columns: t.columns, provenance: { source: "catalog:pg", status: "verified", syncedAt: db.syncedAt } });
-        }
-        for (const f of db.functions || []) {
-          const object = `${f.schema}.${f.name}`, overloaded = (db.functions || []).filter((x) => x.schema === f.schema && x.name === f.name).length > 1;
-          const ID = require_semantic_identity(), name = overloaded ? `${object}(${f.arguments || ""})` : object, scopedObject = ID.qualified(f.schema, f.name) + (overloaded ? `(${f.arguments || ""})` : ""), canonicalId = ID.pg("pgfn", env, db.db, scopedObject);
-          add({ id: `function:${db.db}:${name}`, canonicalId, identityVersion: "dt.identity/v1", scope: { env, db: db.db, schema: f.schema, name: f.name, arguments: f.arguments }, name, kind: "function", db: db.db, aliases: [canonicalId, `function:${db.db}:${object}`, object, f.name], provenance: { source: "catalog:pg", status: "verified", syncedAt: db.syncedAt } });
-          if (overloaded) gaps.push({ kind: "function-overload-resolution", db: db.db, object, detail: "Unqualified function usage cannot establish the called overload." });
-        }
-      }
-      let files = [];
-      try {
-        files = fs2.readdirSync(path2.join(CACHE2, env, "kafka"));
-      } catch {
-      }
-      for (const f of files.filter((f2) => !f2.startsWith("_") && f2.endsWith(".json"))) {
-        const t = readJson(path2.join(CACHE2, env, "kafka", f));
-        if (!t?.topic) continue;
-        add({ id: `topic:${t.topic}`, name: t.topic, kind: "topic", aliases: variants(t.topic), schema: t.valueSchema || null, partitions: t.partitions, messages: t.messages, lastMessageAt: t.lastMessageAt || t.messagesSample?.[0]?.timestamp, fields: t.fields, provenance: { source: "catalog:kafka", status: "verified", syncedAt: t.syncedAt } });
-      }
-      const resolve = (name, kind) => [...nodes.values()].filter((n) => (!kind || n.kind === kind) && n.aliases.some((a) => a.toLowerCase() === String(name).toLowerCase()));
-      for (const p of passports) {
-        const own = "service:" + p.service, effective = p.effective || {}, at = (x) => ({ service: p.service, file: x.file, line: x.line, where: x.file ? `${x.file}:${x.line || 1}` : void 0, sha: p.repo?.sha });
-        for (const x of effective.endpoints || []) {
-          const id = add({ id: `endpoint:${p.service}:${x.method} ${x.path}`, kind: "endpoint", name: `${x.method} ${x.path}`, aliases: [`${x.method} ${x.path}`, x.path], service: p.service, handler: x.handler, provenance: { source: "code", status: "verified", ...at(x) } });
-          relation(own, id, "exposes", at(x), { technology: "HTTP" });
-        }
-        for (const [field, kind] of [["produces", "produces"], ["consumes", "consumes"]]) for (const x of effective[field] || []) {
-          const id = `topic:${x.topic}`;
-          if (!nodes.has(id)) add({ id, name: x.topic, kind: "topic", aliases: variants(x.topic), provenance: { source: "code", status: "verified", ...at(x) } });
-          relation(kind === "consumes" ? id : own, kind === "consumes" ? own : id, kind, at(x), { technology: "Kafka" });
-        }
-        for (const x of effective.tables || []) {
-          let matches = resolve(x.table, "table");
-          if (!matches.length) {
-            const id = add({ id: `table:unknown:${x.table}`, name: x.table, kind: "table", aliases: [x.table], provenance: { source: "code", status: "verified", ...at(x) } });
-            matches = [nodes.get(id)];
-          }
-          if (matches.length === 1) {
-            relation(own, matches[0].id, x.access || "uses", at(x), { technology: "PostgreSQL" });
-            if (matches[0].db) relation(own, `database:${matches[0].db}`, x.access || "uses", at(x), { technology: "PostgreSQL", label: `${x.access || "uses"} ${x.table}`, table: x.table });
-          } else relation(own, `candidate:${hash(x.table).slice(0, 12)}`, "ambiguous-table", at(x), { candidates: matches.map((n) => n.id) });
-        }
-        for (const x of [...effective.calls || [], ...p.http || []]) {
-          const target = x.client || x.target || "", matches = resolve(target, "service");
-          if (matches.length === 1) relation(own, matches[0].id, "calls", at(x), { technology: "HTTP", label: `${x.method || "HTTP"} ${x.path || ""}`.trim() });
-          else if (target) {
-            const id = add({ id: `external:${target}`, name: target, kind: "external", aliases: [target], provenance: { source: "code", status: "verified", ...at(x) } });
-            relation(own, id, "calls", at(x), { technology: "HTTP", label: `${x.method || "HTTP"} ${x.path || ""}`.trim() });
-          }
-        }
-        for (const x of effective.dbCalls || []) {
-          const matches = resolve(x.function || x.name, "function");
-          if (matches.length === 1) relation(own, matches[0].id, "calls", at(x), { technology: "PostgreSQL" });
-        }
-      }
-      for (const e of require_pgindex().load(env).edges || []) {
-        const from = e.userKind === "service" ? `service:${e.user}` : `${["function", "procedure"].includes(e.userKind) ? "function" : "table"}:${e.db}:${e.user}`;
-        const to = `${["function", "procedure"].includes(e.targetKind) ? "function" : "table"}:${e.db}:${e.target}`;
-        if (nodes.has(from) && nodes.has(to) && e.source === "db") relation(from, to, e.role, { source: "catalog:pg-usage", status: "verified", where: e.where, detail: e.detail }, { technology: "PostgreSQL" });
-      }
-      return { nodes: [...nodes.values()], relations, passports, gaps };
-    }
-    function build(env, { pages = docs.list(), systemModel } = {}) {
-      const sys = systemModel || system(env), nodes = new Map(sys.nodes.map((n) => [n.id, { ...n }])), relations = [...sys.relations], mentions = [], gaps = [...sys.gaps || []];
-      const entities = [...nodes.values()], match = entityMatcher(entities);
-      const byTitle = (title, space) => pages.filter((p) => p.title === title && (!space || p.space === space));
-      for (const p of pages) {
-        const spaceId = `space:${p.space}`, pageId = `page:${p.id}`;
-        nodes.set(spaceId, { id: spaceId, name: p.space, kind: "space" });
-        nodes.set(pageId, { id: pageId, name: p.title, kind: "page", space: p.space, url: p.url, version: p.version });
-        relations.push({ from: spaceId, to: pageId, kind: "contains", provenance: provenance(p) });
-        for (const b of p.blocks) {
-          nodes.set(b.id, { id: b.id, name: b.text.slice(0, 100), kind: "block", pageId: p.id, provenance: provenance(p, b) });
-          relations.push({ from: pageId, to: b.id, kind: "contains", provenance: provenance(p, b) });
-          const found = match(b.text);
-          for (const m of found) {
-            mentions.push({ ...m, ...provenance(p, b) });
-            if (m.entity) relations.push({ from: b.id, to: m.entity, kind: "mentions", confidence: "stated", provenance: provenance(p, b) });
-          }
-          for (const explicit of b.text.matchAll(/([\w.-]+-service)\s+(?:calls?|invokes?)\s+([\w.-]+-service)/gi)) {
-            const ids = [explicit[1], explicit[2]].map((name) => {
-              const matches = entities.filter((n) => n.kind === "service" && (n.aliases || [n.name]).some((a) => a.toLowerCase() === name.toLowerCase()));
-              if (matches.length === 1) return matches[0].id;
-              const id = `external:${name}`;
-              if (!nodes.has(id)) nodes.set(id, { id, name, kind: "external", provenance: provenance(p, b), candidates: matches.map((n) => n.id) });
-              mentions.push({ name, entity: id, candidates: [id], ...provenance(p, b) });
-              return id;
-            });
-            relations.push({ from: ids[0], to: ids[1], kind: "calls", label: "calls (documented)", technology: "HTTP", confidence: "stated", provenance: provenance(p, b) });
-          }
-          const services = found.filter((m) => m.entity && nodes.get(m.entity)?.kind === "service");
-          for (const a of services) for (const z of services) if (a.entity !== z.entity) {
-            const re = new RegExp(`${escape(a.name)}\\s+(?:calls?|invokes?|sends?\\s+(?:HTTP\\s+)?requests?\\s+to)\\s+${escape(z.name)}`, "i");
-            if (re.test(b.text)) relations.push({ from: a.entity, to: z.entity, kind: "calls", label: "calls (documented)", technology: "HTTP", confidence: "stated", provenance: provenance(p, b) });
-          }
-          for (const a of services) for (const m of found.filter((m2) => m2.entity && nodes.get(m2.entity)?.kind === "topic")) {
-            for (const [verb, kind] of [["(?:consumes?|listens?\\s+to|subscribes?\\s+to)", "consumes"], ["(?:produces?|publishes?\\s+to|emits?)", "produces"]]) if (new RegExp(`${escape(a.name)}\\s+${verb}\\s+${escape(m.name)}`, "i").test(b.text)) relations.push({ from: kind === "consumes" ? m.entity : a.entity, to: kind === "consumes" ? a.entity : m.entity, kind, label: `${kind} (documented)`, technology: "Kafka", confidence: "stated", provenance: provenance(p, b) });
-          }
-        }
-        for (const link of p.links || []) {
-          const targets = link.id ? pages.filter((x) => x.id === link.id) : byTitle(link.title, link.space);
-          relations.push({ from: pageId, to: targets.length === 1 ? `page:${targets[0].id}` : `page-link:${link.space}:${link.title}`, kind: "links", candidates: targets.length !== 1 ? targets.map((x) => `page:${x.id}`) : void 0, provenance: provenance(p, p.blocks.find((b) => b.id === link.blockId)) });
-        }
-        for (const inferred of p.inferredRelations || []) {
-          const resolveName = (name) => entities.filter((n) => (n.aliases || [n.name]).some((a) => a.toLowerCase() === name.toLowerCase()));
-          const from = resolveName(inferred.from), to = resolveName(inferred.to), b = p.blocks.find((b2) => b2.id === inferred.blockId);
-          if (!b) continue;
-          const source = { ...provenance(p, b, "docs:llm:inferred"), status: "inferred", model: inferred.model };
-          if (from.length === 1 && to.length === 1) relations.push({ from: inferred.kind === "consumes" ? to[0].id : from[0].id, to: inferred.kind === "consumes" ? from[0].id : to[0].id, kind: inferred.kind, label: `${inferred.kind} (inferred from docs)`, technology: inferred.technology, confidence: "inferred", provenance: source });
-          else mentions.push({ name: `${inferred.from} ${inferred.kind} ${inferred.to}`, candidates: [...from, ...to].map((n) => n.id), ...source });
-        }
-        for (const [i, diagram] of (p.diagrams || []).entries()) {
-          const diagramId = `diagram:${p.id}:${i}`, source = provenance(p, p.blocks.find((b) => b.id === diagram.blockId), diagram.provenance || "docs:diagram");
-          if (diagram.attachment) Object.assign(source, { attachment: diagram.attachment, attachmentVersion: diagram.attachmentVersion, hash: diagram.hash });
-          if (/inferred/.test(source.source)) source.status = "inferred";
-          nodes.set(diagramId, { id: diagramId, name: diagram.attachment || `Diagram ${i + 1}`, kind: "diagram", provenance: source });
-          relations.push({ from: pageId, to: diagramId, kind: "contains", provenance: source });
-          const mapping = /* @__PURE__ */ new Map();
-          for (const n of diagram.nodes || []) {
-            const matches = match(n.label || n.name || n.id).filter((m) => m.entity), unique2 = [...new Set(matches.map((m) => m.entity))];
-            const id = unique2.length === 1 ? unique2[0] : `${diagramId}:${n.id}`;
-            mapping.set(n.id, id);
-            if (unique2.length === 1) mentions.push({ name: n.label || n.id, entity: id, candidates: unique2, ...source });
-            if (!nodes.has(id)) nodes.set(id, { id, name: n.label || n.name || n.id, kind: n.kind || "external", candidates: unique2, provenance: source });
-            if (!unique2.length) gaps.push({ kind: "unlinked-diagram-element", element: n.label || n.id, message: "Diagram element is absent from the cached system catalog", provenance: source });
-            if (unique2.length === 1 && nodes.get(id)?.kind === "topic" && !sys.relations.some((r) => ["produces", "consumes"].includes(r.kind) && (r.from === id || r.to === id))) gaps.push({ kind: "topic-without-passport-usage", element: n.label || n.id, message: "Diagram topic has no producer or consumer in the cached service passports", provenance: source });
-          }
-          for (const e of diagram.relations || []) if (mapping.has(e.from) && mapping.has(e.to)) {
-            const from = mapping.get(e.from), to = mapping.get(e.to), fromKind = nodes.get(from)?.kind, toKind = nodes.get(to)?.kind;
-            const kind = e.kind || (toKind === "topic" ? "produces" : fromKind === "topic" ? "consumes" : ["table", "database"].includes(toKind) ? /write|insert|update|delete/i.test(e.label || "") ? "write" : /read|select/i.test(e.label || "") ? "read" : "uses" : "calls");
-            const technology = e.technology || (toKind === "topic" || fromKind === "topic" ? "Kafka" : ["table", "database"].includes(toKind) ? "PostgreSQL" : /https?/i.test(e.label || "") ? "HTTP" : void 0);
-            relations.push({ ...e, from, to, kind, technology, confidence: source.status, provenance: source });
-          }
-        }
-      }
-      for (const r of relations.filter((r2) => r2.confidence === "stated" && !["mentions", "links", "contains"].includes(r2.kind))) {
-        const comparable = sys.relations.some((e) => e.from === r.from && e.to === r.to && (e.kind === r.kind || r.kind === "uses" || r.technology && e.technology === r.technology && !["read", "write"].includes(r.kind)));
-        if (!comparable) {
-          r.conflict = true;
-          gaps.push({ kind: "not-supported-by-cached-code", from: r.from, to: r.to, relation: r.kind, message: "Documented interaction has no matching relation in the cached code/passports. Check cache freshness and dynamic configuration before treating it as a contradiction.", provenance: r.provenance });
-        }
-      }
-      const unique = new Map(relations.map((r) => [`${r.from}|${r.to}|${r.kind}|${r.confidence || ""}|${r.provenance?.blockId || ""}|${r.provenance?.where || ""}`, r]));
-      const graph = { env, builtAt: (/* @__PURE__ */ new Date()).toISOString(), nodes: [...nodes.values()], relations: [...unique.values()], mentions, gaps: [...new Map(gaps.map((g) => [`${g.kind}|${g.from}|${g.to}|${g.element}|${g.provenance?.blockId || ""}`, g])).values()] };
-      writeJson(path2.join(docs.DIR, "graph.json"), graph);
-      writeJson(path2.join(docs.DIR, `graph-${env}.json`), graph);
-      return graph;
-    }
-    async function feature(text, { env = require_config().envNames()[0], spaces, limit = 20, render = false } = {}) {
-      limit = Math.max(1, Math.min(Number(limit) || 20, 20));
-      const search = await require_docs_search().search(text, { spaces, limit: Math.min(60, Math.max(20, limit * 3)) }), pages = docs.list(spaces);
-      const sys = system(env), graph = build(env, { pages, systemModel: sys });
-      const words = require_docs_search().tokens(text).filter((w) => w.length > 2 && !["how", "does", "work", "the", "and", "with", "what", "why", "when", "where", "who"].includes(w));
-      const relevant = search.blocks.filter((b) => !words.length || words.some((w) => require_docs_search().tokens(`${b.title} ${b.path.join(" ")} ${b.text}`).includes(w)));
-      const relevantBlocks = new Set(relevant.map((b) => b.id)), selectedPages = new Set(relevant.map((b) => b.pageId));
-      const stale = new Set(pages.filter((p) => /\b(legacy|archived?|deprecated|obsolete|superseded)\b/i.test(`${p.title} ${(p.labels || []).join(" ")}`)).map((p) => p.id));
-      let code = { hits: [] };
-      try {
-        if (words.length) code = require_codeindex().grep(require_codeindex().select(), words.map(escape).join("|"), { regex: true, tests: false, limit: 40, perFile: 3 });
-      } catch (e) {
-        code.warning = e.message;
-      }
-      const kindOf = new Map(graph.nodes.map((n) => [n.id, n.kind]));
-      const blockKind = new Map(relevant.map((b) => [b.id, b.kind]));
-      const mentioned = graph.mentions.filter((m) => m.entity && relevantBlocks.has(m.blockId) && kindOf.get(m.entity) !== "database");
-      const seeds = new Set(mentioned.filter((m) => blockKind.get(m.blockId) !== "diagram").map((m) => m.entity));
-      const diagramOnly = new Set(mentioned.map((m) => m.entity).filter((id) => !seeds.has(id)));
-      const endpointMatches = (n) => n.kind === "endpoint" && words.some((w) => n.name.toLowerCase().includes(w));
-      for (const n of sys.nodes.filter(endpointMatches)) {
-        seeds.add(n.id);
-        seeds.add(`service:${n.service}`);
-      }
-      const KEEP = /* @__PURE__ */ new Set(["produces", "consumes", "calls", "read", "write"]);
-      const selected = /* @__PURE__ */ new Set([...seeds, ...diagramOnly]), keep = [];
-      const allowed = (r) => KEEP.has(r.kind) && !["database", "function"].includes(kindOf.get(r.from)) && !["database", "function"].includes(kindOf.get(r.to)) || r.kind === "exposes" && seeds.has(r.to);
-      for (const r of sys.relations) if (allowed(r) && (seeds.has(r.from) && kindOf.get(r.from) === "service" || seeds.has(r.to) && kindOf.get(r.to) === "service")) {
-        selected.add(r.from);
-        selected.add(r.to);
-        keep.push(r);
-      }
-      for (const r of sys.relations) if (allowed(r) && !keep.includes(r) && kindOf.get(r.from) !== kindOf.get(r.to) && (selected.has(r.from) && kindOf.get(r.from) === "topic" || selected.has(r.to) && kindOf.get(r.to) === "topic")) {
-        selected.add(r.from);
-        selected.add(r.to);
-        keep.push(r);
-      }
-      for (const r of sys.relations) if (allowed(r) && !keep.includes(r) && selected.has(r.from) && selected.has(r.to)) keep.push(r);
-      const documented = graph.relations.filter((r) => ["stated", "inferred"].includes(r.confidence) && !["contains", "mentions", "links"].includes(r.kind) && selectedPages.has(r.provenance?.pageId) && (selected.has(r.from) || selected.has(r.to)));
-      for (const r of documented) {
-        selected.add(r.from);
-        selected.add(r.to);
-        keep.push(r);
-      }
-      const byKey = /* @__PURE__ */ new Map();
-      for (const r of keep) {
-        const k = `${r.from}|${r.to}|${r.kind}|${r.confidence}`;
-        if (!byKey.has(k)) byKey.set(k, r);
-        else if (r.conflict) byKey.get(k).conflict = true;
-      }
-      const entryServices = [...new Set(sys.nodes.filter((n) => selected.has(n.id) && endpointMatches(n)).map((n) => `service:${n.service}`))];
-      const client = entryServices.length ? [{ id: "person:client", name: "Client", kind: "person", provenance: { source: "code", status: "verified", note: "caller of the matching endpoints" } }] : [];
-      const modelNodes = [...client, ...graph.nodes.filter((n) => selected.has(n.id) && !["page", "space", "block", "diagram", "endpoint"].includes(n.kind))];
-      const modelRelations = [
-        ...sys.nodes.filter((n) => selected.has(n.id) && endpointMatches(n)).map((n) => ({ from: "person:client", to: `service:${n.service}`, kind: "calls", label: n.name, technology: "HTTP", confidence: "verified", provenance: n.provenance })),
-        ...[...byKey.values()].filter((r) => r.kind !== "exposes" && selected.has(r.from) && selected.has(r.to))
-      ];
-      const evidence = [], seen = /* @__PURE__ */ new Set();
-      let evidenceBytes = 0;
-      const quotable = (b) => !["heading", "diagram", "issue"].includes(b.kind);
-      const ranked = [...relevant.filter((b) => !stale.has(b.pageId)), ...relevant.filter((b) => stale.has(b.pageId))].filter(quotable);
-      for (const b of ranked) for (const quote of b.quotes || [b.text]) {
-        const norm = quote.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
-        if (b.kind !== "table-row" && quote.split(/\s+/).length < 4) continue;
-        if (!norm || quote.length > 1800 || evidenceBytes + Buffer.byteLength(quote) > 12e3 || seen.has(norm) || [...seen].some((s) => s.length > 60 && norm.length > 60 && (s.includes(norm) || norm.includes(s)))) continue;
-        seen.add(norm);
-        evidenceBytes += Buffer.byteLength(quote);
-        evidence.push({ blockId: b.id, pageId: b.pageId, space: b.space, version: b.version, title: b.title, path: b.path, text: quote, url: b.url, ...stale.has(b.pageId) ? { stale: true } : {} });
-        if (evidence.length >= Math.min(20, limit)) break;
-      }
-      evidence.splice(Math.min(20, limit));
-      const flows = [];
-      const serviceFlows = /* @__PURE__ */ new Map();
-      for (const p of sys.passports.filter((p2) => selected.has(`service:${p2.service}`))) {
-        let available = Array.isArray(p.flows) ? p.flows : [];
-        if (typeof p.codeIndex === "string" && require_codeindex().load(p.codeIndex)) {
-          try {
-            const index = require_codeindex().load(p.codeIndex);
-            available = require_flows().flows([p.codeIndex, ...(p.libraries || []).filter((l) => l.index).map((l) => l.index)], { config: require_flows().serviceConfig(index.root) });
-          } catch {
-          }
-        }
-        serviceFlows.set(p.service, available);
-      }
-      function appendOutputs(service, f, steps, visited = /* @__PURE__ */ new Set(), depth = 0) {
-        if (depth > 5 || visited.has(`${service}:${f.entry}`)) return;
-        visited.add(`${service}:${f.entry}`);
-        const own = "service:" + service, out2 = f.out || {};
-        const outputs = modelRelations.filter((r) => r.from === own && r.confidence === "verified" && (r.kind === "produces" && (out2.produces || []).some((x) => r.to === `topic:${x.topic}`) || ["write", "read", "uses"].includes(r.kind) && (out2.tables || []).some((x) => r.to.endsWith(":" + x.table) && (x.access || "uses") === r.kind) || r.kind === "calls" && (out2.http || []).some((x) => !r.provenance?.where || x.at === r.provenance.where || x.call?.includes(r.label))));
-        for (const r of outputs) {
-          steps.push(r);
-          if (r.kind === "produces") for (const consumer of modelRelations.filter((c) => c.from === r.to && c.kind === "consumes" && c.confidence === "verified")) {
-            steps.push(consumer);
-            const target = consumer.to.slice("service:".length), listeners = serviceFlows.get(target) || [];
-            for (const listener of listeners.filter((l) => l.topic === r.to.slice("topic:".length) || l.entry === `kafka ${r.to.slice("topic:".length)}`)) appendOutputs(target, listener, steps, visited, depth + 1);
-          }
-          if (r.kind === "calls" && r.to.startsWith("service:")) {
-            const target = r.to.slice("service:".length), candidates2 = serviceFlows.get(target) || [];
-            const route2 = (value) => String(value).replace(/\{[^}]+\}/g, "{}").replace(/\/$/, "").toLowerCase();
-            for (const next of candidates2.filter((next2) => next2.kind === "http" && (route2(next2.entry) === route2(r.label) || (out2.http || []).some((call) => route2(call.call) === route2(next2.entry))))) appendOutputs(target, next, steps, visited, depth + 1);
-          }
-        }
-      }
-      const route = (value) => String(value).replace(/\{[^}]+\}/g, "{}").replace(/\/$/, "").toLowerCase();
-      const candidates = [];
-      for (const [service, available] of serviceFlows) for (const f of available) {
-        if (!words.some((w) => `${f.entry} ${JSON.stringify(f.chain || [])}`.toLowerCase().includes(w))) continue;
-        const endpoint = sys.nodes.find((n) => n.kind === "endpoint" && n.service === service && route(n.name) === route(f.entry)), steps = [];
-        if (endpoint) steps.push({ from: client.length ? "person:client" : endpoint.id, to: "service:" + service, label: endpoint.name, technology: "HTTP", confidence: "verified", provenance: endpoint.provenance });
-        else if (f.topic) steps.push(...modelRelations.filter((r) => r.from === `topic:${f.topic}` && r.to === "service:" + service && r.kind === "consumes"));
-        appendOutputs(service, f, steps);
-        const unique = [...new Map(steps.map((r) => [`${r.from}|${r.to}|${r.kind || ""}|${r.label || ""}`, r])).values()];
-        candidates.push({ name: endpoint?.name || f.entry, service, http: !!endpoint, chain: f.chain || f.via || [], steps: unique, source: Array.isArray(f.chain) ? "codegraph" : "passport-flow" });
-      }
-      const signatures = /* @__PURE__ */ new Set();
-      for (const f of candidates.sort((a, b) => b.http - a.http || b.steps.length - a.steps.length)) {
-        const signature = `${f.name}|${f.steps.map((r) => `${r.from}>${r.to}`).join(",")}`;
-        if (flows.length >= 5 || f.steps.length < 2 || signatures.has(signature)) continue;
-        signatures.add(signature);
-        flows.push(f);
-      }
-      if (!flows.length) for (const n of sys.nodes.filter((n2) => n2.kind === "endpoint" && selected.has(`service:${n2.service}`) && endpointMatches(n2)).slice(0, 5)) flows.push({ name: n.name, steps: [{ from: client.length ? "person:client" : n.id, to: `service:${n.service}`, label: n.name, technology: "HTTP", confidence: "verified", provenance: n.provenance }], source: "endpoint-only", note: "No indexed flow is available; refresh the service passport for outputs and method chains." });
-      if (!flows.length) {
-        for (const p of pages.filter((p2) => selectedPages.has(p2.id))) for (const d of p.diagrams || []) if (/sequenceDiagram|\bparticipant\b/.test(d.source || "") && flows.length < 5) {
-          const steps = graph.relations.filter((r) => r.provenance?.pageId === p.id && r.provenance?.blockId === d.blockId && r.provenance?.source === "docs:diagram");
-          if (steps.length) flows.push({ name: `Documented: ${p.title}`, steps, source: "docs:diagram", note: "Sequence is stated in documentation; no matching indexed code flow is available." });
-        }
-      }
-      const model = { name: text, env, nodes: modelNodes, relations: modelRelations, flows }, D = require_diagrams();
-      const diagrams = [];
-      for (const [view2, name] of [["context", "Context"], ["container", "Container"], ...flows.map((f, i) => [`sequence:${i}`, `Sequence: ${f.name}`])]) {
-        for (const format of ["mermaid", "plantuml", "structurizr"]) {
-          if (format === "structurizr" && view2 !== "container") continue;
-          const diagram = { name, view: view2, format, source: D.write(model, { format, view: view2 }) };
-          if (render && format === "plantuml") {
-            try {
-              const result = await D.render(model, { ...docs.config().diagrams, format, view: view2 });
-              if (typeof result === "string") diagram.svg = result;
-              else Object.assign(diagram, { ...result, view: view2 });
-            } catch (e) {
-              diagram.renderError = e.message;
-            }
-          }
-          diagrams.push(diagram);
-        }
-      }
-      const checked = require_docs_search().verify(evidence), gaps = graph.gaps.filter((g) => selectedPages.has(g.provenance?.pageId) || selected.has(g.from) || selected.has(g.to));
-      const view = require_results().saveView("diagram", { model, diagrams, evidence: checked, gaps }, { title: text, env });
-      return { text, env, pages: [...selectedPages], evidence: checked, code: { hits: code.hits || [], warning: code.warning }, model, diagrams, gaps, view, quoteRule: "Quote only the exact evidence text with its blockId and page link. Verify additional quotes with docs_verify. Dashed/stated relations come from documentation; missing cached code support is a gap, not proof of absence.", search: { mode: search.mode, total: search.total, warnings: search.warnings } };
-    }
-    module2.exports = { system, build, feature, variants, entityMatcher };
-  }
-});
-
-// lib/indexer.js
-var require_indexer = __commonJS({
-  "lib/indexer.js"(exports2, module2) {
-    var path2 = require("path");
-    var { envNames: envNames2, getEnv: getEnv2 } = require_config();
-    var { CACHE: CACHE2, readJson, writeJson } = require_util();
-    var limit = require_limit();
-    var jobs = require_jobs();
-    var LIVE = ["pg", "es", "kafka", "consul"];
-    var WHAT = [...LIVE, "passports", "bitbucket", "confluence", "index", "all"];
-    var sourcesFile = (env) => path2.join(CACHE2, env, "_sources.json");
-    function record(env, key, value) {
-      const s = readJson(sourcesFile(env), {});
-      s[key] = { at: (/* @__PURE__ */ new Date()).toISOString(), ...value };
-      writeJson(sourcesFile(env), s);
-    }
-    function configured(env, kind) {
-      const e = getEnv2(env);
-      return {
-        pg: Object.values(e.pg).some(Boolean),
-        es: e.es.hosts.length > 0,
-        kafka: !!e.kafkaUi,
-        consul: !!e.consul
-      }[kind];
-    }
-    var SOURCES = { pg: () => require_pg(), es: () => require_es(), kafka: () => require_kafka(), consul: () => require_consul() };
-    async function syncSource(env, kind, only, log) {
-      await limit.take(`${kind}:${env}`);
-      const started = Date.now();
-      try {
-        const r = await SOURCES[kind]().sync(env, { only, log });
-        if (kind === "pg") for (const d of r) record(env, `pg:${d.db}`, d.error ? { ok: false, error: d.error } : { ok: true, ...d });
-        else record(env, kind, { ok: true, ms: Date.now() - started, ...typeof r === "object" && !Array.isArray(r) ? r : { count: Array.isArray(r) ? r.length : void 0 } });
-        return r;
-      } catch (e) {
-        record(env, only && kind === "pg" ? `pg:${only.join(",")}` : kind, { ok: false, ms: Date.now() - started, error: e.message });
-        throw e;
-      }
-    }
-    async function rebuildPassports(only, log) {
-      const pp = require_passport();
-      const names = only && only.length ? only : pp.list().map((p) => p.service);
-      const out2 = {};
-      for (const service of names) {
-        const prev = pp.load(service);
-        const opts = prev?.env ? { env: prev.env } : prev && !/^[0-9a-f]{7,40}$/.test(prev.repo.ref || "") && prev.repo.ref !== "HEAD" ? { ref: prev.repo.ref } : {};
-        log(`passport ${service}: building${opts.env ? ` (deployed in ${opts.env})` : opts.ref ? ` (${opts.ref})` : ""}`);
-        try {
-          const p = await pp.build(service, { ...opts, rebuildCatalog: false });
-          out2[service] = { sha: p.repo.sha, changed: p.changes ? !p.changes.none : null };
-          log(`passport ${service}: ${p.repo.sha.slice(0, 10)}${p.changes && !p.changes.none ? ", changed" : ""}`);
-        } catch (e) {
-          out2[service] = { error: e.message };
-          log(`passport ${service}: ERROR ${e.message}`);
-        }
-      }
-      return out2;
-    }
-    function rebuildIndex(env, log) {
-      const lines = require_catalog().build(env);
-      const u = require_pgindex().load(env);
-      log(`index ${env}: ${lines} catalog lines, ${u.edges.length} usage edges`);
-      record(env, "index", { ok: true, lines, edges: u.edges.length });
-      return { catalogLines: lines, usageEdges: u.edges.length };
-    }
-    function refresh({ env, what = "all", only, spaces, full = false } = {}) {
-      env = env || envNames2()[0];
-      if (!WHAT.includes(what)) throw new Error(`what must be one of ${WHAT.join(", ")}`);
-      getEnv2(env);
-      only = typeof only === "string" ? only.split(",").map((s) => s.trim()).filter(Boolean) : only;
-      const global = what === "passports" || what === "bitbucket" || what === "confluence";
-      const title = `${what}${only?.length ? ` (${only.join(", ")})` : ""} ${global ? "" : env}`.trim();
-      const key = what === "confluence" ? `${what}:${(only || []).join(",")}:${spaces || ""}:${full}` : global ? `${what}:${(only || []).join(",")}` : `${env}:${what}:${(only || []).join(",")}`;
-      return jobs.start(key, title, async (log) => {
-        const out2 = {};
-        if (what === "confluence") {
-          out2.confluence = await require_docs_cache().sync({ spaces: spaces || only, full, log });
-          out2.graph = { nodes: require_knowledge().build(env).nodes.length };
-          for (const e of envNames2()) out2[e] = rebuildIndex(e, log);
-          return out2;
-        }
-        if (what === "bitbucket") {
-          out2.bitbucket = await require_bbindex().build({ log, only, force: !!only });
-          for (const e of envNames2()) out2[e] = rebuildIndex(e, log);
-          return out2;
-        }
-        if (what === "passports") {
-          out2.passports = await rebuildPassports(only, log);
-          for (const e of envNames2()) out2[e] = rebuildIndex(e, log);
-          return out2;
-        }
-        const kinds = what === "all" ? LIVE.filter((k) => configured(env, k)) : LIVE.includes(what) ? [what] : [];
-        for (const k of kinds) {
-          log(`${k} ${env}: syncing${only?.length ? ` ${only.join(", ")}` : ""}`);
-          try {
-            out2[k] = await syncSource(env, k, only, (l) => log(l));
-          } catch (e) {
-            out2[k] = { error: e.message };
-            log(`${k} ${env}: ERROR ${e.message}`);
-          }
-        }
-        if (what === "index" && require_docs_cache().list().length) {
-          out2.docsIndex = await require_docs_search().build();
-          const graph = require_knowledge().build(env);
-          out2.docsGraph = { nodes: graph.nodes.length, relations: graph.relations.length, gaps: graph.gaps.length };
-        }
-        Object.assign(out2, rebuildIndex(env, log));
-        return out2;
-      });
-    }
-    function status(env) {
-      const e = getEnv2(env);
-      const src = readJson(sourcesFile(env), {});
-      const pg = require_pg();
-      const configuredDbs = Object.entries(e.pg);
-      const dbs = configuredDbs.map(([db, url]) => {
-        const cat = url ? pg.loadDb(env, db) : null;
-        const s = src[`pg:${db}`] || {};
-        return {
-          db,
-          configured: !!url,
-          host: url ? safeHost(url) : null,
-          syncedAt: cat?.syncedAt || null,
-          tables: cat?.tables.length ?? null,
-          functions: cat?.functions?.length ?? null,
-          triggers: cat?.triggers?.length ?? null,
-          ms: cat?.ms ?? s.ms ?? null,
-          error: s.ok === false ? s.error : null
-        };
-      });
-      const idx = (kind) => readJson(path2.join(CACHE2, env, kind, "_index.json"));
-      const one = (kind, count) => ({ configured: configured(env, kind), syncedAt: count.syncedAt || src[kind]?.at || null, count: count.n, error: src[kind]?.ok === false ? src[kind].error : null, ms: src[kind]?.ms ?? null });
-      const esI = idx("es"), kI = idx("kafka"), consul = readJson(path2.join(CACHE2, env, "consul.json"));
-      const usage = require_pgindex().load(env);
-      let lines = 0;
-      try {
-        lines = require("fs").readFileSync(path2.join(CACHE2, env, "catalog.txt"), "utf8").split("\n").length - 1;
-      } catch {
-      }
-      return {
-        env,
-        envFile: e.envFile,
-        envFileFound: e.envFileFound,
-        pg: dbs,
-        es: one("es", { syncedAt: esI?.syncedAt, n: esI?.indices ? Object.keys(esI.indices).length : null }),
-        kafka: one("kafka", { syncedAt: kI?.syncedAt, n: kI?.topics ? Array.isArray(kI.topics) ? kI.topics.length : Object.keys(kI.topics).length : null }),
-        consul: one("consul", { syncedAt: consul?.syncedAt, n: consul?.services ? Object.keys(consul.services).length : null }),
-        confluence: require_docs_cache().status(),
-        logs: { configured: e.logs.hosts.length > 0, index: e.logs.index },
-        index: { builtAt: usage.builtAt || null, catalogLines: lines, usageEdges: usage.edges.length }
-      };
-    }
-    var safeHost = (url) => {
-      try {
-        const u = new URL(url);
-        return `${u.hostname}:${u.port || 5432}${u.pathname}`;
-      } catch {
-        return "?";
-      }
-    };
-    module2.exports = { refresh, status, WHAT };
-  }
-});
-
-// lib/migrate.js
-var require_migrate = __commonJS({
-  "lib/migrate.js"(exports2, module2) {
-    var fs2 = require("fs");
-    var path2 = require("path");
-    var config = require_config();
-    var SECRETISH = /(DATABASE_URL|PASS|PASSWORD|TOKEN|SECRET|API_KEY|_KEY$|_USER$|USERNAME|LOGIN)/i;
-    var MARK = "\0";
-    function clean(v) {
-      if (Array.isArray(v)) {
-        const a = v.map(clean).filter((x) => x !== void 0);
-        return a.length ? a : void 0;
-      }
-      if (v && typeof v === "object") {
-        const o = Object.fromEntries(Object.entries(v).map(([k, x]) => [k, clean(x)]).filter(([, x]) => x !== void 0));
-        return Object.keys(o).length ? o : void 0;
-      }
-      return v === null || v === "" ? void 0 : v;
-    }
-    function plan() {
-      if (fs2.existsSync(config.CONFIG_FILE)) throw new Error(`${config.CONFIG_FILE} already exists`);
-      const s = config.load();
-      if (s.format !== "legacy") throw new Error("nothing to migrate");
-      const raw = s.raw;
-      const secrets = {};
-      const personal = { ...config.parseEnvFile(path2.join(config.HOME, ".env.browser")), ...config.parseEnvFile(path2.join(config.HOME, ".env.personal")) };
-      for (const [k, v] of Object.entries(personal)) secrets[k] = v;
-      const resolveWith = (lookup, rename) => {
-        const one = (str) => {
-          const pass = (keepUnset) => config.interpolate(str, (name) => {
-            const v = lookup(name);
-            if (!SECRETISH.test(name)) return v;
-            if ((v === void 0 || v === "") && !keepUnset) return void 0;
-            return `${MARK}${rename(name, v)}${MARK}`;
-          });
-          let r2 = pass(false);
-          if (r2 === null || r2 === "") r2 = pass(true);
-          return typeof r2 === "string" ? r2.replace(new RegExp(`${MARK}(\\w+)${MARK}`, "g"), "${$1}") : r2;
-        };
-        const walk = (x) => typeof x === "string" ? one(x) : Array.isArray(x) ? x.map(walk) : x && typeof x === "object" ? Object.fromEntries(Object.entries(x).map(([k, y]) => [k, walk(y)])) : x;
-        return walk;
-      };
-      const out2 = { envs: {} };
-      for (const [name, def] of Object.entries(raw.envs)) {
-        const fileVars = def.envFile ? config.parseEnvFile(path2.join(config.HOME, def.envFile)) : {};
-        const prefix = name.toUpperCase().replace(/[^A-Z0-9]/g, "_") + "_";
-        const lookup = (k) => fileVars[k] ?? personal[k];
-        const rename = (k, v) => {
-          if (k in personal && !(k in fileVars)) return k;
-          const nk = k.startsWith(prefix) ? k : prefix + k;
-          secrets[nk] = v ?? secrets[nk] ?? "";
-          return nk;
-        };
-        const r2 = resolveWith(lookup, rename);
-        const { envFile, ...rest } = def;
-        const e = r2(rest);
-        if (def.postgres === "auto") {
-          e.postgres = {};
-          for (const [k, url] of Object.entries(fileVars)) {
-            const m = k.match(/^DATABASE_URL(?:_(\w+))?$/);
-            if (m && url) e.postgres[m[1] ? m[1].toLowerCase() : decodeURIComponent(new URL(url).pathname.slice(1))] = `\${${rename(k, url)}}`;
-          }
-        }
-        const DEF = { time: "@timestamp", message: "message", service: "service.name", level: "log.level", trace: "trace.id" };
-        if (e.logs && e.logs.fields) {
-          for (const [k, v] of Object.entries(e.logs.fields)) if (DEF[k] === v) delete e.logs.fields[k];
-        }
-        if (e.logs && e.logs.index === "logs-*") delete e.logs.index;
-        if (e.elasticsearch && typeof e.elasticsearch.hosts === "string") e.elasticsearch.hosts = e.elasticsearch.hosts.split(",").map((x) => x.trim()).filter(Boolean);
-        out2.envs[name] = clean(e) || {};
-      }
-      const r = resolveWith((k) => personal[k], (k, v) => {
-        secrets[k] = v ?? secrets[k] ?? "";
-        return k;
-      });
-      out2.bitbucket = r(raw.bitbucket);
-      out2.confluence = r(raw.confluence);
-      const groups = config.interpolate(raw.passports.internalGroups, (k) => personal[k]);
-      out2.passports = { internalGroups: String(groups || "").split(",").map((x) => x.trim()).filter(Boolean) };
-      out2.graph = { url: "${GRAPH_URL}" };
-      out2.tools = { enable: ["all"], disable: [], plugins: [], custom: [] };
-      out2.browser = { sites: Object.fromEntries(Object.entries(raw.browser.sites).map(([k, v]) => [k, { url: config.interpolate(v.url, (x) => personal[x]), secrets: v.secrets }])) };
-      const cleaned = clean(out2);
-      cleaned.tools = out2.tools;
-      return { config: cleaned, secrets };
-    }
-    var envLine = (k, v) => `${k}=${/^[\w@%+=:,./-]*$/.test(v) ? v : !v.includes("'") ? `'${v}'` : JSON.stringify(v)}`;
-    function migrate({ write = true } = {}) {
-      const p = plan();
-      if (!write) return p;
-      if (fs2.existsSync(config.SECRETS_FILE)) throw new Error(`${config.SECRETS_FILE} already exists; move it away first`);
-      fs2.writeFileSync(config.CONFIG_FILE, JSON.stringify(p.config, null, 2) + "\n");
-      fs2.writeFileSync(config.SECRETS_FILE, "# secrets and compose settings for dt (migrated)\n" + Object.entries(p.secrets).map(([k, v]) => envLine(k, String(v))).join("\n") + "\n", { mode: 384 });
-      config.reload();
-      const old = fs2.readdirSync(config.HOME).filter((f) => f === "envs.json" || /^\.env\.[\w-]+$/.test(f) && !f.endsWith(".example"));
-      return { wrote: [config.CONFIG_FILE, config.SECRETS_FILE], envs: Object.keys(p.config.envs), secrets: Object.keys(p.secrets).length, oldFiles: old, note: "config.json is used from now on; check both files, then delete the old ones" };
-    }
-    module2.exports = { migrate, plan };
-  }
-});
-
 // lib/fieldtrace.js
 var require_fieldtrace = __commonJS({
   "lib/fieldtrace.js"(exports2, module2) {
@@ -18121,6 +17660,372 @@ var require_dashboard = __commonJS({
       return p;
     }
     module2.exports = { overview };
+  }
+});
+
+// lib/knowledge.js
+var require_knowledge = __commonJS({
+  "lib/knowledge.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var { CACHE: CACHE2, readJson, writeJson } = require_util();
+    var docs = require_docs_cache();
+    var { hash } = require_docs_parse();
+    var escape = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    var variants = (name) => [.../* @__PURE__ */ new Set([name, name.replace(/-/g, "_"), name.replace(/_/g, "-")])].filter(Boolean);
+    var provenance = (p, b, source = "docs:prose") => ({ source, status: "stated", space: p.space, pageId: p.id, version: p.version, blockId: b?.id, url: p.url });
+    function entityMatcher(entities) {
+      const words = (text) => [...String(text).toLowerCase().matchAll(/[\p{L}\p{N}_./{}:-]+/gu)].map((m) => m[0].replace(/^[.:]+|[.:]+$/g, "")).filter(Boolean);
+      const buckets = /* @__PURE__ */ new Map();
+      for (const n of entities) for (const alias of n.aliases || [n.name]) {
+        if (alias.length < 2) continue;
+        const sequence = words(alias);
+        if (!sequence.length) continue;
+        const key = sequence.join("\0"), bucket = buckets.get(sequence[0]) || /* @__PURE__ */ new Map();
+        const entry = bucket.get(key) || { name: alias.toLowerCase(), sequence, candidates: [] };
+        if (!entry.candidates.includes(n.id)) entry.candidates.push(n.id);
+        bucket.set(key, entry);
+        buckets.set(sequence[0], bucket);
+      }
+      return (text) => {
+        const tokens = words(text), found = /* @__PURE__ */ new Map();
+        for (let i = 0; i < tokens.length; i++) for (const [key, m] of buckets.get(tokens[i]) || []) if (m.sequence.every((t, n) => tokens[i + n] === t)) found.set(key, { name: m.name, candidates: [...m.candidates], ...m.candidates.length === 1 ? { entity: m.candidates[0] } : {} });
+        return [...found.values()];
+      };
+    }
+    function system(env) {
+      const nodes = /* @__PURE__ */ new Map(), relations = [], passports = [], gaps = [];
+      const consul = readJson(path2.join(CACHE2, env, "consul.json"), {});
+      const add = (n) => {
+        const old = nodes.get(n.id);
+        nodes.set(n.id, { ...old, ...n, aliases: [.../* @__PURE__ */ new Set([...old?.aliases || [], ...n.aliases || [], n.name])].filter(Boolean) });
+        return n.id;
+      };
+      const relation = (from, to, kind, src = {}, extra = {}) => relations.push({ from, to, kind, label: kind, confidence: "verified", provenance: { source: "code", status: "verified", ...src }, ...extra });
+      const cachedPassports = require_edges().snapshot();
+      gaps.push(...cachedPassports.gaps);
+      for (const { passport: full, stale, digest } of cachedPassports.rows) {
+        if (!full || full.env && full.env !== env) continue;
+        passports.push(full);
+        const p = { service: full.service, repo: `${full.repo?.project || "?"}/${full.repo?.repo || "?"}` };
+        if (!full.env) gaps.push({ kind: "passport-environment-unknown", service: p.service });
+        const aliases = [p.service, full.repo?.repo, full.app?.name, full.config?.values?.["spring.application.name"], full.config?.merged?.["spring.application.name"], full.kubernetes?.name, ...full.aliases || []].filter((x) => typeof x === "string");
+        add({ id: "service:" + p.service, name: p.service, kind: "service", aliases: aliases.flatMap(variants), version: full.deployed?.version || full.app?.version || full.version || full.repo?.sha?.slice(0, 10), owner: full.owner || full.repo?.project, env: full.env, provenance: { source: "passport", status: "verified", sha: full.repo?.sha, repo: p.repo, stale, digest } });
+        const deployed = consul.services?.[p.service]?.instances || [];
+        const versions = [...new Set(deployed.map((i) => i.meta?.version || i.version).filter(Boolean))];
+        if (versions.length) Object.assign(nodes.get("service:" + p.service), { version: versions.join(", "), versions: { [env]: versions }, env, deploymentProvenance: { source: "catalog:consul", syncedAt: consul.syncedAt } });
+      }
+      const cachedDbs = new Map(require_pg().loadAll(env).map((db) => [db.db, db]));
+      try {
+        for (const f of fs2.readdirSync(path2.join(CACHE2, env, "pg")).filter((f2) => f2.endsWith(".json") && !f2.startsWith("_"))) {
+          const db = readJson(path2.join(CACHE2, env, "pg", f));
+          if (db?.db && Array.isArray(db.tables)) cachedDbs.set(db.db, db);
+        }
+      } catch {
+      }
+      for (const db of cachedDbs.values()) {
+        add({ id: `database:${db.db}`, name: db.db, kind: "database", technology: "PostgreSQL", aliases: [db.db], tables: (db.tables || []).map((t) => `${t.schema}.${t.name}`), provenance: { source: "catalog:pg", status: "verified", syncedAt: db.syncedAt } });
+        for (const t of db.tables || []) {
+          const ID = require_semantic_identity(), object = `${t.schema}.${t.name}`, canonicalId = ID.pg("table", env, db.db, ID.qualified(t.schema, t.name));
+          add({ id: `table:${db.db}:${object}`, canonicalId, identityVersion: "dt.identity/v1", scope: { env, db: db.db, schema: t.schema, name: t.name }, name: object, kind: "table", db: db.db, aliases: [canonicalId, object, t.name], columns: t.columns, provenance: { source: "catalog:pg", status: "verified", syncedAt: db.syncedAt } });
+        }
+        for (const f of db.functions || []) {
+          const object = `${f.schema}.${f.name}`, overloaded = (db.functions || []).filter((x) => x.schema === f.schema && x.name === f.name).length > 1;
+          const ID = require_semantic_identity(), name = overloaded ? `${object}(${f.arguments || ""})` : object, scopedObject = ID.qualified(f.schema, f.name) + (overloaded ? `(${f.arguments || ""})` : ""), canonicalId = ID.pg("pgfn", env, db.db, scopedObject);
+          add({ id: `function:${db.db}:${name}`, canonicalId, identityVersion: "dt.identity/v1", scope: { env, db: db.db, schema: f.schema, name: f.name, arguments: f.arguments }, name, kind: "function", db: db.db, aliases: [canonicalId, `function:${db.db}:${object}`, object, f.name], provenance: { source: "catalog:pg", status: "verified", syncedAt: db.syncedAt } });
+          if (overloaded) gaps.push({ kind: "function-overload-resolution", db: db.db, object, detail: "Unqualified function usage cannot establish the called overload." });
+        }
+      }
+      let files = [];
+      try {
+        files = fs2.readdirSync(path2.join(CACHE2, env, "kafka"));
+      } catch {
+      }
+      for (const f of files.filter((f2) => !f2.startsWith("_") && f2.endsWith(".json"))) {
+        const t = readJson(path2.join(CACHE2, env, "kafka", f));
+        if (!t?.topic) continue;
+        add({ id: `topic:${t.topic}`, name: t.topic, kind: "topic", aliases: variants(t.topic), schema: t.valueSchema || null, partitions: t.partitions, messages: t.messages, lastMessageAt: t.lastMessageAt || t.messagesSample?.[0]?.timestamp, fields: t.fields, provenance: { source: "catalog:kafka", status: "verified", syncedAt: t.syncedAt } });
+      }
+      const resolve = (name, kind) => [...nodes.values()].filter((n) => (!kind || n.kind === kind) && n.aliases.some((a) => a.toLowerCase() === String(name).toLowerCase()));
+      for (const p of passports) {
+        const own = "service:" + p.service, effective = p.effective || {}, at = (x) => ({ service: p.service, file: x.file, line: x.line, where: x.file ? `${x.file}:${x.line || 1}` : void 0, sha: p.repo?.sha });
+        for (const x of effective.endpoints || []) {
+          const id = add({ id: `endpoint:${p.service}:${x.method} ${x.path}`, kind: "endpoint", name: `${x.method} ${x.path}`, aliases: [`${x.method} ${x.path}`, x.path], service: p.service, handler: x.handler, provenance: { source: "code", status: "verified", ...at(x) } });
+          relation(own, id, "exposes", at(x), { technology: "HTTP" });
+        }
+        for (const [field, kind] of [["produces", "produces"], ["consumes", "consumes"]]) for (const x of effective[field] || []) {
+          const id = `topic:${x.topic}`;
+          if (!nodes.has(id)) add({ id, name: x.topic, kind: "topic", aliases: variants(x.topic), provenance: { source: "code", status: "verified", ...at(x) } });
+          relation(kind === "consumes" ? id : own, kind === "consumes" ? own : id, kind, at(x), { technology: "Kafka" });
+        }
+        for (const x of effective.tables || []) {
+          let matches = resolve(x.table, "table");
+          if (!matches.length) {
+            const id = add({ id: `table:unknown:${x.table}`, name: x.table, kind: "table", aliases: [x.table], provenance: { source: "code", status: "verified", ...at(x) } });
+            matches = [nodes.get(id)];
+          }
+          if (matches.length === 1) {
+            relation(own, matches[0].id, x.access || "uses", at(x), { technology: "PostgreSQL" });
+            if (matches[0].db) relation(own, `database:${matches[0].db}`, x.access || "uses", at(x), { technology: "PostgreSQL", label: `${x.access || "uses"} ${x.table}`, table: x.table });
+          } else relation(own, `candidate:${hash(x.table).slice(0, 12)}`, "ambiguous-table", at(x), { candidates: matches.map((n) => n.id) });
+        }
+        for (const x of [...effective.calls || [], ...p.http || []]) {
+          const target = x.client || x.target || "", matches = resolve(target, "service");
+          if (matches.length === 1) relation(own, matches[0].id, "calls", at(x), { technology: "HTTP", label: `${x.method || "HTTP"} ${x.path || ""}`.trim() });
+          else if (target) {
+            const id = add({ id: `external:${target}`, name: target, kind: "external", aliases: [target], provenance: { source: "code", status: "verified", ...at(x) } });
+            relation(own, id, "calls", at(x), { technology: "HTTP", label: `${x.method || "HTTP"} ${x.path || ""}`.trim() });
+          }
+        }
+        for (const x of effective.dbCalls || []) {
+          const matches = resolve(x.function || x.name, "function");
+          if (matches.length === 1) relation(own, matches[0].id, "calls", at(x), { technology: "PostgreSQL" });
+        }
+      }
+      for (const e of require_pgindex().load(env).edges || []) {
+        const from = e.userKind === "service" ? `service:${e.user}` : `${["function", "procedure"].includes(e.userKind) ? "function" : "table"}:${e.db}:${e.user}`;
+        const to = `${["function", "procedure"].includes(e.targetKind) ? "function" : "table"}:${e.db}:${e.target}`;
+        if (nodes.has(from) && nodes.has(to) && e.source === "db") relation(from, to, e.role, { source: "catalog:pg-usage", status: "verified", where: e.where, detail: e.detail }, { technology: "PostgreSQL" });
+      }
+      return { nodes: [...nodes.values()], relations, passports, gaps };
+    }
+    function build(env, { pages = docs.list(), systemModel } = {}) {
+      const sys = systemModel || system(env), nodes = new Map(sys.nodes.map((n) => [n.id, { ...n }])), relations = [...sys.relations], mentions = [], gaps = [...sys.gaps || []];
+      const entities = [...nodes.values()], match = entityMatcher(entities);
+      const byTitle = (title, space) => pages.filter((p) => p.title === title && (!space || p.space === space));
+      for (const p of pages) {
+        const spaceId = `space:${p.space}`, pageId = `page:${p.id}`;
+        nodes.set(spaceId, { id: spaceId, name: p.space, kind: "space" });
+        nodes.set(pageId, { id: pageId, name: p.title, kind: "page", space: p.space, url: p.url, version: p.version });
+        relations.push({ from: spaceId, to: pageId, kind: "contains", provenance: provenance(p) });
+        for (const b of p.blocks) {
+          nodes.set(b.id, { id: b.id, name: b.text.slice(0, 100), kind: "block", pageId: p.id, provenance: provenance(p, b) });
+          relations.push({ from: pageId, to: b.id, kind: "contains", provenance: provenance(p, b) });
+          const found = match(b.text);
+          for (const m of found) {
+            mentions.push({ ...m, ...provenance(p, b) });
+            if (m.entity) relations.push({ from: b.id, to: m.entity, kind: "mentions", confidence: "stated", provenance: provenance(p, b) });
+          }
+          for (const explicit of b.text.matchAll(/([\w.-]+-service)\s+(?:calls?|invokes?)\s+([\w.-]+-service)/gi)) {
+            const ids = [explicit[1], explicit[2]].map((name) => {
+              const matches = entities.filter((n) => n.kind === "service" && (n.aliases || [n.name]).some((a) => a.toLowerCase() === name.toLowerCase()));
+              if (matches.length === 1) return matches[0].id;
+              const id = `external:${name}`;
+              if (!nodes.has(id)) nodes.set(id, { id, name, kind: "external", provenance: provenance(p, b), candidates: matches.map((n) => n.id) });
+              mentions.push({ name, entity: id, candidates: [id], ...provenance(p, b) });
+              return id;
+            });
+            relations.push({ from: ids[0], to: ids[1], kind: "calls", label: "calls (documented)", technology: "HTTP", confidence: "stated", provenance: provenance(p, b) });
+          }
+          const services = found.filter((m) => m.entity && nodes.get(m.entity)?.kind === "service");
+          for (const a of services) for (const z of services) if (a.entity !== z.entity) {
+            const re = new RegExp(`${escape(a.name)}\\s+(?:calls?|invokes?|sends?\\s+(?:HTTP\\s+)?requests?\\s+to)\\s+${escape(z.name)}`, "i");
+            if (re.test(b.text)) relations.push({ from: a.entity, to: z.entity, kind: "calls", label: "calls (documented)", technology: "HTTP", confidence: "stated", provenance: provenance(p, b) });
+          }
+          for (const a of services) for (const m of found.filter((m2) => m2.entity && nodes.get(m2.entity)?.kind === "topic")) {
+            for (const [verb, kind] of [["(?:consumes?|listens?\\s+to|subscribes?\\s+to)", "consumes"], ["(?:produces?|publishes?\\s+to|emits?)", "produces"]]) if (new RegExp(`${escape(a.name)}\\s+${verb}\\s+${escape(m.name)}`, "i").test(b.text)) relations.push({ from: kind === "consumes" ? m.entity : a.entity, to: kind === "consumes" ? a.entity : m.entity, kind, label: `${kind} (documented)`, technology: "Kafka", confidence: "stated", provenance: provenance(p, b) });
+          }
+        }
+        for (const link of p.links || []) {
+          const targets = link.id ? pages.filter((x) => x.id === link.id) : byTitle(link.title, link.space);
+          relations.push({ from: pageId, to: targets.length === 1 ? `page:${targets[0].id}` : `page-link:${link.space}:${link.title}`, kind: "links", candidates: targets.length !== 1 ? targets.map((x) => `page:${x.id}`) : void 0, provenance: provenance(p, p.blocks.find((b) => b.id === link.blockId)) });
+        }
+        for (const inferred of p.inferredRelations || []) {
+          const resolveName = (name) => entities.filter((n) => (n.aliases || [n.name]).some((a) => a.toLowerCase() === name.toLowerCase()));
+          const from = resolveName(inferred.from), to = resolveName(inferred.to), b = p.blocks.find((b2) => b2.id === inferred.blockId);
+          if (!b) continue;
+          const source = { ...provenance(p, b, "docs:llm:inferred"), status: "inferred", model: inferred.model };
+          if (from.length === 1 && to.length === 1) relations.push({ from: inferred.kind === "consumes" ? to[0].id : from[0].id, to: inferred.kind === "consumes" ? from[0].id : to[0].id, kind: inferred.kind, label: `${inferred.kind} (inferred from docs)`, technology: inferred.technology, confidence: "inferred", provenance: source });
+          else mentions.push({ name: `${inferred.from} ${inferred.kind} ${inferred.to}`, candidates: [...from, ...to].map((n) => n.id), ...source });
+        }
+        for (const [i, diagram] of (p.diagrams || []).entries()) {
+          const diagramId = `diagram:${p.id}:${i}`, source = provenance(p, p.blocks.find((b) => b.id === diagram.blockId), diagram.provenance || "docs:diagram");
+          if (diagram.attachment) Object.assign(source, { attachment: diagram.attachment, attachmentVersion: diagram.attachmentVersion, hash: diagram.hash });
+          if (/inferred/.test(source.source)) source.status = "inferred";
+          nodes.set(diagramId, { id: diagramId, name: diagram.attachment || `Diagram ${i + 1}`, kind: "diagram", provenance: source });
+          relations.push({ from: pageId, to: diagramId, kind: "contains", provenance: source });
+          const mapping = /* @__PURE__ */ new Map();
+          for (const n of diagram.nodes || []) {
+            const matches = match(n.label || n.name || n.id).filter((m) => m.entity), unique2 = [...new Set(matches.map((m) => m.entity))];
+            const id = unique2.length === 1 ? unique2[0] : `${diagramId}:${n.id}`;
+            mapping.set(n.id, id);
+            if (unique2.length === 1) mentions.push({ name: n.label || n.id, entity: id, candidates: unique2, ...source });
+            if (!nodes.has(id)) nodes.set(id, { id, name: n.label || n.name || n.id, kind: n.kind || "external", candidates: unique2, provenance: source });
+            if (!unique2.length) gaps.push({ kind: "unlinked-diagram-element", element: n.label || n.id, message: "Diagram element is absent from the cached system catalog", provenance: source });
+            if (unique2.length === 1 && nodes.get(id)?.kind === "topic" && !sys.relations.some((r) => ["produces", "consumes"].includes(r.kind) && (r.from === id || r.to === id))) gaps.push({ kind: "topic-without-passport-usage", element: n.label || n.id, message: "Diagram topic has no producer or consumer in the cached service passports", provenance: source });
+          }
+          for (const e of diagram.relations || []) if (mapping.has(e.from) && mapping.has(e.to)) {
+            const from = mapping.get(e.from), to = mapping.get(e.to), fromKind = nodes.get(from)?.kind, toKind = nodes.get(to)?.kind;
+            const kind = e.kind || (toKind === "topic" ? "produces" : fromKind === "topic" ? "consumes" : ["table", "database"].includes(toKind) ? /write|insert|update|delete/i.test(e.label || "") ? "write" : /read|select/i.test(e.label || "") ? "read" : "uses" : "calls");
+            const technology = e.technology || (toKind === "topic" || fromKind === "topic" ? "Kafka" : ["table", "database"].includes(toKind) ? "PostgreSQL" : /https?/i.test(e.label || "") ? "HTTP" : void 0);
+            relations.push({ ...e, from, to, kind, technology, confidence: source.status, provenance: source });
+          }
+        }
+      }
+      for (const r of relations.filter((r2) => r2.confidence === "stated" && !["mentions", "links", "contains"].includes(r2.kind))) {
+        const comparable = sys.relations.some((e) => e.from === r.from && e.to === r.to && (e.kind === r.kind || r.kind === "uses" || r.technology && e.technology === r.technology && !["read", "write"].includes(r.kind)));
+        if (!comparable) {
+          r.conflict = true;
+          gaps.push({ kind: "not-supported-by-cached-code", from: r.from, to: r.to, relation: r.kind, message: "Documented interaction has no matching relation in the cached code/passports. Check cache freshness and dynamic configuration before treating it as a contradiction.", provenance: r.provenance });
+        }
+      }
+      const unique = new Map(relations.map((r) => [`${r.from}|${r.to}|${r.kind}|${r.confidence || ""}|${r.provenance?.blockId || ""}|${r.provenance?.where || ""}`, r]));
+      const graph = { env, builtAt: (/* @__PURE__ */ new Date()).toISOString(), nodes: [...nodes.values()], relations: [...unique.values()], mentions, gaps: [...new Map(gaps.map((g) => [`${g.kind}|${g.from}|${g.to}|${g.element}|${g.provenance?.blockId || ""}`, g])).values()] };
+      writeJson(path2.join(docs.DIR, "graph.json"), graph);
+      writeJson(path2.join(docs.DIR, `graph-${env}.json`), graph);
+      return graph;
+    }
+    async function feature(text, { env = require_config().envNames()[0], spaces, limit = 20, render = false } = {}) {
+      limit = Math.max(1, Math.min(Number(limit) || 20, 20));
+      const search = await require_docs_search().search(text, { spaces, limit: Math.min(60, Math.max(20, limit * 3)) }), pages = docs.list(spaces);
+      const sys = system(env), graph = build(env, { pages, systemModel: sys });
+      const words = require_docs_search().tokens(text).filter((w) => w.length > 2 && !["how", "does", "work", "the", "and", "with", "what", "why", "when", "where", "who"].includes(w));
+      const relevant = search.blocks.filter((b) => !words.length || words.some((w) => require_docs_search().tokens(`${b.title} ${b.path.join(" ")} ${b.text}`).includes(w)));
+      const relevantBlocks = new Set(relevant.map((b) => b.id)), selectedPages = new Set(relevant.map((b) => b.pageId));
+      const stale = new Set(pages.filter((p) => /\b(legacy|archived?|deprecated|obsolete|superseded)\b/i.test(`${p.title} ${(p.labels || []).join(" ")}`)).map((p) => p.id));
+      let code = { hits: [] };
+      try {
+        if (words.length) code = require_codeindex().grep(require_codeindex().select(), words.map(escape).join("|"), { regex: true, tests: false, limit: 40, perFile: 3 });
+      } catch (e) {
+        code.warning = e.message;
+      }
+      const kindOf = new Map(graph.nodes.map((n) => [n.id, n.kind]));
+      const blockKind = new Map(relevant.map((b) => [b.id, b.kind]));
+      const mentioned = graph.mentions.filter((m) => m.entity && relevantBlocks.has(m.blockId) && kindOf.get(m.entity) !== "database");
+      const seeds = new Set(mentioned.filter((m) => blockKind.get(m.blockId) !== "diagram").map((m) => m.entity));
+      const diagramOnly = new Set(mentioned.map((m) => m.entity).filter((id) => !seeds.has(id)));
+      const endpointMatches = (n) => n.kind === "endpoint" && words.some((w) => n.name.toLowerCase().includes(w));
+      for (const n of sys.nodes.filter(endpointMatches)) {
+        seeds.add(n.id);
+        seeds.add(`service:${n.service}`);
+      }
+      const KEEP = /* @__PURE__ */ new Set(["produces", "consumes", "calls", "read", "write"]);
+      const selected = /* @__PURE__ */ new Set([...seeds, ...diagramOnly]), keep = [];
+      const allowed = (r) => KEEP.has(r.kind) && !["database", "function"].includes(kindOf.get(r.from)) && !["database", "function"].includes(kindOf.get(r.to)) || r.kind === "exposes" && seeds.has(r.to);
+      for (const r of sys.relations) if (allowed(r) && (seeds.has(r.from) && kindOf.get(r.from) === "service" || seeds.has(r.to) && kindOf.get(r.to) === "service")) {
+        selected.add(r.from);
+        selected.add(r.to);
+        keep.push(r);
+      }
+      for (const r of sys.relations) if (allowed(r) && !keep.includes(r) && kindOf.get(r.from) !== kindOf.get(r.to) && (selected.has(r.from) && kindOf.get(r.from) === "topic" || selected.has(r.to) && kindOf.get(r.to) === "topic")) {
+        selected.add(r.from);
+        selected.add(r.to);
+        keep.push(r);
+      }
+      for (const r of sys.relations) if (allowed(r) && !keep.includes(r) && selected.has(r.from) && selected.has(r.to)) keep.push(r);
+      const documented = graph.relations.filter((r) => ["stated", "inferred"].includes(r.confidence) && !["contains", "mentions", "links"].includes(r.kind) && selectedPages.has(r.provenance?.pageId) && (selected.has(r.from) || selected.has(r.to)));
+      for (const r of documented) {
+        selected.add(r.from);
+        selected.add(r.to);
+        keep.push(r);
+      }
+      const byKey = /* @__PURE__ */ new Map();
+      for (const r of keep) {
+        const k = `${r.from}|${r.to}|${r.kind}|${r.confidence}`;
+        if (!byKey.has(k)) byKey.set(k, r);
+        else if (r.conflict) byKey.get(k).conflict = true;
+      }
+      const entryServices = [...new Set(sys.nodes.filter((n) => selected.has(n.id) && endpointMatches(n)).map((n) => `service:${n.service}`))];
+      const client = entryServices.length ? [{ id: "person:client", name: "Client", kind: "person", provenance: { source: "code", status: "verified", note: "caller of the matching endpoints" } }] : [];
+      const modelNodes = [...client, ...graph.nodes.filter((n) => selected.has(n.id) && !["page", "space", "block", "diagram", "endpoint"].includes(n.kind))];
+      const modelRelations = [
+        ...sys.nodes.filter((n) => selected.has(n.id) && endpointMatches(n)).map((n) => ({ from: "person:client", to: `service:${n.service}`, kind: "calls", label: n.name, technology: "HTTP", confidence: "verified", provenance: n.provenance })),
+        ...[...byKey.values()].filter((r) => r.kind !== "exposes" && selected.has(r.from) && selected.has(r.to))
+      ];
+      const evidence = [], seen = /* @__PURE__ */ new Set();
+      let evidenceBytes = 0;
+      const quotable = (b) => !["heading", "diagram", "issue"].includes(b.kind);
+      const ranked = [...relevant.filter((b) => !stale.has(b.pageId)), ...relevant.filter((b) => stale.has(b.pageId))].filter(quotable);
+      for (const b of ranked) for (const quote of b.quotes || [b.text]) {
+        const norm = quote.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+        if (b.kind !== "table-row" && quote.split(/\s+/).length < 4) continue;
+        if (!norm || quote.length > 1800 || evidenceBytes + Buffer.byteLength(quote) > 12e3 || seen.has(norm) || [...seen].some((s) => s.length > 60 && norm.length > 60 && (s.includes(norm) || norm.includes(s)))) continue;
+        seen.add(norm);
+        evidenceBytes += Buffer.byteLength(quote);
+        evidence.push({ blockId: b.id, pageId: b.pageId, space: b.space, version: b.version, title: b.title, path: b.path, text: quote, url: b.url, ...stale.has(b.pageId) ? { stale: true } : {} });
+        if (evidence.length >= Math.min(20, limit)) break;
+      }
+      evidence.splice(Math.min(20, limit));
+      const flows = [];
+      const serviceFlows = /* @__PURE__ */ new Map();
+      for (const p of sys.passports.filter((p2) => selected.has(`service:${p2.service}`))) {
+        let available = Array.isArray(p.flows) ? p.flows : [];
+        if (typeof p.codeIndex === "string" && require_codeindex().load(p.codeIndex)) {
+          try {
+            const index = require_codeindex().load(p.codeIndex);
+            available = require_flows().flows([p.codeIndex, ...(p.libraries || []).filter((l) => l.index).map((l) => l.index)], { config: require_flows().serviceConfig(index.root) });
+          } catch {
+          }
+        }
+        serviceFlows.set(p.service, available);
+      }
+      function appendOutputs(service, f, steps, visited = /* @__PURE__ */ new Set(), depth = 0) {
+        if (depth > 5 || visited.has(`${service}:${f.entry}`)) return;
+        visited.add(`${service}:${f.entry}`);
+        const own = "service:" + service, out2 = f.out || {};
+        const outputs = modelRelations.filter((r) => r.from === own && r.confidence === "verified" && (r.kind === "produces" && (out2.produces || []).some((x) => r.to === `topic:${x.topic}`) || ["write", "read", "uses"].includes(r.kind) && (out2.tables || []).some((x) => r.to.endsWith(":" + x.table) && (x.access || "uses") === r.kind) || r.kind === "calls" && (out2.http || []).some((x) => !r.provenance?.where || x.at === r.provenance.where || x.call?.includes(r.label))));
+        for (const r of outputs) {
+          steps.push(r);
+          if (r.kind === "produces") for (const consumer of modelRelations.filter((c) => c.from === r.to && c.kind === "consumes" && c.confidence === "verified")) {
+            steps.push(consumer);
+            const target = consumer.to.slice("service:".length), listeners = serviceFlows.get(target) || [];
+            for (const listener of listeners.filter((l) => l.topic === r.to.slice("topic:".length) || l.entry === `kafka ${r.to.slice("topic:".length)}`)) appendOutputs(target, listener, steps, visited, depth + 1);
+          }
+          if (r.kind === "calls" && r.to.startsWith("service:")) {
+            const target = r.to.slice("service:".length), candidates2 = serviceFlows.get(target) || [];
+            const route2 = (value) => String(value).replace(/\{[^}]+\}/g, "{}").replace(/\/$/, "").toLowerCase();
+            for (const next of candidates2.filter((next2) => next2.kind === "http" && (route2(next2.entry) === route2(r.label) || (out2.http || []).some((call) => route2(call.call) === route2(next2.entry))))) appendOutputs(target, next, steps, visited, depth + 1);
+          }
+        }
+      }
+      const route = (value) => String(value).replace(/\{[^}]+\}/g, "{}").replace(/\/$/, "").toLowerCase();
+      const candidates = [];
+      for (const [service, available] of serviceFlows) for (const f of available) {
+        if (!words.some((w) => `${f.entry} ${JSON.stringify(f.chain || [])}`.toLowerCase().includes(w))) continue;
+        const endpoint = sys.nodes.find((n) => n.kind === "endpoint" && n.service === service && route(n.name) === route(f.entry)), steps = [];
+        if (endpoint) steps.push({ from: client.length ? "person:client" : endpoint.id, to: "service:" + service, label: endpoint.name, technology: "HTTP", confidence: "verified", provenance: endpoint.provenance });
+        else if (f.topic) steps.push(...modelRelations.filter((r) => r.from === `topic:${f.topic}` && r.to === "service:" + service && r.kind === "consumes"));
+        appendOutputs(service, f, steps);
+        const unique = [...new Map(steps.map((r) => [`${r.from}|${r.to}|${r.kind || ""}|${r.label || ""}`, r])).values()];
+        candidates.push({ name: endpoint?.name || f.entry, service, http: !!endpoint, chain: f.chain || f.via || [], steps: unique, source: Array.isArray(f.chain) ? "codegraph" : "passport-flow" });
+      }
+      const signatures = /* @__PURE__ */ new Set();
+      for (const f of candidates.sort((a, b) => b.http - a.http || b.steps.length - a.steps.length)) {
+        const signature = `${f.name}|${f.steps.map((r) => `${r.from}>${r.to}`).join(",")}`;
+        if (flows.length >= 5 || f.steps.length < 2 || signatures.has(signature)) continue;
+        signatures.add(signature);
+        flows.push(f);
+      }
+      if (!flows.length) for (const n of sys.nodes.filter((n2) => n2.kind === "endpoint" && selected.has(`service:${n2.service}`) && endpointMatches(n2)).slice(0, 5)) flows.push({ name: n.name, steps: [{ from: client.length ? "person:client" : n.id, to: `service:${n.service}`, label: n.name, technology: "HTTP", confidence: "verified", provenance: n.provenance }], source: "endpoint-only", note: "No indexed flow is available; refresh the service passport for outputs and method chains." });
+      if (!flows.length) {
+        for (const p of pages.filter((p2) => selectedPages.has(p2.id))) for (const d of p.diagrams || []) if (/sequenceDiagram|\bparticipant\b/.test(d.source || "") && flows.length < 5) {
+          const steps = graph.relations.filter((r) => r.provenance?.pageId === p.id && r.provenance?.blockId === d.blockId && r.provenance?.source === "docs:diagram");
+          if (steps.length) flows.push({ name: `Documented: ${p.title}`, steps, source: "docs:diagram", note: "Sequence is stated in documentation; no matching indexed code flow is available." });
+        }
+      }
+      const model = { name: text, env, nodes: modelNodes, relations: modelRelations, flows }, D = require_diagrams();
+      const diagrams = [];
+      for (const [view2, name] of [["context", "Context"], ["container", "Container"], ...flows.map((f, i) => [`sequence:${i}`, `Sequence: ${f.name}`])]) {
+        for (const format of ["mermaid", "plantuml", "structurizr"]) {
+          if (format === "structurizr" && view2 !== "container") continue;
+          const diagram = { name, view: view2, format, source: D.write(model, { format, view: view2 }) };
+          if (render && format === "plantuml") {
+            try {
+              const result = await D.render(model, { ...docs.config().diagrams, format, view: view2 });
+              if (typeof result === "string") diagram.svg = result;
+              else Object.assign(diagram, { ...result, view: view2 });
+            } catch (e) {
+              diagram.renderError = e.message;
+            }
+          }
+          diagrams.push(diagram);
+        }
+      }
+      const checked = require_docs_search().verify(evidence), gaps = graph.gaps.filter((g) => selectedPages.has(g.provenance?.pageId) || selected.has(g.from) || selected.has(g.to));
+      const view = require_results().saveView("diagram", { model, diagrams, evidence: checked, gaps }, { title: text, env });
+      return { text, env, pages: [...selectedPages], evidence: checked, code: { hits: code.hits || [], warning: code.warning }, model, diagrams, gaps, view, quoteRule: "Quote only the exact evidence text with its blockId and page link. Verify additional quotes with docs_verify. Dashed/stated relations come from documentation; missing cached code support is a gap, not proof of absence.", search: { mode: search.mode, total: search.total, warnings: search.warnings } };
+    }
+    module2.exports = { system, build, feature, variants, entityMatcher };
   }
 });
 
@@ -45690,9 +45595,10 @@ var require_tools = __commonJS({
           const edges = a.direction === "uses" ? idx.uses(a.env, a.name) : idx.usages(a.env, a.name);
           const rows = edges.map((e) => ({ user: e.user, user_kind: e.userKind, role: e.role, where: e.where, detail: e.detail, object: e.target, kind: e.targetKind, db: e.db, source: e.source, ...e.ambiguous ? { ambiguous: true } : {}, ...e.known === false ? { not_in_db: true } : {} }));
           if (!rows.length) return { total: 0, hint: `nothing ${a.direction === "uses" ? "used by" : "uses"} "${a.name}" in the ${a.env} index. Check the name with find; code usages need a passport of the service (passport tool).` };
+          const stale = idx.load(a.env).stale;
           const by = {};
           for (const r of rows) by[`${r.user_kind}:${r.role}`] = (by[`${r.user_kind}:${r.role}`] || 0) + 1;
-          return tabular("pg-usage", rows, { env: a.env, query: `${a.direction === "uses" ? "used by" : "users of"} ${a.name}` }, { preview: 25, summary: by });
+          return { ...tabular("pg-usage", rows, { env: a.env, query: `${a.direction === "uses" ? "used by" : "users of"} ${a.name}` }, { preview: 25, summary: by }), ...stale ? { note: stale } : {} };
         }
       },
       {
@@ -46694,6 +46600,17 @@ var require_tools = __commonJS({
       const T = require_trace();
       const parent = T.current();
       const started = Date.now();
+      let bytes = 0;
+      try {
+        bytes = Buffer.byteLength(JSON.stringify(args) || "");
+      } catch {
+      }
+      const max = require_config().getTools().maxInputBytes;
+      if (bytes > max) {
+        const error2 = `Arguments exceed ${max} bytes`;
+        require_calls().record({ tool: name, args: { argumentsOmitted: true, bytes }, source, ok: false, ms: Date.now() - started, error: error2 });
+        throw Object.assign(new Error(error2), { code: "DT_ARGUMENT_INVALID" });
+      }
       const registry = await ready(), redactions = require_redact().values(args);
       const evidenceArgs = (tool, input, depth = 0) => {
         if (depth > 3) return { argumentsOmitted: true };
@@ -46702,7 +46619,7 @@ var require_tools = __commonJS({
         if (!Array.isArray(fields)) return input;
         return { ...Object.fromEntries(fields.filter((key) => Object.hasOwn(input || {}, key) && (input[key] === null || ["string", "number", "boolean"].includes(typeof input[key]))).map((key) => [key, input[key]])), argumentsOmitted: true };
       };
-      const logged = evidenceArgs(name, args);
+      const logged = bytes > 8192 && !Array.isArray(registry.byName[name]?.logArgs) ? { argumentsOmitted: true, bytes, keys: Object.keys(args || {}).slice(0, 20) } : evidenceArgs(name, args);
       let ok = false, error, size, steps, evidence, traceId;
       try {
         const r = await T.call(name, logged, { source, session: session || parent?.session, redactions }, async () => {
@@ -46727,7 +46644,8 @@ var require_tools = __commonJS({
         require_calls().record({ tool: name, args: logged, source, ok, ms: Date.now() - started, error, size, steps, redactions, evidence: evidence || require_call_outcome().classify(name, null, { invocation: "failed", traceId }), ...name === "tool_execute" ? { target: args.name } : {} });
       }
     }
-    async function callTool(name, args = {}) {
+    async function callTool(name, args = {}, { isolated = false } = {}) {
+      if (!isolated && require_isolate().enabled(name)) return require_isolate().run(name, args);
       const t = (await ready()).byName[name];
       if (!t) throw Object.assign(new Error(`Unknown tool ${name}`), { code: "DT_TOOL_UNKNOWN" });
       if (!args || typeof args !== "object" || Array.isArray(args)) throw Object.assign(new Error("Tool arguments must be an object"), { code: "DT_ARGUMENT_INVALID" });
@@ -46761,7 +46679,360 @@ var require_tools = __commonJS({
         })
       };
     }
-    module2.exports = { schemas, call, groups, enabled, reload, ready, declarative, bindSql, pluginSource };
+    module2.exports = { schemas, call, callTool, groups, enabled, reload, ready, declarative, bindSql, pluginSource };
+  }
+});
+
+// lib/isolate.js
+var require_isolate = __commonJS({
+  "lib/isolate.js"(exports2, module2) {
+    var { Worker, isMainThread } = require("worker_threads");
+    var HEAVY = /* @__PURE__ */ new Set(["impact", "code_symbols", "code_search", "pg_usage", "pg_function", "pg_table", "field_trace", "who_uses", "feature", "docs_search", "docs_page", "docs_verify", "knowledge_graph", "knowledge_search"]);
+    var heapMb = () => {
+      const v = Number(process.env.DT_WORKER_HEAP_MB ?? require_config().getTools().workerHeapMb ?? 1024);
+      return Number.isFinite(v) ? v : 1024;
+    };
+    var enabled = (name) => isMainThread && HEAVY.has(name) && heapMb() > 0;
+    function serve() {
+      const { parentPort } = require("worker_threads"), T = require_tools();
+      parentPort.on("message", async ({ id, name, args, mod, fn }) => {
+        try {
+          const value = mod ? await MODULES[mod]()[fn](...args) : await T.callTool(name, args, { isolated: true });
+          parentPort.postMessage({ id, ok: true, value, heap: process.memoryUsage().heapUsed });
+        } catch (e) {
+          parentPort.postMessage({ id, ok: false, error: { message: e.message, code: e.code, issues: e.issues }, heap: process.memoryUsage().heapUsed });
+        }
+      });
+    }
+    var MODULES = { indexer: () => require_indexer() };
+    var bundled = !/[\\/]lib[\\/]isolate\.js$/.test(__filename);
+    var ENTRY = __filename;
+    if (!isMainThread && require("worker_threads").workerData?.dtIsolate && !bundled) serve();
+    var worker = null;
+    var queue = Promise.resolve();
+    var seq = 0;
+    function spawn() {
+      const w = new Worker(ENTRY, { workerData: { dtIsolate: true }, resourceLimits: { maxOldGenerationSizeMb: heapMb() }, env: process.env, stdout: false, stderr: false });
+      w.pending = /* @__PURE__ */ new Map();
+      w.on("message", (m) => {
+        const p = w.pending.get(m.id);
+        if (!p) return;
+        w.pending.delete(m.id);
+        if (!w.pending.size) w.unref();
+        w.heap = m.heap;
+        m.ok ? p.resolve(m.value) : p.reject(Object.assign(new Error(m.error.message), { code: m.error.code, issues: m.error.issues }));
+      });
+      const fail = (e) => {
+        const oom = e?.code === "ERR_WORKER_OUT_OF_MEMORY" || /out of memory/i.test(e?.message || "");
+        for (const p of w.pending.values()) p.reject(Object.assign(new Error(oom ? `ran out of memory in its worker (${heapMb()} MB): narrow it (one repo, one db, a smaller depth), or raise tools.workerHeapMb. dt itself is still running.` : `worker stopped: ${e?.message || e}`), { code: oom ? "DT_OUT_OF_MEMORY" : "DT_WORKER_FAILED" }));
+        w.pending.clear();
+        if (worker === w) worker = null;
+      };
+      w.on("error", fail);
+      w.on("exit", (code) => {
+        if (w.pending.size) fail(new Error(`exit ${code}`));
+        if (worker === w) worker = null;
+      });
+      w.unref();
+      return w;
+    }
+    function exec(mod, fn, args = []) {
+      return heapMb() > 0 && isMainThread ? run(null, null, { mod, fn, args }) : MODULES[mod]()[fn](...args);
+    }
+    function run(name, args, extra = {}) {
+      const job = queue.then(async () => {
+        if (!worker) worker = spawn();
+        const w = worker, id = ++seq;
+        const value = await new Promise((resolve, reject) => {
+          w.pending.set(id, { resolve, reject });
+          w.ref();
+          w.postMessage({ id, name, args, ...extra });
+        });
+        if (w.heap > heapMb() * 1e6 / 2) {
+          worker = null;
+          w.terminate();
+        }
+        return value;
+      });
+      queue = job.catch(() => {
+      });
+      return job;
+    }
+    function stop() {
+      const w = worker;
+      worker = null;
+      if (w) return w.terminate();
+    }
+    module2.exports = { enabled, run, exec, stop, serve, HEAVY };
+  }
+});
+
+// lib/indexer.js
+var require_indexer = __commonJS({
+  "lib/indexer.js"(exports2, module2) {
+    var path2 = require("path");
+    var { envNames: envNames2, getEnv: getEnv2 } = require_config();
+    var { CACHE: CACHE2, readJson, writeJson } = require_util();
+    var limit = require_limit();
+    var jobs = require_jobs();
+    var LIVE = ["pg", "es", "kafka", "consul"];
+    var WHAT = [...LIVE, "passports", "bitbucket", "confluence", "index", "all"];
+    var sourcesFile = (env) => path2.join(CACHE2, env, "_sources.json");
+    function record(env, key, value) {
+      const s = readJson(sourcesFile(env), {});
+      s[key] = { at: (/* @__PURE__ */ new Date()).toISOString(), ...value };
+      writeJson(sourcesFile(env), s);
+    }
+    function configured(env, kind) {
+      const e = getEnv2(env);
+      return {
+        pg: Object.values(e.pg).some(Boolean),
+        es: e.es.hosts.length > 0,
+        kafka: !!e.kafkaUi,
+        consul: !!e.consul
+      }[kind];
+    }
+    var SOURCES = { pg: () => require_pg(), es: () => require_es(), kafka: () => require_kafka(), consul: () => require_consul() };
+    async function syncSource(env, kind, only, log) {
+      await limit.take(`${kind}:${env}`);
+      const started = Date.now();
+      try {
+        const r = await SOURCES[kind]().sync(env, { only, log });
+        if (kind === "pg") for (const d of r) record(env, `pg:${d.db}`, d.error ? { ok: false, error: d.error } : { ok: true, ...d });
+        else record(env, kind, { ok: true, ms: Date.now() - started, ...typeof r === "object" && !Array.isArray(r) ? r : { count: Array.isArray(r) ? r.length : void 0 } });
+        return r;
+      } catch (e) {
+        record(env, only && kind === "pg" ? `pg:${only.join(",")}` : kind, { ok: false, ms: Date.now() - started, error: e.message });
+        throw e;
+      }
+    }
+    async function rebuildPassports(only, log) {
+      const pp = require_passport();
+      const names = only && only.length ? only : pp.list().map((p) => p.service);
+      const out2 = {};
+      for (const service of names) {
+        const prev = pp.load(service);
+        const opts = prev?.env ? { env: prev.env } : prev && !/^[0-9a-f]{7,40}$/.test(prev.repo.ref || "") && prev.repo.ref !== "HEAD" ? { ref: prev.repo.ref } : {};
+        log(`passport ${service}: building${opts.env ? ` (deployed in ${opts.env})` : opts.ref ? ` (${opts.ref})` : ""}`);
+        try {
+          const p = await pp.build(service, { ...opts, rebuildCatalog: false });
+          out2[service] = { sha: p.repo.sha, changed: p.changes ? !p.changes.none : null };
+          log(`passport ${service}: ${p.repo.sha.slice(0, 10)}${p.changes && !p.changes.none ? ", changed" : ""}`);
+        } catch (e) {
+          out2[service] = { error: e.message };
+          log(`passport ${service}: ERROR ${e.message}`);
+        }
+      }
+      return out2;
+    }
+    async function rebuildIndex(env, log) {
+      const { lines, edges } = await require_isolate().exec("indexer", "buildIndexes", [env]);
+      log(`index ${env}: ${lines} catalog lines, ${edges} usage edges`);
+      record(env, "index", { ok: true, lines, edges });
+      return { catalogLines: lines, usageEdges: edges };
+    }
+    async function buildDocs(env, { index = true } = {}) {
+      if (!require_docs_cache().list().length) return {};
+      const docsIndex = index ? await require_docs_search().build() : void 0, graph = require_knowledge().build(env);
+      return { ...docsIndex ? { docsIndex } : {}, docsGraph: { nodes: graph.nodes.length, relations: graph.relations.length, gaps: graph.gaps.length } };
+    }
+    function buildIndexes(env) {
+      require_pgindex().current(env, { rebuild: true });
+      return { lines: require_catalog().build(env), edges: require_pgindex().load(env).edges.length };
+    }
+    function refresh({ env, what = "all", only, spaces, full = false } = {}) {
+      env = env || envNames2()[0];
+      if (!WHAT.includes(what)) throw new Error(`what must be one of ${WHAT.join(", ")}`);
+      getEnv2(env);
+      only = typeof only === "string" ? only.split(",").map((s) => s.trim()).filter(Boolean) : only;
+      const global = what === "passports" || what === "bitbucket" || what === "confluence";
+      const title = `${what}${only?.length ? ` (${only.join(", ")})` : ""} ${global ? "" : env}`.trim();
+      const key = what === "confluence" ? `${what}:${(only || []).join(",")}:${spaces || ""}:${full}` : global ? `${what}:${(only || []).join(",")}` : `${env}:${what}:${(only || []).join(",")}`;
+      return jobs.start(key, title, async (log) => {
+        const out2 = {};
+        if (what === "confluence") {
+          out2.confluence = await require_docs_cache().sync({ spaces: spaces || only, full, log });
+          out2.graph = (await require_isolate().exec("indexer", "buildDocs", [env, { index: false }])).docsGraph;
+          for (const e of envNames2()) out2[e] = await rebuildIndex(e, log);
+          return out2;
+        }
+        if (what === "bitbucket") {
+          out2.bitbucket = await require_bbindex().build({ log, only, force: !!only });
+          for (const e of envNames2()) out2[e] = await rebuildIndex(e, log);
+          return out2;
+        }
+        if (what === "passports") {
+          out2.passports = await rebuildPassports(only, log);
+          for (const e of envNames2()) out2[e] = await rebuildIndex(e, log);
+          return out2;
+        }
+        const kinds = what === "all" ? LIVE.filter((k) => configured(env, k)) : LIVE.includes(what) ? [what] : [];
+        for (const k of kinds) {
+          log(`${k} ${env}: syncing${only?.length ? ` ${only.join(", ")}` : ""}`);
+          try {
+            out2[k] = await syncSource(env, k, only, (l) => log(l));
+          } catch (e) {
+            out2[k] = { error: e.message };
+            log(`${k} ${env}: ERROR ${e.message}`);
+          }
+        }
+        if (what === "index") Object.assign(out2, await require_isolate().exec("indexer", "buildDocs", [env]));
+        Object.assign(out2, await rebuildIndex(env, log));
+        return out2;
+      });
+    }
+    function status(env) {
+      const e = getEnv2(env);
+      const src = readJson(sourcesFile(env), {});
+      const pg = require_pg();
+      const configuredDbs = Object.entries(e.pg);
+      const dbs = configuredDbs.map(([db, url]) => {
+        const cat = url ? pg.loadDb(env, db) : null;
+        const s = src[`pg:${db}`] || {};
+        return {
+          db,
+          configured: !!url,
+          host: url ? safeHost(url) : null,
+          syncedAt: cat?.syncedAt || null,
+          tables: cat?.tables.length ?? null,
+          functions: cat?.functions?.length ?? null,
+          triggers: cat?.triggers?.length ?? null,
+          ms: cat?.ms ?? s.ms ?? null,
+          error: s.ok === false ? s.error : null
+        };
+      });
+      const idx = (kind) => readJson(path2.join(CACHE2, env, kind, "_index.json"));
+      const one = (kind, count) => ({ configured: configured(env, kind), syncedAt: count.syncedAt || src[kind]?.at || null, count: count.n, error: src[kind]?.ok === false ? src[kind].error : null, ms: src[kind]?.ms ?? null });
+      const esI = idx("es"), kI = idx("kafka"), consul = readJson(path2.join(CACHE2, env, "consul.json"));
+      const usage = require_pgindex().load(env);
+      let lines = 0;
+      try {
+        lines = require("fs").readFileSync(path2.join(CACHE2, env, "catalog.txt"), "utf8").split("\n").length - 1;
+      } catch {
+      }
+      return {
+        env,
+        envFile: e.envFile,
+        envFileFound: e.envFileFound,
+        pg: dbs,
+        es: one("es", { syncedAt: esI?.syncedAt, n: esI?.indices ? Object.keys(esI.indices).length : null }),
+        kafka: one("kafka", { syncedAt: kI?.syncedAt, n: kI?.topics ? Array.isArray(kI.topics) ? kI.topics.length : Object.keys(kI.topics).length : null }),
+        consul: one("consul", { syncedAt: consul?.syncedAt, n: consul?.services ? Object.keys(consul.services).length : null }),
+        confluence: require_docs_cache().status(),
+        logs: { configured: e.logs.hosts.length > 0, index: e.logs.index },
+        index: { builtAt: usage.builtAt || null, catalogLines: lines, usageEdges: usage.edges.length }
+      };
+    }
+    var safeHost = (url) => {
+      try {
+        const u = new URL(url);
+        return `${u.hostname}:${u.port || 5432}${u.pathname}`;
+      } catch {
+        return "?";
+      }
+    };
+    module2.exports = { refresh, status, WHAT, buildIndexes, buildDocs };
+  }
+});
+
+// lib/migrate.js
+var require_migrate = __commonJS({
+  "lib/migrate.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var config = require_config();
+    var SECRETISH = /(DATABASE_URL|PASS|PASSWORD|TOKEN|SECRET|API_KEY|_KEY$|_USER$|USERNAME|LOGIN)/i;
+    var MARK = "\0";
+    function clean(v) {
+      if (Array.isArray(v)) {
+        const a = v.map(clean).filter((x) => x !== void 0);
+        return a.length ? a : void 0;
+      }
+      if (v && typeof v === "object") {
+        const o = Object.fromEntries(Object.entries(v).map(([k, x]) => [k, clean(x)]).filter(([, x]) => x !== void 0));
+        return Object.keys(o).length ? o : void 0;
+      }
+      return v === null || v === "" ? void 0 : v;
+    }
+    function plan() {
+      if (fs2.existsSync(config.CONFIG_FILE)) throw new Error(`${config.CONFIG_FILE} already exists`);
+      const s = config.load();
+      if (s.format !== "legacy") throw new Error("nothing to migrate");
+      const raw = s.raw;
+      const secrets = {};
+      const personal = { ...config.parseEnvFile(path2.join(config.HOME, ".env.browser")), ...config.parseEnvFile(path2.join(config.HOME, ".env.personal")) };
+      for (const [k, v] of Object.entries(personal)) secrets[k] = v;
+      const resolveWith = (lookup, rename) => {
+        const one = (str) => {
+          const pass = (keepUnset) => config.interpolate(str, (name) => {
+            const v = lookup(name);
+            if (!SECRETISH.test(name)) return v;
+            if ((v === void 0 || v === "") && !keepUnset) return void 0;
+            return `${MARK}${rename(name, v)}${MARK}`;
+          });
+          let r2 = pass(false);
+          if (r2 === null || r2 === "") r2 = pass(true);
+          return typeof r2 === "string" ? r2.replace(new RegExp(`${MARK}(\\w+)${MARK}`, "g"), "${$1}") : r2;
+        };
+        const walk = (x) => typeof x === "string" ? one(x) : Array.isArray(x) ? x.map(walk) : x && typeof x === "object" ? Object.fromEntries(Object.entries(x).map(([k, y]) => [k, walk(y)])) : x;
+        return walk;
+      };
+      const out2 = { envs: {} };
+      for (const [name, def] of Object.entries(raw.envs)) {
+        const fileVars = def.envFile ? config.parseEnvFile(path2.join(config.HOME, def.envFile)) : {};
+        const prefix = name.toUpperCase().replace(/[^A-Z0-9]/g, "_") + "_";
+        const lookup = (k) => fileVars[k] ?? personal[k];
+        const rename = (k, v) => {
+          if (k in personal && !(k in fileVars)) return k;
+          const nk = k.startsWith(prefix) ? k : prefix + k;
+          secrets[nk] = v ?? secrets[nk] ?? "";
+          return nk;
+        };
+        const r2 = resolveWith(lookup, rename);
+        const { envFile, ...rest } = def;
+        const e = r2(rest);
+        if (def.postgres === "auto") {
+          e.postgres = {};
+          for (const [k, url] of Object.entries(fileVars)) {
+            const m = k.match(/^DATABASE_URL(?:_(\w+))?$/);
+            if (m && url) e.postgres[m[1] ? m[1].toLowerCase() : decodeURIComponent(new URL(url).pathname.slice(1))] = `\${${rename(k, url)}}`;
+          }
+        }
+        const DEF = { time: "@timestamp", message: "message", service: "service.name", level: "log.level", trace: "trace.id" };
+        if (e.logs && e.logs.fields) {
+          for (const [k, v] of Object.entries(e.logs.fields)) if (DEF[k] === v) delete e.logs.fields[k];
+        }
+        if (e.logs && e.logs.index === "logs-*") delete e.logs.index;
+        if (e.elasticsearch && typeof e.elasticsearch.hosts === "string") e.elasticsearch.hosts = e.elasticsearch.hosts.split(",").map((x) => x.trim()).filter(Boolean);
+        out2.envs[name] = clean(e) || {};
+      }
+      const r = resolveWith((k) => personal[k], (k, v) => {
+        secrets[k] = v ?? secrets[k] ?? "";
+        return k;
+      });
+      out2.bitbucket = r(raw.bitbucket);
+      out2.confluence = r(raw.confluence);
+      const groups = config.interpolate(raw.passports.internalGroups, (k) => personal[k]);
+      out2.passports = { internalGroups: String(groups || "").split(",").map((x) => x.trim()).filter(Boolean) };
+      out2.graph = { url: "${GRAPH_URL}" };
+      out2.tools = { enable: ["all"], disable: [], plugins: [], custom: [] };
+      out2.browser = { sites: Object.fromEntries(Object.entries(raw.browser.sites).map(([k, v]) => [k, { url: config.interpolate(v.url, (x) => personal[x]), secrets: v.secrets }])) };
+      const cleaned = clean(out2);
+      cleaned.tools = out2.tools;
+      return { config: cleaned, secrets };
+    }
+    var envLine = (k, v) => `${k}=${/^[\w@%+=:,./-]*$/.test(v) ? v : !v.includes("'") ? `'${v}'` : JSON.stringify(v)}`;
+    function migrate({ write = true } = {}) {
+      const p = plan();
+      if (!write) return p;
+      if (fs2.existsSync(config.SECRETS_FILE)) throw new Error(`${config.SECRETS_FILE} already exists; move it away first`);
+      fs2.writeFileSync(config.CONFIG_FILE, JSON.stringify(p.config, null, 2) + "\n");
+      fs2.writeFileSync(config.SECRETS_FILE, "# secrets and compose settings for dt (migrated)\n" + Object.entries(p.secrets).map(([k, v]) => envLine(k, String(v))).join("\n") + "\n", { mode: 384 });
+      config.reload();
+      const old = fs2.readdirSync(config.HOME).filter((f) => f === "envs.json" || /^\.env\.[\w-]+$/.test(f) && !f.endsWith(".example"));
+      return { wrote: [config.CONFIG_FILE, config.SECRETS_FILE], envs: Object.keys(p.config.envs), secrets: Object.keys(p.secrets).length, oldFiles: old, note: "config.json is used from now on; check both files, then delete the old ones" };
+    }
+    module2.exports = { migrate, plan };
   }
 });
 
@@ -47775,7 +48046,9 @@ async function main() {
   const result = await commands[cmd](opts);
   if (result !== void 0) out(result, opts);
 }
-main().catch((e) => {
+var wt = require("worker_threads");
+if (!wt.isMainThread && wt.workerData?.dtIsolate) require_isolate().serve();
+else main().catch((e) => {
   console.error("ERROR: " + e.message);
   process.exit(1);
 });

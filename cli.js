@@ -219,4 +219,7 @@ async function main() {
   if (result !== undefined) out(result, opts);
 }
 
-main().catch(e => { console.error('ERROR: ' + e.message); process.exit(1); });
+// A worker thread started from the bundle (lib/isolate.js) runs heavy tool calls instead of the command line.
+const wt = require('worker_threads');
+if (!wt.isMainThread && wt.workerData?.dtIsolate) require('./lib/isolate').serve();
+else main().catch(e => { console.error('ERROR: ' + e.message); process.exit(1); });
