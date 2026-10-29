@@ -7,13 +7,11 @@ backend uses to call dt can be different. For example, its backend may call
 
 ## Choose a small starting tool list
 
-The bundled compose sets `DT_TOOL_PROFILE=lean-find`: five starting definitions (`find`, `tool_search`, `tool_describe`, `tool_execute`, `tool_profiles`). The four-tool `lean` profile omits the initial `find` definition; it remains discoverable. The existing 11-tool `compact` profile is still available. Existing standalone installations
-remain on their configured profile, or `all` when none is configured. The profile
-can also be selected per connection:
+The bundled compose and the default configuration use the `direct` profile: about fifty everyday tools by name (`find`, `pg_query`, `pg_table`, `es_search`, `kafka_last`, `logs_search`, `bitbucket_file`, `bitbucket_pr`, `code_search`, the workspace and test tools, `feature`, `show`, `code`) plus `tool_search`, `tool_describe` and `tool_execute` for the specialised rest (fixtures, scenarios, collections, test databases, UI-to-API capture). A model asked for rows, an index, a topic, a repo file or a pull request calls that tool at once instead of searching for it. The repo tools take a slug alone; dt finds its project. Set `DT_TOOL_PROFILE` or `tools.profile` to choose another, or pick one per connection:
 
 | OpenAPI path | Starting workflow |
 | --- | --- |
-| `openapi/lean-find.json` | Five starting tools; cached system names plus expandable discovery |
+| `openapi/direct.json` | Everyday tools by name; discovery for the rest (default) |
 | `openapi/lean.json` | Four discovery tools; retrieve each capability on request |
 | `openapi/compact.json` | Find capabilities on demand, then execute exact tools |
 | `openapi/lean.json` | Four discovery tools; request more capabilities when needed |

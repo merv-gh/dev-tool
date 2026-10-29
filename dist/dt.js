@@ -283,7 +283,8 @@ var require_config = __commonJS({
         disable: parts ? parts.filter((p) => p.startsWith("-")).map((p) => p.slice(1)) : list(t.disable),
         plugins: [].concat(t.plugins || []),
         custom: [].concat(t.custom || []),
-        profile: process.env.DT_TOOL_PROFILE || t.profile || "all",
+        profile: process.env.DT_TOOL_PROFILE || t.profile || "direct",
+        // the tools a chat model gets (lib/tool-profiles.js)
         profiles: t.profiles && typeof t.profiles === "object" ? t.profiles : {},
         discoveryRanker: t.discoveryRanker === "bm25" ? "bm25" : "legacy",
         backends: t.backends && typeof t.backends === "object" ? t.backends : {},
@@ -4360,146 +4361,6 @@ var require_extract = __commonJS({
   }
 });
 
-// lib/atlassian.js
-var require_atlassian = __commonJS({
-  "lib/atlassian.js"(exports2, module2) {
-    var { getPersonal } = require_config();
-    var { http: http2 } = require_util();
-    function bb(p, opts = {}) {
-      const { url, token } = getPersonal().bitbucket;
-      if (!url || !token) throw new Error("Bitbucket not configured: set BITBUCKET_URL and BITBUCKET_HTTP_TOKEN in .env.personal");
-      return http2(url + p, { ...opts, headers: { authorization: `Bearer ${token}`, ...opts.headers } });
-    }
-    async function bbAll(p, max = 2e3) {
-      const out2 = [];
-      for (let start = 0; out2.length < max; ) {
-        const res = await bb(`${p}${p.includes("?") ? "&" : "?"}limit=500&start=${start}`);
-        out2.push(...res.values);
-        if (res.isLastPage) break;
-        start = res.nextPageStart;
-      }
-      return out2;
-    }
-    async function repos(filter = "") {
-      const all = await bbAll(`/rest/api/1.0/repos${filter ? `?name=${encodeURIComponent(filter)}` : ""}`);
-      return all.map((r) => ({ project: r.project.key, repo: r.slug, name: r.name, description: r.description || void 0 }));
-    }
-    async function files(project, repo, { at } = {}) {
-      const q = at ? `?at=${encodeURIComponent(at)}` : "";
-      return bbAll(`/rest/api/1.0/projects/${project}/repos/${repo}/files${q}`, 2e4);
-    }
-    async function file(project, repo, filePath, { at } = {}) {
-      const q = at ? `?at=${encodeURIComponent(at)}` : "";
-      return bb(`/rest/api/1.0/projects/${project}/repos/${repo}/raw/${filePath.split("/").map(encodeURIComponent).join("/")}${q}`, { raw: true });
-    }
-    async function browse(project, repo, dir = "", { at } = {}) {
-      const q = `?limit=1000${at ? `&at=${encodeURIComponent(at)}` : ""}`;
-      const res = await bb(`/rest/api/1.0/projects/${project}/repos/${repo}/browse${dir ? "/" + dir.split("/").map(encodeURIComponent).join("/") : ""}${q}`);
-      return (res.children?.values || []).map((v) => ({ name: v.path?.name || v.path?.toString, type: v.type }));
-    }
-    async function prs(project, repo, { state = "OPEN" } = {}) {
-      const res = await bb(`/rest/api/1.0/projects/${project}/repos/${repo}/pull-requests?state=${state}&limit=50`);
-      return res.values.map((p) => ({ id: p.id, title: p.title, state: p.state, author: p.author?.user?.displayName, from: p.fromRef?.displayId, to: p.toRef?.displayId, updated: new Date(p.updatedDate).toISOString() }));
-    }
-    var prBase = (project, repo, id) => `/rest/api/1.0/projects/${project}/repos/${repo}/pull-requests/${id}`;
-    var user = (u) => u?.user?.displayName || u?.displayName || u?.user?.name || null;
-    async function myPrs({ role = "REVIEWER", state = "OPEN" } = {}) {
-      const res = await bb(`/rest/api/1.0/dashboard/pull-requests?role=${role}&state=${state}&limit=100`);
-      return res.values.map((p) => ({
-        project: p.toRef?.repository?.project?.key,
-        repo: p.toRef?.repository?.slug,
-        id: p.id,
-        title: p.title,
-        author: user(p.author),
-        from: p.fromRef?.displayId,
-        to: p.toRef?.displayId,
-        state: p.state,
-        reviewers: (p.reviewers || []).map((r) => `${user(r)}:${r.status}`).join(", "),
-        updated: new Date(p.updatedDate).toISOString(),
-        link: p.links?.self?.[0]?.href
-      }));
-    }
-    function unified(diffs) {
-      const files2 = [];
-      const out2 = [];
-      for (const d of diffs || []) {
-        const from = d.source?.toString || "/dev/null", to = d.destination?.toString || "/dev/null";
-        let add = 0, del = 0;
-        out2.push(`diff --git a/${from} b/${to}`, `--- a/${from}`, `+++ b/${to}`);
-        if (d.binary) out2.push("Binary file");
-        for (const h of d.hunks || []) {
-          out2.push(`@@ -${h.sourceLine},${h.sourceSpan} +${h.destinationLine},${h.destinationSpan} @@${h.context ? " " + h.context : ""}`);
-          for (const s of h.segments || []) {
-            const sign = s.type === "ADDED" ? "+" : s.type === "REMOVED" ? "-" : " ";
-            for (const l of s.lines || []) {
-              out2.push(sign + l.line);
-              if (sign === "+") add++;
-              if (sign === "-") del++;
-            }
-          }
-        }
-        if (d.truncated) out2.push("... (truncated by Bitbucket)");
-        files2.push({ path: to !== "/dev/null" ? to : from, from, add, del });
-      }
-      return { text: out2.join("\n"), files: files2 };
-    }
-    async function prDetails(project, repo, id) {
-      const base = prBase(project, repo, id);
-      const [pr, diff, acts] = await Promise.all([
-        bb(base),
-        bb(`${base}/diff?contextLines=3&withComments=false&maxLines=20000`).catch((e) => ({ error: e.message })),
-        bb(`${base}/activities?limit=200`).catch(() => ({ values: [] }))
-      ]);
-      const u = unified(diff.diffs);
-      const comments = acts.values.filter((a) => a.action === "COMMENTED" && a.comment).map((a) => ({
-        at: new Date(a.createdDate).toISOString(),
-        author: user(a.user),
-        text: a.comment.text,
-        file: a.commentAnchor?.path || null,
-        line: a.commentAnchor?.line || null
-      })).reverse();
-      return {
-        project,
-        repo,
-        id: pr.id,
-        title: pr.title,
-        description: pr.description || "",
-        state: pr.state,
-        author: user(pr.author),
-        from: pr.fromRef?.displayId,
-        to: pr.toRef?.displayId,
-        fromSha: pr.fromRef?.latestCommit,
-        toSha: pr.toRef?.latestCommit,
-        reviewers: (pr.reviewers || []).map((r) => ({ name: user(r), status: r.status })),
-        created: new Date(pr.createdDate).toISOString(),
-        updated: new Date(pr.updatedDate).toISOString(),
-        link: pr.links?.self?.[0]?.href,
-        files: u.files,
-        diff: u.text,
-        diffError: diff.error,
-        comments
-      };
-    }
-    function cf(p) {
-      const { url, user: user2, token } = getPersonal().confluence;
-      if (!url || !token) throw new Error("CONFLUENCE_URL / CONFLUENCE_API_TOKEN not set in .env.personal");
-      return user2 ? http2(url + p, { auth: { user: user2, pass: token } }) : http2(url + p, { headers: { authorization: `Bearer ${token}` } });
-    }
-    async function confluenceSearch(text, { space, limit = 20 } = {}) {
-      let cql = `text ~ ${JSON.stringify(text)} and type = page`;
-      if (space) cql += ` and space = ${JSON.stringify(space)}`;
-      const res = await cf(`/rest/api/content/search?limit=${limit}&cql=${encodeURIComponent(cql)}`);
-      return res.results.map((r) => ({ id: r.id, title: r.title, space: r._expandable?.space?.split("/").pop(), url: r._links?.webui }));
-    }
-    var stripHtml = (h) => h.replace(/<(br|\/p|\/h\d|\/li|\/tr)[^>]*>/gi, "\n").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/\n{3,}/g, "\n\n").trim();
-    async function confluencePage(id) {
-      const p = await cf(`/rest/api/content/${encodeURIComponent(id)}?expand=body.storage,version,space`);
-      return { id: p.id, title: p.title, space: p.space?.key, version: p.version?.number, text: stripHtml(p.body?.storage?.value || "") };
-    }
-    module2.exports = { browse, repos, files, file, prs, myPrs, prDetails, unified, confluenceSearch, confluencePage, bb };
-  }
-});
-
 // lib/bbindex.js
 var require_bbindex = __commonJS({
   "lib/bbindex.js"(exports2, module2) {
@@ -4646,6 +4507,161 @@ var require_bbindex = __commonJS({
       });
     }
     module2.exports = { build, throttle, indexSome, lookup, load, catalogLines, indexRepo, FILE };
+  }
+});
+
+// lib/atlassian.js
+var require_atlassian = __commonJS({
+  "lib/atlassian.js"(exports2, module2) {
+    var { getPersonal } = require_config();
+    var { http: http2 } = require_util();
+    function bb(p, opts = {}) {
+      const { url, token } = getPersonal().bitbucket;
+      if (!url || !token) throw new Error("Bitbucket not configured: set BITBUCKET_URL and BITBUCKET_HTTP_TOKEN in .env.personal");
+      return http2(url + p, { ...opts, headers: { authorization: `Bearer ${token}`, ...opts.headers } });
+    }
+    async function bbAll(p, max = 2e3) {
+      const out2 = [];
+      for (let start = 0; out2.length < max; ) {
+        const res = await bb(`${p}${p.includes("?") ? "&" : "?"}limit=500&start=${start}`);
+        out2.push(...res.values);
+        if (res.isLastPage) break;
+        start = res.nextPageStart;
+      }
+      return out2;
+    }
+    async function repos(filter = "") {
+      const all = await bbAll(`/rest/api/1.0/repos${filter ? `?name=${encodeURIComponent(filter)}` : ""}`);
+      return all.map((r) => ({ project: r.project.key, repo: r.slug, name: r.name, description: r.description || void 0 }));
+    }
+    async function projectOf(project, repo) {
+      if (project) return { project, repo };
+      const slash = String(repo || "").match(/^([^/\s]+)\/([^/\s]+)$/);
+      if (slash) return { project: slash[1], repo: slash[2] };
+      const same = (r) => String(r.repo || r.slug || "").toLowerCase() === String(repo).toLowerCase();
+      const pick = (list) => [...new Set(list.filter(same).map((r) => r.project))];
+      let found = pick(require_bbindex().load().repos || []);
+      if (!found.length) try {
+        found = pick(require_passport().list().map((p) => ({ project: String(p.repo || "").split("/")[0], repo: String(p.repo || "").split("/")[1] })));
+      } catch {
+      }
+      if (!found.length) found = pick(await repos(repo));
+      if (found.length === 1) return { project: found[0], repo };
+      throw new Error(found.length ? `repo ${repo} is in several projects (${found.join(", ")}): pass project` : `no Bitbucket repo named ${repo}; bitbucket_repos lists them`);
+    }
+    async function files(project, repo, { at } = {}) {
+      const q = at ? `?at=${encodeURIComponent(at)}` : "";
+      return bbAll(`/rest/api/1.0/projects/${project}/repos/${repo}/files${q}`, 2e4);
+    }
+    async function file(project, repo, filePath, { at } = {}) {
+      const q = at ? `?at=${encodeURIComponent(at)}` : "";
+      return bb(`/rest/api/1.0/projects/${project}/repos/${repo}/raw/${filePath.split("/").map(encodeURIComponent).join("/")}${q}`, { raw: true });
+    }
+    async function browse(project, repo, dir = "", { at } = {}) {
+      const q = `?limit=1000${at ? `&at=${encodeURIComponent(at)}` : ""}`;
+      const res = await bb(`/rest/api/1.0/projects/${project}/repos/${repo}/browse${dir ? "/" + dir.split("/").map(encodeURIComponent).join("/") : ""}${q}`);
+      return (res.children?.values || []).map((v) => ({ name: v.path?.name || v.path?.toString, type: v.type }));
+    }
+    async function prs(project, repo, { state = "OPEN" } = {}) {
+      const res = await bb(`/rest/api/1.0/projects/${project}/repos/${repo}/pull-requests?state=${state}&limit=50`);
+      return res.values.map((p) => ({ id: p.id, title: p.title, state: p.state, author: p.author?.user?.displayName, from: p.fromRef?.displayId, to: p.toRef?.displayId, updated: new Date(p.updatedDate).toISOString() }));
+    }
+    var prBase = (project, repo, id) => `/rest/api/1.0/projects/${project}/repos/${repo}/pull-requests/${id}`;
+    var user = (u) => u?.user?.displayName || u?.displayName || u?.user?.name || null;
+    async function myPrs({ role = "REVIEWER", state = "OPEN" } = {}) {
+      const res = await bb(`/rest/api/1.0/dashboard/pull-requests?role=${role}&state=${state}&limit=100`);
+      return res.values.map((p) => ({
+        project: p.toRef?.repository?.project?.key,
+        repo: p.toRef?.repository?.slug,
+        id: p.id,
+        title: p.title,
+        author: user(p.author),
+        from: p.fromRef?.displayId,
+        to: p.toRef?.displayId,
+        state: p.state,
+        reviewers: (p.reviewers || []).map((r) => `${user(r)}:${r.status}`).join(", "),
+        updated: new Date(p.updatedDate).toISOString(),
+        link: p.links?.self?.[0]?.href
+      }));
+    }
+    function unified(diffs) {
+      const files2 = [];
+      const out2 = [];
+      for (const d of diffs || []) {
+        const from = d.source?.toString || "/dev/null", to = d.destination?.toString || "/dev/null";
+        let add = 0, del = 0;
+        out2.push(`diff --git a/${from} b/${to}`, `--- a/${from}`, `+++ b/${to}`);
+        if (d.binary) out2.push("Binary file");
+        for (const h of d.hunks || []) {
+          out2.push(`@@ -${h.sourceLine},${h.sourceSpan} +${h.destinationLine},${h.destinationSpan} @@${h.context ? " " + h.context : ""}`);
+          for (const s of h.segments || []) {
+            const sign = s.type === "ADDED" ? "+" : s.type === "REMOVED" ? "-" : " ";
+            for (const l of s.lines || []) {
+              out2.push(sign + l.line);
+              if (sign === "+") add++;
+              if (sign === "-") del++;
+            }
+          }
+        }
+        if (d.truncated) out2.push("... (truncated by Bitbucket)");
+        files2.push({ path: to !== "/dev/null" ? to : from, from, add, del });
+      }
+      return { text: out2.join("\n"), files: files2 };
+    }
+    async function prDetails(project, repo, id) {
+      const base = prBase(project, repo, id);
+      const [pr, diff, acts] = await Promise.all([
+        bb(base),
+        bb(`${base}/diff?contextLines=3&withComments=false&maxLines=20000`).catch((e) => ({ error: e.message })),
+        bb(`${base}/activities?limit=200`).catch(() => ({ values: [] }))
+      ]);
+      const u = unified(diff.diffs);
+      const comments = acts.values.filter((a) => a.action === "COMMENTED" && a.comment).map((a) => ({
+        at: new Date(a.createdDate).toISOString(),
+        author: user(a.user),
+        text: a.comment.text,
+        file: a.commentAnchor?.path || null,
+        line: a.commentAnchor?.line || null
+      })).reverse();
+      return {
+        project,
+        repo,
+        id: pr.id,
+        title: pr.title,
+        description: pr.description || "",
+        state: pr.state,
+        author: user(pr.author),
+        from: pr.fromRef?.displayId,
+        to: pr.toRef?.displayId,
+        fromSha: pr.fromRef?.latestCommit,
+        toSha: pr.toRef?.latestCommit,
+        reviewers: (pr.reviewers || []).map((r) => ({ name: user(r), status: r.status })),
+        created: new Date(pr.createdDate).toISOString(),
+        updated: new Date(pr.updatedDate).toISOString(),
+        link: pr.links?.self?.[0]?.href,
+        files: u.files,
+        diff: u.text,
+        diffError: diff.error,
+        comments
+      };
+    }
+    function cf(p) {
+      const { url, user: user2, token } = getPersonal().confluence;
+      if (!url || !token) throw new Error("CONFLUENCE_URL / CONFLUENCE_API_TOKEN not set in .env.personal");
+      return user2 ? http2(url + p, { auth: { user: user2, pass: token } }) : http2(url + p, { headers: { authorization: `Bearer ${token}` } });
+    }
+    async function confluenceSearch(text, { space, limit = 20 } = {}) {
+      let cql = `text ~ ${JSON.stringify(text)} and type = page`;
+      if (space) cql += ` and space = ${JSON.stringify(space)}`;
+      const res = await cf(`/rest/api/content/search?limit=${limit}&cql=${encodeURIComponent(cql)}`);
+      return res.results.map((r) => ({ id: r.id, title: r.title, space: r._expandable?.space?.split("/").pop(), url: r._links?.webui }));
+    }
+    var stripHtml = (h) => h.replace(/<(br|\/p|\/h\d|\/li|\/tr)[^>]*>/gi, "\n").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/\n{3,}/g, "\n\n").trim();
+    async function confluencePage(id) {
+      const p = await cf(`/rest/api/content/${encodeURIComponent(id)}?expand=body.storage,version,space`);
+      return { id: p.id, title: p.title, space: p.space?.key, version: p.version?.number, text: stripHtml(p.body?.storage?.value || "") };
+    }
+    module2.exports = { browse, repos, projectOf, files, file, prs, myPrs, prDetails, unified, confluenceSearch, confluencePage, bb };
   }
 });
 
@@ -43171,6 +43187,27 @@ var require_tool_search = __commonJS({
   "lib/tool-search.js"(exports2, module2) {
     var STOP = new Set("a an and are as at be before but by can do does every for from get how i if in into is it its me my of on or our show that the their then these this through to use was we what when where which who why with without you your".split(" "));
     var cache = /* @__PURE__ */ new Map();
+    var INTENTS = [
+      [/\b(sql|select|postgres|pg|database|db|table|tables|rows?|column)\b/, ["pg_query", "pg_table", "find"]],
+      [/\b(who (uses|writes|reads)|usages?)\b/, ["pg_usage", "who_uses"]],
+      [/\b(function|procedure|trigger)\b/, ["pg_function"]],
+      [/\b(elastic\w*|es|index|indices|documents?)\b/, ["es_search", "find"]],
+      [/\b(kafka|topics?|messages?|events?)\b/, ["kafka_last", "kafka_topic", "kafka_lag"]],
+      [/\b(logs?|errors?|exceptions?|stack ?trace)\b/, ["logs_search", "logs_trace"]],
+      [/\b(pr|prs|pull requests?|review|merge requests?)\b/, ["bitbucket_pr", "bitbucket_prs", "bitbucket_my_prs"]],
+      [/\b(files?|\w+\.(ya?ml|xml|properties|json|java|kt|sql|gradle|md)|config|source)\b/, ["bitbucket_file", "bitbucket_files", "code_read", "code_search"]],
+      [/\b(repos?|repositor(y|ies)|bitbucket)\b/, ["bitbucket_repos", "bitbucket_files", "bitbucket_file"]],
+      [/\b(grep|code|class|method)\b/, ["code_search", "code_symbols", "code_read"]],
+      [/\b(health|status|down|broken)\b/, ["health", "overview"]],
+      [/\b(docs?|confluence|wiki|feature|architecture)\b/, ["feature", "docs_search", "confluence_search"]]
+    ];
+    function intents(query, names) {
+      const q = String(query || "").toLowerCase(), out2 = [];
+      for (const [re, tools] of INTENTS) if (re.test(q)) {
+        for (const name of tools) if (names.has(name) && !out2.includes(name)) out2.push(name);
+      }
+      return out2;
+    }
     function terms(text) {
       return String(text || "").toLowerCase().match(/[\p{L}\p{N}]+/gu)?.filter((w) => !STOP.has(w)).map((w) => w.length > 4 && w.endsWith("ies") ? w.slice(0, -3) + "y" : w.length > 4 && w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w) || [];
     }
@@ -43209,6 +43246,12 @@ var require_tool_search = __commonJS({
         }
         return { t: d.t, score };
       }).filter((x) => x.score > 0).sort((a, b) => b.score - a.score || a.t.name.localeCompare(b.t.name));
+      const exactName = selected.find((t) => t.name.toLowerCase() === String(query).trim().toLowerCase())?.name;
+      const first = [...exactName ? [exactName] : [], ...intents(query, new Set(selected.map((t) => t.name))).filter((n) => n !== exactName)];
+      if (first.length) {
+        const rest = matches.filter((m) => !first.includes(m.t.name)), top = Math.max(0, ...matches.map((m) => m.score));
+        matches.splice(0, matches.length, ...first.map((name, i) => ({ t: selected.find((t) => t.name === name), score: Math.max(top, 1) + first.length - i })), ...rest);
+      }
       const matched = words.filter((w) => df.get(w) > 0), unmatched = words.filter((w) => !df.get(w));
       const bounded = (xs) => xs.slice(0, 12).map((w) => w.slice(0, 80));
       return { matches, lexical: { mode: "normalized-keywords", ranker, matchedTerms: bounded(matched), unmatchedTerms: bounded(unmatched), truncated: matched.length > 12 || unmatched.length > 12 || words.some((w) => w.length > 80) } };
@@ -43315,7 +43358,63 @@ var require_tool_profiles = __commonJS({
   "lib/tool-profiles.js"(exports2, module2) {
     var CORE = ["find", "tool_search", "tool_describe", "tool_execute", "tool_profiles", "tool_contracts", "knowledge_graph", "knowledge_search", "job_cancel", "call_history", "doctor"];
     var DISCOVERY = ["tool_search", "tool_describe", "tool_execute", "tool_profiles"];
+    var DIRECT = [
+      "find",
+      "catalog_sync",
+      "pg_table",
+      "pg_function",
+      "pg_usage",
+      "pg_query",
+      "es_search",
+      "es_health",
+      "kafka_topic",
+      "kafka_last",
+      "kafka_lag",
+      "health",
+      "overview",
+      "consul_service",
+      "logs_search",
+      "logs_trace",
+      "bitbucket_repos",
+      "bitbucket_files",
+      "bitbucket_file",
+      "bitbucket_prs",
+      "bitbucket_pr",
+      "bitbucket_my_prs",
+      "repo_fetch",
+      "passport",
+      "passports",
+      "who_uses",
+      "code_search",
+      "code_symbols",
+      "code_read",
+      "impact",
+      "feature",
+      "docs_search",
+      "docs_page",
+      "confluence_search",
+      "confluence_page",
+      "workspace_open",
+      "workspace_read",
+      "workspace_write",
+      "workspace_patch",
+      "workspace_push",
+      "test_data",
+      "test_context",
+      "test_run",
+      "show",
+      "diff",
+      "code",
+      "script_list",
+      "script_run",
+      "showcase",
+      "call_history",
+      "tool_search",
+      "tool_describe",
+      "tool_execute"
+    ];
     var PROFILES = {
+      direct: { description: "Everyday tools by name (databases, indices, topics, logs, repo files and PRs, code, docs); tool_search, tool_describe and tool_execute reach the rest.", includeCore: false, names: DIRECT },
       compact: { description: "Small starting set; discover an exact tool then execute it with validated arguments.", names: CORE },
       lean: { description: "Four discovery tools. Search the catalog capability, describe it, then execute; expand profiles on request.", includeCore: false, names: DISCOVERY },
       "lean-find": { description: "Five tools: cached catalog search plus discovery; expand capabilities on request.", includeCore: false, names: [...DISCOVERY, "find"] },
@@ -43339,7 +43438,7 @@ var require_tool_profiles = __commonJS({
     function list(tools) {
       return Object.entries(definitions()).map(([name, x]) => ({ name, description: x.description || "", tools: select(tools, name).map((t) => t.name), count: select(tools, name).length }));
     }
-    module2.exports = { select, list };
+    module2.exports = { select, list, DIRECT };
   }
 });
 
@@ -45123,7 +45222,7 @@ var require_tools = __commonJS({
     var TOOLS = [
       {
         name: "find",
-        description: 'ALWAYS START HERE. Search the cached catalog: Postgres tables/columns and functions with their arguments (each line also says who uses it: services, functions, triggers, views), Elasticsearch indices/fields, Kafka topics/fields, Consul services, service passports, HTTP API routes (from code and seen in the browser) and the browser site map (direct links). All words must match; prefix a word with a kind to filter: "pg:", "pgfn:", "es:", "kafka:", "consul:", "svc:", "api:", "site:". "pg: order-service" lists the tables that service touches. Use the exact names you find here in queries. If the catalog is empty or stale, call catalog_sync.',
+        description: 'Look up exact names when you do not have them (skip it for an exact table, index, topic, repo or PR). Search the cached catalog: Postgres tables/columns and functions with their arguments (each line also says who uses it: services, functions, triggers, views), Elasticsearch indices/fields, Kafka topics/fields, Consul services, service passports, HTTP API routes (from code and seen in the browser) and the browser site map (direct links). All words must match; prefix a word with a kind to filter: "pg:", "pgfn:", "es:", "kafka:", "consul:", "svc:", "api:", "site:". "pg: order-service" lists the tables that service touches. Use the exact names you find here in queries. If the catalog is empty or stale, call catalog_sync.',
         input: { q: str('Words to search, e.g. "order_id" or "kafka: payment" or "svc: order_created"'), env, limit: int("Max lines", 50) },
         required: ["q"],
         run: (a) => {
@@ -45314,30 +45413,37 @@ var require_tools = __commonJS({
       {
         name: "bitbucket_files",
         description: 'List file paths in a Bitbucket repo (default branch unless `at`). Filter by substring, e.g. "application" or ".yml".',
-        input: { project: str("Project key"), repo: str("Repo slug"), filter: str("Substring of path"), at: str("Branch/tag/commit") },
-        required: ["project", "repo"],
+        input: { repo: str("Repo slug (or PROJECT/repo)"), project: str("Project key; optional when the slug is unique"), filter: str("Substring of path"), at: str("Branch/tag/commit") },
+        required: ["repo"],
         limit: () => "bitbucket",
         run: async (a) => {
-          const all = await require_atlassian().files(a.project, a.repo, { at: a.at });
+          const A = require_atlassian(), { project, repo } = await A.projectOf(a.project, a.repo);
+          const all = await A.files(project, repo, { at: a.at });
           const hit = a.filter ? all.filter((f) => f.toLowerCase().includes(a.filter.toLowerCase())) : all;
           return { total: hit.length, files: hit.slice(0, 500) };
         }
       },
       {
         name: "bitbucket_file",
-        description: "Raw content of a file in a Bitbucket repo.",
-        input: { project: str("Project key"), repo: str("Repo slug"), path: str("File path"), at: str("Branch/tag/commit") },
-        required: ["project", "repo", "path"],
+        description: "Raw content of one file in a Bitbucket repo (default branch unless `at`). Use it directly when you know the repo and path; bitbucket_files lists paths.",
+        input: { repo: str("Repo slug (or PROJECT/repo)"), path: str("File path"), project: str("Project key; optional when the slug is unique"), at: str("Branch/tag/commit") },
+        required: ["repo", "path"],
         limit: () => "bitbucket",
-        run: async (a) => clip(await require_atlassian().file(a.project, a.repo, a.path, { at: a.at }), 6e4)
+        run: async (a) => {
+          const A = require_atlassian(), { project, repo } = await A.projectOf(a.project, a.repo);
+          return clip(await A.file(project, repo, a.path, { at: a.at }), 6e4);
+        }
       },
       {
         name: "bitbucket_prs",
-        description: "Pull requests of a Bitbucket repo.",
-        input: { project: str("Project key"), repo: str("Repo slug"), state: { type: "string", enum: ["OPEN", "MERGED", "DECLINED", "ALL"], default: "OPEN" } },
-        required: ["project", "repo"],
+        description: "Pull requests of a Bitbucket repo (bitbucket_pr opens one).",
+        input: { repo: str("Repo slug (or PROJECT/repo)"), project: str("Project key; optional when the slug is unique"), state: { type: "string", enum: ["OPEN", "MERGED", "DECLINED", "ALL"], default: "OPEN" } },
+        required: ["repo"],
         limit: () => "bitbucket",
-        run: (a) => require_atlassian().prs(a.project, a.repo, { state: a.state })
+        run: async (a) => {
+          const A = require_atlassian(), { project, repo } = await A.projectOf(a.project, a.repo);
+          return A.prs(project, repo, { state: a.state });
+        }
       },
       {
         name: "docs_search",
@@ -45442,12 +45548,13 @@ var require_tools = __commonJS({
       {
         name: "bitbucket_pr",
         description: "One pull request for review: title, branches, reviewers, changed files with +/- counts, comments, and the unified diff (clipped). Shown to the user as a diff view.",
-        input: { project: str("Project key"), repo: str("Repo slug"), id: int("Pull request id") },
-        required: ["project", "repo", "id"],
+        input: { repo: str("Repo slug (or PROJECT/repo)"), id: int("Pull request id"), project: str("Project key; optional when the slug is unique") },
+        required: ["repo", "id"],
         limit: () => "bitbucket",
         run: async (a) => {
-          const pr = await require_atlassian().prDetails(a.project, a.repo, a.id);
-          const view = require_results().save("pr", pr.files, { query: `${a.project}/${a.repo}#${a.id} ${pr.title}`, pr });
+          const A = require_atlassian(), { project, repo } = await A.projectOf(a.project, a.repo);
+          const pr = await A.prDetails(project, repo, a.id);
+          const view = require_results().save("pr", pr.files, { query: `${project}/${repo}#${a.id} ${pr.title}`, pr });
           return { ...pr, diff: clip(pr.diff, 4e4), view };
         }
       },

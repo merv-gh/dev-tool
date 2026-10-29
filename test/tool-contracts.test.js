@@ -152,3 +152,43 @@ test('declared argument evidence policy runs before tracing, including discovery
   for (const value of ['opaque-business-input', 'session=one-use-cookie', 'one-use-post-password']) assert.ok(!evidence.includes(value), value);
   assert.match(evidence, /exchange-42/); assert.match(evidence, /argumentsOmitted/);
 });
+
+test('direct profile is the chat default: everyday tools by name, discovery only for the rest', async () => {
+  config();
+  assert.equal(require('../lib/config').getTools().profile, 'direct');
+  const all = await T.schemas(), direct = (await T.schemas({ profile: 'direct' })).map(t => t.name);
+  for (const name of ['find', 'pg_query', 'pg_table', 'es_search', 'kafka_last', 'logs_search', 'bitbucket_file', 'bitbucket_files', 'bitbucket_pr', 'code_search', 'test_run', 'tool_search', 'tool_execute']) assert.ok(direct.includes(name), name);
+  assert.ok(direct.length < all.length / 2, `${direct.length} of ${all.length}`);
+  assert.ok(!direct.some(n => n.startsWith('fixture_') || n.startsWith('scenario_')), 'specialised tools are reached through tool_search');
+});
+
+test('tool_search lists the direct tool first for everyday words; an exact name stays first', async () => {
+  const tools = await T.schemas({ metadata: true }), first = q => require('../lib/tool-search').search(tools, q).matches[0]?.t.name;
+  assert.equal(first('query the orders table in postgres'), 'pg_query');
+  assert.equal(first('search elasticsearch index for order 42'), 'es_search');
+  assert.equal(first('show application.yml in repo payments'), 'bitbucket_file');
+  assert.equal(first('open pull request 12'), 'bitbucket_pr');
+  assert.equal(first('last messages on order_created'), 'kafka_last');
+  assert.equal(first('errors in the logs'), 'logs_search');
+  assert.equal(first('kafka_lag'), 'kafka_lag');
+});
+
+test('repo tools take a slug alone: PROJECT/repo, or the project from what dt already knows', async () => {
+  const A = require('../lib/atlassian');
+  assert.deepEqual(await A.projectOf(undefined, 'PAY/payments-service'), { project: 'PAY', repo: 'payments-service' });
+  assert.deepEqual(await A.projectOf('PAY', 'payments-service'), { project: 'PAY', repo: 'payments-service' });
+  const index = require('../lib/bbindex'), saved = index.load;
+  index.load = () => ({ repos: [{ project: 'SHOP', repo: 'orders' }, { project: 'A', repo: 'common' }, { project: 'B', repo: 'common' }] });
+  try {
+    assert.deepEqual(await A.projectOf(undefined, 'orders'), { project: 'SHOP', repo: 'orders' });
+    await assert.rejects(A.projectOf(undefined, 'common'), /several projects \(A, B\)/);
+  } finally { index.load = saved; }
+  for (const name of ['bitbucket_file', 'bitbucket_files', 'bitbucket_pr', 'bitbucket_prs']) assert.ok(!(await T.schemas()).find(t => t.name === name).inputSchema.required.includes('project'), name);
+});
+
+test('agent prompt sends the model to direct tools before discovery', () => {
+  const prompt = fs.readFileSync(path.join(__dirname, '../lib/agent-prompt.md'), 'utf8'), lines = prompt.split('\n').filter(Boolean);
+  assert.match(lines[1], /direct tool/); assert.match(lines[1], /bitbucket_file/); assert.match(lines[1], /pg_query/);
+  assert.ok(prompt.indexOf('tool_search') > prompt.indexOf('bitbucket_pr'), 'discovery comes after the direct map');
+  assert.ok(prompt.length < 9000, `${prompt.length} chars`);
+});
