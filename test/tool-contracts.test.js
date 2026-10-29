@@ -192,3 +192,42 @@ test('agent prompt sends the model to direct tools before discovery', () => {
   assert.ok(prompt.indexOf('tool_search') > prompt.indexOf('bitbucket_pr'), 'discovery comes after the direct map');
   assert.ok(prompt.length < 9000, `${prompt.length} chars`);
 });
+
+test('tester profile: ready-made checks, test data, scenarios, API capture, scripts and suites by name', async () => {
+  config();
+  const all = await T.schemas(), tester = (await T.schemas({ profile: 'tester' })).map(t => t.name);
+  for (const name of ['checks', 'fixture_plan', 'fixture_capture', 'testdb_template_build', 'scenario_run', 'api_browser_open', 'api_request_save', 'collection_run', 'script_save', 'test_run', 'logs_search', 'tool_search']) assert.ok(tester.includes(name), name);
+  assert.ok(tester.length < all.length / 2, `${tester.length} of ${all.length}`);
+  assert.ok(!tester.includes('evaluation_evidence') && !tester.includes('differential_check'), 'specialised extras stay behind tool_search');
+});
+
+test('starter checks are copied once: edits stay, a deleted collection stays deleted, starters:false turns it off', () => {
+  const S = require('../lib/scripts'), dir = path.join(S.DIR, 'checks');
+  fs.rmSync(dir, { recursive: true, force: true }); fs.rmSync(path.join(S.DIR, '.starters.json'), { force: true });
+  config({}); fs.writeFileSync(configFile, JSON.stringify({ envs: { dev: {} }, scripts: { starters: false } })); require('../lib/config').reload();
+  assert.deepEqual(S.seedStarters(), []); assert.ok(!fs.existsSync(dir), 'opt-out copies nothing');
+  config();
+  assert.deepEqual(S.seedStarters(), ['checks']);
+  assert.deepEqual(fs.readdirSync(dir).sort(), fs.readdirSync(path.join(S.STARTERS, 'checks')).sort());
+  fs.writeFileSync(path.join(dir, 'service.json'), JSON.stringify({ description: 'mine', steps: [] }));
+  assert.deepEqual(S.seedStarters(), []); assert.equal(JSON.parse(fs.readFileSync(path.join(dir, 'service.json'))).description, 'mine', 'an edited check is kept');
+  fs.rmSync(dir, { recursive: true, force: true });
+  assert.deepEqual(S.seedStarters(), []); assert.ok(!fs.existsSync(dir), 'a deleted collection is not re-created');
+  fs.rmSync(path.join(S.DIR, '.starters.json'), { force: true }); S.seedStarters();
+});
+
+test('checks/service and checks/table read their sources, test the results and fail on an unavailable source', async () => {
+  const S = require('../lib/scripts'), def = name => ({ id: `checks/${name}`, ...JSON.parse(fs.readFileSync(path.join(S.STARTERS, 'checks', `${name}.json`), 'utf8')) });
+  const healthy = { consul_service: { instances: [{ node: 'n1', status: 'passing', meta: { version: '1.2.0' } }] }, logs_search: { total: 0, services: [], preview: [] }, kafka_lag: { rows: [{ group: 'pay', lag: 3, state: 'STABLE' }] } };
+  const calls = [], call = (tools, fail) => async (name, args) => { calls.push(name); if (fail === name) throw new Error('ECONNREFUSED'); return tools[name]; };
+  const ok = await S.run(def('service'), { service: 'pay', env: 'dev' }, { call: call(healthy) });
+  assert.equal(ok.ok, true, ok.error); assert.equal(ok.tests.passed, 3); assert.deepEqual(ok.results.check.versions, ['1.2.0']);
+  const broken = await S.run(def('service'), { service: 'pay' }, { call: call({ ...healthy, consul_service: { instances: [{ node: 'n1', status: 'critical' }] }, logs_search: { total: 2, services: [{ key: 'pay', count: 2 }], preview: [{ service: 'pay', message: 'boom 1' }, { service: 'pay', message: 'boom 2' }] } }) });
+  assert.equal(broken.ok, false); assert.equal(broken.tests.failed, 2); assert.deepEqual(broken.results.check.errors, [{ message: 'boom N', count: 2 }], 'errors are grouped by message');
+  const offline = await S.run(def('service'), { service: 'pay' }, { call: call(healthy, 'logs_search') });
+  assert.equal(offline.ok, false, 'an unavailable source never passes its test');
+  assert.match(offline.tests.list.find(t => !t.ok).error, /logs unavailable: ECONNREFUSED/);
+  const table = await S.run(def('table'), { table: 'sales.orders', where: 'id > 0' }, { call: call({ pg_table: [{ columns: [{ name: 'id', type: 'bigint', nullable: false }] }], pg_query: { preview: [{ rows: '7' }], view: 'v' }, pg_usage: { rows: [{ user: 'order-service', role: 'write', where: 'OrderDao.java:10' }] } }) });
+  assert.equal(table.ok, true, table.error); assert.equal(table.results.check.rows, 7); assert.deepEqual(table.results.check.columns, ['id bigint not null']); assert.deepEqual(table.results.check.usedBy, ['order-service write OrderDao.java:10']);
+  await assert.rejects(Promise.resolve(S.run(def('table'), { table: 'x; drop table y' }, { call: call({}) })).then(r => { if (!r.ok) throw new Error(r.error); }), /schema\.table/);
+});

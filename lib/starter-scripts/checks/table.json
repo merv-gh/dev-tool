@@ -1,0 +1,32 @@
+{
+  "description": "What is in a table and who uses it: its definition, the row count and the latest rows for a filter, and the services, functions and views that read or write it (with file:line)",
+  "params": {
+    "table": {
+      "description": "schema.table, e.g. sales.orders",
+      "required": true
+    },
+    "where": {
+      "description": "SQL condition for the count and the rows",
+      "default": "true"
+    },
+    "orderBy": {
+      "description": "Order of the sample rows, e.g. created_at desc (empty: none)",
+      "default": ""
+    },
+    "limit": {
+      "description": "Sample rows",
+      "type": "integer",
+      "default": 20
+    },
+    "env": {
+      "description": "Environment (empty: the first one)",
+      "default": ""
+    }
+  },
+  "steps": [
+    {
+      "js": "const env = vars.env || undefined, t = vars.table;\nif (!/^[A-Za-z_][\\w]*\\.[A-Za-z_][\\w]*$/.test(t)) throw new Error('table must be schema.table');\nconst found = await tools.pg_table({ name: t, env }), definition = Array.isArray(found) ? found[0] || {} : found; // one entry per database holding it\nconst count = await tools.pg_query({ env, sql: `select count(*) as rows from ${t} where ${vars.where}` });\nconst sample = await tools.pg_query({ env, sql: `select * from ${t} where ${vars.where}${vars.orderBy ? ` order by ${vars.orderBy}` : ''} limit ${Math.min(Number(vars.limit) || 20, 500)}` });\nconst usage = await tools.pg_usage({ name: t, env }).catch(e => ({ error: e.message }));\nconst rows = (count.preview || count.rows || [])[0]?.rows;\nreturn { table: t, rows: rows === undefined ? null : Number(rows), columns: (definition.columns || []).map(c => `${c.name} ${c.type}${c.nullable === false ? ' not null' : ''}`), sample: sample.view, usedBy: (usage.rows || []).map(u => `${u.user} ${u.role}${u.where ? ' ' + u.where : ''}`), usage: usage.view };",
+      "as": "check"
+    }
+  ]
+}

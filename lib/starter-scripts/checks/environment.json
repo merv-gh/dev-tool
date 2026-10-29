@@ -1,0 +1,24 @@
+{
+  "description": "The whole environment at once: services that are not healthy, Elasticsearch indices that are not green, lagging consumer groups, and ERROR logs per service in a time window",
+  "params": {
+    "env": {
+      "description": "Environment (empty: the first one)",
+      "default": ""
+    },
+    "window": {
+      "description": "Log window: 15m, 1h, 1d",
+      "default": "1h"
+    },
+    "maxLag": {
+      "description": "Highest acceptable consumer lag",
+      "type": "integer",
+      "default": 1000
+    }
+  },
+  "steps": [
+    {
+      "js": "const env = vars.env || undefined, safe = p => p.catch(e => ({ error: e.message }));\nconst [health, es, lag, logs] = await Promise.all([safe(tools.health({ env })), safe(tools.es_health({ env })), safe(tools.kafka_lag({ env, top: 200 })), safe(tools.logs_search({ env, level: 'ERROR', from: vars.window, size: 50 }))]);\nconst unhealthy = (health.rows || []).filter(r => !['healthy', 'passing', 'no checks'].includes(r.status)).map(r => ({ service: r.service, status: r.status, failing: String(r.failing || '').slice(0, 200) }));\nconst lagging = (lag.rows || []).filter(g => g.lag > vars.maxLag).map(g => ({ group: g.group, lag: g.lag, state: g.state }));\nconst errorsPerService = (logs.services || []).map(s => ({ service: s.key, errors: s.count }));\nconst need = (r, what) => { if (r.error) throw new Error(`${what} unavailable: ${r.error}`); };\ntest('every service is healthy', () => { need(health, 'Consul'); expect(unhealthy.map(u => `${u.service}: ${u.status}`)).toEqual([]); });\ntest('Elasticsearch is green', () => { need(es, 'Elasticsearch'); expect(es.summary?.status).toBe('green'); });\ntest(`no consumer group lags more than ${vars.maxLag}`, () => { need(lag, 'Kafka'); expect(lagging.map(g => g.group)).toEqual([]); });\ntest(`no ERROR logs in the last ${vars.window}`, () => { need(logs, 'logs'); expect(logs.total ?? 0).toBe(0); });\nreturn { health: health.summary, unhealthy, elasticsearch: { status: es.summary?.status, notGreen: (es.rows || []).map(r => `${r.index}: ${r.health}`) }, lagging, errorsPerService, kibana: logs.kibana, unavailable: Object.entries({ health, es, lag, logs }).filter(([, r]) => r.error).map(([k, r]) => `${k}: ${r.error}`) };",
+      "as": "check"
+    }
+  ]
+}

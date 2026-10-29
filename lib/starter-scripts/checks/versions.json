@@ -1,0 +1,23 @@
+{
+  "description": "Which version of a service runs in one environment and in another (Consul registration and /version of each instance), and whether they differ",
+  "params": {
+    "service": {
+      "description": "Service name",
+      "required": true
+    },
+    "env": {
+      "description": "First environment (empty: the first one)",
+      "default": ""
+    },
+    "compare": {
+      "description": "Second environment, e.g. uat (empty: every other environment)",
+      "default": ""
+    }
+  },
+  "steps": [
+    {
+      "js": "const envs = [vars.env || undefined, ...(vars.compare ? vars.compare.split(',').map(s => s.trim()) : [])];\nconst rows = [];\nfor (const env of envs) {\n  const r = await tools.consul_service({ name: vars.service, env }).catch(e => ({ error: e.message }));\n  if (r.error) { rows.push({ env: env || '(default)', error: r.error }); continue; }\n  for (const i of r.instances || []) { let commit = null; try { commit = JSON.parse(i.version || '{}').git?.commit?.id || null; } catch {} rows.push({ env: env || '(default)', node: i.node, status: i.status, version: i.meta?.version || null, commit }); }\n}\nconst versions = [...new Set(rows.filter(r => r.version).map(r => `${r.version}${r.commit ? '@' + r.commit : ''}`))];\ntest('a version was found in every environment', () => expect(rows.filter(r => r.error).map(r => `${r.env}: ${r.error}`)).toEqual([]));\nreturn { service: vars.service, same: versions.length ? versions.length === 1 : null, versions, instances: rows };",
+      "as": "check"
+    }
+  ]
+}

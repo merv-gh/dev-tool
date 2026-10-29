@@ -59,6 +59,7 @@ test.before(() => new Promise(r => mcp.listen(0, '127.0.0.1', () => {
   shop = `http://127.0.0.1:${port}`;
   fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({
     envs: { dev: { consul: 'http://127.0.0.1:9' } },
+    scripts: { starters: false }, // this suite lists only its own collections; starters are tested in tool-contracts
     browser: {
       mcp: `${shop}/mcp`,
       sites: { shop: { url: `${shop}/login`, secrets: ['SHOP_PASSWORD'], links: { order: '/orders/<orderId>', search: { path: 'search?q=<q>', description: 'find anything' }, docs: 'https://docs.example.com/x' } } },

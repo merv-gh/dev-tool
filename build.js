@@ -25,6 +25,11 @@ for (const f of fs.readdirSync(path.join(ROOT, 'web'), { recursive: true })) {
   if (fs.statSync(p).isFile()) files[`web/${f.split(path.sep).join('/')}`] = fs.readFileSync(p);
 }
 files['agent-prompt.md'] = fs.readFileSync(path.join(ROOT, 'lib', 'agent-prompt.md'));
+// Ready-made script collections, copied into the dt home once (lib/scripts.js seedStarters).
+for (const f of fs.readdirSync(path.join(ROOT, 'lib', 'starter-scripts'), { recursive: true })) {
+  const p = path.join(ROOT, 'lib', 'starter-scripts', f);
+  if (fs.statSync(p).isFile()) files[`starter-scripts/${f.split(path.sep).join('/')}`] = fs.readFileSync(p);
+}
 files['config.example.json'] = fs.readFileSync(path.join(ROOT, 'config.example.json'));
 const contracts = path.join(ROOT, 'contracts');
 if (fs.existsSync(contracts)) for (const f of fs.readdirSync(contracts, { recursive: true })) {

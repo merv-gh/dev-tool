@@ -228,6 +228,20 @@ All of this is regex-level analysis of SQL text and code, with evidence for ever
 
 Repeatable actions, saved as JSON in `scripts/` of the config folder; folders are collections (`scripts/orders/support/refund-check.json` is `orders/support/refund-check`). The agent saves one with `script_save` after doing a task by hand, finds it with `script_list`, and runs it with `script_run`; people organize, edit and run them on `/admin` (**Scripts**).
 
+**Ready-made checks.** On first start dt copies the `checks` collection (from `lib/starter-scripts/checks/`) into `scripts/checks/`; in the chat it is one tool, `checks`, that runs a check by name:
+
+| Check | What it does | Tests |
+| --- | --- | --- |
+| `service` | Consul health and version per instance, ERROR logs in a window grouped by message, its consumer lag | every instance passing, no errors, lag ≤ `maxLag` |
+| `environment` | unhealthy services, Elasticsearch indices not green, lagging groups, ERROR logs per service | all four |
+| `versions` | one service's version and commit in `env` and `compare` | a version found in each |
+| `table` | definition, row count and sample rows for `where`, who reads and writes it (file:line) | |
+| `trace` | every service that logged an id, then the timeline of its first trace id | the id is in the logs |
+| `capture-data` | related rows from one root row, captured read-only and masked, validated, exported to `src/test/resources/dt-fixtures/<name>` | rows captured |
+| `reuse-data` | an immutable scratch-Postgres base from that fixture; with `tests`, runs them on a fresh copy | tests pass |
+
+A source that cannot be reached fails its test instead of passing it. They are ordinary scripts: edit or copy them, run many with a collection suite. dt never overwrites them or re-creates a deleted collection; `scripts.starters: false` in config.json skips the copy. The `tester` profile (`DT_TOOL_PROFILE=tester`, or `openapi/tester.json` per connection) gives a model these checks plus test data, scratch databases, scenarios, API and UI capture, scripts and suites by name.
+
 ```json
 {
   "description": "Open an order in the back office and check its payment",

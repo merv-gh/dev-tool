@@ -1,0 +1,23 @@
+{
+  "description": "Follow one id (order id, request id, any value) through the logs: every service that logged it in the window, then the full timeline of the first trace id found with it",
+  "params": {
+    "id": {
+      "description": "The value to look for, e.g. ORD-1042 or a trace id",
+      "required": true
+    },
+    "env": {
+      "description": "Environment (empty: the first one)",
+      "default": ""
+    },
+    "window": {
+      "description": "Log window: 15m, 1h, 1d",
+      "default": "1d"
+    }
+  },
+  "steps": [
+    {
+      "js": "const env = vars.env || undefined;\nconst hits = await tools.logs_search({ env, query: JSON.stringify(String(vars.id)), from: vars.window, size: 200 });\nconst lines = hits.preview || [];\nconst traceIds = [...new Set(lines.map(l => l.trace || l.traceId || l.trace_id || l['trace.id']).filter(Boolean))];\nconst trace = traceIds.length ? await tools.logs_trace({ env, trace: traceIds[0], from: vars.window }).catch(e => ({ error: e.message })) : null;\ntest('the id appears in the logs', () => expect(hits.total ?? 0).toBeGreaterThan(0));\nreturn { id: vars.id, found: hits.total ?? 0, services: (hits.services || []).map(s => `${s.key}: ${s.count}`), levels: (hits.levels || []).map(l => `${l.key}: ${l.count}`), traceIds, trace: trace && (trace.view || trace.error), logs: hits.view, kibana: hits.kibana };",
+      "as": "check"
+    }
+  ]
+}

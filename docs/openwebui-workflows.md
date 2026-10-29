@@ -9,9 +9,12 @@ backend uses to call dt can be different. For example, its backend may call
 
 The bundled compose and the default configuration use the `direct` profile: about fifty everyday tools by name (`find`, `pg_query`, `pg_table`, `es_search`, `kafka_last`, `logs_search`, `bitbucket_file`, `bitbucket_pr`, `code_search`, the workspace and test tools, `feature`, `show`, `code`) plus `tool_search`, `tool_describe` and `tool_execute` for the specialised rest (fixtures, scenarios, collections, test databases, UI-to-API capture). A model asked for rows, an index, a topic, a repo file or a pull request calls that tool at once instead of searching for it. The repo tools take a slug alone; dt finds its project. Set `DT_TOOL_PROFILE` or `tools.profile` to choose another, or pick one per connection:
 
+For testers, connect a model to `openapi/tester.json` (or set `DT_TOOL_PROFILE=tester`). It starts with `checks`, a collection of ready-made scripts copied into `scripts/checks/` on first start: `service` (health, version, ERROR logs, lag), `environment`, `versions`, `table`, `trace`, `capture-data` and `reuse-data`. Their tests fail when a source cannot be reached, never pass. Edit or copy them like any saved script; `scripts.starters: false` skips the copy, and a deleted collection is not re-created.
+
 | OpenAPI path | Starting workflow |
 | --- | --- |
 | `openapi/direct.json` | Everyday tools by name; discovery for the rest (default) |
+| `openapi/tester.json` | Testing by name: `checks`, test data and scratch databases, scenarios, API and UI capture, scripts and suites, workspace tests |
 | `openapi/lean.json` | Four discovery tools; retrieve each capability on request |
 | `openapi/compact.json` | Find capabilities on demand, then execute exact tools |
 | `openapi/lean.json` | Four discovery tools; request more capabilities when needed |
