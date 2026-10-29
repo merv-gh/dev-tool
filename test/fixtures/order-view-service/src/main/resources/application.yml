@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: order-view-service
+  datasource:
+    url: ${ORDERS_DB_URL:jdbc:postgresql://localhost:5432/orders}
+    username: ${ORDERS_DB_USER:orders}
+    password: ${ORDERS_DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+server:
+  port: 8084

@@ -60,6 +60,7 @@ makeRepo('order-service', path.join(FIX, 'order-service'));
 makeRepo('common-lib', path.join(FIX, 'common-lib'), 'v1.4.2');
 makeRepo('payment-service', pay);
 makeRepo('payments-service', path.join(FIX, 'payments-service'));   // a real Spring Boot service: its tests compile and run
+makeRepo('order-view-service', path.join(FIX, 'order-view-service')); // reads sales.order_card(): the order card migration case
 const GIT_BACKEND = path.join(execFileSync('git', ['--exec-path']).toString().trim(), 'git-http-backend');
 
 // ── data ──
@@ -227,7 +228,7 @@ const handle = (ENV) => (req, res) => {
     // Bitbucket
     if (p === '/rest/api/1.0/repos') {
       const name = u.searchParams.get('name') || '';
-      return j({ isLastPage: true, values: ['order-service', 'payment-service', 'payments-service', 'common-lib'].filter(r => r.includes(name)).map(slug => ({ slug, name: slug, project: { key: 'SHOP' } })) });
+      return j({ isLastPage: true, values: ['order-service', 'payment-service', 'payments-service', 'order-view-service', 'common-lib'].filter(r => r.includes(name)).map(slug => ({ slug, name: slug, project: { key: 'SHOP' } })) });
     }
     // browse and raw files of the repos: dt looks inside a repo before taking it as a library's
     if ((m = p.match(/^\/rest\/api\/1\.0\/projects\/[^/]+\/repos\/([^/]+)\/(browse|raw)(?:\/(.*))?$/))) {

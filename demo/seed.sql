@@ -41,8 +41,32 @@ begin
   perform sales.order_total(p_id, false);
 end $$;
 
+-- A wide read function the UI services grew around, and the specialised sources replacing parts of it
+-- (the "order card" migration in the demo: trace the deprecated fields, then read them at their source).
+create table sales.customer_contacts (customer_id bigint primary key references sales.customers(id), email text not null, phone text, verified boolean not null default false);
+comment on table sales.customer_contacts is 'Verified contact data; replaces sales.customers.email for messaging';
+create function sales.customer_contact(p_customer_id bigint) returns table(email text, phone text, verified boolean) language sql stable as $$
+  select coalesce(cc.email, c.email), cc.phone, coalesce(cc.verified, false)
+  from sales.customers c left join sales.customer_contacts cc on cc.customer_id = c.id where c.id = p_customer_id
+$$;
+create function sales.order_payment_status(p_order_id bigint) returns text language sql stable as $$
+  select status from sales.payments where order_id = p_order_id
+$$;
+create function sales.order_card(p_id bigint) returns table(order_id bigint, status text, created_at timestamptz, customer_id bigint, customer_name text, customer_email text,
+    segment text, item_count int, total numeric, total_with_tax numeric, legacy_discount numeric, last_payment_status text) language sql stable as $$
+  select o.id, o.status, o.created_at, c.id, c.name, c.email, c.segment,
+         (select count(*)::int from sales.order_items i where i.order_id = o.id),
+         o.total, round(o.total * 1.2, 2), case when c.segment = 'vip' then 5 else 0 end,
+         (select p.status from sales.payments p where p.order_id = o.id)
+  from sales.orders o join sales.customers c on c.id = o.customer_id where o.id = p_id
+$$;
+comment on function sales.order_card(bigint) is 'Order card for UIs. DEPRECATED fields, removed in 2027.1: customer_email -> sales.customer_contact(customer_id).email; total -> sales.order_total(order_id); total_with_tax -> sales.order_total(order_id, true); last_payment_status -> sales.order_payment_status(order_id); legacy_discount -> no replacement (0 since pricing v2). Read the other fields from sales.orders and sales.customers directly.';
+
 insert into sales.customers (email, name) select 'customer' || g || '@example.com', 'Customer ' || g from generate_series(1, 40) g;
 insert into sales.orders (customer_id, status, total, created_at)
   select 1 + g % 40, (array['new','paid','shipped','closed','payment_failed'])[1 + g % 5], 20 + (g * 7) % 300, now() - (g || ' hours')::interval from generate_series(1, 400) g;
 insert into sales.order_items (order_id, sku, qty, price) select 1 + g % 400, 'SKU-' || (100 + g % 9), 1 + g % 3, 9.9 + g % 50 from generate_series(1, 900) g;
+insert into sales.customer_contacts (customer_id, email, phone, verified) select g, 'c' || g || '@mail.example.com', '+1555' || lpad(g::text, 4, '0'), g % 3 = 0 from generate_series(1, 40, 2) g;
+update sales.customers set segment = 'vip' where id % 7 = 0;
+insert into sales.payments (order_id, amount, status) select id, total, (array['captured','refunded','pending'])[1 + id % 3] from sales.orders where id % 4 = 0;
 analyze;
