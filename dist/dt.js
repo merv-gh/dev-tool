@@ -329,7 +329,7 @@ var require_config = __commonJS({
     }
     function getScripts() {
       const c = resolved("scripts");
-      return { httpAllow: [].concat((c.http || {}).allow || []).filter(Boolean).map(String), js: c.js !== false, jsTimeoutMs: Number(c.jsTimeoutMs) || 5e3, codeTimeoutMs: Number(c.codeTimeoutMs) || 6e4 };
+      return { httpAllow: [].concat((c.http || {}).allow || []).filter(Boolean).map(String), js: c.js !== false, starters: c.starters !== false, jsTimeoutMs: Number(c.jsTimeoutMs) || 5e3, codeTimeoutMs: Number(c.codeTimeoutMs) || 6e4 };
     }
     function getFiles() {
       const c = resolved("files");
@@ -4865,9 +4865,11 @@ var require_codegraph = __commonJS({
         }
         let ctor = null;
         const p = s.slice(j).match(/^\s*(?:(?:private|protected|internal|public)\s+)?(?:constructor\s*)?(?:@\w+\s*)*\(/);
+        let ctorAt = null;
         if (p) {
           const close = closeParen(s, j + p[0].length - 1);
           ctor = params(clean.slice(j + p[0].length, close), kt);
+          ctorAt = [j + p[0].length, close];
           j = close + 1;
         }
         let k = j, supers = "";
@@ -4908,6 +4910,7 @@ var require_codegraph = __commonJS({
           endLine: lineOf(bodyEnd),
           body: hasBody ? [k, bodyEnd] : null,
           ctor,
+          ctorAt,
           ext,
           impl,
           superArgs
@@ -4942,7 +4945,11 @@ var require_codegraph = __commonJS({
         };
         if (/Repository$/.test(t.name) && t.kind === "interface" && t.ext.some((e) => /Repository$|CrudRepository|JpaRepository/.test(e))) c.role = "repository";
         if (t.ctor) {
-          if (kt || t.kind === "record") for (const p of t.ctor) c.fields.push({ name: p.name, type: p.type, annos: [], final: true, line: t.line });
+          const at = (name) => {
+            const i = clean.slice(t.ctorAt[0], t.ctorAt[1]).search(new RegExp(`\\b${name.replace(/\$/g, "\\$")}\\b\\s*(?:[,:=]|$)`));
+            return i < 0 ? t.line : lineOf(t.ctorAt[0] + i);
+          };
+          if (kt || t.kind === "record") for (const p of t.ctor) c.fields.push({ name: p.name, type: p.type, annos: [], final: true, line: at(p.name) });
           c.ctorParams.push(...t.ctor);
         }
         if (t.body) {
@@ -4955,6 +4962,11 @@ var require_codegraph = __commonJS({
         }
         c.bean = bean;
         c.lombok = t.annos.filter((a) => /^(Data|Getter|Setter|Builder|Value|RequiredArgsConstructor|AllArgsConstructor|NoArgsConstructor|Slf4j)$/.test(a));
+        const accessor = (name, f, implicit) => {
+          if (!c.methods.some((m) => m.name === name && !m.params.length)) c.methods.push({ name, params: [], ret: f.type, annos: [], mods: ["public"], line: f.line, startLine: f.line, endLine: f.line, body: null, implicit, field: f.name });
+        };
+        if (t.kind === "record") for (const f of c.fields.filter((f2) => !f2.static)) accessor(f.name, f, "record-accessor");
+        if (c.lombok.some((a) => /^(Data|Getter|Value)$/.test(a))) for (const f of c.fields.filter((f2) => !f2.static)) accessor(`${/^boolean$/.test(f.type) ? "is" : "get"}${f.name[0].toUpperCase()}${f.name.slice(1)}`, f, "lombok-getter");
         classes.push(c);
       }
       return { file: rel, pkg, imports, wild, kt, test, classes, text: s, clean };
@@ -17726,6 +17738,253 @@ var require_migrate = __commonJS({
   }
 });
 
+// lib/fieldtrace.js
+var require_fieldtrace = __commonJS({
+  "lib/fieldtrace.js"(exports2, module2) {
+    var CI = require_codeindex();
+    function splitSql(s) {
+      const out2 = [];
+      let d = 0, start = 0;
+      for (let j = 0; j < s.length; j++) {
+        const c = s[j];
+        if (c === "'" || c === '"') {
+          j++;
+          while (j < s.length && s[j] !== c) j++;
+          continue;
+        }
+        if (s.startsWith("--", j)) {
+          while (j < s.length && s[j] !== "\n") j++;
+          continue;
+        }
+        if (c === "(") d++;
+        else if (c === ")") d--;
+        else if (c === "," && d === 0) {
+          out2.push([start, j]);
+          start = j + 1;
+        }
+      }
+      out2.push([start, s.length]);
+      return out2.map(([a, b]) => ({ text: s.slice(a, b).trim(), at: a + (s.slice(a, b).length - s.slice(a, b).trimStart().length) })).filter((x) => x.text);
+    }
+    function topLevel(s, word, from = 0) {
+      const re = new RegExp(`^${word}\\b`, "i");
+      let d = 0;
+      for (let j = from; j < s.length; j++) {
+        const c = s[j];
+        if (c === "'" || c === '"') {
+          j++;
+          while (j < s.length && s[j] !== c) j++;
+          continue;
+        }
+        if (c === "(") d++;
+        else if (c === ")") d--;
+        else if (d === 0 && /\W/.test(s[j - 1] || " ") && re.test(s.slice(j, j + word.length + 1))) return j;
+      }
+      return -1;
+    }
+    function selectList(body) {
+      const rq = body.search(/\breturn\s+query\b/i), start = topLevel(body, "select", rq < 0 ? 0 : rq);
+      if (start < 0) return null;
+      const from = topLevel(body, "from", start + 6), end = from < 0 ? body.length : from;
+      return { items: splitSql(body.slice(start + 6, end)).map((x) => ({ ...x, at: x.at + start + 6 })), rest: body.slice(end) };
+    }
+    var lineAt = (text, i) => text.slice(0, i).split("\n").length;
+    var stripAlias = (e) => e.replace(/\s+as\s+"?\w+"?\s*$/i, "").replace(/\s+"?\w+"?\s*$/, (m) => /\)|\w\s+\w+$/.test(e) && !/\b(end|null|true|false)\s*$/i.test(e) && /^\s+\w+$/.test(m) && !/[.(]/.test(m) ? "" : m).trim();
+    var aliasOf = (e) => (e.match(/\s+as\s+"?(\w+)"?\s*$/i) || [])[1];
+    function aliases(sql) {
+      const map = {};
+      for (const m of sql.matchAll(/\b(?:from|join)\s+([a-z_][\w]*\.[a-z_]\w*|[a-z_]\w*)(?:\s*\([^)]*\))?(?:\s+(?:as\s+)?(?!on\b|where\b|join\b|left\b|right\b|inner\b|cross\b|group\b|order\b|limit\b)([a-z_]\w*))?/gi)) map[(m[2] || m[1].split(".").pop()).toLowerCase()] = m[1].toLowerCase();
+      return map;
+    }
+    function reads(expr, map) {
+      const out2 = /* @__PURE__ */ new Set();
+      for (const m of expr.matchAll(/\b([a-z_]\w*)\.([a-z_]\w*)\b(?!\s*\()/gi)) if (map[m[1].toLowerCase()]) out2.add(`${map[m[1].toLowerCase()]}.${m[2].toLowerCase()}`);
+      for (const m of expr.matchAll(/\b([a-z_]\w*\.[a-z_]\w*)\s*\(/gi)) out2.add(`${m[1].toLowerCase()}()`);
+      for (const m of expr.matchAll(/\bfrom\s+([a-z_]\w*\.[a-z_]\w*)/gi)) if (![...out2].some((x) => x.startsWith(m[1].toLowerCase() + "."))) out2.add(m[1].toLowerCase());
+      return [...out2];
+    }
+    function deprecations(comment, names) {
+      const out2 = {};
+      if (!/deprecat|obsolete|legacy/i.test(comment || "")) return out2;
+      for (const n of names) {
+        const m = comment.match(new RegExp(`\\b${n}\\b\\s*(?:->|\u2192|=>|:\\s*use)\\s*(.+?)(?=\\s*;|\\.\\s+[A-Z]|\\.?\\s*$)`, "i"));
+        if (m) out2[n] = { replacement: m[1].trim().replace(/\.$/, ""), status: /^(no replacement|none|removed|drop)/i.test(m[1].trim()) ? "removed" : "deprecated" };
+      }
+      return out2;
+    }
+    function dbFields(env, name) {
+      const P = require_pgindex(), found = P.describe(env, name).filter((o2) => o2.kind !== "unknown");
+      if (!found.length) throw new Error(`${name} is not in the ${env} catalog; find it first (find "pgfn: ${name}" or "pg: ${name}")`);
+      if (found.length > 1) throw new Error(`${name} is ambiguous: ${found.map((o2) => `${o2.db}:${o2.object}`).join(", ")}; pass db`);
+      const o = found[0], isFn = ["function", "procedure"].includes(o.kind);
+      let fields;
+      if (isFn) {
+        const cols = (o.arg_list || []).filter((a) => ["table", "out", "inout"].includes(a.mode));
+        const body = o.body || "", list = selectList(body), map = aliases(body);
+        fields = cols.map((c, i) => {
+          const item = list?.items.find((x) => aliasOf(x.text)?.toLowerCase() === c.name.toLowerCase()) || list?.items[i];
+          const expression = item ? stripAlias(item.text).replace(/\s+/g, " ") : null;
+          return { field: c.name, type: c.type, expression, line: item ? lineAt(body, item.at) : null, reads: expression ? reads(expression, map) : [], ...item ? {} : { gap: "expression not found in the body (dynamic SQL or a construct this reader does not parse)" } };
+        });
+      } else fields = (o.columns || []).map((c) => ({ field: c.name, type: c.type, expression: c.name, line: null, reads: [`${o.object}.${c.name}`], .../deprecat/i.test(c.comment || "") ? { comment: c.comment } : {} }));
+      const dep = deprecations(o.comment, fields.map((f) => f.field));
+      for (const f of fields) {
+        if (dep[f.field]) Object.assign(f, dep[f.field], { said: "comment of " + o.object });
+        else if (f.comment) Object.assign(f, { status: "deprecated", replacement: f.comment, said: `comment of ${o.object}.${f.field}` });
+        else f.status = "keep";
+      }
+      const callers = o.usedBy.filter((e) => e.source === "code" && e.userKind === "service").map((e) => ({ service: e.user, where: e.where, sql: String(e.detail || "").replace(/^sql:\s*/, "") }));
+      return { source: { db: o.db, name: o.object, kind: o.kind, lang: o.lang, comment: o.comment || null, returns: o.returns }, fields, callers };
+    }
+    function selected(sql, source, names) {
+      const s = selectList(sql);
+      if (!s) return [];
+      if (s.items.some((x) => /^(\w+\.)?\*$/.test(x.text))) return names;
+      return s.items.map((x) => (stripAlias(x.text).match(/(?:^|\.)(\w+)$/) || [])[1]).filter((n) => names.includes(n));
+    }
+    function link(key, file, line) {
+      const [project, repo] = String(key).split("/"), bb = require_config().getPersonal().bitbucket.url;
+      return bb && !String(key).startsWith("work/") ? `${bb}/projects/${project}/repos/${repo}/browse/${file}${line ? `#${line}` : ""}` : void 0;
+    }
+    var place = (key, where, text) => {
+      const [file, line] = String(where).split(":");
+      return { repo: key, where, file, line: Number(line) || null, ...text ? { text: text.trim().slice(0, 200) } : {}, url: link(key, file, Number(line)) };
+    };
+    function codeFields(key, sourceName, names) {
+      const idx = CI.load(key);
+      if (!idx) return null;
+      const g = idx.graph_(), out2 = Object.fromEntries(names.map((n) => [n, { sql: [], mapper: [], model: [], uses: [] }]));
+      const methodsUsing = (g.sql || []).filter((x) => (x.tables || []).some((t) => t.toLowerCase() === sourceName.toLowerCase()));
+      const classOf = (m) => g.classes.find((c) => m.startsWith(c.id + "#"));
+      const files = new Set(methodsUsing.map((m) => classOf(m.m)?.file).filter(Boolean));
+      for (const m of methodsUsing) {
+        const c = classOf(m.m), meth = c?.methods.find((x) => `${c.id}#${x.name}` === m.m);
+        for (const n of selected(m.sql, sourceName, names)) out2[n].sql.push({ ...place(key, `${c?.file}:${meth?.line || c?.line}`), method: m.m.split(".").pop(), sql: m.sql.slice(0, 300) });
+      }
+      const models = /* @__PURE__ */ new Map();
+      for (const rel of files) {
+        const lines = CI.read(key, rel).text.split("\n").map((l) => l.replace(/^\s*\d+\s{2}/, "")), text = lines.join("\n");
+        for (const [i, l] of lines.entries()) for (const m of l.matchAll(/\.get\w*\(\s*"(\w+)"/g)) {
+          const n = names.find((x) => x.toLowerCase() === m[1].toLowerCase());
+          if (!n) continue;
+          const offset = lines.slice(0, i).join("\n").length + 1 + m.index, open = text.lastIndexOf("new ", offset), ctor = text.slice(open).match(/^new\s+([\w.]+)\s*\(/);
+          let model2 = null, component = null;
+          if (ctor && open > text.lastIndexOf(";", offset)) {
+            const args = splitSql(text.slice(open + ctor[0].length, offset)).length - 1, cls = g.classes.find((c) => c.name === ctor[1].split(".").pop());
+            model2 = cls?.id || ctor[1];
+            component = cls?.ctor?.[args]?.name || cls?.fields?.filter((f) => !f.static)[args]?.name || null;
+            if (cls) models.set(cls.id, cls);
+          }
+          out2[n].mapper.push({ ...place(key, `${rel}:${i + 1}`, l), ...model2 ? { model: model2, component } : {} });
+        }
+      }
+      for (const c of g.classes) for (const f of c.fields || []) {
+        const col = (f.annos || []).join(" ").match(/Column\(\s*(?:name\s*=\s*)?"(\w+)"/)?.[1];
+        const n = col && names.find((x) => x.toLowerCase() === col.toLowerCase());
+        if (n) {
+          out2[n].mapper.push({ ...place(key, `${c.file}:${f.line}`), model: c.id, component: f.name, via: "@Column" });
+          models.set(c.id, c);
+        }
+      }
+      for (const n of names) for (const mp of out2[n].mapper.filter((m) => m.component)) {
+        const cls = models.get(mp.model);
+        if (!cls) continue;
+        const f = (cls.fields || []).find((x) => x.name === mp.component);
+        if (f && !out2[n].model.some((x) => x.model === cls.id && x.field === f.name)) out2[n].model.push({ ...place(key, `${cls.file}:${f.line}`), model: cls.id, field: f.name, type: f.type });
+        const cap = mp.component[0].toUpperCase() + mp.component.slice(1), accessors = /* @__PURE__ */ new Set([mp.component, `get${cap}`, `is${cap}`]);
+        for (const e of g.edges) if (e[2] === "calls" && String(e[1]).startsWith(cls.id + "#") && accessors.has(String(e[1]).split("#")[1]) && !out2[n].uses.some((u) => u.where === e[3]))
+          out2[n].uses.push({ ...place(key, e[3]), method: String(e[0]).split(".").pop(), accessor: String(e[1]).split(".").pop() });
+      }
+      return out2;
+    }
+    function trace({ env, name, fields: only, repos, max = 40 } = {}) {
+      env = env || require_config().envNames()[0];
+      const db = dbFields(env, name), names = db.fields.map((f) => f.field);
+      const pick = only ? String(only).split(",").map((s) => s.trim().toLowerCase()).filter(Boolean) : null;
+      if (pick) db.fields = db.fields.filter((f) => pick.includes(f.field.toLowerCase()));
+      const keys = repos ? CI.select(repos) : [...new Set(db.callers.map((c) => {
+        try {
+          return require_passport().load(c.service)?.codeIndex;
+        } catch {
+          return null;
+        }
+      }).filter(Boolean))];
+      const gaps = [];
+      if (!keys.length) gaps.push({ kind: "no-code-index", detail: "No indexed repo calls it: build the callers' passports (passport service=...) or pass repos" });
+      const perRepo = keys.map((k) => [k, codeFields(k, db.source.name, names)]).filter(([k, v]) => v || !gaps.push({ kind: "no-code-index", repo: k }));
+      for (const f of db.fields) {
+        f.code = { sql: [], mapper: [], model: [], uses: [] };
+        for (const [, v] of perRepo) for (const k of Object.keys(f.code)) f.code[k].push(...v[f.field][k]);
+        for (const k of Object.keys(f.code)) if (f.code[k].length > max) {
+          f.code[k] = f.code[k].slice(0, max);
+          f.truncated = true;
+        }
+        if (f.status !== "keep" && !f.code.sql.length && !f.code.mapper.length) f.unread = true;
+        if (f.code.mapper.length && !f.code.uses.length && f.code.mapper.some((m) => m.component)) f.mappedNotUsed = true;
+      }
+      const changing = db.fields.filter((f) => f.status !== "keep");
+      return {
+        env,
+        ...db,
+        repos: keys,
+        gaps,
+        summary: { fields: db.fields.length, deprecated: changing.length, deprecatedReadInCode: changing.filter((f) => !f.unread).length, places: db.fields.reduce((n, f) => n + Object.values(f.code).reduce((m, x) => m + x.length, 0), 0) },
+        coverage: "Static: cached catalog and code indexes. SQL built at runtime, reflection, BeanPropertyRowMapper/ORM projections by name and generated code are not traced; check them with code_search."
+      };
+    }
+    function rows(r) {
+      const links = (xs) => xs.map((p) => ({ text: `${p.file.split("/").pop()}:${p.line}`, url: p.url || p.where }));
+      return r.fields.map((f) => ({
+        field: f.field,
+        status: f.status,
+        source: f.expression ? `${f.expression}${f.line ? ` (line ${f.line})` : ""}` : "?",
+        reads: f.reads.join(", "),
+        replacement: f.replacement || "",
+        sql: links(f.code.sql),
+        "row mapper": links(f.code.mapper),
+        model: f.code.model.map((m) => `${m.model.split(".").pop()}.${m.field}`).join(", "),
+        "used in": links(f.code.uses)
+      }));
+    }
+    function model(r) {
+      const nodes = /* @__PURE__ */ new Map(), relations = [], add = (id, n) => {
+        if (!nodes.has(id)) nodes.set(id, { id, ...n });
+        return id;
+      };
+      const src = add(`pg:${r.source.name}`, { name: `${r.source.name}${r.source.kind === "function" ? "()" : ""}`, kind: "external", technology: `${r.source.kind}, ${r.fields.filter((f) => f.status !== "keep").length} deprecated fields`, provenance: { source: "catalog:pg", status: "verified", comment: r.source.comment } });
+      const reads2 = /* @__PURE__ */ new Map();
+      for (const f of r.fields) for (const x of f.reads) {
+        const t = x.endsWith("()") ? x : x.split(".").slice(0, 2).join(".");
+        (reads2.get(t) || reads2.set(t, []).get(t)).push(f.field);
+      }
+      for (const [t, fs2] of reads2) relations.push({ from: src, to: add(`pg:${t}`, { name: t, kind: t.endsWith("()") ? "external" : "database", technology: "PostgreSQL", provenance: { source: "catalog:pg", status: "verified" } }), label: fs2.slice(0, 6).join(", "), technology: "SQL", confidence: "verified", provenance: { source: "catalog:pg", status: "verified" } });
+      const cls = (p, id) => add(`code:${id}`, { name: id.split(".").pop(), kind: "service", technology: p.repo, provenance: { source: "code", status: "verified", file: p.file, line: p.line, url: p.url } });
+      const edge = (from, to, label, p, extra = {}) => {
+        const k = `${from}|${to}`, old = relations.find((x) => `${x.from}|${x.to}` === k);
+        if (old) {
+          old.fields.add(label);
+          old.label = [...old.fields].slice(0, 6).join(", ") + (old.fields.size > 6 ? ", \u2026" : "");
+          Object.assign(old, extra.conflict ? { conflict: true } : {});
+          return;
+        }
+        relations.push({ from, to, label, fields: /* @__PURE__ */ new Set([label]), technology: "Java", confidence: "verified", provenance: { source: "code", status: "verified", file: p.file, line: p.line, url: p.url }, ...extra });
+      };
+      for (const f of r.fields) {
+        const old = f.status !== "keep" ? { conflict: true } : {};
+        for (const p of [...f.code.sql, ...f.code.mapper.filter((m) => !m.via)]) edge(cls(p, p.method ? p.method.split("#")[0].replace(/^/, p.repo ? "" : "") : p.file.split("/").pop().replace(/\.\w+$/, "")), src, f.field, p, old);
+        for (const m of f.code.model) for (const p of f.code.mapper.filter((x) => x.model === m.model)) edge(cls(p, p.file.split("/").pop().replace(/\.\w+$/, "")), cls(m, m.model), `maps ${f.field}`, p);
+        for (const u of f.code.uses) for (const m of f.code.model) edge(cls(u, u.method.split("#")[0]), cls(m, m.model), `${u.accessor.split("#")[1]}()`, u, old);
+        if (f.replacement && f.status === "deprecated") {
+          const t = (f.replacement.match(/[a-z_]\w*\.[a-z_]\w*(?=\s*\()/i) || [f.replacement])[0];
+          relations.push({ from: src, to: add(`pg:${t}()`, { name: `${t}()`, kind: "external", technology: "replacement", provenance: { source: "docs", status: "stated", said: f.said } }), label: `${f.field} moves here`, technology: "SQL", confidence: "stated", provenance: { source: "docs", status: "stated", said: f.said } });
+        }
+      }
+      return { name: `${r.source.name} field trace`, title: `${r.source.name} field trace`, nodes: [...nodes.values()], relations: relations.map(({ fields, ...x }) => x), flows: [] };
+    }
+    module2.exports = { trace, rows, model, splitSql, selectList, aliases, reads, deprecations, selected, stripAlias };
+  }
+});
+
 // lib/monitor.js
 var require_monitor = __commonJS({
   "lib/monitor.js"(exports2, module2) {
@@ -18326,6 +18585,38 @@ ${lines.join("\n") || "(empty)"}`,
       }
       return { tools: out2, errors };
     }
+    var STARTERS = path2.join(__dirname, "starter-scripts");
+    var SEEDED = () => path2.join(DIR, ".starters.json");
+    function seedStarters() {
+      if (require_config().getScripts().starters === false) return [];
+      let names = [];
+      try {
+        names = fs2.readdirSync(STARTERS, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name);
+      } catch {
+        return [];
+      }
+      let seeded = {};
+      try {
+        seeded = JSON.parse(fs2.readFileSync(SEEDED(), "utf8"));
+      } catch {
+      }
+      const added = [];
+      for (const name of names) {
+        if (seeded[name] || fs2.existsSync(path2.join(DIR, name))) {
+          seeded[name] ||= "present";
+          continue;
+        }
+        fs2.mkdirSync(path2.join(DIR, name), { recursive: true });
+        for (const f of fs2.readdirSync(path2.join(STARTERS, name)).filter((f2) => f2.endsWith(".json"))) fs2.copyFileSync(path2.join(STARTERS, name, f), path2.join(DIR, name, f));
+        seeded[name] = (/* @__PURE__ */ new Date()).toISOString();
+        added.push(name);
+      }
+      if (added.length || !fs2.existsSync(SEEDED())) {
+        fs2.mkdirSync(DIR, { recursive: true });
+        fs2.writeFileSync(SEEDED(), JSON.stringify(seeded, null, 2) + "\n");
+      }
+      return added;
+    }
     function signature() {
       const parts = [];
       const visit = (d) => {
@@ -18844,7 +19135,7 @@ ${lines.join("\n") || "(empty)"}`,
       const timeoutMs = Math.max(1, Math.min(options.timeoutMs || 3e4, 12e4));
       return httpStep(input, { ...options, timeoutMs }, { deadline: Date.now() + timeoutMs, signal: options.signal });
     }
-    module2.exports = { list, get, save, remove, run, fill, validate, mkdir, move, copy, removeFolder, resolve, getCollection, setCollection, exposed, signature, transform, generate, params, chain, DIR, httpRequest };
+    module2.exports = { seedStarters, STARTERS, list, get, save, remove, run, fill, validate, mkdir, move, copy, removeFolder, resolve, getCollection, setCollection, exposed, signature, transform, generate, params, chain, DIR, httpRequest };
   }
 });
 
@@ -41650,7 +41941,7 @@ ${indent(hint, 4)}` : ""}`);
           const prev = fs2.existsSync(path2.join(root, rel)) ? D.requested(fs2.readFileSync(path2.join(root, rel), "utf8")) : null;
           const want = { tables: [...tables].filter((t) => resolve(namesOf(cat).rel, namesOf(cat).relBy, t).keys.length), functions: [...fnCalls].filter((f) => resolve(namesOf(cat).fn, namesOf(cat).fnBy, f).keys.length), views: [] };
           if (allFunctions !== false) {
-            const schemas = new Set(want.tables.flatMap((t) => resolve(namesOf(cat).rel, namesOf(cat).relBy, t).keys).map((k) => k.split(".")[0]));
+            const schemas = new Set([...want.tables.flatMap((t) => resolve(namesOf(cat).rel, namesOf(cat).relBy, t).keys), ...want.functions.flatMap((f) => resolve(namesOf(cat).fn, namesOf(cat).fnBy, f).keys)].map((k) => k.split(".")[0].toLowerCase()));
             want.functions = [.../* @__PURE__ */ new Set([...want.functions, ...(cat.functions || []).filter((f) => schemas.has(f.schema.toLowerCase()) && f.kind !== "aggregate" && f.kind !== "window").map((f) => `${f.schema}.${f.name}`)])];
           }
           if (prev) for (const k of ["tables", "functions", "views"]) want[k] = [.../* @__PURE__ */ new Set([...prev[k], ...want[k]])];
@@ -43188,7 +43479,13 @@ var require_tool_search = __commonJS({
     var STOP = new Set("a an and are as at be before but by can do does every for from get how i if in into is it its me my of on or our show that the their then these this through to use was we what when where which who why with without you your".split(" "));
     var cache = /* @__PURE__ */ new Map();
     var INTENTS = [
+      [/\b(check|is \S+ (ok|up|healthy)|smoke|doctor)\b/, ["checks", "health", "doctor"]],
+      [/\b(test data|fixtures?|capture data|extract data|seed data)\b/, ["checks", "fixture_plan", "test_data"]],
+      [/\b(suites?|collections?|regression|junit)\b/, ["collection_run", "collection_plan", "collection_report"]],
+      [/\b(scenarios?)\b/, ["scenario_run", "scenario_inventory", "scenario_package"]],
+      [/\b(capture traffic|ui traffic|har|replay)\b/, ["api_browser_open", "api_exchange_list", "api_request_replay"]],
       [/\b(sql|select|postgres|pg|database|db|table|tables|rows?|column)\b/, ["pg_query", "pg_table", "find"]],
+      [/\b(deprecat\w*|migrat\w*|field trace|trace (a |the )?fields?|which fields)\b/, ["field_trace", "pg_function", "impact"]],
       [/\b(who (uses|writes|reads)|usages?)\b/, ["pg_usage", "who_uses"]],
       [/\b(function|procedure|trigger)\b/, ["pg_function"]],
       [/\b(elastic\w*|es|index|indices|documents?)\b/, ["es_search", "find"]],
@@ -43364,6 +43661,7 @@ var require_tool_profiles = __commonJS({
       "pg_table",
       "pg_function",
       "pg_usage",
+      "field_trace",
       "pg_query",
       "es_search",
       "es_health",
@@ -43413,7 +43711,76 @@ var require_tool_profiles = __commonJS({
       "tool_describe",
       "tool_execute"
     ];
+    var TESTER = [
+      "checks",
+      "find",
+      "catalog_sync",
+      "health",
+      "consul_service",
+      "logs_search",
+      "logs_trace",
+      "pg_query",
+      "pg_table",
+      "pg_usage",
+      "es_search",
+      "kafka_last",
+      "kafka_topic",
+      "passport",
+      "who_uses",
+      "bitbucket_file",
+      "test_data",
+      "fixture_plan",
+      "fixture_capture",
+      "fixture_validate",
+      "fixture_export",
+      "fixture_replay",
+      "testdb_template_plan",
+      "testdb_template_build",
+      "testdb_clone",
+      "testdb_reset",
+      "testdb_release",
+      "testdb_resources",
+      "scenario_inventory",
+      "scenario_package",
+      "scenario_verify",
+      "scenario_run",
+      "scenario_inspect",
+      "scenario_stop",
+      "browser_sites",
+      "api_browser_open",
+      "api_browser_action",
+      "api_browser_capture",
+      "api_browser_close",
+      "api_exchange_list",
+      "api_exchange_get",
+      "api_request_prepare",
+      "api_request_replay",
+      "api_request_save",
+      "script_list",
+      "script_get",
+      "script_run",
+      "script_save",
+      "collection_validate",
+      "collection_plan",
+      "collection_run",
+      "collection_report",
+      "collection_history",
+      "workspace_open",
+      "workspace_write",
+      "workspace_patch",
+      "test_context",
+      "test_run",
+      "show",
+      "diff",
+      "code",
+      "call_history",
+      "doctor",
+      "tool_search",
+      "tool_describe",
+      "tool_execute"
+    ];
     var PROFILES = {
+      tester: { description: "Testing by name: ready-made checks (service, environment, versions, table, trace, test data capture and reuse), test data and scratch databases, scenarios, API and UI capture, scripts and suites, tests in a workspace; tool_search reaches the rest.", includeCore: false, names: TESTER },
       direct: { description: "Everyday tools by name (databases, indices, topics, logs, repo files and PRs, code, docs); tool_search, tool_describe and tool_execute reach the rest.", includeCore: false, names: DIRECT },
       compact: { description: "Small starting set; discover an exact tool then execute it with validated arguments.", names: CORE },
       lean: { description: "Four discovery tools. Search the catalog capability, describe it, then execute; expand profiles on request.", includeCore: false, names: DISCOVERY },
@@ -43438,7 +43805,7 @@ var require_tool_profiles = __commonJS({
     function list(tools) {
       return Object.entries(definitions()).map(([name, x]) => ({ name, description: x.description || "", tools: select(tools, name).map((t) => t.name), count: select(tools, name).length }));
     }
-    module2.exports = { select, list, DIRECT };
+    module2.exports = { select, list, DIRECT, TESTER };
   }
 });
 
@@ -45280,6 +45647,34 @@ var require_tools = __commonJS({
         }
       },
       {
+        name: "field_trace",
+        group: "pg",
+        description: 'Trace every field of a Postgres function result (or table) to the code that reads it: the source expression with its body line and the table.columns it reads; deprecated/removed fields with replacements stated in the comment; then, in the repos of the calling services, the SQL selecting the field, the row mapper argument (rs.getX("col") in new Model(...)) or @Column field, the model field and every accessor call (file:line with Bitbucket links). Use it for migrations off a function or deprecated columns; then diff old vs new values with pg_query and change the code in a workspace. Returns `view` (a linked table) and `diagram` (classes, source, tables; deprecated reads red, replacements dashed).',
+        input: { name: str("schema.function or schema.table"), env, fields: str("Only these fields, comma-separated (default all)"), repos: str("Code index keys or globs to search (default: the repos of the services that call it)") },
+        required: ["name"],
+        run: (a) => {
+          const F = require_fieldtrace(), r = F.trace({ env: a.env, name: a.name, fields: a.fields, repos: a.repos }), R = require_results(), D = require_diagrams();
+          const m = F.model(r), title = `${r.source.name} field trace`;
+          const view = R.saveView("table", F.rows(r), { title, env: r.env });
+          const diagrams = [["container", "mermaid"], ["container", "plantuml"], ["container", "structurizr"]].map(([v, format]) => ({ name: "Field trace", view: v, format, source: D.write(m, { format, view: v }) }));
+          const gaps = r.fields.filter((f) => f.status !== "keep").map((f) => ({ from: `pg:${r.source.name}`, to: f.field, relation: f.status, message: `${f.status}${f.replacement ? ` -> ${f.replacement}` : ""}; read at ${[...f.code.sql, ...f.code.mapper, ...f.code.uses].map((p) => p.where).join(", ") || "no indexed code"}`, provenance: { said: f.said } }));
+          const diagram = R.saveView("diagram", { model: m, diagrams, gaps, evidence: r.source.comment ? [{ blockId: `${r.source.name} comment`, title: r.source.name, path: ["comment"], verified: true, text: r.source.comment }] : [] }, { title, env: r.env });
+          const at = (xs) => xs.map((p) => p.where);
+          return {
+            env: r.env,
+            source: r.source,
+            repos: r.repos,
+            summary: r.summary,
+            gaps: r.gaps,
+            coverage: r.coverage,
+            fields: r.fields.map((f) => ({ field: f.field, status: f.status, expression: f.expression, line: f.line, reads: f.reads, ...f.replacement ? { replacement: f.replacement } : {}, sql: at(f.code.sql), mapper: f.code.mapper.map((p) => `${p.where}${p.component ? ` -> ${p.model.split(".").pop()}.${p.component}` : ""}`), uses: f.code.uses.map((p) => `${p.where} ${p.method}`), ...f.unread ? { unread: true } : {}, ...f.gap ? { gap: f.gap } : {} })),
+            callers: r.callers,
+            view,
+            diagram
+          };
+        }
+      },
+      {
         name: "pg_usage",
         group: "pg",
         description: 'Column read/write/predicate lineage (db:schema.table.column), or what uses a Postgres table/view/function, or what an object/service uses, across database objects AND code: services (passports: reads, writes, entity, repository, migration owner, SQL calls, with file:line), functions/procedures (bodies), triggers, views, foreign keys. direction=used_by (default) answers "who touches X"; direction=uses answers "what does X touch" (X can be a function, view or service name).' + VIEW_NOTE,
@@ -46241,6 +46636,11 @@ var require_tools = __commonJS({
         }
       }
       try {
+        try {
+          require_scripts().seedStarters();
+        } catch (e) {
+          errors.push({ source: "starter scripts", error: e.message });
+        }
         const x = require_scripts().exposed();
         errors.push(...x.errors);
         for (const t2 of x.tools) {

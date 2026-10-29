@@ -702,7 +702,7 @@ Secrets (`.env`) are never shown or edited there.
 | Group | Tools |
 | --- | --- |
 | catalog | `find`, `catalog_sync` |
-| pg | `pg_table`, `pg_function`, `pg_usage`, `pg_query` |
+| pg | `pg_table`, `pg_function`, `pg_usage`, `field_trace` (each field of a function or table to the SQL, row mapper, model field and accessor calls that read it, with deprecations and links), `pg_query` |
 | es | `es_search`, `es_health` |
 | kafka | `kafka_topic`, `kafka_last`, `kafka_lag` |
 | consul | `health` (every service, one call), `consul_service`, `overview` (live dashboard) |

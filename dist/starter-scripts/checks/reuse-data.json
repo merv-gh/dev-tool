@@ -1,0 +1,23 @@
+{
+  "description": "Reuse exported test data in tests: build (or find) an immutable scratch-Postgres base from src/test/resources/dt-fixtures/<name> and, when tests are given, run them on a fresh copy of it",
+  "params": {
+    "workspace": {
+      "description": "Workspace id holding the fixture",
+      "required": true
+    },
+    "name": {
+      "description": "Fixture name used by capture-data",
+      "required": true
+    },
+    "tests": {
+      "description": "Tests to run on it, e.g. OrderServiceTest (empty: only build)",
+      "default": ""
+    }
+  },
+  "steps": [
+    {
+      "js": "const directory = `src/test/resources/dt-fixtures/${vars.name}`;\nlet base = await tools.testdb_template_build({ workspace: vars.workspace, directory }).catch(e => { throw new Error(/not initialized|no test database/.test(e.message) ? `${e.message} (one time per scratch cluster: tests.pgUrl in config.json, then testdb_initialize)` : e.message); });\nfor (let i = 0; i < 300 && ['running', 'queued', 'building'].includes(base.state); i++) { await new Promise(r => setTimeout(r, 1000)); base = await tools.testdb_template_build({ job: base.job }); }\nif (base.error || !['ready', 'done'].includes(base.state)) throw new Error(`template ${base.state || ''}: ${base.error || 'not ready'}`);\nconst template = base.id || base.template || base.key;\nlet run = null;\nif (vars.tests) {\n  run = await tools.test_run({ workspace: vars.workspace, tests: vars.tests.split(',').map(s => s.trim()), fixture_template: template });\n  for (let i = 0; i < 600 && run.state === 'running'; i++) { await new Promise(r => setTimeout(r, 1000)); run = await tools.test_run({ workspace: vars.workspace, job: run.job }); }\n  test('tests pass on the fixture', () => expect(run.failed ?? (run.ok === false ? 1 : 0)).toBe(0));\n}\nreturn { template, directory, databases: Object.fromEntries(Object.entries(base.databases || {}).map(([db, x]) => [db, (x.tables || []).map(t => `${t.schema}.${t.name}: ${t.rows}`)])), reused: !!base.reused, run: run && { passed: run.passed, failed: run.failed, view: run.view }, next: run ? undefined : `test_run with fixture_template=${template}` };",
+      "as": "data"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "description": "Is one service OK: Consul health and version of every instance, ERROR logs in a time window grouped by message, and its Kafka consumer lag. Tests fail when an instance is not passing, errors are found, or lag is above maxLag",
+  "params": {
+    "service": {
+      "description": "Service name, e.g. payment-service",
+      "required": true
+    },
+    "env": {
+      "description": "Environment (empty: the first one)",
+      "default": ""
+    },
+    "window": {
+      "description": "Log window: 15m, 1h, 1d",
+      "default": "1h"
+    },
+    "maxLag": {
+      "description": "Highest acceptable consumer lag",
+      "type": "integer",
+      "default": 1000
+    }
+  },
+  "steps": [
+    {
+      "js": "const env = vars.env || undefined, svc = vars.service;\nconst consul = await tools.consul_service({ name: svc, env }).catch(e => ({ error: e.message }));\nconst logs = await tools.logs_search({ env, service: svc, level: 'ERROR', from: vars.window, size: 200 }).catch(e => ({ error: e.message }));\nconst lag = await tools.kafka_lag({ env, top: 200 }).catch(e => ({ error: e.message }));\nconst instances = (consul.instances || []).map(i => ({ node: i.node, status: i.status, version: i.meta?.version || i.version || null }));\nconst mine = (logs.preview || []).filter(l => !l.service || l.service === svc);\nconst byMessage = {};\nfor (const l of mine) { const k = String(l.message || '').replace(/\\d+/g, 'N').slice(0, 160); byMessage[k] = (byMessage[k] || 0) + 1; }\nconst errors = Object.entries(byMessage).sort((a, b) => b[1] - a[1]).map(([message, count]) => ({ message, count }));\nconst groups = (lag.rows || []).filter(g => String(g.group).includes(svc)).map(g => ({ group: g.group, lag: g.lag, state: g.state }));\nconst errorCount = (logs.services || []).find(s => s.key === svc)?.count ?? mine.length;\nconst need = (r, what) => { if (r.error) throw new Error(`${what} unavailable: ${r.error}`); };\ntest('every instance is passing', () => { need(consul, 'Consul'); expect(instances.length > 0).toBe(true); expect(instances.filter(i => i.status !== 'passing').map(i => i.node)).toEqual([]); });\ntest(`no ERROR logs in the last ${vars.window}`, () => { need(logs, 'logs'); expect(errorCount).toBe(0); });\ntest(`consumer lag at most ${vars.maxLag}`, () => { need(lag, 'Kafka'); expect(groups.filter(g => g.lag > vars.maxLag).map(g => `${g.group}: ${g.lag}`)).toEqual([]); });\nreturn { service: svc, versions: [...new Set(instances.map(i => i.version).filter(Boolean))], instances, errorCount, errors: errors.slice(0, 10), kibana: logs.kibana, lag: groups, unavailable: Object.entries({ consul, logs, lag }).filter(([, r]) => r.error).map(([k, r]) => `${k}: ${r.error}`) };",
+      "as": "check"
+    }
+  ]
+}

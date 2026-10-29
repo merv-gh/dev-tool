@@ -1,0 +1,4 @@
+{
+  "description": "Ready-made checks for testers: a service (health, version, errors, lag), the whole environment, versions between environments, a table, one id through the logs, and test data capture and reuse. They are plain scripts in scripts/checks/: edit or copy them like any saved script",
+  "tool": true
+}

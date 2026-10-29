@@ -1,0 +1,40 @@
+{
+  "description": "Extract test data from an environment and keep it with the tests: plan the related rows (and Kafka messages) starting from one row, capture them read-only with personal fields masked, validate, and export into the workspace's src/test/resources/dt-fixtures/<name>",
+  "params": {
+    "workspace": {
+      "description": "Workspace id from workspace_open",
+      "required": true
+    },
+    "db": {
+      "description": "Database, e.g. orders",
+      "required": true
+    },
+    "table": {
+      "description": "Root table, e.g. sales.orders",
+      "required": true
+    },
+    "where": {
+      "description": "Root row, e.g. {\"id\": 42}",
+      "type": "object",
+      "required": true
+    },
+    "name": {
+      "description": "Fixture name, e.g. paid-order",
+      "required": true
+    },
+    "service": {
+      "description": "Service whose code tells which tables it reads (empty: none)",
+      "default": ""
+    },
+    "env": {
+      "description": "Environment (empty: the first one)",
+      "default": ""
+    }
+  },
+  "steps": [
+    {
+      "js": "const env = vars.env || undefined;\nconst plan = await tools.fixture_plan({ env, service: vars.service || undefined, seeds: [{ db: vars.db, table: vars.table, where: vars.where }] });\nlet capture = await tools.fixture_capture({ plan, mask: true });\nfor (let i = 0; i < 120 && capture.state === 'running'; i++) { await new Promise(r => setTimeout(r, 1000)); capture = await tools.fixture_capture({ job: capture.job }); }\nif (capture.state !== 'done') throw new Error(`capture ${capture.state}: ${capture.error || 'not finished'}`);\nconst validation = await tools.fixture_validate({ capture: capture.capture });\nconst exported = await tools.fixture_export({ workspace: vars.workspace, capture: capture.capture, name: vars.name });\ntest('rows were captured', () => expect(capture.counts?.rows || 0).toBeGreaterThan(0));\nreturn { capture: capture.capture, counts: capture.counts, complete: capture.complete, gaps: Object.entries((capture.gaps || []).reduce((n, g) => (n[g.kind] = (n[g.kind] || 0) + 1, n), {})).map(([kind, count]) => `${kind}: ${count}`), validation: { complete: validation.complete, gaps: (validation.gaps || []).length }, directory: exported.directory || exported.path, files: exported.files, next: capture.complete ? `checks reuse-data with name=${vars.name}, or test_run with fixture_path=${exported.directory || exported.path}` : 'incomplete capture: resolve the gaps (seed the missing reads, or leave service empty) before building a reusable base' };",
+      "as": "data"
+    }
+  ]
+}
