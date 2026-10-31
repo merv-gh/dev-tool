@@ -44,7 +44,7 @@ The frozen author catalog has 24 workflows and eight executable incident project
 
 ## Proof interpretation
 
-The independent author publishes symptoms/contracts and a hashed buggy pack. The solver records actual registry calls and application patches in its own worktree. A separate hidden acceptance grader executes the candidates, protected-file checks and behavioral mutations. Project-level red/green through `test_run` is distinguished from external grader execution. See the committed challenge evidence and [the new production readiness plan](production-readiness-plan.md) for verdicts, performance and uncovered work.
+The independent author publishes symptoms/contracts and a hashed buggy pack. The solver records actual registry calls and application patches in its own worktree. A separate hidden acceptance grader executes the candidates, protected-file checks and behavioral mutations. Project-level red/green through `test_run` is distinguished from external grader execution. See the committed challenge evidence and the new production readiness plan for verdicts, performance and uncovered work.
 
 A SQL table usage is not a column lineage proof; an ES query is not an ES replay; a saved Kafka envelope is not a broker delivery guarantee; a library unit test is not cross-environment equivalence; and an `env` parameter is not evidence of where a test actually ran.
 
@@ -67,4 +67,4 @@ All eight original submissions pass independent acceptance; this is **not eight 
 
 Public/oracle inputs were frozen before solving; the executable grader was implemented during solving and pinned afterward. S03's independent differential checks were authored after its candidate froze. This is useful independent engineering evidence, not a formal presealed or statistically representative benchmark.
 
-See [solver transcripts and patches](../proof/developer-challenge/REPORT.md), [author acceptance evidence](../challenges/developer-results-v1/README.md), [small-model evaluation](compact-model-readiness.md), and [the repair plan](production-readiness-plan.md). No actual 27B model was available in this run.
+See [solver transcripts and patches](../proof/developer-challenge/REPORT.md), [author acceptance evidence](../challenges/developer-results-v1/README.md), [small-model evaluation](compact-model-readiness.md), and the repair plan. No actual 27B model was available in this run.

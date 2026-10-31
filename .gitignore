@@ -24,3 +24,8 @@ dist/*.tar.gz
 dist/*.zip
 dist/envs.json
 node_modules/
+
+# Local planning and review notes; keep user docs and runtime contracts tracked.
+/docs/*-plan.md
+/docs/*-proposal.md
+/docs/*-review.md

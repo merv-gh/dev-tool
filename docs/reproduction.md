@@ -145,7 +145,7 @@ For an actual service test, call `test_run`:
 
 Each binding supplies `<PREFIX>_URL`, `<PREFIX>_USERNAME`, and `<PREFIX>_PASSWORD` to the test process. Configure the service's second datasource to read the corresponding prefix. One captured database defaults to `SPRING_DATASOURCE`; multiple databases require explicit, unique bindings. `DT_FIXTURE_PATH` contains the absolute fixture directory. Read the Kafka JSONL envelopes from there and publish them through the service's existing test producer into its test Kafka, or pass them directly to a listener test. Saved source offsets document capture; they are not consumer offsets to commit during replay.
 
-`test_run` drops replay databases when the run finishes or fails. If it returns `state: "running"`, poll the same tool with `workspace` and its `job` id. Use `mode: "build"` for final Maven/Gradle verification. Local test helpers and measured index speedups are described in [dev-performance-plan.md](dev-performance-plan.md).
+`test_run` drops replay databases when the run finishes or fails. If it returns `state: "running"`, poll the same tool with `workspace` and its `job` id. Use `mode: "build"` for final Maven/Gradle verification. Local test helpers and measured index speedups are described in dev-performance-plan.md.
 
 ## Save a repeatable investigation
 

@@ -194,12 +194,13 @@ test('metadata/content drift invalidate future clones and never evict active lea
 test('portable verified fixture replay can opt into templates, preserving default replay semantics', { skip, timeout: 30000 }, async () => {
   const root = path.join(home,'work/service'); fs.mkdirSync(root,{recursive:true});
   const { writeJson }=require('../lib/util'); writeJson(path.join(home,'cache/work/service.json'),{id:'service',path:root});
-  const dir='src/test/resources/dt-fixtures/example', full=path.join(root,dir);fs.mkdirSync(path.join(full,'pg/61'),{recursive:true});
-  const files={};for(const [part,content]of Object.entries({schema:'create table x(id int primary key);',data:'insert into x values(1);',constraints:''})){const rel=`pg/61/${part}.sql`;fs.writeFileSync(path.join(full,rel),content); files[rel]=require('crypto').createHash('sha256').update(content).digest('hex');}
-  writeJson(path.join(full,'manifest.json'),{version:1,complete:true,files,databases:{logical:{directory:'pg/61'}},topics:{}});
+  const dbDir = `pg/${Buffer.from('logical').toString('hex')}`;
+  const dir='src/test/resources/dt-fixtures/example', full=path.join(root,dir);fs.mkdirSync(path.join(full,dbDir),{recursive:true});
+  const files={};for(const [part,content]of Object.entries({schema:'create table x(id int primary key);',data:'insert into x values(1);',constraints:''})){const rel=`${dbDir}/${part}.sql`;fs.writeFileSync(path.join(full,rel),content); files[rel]=require('crypto').createHash('sha256').update(content).digest('hex');}
+  writeJson(path.join(full,'manifest.json'),{version:1,complete:true,files,databases:{logical:{directory:dbDir}},topics:{}});
   const R=require('../lib/reproduction'); const cold=await R.replay('service',dir);assert.equal(cold.lease,undefined);await cold.cleanup();
   const warm=await R.replay('service',dir,{template:true});try{assert.ok(warm.lease);assert.equal((await appQuery(warm.databases.logical,'select * from x'))[0].id,1);}finally{await warm.cleanup();}
-  fs.writeFileSync(path.join(full,'pg/61/data.sql'),'insert into x values(2);');await assert.rejects(R.replay('service',dir,{template:true}),/hash mismatch/);
+  fs.writeFileSync(path.join(full,dbDir,'data.sql'),'insert into x values(2);');await assert.rejects(R.replay('service',dir,{template:true}),/hash mismatch/);
 });
 
 test('cancellation interrupts an active long SQL statement and compensates the allocated database', {skip,timeout:10000},async()=>{

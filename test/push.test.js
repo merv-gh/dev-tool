@@ -112,3 +112,80 @@ test('an existing branch that moved: replayed on its tip; a conflict: nothing pu
   assert.deepEqual(p.files.map(f => f.path), ['App.java']);
   assert.match(p.patch, /\+class App \{ int mine; \}/);
 });
+
+test('.dt build state at root and in modules never stops patch or push', async () => {
+  config({ enabled: true });
+  const ws = await open('feature/moved');
+  const dir = W().checkId(ws.id).path;
+  for (const file of ['.dt/classpath.txt', 'module/.dt/results.json']) {
+    fs.mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });
+    fs.writeFileSync(path.join(dir, file), 'private runtime state');
+  }
+  W().write(ws.id, 'Context.md', { content: 'Task context\n' });
+  const patch = await W().patch(ws.id);
+  assert.deepEqual(patch.files.map(f => f.path), ['Context.md']);
+  const result = await T().call('workspace_push', { workspace: ws.id, branch: 'dt/with-runtime', message: 'Task context' });
+  assert.deepEqual(result.files, ['Context.md']);
+  assert.equal(remoteFile('dt/with-runtime', 'Context.md'), 'Task context');
+  assert.equal(remoteFile('dt/with-runtime', '.dt/classpath.txt'), null);
+  assert.equal(remoteFile('dt/with-runtime', 'module/.dt/results.json'), null);
+  assert.equal((await W().patch(ws.id)).files.length, 0);
+  await assert.rejects(W().push(ws.id, { branch: 'dt/with-runtime', message: 'runtime only' }), /nothing to push/);
+
+  // Existing workspaces may predate the info/exclude entry. Push must work without
+  // first asking for a patch, and must exclude nested runtime folders on its own.
+  const old = await open('feature/moved');
+  const oldDir = W().checkId(old.id).path;
+  // Compose on mounts that cannot chmod keeps Git data outside the workspace.
+  const gitDir = path.join(home, 'separate-runtime-git');
+  git(oldDir, 'init', '-q', `--separate-git-dir=${gitDir}`);
+  fs.writeFileSync(path.join(gitDir, 'info', 'exclude'), '');
+  for (const file of ['.dt/classpath.txt', 'module/.dt/results.json']) {
+    fs.mkdirSync(path.dirname(path.join(oldDir, file)), { recursive: true });
+    fs.writeFileSync(path.join(oldDir, file), 'private runtime state');
+  }
+  W().write(old.id, 'Direct.md', { content: 'Direct push\n' });
+  fs.rmSync(path.join(oldDir, 'App.java'));
+  const direct = await W().push(old.id, { branch: 'dt/legacy-runtime', message: 'direct' });
+  assert.deepEqual(direct.files, ['App.java', 'Direct.md']);
+  assert.equal(remoteFile('dt/legacy-runtime', 'App.java'), null);
+  assert.equal(remoteFile('dt/legacy-runtime', '.dt/classpath.txt'), null);
+  assert.equal(remoteFile('dt/legacy-runtime', 'module/.dt/results.json'), null);
+});
+
+test('patch reports staging failures instead of returning an incomplete change set', async () => {
+  const ws = await open('feature/moved');
+  const dir = W().checkId(ws.id).path;
+  W().write(ws.id, 'New.md', { content: 'new file\n' });
+  const lock = path.join(git(dir, 'rev-parse', '--absolute-git-dir'), 'index.lock');
+  fs.writeFileSync(lock, 'locked');
+  try { await assert.rejects(W().patch(ws.id), /git add:/); }
+  finally { fs.rmSync(lock); }
+  assert.deepEqual((await W().patch(ws.id)).files.map(f => f.path), ['New.md']);
+});
+
+
+test('push works in a clean container without a configured Git author', async () => {
+  config({ enabled: true });
+  const names = ['GIT_CONFIG_GLOBAL', 'GIT_CONFIG_NOSYSTEM', 'GIT_AUTHOR_NAME', 'GIT_AUTHOR_EMAIL', 'GIT_COMMITTER_NAME', 'GIT_COMMITTER_EMAIL', 'EMAIL'];
+  const previous = Object.fromEntries(names.map(k => [k, process.env[k]]));
+  const empty = path.join(home, 'empty-git-config');
+  fs.writeFileSync(empty, '');
+  for (const k of names) delete process.env[k];
+  process.env.GIT_CONFIG_GLOBAL = empty;
+  process.env.GIT_CONFIG_NOSYSTEM = '1';
+  try {
+    const ws = await open('feature/moved');
+    // macOS Git can guess an identity from the login; force missing configuration
+    // to fail there too, as it does in a minimal Linux container.
+    git(W().checkId(ws.id).path, 'config', 'user.useConfigOnly', 'true');
+    W().write(ws.id, 'Container.md', { content: 'container change\n' });
+    await W().push(ws.id, { branch: 'dt/container-author', message: 'container author' });
+    assert.equal(git(bare, 'log', '-1', '--format=%an <%ae>', 'dt/container-author'), 'dt <dt@localhost>');
+  } finally {
+    for (const k of names) {
+      if (previous[k] === undefined) delete process.env[k];
+      else process.env[k] = previous[k];
+    }
+  }
+});

@@ -72,9 +72,7 @@ DT_HOME=~/dt node dist/dt.js serve     # http://127.0.0.1:4000 (add --lan to lis
 ```
 From the sources instead: `npm ci`, then `node cli.js …`. After changing them, `npm run build` rebuilds `dist/` (a test fails while it is stale).
 
-The development loop has `npm run test:local`, `npm run test:changed -- --list`, targeted `npm run test:files -- lib/fastrun.js`, and `npm run bench:dev`. Final verification stays `npm run build && npm test`. See the [performance plan and measurements](docs/dev-performance-plan.md), or run `node demo/reproduction.js` for an isolated related-data example.
-
-The independent [developer/tester completeness review](docs/developer-tool-completeness-review.md) lists remaining work and acceptance tests, including real-service scenario orchestration, richer collection suites and prefilled PostgreSQL template clones.
+The development loop has `npm run test:local`, `npm run test:changed -- --list`, targeted `npm run test:files -- lib/fastrun.js`, and `npm run bench:dev`. Final verification stays `npm run build && npm test`. Run `node demo/reproduction.js` for an isolated related-data example.
 
 ## Plug it in
 
@@ -502,8 +500,8 @@ On the fixture `test/fixtures/shipping-service` (with the library `test/fixtures
    **Compile checks on every write.** `workspace_write` (and `test_run files=`) compiles a written Java file right away against its module's classpath, and answers `compile` with:
    - `errors`: what does not compile, with the line;
    - `fixed`: what dt already fixed in the file, when there is one clear fix:
-     - a missing import, found in a class index of the workspace, its libraries' code and the module's jars (dt reads the jars' directories itself, cached per classpath); the file's own packages win, then the project, the JDK and well-known libraries over obscure ones (JUnit's `Test`, not AspectJ's);
-     - static imports of test helpers (`assertThat`, `when`, `verify`, `any`, `eq`, `get`/`post`, `status`, `jsonPath`…);
+     - a missing import when exactly one class is available in the module's sources or classpath; same-name collisions are offered as suggestions, with project and internal packages first (`passports.internalGroups`), then the JDK and common libraries. Suggestions include ranking reasons; preference alone never applies an ambiguous import;
+     - static imports of test helpers (`assertThat`, `when`, `verify`, `any`, `eq`, `get`/`post`, `status`, `jsonPath`…) when the provider is unique; competing test libraries are offered as choices;
      - an import from a package that is not there, when the class is somewhere else (`javax.persistence` → `jakarta.persistence`);
      - `@MockBean`/`@SpyBean` ↔ `@MockitoBean`/`@MockitoSpyBean`, whichever this Spring Boot has;
      - `throws Exception` on a test method that calls something throwing a checked exception;

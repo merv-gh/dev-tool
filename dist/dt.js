@@ -6037,7 +6037,7 @@ var require_git = __commonJS({
     }
     async function remoteSha(url, ref) {
       if (isSha(ref)) return ref;
-      const out2 = await git(["ls-remote", url, ref || "HEAD"], process.cwd(), authArgs(url));
+      const out2 = await git(["ls-remote", url, ref || "HEAD"], os.tmpdir(), authArgs(url));
       const lines = out2.split("\n").filter(Boolean).map((l) => l.split("	"));
       const hit = lines.find(([, r]) => r === (ref ? `refs/heads/${ref}` : "HEAD")) || lines.find(([, r]) => r === `refs/tags/${ref}^{}`) || lines.find(([, r]) => r === `refs/tags/${ref}`) || lines[0];
       if (!hit) throw new Error(`git ls-remote: no ${ref || "HEAD"} in ${url.replace(/\/\/[^@/]*@/, "//***@")}`);
@@ -6099,7 +6099,7 @@ var require_git = __commonJS({
     }
     async function remoteRefs(project, repo, opts = {}) {
       const url = opts.url || remote(project, repo);
-      const out2 = await git(["ls-remote", "--tags", "--heads", url], process.cwd(), authArgs(url));
+      const out2 = await git(["ls-remote", "--tags", "--heads", url], os.tmpdir(), authArgs(url));
       const tags = /* @__PURE__ */ new Set(), heads = /* @__PURE__ */ new Set();
       for (const l of out2.split("\n")) {
         const r = (l.split("	")[1] || "").trim();
@@ -7873,9 +7873,8 @@ ${BUILD_OUTPUT.join("\n")}
     }
     async function patch(id) {
       const m = checkId(id);
-      const not = [":(exclude).dt", ":(exclude)**/.dt"];
-      await G.git(["add", "-A", "-N", "--", ".", ...not], m.path).catch(() => {
-      });
+      const not = [":(exclude,glob)**/.dt/**"];
+      await G.git(["add", "-A", "-N", "--", ".", ...not], m.path);
       const diff = await G.git(["-c", "core.quotepath=off", "diff", "--binary", "--no-color", "--no-ext-diff", "HEAD", "--", ".", ...not], m.path);
       const stat = await G.git(["-c", "core.quotepath=off", "diff", "--numstat", "HEAD", "--", ".", ...not], m.path);
       const files = stat.split("\n").filter(Boolean).map((l) => {
@@ -7907,14 +7906,14 @@ new file mode`) ? "added" : "modified";
       const def = (refs.match(/^ref: refs\/heads\/(\S+)\s+HEAD$/m) || [])[1];
       if (def && def === branch) throw new Error(`${branch} is the default branch of ${m.project}/${m.repo}: push to another branch`);
       const tip = (refs.match(new RegExp(`^([0-9a-f]{40})\\s+refs/heads/${branch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "m")) || [])[1] || null;
-      const not = [":(exclude).dt", ":(exclude)**/.dt"];
+      const not = [":(exclude,glob)**/.dt/**"];
       await G.git(["add", "-A", "--", ".", ...not], m.path);
       const staged = await G.git(["diff", "--cached", "--name-only"], m.path);
       if (!staged) throw new Error("nothing to push: no changes in the workspace since its commit");
       const who = cfg.author && cfg.author.match(/^\s*(.+?)\s*<([^>]+)>\s*$/);
       const ident = who ? ["-c", `user.name=${who[1]}`, "-c", `user.email=${who[2]}`] : [];
       await G.git(["commit", "-q", "-m", message], m.path, ident).catch(async (e) => {
-        if (/Please tell me who you are|empty ident/i.test(e.message)) return G.git(["commit", "-q", "-m", message], m.path, ["-c", "user.name=dt", "-c", "user.email=dt@localhost"]);
+        if (/Please tell me who you are|empty ident|unable to auto-detect email address|no (?:email|name) was given/i.test(e.message)) return G.git(["commit", "-q", "-m", message], m.path, ["-c", "user.name=dt", "-c", "user.email=dt@localhost"]);
         throw e;
       });
       let commit = await G.git(["rev-parse", "HEAD"], m.path);
@@ -14462,7 +14461,15 @@ public class DtCompiler {
     var SKIP_PKG = /(^|\.)(internal|impl|shaded|shade|repackaged|jdk\.internal|sun|com\.sun)(\.|$)|^META-INF|^module-info$/;
     function jarIndex(classpath) {
       const { PATHS } = require_config();
-      const file = path2.join(PATHS.build, "javacheck", `classes-${hash(classpath.join(path2.delimiter))}.json`);
+      const fingerprint = classpath.map((p) => {
+        try {
+          const st = fs2.statSync(p);
+          return [p, st.size, st.mtimeMs, st.ctimeMs];
+        } catch {
+          return [p, null];
+        }
+      });
+      const file = path2.join(PATHS.build, "javacheck", `classes-${hash(JSON.stringify(fingerprint))}.json`);
       try {
         return JSON.parse(fs2.readFileSync(file, "utf8"));
       } catch {
@@ -14545,19 +14552,28 @@ public class DtCompiler {
       header: ["org.springframework.test.web.servlet.result.MockMvcResultMatchers"],
       print: ["org.springframework.test.web.servlet.result.MockMvcResultHandlers"]
     };
-    var tier = (f, own) => own.some((p) => f.startsWith(p)) ? 0 : /^java\./.test(f) ? 1 : /^(jakarta|javax)\./.test(f) ? 2 : /^(org\.springframework|org\.junit|org\.mockito|org\.assertj|org\.testcontainers|com\.fasterxml\.jackson|org\.hamcrest)\./.test(f) ? 3 : 4;
-    function rank(fqns, own) {
-      return [...new Set(fqns)].sort((a, b) => tier(a, own) - tier(b, own) || a.length - b.length || a.localeCompare(b));
+    var inOwn = (f, own) => own.some((p) => f.startsWith(`${p.replace(/\.+$/, "")}.`));
+    var tier = (f, own) => inOwn(f, own) ? 0 : /^java\./.test(f) ? 1 : /^(jakarta|javax)\./.test(f) ? 2 : /^(org\.springframework|org\.junit|org\.mockito|org\.assertj|org\.testcontainers|com\.fasterxml\.jackson|org\.hamcrest)\./.test(f) ? 3 : 4;
+    function importAffinity(f, text) {
+      const pkg = f.slice(0, f.lastIndexOf("."));
+      const current = text.match(/^\s*package\s+([\w.]+)\s*;/m)?.[1];
+      if (pkg === current) return 2;
+      return [...text.matchAll(/^\s*import\s+(?!static\s)([\w.]+)\.(?:\w+|\*)\s*;/gm)].some((m) => m[1] === pkg) ? 1 : 0;
     }
-    function pick(fqns, own, text = "") {
-      const r = rank(fqns, own);
-      if (r.length === 1) return r[0];
-      if (r.length < 2) return null;
-      const pkgs = new Set([...text.matchAll(/^import\s+(?:static\s+)?([\w.]+)\.\w+\s*;/gm)].map((m) => m[1].split(".").slice(0, 3).join(".")));
-      const near = r.filter((f) => pkgs.has(f.split(".").slice(0, 3).join(".")));
-      if (near.length === 1) return near[0];
-      if (tier(r[0], own) <= 3 && tier(r[1], own) > tier(r[0], own)) return r[0];
-      return null;
+    function rank(fqns, own = [], text = "") {
+      return [...new Set(fqns)].sort((a, b) => tier(a, own) - tier(b, own) || importAffinity(b, text) - importAffinity(a, text) || a.localeCompare(b));
+    }
+    function importReason(f, own, text) {
+      const reasons = [];
+      if (inOwn(f, own)) reasons.push("project or configured internal package");
+      const affinity = importAffinity(f, text);
+      if (affinity) reasons.push(affinity === 2 ? "same package as this file" : "package already imported by this file");
+      if (/^java\./.test(f)) reasons.push("JDK");
+      return reasons.join("; ") || "available on the module classpath";
+    }
+    function pick(fqns, own = [], text = "") {
+      const r = rank(fqns, own, text);
+      return r.length === 1 ? r[0] : null;
     }
     function lev(a, b) {
       if (Math.abs(a.length - b.length) > 2) return 9;
@@ -14633,6 +14649,7 @@ ${text.split("\n")[0]}` };
               }
               continue;
             }
+            if ([...text.matchAll(/^\s*import\s+(?!static\s)([\w.]+)\s*;/gm)].some((m) => m[1].endsWith(`.${sym.name}`))) continue;
             const cands = classes(sym.name);
             const one = pick(cands, own, text);
             if (one) {
@@ -14640,7 +14657,7 @@ ${text.split("\n")[0]}` };
               continue;
             }
             if (cands.length) {
-              suggestions.push({ line: d.line, why: `${sym.name} is in ${new Set(cands).size} packages: import the one meant`, options: rank(cands, own).slice(0, 6).map((f) => ({ import: f, edits: [importEdit(text, f, false)].filter(Boolean) })) });
+              suggestions.push({ line: d.line, why: `${sym.name} is in ${new Set(cands).size} packages: import the one meant`, options: rank(cands, own, text).slice(0, 6).map((f) => ({ import: f, reason: importReason(f, own, text), edits: [importEdit(text, f, false)].filter(Boolean) })) });
               continue;
             }
             const near = similar(sym.name, Object.keys(index));
@@ -14649,9 +14666,14 @@ ${text.split("\n")[0]}` };
           }
           const here = !sym.location || sym.location.kind !== "variable" && declared.has(String(sym.location.name).split(".").pop().replace(/<.*/, ""));
           if (here && STATIC[sym.name]) {
-            const from = STATIC[sym.name].find((c) => known.has(c)) || (known.size ? null : STATIC[sym.name][0]);
+            const available = STATIC[sym.name].filter((c) => known.has(c));
+            const from = pick(available, own, text);
             if (from) {
               apply(importEdit(text, `${from}.${sym.name}`, true), `import static ${from}.${sym.name} (line ${d.line})`);
+              continue;
+            }
+            if (available.length) {
+              suggestions.push({ line: d.line, why: `${sym.name} is provided by several test libraries: choose a static import`, options: rank(available, own, text).map((f) => ({ import: `${f}.${sym.name}`, reason: importReason(f, own, text), edits: [importEdit(text, `${f}.${sym.name}`, true)].filter(Boolean) })) });
               continue;
             }
           }
@@ -14679,9 +14701,9 @@ ${text.split("\n")[0]}` };
           if (im[1]) continue;
           const cands = classes(im[3]).filter((f) => f !== `${pkg}.${im[3]}`);
           const jk = `${pkg.replace(/^javax\./, "jakarta.")}.${im[3]}`;
-          const one = cands.includes(jk) ? jk : pick(cands, own, text);
+          const one = pkg.startsWith("javax.") && cands.includes(jk) ? jk : null;
           if (one) apply({ find: line, replace: line.replace(`${pkg}.${im[3]}`, one) }, `import ${one} instead of ${pkg}.${im[3]} (line ${d.line})`);
-          else if (cands.length) suggestions.push({ line: d.line, why: `no package ${pkg}: ${im[3]} is in ${rank(cands, own).slice(0, 4).join(", ")}`, options: rank(cands, own).slice(0, 6).map((f) => ({ import: f, edits: [{ find: line, replace: line.replace(`${pkg}.${im[3]}`, f) }] })) });
+          else if (cands.length) suggestions.push({ line: d.line, why: `no package ${pkg}: ${im[3]} is in ${rank(cands, own, text).slice(0, 4).join(", ")}`, options: rank(cands, own, text).slice(0, 6).map((f) => ({ import: f, reason: importReason(f, own, text), edits: [{ find: line, replace: line.replace(`${pkg}.${im[3]}`, f) }] })) });
           else suggestions.push({ line: d.line, why: `no package ${pkg} on the classpath (a dependency this module lacks?)` });
           continue;
         }
@@ -14914,8 +14936,12 @@ ${fs2.readFileSync(f, "utf8")}`).join("\n"));
         known.add(fqn);
         (index[fqn.split(".").pop()] ||= []).push(fqn);
       };
-      const own = /* @__PURE__ */ new Set();
-      const W = require_workspace();
+      const own = new Set(require_config().getPersonal().internalGroups);
+      const jars = jarIndex(st.classpath.filter((e) => /\.jar$/.test(e)));
+      const available = new Set(Object.values(jars).flat());
+      const classDirs = st.classpath.filter((e) => !/\.jar$/.test(e));
+      const compiled = (fqn) => available.has(fqn) || classDirs.some((dir) => fs2.existsSync(path2.join(dir, `${fqn.replace(/\./g, "/")}.class`)));
+      const W = require_workspace(), root = W.checkId(id).path;
       let graph = null;
       for (const [i, key] of W.keys(id).entries()) {
         const g = require_codeindex().load(key)?.graph_();
@@ -14923,12 +14949,16 @@ ${fs2.readFileSync(f, "utf8")}`).join("\n"));
         if (i === 0) graph = g;
         for (const c of g.classes || []) {
           if (!c.id || c.id.startsWith("ext:")) continue;
+          if (i > 0 && !compiled(c.id)) continue;
+          if (i === 0 && st.sources?.length && c.file) {
+            const file = path2.resolve(root, c.file);
+            if (!st.sources.some((dir) => file.startsWith(path2.resolve(dir) + path2.sep)) && !compiled(c.id)) continue;
+          }
           add(c.id);
           const pkg = c.id.split(".").slice(0, 2).join(".");
-          if (pkg.includes(".")) own.add(`${pkg}.`);
+          if (i === 0 && pkg.includes(".")) own.add(`${pkg}.`);
         }
       }
-      const jars = jarIndex(st.classpath.filter((e) => /\.jar$/.test(e)));
       for (const fqns of Object.values(jars)) for (const f of fqns) add(f);
       for (const fqns of Object.values(JDK)) for (const f of fqns) add(f);
       return { index, known, own: [...own].filter((p) => !/^(java|javax|jakarta|org\.springframework|org\.junit)\./.test(p)), graph };
@@ -15021,41 +15051,44 @@ ${fs2.readFileSync(f, "utf8")}`).join("\n"));
       const users = usersOf(graph, root, java);
       const fixed = [], original = /* @__PURE__ */ new Map();
       let r, errors = [], suggestions = [], alsoBroken = [], firstErrors = null;
-      for (let round = 0; round < 4; round++) {
-        r = await T.step("compile check", () => compile({ javaHome: st.javaHome, options, files: [...java, ...users].map((f) => path2.join(root, f)) }), `${java.length + users.length} files`);
-        if (r.error) return { skipped: `the compile check failed: ${r.error}` };
-        const relOf = (f) => f ? path2.relative(root, f).split(path2.sep).join("/") : null;
-        const errs = (r.diagnostics || []).filter((d) => d.kind === "ERROR").map((d) => ({ ...d, rel: relOf(d.file) }));
-        let changed = false;
-        suggestions = [];
-        for (const f of java) {
-          const mine = errs.filter((d) => d.rel === f);
-          if (!mine.length) continue;
-          const text = fs2.readFileSync(path2.join(root, f), "utf8");
-          const fx = fixesFor(text, mine, { index, known, own, graph });
-          if (fx.fixed.length && fx.text !== text) {
-            if (!original.has(f)) original.set(f, text);
-            W.write(id, f, { content: fx.text });
-            fixed.push(...fx.fixed.map((w) => `${f}: ${w}`));
-            changed = true;
+      try {
+        for (let round = 0; round < 4; round++) {
+          r = await T.step("compile check", () => compile({ javaHome: st.javaHome, options, files: [...java, ...users].map((f) => path2.join(root, f)) }), `${java.length + users.length} files`);
+          if (r.error) return { skipped: `the compile check failed: ${r.error}` };
+          const relOf = (f) => f ? path2.relative(root, f).split(path2.sep).join("/") : null;
+          const errs = (r.diagnostics || []).filter((d) => d.kind === "ERROR").map((d) => ({ ...d, rel: relOf(d.file) }));
+          let changed = false;
+          suggestions = [];
+          for (const f of java) {
+            const mine = errs.filter((d) => d.rel === f);
+            if (!mine.length) continue;
+            const text = fs2.readFileSync(path2.join(root, f), "utf8");
+            const fx = fixesFor(text, mine, { index, known, own, graph });
+            if (fx.fixed.length && fx.text !== text) {
+              if (!original.has(f)) original.set(f, text);
+              W.write(id, f, { content: fx.text });
+              fixed.push(...fx.fixed.map((w) => `${f}: ${w}`));
+              changed = true;
+            }
+            suggestions.push(...fx.suggestions.map((s) => ({ file: f, ...s })));
           }
-          suggestions.push(...fx.suggestions.map((s) => ({ file: f, ...s })));
+          errors = errs.filter((d) => java.includes(d.rel)).map((d) => ({ file: d.rel, line: d.line, message: short(d.message) }));
+          firstErrors ??= errors;
+          alsoBroken = errs.filter((d) => !java.includes(d.rel)).map((d) => ({ file: d.rel, line: d.line, message: short(d.message) }));
+          if (!changed) break;
         }
-        errors = errs.filter((d) => java.includes(d.rel)).map((d) => ({ file: d.rel, line: d.line, message: short(d.message) }));
-        firstErrors ??= errors;
-        alsoBroken = errs.filter((d) => !java.includes(d.rel)).map((d) => ({ file: d.rel, line: d.line, message: short(d.message) }));
-        if (!changed) break;
-      }
-      if (!autofix && original.size) {
-        const offered = [];
-        for (const [f, text] of original) {
-          const now = fs2.readFileSync(path2.join(root, f), "utf8");
-          W.write(id, f, { content: text });
-          offered.push({ file: f, why: `clear fixes, not applied (fix=false): ${fixed.filter((x) => x.startsWith(`${f}: `)).map((x) => x.slice(f.length + 2)).join("; ")}`, edits: editsBetween(text, now) });
+        if (!autofix && original.size) {
+          const offered = [];
+          for (const [f, text] of original) {
+            const now = fs2.readFileSync(path2.join(root, f), "utf8");
+            offered.push({ file: f, why: `clear fixes, not applied (fix=false): ${fixed.filter((x) => x.startsWith(`${f}: `)).map((x) => x.slice(f.length + 2)).join("; ")}`, edits: editsBetween(text, now) });
+          }
+          return { ok: false, ms: Date.now() - started, compileMs: r.ms, checked: java.length + users.length, errors: firstErrors, suggestions: [...offered, ...suggestions.map((x) => ({ ...x, afterFixes: true }))], ...alsoBroken.length ? { alsoBroken: alsoBroken.slice(0, 10) } : {} };
         }
-        return { ok: false, ms: Date.now() - started, compileMs: r.ms, checked: java.length + users.length, errors: firstErrors, suggestions: [...offered, ...suggestions.map((x) => ({ ...x, afterFixes: true }))], ...alsoBroken.length ? { alsoBroken: alsoBroken.slice(0, 10) } : {} };
+        return { ok: !errors.length && !alsoBroken.filter((e) => users.includes(e.file)).length, ms: Date.now() - started, compileMs: r.ms, checked: java.length + users.length, errors, ...fixed.length ? { fixed } : {}, ...suggestions.length ? { suggestions } : {}, ...alsoBroken.length ? { alsoBroken: alsoBroken.slice(0, 10) } : {} };
+      } finally {
+        if (!autofix) for (const [f, text] of original) W.write(id, f, { content: text });
       }
-      return { ok: !errors.length && !alsoBroken.filter((e) => users.includes(e.file)).length, ms: Date.now() - started, compileMs: r.ms, checked: java.length + users.length, errors, ...fixed.length ? { fixed } : {}, ...suggestions.length ? { suggestions } : {}, ...alsoBroken.length ? { alsoBroken: alsoBroken.slice(0, 10) } : {} };
     }
     function runHints(id, root, cases) {
       const out2 = [];
@@ -42547,7 +42580,7 @@ var require_tools_code = __commonJS({
         {
           name: "workspace_write",
           group: "code",
-          description: "Write a file in a workspace: the whole content (new test files), or edits [{find, replace}] where each find matches exactly once (fixes in existing code). The change shows up in workspace_patch. A Java file is compiled right away against its module's classpath: the answer has compile.errors with their lines, compile.fixed (what was fixed in the file already: missing imports and static imports, throws Exception on tests, @MockBean/@MockitoBean for this Spring Boot, javax -> jakarta) and compile.suggestions (ready edits to choose from, e.g. which of several classes to import). Read compile before the next step; a file with errors does not need a test run to find them. check=false skips the check; fix=false checks but leaves the file as written (the fixes come as suggestions).",
+          description: "Write a file in a workspace: the whole content (new test files), or edits [{find, replace}] where each find matches exactly once (fixes in existing code). The change shows up in workspace_patch. A Java file is compiled right away against its module's classpath: the answer has compile.errors with their lines, compile.fixed (what was fixed in the file already: missing imports and static imports, throws Exception on tests, @MockBean/@MockitoBean for this Spring Boot, javax -> jakarta) and compile.suggestions (ready edits to choose from, e.g. which of several classes to import). Ambiguous imports are suggestions only, ranked with project and configured internal packages first, with reasons. Read compile before the next step; a file with errors does not need a test run to find them. check=false skips the check; fix=false checks but leaves the file as written (the fixes come as suggestions).",
           input: { workspace: str("Workspace id"), path: str("File path"), content: str("Whole file content"), edits: { type: "array", items: { type: "object", properties: { find: { type: "string" }, replace: { type: "string" } }, required: ["find", "replace"] }, description: "Replacements, applied in order" }, ...CHECK },
           required: ["workspace", "path"],
           // compiled at once against the module's classpath: errors with their lines, clear fixes applied (imports,

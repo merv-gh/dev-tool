@@ -4,7 +4,7 @@ Updated 2026-10-29. The implementation is integrated on `codex/openwebui-dev-pla
 
 The latest [readiness repair pass](readiness-implementation.md) supersedes the pre-repair gaps/counts in the historical verification sections below. It adds scoped impact/column lineage, Node execution, explicit targets and differential checks, mixed PG/ES/Kafka native replay/effects, typed retained failures, bounded workflow guides and actual isolated task-evaluator mechanics. External customer-dev and real smaller-model evaluation remain unverified.
 
-The [independent completeness review](developer-tool-completeness-review.md) contains 143 acceptance items, including future adapters. This document records actual implementation; it does not mark that entire inventory complete.
+The independent completeness review contains 143 acceptance items, including future adapters. This document records actual implementation; it does not mark that entire inventory complete.
 
 ## Workflows available now
 
@@ -22,7 +22,7 @@ The [independent completeness review](developer-tool-completeness-review.md) con
 | Inspect results visually | Knowledge map, API client and response explorer, fixture graph, collection report, scenario stages/evidence and architecture diagrams | Snapshot embeds have no live network capability; editable API requests use the separate trusted client URL |
 | Faster development loop | Changed/local/watch test selection, cached indexes/manifests/catalog/usage loads, existing fast Maven compiler/JUnit path, prefilled DB clones | Full builds, bundle freshness and explicit live checks remain the verification gate |
 
-See [Open WebUI setup](openwebui-workflows.md), [composable contracts](composable-architecture.md), [browser/API workbench](browser-api-workbench.md), [collection suites](collection-suites.md), [PostgreSQL templates](postgres-templates.md), [portable runtime](scenario-runtime.md), [capture/replay](reproduction.md), and [performance measurements](dev-performance-plan.md).
+See [Open WebUI setup](openwebui-workflows.md), [composable contracts](composable-architecture.md), [browser/API workbench](browser-api-workbench.md), [collection suites](collection-suites.md), [PostgreSQL templates](postgres-templates.md), [portable runtime](scenario-runtime.md), [capture/replay](reproduction.md), and performance measurements.
 
 ## Independent review corrections
 
@@ -61,4 +61,4 @@ With the repository's default enabled sources, the measured initial catalog is 1
 
 The subsequent [28-scenario verification](developer-scenarios.md) includes eight independently authored/graded cases and the four exact column/state/refactor/dev-test questions. All eight fixes/test submissions pass acceptance; native tool-only execution is proven for the Java case, while seven Node cases expose a test-runner gap. The additional enrichment refactor has native local/source-JDBC differential evidence, with remote-dev execution still unsupported in the evaluated setup.
 
-The new [production readiness plan](production-readiness-plan.md) records reproducible impact identity/cache/coverage gaps, column read/write lineage, mixed ES/Kafka/PG recreation, conflicting test job identity and discovery limits. Two text-search defects found by the solver were repaired separately. The latest rebuilt suite passes 376/420 tests with zero failures and 44 opt-in skips; those results do not override the failing readiness gates. New bundled Open WebUI connections start with five `lean-find` definitions, while configured profiles remain selectable. No actual 27B model was evaluated.
+The new production readiness plan records reproducible impact identity/cache/coverage gaps, column read/write lineage, mixed ES/Kafka/PG recreation, conflicting test job identity and discovery limits. Two text-search defects found by the solver were repaired separately. The latest rebuilt suite passes 376/420 tests with zero failures and 44 opt-in skips; those results do not override the failing readiness gates. New bundled Open WebUI connections start with five `lean-find` definitions, while configured profiles remain selectable. No actual 27B model was evaluated.

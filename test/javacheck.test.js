@@ -27,6 +27,7 @@ const LIB = {
   'jakarta/persistence/Entity.java': 'package jakarta.persistence; public @interface Entity {}',
   'com/x/money/Money.java': 'package com.x.money; public class Money {}',
   'org/y/Money.java': 'package org.y; public class Money {}',
+  'com/acme/shared/Duration.java': 'package com.acme.shared; public class Duration {}',
 };
 
 test('the class index reads jar directories itself', { skip: !JDK && 'no JDK' }, () => {
@@ -124,6 +125,54 @@ class FeeCheckTest {
   r = await J.check(ws.id, [plain]);
   assert.equal(r.ok, true, JSON.stringify(r, null, 2));
   assert.equal(r.fixed, undefined);
+
+  // Both imports would compile, but selecting either changes the API the user gets.
+  const collision = 'src/test/java/com/acme/pay/DurationTest.java';
+  const ambiguous = 'package com.acme.pay;\nclass DurationTest { Duration value; }\n';
+  W.write(ws.id, collision, { content: ambiguous });
+  r = await J.check(ws.id, [collision]);
+  assert.equal(r.ok, false);
+  assert.equal(fs.readFileSync(path.join(root, collision), 'utf8'), ambiguous);
+  const choices = r.suggestions.find(s => /Duration is in 2 packages/.test(s.why));
+  assert.equal(choices.options[0].import, 'com.acme.shared.Duration');
+  assert.match(choices.options[0].reason, /internal/);
+  W.write(ws.id, collision, { edits: choices.options[0].edits });
+  assert.equal((await J.check(ws.id, [collision])).ok, true);
+
+  // Indexed source is useful for navigation, but is not proof of availability.
+  const lib = path.join(home, 'navigation-only');
+  fs.mkdirSync(lib);
+  fs.writeFileSync(path.join(lib, 'Ghost.java'), 'package com.acme.ghost; public class Ghost {}');
+  require('../lib/codeindex').build(lib, 'LIB/navigation');
+  assert.ok(require('../lib/codeindex').load('LIB/navigation').graph_().classes.some(c => c.id === 'com.acme.ghost.Ghost'));
+  const metaFile = path.join(home, 'cache/work', `${ws.id}.json`);
+  const meta = JSON.parse(fs.readFileSync(metaFile, 'utf8'));
+  meta.libs.push({ index: 'LIB/navigation' });
+  fs.writeFileSync(metaFile, JSON.stringify(meta));
+  const ci = J.classIndex(ws.id, { classpath: [buildJar()] });
+  assert.equal(ci.index.Ghost, undefined);
+  const configFile = path.join(home, 'config.json'), configText = fs.readFileSync(configFile, 'utf8');
+  const cfg = require('../lib/config');
+  fs.writeFileSync(configFile, JSON.stringify({ envs: { dev: {} }, passports: { internalGroups: ['com.x.money'] } }));
+  cfg.reload();
+  try {
+    const configured = J.classIndex(ws.id, { classpath: [buildJar()] });
+    assert.equal(J.rank(configured.index.Money, configured.own)[0], 'com.x.money.Money');
+  } finally { fs.writeFileSync(configFile, configText); cfg.reload(); }
+
+  // An interrupted suggestion-only check must not retain its speculative imports.
+  const retry = 'src/test/java/com/acme/pay/RetryTest.java';
+  const before = 'package com.acme.pay;\nclass RetryTest { BigDecimal value; }\n';
+  W.write(ws.id, retry, { content: before });
+  const T = require('../lib/trace'), step = T.step;
+  let rounds = 0;
+  T.step = async (name, fn, ...args) => {
+    if (name === 'compile check' && ++rounds === 2) throw new Error('compiler interrupted');
+    return step(name, fn, ...args);
+  };
+  try { await assert.rejects(J.check(ws.id, [retry], { fix: false }), /compiler interrupted/); }
+  finally { T.step = step; }
+  assert.equal(fs.readFileSync(path.join(root, retry), 'utf8'), before);
 });
 
 test('edits between two texts: each finds once, applied in order they give the new text', () => {
@@ -179,12 +228,60 @@ test('after a run: strict stubs, a missing property, a missing bean come back as
   assert.equal(J.propertyValue(root, 'pay.none'), 'TODO');
 });
 
-test('which import: the file\'s own packages, then well-known libraries over obscure ones', () => {
-  const { pick } = require('../lib/javacheck');
-  assert.equal(pick(['org.aspectj.weaver.ast.Test', 'org.junit.jupiter.api.Test'], []), 'org.junit.jupiter.api.Test');
-  assert.equal(pick(['org.junit.Test', 'org.junit.jupiter.api.Test'], []), null);
-  assert.equal(pick(['org.junit.Test', 'org.junit.jupiter.api.Test'], [], 'import org.junit.jupiter.params.ParameterizedTest;\n'), 'org.junit.jupiter.api.Test');
-  assert.equal(pick(['java.util.List', 'io.vavr.collection.List'], []), 'java.util.List');
-  assert.equal(pick(['com.acme.pay.Money', 'org.joda.money.Money'], ['com.acme.']), 'com.acme.pay.Money');
-  assert.equal(pick(['com.x.Money', 'org.y.Money'], []), null);
+test('ambiguous imports are ranked suggestions, never automatic substitutions', () => {
+  const { pick, rank, fixesFor } = require('../lib/javacheck');
+  for (const candidates of [
+    ['org.aspectj.weaver.ast.Test', 'org.junit.jupiter.api.Test'],
+    ['org.junit.Test', 'org.junit.jupiter.api.Test'],
+    ['java.util.List', 'io.vavr.collection.List'],
+    ['com.acme.pay.Money', 'org.joda.money.Money'],
+  ]) assert.equal(pick(candidates, ['com.acme.'], 'import org.junit.jupiter.params.ParameterizedTest;\n'), null);
+  assert.equal(pick(['com.acme.pay.Money', 'com.acme.pay.Money']), 'com.acme.pay.Money');
+  assert.deepEqual(rank(['java.time.Duration', 'com.acme.shared.Duration'], ['com.acme']), ['com.acme.shared.Duration', 'java.time.Duration']);
+  assert.deepEqual(rank(['com.acme.other.Money', 'com.acme.shared.Money'], ['com.acme'], 'import com.acme.shared.Currency;'), ['com.acme.shared.Money', 'com.acme.other.Money']);
+  assert.deepEqual(rank(['com.acmeevil.Money', 'java.util.Money'], ['com.acme']), ['java.util.Money', 'com.acmeevil.Money']);
+  const text = 'package com.acme.pay;\nimport org.joda.money.Currency;\nclass T { Money amount; }\n';
+  const index = { Money: ['org.joda.money.Money', 'com.acme.shared.Money'] };
+  const r = fixesFor(text, [{ kind: 'ERROR', line: 3, code: 'compiler.err.cant.resolve', message: 'cannot find symbol\n symbol: class Money' }], { index, known: new Set(index.Money), own: ['com.acme'], graph: null });
+  assert.equal(r.text, text);
+  assert.deepEqual(r.fixed, []);
+  assert.equal(r.suggestions[0].options[0].import, 'com.acme.shared.Money');
+  assert.match(r.suggestions[0].options[0].reason, /internal/);
+});
+
+test('ambiguous static helpers require a choice and an empty classpath never invents imports', () => {
+  const J = require('../lib/javacheck');
+  const text = 'class T { void test() { assertEquals(1, 1); } }';
+  const diagnostics = [{ kind: 'ERROR', line: 1, code: 'compiler.err.cant.resolve', message: 'cannot find symbol\n symbol: method assertEquals(int,int)\n location: class T' }];
+  const opts = { index: {}, known: new Set(['org.junit.Assert', 'org.junit.jupiter.api.Assertions']), own: [], graph: null };
+  const r = J.fixesFor(text, diagnostics, opts);
+  assert.equal(r.text, text);
+  assert.equal(r.suggestions[0].options.length, 2);
+  assert.equal(J.fixesFor(text, diagnostics, { ...opts, known: new Set() }).text, text);
+});
+
+
+test('replacing a jar at the same classpath path invalidates cached imports', { skip: !JDK && 'no JDK' }, () => {
+  const J = require('../lib/javacheck');
+  const jar = path.join(home, 'replaceable.jar'), dir = path.join(home, 'replacement');
+  fs.copyFileSync(buildJar(), jar);
+  assert.equal(J.jarIndex([jar]).Added, undefined);
+  fs.mkdirSync(dir);
+  fs.writeFileSync(path.join(dir, 'Added.java'), 'public class Added {}');
+  execFileSync('javac', ['-d', dir, path.join(dir, 'Added.java')]);
+  execFileSync('jar', ['uf', jar, '-C', dir, 'Added.class']);
+  assert.deepEqual(J.jarIndex([jar]).Added, ['Added']);
+});
+
+
+test('an unavailable explicit import is not silently replaced by an unrelated same-named class', () => {
+  const J = require('../lib/javacheck');
+  const text = 'package app;\nimport missing.pay.Money;\nclass T { Money value; }\n';
+  const r = J.fixesFor(text, [
+    { kind: 'ERROR', line: 2, code: 'compiler.err.doesnt.exist', message: 'package missing.pay does not exist' },
+    { kind: 'ERROR', line: 3, code: 'compiler.err.cant.resolve', message: 'cannot find symbol\n symbol: class Money' },
+  ], { index: { Money: ['org.other.Money'] }, known: new Set(['org.other.Money']), own: [], graph: null });
+  assert.equal(r.text, text);
+  assert.equal(r.suggestions[0].options[0].import, 'org.other.Money');
+  assert.equal(r.suggestions[0].options.length, 1);
 });

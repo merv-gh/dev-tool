@@ -1,6 +1,6 @@
 # Readiness repair implementation
 
-Updated 2026-10-29. This is the implementation follow-up to the [frozen production-readiness findings](production-readiness-plan.md). Baseline reports remain unchanged. Implementation, independent grading, model completion and deployed-environment verification are separate results.
+Updated 2026-10-29. This is the implementation follow-up to the frozen production-readiness findings. Baseline reports remain unchanged. Implementation, independent grading, model completion and deployed-environment verification are separate results.
 
 ## Composable workflows
 
@@ -24,7 +24,7 @@ Built-in guide data lives in `lib/workflow-guides.json`. Teams can update one so
 
 The public contract catalog now includes multiple version directories: identity, column lineage, passport edges, `dt.impact/v2`, fixture runtime and evaluation evidence. Exact/prefix HTTP backend adapters remain available for gradual replacement with another language, graph, RAG index or database. A consumer should use canonical identities and versioned DTOs rather than parse display labels.
 
-The independent frozen compound-request review found the intended guide in 22/24 supported requests and all 62 declared stage capabilities after integration. Both unrelated requests abstained; permission checks passed. Two column-lineage paraphrases remain routing misses, with direct `workflow_plan` available as recovery. The [independent report and next-corpus plan](independent-readiness-review.md) preserve those misses; the held-out wording was not used to retune ranking.
+The independent frozen compound-request review found the intended guide in 22/24 supported requests and all 62 declared stage capabilities after integration. Both unrelated requests abstained; permission checks passed. Two column-lineage paraphrases remain routing misses, with direct `workflow_plan` available as recovery. The independent report and next-corpus plan preserve those misses; the held-out wording was not used to retune ranking.
 
 ## Verification commands
 
@@ -66,4 +66,4 @@ Actual execution against a customer's deployed dev target requires a reviewed re
 
 Native capture/replay currently supports the declared SQL, object/scalar ES mappings and JSON/string Kafka payloads. Nested ES query semantics, Avro/protobuf wire codecs/schema registries, broker transaction/consumer-group fidelity and exhaustive runtime read instrumentation require explicit adapters. Unsupported parts fail preflight or remain coverage gaps; they are not silently replaced by an empty fixture. ES deletion/recreation and broker-retention/transient effects have the observer limits stated in their reports. Dependency containers publish only local loopback bindings; their owned bridge is not an egress sandbox for arbitrary project tests. The isolated model evaluator separately disables network and host capabilities.
 
-Broader product ideas from the [143-item completeness inventory](developer-tool-completeness-review.md)—debugger attachment, clocks/randomness, richer graphical binding editors, team approval/ownership and CI policy—remain separately scoped extensions. This repair pass supplies the named readiness contracts, supported implementations and tests; it does not claim that arbitrary future protocols or every possible architecture need no further work.
+Broader product ideas from the 143-item completeness inventory—debugger attachment, clocks/randomness, richer graphical binding editors, team approval/ownership and CI policy—remain separately scoped extensions. This repair pass supplies the named readiness contracts, supported implementations and tests; it does not claim that arbitrary future protocols or every possible architecture need no further work.

@@ -109,3 +109,18 @@ test('a local copy whose git data is gone is not used (git would walk up to a pa
   assert.equal(info.sha, g(['rev-parse', 'HEAD'], src));
   assert.equal(info.reusedFrom, undefined, 'the stale copy was not used');
 });
+
+
+test('remote queries work when the app cwd has a host-only Git pointer', async () => {
+  const G = require('../lib/git');
+  const cwd = process.cwd();
+  const broken = path.join(tmp, 'mounted-app');
+  fs.mkdirSync(broken);
+  fs.writeFileSync(path.join(broken, '.git'), `gitdir: ${path.join(tmp, 'missing-host-worktree')}\n`);
+  process.chdir(broken);
+  try {
+    assert.equal(await G.remoteSha(`file://${src}`, 'main'), g(['rev-parse', 'HEAD'], src));
+    const refs = await G.remoteRefs('SHOP', 'svc', { url: `file://${src}` });
+    assert.ok(refs.heads.has('main'));
+  } finally { process.chdir(cwd); }
+});
