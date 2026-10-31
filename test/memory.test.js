@@ -25,7 +25,7 @@ test('dictionary rows live next to the catalog and load only when used', () => {
   assert.equal(cat.dictionaries['s.d_kind'].count, 2);
 });
 
-test('an older catalog with rows inline is cut down unparsed, and says how to get them back', () => {
+test('an older catalog is paged without dropping its inline dictionary rows', () => {
   const pg = require('../lib/pg'), file = path.join(PG, 'db0.json');
   fs.rmSync(path.join(PG, 'db0.dictionaries.json'), { force: true });
   const rows = Array.from({ length: 5000 }, (_, i) => ({ c0: i, c1: `code ${i}`, c2: true }));
@@ -34,9 +34,10 @@ test('an older catalog with rows inline is cut down unparsed, and says how to ge
   process.env.DT_PG_SLIM_BYTES = String(before - 1);
   try {
     const cat = pg.loadDb('big', 'db0');
-    assert.ok(fs.statSync(file).size < before / 10, 'rewritten without the rows');
+    assert.ok(fs.statSync(file).size < before / 10, 'the manifest contains offsets instead of rows');
     assert.deepEqual(cat.tables.map(t => t.name), ['t1', 'd_kind'], 'the catalog itself is intact');
-    assert.match(cat.dictionariesNote, /catalog_sync what=pg/);
+    assert.equal(cat.dictionaries['s.d_kind'].rows.length, rows.length);
+    assert.deepEqual(cat.dictionaries['s.d_kind'].rows[4999], rows[4999]);
   } finally { delete process.env.DT_PG_SLIM_BYTES; }
 });
 

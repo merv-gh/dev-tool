@@ -3083,6 +3083,496 @@ var require_src = __commonJS({
   }
 });
 
+// lib/pgstore.js
+var require_pgstore = __commonJS({
+  "lib/pgstore.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var crypto = require("crypto");
+    var zlib = require("zlib");
+    var { fileStamp, writeJson } = require_util();
+    var FORMAT = "dt.pg.catalog/v2";
+    var LIMIT = 8 * 1024 * 1024;
+    var PAGE_BYTES = 128 * 1024;
+    var cache = /* @__PURE__ */ new Map();
+    var held = 0;
+    var opened = /* @__PURE__ */ new Map();
+    function failure(message) {
+      return Object.assign(new Error(`Postgres catalog: ${message}`), { code: "DT_PG_CATALOG" });
+    }
+    function remember(key, bytes, read) {
+      const hit = cache.get(key);
+      if (hit) {
+        cache.delete(key);
+        cache.set(key, hit);
+        return hit.value;
+      }
+      const value = read(), cost = bytes * 4;
+      if (cost <= LIMIT) {
+        while (held + cost > LIMIT && cache.size) {
+          const first = cache.keys().next().value;
+          held -= cache.get(first).cost;
+          cache.delete(first);
+        }
+        cache.set(key, { value, cost });
+        held += cost;
+      }
+      return value;
+    }
+    function encode(value) {
+      let size = 0, nodes = 0;
+      const string = (s) => {
+        size += Buffer.byteLength(s) + 2;
+        for (let i = 0; i < s.length; i++) {
+          const c = s.charCodeAt(i);
+          if (c < 32) size += 5;
+          else if (c === 34 || c === 92) size++;
+        }
+      };
+      const visit = (v, depth) => {
+        if (++nodes > 5e5) throw failure("one record exceeds 500000 values");
+        if (depth > 128) throw failure("record nesting exceeds 128 levels");
+        if (typeof v === "string") string(v);
+        else if (v && typeof v === "object") {
+          size += 2;
+          for (const k of Object.keys(v)) {
+            if (!Array.isArray(v)) string(k);
+            size += 2;
+            visit(v[k], depth + 1);
+          }
+        } else size += 24;
+        if (size > LIMIT) throw failure("one record exceeds 8 MiB; narrow the catalog object rather than increasing the process heap");
+      };
+      visit(value, 0);
+      const data = Buffer.from(JSON.stringify(value));
+      if (data.length > LIMIT) throw failure("one record exceeds 8 MiB");
+      return data;
+    }
+    var Reader = class {
+      constructor(file) {
+        this.fd = fs2.openSync(file, "r");
+        this.buf = Buffer.alloc(0);
+        this.pos = 0;
+      }
+      close() {
+        fs2.closeSync(this.fd);
+      }
+      peek() {
+        if (this.pos === this.buf.length) {
+          const b = Buffer.allocUnsafe(64 * 1024);
+          const n = fs2.readSync(this.fd, b, 0, b.length, null);
+          this.buf = b.subarray(0, n);
+          this.pos = 0;
+        }
+        return this.buf[this.pos];
+      }
+      space() {
+        while ([32, 9, 10, 13].includes(this.peek())) this.pos++;
+      }
+      expect(b) {
+        this.space();
+        if (this.peek() !== b) throw failure(`malformed JSON (expected ${String.fromCharCode(b)})`);
+        this.pos++;
+      }
+      value() {
+        this.space();
+        this.peek();
+        let source = this.buf, start = this.pos, depth = 0, quoted = false, escaped = false, bytes = 0, nodes = 0, values = 0;
+        const safeBytes = Math.min(LIMIT, require("v8").getHeapStatistics().heap_size_limit / 32);
+        const chunks = [], first = this.peek(), container = first === 123 || first === 91;
+        if (first === void 0) throw failure("unexpected end of JSON");
+        while (true) {
+          const b = this.peek();
+          if (this.buf !== source) {
+            chunks.push(source.subarray(start));
+            source = this.buf;
+            start = this.pos;
+          }
+          if (b === void 0) {
+            if (quoted || depth) throw failure("truncated JSON record");
+            break;
+          }
+          if (!quoted && !container && first !== 34 && [44, 93, 125, 32, 9, 10, 13].includes(b)) break;
+          this.pos++;
+          bytes++;
+          if (bytes > safeBytes) throw failure("one legacy record exceeds the safe read budget (up to 8 MiB); original cache was preserved");
+          if (quoted) {
+            if (escaped) escaped = false;
+            else if (b === 92) escaped = true;
+            else if (b === 34) {
+              quoted = false;
+              if (!container && first === 34) break;
+            }
+          } else if (b === 34) quoted = true;
+          else if (b === 123 || b === 91) {
+            if (++nodes > 5e4) throw failure("one record exceeds 50000 containers");
+            if (++depth > 128) throw failure("record nesting exceeds 128 levels");
+          } else if (b === 125 || b === 93) {
+            if (--depth === 0 && container) break;
+          } else if (b === 44 && ++values > 5e5) throw failure("one record exceeds 500000 values");
+        }
+        chunks.push(source.subarray(start, this.pos));
+        try {
+          return JSON.parse(Buffer.concat(chunks, bytes).toString("utf8"));
+        } catch {
+          throw failure("malformed JSON record; original cache was preserved");
+        }
+      }
+      object(each) {
+        this.expect(123);
+        this.space();
+        if (this.peek() === 125) {
+          this.pos++;
+          return;
+        }
+        while (true) {
+          const key = this.value();
+          if (typeof key !== "string") throw failure("object key must be a string");
+          this.expect(58);
+          each(key);
+          this.space();
+          if (this.peek() === 125) {
+            this.pos++;
+            break;
+          }
+          this.expect(44);
+        }
+      }
+      array(each) {
+        this.expect(91);
+        this.space();
+        if (this.peek() === 93) {
+          this.pos++;
+          return;
+        }
+        while (true) {
+          each(this.value());
+          this.space();
+          if (this.peek() === 93) {
+            this.pos++;
+            break;
+          }
+          this.expect(44);
+        }
+      }
+    };
+    var DEFER = /* @__PURE__ */ new Set(["body", "definition", "def", "comment"]);
+    function writer(file) {
+      fs2.mkdirSync(path2.dirname(file), { recursive: true });
+      const prefix = `${path2.basename(file)}.${crypto.randomBytes(8).toString("hex")}`;
+      const dataFile = path2.join(path2.dirname(file), prefix + ".data"), headerFile = path2.join(path2.dirname(file), prefix + ".headers");
+      let dataFd = fs2.openSync(dataFile, "wx"), headerFd = fs2.openSync(headerFile, "wx"), dataAt = 0, headerAt = 0;
+      const sections = /* @__PURE__ */ Object.create(null), pending = /* @__PURE__ */ new Map();
+      const flush = (name) => {
+        const p = pending.get(name);
+        if (!p?.rows.length) return;
+        const s = sections[name], buf = encode(p.rows);
+        fs2.writeFileSync(headerFd, buf);
+        fs2.writeSync(headerFd, "\n");
+        s.pages.push([s.count - p.rows.length, p.rows.length, headerAt, buf.length]);
+        headerAt += buf.length + 1;
+        p.rows = [];
+        p.bytes = 0;
+      };
+      const ensure = (name) => {
+        sections[name] ||= { keys: [], count: 0, pages: [] };
+      };
+      const add = (name, value) => {
+        if (!value || typeof value !== "object" || Array.isArray(value)) throw failure(`${name} must contain objects`);
+        const s = sections[name] ||= { keys: [], count: 0, pages: [] };
+        let p = pending.get(name);
+        if (!p) pending.set(name, p = { rows: [], bytes: 0, keys: /* @__PURE__ */ new Map() });
+        const head = [], lazy = [];
+        for (const [key, v] of Object.entries(value)) {
+          if (v === void 0) continue;
+          if (!p.keys.has(key)) {
+            p.keys.set(key, s.keys.length);
+            s.keys.push(key);
+          }
+          const k = p.keys.get(key);
+          if (DEFER.has(key) || v && typeof v === "object" || typeof v === "string" && v.length > 512) {
+            const raw = encode(v), packed = raw.length >= 1024 ? zlib.deflateRawSync(raw, { level: 1 }) : raw;
+            const b = packed.length < raw.length * 0.9 ? packed : raw;
+            lazy.push(k, dataAt, b.length, raw.length);
+            fs2.writeFileSync(dataFd, b);
+            fs2.writeSync(dataFd, "\n");
+            dataAt += b.length + 1;
+          } else head.push(k, v);
+        }
+        const row = [head, lazy], size = encode(row).length;
+        if (p.bytes + size > PAGE_BYTES) flush(name);
+        p.rows.push(row);
+        p.bytes += size;
+        s.count++;
+        if (p.rows.length >= 128) flush(name);
+      };
+      const abort = () => {
+        if (dataFd !== null) fs2.closeSync(dataFd);
+        if (headerFd !== null) fs2.closeSync(headerFd);
+        dataFd = headerFd = null;
+        fs2.rmSync(dataFile, { force: true });
+        fs2.rmSync(headerFile, { force: true });
+      };
+      return { add, ensure, abort, commit(metadata, expectedStamp) {
+        for (const name of pending.keys()) flush(name);
+        fs2.fsyncSync(dataFd);
+        fs2.fsyncSync(headerFd);
+        fs2.closeSync(dataFd);
+        fs2.closeSync(headerFd);
+        dataFd = headerFd = null;
+        if (expectedStamp && fileStamp(file) !== expectedStamp) throw failure("catalog changed during migration; retry the lookup");
+        const manifest = { format: FORMAT, data: path2.basename(dataFile), headers: path2.basename(headerFile), metadata, sections };
+        let previous;
+        try {
+          if (fs2.statSync(file).size <= LIMIT) {
+            const fd = fs2.openSync(file, "r"), b = Buffer.alloc(128);
+            let n;
+            try {
+              n = fs2.readSync(fd, b, 0, b.length, 0);
+            } finally {
+              fs2.closeSync(fd);
+            }
+            if (b.toString("utf8", 0, n).includes(FORMAT)) previous = JSON.parse(fs2.readFileSync(file, "utf8"));
+          }
+        } catch {
+        }
+        writeJson(file, manifest);
+        for (const name of [previous?.data, previous?.headers]) if (typeof name === "string" && path2.basename(name) === name && name.startsWith(path2.basename(file) + ".") && /\.(data|headers)$/.test(name)) {
+          try {
+            fs2.unlinkSync(path2.join(path2.dirname(file), name));
+          } catch {
+          }
+        }
+        return manifest;
+      } };
+    }
+    function migrate(file) {
+      const stamp = fileStamp(file), r = new Reader(file), w = writer(file), metadata = /* @__PURE__ */ Object.create(null);
+      try {
+        r.object((key) => {
+          r.space();
+          if (r.peek() === 91 && ["tables", "functions", "viewDeps", "triggers", "types", "sequences", "extensions", "edges", "columns", "gaps"].includes(key)) {
+            w.ensure(key);
+            r.array((value) => w.add(key, value));
+          } else if (key === "dictionaries") {
+            w.ensure(key);
+            r.object((name) => {
+              const d = r.value();
+              w.add(key, { ...d, ...Array.isArray(d.rows) ? { count: d.rows.length } : {}, $key: name });
+            });
+          } else metadata[key] = r.value();
+        });
+        r.space();
+        if (r.peek() !== void 0) throw failure("trailing data in JSON");
+        w.commit(metadata, stamp);
+      } catch (e) {
+        w.abort();
+        throw e;
+      } finally {
+        r.close();
+      }
+    }
+    var finalize = new FinalizationRegistry((fds) => {
+      for (const fd of fds) try {
+        fs2.closeSync(fd);
+      } catch {
+      }
+    });
+    function open(file, manifest, revision) {
+      const resolve = (name) => {
+        if (typeof name !== "string" || path2.basename(name) !== name || !name.startsWith(path2.basename(file) + ".")) throw failure("invalid record file");
+        return path2.join(path2.dirname(file), name);
+      };
+      const fd = fs2.openSync(resolve(manifest.data), "r");
+      let hd;
+      try {
+        hd = fs2.openSync(resolve(manifest.headers), "r");
+      } catch (e) {
+        fs2.closeSync(fd);
+        throw e;
+      }
+      const stampFd = (n) => {
+        const s = fs2.fstatSync(n);
+        return `${s.dev}:${s.ino}:${s.size}:${s.mtimeMs}`;
+      };
+      const store = { fd, hd, manifest, revision };
+      const dataStamp = stampFd(fd), headerStamp = stampFd(hd);
+      finalize.register(store, [fd, hd]);
+      const read = (which, at, length, rawLength = length) => {
+        if (stampFd(which === "data" ? store.fd : store.hd) !== (which === "data" ? dataStamp : headerStamp)) throw failure("record file changed without a new manifest; refresh the catalog");
+        if (!Number.isSafeInteger(at) || at < 0 || !Number.isSafeInteger(length) || length < 0 || length > LIMIT || !Number.isSafeInteger(rawLength) || rawLength < length || rawLength > LIMIT) throw failure("invalid or oversized record span");
+        return remember(`${path2.dirname(file)}:${manifest.data}:${which}:${at}:${length}:${rawLength}`, rawLength, () => {
+          let buf = Buffer.allocUnsafe(length);
+          let n = 0;
+          while (n < length) {
+            const got = fs2.readSync(which === "data" ? store.fd : store.hd, buf, n, length - n, at + n);
+            if (!got) throw failure("truncated record file");
+            n += got;
+          }
+          if (rawLength !== length) {
+            try {
+              buf = zlib.inflateRawSync(buf, { maxOutputLength: rawLength });
+            } catch {
+              throw failure("invalid or oversized compressed record");
+            }
+            if (buf.length !== rawLength) throw failure("compressed record size mismatch");
+          }
+          if ((buf[0] === 123 || buf[0] === 91) && buf.length > require("v8").getHeapStatistics().heap_size_limit / 32) throw failure("record exceeds the safe object read budget");
+          let quoted = false, escaped = false, values = 0, depth = 0;
+          for (let i = 0; (buf[0] === 123 || buf[0] === 91) && i < buf.length; i++) {
+            const b = buf[i];
+            if (quoted) {
+              if (escaped) escaped = false;
+              else if (b === 92) escaped = true;
+              else if (b === 34) quoted = false;
+            } else if (b === 34) quoted = true;
+            else if (b === 123 || b === 91) {
+              if (++depth > 128) throw failure("record nesting exceeds 128 levels");
+            } else if (b === 125 || b === 93) depth--;
+            else if (b === 44 && ++values > 5e5) throw failure("record contains too many values");
+          }
+          try {
+            return JSON.parse(buf.toString("utf8"));
+          } catch {
+            throw failure("invalid JSON record");
+          }
+        });
+      };
+      const array = (section) => {
+        const s = manifest.sections[section];
+        if (!s) return [];
+        const item = (i) => {
+          let lo = 0, hi = s.pages.length - 1, page;
+          while (lo <= hi) {
+            const m = lo + hi >>> 1, p = s.pages[m];
+            if (i < p[0]) hi = m - 1;
+            else if (i >= p[0] + p[1]) lo = m + 1;
+            else {
+              page = p;
+              break;
+            }
+          }
+          if (!page) throw failure("missing header page");
+          const [head, lazy] = read("headers", page[2], page[3])[i - page[0]], out3 = {};
+          for (let j = 0; j < head.length; j += 2) Object.defineProperty(out3, s.keys[head[j]], { enumerable: true, configurable: true, writable: true, value: head[j + 1] });
+          for (let j = 0; j < lazy.length; j += 4) {
+            const key = s.keys[lazy[j]], at = lazy[j + 1], length = lazy[j + 2], raw = lazy[j + 3];
+            Object.defineProperty(out3, key, { enumerable: key !== "rows", configurable: true, get: () => read("data", at, length, raw) });
+          }
+          return out3;
+        };
+        const index = (k) => typeof k === "string" && /^(0|[1-9]\d*)$/.test(k) && Number(k) < s.count;
+        return new Proxy([], {
+          get: (target, k, receiver) => k === "length" ? s.count : index(k) ? item(Number(k)) : Reflect.get(target, k, receiver),
+          has: (target, k) => index(k) || Reflect.has(target, k),
+          ownKeys: () => [...Array.from({ length: s.count }, (_, i) => String(i)), "length"],
+          getOwnPropertyDescriptor: (target, k) => k === "length" ? { ...Reflect.getOwnPropertyDescriptor(target, k), value: s.count } : index(k) ? { enumerable: true, configurable: true, writable: false, value: item(Number(k)) } : Reflect.getOwnPropertyDescriptor(target, k),
+          set: () => {
+            throw failure("catalog arrays are read-only; refresh the cache to change them");
+          }
+        });
+      };
+      const out2 = { ...manifest.metadata };
+      for (const section of Object.keys(manifest.sections)) if (section !== "dictionaries") out2[section] = array(section);
+      if (manifest.sections.dictionaries) {
+        out2.dictionaries = {};
+        for (const d of array("dictionaries")) {
+          const key = d.$key;
+          delete d.$key;
+          Object.defineProperty(out2.dictionaries, key, { enumerable: true, configurable: true, value: d });
+        }
+      }
+      Object.defineProperty(out2, "_revision", { value: store.revision });
+      return out2;
+    }
+    function load(file, retries = 0) {
+      const sourceStamp = fileStamp(file);
+      let stat;
+      try {
+        stat = fs2.statSync(file);
+      } catch (e) {
+        if (e.code === "ENOENT") return null;
+        throw e;
+      }
+      const fd = fs2.openSync(file, "r"), prefix = Buffer.alloc(128);
+      let n;
+      try {
+        n = fs2.readSync(fd, prefix, 0, prefix.length, 0);
+      } finally {
+        fs2.closeSync(fd);
+      }
+      const modern = /^\s*\{\s*"format"\s*:\s*"dt\.pg\.catalog\/v2"/.test(prefix.toString("utf8", 0, n));
+      const configured = Number(process.env.DT_PG_SLIM_BYTES || LIMIT);
+      const threshold = Math.min(Number.isFinite(configured) && configured > 0 ? configured : LIMIT, require("v8").getHeapStatistics().heap_size_limit / 32);
+      if (!modern && stat.size > threshold) {
+        migrate(file);
+        return load(file);
+      }
+      if (modern && stat.size > Math.min(LIMIT, require("v8").getHeapStatistics().heap_size_limit / 32)) throw failure("manifest exceeds the safe read budget; rebuild the catalog");
+      let value;
+      try {
+        value = JSON.parse(fs2.readFileSync(file, "utf8"));
+      } catch {
+        throw failure("invalid catalog JSON");
+      }
+      if (modern) {
+        const stamp = fileStamp(file);
+        if (stamp !== sourceStamp && retries < 2) return load(file, retries + 1);
+        const hit = opened.get(file);
+        if (hit?.stamp === stamp) return hit.value;
+        let catalog;
+        try {
+          catalog = open(file, value, sourceStamp);
+        } catch (e) {
+          if (fileStamp(file) !== sourceStamp && retries < 2) return load(file, retries + 1);
+          throw e;
+        }
+        opened.delete(file);
+        opened.set(file, { stamp: sourceStamp, value: catalog });
+        while (opened.size > 8) opened.delete(opened.keys().next().value);
+        return catalog;
+      }
+      Object.defineProperty(value, "_revision", { value: fileStamp(file) });
+      return value;
+    }
+    function loadDictionary(file) {
+      let stat;
+      try {
+        stat = fs2.statSync(file);
+      } catch (e) {
+        if (e.code === "ENOENT") return {};
+        throw e;
+      }
+      const fd = fs2.openSync(file, "r"), prefix = Buffer.alloc(128);
+      let n;
+      try {
+        n = fs2.readSync(fd, prefix, 0, prefix.length, 0);
+      } finally {
+        fs2.closeSync(fd);
+      }
+      if (prefix.toString("utf8", 0, n).includes(FORMAT)) return load(file).dictionaries || {};
+      if (stat.size > Math.min(LIMIT, require("v8").getHeapStatistics().heap_size_limit / 32)) {
+        const stamp = fileStamp(file), r = new Reader(file), w = writer(file);
+        try {
+          w.ensure("dictionaries");
+          r.object((key) => w.add("dictionaries", { ...r.value(), $key: key }));
+          r.space();
+          if (r.peek() !== void 0) throw failure("trailing dictionary data");
+          w.commit({}, stamp);
+        } catch (e) {
+          w.abort();
+          throw e;
+        } finally {
+          r.close();
+        }
+        return load(file).dictionaries;
+      }
+      return JSON.parse(fs2.readFileSync(file, "utf8"));
+    }
+    module2.exports = { load, loadDictionary, writer, migrate, FORMAT, LIMIT, stats: () => ({ entries: cache.size, bytes: held }) };
+  }
+});
+
 // lib/pg.js
 var require_pg = __commonJS({
   "lib/pg.js"(exports2, module2) {
@@ -3248,36 +3738,48 @@ from pg_sequences where schemaname not in ('pg_catalog', 'information_schema') o
       const started = Date.now();
       const ms = getTimeouts().pgIndexMs;
       const q = (text) => guarded(sql, ms, "index", (t) => t.unsafe(text));
-      const [tables, functions, viewDeps, triggers, types, sequences, extensions, [meta]] = await Promise.all([
-        q(CATALOG_SQL),
-        q(FUNCTIONS_SQL),
-        q(VIEW_DEPS_SQL),
-        q(TRIGGERS_SQL),
-        q(TYPES_SQL).catch(() => []),
-        q(SEQUENCES_SQL).catch(() => []),
-        q(EXTENSIONS_SQL).catch(() => []),
-        q("select current_database() as database, version() as version")
-      ]);
-      const dictionaries = await dictionaryRows(q, tables);
-      const fs2 = require("fs"), side = dictFile(envName, name);
-      fs2.mkdirSync(path2.dirname(side), { recursive: true });
-      fs2.writeFileSync(side, JSON.stringify(Object.fromEntries(Object.entries(dictionaries).filter(([, d]) => d.rows).map(([k, d]) => [k, { columns: d.columns, rows: d.rows }]))));
-      writeJson(dbFile(envName, name), {
-        db: name,
-        database: meta.database,
-        version: meta.version,
-        syncedAt: (/* @__PURE__ */ new Date()).toISOString(),
-        ms: Date.now() - started,
-        tables: [...tables],
-        functions: [...functions],
-        viewDeps: [...viewDeps],
-        triggers: [...triggers],
-        types: [...types],
-        sequences: [...sequences],
-        extensions: [...extensions],
-        dictionaries: Object.fromEntries(Object.entries(dictionaries).map(([k, { rows, columns, ...d }]) => [k, { ...d, ...rows ? { count: rows.length } : {} }]))
-      });
-      return { tables: tables.length, functions: functions.length, viewDeps: viewDeps.length, triggers: triggers.length, dictionaries: Object.keys(dictionaries).length, ms: Date.now() - started };
+      const store = require_pgstore().writer(dbFile(envName, name));
+      const counts = {}, tables = [];
+      try {
+        const [meta] = await q("select current_database() as database, version() as version");
+        for (const [section, query2, optional] of [
+          ["tables", CATALOG_SQL],
+          ["functions", FUNCTIONS_SQL],
+          ["viewDeps", VIEW_DEPS_SQL],
+          ["triggers", TRIGGERS_SQL],
+          ["types", TYPES_SQL, true],
+          ["sequences", SEQUENCES_SQL, true],
+          ["extensions", EXTENSIONS_SQL, true]
+        ]) {
+          store.ensure(section);
+          counts[section] = 0;
+          try {
+            const bounded = `select case when octet_length(row_to_json(dt_row)::text) <= ${require_pgstore().LIMIT} then row_to_json(dt_row) else json_build_object('__dt_catalog_too_large', true) end as object from (${query2}) dt_row`;
+            await guarded(sql, ms, "index", (t) => t.unsafe(bounded).cursor(1, (rows) => {
+              for (const { object: row } of rows) {
+                if (row.__dt_catalog_too_large) throw Object.assign(new Error(`Postgres catalog ${name}: one ${section} object exceeds 8 MiB; previous catalog preserved`), { code: "DT_PG_CATALOG" });
+                store.add(section, row);
+                counts[section]++;
+                if (section === "tables") tables.push({ schema: row.schema, name: row.name, kind: row.kind });
+              }
+            }));
+          } catch (e) {
+            if (!optional || counts[section] || !/^[0-9A-Z]{5}$/.test(e.code || "")) throw e;
+          }
+        }
+        const dictionaries = await dictionaryRows(q, tables);
+        const fs2 = require("fs"), side = dictFile(envName, name);
+        fs2.mkdirSync(path2.dirname(side), { recursive: true });
+        writeJson(side, Object.fromEntries(Object.entries(dictionaries).filter(([, d]) => d.rows).map(([k, d]) => [k, { columns: d.columns, rows: d.rows }])));
+        store.ensure("dictionaries");
+        for (const [key, { rows, columns, ...d }] of Object.entries(dictionaries)) store.add("dictionaries", { ...d, ...rows ? { count: rows.length } : {}, $key: key });
+        const elapsed = Date.now() - started;
+        store.commit({ db: name, database: meta.database, version: meta.version, syncedAt: (/* @__PURE__ */ new Date()).toISOString(), ms: elapsed });
+        return { ...counts, dictionaries: Object.keys(dictionaries).length, ms: elapsed };
+      } catch (e) {
+        store.abort();
+        throw e;
+      }
     }
     function dictionaryConfig() {
       let c = {};
@@ -3328,33 +3830,18 @@ from pg_sequences where schemaname not in ('pg_catalog', 'information_schema') o
       }
       const m = dictMemo.get(f);
       if (m?.stamp === stamp) return m.data;
-      const data = readJson(f) || {};
+      const data = require_pgstore().loadDictionary(f);
+      dictMemo.delete(f);
       dictMemo.set(f, { stamp, data });
+      while (dictMemo.size > 2) dictMemo.delete(dictMemo.keys().next().value);
       return data;
-    }
-    var BIG = () => Number(process.env.DT_PG_SLIM_BYTES || 32e6);
-    function slim(file) {
-      const fs2 = require("fs");
-      let size;
-      try {
-        size = fs2.statSync(file).size;
-      } catch {
-        return;
-      }
-      if (size < BIG()) return;
-      const buf = fs2.readFileSync(file), at = Math.max(buf.lastIndexOf('\n  "dictionaries": '), buf.lastIndexOf(',"dictionaries":'));
-      if (at < 0) return;
-      const head = buf.subarray(0, at).toString("utf8").replace(/,\s*$/, ""), cat = JSON.parse(head + "\n}");
-      writeJson(file, { ...cat, dictionaries: {}, dictionariesNote: "Rows of an older catalog were dropped to keep lookups small; catalog_sync what=pg stores them next to it" });
-      console.error(`pg catalog ${path2.basename(file)}: ${Math.round(size / 1e6)} MB with dictionary rows inline; rewrote it without them (catalog_sync what=pg brings them back)`);
     }
     function loadDb(envName, name) {
       const file = dbFile(envName, name);
-      slim(file);
-      const cat = readJson(file);
+      const cat = require_pgstore().load(file);
       if (!cat) return null;
       for (const [k, d] of Object.entries(cat.dictionaries || {})) {
-        if (!d || d.rows) continue;
+        if (!d || Object.hasOwn(d, "rows")) continue;
         let rows;
         Object.defineProperty(d, "rows", { enumerable: false, configurable: true, get() {
           if (rows) return rows;
@@ -3386,7 +3873,34 @@ from pg_sequences where schemaname not in ('pg_catalog', 'information_schema') o
       for (const cat of loadAll(envName)) for (const s of new Set(cat.tables.map((t) => t.schema))) (schemas[s] ??= []).push(cat.db);
       writeJson(indexFile(envName), { syncedAt: (/* @__PURE__ */ new Date()).toISOString(), schemas });
     }
-    module2.exports = { query, sync, closeAll, resolveDb, databases, loadDb, loadAll, writeIndex };
+    function loadCached(env, { onError = (db, e) => console.error(`pg cache ${db}: ${e.message}`) } = {}) {
+      let files;
+      try {
+        files = require("fs").readdirSync(path2.join(CACHE2, env, "pg"));
+      } catch {
+        return [];
+      }
+      const out2 = [];
+      for (const f of files.filter((f2) => f2.endsWith(".json") && !f2.startsWith("_") && !f2.endsWith(".dictionaries.json"))) {
+        const db = f.slice(0, -5);
+        try {
+          const cat = loadDb(env, db);
+          if (cat?.db && Array.isArray(cat.tables)) out2.push(cat);
+        } catch (e) {
+          onError(db, e);
+        }
+      }
+      return out2;
+    }
+    function functionCounts(cat) {
+      const counts = /* @__PURE__ */ new Map();
+      for (const f of cat.functions || []) {
+        const key = `${f.schema}\0${f.name}`;
+        counts.set(key, (counts.get(key) || 0) + 1);
+      }
+      return counts;
+    }
+    module2.exports = { loadCached, functionCounts, query, sync, closeAll, resolveDb, databases, loadDb, loadAll, writeIndex };
   }
 });
 
@@ -6207,6 +6721,7 @@ var require_column_lineage = __commonJS({
     var ID = require_semantic_identity();
     var norm = ID.norm;
     var RESERVED = new Set("select from join inner left right full outer cross on where group order having limit offset returning set values into update insert delete using as and or not null true false case when then else end begin return perform distinct all union intersect except exists for each row language create function procedure replace view materialized table with recursive over partition by asc desc conflict do only lateral".split(" "));
+    var tableIndexes = /* @__PURE__ */ new WeakMap();
     function tokens(sql) {
       const out2 = [], re = /--[^\n]*|\/\*[\s\S]*?\*\/|'(?:''|[^'])*'|"(?:""|[^"])*"|[A-Za-z_][\w$]*|:=|::|<=|>=|<>|!=|\S/g;
       let line = 1, last = 0;
@@ -6215,14 +6730,25 @@ var require_column_lineage = __commonJS({
         last = m.index;
         const text = m[0];
         if (/^(--|\/\*)/.test(text)) continue;
+        if (out2.length >= 2e4) {
+          out2.truncated = true;
+          break;
+        }
         out2.push({ text, word: /^"/.test(text) ? text.slice(1, -1).replace(/""/g, '"').toLowerCase() : text.toLowerCase(), literal: /^'/.test(text), quoted: /^"/.test(text), line, at: m.index });
       }
       return out2;
     }
     function analyze(sql, catalog2, { schema, triggerTables = [] } = {}) {
       sql = String(sql || "");
+      const clipped = sql.length > 256 * 1024;
+      if (clipped) sql = sql.slice(0, 256 * 1024);
       const all = tokens(sql), hits = [], gaps = [];
-      const tables = new Map((catalog2.tables || []).map((t) => [ID.qualified(t.schema, t.name), t]));
+      if (clipped || all.truncated) gaps.push({ kind: "sql-analysis-limit", line: 1, detail: "Column analysis is limited to 256 Ki characters and 20000 tokens; remaining SQL was not analyzed." });
+      let tables = catalog2._revision ? tableIndexes.get(catalog2) : null;
+      if (!tables) {
+        tables = new Map((catalog2.tables || []).map((t) => [ID.qualified(t.schema, t.name), t]));
+        tableIndexes.set(catalog2, tables);
+      }
       const resolve = (name) => {
         name = norm(name);
         if (tables.has(name)) return [name];
@@ -6354,22 +6880,24 @@ var require_column_lineage = __commonJS({
       }
       return { protocol: "dt.column-lineage/v1", hits: hits.map(({ key, ...h }) => h), gaps, coverage: { parser: "bounded-sql-lexer/v1", exhaustive: false, supported: ["select", "star", "update-set", "insert-columns", "where", "join-on", "returning", "trigger-old-new"], unsupported: ["dynamic-sql", "nested-alias-scopes", "merge", "runtime-generated-queries"] } };
     }
-    function catalog(catalog2, env) {
+    function catalog(catalog2, env, emit = {}) {
       const edges = [], gaps = [];
+      const edge = (e) => emit.edge ? emit.edge(e) : edges.push(e);
+      const gap = (g) => emit.gap ? emit.gap(g) : gaps.push(g);
       for (const f of catalog2.functions || []) {
         const user = ID.qualified(f.schema, f.name);
         if (!/^(sql|plpgsql)$/.test(f.lang || "")) {
-          gaps.push({ kind: "unsupported-function-language", db: catalog2.db, user, language: f.lang });
+          gap({ kind: "unsupported-function-language", db: catalog2.db, user, language: f.lang });
           continue;
         }
         const r = analyze(f.body, catalog2, { schema: f.schema, triggerTables: (catalog2.triggers || []).filter((t) => norm(t.function) === user).map((t) => t.table) });
-        for (const h of r.hits) edges.push({ env, db: catalog2.db, revision: catalog2.syncedAt || null, target: `${h.table}.${h.column}`, targetKind: "column", user, userKind: f.kind || "function", role: h.access, access: h.access, where: `${user}:${h.line}`, line: h.line, source: "db", detail: h.syntax, syntax: h.syntax, ...h.ambiguous ? { ambiguous: true } : {} });
-        gaps.push(...r.gaps.map((g) => ({ ...g, db: catalog2.db, user, source: "db" })));
+        for (const h of r.hits) edge({ env, db: catalog2.db, revision: catalog2.syncedAt || null, target: `${h.table}.${h.column}`, targetKind: "column", user, userKind: f.kind || "function", role: h.access, access: h.access, where: `${user}:${h.line}`, line: h.line, source: "db", detail: h.syntax, syntax: h.syntax, ...h.ambiguous ? { ambiguous: true } : {} });
+        for (const g of r.gaps) gap({ ...g, db: catalog2.db, user, source: "db" });
       }
       for (const v of catalog2.tables || []) if (v.definition) {
         const user = ID.qualified(v.schema, v.name), r = analyze(v.definition, catalog2, { schema: v.schema });
-        for (const h of r.hits) edges.push({ env, db: catalog2.db, revision: catalog2.syncedAt || null, target: `${h.table}.${h.column}`, targetKind: "column", user, userKind: v.kind, role: h.access, access: h.access, where: `${user}:${h.line}`, line: h.line, source: "db", detail: h.syntax });
-        gaps.push(...r.gaps.map((g) => ({ ...g, db: catalog2.db, user, source: "db" })));
+        for (const h of r.hits) edge({ env, db: catalog2.db, revision: catalog2.syncedAt || null, target: `${h.table}.${h.column}`, targetKind: "column", user, userKind: v.kind, role: h.access, access: h.access, where: `${user}:${h.line}`, line: h.line, source: "db", detail: h.syntax });
+        for (const g of r.gaps) gap({ ...g, db: catalog2.db, user, source: "db" });
       }
       return { edges, gaps };
     }
@@ -6497,16 +7025,25 @@ var require_pgindex = __commonJS({
     function build(env) {
       const pg = require_pg();
       const cats = pg.loadAll(env).map((cat) => ({ cat, names: namesOf(cat) }));
-      const edges = [];
-      for (const { cat, names } of cats) dbSide(cat, names, edges);
-      const passport = require_passport();
-      const snapshot = require_edges().snapshot();
-      codeSide(cats, snapshot.rows.map((x) => x.passport).filter((p) => !p.env || p.env === env), edges);
-      const columns = cats.map((c) => require_column_lineage().catalog(c.cat, env));
-      const data = { identityVersion: "dt.identity/v1", builtAt: (/* @__PURE__ */ new Date()).toISOString(), env, passportSignature: snapshot.signature, dbs: cats.map((c) => c.cat.db), edges, columns: columns.flatMap((x) => x.edges), gaps: columns.flatMap((x) => x.gaps) };
-      writeJson(file(env), data);
-      memo.delete(env);
-      return { edges: edges.length, dbs: data.dbs.length };
+      const store = require_pgstore().writer(file(env));
+      for (const name of ["edges", "columns", "gaps"]) store.ensure(name);
+      const edges = { length: 0, push(e) {
+        store.add("edges", e);
+        this.length++;
+      } };
+      try {
+        for (const { cat, names } of cats) dbSide(cat, names, edges);
+        const snapshot = require_edges().snapshot();
+        codeSide(cats, snapshot.rows.map((x) => x.passport).filter((p) => !p.env || p.env === env), edges);
+        for (const { cat } of cats) require_column_lineage().catalog(cat, env, { edge: (e) => store.add("columns", e), gap: (g) => store.add("gaps", g) });
+        const data = { identityVersion: "dt.identity/v1", builtAt: (/* @__PURE__ */ new Date()).toISOString(), env, passportSignature: snapshot.signature, dbs: cats.map((c) => c.cat.db) };
+        store.commit(data);
+        memo.delete(env);
+        return { edges: edges.length, dbs: data.dbs.length };
+      } catch (e) {
+        store.abort();
+        throw e;
+      }
     }
     function current(env, { rebuild = false } = {}) {
       const d = load(env);
@@ -6528,7 +7065,7 @@ var require_pgindex = __commonJS({
       }
       const m = memo.get(env);
       if (m && m.stamp === stamp) return m.data;
-      const d = readJson(file(env));
+      const d = require_pgstore().load(file(env));
       if (!d) {
         memo.delete(env);
         return { edges: [] };
@@ -6572,7 +7109,7 @@ var require_pgindex = __commonJS({
       }
       return out2;
     }
-    function describe(env, name) {
+    function describe(env, name, { body = true, bodyLimit } = {}) {
       const hit = matcher(name);
       const out2 = [];
       for (const cat of require_pg().loadAll(env)) {
@@ -6584,7 +7121,13 @@ var require_pgindex = __commonJS({
         for (const f of cat.functions || []) {
           const k = ID.qualified(f.schema, f.name);
           if (!hit(k, cat.db)) continue;
-          out2.push({ db: cat.db, object: k, ...f });
+          const definition = {};
+          for (const key of Object.keys(f)) {
+            if (key === "body" && !body) continue;
+            const value = f[key];
+            definition[key] = key === "body" && bodyLimit && typeof value === "string" && value.length > bodyLimit ? Buffer.from(value.slice(0, bodyLimit)).toString("utf8") + `\u2026 (${value.length} chars)` : value;
+          }
+          out2.push({ db: cat.db, object: k, ...definition });
         }
       }
       const all = load(env).edges;
@@ -6700,7 +7243,7 @@ var require_impact = __commonJS({
       const cats = env ? require_pg().loadAll(env) : [];
       const usage = env ? require_pgindex().current(env) : { edges: [] };
       const info = keys.map((k) => ({ key: k, idx: CI.load(k) })).filter((x) => x.idx);
-      const signature = digest([env, info.map((x) => [x.key, x.idx.sha, x.idx.builtAt, x.idx.sourceDigest, require_util().fileStamp(path2.join(x.idx.dir, "files.json")), require_util().fileStamp(path2.join(x.idx.dir, "graph.json"))]), cats, usage.builtAt, usage.edges, passports.signature, require_config().getPersonal().libraryRepos]);
+      const signature = digest([env, info.map((x) => [x.key, x.idx.sha, x.idx.builtAt, x.idx.sourceDigest, require_util().fileStamp(path2.join(x.idx.dir, "files.json")), require_util().fileStamp(path2.join(x.idx.dir, "graph.json"))]), cats.map((c) => [c.db, c.syncedAt, c._revision]), usage.builtAt, usage._revision || digest(usage.edges), passports.signature, require_config().getPersonal().libraryRepos]);
       const key = JSON.stringify([keys, env]);
       if (memo.get(key)?.signature === signature) return memo.get(key);
       const G = build(info, env, cats, usage, passports);
@@ -6728,12 +7271,13 @@ var require_impact = __commonJS({
       };
       const pgid = (kind, db, name) => ID.pg(kind, env, db, name);
       for (const cat of cats) {
+        const fnCounts = require_pg().functionCounts(cat);
         for (const t of cat.tables || []) {
           const name = ID.qualified(t.schema, t.name);
           node(pgid("table", cat.db, name), { kind: "table", name: `table:${name}`, legacyId: `table:${name}`, env, db: cat.db, object: name, revision: cat.syncedAt });
         }
         for (const [ordinal, f] of (cat.functions || []).entries()) {
-          const name = ID.qualified(f.schema, f.name), overloaded = cat.functions.filter((x) => x.schema === f.schema && x.name === f.name).length > 1;
+          const name = ID.qualified(f.schema, f.name), overloaded = fnCounts.get(`${f.schema}\0${f.name}`) > 1;
           const fid = overloaded ? pgid("pgfn", cat.db, `${name}(${f.signature || f.args || `overload-${ordinal}`})`) : pgid("pgfn", cat.db, name);
           if (overloaded) gaps.push({ kind: "ambiguous-pg-function-overload", env, db: cat.db, target: name, detail: "Legacy usage edges do not preserve argument signatures; select exact catalog overload and verify runtime callers." });
           node(fid, { kind: "pgfn", name: `pgfn:${name}`, legacyId: `pgfn:${name}`, env, db: cat.db, object: name, revision: cat.syncedAt });
@@ -7017,9 +7561,13 @@ var require_impact = __commonJS({
       if (p.object.includes('"')) return { edges: [], facts: [], gaps: [{ kind: "quoted-identifier-lineage-unsupported", targetId: id, detail: "Canonical identity is preserved; a SQL parser adapter is required for column evidence." }] };
       const col = p.object.split(".").pop(), table2 = p.object.slice(0, -col.length - 1), cat = G.cats.find((c) => c.db === p.db), edges = [], facts = [], gaps = [];
       if (!cat) return { edges, facts, gaps: [{ kind: "catalog-missing", db: p.db }] };
-      const a = require_column_lineage().catalog(cat, G.env);
+      const a = require_column_lineage().catalog(cat, G.env), overloads = /* @__PURE__ */ new Map();
+      for (const f of cat.functions || []) {
+        const k = ID.qualified(f.schema, f.name);
+        overloads.set(k, (overloads.get(k) || 0) + 1);
+      }
       for (const e of a.edges.filter((e2) => e2.target === p.object)) {
-        if (cat.functions.filter((f) => ID.qualified(f.schema, f.name) === e.user).length > 1) {
+        if (overloads.get(e.user) > 1) {
           gaps.push({ kind: "ambiguous-pg-function-overload", db: p.db, target: e.user });
           continue;
         }
@@ -17749,21 +18297,16 @@ var require_knowledge = __commonJS({
         if (versions.length) Object.assign(nodes.get("service:" + p.service), { version: versions.join(", "), versions: { [env]: versions }, env, deploymentProvenance: { source: "catalog:consul", syncedAt: consul.syncedAt } });
       }
       const cachedDbs = new Map(require_pg().loadAll(env).map((db) => [db.db, db]));
-      try {
-        for (const f of fs2.readdirSync(path2.join(CACHE2, env, "pg")).filter((f2) => f2.endsWith(".json") && !f2.startsWith("_"))) {
-          const db = readJson(path2.join(CACHE2, env, "pg", f));
-          if (db?.db && Array.isArray(db.tables)) cachedDbs.set(db.db, db);
-        }
-      } catch {
-      }
+      for (const db of require_pg().loadCached(env, { onError: (db2, e) => gaps.push({ kind: "invalid-pg-catalog", db: db2, detail: e.message }) })) cachedDbs.set(db.db, db);
       for (const db of cachedDbs.values()) {
         add({ id: `database:${db.db}`, name: db.db, kind: "database", technology: "PostgreSQL", aliases: [db.db], tables: (db.tables || []).map((t) => `${t.schema}.${t.name}`), provenance: { source: "catalog:pg", status: "verified", syncedAt: db.syncedAt } });
         for (const t of db.tables || []) {
           const ID = require_semantic_identity(), object = `${t.schema}.${t.name}`, canonicalId = ID.pg("table", env, db.db, ID.qualified(t.schema, t.name));
           add({ id: `table:${db.db}:${object}`, canonicalId, identityVersion: "dt.identity/v1", scope: { env, db: db.db, schema: t.schema, name: t.name }, name: object, kind: "table", db: db.db, aliases: [canonicalId, object, t.name], columns: t.columns, provenance: { source: "catalog:pg", status: "verified", syncedAt: db.syncedAt } });
         }
+        const fnCounts = require_pg().functionCounts(db);
         for (const f of db.functions || []) {
-          const object = `${f.schema}.${f.name}`, overloaded = (db.functions || []).filter((x) => x.schema === f.schema && x.name === f.name).length > 1;
+          const object = `${f.schema}.${f.name}`, overloaded = fnCounts.get(`${f.schema}\0${f.name}`) > 1;
           const ID = require_semantic_identity(), name = overloaded ? `${object}(${f.arguments || ""})` : object, scopedObject = ID.qualified(f.schema, f.name) + (overloaded ? `(${f.arguments || ""})` : ""), canonicalId = ID.pg("pgfn", env, db.db, scopedObject);
           add({ id: `function:${db.db}:${name}`, canonicalId, identityVersion: "dt.identity/v1", scope: { env, db: db.db, schema: f.schema, name: f.name, arguments: f.arguments }, name, kind: "function", db: db.db, aliases: [canonicalId, `function:${db.db}:${object}`, object, f.name], provenance: { source: "catalog:pg", status: "verified", syncedAt: db.syncedAt } });
           if (overloaded) gaps.push({ kind: "function-overload-resolution", db: db.db, object, detail: "Unqualified function usage cannot establish the called overload." });
@@ -45579,7 +46122,7 @@ var require_tools = __commonJS({
         input: { name: str("schema.function"), env, body: { type: "boolean", default: true, description: "Include the body" } },
         required: ["name"],
         run: (a) => {
-          const found = require_pgindex().describe(a.env, a.name).filter((o) => ["function", "procedure", "aggregate", "window"].includes(o.kind) || o.kind === "unknown");
+          const found = require_pgindex().describe(a.env, a.name, { body: a.body !== false, bodyLimit: 8e3 }).filter((o) => ["function", "procedure", "aggregate", "window"].includes(o.kind) || o.kind === "unknown");
           if (!found.length) throw new Error(`${a.name} not in the ${a.env} catalog; use find with "pgfn:"`);
           return found.map(({ body, ...o }) => ({ ...o, ...a.body !== false ? { body: clip(body, 8e3) } : {}, usedBy: o.usedBy.slice(0, 60), usedByTotal: o.usedBy.length, uses: o.uses.slice(0, 60), note: require_notes().get(o.object, o.db) }));
         }

@@ -59,3 +59,18 @@ test('timeouts: queries and the index have their own limits, set per transaction
     await pg.closeAll();
   }
 });
+
+test('an oversized function is rejected before client JSON parsing and keeps the previous catalog', { skip: !URL_ && 'set DT_TEST_PG_URL' }, async () => {
+  const pg = require('../lib/pg'), admin = require('postgres')(URL_, { onnotice: () => {} });
+  const before = pg.loadDb('live', 'shop');
+  try {
+    await admin.unsafe('create or replace function shop.oversized_catalog_test() returns int language sql as $body$ /*' + 'x'.repeat(9 * 1024 * 1024) + '*/ select 1 $body$');
+    const [result] = await pg.sync('live', { log: () => {} });
+    assert.match(result.error, /one functions object exceeds 8 MiB/);
+    assert.equal(pg.loadDb('live', 'shop').syncedAt, before.syncedAt);
+    assert.ok(!pg.loadDb('live', 'shop').functions.some(f => f.name === 'oversized_catalog_test'));
+  } finally {
+    await admin.unsafe('drop function if exists shop.oversized_catalog_test()');
+    await admin.end(); await pg.closeAll();
+  }
+});
