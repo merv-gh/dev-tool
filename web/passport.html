@@ -25,6 +25,8 @@
   details.acc-sec[open] > summary h2::before { content: '▾'; }
   .add { color: var(--good); } .rem { color: var(--lv-error); }
 </style>
+<link rel="stylesheet" href="/static/inline.css">
+<script src="/static/inline.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -117,6 +119,7 @@ function section(id, title, rows, head, cell) {
 function render() {
   const e = p.effective;
   $('title').textContent = p.service;
+  dtInline.mount(document.querySelector('.wrap'), { title: p.service, summary: 'Service passport' });
   const bbRepo = p.bitbucketUrl ? `${p.bitbucketUrl}/projects/${p.repo.project}/repos/${p.repo.repo}/browse?at=${p.repo.sha}` : null;
   $('meta').innerHTML = [bbRepo ? `<a href="${esc(bbRepo)}" target="_blank" rel="noopener">${esc(p.repo.project)}/${esc(p.repo.repo)}</a>` : esc(`${p.repo.project}/${p.repo.repo}`),
     `<span class="mono">${esc(p.repo.ref)} ${esc(p.repo.sha.slice(0, 12))}</span>`, p.deployed ? `deployed in ${esc(p.env)} (${esc(p.deployed.instance)})` : '', `built ${fmtDate(p.builtAt)}`].filter(Boolean).join(' · ');

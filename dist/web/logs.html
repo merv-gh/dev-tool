@@ -26,6 +26,8 @@
   .lanes .name { font-size: 11px; fill: var(--fg); }
   .trace-link { cursor: pointer; color: var(--accent); }
 </style>
+<link rel="stylesheet" href="/static/inline.css">
+<script src="/static/inline.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -182,6 +184,7 @@ loadResult().then(d => {
   $('openfull').href = location.pathname;
   if (d.kind === 'trace') $('chartbox').style.display = 'none'; else chart();
   lanes(); facets(); render();
+  dtInline.mount(document.querySelector('.wrap'), { title: d.kind === 'trace' ? 'Trace' : 'Logs', summary: `${d.matched ?? d.total ?? lines.length} matched lines` });
 }).catch(fail);
 </script>
 </body>

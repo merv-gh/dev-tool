@@ -1,0 +1,122 @@
+// Shared disclosure and file navigation for sandboxed views and the older result pages.
+// No requests or parent DOM access: embedded views retain their existing sandbox.
+const dtInline = {
+  describe(view, data, meta = {}) {
+    const d = data && typeof data === 'object' ? data : {}, c = d.counts || {};
+    const failedCase = (Array.isArray(d.cases) ? d.cases : []).some(k => ['failed', 'error', 'cancelled'].includes(k.status) || k.equal === false);
+    let failed = !!d.error || d.ok === false || ['failed', 'error', 'compile-error', 'timeout', 'cancelled'].includes(d.outcome || d.status);
+    let summary = '';
+    if (view === 'tests' || view === 'collection-report') {
+      failed ||= failedCase || !!(c.failed || c.errors) || !!d.compile?.length || !!d.cleanupErrors?.length || (d.hooks || []).some(h => h.result?.ok === false);
+      summary = `${c.passed || 0} passed · ${c.failed || 0} failed${c.errors ? ` · ${c.errors} ${c.errors === 1 ? 'error' : 'errors'}` : ''}${c.skipped ? ` · ${c.skipped} skipped` : ''}${d.ms != null ? ` · ${(d.ms / 1000).toFixed(1)} s` : ''}`;
+      if (d.outcome === 'compile-error' || d.compile?.length) summary = 'Compilation failed · ' + summary;
+    } else if (view === 'patch' || view === 'pr') {
+      const files = d.files || [];
+      summary = `${files.length} files · +${files.reduce((n, f) => n + (Number(f.added ?? f.add) || 0), 0)} −${files.reduce((n, f) => n + (Number(f.removed ?? f.del) || 0), 0)}`;
+    } else if (view === 'code') {
+      failed ||= (d.calls || []).some(k => k.ok === false);
+      summary = `${failed ? 'Execution needs attention' : 'Completed'} · ${(d.calls || []).length} tool calls${d.ms != null ? ` · ${d.ms} ms` : ''}`;
+    } else if (view === 'api-exchange') {
+      failed ||= (d.response?.status || 0) >= 400;
+      summary = `${d.request?.method || 'HTTP'} · ${d.response?.status || 'No response'}${d.timing?.durationMs != null ? ` · ${d.timing.durationMs} ms` : ''}`;
+    } else if (view === 'differential') {
+      failed ||= failedCase || d.outcome === 'different';
+      summary = `${c.equal || 0} / ${c.cases || 0} cases equal`;
+    } else if (view === 'scenario-run') {
+      const r = d.result || d;
+      failed ||= r.ok === false || !!r.checks?.failed || !!r.violations?.length;
+      summary = failed ? 'Checks need attention' : r.ok === true ? 'Stage passed' : 'Scenario evidence';
+    } else if (view === 'table') summary = `${(Array.isArray(data) ? data : d.rows || []).length} rows`;
+    else if (view === 'json') summary = Array.isArray(data) ? `${data.length} items` : data && typeof data === 'object' ? `${Object.keys(data).length} fields` : 'Result';
+    else if (view === 'list-diff') summary = d.counts ? `${(c.onlyFirst || 0) + (c.onlyLast || 0)} differences` : 'Compare values';
+    else if (view === 'text-diff') summary = 'Compare changes';
+    return { title: meta.title || ({ code: 'JavaScript', tests: 'Test run', 'collection-report': d.collection || 'Collection suite', patch: `${d.repo || 'Workspace'} patch` })[view] || view.replace(/-/g, ' '), summary, open: failed || ['diagram', 'knowledge-map'].includes(view), failed };
+  },
+
+  mount(target, { title = 'Tool result', summary = '', open = false, failed = false } = {}) {
+    if (!document.body.classList.contains('embed') || !target) return;
+    let shell = [...target.children].find(n => n.classList.contains('inline-result'));
+    if (!shell) {
+      shell = document.createElement('details'); shell.className = 'inline-result'; shell.open = open;
+      const head = document.createElement('summary');
+      const label = document.createElement('strong'); label.className = 'inline-title';
+      const info = document.createElement('span'); info.className = 'inline-info';
+      head.append(label, info); shell.append(head);
+      const content = document.createElement('div'); content.className = 'inline-content';
+      for (const node of [...target.childNodes]) if (!['SCRIPT', 'STYLE', 'ASIDE'].includes(node.nodeName)) content.append(node);
+      shell.append(content); target.prepend(shell);
+      // Preserve signed query parameters and file selection when opening the full result.
+      if (/^https?:$/.test(location.protocol)) {
+        const url = new URL(location.href); url.searchParams.delete('embed');
+        const link = document.createElement('a'); link.href = url.href; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.className = 'inline-full'; link.textContent = 'Open full view'; content.prepend(link);
+      }
+      shell.addEventListener('toggle', () => window.dispatchEvent(new Event('resize')));
+    }
+    shell.querySelector('.inline-title').textContent = title;
+    shell.querySelector('.inline-info').textContent = summary;
+    shell.classList.toggle('inline-failed', failed);
+    // Repeated background refreshes update the summary without undoing the user's choice.
+    return shell;
+  },
+
+  // Decode Git's quoted paths, including octal UTF-8, without treating names as markup.
+  gitPath(value) {
+    if (!value.startsWith('"')) return value.replace(/^[ab]\//, '');
+    const bytes = [], enc = new TextEncoder(), s = value.slice(1, -1);
+    for (let i = 0; i < s.length;) {
+      if (s[i] === '\\') {
+        const octal = s.slice(i + 1).match(/^[0-7]{1,3}/);
+        if (octal) { bytes.push(parseInt(octal[0], 8)); i += octal[0].length + 1; }
+        else { const k = s[++i]; bytes.push(...enc.encode(({t:'\t',n:'\n',r:'\r',b:'\b',f:'\f',v:'\v',a:'\x07'})[k] || k)); i++; }
+      } else { const char = String.fromCodePoint(s.codePointAt(i)); bytes.push(...enc.encode(char)); i += char.length; }
+    }
+    return new TextDecoder().decode(new Uint8Array(bytes)).replace(/^[ab]\//, '');
+  },
+  patchFiles(patch, metadata = []) {
+    const chunks = String(patch || '').split(/^(?=diff --git )/m).filter(ch => ch.startsWith('diff --git '));
+    const parsed = chunks.map(ch => {
+      const lines = ch.split('\n'), header = lines[0].match(/^diff --git ("(?:\\.|[^"\\])*"|a\/.*?) ("(?:\\.|[^"\\])*"|b\/.*)$/);
+      const newPath = lines.find(l => l.startsWith('+++ '))?.slice(4), oldPath = lines.find(l => l.startsWith('--- '))?.slice(4);
+      const path = dtInline.gitPath(newPath && newPath !== '/dev/null' ? newPath : oldPath && oldPath !== '/dev/null' ? oldPath : header?.[2] || 'Unknown file');
+      return { path, patch: ch, added: lines.filter(l => l.startsWith('+') && !l.startsWith('+++ ')).length, removed: lines.filter(l => l.startsWith('-') && !l.startsWith('--- ')).length };
+    });
+    const byPath = new Map(parsed.map(f => [f.path, f])), known = new Set(metadata.map(f => f.path));
+    return [...metadata.map(f => ({ ...f, added: f.added ?? f.add, removed: f.removed ?? f.del, patch: byPath.get(f.path)?.patch || '' })), ...parsed.filter(f => !known.has(f.path))];
+  },
+
+  files(el, entries, render) {
+    el.innerHTML = '<div class="file-layout"><nav class="file-nav" aria-label="Changed files"><label class="file-filter">Filter files<input type="search" placeholder="Path or filename" aria-label="Filter changed files"></label><div class="file-tree"></div></nav><section class="file-preview" aria-label="Selected file diff"></section></div>';
+    const tree = el.querySelector('.file-tree'), panel = el.querySelector('.file-preview'), search = el.querySelector('input');
+    const expanded = new Set(); let selected = entries[0];
+    const ancestors = p => { const parts = p.split('/'); parts.pop(); for (let i = 1; i <= parts.length; i++) expanded.add(parts.slice(0, i).join('/')); };
+    if (selected) ancestors(selected.path);
+    const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
+    function draw() {
+      const root = { dirs: new Map(), files: [] }, q = search.value.trim().toLowerCase();
+      entries.forEach((f, index) => {
+        if (q && !f.path.toLowerCase().includes(q)) return;
+        const parts = f.path.split('/'); let node = root;
+        for (let i = 0; i < parts.length - 1; i++) {
+          const key = parts.slice(0, i + 1).join('/');
+          if (!node.dirs.has(key)) node.dirs.set(key, { name: parts[i], dirs: new Map(), files: [] });
+          node = node.dirs.get(key);
+        }
+        node.files.push({ f, index, name: parts.at(-1) });
+      });
+      const html = node => [...node.dirs.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([path, dir]) => `<details data-folder="${esc(path)}" ${q || expanded.has(path) ? 'open' : ''}><summary>${esc(dir.name)}</summary><div>${html(dir)}</div></details>`).join('') + node.files.sort((a,b) => a.name.localeCompare(b.name)).map(({f,index,name}) => `<button type="button" data-file="${index}" aria-current="${selected === f}" title="${esc(f.path)}"><span class="file-name">${esc(name)}</span><span class="file-count"><span class="file-added">+${Number(f.added)||0}</span> <span class="file-removed">−${Number(f.removed)||0}</span></span></button>`).join('');
+      tree.innerHTML = html(root) || '<p class="empty">No matching files.</p>';
+    }
+    function select(f) {
+      selected = f;
+      if (f) ancestors(f.path);
+      tree.querySelectorAll('button[data-file]').forEach(b => b.setAttribute('aria-current', String(entries[Number(b.dataset.file)] === f)));
+      panel.innerHTML = f ? `<h3 class="file-path">${esc(f.path)}</h3><div class="file-body"></div>` : '<p class="empty">No changed files.</p>';
+      if (f) render(panel.querySelector('.file-body'), f);
+    }
+    tree.addEventListener('toggle', e => { const p = e.target.dataset.folder; if (p !== undefined && !search.value) e.target.open ? expanded.add(p) : expanded.delete(p); }, true);
+    tree.onclick = e => { const b = e.target.closest('button[data-file]'); if (b) select(entries[Number(b.dataset.file)]); };
+    search.oninput = draw;
+    draw(); select(selected);
+    return { select(path) { const f = entries.find(f => f.path === path); if (!f) return; ancestors(f.path); draw(); select(f); } };
+  },
+};

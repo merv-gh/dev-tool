@@ -25,6 +25,8 @@
   .comment .who { font-weight: 600; }
   .comment .text { white-space: pre-wrap; margin-top: 3px; }
 </style>
+<link rel="stylesheet" href="/static/inline.css">
+<script src="/static/inline.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -36,16 +38,10 @@
     <a id="openfull" target="_blank" rel="noopener" class="only-embed">Open full view ↗</a>
   </div>
   <div class="row" id="meta"></div>
-  <div class="card desc" id="desc"></div>
-  <h2>Files <span class="muted" id="fcount"></span></h2>
-  <div class="card scroll"><table class="files"><thead><tr><th>file</th><th class="num">+</th><th class="num">−</th><th></th></tr></thead><tbody id="files"></tbody></table></div>
-  <div class="row" style="margin-top:12px">
-    <h2 style="margin:0">Diff</h2><span class="spacer"></span>
-    <button id="expand">Expand all</button><button id="collapse">Collapse all</button><button id="cpDiff">Copy diff</button>
-  </div>
+  <details><summary>Description</summary><div class="desc" id="desc"></div></details>
+  <div class="row" style="margin:12px 0"><h2 style="margin:0">Changed files <span id="fcount" class="muted"></span></h2><span class="spacer"></span><button id="cpDiff">Copy diff</button></div>
   <div id="diff"></div>
-  <h2>Comments <span class="muted" id="ccount"></span></h2>
-  <div class="card" id="comments"></div>
+  <details style="margin-top:12px"><summary>Comments <span class="muted" id="ccount"></span></summary><div id="comments"></div></details>
 </div>
 <script src="/static/ui.js"></script>
 <script>
@@ -77,26 +73,17 @@ function render() {
     `<span class="muted">updated ${fmtDate(pr.updated)}</span>`,
   ].join('');
   $('desc').textContent = pr.description || '(no description)';
-  const max = Math.max(1, ...pr.files.map(f => f.add + f.del));
   $('fcount').textContent = `${pr.files.length} · +${pr.files.reduce((s, f) => s + f.add, 0)} −${pr.files.reduce((s, f) => s + f.del, 0)}`;
-  $('files').innerHTML = pr.files.map((f, i) => `<tr><td class="mono"><a href="#f${i}" data-go="${i}">${esc(f.path)}</a></td><td class="num" style="color:var(--good)">${f.add}</td><td class="num" style="color:var(--lv-error)">${f.del}</td><td><span class="bar"><i class="a" style="width:${f.add / max * 60}px"></i><i class="d" style="width:${f.del / max * 60}px"></i></span></td></tr>`).join('');
-  const files = parse(pr.diff);
-  const closeAll = embed || files.length > 8;
-  $('diff').innerHTML = files.map((f, i) => `<div class="card file ${closeAll ? 'closed' : ''}" id="f${i}"><div class="head" data-toggle="${i}"><span class="mono">${esc(f.path)}</span><span class="spacer"></span><span class="muted">${f.lines.filter(l => l.t === 'add').length}+ ${f.lines.filter(l => l.t === 'del').length}−</span></div>
-    <div class="body scroll"><table class="diff">${f.lines.map(l => l.t === 'hunk' ? `<tr class="hunk"><td colspan="3">${esc(l.s)}</td></tr>` :
-      `<tr class="${l.t}"><td class="n">${l.o ?? ''}</td><td class="n">${l.n ?? ''}</td><td class="c">${l.t === 'add' ? '+' : l.t === 'del' ? '−' : ' '} ${esc(l.s)}</td></tr>`).join('')}</table></div></div>`).join('') || `<div class="empty">${esc(pr.diffError || 'No diff')}</div>`;
+  dtInline.files($('diff'), dtInline.patchFiles(pr.diff, pr.files), (el, file) => {
+    const f = parse(file.patch)[0];
+    if (!f) { el.innerHTML = `<p class="empty">${esc(pr.diffError || 'No diff available for this file.')}</p>`; return; }
+    el.innerHTML = `<table class="diff">${f.lines.map(l => l.t === 'hunk' ? `<tr class="hunk"><td colspan="3">${esc(l.s)}</td></tr>` : `<tr class="${l.t}"><td class="n">${l.o ?? ''}</td><td class="n">${l.n ?? ''}</td><td class="c">${l.t === 'add' ? '+' : l.t === 'del' ? '−' : ' '} ${esc(l.s)}</td></tr>`).join('')}</table>`;
+  });
+  dtInline.mount(document.querySelector('.wrap'), dtInline.describe('pr', pr, { title: `PR #${pr.id} · ${pr.title}` }));
   $('ccount').textContent = pr.comments.length;
   $('comments').innerHTML = pr.comments.map(c => `<div class="comment"><span class="who">${esc(c.author)}</span> <span class="muted">${fmtDate(c.at)}${c.file ? ` · ${esc(c.file)}${c.line ? ':' + c.line : ''}` : ''}</span><div class="text">${esc(c.text)}</div></div>`).join('') || '<div class="empty">No comments.</div>';
   postHeight();
 }
-document.addEventListener('click', (e) => {
-  const t = e.target.closest('[data-toggle]');
-  if (t) { $(`f${t.dataset.toggle}`).classList.toggle('closed'); postHeight(); }
-  const g = e.target.closest('[data-go]');
-  if (g) { e.preventDefault(); const el = $(`f${g.dataset.go}`); el.classList.remove('closed'); el.scrollIntoView({ block: 'start' }); postHeight(); }
-});
-$('expand').onclick = () => { document.querySelectorAll('.file').forEach(f => f.classList.remove('closed')); postHeight(); };
-$('collapse').onclick = () => { document.querySelectorAll('.file').forEach(f => f.classList.add('closed')); postHeight(); };
 $('cpDiff').onclick = () => copy(pr.diff, 'diff');
 loadResult().then(d => { pr = d.pr; render(); }).catch(fail);
 </script>

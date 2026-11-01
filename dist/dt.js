@@ -19710,8 +19710,8 @@ ${body.replace(/^\s+/, "")}`);
         const web = path2.join(BUILTIN, "..");
         const { diffLists, diffLines } = require_diff();
         shared = {
-          css: fs2.readFileSync(path2.join(web, "ui.css"), "utf8") + "\n" + fs2.readFileSync(path2.join(BUILTIN, "_views.css"), "utf8"),
-          js: fs2.readFileSync(path2.join(BUILTIN, "_helpers.js"), "utf8") + `
+          css: fs2.readFileSync(path2.join(web, "ui.css"), "utf8") + "\n" + fs2.readFileSync(path2.join(BUILTIN, "_views.css"), "utf8") + "\n" + fs2.readFileSync(path2.join(web, "inline.css"), "utf8"),
+          js: fs2.readFileSync(path2.join(web, "inline.js"), "utf8") + "\n" + fs2.readFileSync(path2.join(BUILTIN, "_helpers.js"), "utf8") + `
 dt.diffLists = ${diffLists.toString()};
 dt.diffLines = ${diffLines.toString()};
 `
@@ -19727,7 +19727,7 @@ dt.diffLines = ${diffLines.toString()};
 <style>${a.css}</style>
 <script>window.DATA = ${safeJson(data)}; window.META = ${safeJson({ view: name, ...meta })};</script>
 <script>${a.js}</script></head>
-<body class="${embed ? "embed" : ""}"><div class="wrap">${v.html}</div></body></html>`;
+<body class="${embed ? "embed" : ""}"><div class="wrap">${v.html}</div><script>dtInline.mount(document.querySelector('.wrap'), dtInline.describe(META.view, DATA, META));</script></body></html>`;
     }
     module2.exports = { list, get, save, remove, render, CSP, BUILTIN, DIR };
   }

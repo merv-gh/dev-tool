@@ -39,6 +39,8 @@
   .ok { padding: 10px; color: var(--good); background: var(--panel); border: 1px solid var(--line); }
   .error { padding: 10px; color: var(--bad); background: var(--bad-bg); border-radius: 6px; }
 </style>
+<link rel="stylesheet" href="/static/inline.css">
+<script src="/static/inline.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -83,6 +85,8 @@ const tile = (k, v, s, tone) => `<div class="tile ${tone}"><div class="k">${esc(
 
 function render(d) {
   const h = d.health, es = d.es, k = d.kafka;
+  const needsAttention = !!(h.error || es.error || k.error || h.summary?.down || es.summary?.status === 'red');
+  dtInline.mount(document.querySelector('.wrap'), { title: 'Environment health', summary: needsAttention ? 'Needs attention' : 'Health summary', open: needsAttention, failed: needsAttention });
   const tiles = [];
   if (h.error) tiles.push(tile('Services', '—', esc(h.error), 'bad'));
   else tiles.push(tile('Services', `${h.summary.healthy}/${h.summary.services}`, `${h.summary.down} down · ${h.summary.degraded} degraded`, h.summary.down ? 'bad' : h.summary.degraded ? 'warn' : 'good'));

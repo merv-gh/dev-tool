@@ -81,7 +81,7 @@
   }
   const worst = (ks) => (ks.some(bad) ? (ks.some(k => k.status === 'error') && !ks.some(k => k.status === 'failed') ? 'error' : 'failed') : ks.every(k => k.status === 'skipped') ? 'skipped' : 'passed');
   const sum = (ks) => ks.reduce((n, k) => n + (k.ms || 0), 0);
-  let filter = 'all', selected = cases.find(bad) || cases[0];
+  let filter = cases.some(bad) ? 'failed' : 'all', selected = cases.find(bad) || cases[0];
   const show = (k) => filter === 'all' || (filter === 'failed' ? bad(k) : k.status === filter);
   function drawTree() {
     const rows = [];
@@ -93,8 +93,8 @@
         const vis = ks.filter(show);
         if (!vis.length) continue;
         const single = ks.length === 1 && !/\[\d+\]$/.test(ks[0].name);
-        rows.push(`<div class="row m ${single && ks[0] === selected ? 'sel' : ''}" data-i="${single ? cases.indexOf(ks[0]) : ''}"><span class="ic ${worst(vis)}">${icon[worst(vis)]}</span><span class="nm">${dt.esc(m)}</span><span class="ms">${sum(vis)} ms</span></div>`);
-        if (!single) for (const k of vis) rows.push(`<div class="row inv ${k === selected ? 'sel' : ''}" data-i="${cases.indexOf(k)}"><span class="ic ${k.status}">${icon[k.status]}</span><span class="nm">${dt.esc(k.name.match(/\[\d+\]$/)?.[0] || k.name)}</span><span class="ms">${k.ms} ms</span></div>`);
+        rows.push(`<div class="row m ${single && ks[0] === selected ? 'sel' : ''}" data-i="${single ? cases.indexOf(ks[0]) : ''}" ${single ? 'role="button" tabindex="0"' : ''}><span class="ic ${worst(vis)}">${icon[worst(vis)]}</span><span class="nm">${dt.esc(m)}</span><span class="ms">${sum(vis)} ms</span></div>`);
+        if (!single) for (const k of vis) rows.push(`<div class="row inv ${k === selected ? 'sel' : ''}" data-i="${cases.indexOf(k)}" role="button" tabindex="0"><span class="ic ${k.status}">${icon[k.status]}</span><span class="nm">${dt.esc(k.name.match(/\[\d+\]$/)?.[0] || k.name)}</span><span class="ms">${k.ms} ms</span></div>`);
       }
     }
     dt.$('#tree').innerHTML = rows.join('') || '<div class="row muted">No tests ran.</div>';
@@ -139,8 +139,9 @@
   }
   const n = (f) => cases.filter(k => (f === 'failed' ? bad(k) : k.status === f)).length;
   dt.$('#filt').innerHTML = [['all', `All ${cases.length}`], ['failed', `Failed ${n('failed')}`], ['passed', `Passed ${n('passed')}`], ...(n('skipped') ? [['skipped', `Skipped ${n('skipped')}`]] : [])]
-    .map(([f, l]) => `<button class="small ${f === 'all' ? 'on' : ''}" data-f="${f}">${l}</button>`).join('');
+    .map(([f, l]) => `<button class="small ${f === filter ? 'on' : ''}" data-f="${f}">${l}</button>`).join('');
   dt.$('#filt').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; filter = b.dataset.f; for (const x of dt.$('#filt').children) x.classList.toggle('on', x === b); drawTree(); };
   dt.$('#tree').onclick = (e) => { const r = e.target.closest('.row[data-i]'); if (!r || r.dataset.i === '') return; selected = cases[Number(r.dataset.i)]; drawTree(); drawDet(); };
+  dt.$('#tree').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { const row = e.target.closest('[data-i]'); if (row && row.dataset.i !== '') { e.preventDefault(); selected = cases[Number(row.dataset.i)]; drawTree(); drawDet(); dt.$(`#tree [data-i="${cases.indexOf(selected)}"]`)?.focus(); } } };
   drawTree(); drawDet();
 </script>

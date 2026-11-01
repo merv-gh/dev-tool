@@ -9,6 +9,10 @@
   .cm-bar .sp { flex: 1; }
   .cm-bar button { border: 0; background: none; color: var(--muted); padding: 2px 6px; border-radius: 6px; font-size: 12px; }
   .cm-bar button:hover, .cm-bar button.on { background: var(--line); color: var(--fg); }
+  .cm-box > summary { cursor:pointer; list-style:none; }
+  .cm-box > summary::-webkit-details-marker { display:none; }
+  .cm-box > summary::before { content:''; width:6px; height:6px; border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor; transform:rotate(-45deg); margin-right:3px; }
+  .cm-box[open] > summary::before { transform:rotate(45deg); }
   .cm-box pre { margin: 0; padding: 4px 14px 12px; font: 12.5px/1.6 ui-monospace, Menlo, monospace; overflow: auto; max-height: 420px; white-space: pre; }
   .cm-box pre.wrap { white-space: pre-wrap; word-break: break-word; }
   .k { color: #8e44ad; } .s { color: var(--good); } .n { color: #b5651d; } .c { color: var(--muted); font-style: italic; } .f { color: var(--accent); }
@@ -17,9 +21,9 @@
 </style>
 <div class="cm">
   <div class="cm-head"><b data-title></b><span id="ms"></span></div>
-  <div class="cm-box"><div class="cm-bar"><span class="ic">&lt;/&gt;</span>JavaScript<span class="sp"></span><button data-wrap="code" title="Wrap lines">⏎</button><button data-copy="code">Copy</button></div><pre id="code"></pre></div>
-  <div class="cm-box"><div class="cm-bar"><span class="ic">&lt;/&gt;</span>Output<span class="sp"></span><button data-wrap="out" title="Wrap lines">⏎</button><button data-copy="out">Copy</button></div><pre id="out"></pre></div>
-  <div class="cm-calls" id="calls"></div>
+  <details class="cm-box"><summary class="cm-bar"><span class="ic">&lt;/&gt;</span>JavaScript<span class="sp"></span><button data-wrap="code" title="Wrap lines">⏎</button><button data-copy="code">Copy</button></summary><pre id="code"></pre></details>
+  <details class="cm-box" open><summary class="cm-bar"><span class="ic">&lt;/&gt;</span>Output<span class="sp"></span><button data-wrap="out" title="Wrap lines">⏎</button><button data-copy="out">Copy</button></summary><pre id="out"></pre></details>
+  <details><summary id="call-count">Tool calls</summary><div class="cm-calls" id="calls"></div></details>
 </div>
 <script>
   const KW = /\b(const|let|var|await|async|function|return|if|else|for|of|in|while|new|try|catch|throw|true|false|null|undefined|typeof)\b/g;
@@ -35,6 +39,7 @@
   if ((DATA.logs || []).length) parts.push(`<span class="c">${dt.esc(DATA.logs.join('\n'))}</span>`);
   if (DATA.error) parts.push(`<span class="cm-err">Error: ${dt.esc(DATA.error)}</span>`);
   dt.$('#out').innerHTML = (DATA.error ? '' : '<span class="c">Script completed</span>\n') + (parts.join('\n') || '<span class="c">(no output: use text(...) or return a value)</span>');
+  dt.$('#call-count').textContent = `Tool calls (${(DATA.calls || []).length}) · result views (${(DATA.views || []).length})`;
   dt.$('#calls').innerHTML = (DATA.calls || []).map(c => `<span class="chip ${c.ok ? 'good' : 'bad'}" title="${dt.esc(JSON.stringify(c.args || {}))}">${dt.esc(c.tool)} · ${c.ms} ms</span>`).join('')
     + (DATA.views || []).map(v => `<a class="chip" href="${dt.esc(v.view)}" target="_blank" rel="noopener">${dt.esc(v.tool)} view ↗</a>`).join('');
   document.addEventListener('click', (e) => {

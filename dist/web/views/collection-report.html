@@ -33,23 +33,26 @@
   <div id="cr-alerts"></div>
   <div class="cr-controls"><input id="cr-search" type="search" aria-label="Search cases" placeholder="Search script, case or tag"><select id="cr-filter" aria-label="Filter case status"><option value="all">All cases</option><option value="failed">Failures and errors</option><option value="passed">Passed</option><option value="skipped">Skipped</option></select><button id="cr-download">Download JSON</button><button id="cr-junit">Download JUnit</button></div>
   <div class="cr-grid"><nav id="cr-cases" class="cr-nav" aria-label="Collection cases"></nav><section id="cr-detail" class="cr-detail" aria-live="polite"></section></div>
-  <details><summary>Suite setup, success and finally hooks</summary><div id="cr-hooks"></div></details>
+  <details id="cr-hook-panel"><summary>Suite setup, success and finally hooks</summary><div id="cr-hooks"></div></details>
   <details><summary>Run identity and revisions</summary><div id="cr-identity"></div></details>
 </div>
 <script>
-  const D = DATA, cases = D.cases || [], bad = c => ['failed','error'].includes(c.status);
+  const D = DATA, cases = D.cases || [], bad = c => ['failed','error','cancelled'].includes(c.status);
   let selected = cases.find(bad) || cases[0];
   dt.title(D.collection || META.title || 'Collection suite');
   dt.$('#cr-outcome').textContent = D.status || 'unknown'; dt.$('#cr-outcome').classList.add(['passed','failed','error','skipped','running','cancelled'].includes(D.status) ? D.status : 'error');
   const c = D.counts || {};
   dt.$('#cr-summary').textContent = `${c.passed || 0} passed · ${c.failed || 0} failed · ${c.errors || 0} errors · ${c.skipped || 0} skipped · ${c.cases || 0} selected · ${D.ms || 0} ms`;
-  const messages = [D.error, ...(D.cleanupErrors || []).map(x => `${x.collection || x.script}: ${x.error}`)].filter(Boolean);
+  const failedHooks = (D.hooks || []).filter(h => h.result?.ok === false);
+  dt.$('#cr-hook-panel').open = failedHooks.length > 0;
+  if (cases.some(bad)) dt.$('#cr-filter').value = 'failed';
+  const messages = [D.error, ...failedHooks.map(h => `${h.kind || 'Suite hook'}: ${h.result.error || 'Failed'}`), ...(D.cleanupErrors || []).map(x => `${x.collection || x.script}: ${x.error}`)].filter(Boolean);
   dt.$('#cr-alerts').innerHTML = messages.map(x => `<div class="cr-alert failed">${dt.esc(x)}</div>`).join('');
   function detail() {
     const el = dt.$('#cr-detail');
     if (!selected) { el.innerHTML = '<p class="cr-empty">No cases were selected. Change the tags or script selection and plan again.</p>'; return; }
     const k = selected, r = k.result || {};
-    el.innerHTML = `<h2>${dt.esc(k.script)}</h2><div class="${dt.esc(k.status)}">${dt.esc(k.status)} · ${k.ms || 0} ms · dataset row ${k.row ?? '—'}</div>${r.error || k.error ? `<pre class="failed">${dt.esc(r.error || k.error)}</pre>` : ''}<h3>Case bindings</h3><div id="cr-bindings"></div><h3>Assertions</h3>${(r.tests?.list || []).map(t => `<div class="cr-assertion"><b class="${t.ok ? 'passed' : 'failed'}">${t.ok ? 'Passed' : 'Failed'}: ${dt.esc(t.name)}</b>${t.error ? `<pre>${dt.esc(t.error)}</pre>` : ''}</div>`).join('') || '<p class="muted">No named assertions were recorded.</p>'}<h3>Steps and attempts</h3>${(r.steps || []).map(s => `<details class="cr-step"><summary><span class="${s.ok ? 'passed' : 'failed'}">${s.ok ? 'Passed' : 'Failed'}</span> · ${dt.esc(s.do)} · ${s.ms || 0} ms${s.attempts?.length > 1 ? ` · ${s.attempts.length} attempts` : ''}</summary><pre>${dt.esc(dt.prettyJson(s))}</pre></details>`).join('') || '<p class="muted">No steps ran.</p>'}<details style="margin-top:18px"><summary>Retained case evidence</summary><div id="cr-evidence"></div></details>`;
+    el.innerHTML = `<h2>${dt.esc(k.script)}</h2><div class="${dt.esc(k.status)}">${dt.esc(k.status)} · ${k.ms || 0} ms · dataset row ${k.row ?? '—'}</div>${r.error || k.error ? `<pre class="failed">${dt.esc(r.error || k.error)}</pre>` : ''}<details><summary>Case bindings</summary><div id="cr-bindings"></div></details><h3>Assertions</h3>${(r.tests?.list || []).map(t => `<div class="cr-assertion"><b class="${t.ok ? 'passed' : 'failed'}">${t.ok ? 'Passed' : 'Failed'}: ${dt.esc(t.name)}</b>${t.error ? `<pre>${dt.esc(t.error)}</pre>` : ''}</div>`).join('') || '<p class="muted">No named assertions were recorded.</p>'}<h3>Steps and attempts</h3>${(r.steps || []).map((s, i, steps) => `<details class="cr-step" ${!s.ok && steps.findIndex(x => !x.ok) === i ? 'open' : ''}><summary><span class="${s.ok ? 'passed' : 'failed'}">${s.ok ? 'Passed' : 'Failed'}</span> · ${dt.esc(s.do)} · ${s.ms || 0} ms${s.attempts?.length > 1 ? ` · ${s.attempts.length} attempts` : ''}</summary><pre>${dt.esc(dt.prettyJson(s))}</pre></details>`).join('') || '<p class="muted">No steps ran.</p>'}<details style="margin-top:18px"><summary>Retained case evidence</summary><div id="cr-evidence"></div></details>`;
     dt.json(dt.$('#cr-bindings'), { id:k.id, tags:k.tags, seed:D.seed, matrix:k.matrix, revision:k.revision, ...(k.params ? {params:k.params} : {}) }, {open:1});
     dt.json(dt.$('#cr-evidence'), r, {open:1});
   }

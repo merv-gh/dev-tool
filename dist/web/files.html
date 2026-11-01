@@ -25,6 +25,8 @@
   .pv img { max-width: 100%; }
   mark { background: var(--warn-bg); color: inherit; }
 </style>
+<link rel="stylesheet" href="/static/inline.css">
+<script src="/static/inline.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -121,6 +123,7 @@ async function preview(p) {
   // open the first levels; or the folders down to the file to show
   for (const e of R.data.entries) if (e.dir && (e.path.split('/').length - (R.data.dir ? R.data.dir.split('/').length : 0)) <= 1) open.add(e.path);
   draw();
+  dtInline.mount(document.querySelector('.wrap'), { title: R.title || R.data.store || 'Files', summary: `${files.length} files · ${R.data.entries.length - files.length} folders` });
   const want = qs.get('open') || R.data.select;
   if (want) preview(want);
 })();

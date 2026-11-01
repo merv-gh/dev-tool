@@ -66,6 +66,8 @@
   body.embed .hide-embed { display: none; }
   body:not(.embed) .only-embed { display: none; }
 </style>
+<link rel="stylesheet" href="/static/inline.css">
+<script src="/static/inline.js"></script>
 </head>
 <body>
 <header>
@@ -282,6 +284,7 @@ async function load() {
   // ES hits and Kafka payloads are nested; start flattened for ES so fields become columns.
   flat = data.kind === 'es'; $('flat').classList.toggle('on', flat);
   build();
+  dtInline.mount(document.body, { title: `${data.kind} ${target}`.trim(), summary: `${data.total} rows${data.ms != null ? ` · ${data.ms} ms` : ''}` });
 }
 load();
 </script>
