@@ -11,6 +11,7 @@ notes.json
 /repos/
 /passports/
 /work/
+/contexts/
 /gradle.properties
 /maven-settings.xml
 plugins/*.js

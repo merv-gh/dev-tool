@@ -132,3 +132,20 @@ test('trusted: loopback, bearer key, dt_key cookie, or DT_TRUST_NETWORK', () => 
   process.env.DT_TRUST_NETWORK = '1';
   try { assert.equal(trusted(req('10.0.0.5')), true); } finally { delete process.env.DT_TRUST_NETWORK; }
 });
+
+test('admin context tools round trip files, capture tool results and ship the scratchpad', async () => {
+  const call = async (name, args, headers = {}) => { const r = await post('/api/tool/' + name, args, headers); assert.equal(r.status, 200); return (await r.json()).result; };
+  const c = await call('context_open', { title: 'HTTP context', tickets: ['HTTP-7'], repositories: ['SHOP/orders'] }, { 'x-chat-id': 'http-context-chat' });
+  assert.ok(c.chats.includes('http-context-chat'));
+  const oa = await post('/oapi/context_open', { id: c.id }, { 'x-openwebui-chat-id': 'openapi-context-chat' });
+  assert.ok((await oa.json()).chats.includes('openapi-context-chat'));
+  const mc = await post('/mcp', { jsonrpc: '2.0', id: 70, method: 'tools/call', params: { name: 'context_open', arguments: { id: c.id } } }, { 'x-chat-id': 'mcp-context-chat' });
+  const mr = await mc.json(); assert.ok(JSON.parse(mr.result.content[0].text).chats.includes('mcp-context-chat'));
+  const found = await call('context_find', { query: 'HTTP-7' }); assert.equal(found.contexts[0].id, c.id);
+  await call('context_write', { id: c.id, path: 'notes.md', content: '# HTTP evidence', summary: 'server integration' });
+  assert.equal((await call('context_read', { id: c.id, path: 'notes.md' })).content, '# HTTP evidence');
+  const run = await call('context_run', { id: c.id, tool: 'find', arguments: { q: 'HTTP-context' } }); assert.equal(run.ok, true); assert.ok(run.saved.startsWith('calls/'));
+  assert.ok((await call('context_get', { id: c.id })).files.some(f => f.path === run.saved));
+  const html = await (await fetch(base + '/admin')).text(); assert.match(html, /Context &amp; scratchpad|Context & scratchpad/); assert.match(html, /cxRun/);
+  const js = await fetch(base + '/static/admin-context.js'); assert.equal(js.status, 200); assert.match(await js.text(), /context_run/);
+});

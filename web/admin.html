@@ -6,6 +6,25 @@
 <title>dt admin</title>
 <link rel="stylesheet" href="/static/ui.css">
 <style>
+  .cx-label { display: block; margin: 12px 0 5px; font-size: 12px; color: var(--muted); }
+  .cx-list { padding: 8px; }
+  .cx-item { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 12px 8px; border-radius: 4px; }
+  .cx-item + .cx-item { border-top: 1px solid var(--line); }
+  .cx-item:hover, .cx-item.on { background: var(--accent-soft); }
+  .cx-item strong, .cx-item span { display: block; overflow-wrap: anywhere; }
+  .cx-item span { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .cx-files { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
+  .cx-file { font: 12px ui-monospace, Menlo, monospace; overflow-wrap: anywhere; max-width: 100%; }
+  .cx-wide { width: 100%; box-sizing: border-box; }
+  pre.cx-wrap { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .cx-wrap { overflow-wrap: anywhere; }
+  #cxWorking h2 { margin: 28px 0 10px; font-size: 16px; }
+  #tab-context .grid-form input { min-width: 0; width: 100%; }
+  #tab-context :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #tab-context ::selection { background: var(--accent-soft); color: var(--fg); }
+  @media (max-width: 900px) { #tab-context .pm-side { position: static; max-height: 300px; } }
+  @media (max-width: 480px) { #tab-context .grid-form { grid-template-columns: 1fr; gap: 4px; } }
+  #cxTool { max-width: 100%; } #cxUpload { min-width: 0; max-width: 100%; }
   .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin: 4px 0 14px; overflow-x: auto; }
   .tabs button { border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; padding: 7px 12px; color: var(--muted); }
   .tabs button.on { color: var(--fg); border-bottom-color: var(--accent); font-weight: 600; }
@@ -118,6 +137,7 @@
     <button data-tab="index" class="on">Index</button>
     <button data-tab="explore">Explore</button>
     <button data-tab="passports">Passports<span class="n" id="nPassports"></span></button>
+    <button data-tab="context">Context & scratchpad</button>
     <button data-tab="scripts">Scripts<span class="n" id="nScripts"></span></button>
     <button data-tab="sites">Sites<span class="n" id="nSites"></span></button>
     <button data-tab="api">API routes</button>
@@ -222,6 +242,57 @@
     </div>
   </section>
 
+  <section id="tab-context" hidden>
+    <p class="hint">Keep task memory across chats: plans, progress, findings, files and saved tool results. Search by ticket, repository or workspace. No Git repository required.</p>
+    <div id="cxMessage" class="hint" role="status" aria-live="polite"></div>
+    <div class="pm">
+      <aside class="card pm-side">
+        <div class="pm-head"><strong>Contexts</strong><span id="cxCount" class="muted"></span><button id="cxNew">New context</button></div>
+        <label class="cx-label" for="cxSearch">Find previous work</label><input id="cxSearch" class="filter" placeholder="Ticket, repo, workspace, topic…">
+        <div id="cxList" class="pm-tree cx-list"></div>
+      </aside>
+      <div id="cxEditor" class="card pm-main" hidden>
+        <div data-context-edit>
+          <div class="titlebar"><label for="cxTitle">Task</label><input id="cxTitle" class="title" placeholder="Task title"><span id="cxDirty" class="dirty"></span><button id="cxSaveMeta" class="primary">Save context</button></div>
+          <label class="cx-label" for="cxSummary">Summary · include terms another chat might search</label><textarea id="cxSummary" rows="2"></textarea>
+          <details><summary>Discovery links & status</summary><p class="hint">Comma-separated identifiers. Link the same ticket or task to resume this context. Repository and workspace links also find related work.</p><div class="grid-form">
+            <label for="cxStatus">Status</label><select id="cxStatus"><option value="active">Active</option><option value="paused">Paused</option><option value="done">Done</option></select>
+            <label for="cx-tickets">Tickets</label><input id="cx-tickets" placeholder="SHOP-142">
+            <label for="cx-repositories">Repositories</label><input id="cx-repositories" placeholder="SHOP/order-service, SHARED/domain">
+            <label for="cx-workspaces">Workspaces</label><input id="cx-workspaces" placeholder="Workspace ids or paths">
+            <label for="cx-chats">Chats</label><input id="cx-chats" placeholder="Stable chat ids">
+            <label for="cx-tasks">Tasks</label><input id="cx-tasks" placeholder="Stable task ids">
+            <label for="cx-tags">Tags</label><input id="cx-tags" placeholder="payments, incident, migration">
+          </div></details>
+        </div>
+        <div id="cxWorking" hidden>
+          <p id="cxLocation" class="hint mono cx-wrap"></p>
+          <h2>Files & progress</h2>
+          <div id="cxFiles" class="cx-files" aria-label="Context files"></div>
+          <div class="row"><button id="cxNewFile">New file</button><label for="cxUpload">Upload file (up to 1 MiB)</label><input type="file" id="cxUpload"></div>
+          <div data-context-edit id="cxFileEdits">
+            <label class="cx-label" for="cxPath">Relative file name</label><input id="cxPath" class="cx-wide" placeholder="findings/orders.md">
+            <label class="cx-label" for="cxFileSummary">File summary · used in search</label><input id="cxFileSummary" class="cx-wide">
+            <label class="cx-label" for="cxEncoding">Encoding</label><select id="cxEncoding"><option value="utf8">Text (UTF-8)</option><option value="base64">Binary (base64)</option></select>
+            <label class="cx-label" for="cxContent">Contents</label><textarea id="cxContent" rows="16" spellcheck="false"></textarea>
+          </div>
+          <div class="row"><button id="cxSaveFile" class="primary">Save file</button><button id="cxPreviewButton">Preview text</button><button id="cxDownload">Download saved file</button><button id="cxDeleteFile">Delete file</button></div>
+          <pre id="cxPreview" class="code cx-wrap" hidden></pre>
+          <h2>Tool scratchpad</h2>
+          <p class="hint">Run any enabled tool and keep its result in this context. Tools have their usual effects. Review suggestions and arguments before running.</p>
+          <label class="cx-label" for="cxGoal">What do you want to do in this context?</label><textarea id="cxGoal" rows="2" placeholder="Inspect who writes the order table for this ticket"></textarea>
+          <div class="row"><label><input id="cxUseModel" type="checkbox"> Ask configured model (shares summary and progress excerpt)</label><button id="cxHint">Suggest tools</button></div>
+          <pre id="cxHintOutput" class="code cx-wrap" aria-live="polite"></pre>
+          <div class="row"><label for="cxToolFilter">Find tool</label><input id="cxToolFilter" placeholder="Filter by name or description"><label for="cxTool">Tool</label><select id="cxTool"></select></div>
+          <details><summary>Description & exact argument schema</summary><pre id="cxSchema" class="code cx-wrap"></pre></details>
+          <label class="cx-label" for="cxArgs">Arguments (JSON)</label><textarea id="cxArgs" rows="8" spellcheck="false">{}</textarea>
+          <div class="row"><button id="cxRun" class="primary">Run & save result</button><button id="cxCaptured" hidden></button></div>
+          <pre id="cxRunOutput" class="code cx-wrap" aria-live="polite">Run a tool to save its arguments and result here.</pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section id="tab-config" hidden>
     <h2><span id="cfgName">config.json</span> <span class="muted" id="cfgFile"></span></h2>
     <p class="hint" id="cfgHint">Environments, integrations, tools and browser sites. Secrets stay in <code>.env</code>; write <code>${NAME}</code> here to use one. Saving applies at once: tools reload without a restart.</p>
@@ -240,6 +311,7 @@
 </div>
 <script src="/static/ui.js"></script>
 <script src="/static/admin-scripts.js"></script>
+<script src="/static/admin-context.js"></script>
 <script>
 let S = null, tab = 'index', selectedJob = null, timer = null;
 const api = async (p, body) => {
@@ -478,10 +550,12 @@ async function loadRoutes() {
 }
 
 function show(t) {
+  if (tab === 'context' && t !== tab && !contextCanLeave()) return;
   tab = t;
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   document.querySelectorAll('section[id^=tab-]').forEach(s => s.hidden = s.id !== `tab-${t}`);
   history.replaceState(null, '', `#${t}`);
+  if (t === 'context') loadContexts().catch(e => contextMessage(e.message, true));
   if (t === 'config') loadConfig().catch(e => toast(e.message));
   if (t === 'scripts') loadScripts().catch(e => toast(e.message));
   if (t === 'sites') loadSites().catch(e => toast(e.message));

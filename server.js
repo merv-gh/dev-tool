@@ -65,7 +65,7 @@ function status() {
 }
 
 // ── MCP (Streamable HTTP, JSON responses) ─────────────────────────────
-async function mcpHandle(msg) {
+async function mcpHandle(msg, session) {
   const reply = (result) => ({ jsonrpc: '2.0', id: msg.id, result });
   switch (msg.method) {
     case 'initialize':
@@ -79,7 +79,7 @@ async function mcpHandle(msg) {
     case 'tools/list': return reply({ tools: await tools.schemas() });
     case 'tools/call': {
       try {
-        const result = await tools.call(msg.params.name, msg.params.arguments || {}, { source: 'mcp' });
+        const result = await tools.call(msg.params.name, msg.params.arguments || {}, { source: 'mcp', session });
         return reply({ content: [{ type: 'text', text: typeof result === 'string' ? result : JSON.stringify(result) }] });
       } catch (e) {
         return reply({ content: [{ type: 'text', text: `Error: ${errorPayload(e).error}` }], structuredContent: errorPayload(e), isError: true });
@@ -94,7 +94,7 @@ async function mcpHandle(msg) {
 async function mcp(req, res) {
   const body = await readJsonBody(req);
   const batch = Array.isArray(body);
-  const replies = (await Promise.all((batch ? body : [body]).map(mcpHandle))).filter(Boolean);
+  const replies = (await Promise.all((batch ? body : [body]).map(msg => mcpHandle(msg, req.headers['x-openwebui-chat-id'] || req.headers['x-chat-id'])))).filter(Boolean);
   if (!replies.length) return send(res, 202, '');
   send(res, 200, batch ? replies : replies[0], { 'mcp-session-id': req.headers['mcp-session-id'] || crypto.randomUUID() });
 }
@@ -154,7 +154,7 @@ const routes = [
   ['GET', '/api/find', true, (req, res, url) => send(res, 200, catalog.find(url.searchParams.get('env') || envNames()[0], url.searchParams.get('q') || '', { limit: Number(url.searchParams.get('limit')) || 300 }))],
   ['GET', '/api/tools', false, async (req, res, url) => send(res, 200, await tools.schemas({ profile: url.searchParams.get('profile') || 'all' }))],
   ['POST', '/api/tool/*', true, async (req, res, url) => {
-    try { send(res, 200, { result: await tools.call(url.pathname.split('/').pop(), await readJsonBody(req), { source: 'api' }) }); }
+    try { send(res, 200, { result: await tools.call(url.pathname.split('/').pop(), await readJsonBody(req), { source: 'api', session: req.headers['x-openwebui-chat-id'] || req.headers['x-chat-id'] }) }); }
     catch (e) { send(res, e.statusCode || 400, errorPayload(e)); }
   }],
   ['GET', '/openapi.json', false, async (req, res, url) => send(res, 200, await openapi(url.searchParams.get('profile') || undefined))],

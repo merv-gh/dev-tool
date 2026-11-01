@@ -61,6 +61,10 @@ test('files: local and SFTP stores list, search, read, write, copy; read-only an
   assert.deepEqual((await T.call('files_stores', {})).map(s => [s.store, s.type, s.write]).slice(0, 3), [['templates', 'local', false], ['partner', 'sftp', true], ['archive', 'sftp', false]]);
   const l = await T.call('files_list', { store: 'templates', recursive: true });
   assert.deepEqual(l.rows.map(r => r.path), ['orders', 'orders/order-basic.json', 'readme.txt']);
+  assert.deepEqual((await T.call('files_list', { store: 'templates', path: 'orders' })).rows.map(r => r.path), ['orders/order-basic.json']);
+  assert.deepEqual((await T.call('files_search', { store: 'templates', path: 'orders' })).rows.map(r => r.path), ['orders/order-basic.json']);
+  await assert.rejects(T.call('files_list', { store: 'templates', dir: 'orders', path: 'other' }), /dir or path/);
+  await assert.rejects(T.call('files_search', { store: 'templates', path: '../../etc' }), /leaves the store/);
   const s = await T.call('files_search', { store: 'templates', text: 'c-77' });
   assert.equal(s.rows[0].path, 'orders/order-basic.json');
   assert.equal(s.rows[0].line, 4);

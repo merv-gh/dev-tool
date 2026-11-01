@@ -857,3 +857,85 @@ Notes for coding agents are in [AGENTS.md](AGENTS.md).
 
 ## License
 MIT
+
+### Context: durable task memory and admin scratchpad
+
+Open **Admin → Context & scratchpad** to keep notes, plans, progress, findings,
+files, scripts and tool evidence across chats. Contexts are ordinary folders in
+`DT_HOME/contexts/<id>/`; they do not need Git and survive workspace cleanup.
+Each folder has a managed `index.json` (title, summary, status, tickets,
+repositories, workspaces, chat/task IDs, tags and file descriptions), plus an
+editable `progress.md`. The runtime directory is gitignored. Back it up separately
+from the disposable cache; there is no automatic expiration or remote sharing.
+
+```sh
+node cli.js tool context_find '{"query":"SHOP-142"}'
+node cli.js tool context_open '{"title":"Investigate order rounding","tickets":["SHOP-142"],"repositories":["SHOP/orders"],"chats":["chat-42"]}'
+# Use the returned id in subsequent calls:
+node cli.js tool context_write '{"id":"<id>","path":"findings/rounding.md","content":"Evidence: orders.java:42 ...","summary":"Rounding rules and evidence"}'
+node cli.js tool context_run '{"id":"<id>","tool":"find","arguments":{"q":"order_total"},"summary":"Locate the function for SHOP-142"}'
+```
+
+`context_open` reuses an exact ticket/task match, or a chat match when no ticket
+or task is given, and adds discovery links. An explicit id selects that folder;
+a new ticket/task in the same chat can have its own context;
+if several folders match, it returns candidates without creating or merging one.
+Clients supplying `X-OpenWebUI-Chat-Id` or `X-Chat-Id` automatically link the
+chat when opening a context (HTTP/OpenAPI/MCP); other clients can supply IDs explicitly.
+Repository/workspace links identify related work and can point to several folders.
+`context_find` searches metadata, indexed file names and summaries, returning match
+reasons; `context_get` lists the folder and files, and `context_read` retrieves the
+selected evidence. `context_update` changes metadata (supplied link lists replace
+existing lists). `context_write` supports text, append and base64 files;
+`context_delete_file` removes a selected file. Ticket/task/chat identifiers also find candidates indexed under another identity
+category; select the returned folder id explicitly to attach links without merging
+unrelated work. Read/write revisions allow editors
+to reject stale updates. A null `expected_revision` on a write requires a new file.
+File bodies remain exactly as supplied: keep credentials and cookies out of notes.
+Files are limited to 2 MiB each, 1,000 files / 64 MiB per folder. The normal tool
+request budget also applies (2 MiB by default, including JSON/base64 overhead);
+the admin uploader accepts files up to 1 MiB. Scripts saved here are files; promote
+one with `script_save` and run with `script_run` when execution is wanted.
+
+The admin scratchpad lists enabled tools and their exact schemas, accepts editable
+JSON arguments, runs through the normal tool validation/permissions, and saves a
+redacted snapshot of arguments, timestamps and result or error under `calls/`.
+Inspect both `ok` and `saved`: saving can fail after a tool has run. Do not retry a
+state-changing call just to save its evidence. Large results have a bounded
+scratchpad preview; captures exceeding the file budget return `saveError`.
+
+**Suggest tools** discovers tools without a model. Opting into **Ask configured
+model** sends a bounded, redacted goal, summary, discovery links and progress excerpt
+to `llm.baseUrl` / `llm.model` (or `LLM_BASE_URL` / `LLM_MODEL`, with optional
+`LLM_API_KEY`). It proposes arguments and reports schema errors or missing facts;
+it never executes the suggestion. Review and edit before **Run & save result**.
+No model configuration is needed for the rest of Context. Tool availability and
+permissions are the same as for CLI/MCP calls.
+
+The bundled agent prompt encourages context lookup before multi-step work, reuse
+of related evidence, and regular plan/progress/evidence checkpoints. Reapply your
+Open WebUI setup to update an existing model's prompt. Context files and model
+suggestions are untrusted evidence; verify old findings against current sources.
+The direct/tester profiles expose everyday context tools; other operations and
+compact profiles reach them through `tool_search` with `query="context"`.
+
+To evaluate Context with a real Qwen served by Ollama, forward the server over SSH
+and run the opt-in evaluator against that loopback port:
+
+```sh
+ssh -N -L 41435:127.0.0.1:11435 user@model-host
+node dev/eval-context-model.js --model MODEL_TAG --output cache/context-evaluation.json
+# Include a pre-existing-memory test; enable reasoning when supported:
+node dev/eval-context-model.js --model MODEL_TAG --thinking true --cases ledger,reserve,capacity,related --output cache/context-evaluation-thinking.json
+```
+
+The evaluator uses the shipped prompt and real enabled tools in an isolated
+synthetic home, with a 32K context window, temperature zero and explicit turn/call/
+time budgets. Questions do not name Context tools. It checks ledger joins,
+revision deduplication and currency rounding, a fresh-chat continuation after
+exports disappear, regional failover capacity, and (optionally) reuse of a seeded
+completed task. New calculation answers remain outside model-visible stores;
+seeded prior results are marked separately from model-created checkpoints.
+Reports retain transcripts, source/memory call counts, hashes, model metadata,
+independent numeric differences and the temporary home for inspection. This is a
+small behavioral evaluation, not certification of general model reliability.

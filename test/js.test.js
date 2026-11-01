@@ -119,3 +119,19 @@ test('errors: hook errors stop the step, capture of a missing path, validation, 
   assert.match((await S.run('jobs/start')).error, /turned off/);
   writeConfig({});
 });
+
+
+test('console output cannot corrupt sandbox JSON or interleaved tool RPC, including reused sessions', async () => {
+  const session = new (require('../lib/js').Session)();
+  try {
+    const first = await session.run(`console.log(JSON.stringify({merchant:'amber',reserve:Math.floor(3939211*33/400+0.5)}, null, 2));
+      globalThis.console.warn('warning');
+      const found = await tools.lookup({id: 42});
+      console.info(found);
+      return found.value;`, {}, { onTool: async (name, args) => { assert.equal(name, 'lookup'); assert.deepEqual(args, { id: 42 }); return { value: 17 }; } });
+    assert.equal(first.error, undefined); assert.equal(first.returned, 17);
+    assert.equal(JSON.parse(first.logs[0]).reserve, 324985); assert.equal(first.logs[1], 'warning'); assert.deepEqual(JSON.parse(first.logs[2]), { value: 17 });
+    const second = await session.run(`console.error('another run'); text('output'); return 9;`);
+    assert.equal(second.error, undefined); assert.deepEqual(second.logs, ['another run']); assert.deepEqual(second.output, ['output']); assert.equal(second.returned, 9);
+  } finally { session.close(); }
+});
