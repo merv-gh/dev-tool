@@ -897,6 +897,43 @@ request budget also applies (2 MiB by default, including JSON/base64 overhead);
 the admin uploader accepts files up to 1 MiB. Scripts saved here are files; promote
 one with `script_save` and run with `script_run` when execution is wanted.
 
+**A working folder for the model.** `context_list` lists a directory (optional
+recursion and pagination); `context_search` finds literal text in file bodies
+with bounded line excerpts, file revisions and explicit scan limits. Search scans
+at most 16 MiB per call and skips binary files. `context_read` accepts `from`/`to`
+for line ranges while returning the revision of the entire file. `context_edit`
+applies exact `{find, replace}` edits together: every match must be unique and the
+last read's `expected_revision` is required. Failed edits leave the file intact.
+
+Pass the Context id to `code` for an async `files` helper rooted in that folder:
+
+```json
+{"context":"<id>","code":"const rows = await files.readJson('inputs/orders.json'); const totals = {}; for (const r of rows) totals[r.status] = (totals[r.status] || 0) + r.amount; await files.writeJson('results/totals.json', totals, {summary:'Order totals by status'}); return totals;"}
+```
+
+`files.list(dir, options)`, `files.search(query, options)`, `files.read(path)` and
+`files.readFile(path, options)` inspect nearby files; `readFile` returns content,
+revision and range metadata. `files.readJson`, `files.write`, `files.writeJson`
+and `files.edit(path, edits)` support processing and incremental changes without
+sending full files back to chat. Writes create new files by default; fully read
+an existing file first to update it with its cached revision. A partial read does
+not authorize a whole-file overwrite. The helper resets between code calls;
+`files.edit` reads the file first if needed. Tool permissions still apply and
+there is no direct host filesystem access or automatic script execution.
+
+`context_get` returns `store: "context:<id>"`. Use that store with existing
+`files_list/read/write/search/browse/show/copy` tools, including previews in chat.
+No mount configuration is needed. Copies between Context folders or configured
+local/SFTP stores preserve binary bytes; destination stores must allow writes,
+and existing files require `overwrite: true`. Context limits, managed-index and
+symlink protections apply through this adapter too. To export a generated text
+file to a linked workspace, use `code` with its context and
+`await tools.workspace_write({workspace:'<workspace>', path:'scripts/check.js', content:await files.read('scripts/check.js')})`;
+the normal workspace validation, compiler checks and patch review apply. Link
+workspaces with `context_update`; that metadata never grants access to arbitrary
+host paths. Existing Context files are available immediately, including files
+added externally to the folder.
+
 The admin scratchpad lists enabled tools and their exact schemas, accepts editable
 JSON arguments, runs through the normal tool validation/permissions, and saves a
 redacted snapshot of arguments, timestamps and result or error under `calls/`.

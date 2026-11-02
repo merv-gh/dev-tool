@@ -126,3 +126,107 @@ test('ticket/task/chat classification mistakes discover related memory without i
   const selected = C.open({ id: original.id, tasks: ['FIN-624'] }); assert.deepEqual(selected.tasks, ['FIN-624']);
   assert.equal(C.find({ tasks: ['FIN-624'] }).contexts[0].matchKind, 'linked');
 });
+
+test('nearby files list folders, search bounded body excerpts and edit exact text without losing concurrent changes', async () => {
+  const c = C.open({ title: 'Nearby files' });
+  C.write({ id: c.id, path: 'inputs/orders.txt', content: 'one\nPaid order\nthree\nPaid again\n', summary: 'Order evidence' });
+  C.write({ id: c.id, path: 'inputs/binary.bin', content: 'AAEC/w==', encoding: 'base64' });
+  const listed = await tools.call('context_list', { id: c.id });
+  assert.ok(listed.entries.some(f => f.path === 'inputs' && f.dir)); assert.ok(!listed.entries.some(f => f.path === 'index.json'));
+  assert.equal(C.list({ id: c.id, recursive: true, offset: 1, limit: 1 }).truncated, true);
+  const found = await tools.call('context_search', { id: c.id, dir: 'inputs', query: 'paid', limit: 1 });
+  assert.equal(found.hits[0].path, 'inputs/orders.txt'); assert.equal(found.hits[0].line, 2); assert.equal(found.truncated, true);
+  assert.ok(found.skipped.some(f => f.reason === 'binary')); assert.ok(found.hits[0].match.length < 500);
+  assert.equal(C.search({ id: c.id, dir: 'inputs', query: 'paid', case_sensitive: true }).hits.length, 0);
+  assert.equal(C.search({ id: c.id, query: 'Paid', pattern: '*.bin' }).hits.length, 0);
+  const range = await tools.call('context_read', { id: c.id, path: 'inputs/orders.txt', from: 2, to: 2 });
+  assert.equal(range.content, 'Paid order'); assert.equal(range.truncated, true); assert.equal(range.lines, 5);
+  assert.equal(range.revision, C.read({ id: c.id, path: range.path }).revision);
+  assert.throws(() => C.read({ id: c.id, path: range.path, from: 0 }), /integer/);
+  assert.throws(() => C.read({ id: c.id, path: 'inputs/binary.bin', from: 1 }), /text/);
+  assert.throws(() => C.edit({ id: c.id, path: range.path, edits: [{ find: 'one', replace: '1' }] }), /requires expected_revision/);
+  const edit = await tools.call('context_edit', { id: c.id, path: range.path, expected_revision: range.revision, edits: [{ find: 'Paid order', replace: '$& settled' }] });
+  assert.equal(C.read({ id: c.id, path: range.path }).content, 'one\n$& settled\nthree\nPaid again\n');
+  assert.throws(() => C.edit({ id: c.id, path: range.path, expected_revision: range.revision, edits: [{ find: 'one', replace: 'stale' }] }), /changed/);
+  assert.throws(() => C.edit({ id: c.id, path: range.path, expected_revision: edit.revision, edits: [{ find: 'one', replace: 'changed' }, { find: 'absent', replace: 'no' }] }), /exactly once/);
+  assert.equal(C.read({ id: c.id, path: range.path }).revision, edit.revision, 'failed edit is atomic');
+  C.write({ id: c.id, path: 'duplicate.txt', content: 'aaa' });
+  assert.throws(() => C.edit({ id: c.id, path: 'duplicate.txt', expected_revision: C.read({ id: c.id, path: 'duplicate.txt' }).revision, edits: [{ find: 'aa', replace: 'b' }] }), /exactly once/);
+  for (const operation of ['list', 'search']) assert.throws(() => C[operation]({ id: c.id, dir: '../escape', query: 'x' }));
+  fs.symlinkSync(tmp, path.join(c.folder, 'linked'));
+  try { for (const operation of ['list', 'search']) assert.throws(() => C[operation]({ id: c.id, dir: 'linked', query: 'x' }), /symbolic/); }
+  finally { fs.unlinkSync(path.join(c.folder, 'linked')); }
+});
+
+test('Context file-store adapter supports browsing, exact binary copies and budgets without enabling other stores for writing', async () => {
+  const F = require('../lib/files'), c = C.open({ title: 'Context mount' }), other = C.open({ title: 'Other mount' });
+  assert.equal(C.get(c.id).store, `context:${c.id}`);
+  await F.write(`context:${c.id}`, 'artifacts/bytes.bin', 'AP+A/w==', { base64: true });
+  await F.copy(`context:${c.id}`, 'artifacts/bytes.bin', `context:${other.id}`, 'copied.bin');
+  assert.equal(C.read({ id: other.id, path: 'copied.bin', encoding: 'base64' }).content, 'AP+A/w==');
+  await assert.rejects(() => F.copy(`context:${c.id}`, 'artifacts/bytes.bin', `context:${other.id}`, 'copied.bin'), /changed/);
+  await F.copy(`context:${c.id}`, 'artifacts/bytes.bin', `context:${other.id}`, 'copied.bin', { overwrite: true });
+  const listing = await F.list(`context:${c.id}`, '', { recursive: true });
+  assert.ok(listing.some(f => f.path === 'artifacts/bytes.bin')); assert.ok(!listing.some(f => f.path === 'index.json'));
+  const browse = await tools.call('files_browse', { store: `context:${c.id}` }); assert.match(browse.view, /\/files\//);
+  const browseData = require('../lib/results').load(browse.view.split('/').pop()); assert.equal(browseData.data.store, `context:${c.id}`);
+  await F.mkdir(`context:${c.id}`, 'empty/folder'); assert.ok((await F.list(`context:${c.id}`, 'empty')).some(f => f.dir));
+  for (const file of ['index.json', '.env', '../escape']) await assert.rejects(() => F.write(`context:${c.id}`, file, 'no'));
+  await assert.rejects(() => F.write(`context:${c.id}`, 'oversized', 'x'.repeat(2 * 1024 * 1024 + 1)), /exceeds/);
+  fs.symlinkSync(tmp, path.join(c.folder, 'escape'));
+  try { await assert.rejects(() => F.read(`context:${c.id}`, 'escape/file'), /symbolic/); } finally { fs.unlinkSync(path.join(c.folder, 'escape')); }
+  const cfg = path.join(tmp, 'config.json');
+  fs.writeFileSync(cfg, JSON.stringify({ envs: { test: {} }, files: { readonly: { type: 'local', path: 'read-only' } } })); require('../lib/config').reload();
+  try { await assert.rejects(() => F.copy(`context:${c.id}`, 'progress.md', 'readonly', 'notes.md'), /read-only/); }
+  finally { fs.unlinkSync(cfg); require('../lib/config').reload(); }
+});
+
+test('code works with nearby JSON and notes through enabled tools, rejects blind or stale writes and keeps scopes separate', async () => {
+  const c = C.open({ title: 'File computations' });
+  C.write({ id: c.id, path: 'inputs/orders.json', content: JSON.stringify([{ amount: 5 }, { amount: 7 }]) });
+  const result = await tools.call('code', { context: c.id, code: `
+    const rows = await files.readJson('inputs/orders.json');
+    await files.writeJson('results/total.json', {sum:rows.reduce((n,r)=>n+r.amount,0)}, {summary:'Verified aggregate'});
+    const progress = await files.read('progress.md');
+    await files.write('progress.md', progress + '\\nCalculated total: 12\\n');
+    await files.edit('progress.md', [{find:'Investigate and record evidence',replace:'Calculate and save evidence'}]);
+    const hits = await files.search('Calculated total');
+    return {sum:(await files.readJson('results/total.json')).sum, hits:hits.hits.length, files:(await files.list('results')).total};` });
+  assert.equal(result.ok, true, result.error); assert.deepEqual(result.returned, { sum: 12, hits: 1, files: 1 });
+  assert.equal(JSON.parse(C.read({ id: c.id, path: 'results/total.json' }).content).sum, 12);
+  const blind = await tools.call('code', { context: c.id, code: `await files.write('progress.md','blind overwrite');` });
+  assert.equal(blind.ok, false); assert.match(blind.error, /changed/);
+  const partial = await tools.call('code', { context: c.id, code: `const r=await files.readFile('progress.md',{from:1,to:1});await files.write('progress.md',r.content);` });
+  assert.equal(partial.ok, false); assert.match(partial.error, /changed/);
+  const stale = await tools.call('code', { context: c.id, code: `await files.read('progress.md');await tools.context_write({id:files.id,path:'progress.md',content:'Edited by another chat'});await files.write('progress.md','lost update');` });
+  assert.equal(stale.ok, false); assert.match(stale.error, /changed/); assert.equal(C.read({ id: c.id, path: 'progress.md' }).content, 'Edited by another chat');
+  const noScope = await tools.call('code', { code: `return files.read('progress.md')` }); assert.equal(noScope.ok, false); assert.match(noScope.error, /pass the id/);
+  const escape = await tools.call('code', { context: c.id, code: `await files.read('../other/progress.md');` }); assert.equal(escape.ok, false); assert.match(escape.error, /relative/);
+  const cfg = path.join(tmp, 'config.json'); fs.writeFileSync(cfg, JSON.stringify({ envs: { test: {} }, tools: { disable: ['context_write'] } })); require('../lib/config').reload(); await tools.reload();
+  try {
+    const disabled = await tools.call('code', { context: c.id, code: `await files.write('disabled.txt','no');` }); assert.equal(disabled.ok, false); assert.match(disabled.error, /Unknown tool/);
+    assert.ok(!C.get(c.id).files.some(f => f.path === 'disabled.txt'));
+  } finally { fs.unlinkSync(cfg); require('../lib/config').reload(); await tools.reload(); }
+});
+
+test('body search reports scan limits, and binary edits never rewrite bytes as text', () => {
+  const c = C.open({ title: 'Search budgets' }), data = 'searchable\n' + 'x'.repeat(2 * 1024 * 1024 - 11);
+  for (let i = 0; i < 9; i++) C.write({ id: c.id, path: `evidence/${i}.txt`, content: data });
+  const result = C.search({ id: c.id, dir: 'evidence', query: 'searchable' });
+  assert.ok(result.scannedBytes <= 16 * 1024 * 1024); assert.equal(result.truncated, true); assert.ok(result.skipped.some(f => f.reason === 'scan budget'));
+  C.write({ id: c.id, path: 'binary.bin', content: '/wAB', encoding: 'base64' });
+  const before = C.read({ id: c.id, path: 'binary.bin', encoding: 'base64' });
+  assert.throws(() => C.edit({ id: c.id, path: 'binary.bin', expected_revision: before.revision, edits: [{ find: 'x', replace: 'y' }] }), /UTF-8/);
+  assert.equal(C.read({ id: c.id, path: 'binary.bin', encoding: 'base64' }).content, before.content);
+});
+
+test('nearby generated files export through workspace_write and retain its path validation', async () => {
+  const c = C.open({ title: 'Workspace export', workspaces: ['context-export'] }), W = require('../lib/config').PATHS;
+  const work = path.join(tmp, 'export-workspace'); fs.mkdirSync(work, { recursive: true }); fs.mkdirSync(path.join(W.cache, 'work'), { recursive: true });
+  fs.writeFileSync(path.join(W.cache, 'work', 'context-export.json'), JSON.stringify({ id: 'context-export', path: work, createdAt: new Date().toISOString() }));
+  C.write({ id: c.id, path: 'scripts/check.js', content: 'module.exports = 42;\n' });
+  const result = await tools.call('code', { context: c.id, code: `return await tools.workspace_write({workspace:'context-export',path:'scripts/check.js',content:await files.read('scripts/check.js'),check:false});` });
+  assert.equal(result.ok, true, result.error); assert.equal(fs.readFileSync(path.join(work, 'scripts/check.js'), 'utf8'), 'module.exports = 42;\n');
+  const bad = await tools.call('code', { context: c.id, code: `await tools.workspace_write({workspace:'context-export',path:'../escape.js',content:await files.read('scripts/check.js'),check:false});` });
+  assert.equal(bad.ok, false); assert.match(bad.error, /outside/); assert.equal(fs.existsSync(path.join(tmp, 'escape.js')), false);
+});

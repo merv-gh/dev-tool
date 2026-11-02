@@ -142,3 +142,16 @@ test('the example: ids from one source vs a file, compared in a script, the run 
   const o = await post('/oapi/script_run', { id: 'reconcile/ids' });
   assert.match(o.headers.get('location'), /\/show\/[a-z0-9]+\?embed=1$/, 'script runs embed in Open WebUI');
 });
+
+test('Context folders browse and preview over HTTP without exposing their managed index or unrelated files', async () => {
+  const T = require('../lib/tools');
+  const context = await T.call('context_open', { title: 'Browse task memory' });
+  await T.call('context_write', { id: context.id, path: 'notes/findings.txt', content: 'Verified nearby evidence' });
+  const result = await T.call('files_browse', { store: context.store, dir: 'notes' });
+  const id = result.view.split('/').pop();
+  const preview = await (await fetch(`${base}/api/files/${id}?path=notes/findings.txt`)).json();
+  assert.equal(preview.text, 'Verified nearby evidence');
+  assert.equal((await fetch(`${base}/api/files/${id}?path=index.json`)).status, 403);
+  const show = await post('/oapi/files_show', { store: context.store, path: 'notes/findings.txt' });
+  assert.equal(show.headers.get('content-disposition'), 'inline'); assert.match(show.headers.get('location'), /embed=1/);
+});

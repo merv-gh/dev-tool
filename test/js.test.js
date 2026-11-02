@@ -135,3 +135,16 @@ test('console output cannot corrupt sandbox JSON or interleaved tool RPC, includ
     assert.equal(second.error, undefined); assert.deepEqual(second.logs, ['another run']); assert.deepEqual(second.output, ['output']); assert.equal(second.returned, 9);
   } finally { session.close(); }
 });
+
+test('nearby files scope resets in reused sandboxes without reserving an existing local variable name', async () => {
+  const session = new (require('../lib/js').Session)(), seen = [];
+  const onTool = async (name, args) => { seen.push(args.id); return { content: args.id, revision: args.id }; };
+  try {
+    assert.equal((await session.run("const files=['local']; return files[0];")).returned, 'local');
+    assert.equal((await session.run("return await files.read('note.md');", { context: 'first' }, { onTool })).returned, 'first');
+    assert.equal((await session.run("return await files.read('note.md');", { context: 'second' }, { onTool })).returned, 'second');
+    assert.deepEqual(seen, ['first', 'second']);
+    assert.match((await session.run("return await files.read('note.md');")).error, /pass the id/);
+    assert.match((await session.run("await files.writeJson('invalid.json', undefined);", { context: 'second' })).error, /JSON value/);
+  } finally { session.close(); }
+});

@@ -5,7 +5,7 @@ const fs = require('fs'), os = require('os'), path = require('path'), crypto = r
 const { validateEndpoint } = require('./eval-discovery-model');
 const hash = v => crypto.createHash('sha256').update(typeof v === 'string' ? v : JSON.stringify(v)).digest('hex');
 const ENABLED = ['find', 'tool_search', 'tool_describe', 'tool_execute', 'tool_profiles', 'code', 'files_stores', 'files_list', 'files_search', 'files_read', 'script_list',
-  'context_find', 'context_open', 'context_get', 'context_update', 'context_read', 'context_write', 'context_delete_file', 'context_run', 'context_hint'];
+  'context_find', 'context_open', 'context_get', 'context_list', 'context_search', 'context_edit', 'context_update', 'context_read', 'context_write', 'context_delete_file', 'context_run', 'context_hint'];
 function history() { const file = require('../lib/calls').FILE; return fs.existsSync(file) ? fs.readFileSync(file, 'utf8').split('\n').filter(Boolean).map(s => JSON.parse(s)) : []; }
 function put(root, rel, value) { const f = path.join(root, rel); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, JSON.stringify(value)); }
 function fixtures(root) {
@@ -123,7 +123,7 @@ async function run(o) {
   const prompt = require('../lib/webui').prompt(), samples = [], deadline = Date.now() + o.maxDurationMs;
   let serverModel;
   try { const tags = await (await fetch(o.endpoint.replace(/\/v1$/, '') + '/api/tags', { signal: AbortSignal.timeout(10000) })).json(); serverModel = tags.models?.find(m => m.name === o.model); } catch {}
-  const report = { kind: 'real-model-context-evaluation', model: o.model, serverModel, endpoint: o.endpoint, observedAt: new Date().toISOString(), profile: o.profile, enabledTools: (await T.schemas()).map(t => t.name), exposedTools: schemas.map(t => t.name), promptSha256: hash(prompt), schemaSha256: hash(wire), corpusSha256: oracle.corpusSha256, transport: 'ollama-native', contextTokens: 32768, thinking: o.thinking, sourceSha256: hash(['context.js', 'tools-context.js', 'tools.js'].map(f => fs.readFileSync(path.join(__dirname, '../lib', f), 'utf8'))), sizes: oracle.sizes, home, samples, budgets: o, syntheticOnly: true, oracleExposedToModel: false };
+  const report = { kind: 'real-model-context-evaluation', model: o.model, serverModel, endpoint: o.endpoint, observedAt: new Date().toISOString(), profile: o.profile, enabledTools: (await T.schemas()).map(t => t.name), exposedTools: schemas.map(t => t.name), promptSha256: hash(prompt), schemaSha256: hash(wire), corpusSha256: oracle.corpusSha256, transport: 'ollama-native', contextTokens: 32768, thinking: o.thinking, sourceSha256: hash(['context.js', 'tools-context.js', 'tools.js', 'js.js', 'files.js', 'tool-profiles.js'].map(f => fs.readFileSync(path.join(__dirname, '../lib', f), 'utf8'))), sizes: oracle.sizes, home, samples, budgets: o, syntheticOnly: true, oracleExposedToModel: false };
   const persist = () => { fs.mkdirSync(path.dirname(path.resolve(o.output)), { recursive: true }); fs.writeFileSync(o.output, JSON.stringify(report, null, 2)); };
   for (const item of o.cases.split(',').map(id => QUESTIONS.find(q => q.id === id))) {
     if (Date.now() >= deadline) break;
@@ -179,7 +179,7 @@ async function run(o) {
     sample.executedCalls = history().slice(historyOffset).map(c => ({ tool: c.tool, source: c.source, ok: c.ok, args: c.args, ...(c.error ? { error: c.error } : {}) }));
     sample.sourceReads = sample.executedCalls.filter(c => c.tool === 'files_read').length;
     sample.memoryReads = sample.executedCalls.filter(c => c.tool === 'context_read').length;
-    sample.memoryWrites = sample.executedCalls.filter(c => ['context_write', 'context_run', 'context_update'].includes(c.tool)).length;
+    sample.memoryWrites = sample.executedCalls.filter(c => ['context_write', 'context_edit', 'context_run', 'context_update'].includes(c.tool)).length;
     const contexts = require('../lib/context').find({ limit: 100 }).contexts;
     sample.persistedContexts = contexts.map(c => ({ id: c.id, title: c.title, tickets: c.tickets, files: require('../lib/context').get(c.id).files }));
     sample.contextUsed = events.some(e => (e.name === 'tool_execute' ? e.arguments?.name : e.name)?.startsWith('context_') || (e.result?.calls || []).some(c => c.startsWith('context_')));
