@@ -63,3 +63,18 @@ test('saving a file cannot hide a concurrent metadata edit from another chat', a
   assert.match(h.$('cxMessage').textContent, /changed/); assert.equal(C.get(c.id).title, 'Other chat title');
   assert.equal(h.$('cxTitle').value, 'My title draft'); assert.equal(h.run('contextDirty'), true);
 });
+
+test('editor archives a saved file and preserves an unsaved draft when discard is declined', async () => {
+  const c = C.open({ title: 'Archive in editor' }), h = harness();
+  await h.run('loadContexts()'); await h.run(`contextSelect(${JSON.stringify(c.id)})`);
+  const saved = C.read({ id: c.id, path: 'progress.md' }).content;
+  h.$('cxContent').value = '# unsaved'; h.run('contextMarkDirty(true)'); h.discard(false);
+  await h.$('cxDeleteFile').onclick();
+  assert.equal(C.read({ id: c.id, path: 'progress.md' }).content, saved);
+  assert.equal(h.$('cxContent').value, '# unsaved');
+  h.discard(true); await h.$('cxDeleteFile').onclick();
+  const archived = C.get(c.id).files.find(f => f.path.startsWith('archived/'));
+  assert.ok(archived); assert.equal(C.read({ id: c.id, path: archived.path }).content, saved);
+  assert.ok(!C.get(c.id).files.some(f => f.path === 'progress.md'));
+  assert.match(h.$('cxMessage').textContent, /archived/);
+});

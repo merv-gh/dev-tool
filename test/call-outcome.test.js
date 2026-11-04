@@ -16,6 +16,12 @@ test('explicit application contracts preserve invocation versus failed tests/ass
   assert.equal(O.classify('script_run', { ok: true, response: { status: 404 } }).failed, false);
   assert.equal(O.classify('unknown', { status: 'failed', ok: false }).execution, undefined);
   assert.equal(O.classify('unknown', null, { invocation: 'failed' }).failed, true);
+  assert.equal(O.classify('files_archive', { archived: true, sourceRemoved: false }).failed, true);
+  assert.equal(O.classify('files_archive', { archived: true, sourceRemoved: true }).failed, false);
+  assert.equal(O.classify('testdb_template_verify', { ok: false, failures: ['drift'] }).failed, true);
+  assert.equal(O.classify('testdb_template_verify', { ok: true, failures: [] }).failed, false);
+  assert.equal(O.classify('testdb_gc', { failures: ['ownership mismatch'] }).failed, true);
+  assert.equal(O.classify('testdb_gc', { failures: [] }).failed, false);
 });
 
 test('registry history includes a returned failed job and its exact trace without calling it an invocation failure', async () => {
@@ -45,4 +51,15 @@ test('a call returning running is reconciled after completion and filter applies
   assert.equal(h.length, 1); assert.equal(h[0].evidence.execution.status, 'failed');
   assert.equal(h[0].evidence.job.state, 'done'); assert.equal(h[0].ok, true);
   assert.equal(C.history({ status: 'running' }).length, 0);
+});
+
+
+test('archive and scratch cleanup failures are filterable through the registered history tool', async () => {
+  for (const [tool, payload] of [['files_archive', { archived: true, sourceRemoved: false }], ['testdb_gc', { failures: ['cleanup refused'] }]]) {
+    C.record({ tool, args: {}, ok: true, evidence: O.classify(tool, payload) });
+  }
+  const archived = await T.call('call_history', { kind: 'files', failed: true });
+  assert.equal(archived.rows.length, 1); assert.equal(archived.rows[0].tool, 'files_archive');
+  const cleanup = await T.call('call_history', { kind: 'cleanup', failed: true });
+  assert.equal(cleanup.rows.length, 1); assert.equal(cleanup.rows[0].tool, 'testdb_gc');
 });

@@ -30,7 +30,7 @@ function start({ root, user = 'dt', password = 'pw', port = 0, clientKey }) {
       const get = (h) => handles.get(h.toString('hex'));
       const fail = (id, e) => sf.status(id, e && e.code === 'ENOENT' ? STATUS_CODE.NO_SUCH_FILE : STATUS_CODE.FAILURE);
       sf.on('REALPATH', (id, p) => sf.name(id, [{ filename: path.posix.normalize(`/${p}`), longname: '', attrs: {} }]));
-      for (const op of ['STAT', 'LSTAT']) sf.on(op, (id, p) => { try { sf.attrs(id, attrs(fs.statSync(abs(p)))); } catch (e) { fail(id, e); } });
+      for (const op of ['STAT', 'LSTAT']) sf.on(op, (id, p) => { try { sf.attrs(id, attrs((op === 'LSTAT' ? fs.lstatSync : fs.statSync)(abs(p)))); } catch (e) { fail(id, e); } });
       sf.on('FSTAT', (id, h) => { try { sf.attrs(id, attrs(fs.fstatSync(get(h).fd))); } catch (e) { fail(id, e); } });
       sf.on('OPENDIR', (id, p) => { try { const names = fs.readdirSync(abs(p)); sf.handle(id, handle({ dir: abs(p), names, done: false })); } catch (e) { fail(id, e); } });
       sf.on('READDIR', (id, h) => {
@@ -56,6 +56,8 @@ function start({ root, user = 'dt', password = 'pw', port = 0, clientKey }) {
       sf.on('WRITE', (id, h, offset, data) => { fs.writeSync(get(h).fd, data, 0, data.length, offset); sf.status(id, STATUS_CODE.OK); });
       sf.on('CLOSE', (id, h) => { const f = get(h); if (f && f.fd !== undefined) fs.closeSync(f.fd); handles.delete(h.toString('hex')); sf.status(id, STATUS_CODE.OK); });
       sf.on('MKDIR', (id, p) => { try { fs.mkdirSync(abs(p)); sf.status(id, STATUS_CODE.OK); } catch (e) { fail(id, e); } });
+      sf.on('RENAME', (id, from, to) => { try { if (fs.existsSync(abs(to))) throw new Error('Destination exists'); fs.renameSync(abs(from), abs(to)); sf.status(id, STATUS_CODE.OK); } catch (e) { fail(id, e); } });
+      sf.on('REMOVE', (id, p) => { try { fs.unlinkSync(abs(p)); sf.status(id, STATUS_CODE.OK); } catch (e) { fail(id, e); } });
     })));
     client.on('error', () => {});
   });

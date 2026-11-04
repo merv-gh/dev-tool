@@ -31,9 +31,10 @@ async function loadContexts() {
     };
     $('cxDeleteFile').onclick = () => contextBusy($('cxDeleteFile'), async () => {
       if (!contextState || !contextFile) throw new Error('Select a saved file first');
-      if (!confirm(`Delete ${contextFile.path}?`)) return;
-      await contextCall('context_delete_file', { id: contextState.id, path: contextFile.path, expected_revision: contextFile.revision });
-      contextRestoreMetadata(); contextClearDirty(); contextFile = null; $('cxContent').value = ''; $('cxPath').value = ''; await contextReload(); contextMessage('File deleted.');
+      if (!contextCanLeave(true)) return;
+      const archived = await contextCall('files_archive', { store: 'context:' + contextState.id, context: contextState.id, path: contextFile.path, expected_revision: contextFile.revision });
+      if (!archived.sourceRemoved) throw new Error(archived.error || 'Archive saved; source retained. Inspect both copies.');
+      contextRestoreMetadata(); contextClearDirty(); contextFile = null; $('cxContent').value = ''; $('cxPath').value = ''; await contextReload(); contextMessage('File archived at ' + archived.to.path);
     });
     $('cxPreviewButton').onclick = () => { $('cxPreview').hidden = !$('cxPreview').hidden; $('cxPreview').textContent = $('cxContent').value || 'Empty file'; };
     $('cxUpload').onchange = () => contextBusy($('cxUpload'), async () => {
@@ -64,7 +65,7 @@ async function loadContexts() {
       let args; try { args = JSON.parse($('cxArgs').value); } catch { throw new Error('Arguments must be valid JSON'); }
       $('cxRunOutput').textContent = 'Running ' + name + '…';
       const r = await contextCall('context_run', { id: contextState.id, tool: name, arguments: args, summary: $('cxGoal').value.slice(0, 300) });
-      try { const captured = JSON.parse(r.preview); if (captured.result?.view && typeof adminMapOpen === 'function' && new URL(captured.result.view, location.href).pathname.startsWith('/map/')) await adminMapOpen(captured.result.view, args.env || env()); } catch {}
+      try { const captured = JSON.parse(r.preview); if (captured.result?.view && typeof adminMapOpen === 'function' && /\/map\/[a-z0-9]+$/.test(new URL(captured.result.view, location.href).pathname)) await adminMapOpen(captured.result.view, args.env || env()); } catch {}
       $('cxRunOutput').textContent = r.preview + (r.truncated ? '\n\nPreview truncated. Open the saved file for the full result.' : '') + (r.saveError ? '\n\nCAPTURE FAILED: ' + r.saveError + '\n' + r.guidance : '');
       $('cxCaptured').textContent = r.saved ? 'Open saved result: ' + r.saved : ''; $('cxCaptured').hidden = !r.saved;
       $('cxCaptured').onclick = () => contextRead(r.saved).catch(e => contextMessage(e.message, true));

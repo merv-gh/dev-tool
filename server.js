@@ -276,11 +276,12 @@ const routes = [
       const M=require('./lib/service-map'), a={...result.map}; delete a.refresh;
       if(action==='graph') {
         if(url.searchParams.has('focus')) a.focus=url.searchParams.get('focus')||undefined;
+        if(url.searchParams.has('candidates'))a.include_candidates=url.searchParams.get('candidates')==='1';
         if(url.searchParams.has('libraries'))a.include_libraries=url.searchParams.get('libraries')==='1';
-        const bytes=await M.snapshot(a);res.writeHead(200,{'content-type':'application/vnd.dt.map','cache-control':'no-store','x-content-type-options':'nosniff','x-dt-map-focus':encodeURIComponent(a.focus||(a.layer?'feature:'+a.layer:'')),'x-dt-map-libraries':a.include_libraries?'1':'0','access-control-expose-headers':'X-DT-Map-Focus, X-DT-Map-Libraries',...CORS});res.end(bytes);
+        const bytes=await M.snapshot(a);res.writeHead(200,{'content-type':'application/vnd.dt.map','cache-control':'no-store','x-content-type-options':'nosniff','x-dt-map-focus':encodeURIComponent(a.focus||(a.layer?'feature:'+a.layer:'')),'x-dt-map-libraries':a.include_libraries?'1':'0','x-dt-map-candidates':a.include_candidates?'1':'0','access-control-expose-headers':'X-DT-Map-Focus, X-DT-Map-Libraries, X-DT-Map-Candidates',...CORS});res.end(bytes);
       } else if(action==='full'){const g=await M.graph(a.env);res.writeHead(200,{'content-type':'application/vnd.dt.map','content-disposition':'attachment; filename="microservices.dtm"',...CORS});res.end(g.bytes);}
       else if(action==='node')send(res,200,await M.inspect({env:a.env,id:url.searchParams.get('id')}),CORS);
-      else if(action==='neighbors')send(res,200,await M.neighbors({env:a.env,id:url.searchParams.get('id'),limit:30,include_libraries:url.searchParams.get('libraries')==='1'}),CORS);
+      else if(action==='neighbors')send(res,200,await M.neighbors({env:a.env,id:url.searchParams.get('id'),limit:30,include_candidates:url.searchParams.get('candidates')==='1',include_libraries:url.searchParams.get('libraries')==='1'}),CORS);
       else if(action==='search')send(res,200,await M.search({env:a.env,query:url.searchParams.get('q')||'',include_libraries:url.searchParams.get('libraries')==='1',limit:30}),CORS);
       else send(res,404,{error:'Unknown map action'},CORS);
     }catch(e){send(res,400,errorPayload(e),CORS);}

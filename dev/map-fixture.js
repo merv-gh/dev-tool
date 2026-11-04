@@ -2,7 +2,7 @@
 const fs=require('fs'),path=require('path'),crypto=require('crypto');
 function fixture(home,{services=120,classes=12}={}){
  const put=(name,value)=>{const f=path.join(home,name);fs.mkdirSync(path.dirname(f),{recursive:true});fs.writeFileSync(f,typeof value==='string'?value:JSON.stringify(value));};
- put('config.json',{envs:{test:{}},browser:{mcp:'http://127.0.0.1:4498/mcp',sites:{'shop-ui':{url:'http://127.0.0.1:4498/shop'}}}});
+ put('config.json',{envs:{test:{}},browser:{mcp:'http://127.0.0.1:4498/mcp',sites:{'shop-ui':{url:'http://127.0.0.1:4498/shop',env:'test'}}}});
  const catalog=[],summaries=[];
  for(let i=0;i<services;i++){
   const name=i===0?'orders':i===1?'shipping':`service-${String(i).padStart(3,'0')}`,topic=i===0?'orders.created':`event.${i}`,consumes=i===1?'orders.created':`event.${Math.max(0,i-1)}`,database='db'+(i%12),table='sales.records_'+i;

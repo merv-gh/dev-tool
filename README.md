@@ -981,15 +981,21 @@ For service-scoped code search, retained commit indexes, library impact and opti
 
 ### Microservice map
 
-`map` projects cached passports, catalog inventory, and explored UI API routes into
-one estate: services and UI repositories, Kafka topics, PostgreSQL databases and
-tables, Elasticsearch indexes, and service log inspection targets. Libraries are
-hidden by default. A browser site with the same name as a passport is linked
-automatically; set `browser.sites.<site>.repository: "PROJECT/ui-repo"` when the
-site and UI repository names differ. The overview groups a large estate by repository project and
-infrastructure; select a group or search for an exact service/resource to drill
-in. Repository groups do not assert team ownership. Every bounded view states how
-many entities and relations remain outside it; download preserves the full graph.
+`map` projects cached passports, catalog inventory and explored UI API routes into
+an estate of backend services, UI deployments, UI source repositories and resources.
+The overview is an inventory of containers grouped by service-name prefix. Expand
+a container to see exact services and evidenced connections; naming groups never
+invent dependency arrows. Search reaches entities outside the bounded slice.
+
+A configured site always has its own `ui:<site>` identity, separate from a
+same-named backend service. Set `browser.sites.<site>.repository: "PROJECT/ui-repo"`
+for a known source binding. Set `browser.sites.<site>.env: "dev"` to bind a
+site to that environment; unbound global route observations remain candidates.
+Alternatively, save environment-specific mappings with
+`map_adjust`. UI nodes never inherit backend Kafka/database connections.
+Libraries and unresolved candidates are hidden by default; use the viewer toggles
+or `include_libraries` / `include_candidates` to inspect them. Every view states
+how many entities remain outside it; download preserves the full binary graph.
 
 ```sh
 node cli.js tool map '{"env":"dev"}'
@@ -1011,7 +1017,7 @@ or UI capture). Inspect suggestions before executing. Kafka arrows follow data:
 producer → topic → consumer. Database arrows follow dependencies: service → table.
 Default paths exclude hierarchy/aggregate strokes; enable `include_hierarchy`
 when exploring containers themselves. Static, observed, candidate, suggested
-log targets, aggregates and user annotations retain separate certainty labels.
+log targets and user annotations retain separate certainty labels.
 Ambiguous API owners and database matches remain candidates, never guessed facts.
 
 `map_save` keeps requested feature descriptions and user-flow subgraphs as durable
@@ -1031,14 +1037,24 @@ vendored **ecs-canvas-graph Canvas SDK**, with its license and source revision i
 `web/vendor/ecs-canvas/README.md`. Ordinary JSON remains only for small tool
 arguments/results and existing input passport/config contracts.
 
-In **Admin → Context & scratchpad → Explore microservice map**, selecting a node
-lets you open its passport or prepare the matching tool arguments in the
-scratchpad. Selection itself makes no live calls. **Capture UI screenshot** opens
-the configured site with the existing Playwright MCP tools, captures actual image
-bytes, closes the isolated session and shows the screenshot. Browser availability
-and cleanup errors are explicit. `map_ui_preview` exposes the same operation to
-models. Map and screenshot tool results embed in Open WebUI; map assets and binary
-endpoints also work in its opaque-origin sandbox.
+In **Admin → Context & scratchpad → Explore microservice map**, select a node,
+choose an inspection tool, edit its JSON arguments and press **Run tool**. Native
+passport, query, log and screenshot visualizations appear inside the inspector;
+other results use table or collapsible JSON views. Selection only reads cached
+map metadata. Public/Open WebUI embeds remain read-only; execution uses the
+verified, authenticated Admin parent. The scratchpad preparation option remains.
+**Capture UI screenshot** uses Playwright MCP and closes its isolated session;
+browser availability and cleanup failures are explicit.
+
+**Adjust identities or connections** prepares a `map_adjust` request. Supply a
+user statement or source/property/request citation. Bind `ui:<site>` deployments
+to `uirepo:PROJECT/repo` sources and add evidenced API edges, or suppress a wrong
+edge with `suppress:true`. `map_adjustments` lists corrections and revisions;
+pass `id` to read one fully, then `expected_revision` to update it. Corrections
+live separately in `DT_HOME/maps/adjustments/<env>/*.dtm`, survive refreshes and
+are gitignored; back them up separately. Models are instructed to ask for unknown
+UI repository/environment/API ownership rather than infer it from names. Manual
+edges retain their own certainty and evidence; they are not static code proof.
 
 Verification helpers (synthetic data only):
 
@@ -1052,3 +1068,5 @@ node dev/check-map-browser.js http://127.0.0.1:4497 ./work/map-evidence
 # Real small-model experiment via an explicitly opened SSH tunnel:
 DT_HOME=./work/map-demo node dev/eval-map-model.js --endpoint http://127.0.0.1:41435 --model qwen3.5:4b --output ./work/map-eval.json
 ```
+
+For recorded usage limits, scratch PostgreSQL workflows, patch versus push, file archival and the Admin map URL behavior, see [Tooling workflows](docs/tooling-workflows.md).
