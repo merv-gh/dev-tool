@@ -46,7 +46,7 @@ test.before(async () => {
     envs: { dev: {} }, bitbucket: { url: bb.url, token: bb.token }, passports: { internalGroups: ['com.acme'] },
   }));
 });
-test.after(() => { bb.close(); fs.rmSync(home, { recursive: true, force: true }); });
+test.after(async () => { bb.close(); await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, { recursive: true, force: true }); });
 
 test('bitbucket index: every repo, root build files, first-level folders, module artifactIds', async () => {
   const B = require('../lib/bbindex');

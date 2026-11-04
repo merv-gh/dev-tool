@@ -17,7 +17,7 @@ process.env.DT_RATE_PER_SEC = '0';
 process.env.DT_GIT_DIR = path.join(home, 'git');
 delete process.env.DT_TOOLS;
 for (const k of ['DT_CONFIG_DIR', 'DT_CACHE_DIR', 'DT_PASSPORTS_DIR']) delete process.env[k];
-test.after(() => fs.rmSync(home, { recursive: true, force: true }));
+test.after(async () => { await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, { recursive: true, force: true }); });
 
 test('flow tests through a library controller run green with Maven', { skip: !MVN && 'set DT_TEST_MAVEN', timeout: 900000 }, async () => {
   const FIX = path.join(__dirname, 'fixtures', 'bitbucket');

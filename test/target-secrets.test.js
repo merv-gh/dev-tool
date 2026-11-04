@@ -6,7 +6,7 @@ fs.writeFileSync(path.join(home,'config.json'),JSON.stringify({envs:{dev:{}},tes
 const U=require('../lib/util'),W=require('../lib/workspace'),T=require('../lib/tools');
 function workspace(id,files){const root=path.join(home,'work',id);for(const[p,s]of Object.entries(files)){const f=path.join(root,p);fs.mkdirSync(path.dirname(f),{recursive:true});fs.writeFileSync(f,s);}U.writeJson(path.join(home,'cache','work',id+'.json'),{id,path:root,project:'T',repo:id,sha:'one',createdAt:new Date().toISOString(),dirty:true});return root;}
 function forbidden(value){const s=typeof value==='string'?value:JSON.stringify(value);assert.ok(!s.includes(secret),'selected target secret escaped');assert.ok(!s.includes(secret.slice(0,48)),'truncated target credential prefix escaped');assert.ok(!s.includes(baseSecret),'base config secret escaped');}
-test.after(()=>fs.rmSync(home,{recursive:true,force:true}));
+test.after(async () => { await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home,{recursive:true,force:true}); });
 test('selected target credentials never reach test messages, names, views, history, logs or saved reports',async()=>{
  const root=workspace('private',{'test/secrets.test.cjs':`const t=require('node:test');t('failure '+process.env.TARGET_SECRET,()=>{console.log(process.env.BASE_SECRET);require('node:assert/strict').fail('message '+process.env.TARGET_SECRET)});`});
  const r=await T.call('test_run',{workspace:'private',tests:['test/secrets.test.cjs'],target:'private'});assert.equal(r.outcome,'failed');forbidden(r);forbidden(require('../lib/results').load(r.view.split('/').pop()));

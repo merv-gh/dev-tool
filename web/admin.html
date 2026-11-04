@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>dt admin</title>
 <link rel="stylesheet" href="/static/ui.css">
+<link rel="stylesheet" href="/static/admin-runtime.css">
 <style>
   .cx-label { display: block; margin: 12px 0 5px; font-size: 12px; color: var(--muted); }
   .cx-list { padding: 8px; }
@@ -132,6 +133,12 @@
     <a href="/view" target="_blank" rel="noopener">Results</a>
     <a href="/openapi.json" target="_blank" rel="noopener">OpenAPI</a>
   </div>
+  <form class="rt-scope" id="rtScopeForm" aria-label="Execution scope">
+    <span id="rtIdentity" class="muted">Reading execution scope…</span>
+    <label for="rtStory">Chat / task</label><input id="rtStory" maxlength="200" placeholder="default" autocomplete="off">
+    <span id="rtPrincipalControl" hidden><label for="rtPrincipal">Inspect principal</label> <input id="rtPrincipal" maxlength="200" placeholder="your account" autocomplete="off"></span>
+    <button type="submit" id="rtScopeApply">Apply scope</button><span id="rtScopeStatus" class="hint" role="status"></span>
+  </form>
   <div class="running-bar" id="running" hidden></div>
   <nav class="tabs" id="tabs">
     <button data-tab="index" class="on">Index</button>
@@ -143,6 +150,7 @@
     <button data-tab="api">API routes</button>
     <button data-tab="views">Views<span class="n" id="nViews"></span></button>
     <button data-tab="history">History</button>
+    <button data-tab="runtime">Runtime<span class="n" id="nExecutions"></span></button>
     <button data-tab="jobs">Jobs<span class="n" id="nJobs"></span></button>
     <button data-tab="config">Config</button>
   </nav>
@@ -295,9 +303,24 @@
     </div>
   </section>
 
+  <section id="tab-runtime" hidden>
+    <div class="rt-heading"><div><h2>Execution activity</h2><p class="hint">Calls, code cells and background jobs in the selected chat / task. Cancellation stays visible until work and cleanup settle.</p></div><div class="row"><label><input id="rtLive" type="checkbox" checked> Live</label><button id="rtRefresh">Refresh runtime</button><span id="rtUpdated" class="muted"></span></div></div>
+    <div id="rtMessage" class="hint" role="status" aria-live="polite"></div>
+    <div class="rt-layout">
+      <div class="card rt-activity"><div class="rt-toolbar"><label class="rt-search-label" for="rtSearch">Find execution</label><input id="rtSearch" placeholder="Tool, execution or error…"><label class="rt-search-label" for="rtState">State</label><select id="rtState"><option value="">All states</option><option>queued</option><option>running</option><option>cancelling</option><option>draining</option><option>failed</option><option>cancelled</option><option>done</option><option>interrupted</option></select></div><div id="rtExecutions" class="rt-executions" aria-label="Execution tree"></div></div>
+      <div class="card detail rt-inspector" id="rtExecution"><div class="empty">Select an execution to inspect its ownership, child calls, resources and trace.</div></div>
+    </div>
+    <details id="rtSystem" class="rt-section" open><summary>Runtime, storage & scheduling</summary><div id="rtSystemStatus" class="rt-system-status"></div></details>
+    <details id="rtConfig" class="rt-section"><summary>Active configuration & reloads</summary><p class="hint">A validated generation stays active while existing work finishes. Invalid edits must leave the previous generation available.</p><div id="rtConfigStatus"></div><button id="rtOpenConfig" data-rt-open-config>Open configuration editor</button></details>
+    <div class="rt-section"><div class="rt-heading"><div><h2>Stored metadata</h2><p class="hint">Read persisted records and edit labels, notes and tags with revision checks. Execution state and ownership are read-only.</p></div><div class="row"><label for="rtMetadataKind">Records</label><select id="rtMetadataKind"><option value="executions">Executions</option><option value="calls">Tool calls</option><option value="jobs">Jobs</option></select><button id="rtMetadataRefresh">Refresh records</button></div></div>
+      <div class="rt-layout"><div class="card"><div id="rtMetadataList" class="rt-record-list"></div><div class="rt-toolbar"><button id="rtMetadataMore" hidden>Load older records</button><span id="rtMetadataCount" class="muted"></span></div></div><div class="card detail" id="rtMetadataEditor"><div class="empty">Select a record to read its data and add a note for this chat / task.</div></div></div>
+    </div>
+    <details class="rt-section" id="rtCodePanel"><summary>Code cells & tool scratchpad</summary><p class="hint">Use Node code to combine tool calls and network fetches. Inspect engine capabilities before choosing another runtime. Pending cells use the same returned cell ID; each call uses the selected principal and chat / task.</p><div class="row"><label for="rtCodeTool">Tool</label><select id="rtCodeTool"></select><button id="rtCodeSchema">Reset arguments</button></div><details><summary>Description & argument schema</summary><pre id="rtCodeDescription" class="code cx-wrap"></pre></details><label class="cx-label" for="rtCodeArgs">Arguments (JSON)</label><textarea id="rtCodeArgs" rows="8" spellcheck="false">{}</textarea><div class="row"><button id="rtCodeRun" class="primary">Run code tool</button><span id="rtCodeStatus" class="hint" role="status"></span></div><div id="rtCodeOutput"></div></details>
+  </section>
+
   <section id="tab-config" hidden>
     <h2><span id="cfgName">config.json</span> <span class="muted" id="cfgFile"></span></h2>
-    <p class="hint" id="cfgHint">Environments, integrations, tools and browser sites. Secrets stay in <code>.env</code>; write <code>${NAME}</code> here to use one. Saving applies at once: tools reload without a restart.</p>
+    <p class="hint" id="cfgHint">Environments, integrations, tools and browser sites. Secrets stay in <code>.env</code>; write <code>${NAME}</code> here to use one. Saving validates and activates a generation without restarting. Existing calls finish on their captured configuration.</p>
     <textarea id="cfg" rows="22" spellcheck="false"></textarea>
     <div class="row" style="margin:8px 0"><button class="primary" id="cfgSave">Save</button><button id="cfgReset">Reload</button><span id="cfgMsg" class="muted"></span></div>
     <details><summary>Example with every option</summary><pre class="code" id="cfgExample"></pre></details>
@@ -315,11 +338,15 @@
 <script src="/static/admin-scripts.js"></script>
 <script src="/static/admin-context.js"></script>
 <script src="/static/admin-map.js"></script>
+<script src="/static/admin-runtime.js"></script>
 <script>
 let S = null, tab = 'index', selectedJob = null, timer = null;
-const api = async (p, body) => {
-  const r = await fetch(p, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {});
+const api = async (p, body, { identityOnly = false } = {}) => {
+  const scope = adminRequestScope();
+  const headers = identityOnly ? {} : adminRequestHeaders();
+  const r = await fetch(p, body ? { method: 'POST', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify(body) } : { headers });
   const j = await r.json().catch(() => ({}));
+  if (scope !== adminRequestScope()) throw new Error('Scope changed while the request was running; the previous response was ignored.');
   if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
   return j;
 };
@@ -331,7 +358,7 @@ const ago = (t) => {
   return `<span title="${esc(fmtDate(t))}">${txt}</span>`;
 };
 const dur = (ms) => ms == null ? '' : ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
-const runningKeys = () => new Set((S?.jobs || []).filter(j => j.state === 'running').map(j => j.key));
+const runningKeys = () => new Set((S?.jobs || []).filter(rtActive).map(j => j.key));
 
 function statusOf(x, key) {
   if (runningKeys().has(key)) return '<span class="st run"><span class="dot"></span>syncing</span>';
@@ -386,8 +413,8 @@ function renderPassports() {
 
 function renderJobs() {
   const js = S.jobs;
-  const run = js.filter(j => j.state === 'running');
-  $('nJobs').textContent = run.length ? `${run.length} running` : '';
+  const run = js.filter(rtActive);
+  $('nJobs').textContent = run.length ? `${run.length} active` : '';
   $('running').hidden = !run.length;
   $('running').innerHTML = run.map(j => `<span><b>${esc(j.title)}</b> · ${esc(j.log[j.log.length - 1] || 'starting')}</span>`).join('');
   $('jobs').innerHTML = js.length ? js.map(j => `<tr class="${j.id === selectedJob ? 'on' : ''}" style="cursor:pointer" data-job="${j.id}">
@@ -402,14 +429,15 @@ async function showJob(id, quiet) {
     const j = await api(`/api/admin/job/${id}`);
     const box = $('job');
     const atBottom = box.querySelector('.joblog') ? box.querySelector('.joblog').scrollTop + box.querySelector('.joblog').clientHeight >= box.querySelector('.joblog').scrollHeight - 20 : true;
-    box.innerHTML = `<div class="row"><b>${esc(j.title)}</b><span class="state ${j.state}">${j.state}</span><span class="muted">${fmtDate(j.startedAt)} · ${dur(j.ms)}</span><span class="spacer"></span>${j.state === 'running' ? '<button class="small" id="cancelJob">Cancel</button>' : ''}<button class="small" id="copyLog">Copy log</button></div>
+    box.innerHTML = `<div class="row"><b>${esc(j.title)}</b><span class="state ${j.state}">${j.state}</span><span class="muted">${fmtDate(j.startedAt)} · ${dur(j.ms)}</span><span class="spacer"></span>${['queued', 'running'].includes(j.state) ? '<button class="small" id="cancelJob">Cancel</button>' : ''}<button class="small" id="copyLog">Copy log</button></div>
+      ${rtCancellation(j)}${rtFacts([['Principal',j.owner?.principalId],['Chat / task',j.owner?.storyId],['Execution',j.executionId],['Outcome',j.outcome]])}${j.executionId ? `<button class="small" data-rt-execution="${esc(j.executionId)}">Inspect execution & cleanup</button>` : ''}
       ${j.error ? `<div class="err-text" style="margin:6px 0">${esc(j.error)}</div>` : ''}
       <pre class="joblog">${esc(j.log.join('\n'))}</pre>
       ${j.result ? `<details><summary>Result</summary><pre class="code">${esc(JSON.stringify(j.result, null, 2))}</pre></details>` : ''}`;
     const log = box.querySelector('.joblog');
     if (atBottom) log.scrollTop = log.scrollHeight;
     $('copyLog').onclick = () => copy(j.log.join('\n'), 'log');
-    if ($('cancelJob')) $('cancelJob').onclick = async () => { await fetch(`/api/admin/job/${id}/cancel`, { method: 'POST' }); refresh(); };
+    if ($('cancelJob')) $('cancelJob').onclick = async () => { try { await api(`/api/admin/job/${id}/cancel`, {}); refresh(); } catch (e) { toast(e.message); } };
   } catch (e) { if (!quiet) toast(e.message); }
 }
 
@@ -434,6 +462,7 @@ function renderConfig() {
 async function loadConfig() {
   const c = await api('/api/admin/config');
   $('cfg').value = c.text; $('cfgFile').textContent = c.exists ? c.file : `${c.file} (not created yet: showing what is in effect)`;
+  $('cfg').dataset.revision = c.revision || '';
   $('cfgName').textContent = c.format === 'config.json' ? 'config.json' : 'envs.json';
   if (c.format !== 'config.json') $('cfgHint').innerHTML = 'Older layout (envs.json + .env.&lt;env&gt;). Run <code>node cli.js migrate-config</code> to switch to config.json + .env.';
   $('cfgExample').textContent = c.example; $('cfgMsg').textContent = '';
@@ -451,7 +480,7 @@ async function refresh() {
     renderSources(); renderPassports(); renderJobs(); renderConfig();
   } catch (e) { toast(e.message); }
   clearTimeout(timer);
-  timer = setTimeout(refresh, (S?.jobs || []).some(j => j.state === 'running') ? 1500 : 15000);
+  timer = setTimeout(refresh, (S?.jobs || []).some(rtActive) ? 1500 : 15000);
 }
 
 async function startRefresh(what, only) {
@@ -564,6 +593,7 @@ function show(t) {
   if (t === 'sites') loadSites().catch(e => toast(e.message));
   if (t === 'api') loadRoutes().catch(e => toast(e.message));
   if (t === 'history') loadHistory().catch(e => toast(e.message));
+  if (t === 'runtime') { loadRuntime().catch(e => runtimeMessage(e.message, true)); if (!runtimeMetadata.length) runtimeLoadMetadata(); if (!runtimeTools.length) runtimeLoadCodeTools(); }
   if (t === 'views') loadViews().catch(e => toast(e.message));
 }
 
@@ -591,7 +621,7 @@ $('ppBuild').onclick = async () => {
 };
 $('ppAll').onclick = () => startRefresh('passports');
 $('cfgSave').onclick = async () => {
-  try { const r = await api('/api/admin/config', { text: $('cfg').value }); $('cfgMsg').textContent = `Saved. Envs: ${r.envs.join(', ')}; ${r.tools.tools} tools${r.tools.errors.length ? ` (${r.tools.errors.length} errors below)` : ''}. ${r.note}`; refresh(); }
+  try { const r = await api('/api/admin/config', { text: $('cfg').value, expected_revision: $('cfg').dataset.revision || undefined }); $('cfg').dataset.revision = r.revision || $('cfg').dataset.revision; $('cfgMsg').textContent = `Saved. Envs: ${r.envs.join(', ')}; ${r.tools.tools} tools${r.tools.errors.length ? ` (${r.tools.errors.length} errors below)` : ''}. ${r.note}`; refresh(); }
   catch (e) { $('cfgMsg').innerHTML = `<span class="err-text">${esc(e.message)}</span>`; }
 };
 $('cfgReset').onclick = () => loadConfig();

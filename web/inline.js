@@ -16,6 +16,9 @@ const dtInline = {
     } else if (view === 'code') {
       failed ||= (d.calls || []).some(k => k.ok === false);
       summary = `${failed ? 'Execution needs attention' : 'Completed'} · ${(d.calls || []).length} tool calls${d.ms != null ? ` · ${d.ms} ms` : ''}`;
+    } else if (view === 'code-cell') {
+      failed ||= !!d.result?.error || ['failed', 'cancelled', 'interrupted'].includes(d.state) || (d.result?.tests || []).some(test => !test.ok);
+      summary = `${d.state || 'unknown'}${d.engine ? ' · ' + d.engine : ''} · ${(d.output || []).length} output events${d.nextCursor != null ? ' · cursor ' + d.nextCursor : ''}`;
     } else if (view === 'api-exchange') {
       failed ||= (d.response?.status || 0) >= 400;
       summary = `${d.request?.method || 'HTTP'} · ${d.response?.status || 'No response'}${d.timing?.durationMs != null ? ` · ${d.timing.durationMs} ms` : ''}`;
@@ -30,7 +33,7 @@ const dtInline = {
     else if (view === 'json') summary = Array.isArray(data) ? `${data.length} items` : data && typeof data === 'object' ? `${Object.keys(data).length} fields` : 'Result';
     else if (view === 'list-diff') summary = d.counts ? `${(c.onlyFirst || 0) + (c.onlyLast || 0)} differences` : 'Compare values';
     else if (view === 'text-diff') summary = 'Compare changes';
-    return { title: meta.title || ({ code: 'JavaScript', tests: 'Test run', 'collection-report': d.collection || 'Collection suite', patch: `${d.repo || 'Workspace'} patch` })[view] || view.replace(/-/g, ' '), summary, open: failed || ['diagram', 'knowledge-map'].includes(view), failed };
+    return { title: meta.title || ({ code: 'JavaScript', 'code-cell': 'Code cell', tests: 'Test run', 'collection-report': d.collection || 'Collection suite', patch: `${d.repo || 'Workspace'} patch` })[view] || view.replace(/-/g, ' '), summary, open: failed || ['diagram', 'knowledge-map'].includes(view) || view === 'code-cell' && ['queued', 'running', 'cancelling', 'draining'].includes(d.state), failed };
   },
 
   mount(target, { title = 'Tool result', summary = '', open = false, failed = false } = {}) {

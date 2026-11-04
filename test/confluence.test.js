@@ -40,7 +40,7 @@ const configure = extra => {
   fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify(configuration)); require('../lib/config').reload();
 };
 test.before(() => new Promise(resolve => srv.listen(0, '127.0.0.1', () => { base = `http://127.0.0.1:${srv.address().port}`; configure(); resolve(); })));
-test.after(() => { srv.close(); fs.rmSync(home, { recursive: true, force: true }); });
+test.after(async () => { await new Promise(resolve => srv.close(resolve)); await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, { recursive: true, force: true }); });
 const C = require('../lib/docs-cache'), P = require('../lib/docs-parse'), S = require('../lib/docs-search');
 
 test('storage parser keeps structure, stable block IDs, source offsets, code, links and issues', () => {

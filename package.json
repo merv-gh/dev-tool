@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "postgres": "^3.4.5",
+    "quickjs-emscripten": "0.32.0",
     "ssh2": "^1.16.0"
   },
   "license": "MIT",

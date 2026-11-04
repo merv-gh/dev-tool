@@ -8,7 +8,7 @@ fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ envs: { test: 
 const CI = require('../lib/codeindex'), G = require('../lib/codegraph');
 const source = (folder, name, text) => { const root = path.join(home, folder); fs.mkdirSync(root, { recursive: true }); fs.writeFileSync(path.join(root, name), text); return root; };
 const meta = (sha, extra = {}) => ({ project: 'P', repo: 'one', sha: sha.repeat(40), ref: 'main', ...extra });
-test.after(() => fs.rmSync(home, { recursive: true, force: true }));
+test.after(async () => { await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, { recursive: true, force: true }); });
 
 test('commit snapshots retain matching source, postings and symbols after checkout replacement/deletion', () => {
   const root = source('one', 'One.java', 'class One { int before() { return 1; } }');

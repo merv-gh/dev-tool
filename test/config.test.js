@@ -24,7 +24,7 @@ const srv = http.createServer((req, res) => {
 });
 let base;
 test.before(() => new Promise(r => srv.listen(0, '127.0.0.1', () => { base = `http://127.0.0.1:${srv.address().port}`; r(); })));
-test.after(() => { srv.close(); fs.rmSync(home, { recursive: true, force: true }); });
+test.after(async () => { srv.close(); await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, { recursive: true, force: true }); });
 
 const writeConfig = (c) => { fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify(c, null, 2)); const t = new Date(Date.now() + Math.random() * 1e6); fs.utimesSync(path.join(home, 'config.json'), t, t); };
 
@@ -190,4 +190,28 @@ test('edits to .env and config.json apply without a restart', async () => {
   fs.writeFileSync(path.join(home, '.env'), 'LIVE_DB=postgres://a/two\n');
   const t = new Date(Date.now() + 5000); fs.utimesSync(path.join(home, '.env'), t, t);
   assert.equal(cfg.getEnv('dev').pg.orders, 'postgres://a/two');
+});
+
+
+test('a broken active plugin preserves its last valid registry and running work keeps its config generation',async()=>{
+ const cfg=require('../lib/config'),T=require('../lib/tools'),E=require('../lib/execution');
+ const plugin=path.join(home,'extra','generation.js');fs.writeFileSync(plugin,`module.exports=[{name:'generation_probe',description:'generation probe',run:()=>42}];`);
+ writeConfig({envs:{dev:{postgres:{orders:'postgres://a/old'}}},tools:{plugins:['extra/generation.js']}});cfg.reload();
+ assert.equal(await T.call('generation_probe'),42);const registry=await T.ready();let resume,entered;
+ const gate=new Promise(r=>resume=r),admitted=new Promise(r=>entered=r);
+ const running=cfg.pin(registry.configSnapshot,()=>E.run({registry,configSnapshot:registry.configSnapshot,revision:registry.configSnapshot.revision,registryRevision:registry.revision},async()=>{entered();await gate;return {url:cfg.getEnv('dev').pg.orders,registry:(await T.ready()).revision};}));
+ await admitted;writeConfig({envs:{dev:{postgres:{orders:'postgres://a/new'}}},tools:{plugins:['extra/generation.js']}});cfg.reload();await T.ready();resume();
+ assert.deepEqual(await running,{url:'postgres://a/old',registry:registry.revision});assert.equal(cfg.getEnv('dev').pg.orders,'postgres://a/new');
+ const good=await T.ready();fs.writeFileSync(plugin,'this is malformed javascript');
+ assert.equal((await T.ready()).revision,good.revision);assert.ok(T.registryStatus().lastError);assert.equal(await T.call('generation_probe'),42);
+ fs.writeFileSync(plugin,`module.exports=[{name:'generation_probe',description:'generation probe',run:()=>84}];`);assert.equal(await T.call('generation_probe'),84);assert.equal(T.registryStatus().lastError,null);
+});
+
+
+test('exposed script metadata refreshes after a same-size edit with preserved mtime',async()=>{
+ const S=require('../lib/scripts'),T=require('../lib/tools'),cfg=require('../lib/config');writeConfig({envs:{dev:{}},scripts:{starters:false}});cfg.reload();
+ S.save('refresh/probe',{description:'first description',tool:'script_refresh_probe',steps:[{set:{value:1}}]});
+ assert.equal((await T.schemas()).find(t=>t.name==='script_refresh_probe').description.includes('first description'),true);
+ const file=path.join(S.DIR,'refresh','probe.json'),stat=fs.statSync(file),raw=fs.readFileSync(file,'utf8');fs.writeFileSync(file,raw.replace('first description','other description'));fs.utimesSync(file,stat.atime,stat.mtime);
+ assert.equal((await T.schemas()).find(t=>t.name==='script_refresh_probe').description.includes('other description'),true);
 });

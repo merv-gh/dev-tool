@@ -6,13 +6,23 @@ The shared registry exposes `code_index`, `code_search`, `code_symbols`, `code_r
 
 ```sh
 node cli.js tool code_index '{"service":"orders-service","ref":"v1.2.0"}'
-node cli.js tool code_search '{"repos":"SHOP/orders-service","pattern":"EventPublisher"}'
+node cli.js tool code_search '{"repo":"SHOP/orders-service","pattern":"EventPublisher"}'
 node cli.js tool code_symbols '{"repos":"SHOP/orders-service","q":"OrderService place"}'
 node cli.js tool impact '{"repos":"SHOP/orders-service","target":"OrderService#place"}'
 node cli.js tool code_index '{"versions":true}'
 ```
 
 Use the returned `revisionKey` as `repos` (or `repo` for `code_read`) to pin searches and impact to that exact retained source/index pair. A plain repository name selects its latest alias. A cached full SHA lookup returns a pinned index without moving that alias. If several extraction/source variants share a SHA, the tool does not silently pick one. Use an exact revision key or rebuild with the intended options.
+
+## Cold checkouts and passport jobs
+
+`code_search` accepts `repo` for one repository, service alias, workspace, or exact retained revision. The existing `repos` selector still supports several repositories and globs. One-source results put the repository name in `repository` once; their preview and saved table omit the repeated `repo` column. Multi-source results retain it.
+
+Indexed sources use the native trigram search, not system grep. When local source is present without an index (including a dirty workspace), search uses `rg` if it is on PATH, or the binary selected by `DT_RG`. No fetch or index build is started. A stock deployment without ripgrep uses the bounded native file scanner and reports `native-scan` in `backends`; it does not invoke ordinary `grep`. Literal searches get ripgrep's content prefilter. JavaScript regexes use native regex matching in the worker after file enumeration, preserving syntax such as lookbehind. Hidden directories, build output, symlinks and files larger than 1 MiB are excluded. Cold scans have file, byte and time limits and report truncation. A missing immutable revision never falls back to the latest checkout.
+
+`passport` returns cached data immediately. A cold build or `refresh: true` returns an owned job ID immediately, with progress and cancellation in Admin. Poll with the same `service` and `job`; repeated matching requests join the active job. Cached reads stay available during a refresh. CPU extraction, indexing and flow analysis run in the bounded worker while network resolution remains asynchronous.
+
+Internal-library resolution lists refs once per repository, tries matching version tags/branches, and then checks module/root `build.gradle`, `build.gradle.kts`, `gradle.properties` and `pom.xml`. Build-file reads and missing-version results are reused within a build. Defaults limit probing to 10 seconds, eight branches and 32 requests per distinct module/version; `passports.libraryVersionTimeoutMs`, `libraryVersionMaxBranches` and `libraryVersionMaxRequests` configure these bounds. Advertised-ref lookup has a 15-second deadline, and library fetch commands use `passports.libraryFetchTimeoutMs` (60 seconds by default). A missing version, timed-out lookup, or stale ref falls back to the latest default branch. `exactVersion: false`, resolution metadata, job trace notes and the passport page make that approximation explicit. Cancelling a job stops resolution rather than starting fallback work.
 
 ## Revision behavior
 

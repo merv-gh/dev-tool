@@ -16,7 +16,7 @@ put('sources/openapi.json', { openapi: '3.1.0', info: { title: 'Ledger HTTP' }, 
 put('sources/asyncapi.json', { asyncapi: '3.0.0', channels: { paid: { address: 'orders.paid' }, posted: { address: 'payments.posted' } }, operations: { onPaid: { action: 'receive', channel: { $ref: '#/channels/paid' } }, postPayment: { action: 'send', channel: { $ref: '#/channels/posted' } } } });
 for (const db of ['commerce', 'archive']) put(`cache/dev/pg/${db}.json`, { db, tables: [{ schema: 'public', name: 'orders', kind: 'table', columns: [] }], functions: [] });
 const K = require('../lib/semantic-knowledge');
-test.after(() => fs.rmSync(home, { recursive: true, force: true }));
+test.after(async () => { await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, { recursive: true, force: true }); });
 
 test('heterogeneous sources sync independently with stable semantic identities and no Confluence', async () => {
   const r = K.sync(); assert.equal(r.ok, true, JSON.stringify(r));

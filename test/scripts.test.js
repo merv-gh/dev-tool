@@ -79,7 +79,7 @@ test.before(() => new Promise(r => mcp.listen(0, '127.0.0.1', () => {
   }));
   r();
 })));
-test.after(() => { mcp.close(); fs.rmSync(home, { recursive: true, force: true }); });
+test.after(async () => { mcp.close(); await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, { recursive: true, force: true }); });
 
 test('site map: links resolve against the site URL, siteUrl fills <params>', () => {
   const cfg = require('../lib/config');

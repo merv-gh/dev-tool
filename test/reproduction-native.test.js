@@ -29,7 +29,7 @@ const documents=async()=>({documents:[{_id:'right',_source:{tenantId:'22',orderI
 const capture=()=>R.capture(input,{query,messages,documents,mask:false});
 const profileFile='native-profile.json';
 fs.writeFileSync(path.join(workspace,profileFile),JSON.stringify({version:1,adapter:'native-containers',kafka:{allowOffsetRemap:true},readyTimeoutMs:180000}));
-test.after(async()=>{try{for(const file of fs.existsSync(path.join(CACHE,'fixture-runs'))?fs.readdirSync(path.join(CACHE,'fixture-runs')):[]) await Native.stop(file).catch(()=>{}); await require('../lib/pg').closeAll();} finally{fs.rmSync(home,{recursive:true,force:true});}});
+test.after(async()=>{try{for(const file of fs.existsSync(path.join(CACHE,'fixture-runs'))?fs.readdirSync(path.join(CACHE,'fixture-runs')):[]) await Native.stop(file).catch(()=>{}); await require('../lib/pg').closeAll();} finally{await require('../lib/isolate').stop(); await require('../lib/state-store').close();fs.rmSync(home,{recursive:true,force:true});}});
 
 test('strict mixed-source plan rejects unknown fields, codecs and unbound required reads',()=>{
   assert.throws(()=>R.plan({...input,version:999}),/version/);

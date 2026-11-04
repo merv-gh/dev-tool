@@ -11,6 +11,7 @@ const tools = require('./lib/tools');
 const results = require('./lib/results');
 
 const VERSION = require('./package.json').version;
+const mcpRequests=new Map();
 
 function send(res, status, body, extra = {}) {
   res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...extra });
@@ -34,16 +35,7 @@ function sameSecret(a, b) {
   const x = Buffer.from(String(a || '')), y = Buffer.from(String(b || ''));
   return x.length === y.length && crypto.timingSafeEqual(x, y);
 }
-function trusted(req) {
-  const { apiKey: key, trustNetwork } = getServer();
-  if (key) {
-    const bearer = (String(req.headers.authorization || '').match(/^Bearer\s+(.+)$/i) || [])[1];
-    if (sameSecret(bearer, key) || sameSecret(decodeURIComponent(cookie(req, 'dt_key') || ''), key)) return true;
-  }
-  if (trustNetwork) return true;
-  const a = req.socket.remoteAddress || '';
-  return a === '127.0.0.1' || a === '::1' || a === '::ffff:127.0.0.1';
-}
+function trusted(req) {return !!require('./lib/access').identity(req);}
 
 function status() {
   const p = getPersonal();
@@ -65,9 +57,11 @@ function status() {
 }
 
 // ── MCP (Streamable HTTP, JSON responses) ─────────────────────────────
-async function mcpHandle(msg, session) {
+async function mcpHandle(msg, session, requestSignal) {
   const reply = (result) => ({ jsonrpc: '2.0', id: msg.id, result });
+  const scope=require('./lib/access').current().scopeKey,key=JSON.stringify([scope,session||'',msg.id]);
   switch (msg.method) {
+    case 'notifications/cancelled': {const target=mcpRequests.get(JSON.stringify([scope,session||'',msg.params?.requestId]));target?.abort('MCP request cancelled');return null;}
     case 'initialize':
       return reply({
         protocolVersion: msg.params?.protocolVersion || '2025-03-26',
@@ -78,12 +72,14 @@ async function mcpHandle(msg, session) {
     case 'ping': return reply({});
     case 'tools/list': return reply({ tools: await tools.schemas() });
     case 'tools/call': {
+      if(mcpRequests.has(key))return {jsonrpc:'2.0',id:msg.id,error:{code:-32600,message:'Request id is already active in this session'}};
+      const controller=new AbortController(),onAbort=()=>controller.abort(requestSignal.reason);if(requestSignal?.aborted)onAbort();else requestSignal?.addEventListener('abort',onAbort,{once:true});mcpRequests.set(key,controller);
       try {
-        const result = await tools.call(msg.params.name, msg.params.arguments || {}, { source: 'mcp', session });
+        const result = await tools.call(msg.params.name, msg.params.arguments || {}, { source: 'mcp', session,signal:controller.signal });
         return reply({ content: [{ type: 'text', text: typeof result === 'string' ? result : JSON.stringify(result) }] });
       } catch (e) {
         return reply({ content: [{ type: 'text', text: `Error: ${errorPayload(e).error}` }], structuredContent: errorPayload(e), isError: true });
-      }
+      } finally {mcpRequests.delete(key);requestSignal?.removeEventListener('abort',onAbort);}
     }
     default:
       if (msg.id === undefined) return null; // notifications/initialized etc.
@@ -94,7 +90,7 @@ async function mcpHandle(msg, session) {
 async function mcp(req, res) {
   const body = await readJsonBody(req);
   const batch = Array.isArray(body);
-  const replies = (await Promise.all((batch ? body : [body]).map(msg => mcpHandle(msg, req.headers['x-openwebui-chat-id'] || req.headers['x-chat-id'])))).filter(Boolean);
+  const replies = (await Promise.all((batch ? body : [body]).map(msg => mcpHandle(msg, req.headers['x-openwebui-chat-id'] || req.headers['x-chat-id'] || req.headers['mcp-session-id'],req.dtSignal)))).filter(Boolean);
   if (!replies.length) return send(res, 202, '');
   send(res, 200, batch ? replies : replies[0], { 'mcp-session-id': req.headers['mcp-session-id'] || crypto.randomUUID() });
 }
@@ -130,7 +126,7 @@ async function oapi(req, res, url) {
   let result;
   // Open WebUI says which chat a call comes from when ENABLE_FORWARD_USER_INFO_HEADERS is on
   const session = req.headers['x-openwebui-chat-id'] || req.headers['x-chat-id'] || null;
-  try { result = await tools.call(name, await readJsonBody(req), { source: 'openapi', session }); }
+  try { result = await tools.call(name, await readJsonBody(req), { source: 'openapi', session, signal:req.dtSignal }); }
   catch (e) { return send(res, e.statusCode || 400, errorPayload(e)); }
   const target = result && typeof result === 'object' && (result.view || result.dashboard);
   const embed = typeof target === 'string' ? target + (target.includes('?') ? '&' : '?') + 'embed=1' : null;
@@ -154,7 +150,7 @@ const routes = [
   ['GET', '/api/find', true, (req, res, url) => send(res, 200, catalog.find(url.searchParams.get('env') || envNames()[0], url.searchParams.get('q') || '', { limit: Number(url.searchParams.get('limit')) || 300 }))],
   ['GET', '/api/tools', false, async (req, res, url) => send(res, 200, await tools.schemas({ profile: url.searchParams.get('profile') || 'all' }))],
   ['POST', '/api/tool/*', true, async (req, res, url) => {
-    try { send(res, 200, { result: await tools.call(url.pathname.split('/').pop(), await readJsonBody(req), { source: 'api', session: req.headers['x-openwebui-chat-id'] || req.headers['x-chat-id'] }) }); }
+    try { send(res, 200, { result: await tools.call(url.pathname.split('/').pop(), await readJsonBody(req), { source: 'api', session: req.headers['x-openwebui-chat-id'] || req.headers['x-chat-id'], signal:req.dtSignal }) }); }
     catch (e) { send(res, e.statusCode || 400, errorPayload(e)); }
   }],
   ['GET', '/openapi.json', false, async (req, res, url) => send(res, 200, await openapi(url.searchParams.get('profile') || undefined))],
@@ -165,7 +161,7 @@ const routes = [
   // admin: watch, edit and refresh the index
   ['GET', '/admin', false, (req, res, url) => {
     const key = url.searchParams.get('key');
-    if (key && getServer().apiKey && sameSecret(key, getServer().apiKey)) {
+    if (key && require('./lib/access').identity({...req,headers:{...req.headers,authorization:'Bearer '+key}})) {
       res.writeHead(302, { location: '/admin', 'set-cookie': `dt_key=${encodeURIComponent(key)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=2592000` });
       return res.end();
     }
@@ -186,7 +182,7 @@ const routes = [
   ['GET', '/api/admin/object', true, (req, res, url) => send(res, 200, admin.object(url.searchParams.get('env') || envNames()[0], url.searchParams.get('name') || ''))],
   ['GET', '/api/admin/config', true, (req, res) => send(res, 200, admin.readConfig())],
   ['POST', '/api/admin/config', true, async (req, res) => {
-    try { send(res, 200, await admin.writeConfig((await readJsonBody(req)).text)); } catch (e) { send(res, 400, { error: e.message }); }
+    try { send(res, 200, await admin.writeConfig(...((b)=>[b.text,b.expected_revision])(await readJsonBody(req)))); } catch (e) { send(res, e.statusCode||400, errorPayload(e)); }
   }],
   ['GET', '/api/admin/notes', true, (req, res) => send(res, 200, require('./lib/notes').all())],
   ['POST', '/api/admin/notes', true, async (req, res) => {
@@ -228,7 +224,7 @@ const routes = [
   ['POST', '/api/admin/collection', true, async (req, res) => {
     try { const b = await readJsonBody(req); send(res, 200, require('./lib/scripts').setCollection(b.path, b)); } catch (e) { send(res, 400, { error: e.message }); }
   }],
-  ['GET', '/api/admin/calls', true, (req, res, url) => send(res, 200, require('./lib/calls').history({ q: url.searchParams.get('q') || '', source: url.searchParams.get('source') || '', limit: 300 }))],
+  ['GET', '/api/admin/calls', true, async (req, res, url) => send(res, 200, (await require('./lib/calls').historyPage({ q: url.searchParams.get('q') || '', source: url.searchParams.get('source') || '', limit: 300 })).records)],
   ['GET', '/api/admin/patterns', true, (req, res) => send(res, 200, require('./lib/calls').patterns({ limit: 30 }))],
   ['GET', '/api/admin/views', true, (req, res) => send(res, 200, require('./lib/views').list())],
   ['GET', '/api/admin/view', true, (req, res, url) => { try { send(res, 200, require('./lib/views').get(url.searchParams.get('name'))); } catch (e) { send(res, 404, { error: e.message }); } }],
@@ -341,14 +337,33 @@ const routes = [
 
 function start({ port = 4000, host = '127.0.0.1' } = {}) {
   const server = httpMod.createServer(async (req, res) => {
-    const url = new URL(req.url, 'http://x');
-    const route = routes.find(([m, p]) => m === req.method && (p.endsWith('*') ? url.pathname.startsWith(p.slice(0, -1)) : url.pathname === p));
+    const controller=new AbortController();req.dtSignal=controller.signal;
+    const disconnected=()=>{if(!res.writableEnded)controller.abort('HTTP client disconnected');};
+    req.once('aborted',disconnected);res.once('close',disconnected);
+    const url = new URL(req.url, 'http://x'),A=require('./lib/access');
+    let identity;try{identity=A.identity(req);}catch(e){return send(res,e.statusCode||403,errorPayload(e));}
+    const supplied=!!req.headers.authorization||!!cookie(req,'dt_key');
+    if(!identity&&getServer().accessTokens.length&&(['/api/tools','/openapi.json'].includes(url.pathname)||url.pathname.startsWith('/openapi/')))return send(res,403,{error:'Authentication is required'});
+    const protectedRuntime=url.pathname.startsWith('/api/admin/runtime')||url.pathname.startsWith('/api/admin/execution/')||url.pathname.startsWith('/api/admin/metadata');
+    let route = routes.find(([m, p]) => m === req.method && (p.endsWith('*') ? url.pathname.startsWith(p.slice(0, -1)) : url.pathname === p));
+    if(protectedRuntime)route=[req.method,url.pathname,true,null];
     try {
       if (!route) return send(res, 404, { error: 'not found' });
-      if (route[2] && !trusted(req)) return send(res, 403, { error: 'not allowed: call from this machine, send Authorization: Bearer <DT_API_KEY>, or set DT_TRUST_NETWORK=1' });
-      await route[3](req, res, url);
+      if(req.method!=='GET'&&url.pathname!=='/api/admin/config'&&require('./lib/config').generation().lastError)return send(res,503,{error:'Configuration is invalid; repair it in Admin before starting new work',code:'DT_CONFIG_INVALID'});
+      if (route[2] && !identity) return send(res, 403, { error: 'Authentication is required' });
+      if(supplied&&!identity)return send(res,403,{error:'Invalid access token'});
+      let scope=identity||A.LEGACY;
+      // Keyed immutable result links remain read-only capabilities for sandboxed embeds.
+      // Explicit story headers are enforced; same-principal browser embeds restore their saved story.
+      {const key=url.pathname.match(/\/(?:map|map-preview|show|patch|logs|view|result|files)\/([a-z0-9]+)(?:\.patch)?(?:\/|$)/)?.[1];if(key){const value=results.raw(key);if(value?.owner&&(!identity||(!req.headers['x-dt-story']&&!req.headers['x-openwebui-chat-id']&&!req.headers['x-chat-id']&&!identity.storyBound&&identity.principalId===value.owner.principalId)))scope={...value.owner,role:'user'};}}
+      await A.run(scope,async()=>{
+        const globalWrite=req.method!=='GET'&&['/api/admin/tools/reload','/api/admin/refresh','/api/admin/notes','/api/admin/repos','/api/admin/sites'].includes(url.pathname);
+        if(url.pathname==='/api/admin/config'||globalWrite)A.requireAdmin();
+        if(protectedRuntime){if(!await require('./lib/runtime-admin').handle(req,res,url,send,readJsonBody))send(res,404,{error:'Unknown runtime endpoint'});return;}
+        await route[3](req,res,url);
+      });
     } catch (e) {
-      if (!res.headersSent) send(res, e.statusCode || (e.code === 'DT_PROFILE_UNKNOWN' || e.code === 'DT_ARGUMENT_INVALID' ? 400 : 500), errorPayload(e)); else res.end();
+      if (!res.headersSent) send(res, e.statusCode || (['DT_NOT_FOUND','NOT_FOUND'].includes(e.code)?404:['STATE_CONFLICT','STALE_REVISION'].includes(e.code)?409:e.code === 'DT_PROFILE_UNKNOWN' || e.code === 'DT_ARGUMENT_INVALID' ? 400 : 500), errorPayload(e)); else res.end();
     }
   });
   // the browser container starts after dt is healthy and reads these secrets once

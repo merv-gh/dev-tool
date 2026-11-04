@@ -13,7 +13,7 @@ const PG = path.join(home, 'cache', 'big', 'pg');
 fs.mkdirSync(PG, { recursive: true });
 const table = (t, cols = 30) => ({ schema: 's', name: `t${t}`, kind: 'table', columns: Array.from({ length: cols }, (_, c) => ({ name: `c${c}`, type: 'text' })) });
 const catalog = (extra = {}) => ({ db: 'db0', database: 'db0', version: 'PostgreSQL 16', syncedAt: '2026-10-01T00:00:00.000Z', tables: [table(1), { ...table(2, 3), name: 'd_kind' }], functions: [], viewDeps: [], triggers: [], types: [], sequences: [], extensions: [], ...extra });
-test.after(() => { require('../lib/isolate').stop(); fs.rmSync(home, { recursive: true, force: true }); });
+test.after(async () => { await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, { recursive: true, force: true }); });
 
 test('dictionary rows live next to the catalog and load only when used', () => {
   const pg = require('../lib/pg');

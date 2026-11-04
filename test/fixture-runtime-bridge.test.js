@@ -10,7 +10,7 @@ const prefixes={orders:'ORDERS_DATASOURCE',billing:'BILLING_DATASOURCE'};
 function target(){return require('../lib/test-targets').resolve('local',{fixtureRuntime:id});}
 function put(rel,content){W.write('fixture-test',rel,{content});}
 function workspace(){const root=path.join(home,'work','fixture-test');fs.mkdirSync(root,{recursive:true});U.writeJson(path.join(home,'cache','work','fixture-test.json'),{id:'fixture-test',path:root,project:'TEST',repo:'fixture-test',sha:'fixture-base',createdAt:new Date().toISOString(),dirty:true});return root;}
-let root;test.before(()=>{root=workspace();});test.after(()=>fs.rmSync(home,{recursive:true,force:true}));
+let root;test.before(()=>{root=workspace();});test.after(async () => { await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home,{recursive:true,force:true}); });
 test('native lease binding only uses validated local metadata and explicit exact PG prefixes',async t=>{
  t.mock.method(B,'bindings',async()=>bindings());
  const r=await B.resolve(id,{workspace:'fixture-test',executionTarget:target(),fixtureBindings:prefixes});

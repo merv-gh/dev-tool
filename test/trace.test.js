@@ -16,7 +16,7 @@ process.env.DT_LOG = 'quiet';
 delete process.env.DT_TOOLS;
 for (const k of ['DT_CONFIG_DIR', 'DT_CACHE_DIR', 'DT_PASSPORTS_DIR']) delete process.env[k];
 fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ envs: { dev: {} }, bitbucket: { url: 'http://127.0.0.1:9', token: 't0ken-value' } }));
-test.after(() => fs.rmSync(home, { recursive: true, force: true }));
+test.after(async () => { await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, { recursive: true, force: true }); });
 
 const T = require('../lib/trace');
 
@@ -43,7 +43,7 @@ test('a call: start, steps with times, notes, the failed step with its error; in
   assert.equal(seen.find(c => c.tool === 'slow_tool').step, 'maven prepare');
 });
 
-test('the log rotates by size; the call history stays under its size', () => {
+test('the log rotates by size; the call history stays under its size', async () => {
   const f = path.join(home, 'rot', 'dt.log');
   for (let i = 0; i < 700; i++) T.append(f, 'x'.repeat(5000), { maxBytes: 200000, files: 3 });
   const files = fs.readdirSync(path.dirname(f)).sort();
@@ -53,7 +53,14 @@ test('the log rotates by size; the call history stays under its size', () => {
   const calls = require('../lib/calls');
   for (let i = 0; i < 450; i++) calls.record({ tool: 'big', args: { q: 'y'.repeat(500) }, ok: true, ms: 1 });
   // trimmed to the cap at every check (every 200 calls or megabyte): never more than the cap and those 200
-  assert.ok(fs.statSync(path.join(home, 'cache', '_calls.jsonl')).size < 0.05 * 1048576 + 200 * 600);
+  const state = require('../lib/state-store');
+  if (state.enabled()) {
+    await state.flush();
+    const page = await state.export({ kind: 'calls' });
+    const retainedBytes = page.records.reduce((n, row) => n + Buffer.byteLength(JSON.stringify(row.value)), 0);
+    assert.ok(retainedBytes <= 0.05 * 1048576, `${retainedBytes} retained call bytes`);
+    assert.equal(state.status().queued, 0);
+  } else assert.ok(fs.statSync(path.join(home, 'cache', '_calls.jsonl')).size < 0.05 * 1048576 + 200 * 600);
   delete process.env.DT_LOG_MAX_MB;
 });
 

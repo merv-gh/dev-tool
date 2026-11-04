@@ -1,0 +1,58 @@
+<!-- {"description":"Resumable code execution: status, bounded cursor output, engine capabilities, result and error. DATA: {id,executionId,state,engine,capabilities,cursor,nextCursor,output:[{cursor,kind,text}],result,error,owner}","sample":{"id":"example-cell","executionId":"example-execution","state":"done","engine":"node","capabilities":{"network":true,"tools":true},"cursor":0,"nextCursor":2,"output":[{"cursor":1,"kind":"text","text":"Read 4 tool results"},{"cursor":2,"kind":"text","text":"Total: 120"}],"result":{"returned":{"total":120},"hasReturn":true}}} -->
+<style>
+ .cc-result { border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+ .cc-summary { display:flex; align-items:center; flex-wrap:wrap; gap:8px; padding:10px 12px; cursor:pointer; background:var(--soft); }
+ .cc-summary strong { font-size:13px; }
+ .cc-state { font-size:11px; font-weight:600; padding:2px 7px; border-radius:5px; background:var(--accent-soft); color:var(--accent); }
+ .cc-state.done { background:var(--good-bg); color:var(--good); }
+ .cc-state.failed, .cc-state.interrupted { background:var(--bad-bg); color:var(--bad); }
+ .cc-state.cancelled, .cc-state.cancelling, .cc-state.draining { background:var(--warn-bg); color:var(--warn); }
+ .cc-body { padding:0 12px 12px; }
+ .cc-facts { display:grid; grid-template-columns:100px minmax(0,1fr); gap:5px 10px; margin:14px 0; font-size:12px; }
+ .cc-facts dt { color:var(--muted); } .cc-facts dd { margin:0; overflow-wrap:anywhere; }
+ .cc-error { padding:9px 11px; background:var(--bad-bg); color:var(--bad); border-radius:5px; margin:10px 0; white-space:pre-wrap; overflow-wrap:anywhere; }
+ .cc-notice { color:var(--warn); background:var(--warn-bg); border-radius:5px; padding:9px 11px; margin:10px 0; }
+ .cc-output { list-style:none; margin:10px 0; padding:0; border:1px solid var(--line); border-radius:5px; max-height:360px; overflow:auto; }
+ .cc-output li { display:grid; grid-template-columns:40px 42px minmax(0,1fr); gap:10px; padding:6px 9px; border-bottom:1px solid var(--line); }
+ .cc-output li:last-child { border-bottom:0; }
+ .cc-output small { color:var(--muted); font-variant-numeric:tabular-nums; }
+ .cc-output pre { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; }
+ .cc-body h2 { margin-top:18px; }
+ .cc-body details { margin-top:12px; }
+ .cc-body summary { cursor:pointer; color:var(--muted); }
+ .cc-body pre.src { white-space:pre-wrap; overflow-wrap:anywhere; max-height:400px; }
+ .cc-summary:focus-visible, .cc-body :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+ @media(max-width:480px) { .cc-facts { grid-template-columns:85px minmax(0,1fr); } .cc-output li { grid-template-columns:25px minmax(0,1fr); gap:6px; } .cc-output li > small:nth-child(2) { display:none; } }
+</style>
+<details id="cc-result" class="cc-result">
+ <summary class="cc-summary"><strong data-title>Code cell</strong><span id="cc-state" class="cc-state"></span><span id="cc-summary-meta" class="muted"></span></summary>
+ <div class="cc-body">
+  <dl class="cc-facts" id="cc-facts"></dl>
+  <div id="cc-notice" class="cc-notice" hidden></div><div id="cc-error" class="cc-error" hidden></div>
+  <h2 id="cc-output-title">Output</h2><ol id="cc-output" class="cc-output"></ol>
+  <p id="cc-next" class="hint"></p>
+  <details id="cc-return" hidden><summary>Returned value</summary><div id="cc-return-value"></div></details>
+  <details id="cc-tests" hidden><summary>Cell assertions</summary><div id="cc-test-list"></div></details>
+  <details><summary>Engine, ownership & complete cell result</summary><div id="cc-data"></div></details>
+ </div>
+</details>
+<script>
+ const state=DATA.state||'unknown', result=DATA.result||{}, error=DATA.error||result.error, done=['done','failed','cancelled','interrupted'].includes(state);
+ const output=Array.isArray(DATA.output)?DATA.output:[], owner=DATA.owner||{};
+ dt.title(DATA.title||'Code cell');
+ dt.$('#cc-result').open=(typeof document!=='undefined'&&document.body.classList.contains('embed'))||!!error||!done||state!=='done';
+ dt.$('#cc-state').textContent=state;dt.$('#cc-state').className='cc-state '+state.replace(/[^a-z-]/g,'');
+ dt.$('#cc-summary-meta').textContent=[DATA.engine,output.length+' output events',DATA.nextCursor!=null?'cursor '+DATA.nextCursor:null].filter(Boolean).join(' · ');
+ dt.$('#cc-facts').innerHTML=[['Cell',DATA.id],['Execution',DATA.executionId],['Engine',DATA.engine],['Principal',owner.principalId],['Chat / task',owner.storyId],['Cursor',DATA.cursor],['Next cursor',DATA.nextCursor]].filter(([,v])=>v!=null).map(([k,v])=>'<dt>'+dt.esc(k)+'</dt><dd>'+dt.esc(v)+'</dd>').join('');
+ if(error){dt.$('#cc-error').hidden=false;dt.$('#cc-error').textContent=typeof error==='string'?error:dt.prettyJson(error);}
+ if(['cancelling','draining'].includes(state)||DATA.execution?.cleanupIncomplete||DATA.execution?.outcome==='unknown'){
+  dt.$('#cc-notice').hidden=false;dt.$('#cc-notice').textContent='Owned work or cleanup is still settling, or an external outcome is unknown. Inspect execution details in Admin before retrying calls with effects.';
+ }
+ dt.$('#cc-output-title').textContent='Output · '+output.length+' events in this page';
+ dt.$('#cc-output').innerHTML=output.length?output.slice(0,200).map((entry,i)=>{const event=typeof entry==='string'?{text:entry}:entry||{};return '<li><small>'+dt.esc(event.cursor??i+1)+'</small><small>'+dt.esc(event.kind||'text')+'</small><pre>'+dt.esc(event.text??dt.prettyJson(event))+'</pre></li>';}).join(''):'<li><small></small><small></small><pre>No output in this page.</pre></li>';
+ dt.$('#cc-next').textContent=!done?'Continue with code_wait using this cell ID and nextCursor. This observes the same execution; it does not restart it.':'This cell is '+state+'. Output is a bounded page; use code_wait with a prior cursor to read earlier events.';
+ const returned=result.hasReturn?result.returned:result.returned!==undefined?result.returned:undefined;
+ if(returned!==undefined){dt.$('#cc-return').hidden=false;dt.json(dt.$('#cc-return-value'),returned,{open:2});}
+ if((result.tests||[]).length){dt.$('#cc-tests').hidden=false;dt.$('#cc-tests').open=result.tests.some(test=>!test.ok);dt.table(dt.$('#cc-test-list'),result.tests,{limit:100});}
+ dt.json(dt.$('#cc-data'),DATA,{open:1});
+</script>

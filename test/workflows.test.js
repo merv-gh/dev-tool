@@ -4,7 +4,7 @@ const home = fs.mkdtempSync(path.join(os.tmpdir(), 'dt-guides-'));
 process.env.DT_HOME = home; process.env.DT_LOG = 'quiet';
 require('../dev/eval/discovery-fixture').seed(home);
 const T = require('../lib/tools'), W = require('../lib/workflows');
-test.after(() => fs.rmSync(home, { recursive: true, force: true }));
+test.after(async () => { await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, { recursive: true, force: true }); });
 test('compound requests route to explicit multi-stage guides without changing lexical rankings or claiming execution', async () => {
   const cases = [
     ['find all places across functions and repositories where this column gets read and written', 'column-lineage', 'pg_usage'],

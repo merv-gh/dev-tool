@@ -19,7 +19,7 @@ fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ envs: { dev: {
 // the synced catalog of test/fixtures/pg/pay.sql, as catalog_sync leaves it
 fs.mkdirSync(path.join(home, 'cache', 'dev', 'pg'), { recursive: true });
 fs.copyFileSync(path.join(__dirname, 'fixtures', 'pg', 'pay.catalog.json'), path.join(home, 'cache', 'dev', 'pg', 'pay.json'));
-test.after(() => fs.rmSync(home, { recursive: true, force: true }));
+test.after(async () => { await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, { recursive: true, force: true }); });
 
 const FIX = path.join(__dirname, 'fixtures', 'payments-service');
 const CI = () => require('../lib/codeindex');

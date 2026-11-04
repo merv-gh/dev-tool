@@ -13,7 +13,7 @@ function workspace(id, sources) {
 }
 let root;
 test.before(() => { root = workspace('node', { 'src/value.cjs': 'module.exports=1', 'test/value.test.cjs': `const t=require('node:test'),a=require('node:assert/strict');t('correct value',()=>a.equal(require('../src/value.cjs'),2));t('clean environment',()=>a.equal(process.env.DT_PARENT_SECRET,undefined));` }); process.env.DT_PARENT_SECRET='must-not-leak'; });
-test.after(() => { delete process.env.DT_PARENT_SECRET; fs.rmSync(home, { recursive:true, force:true }); });
+test.after(async () => { delete process.env.DT_PARENT_SECRET; await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, { recursive:true, force:true }); });
 const call = (name,args) => require('../lib/tools').call('tool_execute',{name,arguments:args});
 test('Node tests execute through registry with actual red/green history and explicit local provenance', async () => {
   const red = await call('test_run',{workspace:'node',tests:['test/value.test.cjs'],env:'dev'});

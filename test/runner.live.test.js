@@ -15,7 +15,7 @@ process.env.DT_HOME = home;
 process.env.DT_RATE_PER_SEC = '0';
 delete process.env.DT_TOOLS;
 for (const k of ['DT_CONFIG_DIR', 'DT_CACHE_DIR', 'DT_PASSPORTS_DIR']) delete process.env[k];
-test.after(() => fs.rmSync(home, { recursive: true, force: true }));
+test.after(async () => { await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, { recursive: true, force: true }); });
 
 test('a Testcontainers test runs on the runner against the host\'s Docker', { skip: !on && 'inside the dt container with the runner: DT_TEST_RUNNER=1', timeout: 1200000 }, async () => {
   fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ envs: { dev: {} } }));

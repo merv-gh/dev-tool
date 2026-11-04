@@ -13,7 +13,7 @@ for(const db of ['alpha','beta'])put(`cache/dev/pg/${db}.json`,catalog(db));
 put('cache/dev/pg/_usage.json',{builtAt:'2099-01-01',edges:['alpha','beta'].map(db=>({db,target:'public.orders',targetKind:'table',user:db+'-reader',userKind:'service',role:'read',source:'code',where:'Repository.java:12'}))});
 const passport=(service,effective,env='dev')=>({service,env,repo:{project:'FIXTURE',repo:service,sha:'revision-one'},effective});
 const savePass=(s,e,env)=>put(`passports/${s}/passport.json`,passport(s,e,env));
-test.after(()=>fs.rmSync(home,{recursive:true,force:true}));
+test.after(async () => { await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home,{recursive:true,force:true}); });
 test('scoped database identities separate identical tables, functions and columns; aliases require disambiguation',()=>{
  const a=I.impact('public.orders',{env:'dev',grep:false});assert.equal(a.ambiguous,true);assert.deepEqual(a.resolved,[]);assert.deepEqual(a.candidates.sort(),['table:dev:alpha:public.orders','table:dev:beta:public.orders']);
  const b=I.impact('table:alpha:public.orders',{env:'dev',grep:false});assert.deepEqual(b.services,['alpha-reader']);assert.deepEqual(b.resolved,['table:dev:alpha:public.orders']);assert.equal(b.identityVersion,'dt.identity/v1');

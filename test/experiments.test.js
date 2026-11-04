@@ -9,7 +9,7 @@ process.env.DT_RATE_PER_SEC = '0';
 for (const key of ['DT_CONFIG_DIR', 'DT_CACHE_DIR', 'DT_PASSPORTS_DIR', 'DT_TOOLS']) delete process.env[key];
 fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ envs: { dev: {} } }));
 const E = require('../lib/experiments');
-test.after(() => fs.rmSync(home, { recursive: true, force: true }));
+test.after(async () => { await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, { recursive: true, force: true }); });
 
 test('experiments retain assertions and compare repeated read-only investigations', async () => {
   E.save({ id: 'orders', defaults: { id: 42 }, tools: ['pg_query'], code: 'const r = await tools.pg_query({sql:"select id from sales.orders where id = " + vars.id}); test("found", () => expect(r.rows.length).toBe(1)); return r.rows;' });

@@ -14,7 +14,7 @@ fs.writeFileSync(path.join(tmp, 'config.json'), JSON.stringify({
   envs: { dev: {} },
   passports: { internalGroups: ['com.acme'], libraryRepos: { 'odd-name-*': 'PLAT/platform-tools' } },
 }));
-test.after(() => fs.rmSync(tmp, { recursive: true, force: true }));
+test.after(async () => { await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(tmp, { recursive: true, force: true }); });
 
 const w = (root, files) => { for (const [f, t] of Object.entries(files)) { fs.mkdirSync(path.dirname(path.join(root, f)), { recursive: true }); fs.writeFileSync(path.join(root, f), t); } };
 const sh = (cwd, ...a) => execFileSync('git', a, { cwd, stdio: 'pipe', env: { ...process.env, GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@t', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@t' } }).toString().trim();

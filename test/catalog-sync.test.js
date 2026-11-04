@@ -28,7 +28,7 @@ test.before(() => new Promise(r => consul.listen(0, '127.0.0.1', () => {
   fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ envs: { dev: { consul: `http://127.0.0.1:${consul.address().port}` } } }));
   r();
 })));
-test.after(() => { consul.close(); fs.rmSync(home, { recursive: true, force: true }); });
+test.after(async () => { consul.close(); await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, { recursive: true, force: true }); });
 
 test('catalog_sync: "running" + job id, then the result by job id', async () => {
   const T = require('../lib/tools');

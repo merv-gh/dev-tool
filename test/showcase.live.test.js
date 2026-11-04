@@ -18,7 +18,7 @@ delete process.env.DT_TOOLS;
 for (const k of ['DT_CONFIG_DIR', 'DT_CACHE_DIR', 'DT_PASSPORTS_DIR']) delete process.env[k];
 
 let mock, server;
-test.after(() => { if (mock) mock.kill(); if (server) server.close(); fs.rmSync(home, { recursive: true, force: true }); });
+test.after(async () => { if (mock) mock.kill(); if (server) server.close(); await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, { recursive: true, force: true }); });
 
 test('showcase: two environments, passport, impact, a test on master, the patch; one page', { skip: !MVN && 'set DT_TEST_MAVEN', timeout: 900000 }, async () => {
   const port = 30000 + Math.floor(Math.random() * 20000), uat = port + 1;

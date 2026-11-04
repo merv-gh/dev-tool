@@ -52,7 +52,7 @@ test.before(async () => {
   }));
   fs.writeFileSync(path.join(home, '.env'), 'PARTNER_PW=pw\n');
 });
-test.after(() => { sftp.close(); api.close(); fs.rmSync(home, { recursive: true, force: true }); });
+test.after(async () => { sftp.close(); api.close(); await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, { recursive: true, force: true }); });
 
 const tools = () => require('../lib/tools');
 
@@ -191,7 +191,7 @@ test('call log: history, repeated calls and sequences become script suggestions'
   const T = tools();
   const C = require('../lib/calls');
   assert.ok(C.history({ source: 'script:partner/send-order' }).some(c => c.tool === 'files_write'), 'calls made by scripts are logged with their script');
-  fs.writeFileSync(C.FILE, ''); // start from a clean log
+  await C.clear(); // clear the current story through its selected storage backend
   for (const n of [11, 12, 13]) {
     await T.call('files_search', { store: 'templates', text: `ORD-${n}` }, { source: 'mcp' });
     await T.call('files_read', { store: 'templates', path: 'readme.txt' }, { source: 'mcp' });

@@ -53,7 +53,7 @@ const messages = async () => ({ messages: [
   { partition: 0, offset: '4', key: '42', value: { orderId: 42 } },
   { partition: 2, offset: '9', key: '999', value: { orderId: 999 } },
 ], windows: [{ partition: 0, from: '4', highExclusive: '5' }], truncated: false });
-test.after(() => fs.rmSync(home, { recursive: true, force: true }));
+test.after(async () => { await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, { recursive: true, force: true }); });
 
 test('offline plan resolves composite FKs and requires explicit cross-database joins', () => {
   const p = R.plan(input);

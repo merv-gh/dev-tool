@@ -11,7 +11,7 @@ fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ envs:{ dev:{} 
 const S = require('../lib/scripts'), C = require('../lib/collections');
 const script = (id, extra = {}) => S.save(id, { description:id, steps:[{js:'return vars.n;'}], ...extra });
 const read = (id, code) => script(id, { steps:[{js:code}] });
-test.after(() => fs.rmSync(home, {recursive:true, force:true}));
+test.after(async () => { await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, {recursive:true, force:true}); });
 
 test('tool parity preserves collection vars, hooks and aliases during partial edits', async () => {
   const T = require('../lib/tools');
@@ -219,4 +219,24 @@ test('fifty typed complex datasets preserve exact money/large ids and never leak
   let calls=0;
   const r=await C.run('fifty',{seed:'fixed'}, {schemas:[{name:'find'}],call:async(name,args)=>{calls++;assert.equal(args.previous,null);return args;}});
   assert.equal(r.ok,true,JSON.stringify(r)); assert.equal(calls,50);assert.equal(r.counts.passed,50);assert.equal(r.cases.reduce((n,c)=>n+c.result.tests.passed,0),100);
+});
+
+
+test('execution cancellation is retained immediately and detached finally hooks still run',async()=>{
+ const R=require('../lib/execution');let ready;const admitted=new Promise(r=>ready=r);let runId;
+ script('execution-cancel/a',{steps:[{js:'await tools.find({q:"ready"}); await new Promise(()=>{});'}],finally:'log("execution cleanup");'});
+ const op=R.start({kind:'test'},()=>C.run('execution-cancel',{onStart:id=>runId=id},{call:async()=>{ready();return [];}}));
+ await admitted;R.cancel(op.id,'cancelled by request');await assert.rejects(op.promise,e=>e.code==='DT_CANCELLED');
+ const retained=C.get(runId);assert.equal(retained.status,'cancelled');assert.ok(retained.cases[0].result.logs.some(r=>r.msg==='execution cleanup'),JSON.stringify(retained.cases[0].result));assert.deepEqual(retained.cases[0].result.cleanupErrors||[],[]);
+});
+test('private collection definitions, reports and cancellation handles stay in their story',async()=>{
+ const A=require('../lib/access'),alice={principalId:'alice',storyId:'collections',multiUser:true},bob={principalId:'bob',storyId:'collections',multiUser:true};
+ const r=await A.run(alice,async()=>{script('private-scope/a',{steps:[{set:{secret:'alice'}}]});const result=await C.run('private-scope');assert.equal(result.status,'passed');return result;});
+ await A.run(bob,()=>{assert.deepEqual(C.history(),[]);assert.throws(()=>C.get(r.run),/not found/);assert.throws(()=>C.cancel(r.run),/not found/);});
+});
+
+test('finally hooks inside concurrent top-level code calls retain reentrant code admission',async()=>{
+ script('nested-code-cleanup/a',{steps:[{js:'return 7;'}],finally:'log("nested cleanup");'});
+ const JS=require('../lib/js');const results=await Promise.all([1,2].map(()=>JS.run('return await tools.script_hook();',{}, {onTool:()=>S.run('nested-code-cleanup/a'),timeoutMs:10000})));
+ for(const result of results){assert.equal(result.error,undefined);assert.equal(result.returned.ok,true,JSON.stringify(result));assert.ok(result.returned.logs.some(r=>r.msg==='nested cleanup'));}
 });

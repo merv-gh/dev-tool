@@ -3,7 +3,7 @@ const fs = require('fs'), os = require('os'), path = require('path');
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'dt-outcomes-'));
 process.env.DT_HOME = home; process.env.DT_LOG = 'quiet';
 fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ envs: { dev: {} }, tests: { waitMs: 1 } }));
-test.after(() => fs.rmSync(home, { recursive: true, force: true }));
+test.after(async () => { await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, { recursive: true, force: true }); });
 const O = require('../lib/call-outcome'), C = require('../lib/calls'), J = require('../lib/jobs'), T = require('../lib/tools');
 
 test('explicit application contracts preserve invocation versus failed tests/assertions; HTTP status is not a verdict', () => {

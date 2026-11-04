@@ -14,7 +14,7 @@ fs.mkdirSync(path.join(home, 'files', 'data'), { recursive: true });
 fs.writeFileSync(path.join(home, 'files', 'data', 'a.txt'), '3\n1\n2\n');
 fs.writeFileSync(path.join(home, 'files', 'data', 'b.txt'), '2\n3\n4\n');
 fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ envs: { dev: { consul: 'http://127.0.0.1:9' } }, files: { data: { type: 'local', path: 'files/data' } }, scripts: { codeTimeoutMs: 3000 } }));
-test.after(() => fs.rmSync(home, { recursive: true, force: true }));
+test.after(async () => { await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, { recursive: true, force: true }); });
 
 const T = () => require('../lib/tools');
 

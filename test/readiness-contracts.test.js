@@ -2,7 +2,7 @@ const test = require('node:test'), assert = require('node:assert/strict');
 const fs = require('fs'), os = require('os'), path = require('path');
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'dt-readiness-contracts-')); process.env.DT_HOME = home; process.env.DT_LOG = 'quiet';
 fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ envs: { dev: {} } }));
-test.after(() => fs.rmSync(home, { recursive: true, force: true }));
+test.after(async () => { await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, { recursive: true, force: true }); });
 test('multi-version public contracts describe actual scoped impact, SQL lineage and passport edge DTOs', async () => {
   const T = require('../lib/tools'), contracts = await T.call('tool_contracts', {}), S = require('../lib/schema');
   assert.ok(contracts.some(c => c.name === 'v2/impact.schema.json'));

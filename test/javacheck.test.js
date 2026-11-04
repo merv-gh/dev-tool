@@ -17,7 +17,7 @@ delete process.env.DT_TOOLS;
 for (const k of ['DT_CONFIG_DIR', 'DT_CACHE_DIR', 'DT_PASSPORTS_DIR', 'DT_RUNNER_URL']) delete process.env[k];
 fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ envs: { dev: {} } }));
 const JDK = spawnSync('javac', ['-version']).status === 0;
-test.after(() => fs.rmSync(home, { recursive: true, force: true }));
+test.after(async () => { await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, { recursive: true, force: true }); });
 
 const LIB = {
   'org/springframework/stereotype/Component.java': 'package org.springframework.stereotype; public @interface Component {}',

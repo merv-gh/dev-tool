@@ -24,7 +24,7 @@ test.before(async () => {
   await new Promise(resolve => backend.listen(0, '127.0.0.1', resolve)); backendUrl = `http://127.0.0.1:${backend.address().port}/execute`;
   server = require('../server').start({ port: 0, host: '127.0.0.1' }); await new Promise(resolve => server.on('listening', resolve)); base = `http://127.0.0.1:${server.address().port}`;
 });
-test.after(async () => { backend.closeAllConnections(); server.closeAllConnections(); await Promise.all([new Promise(r => backend.close(r)), new Promise(r => server.close(r))]); fs.rmSync(home, { recursive: true, force: true }); });
+test.after(async () => { backend.closeAllConnections(); server.closeAllConnections(); await Promise.all([new Promise(r => backend.close(r)), new Promise(r => server.close(r))]); await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, { recursive: true, force: true }); });
 const post = async (url, body) => fetch(base + url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
 
 test('compact profile and semantic discovery keep full schemas out of the initial tool list', async () => {

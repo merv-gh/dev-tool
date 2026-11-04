@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const { Server, utils: { parseKey, sftp: { STATUS_CODE, OPEN_MODE } } } = require('ssh2');
 
 // clientKey: a private key (PEM) whose public half may log in, besides the password
-function start({ root, user = 'dt', password = 'pw', port = 0, clientKey }) {
+function start({ root, user = 'dt', password = 'pw', port = 0, clientKey, onRead }) {
   const hostKey = crypto.generateKeyPairSync('rsa', { modulusLength: 2048, privateKeyEncoding: { type: 'pkcs1', format: 'pem' }, publicKeyEncoding: { type: 'pkcs1', format: 'pem' } }).privateKey;
   const allowed = clientKey ? parseKey(clientKey) : null;
   const hostFingerprint = 'SHA256:' + crypto.createHash('sha256').update(parseKey(hostKey).getPublicSSH()).digest('base64').replace(/=+$/, '');
@@ -37,18 +37,19 @@ function start({ root, user = 'dt', password = 'pw', port = 0, clientKey }) {
         const d = get(h);
         if (!d || d.done) return sf.status(id, STATUS_CODE.EOF);
         d.done = true;
-        sf.name(id, d.names.map(n => ({ filename: n, longname: n, attrs: attrs(fs.statSync(path.join(d.dir, n))) })));
+        sf.name(id, d.names.map(n => ({ filename: n, longname: n, attrs: attrs(fs.lstatSync(path.join(d.dir, n))) })));
       });
       sf.on('OPEN', (id, p, flags) => {
         try {
           const w = flags & OPEN_MODE.WRITE;
           const fd = fs.openSync(abs(p), w ? ((flags & OPEN_MODE.EXCL) ? 'wx' : 'w') : 'r');
           if (w) writes.push(path.posix.normalize(`/${p}`));
-          sf.handle(id, handle({ fd }));
+          sf.handle(id, handle({ fd, path: p }));
         } catch (e) { fail(id, e); }
       });
       sf.on('READ', (id, h, offset, len) => {
         const f = get(h);
+        if (onRead?.({ path: f.path, offset, length: len }) === false) return;
         const buf = Buffer.alloc(len);
         const n = fs.readSync(f.fd, buf, 0, len, offset);
         n ? sf.data(id, buf.subarray(0, n)) : sf.status(id, STATUS_CODE.EOF);
@@ -58,6 +59,7 @@ function start({ root, user = 'dt', password = 'pw', port = 0, clientKey }) {
       sf.on('MKDIR', (id, p) => { try { fs.mkdirSync(abs(p)); sf.status(id, STATUS_CODE.OK); } catch (e) { fail(id, e); } });
       sf.on('RENAME', (id, from, to) => { try { if (fs.existsSync(abs(to))) throw new Error('Destination exists'); fs.renameSync(abs(from), abs(to)); sf.status(id, STATUS_CODE.OK); } catch (e) { fail(id, e); } });
       sf.on('REMOVE', (id, p) => { try { fs.unlinkSync(abs(p)); sf.status(id, STATUS_CODE.OK); } catch (e) { fail(id, e); } });
+      sf.once('close', () => { for (const file of handles.values()) if (file.fd !== undefined) try { fs.closeSync(file.fd); } catch {} handles.clear(); });
     })));
     client.on('error', () => {});
   });

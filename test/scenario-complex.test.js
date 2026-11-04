@@ -13,7 +13,7 @@ for (const key of ['DT_CONFIG_DIR', 'DT_CACHE_DIR', 'DT_PASSPORTS_DIR', 'DT_WORK
 fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ envs: { dev: { postgres: { commerce: 'postgres://u:p@127.0.0.1:1/commerce', risk: 'postgres://u:p@127.0.0.1:1/risk' } } } }));
 const { writeJson } = require('../lib/util');
 const R = require('../lib/reproduction');
-test.after(() => fs.rmSync(home, { recursive: true, force: true }));
+test.after(async () => { await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, { recursive: true, force: true }); });
 
 const column = (name, type = 'bigint', extra = {}) => ({ name, type, nullable: false, ...extra });
 const fk = (name, columns, ref, references) => ({ name, type: 'f', ref, def: `FOREIGN KEY (${columns.join(', ')}) REFERENCES ${ref}(${references.join(', ')})` });

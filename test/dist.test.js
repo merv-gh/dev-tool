@@ -32,3 +32,17 @@ test('bundled differential checks spawn their shipped worker without source-tree
     assert.equal(JSON.parse(r.stdout).outcome, 'equivalent');
   } finally { fs.rmSync(home, { recursive: true, force: true }); }
 });
+
+
+test('standalone bundle ships its QuickJS WASM and SQLite metadata workers',()=>{
+ const fs=require('fs'),os=require('os'),root=fs.mkdtempSync(path.join(os.tmpdir(),'dt-standalone-runtime-')),bundle=path.join(root,'bundle'),home=path.join(root,'home');
+ try{
+  fs.mkdirSync(bundle);fs.mkdirSync(home);fs.writeFileSync(path.join(home,'config.json'),JSON.stringify({envs:{dev:{}},scripts:{starters:false}}));
+  for(const file of ['dt.js','quickjs-worker.js','state-worker.js'])fs.copyFileSync(path.join(__dirname,'../dist',file),path.join(bundle,file));
+  const env={PATH:process.env.PATH,DT_HOME:home,DT_LOG:'quiet',NODE_PATH:''};
+  const code=spawnSync(process.execPath,[path.join(bundle,'dt.js'),'tool','code',JSON.stringify({engine:'quickjs',code:'text("pure transform"); return [2,3,7].reduce((a,b)=>a*b,1);'})],{cwd:root,env,encoding:'utf8',timeout:15000});
+  assert.equal(code.status,0,code.stderr||code.stdout);assert.equal(JSON.parse(code.stdout).returned,42);
+  const metadata=spawnSync(process.execPath,[path.join(bundle,'dt.js'),'tool','metadata_list',JSON.stringify({kind:'calls'})],{cwd:root,env,encoding:'utf8',timeout:15000});
+  assert.equal(metadata.status,0,metadata.stderr||metadata.stdout);const records=JSON.parse(metadata.stdout).records;if(require('../lib/state-store').sqliteAvailable())assert.ok(records.some(r=>r.value.tool==='code'));
+ }finally{fs.rmSync(root,{recursive:true,force:true});}
+});

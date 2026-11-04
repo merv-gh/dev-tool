@@ -144,6 +144,12 @@ Saving `config.json` (on `/admin`, or in an editor) applies it without a restart
 | `DT_BROWSER_MCP` | `browser.mcp` (compose: `http://browser:8931/mcp`) | Playwright MCP that dt drives for scripts and route discovery |
 | `COMPOSE_PROFILES`, `DT_BIND`, `DT_PORT`, `WEBUI_PORT`, `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` | | compose settings |
 
+## Runtime and task isolation
+
+Admin's **Runtime** tab shows parent/child executions, cancellation and cleanup, jobs, traces, paged operational metadata with revision-checked annotations, config generations, scheduler limits, and code engine capabilities. Its scratchpad executes editable tool arguments and renders the resulting native views.
+
+Configure `server.accessTokens` for separate principals and send `X-DT-Story` for each chat or task. Mutable folders, handles and histories are scoped to that pair; shared infrastructure catalogs stay reusable. `code_start`, `code_wait` and `code_cancel` support resumable observations without repeating tool effects. Node code keeps direct `fetch`; optional QuickJS handles pure transforms. See [runtime administration and token setup](docs/runtime-administration.md) and [metadata storage](docs/operational-metadata.md) for boundaries, limits, persistence and backup.
+
 ## Add tools at runtime
 
 All of this lives under `tools` in `config.json` and reloads on save (or **Reload tools** on `/admin`), with no restart. Open WebUI picks up new tools the next time it loads the tool list. Definitions that are invalid are shown on `/admin` and skipped, and the other tools keep working.
@@ -391,10 +397,10 @@ Nothing is fetched on a guess. When no repo declares the artifact, the passport 
 
 For the version, one `git ls-remote` lists the repo's tags and branches. dt fetches the first of `v1.2.0`, `1.2.0`, `<artifact>-1.2.0`, `<repo>-1.2.0`, `release/1.2.0` that exists. A version without a tag, such as a SNAPSHOT or an untagged release, is looked for in the build files at the branch tips:
 - files: `gradle.properties`, `build.gradle(.kts)`, `pom.xml`, of the module and the root;
-- branch order: default branch, `develop`, `release/*`, then the others, up to 20;
+- branch order: main/master, `develop`, `release/*`, then the others; default limits are eight branches, 32 requests and ten seconds (configurable);
 - the branch that declares exactly that version is fetched (`acme-starter-kafka 2.1.0-SNAPSHOT: no tag; branch develop declares it (pom.xml)`).
 
-Only if none declares it does dt take the default branch, and it says so. Several libraries in one repo share one fetch.
+Missing versions, lookup timeouts and stale refs fall back to the latest default branch, explicitly marked `exactVersion: false`. Several libraries in one repo share ref listings, build-file reads and fetches. Cold/refresh `passport` calls return an owned job immediately; poll with `service` and `job`. Cached reads remain immediate. See [search and revision behavior](docs/code-search-and-revisions.md).
 
 **Workspaces don't fetch libraries.** The build takes their jars from your repository (Nexus). For flows through library code, a workspace uses the indexes the service's passport built. `libraries=true` fetches the library sources now, for a service without a passport.
 
@@ -862,7 +868,7 @@ MIT
 
 Open **Admin → Context & scratchpad** to keep notes, plans, progress, findings,
 files, scripts and tool evidence across chats. Contexts are ordinary folders in
-`DT_HOME/contexts/<id>/`; they do not need Git and survive workspace cleanup.
+`DT_HOME/contexts/<id>/` in the single-user default scope (private stories use a scoped subfolder); they do not need Git and survive workspace cleanup.
 Each folder has a managed `index.json` (title, summary, status, tickets,
 repositories, workspaces, chat/task IDs, tags and file descriptions), plus an
 editable `progress.md`. The runtime directory is gitignored. Back it up separately

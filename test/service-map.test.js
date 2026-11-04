@@ -9,7 +9,7 @@ for(const [service,effective,extra]of [
  ['shop',{endpoints:[]},{}]])put(path.join(home,'passports',service,'passport.json'),{service,env:'test',repo:{project:'SHOP',repo:service,sha:'abc'},effective,...extra});
 put(path.join(home,'cache/test/catalog.txt'),'pg sales sales.orders table ~1: id integer\npg other sales.orders table ~1: id integer\nkafka orders.created 1\nes orders 2\n');
 put(path.join(home,'cache/routes.json'),{routes:{a:{host:'shop.example',method:'GET',path:'/orders/<id>',count:3,query:[],sources:[],statuses:{200:3}}}});
-test.after(()=>fs.rmSync(home,{recursive:true,force:true}));
+test.after(async () => { await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home,{recursive:true,force:true}); });
 test('binary format round trips UTF-8 without JSON, validates corruption and fixed column references',()=>{
  const bytes=F.encode([{id:'é',kind:'service',label:'注文'}],[],['test']);assert.equal(Buffer.from(bytes).subarray(0,6).toString(),'DTMAP1');assert.equal(F.decode(bytes).node(0).label,'注文');assert.throws(()=>F.decode(bytes.subarray(0,30)),/Invalid/);assert.throws(()=>F.encode([{id:'a'}],[{from:'a',to:'missing'}]),/Dangling/);
 });

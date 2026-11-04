@@ -15,7 +15,7 @@ process.env.DT_HOME = home;
 for (const key of ['DT_CONFIG_DIR', 'DT_CACHE_DIR', 'DT_PASSPORTS_DIR', 'DT_WORK_DIR', 'DT_BUILD_DIR', 'DT_REPOS_DIR', 'DT_PLUGINS_DIR', 'DT_TOOLS', 'DT_RUNNER_URL']) delete process.env[key];
 process.env.DT_GIT_DIR = path.join(home, 'git');
 process.env.DT_RATE_PER_SEC = '0';
-test.after(() => fs.rmSync(home, { recursive: true, force: true }));
+test.after(async () => { await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, { recursive: true, force: true }); });
 const put = (relative, content) => { const f = path.join(home, relative); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, content); };
 const config = sources => put('config.json', JSON.stringify({ envs: { dev: { postgres: sources || {} } }, tests: { maven: MVN, pgUrl: PG, javaHome: process.env.DT_JAVA_HOME || process.env.JAVA_HOME } }));
 

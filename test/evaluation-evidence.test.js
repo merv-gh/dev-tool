@@ -2,7 +2,7 @@ const test = require('node:test'), assert = require('node:assert/strict');
 const fs = require('fs'), os = require('os'), path = require('path');
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'dt-evidence-')); process.env.DT_HOME = home; process.env.DT_LOG = 'quiet';
 fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ envs: { dev: {} } }));
-test.after(() => fs.rmSync(home, { recursive: true, force: true }));
+test.after(async () => { await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, { recursive: true, force: true }); });
 const E = require('../lib/evaluation-evidence');
 const transcript = E.chain([{ tool: 'test_run', arguments: { workspace: 'candidate' }, result: { outcome: 'failed' } }, { tool: 'workspace_write', arguments: { path: 'src/value.cjs', content: 'fixed' } }, { tool: 'test_run', result: { outcome: 'passed' } }]);
 function report() { return { version: 1, case: 'test-case', kind: 'fix', claimedStatus: 'complete', observedAt: new Date().toISOString(), integrity: { publicSha256: 'a'.repeat(64), oracleSha256: 'b'.repeat(64), candidatePatchSha256: E.digest('patch'), protectedUnchanged: true, publicFrozenAt: '2026-01-01', oracleFrozenAt: '2026-01-02', graderFrozenAt: '2026-01-03', solverStartedAt: '2026-01-04' }, transcript: { artifact: 'transcript.json', events: transcript.length, head: transcript.at(-1).hash }, execution: { baseline: { through: 'tool', outcome: 'failed', assertionFailure: true, counts: { tests: 1, failed: 1 } }, post: { through: 'tool', tool: 'test_run', outcome: 'passed', target: 'local', revision: 'candidate', counts: { tests: 2, passed: 2, failed: 0, errors: 0, skipped: 0 } } }, grade: { independent: true, passed: true, assertions: 4 } }; }

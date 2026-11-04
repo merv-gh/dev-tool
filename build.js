@@ -19,6 +19,20 @@ const bundle = esbuild.buildSync({
 
 const files = { 'dt.js': bundle };
 // Spawned protocol workers are runtime assets, not imports reachable by esbuild.
+files['state-worker.js'] = esbuild.buildSync({
+  entryPoints: [path.join(ROOT, 'lib', 'state-worker.js')], bundle: true, platform: 'node', target: 'node22', format: 'cjs',
+  write: false, legalComments: 'none', logLevel: 'error',
+}).outputFiles[0].text;
+files['quickjs-worker.js'] = esbuild.buildSync({
+  entryPoints: [path.join(ROOT, 'lib', 'quickjs-worker.js')], bundle: true, platform: 'node', target: 'node22', format: 'cjs',
+  alias: { 'quickjs-emscripten': path.join(ROOT, 'lib', 'quickjs-bundled.js') }, loader: { '.wasm': 'binary' },
+  write: false, legalComments: 'none', logLevel: 'error',
+}).outputFiles[0].text;
+for (const name of ['quickjs-emscripten', 'quickjs-emscripten-core', '@jitl/quickjs-wasmfile-release-sync', '@jitl/quickjs-ffi-types']) {
+  let directory = path.dirname(require.resolve(name));
+  while (!fs.existsSync(path.join(directory, 'LICENSE')) && directory !== path.dirname(directory)) directory = path.dirname(directory);
+  files[`licenses/${name.replace(/\//g, '-')}.txt`] = fs.readFileSync(path.join(directory, 'LICENSE'));
+}
 files['differential-worker.js'] = fs.readFileSync(path.join(ROOT, 'lib', 'differential-worker.js'));
 for (const f of fs.readdirSync(path.join(ROOT, 'web'), { recursive: true })) {
   const p = path.join(ROOT, 'web', f);

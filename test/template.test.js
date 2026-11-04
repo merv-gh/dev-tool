@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs'),os=require('node:os'),path=require('node:path');
 const home=fs.mkdtempSync(path.join(os.tmpdir(),'dt-template-unit-'));process.env.DT_HOME=home;for(const k of ['DT_CONFIG_DIR','DT_CACHE_DIR','DT_WORK_DIR','DT_PASSPORTS_DIR'])delete process.env[k];
 fs.writeFileSync(path.join(home,'config.json'),JSON.stringify({envs:{dev:{postgres:{}}},tests:{waitMs:1}}));
-test.after(()=>fs.rmSync(home,{recursive:true,force:true}));
+test.after(async () => { await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home,{recursive:true,force:true}); });
 const T = require('../lib/testdb-templates');
 const DB = require('../lib/testdb');
 

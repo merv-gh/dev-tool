@@ -6,7 +6,7 @@ fs.writeFileSync(path.join(home,'config.json'),JSON.stringify({envs:{dev:{}}}));
 const root=path.join(home,'repo'),files=['src/main/Root.java','src/main/java/p/Read.java','src/main/kotlin/p/Write.kt','module/src/main/java/p/Library.java','src/test/java/p/ReadTest.java','src/release.cjs','src/consume.mjs','src/typed.cts','src/typed.mts','config/application-a.yml','config/application-aa.yml','config/application-a.yml.backup'];
 for(const f of files){const p=path.join(root,f);fs.mkdirSync(path.dirname(p),{recursive:true});fs.writeFileSync(p,'// scope_probe exports.release sales.orders.amount\n');}
 const CI=require('../lib/codeindex');CI.build(root,'REGRESSION/globs',{project:'REGRESSION',repo:'globs'});
-test.after(()=>fs.rmSync(home,{recursive:true,force:true}));
+test.after(async () => { await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home,{recursive:true,force:true}); });
 const hits=glob=>CI.grep(['REGRESSION/globs'],'scope_probe',{glob,limit:100}).hits.map(h=>h.path).sort();
 test('recursive path filters include direct and nested files, including module source roots',()=>{
  assert.deepEqual(hits('src/main/**'),files.filter(f=>f.includes('src/main/')).sort());

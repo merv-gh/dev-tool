@@ -156,7 +156,7 @@ function render() {
     l => [`<b>${esc(l.artifactId)}</b><div class="muted">${esc(l.groupId)}${l.via ? ` · via ${esc(l.via)}` : ''}</div>`, `<span class="mono">${esc(l.version || '?')}</span>`,
       l.repo ? `<span class="mono">${esc(l.repo)} @ ${esc(l.ref)} ${esc((l.sha || '').slice(0, 10))}</span>` : '',
       l.provides ? Object.entries(l.provides).filter(([, n]) => n).map(([k, n]) => `<span class="acc">${n} ${esc(k)}</span>`).join('') : '',
-      l.error ? `<span style="color:var(--lv-error)">${esc(l.error)}</span>` : l.exactVersion === false ? '<span class="muted">default branch: no tag for this version</span>' : '']));
+      l.error ? `<span style="color:var(--lv-error)">${esc(l.error)}</span>` : l.note ? `<span class="muted">${esc(l.note)}</span>` : l.exactVersion === false ? '<span class="muted">latest default branch; requested version was not verified</span>' : '']));
   S.push(section('external', 'External dependencies', p.dependencies.external, ['group', 'artifact', 'version', 'scope'], d => [esc(d.groupId), `<b>${esc(d.artifactId)}</b>`, `<span class="mono">${esc(d.version || 'managed')}</span>`, esc(d.scope || '')]));
   if (p.config.unresolved.length) S.push(acc('unresolved', 'Unresolved config placeholders', p.config.unresolved.length, `<div class="card" style="padding:8px 12px">${p.config.unresolved.map(u => `<span class="chip mono" style="margin:2px">${esc(u)}</span>`).join('')}</div>`));
   $('sections').innerHTML = S.join('');

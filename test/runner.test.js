@@ -18,7 +18,7 @@ fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ envs: { dev: {
 
 let server, base;
 test.before(() => new Promise((r) => { server = require('../lib/runner').serve({ port: 0, host: '127.0.0.1' }); server.on('listening', () => { base = `http://127.0.0.1:${server.address().port}`; r(); }); }));
-test.after(() => { server.close(); fs.rmSync(home, { recursive: true, force: true }); });
+test.after(async () => { server.close(); await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, { recursive: true, force: true }); });
 
 const post = (p, body, token = 'runner-test-token') => fetch(base + p, { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify(body) });
 

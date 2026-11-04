@@ -25,7 +25,7 @@ fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ envs: { dev: {
 const server = require('../server').start({ port: 0, host: '127.0.0.1' });
 let base;
 test.before(() => new Promise(r => server.on('listening', () => { base = `http://127.0.0.1:${server.address().port}`; r(); })));
-test.after(() => { server.close(); fs.rmSync(home, { recursive: true, force: true }); });
+test.after(async () => { await new Promise(resolve => server.close(resolve)); await require('../lib/state-store').close(); fs.rmSync(home, { recursive: true, force: true }); });
 const post = (p, body) => fetch(base + p, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
 const local = (url) => url.replace('http://127.0.0.1:4999', base);
 
@@ -49,7 +49,7 @@ test('diffLines: LCS with trimmed head/tail, counts', () => {
 
 test('views: built-ins listed; custom save, override, remove; names checked', () => {
   const V = require('../lib/views');
-  assert.deepEqual(V.list().filter(v => v.builtin).map(v => v.name), ['api-exchange', 'code', 'collection-report', 'diagram', 'differential', 'impact', 'json', 'knowledge-map', 'list-diff', 'patch', 'reproduction', 'scenario-run', 'table', 'tests', 'text-diff', 'xml']);
+  assert.deepEqual(V.list().filter(v => v.builtin).map(v => v.name), ['api-exchange', 'code', 'code-cell', 'collection-report', 'diagram', 'differential', 'impact', 'json', 'knowledge-map', 'list-diff', 'patch', 'reproduction', 'scenario-run', 'table', 'tests', 'text-diff', 'xml']);
   assert.ok(V.get('json').sample, 'built-ins have sample data');
   V.save('order-card', { html: '<!-- {"description": "ignored"} -->\n<h1 id="h"></h1><script>dt.$("#h").textContent = DATA.id</script>', description: 'one order', sample: { id: 'ORD-1' } });
   const v = V.get('order-card');
