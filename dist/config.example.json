@@ -27,12 +27,13 @@
 
   "bitbucket": { "url": "https://bitbucket.example.com", "token": "${BITBUCKET_TOKEN}" },
   "confluence": {
-    "url": "https://confluence.example.com", "type": "server", "user": "${CONFLUENCE_USER}", "token": "${CONFLUENCE_TOKEN}",
+    "url": "https://confluence.example.com", "type": "server", "token": "${CONFLUENCE_TOKEN}",
     "spaces": ["SHOP", "PAY"], "vision": false, "rerank": false, "extractRelations": false,
     "embeddings": { "enabled": false, "baseUrl": "${LLM_BASE_URL}", "model": "${EMBEDDING_MODEL}", "key": "${LLM_API_KEY}" },
     "diagrams": { "plantumlJar": "${PLANTUML_JAR}", "krokiUrl": "${KROKI_URL}", "java": "java", "runner": false }
   },
   "passports": { "internalGroups": ["com.example.libs"], "libraryRepos": { "example-starter-*": "LIB/example-starters", "example-audit-core": "LIB/commons/audit" }, "indexRatePerSec": 8, "libraryVersionTimeoutMs": 10000, "libraryVersionMaxBranches": 8, "libraryVersionMaxRequests": 32, "libraryFetchTimeoutMs": 60000 },
+  "architecture": { "staleAfterMs": 300000, "maxMetricBrokers": 12, "telemetry": [] },
   "graph": { "url": "${GRAPH_URL:-http://graph:8000}" },
 
   "tools": {
@@ -104,6 +105,7 @@
   },
 
   "knowledge": { "sources": [] },
+  "semantic": { "url": "${DT_SEMANTIC_URL:-}", "token": "${DT_SEMANTIC_TOKEN:-}", "timeoutMs": 1800000, "waitMs": 1000, "maxProjectionBytes": 268435456 },
   "scripts": { "http": { "allow": ["https://partner-api.dev.example.com/imports"] }, "js": true, "jsTimeoutMs": 5000 },
 
   "timeouts": { "pgQueryMs": 60000, "pgIndexMs": 120000, "catalogSyncWaitMs": 50000 },

@@ -1,0 +1,1043 @@
+{
+  "protocol": "dt.code-search-benchmark/v1",
+  "observedAt": "2026-11-04T17:16:20.094Z",
+  "corpus": {
+    "syntheticRepositories": 32,
+    "filesPerRepo": 128,
+    "requestedBytesPerFile": 32768,
+    "publicRevisions": [
+      {
+        "repo": "PUBLIC/spring-framework",
+        "sha": "3ebfd02d0ba0fd8df940c35951c726e77f01b3ef"
+      }
+    ]
+  },
+  "host": {
+    "node": "v24.22.0",
+    "platform": "darwin",
+    "arch": "x64",
+    "cpu": "Intel(R) Core(TM) i9-9980HK CPU @ 2.40GHz",
+    "cpus": 16,
+    "memoryBytes": 68719476736
+  },
+  "limits": [
+    "Local synthetic estate and pinned public source; not a production latency guarantee.",
+    "Native indexing includes semantic graph extraction and source snapshots. Zoekt is an additional text-only index over the exact same frozen files.",
+    "Timing uses the filesystem cache after corpus creation; warm searches use seven serial samples. No OS cache eviction or concurrency claim.",
+    "Native timings call the in-process engine; Zoekt includes loopback HTTP and JSON decoding. This is not an end-to-end tool latency comparison."
+  ],
+  "nativeIndex": {
+    "indexes": [
+      {
+        "key": "BENCH/internal-library-0",
+        "revisionKey": "BENCH/internal-library-0@706815b611750e6612c587ebe29718f0c25e9bde-5c56a74f8ac38fb5d76b34b5",
+        "sha": "706815b611750e6612c587ebe29718f0c25e9bde",
+        "files": 128,
+        "bytes": 4202290,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 2854.581
+      },
+      {
+        "key": "BENCH/internal-library-1",
+        "revisionKey": "BENCH/internal-library-1@4cfa79c06e13bd37b417d59732360af9778438b2-7a2d026afe1b1d30e2301bf6",
+        "sha": "4cfa79c06e13bd37b417d59732360af9778438b2",
+        "files": 128,
+        "bytes": 4202939,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 2765.597
+      },
+      {
+        "key": "BENCH/internal-library-2",
+        "revisionKey": "BENCH/internal-library-2@9ccdb7b46a9be648ca7685f2b8f466adc5df2561-cbcc9cd45593ee5a01a7da30",
+        "sha": "9ccdb7b46a9be648ca7685f2b8f466adc5df2561",
+        "files": 128,
+        "bytes": 4202939,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 2781.087
+      },
+      {
+        "key": "BENCH/internal-library-3",
+        "revisionKey": "BENCH/internal-library-3@ec8633d0a4de2964a79b8d739f0e44c1508ed70f-5865f42b8e3a57a00687a7a9",
+        "sha": "ec8633d0a4de2964a79b8d739f0e44c1508ed70f",
+        "files": 128,
+        "bytes": 4202939,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 2696.394
+      },
+      {
+        "key": "BENCH/internal-library-4",
+        "revisionKey": "BENCH/internal-library-4@4a828760f24833dbb1ee532b51f25640d963acfe-57dfed0becf68b6adacb911a",
+        "sha": "4a828760f24833dbb1ee532b51f25640d963acfe",
+        "files": 128,
+        "bytes": 4202939,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 2842.045
+      },
+      {
+        "key": "BENCH/internal-library-5",
+        "revisionKey": "BENCH/internal-library-5@a91a1fd6fd57af4278c70f0452fcc29de57a1537-5e4a6882ff0fa1040f35577d",
+        "sha": "a91a1fd6fd57af4278c70f0452fcc29de57a1537",
+        "files": 128,
+        "bytes": 4202939,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 3085.855
+      },
+      {
+        "key": "BENCH/internal-library-6",
+        "revisionKey": "BENCH/internal-library-6@fc0f9c7ce4d1c823d64ff83c643396d0a08410a7-2f40c6c653778492f1678e21",
+        "sha": "fc0f9c7ce4d1c823d64ff83c643396d0a08410a7",
+        "files": 128,
+        "bytes": 4202939,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 3098.523
+      },
+      {
+        "key": "BENCH/internal-library-7",
+        "revisionKey": "BENCH/internal-library-7@198bc5329841532283b5e76a56215e05ce61e724-554a799ce95abce4450b0774",
+        "sha": "198bc5329841532283b5e76a56215e05ce61e724",
+        "files": 128,
+        "bytes": 4202939,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 2915.99
+      },
+      {
+        "key": "BENCH/service-8",
+        "revisionKey": "BENCH/service-8@a07d82641132743cdea93e4a7e4e3c7e46571e47-ebe81bf80c5257b02ccc91c8",
+        "sha": "a07d82641132743cdea93e4a7e4e3c7e46571e47",
+        "files": 128,
+        "bytes": 4202492,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 3013.475
+      },
+      {
+        "key": "BENCH/service-9",
+        "revisionKey": "BENCH/service-9@0093a696afe873613df65d1408b24987be78c8af-d5d2030fc6b9355d4dfe6094",
+        "sha": "0093a696afe873613df65d1408b24987be78c8af",
+        "files": 128,
+        "bytes": 4202772,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 3018.529
+      },
+      {
+        "key": "BENCH/service-10",
+        "revisionKey": "BENCH/service-10@7a9956844c578b06376343d55dfb33eeb548d71a-afec01e6bf4a47a9955f8aeb",
+        "sha": "7a9956844c578b06376343d55dfb33eeb548d71a",
+        "files": 128,
+        "bytes": 4203565,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 3212.971
+      },
+      {
+        "key": "BENCH/service-11",
+        "revisionKey": "BENCH/service-11@2497a61983c87021b15cb21230aa96b714207ef3-1c4233a71ac1ed8be0df5668",
+        "sha": "2497a61983c87021b15cb21230aa96b714207ef3",
+        "files": 128,
+        "bytes": 4203565,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 3152.634
+      },
+      {
+        "key": "BENCH/service-12",
+        "revisionKey": "BENCH/service-12@05b76682e2f15dd4ef3ec7336fdba904421518dc-861ad923c3e37d12d417bc00",
+        "sha": "05b76682e2f15dd4ef3ec7336fdba904421518dc",
+        "files": 128,
+        "bytes": 4203565,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 2609.201
+      },
+      {
+        "key": "BENCH/service-13",
+        "revisionKey": "BENCH/service-13@1fa04f13052ef94007a2a029454a5b46acd695ec-18a1819dc05dcbb6e8b3ae2a",
+        "sha": "1fa04f13052ef94007a2a029454a5b46acd695ec",
+        "files": 128,
+        "bytes": 4203565,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 2783.115
+      },
+      {
+        "key": "BENCH/service-14",
+        "revisionKey": "BENCH/service-14@5849def989ef94ec8ff7cb3c3e7676318c1c242f-cf904afe8c4d3c0b3fc36827",
+        "sha": "5849def989ef94ec8ff7cb3c3e7676318c1c242f",
+        "files": 128,
+        "bytes": 4203565,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 2745.211
+      },
+      {
+        "key": "BENCH/service-15",
+        "revisionKey": "BENCH/service-15@8ac265978709cd8473833ef28b380a1b33bd3c34-6cf0ff089cc0532521d5c017",
+        "sha": "8ac265978709cd8473833ef28b380a1b33bd3c34",
+        "files": 128,
+        "bytes": 4203565,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 2759.485
+      },
+      {
+        "key": "BENCH/service-16",
+        "revisionKey": "BENCH/service-16@af4f3d0905cbae3ddf8a382303703504e28c6f48-89c0d55f2fe1556740594d15",
+        "sha": "af4f3d0905cbae3ddf8a382303703504e28c6f48",
+        "files": 128,
+        "bytes": 4203565,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 2782.777
+      },
+      {
+        "key": "BENCH/service-17",
+        "revisionKey": "BENCH/service-17@4c95c4915121fccb14d5de9ecf27c9b547a9380a-8b51529b33029efc534ccfe2",
+        "sha": "4c95c4915121fccb14d5de9ecf27c9b547a9380a",
+        "files": 128,
+        "bytes": 4203565,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 2843.623
+      },
+      {
+        "key": "BENCH/service-18",
+        "revisionKey": "BENCH/service-18@0bceb788662bb46e32bd9a0bc5b4df0499044e67-d55945685717240314be609a",
+        "sha": "0bceb788662bb46e32bd9a0bc5b4df0499044e67",
+        "files": 128,
+        "bytes": 4203565,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 2878.037
+      },
+      {
+        "key": "BENCH/service-19",
+        "revisionKey": "BENCH/service-19@45de1d1bc3226da0dead9aef3b5afb8b32258fed-96d71b462dc5e7b6406e58a1",
+        "sha": "45de1d1bc3226da0dead9aef3b5afb8b32258fed",
+        "files": 128,
+        "bytes": 4203565,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 2778.388
+      },
+      {
+        "key": "BENCH/service-20",
+        "revisionKey": "BENCH/service-20@63ef8bcad2df183d4fa77227609e2cdea4ef1b18-bfee42533179ca88ff3904bc",
+        "sha": "63ef8bcad2df183d4fa77227609e2cdea4ef1b18",
+        "files": 128,
+        "bytes": 4203565,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 2569.283
+      },
+      {
+        "key": "BENCH/service-21",
+        "revisionKey": "BENCH/service-21@a534dc29ed31d535a6831f6f36c46fd6f36f8603-01a288264beb0e660a4639ef",
+        "sha": "a534dc29ed31d535a6831f6f36c46fd6f36f8603",
+        "files": 128,
+        "bytes": 4203565,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 2607.466
+      },
+      {
+        "key": "BENCH/service-22",
+        "revisionKey": "BENCH/service-22@13ed9087160b98a3c9490ab44de911367da725b0-66e9192b695c22dae023d9d8",
+        "sha": "13ed9087160b98a3c9490ab44de911367da725b0",
+        "files": 128,
+        "bytes": 4203565,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 2813.051
+      },
+      {
+        "key": "BENCH/service-23",
+        "revisionKey": "BENCH/service-23@49dff7ff5db4383187a55858f24cf11d5a6dae0c-fa298b5bf82d40610013417f",
+        "sha": "49dff7ff5db4383187a55858f24cf11d5a6dae0c",
+        "files": 128,
+        "bytes": 4203565,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 3127.039
+      },
+      {
+        "key": "BENCH/service-24",
+        "revisionKey": "BENCH/service-24@5a4951f970b09a7b71137b995993594cfd496125-2effff04421e01c30f8ef505",
+        "sha": "5a4951f970b09a7b71137b995993594cfd496125",
+        "files": 128,
+        "bytes": 4203565,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 3546.457
+      },
+      {
+        "key": "BENCH/service-25",
+        "revisionKey": "BENCH/service-25@ba50c76d1e0333d959208a821f6ab1a40b23560e-bf6f17c9261b740fe0a8b209",
+        "sha": "ba50c76d1e0333d959208a821f6ab1a40b23560e",
+        "files": 128,
+        "bytes": 4203565,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 2812.481
+      },
+      {
+        "key": "BENCH/service-26",
+        "revisionKey": "BENCH/service-26@7735634ff6e460d9cc3a1d0ec518a4e0afbb861a-1ed69b8b62aa09cb0199119b",
+        "sha": "7735634ff6e460d9cc3a1d0ec518a4e0afbb861a",
+        "files": 128,
+        "bytes": 4203565,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 3012.205
+      },
+      {
+        "key": "BENCH/service-27",
+        "revisionKey": "BENCH/service-27@babd9adf5ec2b2d89accb90de500544c1e571a80-e27654d4b99198c6cd746720",
+        "sha": "babd9adf5ec2b2d89accb90de500544c1e571a80",
+        "files": 128,
+        "bytes": 4203565,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 2819.785
+      },
+      {
+        "key": "BENCH/service-28",
+        "revisionKey": "BENCH/service-28@2fa15938625f71aca27668808379dd18027f1a0a-dadf928b855de8742292fce6",
+        "sha": "2fa15938625f71aca27668808379dd18027f1a0a",
+        "files": 128,
+        "bytes": 4203565,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 2600.183
+      },
+      {
+        "key": "BENCH/service-29",
+        "revisionKey": "BENCH/service-29@02d619681864e9ba5c91084576952ffc7fcbcad4-b1219f7c2f94745a1246ebeb",
+        "sha": "02d619681864e9ba5c91084576952ffc7fcbcad4",
+        "files": 128,
+        "bytes": 4203565,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 2934.602
+      },
+      {
+        "key": "BENCH/service-30",
+        "revisionKey": "BENCH/service-30@7f85916253d43911d13cdfc4899f30cf8a11b597-cf6e341f512050cc7c1573b9",
+        "sha": "7f85916253d43911d13cdfc4899f30cf8a11b597",
+        "files": 128,
+        "bytes": 4203565,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 2795.695
+      },
+      {
+        "key": "BENCH/service-31",
+        "revisionKey": "BENCH/service-31@1cc55a799f143d402edaff393d314afbb5c3b8b5-c98c7228c4f5a80798a9b673",
+        "sha": "1cc55a799f143d402edaff393d314afbb5c3b8b5",
+        "files": 128,
+        "bytes": 4203607,
+        "classes": 64,
+        "edges": 1216,
+        "coldMs": 2704.824
+      },
+      {
+        "key": "PUBLIC/spring-framework",
+        "revisionKey": "PUBLIC/spring-framework@3ebfd02d0ba0fd8df940c35951c726e77f01b3ef-814cc82a5142a21b58b9ae63",
+        "sha": "3ebfd02d0ba0fd8df940c35951c726e77f01b3ef",
+        "files": 10673,
+        "bytes": 56834529,
+        "classes": 19703,
+        "edges": 453220,
+        "coldMs": 53970.786
+      }
+    ],
+    "coldMs": 145931.667,
+    "graphMs": 108489.774,
+    "unchangedMs": 2060.495,
+    "diskBytes": 715661725,
+    "maxRssBytes": 4120936448,
+    "heapUsedBytes": 59353504,
+    "storageBreakdownBytes": {
+      "sourceSnapshots": 191341128,
+      "trigramPostings": 28632927,
+      "semanticGraphs": 492895671,
+      "manifests": 2791999
+    }
+  },
+  "nativeSearch": {
+    "queries": [
+      {
+        "name": "rare-literal",
+        "coldMs": 62.396,
+        "p50Ms": 3.912,
+        "p95Ms": 9.764,
+        "maxMs": 9.764,
+        "hits": 1,
+        "truncated": false,
+        "candidates": 1,
+        "filesRead": 1,
+        "plan": "billing.threshold.rare_needle_72639",
+        "identityHash": "e2d8f9039808c6e7dab2e902e55204b2f276940aab108d60e34c0a27b0a8ffe0"
+      },
+      {
+        "name": "missing-literal",
+        "coldMs": 3.227,
+        "p50Ms": 2.136,
+        "p95Ms": 2.94,
+        "maxMs": 2.94,
+        "hits": 0,
+        "truncated": false,
+        "candidates": 0,
+        "filesRead": 0,
+        "plan": "there_is_no_such_source_298302",
+        "identityHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "name": "common-literal",
+        "coldMs": 443.154,
+        "p50Ms": 358.289,
+        "p95Ms": 405.489,
+        "maxMs": 405.489,
+        "hits": 4278,
+        "truncated": false,
+        "candidates": 2457,
+        "filesRead": 2457,
+        "plan": "Transactional",
+        "identityHash": "0fe5b9b57a7ddad8a066cb2fb029eac08f0213cb5a9db6f517096b0700815f68"
+      },
+      {
+        "name": "alternation",
+        "coldMs": 61.805,
+        "p50Ms": 55.693,
+        "p95Ms": 64.551,
+        "maxMs": 64.551,
+        "hits": 256,
+        "truncated": false,
+        "candidates": 263,
+        "filesRead": 263,
+        "plan": "orderCreated_ | orderCancelled_",
+        "identityHash": "1340e8c23e12ba6627371d68db87637607a98bee4cfaa4c90e6c035598f17367"
+      },
+      {
+        "name": "character-class",
+        "coldMs": 1700.545,
+        "p50Ms": 1474.959,
+        "p95Ms": 1602.646,
+        "maxMs": 1602.646,
+        "hits": 263,
+        "truncated": false,
+        "candidates": 14769,
+        "filesRead": 14769,
+        "plan": "all files",
+        "identityHash": "c3398652c1863de590763707c54b8b59060f68171e97b7662aa689c85abd0252"
+      },
+      {
+        "name": "escaped-literal",
+        "coldMs": 58.713,
+        "p50Ms": 53.197,
+        "p95Ms": 70.669,
+        "maxMs": 70.669,
+        "hits": 256,
+        "truncated": false,
+        "candidates": 257,
+        "filesRead": 257,
+        "plan": "Topic.Order.Created",
+        "identityHash": "1340e8c23e12ba6627371d68db87637607a98bee4cfaa4c90e6c035598f17367"
+      },
+      {
+        "name": "regex-call",
+        "coldMs": 86.717,
+        "p50Ms": 74.309,
+        "p95Ms": 105.889,
+        "maxMs": 105.889,
+        "hits": 302,
+        "truncated": false,
+        "candidates": 322,
+        "filesRead": 322,
+        "plan": "publish & (event) | consume & (event)",
+        "identityHash": "ae489ccae293bfe9e66d6782ba4d2490a6bcf3a7d68da775432013bebd153b51"
+      },
+      {
+        "name": "public-source",
+        "coldMs": 26.934,
+        "p50Ms": 25.99,
+        "p95Ms": 43.493,
+        "maxMs": 43.493,
+        "hits": 768,
+        "truncated": false,
+        "candidates": 213,
+        "filesRead": 213,
+        "plan": "@GetMapping( | @PostMapping( | @RequestMapping(",
+        "identityHash": "62c9ffc6c3772481bc647bc2e61d3ecfcd45e06580e64da9165b03adca1bfbf5"
+      },
+      {
+        "name": "unicode-fold",
+        "coldMs": 169.731,
+        "p50Ms": 167.497,
+        "p95Ms": 221.972,
+        "maxMs": 221.972,
+        "hits": 256,
+        "truncated": false,
+        "candidates": 1689,
+        "filesRead": 1689,
+        "plan": "Ärger",
+        "identityHash": "1340e8c23e12ba6627371d68db87637607a98bee4cfaa4c90e6c035598f17367"
+      }
+    ],
+    "maxRssBytes": 894525440,
+    "heapUsedBytes": 670820128
+  },
+  "zoektIndex": {
+    "coldMs": 35548.475,
+    "diskBytes": 527076470,
+    "ctags": false,
+    "parallelism": 1
+  },
+  "zoektBuild": {
+    "repository": "https://github.com/sourcegraph/zoekt",
+    "commit": "a5a933bc043e08f092559801cfcc213ac942103d",
+    "go": "go1.27.3"
+  },
+  "zoektSearch": {
+    "queries": [
+      {
+        "name": "rare-literal",
+        "coldMs": 3.615,
+        "p50Ms": 3.078,
+        "p95Ms": 4.501,
+        "maxMs": 4.501,
+        "hits": 1,
+        "identityHash": "e2d8f9039808c6e7dab2e902e55204b2f276940aab108d60e34c0a27b0a8ffe0",
+        "sameRows": true,
+        "filesConsidered": 1,
+        "filesLoaded": 1,
+        "contentBytesLoaded": 33374,
+        "matchCount": 1,
+        "crashes": 0,
+        "speedupP50": 1.271
+      },
+      {
+        "name": "missing-literal",
+        "coldMs": 2.814,
+        "p50Ms": 1.533,
+        "p95Ms": 2.115,
+        "maxMs": 2.115,
+        "hits": 0,
+        "identityHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "sameRows": true,
+        "filesConsidered": 0,
+        "filesLoaded": 0,
+        "contentBytesLoaded": 0,
+        "matchCount": 0,
+        "crashes": 0,
+        "speedupP50": 1.393
+      },
+      {
+        "name": "common-literal",
+        "coldMs": 71.763,
+        "p50Ms": 58.261,
+        "p95Ms": 66.221,
+        "maxMs": 66.221,
+        "hits": 4278,
+        "identityHash": "0fe5b9b57a7ddad8a066cb2fb029eac08f0213cb5a9db6f517096b0700815f68",
+        "sameRows": true,
+        "filesConsidered": 2408,
+        "filesLoaded": 2408,
+        "contentBytesLoaded": 71249192,
+        "matchCount": 4278,
+        "crashes": 0,
+        "speedupP50": 6.15
+      },
+      {
+        "name": "alternation",
+        "coldMs": 55.094,
+        "p50Ms": 34.007,
+        "p95Ms": 46.813,
+        "maxMs": 46.813,
+        "hits": 256,
+        "identityHash": "1340e8c23e12ba6627371d68db87637607a98bee4cfaa4c90e6c035598f17367",
+        "sameRows": true,
+        "filesConsidered": 321,
+        "filesLoaded": 276,
+        "contentBytesLoaded": 9487271,
+        "matchCount": 256,
+        "crashes": 0,
+        "speedupP50": 1.638
+      },
+      {
+        "name": "character-class",
+        "coldMs": 3932.075,
+        "p50Ms": 3726.72,
+        "p95Ms": 3814.687,
+        "maxMs": 3814.687,
+        "hits": 263,
+        "identityHash": "c3398652c1863de590763707c54b8b59060f68171e97b7662aa689c85abd0252",
+        "sameRows": true,
+        "filesConsidered": 14769,
+        "filesLoaded": 14769,
+        "contentBytesLoaded": 191444244,
+        "matchCount": 263,
+        "crashes": 0,
+        "speedupP50": 0.396
+      },
+      {
+        "name": "escaped-literal",
+        "coldMs": 9.602,
+        "p50Ms": 10.693,
+        "p95Ms": 13.573,
+        "maxMs": 13.573,
+        "hits": 256,
+        "identityHash": "1340e8c23e12ba6627371d68db87637607a98bee4cfaa4c90e6c035598f17367",
+        "sameRows": true,
+        "filesConsidered": 256,
+        "filesLoaded": 256,
+        "contentBytesLoaded": 8498504,
+        "matchCount": 256,
+        "crashes": 0,
+        "speedupP50": 4.975
+      },
+      {
+        "name": "regex-call",
+        "coldMs": 192.873,
+        "p50Ms": 158.584,
+        "p95Ms": 175.851,
+        "maxMs": 175.851,
+        "hits": 302,
+        "identityHash": "ae489ccae293bfe9e66d6782ba4d2490a6bcf3a7d68da775432013bebd153b51",
+        "sameRows": true,
+        "filesConsidered": 307,
+        "filesLoaded": 286,
+        "contentBytesLoaded": 8962784,
+        "matchCount": 302,
+        "crashes": 0,
+        "speedupP50": 0.469
+      },
+      {
+        "name": "public-source",
+        "coldMs": 47.516,
+        "p50Ms": 46.005,
+        "p95Ms": 62.365,
+        "maxMs": 62.365,
+        "hits": 768,
+        "identityHash": "62c9ffc6c3772481bc647bc2e61d3ecfcd45e06580e64da9165b03adca1bfbf5",
+        "sameRows": true,
+        "filesConsidered": 870,
+        "filesLoaded": 785,
+        "contentBytesLoaded": 8793602,
+        "matchCount": 768,
+        "crashes": 0,
+        "speedupP50": 0.565
+      },
+      {
+        "name": "unicode-fold",
+        "coldMs": 5.539,
+        "p50Ms": 4.903,
+        "p95Ms": 7.031,
+        "maxMs": 7.031,
+        "hits": 256,
+        "identityHash": "1340e8c23e12ba6627371d68db87637607a98bee4cfaa4c90e6c035598f17367",
+        "sameRows": true,
+        "filesConsidered": 256,
+        "filesLoaded": 256,
+        "contentBytesLoaded": 8498504,
+        "matchCount": 256,
+        "crashes": 0,
+        "speedupP50": 34.162
+      }
+    ],
+    "residentBytes": 272769024
+  },
+  "zoektRegexCompatibility": [
+    {
+      "pattern": "(?<=billing\\.)threshold",
+      "supported": false,
+      "error": "error parsing regexp: invalid named capture: `(?<=billing\\.)threshold`",
+      "nativeJavaScriptSyntaxValid": true
+    },
+    {
+      "pattern": "(order)_\\1",
+      "supported": false,
+      "error": "error parsing regexp: invalid escape sequence: `\\1`",
+      "nativeJavaScriptSyntaxValid": true
+    },
+    {
+      "pattern": "get(?!Class)",
+      "supported": false,
+      "error": "error parsing regexp: invalid or unsupported Perl syntax: `(?!`",
+      "nativeJavaScriptSyntaxValid": true
+    }
+  ],
+  "ready": true,
+  "nativeBounded": {
+    "queries": [
+      {
+        "name": "rare-literal",
+        "coldMs": 60.9,
+        "p50Ms": 5.081,
+        "p95Ms": 9.998,
+        "maxMs": 9.998,
+        "hits": 1,
+        "truncated": false,
+        "candidates": 1,
+        "filesRead": 1,
+        "plan": "billing.threshold.rare_needle_72639",
+        "identityHash": "e2d8f9039808c6e7dab2e902e55204b2f276940aab108d60e34c0a27b0a8ffe0"
+      },
+      {
+        "name": "missing-literal",
+        "coldMs": 3.415,
+        "p50Ms": 2.101,
+        "p95Ms": 3.151,
+        "maxMs": 3.151,
+        "hits": 0,
+        "truncated": false,
+        "candidates": 0,
+        "filesRead": 0,
+        "plan": "there_is_no_such_source_298302",
+        "identityHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "name": "common-literal",
+        "coldMs": 16.471,
+        "p50Ms": 17.043,
+        "p95Ms": 18.224,
+        "maxMs": 18.224,
+        "hits": 100,
+        "truncated": true,
+        "candidates": 128,
+        "filesRead": 100,
+        "plan": "Transactional",
+        "identityHash": "c3f9cdd417cd91eecb37d0b6ae8b026fd29473618d93d0a6e8f5998639e42da6"
+      },
+      {
+        "name": "alternation",
+        "coldMs": 27.11,
+        "p50Ms": 21.207,
+        "p95Ms": 24.586,
+        "maxMs": 24.586,
+        "hits": 100,
+        "truncated": true,
+        "candidates": 104,
+        "filesRead": 100,
+        "plan": "orderCreated_ | orderCancelled_",
+        "identityHash": "0105b253cc6489982484df1f144cfafd69361719c60413be2a5138bd7b603ff8"
+      },
+      {
+        "name": "character-class",
+        "coldMs": 267.569,
+        "p50Ms": 208.178,
+        "p95Ms": 265.894,
+        "maxMs": 265.894,
+        "hits": 100,
+        "truncated": true,
+        "candidates": 1664,
+        "filesRead": 1592,
+        "plan": "all files",
+        "identityHash": "0105b253cc6489982484df1f144cfafd69361719c60413be2a5138bd7b603ff8"
+      },
+      {
+        "name": "escaped-literal",
+        "coldMs": 21.788,
+        "p50Ms": 20.138,
+        "p95Ms": 21.368,
+        "maxMs": 21.368,
+        "hits": 100,
+        "truncated": true,
+        "candidates": 104,
+        "filesRead": 100,
+        "plan": "Topic.Order.Created",
+        "identityHash": "0105b253cc6489982484df1f144cfafd69361719c60413be2a5138bd7b603ff8"
+      },
+      {
+        "name": "regex-call",
+        "coldMs": 24.892,
+        "p50Ms": 24.414,
+        "p95Ms": 46.467,
+        "maxMs": 46.467,
+        "hits": 100,
+        "truncated": true,
+        "candidates": 104,
+        "filesRead": 100,
+        "plan": "publish & (event) | consume & (event)",
+        "identityHash": "0105b253cc6489982484df1f144cfafd69361719c60413be2a5138bd7b603ff8"
+      },
+      {
+        "name": "public-source",
+        "coldMs": 10.983,
+        "p50Ms": 8.943,
+        "p95Ms": 10.113,
+        "maxMs": 10.113,
+        "hits": 100,
+        "truncated": true,
+        "candidates": 213,
+        "filesRead": 46,
+        "plan": "@GetMapping( | @PostMapping( | @RequestMapping(",
+        "identityHash": "8e789faf38a869d82c8d67e5fdcfbba6647fb867b5ac07f0f37b1f111ac6702f"
+      },
+      {
+        "name": "unicode-fold",
+        "coldMs": 18.867,
+        "p50Ms": 18.636,
+        "p95Ms": 20.286,
+        "maxMs": 20.286,
+        "hits": 100,
+        "truncated": true,
+        "candidates": 104,
+        "filesRead": 100,
+        "plan": "Ärger",
+        "identityHash": "0105b253cc6489982484df1f144cfafd69361719c60413be2a5138bd7b603ff8"
+      }
+    ],
+    "maxRssBytes": 278835200,
+    "heapUsedBytes": 96437880
+  },
+  "zoektBounded": {
+    "requestedRows": 100,
+    "upstreamMatchBudget": 1000,
+    "queries": [
+      {
+        "name": "rare-literal",
+        "p50Ms": 2.256,
+        "p95Ms": 3.882,
+        "maxMs": 3.882,
+        "hits": 1,
+        "sameRowCount": true,
+        "allRowsMatch": true,
+        "filesConsidered": 1,
+        "filesLoaded": 1,
+        "speedupP50": 2.252
+      },
+      {
+        "name": "missing-literal",
+        "p50Ms": 1.514,
+        "p95Ms": 1.878,
+        "maxMs": 1.878,
+        "hits": 0,
+        "sameRowCount": true,
+        "allRowsMatch": true,
+        "filesConsidered": 0,
+        "filesLoaded": 0,
+        "speedupP50": 1.388
+      },
+      {
+        "name": "common-literal",
+        "p50Ms": 11.387,
+        "p95Ms": 11.802,
+        "maxMs": 11.802,
+        "hits": 100,
+        "sameRowCount": true,
+        "allRowsMatch": true,
+        "filesConsidered": 2251,
+        "filesLoaded": 2251,
+        "speedupP50": 1.497
+      },
+      {
+        "name": "alternation",
+        "p50Ms": 34.013,
+        "p95Ms": 41.684,
+        "maxMs": 41.684,
+        "hits": 100,
+        "sameRowCount": true,
+        "allRowsMatch": true,
+        "filesConsidered": 321,
+        "filesLoaded": 276,
+        "speedupP50": 0.623
+      },
+      {
+        "name": "character-class",
+        "p50Ms": 3681.576,
+        "p95Ms": 3757.817,
+        "maxMs": 3757.817,
+        "hits": 100,
+        "sameRowCount": true,
+        "allRowsMatch": true,
+        "filesConsidered": 14769,
+        "filesLoaded": 14769,
+        "speedupP50": 0.057
+      },
+      {
+        "name": "escaped-literal",
+        "p50Ms": 3.242,
+        "p95Ms": 6.384,
+        "maxMs": 6.384,
+        "hits": 100,
+        "sameRowCount": true,
+        "allRowsMatch": true,
+        "filesConsidered": 256,
+        "filesLoaded": 256,
+        "speedupP50": 6.212
+      },
+      {
+        "name": "regex-call",
+        "p50Ms": 159.356,
+        "p95Ms": 207.812,
+        "maxMs": 207.812,
+        "hits": 100,
+        "sameRowCount": true,
+        "allRowsMatch": true,
+        "filesConsidered": 307,
+        "filesLoaded": 286,
+        "speedupP50": 0.153
+      },
+      {
+        "name": "public-source",
+        "p50Ms": 40.216,
+        "p95Ms": 58.222,
+        "maxMs": 58.222,
+        "hits": 100,
+        "sameRowCount": true,
+        "allRowsMatch": true,
+        "filesConsidered": 870,
+        "filesLoaded": 785,
+        "speedupP50": 0.222
+      },
+      {
+        "name": "unicode-fold",
+        "p50Ms": 3.226,
+        "p95Ms": 3.952,
+        "maxMs": 3.952,
+        "hits": 100,
+        "sameRowCount": true,
+        "allRowsMatch": true,
+        "filesConsidered": 256,
+        "filesLoaded": 256,
+        "speedupP50": 5.777
+      }
+    ]
+  },
+  "queryContract": {
+    "regexEngineNative": "JavaScript RegExp without unicode flag",
+    "regexEngineZoekt": "Go regexp/RE2 syntax",
+    "fullResultEquivalenceScope": "The nine declared queries only; not proof of arbitrary regex translation.",
+    "boundedRows": 100,
+    "zoektUpstreamMatchBudget": 1000
+  },
+  "revisionProbe": {
+    "protocol": "dt.zoekt-revision-probe/v1",
+    "observedAt": "2026-11-04T18:00:25.654Z",
+    "fixture": {
+      "gitRepositories": 4,
+      "indexedRevisions": 5,
+      "libraryVersions": 3,
+      "transitiveLibraryDepth": 2,
+      "libraryBytes": 4217477
+    },
+    "checks": {
+      "tokenlessLocalGit": true,
+      "exactIndexedVersions": true,
+      "oldVersionRetained": true,
+      "failedStagedBuildPreservesPublishedShards": true,
+      "unchangedGitIndexContentRetained": true,
+      "transitiveCallerReached": true,
+      "automaticServiceDependencyExpansion": true,
+      "unrelatedLibraryVersionExcluded": true,
+      "impactStableAfterLibraryRefresh": true,
+      "deltaShardAdded": true
+    },
+    "refresh": {
+      "nativeColdMs": 861.204,
+      "nativeUnchangedMs": 8.029,
+      "nativeChangedCommitMs": 662.168,
+      "zoektGitColdMs": 1855.641,
+      "zoektGitUnchangedMs": 161.888,
+      "zoektGitDeltaCommitMs": 254.509,
+      "deltaShardsBefore": 1,
+      "deltaShardsAfter": 2
+    },
+    "impact": {
+      "oldNearest": [
+        "1 method Middle#adjust (src/main/java/fixture/Middle.java:3) <- calls code:LIB%2Ffee%40381eba731496022ac42440cfb2082689b69ef627-d92e9665805b554fb9fb0ddc@381eba731496022ac42440cfb2082689b69ef627%2Bsource%3Abb5c312db889d0852b8a01681d7606c1b6b6a9eb1f92a05b183c22d35d3ba171:fixture.FeeMath#fee(int)",
+        "2 method OrderService#create (src/main/java/fixture/OrderService.java:3) <- calls code:LIB%2Fmiddle%40802764848b1f17415c42f04a87d3df7c79ffb902-f61dbaf034224c8f79164235@802764848b1f17415c42f04a87d3df7c79ffb902%2Bsource%3A28d2d245aa920c87544e2529fb13e56cd504cb7fd13c7ebba5bd4b51c7811016:fixture.Middle#adjust(int)"
+      ],
+      "newNearest": [
+        "1 method OtherService#create (src/main/java/fixture/OtherService.java:3) <- calls code:LIB%2Ffee%408794cbac885c0799a67c2c87c1885361312ac905-fe1de9b13262666665478935@8794cbac885c0799a67c2c87c1885361312ac905%2Bsource%3Ac18f824b14eca2cc39ecaa6fbec80afab12aa679a22326be73b9c982797da0c2:fixture.FeeMath#fee(int)"
+      ]
+    },
+    "limitation": "A local integration probe, not a configured production backend. Text matches remain candidate evidence; semantic caller edges come from dt graphs with pinned dependency bindings."
+  },
+  "nativeRevision": "2674da38c8fb5d69bc63d0113b541b350016998a",
+  "nativeSourceHashes": {
+    "lib/codeindex.js": "f70e1cb375410024a998c120fbe605d1a61dc315c156ff2d75194a5b305c0e4d",
+    "lib/code-search.js": "31fad7c644197798e2eb6833b2cff2cc3bff8da1331978fb50b82214d8d7db41",
+    "lib/codegraph.js": "6a3de26e2174ee0b63dcc0e490b9b002b5266faf26d3cce02324c775ce3f6589",
+    "lib/impact.js": "6cc6971aa6aad9c2eaacd21795e8d57d52c64009b6973ea49c1f903e324c03b1"
+  },
+  "largeImpact": {
+    "before": {
+      "protocol": "dt.large-impact-baseline/v1",
+      "baselineRevision": "2674da38c8fb5d69bc63d0113b541b350016998a",
+      "selectedService": "FIXTURE/order-events",
+      "target": "org.springframework.context.ApplicationEventPublisher#publishEvent(Object)",
+      "workerHeapMb": 1024,
+      "elapsedMs": 9067,
+      "exitCode": 1,
+      "signal": null,
+      "error": "ERROR: ran out of memory in its worker (1024 MB): narrow it (one repo, one db, a smaller depth), or raise tools.workerHeapMb. dt itself is still running."
+    },
+    "after": {
+      "protocol": "dt.large-impact-probe/v1",
+      "observedAt": "2026-11-04T18:05:04.247Z",
+      "repo": "PUBLIC/spring-framework",
+      "sha": "3ebfd02d0ba0fd8df940c35951c726e77f01b3ef",
+      "sourceBytes": 56834529,
+      "classes": 19703,
+      "target": "org.springframework.context.ApplicationEventPublisher#publishEvent(Object)",
+      "selectedService": "FIXTURE/order-events",
+      "automaticDependencyExpansion": true,
+      "repositoryChain": [
+        "FIXTURE/order-events",
+        "FIXTURE/events-helper",
+        "PUBLIC/spring-framework"
+      ],
+      "workerHeapMb": 1024,
+      "maxRssBytes": 1062993920,
+      "cold": {
+        "elapsedMs": 23096.743,
+        "resolvedTotal": 1,
+        "total": 11,
+        "traversalComplete": false,
+        "complete": false,
+        "gapTotal": 30413,
+        "cutReasons": [
+          "depth",
+          "output"
+        ],
+        "nearest": [
+          "1 method EventBridge#send (EventBridge.java:3) <- calls code:PUBLIC%2Fspring-framework%403ebfd02d0ba0fd8df940c35951c726e77f01b3ef-814cc82a5142a21b58b9ae63@3ebfd02d0ba0fd8df940c35951c726e77f01b3ef%2Bsource%3Ad1c500ce679ef26fca4c5ed65ace12f13535e53c1e09c7dc1bc554c5903d3cf4:org.springframework.context.ApplicationEventPublisher#publishEvent(Object)",
+          "1 method ApplicationEventPublisher#publishEvent (spring-context/src/main/java/org/springframework/context/ApplicationEventPublisher.java:64) <- calls code:PUBLIC%2Fspring-framework%403ebfd02d0ba0fd8df940c35951c726e77f01b3ef-814cc82a5142a21b58b9ae63@3ebfd02d0ba0fd8df940c35951c726e77f01b3ef%2Bsource%3Ad1c500ce679ef26fca4c5ed65ace12f13535e53c1e09c7dc1bc554c5903d3cf4:org.springframework.context.ApplicationEventPublisher#publishEvent(Object)",
+          "1 method TransactionInterceptor#invoke (spring-tx/src/main/java/org/springframework/transaction/interceptor/TransactionInterceptor.java:123) <- calls code:PUBLIC%2Fspring-framework%403ebfd02d0ba0fd8df940c35951c726e77f01b3ef-814cc82a5142a21b58b9ae63@3ebfd02d0ba0fd8df940c35951c726e77f01b3ef%2Bsource%3Ad1c500ce679ef26fca4c5ed65ace12f13535e53c1e09c7dc1bc554c5903d3cf4:org.springframework.context.ApplicationEventPublisher#publishEvent(Object)",
+          "1 method MyEventPublisher#publishMyEvent (spring-context/src/test/java/org/springframework/context/event/test/self_inject/MyEventPublisher.java:29) <- calls code:PUBLIC%2Fspring-framework%403ebfd02d0ba0fd8df940c35951c726e77f01b3ef-814cc82a5142a21b58b9ae63@3ebfd02d0ba0fd8df940c35951c726e77f01b3ef%2Bsource%3Ad1c500ce679ef26fca4c5ed65ace12f13535e53c1e09c7dc1bc554c5903d3cf4:org.springframework.context.ApplicationEventPublisher#publishEvent(Object)",
+          "2 method OrderEvents#emit (OrderEvents.java:3) <- calls code:FIXTURE%2Fevents-helper%40576c8e3ae352b22741ee10cbb6272f7bee98d928-301084468a67f18e5537bd63@576c8e3ae352b22741ee10cbb6272f7bee98d928%2Bsource%3A0430d1853f84c6b80188169752ece0fa19a7fe8cfdd6d8098b6a40cc61088683:fixture.EventBridge#send(Object)",
+          "2 method MethodInterceptor#invoke (spring-aop/src/main/java/org/aopalliance/intercept/MethodInterceptor.java:57) <- dispatch code:PUBLIC%2Fspring-framework%403ebfd02d0ba0fd8df940c35951c726e77f01b3ef-814cc82a5142a21b58b9ae63@3ebfd02d0ba0fd8df940c35951c726e77f01b3ef%2Bsource%3Ad1c500ce679ef26fca4c5ed65ace12f13535e53c1e09c7dc1bc554c5903d3cf4:org.springframework.transaction.interceptor.TransactionInterceptor#invoke(MethodInvocation)",
+          "2 method StompSubProtocolHandler#publishEvent (spring-websocket/src/main/java/org/springframework/web/socket/messaging/StompSubProtocolHandler.java:444) <- calls code:PUBLIC%2Fspring-framework%403ebfd02d0ba0fd8df940c35951c726e77f01b3ef-814cc82a5142a21b58b9ae63@3ebfd02d0ba0fd8df940c35951c726e77f01b3ef%2Bsource%3Ad1c500ce679ef26fca4c5ed65ace12f13535e53c1e09c7dc1bc554c5903d3cf4:org.springframework.context.ApplicationEventPublisher#publishEvent(ApplicationEvent)"
+        ]
+      },
+      "warm": null,
+      "ok": true
+    },
+    "timingScope": "Correctness probes; the after probe ran alongside regression tests. Elapsed times are diagnostic, not isolated latency benchmarks.",
+    "fixSourceHashes": {
+      "lib/codegraph-read.js": "afaaf021e062469c4bf6425c81fd22c3795ca31634744e6e4bc5c66cf2af7786",
+      "lib/codeindex.js": "88f8ea94fdad67970f11250c4864265464e88c5ba7f116b5461d08c25ff37783",
+      "lib/impact.js": "9ee9de107daf57626bd6d498fd824be4c7d621987c52beaed53082ce2b27c1e6",
+      "lib/pgstore.js": "2d75ea5d21ca571b24379943c36dacac5426fba78aa0802fc0dd10eb007612e9"
+    }
+  },
+  "verification": {
+    "tests": 676,
+    "passed": 626,
+    "skipped": 50,
+    "failed": 0,
+    "forcedStreamingTestsPassed": 25,
+    "largeCrossRepositoryImpactPassed": true,
+    "smallCleanBenchmarkSmokePassed": true
+  }
+}

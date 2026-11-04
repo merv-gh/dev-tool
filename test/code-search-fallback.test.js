@@ -38,9 +38,11 @@ test('missing pinned revisions never grep latest checkout and conflicting select
 
 
 test('cancelling a cold grep stops its owned ripgrep process',async()=>{
- const executable=path.join(home,'slow-rg'),pidfile=path.join(home,'rg.pid');fs.writeFileSync(executable,'#!'+process.execPath+'\nrequire("fs").writeFileSync('+JSON.stringify(pidfile)+',String(process.pid));setInterval(()=>{},1000);',{mode:0o755});process.env.DT_RG=executable;
+ // Publish readiness atomically: existsSync could otherwise observe the file
+ // between open/truncate and write, read "", and accidentally check process group 0.
+ const executable=path.join(home,'slow-rg'),pidfile=path.join(home,'rg.pid');fs.writeFileSync(executable,'#!'+process.execPath+'\nconst fs=require("fs"),pidfile='+JSON.stringify(pidfile)+';fs.writeFileSync(pidfile+".tmp",String(process.pid));fs.renameSync(pidfile+".tmp",pidfile);setInterval(()=>{},1000);',{mode:0o755});process.env.DT_RG=executable;
  const E=require('../lib/execution');const operation=E.start({kind:'test'},()=>T.call('code_search',{repo:'orders',pattern:'sendOrder'}));
- try{for(let i=0;i<500&&!fs.existsSync(pidfile);i++)await new Promise(r=>setTimeout(r,10));assert.ok(fs.existsSync(pidfile),JSON.stringify(E.get(operation.id)));const pid=Number(fs.readFileSync(pidfile));E.cancel(operation.id,'cancel search');await assert.rejects(operation.promise,e=>e.code==='DT_CANCELLED');assert.throws(()=>process.kill(pid,0),e=>e.code==='ESRCH');}
+ try{for(let i=0;i<500&&!fs.existsSync(pidfile);i++)await new Promise(r=>setTimeout(r,10));assert.ok(fs.existsSync(pidfile),JSON.stringify(E.get(operation.id)));const pid=Number(fs.readFileSync(pidfile));assert.ok(Number.isInteger(pid)&&pid>1,'fixture must publish a complete child PID');E.cancel(operation.id,'cancel search');await assert.rejects(operation.promise,e=>e.code==='DT_CANCELLED');assert.throws(()=>process.kill(pid,0),e=>e.code==='ESRCH');}
  finally{delete process.env.DT_RG;E.cancel(operation.id);}
 });
 

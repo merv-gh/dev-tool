@@ -110,7 +110,7 @@ async function contextSelect(id, force = false) {
   if (editSequence !== contextEditSequence) { contextMessage('Your draft changed while loading. Select the context again to replace it.', true); return; }
   contextState = c; contextFormRevision = c.revision; contextFile = null; contextClearDirty();
   $('cxEditor').hidden = false; $('cxWorking').hidden = false; $('cxTitle').value = c.title; $('cxSummary').value = c.summary || ''; $('cxStatus').value = c.status;
-  contextLinks.forEach(k => $('cx-' + k).value = c[k].join(', ')); $('cxDirty').textContent = ''; $('cxLocation').textContent = c.folder;
+  contextLinks.forEach(k => $('cx-' + k).value = c[k].join(', ')); $('cxDirty').textContent = ''; $('cxLocation').textContent = `context:${c.id}/`;
   $('cxPath').value = ''; $('cxContent').value = ''; $('cxFileSummary').value = ''; $('cxPreview').hidden = true;
   $('cxRunOutput').textContent = 'Run a tool to save its arguments and result here.'; $('cxCaptured').hidden = true; $('cxHintOutput').textContent = '';
   contextFileList(); await contextList();

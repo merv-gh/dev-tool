@@ -89,6 +89,12 @@ const dtInline = {
     } else if (view === 'code-cell') {
       failed ||= !!d.result?.error || ['failed', 'cancelled', 'interrupted'].includes(d.state) || (d.result?.tests || []).some(test => !test.ok);
       summary = `${d.state || 'unknown'}${d.engine ? ' · ' + d.engine : ''} · ${(d.output || []).length} output events${d.nextCursor != null ? ' · cursor ' + d.nextCursor : ''}`;
+    } else if (view === 'semantic-analysis') {
+      const state = typeof d.job === 'object' ? d.job.state : d.state;
+      failed ||= ['failed', 'interrupted'].includes(state);
+      summary = [d.operation || (d.job ? 'Index job' : 'Semantic evidence'), state, d.mode, Array.isArray(d.results) ? `${d.results.length} results` : null, (d.gaps || []).length ? `${d.gaps.length} gaps` : null, d.truncated ? 'bounded page' : null].filter(Boolean).join(' · ');
+    } else if (view === 'passport-ports') {
+      summary = `${(d.ports || []).length} typed ports${(d.gaps || []).length ? ` · ${d.gaps.length} gaps` : ''}${d.revision ? ' · adjusted' : ''}`;
     } else if (view === 'api-exchange') {
       failed ||= (d.response?.status || 0) >= 400;
       summary = `${d.request?.method || 'HTTP'} · ${d.response?.status || 'No response'}${d.timing?.durationMs != null ? ` · ${d.timing.durationMs} ms` : ''}`;
@@ -103,7 +109,7 @@ const dtInline = {
     else if (view === 'json') summary = Array.isArray(data) ? `${data.length} items` : data && typeof data === 'object' ? `${Object.keys(data).length} fields` : 'Result';
     else if (view === 'list-diff') summary = d.counts ? `${(c.onlyFirst || 0) + (c.onlyLast || 0)} differences` : 'Compare values';
     else if (view === 'text-diff') summary = 'Compare changes';
-    return { title: meta.title || ({ code: 'JavaScript', 'code-cell': 'Code cell', tests: 'Test run', 'collection-report': d.collection || 'Collection suite', patch: `${d.repo || 'Workspace'} patch` })[view] || view.replace(/-/g, ' '), summary, open: failed || ['diagram', 'knowledge-map'].includes(view) || view === 'code-cell' && ['queued', 'running', 'cancelling', 'draining'].includes(d.state), failed };
+    return { title: meta.title || ({ code: 'JavaScript', 'code-cell': 'Code cell', 'semantic-analysis': 'Semantic analysis', 'passport-ports': 'Passport ports', tests: 'Test run', 'collection-report': d.collection || 'Collection suite', patch: `${d.repo || 'Workspace'} patch` })[view] || view.replace(/-/g, ' '), summary, open: failed || ['diagram', 'knowledge-map'].includes(view) || view === 'code-cell' && ['queued', 'running', 'cancelling', 'draining'].includes(d.state) || view === 'semantic-analysis' && ['paths', 'slice'].includes(d.operation) && !!d.results?.length, failed };
   },
 
   mount(target, { title = 'Tool result', summary = '', open = false, failed = false } = {}) {

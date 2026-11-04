@@ -1,0 +1,40 @@
+<!-- {"description":"Typed passport boundary ports, with detected/manual origin, exact source identity, mappings, disabled findings and revisioned adjustment history.","sample":{"identity":{"service":"orders","env":"dev","repo":"SHOP/orders","revision":"1111111111111111111111111111111111111111"},"revision":null,"ports":[{"id":"http-create","type":"http-ingress","origin":"detected","handler":{"file":"src/OrderController.java","line":18,"signature":"OrderController.create(Request)"},"boundary":{"method":"POST","path":"/orders","host":"orders.dev"},"mappings":[{"from":"request.total","to":"order.total","direction":"input","evidence":"handler parameter mapping"}]}],"gaps":[]}} -->
+<style>
+ .pp-head { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+ .pp-head h1 { font-size:15px; margin:0; }
+ .pp-facts { display:grid; grid-template-columns:105px minmax(0,1fr); gap:5px 10px; margin:14px 0; font-size:12px; }
+ .pp-facts dt { color:var(--muted); } .pp-facts dd { margin:0; overflow-wrap:anywhere; }
+ .pp-port { border:1px solid var(--line); border-radius:6px; margin:10px 0; overflow:hidden; }
+ .pp-port>summary { cursor:pointer; padding:9px 11px; background:var(--soft); overflow-wrap:anywhere; }
+ .pp-body { padding:0 11px 11px; }
+ .pp-body pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:320px; overflow:auto; }
+ .pp-note { max-width:75ch; color:var(--muted); margin:10px 0; }
+ .pp-attention { padding:9px 11px; background:var(--warn-bg); color:var(--warn); border-radius:5px; margin:10px 0; }
+ .pp-source { overflow-wrap:anywhere; font-size:12px; color:var(--muted); }
+ .pp-body details { margin:10px 0; } .pp-body summary { cursor:pointer; }
+ .pp :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+ @media(max-width:480px){.pp-facts{grid-template-columns:85px minmax(0,1fr)}}
+</style>
+<div class="pp">
+ <div class="pp-head"><h1 data-title></h1><span id="pp-count" class="muted"></span><a id="pp-edit" href="/admin#semantic" target="_blank" rel="noopener">Inspect or edit in Admin</a></div>
+ <p class="pp-note">Detected findings and manual adjustments retain separate provenance. Declared ports and missing identities are discovery evidence, not proof of an executable or value-flow connection.</p>
+ <div id="pp-identity"></div><div id="pp-gaps" class="pp-attention" hidden></div>
+ <details id="pp-metadata" hidden><summary>Passport metadata & field provenance</summary><div id="pp-metadata-data"></div></details>
+ <div id="pp-ports"></div>
+ <details id="pp-disabled" hidden><summary>Disabled detected findings</summary><div id="pp-disabled-data"></div></details>
+ <details id="pp-history" hidden><summary>Adjustment history & operations</summary><div id="pp-history-data"></div></details>
+ <details><summary>Complete bounded response</summary><div id="pp-data"></div></details>
+</div>
+<script>
+ const D=DATA||{}, I=D.identity||{}, E=dt.esc, ports=Array.isArray(D.ports)?D.ports:[], stringify=value=>typeof value==='string'?value:dt.prettyJson(value);
+ const facts=entries=>'<dl class="pp-facts">'+entries.map(([key,value])=>'<dt>'+E(key)+'</dt><dd>'+E(value==null||value===''?'unknown':stringify(value))+'</dd>').join('')+'</dl>';
+ dt.title(META.title||'Passport ports');dt.$('#pp-count').textContent=ports.length+' ports'+(D.total!=null?' of '+D.total:'')+(D.nextCursor?' · more results available':'');
+ dt.$('#pp-identity').innerHTML=facts([['Service',I.service],['Environment',I.env],['Repository',I.repo],['Full revision',I.revision||I.sha],['Adjustment revision',D.revision==null?'no saved adjustment':D.revision]]);
+ const scope=new URLSearchParams(Object.entries(I).filter(([key,value])=>['service','env','repo','revision'].includes(key)&&value!=null));dt.$('#pp-edit').href='/admin#semantic?'+scope.toString();
+ dt.$('#pp-metadata').hidden=!Object.keys(D.metadata||{}).length;dt.json(dt.$('#pp-metadata-data'),{metadata:D.metadata,detectedMetadata:D.detectedMetadata,provenance:D.metadataProvenance},{open:2});
+ if((D.gaps||[]).length){dt.$('#pp-gaps').hidden=false;dt.$('#pp-gaps').textContent=D.gaps.length+' missing or unresolved identities/mappings. Inspect the bounded response before treating ports as connections.';}
+ const groups=new Map();for(const port of ports){const type=port.type||'untyped';if(!groups.has(type))groups.set(type,[]);groups.get(type).push(port);}
+ dt.$('#pp-ports').innerHTML=[...groups].map(([type,values])=>'<section><h2>'+E(type)+' · '+values.length+'</h2>'+values.map(port=>{const h=port.handler||{},origin=typeof port.origin==='string'?port.origin:port.origin?.kind||port.evidence?.origin||port.provenance?.origin||'unrecorded';return '<details class="pp-port"><summary>'+E(port.id||h.signature||type)+' <span class="chip">'+E(origin)+'</span></summary><div class="pp-body">'+facts([['Handler',h.signature],['Source',h.file?(h.repo||I.repo||'unknown')+' · '+h.file+(h.line?':'+h.line:''):null],['Source revision',h.revision||h.sha||I.revision],['Boundary',port.boundary],['Status',port.status||port.proof?.status],['Evidence',port.evidence||port.provenance]])+(port.mappings?.length?'<details open><summary>Field / parameter mappings · '+port.mappings.length+'</summary><pre>'+E(dt.prettyJson(port.mappings))+'</pre></details>':'<p class="pp-note">No field mapping recorded.</p>')+'<details><summary>Port record</summary><pre>'+E(dt.prettyJson(port))+'</pre></details></div></details>';}).join('')+'</section>').join('')||'<p class="pp-note">No matching typed ports. Read detection gaps or add an evidence-backed declaration in Admin.</p>';
+ dt.$('#pp-disabled').hidden=!(D.disabled||[]).length;dt.json(dt.$('#pp-disabled-data'),D.disabled||[],{open:1});
+ dt.$('#pp-history').hidden=!(D.history||[]).length&&!(D.operations||[]).length;dt.json(dt.$('#pp-history-data'),{history:D.history,operations:D.operations},{open:1});dt.json(dt.$('#pp-data'),D,{open:1});
+</script>

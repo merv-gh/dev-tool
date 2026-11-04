@@ -35,6 +35,7 @@
     <h1 id="title"></h1>
     <span class="muted" id="meta"></span>
     <span class="spacer"></span>
+    <a id="portsAdmin" target="_blank" rel="noopener">Inspect ports & semantic paths</a>
     <input class="filter hide-embed" id="filter" placeholder="Filter everything…  ( / )">
     <a id="openfull" target="_blank" rel="noopener" class="only-embed">Open full view ↗</a>
   </div>
@@ -54,6 +55,7 @@ function repoOf(item) {
 }
 function loc(item) {
   if (item.file === 'config') return `<span class="muted">config ${esc(item.key || '')}</span>`;
+  if (!item.file) return '<span class="muted">source unknown</span>';
   const r = repoOf(item);
   const label = `${item.file.split('/').pop()}:${item.line}`;
   if (!p.bitbucketUrl) return `<span class="muted" title="${esc(item.file)}">${esc(label)}</span>`;
@@ -119,6 +121,7 @@ function section(id, title, rows, head, cell) {
 function render() {
   const e = p.effective;
   $('title').textContent = p.service;
+  $('portsAdmin').href='/admin#semantic?'+new URLSearchParams({service:p.service,...(p.portAdjustments?.identity?.env?{env:p.portAdjustments.identity.env}:p.env?{env:p.env}:{}),repo:p.repo.project+'/'+p.repo.repo,revision:p.repo.sha}).toString();
   dtInline.mount(document.querySelector('.wrap'), { title: p.service, summary: 'Service passport' });
   const bbRepo = p.bitbucketUrl ? `${p.bitbucketUrl}/projects/${p.repo.project}/repos/${p.repo.repo}/browse?at=${p.repo.sha}` : null;
   $('meta').innerHTML = [bbRepo ? `<a href="${esc(bbRepo)}" target="_blank" rel="noopener">${esc(p.repo.project)}/${esc(p.repo.repo)}</a>` : esc(`${p.repo.project}/${p.repo.repo}`),
@@ -133,6 +136,7 @@ function render() {
   ].join('');
   flow();
   const S = [];
+  if(p.description||p.notes||p.owners?.length||p.tags?.length)S.push(acc('metadata','Passport description, owners & notes',(p.owners||[]).length+(p.tags||[]).length,`<div class="card detail"><p>${esc(p.description||'')}</p><div class="row">${(p.owners||[]).map(owner=>`<span class="chip">owner: ${esc(owner)}</span>`).join('')}${(p.tags||[]).map(tag=>`<span class="chip">${esc(tag)}</span>`).join('')}</div><pre class="code" style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(p.notes||'')}</pre><details><summary>Field provenance</summary><pre class="code" style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(JSON.stringify(p.metadataProvenance||{},null,2))}</pre></details></div>`));
   if (Array.isArray(p.flows) && p.flows.length) S.push(section('flows', 'Flows (entry → chain → what leaves)', p.flows, ['entry', 'through', 'leaves', 'a flow test mocks'],
     f => [`<span class="mono">${esc(f.entry)}</span>`, `<span class="muted">${f.via.map(v => esc(v.split(' ')[0])).join(' → ')}</span>`,
       Object.entries(f.out || {}).map(([k, v]) => v.map(x => `<span class="acc">${esc(k)} ${esc(x.type ? `${x.type}.${x.call}` : x.topic || x.call || (x.table ? `${x.table} ${x.access}` : '') || x.function || x.index || '')}</span>`).join('')).join(''),
@@ -159,6 +163,12 @@ function render() {
       l.error ? `<span style="color:var(--lv-error)">${esc(l.error)}</span>` : l.note ? `<span class="muted">${esc(l.note)}</span>` : l.exactVersion === false ? '<span class="muted">latest default branch; requested version was not verified</span>' : '']));
   S.push(section('external', 'External dependencies', p.dependencies.external, ['group', 'artifact', 'version', 'scope'], d => [esc(d.groupId), `<b>${esc(d.artifactId)}</b>`, `<span class="mono">${esc(d.version || 'managed')}</span>`, esc(d.scope || '')]));
   if (p.config.unresolved.length) S.push(acc('unresolved', 'Unresolved config placeholders', p.config.unresolved.length, `<div class="card" style="padding:8px 12px">${p.config.unresolved.map(u => `<span class="chip mono" style="margin:2px">${esc(u)}</span>`).join('')}</div>`));
+  S.push(section('ports','Typed entry / exit ports',e.ports||[],['type / origin','boundary','handler / source','mappings'],port=>[
+    `<b>${esc(port.type)}</b><br><span class="chip">${esc(port.evidence?.origin||port.status||'origin unknown')}</span>`,
+    `<span class="mono">${esc(JSON.stringify(port.boundary||{}))}</span>`,
+    `<span class="mono">${esc(port.handler?.signature||'signature unknown')}</span><br><span class="muted">${esc(port.handler?.file||'source unknown')}${port.handler?.line?':'+esc(port.handler.line):''}</span>`,
+    `<span class="mono">${esc(JSON.stringify(port.mappings||[]))}</span>`]));
+  if(p.portAdjustments)S.push(acc('port-adjustments','Manual port adjustments & gaps',(p.portAdjustments.disabled||[]).length+(p.portAdjustments.gaps||[]).length,`<div class="card detail"><p class="hint">Overlay revision: <code>${esc(p.portAdjustments.revision||'none')}</code>. Detected source evidence remains separate from manual corrections.</p><pre class="code" style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(JSON.stringify({identity:p.portAdjustments.identity,disabled:p.portAdjustments.disabled,gaps:p.portAdjustments.gaps},null,2))}</pre></div>`));
   $('sections').innerHTML = S.join('');
   document.querySelectorAll('#sections details').forEach(d => d.addEventListener('toggle', () => postHeight()));
   postHeight();
@@ -178,7 +188,7 @@ let ft; $('filter').oninput = () => { clearTimeout(ft); ft = setTimeout(() => {
 }, 120); };
 document.addEventListener('keydown', (e) => { if (e.key === '/' && document.activeElement.tagName !== 'INPUT') { e.preventDefault(); $('filter').focus(); } });
 
-fetch(`/api/passport/${encodeURIComponent(service)}?t=${encodeURIComponent(qs.get('t') || '')}`)
+fetch(`/api/passport/${encodeURIComponent(service)}?t=${encodeURIComponent(qs.get('t') || '')}${qs.get('env')?'&env='+encodeURIComponent(qs.get('env')):''}`)
   .then(r => r.ok ? r.json() : r.json().then(j => Promise.reject(new Error(j.error))))
   .then(d => { p = d; render(); }).catch(fail);
 </script>

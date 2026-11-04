@@ -4,6 +4,8 @@ Read-only tools that let an AI agent (or you) investigate a microservice environ
 
 - **An index of your databases.** Postgres tables, columns, views, functions and procedures with their arguments, and **who uses what**: which services read or write a table (from their code, with file:line), which functions, triggers and views touch it, and what calls a function. Also Elasticsearch mappings, Kafka topics (schemas and sample messages), and Consul services.
 - **Service passports.** Static analysis of a Spring service's repo and its internal libraries: HTTP endpoints, Feign and HTTP calls, Kafka in/out, tables and functions used, datasources, dependencies.
+- **Semantic code and editable ports.** Retained Joern analyses for Java and JS/TS, exact commit/dependency selection, callers, guarded paths and value slices. Correct missed ports, field mappings and passport metadata in separate versioned overlays. [Setup and limits](docs/semantic-code.md).
+- **Task memory.** Context folders keep plans, findings, files and tool results across chats, with discovery by ticket, repository and workspace. Admin includes a file editor and tool scratchpad; no Git repository is needed. [Context tools](#context-durable-task-memory-and-admin-scratchpad).
 - **Live tools.** Read-only SQL, ES search, the last Kafka messages, health of all services in one call, consumer lag, ELK log search and traces, Bitbucket PRs, Confluence. A headless browser and a code graph are optional.
 - **Documentation knowledge.** Incremental Confluence Server/DC and Cloud cache, structured search, exact versioned quotes, entity/provenance graph and a one-call `feature` investigation with C4/sequence diagrams. [Configuration, tools and demo](docs/confluence-knowledge.md).
 - **Results you can use.** Tables, dashboards, logs, diffs and passports render as pages; in Open WebUI routine results collapse to a short summary. Expand them inline or open the full view. Failed tests open at the first failure; patch and PR diffs use a searchable folder tree with one file shown at a time. Diagrams and knowledge maps stay open.
@@ -15,7 +17,7 @@ Read-only tools that let an AI agent (or you) investigate a microservice environ
 - **Developer challenge verification.** [28 mapped scenarios](docs/developer-scenarios.md), independently graded fixes, Node/JVM red/green execution, scoped column lineage, reviewed targets, exact differential checks and [isolated task evaluation](docs/task-model-evaluation.md). [Implemented readiness repairs](docs/readiness-implementation.md) distinguish correct fixes, supported tool execution and actual model/deployment evidence.
 - **`/admin`.** Watch what is indexed, refresh all or one source, browse objects and their usages, edit config and notes.
 
-It plugs into **Open WebUI** (bundled, or one you already run) or any **MCP client** (Claude Code, Cursor, ...), and runs as a single Node process with one dependency.
+It plugs into **Open WebUI** (bundled, or one you already run) or any **MCP client** (Claude Code, Cursor, ...). The tool server runs as a single Node process with its dependencies bundled; optional containers provide browser, build and semantic analysis services.
 
 ![A question in Open WebUI answered with dt: who writes sales.orders, as an embedded table](docs/screenshots/chat-usage.png)
 
@@ -54,9 +56,12 @@ Day to day:
 ```
 
 ### What runs
-Nothing is built: dt runs the bundled `dist/dt.js` (code and its one dependency, checked in) in the stock `node:22-bookworm` image, with `dist/` mounted read-only. Updating is `git pull` plus a restart. Pick another image with `DT_NODE_IMAGE` (it needs `git` for passports).
 
-`COMPOSE_PROFILES` in `.env` picks the optional parts (all three by default; `--tools-only` turns them off):
+dt runs the checked-in `dist/dt.js` bundle in the stock `node:22-bookworm` image, with `dist/` mounted read-only. The semantic worker builds a small runtime layer over the pinned Joern image; its scripts are vendored in the bundle. Pick another Node image with `DT_NODE_IMAGE` (it needs `git` for passports).
+
+Your existing update command works: `git pull && ./run.sh up -d`. The launcher includes `semantic` even in older nonempty `.env` profile lists, creates its shared token once, supplies its internal URL, builds updated worker layers, and recreates Node services when the bundle changes. Existing config and tokens are retained. `--no-semantic` or `DT_SEMANTIC_ENABLED=0` opts out; `--tools-only` or an explicitly empty `COMPOSE_PROFILES` disables optional services.
+
+`COMPOSE_PROFILES` in `.env` picks the optional parts (all enabled by default):
 
 | Service | Profile | What |
 | --- | --- | --- |
@@ -64,6 +69,9 @@ Nothing is built: dt runs the bundled `dist/dt.js` (code and its one dependency,
 | `webui` + `setup` | `webui` | Open WebUI, with the agent prompt and tools set on every model |
 | `browser` | `browser` | Playwright MCP: open pages, click, type, screenshot. Logins come from `browser.sites`. dt also drives it for saved scripts and route discovery |
 | `graph` | `graph` | [code-review-graph](https://pypi.org/project/code-review-graph/) over the fetched repos |
+| `jdk` + `runner` | `jdk` | JDK/Maven and an authenticated build runner for tests and Testcontainers |
+| `testdb` | `testdb` | Throwaway Postgres for isolated tests |
+| `semantic` | `semantic` | Joern worker with retained CPGs and bounded parse/query jobs; [resource settings](docs/semantic-code.md#enable) |
 
 ### Without Docker
 ```bash
@@ -597,9 +605,10 @@ dt showcase payments-service FeeCalculator#fee --envs dev,uat [--ref master] [--
 In the chat: "show everything for payments-service and test FeeCalculator.fee". It runs these steps and shows them on one page (`/showcase/<id>`), each with its view embedded:
 
 1. For each environment: health of every service, the live dashboard, and this service's instances with the version, commit and branch deployed. A table then says whether the environments run the same build (`dev 1.1.0-SNAPSHOT@c0ffee1 vs uat 1.0.0@ab2ce56`).
-2. The passport, with its flows.
-3. The impact of the code part.
-4. A workspace on master (or `--ref`): `test_context`, the test written (the skeleton, or your file), run (fast on Maven), the results view and the patch.
+2. The passport with its flows, effective typed ports, manual metadata and correction history, with a direct link to edit the exact source in Admin.
+3. Retained semantic analyses for the service and environment, with full commit and generation identities. Missing coverage explains how to build it; viewing the showcase never starts a Joern parse.
+4. The impact of the code part.
+5. A workspace on master (or `--ref`): `test_context`, the test written (the skeleton, or your file), run (fast on Maven), the results view and the patch.
 
 It doubles as an end-to-end check of dt: every step reports ok or why not, and the CLI exits non-zero when one fails. `test/showcase.live.test.js` runs it against the demo mock (two environments, Bitbucket with real git repos) with Maven. A test that finds a bug is a result, not a failed step: the demo's test finds the fee rounding bug (`expected 0.67, got 0.66`).
 
@@ -727,10 +736,16 @@ Results shaped like tables return a preview plus a `view` link to the full resul
 
 ## Screenshots
 
-Every picture comes from the bundled demo, a fake environment with real Postgres ([demo/](demo/README.md)).
+The bundled demo uses invented service data and real Postgres ([capture instructions](demo/README.md)). The [complete screenshot gallery](docs/screenshots/README.md) covers every native result view, the newer interactive workflows and mobile layouts. Sample renderers are labeled; semantic evidence screenshots use retained results from the real Joern end-to-end tests. [Machine-readable coverage](docs/screenshots/gallery.json).
+
+![Functionality overview](docs/screenshots/functionality-overview.png)
 
 | | |
 | --- | --- |
+| ![Service showcase](docs/screenshots/showcase.png) **Showcase** · versions, passport, ports, semantic readiness, impact and tests | ![Semantic code](docs/screenshots/semantic-composed.png) **Semantic flow** · local Joern slices and declared boundary mappings |
+| ![Semantic paths in Open WebUI](docs/screenshots/chat-semantic.png) **Open WebUI** · retained source paths, guards and gaps | ![Passport ports in Open WebUI](docs/screenshots/chat-ports-expanded.png) **Open WebUI** · expand typed ports and correction history |
+| ![Ports editor](docs/screenshots/admin-ports-editor.png) **Passport editing** · editable arguments, metadata and evidence | ![Context memory](docs/screenshots/admin-context.png) **Context** · plans, nearby files and durable results |
+| ![Microservice map](docs/screenshots/microservices-map.png) **Map** · evidence-backed service dependencies | ![Runtime](docs/screenshots/admin-runtime.png) **Runtime** · owned executions, jobs, metadata and configuration |
 | ![admin: index status](docs/screenshots/admin-index.png) **/admin** · what is indexed, refresh all or one source | ![admin: table usages](docs/screenshots/admin-explore-table.png) **Explore** · a table: columns, constraints, triggers, who uses it |
 | ![admin: function](docs/screenshots/admin-explore-function.png) **Explore** · a function: arguments, callers in code and in the db | ![admin: jobs](docs/screenshots/admin-jobs.png) **Jobs** · every refresh with its log |
 | ![chat: reconcile](docs/screenshots/chat-reconcile.png) **In the chat** · shipped orders vs the partner's settlement file on SFTP | ![chat: file](docs/screenshots/chat-file.png) **In the chat** · "show me the order file from the inbox" |
@@ -1076,3 +1091,15 @@ DT_HOME=./work/map-demo node dev/eval-map-model.js --endpoint http://127.0.0.1:4
 ```
 
 For recorded usage limits, scratch PostgreSQL workflows, patch versus push, file archival and the Admin map URL behavior, see [Tooling workflows](docs/tooling-workflows.md).
+
+### Architecture observatory
+
+Explore a large service estate, C4 context/container/component views, named feature and data flows, and dev/UAT deployment slices on the vendored interactive canvas. Shared explanations are searchable; admins publish immutable revisions and everyone can read. Replica health and resource measurements keep their source, timestamp and gaps. Export SVG, PNG, JSON, Mermaid or PlantUML. See [setup, permissions and evidence](docs/architecture-observability.md).
+
+```sh
+node demo/architecture.js 4046  # synthetic 600-service demo, no Docker required
+```
+
+![600-service architecture estate](docs/screenshots/architecture-estate.png)
+
+![Cross-service refund data flow](docs/screenshots/architecture-dataflow.png)

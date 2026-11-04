@@ -13,9 +13,10 @@ process.env.DT_REPOS_DIR = path.join(home, 'repos');
 process.env.DT_RATE_PER_SEC = '0';
 delete process.env.DT_TOOLS;
 const mock = require('../demo/confluence').createMock({ pageSize: 2 });
-let retries = 0, embeddingCalls = 0, visionCalls = 0, relationCalls = 0, rerankCalls = 0, base;
+let retries = 0, embeddingCalls = 0, visionCalls = 0, relationCalls = 0, rerankCalls = 0, base, expectedAuth;
 const srv = http.createServer((req, res) => {
   const send = o => { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify(o)); };
+  if (expectedAuth && /^(?:\/rest\/api\/|\/api\/v2\/|\/download\/)/.test(req.url) && req.headers.authorization !== expectedAuth) { res.statusCode = 401; return send({ error: 'Incorrect authentication scheme' }); }
   if (req.url === '/retry') { if (!retries++) { res.statusCode = 429; res.setHeader('retry-after', '0'); } return send({ ok: true }); }
   if (req.url === '/redirect') { res.statusCode = 302; res.setHeader('location', 'http://other.invalid/secret'); return res.end(); }
   if (req.url === '/v1/embeddings' || req.url === '/v1/chat/completions') {
@@ -138,6 +139,30 @@ test('Cloud adapter uses v2 pages/spaces/attachments/ancestors and basic email/t
   assert.ok(mock.requests.some(r => r.path === '/api/v2/pages/813/ancestors'));
   assert.throws(() => C.createClient({ ...C.config(), type: 'cloud' }), /requires/);
   const server = C.createClient({ ...C.config(), type: 'server', user: 'ignored@example.com' }); assert.equal(server.cloud, false);
+});
+
+test('cached and live Confluence tools agree on token-only Server/DC and Cloud email/token authentication', async () => {
+  const T = require('../lib/tools');
+  const basic = 'Basic ' + Buffer.from('person@example.com:secret').toString('base64');
+  try {
+    for (const [settings, authorization] of [
+      [{ type: 'server' }, 'Bearer secret'],
+      [{ type: 'dc' }, 'Bearer secret'],
+      [{ type: 'server', user: 'old-username' }, 'Bearer secret'],
+      [{ type: 'dc', user: 'old-username' }, 'Bearer secret'],
+      [{ type: undefined, flavour: 'dc', user: 'old-username' }, 'Bearer secret'],
+      [{ type: undefined }, 'Bearer secret'],
+      [{ type: 'cloud', user: 'person@example.com' }, basic],
+      [{ type: undefined, user: 'person@example.com' }, basic],
+    ]) {
+      configure(settings); expectedAuth = authorization;
+      const client = C.createClient();
+      const page = await client.fetchPage('810', 'SHOP');
+      assert.equal(page.id, '810');
+      assert.ok((await T.call('confluence_search', { text: 'payments', space: 'SHOP' })).length);
+      assert.equal((await T.call('confluence_page', { id: '810' })).id, '810');
+    }
+  } finally { expectedAuth = undefined; configure(); }
 });
 
 test('rate-limit retry is bounded and page/attachment credentials cannot cross origins', async () => {

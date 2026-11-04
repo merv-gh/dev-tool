@@ -18,6 +18,10 @@ const bundle = esbuild.buildSync({
 }).outputFiles[0].text.replace(/^#!.*\n(?=#!)/, ''); // cli.js has its own shebang
 
 const files = { 'dt.js': bundle };
+for (const f of fs.readdirSync(path.join(ROOT, 'vendor', 'file-projections'), { recursive: true })) {
+  const p = path.join(ROOT, 'vendor', 'file-projections', f);
+  if (fs.statSync(p).isFile()) files[`vendor/file-projections/${f.split(path.sep).join('/')}`] = fs.readFileSync(p);
+}
 // Spawned protocol workers are runtime assets, not imports reachable by esbuild.
 files['state-worker.js'] = esbuild.buildSync({
   entryPoints: [path.join(ROOT, 'lib', 'state-worker.js')], bundle: true, platform: 'node', target: 'node22', format: 'cjs',
@@ -34,6 +38,10 @@ for (const name of ['quickjs-emscripten', 'quickjs-emscripten-core', '@jitl/quic
   files[`licenses/${name.replace(/\//g, '-')}.txt`] = fs.readFileSync(path.join(directory, 'LICENSE'));
 }
 files['differential-worker.js'] = fs.readFileSync(path.join(ROOT, 'lib', 'differential-worker.js'));
+files['semantic-query-worker.js'] = esbuild.buildSync({
+  entryPoints: [path.join(ROOT, 'lib', 'semantic-query-worker.js')], bundle: true, platform: 'node', target: 'node22', format: 'cjs',
+  write: false, legalComments: 'none', logLevel: 'error',
+}).outputFiles[0].text;
 for (const f of fs.readdirSync(path.join(ROOT, 'web'), { recursive: true })) {
   const p = path.join(ROOT, 'web', f);
   if (fs.statSync(p).isFile()) files[`web/${f.split(path.sep).join('/')}`] = fs.readFileSync(p);

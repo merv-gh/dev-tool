@@ -1,0 +1,130 @@
+{
+  "schema": "dt.semantic-e2e/v1",
+  "date": "2026-11-04",
+  "scope": "Synthetic Git repositories, real Java/TypeScript Joern frontends and saved CPGs; no deployed business systems were queried or written",
+  "engine": {
+    "joern": "4.0.564",
+    "image": "ghcr.io/joernio/joern@sha256:54c7f728f813c1cefd4303e7c69c5d35003f0fc9fde1459872230e5bc4e4b7b4",
+    "workerContainerMemoryGiB": 18,
+    "workerCpus": 4,
+    "parseReservationMiB": 6144,
+    "queryReservationMiB": 4096
+  },
+  "verification": {
+    "regression": {
+      "tests": 736,
+      "pass": 685,
+      "fail": 0,
+      "skipped": 51
+    },
+    "realJoern": {
+      "tests": 8,
+      "pass": 8,
+      "fail": 0,
+      "skipped": 0
+    },
+    "browser": {
+      "syntheticChecks": 16,
+      "realArtifactChecks": 15,
+      "pageErrors": 0,
+      "desktopAndMobile": true
+    },
+    "upstream": {
+      "goRaceTests": "passed",
+      "goVet": "passed",
+      "projectionPackageTests": "passed"
+    },
+    "dist": "build and build:check passed"
+  },
+  "cases": [
+    {
+      "case": "service and two pinned internal libraries parse as one origin-preserving Java CPG",
+      "status": "passed",
+      "ms": 6673.613568
+    },
+    {
+      "case": "real Java value reaches transitive library call argument after CPG reopening",
+      "status": "passed",
+      "ms": 8631.863847
+    },
+    {
+      "case": "TypeScript gets actual value-flow evidence despite unresolved dynamic call targets",
+      "status": "passed",
+      "ms": 11364.698365
+    },
+    {
+      "case": "manual topic/table ports are queryable, versioned, survive refresh and remain declared",
+      "status": "passed",
+      "ms": 125.193535
+    },
+    {
+      "case": "HTTP boundary composition retains actual local value segments and declared field mappings",
+      "status": "passed",
+      "ms": 8578.195283
+    },
+    {
+      "case": "unchanged cache reuse, new Git commit and forced generations preserve older exact results",
+      "status": "passed",
+      "ms": 12605.885276
+    },
+    {
+      "case": "actual OpenAPI response gives Open WebUI an inline sandboxed view and usable model data",
+      "status": "passed",
+      "ms": 148.748808
+    }
+  ],
+  "retainedSources": {
+    "ok": true,
+    "java": [
+      {
+        "id": "71d3850b7809b46e2834f5ee20ba3f9c8e851dbd0183dcb2cd9f87b23301636c-bcc92f21332c0f0cfc2e2dafa10ab79a",
+        "repo": "P/orders",
+        "sha": "976f8183c4dca15c71107834e952d990fb67af5e",
+        "sources": [
+          {
+            "repo": "P/orders",
+            "sha": "976f8183c4dca15c71107834e952d990fb67af5e",
+            "sourceDigest": "1df6d3e241b9fe9729ed6803847a815788b96b1ad82b5be2278c7b112f2a94ae",
+            "revisionKey": "P/orders@976f8183c4dca15c71107834e952d990fb67af5e-007f748674b08580cb16eb39",
+            "prefix": "repos/c68e069b851949ce"
+          },
+          {
+            "repo": "P/ledger",
+            "sha": "b20c208252481e61a8d94e6e52ed9ef9716a7ed8",
+            "sourceDigest": "2fea069edb589226b12bee9867317d3ca9d8819ef5825e3829021661df7c9eb4",
+            "revisionKey": "P/ledger@b20c208252481e61a8d94e6e52ed9ef9716a7ed8-b971677f6067fdc2e5ebadd0",
+            "prefix": "repos/7efc159b07666e4a"
+          },
+          {
+            "repo": "P/storage",
+            "sha": "3e7b354f69f10954432d900010aee00cca3a4a41",
+            "sourceDigest": "8fc5a62fd676e4ce7a854d6e2a9472b450f452c6d01a81da328af953f5fc57c1",
+            "revisionKey": "P/storage@3e7b354f69f10954432d900010aee00cca3a4a41-5981a84908e5bb606c5de05e",
+            "prefix": "repos/ed45c5b1c3d16b9b"
+          }
+        ]
+      }
+    ],
+    "typescript": [
+      {
+        "id": "b7ef59e8763adb80d18f8495582dc79064c1af5f02e1b56f436fa6dab22d26b1-4792cec0adfab66b043bdc79aaffbf6e",
+        "sha": "3284751a649ef4ae89bf13599d3183426b2060c1"
+      }
+    ],
+    "revisions": 4,
+    "inline": true
+  },
+  "upstream": {
+    "branch": "codex/joern-farm-runtime-guards",
+    "commits": [
+      "3df7196",
+      "4e448e6902c4b7824343b276ebe556356e79f45c"
+    ]
+  },
+  "limits": [
+    "Fixture timings are not a production-estate load benchmark",
+    "Static value/control flows retain unknown feasibility and runtime status",
+    "Transport field mappings and missed-adapter declarations remain manually stated evidence",
+    "Universal invariant proving and per-file incremental Joern relinking are not claimed"
+  ]
+}

@@ -1,0 +1,76 @@
+<!-- {"description":"Exact semantic analyses, source paths, guards, evidence and gaps. Bounded results distinguish call reachability from control/data flow and declared evidence from proof.","sample":{"protocol":"dt.semantic/v1","operation":"paths","mode":"reachability","analyses":[{"id":"example-analysis","repo":"SHOP/orders","sha":"1111111111111111111111111111111111111111","revisionKey":"example-revision"}],"results":[{"id":"path-1","kind":"call-reachability","nodes":[{"id":"a","name":"createOrder","signature":"OrderController.createOrder(Request)","repo":"SHOP/orders","file":"src/OrderController.java","line":18},{"id":"b","name":"save","signature":"OrderRepository.save(Order)","repo":"SHOP/orders","file":"src/OrderRepository.java","line":42}],"edges":[{"from":"a","to":"b","kind":"calls","evidence":"resolved call site src/OrderController.java:25"}],"conditions":[{"expression":"request.total > 0","status":"path_condition","file":"src/OrderController.java","line":20}],"proof":{"status":"candidate","feasibility":"unknown"}}],"coverage":{"engine":"native-projection","complete":false},"gaps":[{"kind":"dataflow-not-built","message":"Call reachability does not establish value flow."}],"proof":{"kind":"call-reachability","status":"candidate","feasibility":"unknown"}}} -->
+<style>
+ .sm-head { display:flex; gap:8px; flex-wrap:wrap; align-items:baseline; }
+ .sm-head h1 { margin:0; font-size:15px; }
+ .sm-note { margin:10px 0; color:var(--muted); max-width:75ch; }
+ .sm-attention { background:var(--warn-bg); color:var(--warn); padding:9px 11px; border-radius:5px; margin:10px 0; overflow-wrap:anywhere; }
+ .sm-layout { display:grid; grid-template-columns:minmax(190px,28%) minmax(0,1fr); gap:12px; margin:12px 0; }
+ .sm-layout>* { min-width:0; }
+ .sm-tree { border:1px solid var(--line); border-radius:6px; padding:10px; max-height:520px; overflow:auto; }
+ .sm-tree h2 { margin:0 0 6px; }
+ .sm-tree details details { margin-left:10px; border-left:1px solid var(--line); padding-left:8px; }
+ .sm-tree summary { cursor:pointer; overflow-wrap:anywhere; margin:5px 0; }
+ .sm-tree button { display:block; width:100%; text-align:left; border:0; border-radius:4px; background:transparent; white-space:normal; overflow-wrap:anywhere; font-size:12px; margin:3px 0; }
+ .sm-tree button:hover,.sm-tree button.on { background:var(--accent-soft); }
+ .sm-path { border:1px solid var(--line); border-radius:6px; margin-bottom:10px; overflow:hidden; }
+ .sm-path>summary { padding:9px 11px; cursor:pointer; background:var(--soft); overflow-wrap:anywhere; }
+ .sm-path-body { padding:0 11px 10px; }
+ .sm-node { padding:9px 0; border-bottom:1px solid var(--line); overflow-wrap:anywhere; }
+ .sm-node strong { display:block; font-weight:600; }
+ .sm-node .mono,.sm-node small { display:block; margin:3px 0; }
+ .sm-node small { color:var(--muted); }
+ .sm-node.on { background:var(--accent-soft); }
+ .sm-conditions { margin:12px 0; padding:0; list-style:none; }
+ .sm-conditions li { padding:8px 0; border-top:1px solid var(--line); overflow-wrap:anywhere; }
+ .sm-conditions code { white-space:pre-wrap; overflow-wrap:anywhere; }
+ .sm-facts { display:grid; grid-template-columns:105px minmax(0,1fr); gap:5px 10px; font-size:12px; }
+ .sm-facts dt { color:var(--muted); } .sm-facts dd { margin:0; overflow-wrap:anywhere; }
+ .sm-data { margin-top:12px; } .sm-data summary { cursor:pointer; }
+ .sm-table { overflow:auto; max-height:420px; margin:10px 0; border:1px solid var(--line); border-radius:6px; }
+ .sm-table td { overflow-wrap:anywhere; max-width:450px; min-width:95px; }
+ .sm-code { white-space:pre-wrap; overflow-wrap:anywhere; max-height:360px; overflow:auto; background:var(--soft); padding:10px; border-radius:5px; }
+ .sm :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+ @media(max-width:700px){.sm-layout{grid-template-columns:minmax(0,1fr)}.sm-tree{max-height:200px}.sm-facts{grid-template-columns:90px minmax(0,1fr)}}
+</style>
+<div class="sm">
+ <div class="sm-head"><h1 data-title></h1><span id="sm-summary" class="muted"></span></div>
+ <p class="sm-note" id="sm-meaning"></p><div id="sm-attention" class="sm-attention" hidden></div>
+ <div id="sm-job"></div><div id="sm-identities"></div>
+ <details class="sm-data" id="sm-gaps" hidden><summary id="sm-gaps-title">Coverage, ambiguity & gaps</summary><div id="sm-gaps-data"></div></details>
+ <div class="sm-layout" id="sm-layout"><aside id="sm-tree" class="sm-tree"><h2>Source hierarchy</h2><div id="sm-tree-items"></div></aside><div id="sm-results"></div></div>
+ <details class="sm-data"><summary>Complete bounded response</summary><div id="sm-data"></div></details>
+</div>
+<script>
+ const D=DATA||{}, E=dt.esc, list=Array.isArray(D.results)?D.results:[], analyses=Array.isArray(D.analyses)?D.analyses:[];
+ const plain=value=>typeof value==='string'?value:dt.prettyJson(value), facts=entries=>'<dl class="sm-facts">'+entries.filter(([,v])=>v!=null&&v!=='').map(([k,v])=>'<dt>'+E(k)+'</dt><dd>'+E(plain(v))+'</dd>').join('')+'</dl>';
+ const loc=node=>[node.repo,node.sha||node.revision,node.file?node.file+(node.line?':'+node.line:''):null].filter(Boolean).join(' · ');
+ const source=node=>{const url=node.sourceUrl||node.url;return typeof url==='string'&&/^https?:\/\//.test(url)?'<a href="'+E(url)+'" target="_blank" rel="noopener noreferrer">'+E(loc(node))+'</a>':E(loc(node));};
+ const rows=(values,keys)=>'<div class="sm-table"><table><thead><tr>'+keys.map(key=>'<th>'+E(key)+'</th>').join('')+'</tr></thead><tbody>'+values.slice(0,200).map(value=>'<tr>'+keys.map(key=>'<td>'+E(plain(value[key]??''))+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
+ dt.title(META.title||'Semantic analysis');dt.$('#sm-summary').textContent=[D.operation,D.mode,list.length?list.length+' results':null,D.truncated?'bounded page; more results may exist':null].filter(Boolean).join(' · ');
+ dt.$('#sm-meaning').textContent=D.mode==='dataflow'?'Data-flow evidence is limited to the recorded analyses and mappings. Unknown boundary mappings and feasibility remain gaps.':D.mode==='controlflow'?'Control-flow paths describe supported branches. Feasibility and universal invariants require separate evidence.':'Call reachability and declared boundaries show candidate connections; they do not establish that a value reaches a sink.';
+ const missing=(D.gaps||[]).length+(D.ambiguity||[]).length;
+ if(D.error||D.truncated||missing){dt.$('#sm-attention').hidden=false;dt.$('#sm-attention').textContent=D.error?plain(D.error):[missing?missing+' coverage or ambiguity gaps':null,D.truncated?'Response truncated; continue with the returned cursor and same analyses':null].filter(Boolean).join(' · ');}
+ const job=D.job&&typeof D.job==='object'?D.job:D.job?{id:D.job,state:D.state}:null;
+ if(job)dt.$('#sm-job').innerHTML='<details class="sm-data"'+(['failed','cancelled','interrupted'].includes(job.state)?' open':'')+'><summary>Index/query job · '+E(job.state||D.state||'queued')+' · '+E(job.id)+'</summary>'+facts([['Stage',job.stage||D.stage],['Execution',job.executionId],['Cache',D.cacheHit===true||D.reused===true?'retained generations reused':D.cacheHit===false||D.reused===false?'new generation':null],['Resources',job.resources||D.resources],['Error',job.error||D.error]])+'<a href="/admin#jobs" target="_blank" rel="noopener">Inspect progress or cancel in Admin</a></details>';
+ dt.$('#sm-identities').innerHTML=analyses.length?'<details class="sm-data"><summary>Exact retained analyses · '+analyses.length+'</summary>'+analyses.map(a=>facts([['Repository',a.repo],['Full revision',a.sha||a.revision],['Analysis',a.id||a.analysisId],['Generation',a.generation],['Revision key',a.revisionKey],['Source digest',a.sourceDigest],['Backend',a.backend]])).join('')+'</details>':'';
+ dt.$('#sm-gaps').hidden=!missing&&!D.coverage&&!D.proof&&!D.truncated;dt.$('#sm-gaps').open=missing>0;dt.$('#sm-gaps-title').textContent='Coverage, proof & gaps'+(missing?' · '+missing:'');
+ const gapSummary=gap=>gap.detail||gap.message||[gap.repo,gap.file?gap.file+(gap.line?':'+gap.line:''):null,gap.name||gap.reason||gap.methodFullName].filter(Boolean).join(' · ')||'Inspect the coverage records for details';
+ dt.$('#sm-gaps-data').innerHTML=facts([['Evidence kind',D.proof?.kind],['Proof status',D.proof?.status],['Feasibility',D.proof?.feasibility],['Truncated',D.truncated],['Next cursor',D.nextCursor]])+([...D.gaps||[],...D.ambiguity||[]].length?'<ul class="sm-conditions">'+[...D.gaps||[],...D.ambiguity||[]].slice(0,100).map(gap=>'<li><strong>'+E(gap.kind||'ambiguity')+'</strong> · '+E(gapSummary(gap))+'</li>').join('')+'</ul>':'')+'<details class="sm-data"><summary>Coverage, dependency & proof records</summary><pre class="sm-code">'+E(dt.prettyJson({coverage:D.coverage,proof:D.proof,dependencies:D.dependencies,gaps:D.gaps,ambiguity:D.ambiguity}))+'</pre></details>';
+ const paths=list.filter(result=>Array.isArray(result.nodes)), allNodes=paths.length?paths.flatMap(path=>path.nodes):Array.isArray(D.nodes)&&D.nodes.length?D.nodes:list.flatMap(result=>result.node?[{...result.node,relationEvidence:result.edge}]:result.file||result.signature||result.handler||result.expression?[result]:[]);
+ let nodeSequence=0;const tree=new Map(), references=[];
+ for(const item of allNodes.slice(0,300)){const node=item.handler?{...item,...item.handler}:item,repo=node.repo||node.analysisId||'Unresolved source',file=node.file||'Source not located',id='sm-source-'+nodeSequence++;if(!tree.has(repo))tree.set(repo,new Map());if(!tree.get(repo).has(file))tree.get(repo).set(file,[]);tree.get(repo).get(file).push({node,id});references.push({item,node,id});}
+ dt.$('#sm-tree-items').innerHTML=[...tree].map(([repo,files])=>'<details open><summary>'+E(repo)+'</summary>'+[...files].map(([file,nodes])=>'<details><summary>'+E(file)+'</summary>'+nodes.map(({node,id})=>'<button data-source="'+id+'">'+E(node.name||node.signature||node.id||node.type)+(node.line?' · '+E(node.line):'')+'</button>').join('')+'</details>').join('')+'</details>').join('');dt.$('#sm-tree').hidden=!tree.size||!allNodes.some(node=>node.file||node.handler?.file);
+ function nodeMarkup(item){const ref=references.find(ref=>ref.item===item),node=ref?.node||item;return '<div class="sm-node"'+(ref?' id="'+ref.id+'"':'')+'><strong>'+E(node.expression||node.predicate||node.name||node.signature||node.code||node.id||node.nodeId||node.type||'Node')+'</strong>'+(node.status||node.label?'<span class="chip">'+E(node.status||node.label)+'</span>':'')+(node.signature?'<span class="mono">'+E(node.signature)+'</span>':'')+'<small>'+(loc(node)?source(node):E('Source file not recorded'+(node.line?' · line '+node.line:'')))+'</small>'+((node.evidence||node.origin)?'<small>Evidence: '+E(plain(node.evidence||node.origin))+'</small>':'')+(node.boundary?facts([['Boundary',node.boundary]]):'')+(node.relationEvidence?facts([['Connection',node.relationEvidence.kind],['Evidence',node.relationEvidence.evidence],['Certainty',node.relationEvidence.certainty]]):'')+'</div>';}
+ function segmentMarkup(path){
+  if(!path.segments?.length&&!path.boundaries?.length)return '';
+  return '<p class="sm-note">Local CPG segments and transport/library boundaries are separate evidence. This composition is not a single end-to-end Joern path; boundary mappings retain their recorded declaration status.</p>'+(path.segments?.length?'<details class="sm-data" open><summary>Local CPG segments · '+path.segments.length+'</summary>'+path.segments.slice(0,30).map(segment=>'<details class="sm-data"><summary>'+E(segment.status||'unknown')+' · '+E(segment.analysisId||segment.id||'unresolved analysis')+'</summary>'+facts([['From',segment.from],['To',segment.to],['Elapsed',segment.ms!=null?segment.ms+' ms':null]])+(segment.paths||[]).slice(0,8).map(local=>'<div class="sm-path-body">'+(local.nodes||[]).map(nodeMarkup).join('')+(local.conditions?.length?'<pre class="sm-code">'+E(dt.prettyJson(local.conditions))+'</pre>':'')+'</div>').join('')+'</details>').join('')+'</details>':'')+(path.boundaries?.length?'<details class="sm-data" open><summary>Boundary mappings & provenance · '+path.boundaries.length+'</summary>'+rows(path.boundaries,['kind','status','mappings','evidence'])+'</details>':'');
+ }
+ if(paths.length)dt.$('#sm-results').innerHTML=paths.map((path,index)=>'<details class="sm-path"'+(!index?' open':'')+'><summary>'+E(path.kind||D.mode||'Candidate path')+' · '+path.nodes.length+' nodes · '+E(path.proof?.status||'proof unrecorded')+'</summary><div class="sm-path-body">'+path.nodes.map(nodeMarkup).join('')+segmentMarkup(path)+(path.edges?.length?'<details class="sm-data"><summary>Connection evidence · '+path.edges.length+'</summary>'+rows(path.edges,['from','to','kind','evidence'])+'</details>':'')+(path.conditions?.length?'<details class="sm-data" open><summary>Guards & branch conditions · '+path.conditions.length+'</summary><ul class="sm-conditions">'+path.conditions.map(condition=>'<li><span class="chip">'+E(condition.status||'unknown')+'</span> <code>'+E(condition.expression||condition.predicate||'Unrecorded expression')+'</code>'+facts([['Polarity',condition.polarity||condition.branch],['Source',loc(condition)],['Origin',condition.origin],['Evidence',condition.evidence],['Feasibility',condition.feasibility]])+'</li>').join('')+'</ul></details>':'<p class="sm-note">No guard evidence recorded for this path.</p>')+'</div></details>').join('');
+ else if(allNodes.length)dt.$('#sm-results').innerHTML=allNodes.slice(0,200).map(nodeMarkup).join('');
+ else if(list.length)dt.$('#sm-results').innerHTML=rows(list,[...new Set(list.flatMap(value=>Object.keys(value||{})))].slice(0,8));
+ else if(analyses.length)dt.$('#sm-results').innerHTML=rows(analyses,['repo','sha','id','revisionKey','generation']);
+ else if(D.configured!==undefined){dt.$('#sm-meaning').textContent=D.note||'Native code search remains available while semantic workers are unavailable.';dt.$('#sm-results').innerHTML=facts([['Readiness',D.configured?'semantic service configured':'not configured'],['Backend',D.backend],['Languages',D.languages],['Named operations',D.operations],['Retained generations',D.retainedGenerations],['Manual ports',D.editablePorts],['Worker',D.worker||'not contacted']]);}
+ else dt.$('#sm-results').innerHTML='<p class="sm-note">'+E(D.message||D.guidance||'No matching retained semantic results. Check readiness and coverage before building or changing the query.')+'</p>';
+ dt.$('#sm-layout').style.gridTemplateColumns=tree.size&&!dt.$('#sm-tree').hidden?'':'minmax(0,1fr)';dt.json(dt.$('#sm-data'),D,{open:1});
+ document.addEventListener('click',event=>{const button=event.target.closest('[data-source]');if(!button)return;document.querySelectorAll('.sm-node.on,[data-source].on').forEach(el=>el.classList.remove('on'));const target=document.getElementById(button.dataset.source);if(!target)return;let parent=target.parentElement;while(parent){if(parent.tagName==='DETAILS')parent.open=true;parent=parent.parentElement;}button.classList.add('on');target.classList.add('on');target.scrollIntoView({block:'nearest',behavior:'smooth'});});
+</script>

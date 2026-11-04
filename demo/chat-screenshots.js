@@ -7,6 +7,10 @@ const { chromium } = require('playwright');
 const WEBUI = process.argv[2] || 'http://127.0.0.1:3480';
 const OUT = path.join(__dirname, '..', 'docs', 'screenshots');
 const QUESTIONS = [
+  ...(process.env.DEMO_SEMANTIC_REPO ? [
+    ['chat-semantic', 'Trace onOrder through the internal libraries; show the semantic path'],
+    ['chat-ports', 'Show the typed manual ports and correction history'],
+  ] : []),
   ['chat-usage', 'Who writes sales.orders?'],
   ['chat-overview', 'How is demo doing? Anything broken?'],
   ['chat-logs', 'Any errors in the last hour?'],
@@ -19,7 +23,7 @@ const QUESTIONS = [
 
 (async () => {
   const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
-  const ctx = await browser.newContext({ viewport: { width: 1360, height: 1500 }, deviceScaleFactor: 2, colorScheme: 'light' });
+  const ctx = await browser.newContext({ viewport: { width: 1360, height: 1100 }, deviceScaleFactor: 1, colorScheme: 'light' });
   for (const [name, q] of QUESTIONS) {
     const p = await ctx.newPage();
     await p.goto(WEBUI, { waitUntil: 'domcontentloaded' });
@@ -32,9 +36,19 @@ const QUESTIONS = [
     await p.keyboard.press('Enter');
     // the tool result is embedded as an iframe; wait for it to size itself, then for the answer
     await p.waitForSelector('iframe', { timeout: 60000 });
-    await p.waitForFunction(() => [...document.querySelectorAll('iframe')].some(f => f.getBoundingClientRect().height > 200), null, { timeout: 60000 });
+    await p.waitForFunction(() => [...document.querySelectorAll('iframe')].some(f => f.getBoundingClientRect().height > 25), null, { timeout: 60000 });
     await p.waitForTimeout(5000);
+    // The port result is intentionally collapsed in chat. Capture both the compact
+    // default and its explicitly expanded native view.
     await p.screenshot({ path: path.join(OUT, `${name}.png`), fullPage: false });
+    if (name === 'chat-ports') {
+      for (const frame of p.frames().slice(1)) {
+        const disclosure = frame.locator('.inline-result');
+        if (await disclosure.count()) await disclosure.evaluate(element => element.open = true);
+      }
+      await p.waitForTimeout(300);
+      await p.screenshot({ path: path.join(OUT, `${name}-expanded.png`), fullPage: false });
+    }
     console.log(`${name}.png`);
     await p.close();
   }

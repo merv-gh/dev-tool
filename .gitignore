@@ -34,3 +34,5 @@ node_modules/
 
 # Durable map overlays are local task data.
 /maps/
+/passport-adjustments/
+/architecture/

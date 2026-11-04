@@ -1,0 +1,20 @@
+.sm-admin-scope { padding:12px 14px; margin-bottom:12px; }
+.sm-admin-scope .grid-form { max-width:950px; margin-top:0; }
+.sm-admin-scope input { min-width:0; width:100%; }
+.sm-admin-query { margin-top:20px; }
+.sm-admin-retained { margin:14px 0; overflow:auto; max-height:360px; }
+.sm-admin-retained td { overflow-wrap:anywhere; max-width:400px; }
+.sm-admin-ports { margin:24px 0; }
+.sm-admin-ports .rt-heading > div { min-width:0; flex:1; }
+#smPortRevision { overflow-wrap:anywhere; }
+.sm-admin-port { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); }
+.sm-admin-port > div { flex:1; min-width:180px; overflow-wrap:anywhere; }
+.sm-admin-port strong, .sm-admin-port small { display:block; }
+.sm-admin-port small { color:var(--muted); margin-top:3px; }
+.sm-admin-view { width:100%; height:150px; border:1px solid var(--line); border-radius:6px; margin:12px 0; }
+#tab-semantic :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+#tab-semantic ::selection { color:var(--fg); background:var(--accent-soft); }
+#tab-semantic textarea { caret-color:var(--accent); }
+#tab-semantic pre { white-space:pre-wrap; overflow-wrap:anywhere; }
+#smTool { max-width:100%; }
+@media(max-width:600px){.sm-admin-scope .grid-form{grid-template-columns:minmax(0,1fr);gap:4px}.sm-admin-scope .grid-form label:not(:first-child){margin-top:8px}}

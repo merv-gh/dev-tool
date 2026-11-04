@@ -1,0 +1,24 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+const source=fs.readFileSync(path.join(__dirname,'../web/admin-semantic.js'),'utf8');
+function harness(call=async()=>({result:{}})){
+ const elements=new Map(),element=()=>({value:'',textContent:'',innerHTML:'',hidden:false,disabled:false,style:{},dataset:{},options:[],children:[],addEventListener(){},querySelectorAll:()=>[],replaceChildren(){this.innerHTML='';this.children=[];},focus(){}}),$=id=>{if(!elements.has(id))elements.set(id,element());return elements.get(id);};let discard=true;const requests=[];
+ const context=vm.createContext({$,URLSearchParams,JSON,console,location:{hash:'#semantic'},env:()=> 'dev',runtimeScopeVersion:0,tab:'semantic',setTimeout:()=>1,clearTimeout(){},confirm:()=>discard,rtEsc:value=>String(value??'').replace(/</g,'&lt;'),rtNativeView:()=>null,rtDisclosure:(_,value)=>JSON.stringify(value),api:async(url,args)=>{requests.push({url,args});return call(url,args);},show(){},showJob(){},document:{addEventListener(){}},window:{addEventListener(){}}});vm.runInContext(source,context);
+ const schemas=[...require('../lib/tools-semantic')({str:description=>({type:'string',description}),int:(description,value)=>({type:'integer',default:value,description}),env:{type:'string'}}),...require('../lib/tools-passport-edit')({str:description=>({type:'string',description}),int:(description,value)=>({type:'integer',default:value,description})})].map(({input,required,...tool})=>({...tool,inputSchema:{type:'object',properties:input,required:required||[]}}));
+ context.schemas=schemas;vm.runInContext('semanticAdminTools=schemas; semanticAdminLoaded=true;semanticAdminInit()',context);
+ return {$,requests,run:code=>vm.runInContext(code,context),discard:value=>discard=value};
+}
+test('port corrections preserve the read revision, project typed fields, and prepare without executing',()=>{
+ const h=harness();h.$('smService').value='orders';h.$('smRepository').value='SHOP/orders';h.$('smRevision').value='1'.repeat(40);h.run("semanticAdminPorts={revision:'overlay-v1'};semanticAdminPortEdit('correct',{id:'detected-1',type:'http-ingress',evidence:{origin:'detected'},status:'detected',handler:{file:'src/Orders.java',line:10,signature:'Orders.get()'},boundary:{method:'GET',path:'/orders'},mappings:[]})");
+ const args=JSON.parse(h.$('smArgs').value);assert.equal(args.expected_revision,'overlay-v1');assert.equal(args.operations[0].port_id,'detected-1');assert.equal(args.operations[0].port.evidence,undefined);assert.equal(args.operations[0].port.status,undefined);assert.equal(args.operations[0].port.handler.file,'src/Orders.java');assert.equal(h.requests.length,0);
+ h.run("semanticAdminPortEdit('disable',{id:'detected-1'})");assert.deepEqual(JSON.parse(h.$('smArgs').value).operations,[{action:'disable',port_id:'detected-1'}]);
+});
+test('declining replacement of a draft cannot run another tool accidentally',async()=>{
+ const h=harness();h.run("semanticAdminPrepare('semantic_query')");h.$('smArgs').value='{"operation":"symbols","query":"preserve"}';h.$('smArgs').oninput();h.discard(false);await h.$('smCapabilities').onclick();assert.equal(h.requests.length,0);assert.equal(h.$('smTool').value,'semantic_query');assert.match(h.$('smArgs').value,/preserve/);
+});
+test('passport metadata edits preserve read identity, current values and revision without replacing port operations',()=>{
+ const h=harness();h.$('smService').value='orders';h.run("semanticAdminPorts={revision:'metadata-v1',metadata:{description:'Existing description',owners:['orders-team']}};semanticAdminMetadataEdit()");const args=JSON.parse(h.$('smArgs').value);assert.equal(args.expected_revision,'metadata-v1');assert.equal(args.metadata.description,'Existing description');assert.deepEqual(args.metadata.owners,['orders-team']);assert.equal(args.operations,undefined);assert.equal(h.requests.length,0);
+});
+test('semantic replies are ignored across stories and drafts typed during a call remain dirty',async()=>{
+ let finish;const waiting=new Promise(resolve=>finish=resolve),h=harness(async()=>waiting);h.run("semanticAdminPrepare('semantic_query')");const pending=h.run('semanticAdminRun()');h.$('smArgs').value='{"operation":"symbols","query":"new draft"}';h.$('smArgs').oninput();finish({result:{results:[]}});await pending;assert.equal(h.run('semanticAdminDirty'),true);assert.match(h.$('smArgs').value,/new draft/);
+ let finishOld;const waitOld=new Promise(resolve=>finishOld=resolve),other=harness(async()=>waitOld);other.run("semanticAdminPrepare('semantic_query')");const old=other.run('semanticAdminRun()');other.run('runtimeScopeVersion++;semanticAdminClear()');finishOld({result:{secret:'old story result'}});await old;assert.equal(other.$('smAdminOutput').innerHTML,'');assert.equal(other.run('semanticAdminPorts'),null);
+});

@@ -6,6 +6,7 @@
 <title>dt admin</title>
 <link rel="stylesheet" href="/static/ui.css">
 <link rel="stylesheet" href="/static/admin-runtime.css">
+<link rel="stylesheet" href="/static/admin-semantic.css"><link rel="stylesheet" href="/static/admin-architecture.css">
 <style>
   .cx-label { display: block; margin: 12px 0 5px; font-size: 12px; color: var(--muted); }
   .cx-list { padding: 8px; }
@@ -15,15 +16,17 @@
   .cx-item strong, .cx-item span { display: block; overflow-wrap: anywhere; }
   .cx-item span { font-size: 12px; color: var(--muted); margin-top: 4px; }
   .cx-files { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
-  .cx-file { font: 12px ui-monospace, Menlo, monospace; overflow-wrap: anywhere; max-width: 100%; }
+  .cx-file { font: 12px ui-monospace, Menlo, monospace; overflow-wrap: anywhere; white-space: normal; max-width: 100%; }
   .cx-wide { width: 100%; box-sizing: border-box; }
   pre.cx-wrap { white-space: pre-wrap; overflow-wrap: anywhere; }
   .cx-wrap { overflow-wrap: anywhere; }
   #cxWorking h2 { margin: 28px 0 10px; font-size: 16px; }
   #tab-context .grid-form input { min-width: 0; width: 100%; }
+  #tab-context .pm > * { min-width: 0; }
+  #tab-context .cx-item { white-space: normal; }
   #tab-context :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   #tab-context ::selection { background: var(--accent-soft); color: var(--fg); }
-  @media (max-width: 900px) { #tab-context .pm-side { position: static; max-height: 300px; } }
+  @media (max-width: 900px) { #tab-context .pm { grid-template-columns: minmax(0, 1fr); } #tab-context .pm-side { position: static; max-height: 300px; } }
   @media (max-width: 480px) { #tab-context .grid-form { grid-template-columns: 1fr; gap: 4px; } }
   #cxTool { max-width: 100%; } #cxUpload { min-width: 0; max-width: 100%; }
   .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin: 4px 0 14px; overflow-x: auto; }
@@ -151,6 +154,8 @@
     <button data-tab="views">Views<span class="n" id="nViews"></span></button>
     <button data-tab="history">History</button>
     <button data-tab="runtime">Runtime<span class="n" id="nExecutions"></span></button>
+    <button data-tab="architecture">Architecture</button>
+    <button data-tab="semantic">Semantic & ports</button>
     <button data-tab="jobs">Jobs<span class="n" id="nJobs"></span></button>
     <button data-tab="config">Config</button>
   </nav>
@@ -318,6 +323,41 @@
     <details class="rt-section" id="rtCodePanel"><summary>Code cells & tool scratchpad</summary><p class="hint">Use Node code to combine tool calls and network fetches. Inspect engine capabilities before choosing another runtime. Pending cells use the same returned cell ID; each call uses the selected principal and chat / task.</p><div class="row"><label for="rtCodeTool">Tool</label><select id="rtCodeTool"></select><button id="rtCodeSchema">Reset arguments</button></div><details><summary>Description & argument schema</summary><pre id="rtCodeDescription" class="code cx-wrap"></pre></details><label class="cx-label" for="rtCodeArgs">Arguments (JSON)</label><textarea id="rtCodeArgs" rows="8" spellcheck="false">{}</textarea><div class="row"><button id="rtCodeRun" class="primary">Run code tool</button><span id="rtCodeStatus" class="hint" role="status"></span></div><div id="rtCodeOutput"></div></details>
   </section>
 
+  <section id="tab-semantic" hidden>
+    <div class="rt-heading"><div><h2>Semantic analyses & passport ports</h2><p class="hint">Select retained source revisions, inspect paths and guards, and keep manual boundary adjustments separate from detected findings. Missing evidence stays visible.</p></div><button id="smCapabilities">Engine capabilities</button></div>
+    <div class="sm-admin-scope card"><div class="grid-form">
+      <label for="smService">Service</label><input id="smService" placeholder="order-service">
+      <label for="smRepository">Repository</label><input id="smRepository" placeholder="PROJECT/repository">
+      <label for="smRevision">Source revision</label><input id="smRevision" placeholder="Full SHA for port edits; ref resolved once for indexing">
+      <label for="smAnalysis">Retained analysis</label><input id="smAnalysis" placeholder="Select an analysis below or paste its exact id">
+    </div><div class="row"><button id="smList">List retained analyses</button><button id="smPorts">Read passport ports</button><button id="smIndex">Prepare indexing</button><span class="hint">Environment follows the Admin selector.</span></div></div>
+    <div id="smAdminMessage" class="hint" role="status" aria-live="polite"></div>
+    <div id="smRetained" class="sm-admin-retained"></div>
+    <div id="smPortEditor" class="sm-admin-ports" hidden><div class="rt-heading"><div><h2>Effective ports & passport metadata</h2><p class="hint" id="smPortRevision"></p></div><div class="row"><button id="smMetadataEdit">Edit passport metadata</button><button id="smPortAdd">Prepare new port</button></div></div><div id="smPortRows"></div></div>
+    <div class="sm-admin-query"><div class="row"><label for="smTool">Tool</label><select id="smTool"></select><button id="smPrepare">Prepare from selected scope</button></div>
+      <details><summary>Tool description & typed argument schema</summary><pre id="smSchema" class="code cx-wrap"></pre></details>
+      <label class="cx-label" for="smArgs">Arguments (JSON)</label><textarea id="smArgs" rows="10" spellcheck="false">{}</textarea>
+      <div class="row"><button id="smRun" class="primary">Run selected tool</button><button id="smCancel" hidden>Cancel job</button><button id="smJobInspect" hidden>Inspect job</button><span id="smRunStatus" class="hint" role="status"></span></div>
+      <div id="smJobStatus" class="hint" role="status"></div><div id="smAdminOutput"></div>
+    </div>
+  </section>
+
+  <section id="tab-architecture" hidden>
+    <div class="rt-heading"><div><h2>Shared architecture knowledge</h2><p id="arAdminPermissions" class="hint">Admins publish; everyone reads.</p></div><div class="row"><button id="arAdminEstate">Explore estate</button><button id="arAdminNew">New document</button><button id="arAdminReload">Reload list</button></div></div>
+    <p id="arAdminStatus" class="hint" role="status" aria-live="polite"></p>
+    <div class="ar-admin"><nav id="arAdminList" aria-label="Published architecture documents"></nav><div>
+    <p class="hint" id="arAdminRevision">Select a published document or create one.</p>
+    <label for="arAdminId">Document ID</label><input id="arAdminId" placeholder="refund-architecture">
+    <label for="arAdminTitle">Title</label><input id="arAdminTitle">
+    <label for="arAdminSummary">Searchable summary</label><textarea id="arAdminSummary" rows="2"></textarea>
+    <label for="arAdminBody">Feature explanation</label><textarea id="arAdminBody" rows="6"></textarea>
+    <details><summary>Edit entities, connections, field mappings & named views</summary><p class="hint">Use existing svc:service or resource IDs. Parent IDs declare C4 boundaries. Every relation needs a citation in evidence. Changes here are declarations, separate from measured environment state.</p><label for="arAdminStructure">Structure (JSON)</label><textarea id="arAdminStructure" rows="20" spellcheck="false"></textarea><p class="hint">Inspect architecture_save with tool_describe for its complete typed schema. Supported views: landscape, context, container, component, deployment, dynamic, dataflow.</p></details>
+    <label for="arAdminReason">Publication reason / ticket / decision</label><input id="arAdminReason" placeholder="ADR-42: confirmed with the Payments team">
+    <div class="row" style="margin-top:12px"><button id="arAdminPublish" class="primary">Publish globally</button></div><details><summary>Publication history</summary><pre id="arAdminHistory"></pre></details>
+    </div></div>
+    <details><summary>Refresh operational observations</summary><p class="hint">Read-only source queries in a cancellable job. PostgreSQL activity, Kafka stats and configured telemetry remain separate from published architecture. Failed sources retain older observations.</p><div class="row"><button id="arAdminRefresh">Refresh selected environment</button><button id="arAdminPoll" hidden>Observe job</button><button id="arAdminCancel" hidden>Cancel job</button></div><pre id="arAdminJob"></pre></details>
+    <iframe id="arAdminPreview" title="Interactive architecture preview" allow="clipboard-write"></iframe>
+  </section>
   <section id="tab-config" hidden>
     <h2><span id="cfgName">config.json</span> <span class="muted" id="cfgFile"></span></h2>
     <p class="hint" id="cfgHint">Environments, integrations, tools and browser sites. Secrets stay in <code>.env</code>; write <code>${NAME}</code> here to use one. Saving validates and activates a generation without restarting. Existing calls finish on their captured configuration.</p>
@@ -339,6 +379,7 @@
 <script src="/static/admin-context.js"></script>
 <script src="/static/admin-map.js"></script>
 <script src="/static/admin-runtime.js"></script>
+<script src="/static/admin-semantic.js"></script><script src="/static/admin-architecture.js"></script>
 <script>
 let S = null, tab = 'index', selectedJob = null, timer = null;
 const api = async (p, body, { identityOnly = false } = {}) => {
@@ -582,11 +623,13 @@ async function loadRoutes() {
 }
 
 function show(t) {
+  const requested = t; t = t.split('?')[0];
   if (tab === 'context' && t !== tab && !contextCanLeave()) return;
   tab = t;
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   document.querySelectorAll('section[id^=tab-]').forEach(s => s.hidden = s.id !== `tab-${t}`);
-  history.replaceState(null, '', `#${t}`);
+  history.replaceState(null, '', `#${t === 'semantic' ? requested : t}`);
+  if (t === 'architecture') loadArchitectureAdmin().catch(e => architectureMessage(e.message, true));
   if (t === 'context') loadContexts().catch(e => contextMessage(e.message, true));
   if (t === 'config') loadConfig().catch(e => toast(e.message));
   if (t === 'scripts') loadScripts().catch(e => toast(e.message));
@@ -594,6 +637,7 @@ function show(t) {
   if (t === 'api') loadRoutes().catch(e => toast(e.message));
   if (t === 'history') loadHistory().catch(e => toast(e.message));
   if (t === 'runtime') { loadRuntime().catch(e => runtimeMessage(e.message, true)); if (!runtimeMetadata.length) runtimeLoadMetadata(); if (!runtimeTools.length) runtimeLoadCodeTools(); }
+  if (t === 'semantic') loadSemanticAdmin().catch(e => semanticAdminMessage(e.message, true));
   if (t === 'views') loadViews().catch(e => toast(e.message));
 }
 
@@ -632,7 +676,7 @@ const toolsReload = async (update) => {
 $('toolsReload').onclick = () => toolsReload(false);
 $('toolsUpdate').onclick = () => toolsReload(true);
 show((location.hash || '#index').slice(1));
-window.addEventListener('hashchange', () => { const t = location.hash.slice(1); if (t && t !== tab && $(`tab-${t}`)) show(t); });
+window.addEventListener('hashchange', () => { const t = location.hash.slice(1); if (t && (t.split('?')[0] !== tab || t.includes('?')) && $(`tab-${t.split('?')[0]}`)) show(t); });
 refresh();
 </script>
 </body>

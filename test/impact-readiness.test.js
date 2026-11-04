@@ -39,6 +39,12 @@ test('four overloaded/versioned methods retain public identities; typed callers 
  const symbols=await require('../lib/tools').call('code_symbols',{q:'MoneyMath round',kind:'method',repos:'LIB/*'});assert.equal(new Set(symbols.rows.map(r=>r.id)).size,4);assert.ok(symbols.rows.every(r=>r.revision&&r.legacyId));
  assert.throws(()=>I.loadLegacy({repos:'LIB/*'}),/Ambiguous legacy class/);
 });
+test('coverage metadata cannot evict a small caller chain from a bounded impact result',()=>{
+ const key='FIXTURE/gap-output';idx(key,{'GapTarget.java':'package fixture;\npublic class GapTarget {\n public int changed() { return 1; }\n public int middle() { return changed(); }\n public int entry() { return middle(); }\n}\n'});
+ const file=path.join(CI.keyDir(key),'graph.json'),graph=JSON.parse(fs.readFileSync(file));graph.errors=Array.from({length:25},(_,i)=>({file:`unrelated-${i}.java`,error:'Unparsed source '.repeat(200)}));fs.writeFileSync(file,JSON.stringify(graph));
+ const result=I.impact('fixture.GapTarget#changed',{repos:key,depth:4,max_output_bytes:8192,grep:false});
+ assert.ok(result.items.some(item=>item.name==='GapTarget#middle'));assert.ok(result.items.some(item=>item.name==='GapTarget#entry'));assert.equal(result.gapTotal,25);assert.equal(result.complete,false);assert.equal(result.metadataTruncated,true);assert.ok(Buffer.byteLength(JSON.stringify(result))<=8192);
+});
 test('graph leaf replacements and equal build timestamps cannot reuse stale canonical workspace revisions',()=>{
  const key='work/cache-leaf';idx(key,{'src/main/java/fixture/CacheLeaf.java':'package fixture; public class CacheLeaf { public int before(){return 1;} }'},{workspace:'cache-leaf'});
  const first=I.load({repos:key,env:'dev'}),dir=CI.keyDir(key),meta=JSON.parse(fs.readFileSync(path.join(dir,'files.json'))),graph=JSON.parse(fs.readFileSync(path.join(dir,'graph.json')));

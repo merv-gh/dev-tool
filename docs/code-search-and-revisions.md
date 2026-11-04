@@ -53,12 +53,12 @@ The pinned external graph MCP smoke test found `PaymentService.create` as a cand
 
 ## Where Zoekt would help
 
-Zoekt is a potential estate-wide text-search backend; it is not currently configured or required for native service/library impact. Start by benchmarking candidate-repository selection and textual mentions across the actual estate. Keep dt's symbol and passport graph for semantic caller traversal.
+The [measured Zoekt comparison](zoekt-evaluation.md) covers 33 repositories / 191 MB, regex compatibility, commit refresh and transitive version-bound impact. It recommends keeping native search as the default: Zoekt improves selected broad searches but regresses several regex queries and does not replace semantic graphs. Zoekt remains an optional integration candidate; it is not configured or required for native service/library impact. Benchmark the actual estate before enabling a backend.
 
 An adapter would need:
 
 1. An asynchronous search boundary above the tool facade. `CI.grep` and impact's current repository preselection are synchronous; an HTTP client cannot simply be dropped into that function. Prefetch bounded candidate repositories before traversal, or refactor the facade and scoped graph loader together.
-2. Exact repository/ref-to-SHA provenance on every result. Zoekt supports repository and branch filters, but a branch name alone is not an immutable revision. Verify indexed branch metadata against the requested SHA, and reject/fall back when it differs. The web API returns branch metadata separately; do not fabricate a commit field on file matches.
+2. Exact repository/ref-to-SHA provenance on every result. Zoekt supports repository and branch filters, but a branch name alone is not an immutable revision. Verify the indexed version against the requested SHA, and reject/fall back when it differs. The pinned raw JSON `/api/search` includes `FileMatch.Version`; the HTML-oriented `/search?format=json` returns a different DTO with separate branch metadata. Do not fabricate missing version fields.
 3. Bounded normalization into dt's existing repo/path/line/text/context DTO, with truncation, time budget, missing-revision coverage and an offline native fallback. Translate literal, regex, case and glob semantics explicitly; JavaScript regex and Zoekt regex are not interchangeable.
 4. Artifact/version dependency bindings from passports and the Bitbucket module index. Search can discover candidate imports/call sites, but matching names must not merge different library revisions or become verified semantic edges.
 5. A ref-aware indexing job, isolated output shards and atomic publication. Do not overwrite the last usable shard on a failed refresh or prune revisions still referenced by workspaces/passports. Add configuration, health, Compose and tool-discovery coverage only when the backend is implemented.

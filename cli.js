@@ -165,6 +165,10 @@ const commands = {
     require('./lib/runner').serve({ port: Number(opts.port || 4100) });
     return new Promise(() => {});
   },
+  async 'semantic-worker'(opts) {
+    require('./lib/semantic-worker').serve({ port: Number(opts.port || 4110) });
+    return new Promise(() => {});
+  },
   // dt doctor [--repo PROJECT/slug] [--deep]: what fetching and test runs need, checked
   async doctor(opts) {
     const d = await require('./lib/doctor').check({ repo: opts.repo, deep: !!opts.deep });

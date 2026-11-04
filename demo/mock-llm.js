@@ -9,6 +9,21 @@ const results = (msgs) => msgs.filter(m => m.role === 'tool').map(m => { try { r
 const ctx = (r) => (Array.isArray(r) && r[0] === 'embed' ? r[1] : r); // OpenAPI embeds: ["embed", context]
 
 const SCENARIOS = [
+  ...(process.env.DEMO_SEMANTIC_REPO ? [{
+    match: /trace onOrder|semantic.*path/i,
+    steps: [
+      { tool: 'tool_describe', args: { name: 'semantic_query' } },
+      { tool: 'tool_execute', args: { name: 'semantic_query', arguments: { env: 'dev', repo: process.env.DEMO_SEMANTIC_REPO, operation: 'paths', from: { name: 'onOrder' }, to: { name: 'write' }, mode: 'reachability', waitMs: 30000 } } },
+    ],
+    answer: rs => { const r = ctx(rs.at(-1)) || {}; return `The retained analysis returns **${r.results?.length || 0} candidate paths**. Expand the source hierarchy, guard conditions and connection evidence above. Call reachability does not prove value flow or runtime feasibility.`; },
+  }, {
+    match: /show.*(typed|manual).*ports/i,
+    steps: [
+      { tool: 'tool_describe', args: { name: 'passport_adjustments' } },
+      { tool: 'tool_execute', args: { name: 'passport_adjustments', arguments: { service: process.env.DEMO_SEMANTIC_SERVICE || 'orders', env: 'dev' } } },
+    ],
+    answer: rs => { const r = ctx(rs.at(-1)) || {}; return `The exact source has **${r.ports?.length || 0} effective ports**. Detected evidence and manual declarations stay separate. Use the Admin editor link to prepare a revision-checked correction.`; },
+  }] : []),
   {
     match: /refund/i,
     steps: [{ tool: 'feature', args: { text: 'How do refunds work?', spaces: 'SHOP', env: 'demo' } }],

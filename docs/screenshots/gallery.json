@@ -1,0 +1,659 @@
+{
+  "captures": [
+    {
+      "file": "sample-api-exchange.png",
+      "title": "api-exchange",
+      "width": 1280,
+      "origin": "built-in sample fixture; presentation only",
+      "overflow": false
+    },
+    {
+      "file": "sample-code.png",
+      "title": "code",
+      "width": 1280,
+      "origin": "built-in sample fixture; presentation only",
+      "overflow": false
+    },
+    {
+      "file": "sample-code-cell.png",
+      "title": "code-cell",
+      "width": 1280,
+      "origin": "built-in sample fixture; presentation only",
+      "overflow": false
+    },
+    {
+      "file": "sample-collection-report.png",
+      "title": "collection-report",
+      "width": 1280,
+      "origin": "built-in sample fixture; presentation only",
+      "overflow": false
+    },
+    {
+      "file": "sample-diagram.png",
+      "title": "diagram",
+      "width": 1280,
+      "origin": "built-in sample fixture; presentation only",
+      "overflow": false
+    },
+    {
+      "file": "sample-differential.png",
+      "title": "differential",
+      "width": 1280,
+      "origin": "built-in sample fixture; presentation only",
+      "overflow": false
+    },
+    {
+      "file": "sample-impact.png",
+      "title": "impact",
+      "width": 1280,
+      "origin": "built-in sample fixture; presentation only",
+      "overflow": false
+    },
+    {
+      "file": "sample-json.png",
+      "title": "json",
+      "width": 1280,
+      "origin": "built-in sample fixture; presentation only",
+      "overflow": false
+    },
+    {
+      "file": "sample-knowledge-map.png",
+      "title": "knowledge-map",
+      "width": 1280,
+      "origin": "built-in sample fixture; presentation only",
+      "overflow": false
+    },
+    {
+      "file": "sample-list-diff.png",
+      "title": "list-diff",
+      "width": 1280,
+      "origin": "built-in sample fixture; presentation only",
+      "overflow": false
+    },
+    {
+      "file": "sample-passport-ports.png",
+      "title": "passport-ports",
+      "width": 1280,
+      "origin": "built-in sample fixture; presentation only",
+      "overflow": false
+    },
+    {
+      "file": "sample-patch.png",
+      "title": "patch",
+      "width": 1280,
+      "origin": "built-in sample fixture; presentation only",
+      "overflow": false
+    },
+    {
+      "file": "sample-reproduction.png",
+      "title": "reproduction",
+      "width": 1280,
+      "origin": "built-in sample fixture; presentation only",
+      "overflow": false
+    },
+    {
+      "file": "sample-scenario-run.png",
+      "title": "scenario-run",
+      "width": 1280,
+      "origin": "built-in sample fixture; presentation only",
+      "overflow": false
+    },
+    {
+      "file": "sample-semantic-analysis.png",
+      "title": "semantic-analysis",
+      "width": 1280,
+      "origin": "built-in sample fixture; presentation only",
+      "overflow": false
+    },
+    {
+      "file": "sample-table.png",
+      "title": "table",
+      "width": 1280,
+      "origin": "built-in sample fixture; presentation only",
+      "overflow": false
+    },
+    {
+      "file": "sample-tests.png",
+      "title": "tests",
+      "width": 1280,
+      "origin": "built-in sample fixture; presentation only",
+      "overflow": false
+    },
+    {
+      "file": "sample-text-diff.png",
+      "title": "text-diff",
+      "width": 1280,
+      "origin": "built-in sample fixture; presentation only",
+      "overflow": false
+    },
+    {
+      "file": "sample-xml.png",
+      "title": "xml",
+      "width": 1280,
+      "origin": "built-in sample fixture; presentation only",
+      "overflow": false
+    },
+    {
+      "file": "admin-context.png",
+      "title": "Context memory, nearby files & scratchpad",
+      "width": 1280,
+      "origin": "demo tool execution",
+      "overflow": false
+    },
+    {
+      "file": "admin-context-scratchpad.png",
+      "title": "Editable tool arguments & saved context results",
+      "width": 1280,
+      "origin": "demo tool execution",
+      "overflow": false
+    },
+    {
+      "file": "admin-runtime.png",
+      "title": "Owned executions, metadata, jobs & configuration",
+      "width": 1280,
+      "origin": "demo tool execution",
+      "overflow": false
+    },
+    {
+      "file": "admin-runtime-metadata.png",
+      "title": "Read and annotate persisted operational records",
+      "width": 1280,
+      "origin": "demo tool execution",
+      "overflow": false
+    },
+    {
+      "file": "admin-runtime-config.png",
+      "title": "Active configuration, storage and scheduler limits",
+      "width": 1280,
+      "origin": "demo tool execution",
+      "overflow": false
+    },
+    {
+      "file": "admin-semantic.png",
+      "title": "Retained semantic versions & tool workbench",
+      "width": 1280,
+      "origin": "demo tool execution",
+      "overflow": false
+    },
+    {
+      "file": "admin-ports-editor.png",
+      "title": "Passport metadata, port corrections & evidence",
+      "width": 1280,
+      "origin": "demo tool execution",
+      "overflow": false
+    },
+    {
+      "file": "admin-map-inspection.png",
+      "title": "Map inspection with editable arguments and native results",
+      "width": 1280,
+      "origin": "demo tool execution",
+      "overflow": false
+    },
+    {
+      "file": "api-client.png",
+      "title": "Editable API requests, capture & response explorer",
+      "width": 1280,
+      "origin": "invented imported exchange; no replay",
+      "overflow": false
+    },
+    {
+      "file": "api-response.png",
+      "title": "Native inline HTTP response",
+      "width": 1280,
+      "origin": "invented imported exchange; no replay",
+      "overflow": false
+    },
+    {
+      "file": "showcase.png",
+      "title": "One-service investigation, versions, ports & semantic readiness",
+      "width": 1280,
+      "origin": "demo tool execution",
+      "overflow": false
+    },
+    {
+      "file": "semantic-reachability.png",
+      "title": "Real Joern \u00b7 Java service and two internal libraries",
+      "width": 1280,
+      "origin": "retained real Joern end-to-end test result; demo source repositories",
+      "overflow": false
+    },
+    {
+      "file": "semantic-dataflow.png",
+      "title": "Real Joern \u00b7 value flow across the saved CPG",
+      "width": 1280,
+      "origin": "retained real Joern end-to-end test result; demo source repositories",
+      "overflow": false
+    },
+    {
+      "file": "semantic-composed.png",
+      "title": "Real Joern local slices with declared HTTP/DB mappings",
+      "width": 1280,
+      "origin": "retained real Joern end-to-end test result; demo source repositories",
+      "overflow": false
+    },
+    {
+      "file": "passport-adjustments.png",
+      "title": "Manual ports, exact source identity and correction history",
+      "width": 1280,
+      "origin": "retained real Joern end-to-end test result; demo source repositories",
+      "overflow": false
+    },
+    {
+      "file": "sample-patch-mobile.png",
+      "title": "patch",
+      "width": 390,
+      "origin": "built-in sample fixture; presentation only",
+      "overflow": false
+    },
+    {
+      "file": "sample-tests-mobile.png",
+      "title": "tests",
+      "width": 390,
+      "origin": "built-in sample fixture; presentation only",
+      "overflow": false
+    },
+    {
+      "file": "admin-context-mobile.png",
+      "title": "Context memory, nearby files & scratchpad",
+      "width": 390,
+      "origin": "demo tool execution",
+      "overflow": false
+    },
+    {
+      "file": "admin-runtime-mobile.png",
+      "title": "Owned executions, metadata, jobs & configuration",
+      "width": 390,
+      "origin": "demo tool execution",
+      "overflow": false
+    },
+    {
+      "file": "admin-ports-editor-mobile.png",
+      "title": "Passport metadata, port corrections & evidence",
+      "width": 390,
+      "origin": "demo tool execution",
+      "overflow": false
+    },
+    {
+      "file": "showcase-mobile.png",
+      "title": "One-service investigation, versions, ports & semantic readiness",
+      "width": 390,
+      "origin": "demo tool execution",
+      "overflow": false
+    },
+    {
+      "file": "semantic-dataflow-mobile.png",
+      "title": "Real Joern \u00b7 value flow across the saved CPG",
+      "width": 390,
+      "origin": "retained real Joern end-to-end test result; demo source repositories",
+      "overflow": false
+    },
+    {
+      "file": "semantic-composed-mobile.png",
+      "title": "Real Joern local slices with declared HTTP/DB mappings",
+      "width": 390,
+      "origin": "retained real Joern end-to-end test result; demo source repositories",
+      "overflow": false
+    },
+    {
+      "file": "microservices-map.png",
+      "title": "Service map with explicit static candidates and source evidence",
+      "width": 1280,
+      "origin": "demo tool execution",
+      "overflow": false
+    },
+    {
+      "file": "code-impact.png",
+      "title": "Actual code impact from the service showcase",
+      "width": 1280,
+      "origin": "demo tool execution",
+      "overflow": false
+    },
+    {
+      "file": "workspace-test-run.png",
+      "title": "Real Maven/JUnit run reproducing the rounding bug",
+      "width": 1280,
+      "origin": "demo tool execution",
+      "overflow": false
+    },
+    {
+      "file": "workspace-patch.png",
+      "title": "Actual workspace patch and recorded test verdicts",
+      "width": 1280,
+      "origin": "demo tool execution",
+      "overflow": false
+    },
+    {
+      "file": "admin-architecture.png",
+      "title": "admin architecture",
+      "width": 1600,
+      "origin": "synthetic 600-service estate; real tool and browser execution",
+      "overflow": false
+    },
+    {
+      "file": "architecture-containers.png",
+      "title": "architecture containers",
+      "width": 1600,
+      "origin": "synthetic 600-service estate; real tool and browser execution",
+      "overflow": false
+    },
+    {
+      "file": "architecture-context.png",
+      "title": "architecture context",
+      "width": 1600,
+      "origin": "synthetic 600-service estate; real tool and browser execution",
+      "overflow": false
+    },
+    {
+      "file": "architecture-dataflow.png",
+      "title": "architecture dataflow",
+      "width": 1600,
+      "origin": "synthetic 600-service estate; real tool and browser execution",
+      "overflow": false
+    },
+    {
+      "file": "architecture-deployment.png",
+      "title": "architecture deployment",
+      "width": 1600,
+      "origin": "synthetic 600-service estate; real tool and browser execution",
+      "overflow": false
+    },
+    {
+      "file": "architecture-estate.png",
+      "title": "architecture estate",
+      "width": 1600,
+      "origin": "synthetic 600-service estate; real tool and browser execution",
+      "overflow": false
+    },
+    {
+      "file": "architecture-mobile.png",
+      "title": "architecture mobile",
+      "width": 390,
+      "origin": "synthetic 600-service estate; real tool and browser execution",
+      "overflow": false
+    },
+    {
+      "file": "architecture-resources.png",
+      "title": "architecture resources",
+      "width": 1600,
+      "origin": "synthetic 600-service estate; real tool and browser execution",
+      "overflow": false
+    },
+    {
+      "file": "sample-architecture.png",
+      "title": "sample architecture",
+      "width": 1280,
+      "origin": "built-in sample fixture; presentation only",
+      "overflow": false
+    }
+  ],
+  "errors": [],
+  "renderers": [
+    "api-exchange",
+    "architecture",
+    "code",
+    "code-cell",
+    "collection-report",
+    "diagram",
+    "differential",
+    "impact",
+    "json",
+    "knowledge-map",
+    "list-diff",
+    "passport-ports",
+    "patch",
+    "reproduction",
+    "scenario-run",
+    "semantic-analysis",
+    "table",
+    "tests",
+    "text-diff",
+    "xml"
+  ],
+  "additionalScreenshots": [
+    {
+      "file": "admin-api.png",
+      "title": "admin api",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "admin-config.png",
+      "title": "admin config",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "admin-explore-function.png",
+      "title": "admin explore function",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "admin-explore-table-dark.png",
+      "title": "admin explore table dark",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "admin-explore-table.png",
+      "title": "admin explore table",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "admin-history.png",
+      "title": "admin history",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "admin-index.png",
+      "title": "admin index",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "admin-jobs.png",
+      "title": "admin jobs",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "admin-passports.png",
+      "title": "admin passports",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "admin-script-files.png",
+      "title": "admin script files",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "admin-script-js.png",
+      "title": "admin script js",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "admin-scripts.png",
+      "title": "admin scripts",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "admin-sites.png",
+      "title": "admin sites",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "admin-views.png",
+      "title": "admin views",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "api-routes.png",
+      "title": "api routes",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "chat-code.png",
+      "title": "chat code",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "chat-file.png",
+      "title": "chat file",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "chat-files.png",
+      "title": "chat files",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "chat-logs.png",
+      "title": "chat logs",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "chat-overview.png",
+      "title": "chat overview",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "chat-ports-expanded.png",
+      "title": "chat ports expanded",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "chat-ports.png",
+      "title": "chat ports",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "chat-reconcile.png",
+      "title": "chat reconcile",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "chat-refunds.png",
+      "title": "chat refunds",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "chat-semantic.png",
+      "title": "chat semantic",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "chat-usage.png",
+      "title": "chat usage",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "dashboard-dark.png",
+      "title": "dashboard dark",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "dashboard.png",
+      "title": "dashboard",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "feature-refunds-dark.png",
+      "title": "feature refunds dark",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "feature-refunds.png",
+      "title": "feature refunds",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "files-dark.png",
+      "title": "files dark",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "files-xml.png",
+      "title": "files xml",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "files.png",
+      "title": "files",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "health.png",
+      "title": "health",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "kafka-lag.png",
+      "title": "kafka lag",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "kafka-last.png",
+      "title": "kafka last",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "logs-dark.png",
+      "title": "logs dark",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "logs.png",
+      "title": "logs",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "passport-dark.png",
+      "title": "passport dark",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "passport.png",
+      "title": "passport",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "pg-query.png",
+      "title": "pg query",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "pg-usage.png",
+      "title": "pg usage",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "pull-request.png",
+      "title": "pull request",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "trace.png",
+      "title": "trace",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "view-list-diff-dark.png",
+      "title": "view list diff dark",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "view-list-diff.png",
+      "title": "view list diff",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "view-text-diff.png",
+      "title": "view text diff",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "view-xml.png",
+      "title": "view xml",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    },
+    {
+      "file": "who-uses.png",
+      "title": "who uses",
+      "origin": "bundled demo; separate live-tool or Open WebUI capture script"
+    }
+  ]
+}

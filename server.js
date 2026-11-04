@@ -265,6 +265,8 @@ const routes = [
   ['GET', '/logs/*', false, page('logs.html')],
   ['GET', '/map-preview/*', false, (req,res,url)=>{const r=results.load(url.pathname.split('/').pop());if(!r||r.kind!=='map-preview'||!/^image\/(png|jpeg|webp)$/.test(r.image?.mimeType)||!/^[A-Za-z0-9+/]+={0,2}$/.test(r.image?.data))return send(res,404,{error:'Screenshot not found'});const title=String(r.title||'Screenshot').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));res.writeHead(200,{'content-type':'text/html; charset=utf-8','content-security-policy':"default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'"});res.end(`<html><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{margin:12px;font:13px system-ui;background:#fafafa;color:#222}img{max-width:100%;height:auto}h1{font-size:15px}</style><h1>${title}</h1><p>Captured ${r.capturedAt}</p><img alt="${title}" src="data:${r.image.mimeType};base64,${r.image.data}"><script>const report=()=>{if(parent!==window)parent.postMessage({type:"iframe:height",height:Math.ceil(document.body.getBoundingClientRect().height)+24},"*")};new ResizeObserver(report).observe(document.body);addEventListener("load",report);for(const ms of [500,1500,3000])setTimeout(report,ms);</script></html>`);}],
   ['GET', '/map/*', false, page('map.html')],
+  ['GET', '/architecture/*', false, page('architecture.html')],
+  ['GET', '/api/architecture/*', false, (req,res,url) => require('./lib/architecture-http').handle(req,res,url)],
   ['GET', '/api/map/*', false, async (req,res,url) => {
     try {
       const parts=url.pathname.split('/').filter(Boolean), id=parts[2], action=parts[3]||'graph', result=results.load(id);
@@ -288,7 +290,7 @@ const routes = [
     const service = decodeURIComponent(url.pathname.split('/').pop());
     const ok = tokenOk(url, `passport:${service}`);
     if (!ok && !trusted(req)) return send(res, 403, { error: 'needs a passport link from the passport tool' });
-    const p = require('./lib/passport').load(service);
+    const p = require('./lib/passport').load(service,{env:url.searchParams.get('env')||undefined});
     p ? send(res, 200, { ...p, bitbucketUrl: require('./lib/config').getPersonal().bitbucket.url }, ok ? CORS : {}) : send(res, 404, { error: `No passport for ${service}` }, ok ? CORS : {});
   }],
   ['GET', '/view', true, viewPage],
@@ -355,7 +357,7 @@ function start({ port = 4000, host = '127.0.0.1' } = {}) {
       let scope=identity||A.LEGACY;
       // Keyed immutable result links remain read-only capabilities for sandboxed embeds.
       // Explicit story headers are enforced; same-principal browser embeds restore their saved story.
-      {const key=url.pathname.match(/\/(?:map|map-preview|show|patch|logs|view|result|files)\/([a-z0-9]+)(?:\.patch)?(?:\/|$)/)?.[1];if(key){const value=results.raw(key);if(value?.owner&&(!identity||(!req.headers['x-dt-story']&&!req.headers['x-openwebui-chat-id']&&!req.headers['x-chat-id']&&!identity.storyBound&&identity.principalId===value.owner.principalId)))scope={...value.owner,role:'user'};}}
+      {const key=url.pathname.match(/\/(?:architecture|map|map-preview|show|patch|logs|view|result|files)\/([a-z0-9]+)(?:\.patch)?(?:\/|$)/)?.[1];if(key){const value=results.raw(key);if(value?.owner&&(!identity||(!req.headers['x-dt-story']&&!req.headers['x-openwebui-chat-id']&&!req.headers['x-chat-id']&&!identity.storyBound&&identity.principalId===value.owner.principalId)))scope={...value.owner,role:'user'};}}
       await A.run(scope,async()=>{
         const globalWrite=req.method!=='GET'&&['/api/admin/tools/reload','/api/admin/refresh','/api/admin/notes','/api/admin/repos','/api/admin/sites'].includes(url.pathname);
         if(url.pathname==='/api/admin/config'||globalWrite)A.requireAdmin();

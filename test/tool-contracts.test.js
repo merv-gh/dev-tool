@@ -78,6 +78,11 @@ test('Open WebUI updates retain user instructions and expose the selected API pr
   assert.ok(once.startsWith(prior)); assert.equal(twice, once);
   assert.equal((twice.match(/<dt-tools-instructions>/g) || []).length, 1);
   assert.equal(W.dtConnection('http://dt:4000/', 'key', { profile: 'api' }).path, 'openapi/api.json');
+  const all = W.dtConnection(base, '', { profile: 'all' });
+  const allSchema = await (await fetch(`${all.url}/${all.path}`)).json();
+  const directSchema = await (await fetch(`${base}/openapi/direct.json`)).json();
+  assert.ok(allSchema.paths['/oapi/files_browse'], 'explicit all must not inherit the server default profile');
+  assert.ok(!directSchema.paths['/oapi/files_browse']);
   assert.ok((await T.schemas({ profile: 'api' })).some(t => t.name === 'api_request_save'));
   for (const name of ['api-exchange', 'api-request']) {
     const response = await fetch(base + `/contracts/v1/${name}.schema.json`);

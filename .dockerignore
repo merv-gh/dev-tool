@@ -1,0 +1,7 @@
+# Build only the shipped runtime. Never send local credentials, source snapshots,
+# workspaces, contexts or retained analysis artifacts to the Docker builder.
+**
+!dist
+!dist/**
+!dev
+!dev/semantic.Dockerfile

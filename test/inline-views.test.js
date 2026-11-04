@@ -8,7 +8,7 @@ vm.runInContext(fs.readFileSync(path.join(__dirname, '../web/inline.js'), 'utf8'
 const inline = context.inline;
 
 test('inline policy collapses routine output and opens actionable failures across result families', () => {
-  for (const view of ['code', 'code-cell', 'json', 'table', 'patch', 'tests', 'collection-report', 'reproduction', 'scenario-run', 'list-diff', 'text-diff', 'api-exchange', 'differential']) {
+  for (const view of ['code', 'code-cell', 'semantic-analysis', 'passport-ports', 'json', 'table', 'patch', 'tests', 'collection-report', 'reproduction', 'scenario-run', 'list-diff', 'text-diff', 'api-exchange', 'differential']) {
     assert.equal(inline.describe(view, {}).open, false, view);
   }
   assert.equal(inline.describe('json', { cases: { not: 'a test suite' } }).open, false);
@@ -26,6 +26,9 @@ test('inline policy collapses routine output and opens actionable failures acros
   assert.equal(inline.describe('code-cell', {state:'done',engine:'node',nextCursor:2,output:[{text:'ready'}]}).open, false);
   assert.equal(inline.describe('code-cell', {state:'running'}).open, true);
   assert.equal(inline.describe('code-cell', {state:'failed',result:{error:'query failed'}}).open, true);
+  assert.equal(inline.describe('semantic-analysis',{job:'parse-1',state:'running'}).open,false);
+  assert.equal(inline.describe('semantic-analysis',{operation:'paths',results:[{nodes:[]}]}).open,true);
+  assert.equal(inline.describe('semantic-analysis',{job:'parse-1',state:'failed'}).open,true);
 });
 
 test('patch navigation matches paths rather than positions, preserves clipped, deleted, renamed and binary files', () => {

@@ -45,7 +45,9 @@ The same tools are available through MCP, OpenAPI and `/api/tool`. The admin sou
 }
 ```
 
-Server/Data Center uses a bearer token. Cloud uses `type: "cloud"`, a site URL ending in `/wiki`, and `user: "email@example.com"` with an API token. Cloud page bodies, spaces, ancestors and attachments use REST v2; incremental discovery uses the read-only CQL search API. Legacy Confluence environment variables still work.
+Server/Data Center uses `type: "server"` or `type: "dc"` and a token only: requests send `Authorization: Bearer <token>`. No username is required; an existing `user` value is ignored with either explicit type. This also supports the [API Token Authentication plugin's Bearer mode](https://wiki.resolution.de/doc/api-token-authentication/2.1.x/user-guide/using-tokens-examples). The example above applies to both the cache sync and live `confluence_search` / `confluence_page` tools.
+
+Cloud API tokens use `type: "cloud"`, a site URL ending in `/wiki`, and `user: "email@example.com"`: [Atlassian requires email plus API token for Basic authentication](https://developer.atlassian.com/cloud/confluence/basic-auth-for-rest-apis/). Cloud page bodies, spaces, ancestors and attachments use REST v2; incremental discovery uses the read-only CQL search API. Legacy Confluence environment variables still work. Without an explicit `type` (or legacy `flavour`), supplying a username retains the legacy Cloud inference; set the type explicitly for Server/DC.
 
 Set `timezone` to the Confluence service account's configured timezone for a precise checkpoint with a two-minute overlap. Without it, a conservative calendar-day CQL window avoids missing changes across timezones. Bodies are fetched only when their version changes; attachment metadata is checked independently because attachments have their own versions. A complete ID listing runs at least daily to remove deleted or moved pages. `full` forces immediate reconciliation and refreshes all current pages. Failed page or attachment requests preserve the previous checkpoint; retries still reuse successful downloads. API calls use dt's Confluence rate-limit queue, with bounded HTTP 429 retries.
 

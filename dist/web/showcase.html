@@ -13,9 +13,11 @@
   .st .t { font-weight: 600; } .st .s { color: var(--muted); overflow: hidden; text-overflow: ellipsis; } .st .ms { color: var(--muted); font-size: 11.5px; }
   @media (max-width: 640px) { .st { grid-template-columns: 18px 1fr auto; } .st .s { grid-column: 2 / 4; } }
   .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr)); gap: 12px; }
-  section.sc { margin: 16px 0; }
-  section.sc > h2 { font-size: 15px; margin: 0 0 6px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
-  section.sc > h2 .s { font-weight: 400; color: var(--muted); font-size: 13px; }
+  details.sc { margin: 18px 0; min-width: 0; }
+  details.sc > summary { cursor: pointer; font-size: 15px; font-weight: 600; margin-bottom: 8px; overflow-wrap: anywhere; }
+  details.sc > summary .s { font-weight: 400; color: var(--muted); font-size: 13px; margin-left: 8px; }
+  .sc-actions { margin: 8px 0; font-size: 13px; }
+  .sc :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .frame { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--panel); }
   .frame iframe { width: 100%; border: 0; display: block; height: 380px; }
   .frame .cap { display: flex; gap: 8px; padding: 5px 10px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--line); background: var(--soft); }
@@ -60,19 +62,30 @@
     return `<div class="frame" id="${anchor(s)}"><div class="cap">${esc(label || s.title)}${s.summary ? ` · ${esc(s.summary)}` : ''}<a href="${esc(s.view)}" target="_blank" rel="noopener">open ↗</a></div><iframe loading="lazy" src="${esc(src)}" title="${esc(s.title)}"></iframe></div>`;
   };
   const get = (key) => steps.find(s => s.key === key);
-  const section = (title, sub, body) => body ? `<section class="sc"><h2>${esc(title)}${sub ? `<span class="s">${esc(sub)}</span>` : ''}</h2>${body}</section>` : '';
+  const section = (title, sub, body, open = false) => body ? `<details class="sc"${open ? ' open' : ''}><summary>${esc(title)}${sub ? `<span class="s">${esc(sub)}</span>` : ''}</summary>${body}</details>` : '';
   const html = [];
-  html.push(section('Environments', D.envs.join(', '), `<div class="grid2">${D.envs.map(e => frame(get(`health:${e}`), `Health of ${e}`)).join('')}</div>`));
+  html.push(section('Environments', D.envs.join(', '), `<div class="grid2">${D.envs.map(e => frame(get(`health:${e}`), `Health of ${e}`)).join('')}</div>`, true));
   html.push(section('Dashboards', '', `<div class="grid2">${D.envs.map(e => frame(get(`dashboard:${e}`), `Dashboard of ${e}`)).join('')}</div>`));
   const v = get('versions');
   html.push(section(`${D.service} in each environment`, v?.summary, `${D.envs.map(e => get(`instances:${e}`)).filter(Boolean).filter(s => !s.ok).map(s => frame(s)).join('')}${frame(v, 'Instances, versions and commits')}`));
   html.push(section('Passport', get('passport')?.summary, frame(get('passport'))));
+  const ports = get('ports');
+  html.push(section('Ports & passport metadata', ports?.summary, `${ports?.admin ? `<p class="sc-actions"><a href="${esc(ports.admin)}">Edit ports, metadata and mappings in Admin</a></p>` : ''}${frame(ports)}`));
+  html.push(section('Architecture & deployment slices', get('architecture')?.summary, frame(get('architecture'))));
+  html.push(section('Semantic code analysis', get('semantic')?.summary, frame(get('semantic'))));
   if (D.target) {
     html.push(section(`Impact of ${D.target}`, '', frame(get('impact'))));
     const ws = get('workspace'), ctx = get('test_context');
     html.push(section('An isolated test on ' + (ws?.ref || 'master'), [ws?.summary, ctx?.summary].filter(Boolean).join(' · '), [ws && !ws.ok ? frame(ws) : '', ctx && !ctx.ok ? frame(ctx) : '', frame(get('test_run'), 'Test run'), frame(get('patch'), 'Patch')].join('')));
   }
   document.getElementById('sections').innerHTML = html.join('');
+  const reveal = () => {
+    const target = document.getElementById(location.hash.slice(1));
+    if (!target) return;
+    for (let parent = target.parentElement; parent; parent = parent.parentElement) if (parent.tagName === 'DETAILS') parent.open = true;
+    target.scrollIntoView({ block: 'start' });
+  };
+  addEventListener('hashchange', reveal); reveal();
   addEventListener('message', (e) => {
     if (!e.data || e.data.type !== 'iframe:height') return;
     for (const f of document.querySelectorAll('iframe')) if (f.contentWindow === e.source) f.style.height = `${Math.min(Math.max(e.data.height + 4, 120), 2400)}px`;

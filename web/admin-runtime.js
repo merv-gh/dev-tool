@@ -227,7 +227,10 @@ async function runtimeRunCode() {
 async function runtimeChangeScope(event) {
   event?.preventDefault();
   if (runtimeCodePending) { $('rtScopeStatus').textContent = 'Wait for the code tool response before changing scope.'; return; }
+  if (typeof semanticAdminPending !== 'undefined' && semanticAdminPending) { $('rtScopeStatus').textContent = 'Wait for the semantic tool response before changing scope.'; return; }
+  if (typeof architectureCanLeave === 'function' && !architectureCanLeave()) return;
   if (!runtimeMetadataCanLeave() || typeof contextCanLeave === 'function' && !contextCanLeave()) return;
+  if (typeof semanticAdminDirty !== 'undefined' && semanticAdminDirty && !confirm('Discard unsaved semantic arguments?')) return;
   const story = $('rtStory').value.trim() || 'default', principal = runtimeState?.identity?.role === 'admin' ? $('rtPrincipal').value.trim() : '';
   const identifier = /^[a-zA-Z0-9][\w.:-]{0,159}$/;
   if (!identifier.test(story) || principal && !identifier.test(principal)) { $('rtScopeStatus').textContent = 'Use up to 160 letters, digits, dots, colons, underscores or hyphens, starting with a letter or digit.'; return; }
@@ -237,6 +240,9 @@ async function runtimeChangeScope(event) {
   $('rtExecutions').replaceChildren(); $('rtMetadataList').replaceChildren();
   $('rtExecution').innerHTML = '<div class="empty">Select an execution in this chat / task.</div>'; $('rtMetadataEditor').innerHTML = '<div class="empty">Select a record in this chat / task.</div>';
   $('rtCodeOutput').replaceChildren(); runtimeCodeSchema(true); runtimeMessage('Reading selected scope…');
+  if (typeof semanticAdminClear === 'function') semanticAdminClear();
+  if (typeof architectureReset === 'function') architectureReset();
+  if (tab === 'architecture') await loadArchitectureAdmin();
   if (typeof contextState !== 'undefined') { contextState = null; contextFile = null; $('cxEditor').hidden = true; }
   if (typeof adminMapResult !== 'undefined') adminMapResult = null;
   $('cxMapPanel').hidden = true; $('cxMapFrame').src = 'about:blank'; $('cxMapPreview').src = 'about:blank';
