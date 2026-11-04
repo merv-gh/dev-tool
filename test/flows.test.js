@@ -91,13 +91,40 @@ test('passport: libraries found through the index, read per module; flows throug
   assert.ok(flow('kafka payments.settled'), 'the listener topic resolved from the config');
 });
 
+test('service-name tools pin the passport commit and search its code and library independently', async () => {
+  const T = require('../lib/tools'), p = require('../lib/passport').load('orders-service');
+  const indexed = await T.call('code_index', { service: 'orders-service', ref: p.repo.sha });
+  assert.equal(indexed.reused, true); assert.equal(indexed.revisionKey, p.codeIndex);
+  const code = await T.call('code_search', { repos: indexed.revisionKey, pattern: 'EventPublisher' });
+  assert.ok(code.rows.some(r => r.file.includes('OrderService.java')));
+  const lib = p.libraries.find(l => l.artifactId === 'acme-kafka-support');
+  const library = await T.call('code_search', { repos: lib.index, pattern: 'kafkaTemplate.send' });
+  assert.ok(library.rows.some(r => r.file.includes('EventPublisher.java')));
+});
+
 test('impact crosses repos: a service method reaches the library endpoint through the handler interface', () => {
   const I = require('../lib/impact');
   const r = I.impact('OrderService#place', { repos: 'SHOP/*,LIB/*' });
   assert.deepEqual(r.endpoints, ['POST /process/{}']);
-  assert.ok(r.items.some(i => i.name === 'ProcessController#process' && i.repo === 'LIB/commons/acme-web-starter'));
+  const pinned = require('../lib/passport').load('orders-service').libraries.find(l => l.artifactId === 'acme-web-starter').index;
+  assert.ok(r.items.some(i => i.name === 'ProcessController#process' && i.repo === pinned));
   const lib = I.impact('com.acme.libs.kafka.EventPublisher#publish', { repos: 'SHOP/*,LIB/*' });
   assert.ok(lib.items.some(i => i.name === 'OrderService#place'), 'who in the service uses the library method');
+});
+
+test('service-scoped impact follows its pinned library after a newer library is indexed', () => {
+  const CI = require('../lib/codeindex'), p = require('../lib/passport').load('orders-service');
+  const pinned = p.libraries.find(l => l.artifactId === 'acme-kafka-support').index;
+  const previous = CI.load(pinned), next = path.join(home, 'newer-library');
+  fs.cpSync(previous.root, next, { recursive: true });
+  const publisher = CI.walk(next).find(f => f.path.endsWith('EventPublisher.java'));
+  const file = path.join(next, publisher.path);
+  fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replace(/publish\(/g, 'replacement('));
+  CI.build(next, previous.baseKey, { project: 'LIB', repo: 'commons', sha: '9'.repeat(40), library: 'acme-kafka-support' });
+  const result = require('../lib/impact').impact('com.acme.libs.kafka.EventPublisher#publish', { repos: 'SHOP/orders-service' });
+  assert.ok(result.items.some(i => i.name === 'OrderService#place'));
+  assert.equal(CI.load(pinned).sha, previous.sha);
+  assert.match(CI.read(pinned, publisher.path).text, /publish\(/);
 });
 
 test('flow test context: the chain\'s beans imported, the edge mocked, properties, what to verify', async () => {

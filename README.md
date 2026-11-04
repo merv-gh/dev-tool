@@ -977,6 +977,8 @@ Reports retain transcripts, source/memory call counts, hashes, model metadata,
 independent numeric differences and the temporary home for inspection. This is a
 small behavioral evaluation, not certification of general model reliability.
 
+For service-scoped code search, retained commit indexes, library impact and optional graph/Zoekt integration, see [Code search and revisions](docs/code-search-and-revisions.md).
+
 ### Microservice map
 
 `map` projects cached passports, catalog inventory, and explored UI API routes into

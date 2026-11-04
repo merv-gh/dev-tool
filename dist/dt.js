@@ -4272,7 +4272,7 @@ var require_semantic_identity = __commonJS({
       const m = String(id).match(/^(table|column|pgfn):([^:]+):([^:]+):(.+)$/);
       return m ? { kind: m[1], env: dec(m[2]), db: dec(m[3]), object: m[4] } : null;
     }
-    var revision = (idx) => idx?.workspace || idx?.key?.startsWith("work/") ? `${idx?.sha || "unknown"}+work:${idx?.sourceDigest || idx?.builtAt || "unknown"}` : idx?.sha || "unknown";
+    var revision = (idx) => idx?.workspace || idx?.key?.startsWith("work/") ? `${idx?.sha || "unknown"}+work:${idx?.sourceDigest || idx?.builtAt || "unknown"}` : idx?.revisionKey ? `${idx.sha}+source:${idx.sourceDigest}` : idx?.sha || "unknown";
     module2.exports = { protocol: "dt.identity/v1", code, parseCode, pg, parsePg, signature, norm, revision, identifier, qualified };
   }
 });
@@ -5948,7 +5948,7 @@ var require_codeindex = __commonJS({
     var { CACHE: CACHE2, readJson, writeJson, fileStamp } = require_util();
     var DIR = path2.join(CACHE2, "code");
     var SKIP_DIRS = /* @__PURE__ */ new Set([".git", "target", "build", "node_modules", ".gradle", ".idea", "out", ".mvn", "dist", ".next", "coverage", "__pycache__"]);
-    var TEXT = /\.(java|kt|kts|groovy|scala|ya?ml|properties|xml|sql|gradle|toml|json|md|txt|conf|[cm]?ts|[cm]?js|tsx|jsx|py|go|sh|html|css|proto|avsc|graphql|feature|csv|env|ftl|vm|mustache|j2|tf)$|(^|\/)(Dockerfile|Jenkinsfile|Makefile|mvnw|gradlew)$/i;
+    var TEXT = /\.(java|kt|kts|groovy|scala|rs|c|cc|cpp|cxx|h|hh|hpp|hxx|cs|swift|rb|php|lua|ex|exs|zig|dart|ya?ml|properties|xml|sql|gradle|toml|json|md|txt|conf|[cm]?ts|[cm]?js|tsx|jsx|py|go|sh|html|css|proto|avsc|graphql|feature|csv|env|ftl|vm|mustache|j2|tf)$|(^|\/)(Dockerfile|Jenkinsfile|Makefile|mvnw|gradlew)$/i;
     var MAX_FILE = 1 << 20;
     var keyDir = (key) => path2.join(DIR, ...key.split("/").map((s) => s.replace(/[^\w.@-]/g, "_")));
     function walk(root) {
@@ -6063,12 +6063,15 @@ var require_codeindex = __commonJS({
         throw e;
       }
     }
-    function buildIndex(root, key, meta = {}, { extracted, force = false } = {}) {
+    function buildIndex(root, key, meta = {}, { extracted, force = false, _output } = {}) {
+      if (!_output && !meta.workspace && !key.startsWith("work/") && /^[a-f0-9]{40}$/i.test(meta.sha || "")) {
+        return buildVersion(root, key, meta, { extracted, force });
+      }
       const started = Date.now();
       const files = walk(root);
-      const dir = keyDir(key);
+      const dir = _output || keyDir(key);
       const input = crypto.createHash("sha256").update(JSON.stringify([2, path2.resolve(root), meta, extracted ?? null])).digest("hex");
-      const prev = !force && files.reusable ? load(key) : null;
+      const prev = !_output && !force && files.reusable ? load(key) : null;
       if (prev?.input === input && prev.list.length === files.length && files.every((f, i) => f.path === prev.list[i].path && f.stamp === prev.list[i].stamp) && fs2.existsSync(path2.join(dir, "tri.bin")) && fs2.existsSync(path2.join(dir, "graph.json"))) {
         const { list: _, dir: _dir, tri: _tri, graph: _graph, ...info2 } = prev;
         return { ...info2, reused: true, ms: Date.now() - started };
@@ -6105,6 +6108,68 @@ var require_codeindex = __commonJS({
       memo.delete(key);
       return info;
     }
+    var VERSION_FORMAT = 1;
+    function atomicJson(file, value) {
+      fs2.mkdirSync(path2.dirname(file), { recursive: true });
+      const temp = file + "." + crypto.randomUUID() + ".tmp";
+      try {
+        fs2.writeFileSync(temp, JSON.stringify(value));
+        fs2.renameSync(temp, file);
+      } finally {
+        fs2.rmSync(temp, { force: true });
+      }
+    }
+    function buildVersion(root, key, meta, { extracted, force }) {
+      const started = Date.now(), files = walk(root);
+      const { ref, ...identity } = meta;
+      const input = crypto.createHash("sha256").update(JSON.stringify([VERSION_FORMAT, path2.resolve(root), identity, extracted ?? null])).digest("hex");
+      const manifest = crypto.createHash("sha256").update(JSON.stringify(files)).digest("hex");
+      const previous = load(key);
+      const summary = (idx, reused) => {
+        const { list: list2, dir, tri, graph, ...info } = idx;
+        return { ...info, key, ref, reused, ms: Date.now() - started };
+      };
+      if (!force && files.reusable && previous?.versionInput === input && previous?.manifest === manifest) return summary(previous, true);
+      const hash = crypto.createHash("sha256");
+      for (const f of files) hash.update(f.path).update("\0").update(fs2.readFileSync(path2.join(root, f.path))).update("\0");
+      const content = hash.digest("hex");
+      const fingerprint = crypto.createHash("sha256").update(JSON.stringify([VERSION_FORMAT, identity, extracted ?? null, content])).digest("hex").slice(0, 24);
+      const revisionKey = `${key}@${meta.sha.toLowerCase()}-${fingerprint}`, final = keyDir(revisionKey);
+      const publish = () => {
+        atomicJson(path2.join(keyDir(key), "files.json"), { alias: revisionKey, versionInput: input, manifest, ref });
+        memo.delete(key);
+        return { ...load(revisionKey), key, immutable: false, versionInput: input, manifest, ref };
+      };
+      const existing = load(revisionKey);
+      if (existing) {
+        if (!existing.immutable || existing.sourceDigest !== content) throw new Error("Invalid immutable code index");
+        return summary(publish(), true);
+      }
+      const staging = final + ".tmp-" + crypto.randomUUID();
+      try {
+        const info = buildIndex(root, key, meta, { extracted, force: true, _output: staging });
+        if (info.sourceDigest !== content) throw new Error("Source changed while indexing; retry after the checkout settles");
+        const source = path2.join(staging, "source"), copied = crypto.createHash("sha256");
+        for (const f of files) {
+          const data = fs2.readFileSync(path2.join(root, f.path)), target = path2.join(source, f.path);
+          copied.update(f.path).update("\0").update(data).update("\0");
+          fs2.mkdirSync(path2.dirname(target), { recursive: true });
+          fs2.writeFileSync(target, data);
+        }
+        if (copied.digest("hex") !== content) throw new Error("Source changed while snapshotting; previous index retained");
+        const raw = readJson(path2.join(staging, "files.json"));
+        atomicJson(path2.join(staging, "files.json"), { ...raw, key: revisionKey, baseKey: key, revisionKey, immutable: true, root: path2.join(final, "source") });
+        try {
+          fs2.renameSync(staging, final);
+        } catch (error) {
+          const winner = load(revisionKey);
+          if (!winner?.immutable || winner.sourceDigest !== content) throw error;
+        }
+        return summary(publish(), false);
+      } finally {
+        fs2.rmSync(staging, { recursive: true, force: true });
+      }
+    }
     var memo = /* @__PURE__ */ new Map();
     function load(key) {
       const dir = keyDir(key);
@@ -6121,6 +6186,14 @@ var require_codeindex = __commonJS({
       if (!files) {
         memo.delete(key);
         return null;
+      }
+      if (files.alias) {
+        if (!files.alias.startsWith(key + "@") || !/@[a-f0-9]{40}-[a-f0-9]{24}$/.test(files.alias)) throw new Error("Invalid code index alias");
+        const target = load(files.alias);
+        if (!target) throw new Error("Missing immutable code index");
+        const value = { ...target, key, immutable: false, versionInput: files.versionInput, manifest: files.manifest, ref: files.ref };
+        Object.defineProperties(value, { trigrams_: { value: () => target.trigrams_() }, graph_: { value: () => target.graph_() } });
+        return value;
       }
       const v = { ...files, dir, tri: null, graph: null };
       Object.defineProperty(v, "trigrams_", { value: () => v.tri || (v.tri = held(v, "tri", path2.join(dir, "tri.bin"), readTrigrams)) });
@@ -6149,7 +6222,7 @@ var require_codeindex = __commonJS({
       }
       return value;
     }
-    function list() {
+    function list({ versions = false } = {}) {
       const out2 = [];
       (function rec(dir, depth) {
         let entries;
@@ -6161,14 +6234,14 @@ var require_codeindex = __commonJS({
         if (entries.some((e) => e.name === "files.json")) {
           const key = path2.relative(DIR, dir).split(path2.sep).join("/");
           const f = load(key);
-          if (f) {
+          if (f && (versions || !f.immutable)) {
             const { list: _, dir: _dir, tri: _tri, graph: _graph, ...info } = f;
             out2.push(info);
           }
           return;
         }
         if (depth < 3) {
-          for (const e of entries) if (e.isDirectory()) rec(path2.join(dir, e.name), depth + 1);
+          for (const e of entries) if (e.isDirectory() && !e.name.includes(".tmp-") && (versions || !/@[a-f0-9]{40}-[a-f0-9]{24}$/.test(e.name))) rec(path2.join(dir, e.name), depth + 1);
         }
       })(DIR, 0);
       return out2.sort((a, b) => a.key.localeCompare(b.key));
@@ -6177,12 +6250,35 @@ var require_codeindex = __commonJS({
       fs2.rmSync(keyDir(key), { recursive: true, force: true });
       memo.delete(key);
     }
+    function revisions(key, sha) {
+      const dir = keyDir(key), prefix = path2.basename(dir) + "@" + String(sha || "").toLowerCase();
+      let entries;
+      try {
+        entries = fs2.readdirSync(path2.dirname(dir), { withFileTypes: true });
+      } catch {
+        return [];
+      }
+      return entries.filter((e) => e.isDirectory() && e.name.startsWith(prefix) && /@[a-f0-9]{40}-[a-f0-9]{24}$/.test(e.name)).map((e) => load([...key.split("/").slice(0, -1), e.name].join("/"))).filter((i) => i?.immutable && i.baseKey === key);
+    }
     function select(spec) {
-      const all = list();
       const pats = [].concat(spec || []).flatMap((s) => String(s).split(",")).map((s) => s.trim()).filter(Boolean);
+      if (pats.length && pats.every((p) => /^[^*?]+@[a-f0-9]{40}-[a-f0-9]{24}$/.test(p))) return [...new Set(pats)].filter((p) => load(p));
+      const all = list({ versions: pats.some((p) => p.includes("@")) });
       if (!pats.length) return all.filter((i) => !i.key.startsWith("work/")).map((i) => i.key);
       const re = (p) => new RegExp("^" + p.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".") + "$", "i");
       return all.filter((i) => pats.some((p) => re(p).test(i.key) || re(p).test(i.repo || "") || i.workspace && re(p).test(i.workspace))).map((i) => i.key);
+    }
+    function withLibraries(keys) {
+      const selected = new Set(keys), pending = [...keys];
+      for (let i = 0; i < pending.length; i++) {
+        for (const lib of load(pending[i])?.libs || []) {
+          if (lib.index && !selected.has(lib.index) && load(lib.index)) {
+            selected.add(lib.index);
+            pending.push(lib.index);
+          }
+        }
+      }
+      return [...selected].filter((key) => !selected.has(load(key)?.revisionKey) || load(key)?.revisionKey === key);
     }
     function required(pattern, regex) {
       if (!regex) return pattern.length >= 3 ? [[pattern]] : null;
@@ -6410,7 +6506,7 @@ var require_codeindex = __commonJS({
       const end = Math.min(lines.length, to || from + 299);
       return { repo: key, path: rel, from, to: end, lines: lines.length, text: lines.slice(from - 1, end).map((l, i) => `${String(from + i).padStart(5)}  ${l}`).join("\n") };
     }
-    module2.exports = { build, load, list, select, remove, grep, read, walk, required, keyDir, DIR };
+    module2.exports = { build, load, list, select, revisions, withLibraries, remove, grep, read, walk, required, keyDir, DIR };
   }
 });
 
@@ -7238,7 +7334,7 @@ var require_impact = __commonJS({
     function load({ repos, env, target } = {}) {
       let keys = CI.select(repos);
       const sc = !repos && target && keys.length > SCOPE_MIN ? scope(target, keys) : { keys, scoped: false };
-      keys = sc.keys;
+      keys = CI.withLibraries(sc.keys);
       const passports = require_edges().snapshot();
       const cats = env ? require_pg().loadAll(env) : [];
       const usage = env ? require_pgindex().current(env) : { edges: [] };
@@ -17581,9 +17677,10 @@ var require_passport = __commonJS({
       const dir = mod ? path2.join(info.path, mod) : info.path;
       const raw = extract(dir, { internalGroups: getPersonal().internalGroups });
       const ex = underModule(raw, mod);
-      const indexKey = `${repo.project}/${repo.repo}${mod ? `/${mod}` : ""}`;
+      let indexKey = `${repo.project}/${repo.repo}${mod ? `/${mod}` : ""}`;
       try {
-        require_codeindex().build(dir, indexKey, { project: repo.project, repo: repo.repo, module: mod || null, ref: info.ref, sha: info.sha, library: dep.artifactId, version: dep.version || null }, { extracted: raw });
+        const indexed = require_codeindex().build(dir, indexKey, { project: repo.project, repo: repo.repo, module: mod || null, ref: info.ref, sha: info.sha, library: dep.artifactId, version: dep.version || null }, { extracted: raw });
+        indexKey = indexed.revisionKey || indexKey;
       } catch (e) {
         notes.push(`code index: ${e.message}`);
       }
@@ -17680,14 +17777,14 @@ var require_passport = __commonJS({
       };
       const key = `${info.project}/${info.repo}`;
       try {
-        require_codeindex().build(info.path, key, { project: info.project, repo: info.repo, ref: info.ref, sha: info.sha, service }, { extracted: ex });
-        passport.codeIndex = key;
+        const indexed = require_codeindex().build(info.path, key, { project: info.project, repo: info.repo, ref: info.ref, sha: info.sha, service, libs: libs.filter((l) => l.index).map((l) => ({ index: l.index, artifactId: l.artifactId, version: l.version })) }, { extracted: ex });
+        passport.codeIndex = indexed.revisionKey || key;
       } catch (e) {
         passport.codeIndex = { error: e.message };
       }
       try {
         const F = require_flows();
-        passport.flows = await T.step("flows", async () => F.flows([key, ...libs.filter((l) => l.index).map((l) => l.index)], { config: F.serviceConfig(info.path) }).map(flowSummary));
+        passport.flows = await T.step("flows", async () => F.flows([typeof passport.codeIndex === "string" ? passport.codeIndex : key, ...libs.filter((l) => l.index).map((l) => l.index)], { config: F.serviceConfig(info.path) }).map(flowSummary));
       } catch (e) {
         passport.flows = { error: e.message };
       }
@@ -17720,10 +17817,22 @@ var require_passport = __commonJS({
     async function graphBuild(repoPath) {
       const url = getPersonal().graphUrl;
       if (!url) return { skipped: "GRAPH_URL not set" };
-      const rel = path2.relative(require_git().REPOS, repoPath).split(path2.sep).join("/");
+      const G = require_git(), CI = require_codeindex();
+      const rel = path2.relative(G.REPOS, repoPath).split(path2.sep).join("/");
+      if (rel.startsWith("../") || path2.isAbsolute(rel) || rel.split("/").length !== 2) throw new Error("Graph builds require a fetched PROJECT/repo");
+      const [project, repo] = rel.split("/"), sha = await G.git(["rev-parse", "HEAD"], repoPath);
+      const indexed = CI.build(repoPath, rel, { project, repo, sha, ref: sha });
+      if (!indexed.revisionKey) throw new Error("Graph builds require a full commit SHA");
+      const index = CI.load(indexed.revisionKey), graphDir = path2.join(index.root, ".code-review-graph");
+      const marker = path2.join(graphDir, "dt-build.json");
+      const repo_root = "/code/" + path2.relative(CI.DIR, index.root).split(path2.sep).join("/");
+      const previous = readJson(marker);
+      if (previous?.url === url && fs2.existsSync(path2.join(graphDir, "graph.db"))) return { repo_root, revisionKey: indexed.revisionKey, sha, reused: true, result: previous.result };
+      fs2.mkdirSync(graphDir, { recursive: true });
       const { http: http2 } = require_util();
-      const res = await http2(`${url}/build_or_update_graph_tool`, { method: "POST", body: { repo_root: `/repos/${rel}`, full_rebuild: false }, timeout: 6e5 });
-      return { repo_root: `/repos/${rel}`, result: typeof res === "string" ? res.slice(0, 500) : res };
+      const res = await http2(`${url}/build_or_update_graph_tool`, { method: "POST", body: { repo_root, full_rebuild: true, postprocess: "minimal" }, timeout: 6e5 });
+      if (res?.status === "ok") writeJson(marker, { url, result: res });
+      return { repo_root, revisionKey: indexed.revisionKey, sha, reused: false, result: typeof res === "string" ? res.slice(0, 500) : res };
     }
     function markdown(p) {
       const L = [];
@@ -43462,7 +43571,7 @@ var require_tools_code = __commonJS({
       const bool = (description, def = false) => ({ type: "boolean", default: def, description });
       const list = (description) => ({ type: "array", items: { type: "string" }, description });
       const CHECK = { check: bool("Compile the written Java files right away", true), fix: bool("Apply the clear compile fixes to the files (false: offer them as suggestions)", true) };
-      const repos = { description: 'Which indexes: PROJECT/repo, a repo name, globs ("SHOP/*"), a workspace id, comma separated. Empty: all fetched repos.', type: "string" };
+      const repos = { description: "Index keys: PROJECT/repo, name, glob, workspace id or immutable revisionKey from code_index; comma separated. Empty: latest fetched repos.", type: "string" };
       const R = () => require_results();
       const keysOf = (spec) => {
         const keys = require_codeindex().select(spec);
@@ -43510,14 +43619,21 @@ var require_tools_code = __commonJS({
         {
           name: "code_index",
           group: "code",
-          description: "Fetch a repo (branch, tag or sha; or a service via its passport repo) and build its code index: a trigram index for code_search over every text file, and a symbol graph (classes, methods, fields, calls, Spring roles, tables, SQL, Kafka topics, endpoints, Feign calls) for impact and test_context. Passports and workspaces index their checkout automatically. Without arguments: lists the indexes.",
-          input: { service: str("Service (resolved like passport)"), project: str("Project key"), repo: str("Repo slug"), ref: str("Branch, tag or sha (default branch if empty)") },
+          description: "Index a repo/service at a branch, tag or SHA for code_search, code_symbols and impact. Commit indexes retain source snapshots; revisionKey pins one. A cached full SHA needs no fetch. Without repo/service, list latest indexes; versions=true includes history.",
+          input: { service: str("Service (resolved like passport)"), project: str("Project key"), repo: str("Repo slug"), ref: str("Branch, tag or sha (default branch if empty)"), versions: bool("Include stored commit indexes when listing") },
           limit: (a) => a.service || a.repo ? "bitbucket" : null,
           run: async (a) => {
             const CI = require_codeindex();
-            if (!a.service && !a.repo) return tabular("code-indexes", CI.list().map((i) => ({ key: i.key, ref: i.ref || "", sha: (i.sha || "").slice(0, 12), files: i.files, classes: i.classes, edges: i.edges, trigrams: i.trigrams, builtAt: i.builtAt, ms: i.ms })), { query: "code indexes" }, { preview: 30 });
+            if (!a.service && !a.repo) return tabular("code-indexes", CI.list({ versions: a.versions }).map((i) => ({ key: i.key, revisionKey: i.revisionKey || "", ref: i.ref || "", sha: (i.sha || "").slice(0, 12), files: i.files, classes: i.classes, edges: i.edges, trigrams: i.trigrams, builtAt: i.builtAt, ms: i.ms })), { query: "code indexes" }, { preview: 30 });
             let { project, repo } = a;
             if (a.service && !(project && repo)) ({ project, repo } = await require_passport().resolveRepo(a.service));
+            if (/^[a-f0-9]{40}$/i.test(a.ref || "")) {
+              const cached = CI.revisions(`${project.toUpperCase()}/${repo}`, a.ref);
+              if (cached.length === 1) {
+                const { root: root2, list: list2, dir, tri, graph, ...info2 } = cached[0];
+                return { ...info2, reused: true };
+              }
+            }
             const info = await require_git().fetchRef(project, repo, a.ref);
             const r = CI.build(info.path, `${info.project}/${repo}`, { project: info.project, repo, ref: info.ref, sha: info.sha, service: a.service || null });
             const { root, ...rest } = r;

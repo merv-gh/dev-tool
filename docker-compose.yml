@@ -98,7 +98,8 @@ services:
     environment:
       HOME: /tmp
     volumes:
-      - ${DT_HOME_DIR:-.}/repos:/repos   # graph data is written next to each repo (.code-review-graph/)
+      - ${DT_HOME_DIR:-.}/repos:/repos   # legacy/manual graph queries; dt builds use pinned snapshots below
+      - ${DT_HOME_DIR:-.}/cache/code:/code # retained source snapshots and per-revision graphs
     restart: unless-stopped
 
   # Runs the builds of test_run (Maven, Gradle, javac, the test JVM) for dt: the JDK, the workspaces and build
