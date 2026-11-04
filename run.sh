@@ -1,7 +1,8 @@
 #!/bin/sh
 # docker compose for dt, with config and data in one folder.
-#   ./run.sh [--home DIR] [--tools-only] [--no-semantic] <compose args>
+#   ./run.sh [--home DIR] [--no-webui|--tools-only] [--no-semantic] <compose args>
 #   ./run.sh --home ~/dt up -d        full stack (profiles from COMPOSE_PROFILES in DIR/.env)
+#   ./run.sh --home ~/dt --no-webui up -d    dt and supporting services, for an existing Open WebUI
 #   ./run.sh --home ~/dt --tools-only up -d   only the dt tool server (for an Open WebUI / MCP client you already run)
 #   ./run.sh --home ~/dt logs -f dt           ./run.sh --home ~/dt down
 # DIR defaults to $DT_HOME, else this folder. It holds config.json + .env (or the older .env.<env> files).
@@ -10,12 +11,14 @@ cd "$(dirname "$0")"
 CODE=$(pwd)
 HOME_DIR=${DT_HOME:-$CODE}
 TOOLS_ONLY=
+NO_WEBUI=
 NO_SEMANTIC=
 while [ $# -gt 0 ]; do
   case "$1" in
     --home) HOME_DIR=$2; shift 2 ;;
     --home=*) HOME_DIR=${1#--home=}; shift ;;
     --tools-only) TOOLS_ONLY=1; shift ;;
+    --no-webui) NO_WEBUI=1; shift ;;
     --no-semantic) NO_SEMANTIC=1; shift ;;
     *) break ;;
   esac
@@ -65,6 +68,13 @@ if [ -n "$TOOLS_ONLY" ]; then export COMPOSE_PROFILES=
 else
   if [ -z "${COMPOSE_PROFILES+set}" ]; then
     COMPOSE_PROFILES=$(env_value COMPOSE_PROFILES) || COMPOSE_PROFILES=webui,browser,graph,jdk,testdb
+  fi
+  # Expand Compose's wildcard so --no-webui can exclude the chat profile too.
+  if [ -n "$NO_WEBUI" ]; then
+    COMPOSE_PROFILES=$(printf '%s' "$COMPOSE_PROFILES" | awk -F, '
+      function add(p) { if (p != "" && p != "webui" && !seen[p]++) { printf "%s%s", sep, p; sep="," } }
+      { for (i=1;i<=NF;i++) { p=$i; gsub(/^[[:space:]]+|[[:space:]]+$/, "", p)
+          if (p == "*") { add("browser"); add("graph"); add("jdk"); add("testdb"); add("semantic") } else add(p) } }')
   fi
   # Include the new worker for existing .env profile lists too. An explicitly empty
   # list still means tools only; --no-semantic / DT_SEMANTIC_ENABLED=0 opts out.

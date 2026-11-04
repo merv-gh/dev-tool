@@ -21,7 +21,7 @@ printf '%s\\n' "$DT_BUNDLE_REVISION" > "$CAPTURE.revision"
 printf '%s\\n' "$@" > "$CAPTURE.args"
 `, { mode: 0o755 });
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  return { home, code, run(args = ['up', '-d'], extra = {}) {
+  return { home, code, bin, root, run(args = ['up', '-d'], extra = {}) {
     const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, CAPTURE: path.join(root, 'capture'), DT_DOCKER_GID: '0' };
     for (const key of ['COMPOSE_PROFILES', 'DT_HOME', 'DT_SEMANTIC_ENABLED', 'DT_SEMANTIC_URL', 'DT_SEMANTIC_TOKEN']) delete env[key];
     const result = spawnSync('sh', [path.join(code, 'run.sh'), '--home', home, ...args], { env: { ...env, ...extra }, encoding: 'utf8' });
@@ -77,4 +77,38 @@ test('new install gets every profile, explicit env wins, and no-build is respect
   assert.doesNotMatch(r.secrets, /^DT_SEMANTIC_TOKEN=/m);
   assert.deepEqual(r.args.slice(-3), ['up','--no-build','-d']);
   assert.equal(fixture(t).run().profiles, 'webui,browser,graph,jdk,testdb,semantic');
+});
+
+test('no-webui keeps every supporting profile, stable tokens and build updates without rewriting the profile choice', t => {
+  for (const contents of ['', 'COMPOSE_PROFILES=webui,browser,graph,jdk,testdb\n']) {
+    const f = fixture(t, contents), r = f.run(['--no-webui','up','-d']);
+    assert.equal(r.profiles, 'browser,graph,jdk,testdb,semantic');
+    assert.equal(r.url, 'http://semantic:4110');
+    assert.deepEqual(r.args.slice(-3), ['up','--build','-d']);
+    assert.equal(f.run(['--no-webui','up','-d']).secrets, r.secrets);
+    assert.equal(f.run().profiles, 'webui,browser,graph,jdk,testdb,semantic', 'the flag must not change later full-stack commands');
+  }
+});
+
+test('no-webui respects explicit profiles, wildcard, empty selection and service opt-outs', t => {
+  for (const [contents, args, extra, profiles] of [
+    ['COMPOSE_PROFILES=webui,browser,graph,jdk,testdb\n', ['--no-webui','config','--services'], { COMPOSE_PROFILES: 'webui,jdk,testdb,custom' }, 'jdk,testdb,custom,semantic'],
+    ['COMPOSE_PROFILES="webui, browser,webui,browser,jdk"\n', ['--no-webui','up','-d'], {}, 'browser,jdk,semantic'],
+    ['COMPOSE_PROFILES=*\n', ['--no-webui','up','-d'], {}, 'browser,graph,jdk,testdb,semantic'],
+    ['COMPOSE_PROFILES=*\n', ['--no-webui','--no-semantic','up','-d'], {}, 'browser,graph,jdk,testdb'],
+    ['COMPOSE_PROFILES=webui,browser,jdk,semantic\nDT_SEMANTIC_ENABLED=0\n', ['--no-webui','up','-d'], {}, 'browser,jdk'],
+    ['COMPOSE_PROFILES=\n', ['--no-webui','up','-d'], {}, ''],
+    ['', ['--no-webui','up','-d'], { COMPOSE_PROFILES: '' }, ''],
+    ['', ['--no-webui','--tools-only','up','-d'], {}, ''],
+  ]) assert.equal(fixture(t, contents).run(args, extra).profiles, profiles);
+});
+
+test('installer forwards no-webui to the launcher without contacting an existing chat', t => {
+  const f=fixture(t);fs.mkdirSync(path.join(f.code,'.git'));
+  for (const name of ['git','curl']) fs.writeFileSync(path.join(f.bin,name),'#!/bin/sh\nexit 0\n',{mode:0o755});
+  fs.chmodSync(path.join(f.code,'run.sh'),0o755);
+  const env={...process.env,PATH:`${f.bin}:${process.env.PATH}`,CAPTURE:path.join(f.root,'capture'),DT_DOCKER_GID:'0'};
+  for(const key of ['COMPOSE_PROFILES','DT_HOME','DT_SEMANTIC_ENABLED','DT_SEMANTIC_URL','DT_SEMANTIC_TOKEN'])delete env[key];
+  const r=spawnSync('sh',[path.join(__dirname,'../install.sh'),'--dir',f.code,'--home',f.home,'--no-webui'],{env,encoding:'utf8',timeout:10000});
+  assert.equal(r.status,0,r.stderr);assert.equal(fs.readFileSync(path.join(f.root,'capture.profiles'),'utf8').trim(),'browser,graph,jdk,testdb,semantic');assert.doesNotMatch(r.stdout,/^chat:/m);
 });

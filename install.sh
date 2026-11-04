@@ -3,7 +3,7 @@
 #   curl -fsSL https://raw.githubusercontent.com/merv-gh/dev-tool/main/install.sh | sh
 #   curl -fsSL .../install.sh | sh -s -- --home ~/work/dt --tools-only
 # Options: --home DIR (config + data, default ~/dt)   --dir DIR (code, default ~/.dev-tool)
-#          --tools-only (no Open WebUI/browser/graph)   --ref BRANCH|TAG   --no-start
+#          --no-webui (keep supporting services)   --tools-only (only dt)   --ref BRANCH|TAG   --no-start
 # Run it again to update the code and restart; your config folder is never overwritten.
 set -e
 REPO=${DT_REPO:-https://github.com/merv-gh/dev-tool.git}
@@ -18,7 +18,8 @@ while [ $# -gt 0 ]; do
     --dir) CODE=$2; shift 2 ;;
     --ref) REF=$2; shift 2 ;;
     --repo) REPO=$2; shift 2 ;;
-    --tools-only) RUN_ARGS="--tools-only"; shift ;;
+    --tools-only) RUN_ARGS="$RUN_ARGS --tools-only"; shift ;;
+    --no-webui) RUN_ARGS="$RUN_ARGS --no-webui"; shift ;;
     --no-start) START=; shift ;;
     *) echo "unknown option $1" >&2; exit 1 ;;
   esac
@@ -61,5 +62,5 @@ New config created from the examples. Fill in $HOME_DIR/.env and $HOME_DIR/confi
 MSG
 cat <<MSG
 
-Manage:     $CODE/run.sh --home $HOME_DIR [--tools-only] ps | logs -f dt | restart dt | down
+Manage:     $CODE/run.sh --home $HOME_DIR [--no-webui|--tools-only] ps | logs -f dt | restart dt | down
 MSG

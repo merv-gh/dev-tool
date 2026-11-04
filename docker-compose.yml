@@ -10,6 +10,7 @@
 # Config and data live in one folder (DT_HOME_DIR, set by run.sh --home; default: this folder):
 #   config.json, .env, notes.json, plugins/, scripts/, cache/, repos/, passports/
 # Only the tool server, for an Open WebUI or MCP client you already run:  ./run.sh --tools-only up -d
+# All configured supporting services without bundled chat/setup:       ./run.sh --no-webui up -d
 name: dev-tool
 
 services:

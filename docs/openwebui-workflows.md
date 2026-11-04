@@ -5,6 +5,17 @@ or `DT_PUBLIC_URL` reachable from the chat user's browser; the URL that Open Web
 backend uses to call dt can be different. For example, its backend may call
 `http://dt:4000`, while the browser opens `http://127.0.0.1:4000/show/<id>`.
 
+For an existing Open WebUI, start the tool stack with `./run.sh --no-webui up -d`.
+Default profiles retain the browser, graph, JDK/build runner, test database and
+Joern worker, while skipping both the bundled chat and its automatic model setup.
+`--tools-only` skips those supporting services too. For persistent selection,
+set `COMPOSE_PROFILES=browser,graph,jdk,testdb,semantic` in `.env` and keep using
+`./run.sh up -d`. The launcher preserves custom profile selections and explicit
+semantic opt-outs. Register the reachable dt OpenAPI URL below and set
+`DT_PUBLIC_URL` for browser-visible result links; no internal worker ports need
+to be exposed. See [connecting your Open WebUI](../README.md#your-own-open-webui)
+for host binding and authentication.
+
 ## Choose a small starting tool list
 
 The bundled compose and the default configuration use the `direct` profile: about fifty everyday tools by name (`find`, `pg_query`, `pg_table`, `es_search`, `kafka_last`, `logs_search`, `bitbucket_file`, `bitbucket_pr`, `code_search`, the workspace and test tools, `feature`, `show`, `code`) plus `tool_search`, `tool_describe` and `tool_execute` for the specialised rest (fixtures, scenarios, collections, test databases, UI-to-API capture). A model asked for rows, an index, a topic, a repo file or a pull request calls that tool at once instead of searching for it. The repo tools take a slug alone; dt finds its project. Set `DT_TOOL_PROFILE` or `tools.profile` to choose another, or pick one per connection:

@@ -4,9 +4,11 @@ The optional Joern worker parses Java and JS/TS outside the tool server. dt ship
 
 ## Enable
 
-`git pull && ./run.sh up -d` enables the worker by default, including installations with older nonempty `COMPOSE_PROFILES` lists. The launcher creates a shared `DT_SEMANTIC_TOKEN` once, supplies `http://semantic:4110`, builds updated worker layers and recreates Node services when the bundle changes. `--no-semantic` or `DT_SEMANTIC_ENABLED=0` disables the local worker; `--tools-only` disables all optional services. Existing tokens and custom endpoints are preserved. Starting the worker does not parse repositories; use `semantic_index` explicitly.
+`git pull && ./run.sh up -d` enables the worker by default, including installations with older nonempty `COMPOSE_PROFILES` lists. The launcher creates a shared `DT_SEMANTIC_TOKEN` once, supplies `http://semantic:4110`, builds updated worker layers and recreates Node services when the bundle changes. `--no-semantic` or `DT_SEMANTIC_ENABLED=0` disables the local worker; `--tools-only` disables all optional services. Existing tokens and custom endpoints are preserved. Starting the worker does not parse repositories; `semantic_index` or the automatic missing-analysis step in `architecture_service` starts parsing.
 
 For direct Compose use, set `DT_SEMANTIC_TOKEN` to a new secret of at least 16 characters and `DT_SEMANTIC_URL=http://semantic:4110`, then run `docker compose --profile semantic up -d --build semantic dt`. After source edits, run `npm run build` first. The worker has no published port or Docker socket; only dt needs its authenticated API. A separately hosted worker uses the same URL/token settings (disable the local worker with `--no-semantic`).
+
+Use `./run.sh --no-webui up -d` to keep the worker and other configured supporting services while attaching dt to an existing Open WebUI. This skips the bundled chat and its setup job, unlike `--tools-only`, which skips all optional services.
 
 The image pins Joern `4.0.564` by digest. The first build downloads that image and the Node runtime. The main app does not download or install analysis packages. Configuration can alternatively use `semantic.url`, `semantic.token` (an environment reference), `semantic.timeoutMs`, `semantic.waitMs` and `semantic.maxProjectionBytes` in `config.json`.
 

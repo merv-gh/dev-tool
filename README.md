@@ -39,10 +39,13 @@ curl -fsSL https://raw.githubusercontent.com/merv-gh/dev-tool/main/install.sh | 
 curl -fsSL https://raw.githubusercontent.com/merv-gh/dev-tool/main/install.sh | sh -s -- --home ~/work/dt --tools-only
 ```
 
+Use `--no-webui` instead of `--tools-only` to install the supporting browser, graph, build, test database and Joern services for an existing chat instance.
+
 | Option | Default | |
 | --- | --- | --- |
 | `--home DIR` | `~/dt` | config and data: `config.json`, `.env`, `notes.json`, `plugins/`, `scripts/`, `cache/`, `repos/`, `passports/` |
 | `--tools-only` | off | only the dt tool server, for an Open WebUI or MCP client you already run |
+| `--no-webui` | off | dt and configured supporting services, skipping bundled Open WebUI and its model setup |
 | `--dir DIR` | `~/.dev-tool` | where the code goes |
 | `--ref REF`, `--no-start` | `main` | branch or tag; install without starting |
 
@@ -85,6 +88,18 @@ The development loop has `npm run test:local`, `npm run test:changed -- --list`,
 ## Plug it in
 
 ### Your own Open WebUI
+
+Start dt and its supporting services without launching another Open WebUI:
+
+```bash
+./run.sh --no-webui up -d
+./run.sh --no-webui ps
+```
+
+With the default profiles this starts `dt`, the browser, graph, JDK/build runner, scratch Postgres and Joern worker, plus their initialization jobs. The flag removes only the `webui` profile, which contains both `webui` and `setup`; it preserves other configured profiles and the `--no-semantic` opt-out. `--tools-only` starts just dt instead. An explicitly empty `COMPOSE_PROFILES` remains empty.
+
+To keep using plain `git pull && ./run.sh up -d`, set `COMPOSE_PROFILES=browser,graph,jdk,testdb,semantic` in `.env`. If this Compose project already has a bundled chat running, stop it once with `./run.sh stop webui setup`; excluding its profile does not stop an existing container. Its data volume is preserved.
+
 1. Make dt reachable from Open WebUI. If they run on different hosts, set `DT_API_KEY` in `.env`, and set `DT_BIND=0.0.0.0` and `DT_TRUST_NETWORK=0`.
 2. Register dt as a tool server: Admin Settings → Tools → add an **OpenAPI** connection at `http://<dt-host>:4000` with path `openapi.json`, bearer auth with the key. Or let dt do it, along with the system prompt and tools for each model:
    ```bash
@@ -92,6 +107,8 @@ The development loop has `npm run test:local`, `npm run test:changed -- --list`,
      --dt-url http://<dt-host>:4000 --dt-key <DT_API_KEY> [--model model-a,model-b]
    ```
 3. Set `DT_PUBLIC_URL` (or `server.publicUrl`) to the address of dt that users' browsers can reach. Tables and dashboards are embedded from there.
+
+The OpenAPI connection provides dt's browser, build and semantic workflows through the tool server; their internal service ports do not need to be published. For separate users and chats, enable `ENABLE_FORWARD_USER_INFO_HEADERS=true` in the existing Open WebUI and configure dt's authenticated identities as described in [runtime administration](docs/runtime-administration.md). Starting with `--no-webui` does not modify the existing chat; the optional `webui-setup` command above deliberately registers tools and updates model instructions.
 
 The system prompt is at `GET /api/prompt` ([lib/agent-prompt.md](lib/agent-prompt.md)) if you'd rather paste it yourself.
 
