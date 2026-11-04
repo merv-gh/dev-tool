@@ -47,3 +47,5 @@ For the optional real semantic chat examples, retain the live test's `P/orders` 
 ## Large architecture estate
 
 `node demo/architecture.js 4046` starts a separate synthetic 600-service architecture demonstration with C4 ownership, a refund data flow, dev/UAT replica health and source-labeled resource panels. No Docker or model is required. It prints the public view and Admin URLs; Admins publish and readers browse. See [architecture observability](../docs/architecture-observability.md) for the schema, metrics and exports.
+
+`node demo/service-architecture.js 4050` runs the service dossier demo: actual static analysis of the bundled Java service, synthetic requirement/Consul fixtures, per-entry graphs and C4/sequence exports. [Details](../docs/service-architecture.md).

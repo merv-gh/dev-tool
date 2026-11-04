@@ -384,6 +384,48 @@
       "width": 1280,
       "origin": "built-in sample fixture; presentation only",
       "overflow": false
+    },
+    {
+      "file": "admin-service-architecture.png",
+      "title": "admin service architecture",
+      "width": 1600,
+      "origin": "actual native source analysis; synthetic environment and documentation; real browser execution",
+      "overflow": false
+    },
+    {
+      "file": "service-architecture-c4.png",
+      "title": "service architecture c4",
+      "width": 1600,
+      "origin": "actual native source analysis; synthetic environment and documentation; real browser execution",
+      "overflow": false
+    },
+    {
+      "file": "service-architecture-flow.png",
+      "title": "service architecture flow",
+      "width": 1600,
+      "origin": "actual native source analysis; synthetic environment and documentation; real browser execution",
+      "overflow": false
+    },
+    {
+      "file": "service-architecture-mobile.png",
+      "title": "service architecture mobile",
+      "width": 390,
+      "origin": "actual native source analysis; synthetic environment and documentation; real browser execution",
+      "overflow": false
+    },
+    {
+      "file": "service-architecture-requirements.png",
+      "title": "service architecture requirements",
+      "width": 1600,
+      "origin": "actual native source analysis; synthetic environment and documentation; real browser execution",
+      "overflow": false
+    },
+    {
+      "file": "service-architecture-runtime.png",
+      "title": "service architecture runtime",
+      "width": 1600,
+      "origin": "actual native source analysis; synthetic environment and documentation; real browser execution",
+      "overflow": false
     }
   ],
   "errors": [],

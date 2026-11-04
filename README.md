@@ -1103,3 +1103,5 @@ node demo/architecture.js 4046  # synthetic 600-service demo, no Docker required
 ![600-service architecture estate](docs/screenshots/architecture-estate.png)
 
 ![Cross-service refund data flow](docs/screenshots/architecture-dataflow.png)
+
+Generate a dossier for one service with `architecture_service`: C4 connections, per-entry boundary paths, requirement citations, Joern evidence and deployment snapshots. Missing exact-revision Joern analyses are built automatically and reused. [Service dossier guide](docs/service-architecture.md). Try `node demo/service-architecture.js 4050` for a source-backed fixture demonstration.

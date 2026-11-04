@@ -1,0 +1,39 @@
+{
+  "validatedAt": "2026-11-04T23:16:33.581Z",
+  "fixture": "test/fixtures/service-dossier",
+  "nativeAnalysis": "actual indexed Java source",
+  "semanticAnalysis": "actual Joern CPG created automatically from an empty client analysis cache",
+  "runtimeObservations": "synthetic Consul fixture",
+  "documentation": "synthetic versioned Confluence fixture",
+  "identity": {
+    "env": "dev",
+    "repo": "DEMO/checkout",
+    "revision": "657565e73ce956ec6c041415645e5c13d0dd1cb1",
+    "passportAt": "2026-11-04T23:15:12.626Z",
+    "overlayRevision": null
+  },
+  "coverage": {
+    "entries": 5,
+    "tracedEntries": 5,
+    "connections": 11,
+    "paths": 13,
+    "requirements": 5,
+    "semanticQueries": 8,
+    "complete": false,
+    "meaning": "All discovered connections within the stated budgets; static reachability and documentation do not prove every runtime or value flow."
+  },
+  "supportedLocalValuePaths": 6,
+  "analyses": [
+    {
+      "id": "8538de721b7ad00fe5768b95209a1fdfe54e93df5802dc1fac60e0c34583d886-da01e8b9254dfe0acb0643e493d04018",
+      "repo": "DEMO/checkout",
+      "sha": "657565e73ce956ec6c041415645e5c13d0dd1cb1",
+      "builtAt": "2026-11-04T23:15:19.097Z",
+      "language": "java"
+    }
+  ],
+  "automaticIndexing": true,
+  "retainedGenerationReuseVerified": true,
+  "runtimeFlowProof": "unknown",
+  "publication": "none; scoped dossier only"
+}

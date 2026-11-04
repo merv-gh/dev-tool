@@ -83,3 +83,13 @@ Captured with `dev/check-architecture-browser.js`. Dev/UAT instances and resourc
 | ![architecture deployment](architecture-deployment.png) **architecture deployment** | ![architecture estate](architecture-estate.png) **architecture estate** |
 | ![architecture mobile](architecture-mobile.png) **architecture mobile** | ![architecture resources](architecture-resources.png) **architecture resources** |
 | ![sample architecture](sample-architecture.png) **sample architecture** | |
+
+## Service architecture dossier
+
+Actual static analysis of the bundled Java fixture; environment and requirement values are synthetic. The separate [Joern validation report](../benchmarks/service-architecture-e2e.json) records real retained-CPG query results.
+
+| | |
+| --- | --- |
+| ![admin service architecture](admin-service-architecture.png) **admin service architecture** | ![service architecture c4](service-architecture-c4.png) **service architecture c4** |
+| ![service architecture flow](service-architecture-flow.png) **service architecture flow** | ![service architecture mobile](service-architecture-mobile.png) **service architecture mobile** |
+| ![service architecture requirements](service-architecture-requirements.png) **service architecture requirements** | ![service architecture runtime](service-architecture-runtime.png) **service architecture runtime** |

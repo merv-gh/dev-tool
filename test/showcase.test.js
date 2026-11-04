@@ -9,6 +9,7 @@ test('showcase reads private adjustments and retained revisions without parsing 
   const passport = { repo: { project: 'SHOP', repo: 'orders', sha: '1'.repeat(40) }, summary: { endpoints: 1, consumes: [], produces: [], tables: {} }, flows: [] };
   t.mock.method(require('../lib/passport'), 'load', () => passport);
   t.mock.method(require('../lib/codeindex'), 'load', () => ({}));
+  t.mock.method(require('../lib/service-architecture'), 'collect', async args => { assert.equal(args.service, 'orders'); assert.equal(args.joern, false); return { view: 'http://localhost:4000/architecture/dossier', coverage: { connections: 2, paths: 1, requirements: 0 } }; });
   const calls = [];
   t.mock.method(require('../lib/tools'), 'call', async (name, args) => {
     calls.push({ name, args });
