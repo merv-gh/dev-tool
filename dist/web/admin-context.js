@@ -64,6 +64,7 @@ async function loadContexts() {
       let args; try { args = JSON.parse($('cxArgs').value); } catch { throw new Error('Arguments must be valid JSON'); }
       $('cxRunOutput').textContent = 'Running ' + name + '…';
       const r = await contextCall('context_run', { id: contextState.id, tool: name, arguments: args, summary: $('cxGoal').value.slice(0, 300) });
+      try { const captured = JSON.parse(r.preview); if (captured.result?.view && typeof adminMapOpen === 'function' && new URL(captured.result.view, location.href).pathname.startsWith('/map/')) await adminMapOpen(captured.result.view, args.env || env()); } catch {}
       $('cxRunOutput').textContent = r.preview + (r.truncated ? '\n\nPreview truncated. Open the saved file for the full result.' : '') + (r.saveError ? '\n\nCAPTURE FAILED: ' + r.saveError + '\n' + r.guidance : '');
       $('cxCaptured').textContent = r.saved ? 'Open saved result: ' + r.saved : ''; $('cxCaptured').hidden = !r.saved;
       $('cxCaptured').onclick = () => contextRead(r.saved).catch(e => contextMessage(e.message, true));

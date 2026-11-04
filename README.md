@@ -976,3 +976,77 @@ seeded prior results are marked separately from model-created checkpoints.
 Reports retain transcripts, source/memory call counts, hashes, model metadata,
 independent numeric differences and the temporary home for inspection. This is a
 small behavioral evaluation, not certification of general model reliability.
+
+### Microservice map
+
+`map` projects cached passports, catalog inventory, and explored UI API routes into
+one estate: services and UI repositories, Kafka topics, PostgreSQL databases and
+tables, Elasticsearch indexes, and service log inspection targets. Libraries are
+hidden by default. A browser site with the same name as a passport is linked
+automatically; set `browser.sites.<site>.repository: "PROJECT/ui-repo"` when the
+site and UI repository names differ. The overview groups a large estate by repository project and
+infrastructure; select a group or search for an exact service/resource to drill
+in. Repository groups do not assert team ownership. Every bounded view states how
+many entities and relations remain outside it; download preserves the full graph.
+
+```sh
+node cli.js tool map '{"env":"dev"}'
+node cli.js tool map_search '{"env":"dev","query":"orders"}'
+node cli.js tool map_neighbors '{"env":"dev","id":"svc:orders"}'
+node cli.js tool map_node '{"env":"dev","id":"pg:orders:sales.orders"}'
+node cli.js tool map_path '{"env":"dev","from":"svc:orders","to":"svc:shipping"}'
+```
+
+For a focused small-model session, use the `map` tool profile (`tools.profile: "map"`
+or `/openapi/map.json`); it exposes the graph workflow, common inspection tools and
+discovery without the entire registry. Tool profiles change discovery, not permissions.
+
+Tool exploration returns bounded TSV and small node/action envelopes, rather
+than dumping the graph into a model's conversation. `map_node` names the exact
+`target.database`, `target.schema`, `target.table`, service or topic and proposes
+enabled, schema-checked tools (`pg_query`, Kafka inspection, passports, ELK, ES,
+or UI capture). Inspect suggestions before executing. Kafka arrows follow data:
+producer → topic → consumer. Database arrows follow dependencies: service → table.
+Default paths exclude hierarchy/aggregate strokes; enable `include_hierarchy`
+when exploring containers themselves. Static, observed, candidate, suggested
+log targets, aggregates and user annotations retain separate certainty labels.
+Ambiguous API owners and database matches remain candidates, never guessed facts.
+
+`map_save` keeps requested feature descriptions and user-flow subgraphs as durable
+layers over exact node ids. Supply participants plus optional directed relations
+and evidence. `map_layers` returns revisions; overwriting a layer requires its
+`expected_revision`. Layers survive passport/catalog refreshes and live in
+`DT_HOME/maps/overlays/<env>/` (gitignored, back up separately). They are user
+annotations, not proof that a flow executed. A missing participant after refresh
+is reported as a gap instead of being recreated as a live service.
+
+The graph cache and overlays use **DTMAP1 binary**, with an interned UTF-8 string
+table and fixed uint32 columns. The browser receives `application/vnd.dt.map`;
+there is no serialized JSON graph, JSON graph export or giant JSON parse. Indexed
+CSR adjacency supports bounded exploration. PostgreSQL inventory is streamed from
+`catalog.txt` without reading large catalog bodies. The read-only viewer uses the
+vendored **ecs-canvas-graph Canvas SDK**, with its license and source revision in
+`web/vendor/ecs-canvas/README.md`. Ordinary JSON remains only for small tool
+arguments/results and existing input passport/config contracts.
+
+In **Admin → Context & scratchpad → Explore microservice map**, selecting a node
+lets you open its passport or prepare the matching tool arguments in the
+scratchpad. Selection itself makes no live calls. **Capture UI screenshot** opens
+the configured site with the existing Playwright MCP tools, captures actual image
+bytes, closes the isolated session and shows the screenshot. Browser availability
+and cleanup errors are explicit. `map_ui_preview` exposes the same operation to
+models. Map and screenshot tool results embed in Open WebUI; map assets and binary
+endpoints also work in its opaque-origin sandbox.
+
+Verification helpers (synthetic data only):
+
+```sh
+node dev/map-fixture.js ./work/map-demo 120 12 # actual passport extraction from 1,800 Java classes
+DT_HOME=./work/map-demo DT_PUBLIC_URL=http://127.0.0.1:4497 node cli.js serve --port 4497
+# In another terminal, with Playwright installed separately (or on NODE_PATH):
+node dev/map-browser-fixture.js 4498
+# With both servers running:
+node dev/check-map-browser.js http://127.0.0.1:4497 ./work/map-evidence
+# Real small-model experiment via an explicitly opened SSH tunnel:
+DT_HOME=./work/map-demo node dev/eval-map-model.js --endpoint http://127.0.0.1:41435 --model qwen3.5:4b --output ./work/map-eval.json
+```

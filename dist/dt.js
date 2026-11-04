@@ -15839,6 +15839,7 @@ var require_runner = __commonJS({
           }
         });
       });
+      req.on("timeout", () => req.destroy(new Error("Docker socket probe timed out")));
       req.on("error", (e) => resolve({ ok: false, error: e.code === "EACCES" ? `EACCES on ${sock}: the runner's user is not in the socket's group (DT_DOCKER_GID)` : e.message }));
     });
     function info() {
@@ -17096,11 +17097,10 @@ var require_routes = __commonJS({
       }
       return { requests: entries.length, api: seen, added, total: Object.keys(db.routes).length };
     }
-    function codeEndpoints() {
+    function codeEndpoints(passports) {
       const P = require_passport();
       const out2 = [];
-      for (const s of P.list()) {
-        const p = P.load(s.service);
+      for (const p of passports || P.list().map((s) => P.load(s.service))) {
         for (const e of p?.effective?.endpoints || []) {
           const segs = String(e.path || "").split("/").filter(Boolean);
           const re = new RegExp(`(^|/)${segs.map((x) => /^\{.*\}$/.test(x) ? "[^/]+" : x.replace(/[.*+?^$()|[\]\\]/g, "\\$&")).join("/")}/?$`, "i");
@@ -17119,8 +17119,8 @@ var require_routes = __commonJS({
     function resolve(url, method = "GET") {
       return resolver()(url, method);
     }
-    function resolver() {
-      const code = codeEndpoints();
+    function resolver(passports) {
+      const code = codeEndpoints(passports);
       return (url, method = "GET") => {
         const route = normalize(url);
         if (!route) return { status: "unknown", candidates: [] };
@@ -17833,7 +17833,7 @@ var require_results = __commonJS({
         total -= x.size;
       }
     }
-    var PAGES = { logs: "logs", trace: "logs", pr: "pr" };
+    var PAGES = { map: "map", "map-preview": "map-preview", logs: "logs", trace: "logs", pr: "pr" };
     function save(kind, rows, meta) {
       fs2.mkdirSync(DIR, { recursive: true });
       const id = Date.now().toString(36) + crypto.randomBytes(9).toString("hex");
@@ -18876,7 +18876,9 @@ var require_browser_mcp = __commonJS({
         const r = await this.post({ jsonrpc: "2.0", id: ++this.seq, method: "tools/call", params: { name, arguments: args } }, options);
         const text = (r.content || []).filter((c) => c.type === "text").map((c) => c.text).join("\n");
         if (r.isError) throw new Error(`${name}: ${text.slice(0, 1e3)}`);
-        return { text, images: (r.content || []).filter((c) => c.type === "image").length };
+        const images = (r.content || []).filter((c) => c.type === "image");
+        const imageData = options?.includeImages ? images.filter((c) => /^image\/(png|jpeg|webp)$/.test(c.mimeType) && typeof c.data === "string" && c.data.length <= 4 * 1024 * 1024 && /^[A-Za-z0-9+/]+={0,2}$/.test(c.data)).slice(0, 1).map((c) => ({ mimeType: c.mimeType, data: c.data })) : [];
+        return { text, images: images.length, ...imageData.length ? { imageData } : {} };
       }
       async close() {
         if (!this.id) return;
@@ -43859,6 +43861,598 @@ var require_tools_context = __commonJS({
   }
 });
 
+// web/map-format.js
+var require_map_format = __commonJS({
+  "web/map-format.js"(exports2, module2) {
+    (function(root) {
+      const NC = 8, EC = 7, META = 8, MAGIC = "DTMAP1\0\0";
+      function decode(input) {
+        const b = input instanceof Uint8Array ? input : new Uint8Array(input);
+        const dv = new DataView(b.buffer, b.byteOffset, b.byteLength), utf = new TextDecoder();
+        if (b.length < 24 || utf.decode(b.subarray(0, 8)) !== MAGIC) throw new Error("Invalid map binary");
+        const count = dv.getUint32(8, true), edgeCount = dv.getUint32(12, true), strings = dv.getUint32(16, true), bytes = dv.getUint32(20, true);
+        const stringStart = 24 + (strings + 1) * 4, rowsStart = stringStart + bytes + 3 & ~3;
+        if (strings < META || count > 2e6 || edgeCount > 1e7 || rowsStart < 0 || rowsStart + (count * NC + edgeCount * EC) * 4 !== b.length) throw new Error("Invalid map lengths");
+        const cached = /* @__PURE__ */ new Map();
+        function str(i) {
+          if (i >= strings) throw new Error("Invalid map string reference");
+          if (cached.has(i)) return cached.get(i);
+          const a = dv.getUint32(24 + i * 4, true), z = dv.getUint32(28 + i * 4, true);
+          if (a > z || z > bytes) throw new Error("Invalid map string offsets");
+          const s = utf.decode(b.subarray(stringStart + a, stringStart + z));
+          cached.set(i, s);
+          return s;
+        }
+        const value = (row, col, edge2 = false) => dv.getUint32(rowsStart + (edge2 ? count * NC + row * EC + col : row * NC + col) * 4, true);
+        const node = (i) => {
+          if (i < 0 || i >= count) throw new Error("Unknown map row");
+          const v = Array.from({ length: NC }, (_, k) => str(value(i, k)));
+          return { id: v[0], kind: v[1], label: v[2], scope: v[3], detail: v[4], repo: v[5], revision: v[6], source: v[7] };
+        };
+        const edge = (i) => {
+          if (i < 0 || i >= edgeCount) throw new Error("Unknown map edge");
+          const from = value(i, 0, true), to = value(i, 1, true);
+          if (from >= count || to >= count) throw new Error("Invalid map endpoints");
+          return { from, to, kind: str(value(i, 2, true)), where: str(value(i, 3, true)), layer: str(value(i, 4, true)), evidence: str(value(i, 5, true)), certainty: str(value(i, 6, true)) };
+        };
+        return { count, edgeCount, node, edge, value, str, bytes: b, meta: Array.from({ length: META }, (_, i) => str(i)) };
+      }
+      function encode(nodes, edges, meta = []) {
+        const utf = new TextEncoder(), strings = Array.from({ length: META }, (_, i) => String(meta[i] ?? "")), ids = /* @__PURE__ */ new Map();
+        strings.forEach((s, i) => {
+          if (!ids.has(s)) ids.set(s, i);
+        });
+        const intern = (s) => {
+          s = String(s ?? "");
+          if (!ids.has(s)) {
+            ids.set(s, strings.length);
+            strings.push(s);
+          }
+          return ids.get(s);
+        };
+        const index = new Map(nodes.map((n, i) => [n.id, i]));
+        const nrows = nodes.map((n) => ["id", "kind", "label", "scope", "detail", "repo", "revision", "source"].map((k) => intern(n[k])));
+        const erows = edges.map((e) => {
+          const a = index.get(e.from), b = index.get(e.to);
+          if (a === void 0 || b === void 0) throw new Error("Dangling map edge");
+          return [a, b, ...["kind", "where", "layer", "evidence", "certainty"].map((k) => intern(e[k]))];
+        });
+        const chunks = strings.map((s) => utf.encode(s)), bytes = chunks.reduce((n, b) => n + b.length, 0), start = 24 + (strings.length + 1) * 4, rows = start + bytes + 3 & ~3;
+        const out2 = new Uint8Array(rows + (nodes.length * NC + edges.length * EC) * 4), dv = new DataView(out2.buffer);
+        out2.set(utf.encode(MAGIC));
+        [nodes.length, edges.length, strings.length, bytes].forEach((n, i) => dv.setUint32(8 + i * 4, n, true));
+        let offset = 0;
+        chunks.forEach((b, i) => {
+          dv.setUint32(24 + i * 4, offset, true);
+          out2.set(b, start + offset);
+          offset += b.length;
+        });
+        dv.setUint32(24 + strings.length * 4, offset, true);
+        let at = rows;
+        for (const row of [...nrows, ...erows]) for (const n of row) {
+          dv.setUint32(at, n, true);
+          at += 4;
+        }
+        return out2;
+      }
+      const api = { decode, encode, NC, EC };
+      if (typeof module2 === "object" && module2.exports) module2.exports = api;
+      else root.dtMapFormat = api;
+    })(globalThis);
+  }
+});
+
+// lib/service-map.js
+var require_service_map = __commonJS({
+  "lib/service-map.js"(exports2, module2) {
+    var fs2 = require("fs");
+    var path2 = require("path");
+    var crypto = require("crypto");
+    var { HOME, PATHS } = require_config();
+    var { CACHE: CACHE2 } = require_util();
+    var F = require_map_format();
+    var ROOT = path2.join(HOME, "maps");
+    var OVERLAYS = path2.join(ROOT, "overlays");
+    var loaded = /* @__PURE__ */ new Map();
+    var pending = /* @__PURE__ */ new Map();
+    var hash = (value) => crypto.createHash("sha256").update(value).digest("hex");
+    var safe = (value, label = "id") => {
+      if (typeof value !== "string" || !value || value.length > 160 || !/^[\w.-]+$/.test(value) || value === "." || value === "..") throw new Error(`Invalid map ${label}`);
+      return value;
+    };
+    var envOf = (env) => safe(env || require_config().envNames()[0], "environment");
+    var bounded = (n, def, max) => {
+      if (n === void 0) return def;
+      if (!Number.isSafeInteger(n) || n < 1 || n > max) throw new Error(`Map limit must be 1..${max}`);
+      return n;
+    };
+    var stamp = (file) => {
+      try {
+        const s = fs2.statSync(file);
+        return `${s.size}:${s.mtimeMs}:${s.ctimeMs}`;
+      } catch (e) {
+        if (e.code === "ENOENT") return "";
+        throw e;
+      }
+    };
+    var files = (dir, suffix) => {
+      try {
+        return fs2.readdirSync(dir).filter((f) => f.endsWith(suffix)).sort().map((f) => path2.join(dir, f));
+      } catch (e) {
+        if (e.code === "ENOENT") return [];
+        throw e;
+      }
+    };
+    function passportFiles() {
+      try {
+        return fs2.readdirSync(PATHS.passports, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => path2.join(PATHS.passports, e.name, "passport.json")).filter((f) => stamp(f)).sort();
+      } catch (e) {
+        if (e.code === "ENOENT") return [];
+        throw e;
+      }
+    }
+    function sites() {
+      return require_config().getBrowser().sites.map((s) => {
+        try {
+          const u = new URL(s.url);
+          return { site: s.site, host: u.host, url: u.origin + u.pathname, repository: require_config().load().raw.browser?.sites?.[s.site]?.repository || "" };
+        } catch {
+          return { site: s.site, host: "", url: "" };
+        }
+      });
+    }
+    function databaseBindings(env) {
+      return Object.entries(require_config().getEnv(env).pg).flatMap(([alias, value]) => {
+        try {
+          const u = new URL(value);
+          return [{ alias, database: decodeURIComponent(u.pathname.slice(1)), host: u.hostname.toLowerCase() + ":" + (u.port || "5432") }];
+        } catch {
+          return [];
+        }
+      });
+    }
+    function source(env) {
+      const passports = passportFiles(), overlays = files(path2.join(OVERLAYS, env), ".dtm"), catalog = path2.join(CACHE2, env, "catalog.txt");
+      const deps = [...passports, ...overlays, catalog, require_routes().FILE];
+      return { passports, overlays, catalog, signature: hash("dt-map-projection-v1.2\n" + deps.map((f) => f + ":" + stamp(f)).join("\n") + "\n" + sites().map((s) => s.site + " " + s.url + " " + s.repository).join("\n") + "\n" + databaseBindings(env).map((d) => [d.alias, d.database, d.host].join(" ")).join("\n")) };
+    }
+    function atomic(file, bytes) {
+      fs2.mkdirSync(path2.dirname(file), { recursive: true });
+      const tmp = file + "." + crypto.randomUUID() + ".tmp";
+      try {
+        fs2.writeFileSync(tmp, bytes, { mode: 384, flag: "wx" });
+        fs2.renameSync(tmp, file);
+      } finally {
+        fs2.rmSync(tmp, { force: true });
+      }
+    }
+    function builder() {
+      const nodes = /* @__PURE__ */ new Map(), edges = /* @__PURE__ */ new Map();
+      const node = (id, kind, label, props = {}) => {
+        const old = nodes.get(id);
+        if (!old) nodes.set(id, { id, kind, label, ...props });
+        else for (const [k, v] of Object.entries(props)) if (v && !old[k]) old[k] = v;
+        return id;
+      };
+      const edge = (from, to, kind, props = {}) => {
+        const key = [from, to, kind, props.layer || "", props.where || ""].join("\0");
+        if (!edges.has(key)) edges.set(key, { from, to, kind, certainty: "static", ...props });
+      };
+      return { nodes, edges, node, edge };
+    }
+    async function rebuild(env, s) {
+      const B = builder(), gaps = [], tbl = /* @__PURE__ */ new Map(), sources = [], bindings = databaseBindings(env);
+      const databaseKeys = (p) => [...new Set((p.db?.datasources || []).flatMap((d) => {
+        const candidates = bindings.filter((b) => b.database === d.db), host = String(d.host || "").replace(/:5432$/, "").toLowerCase(), matched = candidates.filter((b) => b.host.replace(/:5432$/, "") === host);
+        return (matched.length ? matched : candidates).map((b) => b.alias).concat(candidates.length ? [] : d.db ? [d.db] : []);
+      }))];
+      const db = (name) => B.node(`db:${name}`, "postgres", name, { scope: env });
+      const table2 = (database, name, detail = "") => {
+        const id = B.node(`pg:${database}:${name}`, "table", name, { scope: database, detail, source: "catalog" });
+        B.edge(db(database), id, "contains", { where: "cached catalog" });
+        for (const key of /* @__PURE__ */ new Set([name.toLowerCase(), name.split(".").pop().toLowerCase()])) {
+          const arr = tbl.get(key) || [];
+          if (!arr.includes(id)) arr.push(id);
+          tbl.set(key, arr);
+        }
+        return id;
+      };
+      if (stamp(s.catalog)) {
+        const lines = require("readline").createInterface({ input: fs2.createReadStream(s.catalog), crlfDelay: Infinity });
+        for await (const line of lines) {
+          const pg = line.match(/^pg (\S+) (\S+) /);
+          if (pg) {
+            table2(pg[1], pg[2], "Cached table; inspect pg_table for its definition");
+            continue;
+          }
+          const k = line.match(/^kafka (\S+)/);
+          if (k) B.node(`kafka:${k[1]}`, "kafka", k[1], { scope: env, detail: "Cached resource; inspect its schema with the corresponding tool", source: "catalog" });
+          const es = line.match(/^es (\S+)/);
+          if (es) B.node(`es:${es[1]}`, "elasticsearch", es[1], { scope: env, detail: "Cached resource; inspect its schema with the corresponding tool", source: "catalog" });
+        }
+      } else gaps.push("No cached catalog: database/topic inventory is limited to passport findings.");
+      for (const file of s.passports) {
+        let p;
+        try {
+          p = JSON.parse(fs2.readFileSync(file, "utf8"));
+        } catch (e) {
+          gaps.push(`Unreadable passport ${path2.basename(path2.dirname(file))}: ${e.message}`);
+          continue;
+        }
+        if (!p.service || !p.effective) {
+          gaps.push("Passport missing service/effective: " + file);
+          continue;
+        }
+        if (p.env && p.env !== env) continue;
+        const id = B.node(`svc:${p.service}`, "service", p.service, { scope: env, repo: [p.repo?.project, p.repo?.repo].filter(Boolean).join("/"), revision: p.repo?.sha || "", source: "passport", detail: p.env ? "" : "Environment not recorded in passport" });
+        sources.push({ p, id });
+      }
+      const byName = new Map(sources.flatMap(({ p, id }) => [[p.service.toLowerCase(), id], ...p.repo?.repo ? [[p.repo.repo.toLowerCase(), id]] : []]));
+      const uiService = (site) => byName.get(site.site.toLowerCase()) || sources.find(({ p }) => site.repository && `${p.repo?.project}/${p.repo?.repo}`.toLowerCase() === site.repository.toLowerCase())?.id;
+      for (const { p, id } of sources) {
+        const eff = p.effective, where = (x) => `${p.service} ${x.source ? "library " + x.source + " " : ""}${x.file || "passport"}${x.line ? ":" + x.line : ""}`, props = (x) => ({ where: where(x), evidence: x.via || x.handler || "", certainty: p.env ? "static" : "environment-unknown" });
+        for (const x of eff.produces || eff.kafka?.produces || []) if (x.topic && !/^[?(]/.test(x.topic)) B.edge(id, B.node(`kafka:${x.topic}`, "kafka", x.topic, { scope: env, source: "passport" }), "produces", props(x));
+        for (const x of eff.consumes || eff.kafka?.consumes || []) if (x.topic && !/^[?(]/.test(x.topic)) B.edge(B.node(`kafka:${x.topic}`, "kafka", x.topic, { scope: env, source: "passport" }), id, "consumed-by", props(x));
+        for (const x of eff.tables || []) {
+          if (!x.table || /[?$]/.test(x.table)) continue;
+          let candidates = tbl.get(x.table.toLowerCase()) || [];
+          const configured = databaseKeys(p);
+          const narrowed = candidates.filter((t) => configured.includes(B.nodes.get(t).scope));
+          if (narrowed.length) candidates = narrowed;
+          if (!candidates.length && configured.length === 1) candidates = [table2(configured[0], x.table)];
+          if (!candidates.length) candidates = [B.node(`pg:?:${x.table}`, "table", x.table, { scope: "?", source: "passport", detail: "Database unresolved; verify before querying" })];
+          for (const to of candidates) B.edge(id, to, x.access || "uses", { ...props(x), certainty: candidates.length === 1 && B.nodes.get(to).scope !== "?" && x.table.includes(".") ? "static" : "candidate" });
+        }
+        for (const key of databaseKeys(p)) B.edge(id, db(key), "connects-db", { where: p.service + " datasource", evidence: "datasource database name/host matched configured aliases" });
+        for (const x of [...eff.calls || eff.feign || [], ...p.http || []]) {
+          const target = byName.get(String(x.client || x.target || "").toLowerCase());
+          if (target) B.edge(id, target, "calls-http", props(x));
+          else if (x.client || x.target) {
+            const name = x.client || x.target;
+            B.edge(id, B.node(`external:${name}`, "external", name, { scope: env }), "calls-http", { ...props(x), certainty: "unresolved-target" });
+          }
+        }
+        for (const x of [...p.es || [], ...eff.es || []]) if (x.index) B.edge(id, B.node(`es:${x.index}`, "elasticsearch", x.index, { scope: env }), "uses-index", props(x));
+        B.edge(id, B.node(`elk:${p.service}`, "elk", p.service + " logs", { scope: env, source: "inspection-target", detail: "Log query target; availability is not verified" }), "inspect-logs", { where: "service identity", certainty: "suggested" });
+        for (const lib of p.libraries || []) {
+          const name = lib.repo || [lib.groupId, lib.artifactId].filter(Boolean).join(":");
+          if (name) B.edge(id, B.node(`lib:${name}`, "library", lib.artifactId || name, { repo: lib.repo || "", revision: lib.sha || "", detail: lib.version || "", source: "passport" }), "depends-on", { where: p.service + " libraries" });
+        }
+      }
+      const resolve = require_routes().resolver(sources.map((s2) => s2.p)), configuredSites = sites();
+      for (const site of configuredSites) {
+        const id = uiService(site) || B.node(`ui:${site.site}`, "ui", site.site, { scope: site.site, detail: site.url, source: "browser configuration" });
+        const n = B.nodes.get(id);
+        n.kind = "ui";
+        n.scope = site.site;
+        n.detail = site.url;
+      }
+      for (const r of Object.values(require_routes().load().routes || {})) {
+        const site = configuredSites.find((s2) => s2.host === r.host);
+        if (!site) continue;
+        const from = uiService(site) || `ui:${site.site}`, match = resolve(`https://${r.host}${r.path}`, r.method);
+        for (const c of match.candidates || []) if (B.nodes.has(`svc:${c.service}`)) B.edge(from, `svc:${c.service}`, "observed-api", { where: `${r.method} ${r.path}`, evidence: `seen ${r.count} times; ${c.where || c.handler || ""}`, certainty: match.status === "matched" ? "observed" : "candidate" });
+      }
+      const pgCluster = B.node("postgres-cluster:" + env, "postgres-cluster", "Postgres", { scope: env, source: "cached inventory" }), kafkaCluster = B.node("kafka-cluster:" + env, "kafka-cluster", "Kafka", { scope: env, source: "cached inventory" });
+      const domainOf = /* @__PURE__ */ new Map();
+      for (const n of [...B.nodes.values()]) {
+        if (n.kind === "postgres") B.edge(pgCluster, n.id, "contains", { where: "database inventory" });
+        if (n.kind === "kafka") B.edge(kafkaCluster, n.id, "contains", { where: "topic inventory" });
+        if (n.kind === "service" || n.kind === "ui") {
+          const name = n.repo?.split("/")[0] || "UI";
+          const domain = B.node("domain:" + name, "domain", name, { scope: env, source: "repository project grouping", detail: "Repository project grouping, not an ownership claim" });
+          domainOf.set(n.id, domain);
+          B.edge(domain, n.id, "contains", { where: "repository project" });
+        }
+      }
+      const aggregates = /* @__PURE__ */ new Map();
+      for (const e of [...B.edges.values()]) {
+        const fromNode = B.nodes.get(e.from), toNode = B.nodes.get(e.to), from = domainOf.get(e.from) || (fromNode?.kind === "kafka" ? kafkaCluster : null), to = domainOf.get(e.to) || (["postgres", "table"].includes(toNode?.kind) ? pgCluster : toNode?.kind === "kafka" ? kafkaCluster : null);
+        if (!from || !to || from === to || e.kind === "contains" || e.kind === "inspect-logs") continue;
+        const key = [from, to, e.kind].join("|");
+        const entry = aggregates.get(key) || { from, to, kind: e.kind, count: 0 };
+        entry.count++;
+        aggregates.set(key, entry);
+      }
+      for (const e of aggregates.values()) B.edge(e.from, e.to, e.kind, { where: "aggregated passport/observed relations", certainty: "aggregate", evidence: e.count + " underlying relations; expand domains and infrastructure to inspect exact sources" });
+      for (const file of s.overlays) {
+        try {
+          const g = F.decode(fs2.readFileSync(file));
+          if (g.meta[0] !== env) continue;
+          for (let i = 0; i < g.count; i++) {
+            const n = g.node(i);
+            if (n.kind === "feature") B.node(n.id, n.kind, n.label, n);
+            else if (!B.nodes.has(n.id)) gaps.push(`Overlay ${g.meta[3]} refers to missing node ${n.id}`);
+          }
+          for (let i = 0; i < g.edgeCount; i++) {
+            const e = g.edge(i), from = g.node(e.from).id, to = g.node(e.to).id;
+            if (B.nodes.has(from) && B.nodes.has(to)) B.edge(from, to, e.kind, { ...e, from, to });
+          }
+        } catch (e) {
+          gaps.push(`Invalid saved overlay ${path2.basename(file)}: ${e.message}`);
+        }
+      }
+      const bytes = F.encode([...B.nodes.values()], [...B.edges.values()], [env, (/* @__PURE__ */ new Date()).toISOString(), s.signature, "Microservice map", String(B.nodes.size), String(B.edges.size), "0", gaps.join("\n")]);
+      atomic(path2.join(CACHE2, "maps", env + ".dtm"), bytes);
+      return bytes;
+    }
+    function index(bytes) {
+      const g = F.decode(bytes), ids = /* @__PURE__ */ new Map(), offset = new Uint32Array(g.count + 1);
+      for (let i = 0; i < g.count; i++) ids.set(g.str(g.value(i, 0)), i);
+      for (let i = 0; i < g.edgeCount; i++) {
+        const a = g.value(i, 0, true), b = g.value(i, 1, true);
+        if (a >= g.count || b >= g.count) throw new Error("Invalid map endpoints");
+        offset[a + 1]++;
+        offset[b + 1]++;
+      }
+      for (let i = 1; i < offset.length; i++) offset[i] += offset[i - 1];
+      const cursor = offset.slice(), adj = new Uint32Array(g.edgeCount * 2);
+      for (let i = 0; i < g.edgeCount; i++) {
+        const a = g.value(i, 0, true), b = g.value(i, 1, true);
+        adj[cursor[a]++] = i;
+        adj[cursor[b]++] = i;
+      }
+      return Object.assign(g, { ids, offset, adj });
+    }
+    async function graph(env, refresh = false) {
+      env = envOf(env);
+      if (pending.has(env)) return pending.get(env);
+      const s = source(env), hit = loaded.get(env);
+      if (!refresh && hit?.meta[2] === s.signature) return hit;
+      const work = (async () => {
+        let bytes, file = path2.join(CACHE2, "maps", env + ".dtm");
+        if (!refresh && stamp(file)) {
+          bytes = fs2.readFileSync(file);
+          try {
+            if (F.decode(bytes).meta[2] !== s.signature) bytes = null;
+          } catch {
+            bytes = null;
+          }
+        }
+        const g = index(bytes || await rebuild(env, s));
+        loaded.set(env, g);
+        while (loaded.size > 2) loaded.delete(loaded.keys().next().value);
+        return g;
+      })();
+      pending.set(env, work);
+      try {
+        return await work;
+      } finally {
+        pending.delete(env);
+      }
+    }
+    var visible = (g, i, a) => a.include_libraries || g.str(g.value(i, 1)) !== "library";
+    var relation = (e, a) => !a.layer || e.layer === a.layer;
+    function locate(g, id) {
+      if (!g.ids.has(id)) throw new Error("Unknown map node; use map_search for exact ids");
+      return g.ids.get(id);
+    }
+    function* connections(g, i, a = {}) {
+      for (let k = g.offset[i]; k < g.offset[i + 1]; k++) {
+        const n = g.adj[k], e = g.edge(n), other = e.from === i ? e.to : e.from;
+        if (relation(e, a) && visible(g, other, a)) yield [n, e, other];
+      }
+    }
+    var clean = (s) => String(s || "").replace(/[\t\r\n]/g, " ").slice(0, 400);
+    function nodeLine(g, i) {
+      const n = g.node(i);
+      return [n.id, n.kind, n.label, g.offset[i + 1] - g.offset[i]].map(clean).join("	");
+    }
+    async function search(a = {}) {
+      const g = await graph(a.env), limit = bounded(a.limit, 30, 200), q = String(a.query || "").toLowerCase().split(/\s+/).filter(Boolean), matches = [];
+      let total = 0;
+      for (let i = 0; i < g.count; i++) {
+        if (!visible(g, i, a)) continue;
+        const n = g.node(i);
+        if (a.kind && n.kind !== a.kind) continue;
+        if (!q.every((w) => [n.id, n.kind, n.label, n.scope, n.repo, n.detail].join(" ").toLowerCase().includes(w))) continue;
+        total++;
+        if (matches.length < limit) matches.push(nodeLine(g, i));
+      }
+      return { format: "tsv", columns: "id	kind	label	degree", text: matches.join("\n"), total, truncated: total > matches.length, guidance: "Use exact id with map_node, map_neighbors or map_path. Static/candidate connections are not live verification." };
+    }
+    async function neighbors(a) {
+      const g = await graph(a.env), i = locate(g, a.id), limit = bounded(a.limit, 40, 200), lines = [];
+      let total = 0;
+      for (const [, e] of connections(g, i, a)) {
+        total++;
+        if (lines.length < limit) lines.push([g.node(e.from).id, e.kind, g.node(e.to).id, e.certainty, e.where, e.layer].map(clean).join("	"));
+      }
+      return { id: a.id, format: "tsv", columns: "from	relation	to	certainty	source	layer", text: lines.join("\n"), total, truncated: total > lines.length };
+    }
+    async function route(a) {
+      const g = await graph(a.env), start = locate(g, a.from), end = locate(g, a.to), visited = /* @__PURE__ */ new Map([[start, null]]), queue = [start], max = bounded(a.max_visited, 1e4, 1e5);
+      let truncated = false;
+      for (let p = 0; p < queue.length && !visited.has(end); p++) {
+        for (const [ei, e, to] of connections(g, queue[p], a)) {
+          if (a.directed !== false && e.from !== queue[p]) continue;
+          if (!a.include_hierarchy && (e.kind === "contains" || e.certainty === "aggregate")) continue;
+          if (visited.has(to)) continue;
+          if (visited.size >= max) {
+            truncated = true;
+            break;
+          }
+          visited.set(to, [queue[p], ei]);
+          queue.push(to);
+        }
+        if (truncated) break;
+      }
+      const edges = [];
+      if (visited.has(end)) {
+        let i = end;
+        while (i !== start) {
+          const [prev, ei] = visited.get(i);
+          edges.unshift(g.edge(ei));
+          i = prev;
+        }
+      }
+      return { found: visited.has(end), visited: visited.size, truncated, format: "tsv", columns: "from	relation	to	certainty", text: edges.map((e) => [g.node(e.from).id, e.kind, g.node(e.to).id, e.certainty].join("	")).join("\n"), guidance: "A path is static/observed/user evidence, not proof that a user flow executes. Inspect edge certainty and verify with live tools." };
+    }
+    async function inspect(a) {
+      const g = await graph(a.env), n = g.node(locate(g, a.id)), actions = [], env = g.meta[0], add = (tool, args, why) => actions.push({ tool, arguments: args, why });
+      if (n.kind === "service" || n.kind === "ui") {
+        if (n.id.startsWith("svc:")) add("passport", { service: n.id.slice(4) }, "Inspect cached code and dependencies");
+        add("logs_search", { env, service: n.label, query: "*" }, "Inspect live application logs");
+      }
+      if (n.kind === "ui") add("api_browser_open", { site: n.scope }, "Open the UI in an isolated session; use api_browser_action take_screenshot, then api_browser_close");
+      if (n.kind === "table" && n.scope !== "?") {
+        add("pg_table", { env, name: n.scope + ":" + n.label }, "Inspect definition and usage");
+        const sql = n.label.split(".").map((x) => '"' + x.replace(/"/g, '""') + '"').join(".");
+        add("pg_query", { env, db: n.scope, sql: `SELECT * FROM ${sql} LIMIT 20` }, "Sample read-only rows; inspect sensitive columns before sharing");
+      }
+      if (n.kind === "postgres") add("pg_query", { env, db: n.label, sql: "SELECT current_database()" }, "Verify database connection");
+      if (n.kind === "kafka") {
+        add("kafka_topic", { env, topic: n.label }, "Inspect cached schema");
+        add("kafka_last", { env, topic: n.label, n: 5 }, "Inspect live messages");
+      }
+      if (n.kind === "elasticsearch") add("es_search", { env, index: n.label, query: "", size: 5 }, "Inspect matching documents");
+      if (n.kind === "elk") add("logs_search", { env, service: n.label.replace(/ logs$/, ""), query: "*" }, "Inspect service logs");
+      const registry = await require_tools().schemas(), available = [];
+      for (const action of actions) {
+        const t = registry.find((t2) => t2.name === action.tool);
+        if (!t) continue;
+        const errors = require_schema().validate(action.arguments, t.inputSchema);
+        available.push({ ...action, valid: !errors.length, ...errors.length ? { validation: errors } : {} });
+      }
+      const links = n.id.startsWith("svc:") ? [{ label: "Open passport", url: `${require_results().publicUrl()}/passport/${encodeURIComponent(n.id.slice(4))}?t=${require_results().sign("passport:" + n.id.slice(4))}` }] : [];
+      const target = { environment: env, ...n.kind === "table" ? { system: "postgres", database: n.scope, qualified_name: n.label, schema: n.label.includes(".") ? n.label.split(".")[0] : null, table: n.label.includes(".") ? n.label.split(".").slice(1).join(".") : n.label } : n.kind === "postgres" ? { system: "postgres", database: n.label } : n.kind === "kafka" ? { system: "kafka", topic: n.label } : n.kind === "service" || n.kind === "ui" ? { system: "service", service: n.label, ...n.kind === "ui" ? { site: n.scope } : {} } : { system: n.kind, name: n.label } };
+      return { node: n, target, actions: available, links, degree: g.offset[g.ids.get(n.id) + 1] - g.offset[g.ids.get(n.id)], guidance: "Actions are suggestions. Inspect arguments before execution. UI sessions must be closed. Library nodes are hidden by default." };
+    }
+    async function snapshot(a = {}) {
+      const depth = bounded(a.depth, 1, 4), g = await graph(a.env, a.refresh), limit = bounded(a.limit, 70, 250), chosen = /* @__PURE__ */ new Set(), edgeIds = /* @__PURE__ */ new Set(), focus = a.focus || a.layer ? locate(g, a.focus || "feature:" + a.layer) : null;
+      if (focus !== null) {
+        const queue = [[focus, 0]];
+        chosen.add(focus);
+        for (let p = 0; p < queue.length; p++) {
+          const [i, d] = queue[p];
+          if (d >= depth) continue;
+          for (const [ei, , other] of connections(g, i, a)) {
+            if (!chosen.has(other) && chosen.size < limit) {
+              chosen.add(other);
+              queue.push([other, d + 1]);
+            }
+            if (chosen.has(other) && edgeIds.size < 400) edgeIds.add(ei);
+          }
+        }
+      } else {
+        const large = g.count > 100, budgets = large ? { domain: 12, "kafka-cluster": 1, "postgres-cluster": 1, feature: 4, library: 4 } : { ui: 3, service: 12, postgres: 6, kafka: 6, elasticsearch: 3, feature: 4, library: 4 };
+        for (const kind of Object.keys(budgets)) {
+          let count = 0;
+          for (let i = 0; i < g.count && chosen.size < limit && count < budgets[kind]; i++) if (g.str(g.value(i, 1)) === kind && visible(g, i, a)) {
+            chosen.add(i);
+            count++;
+          }
+        }
+      }
+      for (const i of chosen) for (const [ei, e, to] of connections(g, i, a)) if (chosen.has(to) && edgeIds.size < 400) edgeIds.add(ei);
+      const nodes = [...chosen].map((i) => g.node(i)), edges = [...edgeIds].slice(0, 400).map((i) => {
+        const e = g.edge(i);
+        return { ...e, from: g.node(e.from).id, to: g.node(e.to).id };
+      });
+      return F.encode(nodes, edges, [g.meta[0], g.meta[1], g.meta[2], focus === null ? "Microservice map" : g.node(focus).label, String(g.count), String(g.edgeCount), String(g.count - nodes.length), String(g.edgeCount - edges.length)]);
+    }
+    async function overview(a = {}) {
+      const g = await graph(a.env, a.refresh), counts = {};
+      for (let i = 0; i < g.count; i++) {
+        const k = g.str(g.value(i, 1));
+        counts[k] = (counts[k] || 0) + 1;
+      }
+      return { env: g.meta[0], nodes: g.count, edges: g.edgeCount, counts, updatedAt: g.meta[1], gaps: g.meta[7] ? g.meta[7].split("\n") : [], format: "DTMAP1", guidance: "Map data is binary, libraries hidden by default. Use map_search for ids, map_neighbors/map_path for bounded evidence, map_node for live-tool suggestions. Saved feature layers survive refresh." };
+    }
+    async function save(a) {
+      const env = envOf(a.env), id = safe(a.id), file = path2.join(OVERLAYS, env, id + ".dtm"), g = await graph(env);
+      if (typeof a.title !== "string" || !a.title.trim() || a.title.length > 300 || typeof a.description !== "string" || a.description.length > 12e3) throw new Error("Overlay title and bounded description required");
+      let previous = null;
+      if (stamp(file)) previous = hash(fs2.readFileSync(file));
+      if (previous !== null && a.expected_revision === void 0 || a.expected_revision !== void 0 && a.expected_revision !== previous) throw new Error("Overlay changed or exists; read map_layers and provide expected_revision");
+      if (!Array.isArray(a.nodes) || a.edges !== void 0 && !Array.isArray(a.edges)) throw new Error("Overlay nodes and edges must be lists");
+      const refs = [...new Set(a.nodes)];
+      if (refs.length > 200 || (a.edges || []).length > 400) throw new Error("Overlay exceeds 200 nodes / 400 edges");
+      const B = builder(), feature = B.node("feature:" + id, "feature", a.title, { scope: env, detail: a.description, source: "user annotation" });
+      for (const ref of refs) {
+        const n = g.node(locate(g, ref));
+        B.nodes.set(n.id, n);
+        B.edge(feature, n.id, "includes", { layer: id, where: "user request", certainty: "user", evidence: a.description.slice(0, 1e3) });
+      }
+      for (const e of a.edges || []) {
+        if (!refs.includes(e.from) || !refs.includes(e.to) || typeof e.relation !== "string" || !e.relation || e.relation.length > 100 || typeof e.evidence !== "string" || e.evidence.length > 2e3) throw new Error("Overlay edges need referenced node ids, relation and bounded evidence");
+        B.edge(e.from, e.to, e.relation, { layer: id, where: "user request", certainty: "user", evidence: e.evidence });
+      }
+      const bytes = F.encode([...B.nodes.values()], [...B.edges.values()], [env, (/* @__PURE__ */ new Date()).toISOString(), id, a.title, a.description]);
+      atomic(file, bytes);
+      loaded.delete(env);
+      return { id, revision: hash(bytes), saved: true, nodes: B.nodes.size, edges: B.edges.size };
+    }
+    function layers(a = {}) {
+      const env = envOf(a.env), layers2 = [], errors = [];
+      for (const file of files(path2.join(OVERLAYS, env), ".dtm")) {
+        try {
+          const bytes = fs2.readFileSync(file), g = F.decode(bytes);
+          if (g.meta[0] === env) layers2.push({ id: path2.basename(file, ".dtm"), title: g.meta[3], description: g.meta[4], revision: hash(bytes), updatedAt: g.meta[1], nodes: g.count, edges: g.edgeCount });
+        } catch (e) {
+          errors.push({ id: path2.basename(file, ".dtm"), error: e.message });
+        }
+      }
+      return { layers: layers2, errors };
+    }
+    async function preview(a) {
+      const g = await graph(a.env), n = g.node(locate(g, a.id));
+      if (n.kind !== "ui") throw new Error("UI preview needs a UI node");
+      const T = require_tools(), schemas = await T.schemas();
+      for (const name of ["api_browser_open", "api_browser_action", "api_browser_close"]) if (!schemas.some((t) => t.name === name)) throw new Error("UI preview requires enabled " + name);
+      let session, image, cleanupError, failure;
+      try {
+        session = (await T.call("api_browser_open", { site: n.scope }, { source: "map-preview" })).session;
+        const definition = await T.call("api_browser_action", { session, action: "take_screenshot", describe: true }, { source: "map-preview" });
+        if (!definition.available) throw new Error("Browser endpoint has no screenshot tool");
+        const args = definition.inputSchema?.properties?.type ? { type: "png" } : {};
+        const shot = await T.call("api_browser_action", { session, action: "take_screenshot", args }, { source: "map-preview" });
+        image = shot.imageData?.[0];
+        if (!image) throw new Error("Browser returned no supported inline image (PNG/JPEG/WebP, max 3 MiB)");
+      } catch (e) {
+        failure = e;
+      } finally {
+        if (session) try {
+          await T.call("api_browser_close", { session }, { source: "map-preview" });
+        } catch (e) {
+          cleanupError = e.message;
+        }
+      }
+      if (failure) {
+        if (cleanupError) failure.message += "; browser cleanup failed: " + cleanupError + " (session " + session + ")";
+        throw failure;
+      }
+      const view = require_results().save("map-preview", [], { title: n.label + " screenshot", image, node: n.id, capturedAt: (/* @__PURE__ */ new Date()).toISOString() });
+      return { view, node: n.id, ...cleanupError ? { cleanupError, session } : {}, guidance: "Screenshot is a point-in-time UI observation, not proof of complete feature execution." };
+    }
+    module2.exports = { graph, search, neighbors, route, inspect, snapshot, overview, save, layers, preview, ROOT };
+  }
+});
+
+// lib/tools-map.js
+var require_tools_map = __commonJS({
+  "lib/tools-map.js"(exports2, module2) {
+    module2.exports = ({ str, int, env }) => {
+      const M = () => require_service_map();
+      const common = { env, include_libraries: { type: "boolean", default: false }, layer: str("Optional saved overlay id; filters relations"), limit: int("Bounded result size") };
+      return [
+        { name: "map", description: "Show the cached service/UI, Kafka, PostgreSQL, ES and log dependency map. Libraries hidden by default. Use map_search for ids, map_neighbors/map_path for relations, map_node for live-tool suggestions. Static links are not runtime proof.", input: { ...common, focus: str("Exact node id to center; obtain with map_search"), depth: int("Neighborhood depth 1..4", 1), refresh: { type: "boolean", default: false } }, run: async (a) => {
+          const summary = await M().overview(a);
+          await M().snapshot({ ...a, refresh: false });
+          return { ...summary, view: require_results().save("map", [], { title: "Microservice map", map: { ...a, env: summary.env } }) };
+        } },
+        { name: "map_search", description: "Search cached nodes; returns bounded TSV ids, kinds, labels and degrees. Use returned ids for exploration; include_libraries reveals internal libraries.", input: { ...common, query: str("Words in id, label, repository, database or description"), kind: str("service, ui, kafka, postgres, table, elasticsearch, elk, feature, library") }, run: (a) => M().search(a) },
+        { name: "map_neighbors", description: "Read bounded relations with certainty and source evidence. Arrows: producer -> topic -> consumer; service -> table. Use map_node for live-tool suggestions.", input: { ...common, id: str("Exact map node id") }, required: ["id"], run: (a) => M().neighbors(a) },
+        { name: "map_path", description: "Find a bounded shortest path between exact ids. directed=false follows reverse links too. Paths are dependency evidence, not runtime proof.", input: { ...common, from: str("Exact source node id"), to: str("Exact destination node id"), directed: { type: "boolean", default: true }, include_hierarchy: { type: "boolean", default: false, description: "Include contains/aggregate hierarchy edges; default paths use exact relations only" }, max_visited: int("Visited node budget, max 100000", 1e4) }, required: ["from", "to"], run: (a) => M().route(a) },
+        { name: "map_node", description: "Inspect a node and get enabled, schema-checked passport, PG, Kafka, ES, logs or browser tool arguments. Suggestions do not execute. Resolve database ambiguity before querying.", input: { env, id: str("Exact map node id") }, required: ["id"], run: (a) => M().inspect(a) },
+        { name: "map_ui_preview", description: "Navigate to a configured UI node, capture a real screenshot and close its isolated browser session. Returns an inline view; reports browser and cleanup failures.", input: { env, id: str("Exact ui node id from map_search") }, required: ["id"], run: (a) => M().preview(a) },
+        { name: "map_layers", description: "List saved feature/user-flow layers and revisions. Layers survive passport refreshes.", input: { env }, run: (a) => M().layers(a) },
+        { name: "map_save", description: "Save a user-requested feature/flow over existing node ids, labeled user annotations. Updates require expected_revision from map_layers. Max 200 participants/400 relations.", logArgs: ["id", "env", "title"], input: { env, id: str("Stable overlay id: letters/digits/_/.-"), title: str("Feature or user flow title"), description: str("Meaning, scope, request and limitations"), nodes: { type: "array", items: { type: "string" }, maxItems: 200 }, edges: { type: "array", maxItems: 400, items: { type: "object", properties: { from: str("Participant node id"), to: str("Participant node id"), relation: str("Relation name"), evidence: str("Supporting request/source; mark assumptions") }, required: ["from", "to", "relation", "evidence"], additionalProperties: false } }, expected_revision: str("Existing revision; omitted only for a new id") }, required: ["id", "title", "description", "nodes"], run: (a) => M().save(a) }
+      ].map((t) => ({ ...t, group: "map", origin: "built-in", strictInput: true }));
+    };
+  }
+});
+
 // lib/tools-reproduction-runtime.js
 var require_tools_reproduction_runtime = __commonJS({
   "lib/tools-reproduction-runtime.js"(exports2, module2) {
@@ -44607,6 +45201,10 @@ var require_tool_profiles = __commonJS({
     var CORE = ["find", "tool_search", "tool_describe", "tool_execute", "tool_profiles", "tool_contracts", "knowledge_graph", "knowledge_search", "job_cancel", "call_history", "doctor"];
     var DISCOVERY = ["tool_search", "tool_describe", "tool_execute", "tool_profiles"];
     var DIRECT = [
+      "map",
+      "map_search",
+      "map_neighbors",
+      "map_node",
       "context_find",
       "context_open",
       "context_get",
@@ -44672,6 +45270,9 @@ var require_tool_profiles = __commonJS({
       "tool_execute"
     ];
     var TESTER = [
+      "map",
+      "map_search",
+      "map_node",
       "context_find",
       "context_open",
       "context_get",
@@ -44749,6 +45350,7 @@ var require_tool_profiles = __commonJS({
       "tool_execute"
     ];
     var PROFILES = {
+      map: { description: "Microservice map, saved feature flows and bounded graph exploration, with inspection tools and discovery for the rest.", includeCore: false, names: [...DISCOVERY, "map", "map_search", "map_neighbors", "map_path", "map_node", "map_layers", "map_save", "map_ui_preview", "passport", "pg_table", "pg_query", "kafka_topic", "kafka_last", "logs_search", "es_search"] },
       tester: { description: "Testing by name: ready-made checks (service, environment, versions, table, trace, test data capture and reuse), test data and scratch databases, scenarios, API and UI capture, scripts and suites, tests in a workspace; tool_search reaches the rest.", includeCore: false, names: TESTER },
       direct: { description: "Everyday tools by name (databases, indices, topics, logs, repo files and PRs, code, docs); tool_search, tool_describe and tool_execute reach the rest.", includeCore: false, names: DIRECT },
       compact: { description: "Small starting set; discover an exact tool then execute it with validated arguments.", names: CORE },
@@ -46369,7 +46971,7 @@ var require_api_client = __commonJS({
         if (!/^https?:$/.test(target.protocol) || target.username || target.password) throw new Error("browser URL must use http(s) without inline credentials");
       }
       if (["navigate", "navigate_back"].includes(action)) s.seen.clear();
-      return s.browser.call(`browser_${action}`, args);
+      return s.browser.call(`browser_${action}`, args, { includeImages: action === "take_screenshot" });
     }
     async function browserCapture({ session, source } = {}) {
       const s = await sessionGet(session);
@@ -47416,6 +48018,7 @@ var require_tools = __commonJS({
       t.origin = "built-in";
     }
     TOOLS.push(...require_tools_context()({ str, int }));
+    TOOLS.push(...require_tools_map()({ str, int, env }));
     TOOLS.push(...require_tools_dev()({ str, int, env }).map((t) => ({ ...t, origin: "built-in" })));
     TOOLS.push(...require_tools_discovery()({ str, int, registry: () => schemas({ metadata: true }) }).map((t) => ({ ...t, origin: "built-in" })));
     TOOLS.push(...require_tools_knowledge()({ str, int, env }).map((t) => ({ ...t, origin: "built-in" })));
@@ -48779,11 +49382,43 @@ var require_server2 = __commonJS({
       ["GET", "/static/*", false, (req, res, url) => {
         const name = url.pathname.slice("/static/".length);
         const type = { ".css": "text/css", ".js": "text/javascript" }[path2.extname(name)];
-        if (!type || !/^(views\/)?[\w.-]+$/.test(name) || !fs2.existsSync(path2.join(__dirname, "web", name))) return send(res, 404, { error: "not found" });
+        if (!type || !/^(?:views\/|vendor\/ecs-canvas\/)?[\w.-]+$/.test(name) || !fs2.existsSync(path2.join(__dirname, "web", name))) return send(res, 404, { error: "not found" });
         res.writeHead(200, { "content-type": `${type}; charset=utf-8`, "cache-control": "no-cache", ...CORS });
         res.end(fs2.readFileSync(path2.join(__dirname, "web", name)));
       }],
       ["GET", "/logs/*", false, page("logs.html")],
+      ["GET", "/map-preview/*", false, (req, res, url) => {
+        const r = results.load(url.pathname.split("/").pop());
+        if (!r || r.kind !== "map-preview" || !/^image\/(png|jpeg|webp)$/.test(r.image?.mimeType) || !/^[A-Za-z0-9+/]+={0,2}$/.test(r.image?.data)) return send(res, 404, { error: "Screenshot not found" });
+        const title = String(r.title || "Screenshot").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+        res.writeHead(200, { "content-type": "text/html; charset=utf-8", "content-security-policy": "default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'" });
+        res.end(`<html><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{margin:12px;font:13px system-ui;background:#fafafa;color:#222}img{max-width:100%;height:auto}h1{font-size:15px}</style><h1>${title}</h1><p>Captured ${r.capturedAt}</p><img alt="${title}" src="data:${r.image.mimeType};base64,${r.image.data}"><script>const report=()=>{if(parent!==window)parent.postMessage({type:"iframe:height",height:Math.ceil(document.body.getBoundingClientRect().height)+24},"*")};new ResizeObserver(report).observe(document.body);addEventListener("load",report);for(const ms of [500,1500,3000])setTimeout(report,ms);</script></html>`);
+      }],
+      ["GET", "/map/*", false, page("map.html")],
+      ["GET", "/api/map/*", false, async (req, res, url) => {
+        try {
+          const parts = url.pathname.split("/").filter(Boolean), id = parts[2], action = parts[3] || "graph", result = results.load(id);
+          if (!result || result.kind !== "map") return send(res, 404, { error: "Map result not found" }, CORS);
+          const M = require_service_map(), a = { ...result.map };
+          delete a.refresh;
+          if (action === "graph") {
+            if (url.searchParams.has("focus")) a.focus = url.searchParams.get("focus") || void 0;
+            if (url.searchParams.has("libraries")) a.include_libraries = url.searchParams.get("libraries") === "1";
+            const bytes = await M.snapshot(a);
+            res.writeHead(200, { "content-type": "application/vnd.dt.map", "cache-control": "no-store", "x-content-type-options": "nosniff", "x-dt-map-focus": encodeURIComponent(a.focus || (a.layer ? "feature:" + a.layer : "")), "x-dt-map-libraries": a.include_libraries ? "1" : "0", "access-control-expose-headers": "X-DT-Map-Focus, X-DT-Map-Libraries", ...CORS });
+            res.end(bytes);
+          } else if (action === "full") {
+            const g = await M.graph(a.env);
+            res.writeHead(200, { "content-type": "application/vnd.dt.map", "content-disposition": 'attachment; filename="microservices.dtm"', ...CORS });
+            res.end(g.bytes);
+          } else if (action === "node") send(res, 200, await M.inspect({ env: a.env, id: url.searchParams.get("id") }), CORS);
+          else if (action === "neighbors") send(res, 200, await M.neighbors({ env: a.env, id: url.searchParams.get("id"), limit: 30, include_libraries: url.searchParams.get("libraries") === "1" }), CORS);
+          else if (action === "search") send(res, 200, await M.search({ env: a.env, query: url.searchParams.get("q") || "", include_libraries: url.searchParams.get("libraries") === "1", limit: 30 }), CORS);
+          else send(res, 404, { error: "Unknown map action" }, CORS);
+        } catch (e) {
+          send(res, 400, errorPayload(e), CORS);
+        }
+      }],
       ["GET", "/pr/*", false, page("pr.html")],
       ["GET", "/passport/*", false, page("passport.html")],
       ["GET", "/api/passport/*", false, (req, res, url) => {

@@ -244,6 +244,8 @@
 
   <section id="tab-context" hidden>
     <p class="hint">Keep task memory across chats: plans, progress, findings, files and saved tool results. Search by ticket, repository or workspace. No Git repository required.</p>
+    <div class="row" style="margin-bottom:10px"><button id="cxMapOpen">Explore microservice map</button><span class="hint">Select a service or resource to prepare tools; libraries stay hidden until requested.</span></div>
+    <details id="cxMapPanel" hidden><summary id="cxMapSelection">Microservice map</summary><iframe id="cxMapFrame" title="Microservice connections" style="width:100%;height:850px;border:1px solid var(--line);border-radius:8px"></iframe><div id="cxMapActions" class="row" style="padding:10px 0"></div><iframe id="cxMapPreview" title="UI service screenshot" style="width:100%;height:600px;border:1px solid var(--line)" hidden></iframe></details>
     <div id="cxMessage" class="hint" role="status" aria-live="polite"></div>
     <div class="pm">
       <aside class="card pm-side">
@@ -312,6 +314,7 @@
 <script src="/static/ui.js"></script>
 <script src="/static/admin-scripts.js"></script>
 <script src="/static/admin-context.js"></script>
+<script src="/static/admin-map.js"></script>
 <script>
 let S = null, tab = 'index', selectedJob = null, timer = null;
 const api = async (p, body) => {

@@ -262,11 +262,29 @@ const routes = [
   ['GET', '/static/*', false, (req, res, url) => {
     const name = url.pathname.slice('/static/'.length);
     const type = { '.css': 'text/css', '.js': 'text/javascript' }[path.extname(name)];
-    if (!type || !/^(views\/)?[\w.-]+$/.test(name) || !fs.existsSync(path.join(__dirname, 'web', name))) return send(res, 404, { error: 'not found' });
+    if (!type || !/^(?:views\/|vendor\/ecs-canvas\/)?[\w.-]+$/.test(name) || !fs.existsSync(path.join(__dirname, 'web', name))) return send(res, 404, { error: 'not found' });
     res.writeHead(200, { 'content-type': `${type}; charset=utf-8`, 'cache-control': 'no-cache', ...CORS });
     res.end(fs.readFileSync(path.join(__dirname, 'web', name)));
   }],
   ['GET', '/logs/*', false, page('logs.html')],
+  ['GET', '/map-preview/*', false, (req,res,url)=>{const r=results.load(url.pathname.split('/').pop());if(!r||r.kind!=='map-preview'||!/^image\/(png|jpeg|webp)$/.test(r.image?.mimeType)||!/^[A-Za-z0-9+/]+={0,2}$/.test(r.image?.data))return send(res,404,{error:'Screenshot not found'});const title=String(r.title||'Screenshot').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));res.writeHead(200,{'content-type':'text/html; charset=utf-8','content-security-policy':"default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'"});res.end(`<html><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{margin:12px;font:13px system-ui;background:#fafafa;color:#222}img{max-width:100%;height:auto}h1{font-size:15px}</style><h1>${title}</h1><p>Captured ${r.capturedAt}</p><img alt="${title}" src="data:${r.image.mimeType};base64,${r.image.data}"><script>const report=()=>{if(parent!==window)parent.postMessage({type:"iframe:height",height:Math.ceil(document.body.getBoundingClientRect().height)+24},"*")};new ResizeObserver(report).observe(document.body);addEventListener("load",report);for(const ms of [500,1500,3000])setTimeout(report,ms);</script></html>`);}],
+  ['GET', '/map/*', false, page('map.html')],
+  ['GET', '/api/map/*', false, async (req,res,url) => {
+    try {
+      const parts=url.pathname.split('/').filter(Boolean), id=parts[2], action=parts[3]||'graph', result=results.load(id);
+      if(!result||result.kind!=='map') return send(res,404,{error:'Map result not found'},CORS);
+      const M=require('./lib/service-map'), a={...result.map}; delete a.refresh;
+      if(action==='graph') {
+        if(url.searchParams.has('focus')) a.focus=url.searchParams.get('focus')||undefined;
+        if(url.searchParams.has('libraries'))a.include_libraries=url.searchParams.get('libraries')==='1';
+        const bytes=await M.snapshot(a);res.writeHead(200,{'content-type':'application/vnd.dt.map','cache-control':'no-store','x-content-type-options':'nosniff','x-dt-map-focus':encodeURIComponent(a.focus||(a.layer?'feature:'+a.layer:'')),'x-dt-map-libraries':a.include_libraries?'1':'0','access-control-expose-headers':'X-DT-Map-Focus, X-DT-Map-Libraries',...CORS});res.end(bytes);
+      } else if(action==='full'){const g=await M.graph(a.env);res.writeHead(200,{'content-type':'application/vnd.dt.map','content-disposition':'attachment; filename="microservices.dtm"',...CORS});res.end(g.bytes);}
+      else if(action==='node')send(res,200,await M.inspect({env:a.env,id:url.searchParams.get('id')}),CORS);
+      else if(action==='neighbors')send(res,200,await M.neighbors({env:a.env,id:url.searchParams.get('id'),limit:30,include_libraries:url.searchParams.get('libraries')==='1'}),CORS);
+      else if(action==='search')send(res,200,await M.search({env:a.env,query:url.searchParams.get('q')||'',include_libraries:url.searchParams.get('libraries')==='1',limit:30}),CORS);
+      else send(res,404,{error:'Unknown map action'},CORS);
+    }catch(e){send(res,400,errorPayload(e),CORS);}
+  }],
   ['GET', '/pr/*', false, page('pr.html')],
   ['GET', '/passport/*', false, page('passport.html')],
   ['GET', '/api/passport/*', false, (req, res, url) => {

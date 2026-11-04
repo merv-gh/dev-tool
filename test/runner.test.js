@@ -22,6 +22,24 @@ test.after(() => { server.close(); fs.rmSync(home, { recursive: true, force: tru
 
 const post = (p, body, token = 'runner-test-token') => fetch(base + p, { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify(body) });
 
+test('an unresponsive Docker socket probe closes within its timeout', async () => {
+  const net = require('net'), socket = path.join(home, 'docker.sock'), connections = new Set();
+  const silent = net.createServer(s => { connections.add(s); s.on('close', () => connections.delete(s)); });
+  await new Promise(resolve => silent.listen(socket, resolve));
+  const previous = process.env.DOCKER_HOST;
+  process.env.DOCKER_HOST = `unix://${socket}`;
+  try {
+    const start = Date.now(), result = await require('../lib/runner').info();
+    assert.equal(result.docker.ok, false);
+    assert.match(result.docker.error, /timed out/);
+    assert.ok(Date.now() - start < 15000);
+  } finally {
+    if (previous === undefined) delete process.env.DOCKER_HOST; else process.env.DOCKER_HOST = previous;
+    for (const s of connections) s.destroy();
+    await new Promise(resolve => silent.close(resolve));
+  }
+});
+
 test('only with the token, only inside its folders', async () => {
   assert.equal((await post('/exec', { cmd: 'echo', args: ['x'], cwd: path.join(home, 'work', 'ws') }, 'wrong')).status, 401);
   const out = await post('/exec', { cmd: 'echo', args: ['x'], cwd: '/' });
