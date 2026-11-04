@@ -10,6 +10,7 @@
   .chart svg { width: 100%; height: 120px; display: block; }
   .chart .axis { font-size: 10px; fill: var(--muted); }
   .chart .tip { position: absolute; pointer-events: none; background: var(--fg); color: var(--bg); font-size: 11px; padding: 4px 7px; border-radius: 4px; white-space: pre; display: none; z-index: 5; }
+  #services select { max-width:min(300px, calc(100vw - 100px)); }
   .facets { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
   .lines td { white-space: nowrap; }
   table.lines { table-layout: fixed; }
@@ -45,10 +46,10 @@
   <div class="facets" id="levels"></div>
   <div class="facets" id="services"></div>
   <div class="row" style="margin:8px 0">
-    <input class="filter" id="filter" placeholder="Filter lines…  ( / )">
+    <input class="filter" id="filter" aria-label="Filter log lines" placeholder="Filter lines…  ( / )">
     <span class="muted" id="count"></span>
     <span class="spacer"></span>
-    <button id="cpTsv">Copy TSV</button><button id="cpJson">Copy JSON</button><button id="dl">⤓ JSON</button>
+    <details class="dt-more"><summary aria-label="More log actions">…</summary><div class="dt-more-panel"><span class="dt-more-heading">All filtered lines</span><button id="cpTsv">Copy TSV</button><button id="cpJson">Copy JSON</button><hr><button id="dl">Download JSON</button></div></details>
   </div>
   <div class="card scroll"><table class="lines"><colgroup><col style="width:112px"><col style="width:76px"><col style="width:170px"><col><col style="width:120px"></colgroup><thead><tr><th>time</th><th>level</th><th>service</th><th>message</th><th>trace</th></tr></thead><tbody id="rows"></tbody></table></div>
   <div class="row" style="margin-top:8px"><button id="more" style="display:none">Show more</button></div>
@@ -120,14 +121,14 @@ function lanes() {
 
 function facets() {
   const lv = data.levels?.length ? data.levels : Object.entries(lines.reduce((m, l) => (m[l.level || '-'] = (m[l.level || '-'] || 0) + 1, m), {})).map(([key, count]) => ({ key, count }));
-  $('levels').innerHTML = lv.map(l => `<span class="chip click ${sel.level === l.key ? 'on' : ''}" data-level="${esc(l.key)}"><span class="dot" style="background:${color(levelVar(l.key))}"></span>${esc(l.key)} <b>${l.count}</b></span>`).join('');
+  $('levels').innerHTML = lv.map(l => `<button class="chip click ${sel.level === l.key ? 'on' : ''}" aria-pressed="${sel.level === l.key}" data-level="${esc(l.key)}"><span class="dot" style="background:${color(levelVar(l.key))}"></span>${esc(l.key)} <b>${l.count}</b></button>`).join('');
   const sv = data.services?.length ? data.services : Object.entries(lines.reduce((m, l) => (m[l.service || '-'] = (m[l.service || '-'] || 0) + 1, m), {})).map(([key, count]) => ({ key, count })).sort((a, b) => b.count - a.count);
-  $('services').innerHTML = sv.slice(0, embed ? 8 : 25).map(s => `<span class="chip click ${sel.service === s.key ? 'on' : ''}" data-service="${esc(s.key)}">${esc(s.key)} <b>${s.count}</b></span>`).join('');
+  $('services').innerHTML = `<label>Service <select id="service-filter" aria-label="Filter logs by service"><option value="">All services · ${sv.length}</option>${sv.map(s => `<option value="${esc(s.key)}" ${sel.service === s.key ? 'selected' : ''}>${esc(s.key)} · ${s.count}</option>`).join('')}</select></label>`;
 }
 
 function filtered() {
   const q = $('filter').value.trim().toLowerCase();
-  return lines.filter(l => (!sel.level || l.level === sel.level) && (!sel.service || l.service === sel.service) && (!sel.trace || l.trace === sel.trace)
+  return lines.filter(l => (!sel.level || (l.level || '-') === sel.level) && (!sel.service || (l.service || '-') === sel.service) && (!sel.trace || l.trace === sel.trace)
     && (!q || `${l.message} ${l.service} ${l.trace} ${l.level}`.toLowerCase().includes(q)));
 }
 
@@ -149,9 +150,8 @@ function render(reset = true) {
 }
 
 document.addEventListener('click', (e) => {
-  const lvl = e.target.closest('[data-level]'), svc = e.target.closest('[data-service]'), tr = e.target.closest('[data-trace]');
+  const lvl = e.target.closest('[data-level]'), tr = e.target.closest('[data-trace]');
   if (lvl) { sel.level = sel.level === lvl.dataset.level ? null : lvl.dataset.level; facets(); render(); return; }
-  if (svc) { sel.service = sel.service === svc.dataset.service ? null : svc.dataset.service; facets(); render(); return; }
   if (tr) { sel.trace = sel.trace === tr.dataset.trace ? null : tr.dataset.trace; render(); return; }
   const cell = e.target.closest('td.msg');
   if (cell) {
@@ -165,12 +165,13 @@ document.addEventListener('click', (e) => {
   if (e.target.dataset.copysrc) copy(JSON.stringify(lines[e.target.dataset.copysrc].source, null, 2), 'log JSON');
 });
 let ft; $('filter').oninput = () => { clearTimeout(ft); ft = setTimeout(render, 120); };
+$('services').onchange = e => { if (e.target.id === 'service-filter') { sel.service = e.target.value || null; render(); } };
 $('more').onclick = () => render(false);
 const plain = (l) => ({ time: l.time, level: l.level, service: l.service, trace: l.trace, message: l.message });
 $('cpTsv').onclick = () => { const f = filtered(); copy(['time\tlevel\tservice\ttrace\tmessage', ...f.map(l => [l.time, l.level, l.service, l.trace, String(l.message ?? '').replace(/[\t\r\n]+/g, ' ')].join('\t'))].join('\n'), `${f.length} lines as TSV`); };
 $('cpJson').onclick = () => { const f = filtered(); copy(JSON.stringify(f.map(plain), null, 2), `${f.length} lines as JSON`); };
 $('dl').onclick = () => download(`logs-${data.env}-${data.id}.json`, JSON.stringify(filtered().map(l => l.source), null, 2), 'application/json');
-document.addEventListener('keydown', (e) => { if (e.key === '/' && document.activeElement.tagName !== 'INPUT') { e.preventDefault(); $('filter').focus(); } });
+document.addEventListener('keydown', (e) => { if (e.key === '/' && !document.activeElement.closest('input, select, textarea, [contenteditable], .dt-more')) { e.preventDefault(); $('filter').focus(); } });
 
 loadResult().then(d => {
   data = d; lines = d.rows || [];

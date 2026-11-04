@@ -19,6 +19,7 @@
   .query pre { flex: 1; margin: 0; max-height: 96px; overflow: auto; background: var(--soft); padding: 6px 9px; border-radius: 5px; white-space: pre-wrap; word-break: break-word; }
   .bar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding: 8px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
   .bar .sep { width: 1px; height: 20px; background: var(--line); margin: 0 4px; }
+  .paging { display:flex; gap:6px; align-items:center; white-space:nowrap; }
   input, select { font: inherit; padding: 5px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--fg); }
   #filter { width: 260px; max-width: 100%; }
   button { font: inherit; padding: 5px 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--fg); cursor: pointer; white-space: nowrap; }
@@ -83,22 +84,19 @@
   <div class="query" id="qwrap"><pre id="query"></pre><button id="copyq" title="Copy query">Copy</button></div>
 </header>
 <div class="bar">
-  <input id="filter" placeholder="Filter rows…  ( / )" autocomplete="off">
-  <button id="flat" title="Show nested fields as their own columns">Flatten</button>
-  <span class="sep"></span>
-  <button id="prev" title="Previous page (←)">‹</button>
+  <input id="filter" aria-label="Filter rows" placeholder="Filter rows…  ( / )" autocomplete="off">
+  <div class="paging" aria-label="Result pages"><button id="prev" title="Previous page (←)">‹</button>
   <span class="mono" id="page"></span>
-  <button id="next" title="Next page (→)">›</button>
-  <select id="size" title="Rows per page"><option>10</option><option>25</option><option selected>50</option><option>100</option><option>500</option></select>
+  <button id="next" title="Next page (→)">›</button></div>
   <span class="spacer"></span>
-  <span class="muted">Copy</span>
-  <button data-copy="tsv" title="Tab-separated: pastes into Excel / Sheets">TSV</button>
-  <button data-copy="csv">CSV</button>
-  <button data-copy="json">JSON</button>
-  <button data-copy="md" title="Markdown table">MD</button>
-  <span class="sep"></span>
-  <button data-dl="csv">⤓ CSV</button>
-  <button data-dl="json">⤓ JSON</button>
+  <details class="dt-more"><summary aria-label="More table options">…</summary><div class="dt-more-panel">
+    <button id="flat" title="Show nested fields as their own columns" aria-pressed="false" data-default="false" data-keep-open>Flatten nested fields</button>
+    <label>Rows per page <select id="size"><option>10</option><option>25</option><option selected>50</option><option>100</option><option>500</option></select></label>
+    <hr><span class="dt-more-heading">All filtered and sorted rows</span>
+    <button data-copy="tsv" title="Tab-separated: pastes into Excel / Sheets">Copy TSV</button>
+    <button data-copy="csv">Copy CSV</button><button data-copy="json">Copy JSON</button><button data-copy="md">Copy Markdown</button>
+    <hr><button data-dl="csv">Download CSV</button><button data-dl="json">Download JSON</button>
+  </div></details>
 </div>
 <main id="main"></main>
 <aside id="side"><header><strong id="sidetitle"></strong><span class="spacer"></span><button id="sidecopy">Copy</button><button id="sideclose" title="Close (Esc)">✕</button></header><pre id="sidebody"></pre></aside>
@@ -242,13 +240,13 @@ $('filter').oninput = () => { clearTimeout(ft); ft = setTimeout(() => { page = 0
 $('size').onchange = () => { page = 0; render(); };
 $('prev').onclick = () => { page--; render(); };
 $('next').onclick = () => { page++; render(); };
-$('flat').onclick = () => { flat = !flat; $('flat').classList.toggle('on', flat); sortCol = null; build(); };
+$('flat').onclick = () => { flat = !flat; $('flat').classList.toggle('on', flat); $('flat').setAttribute('aria-pressed', String(flat)); sortCol = null; build(); };
 $('copyq').onclick = () => copy(data.query || '', 'query');
 $('sideclose').onclick = () => $('side').classList.remove('open');
 $('sidecopy').onclick = () => copy(sideText, 'value');
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') { $('side').classList.remove('open'); if (document.activeElement === $('filter')) $('filter').blur(); }
-  if (document.activeElement.tagName === 'INPUT') return;
+  if (document.activeElement.closest('input, select, textarea, [contenteditable], .dt-more')) return;
   if (e.key === '/') { e.preventDefault(); $('filter').focus(); }
   if (e.key === 'ArrowRight' && !$('next').disabled) $('next').click();
   if (e.key === 'ArrowLeft' && !$('prev').disabled) $('prev').click();
@@ -282,7 +280,7 @@ async function load() {
   $('query').textContent = data.query || '';
   if (!data.query) $('qwrap').style.display = 'none';
   // ES hits and Kafka payloads are nested; start flattened for ES so fields become columns.
-  flat = data.kind === 'es'; $('flat').classList.toggle('on', flat);
+  flat = data.kind === 'es'; $('flat').classList.toggle('on', flat); $('flat').setAttribute('aria-pressed', String(flat)); $('flat').dispatchEvent(new Event('input', { bubbles: true }));
   build();
   dtInline.mount(document.body, { title: `${data.kind} ${target}`.trim(), summary: `${data.total} rows${data.ms != null ? ` · ${data.ms} ms` : ''}` });
 }

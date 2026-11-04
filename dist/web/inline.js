@@ -1,6 +1,76 @@
 // Shared disclosure and file navigation for sandboxed views and the older result pages.
 // No requests or parent DOM access: embedded views retain their existing sandbox.
 const dtInline = {
+  // Native disclosures remain usable without Popover support. In modern browsers the
+  // panel enters the top layer so scroll containers cannot clip its controls.
+  actions(root = document) {
+    const menus = [...root.querySelectorAll('details.dt-more')];
+    if (!menus.length) return;
+    let spacer;
+    const close = (menu, focus = false) => {
+      menu.open = false;
+      if (focus) menu.querySelector('summary').focus();
+    };
+    const size = () => {
+      if (spacer) spacer.style.height = '0px';
+      let bottom = 0;
+      for (const menu of menus.filter(m => m.open)) {
+        const panel = menu.querySelector('.dt-more-panel');
+        if (typeof panel.showPopover !== 'function' || !panel.matches(':popover-open')) continue;
+        const anchor = menu.querySelector('summary').getBoundingClientRect();
+        const embedded = document.body.classList.contains('embed');
+        panel.style.maxHeight = embedded ? '360px' : `${Math.max(80, innerHeight - 24)}px`;
+        const rect = panel.getBoundingClientRect();
+        const left = Math.max(8, Math.min(anchor.right - rect.width, innerWidth - rect.width - 8));
+        const top = embedded || anchor.bottom + rect.height + 8 <= innerHeight ? anchor.bottom + 6 : Math.max(8, anchor.top - rect.height - 6);
+        panel.style.left = `${left}px`; panel.style.top = `${top}px`;
+        if (embedded) bottom = Math.max(bottom, top + rect.height + scrollY + 8);
+      }
+      if (bottom) {
+        if (!spacer) { spacer = document.createElement('div'); spacer.className = 'dt-more-space'; spacer.setAttribute('aria-hidden', 'true'); document.body.append(spacer); }
+        spacer.style.height = `${Math.max(0, bottom - (document.body.getBoundingClientRect().bottom + scrollY))}px`;
+      }
+    };
+    for (const menu of menus) {
+      const summary = menu.querySelector('summary'), panel = menu.querySelector('.dt-more-panel');
+      const label = summary.getAttribute('aria-label') || 'More options';
+      const update = () => {
+        const active = [...panel.querySelectorAll('[data-default]')].filter(control => String(control.type === 'checkbox' ? control.checked : control.getAttribute('aria-pressed') ?? control.value) !== control.dataset.default).length;
+        summary.dataset.active = active || '';
+        summary.setAttribute('aria-label', label + (active ? ` (${active} active)` : ''));
+        summary.title = summary.getAttribute('aria-label');
+      };
+      panel.addEventListener('change', update);
+      panel.addEventListener('input', update);
+      panel.addEventListener('click', event => {
+        const button = event.target.closest('button, a[href]');
+        if (button && !button.hasAttribute('data-keep-open')) close(menu, true);
+        queueMicrotask(update);
+      });
+      menu.addEventListener('toggle', () => {
+        if (menu.open) for (const other of menus) if (other !== menu && other.open) close(other);
+        if (typeof panel.showPopover === 'function') {
+          panel.setAttribute('popover', 'manual');
+          if (menu.open) panel.showPopover(); else panel.hidePopover();
+          size();
+        }
+      });
+      update();
+    }
+    document.addEventListener('click', event => {
+      for (const menu of menus) if (menu.open && !menu.contains(event.target)) close(menu);
+    });
+    document.addEventListener('keydown', event => {
+      const menu = menus.find(m => m.open);
+      if (menu && event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); close(menu, true); }
+      if (menu && event.key === 'Tab') setTimeout(() => { if (!menu.contains(document.activeElement)) close(menu); }, 0);
+    }, true);
+    window.addEventListener('resize', size);
+    document.addEventListener('scroll', event => {
+      for (const menu of menus) if (menu.open && !menu.querySelector('.dt-more-panel').contains(event.target)) close(menu);
+    }, true);
+  },
+
   describe(view, data, meta = {}) {
     const d = data && typeof data === 'object' ? data : {}, c = d.counts || {};
     const failedCase = (Array.isArray(d.cases) ? d.cases : []).some(k => ['failed', 'error', 'cancelled'].includes(k.status) || k.equal === false);
@@ -52,6 +122,7 @@ const dtInline = {
       if (/^https?:$/.test(location.protocol)) {
         const url = new URL(location.href); url.searchParams.delete('embed');
         const link = document.createElement('a'); link.href = url.href; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.className = 'inline-full'; link.textContent = 'Open full view'; content.prepend(link);
+        const legacyLink = target.querySelector('#openfull'); if (legacyLink) legacyLink.hidden = true;
       }
       shell.addEventListener('toggle', () => window.dispatchEvent(new Event('resize')));
     }
@@ -123,3 +194,4 @@ const dtInline = {
     return { select(path) { const f = entries.find(f => f.path === path); if (!f) return; ancestors(f.path); draw(); select(f); } };
   },
 };
+if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded', () => dtInline.actions());

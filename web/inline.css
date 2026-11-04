@@ -1,4 +1,24 @@
 /* Compact chat results; standalone pages keep their full workspace. */
+/* Shared secondary actions; ordinary buttons and fields keep their native Tab order. */
+details.dt-more { position:relative; flex:none; margin:0; padding:0; border:0; font-size:13px; }
+details.dt-more > summary { display:flex; align-items:center; justify-content:center; gap:5px; min-width:34px; min-height:32px; padding:3px 8px; margin:0; border:1px solid var(--line); border-radius:5px; background:var(--bg); color:var(--fg); font:600 18px/1 ui-sans-serif,system-ui,sans-serif; list-style:none; cursor:pointer; }
+details.dt-more > summary::-webkit-details-marker { display:none; }
+details.dt-more > summary::before { content:none; }
+details.dt-more > summary[data-active]:not([data-active=""])::after { content:attr(data-active); color:var(--accent); font:600 11px/1.4 ui-sans-serif,system-ui,sans-serif; }
+details.dt-more > summary:hover, details.dt-more[open] > summary { border-color:var(--accent); color:var(--accent); }
+.dt-more-panel { width:240px; max-width:calc(100vw - 16px); padding:6px; border:1px solid var(--line); border-radius:7px; background:var(--panel); color:var(--fg); font:13px/1.45 ui-sans-serif,system-ui,sans-serif; overflow:auto; scrollbar-color:var(--muted) var(--soft); }
+.dt-more-panel[popover] { position:fixed; inset:auto; margin:0; box-shadow:0 6px 20px rgba(0,0,0,.12); }
+.dt-more-panel :is(button,a) { display:block; width:100%; text-align:left; white-space:normal; border:0; border-radius:4px; padding:8px 10px; margin:0; background:transparent; color:var(--fg); font:inherit; text-decoration:none; cursor:pointer; }
+.dt-more-panel :is(button,a):hover { background:var(--soft); }
+.dt-more-panel button:disabled { opacity:.45; cursor:default; }
+.dt-more-panel button[aria-pressed=true] { color:var(--accent); background:var(--accent-soft); }
+.dt-more-panel label { display:flex; align-items:center; justify-content:space-between; gap:10px; min-width:0; padding:8px 10px; margin:0; font:inherit; }
+.dt-more-panel select { min-width:0; max-width:145px; font:inherit; }
+.dt-more-panel input[type=checkbox] { width:auto; margin:0; }
+.dt-more-panel .dt-more-heading { display:block; margin:4px 10px; color:var(--muted); font-size:12px; }
+.dt-more-panel hr { border:0; border-top:1px solid var(--line); margin:6px 0; }
+.dt-more :is(summary,button,a,select,input):focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.dt-more-space { flex:none; pointer-events:none; }
 .inline-result { border:1px solid var(--line); border-radius:8px; background:var(--panel); min-width:0; }
 .inline-result > summary { cursor:pointer; padding:10px 12px; font-size:13px; overflow-wrap:anywhere; }
 .inline-title { font-weight:600; }

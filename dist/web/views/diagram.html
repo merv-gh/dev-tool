@@ -9,6 +9,7 @@
   .diagram-tabs [aria-selected="true"] { background:var(--accent-soft); color:var(--accent); border-color:var(--accent); }
   .diagram-tools { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
   .diagram-tools .zoom-level { min-width:44px; text-align:center; font-variant-numeric:tabular-nums; }
+  .diagram-tools > .dt-more { margin-left:auto; }
   .diagram-tools label { display:flex; gap:6px; align-items:center; }
   .diagram-stage { min-height:420px; height:min(64vh,700px); position:relative; overflow:hidden; border:1px solid var(--line); border-radius:8px; background:var(--panel); touch-action:none; cursor:grab; }
   .diagram-stage.dragging { cursor:grabbing; }
@@ -36,7 +37,7 @@
   .diagram-legend i { display:block; width:24px; height:0; border-top:2px solid var(--muted); }
   .diagram-legend .stated { border-top-style:dashed; }
   .diagram-legend .conflict { border-top-color:var(--bad); }
-  .diagram details { border-top:1px solid var(--line); padding-top:10px; }
+  .diagram details:not(.dt-more) { border-top:1px solid var(--line); padding-top:10px; }
   .diagram summary { cursor:pointer; margin-bottom:8px; }
   .diagram-source { max-height:340px; }
   .diagram-provenance { margin:0; padding-left:20px; max-height:240px; overflow:auto; font-size:12px; }
@@ -58,8 +59,10 @@
   <div class="diagram-tools" aria-label="Diagram controls">
     <button type="button" id="diagram-out" aria-label="Zoom out">−</button><output class="zoom-level" id="diagram-zoom">100%</output><button type="button" id="diagram-in" aria-label="Zoom in">+</button><button type="button" id="diagram-fit">Fit</button>
     <span class="spacer"></span>
-    <label>Theme <select id="diagram-theme"><option value="auto">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
-    <button type="button" id="diagram-download-svg" disabled>Download SVG</button><button type="button" id="diagram-download-source">Download source</button>
+    <details class="dt-more"><summary aria-label="More diagram options">…</summary><div class="dt-more-panel">
+      <label>Theme <select id="diagram-theme"><option value="auto">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+      <hr><button type="button" id="diagram-download-svg" disabled>Download SVG</button><button type="button" id="diagram-download-source">Download source</button>
+    </div></details>
   </div>
   <div class="diagram-stage" id="diagram-stage" tabindex="0" role="tabpanel" aria-label="Architecture diagram. Drag to pan. Use plus and minus to zoom, zero to fit, or arrow keys to pan."><div id="diagram-canvas" class="diagram-transform"></div><div id="diagram-message" class="diagram-message" role="status">Preparing diagram…</div></div>
   <div class="diagram-legend" aria-label="Provenance legend"><span><i></i>Verified in code</span><span><i class="stated"></i>Docs only</span><span><i class="conflict"></i>Conflict</span></div>

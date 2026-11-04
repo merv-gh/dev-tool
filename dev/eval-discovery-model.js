@@ -112,7 +112,11 @@ async function run(options) {
     }
     const scripted = options['scripted-endpoint'] || model === 'demo-model';
     return { version: 1, kind: scripted ? 'scripted-endpoint-contract-check' : 'model-discovery-evaluation', observedAt: new Date().toISOString(), provenance: { endpoint, requestedModel: model, returnedModels: [...returnedModels], advertised, modelSizeVerified: false, corpusSha256: hash(corpusText), schemaSha256: hash(JSON.stringify(schemas)), profile: options.profile, ranker: options.discoveryRanker, schemaCount: schemas.length, schemaUtf8Bytes: Buffer.byteLength(JSON.stringify(schemas)), runtime: process.version }, budget: { maxTurns: options.maxTurns, maxCalls: options.maxCalls, maxContextBytes: options.maxContextBytes, maxOutputTokens: options.maxOutputTokens, maxDurationMs: options.maxDurationMs, requestedCases: options.limit, exhausted: performance.now() >= deadline }, usage, estimatedCostUsd: usage.reportedCalls && options.inputPrice !== undefined && options.outputPrice !== undefined ? (usage.prompt_tokens * options.inputPrice + usage.completion_tokens * options.outputPrice) / 1e6 : null, metrics: { cases: samples.length, meanSelectionRecall: samples.length ? samples.reduce((n, c) => n + c.recall, 0) / samples.length : null, invalidCalls: samples.reduce((n, s) => n + s.calls.filter(c => !c.ok).length, 0) }, limits: 'Only discovery/schema selection is measured. No code execution, fixture/task answer, live system access, model size verification or production certification. Token usage is provider-reported; cost is estimated only with explicit prices. Scripted endpoints are never model evidence.', samples };
-  } finally { fs.rmSync(home, { recursive: true, force: true }); }
+  } finally {
+    await require('../lib/isolate').stop();
+    await require('../lib/state-store').close();
+    fs.rmSync(home, { recursive: true, force: true });
+  }
 }
 if (require.main === module) Promise.resolve().then(() => run(args(process.argv.slice(2)))).then(r => process.stdout.write(JSON.stringify(r, null, 2) + '\n')).catch(e => { console.error(e.message); process.exitCode = 1; });
 module.exports = { args, validateEndpoint, run };
