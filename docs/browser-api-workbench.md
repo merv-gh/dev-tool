@@ -63,3 +63,38 @@ The stable boundaries are [exchange v1](../schemas/api-exchange.v1.schema.json),
 A faster-language capture service, a new network inspector, remote evidence store or a different graph/RAG backend can emit these JSON contracts without changing the saved-request format or collection runner. Preserve version numbers, unknown/ambiguous/gap semantics, safe log policies and credential boundaries. Future incompatible semantics require a new version, rather than reinterpreting old evidence.
 
 Verification: `node --test test/api-client.test.js test/scripts.test.js test/collections.test.js`. Tests use actual local HTTP, a fake streamable Playwright MCP server, and executed fixed capture instrumentation against a fake Playwright page. They cover capture ordering/overflow/body omissions, method/status/headers/timing, handler ambiguity, credential removal, URL parameter encoding, replay allowlists/redirects/truncation, script collection hooks and source provenance. The opt-in real-browser regression is `DT_TEST_BROWSER_MCP=http://127.0.0.1:<port>/mcp node --test test/api-client.live.test.js`. It creates a disposable local page and API and requires Docker Desktop's `host.docker.internal` (or `DT_TEST_BROWSER_HOST`). Customer browser authentication remains environment-specific.
+
+## Routes, parameters and optional authentication
+
+Open **API explorer** in Admin, choose a service route and select **Open request**.
+The same action is available on HTTP passport ports, passport endpoints and
+captured exchanges. The explorer provides route search, a service base URL,
+editable path parameters, body/headers and a response inspector. **Send** executes
+the request; selecting or preparing a route only edits the draft.
+
+Optional named bearer profiles resolve `.env` references on the server:
+
+```json
+{
+  "api": {
+    "authProfiles": {
+      "orders-dev": {
+        "label": "Orders · development",
+        "url": "https://orders.dev.example/api",
+        "bearerToken": "${DEV_API_BEARER_TOKEN}",
+        "autoPrefill": false
+      }
+    }
+  },
+  "scripts": {"http": {"allow": ["https://orders.dev.example/api"]}}
+}
+```
+
+Set `DEV_API_BEARER_TOKEN` in `.env`. The explorer shows profile labels and matching
+URL scopes; token values are never returned to the browser or model. Choose
+**No authentication** or a matching profile. Set `autoPrefill: true` to select that
+profile automatically for matching requests. A profile applies only to its exact
+origin and path prefix, alongside the existing HTTP allowlist. Redirects are not
+followed. Captured headers and echoed values are sanitized. Profiles apply to
+explicit explorer replays; saved scripts retain their existing parameter-based
+authentication contract.

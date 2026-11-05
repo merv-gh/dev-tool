@@ -1,9 +1,12 @@
 <!-- {"description": "An array of objects as a table (DATA: rows, or { rows })", "sample": [{"id": 1001, "status": "paid", "total": 129.9}, {"id": 1002, "status": "new", "total": 15}]} -->
-<div class="vhead"><h1 data-title></h1><span class="muted" id="info"></span></div>
+<div class="vhead"><h1 data-title></h1><span class="muted" id="info" role="status"></span><span class="spacer"></span><label class="sr-only" for="row-search">Find rows</label><input id="row-search" type="search" placeholder="Find rows"><details class="dt-more"><summary aria-label="More table options">…</summary><div class="dt-more-panel"><button id="export-json">Download visible JSON</button><button id="export-csv">Download visible CSV</button></div></details></div>
 <div id="t"></div>
 <script>
   const rows = Array.isArray(DATA) ? DATA : DATA.rows || [];
   dt.title();
-  dt.$('#info').textContent = `${rows.length} rows`;
-  dt.table(dt.$('#t'), rows);
+  let visible=rows;
+  function render(){const q=dt.$('#row-search').value.toLowerCase();visible=rows.filter(row=>!q||JSON.stringify(row).toLowerCase().includes(q));dt.$('#info').textContent=`${Math.min(2000,visible.length)} shown · ${visible.length} matching · ${rows.length} total`;dt.table(dt.$('#t'),visible);}
+  let timer;dt.$('#row-search').oninput=()=>{clearTimeout(timer);timer=setTimeout(render,120);};
+  function download(format){const cols=[...new Set(visible.flatMap(row=>Object.keys(row)))],quote=value=>'"'+String(value??'').replaceAll('"','""')+'"',content=format==='json'?JSON.stringify(visible,null,2):[cols.map(quote).join(','),...visible.map(row=>cols.map(c=>quote(typeof row[c]==='object'?JSON.stringify(row[c]):row[c])).join(','))].join('\r\n'),a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type:format==='json'?'application/json':'text/csv'}));a.download='visible-rows.'+format;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+  dt.$('#export-json').onclick=()=>download('json');dt.$('#export-csv').onclick=()=>download('csv');render();
 </script>

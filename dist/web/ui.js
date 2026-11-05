@@ -7,8 +7,8 @@ if (embed) document.body.classList.add('embed');
 
 function toast(msg) {
   let t = document.querySelector('.toast');
-  if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); }
-  t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 1300);
+  if (!t) { t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role','status'); t.setAttribute('aria-live','polite'); document.body.appendChild(t); }
+  t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 5000);
 }
 async function copy(text, what) {
   try { await navigator.clipboard.writeText(text); }
@@ -42,3 +42,7 @@ function fail(e) { document.querySelector('.wrap').innerHTML = `<div class="empt
 const fmtTime = (t, ms = true) => { const d = new Date(t); return isNaN(d) ? esc(t) : d.toLocaleTimeString([], { hour12: false }) + (ms ? '.' + String(d.getMilliseconds()).padStart(3, '0') : ''); };
 const fmtDate = (t) => { const d = new Date(t); return isNaN(d) ? esc(t) : d.toLocaleString([], { hour12: false }); };
 const levelVar = (l) => /ERR|FATAL|SEVERE/.test(l || '') ? 'error' : /WARN/.test(l || '') ? 'warn' : /INFO/.test(l || '') ? 'info' : /DEBUG|TRACE/.test(l || '') ? 'debug' : 'other';
+
+// Preserve keyboard selection when a result redraw replaces its focused button.
+function dtKeepKeyboardFocus(root=document){let previous=null;root.addEventListener('focusin',e=>{const n=e.target;if(n.matches('button,a,[role=button],[tabindex]'))previous={node:n,id:n.id,data:JSON.stringify(n.dataset),label:n.getAttribute('aria-label'),text:n.textContent};});new MutationObserver(()=>{if(!previous||previous.node.isConnected||document.activeElement!==document.body)return;const nodes=[...root.querySelectorAll('button,a,[role=button],[tabindex]')],n=nodes.find(n=>previous.id?n.id===previous.id:previous.data!=='{}'?JSON.stringify(n.dataset)===previous.data:previous.label?n.getAttribute('aria-label')===previous.label:n.textContent===previous.text);if(n){n.focus({preventScroll:true});previous.node=n;}}).observe(root===document?document.body:root,{subtree:true,childList:true});}
+document.addEventListener('DOMContentLoaded',()=>dtKeepKeyboardFocus());

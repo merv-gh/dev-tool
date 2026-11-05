@@ -6,3 +6,5 @@
 
 /* Host typography keeps prefix headings legible at the readable canvas scale. */
 #map-canvas .container-label{font:600 15px/1.4 system-ui,sans-serif;text-transform:none;letter-spacing:normal;white-space:normal;max-width:calc(100% - 24px);padding:4px 6px}#map-canvas .container-resize{display:none}
+
+.map-port-link{display:block;margin:14px 0;font-weight:600}.map-detail h2{font-size:18px!important;letter-spacing:0;text-transform:none}.map-detail h3{font-size:14px;margin:20px 0 10px}.map-detail>p{overflow-wrap:anywhere}.map-evidence{max-width:100ch}.map-action{border-radius:7px}.map-stage{border-radius:12px}#map-call-form .tool-fields{grid-template-columns:minmax(0,1fr)}

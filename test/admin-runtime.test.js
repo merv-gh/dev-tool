@@ -60,7 +60,7 @@ test('cancellation and code results expose incomplete outcomes and only embed re
   h.run("runtimeViewMessage({source:$('rtCodeView').contentWindow,data:{type:'iframe:height',height:90}})"); assert.equal(h.$('rtCodeView').style.height, '90px');
   h.run("runtimeViewMessage({source:{},data:{type:'iframe:height',height:900}})"); assert.equal(h.$('rtCodeView').style.height, '90px');
 });
-test('code cell visualizations collapse successful transient output and expose errors, cursors and ownership', () => {
+test('standalone code cell views expose output, returns, errors, cursors and ownership', () => {
   const html = fs.readFileSync(path.join(__dirname, '../web/views/code-cell.html'), 'utf8'), script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
   function render(data) {
     const elements = new Map(), $ = selector => { if (!elements.has(selector)) elements.set(selector, { textContent: '', innerHTML: '', hidden: true }); return elements.get(selector); };
@@ -68,7 +68,7 @@ test('code cell visualizations collapse successful transient output and expose e
     vm.runInNewContext(script, { DATA: data, dt }); return $;
   }
   const done = render({ id: 'cell-1', executionId: 'execution-1', owner: { principalId: 'alice', storyId: 'CHAT-1' }, state: 'done', engine: 'node', cursor: 2, nextCursor: 3, output: [{ cursor: 3, kind: 'text', text: '<script>bad()</script>' }], result: { hasReturn: true, returned: 7 } });
-  assert.equal(done('#cc-result').open, false); assert.match(done('#cc-facts').innerHTML, /CHAT-1/); assert.match(done('#cc-output').innerHTML, /&lt;script&gt;/); assert.equal(done('#cc-return-value').value, 7); assert.match(done('#cc-next').textContent, /prior cursor/);
+  assert.equal(done('#cc-result').open, true); assert.equal(done('#cc-return').open, true); assert.match(done('#cc-facts').innerHTML, /CHAT-1/); assert.match(done('#cc-output').innerHTML, /&lt;script&gt;/); assert.equal(done('#cc-return-value').value, 7); assert.match(done('#cc-next').textContent, /prior cursor/);
   const failed = render({ id: 'cell-2', state: 'failed', result: { error: 'tool rejected' } }); assert.equal(failed('#cc-result').open, true); assert.equal(failed('#cc-error').textContent, 'tool rejected');
   const active = render({ id: 'cell-3', state: 'draining' }); assert.equal(active('#cc-notice').hidden, false); assert.match(active('#cc-next').textContent, /does not restart/);
 });

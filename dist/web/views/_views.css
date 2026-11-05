@@ -26,3 +26,5 @@ table.diff td.ln { color: var(--muted); text-align: right; width: 1%; white-spac
 table.diff tr.del td.tx { background: var(--bad-bg); } table.diff tr.add td.tx { background: var(--good-bg); }
 table.diff tr.del td.sg { color: var(--bad); } table.diff tr.add td.sg { color: var(--good); }
 table.diff tr.gap td { background: var(--soft); color: var(--muted); text-align: center; }
+
+.table-sort{padding:0;min-height:28px;background:transparent;border:0;font-weight:600;text-align:left;color:inherit}.table-sort:hover{color:var(--accent)}[aria-sort]{color:var(--accent)}.vhead{gap:10px;row-gap:10px}.vhead h1{font-size:18px;letter-spacing:-.015em}.vhead input[type=search]{max-width:230px;min-width:0}details>summary{min-height:28px;align-content:center}.sm-path>summary,.pp-port>summary{min-height:40px}.sm-note,.pp-note{line-height:1.65}

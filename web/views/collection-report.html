@@ -59,6 +59,7 @@
   function draw() {
     const query = dt.$('#cr-search').value.trim().toLowerCase(), status = dt.$('#cr-filter').value;
     const shown = cases.filter(k => (!query || `${k.id} ${(k.tags || []).join(' ')}`.toLowerCase().includes(query)) && (status === 'all' || status === 'failed' ? status === 'all' || bad(k) : k.status === status));
+    if(selected&&!shown.includes(selected)){selected=shown[0];detail();}
     dt.$('#cr-cases').innerHTML = shown.map(k => `<button class="cr-case" data-index="${cases.indexOf(k)}" aria-current="${selected === k}"><span class="${dt.esc(k.status)}">${dt.esc(k.status)} · ${k.ms || 0} ms</span><b>${dt.esc(k.script.split('/').pop())}</b><small>${dt.esc(k.id)}${Object.keys(k.matrix || {}).length ? ` · ${dt.esc(JSON.stringify(k.matrix))}` : ''}</small></button>`).join('') || '<p class="cr-empty">No cases match this filter.</p>';
     dt.$('#cr-cases').querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => { selected = cases[Number(btn.dataset.index)]; draw(); detail(); }));
   }

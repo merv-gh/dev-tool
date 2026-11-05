@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="/static/ui.css">
 <style>
   .flow { padding: 6px; margin: 10px 0; }
-  .flow svg { width: 100%; display: block; }
+  .flow { overflow:auto; } .flow svg { width:100%; min-width:900px; display:block; }
   .flow .lbl { font-size: 12px; fill: var(--fg); }
   .flow .cap { font-size: 10px; fill: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
   .flow .node { cursor: pointer; }
@@ -25,7 +25,7 @@
   details.acc-sec[open] > summary h2::before { content: '▾'; }
   .add { color: var(--good); } .rem { color: var(--lv-error); }
 </style>
-<link rel="stylesheet" href="/static/inline.css">
+<link rel="stylesheet" href="/static/inline.css"><link rel="stylesheet" href="/static/port-editor.css">
 <script src="/static/inline.js"></script>
 </head>
 <body>
@@ -35,15 +35,17 @@
     <h1 id="title"></h1>
     <span class="muted" id="meta"></span>
     <span class="spacer"></span>
+    <button id="portsGraphEdit" class="hide-embed" hidden>Edit boundary graph</button>
     <a id="portsAdmin" target="_blank" rel="noopener">Inspect ports & semantic paths</a>
-    <input class="filter hide-embed" id="filter" placeholder="Filter everything…  ( / )">
+    <input class="filter hide-embed" id="filter" aria-label="Filter passport details" placeholder="Filter everything…  ( / )">
     <a id="openfull" target="_blank" rel="noopener" class="only-embed">Open full view ↗</a>
   </div>
   <div class="row" id="chips"></div>
   <div class="card flow" id="flow"></div>
+  <section id="passportPortWorkspace" hidden><div id="passportPorts"></div></section>
   <div id="sections"></div>
 </div>
-<script src="/static/ui.js"></script>
+<script src="/static/ui.js"></script><script src="/static/port-editor.js"></script>
 <script>
 let p;
 const service = decodeURIComponent(location.pathname.split('/').filter(Boolean)[1]);
@@ -93,7 +95,7 @@ function flow() {
   const node = (x, y, w, n, anchor) => {
     const max = Math.floor((w - 28) / 6.6);
     const t = String(n.label).length > max ? String(n.label).slice(0, max - 1) + '…' : n.label;
-    return `<g class="node" data-go="${n.go}"><rect x="${x}" y="${y - 10}" width="${w}" height="20" rx="10" fill="var(--panel)" stroke="${n.bad ? 'var(--lv-error)' : 'var(--line)'}"/><circle cx="${x + 10}" cy="${y}" r="4" fill="${COLORS[n.kind]}"/><text class="lbl" x="${x + 20}" y="${y + 4}"${n.more ? ' style="fill:var(--muted)"' : ''}>${esc(t)}<title>${esc(n.label)}</title></text></g>`;
+    return `<g class="node" role="button" tabindex="0" data-go="${n.go}"><rect x="${x}" y="${y - 10}" width="${w}" height="20" rx="10" fill="var(--panel)" stroke="${n.bad ? 'var(--lv-error)' : 'var(--line)'}"/><circle cx="${x + 10}" cy="${y}" r="4" fill="${COLORS[n.kind]}"/><text class="lbl" x="${x + 20}" y="${y + 4}"${n.more ? ' style="fill:var(--muted)"' : ''}>${esc(t)}<title>${esc(n.label)}</title></text></g>`;
   };
   const curve = (x1, y1, x2, y2, c) => `<path d="M${x1},${y1} C${(x1 + x2) / 2},${y1} ${(x1 + x2) / 2},${y2} ${x2},${y2}" fill="none" stroke="${c}" stroke-opacity=".45" stroke-width="1.5"/>`;
   left.forEach((n, i) => { const y = topH + (mid - left.length * rowH) / 2 + i * rowH + rowH / 2; s += curve(20 + colW, y, cx - 110, cy, COLORS[n.kind]) + node(20, y, colW, n); });
@@ -108,7 +110,7 @@ function flow() {
   libs.forEach((n, i) => { const x = 20 + i * (lw + 8); s += node(x, 18, lw, n); });
   if (libs.length) s += `<text class="cap" x="20" y="6">internal libraries</text>`;
   s += `<text class="cap" x="20" y="${topH - 2}">in</text><text class="cap" x="${W - 20 - colW}" y="${topH - 2}">out</text>`;
-  s += `<g class="node" data-go="top"><rect x="${cx - 110}" y="${cy - 22}" width="220" height="44" rx="8" fill="var(--accent-soft)" stroke="var(--accent)"/><text class="lbl" x="${cx}" y="${cy - 3}" text-anchor="middle" style="font-weight:600">${esc(p.service)}</text><text class="cap" x="${cx}" y="${cy + 13}" text-anchor="middle">${esc(p.repo.sha.slice(0, 10))} · boot ${esc(p.app.springBoot || '?')}</text></g>`;
+  s += `<g class="node" role="button" tabindex="0" data-go="top"><rect x="${cx - 110}" y="${cy - 22}" width="220" height="44" rx="8" fill="var(--accent-soft)" stroke="var(--accent)"/><text class="lbl" x="${cx}" y="${cy - 3}" text-anchor="middle" style="font-weight:600">${esc(p.service)}</text><text class="cap" x="${cx}" y="${cy + 13}" text-anchor="middle">${esc(p.repo.sha.slice(0, 10))} · boot ${esc(p.app.springBoot || '?')}</text></g>`;
   $('flow').innerHTML = `<svg viewBox="0 -12 ${W} ${H + 12}">${s}</svg>`;
 }
 
@@ -119,9 +121,10 @@ function section(id, title, rows, head, cell) {
 }
 
 function render() {
+  p.app ||= {}; p.http ||= []; p.libraries ||= []; p.dependencies ||= {internal:[],external:[]}; p.config ||= {files:[],unresolved:[]}; p.db ||= {datasources:[]}; p.db.datasources ||= [];
   const e = p.effective;
   $('title').textContent = p.service;
-  $('portsAdmin').href='/admin#semantic?'+new URLSearchParams({service:p.service,...(p.portAdjustments?.identity?.env?{env:p.portAdjustments.identity.env}:p.env?{env:p.env}:{}),repo:p.repo.project+'/'+p.repo.repo,revision:p.repo.sha}).toString();
+  $('portsAdmin').href='/admin#semantic?'+new URLSearchParams({service:p.service,...(p.portAdjustments?.identity?.env?{env:p.portAdjustments.identity.env}:p.env?{env:p.env}:{}),repo:p.repo.project+'/'+p.repo.repo,revision:p.repo.sha,...(qs.get('story')?{story:qs.get('story')}:{})}).toString();
   dtInline.mount(document.querySelector('.wrap'), { title: p.service, summary: 'Service passport' });
   const bbRepo = p.bitbucketUrl ? `${p.bitbucketUrl}/projects/${p.repo.project}/repos/${p.repo.repo}/browse?at=${p.repo.sha}` : null;
   $('meta').innerHTML = [bbRepo ? `<a href="${esc(bbRepo)}" target="_blank" rel="noopener">${esc(p.repo.project)}/${esc(p.repo.repo)}</a>` : esc(`${p.repo.project}/${p.repo.repo}`),
@@ -141,8 +144,8 @@ function render() {
     f => [`<span class="mono">${esc(f.entry)}</span>`, `<span class="muted">${f.via.map(v => esc(v.split(' ')[0])).join(' → ')}</span>`,
       Object.entries(f.out || {}).map(([k, v]) => v.map(x => `<span class="acc">${esc(k)} ${esc(x.type ? `${x.type}.${x.call}` : x.topic || x.call || (x.table ? `${x.table} ${x.access}` : '') || x.function || x.index || '')}</span>`).join('')).join(''),
       `<span class="muted">${(f.mocks || []).map(m => esc(m.split(':')[0])).join(', ')}</span>`]));
-  S.push(section('endpoints', 'HTTP endpoints', uniq(e.endpoints, x => x.method + x.path).sort((a, b) => a.path.localeCompare(b.path)), ['method', 'path', 'handler', 'where'],
-    x => [`<span class="pill ${esc(x.method)}">${esc(x.method)}</span>`, `<span class="mono">${esc(x.path)}</span>`, `<span class="mono">${esc(x.handler)}</span>${src(x)}`, loc(x)]));
+  S.push(section('endpoints', 'HTTP endpoints', uniq(e.endpoints, x => x.method + x.path).sort((a, b) => a.path.localeCompare(b.path)), ['method', 'path', 'handler', 'where', 'request'],
+    x => [`<span class="pill ${esc(x.method)}">${esc(x.method)}</span>`, `<span class="mono">${esc(x.path)}</span>`, `<span class="mono">${esc(x.handler)}</span>${src(x)}`, loc(x), `<a href="/api-client?${esc(new URLSearchParams({method:x.method||'GET',path:x.path,service:p.service,host:x.host||'',...(qs.get('story')?{story:qs.get('story')}:{})}).toString())}" target="_blank" rel="noopener">Open request</a>`]));
   S.push(section('consumes', 'Kafka · consumes', e.consumes, ['topic', 'group', 'handler', 'via', 'where'],
     x => [`<span class="mono">${esc(x.topic)}</span>`, `<span class="mono">${esc(x.group || '')}</span>`, `<span class="mono">${esc(x.handler || x.binding || '')}</span>${src(x)}`, esc(x.via), loc(x)]));
   S.push(section('produces', 'Kafka · produces', e.produces, ['topic', 'via', 'where'],
@@ -180,6 +183,7 @@ document.addEventListener('click', (ev) => {
   const el = n.dataset.go === 'top' ? document.body : document.getElementById(`sec-${n.dataset.go}`) || document.getElementById(`sec-${n.dataset.go}-detail`);
   if (el) { el.querySelectorAll('details.acc-sec').forEach(d => { d.open = true; }); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 });
+document.addEventListener('keydown', e=>{if(['Enter',' '].includes(e.key)&&e.target.matches('[data-go]')){e.preventDefault();e.target.dispatchEvent(new MouseEvent('click',{bubbles:true}));}});
 let ft; $('filter').oninput = () => { clearTimeout(ft); ft = setTimeout(() => {
   const q = $('filter').value.trim().toLowerCase();
   document.querySelectorAll('#sections tbody tr').forEach(tr => { tr.style.display = !q || tr.textContent.toLowerCase().includes(q) ? '' : 'none'; });
@@ -188,9 +192,19 @@ let ft; $('filter').oninput = () => { clearTimeout(ft); ft = setTimeout(() => {
 }, 120); };
 document.addEventListener('keydown', (e) => { if (e.key === '/' && document.activeElement.tagName !== 'INPUT') { e.preventDefault(); $('filter').focus(); } });
 
-fetch(`/api/passport/${encodeURIComponent(service)}?t=${encodeURIComponent(qs.get('t') || '')}${qs.get('env')?'&env='+encodeURIComponent(qs.get('env')):''}`)
+
+async function passportEditing(){
+ const button=$('portsGraphEdit');if(embed)return;let editor;window.addEventListener('beforeunload',e=>{if(editor?.dirty()||editor?.pending()){e.preventDefault();e.returnValue='';}});
+ try{const response=await fetch('/api/tools');if(!response.ok)return;const tools=await response.json();if(!tools.some(t=>t.name==='passport_adjust'))return;button.hidden=false;
+ button.onclick=()=>{const panel=$('passportPortWorkspace');if(editor?.pending())return toast('Wait for the port correction response.');if(!panel.hidden&&editor?.dirty()&&!confirm('Discard the unsaved port draft?'))return;panel.hidden=!panel.hidden;button.setAttribute('aria-expanded',String(!panel.hidden));if(panel.hidden)return;
+ const identity={service:p.service,env:qs.get('env')||p.env||null,repo:p.repo.project+'/'+p.repo.repo,revision:p.repo.sha};
+ editor=dtPortEditor.mount($('passportPorts'),{identity,story:qs.get('story'),selectedPort:qs.get('port'),call:async(name,args)=>{const r=await fetch('/api/tool/'+name,{method:'POST',headers:{'content-type':'application/json',...(qs.get('story')?{'x-dt-story':qs.get('story')}:{})},body:JSON.stringify(args)}),value=await r.json();if(!r.ok||value.error)throw Error(value.error||'Request failed');return value.result;},onSaved:()=>toast('Port correction saved. Reload the passport to refresh its summary.')});panel.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth',block:'start'});};if(qs.has('port'))button.click();
+ }catch{}
+}
+
+fetch(`/api/passport/${encodeURIComponent(service)}?t=${encodeURIComponent(qs.get('t') || '')}${qs.get('env')?'&env='+encodeURIComponent(qs.get('env')):''}`,{headers:qs.get('story')?{'x-dt-story':qs.get('story')}:{}})
   .then(r => r.ok ? r.json() : r.json().then(j => Promise.reject(new Error(j.error))))
-  .then(d => { p = d; render(); }).catch(fail);
+  .then(d => { p = d; render(); passportEditing(); }).catch(fail);
 </script>
 </body>
 </html>

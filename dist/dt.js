@@ -5364,11 +5364,21 @@ var require_overrides = __commonJS({
         const operations = new Map((current?.operations || []).map((operation) => [operation.port_id, operation]));
         const author = require_access().owner(), at = (/* @__PURE__ */ new Date()).toISOString(), changes = [];
         for (const input of inputs) {
-          if (!input || !["add", "correct", "disable"].includes(input.action)) P.invalid("Port action must be add, correct, or disable");
+          if (!input || !["add", "correct", "disable", "restore", "remove"].includes(input.action)) P.invalid("Port action must be add, correct, disable, restore, or remove");
           const provenance = { origin: "manual", status: "declared", author: { principalId: author.principalId, storyId: author.storyId }, reason, at };
           const id = input.action === "add" ? input.port?.id || `manual:${crypto.randomUUID()}` : P.text(input.port_id, "port_id", 160, false);
           if (input.action === "add" && known.has(id)) conflict(`Port ${id} exists; use correct`);
           if (input.action !== "add" && !known.has(id)) P.invalid(`Unknown port ${id}; reload semantic_ports`);
+          if (["restore", "remove"].includes(input.action)) {
+            const detected = visible.detected.find((port2) => port2.id === id);
+            if (input.action === "remove" && detected) P.invalid("Detected ports must be hidden, not deleted");
+            if (input.action === "restore" && !detected) P.invalid("Only detected ports have an original detection to restore");
+            operations.delete(id);
+            if (detected) known.set(id, detected);
+            else known.delete(id);
+            changes.push({ action: input.action, port_id: id });
+            continue;
+          }
           const port = input.action === "disable" ? void 0 : P.normalize({ ...input.port, id }, initial.identity, provenance);
           const operation = { action: input.action, port_id: id, ...port ? { port } : input.action === "disable" ? { port: known.get(id) } : {}, ...input.action === "correct" ? { detected: known.get(id)?.detected || known.get(id) } : {}, provenance };
           operations.set(id, operation);
@@ -20885,7 +20895,7 @@ var require_present = __commonJS({
         graph: p.graph,
         libraries: (p.libraries || []).map(({ artifactId, version, repo, ref, sha, exactVersion, resolution, note, error }) => ({ artifactId, version, repo, ref, sha, exactVersion, resolution, note, error })),
         flows: Array.isArray(p.flows) ? p.flows.map((f) => ({ entry: f.entry, via: (f.via || []).map((v) => v.split(" ")[0]).join(" -> "), out: Object.fromEntries(Object.entries(f.out || {}).map(([k, v]) => [k, v.map((x) => x.type ? `${x.kind} ${x.type}.${x.call}` : x.topic || x.call || x.table && `${x.table} ${x.access}` || x.function || x.index)])), mocks: (f.mocks || []).map((m) => m.split(":")[0]) })) : p.flows,
-        view: `${R.publicUrl()}/passport/${encodeURIComponent(p.service)}?t=${R.sign(`passport:${p.service}`)}`
+        view: `${R.publicUrl()}/passport/${encodeURIComponent(p.service)}?t=${R.sign(`passport:${p.service}`)}&story=${encodeURIComponent(require_access().owner().storyId)}`
       };
     };
   }
@@ -42788,7 +42798,7 @@ ${value.summary || ""}
       } catch (e) {
         saveError = e.message;
       }
-      return { id: a.id, ok: !error, ...error ? { error: record.error } : {}, saved: saved?.path || null, ...saveError ? { saveError, guidance: "The tool ran but capture failed. Do not rerun a state-changing call just to save it." } : {}, preview: preview.slice(0, 24e3), truncated: preview.length > 24e3 };
+      return { id: a.id, ok: !error, ...error ? { error: record.error } : {}, saved: saved?.path || null, ...saveError ? { saveError, guidance: "The tool ran but capture failed. Do not rerun a state-changing call just to save it." } : {}, ...typeof record.result?.view === "string" ? { resultView: record.result.view } : {}, preview: preview.slice(0, 24e3), truncated: preview.length > 24e3 };
     }
     async function hint(a) {
       const goal = text(a.goal, 4e3);
@@ -49267,7 +49277,7 @@ var require_tools_passport_edit = __commonJS({
       return [
         { name: "semantic_ports", description: "List typed detected/manual HTTP, Kafka, DB, scheduled and internal-library ports for one exact service source. Missing identities remain gaps; declarations are not data-flow proof.", input: { ...source, type: { type: "string", enum: require_ports().TYPES }, include_disabled: { type: "boolean", default: false }, limit: int("Bounded page size 1..500", 100), cursor: str("Continuation bound to this exact port projection") }, required: ["service"], run: (a) => O().ports(a) },
         { name: "passport_adjustments", description: "Read effective ports, original detections, revision, and immutable correction history. Exact environment/repository/commit selectors do not borrow newer detections.", input: { ...source, at_revision: str("Historical adjustment hash"), history_limit: int("History entries 1..100", 20) }, required: ["service"], run: (a) => O().adjustments(a) },
-        { name: "passport_adjust", description: "Edit passport description/owners/tags/notes or add, correct and disable typed ports with declared user/source evidence. Saves a private versioned overlay across refreshes. Supply expected_revision from passport_adjustments, or null for a new identity.", input: { ...source, expected_revision: nullable("Required current adjustment hash; null requires a new identity"), reason: str("Required reason/source citation"), metadata: { type: "object", additionalProperties: false, properties: { description: { ...nullable("Declared service description"), maxLength: 8e3 }, notes: { ...nullable("Declared operator notes"), maxLength: 2e4 }, ...Object.fromEntries(["owners", "tags"].map((key) => [key, { type: ["array", "null"], maxItems: 100, items: { type: "string", maxLength: 250 }, description: `Declared ${key}` }])) } }, operations: { type: "array", maxItems: 100, items: { type: "object", additionalProperties: false, properties: { action: { type: "string", enum: ["add", "correct", "disable"] }, port_id: str("Existing detected/manual port id for correct/disable"), port }, required: ["action"] } } }, required: ["service", "expected_revision", "reason"], run: (a) => O().adjust(a) }
+        { name: "passport_adjust", description: "Edit passport description/owners/tags/notes or add, correct, hide/restore detected ports and remove manual typed ports with declared user/source evidence. Saves a private versioned overlay across refreshes. Supply expected_revision from passport_adjustments, or null for a new identity.", input: { ...source, expected_revision: nullable("Required current adjustment hash; null requires a new identity"), reason: str("Required reason/source citation"), metadata: { type: "object", additionalProperties: false, properties: { description: { ...nullable("Declared service description"), maxLength: 8e3 }, notes: { ...nullable("Declared operator notes"), maxLength: 2e4 }, ...Object.fromEntries(["owners", "tags"].map((key) => [key, { type: ["array", "null"], maxItems: 100, items: { type: "string", maxLength: 250 }, description: `Declared ${key}` }])) } }, operations: { type: "array", maxItems: 100, items: { type: "object", additionalProperties: false, properties: { action: { type: "string", enum: ["add", "correct", "disable", "restore", "remove"] }, port_id: str("Existing detected/manual port id for correct/disable"), port }, required: ["action"] } } }, required: ["service", "expected_revision", "reason"], run: (a) => O().adjust(a) }
       ].map((tool) => ({ ...tool, group: "passport", origin: "built-in", strictInput: true }));
     };
   }
@@ -51310,6 +51320,51 @@ var require_tools_scenario_runtime = __commonJS({
   }
 });
 
+// lib/api-auth.js
+var require_api_auth = __commonJS({
+  "lib/api-auth.js"(exports2, module2) {
+    var C = require_config();
+    var invalid = (message) => Object.assign(new Error(message), { code: "DT_ARGUMENT_INVALID", statusCode: 400 });
+    function entries() {
+      const snapshot = C.snapshot(), configured = snapshot.raw.api?.authProfiles || {}, lookup = snapshot.lookup();
+      return Object.entries(configured).map(([id, p]) => {
+        if (!/^[a-zA-Z0-9][\w.-]{0,79}$/.test(id) || !p || typeof p !== "object") throw invalid("Invalid API authentication profile");
+        let url;
+        try {
+          url = new URL(C.interpolate(p.url, lookup));
+        } catch {
+          throw invalid("API authentication profiles require a scoped HTTP(S) URL");
+        }
+        if (!["https:", "http:"].includes(url.protocol) || url.username || url.password || url.search || url.hash) throw invalid("Invalid API authentication URL scope");
+        const ref = typeof p.bearerToken === "string" && p.bearerToken.match(/^\$\{([A-Za-z_]\w*)\}$/);
+        if (!ref) throw invalid("API bearerToken must reference an environment variable, for example ${DEV_API_TOKEN}");
+        return { id, label: String(p.label || id).slice(0, 120), url: url.href, autoPrefill: p.autoPrefill === true, variable: ref[1], value: lookup(ref[1]) };
+      });
+    }
+    function matches(profile, target) {
+      try {
+        const base = new URL(profile.url), url = new URL(target), prefix = base.pathname.replace(/\/$/, "");
+        return !url.username && !url.password && url.origin === base.origin && (!prefix || url.pathname === prefix || url.pathname.startsWith(prefix + "/"));
+      } catch {
+        return false;
+      }
+    }
+    function list({ url } = {}) {
+      return { profiles: entries().map(({ value, variable, ...p }) => ({ ...p, configured: typeof value === "string" && !!value && !/[\r\n]/.test(value), ...url ? { matches: matches(p, url) } : {} })), note: "Bearer values are resolved only when sending to the configured URL scope. They are never returned to this explorer." };
+    }
+    function apply(id, request) {
+      if (!id) return request;
+      const p = entries().find((p2) => p2.id === id);
+      if (!p) throw invalid("Unknown API authentication profile");
+      if (!matches(p, request.url)) throw invalid("The selected bearer profile does not match this request URL");
+      if (typeof p.value !== "string" || !p.value || /[\r\n]/.test(p.value)) throw invalid("The bearer environment reference is missing or invalid");
+      if (Object.keys(request.headers || {}).some((h) => h.toLowerCase() === "authorization")) throw invalid("Remove the request Authorization header before selecting a configured bearer profile");
+      return { ...request, headers: { ...request.headers, authorization: "Bearer " + p.value } };
+    }
+    module2.exports = { list, apply, matches };
+  }
+});
+
 // lib/api-client.js
 var require_api_client = __commonJS({
   "lib/api-client.js"(exports2, module2) {
@@ -51611,7 +51666,9 @@ var require_api_client = __commonJS({
         } else throw new Error(`binding ${name}: in must be path, query, header or body`);
         params[name] = { type: typeof old === "number" ? "number" : typeof old === "boolean" ? "boolean" : "string", required: true, description: binding.description || `${binding.in} ${binding.key || binding.path || binding.index}`, ...binding.secret ? { secret: true } : {}, ...binding.default !== void 0 && !binding.secret ? { default: binding.default } : {} };
       }
-      for (const match of JSON.stringify(req).matchAll(/\{\{([a-z_]\w*)\}\}/gi)) if (!params[match[1]]) params[match[1]] = { type: "string", required: true, description: `Request parameter ${match[1]}` };
+      const used = new Set([...JSON.stringify(req).matchAll(/\{\{([a-z_]\w*)\}\}/gi)].map((match) => match[1]));
+      for (const name of Object.keys(params)) if (!used.has(name)) delete params[name];
+      for (const name of used) if (!params[name]) params[name] = { type: "string", required: true, description: `Request parameter ${name}` };
       for (const match of req.url.matchAll(/\{\{([a-z_]\w*)\}\}/gi)) encoded.push(match[1]);
       if (req.body?.kind === "form" && !Object.keys(req.headers).some((k) => k.toLowerCase() === "content-type")) req.headers["content-type"] = "application/x-www-form-urlencoded";
       const step = { http: `${req.method} ${req.url}`, headers: req.headers || {}, ...req.body?.kind !== "none" && req.body?.value !== void 0 ? { body: req.body.value } : {}, urlEncodeParams: [...new Set(encoded)], allowErrors: true, as: "response", ...assertions ? { assertions } : {}, ...capture ? { capture } : {}, ...before ? { before } : {}, ...after ? { after } : {}, ...finalHook ? { finally: finalHook } : {} };
@@ -51619,7 +51676,7 @@ var require_api_client = __commonJS({
       S().validate(script);
       return { schema: "dt.api-request", version: 1, request: req, params, script, ...e ? { exchange: e.id, route: e.route } : {}, mutation: !["GET", "HEAD", "OPTIONS"].includes(req.method) };
     }
-    async function replay({ prepared, exchange, request, params = {}, timeoutMs = 3e4 } = {}) {
+    async function replay({ prepared, exchange, request, params = {}, auth_profile, timeoutMs = 3e4 } = {}) {
       const p = prepared || prepare({ exchange, request });
       if (p.schema !== "dt.api-request" || p.version !== 1) throw new Error("unsupported prepared request contract");
       const clean = prepare({ request: p.request });
@@ -51627,8 +51684,9 @@ var require_api_client = __commonJS({
       const values = S().params(clean.script, params), step = clean.script.steps[0], encoded = { ...values };
       for (const name of step.urlEncodeParams) if (encoded[name] !== void 0) encoded[name] = encodeURIComponent(String(encoded[name]));
       const sent = { method: clean.request.method, url: S().fill(clean.request.url, encoded), headers: S().fill(clean.request.headers || {}, values), ...clean.request.body?.value !== void 0 ? { body: S().fill(clean.request.body.value, values) } : {} };
-      const result = await S().httpRequest(sent, { timeoutMs, allowErrors: true, maxResponseBytes: MAX_BODY });
-      const out2 = persist(normalize({ request: sent, response: result, time: result.ms }, { kind: "explicit-replay", note: p.exchange ? `replayed exchange ${p.exchange}` : "API client" }));
+      const authenticated = require_api_auth().apply(auth_profile, sent);
+      const result = await S().httpRequest(authenticated, { timeoutMs, allowErrors: true, maxResponseBytes: MAX_BODY });
+      const out2 = persist(normalize({ request: authenticated, response: result, time: result.ms }, { kind: "explicit-replay", note: p.exchange ? `replayed exchange ${p.exchange}` : "API client" }));
       if (result.truncated) out2.gaps.push({ kind: "response-truncated", limit: MAX_BODY });
       persist(out2);
       R().learn([{ method: out2.request.method, url: out2.request.url, status: out2.response.status }], `exchange:${out2.id}`);
@@ -51866,7 +51924,7 @@ var require_api_client = __commonJS({
     }
     function show(exchange) {
       const e = typeof exchange === "string" ? get(exchange) : exchange;
-      const client = `${require_results().publicUrl()}/api-client?exchange=${encodeURIComponent(e.id)}`;
+      const client = `${require_results().publicUrl()}/api-client?exchange=${encodeURIComponent(e.id)}&story=${encodeURIComponent(require_access().owner().storyId)}`;
       return { ...e, client, view: require_results().saveView("api-exchange", e, { title: `${e.request.method} ${e.route.path || "API exchange"}`, client }) };
     }
     module2.exports = { normalize, importExchanges, get, list, prepare, replay, save, browserOpen, browserAction, browserCapture, browserClose, show, MAX_BODY, DIR, captureInstall, captureRead, nativeList, nativeDetails };
@@ -51881,6 +51939,7 @@ var require_tools_api_client = __commonJS({
       const C = () => require_api_client();
       const decorated = (e) => C().show(e);
       return [
+        { name: "api_auth_profiles", logArgs: [], group: "api", description: "List named bearer profiles and matching URL scopes without exposing token values. Selection is optional; references resolve on the server only when explicitly sending a request.", input: { url: str("Request URL to match configured scopes") }, run: (a) => require_api_auth().list(a) },
         { name: "api_exchange_import", logArgs: [], group: "api", description: "Import a HAR, structured request/response exchanges, or browser_network_requests text. Stores bounded sanitized v1 exchanges, removes cookies/credentials, and learns API routes with passport handler candidates. Network text has metadata-only gaps; no requests are replayed. Returns an interactive exchange view by default.", input: { data: { description: "HAR log.entries, exchange object/list, or network text; max 4 MiB and 100 entries" }, source: str("Provenance note, without credentials") }, required: ["data"], run: (a) => {
           const r = C().importExchanges(a.data, { kind: "agent-import", note: a.source });
           return { ...r, exchanges: r.exchanges.map((e) => ({ id: e.id, method: e.request.method, url: e.request.url, status: e.response.status, route: e.route, gaps: e.gaps })), ...r.count ? (() => {
@@ -51891,7 +51950,7 @@ var require_tools_api_client = __commonJS({
         { name: "api_exchange_list", logArgs: [], group: "api", description: "Search previously captured sanitized HTTP exchanges by method, URL, status or attributed service. Offline; returns exchange ids for inspection, preparation and reuse.", input: { q: str("Substring to match"), limit: int("Max records, at most 500", 50) }, run: (a) => ({ exchanges: C().list(a) }) },
         { name: "api_exchange_get", logArgs: ["exchange"], group: "api", description: "Inspect an exchange independently: request/response headers, pretty JSON body, status, timing, redactions, capture gaps and all best matching passport handlers. Includes sandboxed interactive visualization and link to the trusted API client.", input: { exchange: str("Exchange id") }, required: ["exchange"], run: (a) => decorated(a.exchange) },
         { name: "api_request_prepare", logArgs: ["exchange"], group: "api", description: 'Prepare an editable parameterized API request without sending it. Use an exchange id or explicit request {method,url,headers,body:{kind:"json|text|form|none",value}}. Bind named parameters to path segment index (initial slash is index 0), query key, header key, or dotted JSON body path. Secret params have no captured defaults. Returns a versioned contract and a normal saved-script definition.', input: { exchange: str("Optional captured exchange id"), request: obj("Explicit request overrides the captured request"), bindings: obj('Example {orderId:{in:"path",index:3},page:{in:"query",key:"page"},quantity:{in:"body",path:"items.0.quantity"}}'), description: str("Reusable request purpose"), assertions: { type: "array", items: obj("Named script assertion"), description: "Assertions retained when saving" } }, run: (a) => C().prepare(a) },
-        { name: "api_request_replay", logArgs: ["exchange"], group: "api", description: "EXPLICITLY SEND an HTTP request, including mutations. Call only when the user/workflow intends the action. Uses the existing scripts.http.allow URL boundaries, rate limits and timeout; never follows redirects or transfers browser cookies. No retry. Params supplied only for this run; result is sanitized, persisted and visualized with status/headers/JSON/timing. Prepare alone never sends traffic.", input: { prepared: obj("api_request_prepare versioned result"), exchange: str("Or exchange id"), request: obj("Or reviewed explicit request"), params: obj("Runtime parameter values (including credentials)"), timeoutMs: int("Request time limit, max 120000", 3e4) }, run: async (a) => decorated(await C().replay(a)) },
+        { name: "api_request_replay", logArgs: ["exchange"], group: "api", description: "EXPLICITLY SEND an HTTP request, including mutations. Call only when the user/workflow intends the action. Uses the existing scripts.http.allow URL boundaries, rate limits and timeout; never follows redirects or transfers browser cookies. No retry. Params supplied only for this run; result is sanitized, persisted and visualized with status/headers/JSON/timing. Prepare alone never sends traffic.", input: { prepared: obj("api_request_prepare versioned result"), exchange: str("Or exchange id"), request: obj("Or reviewed explicit request"), params: obj("Runtime parameter values (including credentials)"), auth_profile: str("Optional configured bearer profile id; token stays server-side and URL-scoped"), timeoutMs: int("Request time limit, max 120000", 3e4) }, run: async (a) => decorated(await C().replay(a)) },
         { name: "api_request_save", logArgs: ["id", "exchange"], group: "api", description: "Save a prepared/captured request as a reusable normal script in collection/name. Preserves route/source provenance, typed params, assertions, captures and supplied hooks. Collection vars/before/after/finally work through the existing script engine. Does not execute. Cookies are omitted and secrets become required runtime placeholders. Existing script requires overwrite=true.", input: { id: str("collection/request id"), prepared: obj("Prepared contract"), exchange: str("Or exchange id"), request: obj("Or explicit reviewed request"), bindings: obj("Explicit parameter locations"), description: str("What it does and when to use it"), tool: { type: "boolean", default: false, description: "Expose the saved request as an individual tool" }, overwrite: { type: "boolean", default: false }, assertions: { type: "array", items: obj("Script assertion") }, capture: obj('Capture names to response paths, e.g. {orderId:"json.id"}'), before: str("Existing script step before hook"), after: str("Existing script step after hook"), finally: str("Existing script step finally hook") }, required: ["id"], run: (a) => C().save(a) },
         { name: "api_browser_open", logArgs: ["site", "link"], group: "browser", description: "Open an isolated Playwright MCP session with bounded network exchange capture enabled BEFORE navigation. Use browser site/link or URL. Cookies remain only in the browser. Uses native per-request network inspection when available, then a fixed browser_run_code adapter on older endpoints; missing both reports metadata-only mode. Returns session id; inspect UI with api_browser_action, then api_browser_capture. Idle sessions expire in 15 minutes.", input: { site: str("Configured browser site"), link: str("Site link"), params: obj("Link params"), url: str("Or explicit http(s) URL") }, run: (a) => C().browserOpen(a) },
         { name: "api_browser_action", logArgs: ["session", "action"], group: "browser", description: "Inspect or interact with the UI in an existing capture session. Supports snapshot, navigate, click, type, fill_form, press_key, select_option, hover, wait_for, take_screenshot, navigate_back and network_requests with endpoint Playwright MCP args. describe=true returns the action schema without acting; legacy ref maps to target when the discovered schema requires it. UI actions may mutate application state; use intentionally. No browser credentials are exported.", input: { session: str("api_browser_open session"), action: str("Playwright action without browser_ prefix"), args: obj("Standard action args"), describe: { type: "boolean", default: false, description: "Inspect this action schema without executing" } }, required: ["session"], run: (a) => C().browserAction(a) },
@@ -53624,7 +53683,7 @@ var require_execution = __commonJS({
           error = e;
         }
         let cancelling = r.controller.signal.aborted;
-        if (r.children.size || r.resources.size || r.pending.size) {
+        if (r.children.size || r.resources.size || r.pending.size || r.cleanups.size) {
           r.state = "draining";
           persist(r);
           for (const child of r.children) abort(child, error?.message || "owner completed");
@@ -53644,7 +53703,7 @@ var require_execution = __commonJS({
           })]);
           clearTimeout(timer);
           if (!complete) {
-            r.cleanupIncomplete = r.children.size + r.pending.size + r.resources.size;
+            r.cleanupIncomplete = Math.max(r.children.size + r.pending.size + r.resources.size, r.cleanups.size);
             error ||= Object.assign(new Error("Execution cleanup did not finish; outstanding operations may have an unknown outcome"), { code: "DT_EXECUTION_DRAIN_TIMEOUT" });
           }
         }
@@ -55367,7 +55426,7 @@ var require_server2 = __commonJS({
         const view = url.searchParams.get("view") || (r.kind === "view" ? r.view : "table");
         let html;
         try {
-          html = require_views().render(view, data, { title: r.title || r.query || "", at: r.at, id: r.id }, { embed: url.searchParams.has("embed") });
+          html = require_views().render(view, data, { title: r.title || r.query || "", at: r.at, id: r.id, client: r.client, story: r.owner?.storyId }, { embed: url.searchParams.has("embed") });
         } catch (e) {
           return send(res, 404, { error: e.message });
         }

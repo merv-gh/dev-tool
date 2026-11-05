@@ -240,3 +240,10 @@ test('HTTP tools preserve a known empty base path separately from unknown proven
   assert.equal(Ports.normalize({ type: 'http-egress', boundary: {} }, saved.identity, { origin: 'manual' }).boundary.base_path, null);
   assert.throws(() => O.adjust(input('http-base', { expected_revision: saved.revision, operations: [{ action: 'add', port: { type: 'http-egress', boundary: { base_path: 'invalid-prefix' } } }] })), /base_path/);
 });
+
+test('graph CRUD restores detections and removes manual declarations while retaining immutable history',()=>{
+ const original=save(passport('graph-crud')),bytes=fs.readFileSync(path.join(P.DIR,'graph-crud/passport.json')),initial=O.adjustments({service:'graph-crud'}),detected=initial.ports[0];
+ let result=O.adjust(input('graph-crud',{operations:[{action:'disable',port_id:detected.id},{action:'add',port:port()}]}));const generation=result.revision,manual=result.ports.find(p=>p.evidence.origin==='manual');assert.ok(result.disabled.some(p=>p.id===detected.id));
+ result=O.adjust(input('graph-crud',{expected_revision:result.revision,operations:[{action:'restore',port_id:detected.id},{action:'remove',port_id:manual.id}]}));assert.ok(result.ports.some(p=>p.id===detected.id&&p.evidence.origin==='detected'));assert.ok(!result.ports.some(p=>p.id===manual.id));assert.equal(result.disabled.length,0);assert.deepEqual(result.changes.map(c=>c.action),['restore','remove']);
+ const retained=O.adjustments({service:'graph-crud',at_revision:generation});assert.ok(retained.ports.some(p=>p.id===manual.id));assert.ok(retained.disabled.some(p=>p.id===detected.id));assert.throws(()=>O.adjust(input('graph-crud',{expected_revision:result.revision,operations:[{action:'remove',port_id:detected.id}]})),/Detected ports must be hidden/);assert.deepEqual(fs.readFileSync(path.join(P.DIR,original.service,'passport.json')),bytes);
+});

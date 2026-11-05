@@ -3,133 +3,133 @@
     {
       "file": "sample-api-exchange.png",
       "title": "api-exchange",
-      "width": 1280,
+      "width": 1440,
       "origin": "built-in sample fixture; presentation only",
       "overflow": false
     },
     {
       "file": "sample-code.png",
       "title": "code",
-      "width": 1280,
+      "width": 1440,
       "origin": "built-in sample fixture; presentation only",
       "overflow": false
     },
     {
       "file": "sample-code-cell.png",
       "title": "code-cell",
-      "width": 1280,
+      "width": 1440,
       "origin": "built-in sample fixture; presentation only",
       "overflow": false
     },
     {
       "file": "sample-collection-report.png",
       "title": "collection-report",
-      "width": 1280,
+      "width": 1440,
       "origin": "built-in sample fixture; presentation only",
       "overflow": false
     },
     {
       "file": "sample-diagram.png",
       "title": "diagram",
-      "width": 1280,
+      "width": 1440,
       "origin": "built-in sample fixture; presentation only",
       "overflow": false
     },
     {
       "file": "sample-differential.png",
       "title": "differential",
-      "width": 1280,
+      "width": 1440,
       "origin": "built-in sample fixture; presentation only",
       "overflow": false
     },
     {
       "file": "sample-impact.png",
       "title": "impact",
-      "width": 1280,
+      "width": 1440,
       "origin": "built-in sample fixture; presentation only",
       "overflow": false
     },
     {
       "file": "sample-json.png",
       "title": "json",
-      "width": 1280,
+      "width": 1440,
       "origin": "built-in sample fixture; presentation only",
       "overflow": false
     },
     {
       "file": "sample-knowledge-map.png",
       "title": "knowledge-map",
-      "width": 1280,
+      "width": 1440,
       "origin": "built-in sample fixture; presentation only",
       "overflow": false
     },
     {
       "file": "sample-list-diff.png",
       "title": "list-diff",
-      "width": 1280,
+      "width": 1440,
       "origin": "built-in sample fixture; presentation only",
       "overflow": false
     },
     {
       "file": "sample-passport-ports.png",
       "title": "passport-ports",
-      "width": 1280,
+      "width": 1440,
       "origin": "built-in sample fixture; presentation only",
       "overflow": false
     },
     {
       "file": "sample-patch.png",
       "title": "patch",
-      "width": 1280,
+      "width": 1440,
       "origin": "built-in sample fixture; presentation only",
       "overflow": false
     },
     {
       "file": "sample-reproduction.png",
       "title": "reproduction",
-      "width": 1280,
+      "width": 1440,
       "origin": "built-in sample fixture; presentation only",
       "overflow": false
     },
     {
       "file": "sample-scenario-run.png",
       "title": "scenario-run",
-      "width": 1280,
+      "width": 1440,
       "origin": "built-in sample fixture; presentation only",
       "overflow": false
     },
     {
       "file": "sample-semantic-analysis.png",
       "title": "semantic-analysis",
-      "width": 1280,
+      "width": 1440,
       "origin": "built-in sample fixture; presentation only",
       "overflow": false
     },
     {
       "file": "sample-table.png",
       "title": "table",
-      "width": 1280,
+      "width": 1440,
       "origin": "built-in sample fixture; presentation only",
       "overflow": false
     },
     {
       "file": "sample-tests.png",
       "title": "tests",
-      "width": 1280,
+      "width": 1440,
       "origin": "built-in sample fixture; presentation only",
       "overflow": false
     },
     {
       "file": "sample-text-diff.png",
       "title": "text-diff",
-      "width": 1280,
+      "width": 1440,
       "origin": "built-in sample fixture; presentation only",
       "overflow": false
     },
     {
       "file": "sample-xml.png",
       "title": "xml",
-      "width": 1280,
+      "width": 1440,
       "origin": "built-in sample fixture; presentation only",
       "overflow": false
     },
@@ -380,8 +380,8 @@
     },
     {
       "file": "sample-architecture.png",
-      "title": "sample architecture",
-      "width": 1280,
+      "title": "architecture",
+      "width": 1440,
       "origin": "built-in sample fixture; presentation only",
       "overflow": false
     },
@@ -425,6 +425,69 @@
       "title": "service architecture runtime",
       "width": 1600,
       "origin": "actual native source analysis; synthetic environment and documentation; real browser execution",
+      "overflow": false
+    },
+    {
+      "file": "ux-passport-graph.png",
+      "title": "Graph port editor \u00b7 actual indexed Java fixture",
+      "width": 1440,
+      "origin": "disposable UI fixture; actual Java indexing, synthetic infrastructure and retained semantic rows",
+      "overflow": false
+    },
+    {
+      "file": "ux-passport-graph-mobile.png",
+      "title": "Graph port editor \u00b7 mobile",
+      "width": 390,
+      "origin": "disposable UI fixture; actual Java indexing, synthetic infrastructure and retained semantic rows",
+      "overflow": false
+    },
+    {
+      "file": "ux-joern-symbols.png",
+      "title": "Symbol-first tracing \u00b7 synthetic retained projection",
+      "width": 1440,
+      "origin": "disposable UI fixture; actual Java indexing, synthetic infrastructure and retained semantic rows",
+      "overflow": false
+    },
+    {
+      "file": "ux-context-scratchpad.png",
+      "title": "Task memory \u00b7 structured tools and native result",
+      "width": 1440,
+      "origin": "disposable UI fixture; actual Java indexing, synthetic infrastructure and retained semantic rows",
+      "overflow": false
+    },
+    {
+      "file": "ux-context-results.png",
+      "title": "Saved investigation evidence \u00b7 before expansion",
+      "width": 1440,
+      "origin": "disposable UI fixture; actual Java indexing, synthetic infrastructure and retained semantic rows",
+      "overflow": false
+    },
+    {
+      "file": "ux-api-explorer.png",
+      "title": "API explorer \u00b7 route selection and request draft",
+      "width": 1440,
+      "origin": "disposable UI fixture; actual Java indexing, synthetic infrastructure and retained semantic rows",
+      "overflow": false
+    },
+    {
+      "file": "ux-services-map.png",
+      "title": "Dedicated services map workspace \u00b7 synthetic infrastructure",
+      "width": 1440,
+      "origin": "disposable UI fixture; actual Java indexing, synthetic infrastructure and retained semantic rows",
+      "overflow": false
+    },
+    {
+      "file": "ux-admin-navigation.png",
+      "title": "Task-oriented Admin navigation",
+      "width": 1440,
+      "origin": "disposable UI fixture; actual Java indexing, synthetic infrastructure and retained semantic rows",
+      "overflow": false
+    },
+    {
+      "file": "ux-dossier-mobile.png",
+      "title": "Readable service architecture \u00b7 mobile fixture",
+      "width": 390,
+      "origin": "disposable UI fixture; actual Java indexing, synthetic infrastructure and retained semantic rows",
       "overflow": false
     }
   ],

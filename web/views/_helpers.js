@@ -41,6 +41,7 @@ const dt = {
 
   // rows (array of objects) as a table
   table(el, rows, { limit = 2000 } = {}) {
+    if(!rows.length){el.innerHTML='<p class="empty">No rows in this result. Broaden the filter or inspect source coverage.</p>';return;}
     const cols = [...new Set(rows.slice(0, 500).flatMap(r => Object.keys(r || {})))];
     // An http(s) URL, or { text, url } (a list of them in an array), is a link; anything else is text.
     const web = (u) => typeof u === 'string' && /^https?:\/\/[^\s"'<>]+$/i.test(u);
@@ -48,6 +49,9 @@ const dt = {
     const one = (v) => web(v) ? link(v, v) : v && typeof v === 'object' && web(v.url) ? link(v.url, v.text ?? v.label ?? v.url) : null;
     const cell = (v) => one(v) ?? (Array.isArray(v) && !v.length ? '' : Array.isArray(v) && v.every(x => one(x)) ? v.map(one).join('<br>') : dt.esc(v && typeof v === 'object' ? JSON.stringify(v) : v ?? ''));
     el.innerHTML = `<div class="card scroll"><table><thead><tr>${cols.map(c => `<th>${dt.esc(c)}</th>`).join('')}</tr></thead><tbody>${rows.slice(0, limit).map(r => `<tr>${cols.map(c => `<td>${cell(r[c])}</td>`).join('')}</tr>`).join('')}</tbody></table></div>${rows.length > limit ? `<p class="muted">${rows.length - limit} more rows</p>` : ''}`;
+    for(const [i,th]of [...el.querySelectorAll('thead th')].entries()){
+      const button=document.createElement('button');button.className='table-sort';button.textContent=cols[i];button.setAttribute('aria-label','Sort by '+cols[i]);th.replaceChildren(button);button.onclick=()=>{const col=cols[i],direction=el.dataset.sortColumn===col&&el.dataset.sortDirection==='ascending'?'descending':'ascending';el.dataset.sortColumn=col;el.dataset.sortDirection=direction;const sorted=[...rows].sort((a,b)=>{const x=a[col],y=b[col],n=typeof x==='number'&&typeof y==='number'?x-y:String(x??'').localeCompare(String(y??''),undefined,{numeric:true});return direction==='ascending'?n:-n;});dt.table(el,sorted,{limit});el.querySelectorAll('thead th')[i]?.setAttribute('aria-sort',direction);};
+    }
   },
 
   async copy(text, btn) {

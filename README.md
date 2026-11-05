@@ -1122,3 +1122,16 @@ node demo/architecture.js 4046  # synthetic 600-service demo, no Docker required
 ![Cross-service refund data flow](docs/screenshots/architecture-dataflow.png)
 
 Generate a dossier for one service with `architecture_service`: C4 connections, per-entry boundary paths, requirement citations, Joern evidence and deployment snapshots. Missing exact-revision Joern analyses are built automatically and reused. [Service dossier guide](docs/service-architecture.md). Try `node demo/service-architecture.js 4050` for a source-backed fixture demonstration.
+
+
+### Investigation workspace
+
+Admin groups investigation, task work and operations in a persistent navigation rail. **Task memory** separates files/progress, a tool scratchpad with structured arguments and native previews, and saved run evidence. **Services map** has its own workspace; **Joern & ports** offers symbol-first queries and a graph editor for boundary corrections. Read-only inline results link to authenticated editing workspaces.
+
+Use **Open request** on an API route, HTTP port or exchange to enter the interactive API explorer. Optional URL-scoped bearer references resolve `.env` values on the server; see [API authentication](docs/browser-api-workbench.md#routes-parameters-and-optional-authentication). The [UI review](docs/ui-ux-review.md) records every Admin area and inline renderer, the prioritized changes and validation evidence.
+
+| | |
+| --- | --- |
+| ![Editable passport boundary graph](docs/screenshots/ux-passport-graph.png) **Correct ports in the graph** | ![Task memory and tool scratchpad](docs/screenshots/ux-context-scratchpad.png) **Keep investigation evidence together** |
+
+Run `node demo/ui-ux.js` for a disposable local demonstration. [Current screenshots](docs/screenshots/README.md#current-investigation-workspace) and [capture instructions](demo/README.md#investigation-ui-playground) include fixture limitations.

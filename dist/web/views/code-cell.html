@@ -40,7 +40,7 @@
  const state=DATA.state||'unknown', result=DATA.result||{}, error=DATA.error||result.error, done=['done','failed','cancelled','interrupted'].includes(state);
  const output=Array.isArray(DATA.output)?DATA.output:[], owner=DATA.owner||{};
  dt.title(DATA.title||'Code cell');
- dt.$('#cc-result').open=(typeof document!=='undefined'&&document.body.classList.contains('embed'))||!!error||!done||state!=='done';
+ dt.$('#cc-result').open=true;
  dt.$('#cc-state').textContent=state;dt.$('#cc-state').className='cc-state '+state.replace(/[^a-z-]/g,'');
  dt.$('#cc-summary-meta').textContent=[DATA.engine,output.length+' output events',DATA.nextCursor!=null?'cursor '+DATA.nextCursor:null].filter(Boolean).join(' · ');
  dt.$('#cc-facts').innerHTML=[['Cell',DATA.id],['Execution',DATA.executionId],['Engine',DATA.engine],['Principal',owner.principalId],['Chat / task',owner.storyId],['Cursor',DATA.cursor],['Next cursor',DATA.nextCursor]].filter(([,v])=>v!=null).map(([k,v])=>'<dt>'+dt.esc(k)+'</dt><dd>'+dt.esc(v)+'</dd>').join('');
@@ -52,7 +52,7 @@
  dt.$('#cc-output').innerHTML=output.length?output.slice(0,200).map((entry,i)=>{const event=typeof entry==='string'?{text:entry}:entry||{};return '<li><small>'+dt.esc(event.cursor??i+1)+'</small><small>'+dt.esc(event.kind||'text')+'</small><pre>'+dt.esc(event.text??dt.prettyJson(event))+'</pre></li>';}).join(''):'<li><small></small><small></small><pre>No output in this page.</pre></li>';
  dt.$('#cc-next').textContent=!done?'Continue with code_wait using this cell ID and nextCursor. This observes the same execution; it does not restart it.':'This cell is '+state+'. Output is a bounded page; use code_wait with a prior cursor to read earlier events.';
  const returned=result.hasReturn?result.returned:result.returned!==undefined?result.returned:undefined;
- if(returned!==undefined){dt.$('#cc-return').hidden=false;dt.json(dt.$('#cc-return-value'),returned,{open:2});}
+ if(returned!==undefined){dt.$('#cc-return').hidden=false;dt.$('#cc-return').open=true;dt.json(dt.$('#cc-return-value'),returned,{open:2});}
  if((result.tests||[]).length){dt.$('#cc-tests').hidden=false;dt.$('#cc-tests').open=result.tests.some(test=>!test.ok);dt.table(dt.$('#cc-test-list'),result.tests,{limit:100});}
  dt.json(dt.$('#cc-data'),DATA,{open:1});
 </script>

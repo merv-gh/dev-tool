@@ -58,3 +58,19 @@ Refreshes at the same source identity preserve corrections. A different SHA gets
 Passport loading, route discovery, service usage, map projections and impact consume effective scoped ports. Map links carry manual evidence and keep explicit Kafka clusters separate. PostgreSQL usage applies DB corrections as a bounded read projection; its shared cached catalog remains automatic detections, including when a private owner rebuilds it. Another principal/chat sees its own corrections. PG projection currently permits 200 active adjusted services and 5,000 changed DB ports per scope/environment; larger projections fail visibly and direct inspection remains available through `semantic_ports`.
 
 Typed method/boundary edges require exact handler repository/SHA/signature/location and environment-qualified transport identities. DB reads point from table to method; writes point from method to table. Scheduled edges point from schedule to callback. Missing fields remain gaps, and manual edges retain `declared` proof status. The legacy service-level graph remains available for compatibility and must not be presented as an exact distributed value-flow proof.
+
+## Edit ports in the graph
+
+On an authenticated passport page, choose **Edit boundary graph**, or open
+**Joern & ports → Edit service ports** in Admin. Select a graph node or list item
+to edit its type, target, source location and field mappings. Add missing ports
+with **Add port**. Every save requires a reason and the adjustment revision that
+was read; a conflicting save keeps the draft available for review.
+
+**Hide false detection** suppresses an extracted finding in the overlay.
+**Restore detection / Restore original** removes its override. **Delete manual
+port** removes a manual declaration from the current overlay. Earlier immutable
+revisions and the underlying detected passport remain available. The corresponding
+`passport_adjust` operations are `disable`, `restore` and `remove`; `remove` rejects
+detected ports. Read-only chat snapshots show the graph and link to the authenticated
+editor, preserving the service, source revision and selected port.

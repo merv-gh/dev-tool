@@ -302,7 +302,7 @@ const routes = [
     const data = r.kind === 'view' ? r.data : r.rows;
     const view = url.searchParams.get('view') || (r.kind === 'view' ? r.view : 'table');
     let html;
-    try { html = require('./lib/views').render(view, data, { title: r.title || r.query || '', at: r.at, id: r.id }, { embed: url.searchParams.has('embed') }); }
+    try { html = require('./lib/views').render(view, data, { title: r.title || r.query || '', at: r.at, id: r.id, client:r.client, story:r.owner?.storyId }, { embed: url.searchParams.has('embed') }); }
     catch (e) { return send(res, 404, { error: e.message }); }
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'content-security-policy': require('./lib/views').CSP, 'cache-control': 'no-cache', 'x-content-type-options': 'nosniff' });
     res.end(html);

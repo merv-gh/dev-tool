@@ -88,7 +88,7 @@ const dtInline = {
       summary = `${failed ? 'Execution needs attention' : 'Completed'} · ${(d.calls || []).length} tool calls${d.ms != null ? ` · ${d.ms} ms` : ''}`;
     } else if (view === 'code-cell') {
       failed ||= !!d.result?.error || ['failed', 'cancelled', 'interrupted'].includes(d.state) || (d.result?.tests || []).some(test => !test.ok);
-      summary = `${d.state || 'unknown'}${d.engine ? ' · ' + d.engine : ''} · ${(d.output || []).length} output events${d.nextCursor != null ? ' · cursor ' + d.nextCursor : ''}`;
+      summary = `${d.state || 'unknown'}${d.engine ? ' · ' + d.engine : ''} · ${(d.output || []).length} output events${d.result?.returned !== undefined ? ' · returned '+JSON.stringify(d.result.returned).slice(0,100) : ''}`;
     } else if (view === 'semantic-analysis') {
       const state = typeof d.job === 'object' ? d.job.state : d.state;
       failed ||= ['failed', 'interrupted'].includes(state);
@@ -201,3 +201,5 @@ const dtInline = {
   },
 };
 if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded', () => dtInline.actions());
+
+if(typeof document!=='undefined')document.addEventListener('DOMContentLoaded',()=>{let last;document.addEventListener('focusin',e=>{const n=e.target;if(n.matches('button,[role=button],a[href]'))last={node:n,id:n.id,data:JSON.stringify(n.dataset),text:n.textContent};});new MutationObserver(()=>{if(!last||last.node.isConnected||document.activeElement!==document.body)return;const n=[...document.querySelectorAll('button,[role=button],a[href]')].find(n=>last.id?n.id===last.id:last.data!=='{}'?JSON.stringify(n.dataset)===last.data:n.textContent===last.text);if(n){n.focus({preventScroll:true});last.node=n;}}).observe(document.body,{childList:true,subtree:true});});

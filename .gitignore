@@ -31,6 +31,7 @@ node_modules/
 /docs/*-plan.md
 /docs/*-proposal.md
 /docs/*-review.md
+!/docs/ui-ux-review.md
 
 # Durable map overlays are local task data.
 /maps/

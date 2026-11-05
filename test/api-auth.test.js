@@ -1,0 +1,26 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),http=require('node:http');
+const home=fs.mkdtempSync(path.join(os.tmpdir(),'dt-api-auth-'));process.env.DT_HOME=home;process.env.DT_RATE_PER_SEC='0';process.env.DT_LOG='quiet';for(const key of ['DT_CONFIG_DIR','DT_CACHE_DIR','DT_SCRIPTS_DIR'])delete process.env[key];
+const secret='fixture-bearer-do-not-return-1234';let server,url,hits=0,redirected=0;
+test.before(async()=>{server=http.createServer((req,res)=>{hits++;if(req.url==='/allowed/redirect'){res.writeHead(302,{location:'/outside'});res.end();return;}if(req.url==='/outside')redirected++;res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify({seen:req.headers.authorization||null,nested:{message:'echo '+(req.headers.authorization||'anonymous')}}));});await new Promise(r=>server.listen(0,'127.0.0.1',r));url='http://127.0.0.1:'+server.address().port;fs.writeFileSync(path.join(home,'.env'),'UX_API_BEARER='+secret+'\nUX_API_BASE='+url+'\n');fs.writeFileSync(path.join(home,'config.json'),JSON.stringify({envs:{dev:{}},scripts:{starters:false,http:{allow:[url]}},api:{authProfiles:{dev:{label:'Development API',url:'${UX_API_BASE}/allowed',bearerToken:'${UX_API_BEARER}',autoPrefill:true},missing:{url:url+'/missing',bearerToken:'${UX_API_MISSING}'}}}}));});
+test.after(async()=>{server.closeAllConnections();await new Promise(r=>server.close(r));await require('../lib/state-store').close();fs.rmSync(home,{recursive:true,force:true});});
+test('profile discovery resolves URL references but never exposes environment names or bearer values',()=>{const r=require('../lib/api-auth').list({url:url+'/allowed/orders'});assert.equal(r.profiles[0].label,'Development API');assert.equal(r.profiles[0].matches,true);assert.equal(r.profiles[0].autoPrefill,true);assert.equal(r.profiles[1].configured,false);assert.ok(!JSON.stringify(r).includes(secret));assert.ok(!JSON.stringify(r).includes('UX_API_BEARER'));});
+test('bearer injection is optional and rejects wrong URL scopes, credentials and conflicting headers',()=>{const A=require('../lib/api-auth'),request={url:url+'/allowed/orders',headers:{accept:'application/json'}};assert.equal(A.apply('',request),request);assert.equal(A.apply('dev',request).headers.authorization,'Bearer '+secret);for(const target of [url+'/allowed-other',url+'/outside','http://outside.example/allowed','http://user:pass@127.0.0.1:'+server.address().port+'/allowed'])assert.throws(()=>A.apply('dev',{url:target}),/does not match/);assert.throws(()=>A.apply('missing',{url:url+'/missing'}),/missing or invalid/);assert.throws(()=>A.apply('dev',{...request,headers:{Authorization:'Bearer manual'}}),/Remove.*Authorization/);assert.equal(hits,0);});
+test('actual API replay sends the chosen bearer and scrubs captured headers and echoed values',async()=>{const C=require('../lib/api-client'),e=await C.replay({request:{method:'GET',url:url+'/allowed/orders',headers:{},body:{kind:'none'}},auth_profile:'dev'});assert.equal(e.response.status,200);assert.equal(hits,1);assert.ok(!JSON.stringify(e).includes(secret));assert.match(e.request.headers.authorization,/\{\{/);const stored=fs.readFileSync(path.join(home,'cache/api-exchanges',e.id+'.json'),'utf8');assert.ok(!stored.includes(secret));const noAuth=await C.replay({request:{method:'GET',url:url+'/allowed/anonymous',headers:{},body:{kind:'none'}}});assert.equal(noAuth.response.body.value.seen,null);});
+test('repeated explorer sends can switch bearer to anonymous and back without stale captured requirements',async()=>{
+  const C=require('../lib/api-client'),request={method:'GET',url:url+'/allowed/orders/{{id}}',headers:{},body:{kind:'none'}};
+  const first=await C.replay({request,params:{id:'42'},auth_profile:'dev'});
+  assert.ok(first.params.authorization.required);
+  const captured=C.prepare({exchange:first.id});
+  assert.ok(captured.params.authorization.required,'captured credentials remain required until the request removes them');
+  const anonymous=C.prepare({exchange:first.id,request});
+  assert.equal(anonymous.params.authorization,undefined);
+  assert.deepEqual(Object.keys(anonymous.params),['id']);
+  const second=await C.replay({prepared:anonymous,params:{id:'43'}});
+  assert.equal(second.response.body.value.seen,null);
+  assert.equal(second.request.url,url+'/allowed/orders/43');
+  const next=C.prepare({exchange:second.id,request});
+  const third=await C.replay({prepared:next,params:{id:'44'},auth_profile:'dev'});
+  assert.match(third.request.headers.authorization,/Bearer \{\{/);
+  assert.ok(!JSON.stringify(third).includes(secret));
+});
+test('authenticated replay never follows redirects or sends a request after scope validation fails',async()=>{const C=require('../lib/api-client'),before=hits;await assert.rejects(C.replay({request:{method:'GET',url:url+'/outside',headers:{},body:{kind:'none'}},auth_profile:'dev'}),/does not match/);assert.equal(hits,before);await assert.rejects(C.replay({request:{method:'GET',url:url+'/allowed/redirect',headers:{},body:{kind:'none'}},auth_profile:'dev'}));assert.equal(redirected,0);});

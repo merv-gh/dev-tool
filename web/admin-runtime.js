@@ -4,6 +4,7 @@ const runtimeStore = {
   set(key, value) { try { if (value) sessionStorage.setItem('dt-admin-' + key, value); else sessionStorage.removeItem('dt-admin-' + key); } catch {} },
 };
 let runtimeStory = runtimeStore.get('story'), runtimePrincipal = runtimeStore.get('principal');
+const linkedAdminStory=new URL('http://localhost/?'+((location.hash||'').split('?')[1]||'')).searchParams.get('story');if(linkedAdminStory&&/^[a-zA-Z0-9][\w.:-]{0,159}$/.test(linkedAdminStory)){runtimeStory=linkedAdminStory;runtimeStore.set('story',runtimeStory);}
 let runtimeState = null, runtimeScopeVersion = 0, runtimeSelected = null, runtimeTimer = null, runtimeLoading = null, runtimeExecutionSequence = 0;
 let runtimeMetadata = [], runtimeMetadataCursor = null, runtimeMetadataSelected = null, runtimeMetadataDirty = false, runtimeMetadataVersion = 0, runtimeMetadataEditSequence = 0;
 let runtimeTools = [], runtimeCodePending = false, runtimeScopeInitialized = false;
@@ -203,7 +204,7 @@ async function runtimeLoadCodeTools() {
 }
 function rtNativeView(view) {
   if (typeof view !== 'string') return null;
-  try { const url = new URL(view, location.href), route = url.pathname.match(/\/(?:show|view|logs|pr|map|map-preview|files|passport)\/[^/]+$/); if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || !route) return null; return route[0] + url.search + (url.search ? '&' : '?') + 'embed=1'; } catch { return null; }
+  try { const url = new URL(view, location.href), route = url.pathname.match(/\/(?:show|view|logs|pr|map|map-preview|files|passport|architecture)\/[^/]+$/); if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || !route) return null; return route[0] + url.search + (url.search ? '&' : '?') + 'embed=1'; } catch { return null; }
 }
 async function runtimeRunCode() {
   if (runtimeCodePending) return;
@@ -226,6 +227,7 @@ async function runtimeRunCode() {
 }
 async function runtimeChangeScope(event) {
   event?.preventDefault();
+  if(typeof uxBeforeScopeChange==='function'&&!uxBeforeScopeChange())return;
   if (runtimeCodePending) { $('rtScopeStatus').textContent = 'Wait for the code tool response before changing scope.'; return; }
   if (typeof semanticAdminPending !== 'undefined' && semanticAdminPending) { $('rtScopeStatus').textContent = 'Wait for the semantic tool response before changing scope.'; return; }
   if (typeof architectureCanLeave === 'function' && !architectureCanLeave()) return;

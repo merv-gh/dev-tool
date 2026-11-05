@@ -35,7 +35,8 @@
 <div class="sm">
  <div class="sm-head"><h1 data-title></h1><span id="sm-summary" class="muted"></span></div>
  <p class="sm-note" id="sm-meaning"></p><div id="sm-attention" class="sm-attention" hidden></div>
- <div id="sm-job"></div><div id="sm-identities"></div>
+ <div id="sm-job"></div><details class="sm-data"><summary>Exact source revisions & retained generations</summary><div id="sm-identities"></div></details>
+ <div class="row" style="margin:14px 0"><label for="sm-find-path">Find a path or source</label><input id="sm-find-path" type="search" placeholder="Method, file, guard or value"><button id="sm-next-path">Next path</button></div>
  <details class="sm-data" id="sm-gaps" hidden><summary id="sm-gaps-title">Coverage, ambiguity & gaps</summary><div id="sm-gaps-data"></div></details>
  <div class="sm-layout" id="sm-layout"><aside id="sm-tree" class="sm-tree"><h2>Source hierarchy</h2><div id="sm-tree-items"></div></aside><div id="sm-results"></div></div>
  <details class="sm-data"><summary>Complete bounded response</summary><div id="sm-data"></div></details>
@@ -73,4 +74,6 @@
  else dt.$('#sm-results').innerHTML='<p class="sm-note">'+E(D.message||D.guidance||'No matching retained semantic results. Check readiness and coverage before building or changing the query.')+'</p>';
  dt.$('#sm-layout').style.gridTemplateColumns=tree.size&&!dt.$('#sm-tree').hidden?'':'minmax(0,1fr)';dt.json(dt.$('#sm-data'),D,{open:1});
  document.addEventListener('click',event=>{const button=event.target.closest('[data-source]');if(!button)return;document.querySelectorAll('.sm-node.on,[data-source].on').forEach(el=>el.classList.remove('on'));const target=document.getElementById(button.dataset.source);if(!target)return;let parent=target.parentElement;while(parent){if(parent.tagName==='DETAILS')parent.open=true;parent=parent.parentElement;}button.classList.add('on');target.classList.add('on');target.scrollIntoView({block:'nearest',behavior:'smooth'});});
+
+(()=>{let current=-1;const input=dt.$('#sm-find-path');input.oninput=()=>{const q=input.value.toLowerCase();for(const item of document.querySelectorAll('.sm-path,#sm-tree-items button'))item.hidden=!!q&&!item.textContent.toLowerCase().includes(q);};dt.$('#sm-next-path').onclick=()=>{const paths=[...document.querySelectorAll('.sm-path')].filter(p=>!p.hidden);if(!paths.length)return;current=(current+1)%paths.length;paths[current].open=true;paths[current].querySelector('summary')?.focus();paths[current].scrollIntoView({block:'nearest'});};})();
 </script>

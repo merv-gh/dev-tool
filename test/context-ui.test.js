@@ -5,12 +5,12 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'dt-context-ui-'));
 process.env.DT_CONFIG_DIR = tmp; process.env.DT_CACHE_DIR = path.join(tmp, 'cache');
 const C = require('../lib/context'), tools = require('../lib/tools');
 test.after(() => fs.rmSync(tmp, { recursive: true, force: true }));
-function harness() {
+function harness(override) {
   const elements = new Map();
   const element = () => ({ value: '', textContent: '', hidden: false, disabled: false, options: [], children: [], append(...items) { this.children.push(...items); this.options.push(...items); }, replaceChildren() { this.children = []; this.options = []; }, addEventListener() {}, focus() {} });
   const $ = id => { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); };
   let discard = true;
-  const runtime = vm.createContext({ $, console, setTimeout, clearTimeout, confirm: () => discard, window: { addEventListener() {} }, document: { createElement: element, querySelectorAll: () => [...elements.values()] }, api: async (url, args) => url === '/api/tools' ? tools.schemas() : { result: await tools.call(url.split('/').pop(), args) } });
+  const runtime = vm.createContext({ $, console, setTimeout, clearTimeout, confirm: () => discard, window: { addEventListener() {} }, document: { createElement: element, querySelectorAll: () => [...elements.values()] }, api: async (url, args) => override?.(url,args) ?? (url === '/api/tools' ? tools.schemas() : { result: await tools.call(url.split('/').pop(), args) }) });
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../web/admin-context.js'), 'utf8'), runtime);
   return { $, run: code => vm.runInContext(code, runtime), discard: value => discard = value };
 }
@@ -49,6 +49,16 @@ test('scratchpad captures failures and keeps output visible without overwriting 
   assert.ok(C.get(c.id).files.some(f => f.path.startsWith('calls/')));
   assert.equal(h.$('cxContent').value, '# draft'); assert.equal(h.run('contextDirty'), true);
   assert.equal(h.$('cxRun').disabled, false);
+});
+
+test('suggested tool fields render the proposed arguments before the user reviews or runs them', async () => {
+  const c=C.open({title:'Suggested tool'}),h=harness(url=>url.endsWith('/context_hint')?{result:{guidance:'Inspect this source',suggestion:{tool:'find',arguments:{q:'orders'},explanation:'Use cached evidence',missing:[]},validation:[]}}:undefined);
+  await h.run('loadContexts()');await h.run(`contextSelect(${JSON.stringify(c.id)})`);
+  h.run("let renderedArgs;contextToolSchema=()=>{renderedArgs=$('cxArgs').value;}");
+  h.$('cxArgs').value='{"q":"previous task"}';h.$('cxGoal').value='Find orders';
+  await h.$('cxHint').onclick();
+  assert.deepEqual(JSON.parse(h.run('renderedArgs')),{q:'orders'});
+  assert.equal(h.$('cxTool').value,'find');
 });
 
 

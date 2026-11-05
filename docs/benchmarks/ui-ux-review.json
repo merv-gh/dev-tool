@@ -1,0 +1,113 @@
+{
+  "schema": "dt.ui-ux-review/v1",
+  "reviewedAt": "2026-11-05",
+  "fixture": "demo/ui-ux.js",
+  "checker": "dev/check-ux-browser.js",
+  "baseline": {
+    "userFlowHeuristics": "22/40",
+    "interactionAssessment": "11/20"
+  },
+  "browserConfirmation": {
+    "checks": 107,
+    "passed": 105,
+    "defects": 2,
+    "pageErrors": 0,
+    "inventoryVisits": 78,
+    "snapshotWriteAttempts": 0,
+    "adminAreas": 15,
+    "resultRenderers": 20,
+    "standaloneSurfaces": [
+      "passport",
+      "map",
+      "dossier",
+      "api-client"
+    ],
+    "widths": [
+      1440,
+      390
+    ],
+    "documentOverflows": 0,
+    "result": "105 checks passed; two recorded failures resolved or isolated as described below"
+  },
+  "checkedWorkflows": [
+    "graph port create/correct/hide/restore/remove",
+    "required reason and revision conflict draft retention",
+    "unsaved draft navigation",
+    "exact Joern hash scope, symbol selection and rendered paths",
+    "read-only snapshots without write attempts",
+    "keyboard focus and tab/panel relationships",
+    "API route inventory, request links, query-string preservation and typed parameters",
+    "dark primary button contrast"
+  ],
+  "confirmationFailures": [
+    {
+      "check": "api-typed-parameters-auto-bearer-and-no-auth",
+      "cause": "unused captured credential parameter survived request editing",
+      "resolution": "prepare now retains only parameters referenced in the edited request",
+      "verification": "test/api-auth.test.js repeats bearer \u2192 anonymous \u2192 bearer through actual local HTTP"
+    },
+    {
+      "check": "context-navigation-and-native-run",
+      "cause": "checker expanded a saved iframe during navigation after successful run and result selection",
+      "resolution": "checker synchronization hardened; unchanged previews no longer reload, and switching contexts clears prior previews",
+      "verification": "test/admin-ux.test.js covers frame reuse, context reset and versioned saved-file reads; no additional browser round"
+    }
+  ],
+  "fixtureLimits": {
+    "javaSourceIndexing": "actual",
+    "infrastructure": "synthetic",
+    "retainedSemanticProjection": "synthetic",
+    "joernParserExecuted": false,
+    "openWebUIBrowserSessionExecuted": false,
+    "snapshots": "sandboxed native templates and no-write interception"
+  },
+  "validation": {
+    "fullSuite": {
+      "command": "npm test",
+      "tests": 786,
+      "passed": 734,
+      "failed": 0,
+      "skipped": 52,
+      "durationMs": 54252
+    },
+    "build": {
+      "commands": [
+        "npm run build",
+        "npm run build:check"
+      ],
+      "current": true
+    },
+    "diffCheck": {
+      "command": "git diff --check",
+      "passed": true
+    },
+    "apiRegression": {
+      "command": "node --test test/api-auth.test.js test/api-client.test.js test/collections.test.js test/scripts.test.js",
+      "passed": 71,
+      "failed": 0
+    },
+    "executionRegression": {
+      "command": "node --test test/execution.test.js test/node-targets.test.js",
+      "passed": 27,
+      "failed": 0,
+      "redBeforeFix": true
+    },
+    "contextHintRegression": {
+      "command": "node --test test/context-ui.test.js test/admin-map.test.js test/admin-ux.test.js",
+      "passed": 11,
+      "failed": 0
+    }
+  },
+  "additionalFixes": [
+    {
+      "finding": "parallel cancellation test could observe completion before asynchronous process cleanup",
+      "resolution": "execution drain includes stop promises even after the resource handle is released; unfinished cleanup is counted",
+      "verification": "regression reproduced against old behavior, focused suite and final npm test pass"
+    },
+    {
+      "finding": "model/map suggestions prepared structured fields before updating exact arguments",
+      "resolution": "render schema fields after assigning the proposed arguments",
+      "verification": "context suggestion regression and final npm test pass"
+    }
+  ]
+}

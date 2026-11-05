@@ -1,6 +1,6 @@
 // Native semantic and passport tools share the authenticated Admin transport.
 let semanticAdminTools = [], semanticAdminLoaded = false, semanticAdminPending = false, semanticAdminVersion = 0, semanticAdminDirty = false, semanticAdminJob = null, semanticAdminJobTimer = null, semanticAdminPorts = null, semanticAdminEdits = 0, semanticAdminCurrentTool = null;
-let semanticAdminLoading = null, semanticAdminHash = '';
+let semanticAdminLoading = null, semanticAdminHash = '', semanticAutoPortHash = '';
 const semanticToolNames = ["semantic_capabilities", "semantic_index", "semantic_search", "semantic_query", "semantic_ports", "passport_adjustments", "passport_adjust"];
 function semanticAdminMessage(text, error = false) {
   $("smAdminMessage").textContent = text;
@@ -159,7 +159,7 @@ async function loadSemanticAdmin() {
     if(!semanticAdminLoading)semanticAdminLoading=(async()=>{
       semanticAdminTools = (await api("/api/tools")).filter((tool) => semanticToolNames.includes(tool.name));
       $("smTool").innerHTML = semanticAdminTools.map((tool) => "<option>" + rtEsc(tool.name) + "</option>").join("");
-      semanticAdminLoaded = true;semanticAdminPrepare("semantic_query");
+      semanticAdminLoaded = true;
     })().finally(()=>{semanticAdminLoading=null;});
     await semanticAdminLoading;
   }
@@ -167,10 +167,13 @@ async function loadSemanticAdmin() {
     for (const [key, id] of [["service", "smService"], ["repo", "smRepository"], ["revision", "smRevision"], ["analysis", "smAnalysis"]]) if (params.has(key)) $(id).value = params.get(key);
     if (params.has("env") && [...$("env").options].some((option) => option.value === params.get("env"))) $("env").value = params.get("env");
   }
+  if (!semanticAdminCurrentTool) semanticAdminPrepare("semantic_query");
+  const requestedPort=new URLSearchParams(location.hash.split('?')[1]||'').get('port');
+  if(requestedPort&&semanticAutoPortHash!==location.hash){semanticAutoPortHash=location.hash;const s=semanticAdminScope();if(semanticAdminPrepare('passport_adjustments',{service:s.service,env:s.env,...(s.repo?{repo:s.repo}:{}),...(s.revision?{revision:s.revision}:{})}))await semanticAdminRun();}
   if (semanticAdminJob) semanticAdminPollJob(semanticAdminJob);
 }
 function semanticAdminClear() {
-  semanticAdminVersion++;
+  semanticAdminVersion++;semanticAutoPortHash='';if(typeof uxClearScope==='function')uxClearScope();
   semanticAdminPorts = null;
   semanticAdminJob = null;
   semanticAdminDirty = false;

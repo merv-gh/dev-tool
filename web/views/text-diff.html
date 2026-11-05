@@ -1,5 +1,5 @@
 <!-- {"description": "Two texts compared line by line (unified, with context). DATA: { first, last, labels: [a, b], format: 'json' | 'xml' (re-indent both first) }", "sample": {"labels": ["template", "sent"], "format": "json", "first": "{\"orderId\": \"ORD-1001\", \"customer\": {\"id\": \"C-77\"}, \"qty\": 1}", "last": "{\"orderId\": \"ORD-978827\", \"customer\": {\"id\": \"C-42\"}, \"qty\": 1}"}} -->
-<div class="vhead"><h1 data-title></h1><span class="muted" id="info"></span><span class="spacer"></span>
+<div class="vhead"><h1 data-title></h1><span class="muted" id="info"></span><span class="spacer"></span><button id="previous-change">Previous change</button><button id="next-change">Next change</button>
   <label class="muted" style="font-size:12px"><input type="checkbox" id="all"> all lines</label></div>
 <div class="card scroll"><table class="diff" id="t"></table></div>
 <script>
@@ -22,4 +22,6 @@
   };
   draw();
   dt.$('#all').onchange = draw;
+
+(()=>{let current=-1;function move(delta){const changes=[...document.querySelectorAll('tr.add,tr.del')];if(!changes.length)return;current=(current+delta+changes.length)%changes.length;changes[current].tabIndex=-1;changes[current].focus({preventScroll:true});changes[current].scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth'});}const previous=dt.$('#previous-change'),next=dt.$('#next-change');if(previous)previous.onclick=()=>move(-1);if(next)next.onclick=()=>move(1);})();
 </script>

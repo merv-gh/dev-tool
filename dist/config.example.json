@@ -106,6 +106,7 @@
 
   "knowledge": { "sources": [] },
   "semantic": { "url": "${DT_SEMANTIC_URL:-}", "token": "${DT_SEMANTIC_TOKEN:-}", "timeoutMs": 1800000, "waitMs": 1000, "maxProjectionBytes": 268435456 },
+  "api": { "authProfiles": {} },
   "scripts": { "http": { "allow": ["https://partner-api.dev.example.com/imports"] }, "js": true, "jsTimeoutMs": 5000 },
 
   "timeouts": { "pgQueryMs": 60000, "pgIndexMs": 120000, "catalogSyncWaitMs": 50000 },

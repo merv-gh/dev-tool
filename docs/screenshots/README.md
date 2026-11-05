@@ -2,6 +2,20 @@
 
 Captured from the running demo with `demo/gallery.js`, `demo/screenshots.js` and `demo/chat-screenshots.js`. Synthetic samples demonstrate rendering; real Joern captures use retained end-to-end test results. Open WebUI uses a scripted model with real tool calls. This gallery does not imply every integration was executed. [Capture instructions](../../demo/README.md).
 
+## Current investigation workspace
+
+Captured during the [UI review](../ui-ux-review.md) with `demo/ui-ux.js` and
+`dev/check-ux-browser.js`. Source indexing uses the bundled Java service;
+environment values and the retained semantic projection are synthetic.
+The twenty native sample images below were refreshed in this pass.
+
+| | |
+| --- | --- |
+| ![Editable service boundary graph](ux-passport-graph.png) **Port graph** · typed corrections, additions, source and history | ![Task memory tool scratchpad](ux-context-scratchpad.png) **Task memory** · structured arguments, explicit execution and native preview |
+| ![Joern symbol selectors](ux-joern-symbols.png) **Joern** · exact source scope and selected entry/exit symbols | ![API explorer route inventory](ux-api-explorer.png) **API explorer** · endpoint selection, editable requests and optional bearer references |
+| ![Saved investigation evidence](ux-context-results.png) **Saved evidence** · retained runs before opening their preview | ![Dedicated services map](ux-services-map.png) **Services map** · its own investigation workspace |
+| ![Mobile editable passport graph](ux-passport-graph-mobile.png) **Mobile port editing** · readable graph with adjacent form below | ![Mobile service architecture](ux-dossier-mobile.png) **Mobile architecture** · readable graph, entity list and evidence |
+
 ## Investigations & editing
 
 | | |

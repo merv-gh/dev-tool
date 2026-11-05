@@ -49,3 +49,26 @@ For the optional real semantic chat examples, retain the live test's `P/orders` 
 `node demo/architecture.js 4046` starts a separate synthetic 600-service architecture demonstration with C4 ownership, a refund data flow, dev/UAT replica health and source-labeled resource panels. No Docker or model is required. It prints the public view and Admin URLs; Admins publish and readers browse. See [architecture observability](../docs/architecture-observability.md) for the schema, metrics and exports.
 
 `node demo/service-architecture.js 4050` runs the service dossier demo: actual static analysis of the bundled Java service, synthetic requirement/Consul fixtures, per-entry graphs and C4/sequence exports. [Details](../docs/service-architecture.md).
+
+## Investigation UI playground
+
+```bash
+node demo/ui-ux.js 4064
+# In another terminal, with Playwright and Chromium installed:
+NODE_PATH=<node_modules containing playwright> node dev/check-ux-browser.js
+```
+
+The playground uses a fresh temporary home and listens on localhost. It starts
+Admin at `http://127.0.0.1:4064/admin` and a local request fixture on the next
+port, then writes `work/ux-pass/demo.json`. Pass another port and optional
+manifest filename to the launcher; the checker accepts that manifest and an
+optional screenshot output directory. Set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` if
+using an existing browser executable.
+
+The checker exercises all fifteen Admin areas, twenty result renderers and
+the passport, map, dossier and API explorer at desktop/mobile sizes. It also
+executes port corrections and authenticated/anonymous requests against the
+disposable fixtures. Java source indexing is real; environment data and the
+retained semantic projection are synthetic. This demo does not start Joern,
+contact external services or measure model quality. Stop the launcher with
+Ctrl-C when finished. [Review and workflow contracts](../docs/ui-ux-review.md).

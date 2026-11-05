@@ -26,6 +26,7 @@ const docs=(model.documents||[]).filter(d=>(d.entities||[]).includes(n.id));if(!
 for(const d of docs.slice(0,8)){const box=document.createElement('div');box.className='excerpt';const h=document.createElement('strong');h.textContent=d.title;const p=document.createElement('p');p.textContent=d.text;const small=document.createElement('p');small.className='muted';small.textContent=`${d.provenance?.source||''} · ${d.provenance?.file||d.id} · ${String(d.provenance?.revision||'').slice(0,14)}`;box.append(h,p,small);dt.$('#node-documents').append(box);}}
 function draw(){const q=dt.$('#entity-filter').value.toLowerCase().trim(),proof=dt.$('#evidence-filter').value, filtered=nodes.filter(n=>`${n.id} ${n.name} ${n.kind}`.toLowerCase().includes(q));
 const visible=filtered.slice(0,60),visibleIds=new Set(visible.map(n=>n.id)), relations=edges.filter(r=>visibleIds.has(r.from)&&visibleIds.has(r.to)&&(proof==='all'||r.proof===proof));
+if(!visibleIds.has(selected)){selected=visible[0]?.id;detail();}
 dt.$('[data-status]').textContent=`Showing ${visible.length} entities and ${relations.length} relationships${filtered.length>60?' (first 60; narrow the filter)':''}.`;
 const kinds=[...new Set(visible.map(n=>n.kind))].sort((a,b)=>['endpoint','service','topic','database','table','external','unresolved'].indexOf(a)-['endpoint','service','topic','database','table','external','unresolved'].indexOf(b));
 const positions=new Map();height=Math.max(240,...kinds.map(k=>visible.filter(n=>n.kind===k).length*90+55));width=Math.max(600,kinds.length*240);

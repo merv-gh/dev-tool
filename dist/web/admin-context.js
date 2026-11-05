@@ -14,7 +14,7 @@ async function loadContexts() {
     $('cxSearch').oninput = () => { clearTimeout(loadContexts.searchTimer); loadContexts.searchTimer = setTimeout(() => contextList().catch(e => contextMessage(e.message, true)), 250); };
     $('cxNew').onclick = () => {
       if (!contextCanLeave()) return;
-      contextSelectSequence++; contextState = null; contextFile = null; contextClearDirty(); $('cxEditor').hidden = false; $('cxWorking').hidden = true;
+      contextSelectSequence++; if(typeof contextResetResults==='function')contextResetResults(); contextState = null; contextFile = null; contextClearDirty(); $('cxEditor').hidden = false; $('cxWorking').hidden = true;
       $('cxTitle').value = ''; $('cxSummary').value = ''; $('cxStatus').value = 'active'; contextLinks.forEach(k => $('cx-' + k).value = ''); $('cxDirty').textContent = ''; $('cxTitle').focus(); contextMessage('Give this task a title and stable identifiers so other chats can find it.');
     };
     $('cxSaveMeta').onclick = () => contextBusy($('cxSaveMeta'), async () => {
@@ -57,7 +57,7 @@ async function loadContexts() {
       if (!$('cxGoal').value.trim()) throw new Error('Describe what you want to do');
       const r = await contextCall('context_hint', { id: contextState.id, goal: $('cxGoal').value.trim(), use_model: $('cxUseModel').checked });
       $('cxHintOutput').textContent = r.guidance + '\n' + (r.suggestion ? r.suggestion.explanation + '\nMissing: ' + JSON.stringify(r.suggestion.missing || []) + (r.validation.length ? '\nNeeds edits: ' + JSON.stringify(r.validation) : '') : r.candidates.map(t => t.name + ': ' + t.description.slice(0, 150)).join('\n'));
-      if (r.suggestion) { $('cxToolFilter').value = ''; contextToolList(); $('cxTool').value = r.suggestion.tool; contextToolSchema(false); $('cxArgs').value = JSON.stringify(r.suggestion.arguments, null, 2); }
+      if (r.suggestion) { $('cxToolFilter').value = ''; contextToolList(); $('cxTool').value = r.suggestion.tool; $('cxArgs').value = JSON.stringify(r.suggestion.arguments, null, 2); contextToolSchema(false); }
     });
     $('cxRun').onclick = () => contextBusy($('cxRun'), async () => {
       if (!contextState) throw new Error('Open a context first');
@@ -67,6 +67,7 @@ async function loadContexts() {
       const r = await contextCall('context_run', { id: contextState.id, tool: name, arguments: args, summary: $('cxGoal').value.slice(0, 300) });
       try { const captured = JSON.parse(r.preview); if (captured.result?.view && typeof adminMapOpen === 'function' && /\/map\/[a-z0-9]+$/.test(new URL(captured.result.view, location.href).pathname)) await adminMapOpen(captured.result.view, args.env || env()); } catch {}
       $('cxRunOutput').textContent = r.preview + (r.truncated ? '\n\nPreview truncated. Open the saved file for the full result.' : '') + (r.saveError ? '\n\nCAPTURE FAILED: ' + r.saveError + '\n' + r.guidance : '');
+      if(typeof contextRenderResult==='function')contextRenderResult(r);
       $('cxCaptured').textContent = r.saved ? 'Open saved result: ' + r.saved : ''; $('cxCaptured').hidden = !r.saved;
       $('cxCaptured').onclick = () => contextRead(r.saved).catch(e => contextMessage(e.message, true));
       await contextReload(); contextMessage(r.ok ? r.saved ? 'Tool completed; result saved.' : 'Tool completed; saving failed. Do not rerun just to save it.' : 'Tool failed; inspect the captured error.', !r.ok || !!r.saveError);
@@ -108,7 +109,7 @@ async function contextSelect(id, force = false) {
   const c = await contextCall('context_get', { id });
   if (selection !== contextSelectSequence) return;
   if (editSequence !== contextEditSequence) { contextMessage('Your draft changed while loading. Select the context again to replace it.', true); return; }
-  contextState = c; contextFormRevision = c.revision; contextFile = null; contextClearDirty();
+  if(typeof contextResetResults==='function')contextResetResults(); contextState = c; contextFormRevision = c.revision; contextFile = null; contextClearDirty();
   $('cxEditor').hidden = false; $('cxWorking').hidden = false; $('cxTitle').value = c.title; $('cxSummary').value = c.summary || ''; $('cxStatus').value = c.status;
   contextLinks.forEach(k => $('cx-' + k).value = c[k].join(', ')); $('cxDirty').textContent = ''; $('cxLocation').textContent = `context:${c.id}/`;
   $('cxPath').value = ''; $('cxContent').value = ''; $('cxFileSummary').value = ''; $('cxPreview').hidden = true;

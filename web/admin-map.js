@@ -24,7 +24,7 @@ window.addEventListener('message',async e=>{
       const b=document.createElement('button');b.textContent='Prepare '+a.tool;b.onclick=()=>{
         if(!contextState){contextMessage('Open or create a context to prepare tools in its scratchpad.',true);return;}
         if(!contextTools.some(t=>t.name===a.tool)){contextMessage('This tool is unavailable in the scratchpad.',true);return;}
-        $('cxToolFilter').value='';contextToolList();$('cxTool').value=a.tool;contextToolSchema(false);$('cxArgs').value=JSON.stringify(a.arguments,null,2);$('cxGoal').value='Inspect '+r.node.label+' from the service map';contextMessage('Prepared '+a.tool+'. Review arguments, then Run & save result.');$('cxArgs').focus();
+        $('cxToolFilter').value='';contextToolList();$('cxTool').value=a.tool;$('cxArgs').value=JSON.stringify(a.arguments,null,2);contextToolSchema(false);$('cxGoal').value='Inspect '+r.node.label+' from the service map';contextMessage('Prepared '+a.tool+'. Review arguments, then Run & save result.');$('cxArgs').focus();
       };$('cxMapActions').append(b);if(e.data.type==='dt:map-action'&&a.tool===e.data.tool)b.click();
     }
     if(r.node.kind==='ui'){
@@ -39,7 +39,7 @@ window.addEventListener('message',async e=>{
  const frame=$('cxMapFrame');if(e.source!==frame.contentWindow||e.data?.map!==adminMapResult)return;
  const mapId=adminMapResult,target=frame.contentWindow,selectedEnv=adminMapEnv;
  const reply=payload=>{if(adminMapResult===mapId&&frame.contentWindow===target)target.postMessage({...payload,map:mapId},location.origin);};
- if(e.data.type==='dt:map-ready'){reply({type:'dt:map-host',run:true});return;}
+ if(e.data.type==='dt:map-ready'){reply({type:'dt:map-host',run:true,story:runtimeStory||'default',env:selectedEnv});return;}
  if(e.data.type!=='dt:map-run')return;
  const request=e.data.request;
  try{

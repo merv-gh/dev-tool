@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>dt admin</title>
+<title>Developer workspace · dt</title>
 <link rel="stylesheet" href="/static/ui.css">
 <link rel="stylesheet" href="/static/admin-runtime.css">
 <link rel="stylesheet" href="/static/admin-semantic.css"><link rel="stylesheet" href="/static/admin-architecture.css">
@@ -124,6 +124,7 @@
   iframe.vw-prev { width: 100%; height: 520px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
   details summary { cursor: pointer; color: var(--muted); font-size: 12px; margin: 8px 0; }
 </style>
+<link rel="stylesheet" href="/static/admin-ux.css"><link rel="stylesheet" href="/static/port-editor.css">
 </head>
 <body>
 <div class="wrap">
@@ -224,7 +225,7 @@
     <h2>API routes <span class="muted" id="rtCount"></span></h2>
     <p class="hint">Endpoints from code (passports) merged with routes seen in the browser (saved scripts, routes_discover, or routes_learn from the chat). Ids show as <code>&lt;id&gt;</code>.</p>
     <div class="row" style="margin-bottom:8px"><input id="rtQ" class="filter" placeholder="path, service, handler, host…" style="width:360px"></div>
-    <div class="card scroll"><table><thead><tr><th>Service</th><th>Method</th><th>Path</th><th>Host / site</th><th class="num">Seen</th><th>Status</th><th>Handler</th><th>Source</th></tr></thead><tbody id="routes"></tbody></table></div>
+    <div class="card scroll"><table><thead><tr><th>Service</th><th>Method</th><th>Path</th><th>Host / site</th><th class="num">Seen</th><th>Status</th><th>Handler</th><th>Source</th><th>Request</th></tr></thead><tbody id="routes"></tbody></table></div>
   </section>
 
   <section id="tab-views" hidden>
@@ -254,6 +255,8 @@
       <div class="card detail" id="job"><div class="empty">Select a job to see its log.</div></div>
     </div>
   </section>
+
+  <section id="tab-map" hidden><p class="hint">Explore evidence-backed connections, inspect services and resources, and record reviewed corrections.</p><div id="mapWorkspaceHost"></div></section>
 
   <section id="tab-context" hidden>
     <p class="hint">Keep task memory across chats: plans, progress, findings, files and saved tool results. Search by ticket, repository or workspace. No Git repository required.</p>
@@ -377,6 +380,7 @@
 </div>
 <script src="/static/ui.js"></script>
 <script src="/static/admin-scripts.js"></script>
+<script src="/static/tool-form.js"></script><script src="/static/port-editor.js"></script>
 <script src="/static/admin-context.js"></script>
 <script src="/static/admin-map.js"></script>
 <script src="/static/admin-runtime.js"></script>
@@ -504,7 +508,7 @@ function renderConfig() {
 async function loadConfig() {
   const c = await api('/api/admin/config');
   $('cfg').value = c.text; $('cfgFile').textContent = c.exists ? c.file : `${c.file} (not created yet: showing what is in effect)`;
-  $('cfg').dataset.revision = c.revision || '';
+  $('cfg').dataset.revision = c.revision || ''; $('cfg').dataset.savedText=c.text;
   $('cfgName').textContent = c.format === 'config.json' ? 'config.json' : 'envs.json';
   if (c.format !== 'config.json') $('cfgHint').innerHTML = 'Older layout (envs.json + .env.&lt;env&gt;). Run <code>node cli.js migrate-config</code> to switch to config.json + .env.';
   $('cfgExample').textContent = c.example; $('cfgMsg').textContent = '';
@@ -619,8 +623,8 @@ let rtTimer;
 async function loadRoutes() {
   const r = await api(`/api/admin/routes?q=${encodeURIComponent($('rtQ').value.trim())}`);
   $('rtCount').textContent = `${r.routes.length}`;
-  $('routes').innerHTML = r.routes.length ? r.routes.slice(0, 500).map(x => `<tr><td>${esc(x.service || '')}</td><td class="mono">${esc(x.method)}</td><td class="mono">${esc(x.path)}${x.query ? `<span class="muted">?${esc(x.query)}</span>` : ''}</td><td class="mono">${esc(x.site || x.host || '')}</td><td class="num">${x.seen || ''}</td><td class="mono">${esc(x.statuses)}</td><td class="where">${esc(x.handler)}${x.where ? `<br>${esc(x.where)}` : ''}</td><td class="det">${esc(x.source)}</td></tr>`).join('')
-    : '<tr><td colspan="8" class="empty">No routes yet: build passports, run a script with browser steps, or ask the agent to discover a page\'s routes.</td></tr>';
+  $('routes').innerHTML = r.routes.length ? r.routes.slice(0, 500).map(x => `<tr><td>${esc(x.service || '')}</td><td class="mono">${esc(x.method)}</td><td class="mono">${esc(x.path)}${x.query ? `<span class="muted">?${esc(x.query)}</span>` : ''}</td><td class="mono">${esc(x.site || x.host || '')}</td><td class="num">${x.seen || ''}</td><td class="mono">${esc(x.statuses)}</td><td class="where">${esc(x.handler)}${x.where ? `<br>${esc(x.where)}` : ''}</td><td class="det">${esc(x.source)}</td><td><a target="_blank" rel="noopener" href="/api-client?${esc(new URLSearchParams({method:x.method||'GET',path:x.path||'/',host:x.host||'',service:x.service||'',story:runtimeStory||'default'}).toString())}">Open request</a></td></tr>`).join('')
+    : '<tr><td colspan="9" class="empty">No routes yet: build passports, run a script with browser steps, or ask the agent to discover a page\'s routes.</td></tr>';
 }
 
 function show(t) {
@@ -666,7 +670,7 @@ $('ppBuild').onclick = async () => {
 };
 $('ppAll').onclick = () => startRefresh('passports');
 $('cfgSave').onclick = async () => {
-  try { const r = await api('/api/admin/config', { text: $('cfg').value, expected_revision: $('cfg').dataset.revision || undefined }); $('cfg').dataset.revision = r.revision || $('cfg').dataset.revision; $('cfgMsg').textContent = `Saved. Envs: ${r.envs.join(', ')}; ${r.tools.tools} tools${r.tools.errors.length ? ` (${r.tools.errors.length} errors below)` : ''}. ${r.note}`; refresh(); }
+  try { const r = await api('/api/admin/config', { text: $('cfg').value, expected_revision: $('cfg').dataset.revision || undefined }); $('cfg').dataset.revision = r.revision || $('cfg').dataset.revision; $('cfg').dataset.savedText=$('cfg').value; $('cfgMsg').textContent = `Saved. Envs: ${r.envs.join(', ')}; ${r.tools.tools} tools${r.tools.errors.length ? ` (${r.tools.errors.length} errors below)` : ''}. ${r.note}`; refresh(); }
   catch (e) { $('cfgMsg').innerHTML = `<span class="err-text">${esc(e.message)}</span>`; }
 };
 $('cfgReset').onclick = () => loadConfig();
@@ -680,5 +684,6 @@ show((location.hash || '#index').slice(1));
 window.addEventListener('hashchange', () => { const t = location.hash.slice(1); if (t && (t.split('?')[0] !== tab || t.includes('?')) && $(`tab-${t.split('?')[0]}`)) show(t); });
 refresh();
 </script>
+<script src="/static/admin-ux.js"></script>
 </body>
 </html>

@@ -26,6 +26,20 @@ test('terminal ownership cancels and drains unfinished child resources', async (
   assert.equal(E.get(parent.id).children, 0); assert.equal(E.get(parent.id).state, 'done');
 });
 
+test('a released resource still drains its asynchronous cancellation cleanup', async () => {
+  let admitted, finishBody, finishCleanup;
+  const ready=new Promise(resolve=>admitted=resolve),cleanup=new Promise(resolve=>finishCleanup=resolve);
+  const execution=E.start({kind:'released-cleanup'},()=>new Promise(resolve=>{
+    finishBody=resolve;
+    const release=E.resource(()=>{release();finishBody();return cleanup;});
+    admitted();
+  }));
+  await ready;E.cancel(execution.id,'stop released handle');
+  let settled=false;execution.promise.catch(()=>{settled=true;});
+  try{await delay(20);assert.equal(settled,false,'terminal completion must await the pending stop operation');assert.equal(E.get(execution.id).state,'draining');}
+  finally{finishCleanup();await assert.rejects(execution.promise,e=>e.code==='DT_CANCELLED');}
+});
+
 test('noncooperative work reports an unknown outcome rather than completed cleanup', async () => {
   const parent = E.start({ kind: 'test', drainMs: 20 }, () => { E.track(new Promise(() => {})); return 'no'; });
   await assert.rejects(parent.promise, e => e.code === 'DT_EXECUTION_DRAIN_TIMEOUT');

@@ -142,7 +142,7 @@
   const n = (f) => cases.filter(k => (f === 'failed' ? bad(k) : k.status === f)).length;
   dt.$('#filt').innerHTML = [['all', `All ${cases.length}`], ['failed', `Failed ${n('failed')}`], ['passed', `Passed ${n('passed')}`], ...(n('skipped') ? [['skipped', `Skipped ${n('skipped')}`]] : [])]
     .map(([f, l]) => `<button class="small ${f === filter ? 'on' : ''}" data-f="${f}">${l}</button>`).join('');
-  dt.$('#filt').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; filter = b.dataset.f; for (const x of dt.$('#filt').children) x.classList.toggle('on', x === b); drawTree(); };
+  dt.$('#filt').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; filter = b.dataset.f; for (const x of dt.$('#filt').children) x.classList.toggle('on', x === b); if(selected&&!show(selected))selected=cases.find(show);drawTree();drawDet(); };
   dt.$('#tree').onclick = (e) => { const r = e.target.closest('.row[data-i]'); if (!r || r.dataset.i === '') return; selected = cases[Number(r.dataset.i)]; drawTree(); drawDet(); };
   dt.$('#tree').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { const row = e.target.closest('[data-i]'); if (row && row.dataset.i !== '') { e.preventDefault(); selected = cases[Number(row.dataset.i)]; drawTree(); drawDet(); dt.$(`#tree [data-i="${cases.indexOf(selected)}"]`)?.focus(); } } };
   drawTree(); drawDet();
