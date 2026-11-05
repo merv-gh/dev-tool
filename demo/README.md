@@ -72,3 +72,33 @@ disposable fixtures. Java source indexing is real; environment data and the
 retained semantic projection are synthetic. This demo does not start Joern,
 contact external services or measure model quality. Stop the launcher with
 Ctrl-C when finished. [Review and workflow contracts](../docs/ui-ux-review.md).
+
+
+## Field guide and self-context
+
+The same disposable playground serves **Admin → Field guide** and `/handbook`.
+It includes the current authorized registry, editable examples, every native
+sample, a safe installation briefing and persistent story-scoped self-context.
+Choose a Chat / task label, save the briefing, edit `operator-notes.md` from
+Task memory, then refresh the snapshots: the note is preserved. Saving memory
+or running a practice example writes only to the playground’s temporary home.
+
+```bash
+node demo/ui-ux.js 4064
+# In another terminal:
+NODE_PATH=<node_modules containing playwright> node dev/check-handbook-browser.js
+```
+
+The checker walks all chapters/tool forms, renders native samples, executes
+local calculations and the amount-conversion practice, confirms scoped memory
+handoff/preservation, and checks desktop/mobile overflow. It records JSON and
+PNG evidence under `work/handbook/screenshots/`; an optional second/third
+argument chooses the manifest/output directory. It does not run production
+queries, parse Joern, evaluate an autonomous model or execute service regression
+tests. Keep those claims separate from this documentation/UI check.
+
+The [portable manual](../docs/handbook/README.md) and built-in contracts are
+generated with `node dev/build-handbook.js`; `--check` detects documentation
+staleness. `npm run build` ships the guide and allowlisted demo images in
+`dist/`, so the existing `./run.sh up -d` workflow includes it. Screenshots and
+review evidence are linked from the handbook and main README.

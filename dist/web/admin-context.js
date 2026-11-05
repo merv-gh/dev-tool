@@ -80,6 +80,9 @@ async function loadContexts() {
     contextToolList();
   }
   await contextList();
+  const linkedContext=new URLSearchParams((location.hash||'').split('?')[1]||'').get('context');
+  if(linkedContext&&contextState?.id!==linkedContext)await contextSelect(linkedContext);
+  const linkedFile=new URLSearchParams((location.hash||'').split('?')[1]||'').get('file');if(linkedFile&&contextState?.id===linkedContext&&contextFile?.path!==linkedFile)await contextRead(linkedFile);
 }
 async function contextBusy(button, fn) {
   const controls = [...document.querySelectorAll('#tab-context button, #tab-context input, #tab-context select, #tab-context textarea')].map(el => [el, el.disabled]);

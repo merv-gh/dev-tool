@@ -1,0 +1,229 @@
+{
+  "schema": "dt.handbook-verification/v1",
+  "verifiedAt": "2026-11-05T09:40:45.380215+00:00",
+  "source": {
+    "baselineCommit": "e22dee8e85d2ec02acaa0e6ff13f0b529d6b108e",
+    "featureState": "Working-tree implementation; verification covers the current generated handbook and bundle."
+  },
+  "coverage": {
+    "chapters": 21,
+    "preparedExamples": 56,
+    "builtInToolContracts": 223,
+    "enabledToolFormsVisited": 223,
+    "nativeViewTypes": 20,
+    "nativeSamplesRendered": 20,
+    "indexLayers": 14,
+    "connectedBoundaryCases": 4
+  },
+  "fixture": {
+    "launcher": "demo/ui-ux.js",
+    "checker": "dev/check-handbook-browser.js",
+    "infrastructure": "Synthetic local fixtures; actual bundled Java source indexing; retained semantic projection is synthetic.",
+    "writes": "Owned disposable task memory, saved native presentation results and local sandbox computations."
+  },
+  "browser": {
+    "checks": [
+      {
+        "name": "all-chapters-and-examples",
+        "ok": true
+      },
+      {
+        "name": "search-and-crosslinks",
+        "ok": true
+      },
+      {
+        "name": "boundary-checkpoint",
+        "ok": true
+      },
+      {
+        "name": "all-enabled-tool-forms",
+        "ok": true
+      },
+      {
+        "name": "prepared-example-run-native-result",
+        "ok": true
+      },
+      {
+        "name": "all-visualization-examples-prepare-and-render",
+        "ok": true
+      },
+      {
+        "name": "exact-revision-carry-forward",
+        "ok": true
+      },
+      {
+        "name": "local-boundary-red-green-practice",
+        "ok": true
+      },
+      {
+        "name": "self-context-persistence",
+        "ok": true
+      },
+      {
+        "name": "responsive-1440",
+        "ok": true,
+        "originalDefect": "Long raw tool result widened the document.",
+        "repair": "Wrap and bound preformatted output inside the result workbench.",
+        "verification": "Six chapters checked with an open long raw result at this viewport; no document overflow."
+      },
+      {
+        "name": "responsive-390",
+        "ok": true,
+        "originalDefect": "Long raw tool result widened the document.",
+        "repair": "Wrap and bound preformatted output inside the result workbench.",
+        "verification": "Six chapters checked with an open long raw result at this viewport; no document overflow."
+      },
+      {
+        "name": "standalone-and-scope",
+        "ok": true
+      },
+      {
+        "name": "saved-memory-handoff-preserves-scope-and-opens-notes",
+        "ok": true
+      },
+      {
+        "name": "images-and-zero-page-errors",
+        "ok": true
+      }
+    ],
+    "confirmationBeforeRepair": {
+      "checks": 14,
+      "passed": 12,
+      "failed": 2,
+      "pageErrors": 0,
+      "overflows": 12
+    },
+    "responsiveRegression": {
+      "checks": [
+        {
+          "width": 1440,
+          "chapter": "start",
+          "ok": true
+        },
+        {
+          "width": 1440,
+          "chapter": "indices",
+          "ok": true
+        },
+        {
+          "width": 1440,
+          "chapter": "case-contracts",
+          "ok": true
+        },
+        {
+          "width": 1440,
+          "chapter": "tool-reference",
+          "ok": true
+        },
+        {
+          "width": 1440,
+          "chapter": "self-context",
+          "ok": true
+        },
+        {
+          "width": 1440,
+          "chapter": "visualizations",
+          "ok": true
+        },
+        {
+          "width": 390,
+          "chapter": "start",
+          "ok": true
+        },
+        {
+          "width": 390,
+          "chapter": "indices",
+          "ok": true
+        },
+        {
+          "width": 390,
+          "chapter": "case-contracts",
+          "ok": true
+        },
+        {
+          "width": 390,
+          "chapter": "tool-reference",
+          "ok": true
+        },
+        {
+          "width": 390,
+          "chapter": "self-context",
+          "ok": true
+        },
+        {
+          "width": 390,
+          "chapter": "visualizations",
+          "ok": true
+        }
+      ],
+      "summary": {
+        "checks": 12,
+        "passed": 12,
+        "failed": 0
+      }
+    },
+    "pageErrors": 0,
+    "postRepairDocumentOverflows": 0,
+    "widths": [
+      1440,
+      390
+    ],
+    "startupNote": "One attempted run timed out before any check while the full test workload was running. Confirmation was then run after the workload finished.",
+    "repairNote": "Confirmation found two responsive failures caused by one long-result wrapping defect. The focused post-fix regression passed all 12 chapter/viewport combinations."
+  },
+  "localExercise": {
+    "tool": "js_run through context_run",
+    "sameAssertions": true,
+    "baselineFailed": 2,
+    "baselinePassed": 1,
+    "candidateFailed": 0,
+    "candidatePassed": 3,
+    "actualSavedResults": true,
+    "proofLimit": "Sandbox teaching exercise at the amount-conversion seam, not service integration or workspace red-green certification."
+  },
+  "automatedTests": {
+    "command": "npm test",
+    "tests": 797,
+    "passed": 745,
+    "failed": 0,
+    "cancelled": 0,
+    "skipped": 52,
+    "durationMs": 49142.316424,
+    "skipNote": "Optional environment-dependent integration/live cases retain their prerequisite-based skips.",
+    "firstRunRepair": "A model-briefing size-budget test caught overly long discovery guidance; shortened it and reran the complete suite."
+  },
+  "packaging": {
+    "buildCheck": true,
+    "portableDocsCheck": true,
+    "standaloneBundleOutsideSourceTree": true,
+    "standalonePersistentSelfContext": true,
+    "shippedAllowlistedExampleImages": 28,
+    "sourceTreeDependenciesRequired": false
+  },
+  "independentNoviceReview": {
+    "report": "docs/handbook/novice-review.md",
+    "initialDraftScore": "6.5/10",
+    "reviewMethod": "Independent bounded novice browser walkthrough, then bounded text/source follow-up of repairs.",
+    "followup": "No remaining P1/P2 documentation issues found; two final copyedits applied.",
+    "newIndependentScore": null
+  },
+  "captures": [
+    "handbook-boundary-case-desktop.png",
+    "handbook-boundary-practice-desktop.png",
+    "handbook-exact-revision-desktop.png",
+    "handbook-memory-handoff-desktop.png",
+    "handbook-self-context-390.png",
+    "handbook-self-context-desktop.png",
+    "handbook-start-390.png",
+    "handbook-start-desktop.png",
+    "handbook-tool-reference-desktop.png",
+    "handbook-visual-index-desktop.png"
+  ],
+  "notRerun": [
+    "Fresh Joern parsing",
+    "Live Postgres/Kafka/Elasticsearch environment access",
+    "Open WebUI transport",
+    "Autonomous model quality",
+    "Full-service integration regression for the illustrative boundary cases"
+  ]
+}

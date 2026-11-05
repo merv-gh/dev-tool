@@ -2,6 +2,27 @@
 
 Captured from the running demo with `demo/gallery.js`, `demo/screenshots.js` and `demo/chat-screenshots.js`. Synthetic samples demonstrate rendering; real Joern captures use retained end-to-end test results. Open WebUI uses a scripted model with real tool calls. This gallery does not imply every integration was executed. [Capture instructions](../../demo/README.md).
 
+## Field guide and self-context
+
+Captured from `demo/ui-ux.js` with `dev/check-handbook-browser.js`. The guide
+uses the live enabled registry; infrastructure and retained semantic examples
+are synthetic. Local calculations, the amount-conversion assertion exercise,
+self-context saving and the scoped Task memory handoff were actually executed.
+The twenty native views are labeled presentation samples. These captures do not
+claim a fresh Joern parse or an autonomous model evaluation.
+
+| | |
+| --- | --- |
+| ![Field guide orientation](handbook-start-desktop.png) **Start by task** · searchable chapters, scopes and editable examples | ![Live installation briefing](handbook-self-context-desktop.png) **Self-context** · cache metadata and persistent operator knowledge |
+| ![All enabled tool contracts](handbook-tool-reference-desktop.png) **Tool reference** · live schemas and editable forms | ![All native view examples](handbook-visual-index-desktop.png) **Visual index** · question, interaction and sample for every view |
+| ![Boundary investigation checkpoint](handbook-boundary-case-desktop.png) **Connected cases** · choose the next discriminating evidence | ![Actual local boundary practice](handbook-boundary-practice-desktop.png) **Local practice** · failing and passing independent assertions |
+| ![Pinned source search](handbook-exact-revision-desktop.png) **Exact source** · a returned revisionKey becomes the next repo argument | ![Scoped operator note](handbook-memory-handoff-desktop.png) **Memory handoff** · same story, selected folder and preserved note |
+| ![Mobile field guide](handbook-start-390.png) **Mobile reading** | ![Mobile self-context](handbook-self-context-390.png) **Mobile briefing** |
+
+[Portable handbook](../handbook/README.md) ·
+[Independent novice review and repairs](../handbook/novice-review.md) ·
+[Verification](../benchmarks/handbook-verification.json)
+
 ## Current investigation workspace
 
 Captured during the [UI review](../ui-ux-review.md) with `demo/ui-ux.js` and

@@ -10,10 +10,15 @@ function harness(override) {
   const element = () => ({ value: '', textContent: '', hidden: false, disabled: false, options: [], children: [], append(...items) { this.children.push(...items); this.options.push(...items); }, replaceChildren() { this.children = []; this.options = []; }, addEventListener() {}, focus() {} });
   const $ = id => { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); };
   let discard = true;
-  const runtime = vm.createContext({ $, console, setTimeout, clearTimeout, confirm: () => discard, window: { addEventListener() {} }, document: { createElement: element, querySelectorAll: () => [...elements.values()] }, api: async (url, args) => override?.(url,args) ?? (url === '/api/tools' ? tools.schemas() : { result: await tools.call(url.split('/').pop(), args) }) });
+  const runtime = vm.createContext({ $, console, URLSearchParams, location:{hash:'#context'}, setTimeout, clearTimeout, confirm: () => discard, window: { addEventListener() {} }, document: { createElement: element, querySelectorAll: () => [...elements.values()] }, api: async (url, args) => override?.(url,args) ?? (url === '/api/tools' ? tools.schemas() : { result: await tools.call(url.split('/').pop(), args) }) });
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../web/admin-context.js'), 'utf8'), runtime);
   return { $, run: code => vm.runInContext(code, runtime), discard: value => discard = value };
 }
+test('Task memory deep links select the exact saved context and operator note', async () => {
+  const c=C.open({id:'dev-tool-self',title:'Operating context'});C.write({id:c.id,path:'operator-notes.md',content:'Preserved operating knowledge.'});
+  const h=harness();h.run("location.hash='#context?story=review-story&env=dev&context=dev-tool-self&file=operator-notes.md'");
+  await h.run('loadContexts()');assert.equal(h.run('contextState.id'),c.id);assert.equal(h.$('cxPath').value,'operator-notes.md');assert.equal(h.$('cxContent').value,'Preserved operating knowledge.');
+});
 test('editor saves notes and metadata independently without losing drafts; stale edits survive rejection', async () => {
   const c = C.open({ title: 'UI memory' }), h = harness();
   await h.run('loadContexts()'); await h.run(`contextSelect(${JSON.stringify(c.id)})`);

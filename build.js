@@ -47,6 +47,8 @@ for (const f of fs.readdirSync(path.join(ROOT, 'web'), { recursive: true })) {
   if (fs.statSync(p).isFile()) files[`web/${f.split(path.sep).join('/')}`] = fs.readFileSync(p);
 }
 files['agent-prompt.md'] = fs.readFileSync(path.join(ROOT, 'lib', 'agent-prompt.md'));
+// Handbook examples remain available in the standalone bundle, without a docs checkout.
+for(const name of require('./lib/handbook').imageNames())files['web/handbook-images/'+name]=fs.readFileSync(path.join(ROOT,'docs/screenshots',name));
 // Ready-made script collections, copied into the dt home once (lib/scripts.js seedStarters).
 for (const f of fs.readdirSync(path.join(ROOT, 'lib', 'starter-scripts'), { recursive: true })) {
   const p = path.join(ROOT, 'lib', 'starter-scripts', f);

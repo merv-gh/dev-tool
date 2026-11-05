@@ -142,6 +142,11 @@ const CORS = { 'access-control-allow-origin': '*' };
 // Pages are plain HTML; their data comes from trusted endpoints, or from ones keyed by an unguessable
 // result id / signed token (embeds in Open WebUI load them from a sandboxed, cross-origin iframe).
 const routes = [
+  ['GET', '/handbook', true, page('handbook.html')],
+  ['GET', '/api/handbook', true, async (req,res) => send(res,200,await require('./lib/handbook').catalog())],
+  ['GET', '/api/handbook/context', true, async (req,res,url) => send(res,200,await require('./lib/handbook').selfContext({env:url.searchParams.get('env')||undefined}))],
+  ['GET', '/api/handbook/sample', true, (req,res,url) => { const view=require('./lib/views').get(url.searchParams.get('view'));if(view.sample===undefined)return send(res,404,{error:'This view has no sample'});send(res,200,{view:view.name,data:view.sample}); }],
+  ['GET', '/handbook-images/*', false, (req,res,url) => { const file=require('./lib/handbook').imageFile(url.pathname.slice('/handbook-images/'.length));if(!file)return send(res,404,{error:'Unknown handbook image'});res.writeHead(200,{'content-type':'image/png','cache-control':'public, max-age=3600','x-content-type-options':'nosniff'});res.end(fs.readFileSync(file)); }],
   ['GET', '/api-client', true, page('api-client.html')],
   ['GET', '/', false, (req, res) => send(res, 200, { name: 'dt', mcp: '/mcp', openapi: '/openapi.json', tools: '/api/tools', status: '/api/status', admin: '/admin', results: '/view', prompt: '/api/prompt' })],
   ['GET', '/health', false, (req, res) => send(res, 200, { ok: true, version: VERSION })],

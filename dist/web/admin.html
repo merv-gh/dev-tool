@@ -124,7 +124,7 @@
   iframe.vw-prev { width: 100%; height: 520px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
   details summary { cursor: pointer; color: var(--muted); font-size: 12px; margin: 8px 0; }
 </style>
-<link rel="stylesheet" href="/static/admin-ux.css"><link rel="stylesheet" href="/static/port-editor.css">
+<link rel="stylesheet" href="/static/admin-ux.css"><link rel="stylesheet" href="/static/handbook.css"><link rel="stylesheet" href="/static/port-editor.css">
 </head>
 <body>
 <div class="wrap">
@@ -362,6 +362,7 @@
     <details><summary>Refresh operational observations</summary><p class="hint">Read-only source queries in a cancellable job. PostgreSQL activity, Kafka stats and configured telemetry remain separate from published architecture. Failed sources retain older observations.</p><div class="row"><button id="arAdminRefresh">Refresh selected environment</button><button id="arAdminPoll" hidden>Observe job</button><button id="arAdminCancel" hidden>Cancel job</button></div><pre id="arAdminJob"></pre></details>
     <iframe id="arAdminPreview" title="Interactive architecture preview" allow="clipboard-write"></iframe>
   </section>
+  <section id="tab-handbook" hidden><div id="adminHandbook"></div></section>
   <section id="tab-config" hidden>
     <h2><span id="cfgName">config.json</span> <span class="muted" id="cfgFile"></span></h2>
     <p class="hint" id="cfgHint">Environments, integrations, tools and browser sites. Secrets stay in <code>.env</code>; write <code>${NAME}</code> here to use one. Saving validates and activates a generation without restarting. Existing calls finish on their captured configuration.</p>
@@ -385,6 +386,7 @@
 <script src="/static/admin-map.js"></script>
 <script src="/static/admin-runtime.js"></script>
 <script src="/static/admin-semantic.js"></script><script src="/static/admin-architecture.js"></script>
+<script src="/static/handbook.js"></script><script src="/static/admin-handbook.js"></script>
 <script>
 let S = null, tab = 'index', selectedJob = null, timer = null;
 const api = async (p, body, { identityOnly = false } = {}) => {
@@ -514,16 +516,19 @@ async function loadConfig() {
   $('cfgExample').textContent = c.example; $('cfgMsg').textContent = '';
 }
 
+let adminLinkedEnvApplied = false;
 async function refresh() {
   try {
     S = await api('/api/admin/status');
     let cur = env();
+    if (!adminLinkedEnvApplied) { const linkedEnv = new URLSearchParams(location.hash.split('?')[1] || '').get('env'); if (S.envs.some(e => e.env === linkedEnv)) cur = linkedEnv; adminLinkedEnvApplied = true; }
     try { cur = cur || localStorage.getItem('dt-admin-env'); } catch {}
     $('env').innerHTML = S.envs.map(e => `<option ${e.env === cur ? 'selected' : ''}>${esc(e.env)}</option>`).join('');
     $('version').textContent = `v${S.version}`;
     $('authInfo').textContent = S.auth.apiKey ? 'API key' : S.auth.trustNetwork ? 'trusted network' : 'local only';
     $('nScripts').textContent = S.config.scripts || ''; $('nSites').textContent = S.config.browserSites.length || '';
     renderSources(); renderPassports(); renderJobs(); renderConfig();
+    if(typeof adminHandbookScope!=='undefined'&&tab==='handbook'&&adminHandbookScope!==adminRequestScope()+'|'+env())loadHandbook().catch(e=>toast(e.message));
   } catch (e) { toast(e.message); }
   clearTimeout(timer);
   timer = setTimeout(refresh, (S?.jobs || []).some(rtActive) ? 1500 : 15000);
@@ -633,7 +638,8 @@ function show(t) {
   tab = t;
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   document.querySelectorAll('section[id^=tab-]').forEach(s => s.hidden = s.id !== `tab-${t}`);
-  history.replaceState(null, '', `#${t === 'semantic' ? requested : t}`);
+  history.replaceState(null, '', `#${['semantic','handbook','context'].includes(t) ? requested : t}`);
+  if (t === 'handbook') loadHandbook().catch(e => toast(e.message));
   if (t === 'architecture') loadArchitectureAdmin().catch(e => architectureMessage(e.message, true));
   if (t === 'context') loadContexts().catch(e => contextMessage(e.message, true));
   if (t === 'config') loadConfig().catch(e => toast(e.message));

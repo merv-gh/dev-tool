@@ -238,6 +238,7 @@ async function runtimeChangeScope(event) {
   if (!identifier.test(story) || principal && !identifier.test(principal)) { $('rtScopeStatus').textContent = 'Use up to 160 letters, digits, dots, colons, underscores or hyphens, starting with a letter or digit.'; return; }
   runtimeStory = story; runtimePrincipal = principal; runtimeStore.set('story', story); runtimeStore.set('principal', principal);
   runtimeScopeVersion++; runtimeMetadataVersion++; runtimeSelected = null; runtimeMetadataSelected = null; runtimeMetadataDirty = false; runtimeMetadata = []; runtimeMetadataCursor = null;
+  if(typeof clearHandbook==='function')clearHandbook();
   if (runtimeState) runtimeState = { ...runtimeState, executions: [], jobs: [] };
   $('rtExecutions').replaceChildren(); $('rtMetadataList').replaceChildren();
   $('rtExecution').innerHTML = '<div class="empty">Select an execution in this chat / task.</div>'; $('rtMetadataEditor').innerHTML = '<div class="empty">Select a record in this chat / task.</div>';
@@ -252,6 +253,7 @@ async function runtimeChangeScope(event) {
   if (typeof selectedJob !== 'undefined') selectedJob = null;
   await loadRuntime(); await refresh(); await runtimeLoadMetadata();
   if (tab === 'context') await loadContexts(); if (tab === 'history') await loadHistory();
+  if(tab==='handbook')await loadHandbook();
   runtimeMessage('Scope applied. New tools and requests use this chat / task.');
 }
 function runtimeViewMessage(event) {

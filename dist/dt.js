@@ -49110,6 +49110,673 @@ var require_tools_context = __commonJS({
   }
 });
 
+// lib/handbook-content.js
+var require_handbook_content = __commonJS({
+  "lib/handbook-content.js"(exports2, module2) {
+    var example = (tool, args, label, expect) => ({ tool, args, label, expect });
+    var section = (id, title, body, extra = {}) => ({ id, title, body: [].concat(body), ...extra });
+    var chapter = (id, title, group, summary, outcome, prerequisites, sections, related = []) => ({ id, title, group, summary, outcome, prerequisites, sections, related });
+    var figure = (file, caption) => ({ file, caption });
+    var indexes = [
+      { id: "catalog", name: "Environment catalog", path: "cache/{env}/catalog.txt", source: "Cached PG, ES, Kafka, Consul, passports and API routes", purpose: "Cheap name discovery with find. A hit identifies an object; it does not execute a query.", refresh: { tool: "catalog_sync", args: { env: "{{env}}", what: "index" } }, version: "Environment + cached source generations. index rebuilds from cache; it does not contact the sources.", queries: ["find", "pg_table", "kafka_topic"], limit: "Catalog absence means unknown coverage, not that the object does not exist." },
+      { id: "postgres", name: "Postgres catalog", path: "cache/{env}/pg/", source: "Read-only database metadata refresh", purpose: "Tables, columns, functions/bodies, constraints, views and triggers.", refresh: { tool: "catalog_sync", args: { env: "{{env}}", what: "pg", only: "{{db}}" } }, version: "Database snapshot timestamp; deployed code has a separate SHA.", queries: ["pg_table", "pg_function", "ddl_snapshot"], limit: "Catalog rows are metadata, not current business rows. Use bounded pg_query for actual values." },
+      { id: "usage", name: "Postgres usage graph", path: "cache/{env}/pg/_usage.json", source: "Database dependencies plus passport code findings", purpose: "Readers/writers, functions, views, triggers and supported column lineage.", refresh: { tool: "catalog_sync", args: { env: "{{env}}", what: "index" } }, version: "Built from the available catalog/passport generations.", queries: ["pg_usage", "field_trace", "impact"], limit: "Missing passports, dynamic SQL and unqualified names can leave ambiguity or gaps." },
+      { id: "search", name: "Elasticsearch metadata", path: "cache/{env}/es/_index.json", source: "Mappings, aliases and index metadata", purpose: "Resolve an index and its fields before es_search.", refresh: { tool: "catalog_sync", args: { env: "{{env}}", what: "es" } }, version: "Environment + metadata refresh time; documents change separately.", queries: ["find", "es_search", "es_health"], limit: "A mapping or alias says nothing about whether a particular document is current." },
+      { id: "topics", name: "Kafka metadata", path: "cache/{env}/kafka/_index.json", source: "Topic/config/schema metadata", purpose: "Resolve topics and schemas before bounded message inspection.", refresh: { tool: "catalog_sync", args: { env: "{{env}}", what: "kafka" } }, version: "Cluster/environment + cached metadata time; retain partition/offset for observations.", queries: ["kafka_topic", "kafka_last", "kafka_lag"], limit: "Samples and lag cannot prove exactly-once delivery or global ordering." },
+      { id: "consul", name: "Consul observations", path: "cache/{env}/consul.json", source: "Service registrations, health and instance metadata", purpose: "Relate services to replicas, deployed versions/SHAs and observed health.", refresh: { tool: "catalog_sync", args: { env: "{{env}}", what: "consul" } }, version: "Environment + observation time. A version is useful only if actually reported.", queries: ["consul_service", "health", "overview"], limit: "Registration is not proof of a dependency. Missing commit metadata remains unknown." },
+      { id: "passports", name: "Service passports", path: "passports/{service}/passport.json", source: "Static analysis of service and resolved internal-library source", purpose: "Endpoints, topics, database accesses, HTTP clients, source locations and resolution gaps.", refresh: { tool: "passport", args: { service: "{{service}}", env: "{{env}}", refresh: true } }, version: "Repository + source SHA; retained revisions and correction overlays remain distinct.", queries: ["passport", "semantic_ports", "who_uses", "architecture_service"], limit: "Default-branch library fallback is useful exploration, not exact-version proof." },
+      { id: "repository-map", name: "Repository/module lookup", path: "cache/bitbucket/_index.json", source: "Bitbucket repository folders and Maven/Gradle modules", purpose: "Resolve internal artifacts to repositories and modules.", refresh: { tool: "catalog_sync", args: { env: "{{env}}", what: "bitbucket" } }, version: "Repository/module metadata refresh; exact source ref still needs resolving.", queries: ["bitbucket_repos", "repo_fetch", "passport"], limit: "A matching artifact name alone cannot choose between multiple versions or owners." },
+      { id: "code", name: "Native code index", path: "cache/code/", source: "Fetched source files, trigrams, symbols and Java/Kotlin call graph", purpose: "Scoped text/regex/symbol search and bounded impact without requiring Joern.", refresh: { tool: "code_index", args: { service: "{{service}}" } }, version: "Repository SHA plus source digest/revisionKey; workspace changes have their own content identity.", queries: ["code_index", "code_search", "code_symbols", "code_read", "impact"], limit: "Text hits are candidates. Fast grep fallback and optional Zoekt are search paths, not value-flow proof." },
+      { id: "semantic", name: "Retained Joern projections", path: "cache/semantic/", source: "Optional Joern worker code property graph (CPG) and bounded local projections", purpose: "Exact-generation symbols, callers, paths, guards and supported value-flow evidence.", refresh: { tool: "semantic_index", args: { service: "{{service}}", env: "{{env}}" } }, version: "Exact source/dependency set + analysis/generation IDs; a reparse preserves the last good generation.", queries: ["semantic_index", "semantic_search", "semantic_query"], limit: "Select exact analyses; reachability, control flow, local data flow and declared transport maps are different claims." },
+      { id: "documentation", name: "Documentation blocks and knowledge", path: "cache/confluence/index/blocks.json", source: "Versioned Confluence mirror and configured knowledge sources", purpose: "Searchable requirement passages with block/page identities and verifiable quotes.", refresh: { tool: "catalog_sync", args: { env: "{{env}}", what: "confluence" } }, version: "Source revision/page version and indexed block identity; published architecture has a separate revision.", queries: ["docs_search", "docs_page", "docs_verify", "knowledge_search", "knowledge_verify"], limit: "Embeddings rank candidates; they do not establish that a requirement was implemented." },
+      { id: "routes", name: "Observed and static routes", path: "cache/routes.json", source: "Passport endpoints and browser/network observations", purpose: "Match method/path/host to candidate handlers and prepare API requests.", refresh: { tool: "api_routes", args: { service: "{{service}}" } }, version: "Source SHA for static routes; observation timestamp and method/host/path for traffic.", queries: ["api_routes", "routes_discover", "routes_learn", "api_exchange_get"], limit: "api_routes reads the inventory. Capture traffic or rebuild a passport to add evidence; names alone do not prove runtime routing." },
+      { id: "operations", name: "Operational history", path: "cache/state/operational.sqlite", source: "Owned executions, jobs, calls and edited metadata; legacy JSONL remains supported", purpose: "Inspect work, errors, duration, cancellation and investigation provenance.", refresh: null, version: "Principal + chat/task scope, call/execution IDs and captured config/registry revisions.", queries: ["execution_list", "execution_get", "metadata_list", "call_history", "dt_log"], limit: "A successful invocation or low latency is not a successful investigation or a behavioral test pass." },
+      { id: "memory", name: "Task memory discovery index", path: "contexts/{context}/index.json", source: "Context title, summary, links, file names and per-file summaries", purpose: "Rediscover prior work and read only the evidence relevant to this task.", refresh: { tool: "context_find", args: { query: "{{ticket}}" } }, version: "Context/file revisions; stories isolate private memory. Read content separately.", queries: ["context_find", "context_get", "context_search", "context_read"], limit: "Saved findings can be stale or untrusted; verify environment, SHA and timestamps before reusing them." }
+    ];
+    var chapters = [
+      chapter("start", "Your first investigation", "Start here", "Get from an unfamiliar symptom to a bounded, reviewable answer.", "Find a real service/object, keep a task record and identify the next evidence gap.", ["Open Admin and choose the environment. A configured connection is not proof that its data is indexed."], [
+        section("orientation", "Choose a surface and a scope", [
+          "Open WebUI is the conversation surface. Admin is the operational workbench: Explore searches evidence, Passports/Services map/Architecture show relationships, Task memory keeps work, and Runtime/Jobs explain execution. This handbook is also available at /handbook and as a portable manual in the repository.",
+          "Choose the environment in Admin and a stable Chat / task ID before starting. A token identifies the user; the story separates investigations. Profiles such as direct, tester and semantic change which tools are sent to a model; they do not grant permissions. Source env=dev does not mean a test will execute on a deployed dev application.",
+          "In the examples, replace the selected service, repository and database with discovered names. checkout and DEMO/checkout belong to the disposable UI playground, not your company environment. Examples are prepared drafts. Nothing runs until you press Run tool."
+        ], { steps: ["Read Self-context to see which tools and caches are available here.", "Search previous task memory by ticket. Open an exact context, then read progress.md.", "Use find for names; inspect a passport or definition before querying live data.", "Record what is known, the source identity, the next question and what would disprove the current hypothesis."], examples: [example("find", { env: "{{env}}", q: "{{service}}" }, "Find the service in cached evidence", "Catalog lines or an explicit empty-catalog hint. If empty, see Indices; repeated identical searches do not create coverage."), example("tool_search", { query: "investigate service error and reproduce related state" }, "Discover a compound workflow", "Enabled tools and planning guides, not an automatic diagnosis.")] }),
+        section("first-answer", "Build an answer someone can audit", "A useful first answer names the symptom, environment, deployed/source identity, observed evidence and uncertainty. Link the native view, cite exact file:line or documentation blocks, and distinguish an observation from a proposed cause. A service-name match, green health badge or path through a graph is a starting point.", { table: { headers: ["Question", "Start with", "Check before concluding"], rows: [["What is this service?", "passport / showcase", "Source SHA, library resolution and missing evidence"], ["Who writes this field?", "find \u2192 pg_usage / field_trace", "Column classification, dynamic SQL and missing passports"], ["What failed around this request?", "logs_search \u2192 logs_trace", "Time window, trace/tenant/entity identity and instance"], ["Can I reproduce it?", "scenario_inventory \u2192 fixture_plan", "Required reads, scope, execution target and independent expectations"]] }, figure: figure("ux-admin-navigation.png", "Admin groups investigation, work and operations; synthetic demo environment.") })
+      ], ["self-context", "task-memory", "indices", "case-contracts"]),
+      chapter("self-context", "Dev-tool\u2019s own operating context", "Start here", "Understand this installation and keep a durable briefing without copying credentials.", "Refresh a scoped app briefing and preserve operator knowledge across chats.", ["Open the Self-context view in this handbook."], [
+        section("briefing", "What the live briefing knows", [
+          "Self-context reports this installation\u2019s version, enabled tool names/groups, profile availability, selected environment and authenticated story. It checks cache file/directory timestamps and configured-capability flags without contacting infrastructure or parsing large PG catalogs. A cache timestamp is a filesystem observation, not a claim that every object is fresh.",
+          "The recent-call summary is a bounded operational sample in the current story. Invocation errors and latency help find slow or wasteful workflows. They cannot grade the model, prove a fix or tell whether the user\u2019s question was answered. Use the effectiveness chapter for stronger evidence.",
+          "Copy model briefing produces a compact operating context. It excludes raw configuration, token values, connection URLs, file bodies and absolute machine paths. Tool descriptions and schemas are inspected separately when needed."
+        ], { examples: [example("self_context", { env: "{{env}}" }, "Read this installation\u2019s briefing", "A safe capability/cache summary and a compact model briefing; no network refresh or memory write.")] }),
+        section("durable", "Keep a persistent self-context", [
+          "Save self-context creates or reopens the current story\u2019s dev-tool-self context. operating-context.md and capabilities.json are generated snapshots. operator-notes.md is created once and then preserved: record your naming conventions, approved runner profiles, useful script IDs and known limitations there. Never paste credentials.",
+          "Open the saved folder from Task memory. A new chat in the same authorized scope can consult it with context_find, context_get and context_read. Another story has its own self-context; this does not publish private notes globally. Refresh generated snapshots when tools/configuration or the selected environment changes. Old captures keep their original timestamps.",
+          "If another editor changes a generated file during refresh, revision checks reject the stale write. Read the current file and refresh intentionally; do not erase operator notes to resolve a conflict. This persistent memory complements the live briefing rather than silently replacing it."
+        ], { examples: [example("self_context", { env: "{{env}}", save: true }, "Save a scoped self-context", "The context ID, written file paths, snapshot time and a link to Task memory."), example("context_get", { id: "dev-tool-self" }, "Inspect persistent self-context", "A file inventory. Read operator-notes.md for local operating knowledge.")] })
+      ], ["task-memory", "operations", "tool-reference"]),
+      chapter("task-memory", "Contexts, nearby files and handoffs", "Start here", "Keep notes and results outside disposable Git checkouts.", "Resume work without re-fetching everything or trusting stale conclusions.", ["Choose a ticket/task identity and current story."], [
+        section("start-memory", "Search before creating", [
+          "A context is a durable folder with a discovery index. It is useful even when the task has no repository: log investigations, data comparisons, requirement research and scripts can all live there. Contexts and writable code workspaces solve different problems.",
+          "context_find searches metadata, discovery links, file names and summaries; it does not read every file body. Search exact tickets/tasks first. If ambiguous candidates are returned, inspect them and select an explicit ID. indexedContexts=0 means no readable saved memory; stop repeating the same search and create a task context.",
+          "Open progress.md first, then use context_search to find relevant saved evidence. Save a short plan, current findings, source environment/revisions, unresolved questions and the next action. Update the context summary so another chat can discover it. Supplied discovery-link arrays replace existing arrays: include old links you intend to keep."
+        ], { examples: [example("context_find", { query: "{{ticket}}" }, "Find prior work", "Exact matches or candidates; inspect identity before attaching."), example("context_open", { id: "{{context}}", title: "{{ticket}} \xB7 service investigation", tickets: ["{{ticket}}"], repositories: ["{{repo}}"], summary: "Symptom, evidence, attempted hypotheses and next steps" }, "Open a task context", "A reusable folder and progress.md, without requiring Git."), example("context_search", { id: "{{context}}", query: "revision" }, "Search saved evidence", "Bounded matching lines and file revisions. Use context_read for the exact content.")] }),
+        section("scratchpad", "Run and retain evidence", [
+          "Task memory has Files & progress, Tool scratchpad and Saved results modes. Choose a tool, inspect its contract, edit the structured fields or exact JSON, then Run & save result. A model hint proposes arguments; it never executes them.",
+          "context_run uses normal tool authorization and effects. Inspect ok and saved/saveError separately: a request can succeed while capture fails. If saving failed after a state-changing call, recover the existing execution/result rather than repeating the action. Keep compact summaries and relevant excerpts; do not flood model context with large saved outputs.",
+          "Nearby context_list/read/search/write/edit helpers are available to code cells when context is supplied. A saved script file is not registered or executed until script_save/script_run is used. Copying a result into notes does not upgrade its proof or freshness."
+        ], { examples: [example("context_run", { id: "{{context}}", tool: "find", arguments: { env: "{{env}}", q: "{{service}}" }, summary: "Resolve the service before live queries" }, "Run a cached lookup and preserve it", "A saved calls/...json record plus the original native visualization when available.")], figure: figure("ux-context-scratchpad.png", "Structured arguments and native previews in a task context; actual local show call in the synthetic playground.") }),
+        section("files", "Edit, import and archive safely", "Use context_read to obtain the current revision before context_edit or a guarded context_write. Configured local/SFTP stores can be browsed and copied with files_* tools. files_archive moves a source from a context or configured writable store into archived/ in a destination context. Supply the observed source revision and inspect sourceRemoved plus destination details; a retained source after partial failure is not a completed move.", { steps: ["Read the source and preserve its revision.", "Archive with an explicit destination context and a useful summary.", "Inspect both destination and sourceRemoved; resolve partial outcomes without deleting the only good copy.", "Prefer archival to context_delete_file when the evidence may be useful later."] })
+      ], ["self-context", "automation", "operations", "verify-changes"]),
+      chapter("indices", "Indices, freshness and exact versions", "Evidence foundations", "Know which search can answer a question and when to refresh.", "Choose the cheapest adequate source without overwriting the evidence under review.", ["Know the selected environment; discover exact names with find."], [
+        section("layers", "Three kinds of evidence", [
+          "Cached metadata answers what exists and what code appears to touch. Live queries answer what was observed at a particular time. Executed tests answer what happened on a declared target with specific inputs and assertions. Keep these categories separate in notes and final answers.",
+          "The index atlas below explains each retained layer, where it comes from, its identity and its refresh tool. Paths are relative to DT_HOME/configured cache roots; they are explanatory, not instructions to copy another user\u2019s absolute directory. File timestamps in Self-context show cache presence/change, not a distributed consistency guarantee.",
+          "A source refresh and a derived-index rebuild are different operations. catalog_sync what=index rebuilds catalog/usage from existing caches; it cannot fetch a missing database table definition or a new Confluence page. Refresh the relevant source first, then rebuild derived views."
+        ], { indexAtlas: true }),
+        section("versioning", "Refresh the missing layer, preserve the old identity", [
+          "Repository aliases can advance as new commits are fetched. For a review, keep the returned SHA, sourceDigest/revisionKey and semantic analysis IDs instead of assuming a branch still means the same source. Listing versions with code_index and semantic_index exposes retained generations. A mutable workspace gets a distinct content identity after edits.",
+          "Semantic reparsing is a job and preserves a last good generation. Do not delete an old index simply to make a progress indicator disappear. Observe the returned job, inspect its error/gaps and query the intended retained generation. Concurrent stories do not share owned jobs or private correction overlays.",
+          "If an internal library\u2019s exact version cannot be resolved, passport reports its bounded search/fallback. Default-branch source helps exploration, but cannot prove behavior of the deployed artifact. Record the fallback, inspect build.gradle/pom.xml and select the exact source before making a compatibility claim."
+        ], { examples: [example("catalog_sync", { env: "{{env}}", what: "index" }, "Rebuild derived catalog from cache", "A job or completed refresh; source systems are not refreshed by index-only work."), example("code_index", { versions: true }, "List retained code revisions", "Source identities usable for scoped searches."), example("semantic_index", { versions: true }, "List retained semantic analyses", "Generation IDs and exact source identities; no target means listing, not parsing.")] })
+      ], ["services", "joern", "case-library", "operations"]),
+      chapter("services", "Explore a service and its surroundings", "Explore systems", "Move from a name to endpoints, storage, topics, libraries and environment replicas.", "Explain a service\u2019s boundary and know which connections are evidenced.", ["A service name or repository; environment access only for live observations."], [
+        section("passport", "Read the passport before expanding the ocean", [
+          "Search find or passports, then request passport for one service and selected environment. The response may return cached evidence or an asynchronous build. Observe job=<returned ID> instead of repeatedly requesting refresh=true. The passport source SHA and library-resolution notes are part of the answer.",
+          "Read endpoints, scheduled entries, consumed/produced topics, tables/functions, external HTTP clients, internal libraries and source locations. A missing section can mean incomplete analysis; inspect gaps before concluding there are no dependencies. who_uses and pg_usage reveal consumers and writers outside the selected service.",
+          "The Services map groups many services by name prefix. Prefix containment is an inventory convenience, not ownership or an inferred dependency. Expand a prefix, inspect a service and read connection evidence. Candidate edges are optional and explicitly weaker. UI deployments, UI repositories and backend services keep separate identities."
+        ], { examples: [example("passport", { service: "{{service}}", env: "{{env}}" }, "Inspect the service passport", "Pinned source, boundary summary, job state if needed and a native passport view."), example("map", { env: "{{env}}", focus: "svc:{{service}}", depth: 1 }, "Open a bounded service neighborhood", "Evidenced entities/relations and gaps; no invented aggregate arrows."), example("who_uses", { name: "{{service}}", env: "{{env}}" }, "Find related services", "Cross-service evidence; inspect the actual matched resource and direction.")], figure: figure("ux-services-map.png", "A dedicated map workspace; service-prefix grouping is inventory, not proof of dependency.") }),
+        section("correct", "Correct ports where you see them", [
+          "Open Edit boundary graph on an authenticated passport or Edit service ports in Joern & ports. Select a graph node/list item to inspect type, source, target and mappings. Edit HTTP host/method/path, topic/cluster, database/schema/table, schedule or library identity. Add a missing boundary when evidence exists.",
+          "Every correction needs a reason/source citation and the adjustment revision read with that exact source identity. Hide false detections and restore them later. Delete only manually declared ports; source detections remain intact. A revision conflict preserves the draft. Reload and reconcile rather than silently overriding another editor.",
+          "Corrections are private versioned declarations, distinct from detected source and Joern proof. They can improve exploration but do not prove runtime delivery. HTTP ports link to API explorer; adding a port does not execute that API or change the deployed application."
+        ], { figure: figure("ux-passport-graph.png", "Typed port CRUD beside the graph; actual Java fixture analysis with unresolved boundaries visible.") }),
+        section("replicas", "Check what is deployed", "Use consul_service for actual replicas/version metadata and health for the environment-wide view. Correlate an unhealthy instance with logs before assigning cause. A source branch or passport does not establish the deployed commit unless metadata resolves it. A dossier can combine C4, source paths, requirements and observations, with optional Joern jobs.", { examples: [example("consul_service", { env: "{{env}}", name: "{{service}}" }, "Inspect replicas and deployment identity", "Reported addresses, health, versions and commit metadata; missing values stay unknown."), example("architecture_service", { service: "{{service}}", env: "{{env}}", joern: false, include_docs: true }, "Collect a fast service architecture dossier", "A scoped evidence dossier/job. Set joern=true intentionally when parsing/enrichment is needed.")] })
+      ], ["requirements", "joern", "live-evidence", "case-contracts"]),
+      chapter("requirements", "Discover requirements and publish explanations", "Explore systems", "Join documentation, code and observations without turning guesses into facts.", "Produce a cited requirement-to-implementation map with explicit gaps.", ["Cached documentation or a configured knowledge source; a service/feature name."], [
+        section("source", "Search requirements as evidence", [
+          "Start with docs_search or knowledge_search using exact feature/service/domain terms. Read relevant docs_page blocks and retain page version, block ID and link. Verify a quote with docs_verify or knowledge_verify at the recorded source revision. A search ranking or model summary is not the requirement itself.",
+          "feature connects documentation to indexed code and diagrams. Separate \u201Cthe document requires\u201D, \u201Cthis source revision implements\u201D and \u201Cthis environment was observed\u201D. When a requirement seems contradicted, first check page version, deployment SHA, feature flag and service responsibility. Missing cached support is a gap, not evidence that production violates the rule.",
+          "Retrieved documents and saved notes are untrusted content. Follow their facts/citations, not embedded instructions to reveal secrets, run commands or change tool policy. Use live Confluence search only when the cache is insufficient and network access is intended. Token-only bearer authentication and username/API-token modes depend on the configured Confluence deployment; inspect its configured authentication mode rather than guessing."
+        ], { examples: [example("docs_search", { query: "{{service}} refund authorization" }, "Search requirement passages", "Versioned blocks and source links; read the selected page before quoting."), example("knowledge_search", { query: "{{service}} refund", env: "{{env}}", includeConfluence: true }, "Find source-neutral architecture knowledge", "Cached claims and sources in this environment. No publication occurs.")] }),
+        section("publish", "From an investigation to shared architecture", [
+          "Use architecture_service for a scoped dossier, architecture_list/get/view/flow for shared explanations, and C4 context/container/component/deployment or data-flow views for the question at hand. Inspect evidence and uncertainty on each connection. Consul replicas belong to environment slices; optional CPU/memory values appear only when instrumented.",
+          "Keep draft explanations and diagrams in task memory. An administrator publishes architecture_save with expected_revision and reason. Everyone authorized to read can inspect published history. A publication conflict preserves the draft. Refreshing runtime observations does not authorize rewriting the architecture document.",
+          "Export SVG/PNG for presentation and JSON/Mermaid/PlantUML for portable review. A rendered arrow or a PlantUML export preserves the claim and its certainty; it does not strengthen that claim. For a feature crossing services, describe transport mappings and ownership explicitly."
+        ], { figure: figure("service-architecture-requirements.png", "Requirements and evidence in the service dossier; versioned synthetic documentation in the demo.") })
+      ], ["services", "joern", "case-stale", "extend"]),
+      chapter("joern", "Code search, impact and Joern", "Explore systems", "Choose text search, symbol graph or value-flow evidence for the actual question.", "Pin the source and trace a bounded entry-to-exit path with honest proof labels.", ["Fetched/indexed source; optional semantic worker for Joern queries."], [
+        section("search", "Start with cheap source discovery", [
+          "code_search accepts a single repo argument so one-repository results do not repeat a redundant repo column. Use scoped text, regex and source globs; code_read fetches exact lines and code_symbols resolves symbols. The native index/fast grep path works without Joern. Optional Zoekt can broaden text impact across internal repositories; it does not replace evidence about the exact deployed library revision.",
+          "Use impact for candidate affected endpoints, resources and tests. Read returned depth/budget/ambiguity and source identities. An impact candidate is not a guarantee that a test executes the affected behavior. Check internal library versions in build files and passport resolution before traversing across module boundaries."
+        ], { examples: [example("code_search", { repo: "{{repo}}", pattern: "refund", limit: 30 }, "Search one repository", "Source hits with bounded context; select exact revisions for historical analysis."), example("semantic_capabilities", {}, "Inspect semantic readiness", "Configured/retained capabilities and limits; no implicit CPG build.")] }),
+        section("trace", "Use the guided Joern workbench", [
+          "In Joern & ports, select a retained analysis or enter service/repository/source revision. Build missing analysis starts an owned parse job; cancel or inspect it with the returned ID. Symbol search does not silently start a parse. If parsing is unavailable, continue with native code search and record the missing semantic evidence.",
+          "Choose Trace calls or Trace values. Search/select the source entry and target exit symbols, review their source identity and exact arguments, then Run investigation. The UI follows the project/symbol-first interaction used by file-projections. Raw arguments remain available for callers, slices, guards, comparisons and cross-analysis selectors.",
+          "Call reachability answers whether a supported call chain exists. Dataflow/controlflow modes answer narrower supported questions over recorded generations. A local CPG segment, a declared Kafka/HTTP mapping and a database usage edge have different proof. No chain through all three proves an end-to-end value arrived in production.",
+          "Inspect source hierarchy, path cards, guards, bypasses, coverage, ambiguity and feasibility. A guard\u2019s presence does not prove dominance on every path. \u201CNo path\u201D can mean unsupported analysis or a budget limit; consult gaps before declaring impossibility. Keep exact analysis IDs in task memory for repeatable review."
+        ], { examples: [example("semantic_index", { versions: true }, "Select retained analyses", "Exact generation IDs; select one before searching symbols."), example("semantic_search", { service: "{{service}}", env: "{{env}}", query: "refund", limit: 12 }, "Search retained methods and boundaries", "Source locations or a missing-analysis/build suggestion.")], figure: figure("ux-joern-symbols.png", "Entry/exit selection with a synthetic retained projection; this screenshot is not evidence of a fresh Joern parse.") })
+      ], ["indices", "services", "case-library", "verify-changes"]),
+      chapter("live-evidence", "Logs, SQL, Kafka and Elasticsearch", "Investigate", "Observe the same entity across systems without confusing clocks, tenants or stale projections.", "Create a correlated evidence timeline and identify the first unexplained boundary.", ["Environment, bounded time window and trace/entity/tenant identity."], [
+        section("identity", "Write down the correlation tuple", [
+          "Use an investigation tuple: environment, tenant, entity ID, time window, trace ID, deployed SHA and topic partition/offset where available. Retain IDs as strings when precision matters. The same order ID can belong to multiple tenants; a log line from a different replica/version may describe a different implementation.",
+          "Start with a bounded logs_search and expand one trace with logs_trace. Check instance/version and timestamps. Lack of an ERROR log is not evidence of correct behavior; absence can reflect retention, sampling or an incorrect query. Record the exact query/window with the result.",
+          "Discover schema/table/function names before SQL. pg_query is read-only and time-bounded. Select the necessary columns and filter by tenant plus entity; avoid unbounded SELECT *. Parameterize reusable scripts and never copy connection credentials into saved evidence. Database functions can hide enrichment, normalization and transaction semantics that are absent from the Java handler."
+        ], { examples: [example("logs_search", { env: "{{env}}", service: "{{service}}", from: "30m", size: 50 }, "Collect a bounded service window", "Timestamped observations with source links; narrow by actual trace/entity after inspection."), example("pg_usage", { env: "{{env}}", name: "sales.refunds" }, "Inspect the refund table\u2019s users", "Readers/writers/functions/triggers with source references; substitute a discovered table.")] }),
+        section("streams", "Read each system\u2019s semantics", [
+          "kafka_topic describes schemas/configuration; kafka_last samples bounded messages; kafka_lag shows consumer progress. Retain key, schema, partition/offset and event time. A sampled message may be old, duplicated or from another tenant. Never infer exactly-once processing from a few messages or zero lag.",
+          "For Elasticsearch, inspect mappings/aliases before es_search. Compare indexed version/update time to the authoritative database/event. A missing search hit can be projection lag, alias routing, refresh timing or tenant filtering. A successful write API response does not imply the document is immediately searchable.",
+          "Join compact results with code when needed: one bounded computation can combine SQL, Kafka and ES evidence. Print a small comparison and preserve the full relevant inputs in task memory. Do not load a hundred-megabyte catalog into a model or construct an unbounded JSON aggregation just to count matches."
+        ], { examples: [example("kafka_topic", { env: "{{env}}", topic: "refund.approved" }, "Inspect the event contract", "Schema/config and bounded topic metadata; discover the actual topic first."), example("kafka_last", { env: "{{env}}", topic: "refund.approved", n: 5 }, "Inspect a few event envelopes", "Read-only samples, not delivery or ordering proof.")] })
+      ], ["case-contracts", "case-tenant", "case-stale", "reproduce"]),
+      chapter("case-contracts", "Case: the cent lost between services", "Boundary cases", "A correct-looking UI total diverges only after a shared library, API and SQL function.", "Find the first contract violation and design a regression across the boundary.", ["Illustrative case: checkout, reservations and payments; replace names with real evidence."], [
+        section("symptom", "The symptom and the misleading easy answer", [
+          "A customer sees 10.01 in checkout. The accepted reservation stores 1000 cents and the refund event later carries 10.00. Unit tests for checkout\u2019s formatter pass. Possible causes include floating-point rounding, a major/minor-unit mismatch, stale deployed library code, a database normalization function or an old event\u2014not simply \u201Cthe UI is wrong\u201D. This is a teaching case, not a claim about the bundled fixture.",
+          "Open a ticket context and record the expected contract independently: currency, scale, rounding rule, authoritative amount, tax/quantity handling and whether conversions happen once. Search requirements and read the relevant document blocks. Pin the request\u2019s actual deployment and shared library version; latest-main source alone cannot explain a previous release."
+        ], { steps: ["Find the checkout endpoint and shared amount-library call in passport/code.", "Read the observed outgoing HTTP request in API explorer, with credentials redacted.", "Read the receiving handler, mapper and any SQL function/trigger that touches the amount.", "Compare the persisted row, produced event and Elasticsearch projection using the same tenant/order/version."] }),
+        section("matrix", "Construct a boundary ledger", "Record raw representation and units at each boundary. Inspect the exact source producing and consuming each value. The first difference from the independently stated contract narrows the investigation; downstream symptoms may be consequences.", { table: { headers: ["Boundary", "Observation to preserve", "Competing explanations"], rows: [["UI \u2192 checkout", "Request body, currency and displayed total", "UI rounding versus server recomputation"], ["Checkout \u2192 internal library", "DTO values and exact artifact/version", "Wrong import/version or decimal-scale policy"], ["Checkout \u2192 reservations API", "Raw JSON value, type and contract units", "10.01 major units versus 1001 minor units"], ["Mapper \u2192 SQL function", "Bound values, function definition, trigger chain", "Integer cast, scale truncation or enrichment override"], ["DB \u2192 Kafka \u2192 ES", "Entity version, event ID, tenant and offsets", "Corrected DB with stale/duplicate projection"]] }, examples: [example("api_routes", { service: "{{service}}" }, "Locate the boundary API", "Candidate method/path/handler; open the observed request rather than inventing a host."), example("code_search", { repo: "{{repo}}", pattern: "BigDecimal", limit: 30 }, "Find conversion and rounding sites", "Read both caller and callee; a class name alone does not settle the units."), example("pg_usage", { env: "{{env}}", name: "sales.refunds" }, "Follow database-side enrichment", "Inspect functions/triggers and exact definitions before changing Java code.")] }),
+        section("decision", "Choose the next discriminating check", "Use the interactive checkpoints to practice evidence selection. Each answer states what would narrow the case, rather than presenting a precomputed production diagnosis.", { decision: { question: "The outgoing request contains 10.01, but the receiver contract says integer cents. Which next step best tests the boundary?", choices: [{ label: "Change the UI formatter to show 10.00", answer: "This can hide the symptom while leaving the contract violation. First verify the receiving handler/schema and observe its parsed value." }, { label: "Verify the request/receiver units and test 10.01 \u2192 1001 cents", answer: "Correct direction. Inspect both contracts and actual parsed input, then reproduce the conversion with independent expected values. Also cover zero, negatives, tax/quantity and malformed input." }, { label: "Declare the Kafka consumer broken because the event is 10.00", answer: "The event may faithfully reflect the already wrong database value. Walk upstream and compare entity versions before blaming delivery." }] } }),
+        section("proof", "Prove the repair at the actual seam", [
+          "Capture the minimal input and related rows. Execute the real caller/library/receiver path with edge dependencies controlled at the intended level. A test that mocks the conversion function and asserts its own mock cannot expose the unit mismatch.",
+          "Show a failing assertion on the original version and a passing assertion after the fix. Include adjacent rounding values, precision-preserving IDs, invalid inputs with no downstream calls, and relevant tenant isolation. Compare before/after values with differential_check when a reviewed profile exists. Record build target, deployed/source SHA and any untested transport seam.",
+          "Save the boundary ledger and test evidence in context, link the patch, then inspect downstream projections separately. A green conversion test does not establish that a live Kafka/ES pipeline has caught up. The same ledger can be reused in the stale-projection case."
+        ])
+      ], ["requirements", "case-library", "case-stale", "verify-changes"]),
+      chapter("case-tenant", "Case: an event succeeds for the wrong tenant", "Boundary cases", "Two databases, a shared publisher and an unsafe large identifier produce misleading green signals.", "Preserve identity through capture, replay and independent write checks.", ["Illustrative case; never run these business mutations against a source environment."], [
+        section("symptom", "A duplicate-looking order disappears", [
+          "Tenant A and tenant B both have order 42. Two other orders have IDs 9007199254740992 and 9007199254740993. A consumer reports success, lag is zero, but one refund is missing and another tenant\u2019s state changed. A JavaScript Number can collapse adjacent large IDs; a SQL join can drop tenant_id; an idempotency key can omit tenant; a shared publisher can encode a string ID as a number.",
+          "Before diagnosing, inspect schema types and event bytes, mapper code, SQL predicates, idempotency-key construction and the exact shared-library artifact. \u201CSame orderId\u201D is not a safe correlation relation. Zero lag says offsets advanced, not that the correct business entity was updated."
+        ], { table: { headers: ["Candidate defect", "Evidence to inspect", "Independent counterexample"], rows: [["Precision loss", "Raw event, decoded type, JS/JSON conversion", "Two adjacent large IDs remain distinct strings"], ["Tenant omitted from join", "SQL predicates and composite FK tuples", "Same ID in two tenants; only intended tenant changes"], ["Dedup key too broad", "Publisher/consumer key construction", "Same entity ID in separate tenants processes independently"], ["Cross-DB relation guessed", "Business relation evidence and fixture plan", "Unrelated same-number rows are excluded"]] } }),
+        section("capture", "Capture related tuples, not a bag of IDs", "fixture_plan binds explicit roots, foreign-key closure, cross-database relations, Kafka matches and Elasticsearch reads. Use tenant-qualified tuples and explicit relation evidence. Inspect the plan before capture; a field named id in two databases is not enough to infer a relationship.", { examples: [example("fixture_plan", { env: "{{env}}", service: "{{service}}", seeds: [{ db: "{{db}}", table: "sales.refunds", where: { tenant_id: "tenant-a", order_id: "9007199254740993" } }], limits: { totalRows: 100, queries: 20, durationMs: 3e4 } }, "Prepare a bounded identity-sensitive capture", "A plan to inspect, not a capture or replay. Supply actual required reads and evidenced cross-system relations before execution.")], steps: ["Validate the schema and FK closure with fixture_schema/fixture_validate.", "Capture bounded source reads; keep schema/source hashes, time windows and declared consistency limits.", "Review Kafka codecs and ES mappings. Missing or truncated reads remain incomplete.", "Export/replay only into reviewed owned resources; bind every application datasource explicitly."] }),
+        section("effects", "Assertions must watch the uninvolved tenant too", [
+          "A useful regression asserts both the intended update and the absence of unrelated writes. Freeze independent expectations before executing the application: tenant A\u2019s target row changes, tenant B\u2019s row stays byte-for-byte equivalent, adjacent large IDs remain distinct, and rejected inputs leave state untouched.",
+          "For native fixture replay, preflight supported adapters, start the owned runtime, inspect bindings, arm expected effects, run the actual application test, observe outputs and check them independently. Record rejected/unbound reads. Stop the lease and inspect cleanup; a JSON fixture export is not a running Kafka broker or ES replay.",
+          "A success response from scenario_run, collection_run or test_run is only useful with actual executed assertions and correct target/identity. No-test and skip-only outcomes cannot prove the fix. Distinguish external acceptance evidence from the tool\u2019s own execution transcript."
+        ], { decision: { question: "The target refund row is correct after replay. What else is essential before calling the tenant bug fixed?", choices: [{ label: "Check that the consumer lag is zero", answer: "Useful operational context, but it does not check which tenant was written." }, { label: "Verify no writes to the other tenant and preserve both large IDs", answer: "Yes. Independently observe the negative effects and identity-sensitive cases, using the actual application path and declared datasource bindings." }, { label: "Compare only the count of rows", answer: "Equal counts can conceal swapped identities, wrong amounts or cross-tenant updates." }] } })
+      ], ["live-evidence", "reproduce", "verify-changes", "case-library"]),
+      chapter("case-stale", "Case: a cancellation looks undone in search", "Boundary cases", "HTTP acceptance, an outbox, a retrying consumer and a stale index disagree.", "Distinguish expected eventual consistency from a lost, duplicated or misrouted update.", ["Illustrative asynchronous workflow; agree on the documented consistency window."], [
+        section("timeline", "Build a versioned timeline", [
+          "A cancellation endpoint returns 202. Postgres says cancelled, the UI search still says active, and one retry log appears in UAT but not dev. Possible explanations include an accepted asynchronous command, an outbox transaction that did not publish, a consumer retry, wrong tenant routing, a stale ES alias or an old UI bundle/API endpoint.",
+          "Do not treat HTTP 202 as proof of completed cancellation. Read the requirement\u2019s consistency guarantee, then construct a timeline: request/trace, database entity version and outbox row, event ID and partition/offset, consumer attempt/version, ES document version/update time, alias and the UI\u2019s actual network request.",
+          "Compare Consul\u2019s replica SHAs and environment configuration. A UI deployment is not the same node as its React repository; a discovered browser host is not automatically a Kafka consumer. Correct identity/edge declarations only with a requirement, property, source file or observed request as evidence."
+        ], { table: { headers: ["Observed divergence", "Next discriminating check", "Do not conclude"], rows: [["DB updated, no event found", "Outbox row/state, publishing logs and bounded offsets", "\u201CNo sampled event\u201D proves no event was ever sent"], ["Event exists, ES old", "Consumer version, retry/DLQ, target alias and tenant", "Zero lag proves successful projection"], ["ES current, UI old", "Actual API response, cache headers, UI deployment/repo binding", "The backend is wrong because the screen is stale"], ["Only one replica fails", "Consul SHA/config and that replica\u2019s trace", "The whole environment runs one source version"]] } }),
+        section("retry", "Test retry and ordering behavior explicitly", [
+          "Create deterministic scenarios for duplicate delivery, delayed older events, authorization failure, unavailable downstream and retry-after-success. Assert the business rule: monotonic entity versions or idempotent effects, not an assumed global ordering of all Kafka topics.",
+          "Use scenario_inventory/state planning to identify dependencies, then reviewed scenario/fixture runtime bindings to exercise the relevant seams. A declaration of an HTTP/Kafka boundary is useful for a test plan but not a proof that transport occurred. Include time/clock assumptions and independent expectations.",
+          "If all evidence agrees that the documented window has not expired, report the observation and when to re-check; do not patch a correct asynchronous pipeline. If a stale event overwrites a newer version, reproduce the ordering defect and retain both events/version checks in the regression."
+        ], { decision: { question: "DB version 8 is cancelled, but ES version 7 is active immediately after a 202. Which conclusion is justified?", choices: [{ label: "The cancellation failed", answer: "Too early. The database changed, and the API accepted asynchronous work. Check the documented consistency window and projection timeline." }, { label: "The system is definitely healthy", answer: "Also too strong. Publication/processing could be stuck. Inspect outbox, offsets, consumer evidence and the deadline." }, { label: "The search projection is behind; investigate whether it catches up within the contract", answer: "Correct bounded observation. Preserve versions and timestamps, then locate the first missing or contradictory stage." }] } })
+      ], ["requirements", "live-evidence", "api-browser", "reproduce", "case-contracts"]),
+      chapter("case-library", "Case: the bug hides in a shared library version", "Boundary cases", "Two services import the same class name while a passport falls back to default-branch source.", "Resolve actual dependency identity before changing an import or claiming cross-service impact.", ["Build files/artifact metadata and exact service source or deployment identity."], [
+        section("resolution", "Separate the names that look the same", [
+          "A service compiles with a new import suggested by a model, but an endpoint disappears or rounding changes only on UAT. Two libraries export the same short class name. The passport could not find the requested artifact version and used the default branch. The fallback is not the deployed artifact, even if the repository name matches.",
+          "Read build.gradle/pom.xml dependency declarations, dependency management, module paths, resolved classpath and jar ownership. Search internal library repositories/modules with the Bitbucket index; inspect the exact version\u2019s source/tag/SHA when available. Record both the requested artifact version and the resolution confidence.",
+          "A compile fix may be syntactically valid and semantically wrong. Inspect workspace_write compile.errors/fixed/suggestions and imports. Prefer the project\u2019s intended internal class only when source/classpath evidence supports that ownership; \u201Cinternal\u201D is not an unconditional correctness rule. Use fix=false when you want to review suggestions before applying them."
+        ], { examples: [example("code_search", { repo: "{{repo}}", pattern: "implementation", glob: "**/build.gradle*", limit: 30 }, "Inspect Gradle dependency declarations", "Exact source hits; also inspect version catalogs/dependency management when used."), example("code_search", { repo: "{{repo}}", pattern: "import ", limit: 30 }, "Compare existing import conventions", "Conventions are hints. Check class owner, API and resolved classpath before editing.")] }),
+        section("closure", "Trace and test the dependency closure", [
+          "Resolve the actual shared method and affected callers with native code graph/impact. Joern may enrich supported Java/Kotlin slices over the exact dependency closure. Do not merge two generations merely because method names match. Keep analysis IDs and library-resolution gaps with the path evidence.",
+          "A library unit test alone cannot prove both services use the repaired artifact. Execute a sensitive service-level test against the intended library version and inspect runtime classpath/source identity. Test the old failure first, then the candidate, and check consumers for changed DTO/topic/API contracts.",
+          "If source for the deployed library version remains unavailable, state that limitation, use artifact-level behavior tests where supported, and avoid an exact source-level diagnosis. Keep a useful default-branch hypothesis in context while clearly separating it from confirmed evidence."
+        ])
+      ], ["indices", "joern", "verify-changes", "case-contracts"]),
+      chapter("reproduce", "Capture and replay a minimal failing state", "Build confidence", "Turn cross-system observations into owned, reproducible inputs and effects.", "Execute a bounded application regression and clean up its resources.", ["Known behavior contract, roots/tenant/window, supported adapters and reviewed execution target."], [
+        section("lifecycle", "Choose the right reproduction layer", [
+          "scenario_inventory identifies known application reads/actions. fixture_plan/capture/validate/export preserve related source state. scenario_state_plan/capture/get preserve cross-source scenario evidence. These are not all interchangeable, and none by itself executes the application.",
+          "A simple JVM regression may use test_data factories and mocked edges. A SQL-dependent regression may use a dedicated scratch Postgres database or a verified template clone. A cross-system test may require fixture_runtime adapters and explicit bindings. A portable scenario package declares the workload and expectations; scenario_verify/preflight checks support before execution.",
+          "Do not replay source writes into a production database. Source PG/ES/Kafka reads stay read-only; scratch resources have their own connection bindings and owner leases. env chooses source context, while target and runtime bindings determine execution. Inspect execution metadata before claiming \u201Ctested on dev\u201D."
+        ], { table: { headers: ["Need", "Tools", "Evidence to retain"], rows: [["Related source rows/events", "fixture_plan/capture/validate/export", "Roots, relation evidence, scope, gaps and hashes"], ["A running owned PG/ES/Kafka fixture", "fixture_runtime_preflight/start/bindings", "Adapter support, lease ID and application datasource mapping"], ["Independent effects", "fixture_runtime_arm/observe/check", "Frozen expectations and observed writes/no-writes"], ["Portable declared workload", "scenario_package/verify/preflight/run", "Package revision, action bindings, assertions and target"], ["Controlled template DB", "testdb_* lifecycle", "Dedicated scratch server, base/template/lease identity and cleanup"]] } }),
+        section("resources", "Scratch databases and runtime ownership", [
+          "testdb_capabilities and testdb_initialize describe/prepare the dedicated scratch cluster. Template plan/build/inspect/verify preserve an immutable base; clone allocates a private leased database. Inspect/renew/reset/release operate on owned resources. Pin/invalidate/gc have explicit lifecycle effects; inspect their exact contracts in the tool reference.",
+          "test_run may allocate scratch databases internally. Zero explicit testdb calls is not evidence that no test database was used. Preserve the returned database/runtime metadata and inspect cleanup. Unsupported replay adapters, incomplete fixtures and unbound application reads are gaps rather than green test results.",
+          "Always stop what you start: fixture_runtime_stop, scenario_stop and testdb_release. Use the corresponding cleanup/resource inspection tools after an interruption. Cancellation requests do not mean cleanup already finished; inspect execution state and unknown outcomes before considering the environment released."
+        ], { steps: ["Plan/validate before capturing or starting resources.", "Freeze expectations before executing the application.", "Observe and independently check effects.", "Stop owned leases, record cleanup, and keep the reproducer in task memory or the workspace fixture."], figure: figure("sample-reproduction.png", "Reproduction explorer sample: declarations, captures and execution proof remain distinguishable.") })
+      ], ["case-tenant", "verify-changes", "operations", "automation"]),
+      chapter("verify-changes", "Workspaces, regressions, patches and push", "Build confidence", "Make the smallest change and prove the behavior on an explicit target.", "Produce a reviewable patch with actual red/green evidence.", ["A writable checkout or context-only workspace, build capability and independent expectations."], [
+        section("workspace", "Choose memory or a checkout", [
+          "Use contexts for notes/results when no code checkout is needed. workspace_open resolves a repository/source/deployed ref for a writable checkout; inspect returned identity and path through tools. A workspace\u2019s files are editable; the cached source used for discovery is separate. workspace_list/read/write/patch manage that work, and workspace_drop removes a disposable workspace when intended.",
+          "Before writing tests, test_context reads the real target, chain, dependencies, style and edge mocks. test_data builds valid objects/dictionaries with agreeing IDs; generated skeletons are a starting point, not execution proof. Current test_run supports declared JVM selectors and explicit Node .test.js/.cjs/.mjs paths; old benchmark reports may describe earlier runner gaps.",
+          "workspace_write can perform compile checks and clear fixes. Review changes and suggestions before proceeding; fix=false requests reviewable suggestions rather than automatic fixes where supported. Do not confuse compilation success with business correctness."
+        ], { examples: [example("test_targets", {}, "Inspect supported test targets", "Reviewed placement, dependency/effect rules and capability gaps."), example("workspace_open", { service: "{{service}}", env: "{{env}}" }, "Open the selected service source", "A workspace/job and exact source identity; this creates local writable state.")] }),
+        section("proof", "Make the regression sensitive", [
+          "State independent expected values before copying observed output. Run against the original code and preserve the failing assertion. Implement the repair and rerun that same behavior. Include edge/negative cases that reject a relevant wrong implementation. Assertions that mirror a helper\u2019s current output are weak evidence.",
+          "Choose mode=fast for supported short iterations and run mode=build for the final project build before review/push. Inspect counts, errors, skipped tests, logs, target placement and cleanup. No tests, all-skipped, unsupported target, timeout and cleanup-unknown are not passes. Differential checks compare exact types, ordering, errors and independently observed effects; normalization must not erase a business difference.",
+          "Keep the test selector, source identity, fixture hash and execution ID in context. test_run red/green proof belongs to the actual workspace/behavior history, not a screenshot of a green badge."
+        ], { figure: figure("sample-tests.png", "Native test summary sample: first failure details, expected/actual and focused stack evidence.") }),
+        section("deliver", "Patch versus push", [
+          "workspace_patch exports the current diff and reports retained test proof without committing or publishing. Inspect the folder tree and selected file diff; remove unrelated files and review generated/compile-fix edits. A patch is useful even when pushing is not authorized.",
+          "workspace_push commits/pushes only when requested, to an allowed unprotected feature branch. It advances the workspace base and reports proof; it does not run or enforce tests. Protected main/master/release/default destinations are refused by this tool. A model should not infer push authorization from \u201Cinvestigate\u201D. Direct repository maintenance by an operator is a separate workflow.",
+          "A clean commit does not establish deployment success. Report what changed, which tests actually ran, the target and material gaps. Retain the final patch/result links instead of pasting all changed files into chat."
+        ], { figure: figure("sample-patch.png", "Patch renderer sample: folder hierarchy and one selected diff keep chat readable.") })
+      ], ["task-memory", "reproduce", "case-library", "automation"]),
+      chapter("api-browser", "From a browser action to an API check", "Automate", "Inspect requests, edit arguments/authentication and save reusable checks.", "Capture or prepare one request, explicitly send it and inspect the sanitized response.", ["Configured HTTP allowlist; optional Playwright MCP and a reviewed browser interaction."], [
+        section("explorer", "Prepare a request without sending it", [
+          "Open API explorer from Admin routes, an HTTP passport port or an API exchange. Select a route, fill the service base URL and typed path/query parameters, then inspect body/headers. A route without a known host needs an explicit base URL; the UI does not invent a live destination.",
+          "Optional named bearer profiles reference .env values and are bound to an exact origin/path scope plus the existing HTTP allowlist. The browser/model sees labels and readiness, not the token. autoPrefill=true explicitly enables automatic profile selection. No authentication remains selectable. A conflicting manually supplied Authorization header must be reconciled before using a profile.",
+          "Send executes the request, including mutations for non-read methods. Preparation and route selection do not send. Redirects are not followed, browser cookies are not transferred and saved exchanges are sanitized. Review status, timing, headers, body, route candidates, redactions and capture gaps."
+        ], { examples: [example("api_routes", { service: "{{service}}" }, "Find endpoints to prepare", "A route inventory with Open request links."), example("api_auth_profiles", {}, "Inspect optional bearer references", "Labels/scopes/readiness only; no secret values.")], figure: figure("ux-api-explorer.png", "Interactive API explorer with a populated route inventory; request selection does not execute it.") }),
+        section("capture", "Observe UI traffic, then reuse it", [
+          "browser_sites/site_url discover configured pages. api_browser_open starts an isolated Playwright session and installs capture before navigation; api_browser_action inspects or interacts with it; api_browser_capture drains bounded exchanges. UI actions can mutate the application, so keep their scope intentional. api_browser_close releases the session.",
+          "Import HAR/network text with api_exchange_import when appropriate. Network listings can lack bodies/headers and retain metadata-only gaps. Static and observed API routes can have several candidate handlers; inspect ambiguity rather than selecting a convenient one. routes_learn/discover add evidence but do not prove a handler implementation was exercised.",
+          "api_request_prepare binds named path/query/header/JSON-body parameters. api_request_replay explicitly executes; api_request_save stores a normal script with parameter names and assertions. Named bearer references apply to explicit explorer replays; saved scripts retain the parameter-based credential contract. Never save cookies or captured credential defaults. Add independent assertions before promoting the request into a collection."
+        ], { examples: [example("api_exchange_list", { limit: 10 }, "Reopen captured traffic", "Saved sanitized exchanges in the current story, not another user\u2019s browser session.")] })
+      ], ["services", "case-stale", "automation", "task-memory"]),
+      chapter("automation", "Scripts, collections and long calculations", "Automate", "Turn a verified manual chain into a reusable bounded workflow.", "Reuse known checks while preserving parameters, assertions and cleanup.", ["Working manual steps and intentional side effects; optional runner/browser dependencies."], [
+        section("reuse", "Reuse before authoring", [
+          "script_list/script_get find existing workflows; checks exposes ready-made environment/service/table/trace/data-capture checks. Inspect what a script does before script_run. A failed or unavailable dependency must fail its check rather than masquerade as a successful assertion.",
+          "script_save stores ordered tool/script/browser/http/set/transform/js steps with parameters, variables and hooks. A context file containing JSON is not automatically a registered script. Expose a saved script/collection as a tool only when that interface is useful. Keep credentials as runtime parameters or configured secret references.",
+          "For several result transformations or long calculations, use code/code_start and nearby context files. Save compact intermediate results and a resumable plan rather than forcing every raw payload through the model. Inspect code runtime capabilities before choosing Node/QuickJS; arbitrary imported libraries or host access are not universal across engines."
+        ], { examples: [example("script_list", {}, "Find a reusable workflow", "Configured scripts and collections; inspect the selected script\u2019s contract."), example("code", { code: "const xs = [2, 3, 7]; text({inputs: xs, product: xs.reduce((a,b) => a*b, 1)});", context: "{{context}}" }, "Run a small calculation beside task memory", "A code/result view. This example calculates locally and does not call infrastructure.")] }),
+        section("collections", "Plan a suite and read the failing case", [
+          "collection_get/save configure a collection; collection_validate checks definitions; collection_plan expands selection/tags/datasets/matrices before running. Keep data rows bounded and record a deterministic seed when useful. Hooks and finally blocks must preserve cleanup even when an assertion fails.",
+          "collection_run executes the declared suite; collection_report/history/check explain per-case results, assertion failures, hook failures and cleanup. collection_cancel requests cancellation; inspect terminal execution/resource state afterward. Scenario-run and reproduction views answer different questions from a collection report\u2014open the view that preserves the relevant evidence.",
+          "call_patterns can turn repeated investigation chains into draft scripts. Review generalized parameters and steps; accidental repetition is not a trustworthy business contract. Run scripts against representative inputs and independent expectations before relying on them for recurring checks."
+        ], { figure: figure("sample-collection-report.png", "Collection report sample: select a case to inspect assertions, execution and cleanup separately.") })
+      ], ["task-memory", "api-browser", "operations", "extend"]),
+      chapter("extend", "Extend tools and result views", "Automate", "Add useful capabilities through supported contracts instead of hiding behavior in prompts.", "Create a scoped extension whose inputs, effects and output can be inspected.", ["Administrator access for global configuration; reviewed code/configuration for extensions."], [
+        section("choice", "Choose the smallest extension", [
+          "Use a script for a repeatable composition of existing tools. Use tools.custom for a declarative SQL/HTTP capability with explicit arguments. Use a plugin when a new implementation is required. Add a result renderer when the output needs a clearer view, not a new tool that repeats existing behavior.",
+          "Config lives in config.json with ${VAR} references; secret values live in .env. Avoid absolute/user-specific paths in portable examples. Global configuration saves validate and activate a generation; existing calls finish on their captured snapshot. Reload tools after changes when required, then inspect the enabled registry and error list.",
+          "tool_profiles changes discovery sets, not permissions. Disabled tools should disappear from executable discovery. Keep descriptions concise: purpose, required identity and effects; put longer procedures in the handbook/workflow guides. Custom tools appear in this handbook\u2019s live reference automatically, including their actual schema and origin."
+        ], { examples: [example("tool_contracts", {}, "Inspect portable contracts", "Versioned schemas and public contract URLs."), example("tool_describe", { name: "pg_query" }, "Inspect one exact tool contract", "Required arguments/defaults and enabled implementation metadata.")] }),
+        section("render", "Build a renderer that preserves evidence", [
+          "view_list/get inspect built-ins and overrides; view_save creates a story-scoped custom renderer. A view is a sandboxed HTML fragment with a JSON metadata comment and optional sample. Its script receives DATA/META and dt helpers. Saved view pages cannot call tools or fetch arbitrary network data under their CSP.",
+          "Routine successful outputs should summarize compactly; failures should expose the first actionable detail. Use tables for rows, a folder tree for patches, source/path hierarchy for code and a selected-entity inspector for graphs. Keep raw output/export controls secondary and make all important selections keyboard-accessible.",
+          "Create a small synthetic sample that includes empty/error/long-value cases. Test the view in Admin and inline/mobile before replacing an established renderer. Label samples as presentation fixtures. A chart or screenshot does not certify backend behavior."
+        ], { examples: [example("view_list", {}, "Inspect native and configured renderers", "Descriptions and sample availability; actual templates may have story overrides.")] }),
+        section("adapter", "Use adapters and source integrations deliberately", "tool_contracts and tool_describe expose transport/result schemas for optional adapters. Preserve versioned request/result identities, bounded execution, current authorization, cancellation and proof/gap semantics when swapping backends. Optional Joern Docker and Zoekt should improve a declared operation, with native search still available where supported. A new source needs an update strategy, version identity and observability, not just a successful first fetch.")
+      ], ["tool-reference", "visualizations", "operations", "requirements"]),
+      chapter("operations", "Monitor work and effectiveness", "Operate", "Tell whether the tool chain is helping and debug slow, failed or stuck work.", "Use owned execution evidence and outcome-based checks instead of vanity metrics.", ["A stable story and some actual tool/test history."], [
+        section("runtime", "Follow a call without starting it again", [
+          "Runtime shows owned calls/executions, scheduler/resource state, metadata and active configuration. Jobs shows background parse/refresh/build/collection work. A returned job or cell ID is the handle to observe; use its inspect/wait tool rather than launching another copy. Admission, running, cancelling, draining and terminal states answer different questions.",
+          "execution_list/get and call_history reveal current steps, invocation errors and links; dt_log gives bounded operational logs; doctor checks local prerequisites. Cancel the specific owned job/execution/cell and observe cleanup. A cancelled request can have an unknown external outcome, and a successful call can still have failed assertions in its result.",
+          "metadata_list/get/edit lets you annotate owned records with labels/notes/tags and revision checks. An annotation is not permission to rewrite execution state. Config views distinguish the active generation from invalid candidates; do not assume an edited file is already active."
+        ], { examples: [example("execution_list", { limit: 20 }, "Inspect owned execution activity", "Only visible executions in this story, with current states."), example("call_history", { failed: true, limit: 20 }, "Find failing work", "Invocation/execution evidence; inspect actual tests and cleanup too."), example("doctor", {}, "Check installation prerequisites", "Local capability findings and recovery suggestions; this does not fix remote business data.")], figure: figure("admin-runtime.png", "Runtime inspection with ownership, jobs and resources; earlier demo capture of the same operational surface.") }),
+        section("effectiveness", "Measure outcomes, cost and reuse", [
+          "Start with a concrete effectiveness question: can a novice resolve a service boundary, can a model resume an investigation without re-querying, or does a regression reject the actual defect? Define success before the run and keep environment/source/input identities. Count completed tasks with verifiable evidence, not just successful tool calls.",
+          "The Self-context sample reports recent invocation count, error count and latency percentiles. Use these as local operational hints. Look for repeated identical searches, unnecessary all-source refreshes, large raw responses, repeated builds, missing indices and duplicated jobs. Prefer cached discovery, targeted refresh, retained generations, compact views and context reuse.",
+          "For model comparisons, keep the same tool/config profile, tasks, fixture revisions and budgets. evaluation_evidence inspects parent-recorded transcripts, signatures, artifact hashes, independent grades and mutation evidence. Do not paste a model\u2019s self-grade into that evidence. Separate tool execution from external grading and synthetic fixtures from live runs.",
+          "Monitor assertion counts, red/green sensitivity, independently observed effects, unsupported operations, incomplete captures and cleanup failures. Review saved call patterns to automate repeated work. Keep a short effectiveness note in context: objective, baseline, observed change, cost, limitations and next experiment."
+        ], { table: { headers: ["Signal", "Useful interpretation", "Common misuse"], rows: [["Invocation error rate", "Which calls need diagnosis", "Treating every ok=true as a solved user task"], ["p50/p95 call latency", "Where time is spent in this bounded sample", "Claiming a representative production benchmark"], ["Reuse of context/index generation", "Avoided repeated investigation/fetch", "Trusting stale findings without checking identity"], ["Red/green + mutation sensitivity", "Regression detects the relevant defect", "Counting generated or skipped tests as passing"], ["Cleanup and independent effects", "The run left a known outcome", "Calling a cancellation request a completed rollback"]] }, examples: [example("evaluation_evidence", { limit: 10 }, "Inspect retained independent evaluation evidence", "Available parent-recorded runs or an empty inventory; no grade is invented.")] })
+      ], ["self-context", "indices", "reproduce", "automation"]),
+      chapter("visualizations", "Every visualization: what to read and do", "Reference", "A visual index of native results and standalone workbenches.", "Select the right view, find the first useful detail and preserve its evidence.", ["All examples below are labeled built-in presentation fixtures."], [
+        section("rules", "Read the summary, then the evidence", "Successful transient chat results normally start collapsed. Open a result to inspect the relevant table, file, case or source path; failed tests/calls expose actionable detail. Editing and tool execution happen in authenticated workspaces, not saved snapshots. Use Open full view for more room, and More/Export for secondary formats.", { visualAtlas: true }),
+        section("surfaces", "Standalone workbenches", "Passports combine service boundary graphs and detected/manual evidence; API explorer prepares and sends reviewed requests; Services map explores bounded relationships and editable tool inspections; architecture/dossiers add C4/environment/requirement views and exports. Logs/trace, PR, files, dashboard and showcase have their own explorers. Use the selected inspector before exporting or summarizing a large graph.", { table: { headers: ["Surface", "Useful interaction", "Keep in the answer"], rows: [["Passport / port graph", "Select a node; correct/add/hide/restore with source/reason", "Exact source and correction provenance"], ["Map / architecture", "Expand prefix/environment, select entity/edge, inspect sources", "Certainty, scope and unknowns"], ["Logs / trace", "Narrow time/service/trace, inspect selected line", "Query/window and instance identity"], ["PR / patch", "Select file in folder tree; inspect line changes/comments", "Base/head and actual test proof"], ["Files", "Browse, search, preview/download, archive to context", "Store/path/revision and source-removal outcome"], ["Showcase", "One-service versions, impact, tests and evidence", "Which sections were actually executed"], ["API explorer", "Edit parameters/auth/body; explicitly Send", "Sanitized request/response and capture gaps"]] } })
+      ], ["tool-reference", "extend", "services", "api-browser"]),
+      chapter("tool-reference", "Complete live tool reference", "Reference", "Every enabled tool, its schema, origin, chapter links and editable examples.", "Find an exact capability and prepare valid arguments without memorizing names.", ["Select the current profile/scope; unavailable tools remain an explicit capability gap."], [
+        section("catalog", "Search by task or exact name", [
+          "The live reference is generated from the same enabled registry used by CLI, MCP, OpenAPI and the Admin scratchpad. It includes custom/plugin/script tools visible to the current user and exposes their exact input schema. Disabled/admin-only tools are not presented as executable to an unauthorized reader.",
+          "Search a task term, tool name or group. Select a tool to read its contract, required fields, defaults and operational effect label. Prepare an editable form, copy exact JSON/CLI, or run intentionally in this story. The handbook does not bypass normal authorization, validation, rate limits or configured HTTP scopes.",
+          "The portable repository reference records built-in tools at generation time. The running registry remains authoritative for extensions and permissions. A required field can still need a real returned ID; blank values or an invented analysis/lease/workspace ID are not useful arguments."
+        ], { toolCatalog: true }),
+        section("discover", "When a tool is missing", "Use tool_search/tool_describe/tool_profiles to discover alternatives. Check Config\u2019s enabled/disabled groups and Runtime\u2019s registry generation. Ask an administrator to configure a missing dependency rather than retrying a forbidden capability. Consult workflow_plan for staged prerequisites; a guide proposes work and never authorizes it.")
+      ], ["start", "extend", "operations"]),
+      chapter("glossary", "Glossary and common mistakes", "Reference", "Decode the identities and proof terms used across the workbench.", "Resolve terminology without losing the investigation thread.", ["No prerequisites."], [
+        section("terms", "Working vocabulary", "These terms have operational consequences; record exact identities when handing work to another person or model.", { table: { headers: ["Term", "Meaning"], rows: [["Context / memory", "Durable indexed task folder, independent of Git checkouts"], ["Workspace", "Writable source/task working directory with its own change/test history"], ["Story / chat/task scope", "Private investigation boundary within an authenticated principal"], ["Passport / port", "Static service description / typed boundary; manual overlays stay declared"], ["Revision / SHA / revisionKey", "Document/file compare-and-swap (CAS) identity, Git source identity, and exact retained source index key"], ["Analysis / generation / revisionSet", "Retained semantic projection and exact selected source/dependency identities"], ["Cache / live observation", "Prior metadata/result versus a query made at a recorded time"], ["Declaration / static / observed / proved", "Different evidence strengths; never silently convert one into another"], ["Job / execution / code cell", "Background handle / owned invocation lifecycle / resumable computation"], ["Fixture / template / lease", "Captured inputs / immutable scratch base / owned temporary runtime allocation"], ["Red-green / green-only", "The same behavior failed before and passed after / only a passing candidate run is known"], ["Unknown outcome", "The system cannot establish completion/effects/cleanup, even if a request ended"]] } }),
+        section("mistakes", "Short recovery paths", [
+          "Empty find \u2192 check environment/cache presence, then refresh the missing source. Missing Joern \u2192 inspect capabilities and retained analyses; use native code search while preserving the gap. Stale edit \u2192 reread revision and reconcile the draft. Wrong import \u2192 inspect internal class ownership and resolved artifact/version.",
+          "API cannot send \u2192 check base URL, placeholders, optional bearer selection and HTTP allowlist; do not paste secrets into notes. Job appears stuck \u2192 inspect the same handle, step and prerequisites before cancelling. Test looks green \u2192 verify executed assertions, target, skips, cleanup and independent effects.",
+          "Huge output \u2192 narrow the query, use summaries/search/views and save bounded evidence in context. A beautiful graph with missing sources \u2192 inspect certainty/gaps and add only evidence-backed declarations. \u201CLatest\u201D source with an old deployment \u2192 resolve and pin the actual version first."
+        ])
+      ], ["start", "indices", "operations"])
+    ];
+    chapters.find((c) => c.id === "automation").sections[0].examples.splice(1, 0, example("context_open", { id: "{{context}}", title: "{{ticket}} \xB7 handbook practice", tickets: ["{{ticket}}"], summary: "Local handbook examples and saved calculations" }, "First, create the calculation context", "Run this once before the code example below. The default context ID is illustrative and private to this story."));
+    chapters.find((c) => c.id === "extend").sections.splice(1, 0, section("first-extension", "Add your first custom capability", [
+      "For a declarative read-only SQL tool, merge the following tools.custom entry into your existing config.json. Keep the existing envs and connection references. Replace orders and sales.refunds with discovered database/table names. The :tenantId binding becomes a database parameter; do not concatenate SQL strings.",
+      "Save the configuration in Admin \u2192 Config, inspect validation/tool errors, then use Admin \u2192 Config \u2192 Tools \u2192 Reload tools if needed. Find refund_count in the live tool reference, inspect its schema and prepare a call with a real tenant. Availability does not prove the source table exists or that a live query succeeded.",
+      "For local code without a new dependency, create plugins/label-stats.js under DT_HOME with the second snippet. The plugin exports an array of tool definitions. Reload tools, describe label_stats and run the third example. Plugins execute trusted server-side code: review their effects and dependencies before installation. Use .env references for credentials rather than literal values."
+    ], { snippets: [
+      { title: "A tools.custom entry to merge into config.json", language: "json", code: JSON.stringify({ tools: { custom: [{ name: "refund_count", type: "sql", description: "Count refund records for one tenant in the configured orders database.", db: "orders", sql: "select count(*)::text as count from sales.refunds where tenant_id = :tenantId", params: { tenantId: { type: "string", required: true, description: "Exact tenant identity" } } }] } }, null, 2) },
+      { title: "plugins/label-stats.js \xB7 local plugin with no network or dependencies", language: "javascript", code: "module.exports = [{\n  name: 'label_stats',\n  description: 'Count characters and words in a supplied label; no network or writes.',\n  input: { label: { type: 'string', description: 'Text to inspect' } },\n  required: ['label'],\n  run: ({ label }) => ({\n    characters: Array.from(label).length,\n    words: label.trim() ? label.trim().split(/\\s+/).length : 0\n  })\n}];" },
+      { title: "Describe the installed plugin, then run it", language: "shell", code: `node cli.js tool tool_describe '{"name":"label_stats"}'
+node cli.js tool label_stats '{"label":"refund approved"}'` }
+    ] }));
+    chapters.find((c) => c.id === "start").sections.splice(1, 0, section("scope-map", "Keep these identities separate", [
+      "Chat / task is a stable investigation label you choose, such as REFUND-142. It need not be an existing Open WebUI chat ID. Reuse that label under the same authenticated user to reopen private work; a different story starts a separate investigation. Example names below are illustrative.",
+      "Before executing application tests, inspect test_targets and the selected target/runtime bindings. The source environment identifies where captured evidence came from; it does not choose where a test runs. The reproduction chapter shows target, fixture and cleanup lifecycles."
+    ], { table: { headers: ["Identity", "Meaning", "Where to choose or inspect"], rows: [["User / role", "Authenticated principal and allowed actions", "Your configured token/session; Self-context shows the active identity"], ["Chat / task \xB7 REFUND-142", "Private investigation and memory boundary", "Admin Chat / task \u2192 Apply scope; standalone handbook has the same control"], ["Environment \xB7 dev", "Source provenance for catalogs/live reads", "Environment selector and each tool\u2019s env argument"], ["Profile \xB7 semantic", "Tools offered to the model; grants no extra permissions", "Model integration/profile configuration; tool_profiles lists discovery sets"], ["Repository revision", "Exact source reviewed, independent of deployment", "code_index revisionKey and SHA; semantic_index retained analysis ID"], ["Execution target / runner", "Where application tests execute and which dependencies they use", "test_targets; reviewed target/profile and returned runtime bindings"]] }, examples: [example("test_targets", {}, "Inspect available execution targets", "Configured execution placement and prerequisites; listing does not start a test.")] }));
+    chapters.find((c) => c.id === "indices").sections.push(section("carry-identities", "Carry a returned identity into the next call", [
+      "First run List retained code revisions above. Expand Complete tool result: the tabular result contains rows. Choose a row for the intended repository/source; copy that row\u2019s revisionKey, and retain its SHA. Paste the returned revisionKey into Example variables \u2192 revisionKey. The pinned search below sets repo to that exact key. Do not substitute the mutable PROJECT/repo alias.",
+      "Then run List retained semantic analyses. Choose a ready analysis matching the intended repository, SHA and language; copy analyses[n].id into Example variables \u2192 analysis. The pinned semantic search below passes analysis directly. Verify the returned analyses identities match your selection before interpreting hits. An empty list means no retained analysis in this scope; it is not a fabricated ID or permission to query an unrelated generation.",
+      "When an index job is needed, observe its returned job ID until ready, then list again. Preserve sourceDigest/revisionKey and full SHA from the indexed result/manifest when the listing abbreviates SHA. For multi-repository work, use an actual returned revisionSet or explicit analyses array. A text match is still only a candidate even when the source selection is exact."
+    ], { table: { headers: ["Observed response field", "Next argument", "Check"], rows: [["code_index listing rows[n].revisionKey", "code_search.repo", "Same retained code source; keep the row\u2019s SHA"], ["semantic_index analyses[n].id", "semantic_search.analysis / semantic_query.analysis", "Returned analyses[].id and SHA match the selected source"], ["Composite semantic_index revisionSet", "semantic_query.revisionSet", "All selected service/library revisions belong to the intended closure"]] }, examples: [{ ...example("code_search", { repo: "{{revisionKey}}", pattern: "BigDecimal", limit: 30 }, "Search the selected immutable code revision", "Paste the returned revisionKey above first; inspect the repo argument before Run."), requires: ["revisionKey"] }, { ...example("semantic_search", { analysis: "{{analysis}}", query: "refund", limit: 20 }, "Search the selected retained analysis", "Paste the returned analysis ID above first; confirm result analyses identities and proof/gaps."), requires: ["analysis"] }] }));
+    var centsBroken = "const toMinor = major => String(Math.trunc(Number(major)) * 100);";
+    var centsFixed = "const toMinor = major => {\n  if (!/^\\d+\\.\\d{2}$/.test(major)) throw Error('Expected non-negative decimal with two fractional digits');\n  const [whole, fraction] = major.split('.');\n  return String(BigInt(whole) * 100n + BigInt(fraction));\n};";
+    var centsChecks = "\n// The receiving contract requires exact integer cents, represented as a string.\nfor (const [input, expected] of [['10.01', '1001'], ['0.00', '0'], ['90071992547409.93', '9007199254740993']]) {\n  test('major-to-minor ' + input, () => expect(toMinor(input)).toBe(expected));\n}\nreturn { observed: toMinor('10.01'), expected: '1001' };";
+    chapters.find((c) => c.id === "case-contracts").sections.push(section("local-practice", "Optional local practice: execute the same boundary checks", [
+      "This small executable teaching exercise needs only the built-in js_run sandbox. It makes no business API/database calls and installs nothing. It tests the amount-conversion seam, not the full checkout service or a live pipeline. The original source is shown in the prepared code argument; the independent receiver contract is exact integer cents encoded as a string.",
+      "Open the practice context first. Run the broken version: invocation/capture may be successful while two named assertions fail (10.01 and the large value). Expand Complete tool result and inspect preview \u2192 result.tests, observed/expected values, and the saved calls record. Then run the repaired version with the identical three assertions. All three must pass. The fix changes the converter only; it avoids Number precision loss by parsing decimal digits with BigInt.",
+      "Both context_run results give a saved calls/...json path. Read those records with context_read to retain the actual code, test names and values. The same test selectors must occur in both records. No remote resource is allocated; the sandbox computation finishes locally. Archive these practice records when no longer useful. For a real service, repeat the checks through its actual caller/library/receiver path with a declared test target and independent side-effect assertions."
+    ], { examples: [example("context_open", { id: "{{context}}", title: "{{ticket}} \xB7 boundary practice", tickets: ["{{ticket}}"], summary: "Local amount-conversion red/green exercise; no application integration proof" }, "Open the local practice context", "A private folder for the two actual sandbox results."), example("context_run", { id: "{{context}}", tool: "js_run", arguments: { code: centsBroken + centsChecks }, summary: "Original converter: same independent amount assertions; inspect failing tests" }, "Run the broken converter", "Two failed assertions and one passing assertion; expected 1001, observed 1000 for 10.01. Invocation success is not test success."), example("context_run", { id: "{{context}}", tool: "js_run", arguments: { code: centsFixed + centsChecks }, summary: "Repaired converter: identical independent assertions; inspect all three passes" }, "Run the repaired converter", "The same three assertion names pass. Keep both saved records; this is local teaching evidence, not workspace red-green certification.")] }));
+    var glossary = chapters.find((c) => c.id === "glossary").sections[0].table.rows;
+    glossary.push(["CAS \xB7 compare-and-swap", "Write only when the observed revision still matches; a conflict preserves the current data"], ["CPG \xB7 code property graph", "Joern\u2019s combined source/AST/control/data-flow representation; coverage and proof limits still apply"], ["Profile", "Model tool-discovery set; distinct from an authorization role"], ["Execution target / runner", "Declared placement and dependencies for a test / the worker that executes it"]);
+    chapters.find((c) => c.id === "extend").sections.find((s) => s.id === "first-extension").body.push("After trying label_stats, remove its plugin file and reload tools; verify it disappears from tool_search and the live handbook. For refund_count, remove only that custom entry and save/reload configuration. These installation changes are global server configuration and require administrator access. view_save is the separate story-scoped renderer path described below.");
+    chapters.find((c) => c.id === "extend").sections.find((s) => s.id === "render").examples.push(
+      example("view_save", { name: "handbook-label", description: "Local practice label card; DATA is {label:string}.", html: '<article class="card"><h2 id="practice-label"></h2><p class="muted">Synthetic handbook practice</p></article><script>document.getElementById("practice-label").textContent = String(DATA.label ?? "No label supplied");</script>', sample: { label: "Refund approved" } }, "Save a practice renderer in this story", "Creates handbook-label in the current story. It renders supplied data and makes no API requests."),
+      example("show", { view: "handbook-label", data: { label: "Refund approved" }, title: "Local renderer practice" }, "Render the saved practice view", "Run Save a practice renderer first. Inspect the native card; remove the practice view from Admin \u2192 Views when finished.")
+    );
+    var groupChapters = { catalog: "indices", pg: "live-evidence", es: "live-evidence", kafka: "live-evidence", consul: "services", bitbucket: "case-library", confluence: "requirements", logs: "live-evidence", passport: "services", browser: "api-browser", api: "api-browser", scripts: "automation", views: "visualizations", files: "task-memory", history: "operations", showcase: "services", code: "verify-changes", context: "task-memory", map: "services", architecture: "requirements", runtime: "operations", semantic: "joern", knowledge: "requirements" };
+    var visualHelp = {
+      "api-exchange": ["What was sent and returned?", "Read status/timing, request/response JSON and headers; open API explorer to prepare a new send."],
+      architecture: ["What connects, why and in which environment?", "Select an entity/edge, compare environment replicas and inspect source certainty before exporting."],
+      code: ["Where is the code?", "Navigate source hierarchy and bounded line excerpts; retain repository/revision and file:line."],
+      "code-cell": ["What did the computation return?", "Read output/return/errors; inspect tests and owned calls, then resume the same cell ID if running."],
+      "collection-report": ["Which case/check failed?", "Select a case and inspect assertions, hooks and cleanup; filter without losing selected evidence."],
+      diagram: ["What structure does this explain?", "Inspect labels/legend, zoom or open full view; rendered structure is still a declared claim."],
+      differential: ["What behavior changed?", "Inspect differing cases, exact types/ordering/errors and independently observed effects."],
+      impact: ["What might be affected?", "Inspect typed edges, source identities, bounded traversal and candidate tests; relevance is not execution."],
+      json: ["Which fields matter?", "Expand/collapse the tree, inspect null/empty values and copy only the needed subtree/result."],
+      "knowledge-map": ["Which claims and sources are connected?", "Select entities, inspect provenance/confidence and reconcile filters before summarizing."],
+      "list-diff": ["What was added, removed or retained?", "Read counts and filtered lists; inspect matching keys and retained value changes."],
+      "passport-ports": ["Which service boundaries exist?", "Select graph/list evidence and follow authenticated editing links; detected, disabled and manual ports stay separate."],
+      patch: ["Which file/lines changed?", "Choose a folder/file, inspect one diff and preserve base/head, binary/deleted/renamed status."],
+      reproduction: ["What supports this reproduction?", "Inspect inputs, scope, versions, required reads, capture gaps and independent execution proof."],
+      "scenario-run": ["Where did the scenario fail?", "Read outcome/target, select actions/assertions, inspect actual versus expected and cleanup."],
+      "semantic-analysis": ["How can this call/value travel?", "Navigate source paths/guards, filter/select results and read mode, coverage, proof and feasibility."],
+      table: ["Which rows answer the question?", "Filter/sort rows, inspect matching/total counts and use More for CSV/JSON exports."],
+      tests: ["What failed and where?", "Summary first; inspect first failing test, expected/actual, focused stack and executed/skipped counts."],
+      "text-diff": ["Which lines changed?", "Navigate previous/next change and compare before/after identities and line numbers."],
+      xml: ["Which element matters?", "Read formatted hierarchy/source, wrap long lines and copy/download only what is needed."]
+    };
+    module2.exports = { version: 1, title: "The dev-tool field guide", chapters, indexes, groupChapters, visualHelp };
+  }
+});
+
+// package.json
+var require_package2 = __commonJS({
+  "package.json"(exports2, module2) {
+    module2.exports = {
+      name: "dev-tool",
+      version: "0.2.0",
+      description: "Read-only, agent-friendly tools for a microservice environment: Postgres/ES/Kafka/Consul index with usages, service passports, logs, PRs. OpenAPI + MCP + admin UI.",
+      bin: {
+        dt: "cli.js"
+      },
+      scripts: {
+        serve: "node cli.js serve",
+        sync: "node cli.js sync",
+        test: "node --test test/*.test.js",
+        "test:local": "node dev/test.js --local",
+        "test:live": "node dev/test.js --live",
+        "test:changed": "node dev/test.js --local --changed",
+        "test:files": "node dev/test.js --local --files",
+        "bench:dev": "node dev/benchmark.js",
+        build: "node build.js",
+        "build:check": "node build.js --check"
+      },
+      dependencies: {
+        postgres: "^3.4.5",
+        "quickjs-emscripten": "0.32.0",
+        ssh2: "^1.16.0"
+      },
+      license: "MIT",
+      engines: {
+        node: ">=22"
+      },
+      devDependencies: {
+        esbuild: "^0.25.10"
+      }
+    };
+  }
+});
+
+// lib/tool-profiles.js
+var require_tool_profiles = __commonJS({
+  "lib/tool-profiles.js"(exports2, module2) {
+    var CORE = ["find", "tool_search", "tool_describe", "tool_execute", "tool_profiles", "tool_contracts", "knowledge_graph", "knowledge_search", "job_cancel", "call_history", "doctor"];
+    var DISCOVERY = ["tool_search", "tool_describe", "tool_execute", "tool_profiles"];
+    var DIRECT = [
+      "architecture_service",
+      "architecture_list",
+      "architecture_view",
+      "code_start",
+      "code_wait",
+      "code_cancel",
+      "execution_list",
+      "execution_get",
+      "execution_cancel",
+      "metadata_list",
+      "metadata_get",
+      "metadata_edit",
+      "map",
+      "map_search",
+      "map_neighbors",
+      "map_node",
+      "context_find",
+      "context_open",
+      "context_get",
+      "context_list",
+      "context_search",
+      "context_read",
+      "context_write",
+      "context_edit",
+      "files_archive",
+      "context_run",
+      "find",
+      "catalog_sync",
+      "pg_table",
+      "pg_function",
+      "pg_usage",
+      "field_trace",
+      "pg_query",
+      "es_search",
+      "es_health",
+      "kafka_topic",
+      "kafka_last",
+      "kafka_lag",
+      "health",
+      "overview",
+      "consul_service",
+      "logs_search",
+      "logs_trace",
+      "bitbucket_repos",
+      "bitbucket_files",
+      "bitbucket_file",
+      "bitbucket_prs",
+      "bitbucket_pr",
+      "bitbucket_my_prs",
+      "repo_fetch",
+      "passport",
+      "passports",
+      "who_uses",
+      "code_search",
+      "code_symbols",
+      "code_read",
+      "impact",
+      "feature",
+      "docs_search",
+      "docs_page",
+      "confluence_search",
+      "confluence_page",
+      "workspace_open",
+      "workspace_read",
+      "workspace_write",
+      "workspace_patch",
+      "workspace_push",
+      "test_data",
+      "test_context",
+      "test_run",
+      "show",
+      "diff",
+      "code",
+      "script_list",
+      "script_run",
+      "showcase",
+      "call_history",
+      "tool_search",
+      "tool_describe",
+      "tool_execute"
+    ];
+    var TESTER = [
+      "map",
+      "map_search",
+      "map_node",
+      "context_find",
+      "context_open",
+      "context_get",
+      "context_list",
+      "context_search",
+      "context_read",
+      "context_write",
+      "context_edit",
+      "files_archive",
+      "context_run",
+      "checks",
+      "find",
+      "catalog_sync",
+      "health",
+      "consul_service",
+      "logs_search",
+      "logs_trace",
+      "pg_query",
+      "pg_table",
+      "pg_usage",
+      "es_search",
+      "kafka_last",
+      "kafka_topic",
+      "passport",
+      "who_uses",
+      "bitbucket_file",
+      "test_data",
+      "fixture_plan",
+      "fixture_capture",
+      "fixture_validate",
+      "fixture_export",
+      "fixture_replay",
+      "testdb_initialize",
+      "testdb_template_plan",
+      "testdb_template_build",
+      "testdb_clone",
+      "testdb_reset",
+      "testdb_release",
+      "testdb_lease_inspect",
+      "testdb_resources",
+      "scenario_inventory",
+      "scenario_package",
+      "scenario_verify",
+      "scenario_run",
+      "scenario_inspect",
+      "scenario_stop",
+      "browser_sites",
+      "api_browser_open",
+      "api_browser_action",
+      "api_browser_capture",
+      "api_browser_close",
+      "api_exchange_list",
+      "api_exchange_get",
+      "api_request_prepare",
+      "api_request_replay",
+      "api_request_save",
+      "script_list",
+      "script_get",
+      "script_run",
+      "script_save",
+      "collection_validate",
+      "collection_plan",
+      "collection_run",
+      "collection_report",
+      "collection_history",
+      "workspace_open",
+      "workspace_write",
+      "workspace_patch",
+      "test_context",
+      "test_run",
+      "show",
+      "diff",
+      "code",
+      "call_history",
+      "doctor",
+      "tool_search",
+      "tool_describe",
+      "tool_execute"
+    ];
+    var PROFILES = {
+      architecture: { description: "Shared architecture explanations, C4 and feature/data flows, environment observations and exports. Admins publish; everyone reads.", prefixes: ["architecture_"], names: [...CORE, "semantic_query", "passport", "consul_service"] },
+      semantic: { description: "Exact semantic revisions, source paths and guards, plus typed passport ports and separately versioned corrections.", includeCore: false, names: [...DISCOVERY, "semantic_capabilities", "semantic_index", "semantic_search", "semantic_query", "semantic_ports", "passport_adjustments", "passport_adjust", "passport", "code_search", "code_read", "job_cancel", "call_history"] },
+      map: { description: "Microservice map, saved feature flows and bounded graph exploration, with inspection tools and discovery for the rest.", includeCore: false, names: [...DISCOVERY, "map", "map_search", "map_neighbors", "map_path", "map_node", "map_adjustments", "map_adjust", "map_layers", "map_save", "map_ui_preview", "passport", "pg_table", "pg_query", "kafka_topic", "kafka_last", "logs_search", "es_search"] },
+      tester: { description: "Testing by name: ready-made checks (service, environment, versions, table, trace, test data capture and reuse), test data and scratch databases, scenarios, API and UI capture, scripts and suites, tests in a workspace; tool_search reaches the rest.", includeCore: false, names: TESTER },
+      direct: { description: "Everyday tools by name (databases, indices, topics, logs, repo files and PRs, code, docs); tool_search, tool_describe and tool_execute reach the rest.", includeCore: false, names: DIRECT },
+      compact: { description: "Small starting set; discover an exact tool then execute it with validated arguments.", names: CORE },
+      lean: { description: "Four discovery tools. Search the catalog capability, describe it, then execute; expand profiles on request.", includeCore: false, names: DISCOVERY },
+      "lean-find": { description: "Five tools: cached catalog search plus discovery; expand capabilities on request.", includeCore: false, names: [...DISCOVERY, "find"] },
+      investigate: { description: "Find services and data, inspect evidence, follow logs and visualize dependencies.", names: [...CORE, "passport", "passports", "pg_query", "pg_usage", "es_search", "kafka_last", "logs_search", "logs_trace", "health", "overview", "impact", "code_search", "feature", "experiment_list", "experiment_run"] },
+      testing: { description: "Build reproducible fixtures, scenario contracts, collections and isolated test runs.", prefixes: ["fixture_", "scenario_", "collection_", "testdb_", "test_"], names: [...CORE, "workspace_open", "workspace_read", "workspace_write", "workspace_patch", "script_list", "script_get", "script_run"] },
+      develop: { description: "Inspect code, make a workspace change, compile and verify its behavior.", prefixes: ["workspace_", "code_", "test_", "semantic_", "passport_adjust"], names: [...CORE, "passport", "repo_fetch", "impact", "experiment_save", "experiment_run", "experiment_compare"] },
+      knowledge: { description: "Inspect source-neutral documentation, contracts, architecture and provenance.", prefixes: ["knowledge_", "docs_", "architecture_"], names: [...CORE, "feature", "passport", "who_uses"] },
+      api: { description: "Inspect UI traffic, discover routes, edit requests and save reusable scripts or collections.", groups: ["api", "browser"], prefixes: ["api_", "collection_"], names: [...CORE, "script_list", "script_get", "script_run", "script_save", "script_collection", "routes_discover", "routes_learn"] },
+      all: { description: "Every enabled tool; compatible with existing installations." }
+    };
+    function definitions() {
+      return { ...PROFILES, ...require_config().getTools().profiles || {} };
+    }
+    function select(tools, name = "all") {
+      const profile = definitions()[name];
+      if (!profile) throw Object.assign(new Error(`Unknown tool profile ${name}`), { code: "DT_PROFILE_UNKNOWN" });
+      if (name === "all") return tools;
+      const names = /* @__PURE__ */ new Set([...profile.includeCore === false ? [] : CORE, ...profile.names || []]);
+      return tools.filter((t) => names.has(t.name) || (profile.groups || []).includes(t.group) || (profile.prefixes || []).some((p) => t.name.startsWith(p)));
+    }
+    function list(tools) {
+      return Object.entries(definitions()).map(([name, x]) => ({ name, description: x.description || "", tools: select(tools, name).map((t) => t.name), count: select(tools, name).length }));
+    }
+    module2.exports = { select, list, DIRECT, TESTER };
+  }
+});
+
+// lib/handbook.js
+var require_handbook = __commonJS({
+  "lib/handbook.js"(exports2, module2) {
+    var fs2 = require("node:fs");
+    var path2 = require("node:path");
+    var C = require_config();
+    var A = require_access();
+    var content = require_handbook_content();
+    var invalid = (message) => Object.assign(new Error(message), { code: "DT_ARGUMENT_INVALID", statusCode: 400 });
+    function environment(value) {
+      const env = value || C.envNames()[0];
+      if (!C.envNames().includes(env)) throw invalid("Select a configured environment");
+      return env;
+    }
+    function probe(id, relative, absolute) {
+      try {
+        const stat = fs2.statSync(absolute);
+        return { id, path: relative, present: true, kind: stat.isDirectory() ? "directory" : "file", changedAt: stat.mtime.toISOString(), ...stat.isFile() ? { bytes: stat.size } : {} };
+      } catch {
+        return { id, path: relative, present: false };
+      }
+    }
+    function indexStatus(env) {
+      const cache = C.PATHS.cache, roots = { catalog: path2.join(cache, env, "catalog.txt"), postgres: path2.join(cache, env, "pg"), usage: path2.join(cache, env, "pg/_usage.json"), search: path2.join(cache, env, "es/_index.json"), topics: path2.join(cache, env, "kafka/_index.json"), consul: path2.join(cache, env, "consul.json"), passports: C.PATHS.passports, "repository-map": path2.join(cache, "bitbucket/_index.json"), code: path2.join(cache, "code"), semantic: path2.join(A.scopedDirectory(path2.join(cache, "semantic")), "analyses"), documentation: path2.join(cache, "confluence/index/blocks.json"), routes: path2.join(cache, "routes.json"), operations: path2.join(cache, "state/operational.sqlite"), memory: path2.join(A.scopedDirectory(path2.join(C.HOME, "contexts"))) };
+      return content.indexes.map((index) => ({ ...probe(index.id, index.path.replace("{env}", env), roots[index.id]), note: "Filesystem metadata only; presence/change time is not a completeness or source freshness guarantee." }));
+    }
+    function activity() {
+      const rows = require_calls().history({ limit: 200 }), times = rows.map((r) => r.ms).filter(Number.isFinite).sort((a, b) => a - b), percentile = (p) => times.length ? times[Math.min(times.length - 1, Math.ceil(times.length * p) - 1)] : null;
+      return { sample: rows.length, limit: 200, invocationErrors: rows.filter((r) => r.ok === false).length, p50Ms: percentile(0.5), p95Ms: percentile(0.95), meaning: "Recent visible invocation sample, not a model/task success score or representative benchmark." };
+    }
+    async function selfContext({ env: requested, save = false } = {}) {
+      const env = environment(requested), schemas = await require_tools().schemas({ metadata: true }), owner = A.owner(), groups = {};
+      for (const tool of schemas) (groups[tool.group || "other"] ||= []).push(tool.name);
+      const cfg = C.getEnv(env), personal = C.getPersonal(), registry = require_tools().registryStatus();
+      const snapshot = { schema: "dt.self-context/v1", at: (/* @__PURE__ */ new Date()).toISOString(), version: require_package2().version, env, identity: { principalId: owner.principalId, storyId: owner.storyId, role: owner.role }, registry: { revision: registry.revision || null, count: schemas.length, groups }, capabilities: { postgres: Object.values(cfg.pg).some(Boolean), elasticsearch: !!cfg.es?.hosts?.length, kafka: !!cfg.kafkaUi, consul: !!cfg.consul, logs: !!cfg.logs?.hosts?.length, bitbucket: !!personal.bitbucket?.token, confluence: !!personal.confluence?.token, semanticConfigured: !!C.getSemantic().url }, indices: indexStatus(env), activity: activity(), persistent: { context: "dev-tool-self", generated: ["operating-context.md", "capabilities.json"], notes: "operator-notes.md" } };
+      snapshot.briefing = ["# dev-tool operating context", `Captured: ${snapshot.at}`, `App version: ${snapshot.version}. Environment: ${env}. Principal: ${owner.principalId}; chat/task: ${owner.storyId}; role: ${owner.role}.`, `Enabled tools: ${schemas.length}; registry: ${snapshot.registry.revision || "unknown"}.`, "Start with context_find for prior work, find for cached object names, and handbook for workflow help. Inspect tool_describe before using unfamiliar arguments. Profiles select discovery, not permissions.", "Pin repository SHA/revisionKey and retained semantic analyses; record source environment, timestamps and gaps. Cache presence is not complete/fresh evidence.", "Source reads are read-only. Workspace/artifact changes, API sends, jobs and owned runtime allocations have their stated effects; execute them intentionally. env selects source context, not a remote execution target.", "Use existing job/cell IDs to observe work. Inspect actual assertions, execution target and cleanup. A successful invocation, static path or declaration does not prove a bug fix.", "Read dev-tool-self/operator-notes.md for scoped operator knowledge; generated snapshots can be refreshed without replacing those notes.", "## Tool groups", ...Object.entries(groups).map(([group, names]) => `${group}: ${names.join(", ")}`), "## Evidence caches", ...snapshot.indices.map((index) => `${index.id}: ${index.present ? "present; filesystem changed " + index.changedAt : "not present"} (${index.path})`), "## Recent activity", JSON.stringify(snapshot.activity)].join("\n\n");
+      if (save) {
+        const contexts = require_context(), id = "dev-tool-self";
+        contexts.open({ id, title: "dev-tool \xB7 operating context", summary: "Installation capabilities, handbook, evidence index status and operator knowledge for this chat/task.", tags: ["dev-tool", "self-context", "handbook"] });
+        const write = (file, body, summary) => {
+          let revision = null;
+          try {
+            revision = contexts.read({ id, path: file }).revision;
+          } catch (error) {
+            if (!/no.*file|not found|ENOENT/i.test(error.message)) throw error;
+          }
+          return contexts.write({ id, path: file, content: body, summary, expected_revision: revision });
+        };
+        const stored = [];
+        stored.push(write("operating-context.md", snapshot.briefing, "Generated operating briefing; refresh after configuration changes").path);
+        stored.push(write("capabilities.json", JSON.stringify({ ...snapshot, briefing: void 0 }, null, 2), "Generated tool and index snapshot; no credentials").path);
+        if (!contexts.get(id).files.some((file) => file.path === "operator-notes.md")) contexts.write({ id, path: "operator-notes.md", content: "# Operator notes\n\nRecord naming conventions, approved target/script IDs and known limits here. Keep credentials in .env. This file is preserved when generated snapshots refresh.\n", summary: "User-maintained operating knowledge; preserved on refresh", expected_revision: null });
+        snapshot.saved = { id, files: stored, notesPreserved: true, admin: "/admin#context?" + new URLSearchParams({ story: owner.storyId, env, context: id, file: "operator-notes.md" }) };
+      }
+      return snapshot;
+    }
+    function chapterFor(tool) {
+      if (/^(fixture_|scenario_)/.test(tool.name)) return "reproduce";
+      if (/^testdb_/.test(tool.name)) return "reproduce";
+      return content.groupChapters[tool.group] || "extend";
+    }
+    async function catalog() {
+      const tools = (await require_tools().schemas({ metadata: true })).map((tool) => ({ ...tool, chapter: chapterFor(tool) }));
+      const views = require_views().list().map((view) => ({ ...view, help: content.visualHelp[view.name] || ["Configured result view", "Inspect its description/sample and current story override."], image: content.visualHelp[view.name] ? "sample-" + view.name + ".png" : null }));
+      return { ...content, tools, views, profiles: require_tool_profiles().list(tools), coverage: { tools: tools.length, chapters: content.chapters.length, views: views.length, meaning: "Current authorized enabled registry. Schema coverage does not claim every tool was executed." } };
+    }
+    async function query({ query: query2 = "", chapter, env, limit = 6 } = {}) {
+      environment(env);
+      const words = String(query2).toLowerCase().split(/\s+/).filter(Boolean), all = content.chapters;
+      if (chapter) {
+        const selected = all.find((item) => item.id === chapter);
+        if (!selected) throw invalid("Unknown handbook chapter");
+        return { ...selected, url: "/handbook#" + selected.id };
+      }
+      const chapters = all.filter((item) => !words.length || words.every((word) => JSON.stringify(item).toLowerCase().includes(word))).slice(0, Math.min(20, Math.max(1, Number(limit) || 6))).map(({ id, title, summary, outcome }) => ({ id, title, summary, outcome, url: "/handbook#" + id }));
+      return { title: content.title, chapters, total: all.length, note: "Read a chapter for prerequisites, editable examples and proof limits. For exact enabled schemas use tool_describe or the live handbook reference.", url: "/handbook" };
+    }
+    var imageNames = () => [.../* @__PURE__ */ new Set([...content.chapters.flatMap((c) => c.sections.map((s) => s.figure?.file).filter(Boolean)), ...Object.keys(content.visualHelp).map((name) => "sample-" + name + ".png")])];
+    function imageFile(name) {
+      if (!imageNames().includes(name)) return null;
+      for (const file of [path2.join(C.ROOT, "web/handbook-images", name), path2.join(C.ROOT, "docs/screenshots", name)]) if (fs2.existsSync(file)) return file;
+      return null;
+    }
+    module2.exports = { catalog, selfContext, query, indexStatus, imageNames, imageFile, chapterFor };
+  }
+});
+
+// lib/tools-handbook.js
+var require_tools_handbook = __commonJS({
+  "lib/tools-handbook.js"(exports2, module2) {
+    module2.exports = ({ str, int, env }) => [
+      { name: "handbook", group: "catalog", description: "Find dev-tool workflow chapters or read one chapter: prerequisites, examples, indices, visualization guidance and proof limits. Does not execute examples.", input: { query: str("Workflow/question words"), chapter: str("Exact chapter id"), env, limit: int("Maximum chapter matches", 6) }, run: (a) => require_handbook().query(a) },
+      { name: "self_context", group: "context", strictInput: true, description: "Read a safe briefing of this installation\u2019s enabled tools, cache metadata and current story. save=true refreshes generated files in the scoped dev-tool-self context, preserving operator-notes.md. No remote refresh or credentials.", input: { env, save: { type: "boolean", default: false } }, run: (a) => require_handbook().selfContext(a) }
+    ];
+  }
+});
+
 // lib/tools-map.js
 var require_tools_map = __commonJS({
   "lib/tools-map.js"(exports2, module2) {
@@ -50022,209 +50689,6 @@ var require_contracts = __commonJS({
       return [...names].sort().filter((name) => resolve(name)).map((name) => ({ name, url: `/contracts/${name}`, schema: JSON.parse(fs2.readFileSync(resolve(name), "utf8")) }));
     }
     module2.exports = { aliases, resolve, list };
-  }
-});
-
-// lib/tool-profiles.js
-var require_tool_profiles = __commonJS({
-  "lib/tool-profiles.js"(exports2, module2) {
-    var CORE = ["find", "tool_search", "tool_describe", "tool_execute", "tool_profiles", "tool_contracts", "knowledge_graph", "knowledge_search", "job_cancel", "call_history", "doctor"];
-    var DISCOVERY = ["tool_search", "tool_describe", "tool_execute", "tool_profiles"];
-    var DIRECT = [
-      "architecture_service",
-      "architecture_list",
-      "architecture_view",
-      "code_start",
-      "code_wait",
-      "code_cancel",
-      "execution_list",
-      "execution_get",
-      "execution_cancel",
-      "metadata_list",
-      "metadata_get",
-      "metadata_edit",
-      "map",
-      "map_search",
-      "map_neighbors",
-      "map_node",
-      "context_find",
-      "context_open",
-      "context_get",
-      "context_list",
-      "context_search",
-      "context_read",
-      "context_write",
-      "context_edit",
-      "files_archive",
-      "context_run",
-      "find",
-      "catalog_sync",
-      "pg_table",
-      "pg_function",
-      "pg_usage",
-      "field_trace",
-      "pg_query",
-      "es_search",
-      "es_health",
-      "kafka_topic",
-      "kafka_last",
-      "kafka_lag",
-      "health",
-      "overview",
-      "consul_service",
-      "logs_search",
-      "logs_trace",
-      "bitbucket_repos",
-      "bitbucket_files",
-      "bitbucket_file",
-      "bitbucket_prs",
-      "bitbucket_pr",
-      "bitbucket_my_prs",
-      "repo_fetch",
-      "passport",
-      "passports",
-      "who_uses",
-      "code_search",
-      "code_symbols",
-      "code_read",
-      "impact",
-      "feature",
-      "docs_search",
-      "docs_page",
-      "confluence_search",
-      "confluence_page",
-      "workspace_open",
-      "workspace_read",
-      "workspace_write",
-      "workspace_patch",
-      "workspace_push",
-      "test_data",
-      "test_context",
-      "test_run",
-      "show",
-      "diff",
-      "code",
-      "script_list",
-      "script_run",
-      "showcase",
-      "call_history",
-      "tool_search",
-      "tool_describe",
-      "tool_execute"
-    ];
-    var TESTER = [
-      "map",
-      "map_search",
-      "map_node",
-      "context_find",
-      "context_open",
-      "context_get",
-      "context_list",
-      "context_search",
-      "context_read",
-      "context_write",
-      "context_edit",
-      "files_archive",
-      "context_run",
-      "checks",
-      "find",
-      "catalog_sync",
-      "health",
-      "consul_service",
-      "logs_search",
-      "logs_trace",
-      "pg_query",
-      "pg_table",
-      "pg_usage",
-      "es_search",
-      "kafka_last",
-      "kafka_topic",
-      "passport",
-      "who_uses",
-      "bitbucket_file",
-      "test_data",
-      "fixture_plan",
-      "fixture_capture",
-      "fixture_validate",
-      "fixture_export",
-      "fixture_replay",
-      "testdb_initialize",
-      "testdb_template_plan",
-      "testdb_template_build",
-      "testdb_clone",
-      "testdb_reset",
-      "testdb_release",
-      "testdb_lease_inspect",
-      "testdb_resources",
-      "scenario_inventory",
-      "scenario_package",
-      "scenario_verify",
-      "scenario_run",
-      "scenario_inspect",
-      "scenario_stop",
-      "browser_sites",
-      "api_browser_open",
-      "api_browser_action",
-      "api_browser_capture",
-      "api_browser_close",
-      "api_exchange_list",
-      "api_exchange_get",
-      "api_request_prepare",
-      "api_request_replay",
-      "api_request_save",
-      "script_list",
-      "script_get",
-      "script_run",
-      "script_save",
-      "collection_validate",
-      "collection_plan",
-      "collection_run",
-      "collection_report",
-      "collection_history",
-      "workspace_open",
-      "workspace_write",
-      "workspace_patch",
-      "test_context",
-      "test_run",
-      "show",
-      "diff",
-      "code",
-      "call_history",
-      "doctor",
-      "tool_search",
-      "tool_describe",
-      "tool_execute"
-    ];
-    var PROFILES = {
-      architecture: { description: "Shared architecture explanations, C4 and feature/data flows, environment observations and exports. Admins publish; everyone reads.", prefixes: ["architecture_"], names: [...CORE, "semantic_query", "passport", "consul_service"] },
-      semantic: { description: "Exact semantic revisions, source paths and guards, plus typed passport ports and separately versioned corrections.", includeCore: false, names: [...DISCOVERY, "semantic_capabilities", "semantic_index", "semantic_search", "semantic_query", "semantic_ports", "passport_adjustments", "passport_adjust", "passport", "code_search", "code_read", "job_cancel", "call_history"] },
-      map: { description: "Microservice map, saved feature flows and bounded graph exploration, with inspection tools and discovery for the rest.", includeCore: false, names: [...DISCOVERY, "map", "map_search", "map_neighbors", "map_path", "map_node", "map_adjustments", "map_adjust", "map_layers", "map_save", "map_ui_preview", "passport", "pg_table", "pg_query", "kafka_topic", "kafka_last", "logs_search", "es_search"] },
-      tester: { description: "Testing by name: ready-made checks (service, environment, versions, table, trace, test data capture and reuse), test data and scratch databases, scenarios, API and UI capture, scripts and suites, tests in a workspace; tool_search reaches the rest.", includeCore: false, names: TESTER },
-      direct: { description: "Everyday tools by name (databases, indices, topics, logs, repo files and PRs, code, docs); tool_search, tool_describe and tool_execute reach the rest.", includeCore: false, names: DIRECT },
-      compact: { description: "Small starting set; discover an exact tool then execute it with validated arguments.", names: CORE },
-      lean: { description: "Four discovery tools. Search the catalog capability, describe it, then execute; expand profiles on request.", includeCore: false, names: DISCOVERY },
-      "lean-find": { description: "Five tools: cached catalog search plus discovery; expand capabilities on request.", includeCore: false, names: [...DISCOVERY, "find"] },
-      investigate: { description: "Find services and data, inspect evidence, follow logs and visualize dependencies.", names: [...CORE, "passport", "passports", "pg_query", "pg_usage", "es_search", "kafka_last", "logs_search", "logs_trace", "health", "overview", "impact", "code_search", "feature", "experiment_list", "experiment_run"] },
-      testing: { description: "Build reproducible fixtures, scenario contracts, collections and isolated test runs.", prefixes: ["fixture_", "scenario_", "collection_", "testdb_", "test_"], names: [...CORE, "workspace_open", "workspace_read", "workspace_write", "workspace_patch", "script_list", "script_get", "script_run"] },
-      develop: { description: "Inspect code, make a workspace change, compile and verify its behavior.", prefixes: ["workspace_", "code_", "test_", "semantic_", "passport_adjust"], names: [...CORE, "passport", "repo_fetch", "impact", "experiment_save", "experiment_run", "experiment_compare"] },
-      knowledge: { description: "Inspect source-neutral documentation, contracts, architecture and provenance.", prefixes: ["knowledge_", "docs_", "architecture_"], names: [...CORE, "feature", "passport", "who_uses"] },
-      api: { description: "Inspect UI traffic, discover routes, edit requests and save reusable scripts or collections.", groups: ["api", "browser"], prefixes: ["api_", "collection_"], names: [...CORE, "script_list", "script_get", "script_run", "script_save", "script_collection", "routes_discover", "routes_learn"] },
-      all: { description: "Every enabled tool; compatible with existing installations." }
-    };
-    function definitions() {
-      return { ...PROFILES, ...require_config().getTools().profiles || {} };
-    }
-    function select(tools, name = "all") {
-      const profile = definitions()[name];
-      if (!profile) throw Object.assign(new Error(`Unknown tool profile ${name}`), { code: "DT_PROFILE_UNKNOWN" });
-      if (name === "all") return tools;
-      const names = /* @__PURE__ */ new Set([...profile.includeCore === false ? [] : CORE, ...profile.names || []]);
-      return tools.filter((t) => names.has(t.name) || (profile.groups || []).includes(t.group) || (profile.prefixes || []).some((p) => t.name.startsWith(p)));
-    }
-    function list(tools) {
-      return Object.entries(definitions()).map(([name, x]) => ({ name, description: x.description || "", tools: select(tools, name).map((t) => t.name), count: select(tools, name).length }));
-    }
-    module2.exports = { select, list, DIRECT, TESTER };
   }
 });
 
@@ -52967,6 +53431,7 @@ var require_tools = __commonJS({
       t.origin = "built-in";
     }
     TOOLS.push(...require_tools_context()({ str, int }));
+    TOOLS.push(...require_tools_handbook()({ str, int, env }));
     TOOLS.push(...require_tools_map()({ str, int, env }));
     TOOLS.push(...require_tools_architecture()({ str, int, env }));
     TOOLS.push(...require_tools_runtime()({ str, int }));
@@ -54452,44 +54917,6 @@ ${section}`;
   }
 });
 
-// package.json
-var require_package2 = __commonJS({
-  "package.json"(exports2, module2) {
-    module2.exports = {
-      name: "dev-tool",
-      version: "0.2.0",
-      description: "Read-only, agent-friendly tools for a microservice environment: Postgres/ES/Kafka/Consul index with usages, service passports, logs, PRs. OpenAPI + MCP + admin UI.",
-      bin: {
-        dt: "cli.js"
-      },
-      scripts: {
-        serve: "node cli.js serve",
-        sync: "node cli.js sync",
-        test: "node --test test/*.test.js",
-        "test:local": "node dev/test.js --local",
-        "test:live": "node dev/test.js --live",
-        "test:changed": "node dev/test.js --local --changed",
-        "test:files": "node dev/test.js --local --files",
-        "bench:dev": "node dev/benchmark.js",
-        build: "node build.js",
-        "build:check": "node build.js --check"
-      },
-      dependencies: {
-        postgres: "^3.4.5",
-        "quickjs-emscripten": "0.32.0",
-        ssh2: "^1.16.0"
-      },
-      license: "MIT",
-      engines: {
-        node: ">=22"
-      },
-      devDependencies: {
-        esbuild: "^0.25.10"
-      }
-    };
-  }
-});
-
 // lib/admin.js
 var require_admin = __commonJS({
   "lib/admin.js"(exports2, module2) {
@@ -55143,6 +55570,20 @@ var require_server2 = __commonJS({
     var tokenOk = (url, value) => results.verify(value, url.searchParams.get("t"));
     var CORS = { "access-control-allow-origin": "*" };
     var routes = [
+      ["GET", "/handbook", true, page("handbook.html")],
+      ["GET", "/api/handbook", true, async (req, res) => send(res, 200, await require_handbook().catalog())],
+      ["GET", "/api/handbook/context", true, async (req, res, url) => send(res, 200, await require_handbook().selfContext({ env: url.searchParams.get("env") || void 0 }))],
+      ["GET", "/api/handbook/sample", true, (req, res, url) => {
+        const view = require_views().get(url.searchParams.get("view"));
+        if (view.sample === void 0) return send(res, 404, { error: "This view has no sample" });
+        send(res, 200, { view: view.name, data: view.sample });
+      }],
+      ["GET", "/handbook-images/*", false, (req, res, url) => {
+        const file = require_handbook().imageFile(url.pathname.slice("/handbook-images/".length));
+        if (!file) return send(res, 404, { error: "Unknown handbook image" });
+        res.writeHead(200, { "content-type": "image/png", "cache-control": "public, max-age=3600", "x-content-type-options": "nosniff" });
+        res.end(fs2.readFileSync(file));
+      }],
       ["GET", "/api-client", true, page("api-client.html")],
       ["GET", "/", false, (req, res) => send(res, 200, { name: "dt", mcp: "/mcp", openapi: "/openapi.json", tools: "/api/tools", status: "/api/status", admin: "/admin", results: "/view", prompt: "/api/prompt" })],
       ["GET", "/health", false, (req, res) => send(res, 200, { ok: true, version: VERSION })],

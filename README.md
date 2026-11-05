@@ -6,6 +6,7 @@ Read-only tools that let an AI agent (or you) investigate a microservice environ
 - **Service passports.** Static analysis of a Spring service's repo and its internal libraries: HTTP endpoints, Feign and HTTP calls, Kafka in/out, tables and functions used, datasources, dependencies.
 - **Semantic code and editable ports.** Retained Joern analyses for Java and JS/TS, exact commit/dependency selection, callers, guarded paths and value slices. Correct missed ports, field mappings and passport metadata in separate versioned overlays. [Setup and limits](docs/semantic-code.md).
 - **Task memory.** Context folders keep plans, findings, files and tool results across chats, with discovery by ticket, repository and workspace. Admin includes a file editor and tool scratchpad; no Git repository is needed. [Context tools](#context-durable-task-memory-and-admin-scratchpad).
+- **Interactive field guide and self-context.** Admin → Field guide covers investigation workflows, all enabled tool contracts, every native visualization and evidence indices. Read a safe installation briefing or save it as persistent task memory while preserving operator notes. [Start the handbook](docs/handbook/README.md).
 - **Live tools.** Read-only SQL, ES search, the last Kafka messages, health of all services in one call, consumer lag, ELK log search and traces, Bitbucket PRs, Confluence. A headless browser and a code graph are optional.
 - **Documentation knowledge.** Incremental Confluence Server/DC and Cloud cache, structured search, exact versioned quotes, entity/provenance graph and a one-call `feature` investigation with C4/sequence diagrams. [Configuration, tools and demo](docs/confluence-knowledge.md).
 - **Results you can use.** Tables, dashboards, logs, diffs and passports render as pages; in Open WebUI routine results collapse to a short summary. Expand them inline or open the full view. Failed tests open at the first failure; patch and PR diffs use a searchable folder tree with one file shown at a time. Diagrams and knowledge maps stay open.
@@ -718,6 +719,7 @@ The wire side fills up by itself: every script with browser steps records what t
 | **Explore** | Search the catalog; open a table or function to see its columns or arguments, constraints, triggers, body, "used by" and "uses"; attach a note |
 | **Passports** | Build one for a service (optionally mapping it to a repo), rebuild one or all |
 | **Scripts** | Collections as nested folders, Postman style: create, rename inline, drag to move, duplicate, delete. Each script has a step editor (kind, target with suggestions, args, "save as", optional, reorder), params, a JSON view, and Run with a field per param showing each step's result. Ctrl/⌘+S saves |
+| **Field guide** | Searchable workflow chapters, editable tool examples, native samples, live app briefing and persistent operator knowledge |
 | **Views** | Built-in and custom views; edit HTML and sample data with a live (sandboxed) preview, copy or override built-ins |
 | **History** | Repeated calls and sequences from the call log, each with **Save as script…**; the calls themselves, filtered by words and source |
 | **Sites** | Edit `browser.sites` one site at a time: start URL (`${VAR}` allowed), description, login secret names (marked when `.env` has no value), and the links with a live preview of the URL each opens |
@@ -750,6 +752,40 @@ Secrets (`.env`) are never shown or edited there.
 | custom, plugin | yours: from `tools.custom` and `tools.plugins` |
 
 Results shaped like tables return a preview plus a `view` link to the full result (`/view/<id>`), which Open WebUI embeds in the chat.
+
+## Field guide and persistent self-context
+
+Open **Admin → Field guide** or `/handbook`. The guide includes 21 chapters,
+56 prepared examples, a live reference for every enabled tool, all 20 native
+result views and 14 index layers. It covers service/requirement exploration,
+Joern and exact revisions, contexts, reproduction, scripts, extensions and
+operational effectiveness. Four connected boundary cases explain how defects
+can cross UI, internal libraries, APIs, SQL, Kafka and search projections.
+An optional local sandbox exercise actually fails and passes the same checks.
+
+**Self-context** reads safe local installation metadata without refreshing
+infrastructure or parsing database catalogs. **Save persistent self-context**
+keeps generated `operating-context.md` and `capabilities.json` in the current
+story’s `dev-tool-self` folder; `operator-notes.md` survives refreshes. The
+Task memory link reopens that story, folder and note. Different authenticated
+users and stories retain their normal isolation.
+
+```bash
+node cli.js tool handbook '{"chapter":"indices"}'
+node cli.js tool self_context '{"env":"dev","save":true}'
+```
+
+Examples prepare editable arguments and run only after an explicit click.
+Returned revisions must come from actual reads; illustrative names and sample
+renderers are labeled. See the [portable handbook](docs/handbook/README.md),
+[complete built-in reference](docs/handbook/tools.md),
+[independent novice review and repairs](docs/handbook/novice-review.md), and
+[verification record](docs/benchmarks/handbook-verification.json).
+
+| | |
+| --- | --- |
+| ![Interactive field guide](docs/screenshots/handbook-start-desktop.png) **Learn by task** · chapters, decisions and editable examples | ![Persistent installation briefing](docs/screenshots/handbook-self-context-desktop.png) **Self-context** · live capabilities and preserved operator notes |
+| ![Executable boundary practice](docs/screenshots/handbook-boundary-practice-desktop.png) **Practice a boundary defect** · real local assertions and retained results | ![Exact source identity](docs/screenshots/handbook-exact-revision-desktop.png) **Pin the source** · carry returned revision keys into the next search |
 
 ## Screenshots
 
