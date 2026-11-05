@@ -1,0 +1,240 @@
+{
+  "schema": "dt.handbook-task-review/v1",
+  "reviewedAt": "2026-11-05",
+  "publishedBaseline": "9e6de38ae4ed530e6d462389afded48ff05bcf0c",
+  "method": "Two fresh independent agents in novice roles; vague task cards, public docs/UI and actual product API execution; no prior reviews or implementation/solution reading.",
+  "report": "docs/handbook/novice-task-review.md",
+  "plan": "docs/handbook/reviews/task-review-2026-11-05/plan.json",
+  "originalFixtureInputsUnchanged": true,
+  "taskRunsCrosscheckedAgainstTranscripts": true,
+  "tasks": {
+    "tester": {
+      "score": 8,
+      "completedUsefulLocalTask": true,
+      "story": "novice-tester-231",
+      "apiInvocations": 25,
+      "report": "docs/handbook/reviews/task-review-2026-11-05/tester/review.md",
+      "evidence": "docs/handbook/reviews/task-review-2026-11-05/tester/evidence.json",
+      "runs": [
+        {
+          "job": "mw3dljo0441e06",
+          "outcome": "all-tests-skipped",
+          "counts": {
+            "tests": 1,
+            "passed": 0,
+            "failed": 0,
+            "errors": 0,
+            "skipped": 1
+          },
+          "view": "<temporary-demo>/show/sf586114d1ebd0be05182b494d46e98d4zmw3dljyf9600adef1ec97a7d66",
+          "execution": {
+            "id": "local",
+            "kind": "local",
+            "manifestSha256": "cfe635351d9d8aa87abb1a6a49e9bb2efbc62a82a17ac8639a29fdb0a8eb3cbb",
+            "environment": null,
+            "sourceEnvironment": null,
+            "deployment": null,
+            "host": {
+              "placement": "local",
+              "hostname": "<local-review-host>"
+            },
+            "dependencies": [],
+            "effects": "workspace-and-scratch",
+            "isolation": "build process with cleaned environment; host filesystem and network are not sandboxed by this profile",
+            "attestation": {
+              "deploymentVerified": false,
+              "runtimeReadsVerified": false
+            },
+            "provenance": "project local dependencies; env alone does not select a live deployment"
+          }
+        },
+        {
+          "job": "mw3dmehcb01d8b",
+          "outcome": "failed",
+          "counts": {
+            "tests": 22,
+            "passed": 8,
+            "failed": 14,
+            "errors": 0,
+            "skipped": 0
+          },
+          "view": "<temporary-demo>/show/sf586114d1ebd0be05182b494d46e98d4zmw3dmet57696ad198563054e94",
+          "execution": {
+            "id": "local",
+            "kind": "local",
+            "manifestSha256": "cfe635351d9d8aa87abb1a6a49e9bb2efbc62a82a17ac8639a29fdb0a8eb3cbb",
+            "environment": null,
+            "sourceEnvironment": null,
+            "deployment": null,
+            "host": {
+              "placement": "local",
+              "hostname": "<local-review-host>"
+            },
+            "dependencies": [],
+            "effects": "workspace-and-scratch",
+            "isolation": "build process with cleaned environment; host filesystem and network are not sandboxed by this profile",
+            "attestation": {
+              "deploymentVerified": false,
+              "runtimeReadsVerified": false
+            },
+            "provenance": "project local dependencies; env alone does not select a live deployment"
+          }
+        },
+        {
+          "job": "mw3dn2wgad5ad6",
+          "outcome": "failed",
+          "counts": {
+            "tests": 22,
+            "passed": 8,
+            "failed": 14,
+            "errors": 0,
+            "skipped": 0
+          },
+          "view": "<temporary-demo>/show/sf586114d1ebd0be05182b494d46e98d4zmw3dn37t834e081c6222245c7e",
+          "execution": {
+            "id": "local",
+            "kind": "local",
+            "manifestSha256": "cfe635351d9d8aa87abb1a6a49e9bb2efbc62a82a17ac8639a29fdb0a8eb3cbb",
+            "environment": null,
+            "sourceEnvironment": null,
+            "deployment": null,
+            "host": {
+              "placement": "local",
+              "hostname": "<local-review-host>"
+            },
+            "dependencies": [],
+            "effects": "workspace-and-scratch",
+            "isolation": "build process with cleaned environment; host filesystem and network are not sandboxed by this profile",
+            "attestation": {
+              "deploymentVerified": false,
+              "runtimeReadsVerified": false
+            },
+            "provenance": "project local dependencies; env alone does not select a live deployment"
+          }
+        }
+      ],
+      "patch": "docs/handbook/reviews/task-review-2026-11-05/tester/bug-231-tests.patch",
+      "productionFixtureRepair": false,
+      "deployedBehaviorProven": false,
+      "source": {
+        "repo": "NOVICE/checkout-boundary",
+        "sha": "9407344605f9e9ff5e49d1076d77b6bcb69526dd",
+        "revisionKey": "NOVICE/checkout-boundary@9407344605f9e9ff5e49d1076d77b6bcb69526dd-421c67ce69189ab8f58ee9b5"
+      },
+      "patchSha256": "cfc787b423670df4b1c4069f03de9ec04c6482546949393d14db4aabb8a3c894"
+    },
+    "developer": {
+      "score": 9,
+      "completedUsefulLocalTask": true,
+      "story": "novice-developer-318",
+      "apiInvocations": 30,
+      "report": "docs/handbook/reviews/task-review-2026-11-05/developer/review.md",
+      "evidence": "docs/handbook/reviews/task-review-2026-11-05/developer/task-evidence.json",
+      "runs": [
+        {
+          "phase": "original",
+          "job": "mw3dpha8cc1bbd",
+          "counts": {
+            "tests": 47,
+            "passed": 31,
+            "failed": 16,
+            "errors": 0,
+            "skipped": 0
+          },
+          "view": "<temporary-demo>/show/s617f2304fb4e5a5e0bb34eb1371e025fzmw3dphm1e009b9bff7dc89e41f"
+        },
+        {
+          "phase": "repaired",
+          "job": "mw3dphmdf93552",
+          "counts": {
+            "tests": 47,
+            "passed": 47,
+            "failed": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "view": "<temporary-demo>/show/s617f2304fb4e5a5e0bb34eb1371e025fzmw3dphyid2981eb6b4993ac042"
+        }
+      ],
+      "patch": "docs/handbook/reviews/task-review-2026-11-05/developer/task-318.patch",
+      "productionFixtureRepair": true,
+      "deployedBehaviorProven": false,
+      "source": {
+        "repository": "NOVICE/booking-policy",
+        "sha": "ebdcfddc1d57b417a343d07ae7526bad9e619d98",
+        "revisionKey": "NOVICE/booking-policy@ebdcfddc1d57b417a343d07ae7526bad9e619d98-55b2d980a9ca18459838e6cb"
+      },
+      "patchSha256": "0a4185ba46a91196965e46ba8e46426ba2b155610f4f5d91a7bba19a85ee10cd"
+    }
+  },
+  "findings": [
+    {
+      "id": "NTR-01",
+      "priority": 2,
+      "status": "open",
+      "summary": "Node test_context returns irrelevant JVM/library advice",
+      "reviewers": [
+        "tester",
+        "developer"
+      ]
+    },
+    {
+      "id": "NTR-02",
+      "priority": 2,
+      "status": "open",
+      "summary": "Node executed test proof omitted from workspace_patch",
+      "reviewers": [
+        "tester",
+        "developer"
+      ]
+    },
+    {
+      "id": "NTR-03",
+      "priority": 2,
+      "status": "open",
+      "summary": "Native test summary lacks compact source/target/deployment provenance",
+      "reviewers": [
+        "tester",
+        "developer"
+      ],
+      "priorityDifference": "Tester P2; developer P3"
+    },
+    {
+      "id": "NTR-04",
+      "priority": 3,
+      "status": "open",
+      "summary": "All-skipped result gives generic source-parts next action",
+      "reviewers": [
+        "tester"
+      ]
+    },
+    {
+      "id": "NTR-05",
+      "priority": 3,
+      "status": "open",
+      "summary": "Node test-only run labeled full build",
+      "reviewers": [
+        "developer"
+      ]
+    },
+    {
+      "id": "NTR-06",
+      "priority": 3,
+      "status": "contract-clarity-observation",
+      "summary": "Existing context_open update semantics confusing; recovered using context_update",
+      "reviewers": [
+        "developer"
+      ],
+      "caveat": "Tester considered this documented operator learning rather than a product defect."
+    }
+  ],
+  "productBehaviorChangedByReview": false,
+  "noP1Established": true,
+  "limits": [
+    "Novice-role agent exercise, not human usability research or representative model evaluation.",
+    "Local executable module fixtures only; synthetic infrastructure and semantic samples are not behavior proof.",
+    "No deployed application, real PG/Kafka/ES, fresh Joern, Open WebUI transport or production-model evaluation.",
+    "Developer booking field/refundability schema convention remains explicitly inferred.",
+    "Original skipped smoke placeholders do not establish passing behavior."
+  ]
+}

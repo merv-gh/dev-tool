@@ -1,0 +1,27 @@
+Complete execution record
+{
+  "id": "job:mw3dphmdf93552",
+  "parentId": "8c2d8704-ac84-42bf-a265-9fb7f2de7e81",
+  "kind": "job",
+  "tool": "tests test/smoke.test.cjs in booking-policy-ebdcfddc1d57b417a343d07ae7526bad9e619d98-2868f34500a9a0a4",
+  "title": "tests test/smoke.test.cjs in booking-policy-ebdcfddc1d57b417a343d07ae7526bad9e619d98-2868f34500a9a0a4",
+  "source": "job",
+  "owner": {
+    "principalId": "local",
+    "storyId": "novice-developer-318",
+    "role": "admin",
+    "multiUser": false,
+    "scopeKey": "617f2304fb4e5a5e0bb34eb1371e025f"
+  },
+  "revision": "ebe1288b4107295ad0e0fa0a",
+  "registryRevision": "99f9d536896d23ff6da7bb3d",
+  "processId": 19327,
+  "canCancel": false,
+  "outcome": "completed",
+  "state": "done",
+  "startedAt": "2026-11-05T10:04:27.637Z",
+  "endedAt": "2026-11-05T10:04:28.076Z",
+  "ms": 439,
+  "resources": 0,
+  "children": 0
+}

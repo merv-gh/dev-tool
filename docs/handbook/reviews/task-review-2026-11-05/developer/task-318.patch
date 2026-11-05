@@ -1,0 +1,67 @@
+diff --git a/src/cancellation.cjs b/src/cancellation.cjs
+index 5472c4d..2ec7bd9 100644
+--- a/src/cancellation.cjs
++++ b/src/cancellation.cjs
+@@ -1,3 +1,15 @@
+ exports.quoteCancellation = function(booking, minutesToDeparture) {
+-  throw new Error('cancellation quotation is not implemented');
++  if (!booking || typeof booking !== 'object' || Array.isArray(booking) ||
++      booking.status !== 'CONFIRMED' || typeof booking.refundable !== 'boolean' ||
++      !Number.isSafeInteger(booking.paidCents) || booking.paidCents < 0 ||
++      !Number.isFinite(minutesToDeparture) || minutesToDeparture < 0) {
++    throw new TypeError('Invalid booking or minutes to departure');
++  }
++  const paidCents = booking.paidCents;
++  let refundCents = 0;
++  if (booking.refundable) {
++    if (minutesToDeparture >= 48 * 60) refundCents = paidCents;
++    else if (minutesToDeparture >= 24 * 60) refundCents = Math.floor(paidCents / 2);
++  }
++  return { refundCents, retainedCents: paidCents - refundCents };
+ };
+diff --git a/test/smoke.test.cjs b/test/smoke.test.cjs
+index 0fd4d8a..e6cca88 100644
+--- a/test/smoke.test.cjs
++++ b/test/smoke.test.cjs
+@@ -1,2 +1,40 @@
+ const test = require('node:test');
+-test('incident regression tests', { skip: 'implement the requested regression suite' }, () => {});
++const assert = require('node:assert/strict');
++const { quoteCancellation } = require('../src/cancellation.cjs');
++const booking = (overrides = {}) => ({status:'CONFIRMED', refundable:true, paidCents:1001, ...overrides});
++// Expected values derive from INCIDENT.md, not the implementation.
++const cases = [
++ ['early',1001,4000,true,1001], ['48h boundary',1001,2880,true,1001],
++ ['just below 48h',1001,2879.999,true,500], ['24h boundary',1001,1440,true,500],
++ ['just below 24h',1001,1439.999,true,0], ['departure',1001,0,true,0],
++ ['zero payment',0,2880,true,0], ['one cent half',1,1440,true,0],
++ ['even half',1000,1440,true,500], ['safe max full',Number.MAX_SAFE_INTEGER,2880,true,Number.MAX_SAFE_INTEGER],
++ ['safe max half',Number.MAX_SAFE_INTEGER,1440,true,4503599627370495],
++ ['nonrefundable early',1001,4000,false,0], ['nonrefundable middle',1001,1440,false,0],
++ ['nonrefundable late',1001,0,false,0], ['fractional early',1001,2880.5,true,1001]
++];
++for (const [name,paidCents,minutes,refundable,expected] of cases) test(name,()=>{
++ const b=booking({paidCents,refundable});
++ const before={...b};
++ assert.deepEqual(quoteCancellation(b,minutes),{refundCents:expected,retainedCents:paidCents-expected});
++ assert.deepEqual(b,before);
++});
++for (const value of [-1,1.5,Number.MAX_SAFE_INTEGER+1,NaN,Infinity,'1001',null,undefined]) test('reject paidCents '+String(value),()=>{
++ const b=booking({paidCents:value}); const before={...b};
++ assert.throws(()=>quoteCancellation(b,2880)); assert.deepEqual(b,before);
++});
++for (const value of [-1,NaN,Infinity,-Infinity,'1440',null,undefined]) test('reject minutes '+String(value),()=>{
++ const b=booking(); const before={...b};
++ assert.throws(()=>quoteCancellation(b,value)); assert.deepEqual(b,before);
++});
++for (const value of ['CANCELLED','PENDING','confirmed',null,undefined]) test('reject state '+String(value),()=>{
++ const b=booking({status:value}); const before={...b};
++ assert.throws(()=>quoteCancellation(b,2880)); assert.deepEqual(b,before);
++});
++for (const value of [null,undefined,[],42,'booking']) test('reject booking '+String(value),()=>assert.throws(()=>quoteCancellation(value,2880)));
++for (const value of [undefined,null,0,1,'false','true']) test('reject refundable '+String(value),()=>{
++ const b=booking({refundable:value}); const before={...b};
++ assert.throws(()=>quoteCancellation(b,2880)); assert.deepEqual(b,before);
++});
++
++test('accept frozen booking',()=>assert.deepEqual(quoteCancellation(Object.freeze(booking()),2880),{refundCents:1001,retainedCents:0}));

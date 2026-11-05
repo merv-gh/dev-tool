@@ -28,7 +28,7 @@ Examples use illustrative `checkout`, `DEMO/checkout`, `orders`, `HANDBOOK-101` 
 - [Complete live tool reference](#tool-reference)
 - [Glossary and common mistakes](#glossary)
 
-[Complete built-in tool reference](tools.md) · [Source and verification](../benchmarks/handbook-verification.json)
+[Complete built-in tool reference](tools.md) · [Source and verification](../benchmarks/handbook-verification.json) · [Task-based novice review](novice-task-review.md)
 
 <a id="start"></a>
 

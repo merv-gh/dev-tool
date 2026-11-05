@@ -1,0 +1,65 @@
+{
+  "schema": "dt.novice-task-review/v1",
+  "frozenAt": "2026-11-05T09:59:25.875255+00:00",
+  "publishedBaseline": "9e6de38",
+  "roleReviewers": [
+    "fresh independent tester",
+    "fresh independent developer"
+  ],
+  "initialBriefs": {
+    "tester": "BUG-231: Customer entered 12.50 EUR but reservation history showed 0.12. Might be display or rounding. Test it, leave a bug report and regression checks; no production fix. Repository: NOVICE/checkout-boundary.",
+    "developer": "TASK-318: Cancellation quote throws. Early refundable bookings return everything, nearer departures about half, late ones nothing; do not change the booking. Deliver a tested patch. Repository: NOVICE/booking-policy."
+  },
+  "fixtures": {
+    "projects": [
+      {
+        "repo": "NOVICE/checkout-boundary",
+        "sha": "9407344605f9e9ff5e49d1076d77b6bcb69526dd",
+        "revisionKey": "NOVICE/checkout-boundary@9407344605f9e9ff5e49d1076d77b6bcb69526dd-421c67ce69189ab8f58ee9b5",
+        "summary": "Checkout amount differs from reservation history",
+        "inputFileHashes": {
+          "INCIDENT.md": "5f18f89ddbf72bb84abff5edbb0c0aa1f365b907680711c10640fdf3a5bfd05b",
+          "contract.json": "cb777aae25bb6e98d04a5398c034bca51ebf97e8f2cc65cf0224c62859b51a33",
+          "package.json": "9fdae8e3156423ea83a07cc3184a8e9ad4ca73b849a35cd9d7a3c1d44532c35b",
+          "test/smoke.test.cjs": "5852e092c5da893c497dc4b9d525272d952bca38518a758a64ef58cdb74b81a5",
+          "reservations/src/api.cjs": "f1f949b0eac82b4b93bccdd21fe6340860edc5f5e927cd6172622f1d685c6fd2",
+          "checkout/src/checkout.cjs": "1407eeb4f12b46cb451145d6a2882c90a00e89843bc452c16fb63b7c3c5be1eb"
+        }
+      },
+      {
+        "repo": "NOVICE/booking-policy",
+        "sha": "ebdcfddc1d57b417a343d07ae7526bad9e619d98",
+        "revisionKey": "NOVICE/booking-policy@ebdcfddc1d57b417a343d07ae7526bad9e619d98-55b2d980a9ca18459838e6cb",
+        "summary": "Cancellation refund quote for a booking",
+        "inputFileHashes": {
+          "INCIDENT.md": "3718f0cff4806c9c9c6d6585b5d8d62f17f07507a505e232558c9775bb72dd87",
+          "package.json": "2e04bb956746e3e0fce6d106d0f88fb54d377a82a0c9887a5464321d5d583c60",
+          "test/smoke.test.cjs": "5852e092c5da893c497dc4b9d525272d952bca38518a758a64ef58cdb74b81a5",
+          "src/cancellation.cjs": "015045414654460faa9481cce589906911863811bc65bf86fcd5fee83cad87d2"
+        }
+      }
+    ],
+    "provenance": "Original tracked C02 and C07 incident projects copied unchanged; review-only package.json and Git metadata added; no solutions or prior evidence copied."
+  },
+  "evaluation": [
+    "Discover requirements and separate absent requirements from inferred behavior",
+    "Maintain user/story/source identities",
+    "Reach actual original failure with meaningful assertions",
+    "Tester leaves reproducible bug evidence without a fix; developer preserves assertions and produces a tested patch",
+    "Interpret target, invocation status, skips, behavioral proof and native visualizations correctly",
+    "Preserve context and leave a resumable handoff",
+    "Report observed confusing/misleading UI/documentation transitions with reproducible evidence"
+  ],
+  "constraints": [
+    "Public product docs/UI first; no prior review/results/solutions/graders",
+    "Use product tool API for source access, writes and tests; no direct filesystem or shell test bypass",
+    "Only localhost disposable fixtures, isolated reviewer stories",
+    "No global config changes or repository pushes by reviewers",
+    "Roughly 12 minutes or 40 meaningful tool invocations each"
+  ],
+  "limits": [
+    "This is expert agents role-playing novice users, not a measured study with human novice participants.",
+    "The source cases are real local executable fixtures; external infrastructure and retained semantic examples are synthetic.",
+    "No autonomous Qwen/model-backend evaluation or fresh Joern/real environment integration is implied."
+  ]
+}

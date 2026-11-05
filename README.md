@@ -779,7 +779,8 @@ Examples prepare editable arguments and run only after an explicit click.
 Returned revisions must come from actual reads; illustrative names and sample
 renderers are labeled. See the [portable handbook](docs/handbook/README.md),
 [complete built-in reference](docs/handbook/tools.md),
-[independent novice review and repairs](docs/handbook/novice-review.md), and
+[independent novice review and repairs](docs/handbook/novice-review.md),
+[task-based tester/developer reviews and open findings](docs/handbook/novice-task-review.md), and
 [verification record](docs/benchmarks/handbook-verification.json).
 
 | | |

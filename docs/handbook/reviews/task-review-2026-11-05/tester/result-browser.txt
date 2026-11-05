@@ -1,0 +1,208 @@
+REGRESSION GUIDE dt admin
+V0.2.0
+dev
+uat
+local only
+Results
+OpenAPI
+local · admin · single user
+Chat / task
+Apply scope
+Shared local account. Choose a stable chat / task ID to separate work; default includes existing work.
+Investigate
+Explore
+Passports
+2
+Services map
+Architecture
+Joern & ports
+Work
+Task memory
+API explorer
+Scripts
+Sites
+Views
+Field guide
+Operate
+Index
+History
+Runtime
+Jobs
+Config
+Field guide & self-context
+
+Learn workflows, inspect this installation and keep durable operating knowledge.
+
+dev
+The dev-tool field guide
+
+Learn the system. Follow the evidence. Keep work another person or model can resume.
+
+Self-context
+All tools
+Visual index
+Search the handbook, tools and views
+0 / 21 chapters marked read
+
+223 enabled tools · 20 result views · dev · novice-tester-231
+
+Start here
+Your first investigation
+Dev-tool’s own operating context
+Contexts, nearby files and handoffs
+Evidence foundations
+Indices, freshness and exact versions
+Explore systems
+Explore a service and its surroundings
+Discover requirements and publish explanations
+Code search, impact and Joern
+Investigate
+Logs, SQL, Kafka and Elasticsearch
+Boundary cases
+Case: the cent lost between services
+Case: an event succeeds for the wrong tenant
+Case: a cancellation looks undone in search
+Case: the bug hides in a shared library version
+Build confidence
+Capture and replay a minimal failing state
+Workspaces, regressions, patches and push
+Automate
+From a browser action to an API check
+Scripts, collections and long calculations
+Extend tools and result views
+Operate
+Monitor work and effectiveness
+Reference
+Every visualization: what to read and do
+Complete live tool reference
+Glossary and common mistakes
+Workspaces, regressions, patches and push
+
+Make the smallest change and prove the behavior on an explicit target.
+
+What you will be able to do
+Produce a reviewable patch with actual red/green evidence.
+Before you start: A writable checkout or context-only workspace, build capability and independent expectations.
+Choose memory or a checkout
+Make the regression sensitive
+Patch versus push
+Example variables · dev · illustrative checkout defaults
+Choose memory or a checkout
+
+Use contexts for notes/results when no code checkout is needed. workspace_open resolves a repository/source/deployed ref for a writable checkout; inspect returned identity and path through tools. A workspace’s files are editable; the cached source used for discovery is separate. workspace_list/read/write/patch manage that work, and workspace_drop removes a disposable workspace when intended.
+
+Before writing tests, test_context reads the real target, chain, dependencies, style and edge mocks. test_data builds valid objects/dictionaries with agreeing IDs; generated skeletons are a starting point, not execution proof. Current test_run supports declared JVM selectors and explicit Node .test.js/.cjs/.mjs paths; old benchmark reports may describe earlier runner gaps.
+
+workspace_write can perform compile checks and clear fixes. Review changes and suggestions before proceeding; fix=false requests reviewable suggestions rather than automatic fixes where supported. Do not confuse compilation success with business correctness.
+
+Inspect supported test targetstest_targets
+
+Reviewed placement, dependency/effect rules and capability gaps.
+
+Prepare editable example
+Copy example JSON
+Open the selected service sourceworkspace_open
+
+A workspace/job and exact source identity; this creates local writable state.
+
+Prepare editable example
+Copy example JSON
+Make the regression sensitive
+
+State independent expected values before copying observed output. Run against the original code and preserve the failing assertion. Implement the repair and rerun that same behavior. Include edge/negative cases that reject a relevant wrong implementation. Assertions that mirror a helper’s current output are weak evidence.
+
+Choose mode=fast for supported short iterations and run mode=build for the final project build before review/push. Inspect counts, errors, skipped tests, logs, target placement and cleanup. No tests, all-skipped, unsupported target, timeout and cleanup-unknown are not passes. Differential checks compare exact types, ordering, errors and independently observed effects; normalization must not erase a business difference.
+
+Keep the test selector, source identity, fixture hash and execution ID in context. test_run red/green proof belongs to the actual workspace/behavior history, not a screenshot of a green badge.
+
+Native test summary sample: first failure details, expected/actual and focused stack evidence. Select the image to open it at full size.
+Patch versus push
+
+workspace_patch exports the current diff and reports retained test proof without committing or publishing. Inspect the folder tree and selected file diff; remove unrelated files and review generated/compile-fix edits. A patch is useful even when pushing is not authorized.
+
+workspace_push commits/pushes only when requested, to an allowed unprotected feature branch. It advances the workspace base and reports proof; it does not run or enforce tests. Protected main/master/release/default destinations are refused by this tool. A model should not infer push authorization from “investigate”. Direct repository maintenance by an operator is a separate workflow.
+
+A clean commit does not establish deployment success. Report what changed, which tests actually ran, the target and material gaps. Retain the final patch/result links instead of pasting all changed files into chat.
+
+Patch renderer sample: folder hierarchy and one selected diff keep chat readable. Select the image to open it at full size.
+Continue the investigation
+Contexts, nearby files and handoffs
+Capture and replay a minimal failing state
+Case: the bug hides in a shared library version
+Scripts, collections and long calculations
+Mark chapter read
+Next: From a browser action to an API check
+NATIVE TEST VIEW failed: test/bug-231.test.cjs
+Tests failed
+8 of 22 passed · 14 failed
+full build
+0.4 s
+All 22
+Failed 14
+Passed 8
+✗
+cjs
+0/14 · 12 ms
+✗
+BUG-231 exact cents and identity for 12.50 EUR
+7 ms
+✗
+BUG-231 exact cents and identity for 0.01 EUR
+1 ms
+✗
+BUG-231 exact cents and identity for 1.20 EUR
+0 ms
+✗
+BUG-231 exact cents and identity for 19.99 EUR
+1 ms
+✗
+BUG-231 exact cents and identity for 42 EUR
+0 ms
+✗
+BUG-231 exact cents and identity for 90071992547409.91 EUR
+0 ms
+✗
+BUG-231 rejects malformed/unsafe total "" without downstream request
+1 ms
+✗
+BUG-231 rejects malformed/unsafe total " " without downstream request
+0 ms
+✗
+BUG-231 rejects malformed/unsafe total "1e2" without downstream request
+0 ms
+✗
+BUG-231 rejects malformed/unsafe total "0x10" without downstream request
+2 ms
+✗
+BUG-231 rejects malformed/unsafe total "12.501" without downstream request
+0 ms
+✗
+BUG-231 rejects malformed/unsafe total null without downstream request
+0 ms
+✗
+BUG-231 rejects malformed/unsafe total 12.5 without downstream request
+0 ms
+✗
+BUG-231 rejects malformed/unsafe total "90071992547409.92" without downstream request
+0 ms
+✗
+cjs.BUG-231 exact cents and identity for 12.50 EUR
+7 ms
+observed downstream body: {"orderId":"order-231","amountCents":12,"currency":"EUR"}
+Expected
+{ orderId: 'order-231', amountCents: 1250, currency: 'EUR' }
+Actual
+{ orderId: 'order-231', amountCents: 12, currency: 'EUR' }
+Stack
+Full stack
+Copy
+AssertionError [ERR_ASSERTION]: observed downstream body: {"orderId":"order-231","amountCents":12,"currency":"EUR"}
++ actual - expected
+  {
++   amountCents: 12,
+-   amountCents: 1250,
+    currency: 'EUR',
+    orderId: 'order-231'
+  }
+	(message cut)
+node --test --test-reporter=<demo-home>/work/_stories/f586114d1ebd0be05182b494d46e98d4/checkout-boundary-9407344605f9e9ff5e49d1076d77b6bcb69526dd-fd0b6e99b3f34fd1/.dt/node-reports/reporter-mw3dn2wt3557e1d9.cjs --test-reporter-destination=<demo-home>/work/_stories/f586114d1ebd0be05182b494d46e98d4/checkout-boundary-9407344605f9e9ff5e49d1076d77b6bcb69526dd-fd0b6e99b3f34fd1/.dt/node-reports/TEST-mw3dn2wt3557e1d9.jsonl <demo-home>/work/_stories/f586114d1ebd0be05182b494d46e98d4/checkout-boundary-9407344605f9e9ff5e49d1076d77b6bcb69526dd-fd0b6e99b3f34fd1/test/bug-231.test.cjs

@@ -1,0 +1,164 @@
+{
+  "story": "novice-tester-231",
+  "context": "novice-tester-231",
+  "repository": "NOVICE/checkout-boundary",
+  "sourceSha": "9407344605f9e9ff5e49d1076d77b6bcb69526dd",
+  "revisionKey": "NOVICE/checkout-boundary@9407344605f9e9ff5e49d1076d77b6bcb69526dd-421c67ce69189ab8f58ee9b5",
+  "sourceEnvironment": "dev",
+  "workspace": "checkout-boundary-9407344605f9e9ff5e49d1076d77b6bcb69526dd-fd0b6e99b3f34fd1",
+  "productionCodeChanged": false,
+  "proven": {
+    "input": "12.50 EUR",
+    "expectedAmountCents": 1250,
+    "actualAmountCents": 12,
+    "level": "actual local modules; in-process boundary"
+  },
+  "runs": [
+    {
+      "job": "mw3dljo0441e06",
+      "outcome": "all-tests-skipped",
+      "counts": {
+        "tests": 1,
+        "passed": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      "view": "<temporary-demo>/show/sf586114d1ebd0be05182b494d46e98d4zmw3dljyf9600adef1ec97a7d66",
+      "execution": {
+        "id": "local",
+        "kind": "local",
+        "manifestSha256": "cfe635351d9d8aa87abb1a6a49e9bb2efbc62a82a17ac8639a29fdb0a8eb3cbb",
+        "environment": null,
+        "sourceEnvironment": null,
+        "deployment": null,
+        "host": {
+          "placement": "local",
+          "hostname": "<local-review-host>"
+        },
+        "dependencies": [],
+        "effects": "workspace-and-scratch",
+        "isolation": "build process with cleaned environment; host filesystem and network are not sandboxed by this profile",
+        "attestation": {
+          "deploymentVerified": false,
+          "runtimeReadsVerified": false
+        },
+        "provenance": "project local dependencies; env alone does not select a live deployment"
+      }
+    },
+    {
+      "job": "mw3dmehcb01d8b",
+      "outcome": "failed",
+      "counts": {
+        "tests": 22,
+        "passed": 8,
+        "failed": 14,
+        "errors": 0,
+        "skipped": 0
+      },
+      "view": "<temporary-demo>/show/sf586114d1ebd0be05182b494d46e98d4zmw3dmet57696ad198563054e94",
+      "execution": {
+        "id": "local",
+        "kind": "local",
+        "manifestSha256": "cfe635351d9d8aa87abb1a6a49e9bb2efbc62a82a17ac8639a29fdb0a8eb3cbb",
+        "environment": null,
+        "sourceEnvironment": null,
+        "deployment": null,
+        "host": {
+          "placement": "local",
+          "hostname": "<local-review-host>"
+        },
+        "dependencies": [],
+        "effects": "workspace-and-scratch",
+        "isolation": "build process with cleaned environment; host filesystem and network are not sandboxed by this profile",
+        "attestation": {
+          "deploymentVerified": false,
+          "runtimeReadsVerified": false
+        },
+        "provenance": "project local dependencies; env alone does not select a live deployment"
+      }
+    },
+    {
+      "job": "mw3dn2wgad5ad6",
+      "outcome": "failed",
+      "counts": {
+        "tests": 22,
+        "passed": 8,
+        "failed": 14,
+        "errors": 0,
+        "skipped": 0
+      },
+      "view": "<temporary-demo>/show/sf586114d1ebd0be05182b494d46e98d4zmw3dn37t834e081c6222245c7e",
+      "execution": {
+        "id": "local",
+        "kind": "local",
+        "manifestSha256": "cfe635351d9d8aa87abb1a6a49e9bb2efbc62a82a17ac8639a29fdb0a8eb3cbb",
+        "environment": null,
+        "sourceEnvironment": null,
+        "deployment": null,
+        "host": {
+          "placement": "local",
+          "hostname": "<local-review-host>"
+        },
+        "dependencies": [],
+        "effects": "workspace-and-scratch",
+        "isolation": "build process with cleaned environment; host filesystem and network are not sandboxed by this profile",
+        "attestation": {
+          "deploymentVerified": false,
+          "runtimeReadsVerified": false
+        },
+        "provenance": "project local dependencies; env alone does not select a live deployment"
+      }
+    }
+  ],
+  "selector": [
+    "test/bug-231.test.cjs"
+  ],
+  "patch": "bug-231-tests.patch",
+  "patchProofGap": "workspace_patch returned tests:[]",
+  "missingEvidence": [
+    "deployed source identity",
+    "real HTTP/persistence/history behavior",
+    "incident trace/order/time"
+  ],
+  "screenshots": [
+    "01-admin-scope.png",
+    "02-field-guide.png",
+    "03-test-failure.png"
+  ],
+  "taskVerdict": "local tester deliverable completed; deployed history unverified",
+  "score": 8,
+  "callEvidence": "calls.json",
+  "review": "review.md",
+  "bugReport": "bug-report.md",
+  "testSourceSha256": "61d5d6a37bf63905b158f8d70c11af7b7566b7fa101195faa9fbf7241d54988d",
+  "patchSha256": "cfc787b423670df4b1c4069f03de9ec04c6482546949393d14db4aabb8a3c894",
+  "contextStatus": "done",
+  "findings": [
+    {
+      "id": "tester-node-context",
+      "priority": "P2",
+      "observed": true,
+      "description": "test_context rejects Node target as no class and suggests library indexing"
+    },
+    {
+      "id": "tester-patch-proof",
+      "priority": "P2",
+      "observed": true,
+      "description": "workspace_patch returns tests:[] after actual Node regression executions"
+    },
+    {
+      "id": "tester-result-provenance",
+      "priority": "P2",
+      "observed": true,
+      "description": "native test view omits compact source/target/deployment attestation"
+    },
+    {
+      "id": "tester-skipped-next",
+      "priority": "P3",
+      "observed": true,
+      "description": "all-tests-skipped next action refers to empty source parts"
+    }
+  ],
+  "httpToolInvocationsAtSnapshot": 25
+}

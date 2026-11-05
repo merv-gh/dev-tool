@@ -1,0 +1,179 @@
+ADMIN GUIDE dt admin
+V0.2.0
+dev
+uat
+local only
+Results
+OpenAPI
+local · admin · single user
+Chat / task
+Apply scope
+Shared local account. Choose a stable chat / task ID to separate work; default includes existing work.
+Investigate
+Explore
+Passports
+2
+Services map
+Architecture
+Joern & ports
+Work
+Task memory
+API explorer
+Scripts
+Sites
+Views
+Field guide
+Operate
+Index
+History
+Runtime
+Jobs
+Config
+Field guide & self-context
+
+Learn workflows, inspect this installation and keep durable operating knowledge.
+
+dev
+The dev-tool field guide
+
+Learn the system. Follow the evidence. Keep work another person or model can resume.
+
+Self-context
+All tools
+Visual index
+Search the handbook, tools and views
+0 / 21 chapters marked read
+
+223 enabled tools · 20 result views · dev · novice-tester-231
+
+Start here
+Your first investigation
+Dev-tool’s own operating context
+Contexts, nearby files and handoffs
+Evidence foundations
+Indices, freshness and exact versions
+Explore systems
+Explore a service and its surroundings
+Discover requirements and publish explanations
+Code search, impact and Joern
+Investigate
+Logs, SQL, Kafka and Elasticsearch
+Boundary cases
+Case: the cent lost between services
+Case: an event succeeds for the wrong tenant
+Case: a cancellation looks undone in search
+Case: the bug hides in a shared library version
+Build confidence
+Capture and replay a minimal failing state
+Workspaces, regressions, patches and push
+Automate
+From a browser action to an API check
+Scripts, collections and long calculations
+Extend tools and result views
+Operate
+Monitor work and effectiveness
+Reference
+Every visualization: what to read and do
+Complete live tool reference
+Glossary and common mistakes
+Your first investigation
+
+Get from an unfamiliar symptom to a bounded, reviewable answer.
+
+What you will be able to do
+Find a real service/object, keep a task record and identify the next evidence gap.
+Before you start: Open Admin and choose the environment. A configured connection is not proof that its data is indexed.
+Choose a surface and a scope
+Keep these identities separate
+Build an answer someone can audit
+Example variables · dev · illustrative checkout defaults
+Choose a surface and a scope
+
+Open WebUI is the conversation surface. Admin is the operational workbench: Explore searches evidence, Passports/Services map/Architecture show relationships, Task memory keeps work, and Runtime/Jobs explain execution. This handbook is also available at /handbook and as a portable manual in the repository.
+
+Choose the environment in Admin and a stable Chat / task ID before starting. A token identifies the user; the story separates investigations. Profiles such as direct, tester and semantic change which tools are sent to a model; they do not grant permissions. Source env=dev does not mean a test will execute on a deployed dev application.
+
+In the examples, replace the selected service, repository and database with discovered names. checkout and DEMO/checkout belong to the disposable UI playground, not your company environment. Examples are prepared drafts. Nothing runs until you press Run tool.
+
+Read Self-context to see which tools and caches are available here.
+Search previous task memory by ticket. Open an exact context, then read progress.md.
+Use find for names; inspect a passport or definition before querying live data.
+Record what is known, the source identity, the next question and what would disprove the current hypothesis.
+Find the service in cached evidencefind
+
+Catalog lines or an explicit empty-catalog hint. If empty, see Indices; repeated identical searches do not create coverage.
+
+Prepare editable example
+Copy example JSON
+Discover a compound workflowtool_search
+
+Enabled tools and planning guides, not an automatic diagnosis.
+
+Prepare editable example
+Copy example JSON
+Keep these identities separate
+
+Chat / task is a stable investigation label you choose, such as REFUND-142. It need not be an existing Open WebUI chat ID. Reuse that label under the same authenticated user to reopen private work; a different story starts a separate investigation. Example names below are illustrative.
+
+Before executing application tests, inspect test_targets and the selected target/runtime bindings. The source environment identifies where captured evidence came from; it does not choose where a test runs. The reproduction chapter shows target, fixture and cleanup lifecycles.
+
+Identity	Meaning	Where to choose or inspect
+User / role	Authenticated principal and allowed actions	Your configured token/session; Self-context shows the active identity
+Chat / task · REFUND-142	Private investigation and memory boundary	Admin Chat / task → Apply scope; standalone handbook has the same control
+Environment · dev	Source provenance for catalogs/live reads	Environment selector and each tool’s env argument
+Profile · semantic	Tools offered to the model; grants no extra permissions	Model integration/profile configuration; tool_profiles lists discovery sets
+Repository revision	Exact source reviewed, independent of deployment	code_index revisionKey and SHA; semantic_index retained analysis ID
+Execution target / runner	Where application tests execute and which dependencies they use	test_targets; reviewed target/profile and returned runtime bindings
+Inspect available execution targetstest_targets
+
+Configured execution placement and prerequisites; listing does not start a test.
+
+Prepare editable example
+Copy example JSON
+Build an answer someone can audit
+
+A useful first answer names the symptom, environment, deployed/source identity, observed evidence and uncertainty. Link the native view, cite exact file:line or documentation blocks, and distinguish an observation from a proposed cause. A service-name match, green health badge or path through a graph is a starting point.
+
+Question	Start with	Check before concluding
+What is this service?	passport / showcase	Source SHA, library resolution and missing evidence
+Who writes this field?	find → pg_usage / field_trace	Column classification, dynamic SQL and missing passports
+What failed around this request?	logs_search → logs_trace	Time window, trace/tenant/entity identity and instance
+Can I reproduce it?	scenario_inventory → fixture_plan	Required reads, scope, execution target and independent expectations
+Admin groups investigation, work and operations; synthetic demo environment. Select the image to open it at full size.
+Continue the investigation
+Dev-tool’s own operating context
+Contexts, nearby files and handoffs
+Indices, freshness and exact versions
+Case: the cent lost between services
+Mark chapter read
+Next: Dev-tool’s own operating context
+FRAMES [
+  '<temporary-demo>/admin#handbook',
+  'about:blank',
+  'about:blank',
+  'about:blank',
+  'about:blank',
+  'about:blank'
+]
+FRAME TEXT
+FRAME TEXT
+FRAME TEXT
+FRAME TEXT
+FRAME TEXT
+HANDBOOK Back to Admin
+The dev-tool field guide
+Environment
+dev
+uat
+Chat / task
+Apply scope
+The dev-tool field guide
+
+Learn the system. Follow the evidence. Keep work another person or model can resume.
+
+Self-context
+All tools
+Visual index
+Search the handbook, tools and views
+
+Loading the current handbook and registry…

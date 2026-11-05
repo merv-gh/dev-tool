@@ -1,0 +1,115 @@
+{
+  "task": "TASK-318",
+  "story": "novice-developer-318",
+  "source": {
+    "repository": "NOVICE/booking-policy",
+    "sha": "ebdcfddc1d57b417a343d07ae7526bad9e619d98",
+    "revisionKey": "NOVICE/booking-policy@ebdcfddc1d57b417a343d07ae7526bad9e619d98-55b2d980a9ca18459838e6cb"
+  },
+  "workspace": {
+    "id": "booking-policy-ebdcfddc1d57b417a343d07ae7526bad9e619d98-2868f34500a9a0a4",
+    "owner": {
+      "principalId": "local",
+      "storyId": "novice-developer-318",
+      "role": "admin",
+      "multiUser": false,
+      "scopeKey": "617f2304fb4e5a5e0bb34eb1371e025f"
+    },
+    "retained": true
+  },
+  "contractSource": "INCIDENT.md:3",
+  "contractInference": [
+    "booking.status field",
+    "boolean booking.refundable",
+    "TypeError choice, no prescribed error type"
+  ],
+  "selector": [
+    "test/smoke.test.cjs"
+  ],
+  "testSha256": "ff6c4546226609eb9fabcd33726f867e585d567551f0bf5bc70b600b24440a30",
+  "runs": [
+    {
+      "phase": "original",
+      "job": "mw3dpha8cc1bbd",
+      "counts": {
+        "tests": 47,
+        "passed": 31,
+        "failed": 16,
+        "errors": 0,
+        "skipped": 0
+      },
+      "view": "<temporary-demo>/show/s617f2304fb4e5a5e0bb34eb1371e025fzmw3dphm1e009b9bff7dc89e41f"
+    },
+    {
+      "phase": "repaired",
+      "job": "mw3dphmdf93552",
+      "counts": {
+        "tests": 47,
+        "passed": 47,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "view": "<temporary-demo>/show/s617f2304fb4e5a5e0bb34eb1371e025fzmw3dphyid2981eb6b4993ac042"
+    }
+  ],
+  "target": {
+    "id": "local",
+    "kind": "local",
+    "manifestSha256": "cfe635351d9d8aa87abb1a6a49e9bb2efbc62a82a17ac8639a29fdb0a8eb3cbb",
+    "environment": null,
+    "sourceEnvironment": null,
+    "deployment": null,
+    "host": {
+      "placement": "local",
+      "hostname": "<local-review-host>"
+    },
+    "dependencies": [],
+    "effects": "workspace-and-scratch",
+    "isolation": "build process with cleaned environment; host filesystem and network are not sandboxed by this profile",
+    "attestation": {
+      "deploymentVerified": false,
+      "runtimeReadsVerified": false
+    },
+    "provenance": "project local dependencies; env alone does not select a live deployment"
+  },
+  "fixture": null,
+  "cleanup": {
+    "job": "job:mw3dphmdf93552",
+    "state": "done",
+    "outcome": "completed",
+    "resources": 0,
+    "children": 0,
+    "limitation": "No per-child-process cleanup record; retained workspace is intentional"
+  },
+  "patch": {
+    "view": "<temporary-demo>/show/s617f2304fb4e5a5e0bb34eb1371e025fzmw3dpi1xaf9828a10535628ac5",
+    "download": "<temporary-demo>/patch/s617f2304fb4e5a5e0bb34eb1371e025fzmw3dpi1xaf9828a10535628ac5.patch",
+    "sha256": "0a4185ba46a91196965e46ba8e46426ba2b155610f4f5d91a7bba19a85ee10cd",
+    "files": [
+      {
+        "path": "src/cancellation.cjs",
+        "added": 13,
+        "removed": 1,
+        "status": "modified"
+      },
+      {
+        "path": "test/smoke.test.cjs",
+        "added": 39,
+        "removed": 1,
+        "status": "modified"
+      }
+    ],
+    "reportedProof": []
+  },
+  "memory": {
+    "id": "novice-developer-318",
+    "files": [
+      "progress.md",
+      "contract.md"
+    ],
+    "status": "done",
+    "revision": "1ade06fc60d65a168198bb529bdf6896659bab8669a0ec656cd12697b8fb3696"
+  },
+  "toolInvocations": 30
+}

@@ -1,0 +1,14 @@
+{
+  "workspace": "checkout-boundary-9407344605f9e9ff5e49d1076d77b6bcb69526dd-fd0b6e99b3f34fd1",
+  "tests": [
+    "test/bug-231.test.cjs"
+  ],
+  "target": "local",
+  "mode": "build",
+  "files": [
+    {
+      "path": "test/bug-231.test.cjs",
+      "content": "const test = require('node:test');\nconst assert = require('node:assert/strict');\nconst { place } = require('../checkout/src/checkout.cjs');\nconst { reserve } = require('../reservations/src/api.cjs');\n\n// Independent expectations: INCIDENT.md:3 and contract.json at base 9407344605f9e9ff5e49d1076d77b6bcb69526dd.\n// These tests execute local modules and an in-process boundary, not deployed HTTP/history/UI.\nfor (const [total, cents] of [ ['12.50', 1250], ['0', 0], ['0.01', 1], ['1.20', 120], ['19.99', 1999], ['42', 4200], ['90071992547409.91', Number.MAX_SAFE_INTEGER] ]) {\n  test(`BUG-231 exact cents and identity for ${total} EUR`, async () => {\n    const calls = [];\n    const result = await place({id:'order-231', total, currency:'EUR'}, body => { calls.push(body); return reserve(body); });\n    assert.equal(calls.length, 1);\n    assert.deepEqual(calls[0], {orderId:'order-231', amountCents:cents, currency:'EUR'}, `observed downstream body: ${JSON.stringify(calls[0])}`);\n    assert.deepEqual(result, {orderId:'order-231', amountCents:cents, currency:'EUR', status:'RESERVED'});\n  });\n}\nfor (const total of ['-0.01', 'oops', 'NaN', '', ' ', '1e2', '0x10', '12.501', null, 12.5, '90071992547409.92']) {\n  test(`BUG-231 rejects malformed/unsafe total ${JSON.stringify(total)} without downstream request`, async () => {\n    let calls = 0;\n    let rejected = false;\n    try { await place({id:'order-231', total, currency:'EUR'}, body => { calls++; return reserve(body); }); } catch { rejected = true; }\n    assert.deepEqual({calls, rejected}, {calls:0, rejected:true}, 'invalid totals must reject before reservations');\n  });\n}\ntest('BUG-231 reservations accepts the independently specified 1250 cents contract', () => {\n  assert.deepEqual(reserve({orderId:'order-231', amountCents:1250, currency:'EUR'}), {orderId:'order-231', amountCents:1250, currency:'EUR', status:'RESERVED'});\n});\nfor (const amountCents of [-1, 12.5, Number.MAX_SAFE_INTEGER + 1]) {\n  test(`BUG-231 reservations rejects invalid cents ${amountCents}`, () => {\n    assert.throws(() => reserve({orderId:'order-231', amountCents, currency:'EUR'}));\n  });\n}\n"
+    }
+  ]
+}
