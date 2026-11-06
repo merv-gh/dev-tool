@@ -79,10 +79,10 @@ test('a fast run recompiles the changed files and the classes that use them', ()
 
 test('context: bodies of what the method calls; parameterized boundaries for pure logic', () => {
   const T = require('../lib/testgen');
-  const svc = T.context(ws.id, 'PaymentService#create');
+  const svc = T.context(ws.id, 'PaymentService#create', {flow:false});
   assert.deepEqual(svc.callees.map(c => c.method), ['FeeCalculator#fee', 'PaymentEvents#created']);
   assert.match(svc.callees[0].code, /setScale\(2, RoundingMode\.HALF_UP\)/);
-  const fee = T.context(ws.id, 'FeeCalculator');
+  const fee = T.context(ws.id, 'FeeCalculator', {flow:false});
   assert.match(fee.skeleton, /\/\/ @CsvSource\(\{ "0\.00, \?", "0\.01, \?", "1\.00, \?", "12\.345, \?", "-1\.00, \?" \}\)/);
   assert.match(fee.skeleton, /\/\/ void feeCases\(String amount, String expected\)/);
 });

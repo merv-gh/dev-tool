@@ -2,6 +2,21 @@
 
 Captured from the running demo with `demo/gallery.js`, `demo/screenshots.js` and `demo/chat-screenshots.js`. Synthetic samples demonstrate rendering; real Joern captures use retained end-to-end test results. Open WebUI uses a scripted model with real tool calls. This gallery does not imply every integration was executed. [Capture instructions](../../demo/README.md).
 
+## Shared project knowledge
+
+Captured with `dev/check-project-context-browser.js` against the disposable
+`demo/ui-ux.js` environment. The shared project imports actual indexed fixture
+paths; infrastructure is synthetic and no fresh Joern parse or database
+integration is claimed. Publication, file editing/upload, conflict rejection,
+restore and retained graph reopening were exercised through the real app.
+[How to use project context](../project-context.md).
+
+| | |
+| --- | --- |
+| ![Shared service understanding](admin-project-knowledge-desktop.png) **Project knowledge** · pinned entries, exits, flows and evidence | ![Editable flow assumptions](admin-project-knowledge-edit.png) **Publication editor** · explanations, assumptions and retained revisions |
+| ![Mobile project understanding](admin-project-knowledge-mobile.png) **Mobile** · bounded selectors and scrollable diagrams | ![Inline project knowledge](project-context-inline.png) **Open WebUI** · read-only project view |
+| ![Illustrative project view](sample-project-context.png) **Visual-index example** · explicitly assumed flow | |
+
 ## Tracing and test evidence
 
 Captured with `dev/check-observability-browser.js` against `demo/ui-ux.js`.

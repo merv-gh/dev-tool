@@ -3718,6 +3718,46 @@
       }
     },
     {
+      "name": "SM80.project-context-publication",
+      "initial": "draft",
+      "states": [
+        "draft",
+        "locked",
+        "checked",
+        "files-written",
+        "revision-written",
+        "published",
+        "failed"
+      ],
+      "terminal": [
+        "published",
+        "failed"
+      ],
+      "transitions": {
+        "draft": [
+          "locked"
+        ],
+        "locked": [
+          "checked",
+          "failed"
+        ],
+        "checked": [
+          "files-written",
+          "failed"
+        ],
+        "files-written": [
+          "revision-written",
+          "failed"
+        ],
+        "revision-written": [
+          "published",
+          "failed"
+        ],
+        "published": [],
+        "failed": []
+      }
+    },
+    {
       "name": "UI.activity",
       "initial": "idle",
       "states": [
@@ -3806,6 +3846,23 @@
         ],
         "busy": [
           "idle"
+        ]
+      }
+    },
+    {
+      "name": "UI.project-context-scope",
+      "initial": "task",
+      "states": [
+        "task",
+        "project"
+      ],
+      "terminal": [],
+      "transitions": {
+        "task": [
+          "project"
+        ],
+        "project": [
+          "task"
         ]
       }
     },

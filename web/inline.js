@@ -97,6 +97,8 @@ const dtInline = {
       summary = [d.operation || (d.job ? 'Index job' : 'Semantic evidence'), state, d.mode, Array.isArray(d.results) ? `${d.results.length} results` : null, (d.gaps || []).length ? `${d.gaps.length} gaps` : null, d.truncated ? 'bounded page' : null].filter(Boolean).join(' · ');
     } else if (view === 'passport-ports') {
       summary = `${(d.ports || []).length} typed ports${(d.gaps || []).length ? ` · ${d.gaps.length} gaps` : ''}${d.revision ? ' · adjusted' : ''}`;
+    } else if (view === 'project-context') {
+      summary = `${(d.document?.services || []).length} services · ${(d.files || []).length} files · revision ${(d.revision || 'unpublished').slice(0,10)}`;
     } else if (view === 'api-exchange') {
       failed ||= (d.response?.status || 0) >= 400;
       summary = `${d.request?.method || 'HTTP'} · ${d.response?.status || 'No response'}${d.timing?.durationMs != null ? ` · ${d.timing.durationMs} ms` : ''}`;

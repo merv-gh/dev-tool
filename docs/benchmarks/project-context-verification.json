@@ -1,0 +1,114 @@
+{
+  "schema": "dt.project-context.verification/v1",
+  "date": "2026-11-06",
+  "baseCommit": "31ea7f6",
+  "sourceDigest": "95cd738fcbca5f8625817aaba86c3a459174b4abda78b7bff685714f8aa5c5a2",
+  "automated": {
+    "sourceDigest": "95cd738fcbca5f8625817aaba86c3a459174b4abda78b7bff685714f8aa5c5a2",
+    "command": "npm run test:coverage",
+    "scope": "full-suite",
+    "exitCode": 0,
+    "node": "v24.22.0",
+    "counts": {
+      "tests": 845,
+      "failed": 0,
+      "passed": 793,
+      "cancelled": 0,
+      "skipped": 52,
+      "todo": 0,
+      "topLevel": 845,
+      "suites": 0
+    }
+  },
+  "coverage": {
+    "transitions": {
+      "hit": 338,
+      "total": 638,
+      "percent": 53
+    },
+    "lines": {
+      "hit": 24382,
+      "total": 26600,
+      "percent": 91.7
+    },
+    "functions": {
+      "hit": 5200,
+      "total": 6032,
+      "percent": 86.2
+    },
+    "branches": {
+      "hit": 18163,
+      "total": 22329,
+      "percent": 81.3
+    },
+    "testedFiles": 117,
+    "sourceFiles": {
+      "measured": 164,
+      "unmeasured": 26,
+      "total": 190
+    }
+  },
+  "browser": {
+    "fixture": "demo/ui-ux.js; disposable synthetic infrastructure with real indexed fixture source",
+    "feature": {
+      "checks": [
+        "shared project mode and source-pinned service map",
+        "same global publication across chats",
+        "retained dossier reopens in the full graph without indexing",
+        "editable understanding publishes immutable history",
+        "file edit pins new bytes and preserves historical evidence",
+        "binary screenshot survives publication and previews without executing files",
+        "flow explanation and assumptions edit in place",
+        "stale publication rejects without losing the local draft",
+        "historical revision is read only and restore creates a new head",
+        "mobile project view has no document overflow",
+        "read-only sandboxed Open WebUI project view",
+        "illustrative native view available in the visual index",
+        "private task workspace remains usable"
+      ],
+      "passed": 13,
+      "pageErrors": []
+    },
+    "regression": {
+      "checks": 117,
+      "passed": 117,
+      "defects": 0,
+      "pageErrors": 0,
+      "visits": 86
+    }
+  },
+  "standalone": {
+    "command": "node dev/check-project-context-bundle.js",
+    "passed": 8,
+    "scope": "Copied dist into a separate temporary folder without a source checkout or node_modules; independent CLI processes, HTTP reads and inline asset rendering."
+  },
+  "focused": {
+    "command": "node --test test/flows.test.js test/project-context.test.js test/fastrun.test.js test/tool-contracts.test.js",
+    "passed": 40,
+    "failed": 0
+  },
+  "verified": [
+    "Global reads across principals and chats; admin-only publication",
+    "Immutable revision and file identities, deduplication, archive and restore",
+    "Cross-process CAS publication, failed-head recovery and retained history",
+    "Owned task-file promotion with exact source revision",
+    "Configured-secret/common-credential rejection in text and publication metadata",
+    "Manifest/blob integrity and bounded pre-read sizes",
+    "Shared knowledge search, declared graph relations and exact historical quotation verification",
+    "Retained service dossier and branch-specific diagrams; interactive graph reopens without reindexing",
+    "Default public entry caller selection, explicit unit isolation, and real service/library chain",
+    "Base-SHA comparisons do not label dirty or unverified worktrees as source matches"
+  ],
+  "coverageArtifact": {
+    "path": "docs/benchmarks/test-coverage.json",
+    "sha256": "43c0cd8155d8b7ef77ff306388e47bd2f291fe4aeef8458e38ec996d732f7e98"
+  },
+  "limits": [
+    "52 optional/live tests skipped; no live Docker, PostgreSQL, Kafka or fresh Joern execution is claimed.",
+    "Suite ran on Node 24.22.0; the Compose Node 22 image was not executed.",
+    "Browser checks exercised the native sandbox renderer used by Open WebUI without a separate live Open WebUI installation.",
+    "No autonomous model benchmark was run; prompt budget, tool contracts, discovery and generated test scope were checked locally.",
+    "Flow skeletons use boundary doubles. Database, HTTP wire and broker integration require the explicit isolated fixtures described by integrationPlan.",
+    "Coverage describes measured Node sources and observed lifecycle transitions, not individual assertion quality or every possible execution."
+  ]
+}

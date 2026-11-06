@@ -54,3 +54,11 @@ test('composite analyses containing unrelated sources or another environment can
  const S=require('../lib/semantic-code'),foreign={id:'foreign',repo:'SHOP/checkout',sha,env:'dev',language:'java',sources:[{repo:'SHOP/checkout',sha},{repo:'OTHER/private',sha}]},uat={id:'uat',repo:'SHOP/checkout',sha,env:'uat',language:'java'};t.mock.method(S,'list',()=>({analyses:[foreign,uat]}));t.mock.method(S,'load',id=>id==='foreign'?foreign:uat);
  for(const id of ['foreign','uat'])await assert.rejects(D.semantics(passport,{flows:[],nodes:[]},{env:'dev',analyses:[id]},()=>{}),/does not match/);
 });
+
+test('a published project context retains the full pinned dossier and diagrams without promoting static paths to runtime proof',async()=>{
+ const S=require('../lib/project-context'),saved=S.save({id:'checkout-project',expected_revision:null,reason:'Retain source-based understanding',document:{title:'Checkout',services:[]},dossier:shown.view});
+ assert.equal(saved.document.services[0].revision,sha);assert.ok(saved.document.services[0].entries.length);assert.ok(saved.document.services[0].flows.some(f=>f.exits.length));assert.ok(saved.files.some(f=>f.path.endsWith('.puml')));
+ const full=JSON.parse(S.get({id:saved.id,path:'services/checkout/dossier.json'}).file.content);assert.equal(full.protocol,'dt.service-architecture/v1');assert.equal(full.identity.revision,sha);assert.equal(full.coverage.complete,false);assert.equal(saved.runtimeVerified,false);
+ const visual=await require('../lib/tools').call('project_context_get',{id:saved.id,revision:saved.revision,path:'services/checkout/dossier.json',diagram:true,view:false});assert.ok(visual.diagramView.includes('/architecture/'));assert.equal(require('../lib/results').load(visual.diagramView.split('/').pop()).data.dossier.identity.revision,sha);
+ A.run({principalId:'other',storyId:'other',role:'admin',multiUser:true},()=>assert.throws(()=>S.save({id:'other-project',expected_revision:null,reason:'Cannot promote another chat result',document:{title:'No'},dossier:shown.view}),{code:'DT_NOT_FOUND'}));
+});

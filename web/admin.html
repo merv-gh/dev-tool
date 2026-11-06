@@ -6,7 +6,7 @@
 <title>Developer workspace · dt</title>
 <link rel="stylesheet" href="/static/ui.css">
 <link rel="stylesheet" href="/static/admin-runtime.css">
-<link rel="stylesheet" href="/static/diagnostics.css">
+<link rel="stylesheet" href="/static/diagnostics.css"><link rel="stylesheet" href="/static/project-context.css">
 <link rel="stylesheet" href="/static/admin-semantic.css"><link rel="stylesheet" href="/static/admin-architecture.css">
 <style>
   .cx-label { display: block; margin: 12px 0 5px; font-size: 12px; color: var(--muted); }
@@ -260,7 +260,8 @@
   <section id="tab-map" hidden><p class="hint">Explore evidence-backed connections, inspect services and resources, and record reviewed corrections.</p><div id="mapWorkspaceHost"></div></section>
 
   <section id="tab-context" hidden>
-    <p class="hint">Keep task memory across chats: plans, progress, findings, files and saved tool results. Search by ticket, repository or workspace. No Git repository required.</p>
+    <div class="workspace-mode-tabs" aria-label="Context scope"><button id="cxScopeTask" aria-pressed="true">Task memory</button><button id="cxScopeProject" aria-pressed="false">Project knowledge</button></div>
+    <div id="cxTaskMemory"><p class="hint">Keep task memory across chats: plans, progress, findings, files and saved tool results. Search by ticket, repository or workspace. No Git repository required.</p>
     <div class="row" style="margin-bottom:10px"><button id="cxMapOpen">Explore microservice map</button><span class="hint">Select a service or resource to prepare tools; libraries stay hidden until requested.</span></div>
     <details id="cxMapPanel" hidden><summary id="cxMapSelection">Microservice map</summary><iframe id="cxMapFrame" title="Microservice connections" style="width:100%;height:850px;border:1px solid var(--line);border-radius:8px"></iframe><div id="cxMapActions" class="row" style="padding:10px 0"></div><iframe id="cxMapPreview" title="UI service screenshot" style="width:100%;height:600px;border:1px solid var(--line)" hidden></iframe></details>
     <div id="cxMessage" class="hint" role="status" aria-live="polite"></div>
@@ -309,6 +310,30 @@
           <pre id="cxRunOutput" class="code cx-wrap" aria-live="polite">Run a tool to save its arguments and result here.</pre>
         </div>
       </div>
+    </div>
+    </div>
+    <div id="pcPanel" class="pc-editor" hidden>
+      <p id="pcPolicy" class="hint">Shared versioned project understanding. Admins publish; everyone reads.</p>
+      <div class="pc-row"><label>Find project knowledge<input id="pcSearch" type="text" placeholder="Project, service, repository or finding"></label><button id="pcSearchButton">Search projects</button><button id="pcNew">New project context</button></div>
+      <label>Published project<select id="pcProjects"><option value="">Choose a published project</option></select></label>
+      <div class="pc-row"><label>Publication history<select id="pcRevision" disabled></select></label><button id="pcRestore" disabled>Restore as new revision</button></div>
+      <p id="pcPublished" class="hint"></p><div id="pcMessage" class="pc-message hint" role="status" aria-live="polite">Choose a publication to read its maps and evidence, or create a project context.</div>
+      <details id="pcEditDetails"><summary>Edit project understanding & files <span id="pcDirty"></span></summary>
+        <fieldset id="pcFields" disabled>
+          <div class="pc-row"><label>Stable id<input id="pcId" type="text" placeholder="orders-platform"></label><label>Title<input id="pcTitle" type="text"></label></div>
+          <label>Searchable summary<textarea id="pcSummary" rows="2"></textarea></label>
+          <div class="pc-row"><label>Repositories (comma separated)<input id="pcRepos" type="text"></label><label>Tags (comma separated)<input id="pcTags" type="text"></label></div>
+          <label>Project understanding<textarea id="pcBody" rows="6" placeholder="Important details, rationale, assumptions and where to investigate next"></textarea></label>
+          <details><summary>Service contracts JSON · entry points, exits, flows and evidence</summary><p class="hint">Stable ids join flows to their entry and exit boundaries. Keep assumptions and gaps explicit. Each non-assumed flow needs evidence references.</p><textarea id="pcServices" rows="16" spellcheck="false">[]</textarea><button id="pcTemplate">Show document template</button><pre id="pcTemplateText" hidden></pre></details>
+          <div id="pcFlowEdits" hidden><h3>Edit selected flow</h3><label>Flow explanation<textarea id="pcFlowSummary" rows="2"></textarea></label><label>Declared basis<select id="pcFlowBasis"><option value="assumption">Assumption</option><option value="static">Static code</option><option value="joern">Joern value-flow evidence</option><option value="observation">Observation</option></select></label><label>Assumptions (one per line)<textarea id="pcFlowAssumptions" rows="2"></textarea></label><label>Unresolved gaps (one per line)<textarea id="pcFlowGaps" rows="2"></textarea></label><button id="pcApplyFlow">Stage flow edits</button></div>
+          <div class="pc-row"><button id="pcNewFile">New text file</button><label>Upload evidence (up to 2 MiB)<input id="pcUpload" type="file"></label></div>
+          <div id="pcFileEdits" hidden><p id="pcFileKind" class="hint"></p><label>Relative file path<input id="pcPath" type="text" placeholder="findings/orders.md"></label><label>Searchable file summary<input id="pcFileSummary" type="text"></label><label>Text contents<textarea id="pcFileBody" rows="10" spellcheck="false"></textarea></label><div class="pc-row"><button id="pcStageFile">Stage file</button><button id="pcArchive">Stage archive</button></div></div>
+          <button id="pcPreviewDraft">Preview local document</button>
+        </fieldset>
+      <label>Retained service dossier URL/id (optional)<input id="pcDossier" type="text" placeholder="architecture_service result URL from this chat"></label>
+      <div class="pc-row"><label>Publication reason<input id="pcReason" type="text" placeholder="What changed, why, and which evidence supports it"></label><button id="pcPublish" class="primary" disabled>Publish revision</button></div>
+      </details>
+      <div class="pc-row"><button id="pcDownload" disabled>Download selected file</button><button id="pcOpenGraph">Prepare retained service graph</button><a id="pcRetainedGraph" target="_blank" rel="noopener" hidden>Open retained service graph</a></div><div id="pcPreview"></div>
     </div>
   </section>
 
@@ -387,7 +412,7 @@
 <script src="/static/state-machine.js"></script><script src="/static/ui.js"></script>
 <script src="/static/admin-scripts.js"></script>
 <script src="/static/tool-form.js"></script><script src="/static/port-editor.js"></script>
-<script src="/static/admin-context.js"></script>
+<script src="/static/admin-context.js"></script><script src="/static/project-context-ui.js"></script><script src="/static/admin-project-context.js"></script>
 <script src="/static/admin-map.js"></script>
 <script src="/static/admin-runtime.js"></script>
 <script src="/static/trace-format.js"></script><script src="/static/diagnostics.js"></script><script src="/static/admin-observability.js"></script>

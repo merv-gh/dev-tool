@@ -151,3 +151,13 @@ test('flow test context: the chain\'s beans imported, the edge mocked, propertie
   assert.match(job.skeleton, /entry\.run\(\);/);
   assert.ok(!/KafkaTemplate/.test(job.skeleton), 'only the edge of this flow');
 });
+
+test('default class requests prefer public entry callers; explicit unit isolation remains available',async()=>{
+ const W=require('../lib/workspace'),T=require('../lib/testgen'),ws=await W.open({project:'SHOP',repo:'orders-service',ref:'main',url:`file://${repos['SHOP/orders-service']}`,git:gitImpl});
+ const plan=T.context(ws.id,'OrderService');assert.equal(plan.style,'integration-plan');assert.ok(plan.candidates.some(c=>c.kind==='http'));assert.equal(plan.skeleton,undefined);assert.equal(plan.integrationPlan.currentSkeleton,'none');
+ const flow=T.context(ws.id,'POST /process/order');assert.equal(flow.style,'flow');assert.equal(flow.integrationPlan.approach,'outside-in');assert.equal(flow.integrationPlan.provesDatabaseIntegration,false);assert.ok(flow.flow.beans.some(b=>b.id.endsWith('.OrderService')));assert.match(flow.integrationPlan.boundaries.database,/real PostgreSQL/);
+ const unit=T.context(ws.id,'OrderService',{strategy:'unit'});assert.equal(unit.style,'mockito');assert.match(unit.testScope,/Isolated class/);
+ const r=require('../lib/project-context').save({id:'orders-understanding',expected_revision:null,reason:'Retain source pin',document:{title:'Orders',repositories:['SHOP/orders-service'],services:[{service:'orders-service',repo:'SHOP/orders-service',revision:ws.sha,entries:[],exits:[],flows:[],assumptions:[],gaps:[]}]}});
+ const next=T.context(ws.id,'POST /process/order');assert.equal(next.integrationPlan.knowledge[0].revision,r.revision);assert.equal(next.integrationPlan.knowledge[0].services[0].sourceMatches,true);
+ const file='src/main/java/com/acme/orders/OrderService.java',before=fs.readFileSync(path.join(W.checkId(ws.id).path,file),'utf8');W.write(ws.id,file,{content:before+'\n// Local investigation edit\n'});const edited=T.context(ws.id,'POST /process/order');assert.equal(edited.integrationPlan.knowledge[0].services[0].sourceMatches,false);assert.equal(edited.integrationPlan.knowledge[0].services[0].workspaceDirty,true);
+});

@@ -531,6 +531,41 @@
       "width": 1440,
       "origin": "executed repository test coverage; local demo shell",
       "overflow": false
+    },
+    {
+      "file": "admin-project-knowledge-desktop.png",
+      "title": "Shared project knowledge",
+      "width": 1440,
+      "origin": "disposable app; actual fixture source index, synthetic infrastructure",
+      "overflow": false
+    },
+    {
+      "file": "admin-project-knowledge-edit.png",
+      "title": "Project understanding and flow editor",
+      "width": 1440,
+      "origin": "disposable app; actual fixture source index, synthetic infrastructure",
+      "overflow": false
+    },
+    {
+      "file": "admin-project-knowledge-mobile.png",
+      "title": "Mobile shared project knowledge",
+      "width": 390,
+      "origin": "disposable app; actual fixture source index, synthetic infrastructure",
+      "overflow": false
+    },
+    {
+      "file": "project-context-inline.png",
+      "title": "Inline shared project knowledge",
+      "width": 1440,
+      "origin": "disposable app; actual fixture source index, synthetic infrastructure",
+      "overflow": false
+    },
+    {
+      "file": "sample-project-context.png",
+      "title": "Illustrative project context",
+      "width": 1440,
+      "origin": "built-in illustrative sample; presentation only",
+      "overflow": false
     }
   ],
   "errors": [],

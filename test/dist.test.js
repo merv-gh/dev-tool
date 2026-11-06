@@ -62,7 +62,7 @@ test('standalone telemetry persists scoped spans and reads its portable coverage
   await start();let r=await fetch(base+'/api/admin/runtime/observability',{method:'POST',headers:{'content-type':'application/json','x-dt-story':'bundle'},body:'{"enabled":true}'});assert.equal(r.status,200);await r.json();
   r=await fetch(base+'/api/tool/find',{method:'POST',headers:{'content-type':'application/json','x-dt-story':'bundle'},body:'{"q":"local-fixture","env":"dev"}'});assert.equal(r.status,200);await r.json();
   const traced=await read();assert.ok(traced.spans.some(s=>s.name==='http.server'));assert.equal(traced.storage.persistence,'sqlite');assert.equal((await read('neighbor')).spans.length,0);
-  const coverage=await fetch(base+'/api/admin/runtime/coverage').then(r=>r.json());assert.equal(coverage.available,hasCoverage);if(hasCoverage)assert.equal(coverage.stale,false);
+  const coverage=await fetch(base+'/api/admin/runtime/coverage').then(r=>r.json());assert.equal(coverage.available,hasCoverage);if(hasCoverage){const expected=require('../lib/source-version').digest();assert.equal(coverage.currentSourceDigest,expected);assert.equal(coverage.stale,JSON.parse(fs.readFileSync(coverageFile,'utf8')).run.sourceDigest!==expected);}
   await stop();await start();assert.equal((await read()).enabled,true);assert.ok((await read()).spans.length>0);assert.equal((await read('neighbor')).spans.length,0);
  }finally{await stop();fs.rmSync(root,{recursive:true,force:true});}
 });

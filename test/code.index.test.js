@@ -148,20 +148,20 @@ test('workspace from a git remote: write, edit, patch that applies; test context
   W.write(ws.id, 'src/main/java/com/acme/pay/FeeCalculator.java', { edits: [{ find: 'RoundingMode.DOWN', replace: 'RoundingMode.HALF_UP' }] });
 
   const T = require('../lib/testgen');
-  const svc = T.context(ws.id, 'PaymentService');
+  const svc = T.context(ws.id, 'PaymentService', {flow:false});
   assert.equal(svc.style, 'mockito');
   assert.deepEqual(svc.methods.find(m => m.name === 'create').calls, ['payments.save(...)', 'fees.fee(BigDecimal amount) -> BigDecimal', 'events.created(Payment p) -> void']);
   assert.match(svc.skeleton, /@ExtendWith\(MockitoExtension\.class\)[\s\S]*@Mock\n {4}PaymentRepository payments;[\s\S]*@InjectMocks\n {4}PaymentService subject;/);
   assert.match(svc.skeleton, /var result = subject\.create\(1L, new BigDecimal\("10\.00"\)\);/);
   assert.match(svc.skeleton, /void getTest\(\)/, 'no test method named like a static helper');
-  const web = T.context(ws.id, 'PaymentController#settle');
+  const web = T.context(ws.id, 'PaymentController#settle', {flow:false});
   assert.equal(web.style, 'webmvc');
   assert.match(web.skeleton, /@WebMvcTest\(PaymentController\.class\)[\s\S]*@MockBean\n {4}PaymentService service;[\s\S]*post\("\/payments\/\{id\}\/settle", 1\)/);
-  const repo = T.context(ws.id, 'PaymentRepository', { env: 'dev' });
+  const repo = T.context(ws.id, 'PaymentRepository', { env: 'dev',flow:false });
   assert.equal(repo.style, 'jpa');
   assert.equal(repo.ddl.path, 'src/test/resources/dt-schema/pay.sql');
   assert.deepEqual(repo.inserts.map(i => i.sql), ['insert into pay.customers (email) values (?)', 'insert into pay.payments (customer_id, amount) values (?, ?)']);
-  const dao = T.context(ws.id, 'BalanceDao', { env: 'dev' });
+  const dao = T.context(ws.id, 'BalanceDao', { env: 'dev',flow:false });
   assert.deepEqual(dao.ddl.tables.sort(), ['pay.customers', 'pay.payments', 'pay.refunds'], 'the snapshot grows with each test that needs more');
   W.write(ws.id, svc.test.path, { content: svc.skeleton });
 

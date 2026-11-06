@@ -37,3 +37,6 @@ node_modules/
 /maps/
 /passport-adjustments/
 /architecture/
+
+# Shared project publications are runtime knowledge, backed up separately.
+/project-contexts/

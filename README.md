@@ -945,6 +945,21 @@ as Open WebUI tool results.
 ## License
 MIT
 
+### Shared project knowledge and outside-in testing
+
+**Admin → Context → Project knowledge** keeps versioned project understanding,
+service entry-to-exit maps, assumptions, screenshots, scripts, queries and files
+across users and chats. Admins publish; everyone reads. Import an existing
+`architecture_service` dossier, preserve exact source pins and reopen its retained
+interactive graph without rerunning analysis. `project_context_find/get/save`
+and `knowledge_search` expose it to the model. Task progress stays private.
+
+`test_context` now prefers evidenced public callers of a service class and returns
+an explicit integration plan. Real service/library code stays on the chain;
+database or producer mocks carry no SQL/delivery proof. Intentional class tests
+remain available with `flow=false` or `strategy=unit`.
+[Setup, version history, examples and scope limits](docs/project-context.md).
+
 ### Context: durable task memory and admin scratchpad
 
 Open **Admin → Context & scratchpad** to keep notes, plans, progress, findings,
