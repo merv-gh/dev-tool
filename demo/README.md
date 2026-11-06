@@ -52,6 +52,11 @@ For the optional real semantic chat examples, retain the live test's `P/orders` 
 
 ## Investigation UI playground
 
+The separate [UX review storybook](ux-storybook/README.md) contains two interactive
+proposals, independent findings, actual before/after desktop/mobile screenshots
+and reasons for each change. It is isolated from the production UI so proposals
+can be reviewed before implementation.
+
 ```bash
 node demo/ui-ux.js 4064
 # In another terminal, with Playwright and Chromium installed:
