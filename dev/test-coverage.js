@@ -14,7 +14,7 @@ try{
  const sourceFiles=C.lcov(fs.readFileSync(path.join(scratch,'coverage.lcov'),'utf8'),root),loaded=new Set(sourceFiles.map(f=>f.path));
  for(const file of require('../lib/source-version').files(root).filter(f=>f.endsWith('.js')))if(!loaded.has(file))sourceFiles.push({path:file,instrumented:false,lines:{hit:0,total:0,percent:null},functions:{hit:0,total:0,percent:null},branches:{hit:0,total:0,percent:null},uncoveredLines:[]});
  sourceFiles.sort((a,b)=>a.path.localeCompare(b.path));
- const report=C.aggregate({rows,tests,sourceFiles,run:{sourceDigest,command:'npm run test:coverage'+(files.length?' -- '+files.join(' '):''),scope:files.length?'selected-files':'full-suite',exitCode:result.status??-1,node:process.version,counts:tests.filter(t=>t.type==='test:summary').at(-1)?.counts}});
+ const report=C.aggregate({rows,tests,sourceFiles,run:{sourceDigest,platform:process.platform,architecture:process.arch,command:'npm run test:coverage'+(files.length?' -- '+files.join(' '):''),scope:files.length?'selected-files':'full-suite',exitCode:result.status??-1,node:process.version,counts:tests.filter(t=>t.type==='test:summary').at(-1)?.counts}});
  report.summary.sourceFiles={measured:loaded.size,unmeasured:sourceFiles.length-loaded.size,total:sourceFiles.length};
  report.limits.push('V8 percentages describe measured sources only. Never-loaded sources are explicitly listed as unmeasured.');
  require('../lib/atomic-file').atomicFile(output,JSON.stringify(report)+'\n');

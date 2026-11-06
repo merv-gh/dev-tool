@@ -1,0 +1,83 @@
+name: Verify
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  LANG: C.UTF-8
+  LC_ALL: C.UTF-8
+  DT_NO_DOCTOR: '1'
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build:check
+      - run: node dev/state-machines.js --check
+      - run: node dev/docs-check.js
+      - run: node dev/release-inventory.js docs/benchmarks/tool-verification.json --check
+      - run: npm test
+      - if: matrix.node == 24
+        run: npm run test:coverage
+        env:
+          DT_COVERAGE_OUTPUT: work/ci/coverage.json
+      - if: matrix.node == 24
+        run: node dev/coverage-gate.js work/ci/coverage.json
+      - if: always() && matrix.node == 24
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: coverage-${{ github.sha }}
+          path: work/ci/coverage.json
+          if-no-files-found: error
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: disposable-test-password
+        ports: ['55432:5432']
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node dev/required-tests.js test/pg.live.test.js test/runtime-isolation.live.test.js
+        env:
+          DT_TEST_PG_URL: postgres://postgres:disposable-test-password@127.0.0.1:55432/postgres
+      - run: npx playwright install --with-deps chromium
+      - run: |
+          node demo/ui-ux.js 4064 work/ci/fixture.json >work-fixture.log 2>&1 &
+          for attempt in $(seq 1 60); do test -f work/ci/fixture.json && break; sleep 1; done
+          test -f work/ci/fixture.json
+          node dev/check-ux-browser.js work/ci/fixture.json work/ci/browser
+          node dev/check-readiness-browser.js work/ci/fixture.json work/ci/readiness-browser
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: browser-${{ github.sha }}
+          path: |
+            work/ci/browser
+            work/ci/readiness-browser
+            work-fixture.log

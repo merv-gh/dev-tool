@@ -21,12 +21,14 @@ HOME_DIR=${DT_HOME:-$CODE}
 TOOLS_ONLY=
 NO_WEBUI=
 NO_SEMANTIC=
+OBSERVABILITY=
 while [ $# -gt 0 ]; do
   case "$1" in
     --home) HOME_DIR=$2; shift 2 ;;
     --home=*) HOME_DIR=${1#--home=}; shift ;;
     --tools-only) TOOLS_ONLY=1; shift ;;
     --no-webui) NO_WEBUI=1; shift ;;
+    --observability) OBSERVABILITY=1; shift ;;
     --no-semantic) NO_SEMANTIC=1; shift ;;
     *) break ;;
   esac
@@ -102,6 +104,12 @@ else
     COMPOSE_PROFILES=$(printf '%s' "$COMPOSE_PROFILES" | awk -F, '{for(i=1;i<=NF;i++)if($i!="semantic"&&$i!=""){printf "%s%s",sep,$i;sep=","}}')
   fi
   export COMPOSE_PROFILES
+fi
+if [ -n "$OBSERVABILITY" ]; then
+  COMPOSE_PROFILES=${COMPOSE_PROFILES:+$COMPOSE_PROFILES,}observability
+  export COMPOSE_PROFILES
+  export DT_OPERATIONAL_METRICS=${DT_OPERATIONAL_METRICS:-1}
+  export OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}
 fi
 run_phase prepared
 # Compose cannot see bind-mounted changes. Include every runtime asset: views and

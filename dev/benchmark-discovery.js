@@ -51,7 +51,11 @@ async function benchmark() {
       contractChecks: await require('./eval/discovery-checks').checks(T, home, { discoveryRanker: 'bm25' }),
     };
     return report;
-  } finally { fs.rmSync(home, { recursive: true, force: true }); }
+  } finally {
+    await require('../lib/isolate').stop();
+    await require('../lib/state-store').close();
+    fs.rmSync(home, { recursive: true, force: true });
+  }
 }
 if (require.main === module) benchmark().then(r => process.stdout.write(JSON.stringify(r, null, 2) + '\n')).catch(e => { console.error(e.stack); process.exitCode = 1; });
 module.exports = { benchmark };

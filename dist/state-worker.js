@@ -716,10 +716,24 @@ async function init() {
   fs.mkdirSync(path.dirname(options.file), { recursive: true, mode: 448 });
   db = new DatabaseSync(options.file);
   fs.chmodSync(options.file, 384);
-  db.exec("PRAGMA busy_timeout=2000; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA foreign_keys=ON;");
-  const version = db.prepare("PRAGMA user_version").get().user_version;
-  if (version > 1) throw new Error(`operational state schema ${version} is newer than supported schema 1`);
-  db.exec(`CREATE TABLE IF NOT EXISTS records (
+  db.exec("PRAGMA busy_timeout=2000;");
+  const bootstrap = async (fn) => {
+    const deadline = Date.now() + 6e3;
+    for (; ; ) {
+      try {
+        return fn();
+      } catch (error) {
+        if (![5, 6].includes(Number(error.errcode) & 255) || Date.now() >= deadline) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+    }
+  };
+  await bootstrap(() => db.exec("PRAGMA journal_mode=WAL;"));
+  db.exec("PRAGMA synchronous=FULL; PRAGMA foreign_keys=ON;");
+  await bootstrap(() => begin(() => {
+    const version = db.prepare("PRAGMA user_version").get().user_version;
+    if (version > 1) throw new Error(`operational state schema ${version} is newer than supported schema 1`);
+    db.exec(`CREATE TABLE IF NOT EXISTS records (
     seq INTEGER PRIMARY KEY AUTOINCREMENT,kind TEXT NOT NULL,id TEXT NOT NULL,scope TEXT NOT NULL,owner TEXT NOT NULL,
     at TEXT NOT NULL,updated_at TEXT NOT NULL,revision INTEGER NOT NULL,tool TEXT NOT NULL,source TEXT NOT NULL,
     state TEXT NOT NULL,category TEXT NOT NULL,failed INTEGER NOT NULL,job_id TEXT NOT NULL,payload TEXT NOT NULL,
@@ -730,6 +744,7 @@ async function init() {
     CREATE INDEX IF NOT EXISTS records_scope_job ON records(kind,scope,job_id);
     CREATE TABLE IF NOT EXISTS migrations(id TEXT PRIMARY KEY,value TEXT NOT NULL);
     PRAGMA user_version=1;`);
+  }));
   await importCalls(options.legacyCalls);
   importJobs(options.legacyJobs);
   await importScopedLegacy();

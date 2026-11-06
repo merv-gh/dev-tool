@@ -1,0 +1,89 @@
+name: Deep verification
+on:
+  schedule:
+    - cron: '21 2 * * *'
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+env:
+  LANG: C.UTF-8
+  LC_ALL: C.UTF-8
+  DT_NO_DOCTOR: '1'
+jobs:
+  scale:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node dev/catalog-scale.js --objects 1000000 --environments 10 --sessions 50 --seconds 10 --check --out work/ci/catalog-scale.json
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: catalog-scale-${{ github.sha }}
+          path: work/ci/catalog-scale.json
+          if-no-files-found: error
+  native:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci --ignore-scripts
+      - run: |
+          docker run -d --name dt-ci-pg -e POSTGRES_PASSWORD=disposable-test-password -p 127.0.0.1:55432:5432 postgres:16-alpine
+          for attempt in $(seq 1 60); do docker exec dt-ci-pg pg_isready && break; sleep 1; done
+          echo "DT_TEST_MAVEN=$(command -v mvn)" >> "$GITHUB_ENV"
+      - run: mkdir -p work/ci
+      - run: node dev/required-tests.js test/flows.live.test.js test/reproduction.live.test.js test/reproduction-native.test.js test/fixture-runtime-bridge.test.js
+        env:
+          DT_TEST_PG_URL: postgres://postgres:disposable-test-password@127.0.0.1:55432/postgres
+          DT_TEST_NATIVE_FIXTURE: '1'
+          DT_TEST_NATIVE_BRIDGE: '1'
+          DT_NATIVE_EVIDENCE: work/ci/native.json
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: native-${{ github.sha }}
+          path: work/ci/native.json
+      - if: always()
+        run: docker rm -f dt-ci-pg
+  joern:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 24
+      - run: npm ci --ignore-scripts
+      - run: docker build -f dev/semantic.Dockerfile -t dt-semantic-ci .
+      - run: |
+          docker run -d --name dt-semantic-ci -p 127.0.0.1:4110:4110 -e DT_SEMANTIC_TOKEN=disposable-semantic-token-123456 -e DT_SEMANTIC_MEMORY_MB=4096 -e DT_SEMANTIC_PARSE_MEMORY_MB=2048 -e DT_SEMANTIC_QUERY_MEMORY_MB=1024 --memory=5g dt-semantic-ci
+          for attempt in $(seq 1 90); do curl --fail --silent http://127.0.0.1:4110/health && break; sleep 2; done
+          curl --fail http://127.0.0.1:4110/health
+      - run: node dev/required-tests.js test/semantic.live.test.js test/service-architecture.live.test.js
+        env:
+          DT_SEMANTIC_LIVE_URL: http://127.0.0.1:4110
+          DT_SEMANTIC_LIVE_TOKEN: disposable-semantic-token-123456
+          DT_SERVICE_ARCHITECTURE_LIVE_URL: http://127.0.0.1:4110
+          DT_SERVICE_ARCHITECTURE_LIVE_TOKEN: disposable-semantic-token-123456
+      - if: always()
+        run: docker logs dt-semantic-ci > semantic-ci.log 2>&1; docker rm -f dt-semantic-ci
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: joern-${{ github.sha }}
+          path: semantic-ci.log

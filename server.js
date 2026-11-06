@@ -14,18 +14,19 @@ const VERSION = require('./package.json').version;
 const mcpRequests=new Map();
 
 function send(res, status, body, extra = {}) {
+  if(status===429)extra={'retry-after':String(body?.retryAfter||body?.result?.retryAfter||1),...extra};
   res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...extra });
   res.end(typeof body === 'string' ? body : JSON.stringify(body));
 }
 
-const readJsonBody = (req) => new Promise((resolve, reject) => {
+const readJsonBody = (req, form = false) => new Promise((resolve, reject) => {
   const chunks = []; let size = 0, failed = false;
   req.on('data', c => { if (failed) return; size += c.length; if (size > require('./lib/config').getTools().maxInputBytes) { failed = true; chunks.length = 0; reject(Object.assign(new Error('Request body exceeds configured input budget'), { code: 'DT_ARGUMENT_INVALID', statusCode: 413 })); } else chunks.push(c); }).on('error', reject).on('end', () => {
     if (failed) return;
-    try { resolve(chunks.length ? JSON.parse(Buffer.concat(chunks)) : {}); } catch (e) { reject(e); }
+    try { resolve(chunks.length ? (form?Object.fromEntries(new URLSearchParams(Buffer.concat(chunks).toString('utf8'))):JSON.parse(Buffer.concat(chunks))) : {}); } catch (e) { reject(e); }
   });
 });
-const errorPayload = e => require('./lib/redact').clean({ error: e.message, ...(e.code ? { code: e.code } : {}), ...(e.issues ? { issues: e.issues } : {}) });
+const errorPayload = e => require('./lib/redact').clean({ error: e.message, ...(e.code ? { code: e.code } : {}), ...(e.issues ? { issues: e.issues } : {}), ...(e.retryAfter?{retryAfter:e.retryAfter}:{}) });
 
 // Tools reach the infrastructure with your credentials. Allowed: this machine; a request with
 // DT_API_KEY (Authorization: Bearer, or the dt_key cookie set by /admin?key=...); or anyone on the
@@ -45,8 +46,7 @@ function status() {
     envs: envNames().map(env => {
       const e = getEnv(env);
       const synced = (f) => readJson(path.join(CACHE, env, f))?.syncedAt || null;
-      let lines = 0;
-      try { lines = fs.readFileSync(path.join(CACHE, env, 'catalog.txt'), 'utf8').split('\n').length - 1; } catch {}
+      const lines = catalog.count(env);
       return {
         env, envFileFound: e.envFileFound, pgConfigured: Object.values(e.pg).filter(Boolean).length,
         synced: { pg: synced('pg/_index.json'), es: synced('es/_index.json'), kafka: synced('kafka/_index.json'), consul: synced('consul.json') },
@@ -64,7 +64,7 @@ async function mcpHandle(msg, session, requestSignal) {
     case 'notifications/cancelled': {const target=mcpRequests.get(JSON.stringify([scope,session||'',msg.params?.requestId]));target?.abort('MCP request cancelled');return null;}
     case 'initialize':
       return reply({
-        protocolVersion: msg.params?.protocolVersion || '2025-03-26',
+        protocolVersion: '2025-03-26',
         capabilities: { tools: { listChanged: false } },
         serverInfo: { name: 'dt', version: VERSION },
         instructions: require('./lib/webui').prompt(),
@@ -154,7 +154,7 @@ const routes = [
   ['GET', '/health', false, (req, res) => send(res, 200, { ok: true, version: VERSION })],
   ['GET', '/api/status', false, (req, res) => send(res, 200, { trusted: trusted(req), ...status() })],
   ['GET', '/api/prompt', false, (req, res) => { res.writeHead(200, { 'content-type': 'text/markdown; charset=utf-8' }); res.end(require('./lib/webui').prompt()); }],
-  ['GET', '/api/find', true, (req, res, url) => send(res, 200, catalog.find(url.searchParams.get('env') || envNames()[0], url.searchParams.get('q') || '', { limit: Number(url.searchParams.get('limit')) || 300 }))],
+  ['GET', '/api/find', true, async (req, res, url) => send(res, 200, await require('./lib/isolate').exec('catalog','find',[url.searchParams.get('env') || envNames()[0], url.searchParams.get('q') || '', { limit: Number(url.searchParams.get('limit')) || 300 }]))],
   ['GET', '/api/tools', false, async (req, res, url) => send(res, 200, await tools.schemas({ profile: url.searchParams.get('profile') || 'all' }))],
   ['POST', '/api/tool/*', true, async (req, res, url) => {
     try { send(res, 200, { result: await tools.call(url.pathname.split('/').pop(), await readJsonBody(req), { source: 'api', session: req.headers['x-openwebui-chat-id'] || req.headers['x-chat-id'], signal:req.dtSignal }) }); }
@@ -166,13 +166,20 @@ const routes = [
   ['POST', '/oapi/*', true, oapi],
 
   // admin: watch, edit and refresh the index
+  ['POST','/api/session',false,async(req,res)=>{
+    const form=String(req.headers['content-type']||'').startsWith('application/x-www-form-urlencoded'),body=await readJsonBody(req,form),token=(String(req.headers.authorization||'').match(/^Bearer\s+(.+)$/i)||[])[1]||body.token;
+    if(typeof token!=='string'||token.length>8192)return send(res,401,{error:'A valid token is required'});
+    const identity=require('./lib/access').identity({...req,headers:{...req.headers,authorization:'Bearer '+token}});if(!identity)return send(res,401,{error:'Invalid or expired token'});
+    const cookie=`dt_key=${encodeURIComponent(token)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400${getServer().securityProfile==='team'?'; Secure':''}`;
+    res.writeHead(303,{location:'/admin','set-cookie':cookie,'cache-control':'no-store','referrer-policy':'no-referrer'});res.end();
+  }],
   ['GET', '/admin', false, (req, res, url) => {
-    const key = url.searchParams.get('key');
+    const key = getServer().securityProfile==='team'?null:url.searchParams.get('key');
     if (key && require('./lib/access').identity({...req,headers:{...req.headers,authorization:'Bearer '+key}})) {
-      res.writeHead(302, { location: '/admin', 'set-cookie': `dt_key=${encodeURIComponent(key)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=2592000` });
+      res.writeHead(302, { location: '/admin', 'set-cookie': `dt_key=${encodeURIComponent(key)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=2592000${getServer().securityProfile==='team'?'; Secure':''}` });
       return res.end();
     }
-    if (!trusted(req)) { res.writeHead(401, { 'content-type': 'text/html; charset=utf-8' }); return res.end('<p style="font:14px system-ui;margin:40px">Open <code>/admin?key=&lt;DT_API_KEY&gt;</code> once to sign in.</p>'); }
+    if (!trusted(req)) { res.writeHead(401, {'content-type':'text/html; charset=utf-8','cache-control':'no-store','referrer-policy':'no-referrer','content-security-policy':"default-src 'none'; style-src 'self'; form-action 'self'; frame-ancestors 'none'"});return res.end('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in to dev-tool</title><link rel="stylesheet" href="/static/ui.css"><main class="wrap"><h1>Sign in to dev-tool</h1><p>Use your access token. It stays out of the URL.</p><form action="/api/session" method="post"><label for="token">Access token</label> <input id="token" name="token" type="password" required autocomplete="current-password"> <button type="submit">Sign in</button></form></main></html>'); }
     page('admin.html')(req, res);
   }],
   ['GET', '/api/admin/status', true, async (req, res) => send(res, 200, await admin.status())],
@@ -345,22 +352,24 @@ const routes = [
 ];
 
 function start({ port = 4000, host = '127.0.0.1' } = {}) {
+  require('./lib/operational-metrics').start();
   const server = httpMod.createServer(async (req, res) => {
     const controller=new AbortController();req.dtSignal=controller.signal;
     const disconnected=()=>{if(!res.writableEnded)controller.abort('HTTP client disconnected');};
     req.once('aborted',disconnected);res.once('close',disconnected);
     const url = new URL(req.url, 'http://x'),A=require('./lib/access');
-    let identity;try{identity=A.identity(req);}catch(e){return send(res,e.statusCode||403,errorPayload(e));}
+    let identity;try{require('./lib/security').enforce(req);identity=A.identity(req);}catch(e){return send(res,e.statusCode||403,errorPayload(e));}
     const supplied=!!req.headers.authorization||!!cookie(req,'dt_key');
-    if(!identity&&getServer().accessTokens.length&&(['/api/tools','/openapi.json'].includes(url.pathname)||url.pathname.startsWith('/openapi/')))return send(res,403,{error:'Authentication is required'});
+    if(!identity&&getServer().securityProfile==='team'&&url.pathname==='/api/status')return send(res,403,{error:'Authentication is required'});
+    if(!identity&&(getServer().accessTokens.length||getServer().securityProfile==='team')&&(['/api/tools','/openapi.json'].includes(url.pathname)||url.pathname.startsWith('/openapi/')))return send(res,403,{error:'Authentication is required'});
     const protectedRuntime=url.pathname.startsWith('/api/admin/runtime')||url.pathname.startsWith('/api/admin/execution/')||url.pathname.startsWith('/api/admin/metadata');
     let route = routes.find(([m, p]) => m === req.method && (p.endsWith('*') ? url.pathname.startsWith(p.slice(0, -1)) : url.pathname === p));
     if(protectedRuntime)route=[req.method,url.pathname,true,null];
     try {
       if (!route) return send(res, 404, { error: 'not found' });
-      if(req.method!=='GET'&&url.pathname!=='/api/admin/config'&&require('./lib/config').generation().lastError)return send(res,503,{error:'Configuration is invalid; repair it in Admin before starting new work',code:'DT_CONFIG_INVALID'});
+      if(req.method!=='GET'&&url.pathname!=='/api/admin/config'&&url.pathname!=='/api/session'&&require('./lib/config').generation().lastError)return send(res,503,{error:'Configuration is invalid; repair it in Admin before starting new work',code:'DT_CONFIG_INVALID'});
       if (route[2] && !identity) return send(res, 403, { error: 'Authentication is required' });
-      if(supplied&&!identity)return send(res,403,{error:'Invalid access token'});
+      if(supplied&&!identity&&!['/admin','/api/session'].includes(url.pathname))return send(res,403,{error:'Invalid access token'});
       let scope=identity||A.LEGACY;
       // Keyed immutable result links remain read-only capabilities for sandboxed embeds.
       // Explicit story headers are enforced; same-principal browser embeds restore their saved story.
@@ -383,6 +392,7 @@ function start({ port = 4000, host = '127.0.0.1' } = {}) {
       if (!res.headersSent) send(res, e.statusCode || (['DT_NOT_FOUND','NOT_FOUND'].includes(e.code)?404:['STATE_CONFLICT','STALE_REVISION'].includes(e.code)?409:e.code === 'DT_PROFILE_UNKNOWN' || e.code === 'DT_ARGUMENT_INVALID' ? 400 : 500), errorPayload(e)); else res.end();
     }
   });
+  server.once('close',()=>require('./lib/operational-metrics').stop().catch(()=>{}));
   // the browser container starts after dt is healthy and reads these secrets once
   try { require('./lib/browser').writeSecrets(); } catch (e) { console.error(`browser secrets: ${e.message}`); }
   tools.ready().catch(e => console.error(`tools: ${e.message}`));

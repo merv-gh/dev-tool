@@ -457,6 +457,172 @@ var require_lifecycles = __commonJS({
   }
 });
 
+// lib/access.js
+var require_access = __commonJS({
+  "lib/access.js"(exports2, module2) {
+    var { AsyncLocalStorage } = require("node:async_hooks");
+    var crypto = require("node:crypto");
+    var path3 = require("node:path");
+    var context2 = new AsyncLocalStorage();
+    var LEGACY = Object.freeze({ principalId: "local", storyId: "default", role: "admin", scopeKey: "legacy", multiUser: false });
+    var identifier = /^[a-zA-Z0-9][\w.:-]{0,159}$/;
+    var deny = (message = "Resource is not available in this story") => Object.assign(new Error(message), { code: "DT_ACCESS_DENIED", statusCode: 403 });
+    function normalize(value = {}) {
+      if (!value.multiUser && (!value.storyId || value.storyId === "default")) return LEGACY;
+      const principalId = String(value.principalId || "local"), storyId = String(value.storyId || "default");
+      if (!identifier.test(principalId) || !identifier.test(storyId)) throw deny("Invalid principal or story identifier");
+      return Object.freeze({
+        principalId,
+        storyId,
+        role: value.role === "admin" ? "admin" : "user",
+        multiUser: !!value.multiUser,
+        ...value.storyBound ? { storyBound: true } : {},
+        ...Object.fromEntries(["envs", "tools"].filter((k) => Array.isArray(value[k])).map((k) => [k, Object.freeze([...value[k]])])),
+        scopeKey: crypto.createHash("sha256").update(principalId + "\0" + storyId).digest("hex").slice(0, 32)
+      });
+    }
+    var current = () => context2.getStore() || LEGACY;
+    var owner = () => ({ ...current() });
+    var run = (scope, fn) => context2.run(normalize(scope), fn);
+    function visible(value) {
+      const other = value || LEGACY;
+      return current().scopeKey === (other.scopeKey || (!other.multiUser ? "legacy" : null));
+    }
+    function assertOwner(value) {
+      if (!visible(value)) throw deny();
+    }
+    function requireAdmin() {
+      if (current().role !== "admin") throw deny("Administrator access is required");
+    }
+    function scopedDirectory(base) {
+      return current().scopeKey === "legacy" ? base : path3.join(base, "_stories", current().scopeKey);
+    }
+    function sameSecret(a, b) {
+      const x = Buffer.from(String(a || "")), y = Buffer.from(String(b || ""));
+      return x.length === y.length && x.length > 0 && crypto.timingSafeEqual(x, y);
+    }
+    var selectedStory = (headers) => headers["x-dt-story"] || headers["x-openwebui-chat-id"] || headers["x-chat-id"] || headers["mcp-session-id"] || "default";
+    function identity(req) {
+      const lifecycle = require_state_machine2().create(require_lifecycles().identity);
+      const accepted = (value) => {
+        lifecycle.to("authenticated");
+        const scope = normalize(value);
+        lifecycle.to("scoped");
+        return scope;
+      };
+      const rejected = () => {
+        lifecycle.to("rejected");
+        return null;
+      };
+      try {
+        const config = require_config(), cfg = config.getServer(), tokens = cfg.accessTokens || [];
+        const bearer = (String(req.headers.authorization || "").match(/^Bearer\s+(.+)$/i) || [])[1];
+        let cookie;
+        try {
+          cookie = decodeURIComponent((String(req.headers.cookie || "").match(/(?:^|;\s*)dt_key=([^;]+)/) || [])[1] || "");
+        } catch {
+          cookie = "";
+        }
+        const supplied = bearer || cookie;
+        if (tokens.length) {
+          const token = tokens.find((item) => !item.revoked && (!item.expiresAt || Date.parse(item.expiresAt) > Date.now()) && sameSecret(supplied, item.token));
+          if (!token && !(cfg.apiKey && sameSecret(supplied, cfg.apiKey))) return rejected();
+          const principal = token || { id: "operator", role: "admin" }, role = principal.role === "admin" ? "admin" : "user";
+          if (role !== "admin" && config.generation().lastError) throw Object.assign(deny("Configuration is invalid; ask an administrator to repair it"), { statusCode: 503, code: "DT_CONFIG_INVALID" });
+          let principalId = principal.principal || principal.id;
+          if (req.headers["x-dt-principal"]) {
+            if (role !== "admin") throw deny("Only administrators can select another principal");
+            principalId = String(req.headers["x-dt-principal"]);
+          }
+          if (principal.story && req.headers["x-dt-story"] && principal.story !== req.headers["x-dt-story"]) throw deny("This token is bound to another story");
+          return accepted({ principalId, storyId: String(principal.story || selectedStory(req.headers)), role, multiUser: true, storyBound: !!principal.story, envs: principal.envs, tools: principal.tools });
+        }
+        if (cfg.securityProfile === "team") {
+          if (cfg.apiKey && sameSecret(supplied, cfg.apiKey)) return accepted({ ...LEGACY, multiUser: true, principalId: "operator", storyId: selectedStory(req.headers) });
+          return rejected();
+        }
+        if (supplied && (!cfg.apiKey || !sameSecret(supplied, cfg.apiKey))) return rejected();
+        const localScope = () => accepted({ ...LEGACY, storyId: selectedStory(req.headers) });
+        if (cfg.apiKey && sameSecret(supplied, cfg.apiKey)) return localScope();
+        const remote = req.socket.remoteAddress || "";
+        return cfg.trustNetwork || ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(remote) ? localScope() : rejected();
+      } catch (error) {
+        if (!lifecycle.terminal) lifecycle.to("rejected");
+        throw error;
+      }
+    }
+    var ADMIN_TOOLS = /* @__PURE__ */ new Set(["catalog_sync", "catalog_manage", "tools_reload", "testdb_initialize", "testdb_gc", "testdb_template_invalidate", "testdb_template_pin", "plugin_install", "config_write", "architecture_save", "architecture_refresh", "project_context_save"]);
+    function allowsEnv(name) {
+      const allowed = current().envs;
+      return !allowed || allowed.includes(name);
+    }
+    function checkEnv(name) {
+      if (!allowsEnv(name)) throw deny("Environment is not available to this principal");
+    }
+    function checkTool(name) {
+      if (current().multiUser && ADMIN_TOOLS.has(name)) requireAdmin();
+      const allowed = current().tools;
+      if (allowed && !allowed.some((x) => x.endsWith("*") ? name.startsWith(x.slice(0, -1)) : name === x)) throw deny("Tool is not available to this principal");
+    }
+    module2.exports = { current, owner, run, visible, assertOwner, requireAdmin, scopedDirectory, normalize, identity, sameSecret, deny, LEGACY, checkTool, checkEnv, allowsEnv };
+  }
+});
+
+// lib/security.js
+var require_security = __commonJS({
+  "lib/security.js"(exports2, module2) {
+    var crypto = require("node:crypto");
+    var fs3 = require("node:fs");
+    function settings(server = {}) {
+      const profile = process.env.DT_SECURITY_PROFILE || server.securityProfile || "local";
+      if (!["local", "team"].includes(profile)) throw Error("server.securityProfile must be local or team");
+      const origins = server.allowedOrigins || [], proxies = server.trustedProxies || [];
+      if (!Array.isArray(origins) || !Array.isArray(proxies) || origins.length > 100 || proxies.length > 100) throw Error("Origin and proxy policies must be bounded lists");
+      for (const origin of origins) {
+        const u = new URL(origin);
+        if (!["http:", "https:"].includes(u.protocol) || u.origin !== origin || u.username) throw Error("allowedOrigins must contain exact HTTP(S) origins");
+      }
+      for (const proxy of proxies) if (typeof proxy !== "string" || !require("node:net").isIP(proxy)) throw Error("trustedProxies must contain exact proxy IP addresses");
+      return { profile, allowedOrigins: origins, trustedProxies: proxies };
+    }
+    function enforce(req) {
+      const c = require_config().getServer();
+      if (c.securityProfile !== "team") return;
+      const deny = (message) => {
+        throw Object.assign(Error(message), { code: "DT_SECURITY_POLICY", statusCode: 403 });
+      };
+      const origin = req.headers.origin, allowed = /* @__PURE__ */ new Set([new URL(c.publicUrl).origin, ...c.allowedOrigins]);
+      if (origin && !allowed.has(origin)) deny("Browser origin is not allowed");
+      if (!["GET", "HEAD", "OPTIONS"].includes(req.method) && !req.headers.authorization && /(?:^|;\s*)dt_key=/.test(req.headers.cookie || "") && !allowed.has(origin)) deny("Cookie mutations require an allowed Origin");
+      const remote = req.socket.remoteAddress || "";
+      const forwarded = req.headers["x-forwarded-proto"];
+      if (forwarded && !c.trustedProxies.includes(remote)) deny("Forwarded transport headers require a configured trusted proxy");
+    }
+    function verifyPlugin(file, spec) {
+      const team = require_config().getServer().securityProfile === "team";
+      if (team && spec.remote && (!/^https:\/\//.test(spec.url) || !/^[a-f0-9]{64}$/i.test(spec.sha256 || ""))) throw Error("Team mode requires HTTPS and an approved sha256 for remote plugins");
+      if (spec.sha256) {
+        const actual = crypto.createHash("sha256").update(fs3.readFileSync(file)).digest("hex");
+        if (actual !== spec.sha256.toLowerCase()) throw Error("Plugin sha256 mismatch; cached code was not loaded");
+      }
+    }
+    function report() {
+      const C = require_config(), c = C.getServer(), checks = [];
+      const add = (check, status, detail) => checks.push({ group: "security", check, status, detail });
+      add("deployment profile", c.securityProfile === "team" ? "ok" : "warn", c.securityProfile === "team" ? "Authenticated team service" : "Local compatibility mode; select team before network exposure");
+      add("authentication", c.accessTokens.some((t) => !t.revoked && (!t.expiresAt || Date.parse(t.expiresAt) > Date.now())) || c.apiKey ? "ok" : "fail", "Team mode requires an active token or API key; credentials are never returned");
+      add("TLS gateway", c.publicUrl.startsWith("https:") ? "ok" : "warn", "Use HTTPS publicUrl behind a TLS gateway; keep the application port private");
+      for (const spec of C.getTools().plugins) {
+        const s = typeof spec === "string" ? { url: spec } : spec;
+        if (/^(https?:|github:)/.test(s.url || "")) add("remote plugin", /^[a-f0-9]{64}$/i.test(s.sha256 || "") ? "ok" : "fail", "Remote plugin needs an approved content hash before team activation");
+      }
+      add("trusted plugin boundary", "warn", "In-process plugins inherit server access; use authenticated external adapters for a separate trust boundary");
+      return { profile: c.securityProfile, checks, counts: Object.fromEntries(["ok", "warn", "fail"].map((s) => [s, checks.filter((c2) => c2.status === s).length])) };
+    }
+    module2.exports = { settings, enforce, verifyPlugin, report };
+  }
+});
+
 // lib/config.js
 var require_config = __commonJS({
   "lib/config.js"(exports2, module2) {
@@ -711,6 +877,7 @@ var require_config = __commonJS({
     var trimUrl = (u) => (u ? String(u).replace(/\/$/, "") : null) || null;
     function getEnv2(name) {
       name = name || envNames2()[0];
+      require_access().checkEnv(name);
       checkFresh();
       const s = load();
       const cache = s.envCache || (s.envCache = {});
@@ -753,7 +920,7 @@ var require_config = __commonJS({
         }
       };
     }
-    var envNames2 = () => Object.keys(load().raw.envs || {});
+    var envNames2 = () => Object.keys(load().raw.envs || {}).filter((name) => require_access().allowsEnv(name));
     var resolved = (key) => {
       const s = load();
       return interpolate(s.raw[key] || {}, s.lookup());
@@ -794,6 +961,8 @@ var require_config = __commonJS({
         profiles: t.profiles && typeof t.profiles === "object" ? t.profiles : {},
         discoveryRanker: t.discoveryRanker === "bm25" ? "bm25" : "legacy",
         backends: t.backends && typeof t.backends === "object" ? t.backends : {},
+        catalogReadConcurrency: Number.isInteger(t.catalogReadConcurrency) && t.catalogReadConcurrency > 0 && t.catalogReadConcurrency <= 8 ? t.catalogReadConcurrency : 4,
+        catalogReaderHeapMb: Number.isInteger(t.catalogReaderHeapMb) && t.catalogReaderHeapMb >= 32 && t.catalogReaderHeapMb <= 256 ? t.catalogReaderHeapMb : 64,
         workerConcurrency: Number.isInteger(t.workerConcurrency) && t.workerConcurrency > 0 && t.workerConcurrency <= 8 ? t.workerConcurrency : 1,
         workerMemoryMb: Number.isInteger(t.workerMemoryMb) && t.workerMemoryMb > 0 ? t.workerMemoryMb : void 0,
         codeConcurrency: Number.isInteger(t.codeConcurrency) && t.codeConcurrency > 0 && t.codeConcurrency <= 8 ? t.codeConcurrency : 2,
@@ -900,12 +1069,14 @@ var require_config = __commonJS({
     function accessTokens(value) {
       if (value === void 0) return [];
       if (!Array.isArray(value) || value.length > 1e3) throw new Error("server.accessTokens must be a bounded list");
-      const ids = /* @__PURE__ */ new Set(), tokens = /* @__PURE__ */ new Set();
+      const ids = /* @__PURE__ */ new Set(), tokens = /* @__PURE__ */ new Set(), ident = /^[a-zA-Z0-9][\w.:-]{0,159}$/;
       return value.map((v) => {
-        if (!v || typeof v.id !== "string" || !/^[a-zA-Z0-9][\w.:-]{0,159}$/.test(v.id) || typeof v.token !== "string" || v.token.length < 16 || v.token.includes("${") || !["admin", "user"].includes(v.role || "user") || v.story !== void 0 && (typeof v.story !== "string" || !/^[a-zA-Z0-9][\w.:-]{0,159}$/.test(v.story)) || ids.has(v.id) || tokens.has(v.token)) throw new Error("Each access token needs a unique id, resolved token (at least 16 characters), and role admin/user");
+        if (!v || !ident.test(v.id || "") || typeof v.token !== "string" || v.token.length < 16 || v.token.includes("${") || !["admin", "user"].includes(v.role || "user") || v.story !== void 0 && !ident.test(v.story) || v.principal !== void 0 && !ident.test(v.principal) || ids.has(v.id) || tokens.has(v.token)) throw new Error("Each access token needs a unique id, resolved token (at least 16 characters), and role admin/user");
+        for (const k of ["envs", "tools"]) if (v[k] !== void 0 && (!Array.isArray(v[k]) || v[k].length > 1e3 || v[k].some((x) => typeof x !== "string" || !(k === "envs" ? /^[\w-]+$/ : /^[a-z][a-z0-9_]*\*?$/).test(x)))) throw Error("Token " + k + " must be a bounded allowlist");
+        if (v.expiresAt !== void 0 && (typeof v.expiresAt !== "string" || !Number.isFinite(Date.parse(v.expiresAt)))) throw Error("Token expiresAt must be an ISO date");
         ids.add(v.id);
         tokens.add(v.token);
-        return { id: v.id, token: v.token, role: v.role || "user", ...v.story ? { story: v.story } : {} };
+        return { ...Object.fromEntries(["principal", "story", "expiresAt", "envs", "tools"].filter((k) => v[k] !== void 0).map((k) => [k, v[k]])), id: v.id, token: v.token, role: v.role || "user", revoked: v.revoked === true };
       });
     }
     function validateCandidate(raw, lookup = load().lookup()) {
@@ -916,12 +1087,21 @@ var require_config = __commonJS({
         if (def.postgres !== void 0 && def.postgres !== "auto" && (!def.postgres || typeof def.postgres !== "object" || Array.isArray(def.postgres))) throw new Error("postgres must be auto or a database mapping");
       }
       accessTokens(interpolate(raw.server?.accessTokens, lookup));
+      require_security().settings(interpolate(raw.server || {}, lookup));
+      for (const [key, b] of Object.entries(raw.server?.networkBudgets || {})) {
+        if (!/^[a-z][\w:-]*\*?$/.test(key) || !b || typeof b !== "object" || b.ratePerSec !== void 0 && (!Number.isFinite(b.ratePerSec) || b.ratePerSec < 0) || ["concurrency", "maxQueued", "maxWaitMs"].some((k) => b[k] !== void 0 && (!Number.isInteger(b[k]) || b[k] < 1 || b[k] > 12e4))) throw Error("Invalid server.networkBudgets entry");
+      }
       return raw;
     }
     function getServer() {
       const c = resolved("server");
       const e = process.env;
       return {
+        ...(() => {
+          const s = require_security().settings(c);
+          return { securityProfile: s.profile, allowedOrigins: s.allowedOrigins, trustedProxies: s.trustedProxies };
+        })(),
+        networkBudgets: c.networkBudgets || {},
         publicUrl: trimUrl(e.DT_PUBLIC_URL || c.publicUrl) || `http://127.0.0.1:${e.DT_PUBLISHED_PORT || e.PORT || 4e3}`,
         apiKey: e.DT_API_KEY || c.apiKey || null,
         trustNetwork: e.DT_TRUST_NETWORK !== void 0 ? e.DT_TRUST_NETWORK === "1" : !!c.trustNetwork,
@@ -988,103 +1168,6 @@ var require_config = __commonJS({
       parseEnvFile,
       interpolate
     };
-  }
-});
-
-// lib/access.js
-var require_access = __commonJS({
-  "lib/access.js"(exports2, module2) {
-    var { AsyncLocalStorage } = require("node:async_hooks");
-    var crypto = require("node:crypto");
-    var path3 = require("node:path");
-    var context2 = new AsyncLocalStorage();
-    var LEGACY = Object.freeze({ principalId: "local", storyId: "default", role: "admin", scopeKey: "legacy", multiUser: false });
-    var identifier = /^[a-zA-Z0-9][\w.:-]{0,159}$/;
-    var deny = (message = "Resource is not available in this story") => Object.assign(new Error(message), { code: "DT_ACCESS_DENIED", statusCode: 403 });
-    function normalize(value = {}) {
-      if (!value.multiUser && (!value.storyId || value.storyId === "default")) return LEGACY;
-      const principalId = String(value.principalId || "local"), storyId = String(value.storyId || "default");
-      if (!identifier.test(principalId) || !identifier.test(storyId)) throw deny("Invalid principal or story identifier");
-      return Object.freeze({
-        principalId,
-        storyId,
-        role: value.role === "admin" ? "admin" : "user",
-        multiUser: !!value.multiUser,
-        ...value.storyBound ? { storyBound: true } : {},
-        scopeKey: crypto.createHash("sha256").update(principalId + "\0" + storyId).digest("hex").slice(0, 32)
-      });
-    }
-    var current = () => context2.getStore() || LEGACY;
-    var owner = () => ({ ...current() });
-    var run = (scope, fn) => context2.run(normalize(scope), fn);
-    function visible(value) {
-      const other = value || LEGACY;
-      return current().scopeKey === (other.scopeKey || (!other.multiUser ? "legacy" : null));
-    }
-    function assertOwner(value) {
-      if (!visible(value)) throw deny();
-    }
-    function requireAdmin() {
-      if (current().role !== "admin") throw deny("Administrator access is required");
-    }
-    function scopedDirectory(base) {
-      return current().scopeKey === "legacy" ? base : path3.join(base, "_stories", current().scopeKey);
-    }
-    function sameSecret(a, b) {
-      const x = Buffer.from(String(a || "")), y = Buffer.from(String(b || ""));
-      return x.length === y.length && x.length > 0 && crypto.timingSafeEqual(x, y);
-    }
-    var selectedStory = (headers) => headers["x-dt-story"] || headers["x-openwebui-chat-id"] || headers["x-chat-id"] || headers["mcp-session-id"] || "default";
-    function identity(req) {
-      const lifecycle = require_state_machine2().create(require_lifecycles().identity);
-      const accepted = (value) => {
-        lifecycle.to("authenticated");
-        const scope = normalize(value);
-        lifecycle.to("scoped");
-        return scope;
-      };
-      const rejected = () => {
-        lifecycle.to("rejected");
-        return null;
-      };
-      try {
-        const config = require_config(), cfg = config.getServer(), tokens = cfg.accessTokens || [];
-        const bearer = (String(req.headers.authorization || "").match(/^Bearer\s+(.+)$/i) || [])[1];
-        let cookie;
-        try {
-          cookie = decodeURIComponent((String(req.headers.cookie || "").match(/(?:^|;\s*)dt_key=([^;]+)/) || [])[1] || "");
-        } catch {
-          cookie = "";
-        }
-        const supplied = bearer || cookie;
-        if (tokens.length) {
-          const token = tokens.find((item) => sameSecret(supplied, item.token));
-          if (!token && !(cfg.apiKey && sameSecret(supplied, cfg.apiKey))) return rejected();
-          const principal = token || { id: "operator", role: "admin" }, role = principal.role === "admin" ? "admin" : "user";
-          if (role !== "admin" && config.generation().lastError) throw Object.assign(deny("Configuration is invalid; ask an administrator to repair it"), { statusCode: 503, code: "DT_CONFIG_INVALID" });
-          let principalId = principal.id;
-          if (req.headers["x-dt-principal"]) {
-            if (role !== "admin") throw deny("Only administrators can select another principal");
-            principalId = String(req.headers["x-dt-principal"]);
-          }
-          if (principal.story && req.headers["x-dt-story"] && principal.story !== req.headers["x-dt-story"]) throw deny("This token is bound to another story");
-          return accepted({ principalId, storyId: String(principal.story || selectedStory(req.headers)), role, multiUser: true, storyBound: !!principal.story });
-        }
-        if (supplied && (!cfg.apiKey || !sameSecret(supplied, cfg.apiKey))) return rejected();
-        const localScope = () => accepted({ ...LEGACY, storyId: selectedStory(req.headers) });
-        if (cfg.apiKey && sameSecret(supplied, cfg.apiKey)) return localScope();
-        const remote = req.socket.remoteAddress || "";
-        return cfg.trustNetwork || ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(remote) ? localScope() : rejected();
-      } catch (error) {
-        if (!lifecycle.terminal) lifecycle.to("rejected");
-        throw error;
-      }
-    }
-    var ADMIN_TOOLS = /* @__PURE__ */ new Set(["catalog_sync", "tools_reload", "testdb_initialize", "testdb_gc", "testdb_template_invalidate", "testdb_template_pin", "plugin_install", "config_write", "architecture_save", "architecture_refresh", "project_context_save"]);
-    function checkTool(name) {
-      if (current().multiUser && ADMIN_TOOLS.has(name)) requireAdmin();
-    }
-    module2.exports = { current, owner, run, visible, assertOwner, requireAdmin, scopedDirectory, normalize, identity, sameSecret, deny, LEGACY, checkTool };
   }
 });
 
@@ -3196,7 +3279,8 @@ var require_package = __commonJS({
         node: ">=22"
       },
       devDependencies: {
-        esbuild: "^0.25.10"
+        esbuild: "^0.25.10",
+        playwright: "1.64.1"
       }
     };
   }
@@ -18523,7 +18607,10 @@ var require_telemetry = __commonJS({
     function chrome(snapshot2) {
       return require_trace_format().chrome(snapshot2);
     }
-    module2.exports = { remote, stepName, begin, run, carrier, withCarrier, snapshot, setEnabled, enabled, flush, shutdown, ingest, interruptProducer, chrome, settings };
+    function health() {
+      return { dropped: dropped + exportDropped + (store?.status().dropped || 0), exportFailures, queued: exporting.size };
+    }
+    module2.exports = { health, remote, stepName, begin, run, carrier, withCarrier, snapshot, setEnabled, enabled, flush, shutdown, ingest, interruptProducer, chrome, settings };
   }
 });
 
@@ -18538,10 +18625,14 @@ var require_limit = __commonJS({
     async function take(key) {
       const E = require_execution();
       E.check();
-      const RATE = rate();
+      const RATE = budget(key).ratePerSec;
       if (!RATE || !key) return 0;
       const gap = 1e3 / RATE, now = Date.now(), at = Math.max(now, next.get(key) || 0), wait = at - now;
-      if (wait > MAX_WAIT) throw new Error(`rate limit: ${key} is busy (${Math.ceil(wait / 1e3)}s queued). Retry later or batch the question.`);
+      if (wait > budget(key).maxWaitMs) throw Object.assign(new Error("rate limit: live target is busy; retry later or batch the question"), { code: "DT_RATE_LIMIT", statusCode: 429, retryAfter: Math.ceil(wait / 1e3) });
+      if (next.size > 4096) {
+        for (const [k, t] of next) if (t < now) next.delete(k);
+      }
+      if (next.size >= 4096 && !next.has(key)) throw Object.assign(Error("Target admission capacity reached"), { code: "DT_QUEUE_FULL", statusCode: 429, retryAfter: 30 });
       next.set(key, at + gap);
       const reservation = create(require_lifecycles().networkAdmission);
       reservation.to("reserved");
@@ -18584,7 +18675,7 @@ var require_limit = __commonJS({
       }
       run(fn, { key = require_access().owner().scopeKey, signal = require_execution().signal() } = {}) {
         if (signal?.aborted) return Promise.reject(require_execution().abortError(signal.reason));
-        if (this.queued >= this.maxQueued) return Promise.reject(Object.assign(new Error("Execution queue is full; wait for an active operation to finish"), { code: "DT_QUEUE_FULL" }));
+        if (this.queued >= this.maxQueued) return Promise.reject(Object.assign(new Error("Execution queue is full; wait for an active operation to finish"), { code: "DT_QUEUE_FULL", statusCode: 429, retryAfter: 1 }));
         return new Promise((resolve2, reject) => {
           const lifecycle = create(admission);
           const item = { lifecycle, fn: require("async_hooks").AsyncResource.bind(fn), resolve: resolve2, reject, signal, key };
@@ -18647,7 +18738,7 @@ var require_limit = __commonJS({
     function schedule(resource, fn, options = {}) {
       const E = require_execution(), A = require("async_hooks").AsyncResource;
       const C = require_config(), c = C.live(() => C.getTools());
-      const configured = resource === "cpu" ? c.workerConcurrency : resource === "code" ? c.codeConcurrency : c.buildConcurrency;
+      const configured = resource === "catalog" ? c.catalogReadConcurrency : resource === "cpu" ? c.workerConcurrency : resource === "code" ? c.codeConcurrency : c.buildConcurrency;
       const concurrency = Math.max(1, Math.min(8, Number(configured || (resource === "cpu" ? 1 : 2)))), maxQueued = Math.max(1, Number(c.maxQueued || 100));
       if (!schedulers.has(resource)) schedulers.set(resource, new FairScheduler({ concurrency, maxQueued }));
       else {
@@ -18658,8 +18749,442 @@ var require_limit = __commonJS({
       const bound = A.bind(fn);
       return E.track(schedulers.get(resource).run(bound, options));
     }
+    var networkSchedulers = /* @__PURE__ */ new Map();
+    function budget(key) {
+      const map = require_config().getServer().networkBudgets || {}, v = map[key] || map[key.split(":")[0] + ":*"] || {};
+      return { ratePerSec: v.ratePerSec ?? rate(), concurrency: v.concurrency || 4, maxQueued: v.maxQueued || 100, maxWaitMs: v.maxWaitMs ?? MAX_WAIT };
+    }
+    async function network(key, fn) {
+      const b = budget(key), E = require_execution();
+      if (!networkSchedulers.has(key)) {
+        if (networkSchedulers.size >= 1024) {
+          for (const [k, s] of networkSchedulers) if (!s.running && !s.queued) networkSchedulers.delete(k);
+        }
+        if (networkSchedulers.size >= 1024) throw Object.assign(Error("Too many active network targets"), { code: "DT_QUEUE_FULL", statusCode: 429, retryAfter: 30 });
+        networkSchedulers.set(key, new FairScheduler(b));
+      }
+      const scheduler = networkSchedulers.get(key);
+      scheduler.concurrency = b.concurrency;
+      scheduler.maxQueued = b.maxQueued;
+      let began = false;
+      const timeout = AbortSignal.timeout(b.maxWaitMs), signal = E.signal(), admission2 = signal ? AbortSignal.any([signal, timeout]) : timeout, t = Date.now();
+      try {
+        return await E.track(scheduler.run(async () => {
+          await take(key);
+          if (timeout.aborted) throw Error("Admission deadline exceeded");
+          began = true;
+          require_operational_metrics().record("admission", Date.now() - t);
+          return fn();
+        }, { signal: admission2 }));
+      } catch (error) {
+        if (!began && timeout.aborted && !signal?.aborted) throw Object.assign(Error("Live target admission timed out; retry later"), { code: "DT_RATE_LIMIT", statusCode: 429, retryAfter: 1 });
+        throw error;
+      }
+    }
     var stats = () => Object.fromEntries([...schedulers].map(([key, s]) => [key, s.stats()]));
-    module2.exports = { take, rate, sleep, FairScheduler, schedule, stats, status: stats };
+    module2.exports = { take, rate, sleep, FairScheduler, schedule, stats, status: () => ({ ...stats(), network: { targets: networkSchedulers.size, running: [...networkSchedulers.values()].reduce((n, s) => n + s.running, 0), queued: [...networkSchedulers.values()].reduce((n, s) => n + s.queued, 0) } }), network, budget };
+  }
+});
+
+// lib/catalog-references.js
+var require_catalog_references = __commonJS({
+  "lib/catalog-references.js"(exports2, module2) {
+    var fs3 = require("node:fs");
+    var path3 = require("node:path");
+    var crypto = require("node:crypto");
+    var fail = (message) => Object.assign(Error(message), { code: "DT_CATALOG_RETENTION", statusCode: 409 });
+    var root = (env) => path3.join(path3.dirname(require_catalog_store().filename(env)), "catalog-references");
+    function locked(env, fn) {
+      const dir = root(env), lock = path3.join(dir, ".lock");
+      fs3.mkdirSync(dir, { recursive: true });
+      try {
+        fs3.mkdirSync(lock);
+      } catch (e) {
+        if (e.code !== "EEXIST") throw e;
+        let alive = Date.now() - fs3.statSync(lock).mtimeMs < 3e4;
+        try {
+          const owner = JSON.parse(fs3.readFileSync(path3.join(lock, "owner.json"))), p = owner.pid;
+          try {
+            process.kill(p, 0);
+            alive = owner.thread ? alive : true;
+          } catch (e2) {
+            alive = e2.code !== "ESRCH";
+          }
+        } catch {
+        }
+        if (alive) throw fail("Catalog retention is busy; retry saving the evidence");
+        fs3.rmSync(lock, { recursive: true, force: true });
+        try {
+          fs3.mkdirSync(lock);
+        } catch {
+          throw fail("Catalog retention is busy");
+        }
+      }
+      const token = crypto.randomUUID();
+      fs3.writeFileSync(path3.join(lock, "owner.json"), JSON.stringify({ pid: process.pid, thread: require("node:worker_threads").threadId, token }));
+      try {
+        return fn(dir, () => {
+          if (JSON.parse(fs3.readFileSync(path3.join(lock, "owner.json"))).token !== token) throw fail("Catalog retention lease changed");
+          const now = /* @__PURE__ */ new Date();
+          fs3.utimesSync(lock, now, now);
+        });
+      } finally {
+        try {
+          if (JSON.parse(fs3.readFileSync(path3.join(lock, "owner.json"))).token === token) fs3.rmSync(lock, { recursive: true, force: true });
+        } catch {
+        }
+      }
+    }
+    function list(env, generation) {
+      if (!/^[a-f0-9]{64}$/.test(generation || "")) return [];
+      const dir = path3.join(root(env), generation);
+      let files;
+      try {
+        files = fs3.readdirSync(dir);
+      } catch {
+        return [];
+      }
+      return files.filter((f) => /^[a-f0-9]{64}\.json$/.test(f)).map((f) => JSON.parse(fs3.readFileSync(path3.join(dir, f))));
+    }
+    function collect(value, out2 = /* @__PURE__ */ new Map(), depth = 0, budget = { n: 0 }) {
+      if (!value || typeof value !== "object" || depth > 12 || ++budget.n > 2e4) return out2;
+      if (value.protocol === "dt.catalog-page/v1" && /^[\w-]+$/.test(value.env || "") && /^[a-f0-9]{64}$/.test(value.generation || "")) out2.set(value.env + ":" + value.generation, { env: value.env, generation: value.generation });
+      for (const v of Object.values(value)) collect(v, out2, depth + 1, budget);
+      return out2;
+    }
+    function retain(input, source) {
+      let value = input;
+      if (Buffer.isBuffer(input) && !input.includes("dt.catalog-page/v1")) return [];
+      if (typeof input === "string" || Buffer.isBuffer(input)) {
+        const text = String(input);
+        if (!text.includes("dt.catalog-page/v1")) return [];
+        if (Buffer.byteLength(text) > 4 * 1048576) throw fail("Catalog evidence needs a compact manifest before saving");
+        try {
+          value = JSON.parse(text);
+        } catch {
+          return [];
+        }
+      }
+      const references = [...collect(value).values()], scope = require_access().owner().scopeKey, reference = crypto.createHash("sha256").update(scope + "\0" + source).digest("hex");
+      for (const r of references) locked(r.env, (dir) => {
+        if (!require_catalog_store().page(r.env, "", { generation: r.generation, limit: 1 })) throw fail("Catalog generation is unavailable; refresh before retaining a reference");
+        const target = path3.join(dir, r.generation, reference + ".json");
+        if (!fs3.existsSync(target)) {
+          let total = 0;
+          for (const g of fs3.readdirSync(dir)) if (/^[a-f0-9]{64}$/.test(g)) total += fs3.readdirSync(path3.join(dir, g)).length;
+          if (total >= 1e4) throw fail("Catalog reference budget reached; explicitly release obsolete evidence references");
+        }
+        require_atomic_file().atomicFile(target, JSON.stringify({ ...r, reference, scope, at: (/* @__PURE__ */ new Date()).toISOString() }), { mode: 384 });
+      });
+      return references.map((r) => ({ ...r, reference }));
+    }
+    function release(env, generation, reference) {
+      require_access().requireAdmin();
+      if (!/^[a-f0-9]{64}$/.test(reference || "")) throw fail("Invalid reference");
+      return locked(env, (dir) => {
+        const found = list(env, generation).find((r) => r.reference === reference && r.scope === require_access().owner().scopeKey);
+        if (!found) throw fail("Reference is not available in the selected scope");
+        fs3.unlinkSync(path3.join(dir, generation, reference + ".json"));
+        return { released: reference, generation };
+      });
+    }
+    module2.exports = { retain, list, locked, release };
+  }
+});
+
+// lib/catalog-store.js
+var require_catalog_store = __commonJS({
+  "lib/catalog-store.js"(exports2, module2) {
+    var fs3 = require("node:fs");
+    var path3 = require("node:path");
+    var crypto = require("node:crypto");
+    var fail = (message, code = "DT_CATALOG_INDEX") => Object.assign(Error(message), { code, statusCode: 409 });
+    var digest = (value) => crypto.createHash("sha256").update(value).digest("hex");
+    function available() {
+      try {
+        return !!require("node:sqlite").DatabaseSync;
+      } catch {
+        return false;
+      }
+    }
+    function filename(env) {
+      require_access().checkEnv(env);
+      if (!/^[\w-]+$/.test(env || "")) throw fail("Invalid environment");
+      return path3.join(require_util2().CACHE, env, "catalog.sqlite");
+    }
+    function open(env, { create = false } = {}) {
+      const file = filename(env);
+      if (!create && !fs3.existsSync(file)) return null;
+      const { DatabaseSync } = require("node:sqlite");
+      if (create) fs3.mkdirSync(path3.dirname(file), { recursive: true });
+      const db = new DatabaseSync(file, { readOnly: !create, timeout: 2e3 });
+      try {
+        db.exec("PRAGMA cache_size=-4096; PRAGMA temp_store=FILE; PRAGMA busy_timeout=2000;");
+        if (!create) {
+          const version = db.prepare("PRAGMA user_version").get().user_version;
+          if (!version) {
+            db.close();
+            return null;
+          }
+          if (version > 1) throw fail("Catalog schema is newer than this build");
+        }
+        if (create) {
+          const v = db.prepare("PRAGMA user_version").get().user_version;
+          if (v > 1) {
+            throw fail("Catalog schema is newer than this build");
+          }
+          db.exec(`PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;
+   CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,value TEXT NOT NULL);
+   CREATE TABLE IF NOT EXISTS generations(id INTEGER PRIMARY KEY,revision TEXT UNIQUE,signature TEXT,at TEXT,count INTEGER,edges INTEGER,pinned INTEGER DEFAULT 0);
+   CREATE TABLE IF NOT EXISTS objects(id INTEGER PRIMARY KEY,key TEXT NOT NULL,line TEXT NOT NULL,text TEXT NOT NULL,main TEXT NOT NULL,kind TEXT NOT NULL,start INTEGER NOT NULL,stop INTEGER);
+   CREATE UNIQUE INDEX IF NOT EXISTS object_live ON objects(key) WHERE stop IS NULL;
+   CREATE INDEX IF NOT EXISTS object_generation ON objects(start,stop);
+   CREATE VIRTUAL TABLE IF NOT EXISTS search USING fts5(text,content='objects',content_rowid='id',tokenize='trigram');
+   CREATE TABLE IF NOT EXISTS edges(id INTEGER PRIMARY KEY,key TEXT NOT NULL,db TEXT,target TEXT,base_target TEXT,user TEXT,base_user TEXT,userKind TEXT,role TEXT,payload TEXT,start INTEGER NOT NULL,stop INTEGER);
+   CREATE UNIQUE INDEX IF NOT EXISTS edge_live ON edges(key) WHERE stop IS NULL;
+   CREATE INDEX IF NOT EXISTS edge_target ON edges(target,db,start,stop);
+   CREATE INDEX IF NOT EXISTS edge_base_target ON edges(base_target,db,start,stop);
+   CREATE INDEX IF NOT EXISTS edge_user ON edges(user,db,start,stop);
+   CREATE INDEX IF NOT EXISTS edge_base_user ON edges(base_user,db,start,stop);
+   PRAGMA user_version=1;`);
+        }
+        return db;
+      } catch (error) {
+        db.close();
+        throw error;
+      }
+    }
+    function generation(db, revision) {
+      const row = revision ? db.prepare("SELECT * FROM generations WHERE revision=?").get(revision) : db.prepare("SELECT * FROM generations ORDER BY id DESC LIMIT 1").get();
+      if (revision && !row) throw fail("Catalog generation is unavailable; reopen the current search", "DT_CATALOG_GENERATION");
+      return row;
+    }
+    function status(env) {
+      if (!available()) return { backend: "stream", reason: "node:sqlite unavailable" };
+      const db = open(env);
+      if (!db) return { backend: "stream", generation: null };
+      try {
+        const g = generation(db);
+        return { backend: "sqlite", generation: g?.revision, at: g?.at, objects: g?.count || 0, edges: g?.edges || 0, generations: db.prepare("SELECT count(*) AS n FROM generations").get().n };
+      } finally {
+        db.close();
+      }
+    }
+    function unchanged(env, signature) {
+      if (!available()) return false;
+      const db = open(env);
+      if (!db) return false;
+      try {
+        return db.prepare("SELECT value FROM meta WHERE key='checked_signature'").get()?.value === signature;
+      } finally {
+        db.close();
+      }
+    }
+    function objectKey(line) {
+      const parts = line.split(/\s+/);
+      const kind = parts[0];
+      if (kind === "pgfn") return digest(line.split(" -> ")[0].split(" [")[0]);
+      return digest(parts.slice(0, kind === "pg" ? 3 : kind === "api" ? 4 : kind === "docs" ? 3 : 2).join(" "));
+    }
+    function writer(env, signature, usageStamp) {
+      const db = open(env, { create: true }), life = require_state_machine2().create(require_lifecycles().catalogWriter);
+      let closed = false, count = 0, edgeCount = 0, changed = 0;
+      const hash = crypto.createHash("sha256");
+      try {
+        db.exec("BEGIN IMMEDIATE; CREATE TEMP TABLE seen(key TEXT PRIMARY KEY) WITHOUT ROWID; CREATE TEMP TABLE edge_seen(key TEXT PRIMARY KEY) WITHOUT ROWID;");
+      } catch (e) {
+        db.close();
+        throw e;
+      }
+      const previous = generation(db), id = (previous?.id || 0) + 1;
+      const seen = db.prepare("INSERT OR IGNORE INTO seen VALUES (?)"), edgeSeen = db.prepare("INSERT OR IGNORE INTO edge_seen VALUES (?)");
+      const old = db.prepare("SELECT id,line FROM objects WHERE key=? AND stop IS NULL"), stop = db.prepare("UPDATE objects SET stop=? WHERE id=?");
+      const add = db.prepare("INSERT INTO objects(key,line,text,main,kind,start) VALUES (?,?,?,?,?,?)"), fts = db.prepare("INSERT INTO search(rowid,text) VALUES (?,?)");
+      const oldEdge = db.prepare("SELECT id FROM edges WHERE key=? AND stop IS NULL"), addEdge = db.prepare("INSERT INTO edges(key,db,target,base_target,user,base_user,userKind,role,payload,start) VALUES (?,?,?,?,?,?,?,?,?,?)");
+      function check() {
+        if (closed) throw fail("Catalog writer is closed");
+        if ((count + edgeCount) % 256 === 0) require_execution().check();
+      }
+      function line(value) {
+        check();
+        if (Buffer.byteLength(value) > 1024 * 1024) throw fail("Catalog line exceeds 1 MiB; previous generation retained");
+        const key = objectKey(value);
+        if (!seen.run(key).changes) throw fail("Duplicate catalog identity: " + value.slice(0, 120));
+        count++;
+        hash.update(value + "\n");
+        const row = old.get(key);
+        if (row?.line === value) return;
+        if (row) stop.run(id, row.id);
+        const text = value.toLowerCase(), cut = text.indexOf(" | used by: "), r = add.run(key, value, text, cut < 0 ? text : text.slice(0, cut), value.split(" ")[0], id);
+        fts.run(r.lastInsertRowid, text);
+        changed++;
+      }
+      function edge(e) {
+        check();
+        const payload = JSON.stringify(e);
+        if (Buffer.byteLength(payload) > 1024 * 1024) throw fail("Usage edge exceeds 1 MiB");
+        const key = digest(payload);
+        if (!edgeSeen.run(key).changes) return;
+        edgeCount++;
+        hash.update(payload + "\n");
+        if (oldEdge.get(key)) return;
+        const target = String(e.target || "").toLowerCase(), user = String(e.user || "").toLowerCase();
+        addEdge.run(key, e.db || "", target, target.split(".").at(-1), user, user.split(".").at(-1), e.userKind || "", e.role || "", payload, id);
+        changed++;
+      }
+      const summaryStmt = db.prepare("SELECT user,userKind,group_concat(DISTINCT role) AS roles FROM edges WHERE target=? AND db=? AND start<=? AND (stop IS NULL OR stop>?) GROUP BY user,userKind ORDER BY min(id) LIMIT 9");
+      function summary(key) {
+        const at = key.indexOf("|"), rows = summaryStmt.all(key.slice(at + 1), key.slice(0, at), id, id);
+        const labels = { service: "svc", function: "fn", procedure: "proc", table: "fk" };
+        return rows.slice(0, 8).map((r) => `${labels[r.userKind] || r.userKind} ${r.user}(${r.roles})`).join("; ") + (rows.length > 8 ? "; +more" : "");
+      }
+      function finishEdges() {
+        changed += Number(db.prepare("UPDATE edges SET stop=? WHERE stop IS NULL AND key NOT IN (SELECT key FROM edge_seen)").run(id).changes);
+      }
+      function commit() {
+        check();
+        life.to("flushing");
+        changed += Number(db.prepare("UPDATE objects SET stop=? WHERE stop IS NULL AND key NOT IN (SELECT key FROM seen)").run(id).changes);
+        const revision = digest(env + "\n" + id + "\n" + hash.digest("hex"));
+        if (changed || !previous) db.prepare("INSERT INTO generations(id,revision,signature,at,count,edges) VALUES (?,?,?,?,?,?)").run(id, revision, signature, (/* @__PURE__ */ new Date()).toISOString(), count, edgeCount);
+        db.prepare("INSERT OR REPLACE INTO meta VALUES ('checked_signature',?)").run(signature);
+        if (usageStamp) db.prepare("INSERT OR REPLACE INTO meta VALUES ('usage_stamp',?)").run(usageStamp);
+        life.to("synced");
+        db.exec("COMMIT");
+        life.to("published");
+        closed = true;
+        db.close();
+        return { generation: changed || !previous ? revision : previous.revision, objects: count, edges: edgeCount, changed, reused: !changed && !!previous };
+      }
+      function abort() {
+        if (closed) return;
+        try {
+          db.exec("ROLLBACK");
+        } finally {
+          closed = true;
+          db.close();
+          if (!life.terminal) life.to("aborted");
+        }
+      }
+      return { line, edge, summary, finishEdges, commit, abort };
+    }
+    function terms(q) {
+      if (typeof q !== "string" || Buffer.byteLength(q) > 8192) throw fail("Catalog query must be at most 8 KiB", "DT_ARGUMENT_INVALID");
+      let kind = null;
+      const words = q.toLowerCase().split(/\s+/).filter(Boolean).filter((w) => {
+        const m = w.match(/^(pg|pgfn|es|kafka|consul|svc|api|site|repo|docs):$/);
+        if (m) kind = m[1];
+        return !m;
+      });
+      return { words, kind };
+    }
+    function page(env, q = "", options = {}) {
+      if (!available()) return null;
+      const db = open(env);
+      if (!db) return null;
+      try {
+        const limit = Math.max(1, Math.min(500, Number(options.limit) || 50)), queryHash = digest(JSON.stringify([env, q, options.object || "", options.direction || "users"]));
+        let cursor = null;
+        if (options.cursor) {
+          try {
+            if (options.cursor.length > 2048) throw Error();
+            cursor = JSON.parse(Buffer.from(options.cursor, "base64url"));
+            if (cursor.query !== queryHash || !Number.isSafeInteger(cursor.id) || ![0, 1].includes(cursor.rank)) throw Error();
+          } catch {
+            throw fail("Cursor does not belong to this search", "DT_ARGUMENT_INVALID");
+          }
+        }
+        if (cursor && options.generation && cursor.generation !== options.generation) throw fail("Cursor and generation differ");
+        const g = generation(db, options.generation || cursor?.generation);
+        if (!g) return null;
+        const result = [], visible = "o.start<=? AND (o.stop IS NULL OR o.stop>?)";
+        let more = false, bytes = 0, last = cursor;
+        const push = (row, rank) => {
+          const value = options.object ? JSON.parse(row.payload) : { line: row.line };
+          const size = Buffer.byteLength(JSON.stringify(value));
+          if (size > 2 * 1024 * 1024) throw fail("Catalog record exceeds the result budget; inspect its source directly", "DT_RESULT_TOO_LARGE");
+          if (result.length >= limit || bytes + size > 2 * 1024 * 1024) {
+            more = true;
+            return false;
+          }
+          result.push(value);
+          bytes += size;
+          last = { generation: g.revision, query: queryHash, rank, id: row.id };
+          return true;
+        };
+        if (options.object) {
+          if (typeof options.object !== "string" || options.object.length > 1e3) throw fail("Invalid usage object");
+          const parts = options.object.toLowerCase().split(":"), name = parts.at(-1), database = parts.length > 1 ? parts[0] : null, side = options.direction === "uses" ? "user" : "target", column = name.includes(".") ? side : "base_" + side;
+          const sql = `SELECT o.id,o.payload FROM edges o WHERE ${visible} AND o.${column}=? ${database ? "AND o.db=?" : ""} AND o.id>? ORDER BY o.id LIMIT ?`;
+          for (const row of db.prepare(sql).iterate(g.id, g.id, name, ...database ? [database] : [], cursor?.id || 0, limit + 1)) if (!push(row, 0)) break;
+        } else {
+          const { words, kind } = terms(q), fts = words.filter((w) => [...w].length >= 3).map((w) => '"' + w.replaceAll('"', '""') + '"').join(" AND ");
+          const exact = words.map(() => "instr(o.text,?)>0").join(" AND ") || "1", main2 = words.map(() => "instr(o.main,?)>0").join(" AND ") || "1";
+          for (let rank = cursor?.rank || 0; rank < 2 && !more; rank++) {
+            const sql = `SELECT o.id,o.line FROM ${fts ? "search JOIN objects o ON o.id=search.rowid" : "objects o"} WHERE ${fts ? "search MATCH ? AND " : ""}${visible} ${kind ? "AND o.kind=?" : ""} AND ${exact} AND ${rank ? "NOT " : ""}(${main2}) AND o.id>? ORDER BY o.id LIMIT ?`;
+            const args = [...fts ? [fts] : [], g.id, g.id, ...kind ? [kind] : [], ...words, ...words, cursor?.rank === rank ? cursor.id : 0, limit - result.length + 1];
+            for (const row of db.prepare(sql).iterate(...args)) if (!push(row, rank)) break;
+          }
+        }
+        return { protocol: "dt.catalog-page/v1", env, generation: g.revision, at: g.at, results: result, nextCursor: more && last ? Buffer.from(JSON.stringify(last)).toString("base64url") : null, complete: !more, query: q, objects: g.count, usageEdges: g.edges };
+      } finally {
+        db.close();
+      }
+    }
+    function manage(env, { action = "list", generation: revision, reference, _heartbeat } = {}) {
+      if (action === "release_ref") return require_catalog_references().release(env, revision, reference);
+      if (action === "references") {
+        require_access().requireAdmin();
+        return require_catalog_references().list(env, revision).filter((r) => r.scope === require_access().owner().scopeKey);
+      }
+      if (action === "gc") return require_catalog_references().locked(env, (dir, heartbeat) => manage(env, { action: "collect", generation: revision, _heartbeat: heartbeat }));
+      if (!available()) throw fail("Catalog generations require node:sqlite");
+      require_access().requireAdmin();
+      const db = open(env, { create: true });
+      try {
+        if (action === "list") return db.prepare("SELECT * FROM generations ORDER BY id DESC LIMIT 1000").all();
+        const g = generation(db, revision);
+        if (!g) throw fail("No catalog generation");
+        if (action === "pin" || action === "unpin") {
+          db.prepare("UPDATE generations SET pinned=? WHERE id=?").run(action === "pin" ? 1 : 0, g.id);
+          return { generation: g.revision, pinned: action === "pin" };
+        }
+        if (action !== "collect") throw fail("Unknown retention action");
+        db.exec("BEGIN IMMEDIATE");
+        try {
+          const current = generation(db);
+          if (g.id === current.id || g.pinned || require_catalog_references().list(env, g.revision).length) throw fail("Current, pinned or referenced generations cannot be collected");
+          db.prepare("DELETE FROM generations WHERE id=?").run(g.id);
+          const dead = db.prepare("SELECT o.id,o.text FROM objects o WHERE o.stop IS NOT NULL AND NOT EXISTS (SELECT 1 FROM generations g WHERE o.start<=g.id AND o.stop>g.id)");
+          const remove = db.prepare("DELETE FROM objects WHERE id=?"), fts = db.prepare("INSERT INTO search(search,rowid,text) VALUES ('delete',?,?)");
+          let removed = 0;
+          for (const row of dead.iterate()) {
+            fts.run(row.id, row.text);
+            remove.run(row.id);
+            if (++removed % 1e3 === 0 && typeof _heartbeat === "function") _heartbeat();
+          }
+          db.exec("DELETE FROM edges WHERE stop IS NOT NULL AND NOT EXISTS (SELECT 1 FROM generations g WHERE edges.start<=g.id AND edges.stop>g.id)");
+          db.exec("COMMIT");
+          return { collected: g.revision };
+        } catch (e) {
+          db.exec("ROLLBACK");
+          throw e;
+        }
+      } finally {
+        db.close();
+      }
+    }
+    function matchesUsage(env, stamp) {
+      if (!available()) return false;
+      const db = open(env);
+      if (!db) return false;
+      try {
+        return db.prepare("SELECT value FROM meta WHERE key='usage_stamp'").get()?.value === stamp;
+      } finally {
+        db.close();
+      }
+    }
+    module2.exports = { matchesUsage, available, filename, writer, page, status, unchanged, manage, terms };
   }
 });
 
@@ -18685,6 +19210,7 @@ var require_results = __commonJS({
     var newId = () => scopePrefix() + Date.now().toString(36) + crypto.randomBytes(9).toString("hex");
     function install(id, text) {
       const lifecycle = require_state_machine2().create(require_lifecycles().result);
+      require_catalog_references().retain(text, "result:" + id);
       lifecycle.to("serialized");
       try {
         require_atomic_file().atomicFile(path3.join(DIR, `${id}.json`), text);
@@ -18803,706 +19329,6 @@ var require_notes = __commonJS({
       return { name: k, note: n[k] || null };
     }
     module2.exports = { all, get, set, FILE, exists: () => fs3.existsSync(FILE) };
-  }
-});
-
-// lib/semantic-identity.js
-var require_semantic_identity = __commonJS({
-  "lib/semantic-identity.js"(exports2, module2) {
-    var enc = (s) => encodeURIComponent(String(s ?? "unknown"));
-    var dec = (s) => decodeURIComponent(s);
-    var identifier = (s) => /^[a-z_][a-z0-9_$]*$/.test(String(s)) ? String(s) : '"' + String(s).replace(/"/g, '""') + '"';
-    var qualified = (...parts) => parts.map(identifier).join(".");
-    var norm = (s) => (String(s || "").match(/"(?:""|[^"])*"|[^"]+/g) || []).map((x) => x.startsWith('"') ? identifier(x.slice(1, -1).replace(/""/g, '"')) : x.replace(/\s+/g, "").toLowerCase()).join("");
-    var signature = (m) => `${m.name}(${(m.params || []).map((p) => String(p.type || "?").replace(/\s+/g, "")).join(",")})`;
-    function code(repo, revision2, symbol) {
-      return `code:${enc(repo)}@${enc(revision2 || "unknown")}:${symbol}`;
-    }
-    function parseCode(id) {
-      const m = String(id).match(/^code:([^@]+)@([^:]+):(.+)$/);
-      return m ? { repo: dec(m[1]), revision: dec(m[2]), symbol: m[3] } : null;
-    }
-    function pg(kind, env, db, object) {
-      return `${kind}:${enc(env)}:${enc(db)}:${norm(object)}`;
-    }
-    function parsePg(id) {
-      const m = String(id).match(/^(table|column|pgfn):([^:]+):([^:]+):(.+)$/);
-      return m ? { kind: m[1], env: dec(m[2]), db: dec(m[3]), object: m[4] } : null;
-    }
-    var revision = (idx) => idx?.workspace || idx?.key?.startsWith("work/") ? `${idx?.sha || "unknown"}+work:${idx?.sourceDigest || idx?.builtAt || "unknown"}` : idx?.revisionKey ? `${idx.sha}+source:${idx.sourceDigest}` : idx?.sha || "unknown";
-    module2.exports = { protocol: "dt.identity/v1", code, parseCode, pg, parsePg, signature, norm, revision, identifier, qualified };
-  }
-});
-
-// lib/passport/extract.js
-var require_extract = __commonJS({
-  "lib/passport/extract.js"(exports2, module2) {
-    var fs3 = require("fs");
-    var path3 = require("path");
-    var SKIP_DIRS = /* @__PURE__ */ new Set([".git", "target", "build", "node_modules", ".gradle", ".idea", "out", "bin", ".mvn", "dist"]);
-    var EXT = /\.(java|kt|kts|groovy|ya?ml|properties|xml|sql|gradle|toml)$/;
-    var MAX_FILE = 1 << 20;
-    function walk(root) {
-      const out2 = [];
-      (function rec(dir) {
-        for (const e of fs3.readdirSync(dir, { withFileTypes: true })) {
-          if (e.isDirectory()) {
-            if (SKIP_DIRS.has(e.name) || e.name.startsWith(".")) continue;
-            const rel = path3.relative(root, path3.join(dir, e.name)).split(path3.sep).join("/");
-            if (/(^|\/)src\/(test|it|integrationTest)(\/|$)/.test(rel)) continue;
-            rec(path3.join(dir, e.name));
-          } else if (EXT.test(e.name)) {
-            const full = path3.join(dir, e.name);
-            const st = fs3.statSync(full);
-            if (st.size <= MAX_FILE) out2.push({ path: path3.relative(root, full).split(path3.sep).join("/"), text: fs3.readFileSync(full, "utf8") });
-          }
-        }
-      })(root);
-      return out2;
-    }
-    var lineCache = /* @__PURE__ */ new Map();
-    var lineAt = (text, idx) => {
-      let nl = lineCache.get(text);
-      if (!nl) {
-        nl = [];
-        for (let i = 0; i < text.length; i++) if (text.charCodeAt(i) === 10) nl.push(i);
-        lineCache.set(text, nl);
-        if (lineCache.size > 64) lineCache.delete(lineCache.keys().next().value);
-      }
-      let lo = 0, hi = nl.length;
-      while (lo < hi) {
-        const m = lo + hi >> 1;
-        if (nl[m] < idx) lo = m + 1;
-        else hi = m;
-      }
-      return lo + 1;
-    };
-    function parseProperties(text) {
-      const out2 = {};
-      for (const raw of text.split(/\r?\n/)) {
-        const line = raw.trim();
-        if (!line || line[0] === "#" || line[0] === "!") continue;
-        const m = line.match(/^([^=:\s]+)\s*[=:]\s*(.*)$/);
-        if (m) out2[m[1]] = m[2].trim();
-      }
-      return out2;
-    }
-    var unquote = (v) => {
-      v = v.trim();
-      return /^(['"]).*\1$/.test(v) ? v.slice(1, -1) : v;
-    };
-    function stripYamlComment(v) {
-      let q = null;
-      for (let i = 0; i < v.length; i++) {
-        const c = v[i];
-        if (q) {
-          if (c === q) q = null;
-          continue;
-        }
-        if (c === '"' || c === "'") q = c;
-        else if (c === "#" && (i === 0 || /\s/.test(v[i - 1]))) return v.slice(0, i).trimEnd();
-      }
-      return v;
-    }
-    function parseYaml(text) {
-      const docs = [];
-      for (const doc of text.split(/^---\s*$/m)) {
-        const flat = {};
-        const stack = [{ indent: -1, key: "" }];
-        const listIdx = {};
-        let block = null;
-        for (const raw of doc.split(/\r?\n/)) {
-          if (block) {
-            const ind = raw.match(/^ */)[0].length;
-            if (raw.trim() === "" || ind > block.indent) {
-              flat[block.key] = (flat[block.key] ? flat[block.key] + "\n" : "") + raw.trim();
-              continue;
-            }
-            block = null;
-          }
-          if (!raw.trim() || raw.trim().startsWith("#")) continue;
-          const indent = raw.match(/^ */)[0].length;
-          let line = stripYamlComment(raw.trim());
-          while (stack.length > 1 && stack[stack.length - 1].indent >= indent && !(line.startsWith("- ") && stack[stack.length - 1].indent === indent && stack[stack.length - 1].list)) stack.pop();
-          const parent = stack[stack.length - 1].key;
-          if (line.startsWith("- ") || line === "-") {
-            const i = listIdx[parent] = (listIdx[parent] ?? -1) + 1;
-            const item = line.slice(1).trim();
-            const key2 = `${parent}[${i}]`;
-            const kv = item.match(/^([^:]+?):\s*(.*)$/);
-            if (kv && !/^["']/.test(item)) {
-              stack.push({ indent, key: key2, list: true });
-              if (kv[2]) flat[`${key2}.${kv[1].trim()}`] = unquote(kv[2]);
-              else stack.push({ indent: indent + 2, key: `${key2}.${kv[1].trim()}` });
-            } else flat[key2] = unquote(item);
-            continue;
-          }
-          const m = line.match(/^(["']?)([^"':]+?)\1\s*:(?:\s+(.*)|\s*)$/);
-          if (!m) continue;
-          const key = parent ? `${parent}.${m[2].trim()}` : m[2].trim();
-          const val = m[3];
-          if (val === void 0 || val === "") stack.push({ indent, key });
-          else if (/^[|>][-+]?$/.test(val)) block = { key, indent };
-          else if (/^\[.*\]$/.test(val)) val.slice(1, -1).split(",").map((s) => unquote(s)).filter(Boolean).forEach((v, i) => {
-            flat[`${key}[${i}]`] = v;
-          });
-          else flat[key] = unquote(val);
-        }
-        docs.push(flat);
-      }
-      return docs;
-    }
-    function loadConfig(files) {
-      const sources = [];
-      for (const f of files) {
-        const base = path3.basename(f.path);
-        const m = base.match(/^(application|bootstrap)(?:-([\w.-]+))?\.(ya?ml|properties)$/);
-        if (!m || !/src\/main\/resources|^[^/]*$|config\//.test(f.path)) continue;
-        const docs = m[3] === "properties" ? [parseProperties(f.text)] : parseYaml(f.text);
-        for (const props of docs) {
-          const profile = m[2] || props["spring.config.activate.on-profile"] || props["spring.profiles"] || null;
-          sources.push({ file: f.path, profile, props });
-        }
-      }
-      sources.sort((a, b) => (a.profile ? 1 : 0) - (b.profile ? 1 : 0));
-      const merged = {};
-      for (const s of sources) for (const [k, v] of Object.entries(s.props)) if (!(k in merged)) merged[k] = v;
-      return { sources, merged, profiles: [...new Set(sources.map((s) => s.profile).filter(Boolean))] };
-    }
-    function resolver(merged, unresolved) {
-      const relaxed = (k) => merged[k] ?? merged[k.replace(/-([a-z])/g, (_, c) => c.toUpperCase())] ?? merged[k.replace(/[A-Z]/g, (c) => "-" + c.toLowerCase())];
-      const resolve2 = (s, depth = 0) => {
-        if (typeof s !== "string" || depth > 5) return s;
-        return s.replace(/\$\{([^}:]+)(?::([^}]*))?\}/g, (all, key, def) => {
-          const v = relaxed(key.trim());
-          if (v !== void 0) return resolve2(String(v), depth + 1);
-          if (def !== void 0) return resolve2(def, depth + 1);
-          unresolved.add(key.trim());
-          return all;
-        });
-      };
-      return resolve2;
-    }
-    function stripComments(t) {
-      const parts = [];
-      let i = 0, from = 0, q = null;
-      const blank = (a, b) => t.slice(a, b).replace(/[^\n]/g, " ");
-      while (i < t.length) {
-        const c = t[i];
-        if (q) {
-          if (c === "\\") {
-            i += 2;
-            continue;
-          }
-          if (c === q || c === "\n") q = null;
-          i++;
-          continue;
-        }
-        if (c === '"' && t.startsWith('"""', i)) {
-          const e = t.indexOf('"""', i + 3);
-          i = e < 0 ? t.length : e + 3;
-          continue;
-        }
-        if (c === '"' || c === "'") {
-          q = c;
-          i++;
-          continue;
-        }
-        if (c === "/" && t[i + 1] === "/") {
-          const e = t.indexOf("\n", i);
-          const end = e < 0 ? t.length : e;
-          parts.push(t.slice(from, i), blank(i, end));
-          i = from = end;
-          continue;
-        }
-        if (c === "/" && t[i + 1] === "*") {
-          const e = t.indexOf("*/", i + 2);
-          const end = e < 0 ? t.length : e + 2;
-          parts.push(t.slice(from, i), blank(i, end));
-          i = from = end;
-          continue;
-        }
-        i++;
-      }
-      parts.push(t.slice(from));
-      return parts.join("");
-    }
-    function balanced(t, idx, open = "(", close = ")") {
-      let depth = 0, q = null;
-      for (let i = idx; i < t.length; i++) {
-        const c = t[i];
-        if (q) {
-          if (c === "\\") {
-            i++;
-            continue;
-          }
-          if (c === q) q = null;
-          continue;
-        }
-        if (c === '"' || c === "'") q = c;
-        else if (c === open) depth++;
-        else if (c === close && --depth === 0) return { inner: t.slice(idx + 1, i), end: i + 1 };
-      }
-      return { inner: t.slice(idx + 1), end: t.length };
-    }
-    function splitTop(s) {
-      const parts = [];
-      let depth = 0, q = null, cur = "";
-      for (let i = 0; i < s.length; i++) {
-        const c = s[i];
-        if (q) {
-          cur += c;
-          if (c === "\\") {
-            cur += s[++i] || "";
-            continue;
-          }
-          if (c === q) q = null;
-          continue;
-        }
-        if (c === '"' || c === "'") {
-          q = c;
-          cur += c;
-          continue;
-        }
-        if ("({[".includes(c)) depth++;
-        if (")}]".includes(c)) depth--;
-        if (c === "," && depth === 0) {
-          parts.push(cur);
-          cur = "";
-          continue;
-        }
-        cur += c;
-      }
-      if (cur.trim()) parts.push(cur);
-      return parts.map((p) => p.trim());
-    }
-    function annoArgs(inner) {
-      const out2 = {};
-      for (const part of splitTop(inner || "")) {
-        const m = part.match(/^(\w+)\s*=\s*([\s\S]*)$/);
-        const key = m ? m[1] : "value";
-        out2[key] = parseValue(m ? m[2] : part);
-      }
-      return out2;
-    }
-    function parseValue(v) {
-      v = v.trim();
-      if (/^[{[]/.test(v)) return splitTop(v.slice(1, -1)).flatMap(parseValue);
-      const lits = [...v.matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((m) => m[1]);
-      if (lits.length && /^("(?:[^"\\]|\\.)*"\s*\+?\s*)+$/.test(v)) return [lits.join("")];
-      if (lits.length === 1 && /^"/.test(v)) return [lits[0]];
-      return v ? [{ expr: v }] : [];
-    }
-    function annotations(t, names) {
-      const re2 = new RegExp(`@(${names.join("|")})\\b`, "g");
-      const out2 = [];
-      let m;
-      while (m = re2.exec(t)) {
-        let end = m.index + m[0].length, args = {};
-        const rest = t.slice(end).match(/^\s*\(/);
-        if (rest) {
-          const b = balanced(t, end + rest[0].length - 1);
-          args = annoArgs(b.inner);
-          end = b.end;
-        }
-        out2.push({ name: m[1], args, start: m.index, end });
-      }
-      return out2;
-    }
-    function methodAfter(t, idx) {
-      let s = t.slice(idx, idx + 600);
-      for (let guard = 0; guard < 12; guard++) {
-        const a = s.match(/^\s*@[\w.]+/);
-        if (!a) break;
-        let cut = a[0].length;
-        const p = s.slice(cut).match(/^\s*\(/);
-        if (p) cut += balanced(s, cut + p[0].length - 1).end - cut;
-        s = s.slice(cut);
-      }
-      const kt = s.match(/^\s*(?:(?:public|private|protected|internal|open|override|suspend)\s+)*fun\s+(?:<[^>]*>\s*)?(\w+)\s*\(/);
-      if (kt) return kt[1];
-      const java = s.match(/^\s*(?:(?:public|protected|private|static|final|default|synchronized|abstract)\s+)*(?:<[^>]*>\s*)?[\w.]+(?:\s*<[^()]*?>)?(?:\[\])?\s+(\w+)\s*\(/);
-      return java ? java[1] : null;
-    }
-    var typeDecl = /(?:^|\s)(?:class|interface|object|enum)\s+(\w+)/g;
-    function typeAt(t, idx) {
-      let name = null, m;
-      typeDecl.lastIndex = 0;
-      while ((m = typeDecl.exec(t)) && m.index < idx) name = m[1];
-      return name;
-    }
-    var joinPath = (...ps) => ("/" + ps.filter(Boolean).join("/")).replace(/\/+/g, "/").replace(/(.)\/$/, "$1");
-    var HTTP_ANNO = { GetMapping: "GET", PostMapping: "POST", PutMapping: "PUT", DeleteMapping: "DELETE", PatchMapping: "PATCH", RequestMapping: null };
-    var MAPPINGS = Object.keys(HTTP_ANNO);
-    var snake = (s) => s.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
-    var SQL_NOT_TABLE = /* @__PURE__ */ new Set(["select", "lateral", "unnest", "generate_series", "dual", "values", "where", "on", "set", "jsonb_array_elements", "json_array_elements", "jsonb_each", "table", "only", "the", "a", "an", "to", "and", "or", "not", "in", "is", "as", "this", "that", "it", "your", "our", "their", "all", "any", "each", "one"]);
-    var TABLE_RE = '("?[a-zA-Z_][\\w$]*"?(?:\\s*\\.\\s*"?[a-zA-Z_][\\w$]*"?)?)';
-    function sqlRefs(sql) {
-      const refs = [];
-      const add = (access, re2) => {
-        for (const m of sql.matchAll(re2)) {
-          const name = require_semantic_identity().norm(m[1]);
-          if (SQL_NOT_TABLE.has(name) || /^\d/.test(name)) continue;
-          if (access === "read" && /delete\s+$/i.test(sql.slice(Math.max(0, m.index - 8), m.index))) continue;
-          const after = sql.slice(m.index + m[0].length).trimStart();
-          refs.push({ table: name, access: after.startsWith("(") && access === "read" ? "function" : access });
-        }
-      };
-      add("read", new RegExp(`\\b(?:from|join)\\s+${TABLE_RE}`, "gi"));
-      add("write", new RegExp(`\\binsert\\s+into\\s+${TABLE_RE}`, "gi"));
-      add("write", new RegExp(`\\bupdate\\s+${TABLE_RE}\\s+set\\b`, "gi"));
-      add("write", new RegExp(`\\bdelete\\s+from\\s+${TABLE_RE}`, "gi"));
-      add("write", new RegExp(`\\bmerge\\s+into\\s+${TABLE_RE}`, "gi"));
-      add("write", new RegExp(`\\btruncate\\s+(?:table\\s+)?${TABLE_RE}`, "gi"));
-      return refs;
-    }
-    var SQL_NOT_FN = new Set("select from where in exists values any all some as on using and or not case when then else end coalesce nullif greatest least cast count sum min max avg lower upper trim now concat substring position extract array row over filter within lateral unnest into table with returning set join by group order limit offset distinct between like ilike is null interval date timestamp length round abs floor ceil to_char to_date to_timestamp to_number date_trunc date_part string_agg array_agg json_agg jsonb_agg json_build_object jsonb_build_object row_number rank dense_rank lag lead first_value last_value nextval currval setval gen_random_uuid uuid_generate_v4 md5 replace split_part regexp_replace regexp_matches format left right char varchar numeric decimal int integer bigint smallint text jsonb json bool boolean float double real primary key references foreign unique check default index create alter update delete insert merge call perform execute return returns function procedure if raise loop for while begin declare language of do conflict constraint generate_series jsonb_array_elements json_array_elements jsonb_each jsonb_set to_jsonb to_json array_length cardinality mod power sqrt random age make_interval new char_length octet_length chr ascii initcap lpad rpad btrim ltrim rtrim strpos reverse repeat translate encode decode jsonb_extract_path_text jsonb_typeof jsonb_array_length row_to_json array_to_json array_to_string string_to_array bool_and bool_or every percentile_cont percentile_disc mode ntile cume_dist percent_rank nth_value current_setting set_config pg_sleep exp ln log sign trunc width_bucket clock_timestamp statement_timestamp transaction_timestamp timeofday justify_days date_bin isfinite overlaps".split(" "));
-    function sqlCalls(sql) {
-      const out2 = /* @__PURE__ */ new Set();
-      for (const m of sql.matchAll(/(?<![\w$."'])("?[a-zA-Z_][\w$]*"?(?:\s*\.\s*"?[a-zA-Z_][\w$]*"?)?)\s*\(/g)) {
-        const name = require_semantic_identity().norm(m[1]);
-        const parts = name.split(".");
-        if (SQL_NOT_FN.has(parts[parts.length - 1]) || parts[0] === "pg_catalog") continue;
-        if (/\b(into|table|references|exists|index|on|view|type)\s*$/i.test(sql.slice(Math.max(0, m.index - 12), m.index))) continue;
-        out2.add(name);
-      }
-      return [...out2];
-    }
-    var looksCall = (s) => /\b(select|call|perform)\s+"?[\w.]+"?\s*\(/i.test(s) || /\{\s*(\?\s*=\s*)?call\s/i.test(s);
-    var looksSql = (s) => /\b(select\s[\s\S]*\bfrom|insert\s+into|update\s+\S+\s+set|delete\s+from|merge\s+into|truncate)\b/i.test(s);
-    function stringLiterals(t) {
-      const out2 = [];
-      const re2 = /"""([\s\S]*?)"""|"((?:[^"\\\n]|\\.)*)"/g;
-      let m, cur = null;
-      while (m = re2.exec(t)) {
-        const val = m[1] !== void 0 ? m[1] : m[2].replace(/\\n/g, "\n").replace(/\\"/g, '"');
-        if (cur && /^\s*\+\s*$/.test(t.slice(cur.end, m.index))) {
-          cur.value += val;
-          cur.end = m.index + m[0].length;
-          continue;
-        }
-        if (cur) out2.push(cur);
-        cur = { value: val, index: m.index, end: m.index + m[0].length };
-      }
-      if (cur) out2.push(cur);
-      return out2;
-    }
-    var tag = (xml, name) => {
-      const m = xml.match(new RegExp(`<${name}>\\s*([^<]*?)\\s*</${name}>`));
-      return m ? m[1] : null;
-    };
-    function parsePom(text) {
-      const noComments = text.replace(/<!--[\s\S]*?-->/g, "");
-      const props = {};
-      const propsBlock = noComments.match(/<properties>([\s\S]*?)<\/properties>/);
-      if (propsBlock) for (const m of propsBlock[1].matchAll(/<([\w.-]+)>\s*([^<]*?)\s*<\/\1>/g)) props[m[1]] = m[2];
-      const parentBlock = noComments.match(/<parent>([\s\S]*?)<\/parent>/);
-      const parent = parentBlock ? { groupId: tag(parentBlock[1], "groupId"), artifactId: tag(parentBlock[1], "artifactId"), version: tag(parentBlock[1], "version") } : null;
-      const head = noComments.replace(/<parent>[\s\S]*?<\/parent>/, "").replace(/<(dependencies|dependencyManagement|build|profiles|properties|modules|repositories|pluginRepositories|distributionManagement|reporting)>[\s\S]*?<\/\1>/g, "");
-      const self2 = { groupId: tag(head, "groupId") || parent?.groupId, artifactId: tag(head, "artifactId"), version: tag(head, "version") || parent?.version };
-      props["project.version"] = self2.version;
-      props["project.groupId"] = self2.groupId;
-      if (parent?.version) props["project.parent.version"] = parent.version;
-      const res = (v) => v && v.replace(/\$\{([^}]+)\}/g, (a, k) => props[k] ?? a);
-      const deps = [];
-      for (const m of noComments.matchAll(/<dependency>([\s\S]*?)<\/dependency>/g)) {
-        const d = m[1];
-        deps.push({ groupId: res(tag(d, "groupId")), artifactId: res(tag(d, "artifactId")), version: res(tag(d, "version")), scope: tag(d, "scope") || (tag(d, "type") === "pom" ? "import" : null) });
-      }
-      return { self: self2, parent, deps, props };
-    }
-    function gradleVars(text) {
-      const out2 = {};
-      const t = text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'])\/\/[^\n]*/g, "$1");
-      const str = (v) => {
-        const m = String(v).trim().match(/^(["'])((?:(?!\1).)*)\1/);
-        return m ? m[2] : null;
-      };
-      const put = (k, raw) => {
-        const v = String(raw).trim();
-        const map = v.match(/^\[([\s\S]*)\]$/) || v.match(/^mapOf\(([\s\S]*)\)$/);
-        if (map) {
-          for (const m of map[1].matchAll(/["']?([\w.-]+)["']?\s*(?::|to)\s*(["'][^"']*["'])/g)) out2[`${k}.${m[1]}`] = str(m[2]);
-          return;
-        }
-        const s = str(v);
-        if (s !== null) out2[k] = s;
-        else if (/^[\d.]+$/.test(v)) out2[k] = v;
-        else if (/^[\w.]+$/.test(v)) out2[k] = `\${${v}}`;
-      };
-      for (const m of t.matchAll(/\b(?:project\.)?ext\s*\{/g)) {
-        let depth = 1, i = m.index + m[0].length;
-        const start = i;
-        for (; i < t.length && depth; i++) {
-          if (t[i] === "{") depth++;
-          else if (t[i] === "}") depth--;
-        }
-        const body = t.slice(start, i - 1);
-        for (const a of body.matchAll(/^\s*(?:set\s*\(\s*["'](\w+)["']\s*,\s*([^)\n]+)\)|(\w+)\s*=\s*(\[[\s\S]*?\]|[^\n]+))/gm)) put(a[1] || a[3], (a[2] || a[4]).replace(/[;,]\s*$/, ""));
-      }
-      const line = [
-        /\b(?:project\.)?ext\.(\w+)\s*=\s*(\[[\s\S]*?\]|[^\n;]+)/g,
-        /\bext\s*\[\s*["'](\w+)["']\s*\]\s*=\s*([^\n;]+)/g,
-        /\b(?:project\.)?ext\.set\s*\(\s*["'](\w+)["']\s*,\s*([^)\n]+)\)/g,
-        /\bextra\s*\[\s*["'](\w+)["']\s*\]\s*=\s*([^\n;]+)/g,
-        /\bextra\.set\s*\(\s*["'](\w+)["']\s*,\s*([^)\n]+)\)/g,
-        /\bval\s+(\w+)(?:\s*:\s*String)?\s+by\s+extra\s*\(\s*([^)\n]+)\)/g,
-        /^\s*(?:def|val|var)\s+(\w+)(?:\s*:\s*String)?\s*=\s*(mapOf\([\s\S]*?\)|\[[\s\S]*?\]|[^\n;]+)/gm
-      ];
-      for (const re2 of line) for (const m of t.matchAll(re2)) put(m[1], m[2]);
-      return out2;
-    }
-    function gradleResolve(v, props) {
-      if (v == null) return v;
-      let out2 = String(v);
-      for (let i = 0; i < 5 && /\$/.test(out2); i++) {
-        const next = out2.replace(/\$\{([\w.]+)\}|\$([A-Za-z_]\w*(?:\.\w+)*)/g, (a, k1, k2) => {
-          const k = k1 || k2;
-          if (props[k] !== void 0) return props[k];
-          const parts = k.split(".");
-          for (let n = parts.length - 1; n > 0; n--) {
-            const head = parts.slice(0, n).join(".");
-            if (props[head] !== void 0) return props[head] + "." + parts.slice(n).join(".");
-          }
-          return a;
-        });
-        if (next === out2) break;
-        out2 = next;
-      }
-      return out2;
-    }
-    function parseGradle(text, props = {}) {
-      const deps = [];
-      const all = { ...props, ...gradleVars(text) };
-      const res = (v) => v ? gradleResolve(v, all) : v;
-      const conf = "implementation|api|compile|compileOnly|runtimeOnly|annotationProcessor|kapt|testImplementation";
-      const re2 = new RegExp(`\\b(${conf})\\s*\\(?\\s*(?:(?:platform|enforcedPlatform)\\s*\\(\\s*)?["']([^:"'\\s]+):([^:"'\\s]+)(?::([^"'\\s]+))?["']`, "g");
-      for (const m of text.matchAll(re2)) if (m[1] !== "testImplementation") deps.push({ groupId: m[2], artifactId: m[3], version: res(m[4]) || null, scope: m[1] });
-      const mapRe = new RegExp(`\\b(${conf})\\s*\\(?\\s*group\\s*[:=]\\s*["']([^"']+)["']\\s*,\\s*name\\s*[:=]\\s*["']([^"']+)["'](?:\\s*,\\s*version\\s*[:=]\\s*(["'][^"']*["']|[\\w.]+))?`, "g");
-      for (const m of text.matchAll(mapRe)) {
-        if (m[1] === "testImplementation") continue;
-        const v = m[4] ? /^["']/.test(m[4]) ? m[4].slice(1, -1) : `\${${m[4]}}` : null;
-        deps.push({ groupId: m[2], artifactId: m[3], version: res(v) || null, scope: m[1] });
-      }
-      const group = text.match(/^\s*group\s*=\s*["']([^"']+)["']/m);
-      const boot = text.match(/id\s*\(?\s*["']org\.springframework\.boot["']\s*\)?\s*version\s*["']([^"']+)["']/);
-      for (const d of deps) if (d.version && /\$/.test(d.version)) d.unresolvedVersion = true;
-      return { deps, group: group && group[1], bootVersion: boot && boot[1], vars: all };
-    }
-    function extract(root, { internalGroups = [] } = {}) {
-      const started = Date.now();
-      const files = walk(root);
-      const code = files.filter((f) => /\.(java|kt|groovy)$/.test(f.path)).map((f) => ({ ...f, clean: stripComments(f.text) }));
-      const unresolved = /* @__PURE__ */ new Set();
-      const cfg = loadConfig(files);
-      const resolve2 = resolver(cfg.merged, unresolved);
-      const at = (f, idx) => ({ file: f.path, line: lineAt(f.text, idx) });
-      const constants = {};
-      const valueFields = {};
-      for (const f of code) {
-        for (const m of f.clean.matchAll(/\b(?:static\s+final|final\s+static|const\s+val)\s+(?:String\s+)?(\w+)\s*(?::\s*String\s*)?=\s*((?:"(?:[^"\\]|\\.)*"\s*\+?\s*)+)/g)) {
-          constants[m[1]] = [...m[2].matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((x) => x[1]).join("");
-        }
-        for (const m of f.clean.matchAll(/@Value\s*\(\s*"([^"]+)"\s*\)\s*(?:(?:private|protected|public|final|lateinit|var|val)\s+)*(?:[\w<>]+\s+)?(\w+)/g)) valueFields[m[2]] = m[1];
-      }
-      const fromExpr = (x) => {
-        if (typeof x === "string") return resolve2(x);
-        const e = x.expr.trim();
-        const spel = e.match(/^"?#\{'?(\$\{[^}]+\})'?(?:\.split\([^)]*\))?\}"?$/);
-        if (spel) return resolve2(spel[1]);
-        const id = e.split(".").pop();
-        if (constants[id] !== void 0) return resolve2(constants[id]);
-        if (valueFields[id] !== void 0) return resolve2(valueFields[id]);
-        const getter = e.match(/(?:get)?(\w+)\(\)$/);
-        if (getter && valueFields[getter[1][0].toLowerCase() + getter[1].slice(1)]) return resolve2(valueFields[getter[1][0].toLowerCase() + getter[1].slice(1)]);
-        return { unresolved: e };
-      };
-      const values = (arr) => (arr || []).map(fromExpr).flatMap((v) => typeof v === "string" ? v.split(",").map((s) => s.trim()).filter(Boolean) : [v]);
-      const show = (v) => typeof v === "string" ? v : `?${v.unresolved}`;
-      const endpoints = [], feign = [], consumes = [], produces = [], tables = [], calls = [], esIndices = [], http2 = [];
-      for (const f of code) {
-        const t = f.clean;
-        const isController = /@(Rest)?Controller\b/.test(t);
-        const feignAnno = annotations(t, ["FeignClient"])[0];
-        if (isController || feignAnno) {
-          const firstType = t.search(/(?:^|\s)(?:class|interface)\s+\w+/);
-          const classMap = annotations(t.slice(0, Math.max(firstType, 0)), ["RequestMapping"])[0];
-          const base = classMap ? values(classMap.args.value || classMap.args.path).map(show)[0] || "" : "";
-          for (const a of annotations(t, MAPPINGS)) {
-            if (a.start < firstType) continue;
-            const paths = values(a.args.value || a.args.path).map(show);
-            const reqMethods = (a.args.method || []).map((x) => typeof x === "string" ? x : x.expr.split(".").pop());
-            const methods = HTTP_ANNO[a.name] ? [HTTP_ANNO[a.name]] : reqMethods.length ? reqMethods : ["ANY"];
-            const handler = `${typeAt(t, a.start)}.${methodAfter(t, a.end)}`;
-            for (const m of methods) for (const p of paths.length ? paths : [""]) {
-              const item = { method: m, path: joinPath(base, p), handler, ...at(f, a.start) };
-              if (feignAnno) {
-                const fa = feignAnno.args;
-                item.client = show(values(fa.name || fa.value || fa.contextId)[0] || "?");
-                item.url = fa.url ? show(values(fa.url)[0]) : null;
-                item.path = joinPath(fa.path ? show(values(fa.path)[0]) : "", base, p);
-                feign.push(item);
-              } else endpoints.push(item);
-            }
-          }
-        }
-        for (const a of annotations(t, ["KafkaListener"])) {
-          const topics = values(a.args.topics || a.args.value);
-          const pattern = a.args.topicPattern ? values(a.args.topicPattern).map(show) : [];
-          const group = a.args.groupId ? show(values(a.args.groupId)[0]) : a.args.id ? show(values(a.args.id)[0]) : null;
-          const handler = `${typeAt(t, a.start)}.${methodAfter(t, a.end) || "(class)"}`;
-          for (const tp of topics) consumes.push({ topic: show(tp), group, handler, via: "@KafkaListener", ...at(f, a.start) });
-          for (const p of pattern) consumes.push({ topic: p, pattern: true, group, handler, via: "@KafkaListener(topicPattern)", ...at(f, a.start) });
-        }
-        for (const m of t.matchAll(/(\w+)\s*\.\s*(send|sendDefault)\s*\(\s*/g)) {
-          const recv = m[1];
-          if (!/kafka|template|producer|publisher|bridge/i.test(recv) || /jms|rabbit|amqp|mail|sms|rest|web|http/i.test(recv)) continue;
-          const open = m.index + m[0].length - 1;
-          const args = splitTop(balanced(t, t.lastIndexOf("(", open)).inner);
-          let first = args[0] || "";
-          const pr = first.match(/new\s+ProducerRecord\s*(?:<[^>]*>)?\s*\(([\s\S]*)\)$/);
-          if (pr) first = splitTop(pr[1])[0];
-          if (m[2] === "sendDefault") {
-            produces.push({ topic: "(default topic)", via: `${recv}.sendDefault`, ...at(f, m.index) });
-            continue;
-          }
-          const v = parseValue(first)[0];
-          if (v === void 0) continue;
-          const topic = show(fromExpr(v));
-          if (/bridge/i.test(recv)) {
-            const dest = cfg.merged[`spring.cloud.stream.bindings.${topic}.destination`];
-            produces.push({ topic: dest ? resolve2(dest) : topic, binding: topic, via: "StreamBridge.send", ...at(f, m.index) });
-          } else produces.push({ topic, via: `${recv}.${m[2]}`, ...at(f, m.index) });
-        }
-        const ent = /@Entity\b/.test(t);
-        if (ent) {
-          const tbl = annotations(t, ["Table"])[0];
-          const cls = (t.match(/(?:class|data\s+class)\s+(\w+)/) || [])[1];
-          const name = tbl && (tbl.args.name || tbl.args.value) ? show(values(tbl.args.name || tbl.args.value)[0]) : snake(cls || "?");
-          const schema = tbl && tbl.args.schema ? show(values(tbl.args.schema)[0]) : null;
-          tables.push({ table: (schema ? `${schema}.${name}` : name).toLowerCase(), access: "entity", via: `@Entity ${cls}`, entity: cls, ...at(f, t.indexOf("@Entity")) });
-        }
-        for (const m of t.matchAll(/interface\s+(\w+)\s*(?:<[^>]*>)?\s*:?\s*(?:extends\s+)?[\w.]*?(Jpa|Crud|PagingAndSorting|ListCrud|ListPagingAndSorting|Reactive\w*|R2dbc|Coroutine\w*)Repository\s*<\s*(\w+)/g)) {
-          tables.push({ table: null, entity: m[3], access: "repository", via: `${m[1]} (${m[2]}Repository)`, ...at(f, m.index) });
-        }
-        for (const s of stringLiterals(t)) {
-          const isSql = looksSql(s.value);
-          if (!isSql && !looksCall(s.value)) continue;
-          const snippet = s.value.replace(/\s+/g, " ").slice(0, 300);
-          if (isSql) for (const r of sqlRefs(s.value)) tables.push({ ...r, via: "sql", sql: snippet, ...at(f, s.index) });
-          for (const name of sqlCalls(s.value)) calls.push({ name, via: "sql", sql: snippet, ...at(f, s.index) });
-        }
-        for (const a of annotations(t, ["Procedure", "NamedStoredProcedureQuery"])) {
-          const n = a.args.procedureName || a.name === "Procedure" && a.args.value;
-          if (n) calls.push({ name: show(values(n)[0]).toLowerCase(), via: `@${a.name}`, explicit: true, ...at(f, a.start) });
-        }
-        for (const m of t.matchAll(/\.(withProcedureName|withFunctionName|createStoredProcedureQuery)\s*\(\s*"([\w.]+)"/g)) {
-          calls.push({ name: m[2].toLowerCase(), via: m[1], explicit: true, ...at(f, m.index) });
-        }
-        for (const a of annotations(t, ["Document"])) {
-          if (a.args.indexName) esIndices.push({ index: show(values(a.args.indexName)[0]), via: "@Document", ...at(f, a.start) });
-        }
-        for (const m of t.matchAll(/IndexCoordinates\s*\.\s*of\s*\(\s*([^)]+)\)/g)) {
-          esIndices.push({ index: show(fromExpr(parseValue(splitTop(m[1])[0])[0] || { expr: m[1] })), via: "IndexCoordinates.of", ...at(f, m.index) });
-        }
-        for (const s of stringLiterals(t)) {
-          const u = s.value.match(/^(https?|lb):\/\/([^/\s"'$]+|\$\{[^}]+\})[^\s"']*$/);
-          if (u && !/(w3\.org|xmlns|schema|apache\.org|springframework\.org|example\.com)/i.test(s.value)) http2.push({ url: resolve2(s.value), target: resolve2(u[2]), via: "code", ...at(f, s.index) });
-        }
-      }
-      for (const f of files) {
-        const isMigration = /(db\/migration|liquibase|changelog|flyway|migrations?)\//i.test(f.path);
-        if (/\.sql$/.test(f.path) || /\.xml$/.test(f.path) && /<mapper\b|<changeSet\b|<databaseChangeLog\b/.test(f.text) || /\.ya?ml$/.test(f.path) && /databaseChangeLog/.test(f.text)) {
-          if (isMigration) {
-            for (const m of f.text.matchAll(new RegExp(`create\\s+table\\s+(?:if\\s+not\\s+exists\\s+)?${TABLE_RE}`, "gi"))) tables.push({ table: require_semantic_identity().norm(m[1]), access: "owner", via: "migration", ...at(f, m.index) });
-            for (const m of f.text.matchAll(/<createTable\b([^>]*)>/g)) {
-              const tn = (m[1].match(/tableName="([^"]+)"/) || [])[1];
-              const sc = (m[1].match(/schemaName="([^"]+)"/) || [])[1];
-              if (tn) tables.push({ table: (sc ? `${sc}.${tn}` : tn).toLowerCase(), access: "owner", via: "liquibase", ...at(f, m.index) });
-            }
-          } else {
-            const via = /\.xml$/.test(f.path) ? "mybatis" : "sql file";
-            for (const r of sqlRefs(f.text)) tables.push({ ...r, via, ...at(f, 0) });
-            for (const name of sqlCalls(f.text)) calls.push({ name, via, ...at(f, 0) });
-          }
-        }
-      }
-      const datasources = [];
-      const declaredTopics = [];
-      for (const [k, raw] of Object.entries(cfg.merged)) {
-        const v = resolve2(String(raw));
-        const b = k.match(/^spring\.cloud\.stream\.bindings\.([^.]+)\.destination$/);
-        if (b) {
-          const out2 = /-out-\d+$|output/i.test(b[1]);
-          (out2 ? produces : consumes).push({ topic: v, binding: b[1], group: out2 ? void 0 : resolve2(cfg.merged[`spring.cloud.stream.bindings.${b[1]}.group`] || "") || null, via: "stream binding", file: "config", line: 0, key: k });
-          continue;
-        }
-        if (/(^|\.)(url|jdbc-url|jdbcUrl)$/.test(k) && /^(jdbc|r2dbc):/.test(v)) {
-          const m = v.match(/^(?:jdbc|r2dbc):(\w+):(?:\/\/)?([^/?;]+)\/([^?;]+)/);
-          datasources.push({ key: k, kind: m ? m[1] : "unknown", host: m ? m[2] : null, db: m ? m[3] : null, url: v.replace(/password=[^&;]+/gi, "password=***") });
-          continue;
-        }
-        if (/topic/i.test(k) && /^[\w.\-]+$/.test(v) && !/^\d+$/.test(v) && !/(partitions|replicas|replication|retention|count|enabled|size|timeout)/i.test(k)) declaredTopics.push({ key: k, topic: v });
-        if (/^(https?|lb):\/\//.test(v)) http2.push({ url: v, target: (v.match(/^\w+:\/\/([^/:]+)/) || [])[1], key: k, via: "config", file: "config", line: 0 });
-        if (/(index(-|_)?name|\.index)$/i.test(k) && /^[\w.\-*]+$/.test(v)) esIndices.push({ index: v, via: "config", key: k, file: "config", line: 0 });
-      }
-      const entityTable = Object.fromEntries(tables.filter((t) => t.access === "entity").map((t) => [t.entity, t.table]));
-      for (const t of tables) if (t.access === "repository") t.table = entityTable[t.entity] || snake(t.entity);
-      const deps = [];
-      let self2 = null, bootVersion = null;
-      const gradleProps = {};
-      for (const f of files) if (/gradle\.properties$/.test(f.path)) Object.assign(gradleProps, parseProperties(f.text));
-      const scripts = files.filter((f) => /(build|settings)\.gradle(\.kts)?$/.test(f.path)).sort((a, b) => a.path.split("/").length - b.path.split("/").length);
-      for (const f of scripts) for (const [k, v] of Object.entries(gradleVars(f.text))) if (gradleProps[k] === void 0) gradleProps[k] = v;
-      const modules = /* @__PURE__ */ new Set();
-      for (const f of files) {
-        if (path3.basename(f.path) === "pom.xml") {
-          const p = parsePom(f.text);
-          if (!self2 || f.path === "pom.xml") self2 = p.self;
-          if (p.self.artifactId) modules.add(`${p.self.groupId}:${p.self.artifactId}`);
-          if (p.parent && p.parent.artifactId === "spring-boot-starter-parent") bootVersion = p.parent.version;
-          for (const d of p.deps) deps.push({ ...d, from: f.path });
-        } else if (/build\.gradle(\.kts)?$/.test(f.path)) {
-          const g = parseGradle(f.text, gradleProps);
-          if (g.group && !self2) self2 = { groupId: g.group, artifactId: path3.basename(root), version: gradleResolve(gradleProps.version, gradleProps) || null };
-          bootVersion = bootVersion || g.bootVersion;
-          for (const d of g.deps) deps.push({ ...d, from: f.path });
-        }
-      }
-      const ownPrefix = self2?.groupId ? self2.groupId.split(".").slice(0, 2).join(".") : null;
-      const isInternal = (g) => !!g && (internalGroups.length ? internalGroups.some((p) => g === p || g.startsWith(p + ".")) : !!ownPrefix && (g === ownPrefix || g.startsWith(ownPrefix + ".")));
-      const seen = /* @__PURE__ */ new Set();
-      const dependencies = { internal: [], external: [], modules: [...modules] };
-      for (const d of deps) {
-        const key = `${d.groupId}:${d.artifactId}`;
-        if (!d.groupId || seen.has(key) || modules.has(key)) continue;
-        seen.add(key);
-        (isInternal(d.groupId) ? dependencies.internal : dependencies.external).push({ groupId: d.groupId, artifactId: d.artifactId, version: d.version, scope: d.scope });
-      }
-      if (!bootVersion) bootVersion = (deps.find((d) => d.groupId === "org.springframework.boot" && d.version) || {}).version || null;
-      return {
-        app: {
-          name: cfg.merged["spring.application.name"] ? resolve2(cfg.merged["spring.application.name"]) : null,
-          groupId: self2?.groupId || null,
-          artifactId: self2?.artifactId || null,
-          version: self2?.version || null,
-          springBoot: bootVersion,
-          port: cfg.merged["server.port"] ? resolve2(String(cfg.merged["server.port"])) : null,
-          contextPath: cfg.merged["server.servlet.context-path"] ? resolve2(cfg.merged["server.servlet.context-path"]) : null,
-          profiles: cfg.profiles
-        },
-        endpoints,
-        feign,
-        kafka: { consumes, produces, declared: declaredTopics },
-        db: { datasources, tables, calls },
-        es: esIndices,
-        http: http2,
-        dependencies,
-        config: { files: [...new Set(cfg.sources.map((s) => s.file))], keys: Object.keys(cfg.merged).length, unresolved: [...unresolved].sort() },
-        stats: { files: files.length, sourceFiles: code.length, ms: Date.now() - started }
-      };
-    }
-    module2.exports = { extract, walk, parseYaml, parseProperties, parsePom, parseGradle, gradleVars, gradleResolve, sqlRefs, sqlCalls, stripComments, splitTop, balanced, annoArgs, methodAfter, stringLiterals, loadConfig, resolver };
   }
 });
 
@@ -22577,6 +22403,934 @@ from pg_sequences where schemaname not in ('pg_catalog', 'information_schema') o
   }
 });
 
+// lib/fixture-schema.js
+var require_fixture_schema = __commonJS({
+  "lib/fixture-schema.js"(exports2, module2) {
+    var MAX_DEPTH = 32;
+    var MAX_PATHS = 1e4;
+    var MAX_NODES = 5e4;
+    var validPath = (p) => typeof p === "string" && /^(value|key|headers)(\.[\w-]+|\[\])*$/.test(p);
+    var fieldName = (n) => typeof n === "string" && /^[\w-]+$/.test(n);
+    var normalized = (n) => String(n || "").replace(/[^a-z0-9]/gi, "").toLowerCase();
+    var scalar = (t) => ["string", "integer", "number", "boolean"].includes(t);
+    var PRIMITIVES = new Map(Object.entries({ null: "null", boolean: "boolean", int: "integer", long: "integer", float: "number", double: "number", bytes: "string", string: "string" }));
+    var primitive = (t) => PRIMITIVES.get(t);
+    var jsonType = (v) => v === null ? "null" : Array.isArray(v) ? "array" : typeof v === "number" && Number.isInteger(v) ? "integer" : typeof v;
+    function decoded(value) {
+      if (typeof value !== "string") return value;
+      if (value.length > 1e6) return null;
+      try {
+        return JSON.parse(value);
+      } catch {
+        return value;
+      }
+    }
+    function schemaOf(definition) {
+      if (!definition) return null;
+      const envelope = typeof definition === "object" && Object.hasOwn(definition, "schema");
+      const schema = decoded(envelope ? definition.schema : definition);
+      const kind = String(envelope ? definition.type || definition.schemaType || "" : "").toUpperCase();
+      if (kind && !["JSON", "JSONSCHEMA", "JSON_SCHEMA", "AVRO"].includes(kind)) return null;
+      const looksAvro = (s) => s && typeof s === "object" && (["record", "enum", "fixed", "int", "long", "float", "double", "bytes"].includes(s.type) || s.type === "array" && (typeof s.items === "string" || Array.isArray(s.items)));
+      const avro = kind === "AVRO" || !kind && (typeof schema === "string" || Array.isArray(schema) || looksAvro(schema));
+      return schema && (typeof schema === "object" || avro) ? { schema, kind: avro ? "avro-schema" : "json-schema" } : null;
+    }
+    function paths(topic = {}) {
+      if (!topic || typeof topic !== "object") return [];
+      const out2 = /* @__PURE__ */ new Map();
+      let work = 0;
+      const add = (p, type, source, detail) => {
+        if (!validPath(p) || out2.size >= MAX_PATHS && !out2.has(p)) return;
+        let entry = out2.get(p);
+        if (!entry) {
+          entry = { path: p, types: /* @__PURE__ */ new Set(), sources: /* @__PURE__ */ new Set(), evidence: /* @__PURE__ */ new Set() };
+          out2.set(p, entry);
+        }
+        for (const t of [].concat(type || "unknown")) entry.types.add(t);
+        entry.sources.add(source);
+        entry.evidence.add(detail || `${source}: ${p}`);
+      };
+      const walkSample = (v, p, source, detail, depth = 0, ancestors = /* @__PURE__ */ new Set()) => {
+        if (depth > MAX_DEPTH || ++work > MAX_NODES || ancestors.has(v)) return;
+        if (typeof v === "string" && /^[\s]*[\[{]/.test(v)) {
+          const parsed = decoded(v);
+          if (parsed !== v) v = parsed;
+        }
+        add(p, jsonType(v), source, detail);
+        if (!v || typeof v !== "object") return;
+        const next = new Set(ancestors);
+        next.add(v);
+        if (Array.isArray(v)) for (const x of v) walkSample(x, `${p}[]`, source, detail, depth + 1, next);
+        else for (const [name, x] of Object.entries(v)) if (fieldName(name)) walkSample(x, `${p}.${name}`, source, detail, depth + 1, next);
+      };
+      function jsonSchema(root, prefix) {
+        const resolve2 = (ref) => {
+          if (ref === "#") return root;
+          if (typeof ref !== "string" || !ref.startsWith("#/")) return null;
+          let node = root;
+          for (const part of ref.slice(2).split("/").map((s) => s.replace(/~1/g, "/").replace(/~0/g, "~"))) {
+            if (!node || typeof node !== "object" || !Object.hasOwn(node, part)) return null;
+            node = node[part];
+          }
+          return node;
+        };
+        function visit(node, p, depth = 0, ancestors = /* @__PURE__ */ new Set()) {
+          if (node === true) {
+            add(p, "unknown", "json-schema");
+            return;
+          }
+          if (!node || typeof node !== "object" || Array.isArray(node) || depth > MAX_DEPTH || ++work > MAX_NODES || ancestors.has(node)) return;
+          const next = new Set(ancestors);
+          next.add(node);
+          const types = [].concat(node.type || []).filter((t) => ["object", "array", "null", "string", "number", "integer", "boolean"].includes(t));
+          if (node.properties && typeof node.properties === "object" && !Array.isArray(node.properties)) types.push("object");
+          if (node.items || node.prefixItems) types.push("array");
+          if (Array.isArray(node.enum)) types.push(...node.enum.map(jsonType));
+          if (Object.hasOwn(node, "const")) types.push(jsonType(node.const));
+          if (node.nullable === true) types.push("null");
+          if (types.length) add(p, types, "json-schema");
+          if (node.$ref) visit(resolve2(node.$ref), p, depth + 1, next);
+          for (const keyword of ["allOf", "anyOf", "oneOf"]) if (Array.isArray(node[keyword])) for (const variant of node[keyword]) visit(variant, p, depth + 1, next);
+          if (node.properties && typeof node.properties === "object" && !Array.isArray(node.properties)) {
+            for (const [name, definition] of Object.entries(node.properties)) if (fieldName(name)) visit(definition, `${p}.${name}`, depth + 1, next);
+          }
+          if (Array.isArray(node.items)) for (const item of node.items) visit(item, `${p}[]`, depth + 1, next);
+          else if (node.items) visit(node.items, `${p}[]`, depth + 1, next);
+          if (Array.isArray(node.prefixItems)) for (const item of node.prefixItems) visit(item, `${p}[]`, depth + 1, next);
+          if (!out2.has(p)) add(p, "unknown", "json-schema");
+        }
+        visit(root, prefix);
+      }
+      function avroSchema(root, prefix) {
+        const names = /* @__PURE__ */ new Map(), seen = /* @__PURE__ */ new Set();
+        const fullname = (node, namespace) => node.name?.includes(".") ? node.name : [node.namespace || namespace, node.name].filter(Boolean).join(".");
+        function collect(node, namespace = "", depth = 0) {
+          if (!node || typeof node !== "object" || seen.has(node) || depth > MAX_DEPTH || ++work > MAX_NODES) return;
+          seen.add(node);
+          if (Array.isArray(node)) {
+            for (const branch of node) collect(branch, namespace, depth + 1);
+            return;
+          }
+          if (["record", "enum", "fixed"].includes(node.type) && typeof node.name === "string") {
+            const full = fullname(node, namespace);
+            names.set(full, node);
+            namespace = full.split(".").slice(0, -1).join(".");
+          }
+          for (const f of Array.isArray(node.fields) ? node.fields : []) collect(f?.type, namespace, depth + 1);
+          collect(node.items, namespace, depth + 1);
+          collect(node.values, namespace, depth + 1);
+          if (typeof node.type === "object") collect(node.type, namespace, depth + 1);
+        }
+        collect(root);
+        function visit(node, p, namespace = "", depth = 0, ancestors = /* @__PURE__ */ new Set()) {
+          if (node == null || depth > MAX_DEPTH || ++work > MAX_NODES) return;
+          if (typeof node === "string") {
+            const type = primitive(node);
+            if (type) add(p, type, "avro-schema");
+            else {
+              const target = names.get(node.includes(".") ? node : [namespace, node].filter(Boolean).join("."));
+              if (target) visit(target, p, namespace, depth + 1, ancestors);
+              else add(p, "unknown", "avro-schema");
+            }
+            return;
+          }
+          if (typeof node !== "object" || ancestors.has(node)) return;
+          const next = new Set(ancestors);
+          next.add(node);
+          if (Array.isArray(node)) {
+            for (const branch of node) visit(branch, p, namespace, depth + 1, next);
+            return;
+          }
+          if (node.type === "record") {
+            add(p, "object", "avro-schema");
+            const full = fullname(node, namespace), ns = full.split(".").slice(0, -1).join(".");
+            for (const f of Array.isArray(node.fields) ? node.fields : []) if (f && fieldName(f.name)) visit(f.type, `${p}.${f.name}`, ns, depth + 1, next);
+          } else if (node.type === "array") {
+            add(p, "array", "avro-schema");
+            visit(node.items, `${p}[]`, namespace, depth + 1, next);
+          } else if (node.type === "map") add(p, "object", "avro-schema");
+          else if (node.type === "enum" || node.type === "fixed") add(p, "string", "avro-schema");
+          else visit(node.type, p, namespace, depth + 1, next);
+        }
+        visit(root, prefix);
+      }
+      for (const side of ["key", "value"]) {
+        const definition = schemaOf(topic[`${side}Schema`]);
+        if (definition) {
+          if (definition.kind === "avro-schema") avroSchema(definition.schema, side);
+          else jsonSchema(definition.schema, side);
+        }
+        const shaped = [...out2.values()].some((p) => p.path.startsWith(side) && [...p.types].some(scalar));
+        if (!shaped) {
+          if (side === "value" && topic.fields && typeof topic.fields === "object") {
+            const fields = Array.isArray(topic.fields) ? topic.fields.map((f) => [f?.path || f?.name, f?.type]) : Object.entries(topic.fields);
+            for (const [name, raw] of fields) if (typeof name === "string") {
+              const p = /^(value|key|headers)(\.|\[\])/.test(name) ? name : `value.${name}`;
+              const t = typeof raw === "object" && raw ? raw.type : raw;
+              add(p, [].concat(t || "unknown").map((x) => primitive(x) || (["object", "array", "null", "integer", "number", "boolean", "string"].includes(x) ? x : "unknown")), "cached-fields");
+              const tokens = p.match(/^(?:value|key|headers)|\.[\w-]+|\[\]/g) || [];
+              let parent = "";
+              for (let i = 0; i < tokens.length - 1; i++) {
+                parent += tokens[i];
+                add(parent, tokens[i + 1] === "[]" ? "array" : "object", "cached-fields");
+              }
+            }
+          }
+          for (const [i, sample] of (Array.isArray(topic.samples) ? topic.samples : []).entries()) if (sample && Object.hasOwn(sample, side)) walkSample(sample[side], side, "cached-sample", `cached sample[${i}]: ${side}`);
+        }
+      }
+      for (const [i, sample] of (Array.isArray(topic.samples) ? topic.samples : []).entries()) if (sample && Object.hasOwn(sample, "headers")) walkSample(sample.headers, "headers", "cached-sample", `cached sample[${i}]: headers`);
+      return [...out2.values()].sort((a, b) => a.path.localeCompare(b.path)).map((e) => ({ path: e.path, types: [...e.types].sort(), sources: [...e.sources].sort(), evidence: [...e.evidence].sort() }));
+    }
+    function validatePath(topic, path3) {
+      return validPath(path3) && (path3 === "headers" || path3.startsWith("headers.") || path3.startsWith("headers[]") || paths(topic).some((p) => p.path === path3));
+    }
+    function singular(name) {
+      if (/ies$/i.test(name)) return name.slice(0, -3) + "y";
+      if (/(?:sses|shes|ches|xes|zes|statuses)$/i.test(name)) return name.slice(0, -2);
+      return /s$/i.test(name) && !/(?:ss|us|is)$/i.test(name) ? name.slice(0, -1) : name;
+    }
+    function candidates(tables = [], topics = []) {
+      const columns = /* @__PURE__ */ new Map();
+      for (const t of tables) {
+        if (!t || typeof t !== "object") continue;
+        const table2 = t.table || (t.schema && t.name ? `${t.schema}.${t.name}` : null);
+        if (!table2 || !t.db) continue;
+        for (const c of t.columns || []) {
+          if (!c?.name) continue;
+          const aliases = /* @__PURE__ */ new Map([[normalized(c.name), `normalized field name equals column ${c.name}`]]);
+          if (normalized(c.name) === "id") {
+            const entity = table2.split(".").at(-1);
+            aliases.set(normalized(singular(entity) + "Id"), `table semantic id: ${table2}.id \u2192 ${singular(entity)}Id`);
+            aliases.set(normalized(entity + "Id"), `table semantic id: ${table2}.id \u2192 ${entity}Id`);
+          }
+          for (const [alias, evidence] of aliases) {
+            if (!alias) continue;
+            if (!columns.has(alias)) columns.set(alias, []);
+            columns.get(alias).push({ from: { db: t.db, table: table2, column: c.name }, evidence });
+          }
+        }
+      }
+      const out2 = /* @__PURE__ */ new Map();
+      for (const topic of topics) {
+        if (typeof topic?.topic !== "string" || !topic.topic) continue;
+        for (const p of paths(topic)) {
+          if (!p.types.some(scalar) || p.types.some((t) => t === "array" || t === "object")) continue;
+          const leaf = p.path.split(".").at(-1).replace(/(?:\[\])+$/, "");
+          for (const c of columns.get(normalized(leaf)) || []) {
+            const key = JSON.stringify([topic.topic, p.path, c.from]);
+            const evidence = [.../* @__PURE__ */ new Set([c.evidence, ...p.evidence, "Candidate only; confirm from service code or a schema contract before adding a match."])];
+            if (!out2.has(key)) out2.set(key, { topic: topic.topic, path: p.path, from: c.from, source: "candidate", verified: false, evidence });
+            else out2.get(key).evidence = [.../* @__PURE__ */ new Set([...out2.get(key).evidence, ...evidence])];
+          }
+        }
+      }
+      return [...out2.values()].sort((a, b) => JSON.stringify([a.topic, a.path, a.from]).localeCompare(JSON.stringify([b.topic, b.path, b.from])));
+    }
+    module2.exports = { paths, candidates, validatePath };
+  }
+});
+
+// lib/semantic-identity.js
+var require_semantic_identity = __commonJS({
+  "lib/semantic-identity.js"(exports2, module2) {
+    var enc = (s) => encodeURIComponent(String(s ?? "unknown"));
+    var dec = (s) => decodeURIComponent(s);
+    var identifier = (s) => /^[a-z_][a-z0-9_$]*$/.test(String(s)) ? String(s) : '"' + String(s).replace(/"/g, '""') + '"';
+    var qualified = (...parts) => parts.map(identifier).join(".");
+    var norm = (s) => (String(s || "").match(/"(?:""|[^"])*"|[^"]+/g) || []).map((x) => x.startsWith('"') ? identifier(x.slice(1, -1).replace(/""/g, '"')) : x.replace(/\s+/g, "").toLowerCase()).join("");
+    var signature = (m) => `${m.name}(${(m.params || []).map((p) => String(p.type || "?").replace(/\s+/g, "")).join(",")})`;
+    function code(repo, revision2, symbol) {
+      return `code:${enc(repo)}@${enc(revision2 || "unknown")}:${symbol}`;
+    }
+    function parseCode(id) {
+      const m = String(id).match(/^code:([^@]+)@([^:]+):(.+)$/);
+      return m ? { repo: dec(m[1]), revision: dec(m[2]), symbol: m[3] } : null;
+    }
+    function pg(kind, env, db, object) {
+      return `${kind}:${enc(env)}:${enc(db)}:${norm(object)}`;
+    }
+    function parsePg(id) {
+      const m = String(id).match(/^(table|column|pgfn):([^:]+):([^:]+):(.+)$/);
+      return m ? { kind: m[1], env: dec(m[2]), db: dec(m[3]), object: m[4] } : null;
+    }
+    var revision = (idx) => idx?.workspace || idx?.key?.startsWith("work/") ? `${idx?.sha || "unknown"}+work:${idx?.sourceDigest || idx?.builtAt || "unknown"}` : idx?.revisionKey ? `${idx.sha}+source:${idx.sourceDigest}` : idx?.sha || "unknown";
+    module2.exports = { protocol: "dt.identity/v1", code, parseCode, pg, parsePg, signature, norm, revision, identifier, qualified };
+  }
+});
+
+// lib/passport/extract.js
+var require_extract = __commonJS({
+  "lib/passport/extract.js"(exports2, module2) {
+    var fs3 = require("fs");
+    var path3 = require("path");
+    var SKIP_DIRS = /* @__PURE__ */ new Set([".git", "target", "build", "node_modules", ".gradle", ".idea", "out", "bin", ".mvn", "dist"]);
+    var EXT = /\.(java|kt|kts|groovy|ya?ml|properties|xml|sql|gradle|toml)$/;
+    var MAX_FILE = 1 << 20;
+    function walk(root) {
+      const out2 = [];
+      (function rec(dir) {
+        for (const e of fs3.readdirSync(dir, { withFileTypes: true })) {
+          if (e.isDirectory()) {
+            if (SKIP_DIRS.has(e.name) || e.name.startsWith(".")) continue;
+            const rel = path3.relative(root, path3.join(dir, e.name)).split(path3.sep).join("/");
+            if (/(^|\/)src\/(test|it|integrationTest)(\/|$)/.test(rel)) continue;
+            rec(path3.join(dir, e.name));
+          } else if (EXT.test(e.name)) {
+            const full = path3.join(dir, e.name);
+            const st = fs3.statSync(full);
+            if (st.size <= MAX_FILE) out2.push({ path: path3.relative(root, full).split(path3.sep).join("/"), text: fs3.readFileSync(full, "utf8") });
+          }
+        }
+      })(root);
+      return out2;
+    }
+    var lineCache = /* @__PURE__ */ new Map();
+    var lineAt = (text, idx) => {
+      let nl = lineCache.get(text);
+      if (!nl) {
+        nl = [];
+        for (let i = 0; i < text.length; i++) if (text.charCodeAt(i) === 10) nl.push(i);
+        lineCache.set(text, nl);
+        if (lineCache.size > 64) lineCache.delete(lineCache.keys().next().value);
+      }
+      let lo = 0, hi = nl.length;
+      while (lo < hi) {
+        const m = lo + hi >> 1;
+        if (nl[m] < idx) lo = m + 1;
+        else hi = m;
+      }
+      return lo + 1;
+    };
+    function parseProperties(text) {
+      const out2 = {};
+      for (const raw of text.split(/\r?\n/)) {
+        const line = raw.trim();
+        if (!line || line[0] === "#" || line[0] === "!") continue;
+        const m = line.match(/^([^=:\s]+)\s*[=:]\s*(.*)$/);
+        if (m) out2[m[1]] = m[2].trim();
+      }
+      return out2;
+    }
+    var unquote = (v) => {
+      v = v.trim();
+      return /^(['"]).*\1$/.test(v) ? v.slice(1, -1) : v;
+    };
+    function stripYamlComment(v) {
+      let q = null;
+      for (let i = 0; i < v.length; i++) {
+        const c = v[i];
+        if (q) {
+          if (c === q) q = null;
+          continue;
+        }
+        if (c === '"' || c === "'") q = c;
+        else if (c === "#" && (i === 0 || /\s/.test(v[i - 1]))) return v.slice(0, i).trimEnd();
+      }
+      return v;
+    }
+    function parseYaml(text) {
+      const docs = [];
+      for (const doc of text.split(/^---\s*$/m)) {
+        const flat = {};
+        const stack = [{ indent: -1, key: "" }];
+        const listIdx = {};
+        let block = null;
+        for (const raw of doc.split(/\r?\n/)) {
+          if (block) {
+            const ind = raw.match(/^ */)[0].length;
+            if (raw.trim() === "" || ind > block.indent) {
+              flat[block.key] = (flat[block.key] ? flat[block.key] + "\n" : "") + raw.trim();
+              continue;
+            }
+            block = null;
+          }
+          if (!raw.trim() || raw.trim().startsWith("#")) continue;
+          const indent = raw.match(/^ */)[0].length;
+          let line = stripYamlComment(raw.trim());
+          while (stack.length > 1 && stack[stack.length - 1].indent >= indent && !(line.startsWith("- ") && stack[stack.length - 1].indent === indent && stack[stack.length - 1].list)) stack.pop();
+          const parent = stack[stack.length - 1].key;
+          if (line.startsWith("- ") || line === "-") {
+            const i = listIdx[parent] = (listIdx[parent] ?? -1) + 1;
+            const item = line.slice(1).trim();
+            const key2 = `${parent}[${i}]`;
+            const kv = item.match(/^([^:]+?):\s*(.*)$/);
+            if (kv && !/^["']/.test(item)) {
+              stack.push({ indent, key: key2, list: true });
+              if (kv[2]) flat[`${key2}.${kv[1].trim()}`] = unquote(kv[2]);
+              else stack.push({ indent: indent + 2, key: `${key2}.${kv[1].trim()}` });
+            } else flat[key2] = unquote(item);
+            continue;
+          }
+          const m = line.match(/^(["']?)([^"':]+?)\1\s*:(?:\s+(.*)|\s*)$/);
+          if (!m) continue;
+          const key = parent ? `${parent}.${m[2].trim()}` : m[2].trim();
+          const val = m[3];
+          if (val === void 0 || val === "") stack.push({ indent, key });
+          else if (/^[|>][-+]?$/.test(val)) block = { key, indent };
+          else if (/^\[.*\]$/.test(val)) val.slice(1, -1).split(",").map((s) => unquote(s)).filter(Boolean).forEach((v, i) => {
+            flat[`${key}[${i}]`] = v;
+          });
+          else flat[key] = unquote(val);
+        }
+        docs.push(flat);
+      }
+      return docs;
+    }
+    function loadConfig(files) {
+      const sources = [];
+      for (const f of files) {
+        const base = path3.basename(f.path);
+        const m = base.match(/^(application|bootstrap)(?:-([\w.-]+))?\.(ya?ml|properties)$/);
+        if (!m || !/src\/main\/resources|^[^/]*$|config\//.test(f.path)) continue;
+        const docs = m[3] === "properties" ? [parseProperties(f.text)] : parseYaml(f.text);
+        for (const props of docs) {
+          const profile = m[2] || props["spring.config.activate.on-profile"] || props["spring.profiles"] || null;
+          sources.push({ file: f.path, profile, props });
+        }
+      }
+      sources.sort((a, b) => (a.profile ? 1 : 0) - (b.profile ? 1 : 0));
+      const merged = {};
+      for (const s of sources) for (const [k, v] of Object.entries(s.props)) if (!(k in merged)) merged[k] = v;
+      return { sources, merged, profiles: [...new Set(sources.map((s) => s.profile).filter(Boolean))] };
+    }
+    function resolver(merged, unresolved) {
+      const relaxed = (k) => merged[k] ?? merged[k.replace(/-([a-z])/g, (_, c) => c.toUpperCase())] ?? merged[k.replace(/[A-Z]/g, (c) => "-" + c.toLowerCase())];
+      const resolve2 = (s, depth = 0) => {
+        if (typeof s !== "string" || depth > 5) return s;
+        return s.replace(/\$\{([^}:]+)(?::([^}]*))?\}/g, (all, key, def) => {
+          const v = relaxed(key.trim());
+          if (v !== void 0) return resolve2(String(v), depth + 1);
+          if (def !== void 0) return resolve2(def, depth + 1);
+          unresolved.add(key.trim());
+          return all;
+        });
+      };
+      return resolve2;
+    }
+    function stripComments(t) {
+      const parts = [];
+      let i = 0, from = 0, q = null;
+      const blank = (a, b) => t.slice(a, b).replace(/[^\n]/g, " ");
+      while (i < t.length) {
+        const c = t[i];
+        if (q) {
+          if (c === "\\") {
+            i += 2;
+            continue;
+          }
+          if (c === q || c === "\n") q = null;
+          i++;
+          continue;
+        }
+        if (c === '"' && t.startsWith('"""', i)) {
+          const e = t.indexOf('"""', i + 3);
+          i = e < 0 ? t.length : e + 3;
+          continue;
+        }
+        if (c === '"' || c === "'") {
+          q = c;
+          i++;
+          continue;
+        }
+        if (c === "/" && t[i + 1] === "/") {
+          const e = t.indexOf("\n", i);
+          const end = e < 0 ? t.length : e;
+          parts.push(t.slice(from, i), blank(i, end));
+          i = from = end;
+          continue;
+        }
+        if (c === "/" && t[i + 1] === "*") {
+          const e = t.indexOf("*/", i + 2);
+          const end = e < 0 ? t.length : e + 2;
+          parts.push(t.slice(from, i), blank(i, end));
+          i = from = end;
+          continue;
+        }
+        i++;
+      }
+      parts.push(t.slice(from));
+      return parts.join("");
+    }
+    function balanced(t, idx, open = "(", close = ")") {
+      let depth = 0, q = null;
+      for (let i = idx; i < t.length; i++) {
+        const c = t[i];
+        if (q) {
+          if (c === "\\") {
+            i++;
+            continue;
+          }
+          if (c === q) q = null;
+          continue;
+        }
+        if (c === '"' || c === "'") q = c;
+        else if (c === open) depth++;
+        else if (c === close && --depth === 0) return { inner: t.slice(idx + 1, i), end: i + 1 };
+      }
+      return { inner: t.slice(idx + 1), end: t.length };
+    }
+    function splitTop(s) {
+      const parts = [];
+      let depth = 0, q = null, cur = "";
+      for (let i = 0; i < s.length; i++) {
+        const c = s[i];
+        if (q) {
+          cur += c;
+          if (c === "\\") {
+            cur += s[++i] || "";
+            continue;
+          }
+          if (c === q) q = null;
+          continue;
+        }
+        if (c === '"' || c === "'") {
+          q = c;
+          cur += c;
+          continue;
+        }
+        if ("({[".includes(c)) depth++;
+        if (")}]".includes(c)) depth--;
+        if (c === "," && depth === 0) {
+          parts.push(cur);
+          cur = "";
+          continue;
+        }
+        cur += c;
+      }
+      if (cur.trim()) parts.push(cur);
+      return parts.map((p) => p.trim());
+    }
+    function annoArgs(inner) {
+      const out2 = {};
+      for (const part of splitTop(inner || "")) {
+        const m = part.match(/^(\w+)\s*=\s*([\s\S]*)$/);
+        const key = m ? m[1] : "value";
+        out2[key] = parseValue(m ? m[2] : part);
+      }
+      return out2;
+    }
+    function parseValue(v) {
+      v = v.trim();
+      if (/^[{[]/.test(v)) return splitTop(v.slice(1, -1)).flatMap(parseValue);
+      const lits = [...v.matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((m) => m[1]);
+      if (lits.length && /^("(?:[^"\\]|\\.)*"\s*\+?\s*)+$/.test(v)) return [lits.join("")];
+      if (lits.length === 1 && /^"/.test(v)) return [lits[0]];
+      return v ? [{ expr: v }] : [];
+    }
+    function annotations(t, names) {
+      const re2 = new RegExp(`@(${names.join("|")})\\b`, "g");
+      const out2 = [];
+      let m;
+      while (m = re2.exec(t)) {
+        let end = m.index + m[0].length, args = {};
+        const rest = t.slice(end).match(/^\s*\(/);
+        if (rest) {
+          const b = balanced(t, end + rest[0].length - 1);
+          args = annoArgs(b.inner);
+          end = b.end;
+        }
+        out2.push({ name: m[1], args, start: m.index, end });
+      }
+      return out2;
+    }
+    function methodAfter(t, idx) {
+      let s = t.slice(idx, idx + 600);
+      for (let guard = 0; guard < 12; guard++) {
+        const a = s.match(/^\s*@[\w.]+/);
+        if (!a) break;
+        let cut = a[0].length;
+        const p = s.slice(cut).match(/^\s*\(/);
+        if (p) cut += balanced(s, cut + p[0].length - 1).end - cut;
+        s = s.slice(cut);
+      }
+      const kt = s.match(/^\s*(?:(?:public|private|protected|internal|open|override|suspend)\s+)*fun\s+(?:<[^>]*>\s*)?(\w+)\s*\(/);
+      if (kt) return kt[1];
+      const java = s.match(/^\s*(?:(?:public|protected|private|static|final|default|synchronized|abstract)\s+)*(?:<[^>]*>\s*)?[\w.]+(?:\s*<[^()]*?>)?(?:\[\])?\s+(\w+)\s*\(/);
+      return java ? java[1] : null;
+    }
+    var typeDecl = /(?:^|\s)(?:class|interface|object|enum)\s+(\w+)/g;
+    function typeAt(t, idx) {
+      let name = null, m;
+      typeDecl.lastIndex = 0;
+      while ((m = typeDecl.exec(t)) && m.index < idx) name = m[1];
+      return name;
+    }
+    var joinPath = (...ps) => ("/" + ps.filter(Boolean).join("/")).replace(/\/+/g, "/").replace(/(.)\/$/, "$1");
+    var HTTP_ANNO = { GetMapping: "GET", PostMapping: "POST", PutMapping: "PUT", DeleteMapping: "DELETE", PatchMapping: "PATCH", RequestMapping: null };
+    var MAPPINGS = Object.keys(HTTP_ANNO);
+    var snake = (s) => s.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
+    var SQL_NOT_TABLE = /* @__PURE__ */ new Set(["select", "lateral", "unnest", "generate_series", "dual", "values", "where", "on", "set", "jsonb_array_elements", "json_array_elements", "jsonb_each", "table", "only", "the", "a", "an", "to", "and", "or", "not", "in", "is", "as", "this", "that", "it", "your", "our", "their", "all", "any", "each", "one"]);
+    var TABLE_RE = '("?[a-zA-Z_][\\w$]*"?(?:\\s*\\.\\s*"?[a-zA-Z_][\\w$]*"?)?)';
+    function sqlRefs(sql) {
+      const refs = [];
+      const add = (access, re2) => {
+        for (const m of sql.matchAll(re2)) {
+          const name = require_semantic_identity().norm(m[1]);
+          if (SQL_NOT_TABLE.has(name) || /^\d/.test(name)) continue;
+          if (access === "read" && /delete\s+$/i.test(sql.slice(Math.max(0, m.index - 8), m.index))) continue;
+          const after = sql.slice(m.index + m[0].length).trimStart();
+          refs.push({ table: name, access: after.startsWith("(") && access === "read" ? "function" : access });
+        }
+      };
+      add("read", new RegExp(`\\b(?:from|join)\\s+${TABLE_RE}`, "gi"));
+      add("write", new RegExp(`\\binsert\\s+into\\s+${TABLE_RE}`, "gi"));
+      add("write", new RegExp(`\\bupdate\\s+${TABLE_RE}\\s+set\\b`, "gi"));
+      add("write", new RegExp(`\\bdelete\\s+from\\s+${TABLE_RE}`, "gi"));
+      add("write", new RegExp(`\\bmerge\\s+into\\s+${TABLE_RE}`, "gi"));
+      add("write", new RegExp(`\\btruncate\\s+(?:table\\s+)?${TABLE_RE}`, "gi"));
+      return refs;
+    }
+    var SQL_NOT_FN = new Set("select from where in exists values any all some as on using and or not case when then else end coalesce nullif greatest least cast count sum min max avg lower upper trim now concat substring position extract array row over filter within lateral unnest into table with returning set join by group order limit offset distinct between like ilike is null interval date timestamp length round abs floor ceil to_char to_date to_timestamp to_number date_trunc date_part string_agg array_agg json_agg jsonb_agg json_build_object jsonb_build_object row_number rank dense_rank lag lead first_value last_value nextval currval setval gen_random_uuid uuid_generate_v4 md5 replace split_part regexp_replace regexp_matches format left right char varchar numeric decimal int integer bigint smallint text jsonb json bool boolean float double real primary key references foreign unique check default index create alter update delete insert merge call perform execute return returns function procedure if raise loop for while begin declare language of do conflict constraint generate_series jsonb_array_elements json_array_elements jsonb_each jsonb_set to_jsonb to_json array_length cardinality mod power sqrt random age make_interval new char_length octet_length chr ascii initcap lpad rpad btrim ltrim rtrim strpos reverse repeat translate encode decode jsonb_extract_path_text jsonb_typeof jsonb_array_length row_to_json array_to_json array_to_string string_to_array bool_and bool_or every percentile_cont percentile_disc mode ntile cume_dist percent_rank nth_value current_setting set_config pg_sleep exp ln log sign trunc width_bucket clock_timestamp statement_timestamp transaction_timestamp timeofday justify_days date_bin isfinite overlaps".split(" "));
+    function sqlCalls(sql) {
+      const out2 = /* @__PURE__ */ new Set();
+      for (const m of sql.matchAll(/(?<![\w$."'])("?[a-zA-Z_][\w$]*"?(?:\s*\.\s*"?[a-zA-Z_][\w$]*"?)?)\s*\(/g)) {
+        const name = require_semantic_identity().norm(m[1]);
+        const parts = name.split(".");
+        if (SQL_NOT_FN.has(parts[parts.length - 1]) || parts[0] === "pg_catalog") continue;
+        if (/\b(into|table|references|exists|index|on|view|type)\s*$/i.test(sql.slice(Math.max(0, m.index - 12), m.index))) continue;
+        out2.add(name);
+      }
+      return [...out2];
+    }
+    var looksCall = (s) => /\b(select|call|perform)\s+"?[\w.]+"?\s*\(/i.test(s) || /\{\s*(\?\s*=\s*)?call\s/i.test(s);
+    var looksSql = (s) => /\b(select\s[\s\S]*\bfrom|insert\s+into|update\s+\S+\s+set|delete\s+from|merge\s+into|truncate)\b/i.test(s);
+    function stringLiterals(t) {
+      const out2 = [];
+      const re2 = /"""([\s\S]*?)"""|"((?:[^"\\\n]|\\.)*)"/g;
+      let m, cur = null;
+      while (m = re2.exec(t)) {
+        const val = m[1] !== void 0 ? m[1] : m[2].replace(/\\n/g, "\n").replace(/\\"/g, '"');
+        if (cur && /^\s*\+\s*$/.test(t.slice(cur.end, m.index))) {
+          cur.value += val;
+          cur.end = m.index + m[0].length;
+          continue;
+        }
+        if (cur) out2.push(cur);
+        cur = { value: val, index: m.index, end: m.index + m[0].length };
+      }
+      if (cur) out2.push(cur);
+      return out2;
+    }
+    var tag = (xml, name) => {
+      const m = xml.match(new RegExp(`<${name}>\\s*([^<]*?)\\s*</${name}>`));
+      return m ? m[1] : null;
+    };
+    function parsePom(text) {
+      const noComments = text.replace(/<!--[\s\S]*?-->/g, "");
+      const props = {};
+      const propsBlock = noComments.match(/<properties>([\s\S]*?)<\/properties>/);
+      if (propsBlock) for (const m of propsBlock[1].matchAll(/<([\w.-]+)>\s*([^<]*?)\s*<\/\1>/g)) props[m[1]] = m[2];
+      const parentBlock = noComments.match(/<parent>([\s\S]*?)<\/parent>/);
+      const parent = parentBlock ? { groupId: tag(parentBlock[1], "groupId"), artifactId: tag(parentBlock[1], "artifactId"), version: tag(parentBlock[1], "version") } : null;
+      const head = noComments.replace(/<parent>[\s\S]*?<\/parent>/, "").replace(/<(dependencies|dependencyManagement|build|profiles|properties|modules|repositories|pluginRepositories|distributionManagement|reporting)>[\s\S]*?<\/\1>/g, "");
+      const self2 = { groupId: tag(head, "groupId") || parent?.groupId, artifactId: tag(head, "artifactId"), version: tag(head, "version") || parent?.version };
+      props["project.version"] = self2.version;
+      props["project.groupId"] = self2.groupId;
+      if (parent?.version) props["project.parent.version"] = parent.version;
+      const res = (v) => v && v.replace(/\$\{([^}]+)\}/g, (a, k) => props[k] ?? a);
+      const deps = [];
+      for (const m of noComments.matchAll(/<dependency>([\s\S]*?)<\/dependency>/g)) {
+        const d = m[1];
+        deps.push({ groupId: res(tag(d, "groupId")), artifactId: res(tag(d, "artifactId")), version: res(tag(d, "version")), scope: tag(d, "scope") || (tag(d, "type") === "pom" ? "import" : null) });
+      }
+      return { self: self2, parent, deps, props };
+    }
+    function gradleVars(text) {
+      const out2 = {};
+      const t = text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'])\/\/[^\n]*/g, "$1");
+      const str = (v) => {
+        const m = String(v).trim().match(/^(["'])((?:(?!\1).)*)\1/);
+        return m ? m[2] : null;
+      };
+      const put = (k, raw) => {
+        const v = String(raw).trim();
+        const map = v.match(/^\[([\s\S]*)\]$/) || v.match(/^mapOf\(([\s\S]*)\)$/);
+        if (map) {
+          for (const m of map[1].matchAll(/["']?([\w.-]+)["']?\s*(?::|to)\s*(["'][^"']*["'])/g)) out2[`${k}.${m[1]}`] = str(m[2]);
+          return;
+        }
+        const s = str(v);
+        if (s !== null) out2[k] = s;
+        else if (/^[\d.]+$/.test(v)) out2[k] = v;
+        else if (/^[\w.]+$/.test(v)) out2[k] = `\${${v}}`;
+      };
+      for (const m of t.matchAll(/\b(?:project\.)?ext\s*\{/g)) {
+        let depth = 1, i = m.index + m[0].length;
+        const start = i;
+        for (; i < t.length && depth; i++) {
+          if (t[i] === "{") depth++;
+          else if (t[i] === "}") depth--;
+        }
+        const body = t.slice(start, i - 1);
+        for (const a of body.matchAll(/^\s*(?:set\s*\(\s*["'](\w+)["']\s*,\s*([^)\n]+)\)|(\w+)\s*=\s*(\[[\s\S]*?\]|[^\n]+))/gm)) put(a[1] || a[3], (a[2] || a[4]).replace(/[;,]\s*$/, ""));
+      }
+      const line = [
+        /\b(?:project\.)?ext\.(\w+)\s*=\s*(\[[\s\S]*?\]|[^\n;]+)/g,
+        /\bext\s*\[\s*["'](\w+)["']\s*\]\s*=\s*([^\n;]+)/g,
+        /\b(?:project\.)?ext\.set\s*\(\s*["'](\w+)["']\s*,\s*([^)\n]+)\)/g,
+        /\bextra\s*\[\s*["'](\w+)["']\s*\]\s*=\s*([^\n;]+)/g,
+        /\bextra\.set\s*\(\s*["'](\w+)["']\s*,\s*([^)\n]+)\)/g,
+        /\bval\s+(\w+)(?:\s*:\s*String)?\s+by\s+extra\s*\(\s*([^)\n]+)\)/g,
+        /^\s*(?:def|val|var)\s+(\w+)(?:\s*:\s*String)?\s*=\s*(mapOf\([\s\S]*?\)|\[[\s\S]*?\]|[^\n;]+)/gm
+      ];
+      for (const re2 of line) for (const m of t.matchAll(re2)) put(m[1], m[2]);
+      return out2;
+    }
+    function gradleResolve(v, props) {
+      if (v == null) return v;
+      let out2 = String(v);
+      for (let i = 0; i < 5 && /\$/.test(out2); i++) {
+        const next = out2.replace(/\$\{([\w.]+)\}|\$([A-Za-z_]\w*(?:\.\w+)*)/g, (a, k1, k2) => {
+          const k = k1 || k2;
+          if (props[k] !== void 0) return props[k];
+          const parts = k.split(".");
+          for (let n = parts.length - 1; n > 0; n--) {
+            const head = parts.slice(0, n).join(".");
+            if (props[head] !== void 0) return props[head] + "." + parts.slice(n).join(".");
+          }
+          return a;
+        });
+        if (next === out2) break;
+        out2 = next;
+      }
+      return out2;
+    }
+    function parseGradle(text, props = {}) {
+      const deps = [];
+      const all = { ...props, ...gradleVars(text) };
+      const res = (v) => v ? gradleResolve(v, all) : v;
+      const conf = "implementation|api|compile|compileOnly|runtimeOnly|annotationProcessor|kapt|testImplementation";
+      const re2 = new RegExp(`\\b(${conf})\\s*\\(?\\s*(?:(?:platform|enforcedPlatform)\\s*\\(\\s*)?["']([^:"'\\s]+):([^:"'\\s]+)(?::([^"'\\s]+))?["']`, "g");
+      for (const m of text.matchAll(re2)) if (m[1] !== "testImplementation") deps.push({ groupId: m[2], artifactId: m[3], version: res(m[4]) || null, scope: m[1] });
+      const mapRe = new RegExp(`\\b(${conf})\\s*\\(?\\s*group\\s*[:=]\\s*["']([^"']+)["']\\s*,\\s*name\\s*[:=]\\s*["']([^"']+)["'](?:\\s*,\\s*version\\s*[:=]\\s*(["'][^"']*["']|[\\w.]+))?`, "g");
+      for (const m of text.matchAll(mapRe)) {
+        if (m[1] === "testImplementation") continue;
+        const v = m[4] ? /^["']/.test(m[4]) ? m[4].slice(1, -1) : `\${${m[4]}}` : null;
+        deps.push({ groupId: m[2], artifactId: m[3], version: res(v) || null, scope: m[1] });
+      }
+      const group = text.match(/^\s*group\s*=\s*["']([^"']+)["']/m);
+      const boot = text.match(/id\s*\(?\s*["']org\.springframework\.boot["']\s*\)?\s*version\s*["']([^"']+)["']/);
+      for (const d of deps) if (d.version && /\$/.test(d.version)) d.unresolvedVersion = true;
+      return { deps, group: group && group[1], bootVersion: boot && boot[1], vars: all };
+    }
+    function extract(root, { internalGroups = [] } = {}) {
+      const started = Date.now();
+      const files = walk(root);
+      const code = files.filter((f) => /\.(java|kt|groovy)$/.test(f.path)).map((f) => ({ ...f, clean: stripComments(f.text) }));
+      const unresolved = /* @__PURE__ */ new Set();
+      const cfg = loadConfig(files);
+      const resolve2 = resolver(cfg.merged, unresolved);
+      const at = (f, idx) => ({ file: f.path, line: lineAt(f.text, idx) });
+      const constants = {};
+      const valueFields = {};
+      for (const f of code) {
+        for (const m of f.clean.matchAll(/\b(?:static\s+final|final\s+static|const\s+val)\s+(?:String\s+)?(\w+)\s*(?::\s*String\s*)?=\s*((?:"(?:[^"\\]|\\.)*"\s*\+?\s*)+)/g)) {
+          constants[m[1]] = [...m[2].matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((x) => x[1]).join("");
+        }
+        for (const m of f.clean.matchAll(/@Value\s*\(\s*"([^"]+)"\s*\)\s*(?:(?:private|protected|public|final|lateinit|var|val)\s+)*(?:[\w<>]+\s+)?(\w+)/g)) valueFields[m[2]] = m[1];
+      }
+      const fromExpr = (x) => {
+        if (typeof x === "string") return resolve2(x);
+        const e = x.expr.trim();
+        const spel = e.match(/^"?#\{'?(\$\{[^}]+\})'?(?:\.split\([^)]*\))?\}"?$/);
+        if (spel) return resolve2(spel[1]);
+        const id = e.split(".").pop();
+        if (constants[id] !== void 0) return resolve2(constants[id]);
+        if (valueFields[id] !== void 0) return resolve2(valueFields[id]);
+        const getter = e.match(/(?:get)?(\w+)\(\)$/);
+        if (getter && valueFields[getter[1][0].toLowerCase() + getter[1].slice(1)]) return resolve2(valueFields[getter[1][0].toLowerCase() + getter[1].slice(1)]);
+        return { unresolved: e };
+      };
+      const values = (arr) => (arr || []).map(fromExpr).flatMap((v) => typeof v === "string" ? v.split(",").map((s) => s.trim()).filter(Boolean) : [v]);
+      const show = (v) => typeof v === "string" ? v : `?${v.unresolved}`;
+      const endpoints = [], feign = [], consumes = [], produces = [], tables = [], calls = [], esIndices = [], http2 = [];
+      for (const f of code) {
+        const t = f.clean;
+        const isController = /@(Rest)?Controller\b/.test(t);
+        const feignAnno = annotations(t, ["FeignClient"])[0];
+        if (isController || feignAnno) {
+          const firstType = t.search(/(?:^|\s)(?:class|interface)\s+\w+/);
+          const classMap = annotations(t.slice(0, Math.max(firstType, 0)), ["RequestMapping"])[0];
+          const base = classMap ? values(classMap.args.value || classMap.args.path).map(show)[0] || "" : "";
+          for (const a of annotations(t, MAPPINGS)) {
+            if (a.start < firstType) continue;
+            const paths = values(a.args.value || a.args.path).map(show);
+            const reqMethods = (a.args.method || []).map((x) => typeof x === "string" ? x : x.expr.split(".").pop());
+            const methods = HTTP_ANNO[a.name] ? [HTTP_ANNO[a.name]] : reqMethods.length ? reqMethods : ["ANY"];
+            const handler = `${typeAt(t, a.start)}.${methodAfter(t, a.end)}`;
+            for (const m of methods) for (const p of paths.length ? paths : [""]) {
+              const item = { method: m, path: joinPath(base, p), handler, ...at(f, a.start) };
+              if (feignAnno) {
+                const fa = feignAnno.args;
+                item.client = show(values(fa.name || fa.value || fa.contextId)[0] || "?");
+                item.url = fa.url ? show(values(fa.url)[0]) : null;
+                item.path = joinPath(fa.path ? show(values(fa.path)[0]) : "", base, p);
+                feign.push(item);
+              } else endpoints.push(item);
+            }
+          }
+        }
+        for (const a of annotations(t, ["KafkaListener"])) {
+          const topics = values(a.args.topics || a.args.value);
+          const pattern = a.args.topicPattern ? values(a.args.topicPattern).map(show) : [];
+          const group = a.args.groupId ? show(values(a.args.groupId)[0]) : a.args.id ? show(values(a.args.id)[0]) : null;
+          const handler = `${typeAt(t, a.start)}.${methodAfter(t, a.end) || "(class)"}`;
+          for (const tp of topics) consumes.push({ topic: show(tp), group, handler, via: "@KafkaListener", ...at(f, a.start) });
+          for (const p of pattern) consumes.push({ topic: p, pattern: true, group, handler, via: "@KafkaListener(topicPattern)", ...at(f, a.start) });
+        }
+        for (const m of t.matchAll(/(\w+)\s*\.\s*(send|sendDefault)\s*\(\s*/g)) {
+          const recv = m[1];
+          if (!/kafka|template|producer|publisher|bridge/i.test(recv) || /jms|rabbit|amqp|mail|sms|rest|web|http/i.test(recv)) continue;
+          const open = m.index + m[0].length - 1;
+          const args = splitTop(balanced(t, t.lastIndexOf("(", open)).inner);
+          let first = args[0] || "";
+          const pr = first.match(/new\s+ProducerRecord\s*(?:<[^>]*>)?\s*\(([\s\S]*)\)$/);
+          if (pr) first = splitTop(pr[1])[0];
+          if (m[2] === "sendDefault") {
+            produces.push({ topic: "(default topic)", via: `${recv}.sendDefault`, ...at(f, m.index) });
+            continue;
+          }
+          const v = parseValue(first)[0];
+          if (v === void 0) continue;
+          const topic = show(fromExpr(v));
+          if (/bridge/i.test(recv)) {
+            const dest = cfg.merged[`spring.cloud.stream.bindings.${topic}.destination`];
+            produces.push({ topic: dest ? resolve2(dest) : topic, binding: topic, via: "StreamBridge.send", ...at(f, m.index) });
+          } else produces.push({ topic, via: `${recv}.${m[2]}`, ...at(f, m.index) });
+        }
+        const ent = /@Entity\b/.test(t);
+        if (ent) {
+          const tbl = annotations(t, ["Table"])[0];
+          const cls = (t.match(/(?:class|data\s+class)\s+(\w+)/) || [])[1];
+          const name = tbl && (tbl.args.name || tbl.args.value) ? show(values(tbl.args.name || tbl.args.value)[0]) : snake(cls || "?");
+          const schema = tbl && tbl.args.schema ? show(values(tbl.args.schema)[0]) : null;
+          tables.push({ table: (schema ? `${schema}.${name}` : name).toLowerCase(), access: "entity", via: `@Entity ${cls}`, entity: cls, ...at(f, t.indexOf("@Entity")) });
+        }
+        for (const m of t.matchAll(/interface\s+(\w+)\s*(?:<[^>]*>)?\s*:?\s*(?:extends\s+)?[\w.]*?(Jpa|Crud|PagingAndSorting|ListCrud|ListPagingAndSorting|Reactive\w*|R2dbc|Coroutine\w*)Repository\s*<\s*(\w+)/g)) {
+          tables.push({ table: null, entity: m[3], access: "repository", via: `${m[1]} (${m[2]}Repository)`, ...at(f, m.index) });
+        }
+        for (const s of stringLiterals(t)) {
+          const isSql = looksSql(s.value);
+          if (!isSql && !looksCall(s.value)) continue;
+          const snippet = s.value.replace(/\s+/g, " ").slice(0, 300);
+          if (isSql) for (const r of sqlRefs(s.value)) tables.push({ ...r, via: "sql", sql: snippet, ...at(f, s.index) });
+          for (const name of sqlCalls(s.value)) calls.push({ name, via: "sql", sql: snippet, ...at(f, s.index) });
+        }
+        for (const a of annotations(t, ["Procedure", "NamedStoredProcedureQuery"])) {
+          const n = a.args.procedureName || a.name === "Procedure" && a.args.value;
+          if (n) calls.push({ name: show(values(n)[0]).toLowerCase(), via: `@${a.name}`, explicit: true, ...at(f, a.start) });
+        }
+        for (const m of t.matchAll(/\.(withProcedureName|withFunctionName|createStoredProcedureQuery)\s*\(\s*"([\w.]+)"/g)) {
+          calls.push({ name: m[2].toLowerCase(), via: m[1], explicit: true, ...at(f, m.index) });
+        }
+        for (const a of annotations(t, ["Document"])) {
+          if (a.args.indexName) esIndices.push({ index: show(values(a.args.indexName)[0]), via: "@Document", ...at(f, a.start) });
+        }
+        for (const m of t.matchAll(/IndexCoordinates\s*\.\s*of\s*\(\s*([^)]+)\)/g)) {
+          esIndices.push({ index: show(fromExpr(parseValue(splitTop(m[1])[0])[0] || { expr: m[1] })), via: "IndexCoordinates.of", ...at(f, m.index) });
+        }
+        for (const s of stringLiterals(t)) {
+          const u = s.value.match(/^(https?|lb):\/\/([^/\s"'$]+|\$\{[^}]+\})[^\s"']*$/);
+          if (u && !/(w3\.org|xmlns|schema|apache\.org|springframework\.org|example\.com)/i.test(s.value)) http2.push({ url: resolve2(s.value), target: resolve2(u[2]), via: "code", ...at(f, s.index) });
+        }
+      }
+      for (const f of files) {
+        const isMigration = /(db\/migration|liquibase|changelog|flyway|migrations?)\//i.test(f.path);
+        if (/\.sql$/.test(f.path) || /\.xml$/.test(f.path) && /<mapper\b|<changeSet\b|<databaseChangeLog\b/.test(f.text) || /\.ya?ml$/.test(f.path) && /databaseChangeLog/.test(f.text)) {
+          if (isMigration) {
+            for (const m of f.text.matchAll(new RegExp(`create\\s+table\\s+(?:if\\s+not\\s+exists\\s+)?${TABLE_RE}`, "gi"))) tables.push({ table: require_semantic_identity().norm(m[1]), access: "owner", via: "migration", ...at(f, m.index) });
+            for (const m of f.text.matchAll(/<createTable\b([^>]*)>/g)) {
+              const tn = (m[1].match(/tableName="([^"]+)"/) || [])[1];
+              const sc = (m[1].match(/schemaName="([^"]+)"/) || [])[1];
+              if (tn) tables.push({ table: (sc ? `${sc}.${tn}` : tn).toLowerCase(), access: "owner", via: "liquibase", ...at(f, m.index) });
+            }
+          } else {
+            const via = /\.xml$/.test(f.path) ? "mybatis" : "sql file";
+            for (const r of sqlRefs(f.text)) tables.push({ ...r, via, ...at(f, 0) });
+            for (const name of sqlCalls(f.text)) calls.push({ name, via, ...at(f, 0) });
+          }
+        }
+      }
+      const datasources = [];
+      const declaredTopics = [];
+      for (const [k, raw] of Object.entries(cfg.merged)) {
+        const v = resolve2(String(raw));
+        const b = k.match(/^spring\.cloud\.stream\.bindings\.([^.]+)\.destination$/);
+        if (b) {
+          const out2 = /-out-\d+$|output/i.test(b[1]);
+          (out2 ? produces : consumes).push({ topic: v, binding: b[1], group: out2 ? void 0 : resolve2(cfg.merged[`spring.cloud.stream.bindings.${b[1]}.group`] || "") || null, via: "stream binding", file: "config", line: 0, key: k });
+          continue;
+        }
+        if (/(^|\.)(url|jdbc-url|jdbcUrl)$/.test(k) && /^(jdbc|r2dbc):/.test(v)) {
+          const m = v.match(/^(?:jdbc|r2dbc):(\w+):(?:\/\/)?([^/?;]+)\/([^?;]+)/);
+          datasources.push({ key: k, kind: m ? m[1] : "unknown", host: m ? m[2] : null, db: m ? m[3] : null, url: v.replace(/password=[^&;]+/gi, "password=***") });
+          continue;
+        }
+        if (/topic/i.test(k) && /^[\w.\-]+$/.test(v) && !/^\d+$/.test(v) && !/(partitions|replicas|replication|retention|count|enabled|size|timeout)/i.test(k)) declaredTopics.push({ key: k, topic: v });
+        if (/^(https?|lb):\/\//.test(v)) http2.push({ url: v, target: (v.match(/^\w+:\/\/([^/:]+)/) || [])[1], key: k, via: "config", file: "config", line: 0 });
+        if (/(index(-|_)?name|\.index)$/i.test(k) && /^[\w.\-*]+$/.test(v)) esIndices.push({ index: v, via: "config", key: k, file: "config", line: 0 });
+      }
+      const entityTable = Object.fromEntries(tables.filter((t) => t.access === "entity").map((t) => [t.entity, t.table]));
+      for (const t of tables) if (t.access === "repository") t.table = entityTable[t.entity] || snake(t.entity);
+      const deps = [];
+      let self2 = null, bootVersion = null;
+      const gradleProps = {};
+      for (const f of files) if (/gradle\.properties$/.test(f.path)) Object.assign(gradleProps, parseProperties(f.text));
+      const scripts = files.filter((f) => /(build|settings)\.gradle(\.kts)?$/.test(f.path)).sort((a, b) => a.path.split("/").length - b.path.split("/").length);
+      for (const f of scripts) for (const [k, v] of Object.entries(gradleVars(f.text))) if (gradleProps[k] === void 0) gradleProps[k] = v;
+      const modules = /* @__PURE__ */ new Set();
+      for (const f of files) {
+        if (path3.basename(f.path) === "pom.xml") {
+          const p = parsePom(f.text);
+          if (!self2 || f.path === "pom.xml") self2 = p.self;
+          if (p.self.artifactId) modules.add(`${p.self.groupId}:${p.self.artifactId}`);
+          if (p.parent && p.parent.artifactId === "spring-boot-starter-parent") bootVersion = p.parent.version;
+          for (const d of p.deps) deps.push({ ...d, from: f.path });
+        } else if (/build\.gradle(\.kts)?$/.test(f.path)) {
+          const g = parseGradle(f.text, gradleProps);
+          if (g.group && !self2) self2 = { groupId: g.group, artifactId: path3.basename(root), version: gradleResolve(gradleProps.version, gradleProps) || null };
+          bootVersion = bootVersion || g.bootVersion;
+          for (const d of g.deps) deps.push({ ...d, from: f.path });
+        }
+      }
+      const ownPrefix = self2?.groupId ? self2.groupId.split(".").slice(0, 2).join(".") : null;
+      const isInternal = (g) => !!g && (internalGroups.length ? internalGroups.some((p) => g === p || g.startsWith(p + ".")) : !!ownPrefix && (g === ownPrefix || g.startsWith(ownPrefix + ".")));
+      const seen = /* @__PURE__ */ new Set();
+      const dependencies = { internal: [], external: [], modules: [...modules] };
+      for (const d of deps) {
+        const key = `${d.groupId}:${d.artifactId}`;
+        if (!d.groupId || seen.has(key) || modules.has(key)) continue;
+        seen.add(key);
+        (isInternal(d.groupId) ? dependencies.internal : dependencies.external).push({ groupId: d.groupId, artifactId: d.artifactId, version: d.version, scope: d.scope });
+      }
+      if (!bootVersion) bootVersion = (deps.find((d) => d.groupId === "org.springframework.boot" && d.version) || {}).version || null;
+      return {
+        app: {
+          name: cfg.merged["spring.application.name"] ? resolve2(cfg.merged["spring.application.name"]) : null,
+          groupId: self2?.groupId || null,
+          artifactId: self2?.artifactId || null,
+          version: self2?.version || null,
+          springBoot: bootVersion,
+          port: cfg.merged["server.port"] ? resolve2(String(cfg.merged["server.port"])) : null,
+          contextPath: cfg.merged["server.servlet.context-path"] ? resolve2(cfg.merged["server.servlet.context-path"]) : null,
+          profiles: cfg.profiles
+        },
+        endpoints,
+        feign,
+        kafka: { consumes, produces, declared: declaredTopics },
+        db: { datasources, tables, calls },
+        es: esIndices,
+        http: http2,
+        dependencies,
+        config: { files: [...new Set(cfg.sources.map((s) => s.file))], keys: Object.keys(cfg.merged).length, unresolved: [...unresolved].sort() },
+        stats: { files: files.length, sourceFiles: code.length, ms: Date.now() - started }
+      };
+    }
+    module2.exports = { extract, walk, parseYaml, parseProperties, parsePom, parseGradle, gradleVars, gradleResolve, sqlRefs, sqlCalls, stripComments, splitTop, balanced, annoArgs, methodAfter, stringLiterals, loadConfig, resolver };
+  }
+});
+
 // lib/passport/ports.js
 var require_ports = __commonJS({
   "lib/passport/ports.js"(exports2, module2) {
@@ -23612,6 +24366,13 @@ var require_trace4 = __commonJS({
       if (files > 1) fs3.renameSync(file, `${file}.1`);
       else fs3.rmSync(file, { force: true });
     }
+    function jsonStderr() {
+      try {
+        return (process.env.DT_LOG_FORMAT || require_config().load().raw.log?.format) === "json";
+      } catch {
+        return process.env.DT_LOG_FORMAT === "json";
+      }
+    }
     function write(event, c = context2()) {
       const trace2 = require_telemetry().carrier();
       if (trace2?.traceparent) {
@@ -23619,12 +24380,14 @@ var require_trace4 = __commonJS({
         event = { ...event, traceId, otelSpanId: spanId };
       }
       try {
-        append(logFile(), JSON.stringify(require_redact().clean({ at: (/* @__PURE__ */ new Date()).toISOString(), owner: c?.owner || require_access().owner(), ...event }, { known: callSecrets.get(c) || [] })), limits());
+        const line = JSON.stringify(require_redact().clean({ at: (/* @__PURE__ */ new Date()).toISOString(), owner: c?.owner || require_access().owner(), ...event }, { known: callSecrets.get(c) || [] }));
+        append(logFile(), line, limits());
+        if (jsonStderr() && level() !== "quiet") process.stderr.write(line + "\n");
       } catch {
       }
     }
     function say(text, c = context2()) {
-      if (level() !== "quiet") process.stderr.write(`${clock()} dt ${require_redact().clean(text, { known: callSecrets.get(c) || [] })}
+      if (level() !== "quiet" && !jsonStderr()) process.stderr.write(`${clock()} dt ${require_redact().clean(text, { known: callSecrets.get(c) || [] })}
 `);
     }
     var short = (args) => {
@@ -23646,13 +24409,14 @@ var require_trace4 = __commonJS({
         finish(c, { ok: true });
         return r;
       } catch (e) {
-        finish(c, { ok: false, error: e.message });
+        finish(c, { ok: false, error: e.message, cancelled: e.code === "DT_CANCELLED" || e.name === "AbortError" });
         throw e;
       } finally {
         running.delete(c.id);
       }
     }
-    function finish(c, { ok, error }) {
+    function finish(c, { ok, error, cancelled }) {
+      require_operational_metrics().record(c.kind, Date.now() - c.startedAt, cancelled ? "cancelled" : ok ? "succeeded" : "failed");
       c.state = ok ? "succeeded" : "failed";
       c.ms = Date.now() - c.startedAt;
       const slow = c.steps.filter((s) => s.depth === 0).map((s) => `${s.name} ${secs(s.ms)}${s.ok ? "" : " FAILED"}`).join(" \xB7 ");
@@ -25800,6 +26564,112 @@ var require_codeindex = __commonJS({
   }
 });
 
+// lib/passport/edges.js
+var require_edges = __commonJS({
+  "lib/passport/edges.js"(exports2, module2) {
+    var fs3 = require("fs");
+    var path3 = require("path");
+    var crypto = require("crypto");
+    var snapshots = /* @__PURE__ */ new Map();
+    var { create } = require_state_machine2();
+    var lifecycle = require_lifecycles().edgeSnapshot;
+    function validate(data) {
+      if (!data || typeof data !== "object" || Array.isArray(data) || typeof data.service !== "string" || !data.service || !data.effective || typeof data.effective !== "object" || Array.isArray(data.effective)) throw new Error("Invalid persisted passport: service and effective object required");
+      if (data.env != null && typeof data.env !== "string" || data.repo?.sha != null && typeof data.repo.sha !== "string") throw new Error("Invalid persisted passport environment/revision");
+      const arrays = (object, names) => {
+        for (const name of names) if (object?.[name] !== void 0 && (!Array.isArray(object[name]) || object[name].some((x) => !x || typeof x !== "object" || Array.isArray(x)))) throw new Error(`Invalid persisted passport edge array: ${name}`);
+      };
+      arrays(data.effective, ["consumes", "produces", "calls", "endpoints", "tables", "es", "feign"]);
+      arrays(data.effective.kafka, ["consumes", "produces"]);
+      return data;
+    }
+    function snapshot({ env, manual = true } = {}) {
+      const dir = require_passport().DIR, rows = [], gaps = [], signatures = [];
+      let dirs = [];
+      try {
+        dirs = fs3.readdirSync(dir, { withFileTypes: true }).filter((x) => x.isDirectory()).sort((a, b) => a.name.localeCompare(b.name));
+      } catch (e) {
+        if (e.code !== "ENOENT") gaps.push({ kind: "passport-read-error", message: e.message });
+      }
+      const alive = /* @__PURE__ */ new Set();
+      for (const d of dirs) {
+        const f = path3.join(dir, d.name, "passport.json");
+        alive.add(f);
+        let stamp;
+        try {
+          const s = fs3.statSync(f);
+          stamp = `${s.dev}:${s.ino}:${s.size}:${s.mtimeMs}:${s.ctimeMs}`;
+        } catch (e) {
+          if (e.code !== "ENOENT") gaps.push({ kind: "passport-read-error", service: d.name, message: e.message });
+          else snapshots.delete(f);
+          continue;
+        }
+        let m = snapshots.get(f);
+        if (!m || m.stamp !== stamp) {
+          const phase = m?.lifecycle || create(lifecycle);
+          try {
+            const raw = fs3.readFileSync(f);
+            const data = validate(JSON.parse(raw));
+            phase.to("valid");
+            m = { stamp, digest: crypto.createHash("sha256").update(raw).digest("hex"), data, lifecycle: phase };
+            snapshots.set(f, m);
+          } catch (e) {
+            phase.to(m?.data ? "stale" : "invalid");
+            m = { stamp, digest: `invalid:${stamp}`, data: m?.data, error: e.message, lifecycle: phase };
+            snapshots.set(f, m);
+          }
+        }
+        signatures.push([d.name, m.digest, m.error || ""]);
+        if (m.error) gaps.push({ kind: "passport-stale-last-good", service: d.name, message: m.error, retained: !!m.data });
+        if (m.data) {
+          const passport = manual ? require_overrides().apply(m.data, env ? { env } : {}) : m.data;
+          if (manual) signatures.push([d.name, "adjustment", passport.portAdjustments?.revision || ""]);
+          rows.push({ passport, stale: !!m.error, digest: m.digest });
+        }
+      }
+      for (const f of snapshots.keys()) if (!alive.has(f)) {
+        snapshots.get(f).lifecycle.to("removed");
+        snapshots.delete(f);
+      }
+      return { protocol: "dt.passport-edges/v1", signature: JSON.stringify(signatures), rows, gaps };
+    }
+    function normalize(p, { env, stale = false, digest } = {}) {
+      const effective = p.effective || {}, gaps = [];
+      if (env && p.env && p.env !== env) return { included: false, edges: [], gaps: [] };
+      const evidence = { env: p.env || null, revision: p.repo?.sha || null, passportDigest: digest || null, stale };
+      if (env && !p.env) gaps.push({ kind: "passport-environment-unknown", service: p.service });
+      if (!p.repo?.sha) gaps.push({ kind: "passport-revision-unknown", service: p.service });
+      const edges = [], loc = (x) => x.file ? `${x.file}:${x.line || 1}` : "passport";
+      const add = (from, to, kind, x) => edges.push({ from, to, kind, where: loc(x), repo: `svc:${p.service}`, ...evidence, ...x.manual ? { origin: "manual", proof: "declared", provenance: x.provenance } : { origin: "detected", proof: "static" } });
+      const svc = `svc:${p.service}`;
+      for (const x of effective.consumes || effective.kafka?.consumes || []) if (x.topic && !/^[?(]/.test(x.topic)) add(svc, `topic:${x.topic}`, "consumes", x);
+      for (const x of effective.produces || effective.kafka?.produces || []) if (x.topic && !/^[?(]/.test(x.topic)) add(`topic:${x.topic}`, svc, "produced-by", x);
+      const normPath = (p2) => String(p2 || "").replace(/\{[^}]*\}/g, "{}").replace(/\/+$/, "") || "/";
+      for (const x of effective.calls || effective.feign || []) if (x.method && x.path) add(svc, `endpoint:${x.method.toUpperCase()} ${normPath(x.path)}`, "calls-http", x);
+      for (const x of effective.endpoints || []) if (x.method && x.path) add(`endpoint:${x.method.toUpperCase()} ${normPath(x.path)}`, svc, "handler", x);
+      for (const x of effective.es || []) if (x.index && !/^[?(]/.test(x.index)) add(svc, `es:${x.index}`, "es", x);
+      const ports = effective.ports || require_ports().detected(p), portEdges = [];
+      for (const port of ports) {
+        const missing = require_ports().gaps(port);
+        if (missing) gaps.push(missing);
+        const h = port.handler, b = port.boundary;
+        if (!h.repo || !h.revision || !h.signature || !h.file || !h.line || !port.env) continue;
+        const method = require_semantic_identity().code(h.repo, h.revision, `${h.signature}@${h.file}:${h.line}`);
+        let boundary, incoming = ["http-ingress", "kafka-consume", "db-read", "scheduled"].includes(port.type);
+        const enc = encodeURIComponent;
+        if (port.type.startsWith("http") && b.host && b.method && b.path) boundary = `http:${enc(port.env)}:${enc(b.host)}:${enc(b.method)}:${enc((b.base_path || "") + b.path)}`;
+        else if (port.type.startsWith("kafka") && b.cluster && b.topic) boundary = `topic:${enc(port.env)}:${enc(b.cluster)}:${enc(b.topic)}`;
+        else if (port.type.startsWith("db-") && b.db && b.schema && b.table) boundary = require_semantic_identity().pg("table", port.env, b.db, require_semantic_identity().qualified(b.schema, b.table));
+        else if (port.type === "scheduled" && b.schedule && b.registration) boundary = `schedule:${enc(port.env)}:${enc(port.service)}:${enc(b.registration)}`;
+        else if (port.type === "internal-library" && b.target_repo && b.target_revision && b.target_signature) boundary = require_semantic_identity().code(b.target_repo, b.target_revision, b.target_signature);
+        if (boundary) portEdges.push({ from: incoming ? boundary : method, to: incoming ? method : boundary, kind: port.type, portId: port.id, origin: port.evidence.origin, proof: port.status === "declared" ? "declared" : "static", evidence: port.evidence, mappings: port.mappings, parameters: port.parameters, identity: { service: port.service, env: port.env, repo: port.repo, revision: port.revision } });
+      }
+      return { included: true, edges, ports, portEdges, gaps, evidence };
+    }
+    module2.exports = { snapshot, normalize };
+  }
+});
+
 // lib/column-lineage.js
 var require_column_lineage = __commonJS({
   "lib/column-lineage.js"(exports2, module2) {
@@ -25987,6 +26857,306 @@ var require_column_lineage = __commonJS({
       return { edges, gaps };
     }
     module2.exports = { tokens, analyze, catalog };
+  }
+});
+
+// lib/pgindex.js
+var require_pgindex = __commonJS({
+  "lib/pgindex.js"(exports2, module2) {
+    var path3 = require("path");
+    var { CACHE: CACHE2, readJson, writeJson, fileStamp } = require_util2();
+    var { sqlRefs, sqlCalls } = require_extract();
+    var file = (env) => path3.join(CACHE2, env, "pg", "_usage.json");
+    var ID = require_semantic_identity();
+    var norm = ID.norm;
+    var base = (s) => s.split(".").pop();
+    function namesOf(cat) {
+      const rel = /* @__PURE__ */ new Map(), fn = /* @__PURE__ */ new Map();
+      for (const t of cat.tables) {
+        const k = ID.qualified(t.schema, t.name);
+        rel.set(k, t.kind);
+      }
+      for (const f of cat.functions || []) {
+        const k = ID.qualified(f.schema, f.name);
+        fn.set(k, f.kind);
+      }
+      const byName = (rows) => {
+        const out2 = /* @__PURE__ */ new Map();
+        for (const row of rows) {
+          const key = ID.identifier(row.name), value = ID.qualified(row.schema, row.name), prior = out2.get(key);
+          if (!prior) out2.set(key, value);
+          else if (typeof prior === "string") {
+            if (prior !== value) out2.set(key, [prior, value]);
+          } else if (!prior.includes(value)) prior.push(value);
+        }
+        return out2;
+      };
+      let relBy, fnBy;
+      return { rel, fn, relBy: () => relBy ||= byName(cat.tables), fnBy: () => fnBy ||= byName(cat.functions || []) };
+    }
+    function resolve2(map, by, name, schemas = []) {
+      name = norm(name);
+      if (name.includes(".")) return map.has(name) ? { keys: [name] } : { keys: [] };
+      for (const s of [...schemas, "public"]) if (map.has(`${s}.${name}`)) return { keys: [`${s}.${name}`] };
+      const found = by().get(name), all = typeof found === "string" ? [found] : found || [];
+      return { keys: all, ambiguous: all.length > 1 };
+    }
+    var stripSqlComments = (s) => String(s || "").replace(/\/\*[\s\S]*?\*\//g, " ").replace(/--[^\n]*/g, " ");
+    var loc = (x) => x.file === "config" ? `config ${x.key || ""}` : x.file ? `${x.file}:${x.line}` : "";
+    function dbSide(cat, names, edges) {
+      const db = cat.db;
+      const push = (e) => edges.push({ db, source: "db", where: "", detail: "", ...e });
+      for (const t of cat.tables) {
+        const user = ID.qualified(t.schema, t.name);
+        for (const c of t.constraints || []) {
+          if (c.type === "f" && c.ref) push({ target: norm(c.ref), targetKind: names.rel.get(norm(c.ref)) || "table", user, userKind: t.kind, role: "references", detail: c.def, where: c.name });
+        }
+      }
+      for (const d of cat.viewDeps || []) {
+        const ref = norm(d.ref);
+        const fn = d.ref_kind === "function";
+        push({ target: ref, targetKind: fn ? names.fn.get(ref) || "function" : names.rel.get(ref) || "table", user: norm(d.view), userKind: names.rel.get(norm(d.view)) || "view", role: fn ? "calls" : "selects" });
+      }
+      for (const tr of cat.triggers || []) {
+        const table2 = norm(tr.table), fn = norm(tr.function);
+        const when = (tr.def.match(/\b(BEFORE|AFTER|INSTEAD OF)\b.*?\bON\b/i) || [""])[0].replace(/\s+ON$/i, "");
+        push({ target: fn, targetKind: "function", user: table2, userKind: "trigger", role: "executes", detail: `${tr.name} ${when}${tr.enabled ? "" : " (disabled)"}`, where: tr.name });
+        push({ target: table2, targetKind: names.rel.get(table2) || "table", user: fn, userKind: "function", role: "trigger", detail: `${tr.name} ${when}`, where: tr.name });
+      }
+      for (const f of cat.functions || []) {
+        if (!/^(sql|plpgsql)$/.test(f.lang)) continue;
+        const user = ID.qualified(f.schema, f.name);
+        const body = stripSqlComments(f.body);
+        const schemas = [ID.identifier(f.schema)];
+        const seen = /* @__PURE__ */ new Set();
+        const once = (e) => {
+          const k = `${e.target}|${e.role}`;
+          if (!seen.has(k)) {
+            seen.add(k);
+            push(e);
+          }
+        };
+        for (const r of sqlRefs(body)) {
+          if (r.access === "function") continue;
+          const { keys, ambiguous } = resolve2(names.rel, names.relBy, r.table, schemas);
+          for (const k of keys) once({ target: k, targetKind: names.rel.get(k), user, userKind: f.kind, role: r.access, ambiguous });
+        }
+        for (const c of sqlCalls(body)) {
+          const { keys, ambiguous } = resolve2(names.fn, names.fnBy, c, schemas);
+          for (const k of keys) if (k !== user) once({ target: k, targetKind: names.fn.get(k), user, userKind: f.kind, role: "calls", ambiguous });
+        }
+      }
+    }
+    function codeSide(cats, passports, edges) {
+      for (const p of passports) {
+        const e = p.effective || {};
+        const wanted = new Set((p.db?.datasources || []).map((d) => String(d.db || "").toLowerCase()).filter(Boolean));
+        const mine = cats.filter((c) => wanted.has(String(c.cat.database || "").toLowerCase()) || wanted.has(c.cat.db.toLowerCase()));
+        const targets = mine.length ? mine : cats;
+        const seen = /* @__PURE__ */ new Set();
+        const add = (x) => {
+          const k = `${x.db}|${x.target}|${x.role}|${x.where}`;
+          if (!seen.has(k)) {
+            seen.add(k);
+            edges.push(x);
+          }
+        };
+        for (const t of e.tables || []) {
+          if (!t.table) continue;
+          const role = t.access === "function" ? "calls" : t.access;
+          let found = false;
+          for (const { cat, names } of targets) {
+            const r = role === "calls" ? resolve2(names.fn, names.fnBy, t.table) : resolve2(names.rel, names.relBy, t.table);
+            for (const k of r.keys) {
+              found = true;
+              add({ target: k, targetKind: (role === "calls" ? names.fn : names.rel).get(k), db: cat.db, user: p.service, userKind: "service", role, detail: t.via + (t.sql ? `: ${t.sql}` : ""), where: loc(t), source: t.source || "code", ambiguous: r.ambiguous });
+            }
+          }
+          if (!found && role !== "calls") add({ target: norm(t.table), targetKind: "table", db: null, known: false, user: p.service, userKind: "service", role, detail: t.via + (t.sql ? `: ${t.sql}` : ""), where: loc(t), source: t.source || "code" });
+        }
+        for (const c of e.dbCalls || []) {
+          let found = false;
+          for (const { cat, names } of targets) {
+            const r = resolve2(names.fn, names.fnBy, c.name);
+            for (const k of r.keys) {
+              found = true;
+              add({ target: k, targetKind: names.fn.get(k), db: cat.db, user: p.service, userKind: "service", role: "calls", detail: c.via + (c.sql ? `: ${c.sql}` : ""), where: loc(c), source: c.source || "code", ambiguous: r.ambiguous });
+            }
+          }
+          if (!found && c.explicit) add({ target: norm(c.name), targetKind: "function", db: null, known: false, user: p.service, userKind: "service", role: "calls", detail: c.via, where: loc(c), source: c.source || "code" });
+        }
+      }
+    }
+    function build(env) {
+      const pg = require_pg();
+      const cats = pg.loadAll(env).map((cat) => ({ cat, names: namesOf(cat) }));
+      const store = require_pgstore().writer(file(env));
+      for (const name of ["edges", "columns", "gaps"]) store.ensure(name);
+      const edges = { length: 0, push(e) {
+        store.add("edges", e);
+        this.length++;
+      } };
+      try {
+        for (const { cat, names } of cats) dbSide(cat, names, edges);
+        const snapshot = require_edges().snapshot({ manual: false });
+        codeSide(cats, snapshot.rows.map((x) => x.passport).filter((p) => !p.env || p.env === env), edges);
+        for (const { cat } of cats) require_column_lineage().catalog(cat, env, { edge: (e) => store.add("columns", e), gap: (g) => store.add("gaps", g) });
+        const data = { identityVersion: "dt.identity/v1", builtAt: (/* @__PURE__ */ new Date()).toISOString(), env, passportSignature: snapshot.signature, dbs: cats.map((c) => c.cat.db) };
+        store.commit(data);
+        memo.delete(env);
+        return { edges: edges.length, dbs: data.dbs.length };
+      } catch (e) {
+        store.abort();
+        throw e;
+      }
+    }
+    function current(env, { rebuild = false } = {}) {
+      const d = load(env);
+      const synced = require_pg().loadAll(env).map((c) => c.syncedAt).sort().pop();
+      const stale = synced && (!d.builtAt || d.builtAt < synced) || d.passportSignature !== void 0 && d.passportSignature !== require_edges().snapshot({ manual: false }).signature;
+      if (stale && (rebuild || !d.builtAt)) {
+        build(env);
+        return load(env);
+      }
+      if (stale) Object.defineProperty(d, "stale", { value: `usage index built ${d.builtAt}, before the latest database sync or passport change: catalog_sync what=index rebuilds it`, configurable: true });
+      return d;
+    }
+    var memo = /* @__PURE__ */ new Map();
+    function load(env) {
+      const stamp = fileStamp(file(env));
+      if (!stamp) {
+        memo.delete(env);
+        return { edges: [] };
+      }
+      const m = memo.get(env);
+      if (m && m.stamp === stamp) return m.data;
+      const d = require_pgstore().load(file(env));
+      if (!d) {
+        memo.delete(env);
+        return { edges: [] };
+      }
+      memo.set(env, { stamp, data: d });
+      return d;
+    }
+    function matcher(name) {
+      let db = null, n = norm(name);
+      const m = n.match(/^([\w-]+):(.+)$/);
+      if (m) {
+        db = m[1];
+        n = m[2];
+      }
+      return (target, edgeDb) => (!db || edgeDb === db) && (n.includes(".") ? target === n : base(target) === n);
+    }
+    var ORDER = { service: 0, function: 1, procedure: 1, trigger: 2, view: 3, matview: 3, table: 4 };
+    var sortEdges = (rows) => rows.sort((a, b) => (ORDER[a.userKind] ?? 9) - (ORDER[b.userKind] ?? 9) || a.user.localeCompare(b.user) || a.role.localeCompare(b.role));
+    function indexed(env, name, direction) {
+      const S = require_catalog_store();
+      if (!S.matchesUsage(env, fileStamp(file(env)))) return null;
+      let cursor, rows = [];
+      do {
+        const page = S.page(env, "", { object: name, direction, cursor, limit: 500 });
+        if (!page) return null;
+        rows.push(...page.results);
+        cursor = page.nextCursor;
+        if (rows.length >= 1e4 && cursor) throw Object.assign(Error("Usage exceeds 10000 edges; use catalog_usage pages"), { code: "DT_RESULT_TOO_LARGE" });
+      } while (cursor);
+      return rows;
+    }
+    function usages(env, name) {
+      const hit = matcher(name);
+      if (isColumn(name)) return columnLineage(env, name).edges;
+      return sortEdges(require_overrides().usageProjection(env, indexed(env, name, "users") || current(env).edges.filter((e) => hit(e.target, e.db)), (e) => hit(e.target, e.db)));
+    }
+    function uses(env, name) {
+      const hit = matcher(name);
+      return require_overrides().usageProjection(env, indexed(env, name, "uses") || current(env).edges.filter((e) => hit(e.user, e.db)), (e) => hit(e.user, e.db)).sort((a, b) => a.target.localeCompare(b.target));
+    }
+    function usedBySummary(env, max = 8) {
+      const by = /* @__PURE__ */ new Map();
+      for (const e of load(env).edges) {
+        if (!e.db) continue;
+        const k = `${e.db}|${e.target}`;
+        const users = by.get(k) || by.set(k, /* @__PURE__ */ new Map()).get(k);
+        const label = `${{ service: "svc", function: "fn", procedure: "proc", trigger: "trigger", view: "view", matview: "matview", table: "fk" }[e.userKind] || e.userKind} ${e.user}`;
+        (users.get(label) || users.set(label, /* @__PURE__ */ new Set()).get(label)).add(e.role);
+      }
+      const out2 = /* @__PURE__ */ new Map();
+      for (const [k, users] of by) {
+        const parts = [...users].map(([label, roles]) => `${label}(${[...roles].join(",")})`);
+        out2.set(k, parts.slice(0, max).join("; ") + (parts.length > max ? `; +${parts.length - max} more` : ""));
+      }
+      return out2;
+    }
+    function describe(env, name, { body = true, bodyLimit } = {}) {
+      const hit = matcher(name);
+      const out2 = [];
+      for (const cat of require_pg().loadAll(env)) {
+        for (const t of cat.tables) {
+          const k = ID.qualified(t.schema, t.name);
+          if (!hit(k, cat.db)) continue;
+          out2.push({ db: cat.db, object: k, ...t, triggers: (cat.triggers || []).filter((x) => norm(x.table) === k) });
+        }
+        for (const f of cat.functions || []) {
+          const k = ID.qualified(f.schema, f.name);
+          if (!hit(k, cat.db)) continue;
+          const definition = {};
+          for (const key of Object.keys(f)) {
+            if (key === "body" && !body) continue;
+            const value = f[key];
+            definition[key] = key === "body" && bodyLimit && typeof value === "string" && value.length > bodyLimit ? Buffer.from(value.slice(0, bodyLimit)).toString("utf8") + `\u2026 (${value.length} chars)` : value;
+          }
+          out2.push({ db: cat.db, object: k, ...definition });
+        }
+      }
+      for (const o of out2) {
+        o.usedBy = sortEdges(require_overrides().usageProjection(env, indexed(env, o.db + ":" + o.object, "users") || load(env).edges.filter((e) => e.db === o.db && e.target === o.object), (e) => e.db === o.db && e.target === o.object));
+        o.uses = require_overrides().usageProjection(env, indexed(env, o.db + ":" + o.object, "uses") || load(env).edges.filter((e) => e.db === o.db && e.user === o.object), (e) => e.db === o.db && e.user === o.object);
+      }
+      if (!out2.length) {
+        const unknown = (indexed(env, name, "users") || load(env).edges.filter((e) => hit(e.target, null))).filter((e) => !e.db);
+        if (unknown.length) out2.push({ db: null, object: norm(name), kind: "unknown", note: "Named in code but not found in any synced database", usedBy: sortEdges(unknown), uses: [] });
+      }
+      return out2;
+    }
+    function isColumn(name) {
+      return String(name).replace(/^column:/, "").split(":").pop().split(".").length >= 3;
+    }
+    function columnLineage(env, name) {
+      const I = require_impact(), G = I.load({ env, target: `column:${String(name).replace(/^column:/, "")}` }), r = I.resolveTarget(G, `column:${String(name).replace(/^column:/, "")}`);
+      if (!r.start.length) return { protocol: "dt.column-lineage/v1", env, target: name, edges: [], complete: false, ambiguous: r.ambiguous || void 0, candidates: r.candidates || [], gaps: [{ kind: r.ambiguous ? "ambiguous-target" : "unknown-column" }] };
+      const edges = [], gaps = [...G.gaps], callers = [];
+      for (const id of r.start) {
+        const ce = I.columnEdges(G, id);
+        gaps.push(...ce.gaps);
+        for (const e of ce.edges) {
+          const n = G.nodes.get(e.from), object = require_semantic_identity().parsePg(id);
+          edges.push({ db: object.db, env, revision: e.revision || n?.revision || null, target: object.object, targetId: id, targetKind: "column", user: n?.object || e.from, userId: e.from, userKind: n?.kind || "code", access: e.access, role: e.access, file: e.file || n?.file || null, line: e.line || n?.line || null, where: e.where, source: e.repo?.startsWith("db:") ? "db" : "code", detail: e.syntax, ...e });
+          const visited = /* @__PURE__ */ new Set([e.from]), queue = [e.from];
+          while (queue.length && visited.size <= 1e3) {
+            const child = queue.shift();
+            for (const c of G.rev.get(child) || []) {
+              if (visited.has(c.from)) continue;
+              visited.add(c.from);
+              callers.push({ userId: c.from, via: child, role: c.kind, where: c.where, repo: c.repo, targetId: id });
+              queue.push(c.from);
+            }
+          }
+          if (queue.length) gaps.push({ kind: "caller-chain-limit", targetId: id });
+        }
+        for (const e of G.rev.get(id) || []) {
+          const field = G.nodes.get(e.from);
+          if (field?.kind !== "field") continue;
+          edges.push({ env, db: require_semantic_identity().parsePg(id).db, revision: field.revision, targetId: id, targetKind: "column", target: require_semantic_identity().parsePg(id).object, user: field.legacyId, userId: field.id, userKind: "field", role: "unknown", access: "unknown", source: "code", file: field.file, line: field.line, where: e.where, detail: "ORM column mapping; persistence behavior requires runtime verification" });
+          for (const use of G.rev.get(field.id) || []) if (["reads", "writes"].includes(use.kind)) {
+            const method = G.nodes.get(use.from);
+            edges.push({ env, db: require_semantic_identity().parsePg(id).db, revision: method?.revision, targetId: id, targetKind: "column", target: require_semantic_identity().parsePg(id).object, user: method?.legacyId || use.from, userId: use.from, userKind: "method", role: use.kind === "writes" ? "write" : "read", access: use.kind === "writes" ? "write" : "read", source: "code", file: method?.file, line: method?.line, where: use.where, detail: "ORM object field access", persistenceWriteVerified: false });
+          }
+          gaps.push({ kind: "orm-runtime-persistence", userId: field.id });
+        }
+      }
+      return { protocol: "dt.column-lineage/v1", identityVersion: "dt.identity/v1", env, target: name, resolved: r.start, edges, callers, complete: false, traversalComplete: !gaps.some((g) => g.kind === "caller-chain-limit"), gaps: [...new Map(gaps.map((g) => [JSON.stringify(g), g])).values()], coverage: { source: "cached-catalog-and-indexed-source", exhaustive: false, parser: "bounded-sql-lexer/v1", unknowns: ["dynamic-sql", "unindexed-repositories", "generated-code", "reflection", "ORM runtime persistence"] } };
+    }
+    module2.exports = { build, load, current, usages, uses, describe, usedBySummary, resolve: resolve2, namesOf, isColumn, columnLineage };
   }
 });
 
@@ -27332,618 +28502,6 @@ var require_passport = __commonJS({
       return rows;
     }
     module2.exports = { extractSource, analyzeLibrary, analyzeService, refreshCatalogs, build, branchDeclaring, fetchLibraries, flowSummary, load, loadDetected, list, whoUses, libraryRepoNames, findModule, resolveRepo, deployedSha, diff, markdown, graphBuild, DIR };
-  }
-});
-
-// lib/passport/edges.js
-var require_edges = __commonJS({
-  "lib/passport/edges.js"(exports2, module2) {
-    var fs3 = require("fs");
-    var path3 = require("path");
-    var crypto = require("crypto");
-    var snapshots = /* @__PURE__ */ new Map();
-    var { create } = require_state_machine2();
-    var lifecycle = require_lifecycles().edgeSnapshot;
-    function validate(data) {
-      if (!data || typeof data !== "object" || Array.isArray(data) || typeof data.service !== "string" || !data.service || !data.effective || typeof data.effective !== "object" || Array.isArray(data.effective)) throw new Error("Invalid persisted passport: service and effective object required");
-      if (data.env != null && typeof data.env !== "string" || data.repo?.sha != null && typeof data.repo.sha !== "string") throw new Error("Invalid persisted passport environment/revision");
-      const arrays = (object, names) => {
-        for (const name of names) if (object?.[name] !== void 0 && (!Array.isArray(object[name]) || object[name].some((x) => !x || typeof x !== "object" || Array.isArray(x)))) throw new Error(`Invalid persisted passport edge array: ${name}`);
-      };
-      arrays(data.effective, ["consumes", "produces", "calls", "endpoints", "tables", "es", "feign"]);
-      arrays(data.effective.kafka, ["consumes", "produces"]);
-      return data;
-    }
-    function snapshot({ env, manual = true } = {}) {
-      const dir = require_passport().DIR, rows = [], gaps = [], signatures = [];
-      let dirs = [];
-      try {
-        dirs = fs3.readdirSync(dir, { withFileTypes: true }).filter((x) => x.isDirectory()).sort((a, b) => a.name.localeCompare(b.name));
-      } catch (e) {
-        if (e.code !== "ENOENT") gaps.push({ kind: "passport-read-error", message: e.message });
-      }
-      const alive = /* @__PURE__ */ new Set();
-      for (const d of dirs) {
-        const f = path3.join(dir, d.name, "passport.json");
-        alive.add(f);
-        let stamp;
-        try {
-          const s = fs3.statSync(f);
-          stamp = `${s.dev}:${s.ino}:${s.size}:${s.mtimeMs}:${s.ctimeMs}`;
-        } catch (e) {
-          if (e.code !== "ENOENT") gaps.push({ kind: "passport-read-error", service: d.name, message: e.message });
-          else snapshots.delete(f);
-          continue;
-        }
-        let m = snapshots.get(f);
-        if (!m || m.stamp !== stamp) {
-          const phase = m?.lifecycle || create(lifecycle);
-          try {
-            const raw = fs3.readFileSync(f);
-            const data = validate(JSON.parse(raw));
-            phase.to("valid");
-            m = { stamp, digest: crypto.createHash("sha256").update(raw).digest("hex"), data, lifecycle: phase };
-            snapshots.set(f, m);
-          } catch (e) {
-            phase.to(m?.data ? "stale" : "invalid");
-            m = { stamp, digest: `invalid:${stamp}`, data: m?.data, error: e.message, lifecycle: phase };
-            snapshots.set(f, m);
-          }
-        }
-        signatures.push([d.name, m.digest, m.error || ""]);
-        if (m.error) gaps.push({ kind: "passport-stale-last-good", service: d.name, message: m.error, retained: !!m.data });
-        if (m.data) {
-          const passport = manual ? require_overrides().apply(m.data, env ? { env } : {}) : m.data;
-          if (manual) signatures.push([d.name, "adjustment", passport.portAdjustments?.revision || ""]);
-          rows.push({ passport, stale: !!m.error, digest: m.digest });
-        }
-      }
-      for (const f of snapshots.keys()) if (!alive.has(f)) {
-        snapshots.get(f).lifecycle.to("removed");
-        snapshots.delete(f);
-      }
-      return { protocol: "dt.passport-edges/v1", signature: JSON.stringify(signatures), rows, gaps };
-    }
-    function normalize(p, { env, stale = false, digest } = {}) {
-      const effective = p.effective || {}, gaps = [];
-      if (env && p.env && p.env !== env) return { included: false, edges: [], gaps: [] };
-      const evidence = { env: p.env || null, revision: p.repo?.sha || null, passportDigest: digest || null, stale };
-      if (env && !p.env) gaps.push({ kind: "passport-environment-unknown", service: p.service });
-      if (!p.repo?.sha) gaps.push({ kind: "passport-revision-unknown", service: p.service });
-      const edges = [], loc = (x) => x.file ? `${x.file}:${x.line || 1}` : "passport";
-      const add = (from, to, kind, x) => edges.push({ from, to, kind, where: loc(x), repo: `svc:${p.service}`, ...evidence, ...x.manual ? { origin: "manual", proof: "declared", provenance: x.provenance } : { origin: "detected", proof: "static" } });
-      const svc = `svc:${p.service}`;
-      for (const x of effective.consumes || effective.kafka?.consumes || []) if (x.topic && !/^[?(]/.test(x.topic)) add(svc, `topic:${x.topic}`, "consumes", x);
-      for (const x of effective.produces || effective.kafka?.produces || []) if (x.topic && !/^[?(]/.test(x.topic)) add(`topic:${x.topic}`, svc, "produced-by", x);
-      const normPath = (p2) => String(p2 || "").replace(/\{[^}]*\}/g, "{}").replace(/\/+$/, "") || "/";
-      for (const x of effective.calls || effective.feign || []) if (x.method && x.path) add(svc, `endpoint:${x.method.toUpperCase()} ${normPath(x.path)}`, "calls-http", x);
-      for (const x of effective.endpoints || []) if (x.method && x.path) add(`endpoint:${x.method.toUpperCase()} ${normPath(x.path)}`, svc, "handler", x);
-      for (const x of effective.es || []) if (x.index && !/^[?(]/.test(x.index)) add(svc, `es:${x.index}`, "es", x);
-      const ports = effective.ports || require_ports().detected(p), portEdges = [];
-      for (const port of ports) {
-        const missing = require_ports().gaps(port);
-        if (missing) gaps.push(missing);
-        const h = port.handler, b = port.boundary;
-        if (!h.repo || !h.revision || !h.signature || !h.file || !h.line || !port.env) continue;
-        const method = require_semantic_identity().code(h.repo, h.revision, `${h.signature}@${h.file}:${h.line}`);
-        let boundary, incoming = ["http-ingress", "kafka-consume", "db-read", "scheduled"].includes(port.type);
-        const enc = encodeURIComponent;
-        if (port.type.startsWith("http") && b.host && b.method && b.path) boundary = `http:${enc(port.env)}:${enc(b.host)}:${enc(b.method)}:${enc((b.base_path || "") + b.path)}`;
-        else if (port.type.startsWith("kafka") && b.cluster && b.topic) boundary = `topic:${enc(port.env)}:${enc(b.cluster)}:${enc(b.topic)}`;
-        else if (port.type.startsWith("db-") && b.db && b.schema && b.table) boundary = require_semantic_identity().pg("table", port.env, b.db, require_semantic_identity().qualified(b.schema, b.table));
-        else if (port.type === "scheduled" && b.schedule && b.registration) boundary = `schedule:${enc(port.env)}:${enc(port.service)}:${enc(b.registration)}`;
-        else if (port.type === "internal-library" && b.target_repo && b.target_revision && b.target_signature) boundary = require_semantic_identity().code(b.target_repo, b.target_revision, b.target_signature);
-        if (boundary) portEdges.push({ from: incoming ? boundary : method, to: incoming ? method : boundary, kind: port.type, portId: port.id, origin: port.evidence.origin, proof: port.status === "declared" ? "declared" : "static", evidence: port.evidence, mappings: port.mappings, parameters: port.parameters, identity: { service: port.service, env: port.env, repo: port.repo, revision: port.revision } });
-      }
-      return { included: true, edges, ports, portEdges, gaps, evidence };
-    }
-    module2.exports = { snapshot, normalize };
-  }
-});
-
-// lib/pgindex.js
-var require_pgindex = __commonJS({
-  "lib/pgindex.js"(exports2, module2) {
-    var path3 = require("path");
-    var { CACHE: CACHE2, readJson, writeJson, fileStamp } = require_util2();
-    var { sqlRefs, sqlCalls } = require_extract();
-    var file = (env) => path3.join(CACHE2, env, "pg", "_usage.json");
-    var ID = require_semantic_identity();
-    var norm = ID.norm;
-    var base = (s) => s.split(".").pop();
-    function namesOf(cat) {
-      const rel = /* @__PURE__ */ new Map(), fn = /* @__PURE__ */ new Map(), relBy = /* @__PURE__ */ new Map(), fnBy = /* @__PURE__ */ new Map();
-      for (const t of cat.tables) {
-        const k = ID.qualified(t.schema, t.name);
-        rel.set(k, t.kind);
-        (relBy.get(ID.identifier(t.name)) || relBy.set(ID.identifier(t.name), []).get(ID.identifier(t.name))).push(k);
-      }
-      for (const f of cat.functions || []) {
-        const k = ID.qualified(f.schema, f.name);
-        if (!fn.has(k)) (fnBy.get(ID.identifier(f.name)) || fnBy.set(ID.identifier(f.name), []).get(ID.identifier(f.name))).push(k);
-        fn.set(k, f.kind);
-      }
-      return { rel, fn, relBy, fnBy };
-    }
-    function resolve2(map, by, name, schemas = []) {
-      name = norm(name);
-      if (name.includes(".")) return map.has(name) ? { keys: [name] } : { keys: [] };
-      for (const s of [...schemas, "public"]) if (map.has(`${s}.${name}`)) return { keys: [`${s}.${name}`] };
-      const all = by.get(name) || [];
-      return { keys: all, ambiguous: all.length > 1 };
-    }
-    var stripSqlComments = (s) => String(s || "").replace(/\/\*[\s\S]*?\*\//g, " ").replace(/--[^\n]*/g, " ");
-    var loc = (x) => x.file === "config" ? `config ${x.key || ""}` : x.file ? `${x.file}:${x.line}` : "";
-    function dbSide(cat, names, edges) {
-      const db = cat.db;
-      const push = (e) => edges.push({ db, source: "db", where: "", detail: "", ...e });
-      for (const t of cat.tables) {
-        const user = ID.qualified(t.schema, t.name);
-        for (const c of t.constraints || []) {
-          if (c.type === "f" && c.ref) push({ target: norm(c.ref), targetKind: names.rel.get(norm(c.ref)) || "table", user, userKind: t.kind, role: "references", detail: c.def, where: c.name });
-        }
-      }
-      for (const d of cat.viewDeps || []) {
-        const ref = norm(d.ref);
-        const fn = d.ref_kind === "function";
-        push({ target: ref, targetKind: fn ? names.fn.get(ref) || "function" : names.rel.get(ref) || "table", user: norm(d.view), userKind: names.rel.get(norm(d.view)) || "view", role: fn ? "calls" : "selects" });
-      }
-      for (const tr of cat.triggers || []) {
-        const table2 = norm(tr.table), fn = norm(tr.function);
-        const when = (tr.def.match(/\b(BEFORE|AFTER|INSTEAD OF)\b.*?\bON\b/i) || [""])[0].replace(/\s+ON$/i, "");
-        push({ target: fn, targetKind: "function", user: table2, userKind: "trigger", role: "executes", detail: `${tr.name} ${when}${tr.enabled ? "" : " (disabled)"}`, where: tr.name });
-        push({ target: table2, targetKind: names.rel.get(table2) || "table", user: fn, userKind: "function", role: "trigger", detail: `${tr.name} ${when}`, where: tr.name });
-      }
-      for (const f of cat.functions || []) {
-        if (!/^(sql|plpgsql)$/.test(f.lang)) continue;
-        const user = ID.qualified(f.schema, f.name);
-        const body = stripSqlComments(f.body);
-        const schemas = [ID.identifier(f.schema)];
-        const seen = /* @__PURE__ */ new Set();
-        const once = (e) => {
-          const k = `${e.target}|${e.role}`;
-          if (!seen.has(k)) {
-            seen.add(k);
-            push(e);
-          }
-        };
-        for (const r of sqlRefs(body)) {
-          if (r.access === "function") continue;
-          const { keys, ambiguous } = resolve2(names.rel, names.relBy, r.table, schemas);
-          for (const k of keys) once({ target: k, targetKind: names.rel.get(k), user, userKind: f.kind, role: r.access, ambiguous });
-        }
-        for (const c of sqlCalls(body)) {
-          const { keys, ambiguous } = resolve2(names.fn, names.fnBy, c, schemas);
-          for (const k of keys) if (k !== user) once({ target: k, targetKind: names.fn.get(k), user, userKind: f.kind, role: "calls", ambiguous });
-        }
-      }
-    }
-    function codeSide(cats, passports, edges) {
-      for (const p of passports) {
-        const e = p.effective || {};
-        const wanted = new Set((p.db?.datasources || []).map((d) => String(d.db || "").toLowerCase()).filter(Boolean));
-        const mine = cats.filter((c) => wanted.has(String(c.cat.database || "").toLowerCase()) || wanted.has(c.cat.db.toLowerCase()));
-        const targets = mine.length ? mine : cats;
-        const seen = /* @__PURE__ */ new Set();
-        const add = (x) => {
-          const k = `${x.db}|${x.target}|${x.role}|${x.where}`;
-          if (!seen.has(k)) {
-            seen.add(k);
-            edges.push(x);
-          }
-        };
-        for (const t of e.tables || []) {
-          if (!t.table) continue;
-          const role = t.access === "function" ? "calls" : t.access;
-          let found = false;
-          for (const { cat, names } of targets) {
-            const r = role === "calls" ? resolve2(names.fn, names.fnBy, t.table) : resolve2(names.rel, names.relBy, t.table);
-            for (const k of r.keys) {
-              found = true;
-              add({ target: k, targetKind: (role === "calls" ? names.fn : names.rel).get(k), db: cat.db, user: p.service, userKind: "service", role, detail: t.via + (t.sql ? `: ${t.sql}` : ""), where: loc(t), source: t.source || "code", ambiguous: r.ambiguous });
-            }
-          }
-          if (!found && role !== "calls") add({ target: norm(t.table), targetKind: "table", db: null, known: false, user: p.service, userKind: "service", role, detail: t.via + (t.sql ? `: ${t.sql}` : ""), where: loc(t), source: t.source || "code" });
-        }
-        for (const c of e.dbCalls || []) {
-          let found = false;
-          for (const { cat, names } of targets) {
-            const r = resolve2(names.fn, names.fnBy, c.name);
-            for (const k of r.keys) {
-              found = true;
-              add({ target: k, targetKind: names.fn.get(k), db: cat.db, user: p.service, userKind: "service", role: "calls", detail: c.via + (c.sql ? `: ${c.sql}` : ""), where: loc(c), source: c.source || "code", ambiguous: r.ambiguous });
-            }
-          }
-          if (!found && c.explicit) add({ target: norm(c.name), targetKind: "function", db: null, known: false, user: p.service, userKind: "service", role: "calls", detail: c.via, where: loc(c), source: c.source || "code" });
-        }
-      }
-    }
-    function build(env) {
-      const pg = require_pg();
-      const cats = pg.loadAll(env).map((cat) => ({ cat, names: namesOf(cat) }));
-      const store = require_pgstore().writer(file(env));
-      for (const name of ["edges", "columns", "gaps"]) store.ensure(name);
-      const edges = { length: 0, push(e) {
-        store.add("edges", e);
-        this.length++;
-      } };
-      try {
-        for (const { cat, names } of cats) dbSide(cat, names, edges);
-        const snapshot = require_edges().snapshot({ manual: false });
-        codeSide(cats, snapshot.rows.map((x) => x.passport).filter((p) => !p.env || p.env === env), edges);
-        for (const { cat } of cats) require_column_lineage().catalog(cat, env, { edge: (e) => store.add("columns", e), gap: (g) => store.add("gaps", g) });
-        const data = { identityVersion: "dt.identity/v1", builtAt: (/* @__PURE__ */ new Date()).toISOString(), env, passportSignature: snapshot.signature, dbs: cats.map((c) => c.cat.db) };
-        store.commit(data);
-        memo.delete(env);
-        return { edges: edges.length, dbs: data.dbs.length };
-      } catch (e) {
-        store.abort();
-        throw e;
-      }
-    }
-    function current(env, { rebuild = false } = {}) {
-      const d = load(env);
-      const synced = require_pg().loadAll(env).map((c) => c.syncedAt).sort().pop();
-      const stale = synced && (!d.builtAt || d.builtAt < synced) || d.passportSignature !== void 0 && d.passportSignature !== require_edges().snapshot({ manual: false }).signature;
-      if (stale && (rebuild || !d.builtAt)) {
-        build(env);
-        return load(env);
-      }
-      if (stale) Object.defineProperty(d, "stale", { value: `usage index built ${d.builtAt}, before the latest database sync or passport change: catalog_sync what=index rebuilds it`, configurable: true });
-      return d;
-    }
-    var memo = /* @__PURE__ */ new Map();
-    function load(env) {
-      const stamp = fileStamp(file(env));
-      if (!stamp) {
-        memo.delete(env);
-        return { edges: [] };
-      }
-      const m = memo.get(env);
-      if (m && m.stamp === stamp) return m.data;
-      const d = require_pgstore().load(file(env));
-      if (!d) {
-        memo.delete(env);
-        return { edges: [] };
-      }
-      memo.set(env, { stamp, data: d });
-      return d;
-    }
-    function matcher(name) {
-      let db = null, n = norm(name);
-      const m = n.match(/^([\w-]+):(.+)$/);
-      if (m) {
-        db = m[1];
-        n = m[2];
-      }
-      return (target, edgeDb) => (!db || edgeDb === db) && (n.includes(".") ? target === n : base(target) === n);
-    }
-    var ORDER = { service: 0, function: 1, procedure: 1, trigger: 2, view: 3, matview: 3, table: 4 };
-    var sortEdges = (rows) => rows.sort((a, b) => (ORDER[a.userKind] ?? 9) - (ORDER[b.userKind] ?? 9) || a.user.localeCompare(b.user) || a.role.localeCompare(b.role));
-    function usages(env, name) {
-      const hit = matcher(name);
-      if (isColumn(name)) return columnLineage(env, name).edges;
-      return sortEdges(require_overrides().usageProjection(env, current(env).edges.filter((e) => hit(e.target, e.db)), (e) => hit(e.target, e.db)));
-    }
-    function uses(env, name) {
-      const hit = matcher(name);
-      return require_overrides().usageProjection(env, current(env).edges.filter((e) => hit(e.user, e.db)), (e) => hit(e.user, e.db)).sort((a, b) => a.target.localeCompare(b.target));
-    }
-    function usedBySummary(env, max = 8) {
-      const by = /* @__PURE__ */ new Map();
-      for (const e of load(env).edges) {
-        if (!e.db) continue;
-        const k = `${e.db}|${e.target}`;
-        const users = by.get(k) || by.set(k, /* @__PURE__ */ new Map()).get(k);
-        const label = `${{ service: "svc", function: "fn", procedure: "proc", trigger: "trigger", view: "view", matview: "matview", table: "fk" }[e.userKind] || e.userKind} ${e.user}`;
-        (users.get(label) || users.set(label, /* @__PURE__ */ new Set()).get(label)).add(e.role);
-      }
-      const out2 = /* @__PURE__ */ new Map();
-      for (const [k, users] of by) {
-        const parts = [...users].map(([label, roles]) => `${label}(${[...roles].join(",")})`);
-        out2.set(k, parts.slice(0, max).join("; ") + (parts.length > max ? `; +${parts.length - max} more` : ""));
-      }
-      return out2;
-    }
-    function describe(env, name, { body = true, bodyLimit } = {}) {
-      const hit = matcher(name);
-      const out2 = [];
-      for (const cat of require_pg().loadAll(env)) {
-        for (const t of cat.tables) {
-          const k = ID.qualified(t.schema, t.name);
-          if (!hit(k, cat.db)) continue;
-          out2.push({ db: cat.db, object: k, ...t, triggers: (cat.triggers || []).filter((x) => norm(x.table) === k) });
-        }
-        for (const f of cat.functions || []) {
-          const k = ID.qualified(f.schema, f.name);
-          if (!hit(k, cat.db)) continue;
-          const definition = {};
-          for (const key of Object.keys(f)) {
-            if (key === "body" && !body) continue;
-            const value = f[key];
-            definition[key] = key === "body" && bodyLimit && typeof value === "string" && value.length > bodyLimit ? Buffer.from(value.slice(0, bodyLimit)).toString("utf8") + `\u2026 (${value.length} chars)` : value;
-          }
-          out2.push({ db: cat.db, object: k, ...definition });
-        }
-      }
-      const all = load(env).edges;
-      for (const o of out2) {
-        o.usedBy = sortEdges(require_overrides().usageProjection(env, all.filter((e) => e.db === o.db && e.target === o.object), (e) => e.db === o.db && e.target === o.object));
-        o.uses = require_overrides().usageProjection(env, all.filter((e) => e.db === o.db && e.user === o.object), (e) => e.db === o.db && e.user === o.object);
-      }
-      if (!out2.length) {
-        const unknown = all.filter((e) => !e.db && hit(e.target, null));
-        if (unknown.length) out2.push({ db: null, object: norm(name), kind: "unknown", note: "Named in code but not found in any synced database", usedBy: sortEdges(unknown), uses: [] });
-      }
-      return out2;
-    }
-    function isColumn(name) {
-      return String(name).replace(/^column:/, "").split(":").pop().split(".").length >= 3;
-    }
-    function columnLineage(env, name) {
-      const I = require_impact(), G = I.load({ env, target: `column:${String(name).replace(/^column:/, "")}` }), r = I.resolveTarget(G, `column:${String(name).replace(/^column:/, "")}`);
-      if (!r.start.length) return { protocol: "dt.column-lineage/v1", env, target: name, edges: [], complete: false, ambiguous: r.ambiguous || void 0, candidates: r.candidates || [], gaps: [{ kind: r.ambiguous ? "ambiguous-target" : "unknown-column" }] };
-      const edges = [], gaps = [...G.gaps], callers = [];
-      for (const id of r.start) {
-        const ce = I.columnEdges(G, id);
-        gaps.push(...ce.gaps);
-        for (const e of ce.edges) {
-          const n = G.nodes.get(e.from), object = require_semantic_identity().parsePg(id);
-          edges.push({ db: object.db, env, revision: e.revision || n?.revision || null, target: object.object, targetId: id, targetKind: "column", user: n?.object || e.from, userId: e.from, userKind: n?.kind || "code", access: e.access, role: e.access, file: e.file || n?.file || null, line: e.line || n?.line || null, where: e.where, source: e.repo?.startsWith("db:") ? "db" : "code", detail: e.syntax, ...e });
-          const visited = /* @__PURE__ */ new Set([e.from]), queue = [e.from];
-          while (queue.length && visited.size <= 1e3) {
-            const child = queue.shift();
-            for (const c of G.rev.get(child) || []) {
-              if (visited.has(c.from)) continue;
-              visited.add(c.from);
-              callers.push({ userId: c.from, via: child, role: c.kind, where: c.where, repo: c.repo, targetId: id });
-              queue.push(c.from);
-            }
-          }
-          if (queue.length) gaps.push({ kind: "caller-chain-limit", targetId: id });
-        }
-        for (const e of G.rev.get(id) || []) {
-          const field = G.nodes.get(e.from);
-          if (field?.kind !== "field") continue;
-          edges.push({ env, db: require_semantic_identity().parsePg(id).db, revision: field.revision, targetId: id, targetKind: "column", target: require_semantic_identity().parsePg(id).object, user: field.legacyId, userId: field.id, userKind: "field", role: "unknown", access: "unknown", source: "code", file: field.file, line: field.line, where: e.where, detail: "ORM column mapping; persistence behavior requires runtime verification" });
-          for (const use of G.rev.get(field.id) || []) if (["reads", "writes"].includes(use.kind)) {
-            const method = G.nodes.get(use.from);
-            edges.push({ env, db: require_semantic_identity().parsePg(id).db, revision: method?.revision, targetId: id, targetKind: "column", target: require_semantic_identity().parsePg(id).object, user: method?.legacyId || use.from, userId: use.from, userKind: "method", role: use.kind === "writes" ? "write" : "read", access: use.kind === "writes" ? "write" : "read", source: "code", file: method?.file, line: method?.line, where: use.where, detail: "ORM object field access", persistenceWriteVerified: false });
-          }
-          gaps.push({ kind: "orm-runtime-persistence", userId: field.id });
-        }
-      }
-      return { protocol: "dt.column-lineage/v1", identityVersion: "dt.identity/v1", env, target: name, resolved: r.start, edges, callers, complete: false, traversalComplete: !gaps.some((g) => g.kind === "caller-chain-limit"), gaps: [...new Map(gaps.map((g) => [JSON.stringify(g), g])).values()], coverage: { source: "cached-catalog-and-indexed-source", exhaustive: false, parser: "bounded-sql-lexer/v1", unknowns: ["dynamic-sql", "unindexed-repositories", "generated-code", "reflection", "ORM runtime persistence"] } };
-    }
-    module2.exports = { build, load, current, usages, uses, describe, usedBySummary, resolve: resolve2, namesOf, isColumn, columnLineage };
-  }
-});
-
-// lib/fixture-schema.js
-var require_fixture_schema = __commonJS({
-  "lib/fixture-schema.js"(exports2, module2) {
-    var MAX_DEPTH = 32;
-    var MAX_PATHS = 1e4;
-    var MAX_NODES = 5e4;
-    var validPath = (p) => typeof p === "string" && /^(value|key|headers)(\.[\w-]+|\[\])*$/.test(p);
-    var fieldName = (n) => typeof n === "string" && /^[\w-]+$/.test(n);
-    var normalized = (n) => String(n || "").replace(/[^a-z0-9]/gi, "").toLowerCase();
-    var scalar = (t) => ["string", "integer", "number", "boolean"].includes(t);
-    var PRIMITIVES = new Map(Object.entries({ null: "null", boolean: "boolean", int: "integer", long: "integer", float: "number", double: "number", bytes: "string", string: "string" }));
-    var primitive = (t) => PRIMITIVES.get(t);
-    var jsonType = (v) => v === null ? "null" : Array.isArray(v) ? "array" : typeof v === "number" && Number.isInteger(v) ? "integer" : typeof v;
-    function decoded(value) {
-      if (typeof value !== "string") return value;
-      if (value.length > 1e6) return null;
-      try {
-        return JSON.parse(value);
-      } catch {
-        return value;
-      }
-    }
-    function schemaOf(definition) {
-      if (!definition) return null;
-      const envelope = typeof definition === "object" && Object.hasOwn(definition, "schema");
-      const schema = decoded(envelope ? definition.schema : definition);
-      const kind = String(envelope ? definition.type || definition.schemaType || "" : "").toUpperCase();
-      if (kind && !["JSON", "JSONSCHEMA", "JSON_SCHEMA", "AVRO"].includes(kind)) return null;
-      const looksAvro = (s) => s && typeof s === "object" && (["record", "enum", "fixed", "int", "long", "float", "double", "bytes"].includes(s.type) || s.type === "array" && (typeof s.items === "string" || Array.isArray(s.items)));
-      const avro = kind === "AVRO" || !kind && (typeof schema === "string" || Array.isArray(schema) || looksAvro(schema));
-      return schema && (typeof schema === "object" || avro) ? { schema, kind: avro ? "avro-schema" : "json-schema" } : null;
-    }
-    function paths(topic = {}) {
-      if (!topic || typeof topic !== "object") return [];
-      const out2 = /* @__PURE__ */ new Map();
-      let work = 0;
-      const add = (p, type, source, detail) => {
-        if (!validPath(p) || out2.size >= MAX_PATHS && !out2.has(p)) return;
-        let entry = out2.get(p);
-        if (!entry) {
-          entry = { path: p, types: /* @__PURE__ */ new Set(), sources: /* @__PURE__ */ new Set(), evidence: /* @__PURE__ */ new Set() };
-          out2.set(p, entry);
-        }
-        for (const t of [].concat(type || "unknown")) entry.types.add(t);
-        entry.sources.add(source);
-        entry.evidence.add(detail || `${source}: ${p}`);
-      };
-      const walkSample = (v, p, source, detail, depth = 0, ancestors = /* @__PURE__ */ new Set()) => {
-        if (depth > MAX_DEPTH || ++work > MAX_NODES || ancestors.has(v)) return;
-        if (typeof v === "string" && /^[\s]*[\[{]/.test(v)) {
-          const parsed = decoded(v);
-          if (parsed !== v) v = parsed;
-        }
-        add(p, jsonType(v), source, detail);
-        if (!v || typeof v !== "object") return;
-        const next = new Set(ancestors);
-        next.add(v);
-        if (Array.isArray(v)) for (const x of v) walkSample(x, `${p}[]`, source, detail, depth + 1, next);
-        else for (const [name, x] of Object.entries(v)) if (fieldName(name)) walkSample(x, `${p}.${name}`, source, detail, depth + 1, next);
-      };
-      function jsonSchema(root, prefix) {
-        const resolve2 = (ref) => {
-          if (ref === "#") return root;
-          if (typeof ref !== "string" || !ref.startsWith("#/")) return null;
-          let node = root;
-          for (const part of ref.slice(2).split("/").map((s) => s.replace(/~1/g, "/").replace(/~0/g, "~"))) {
-            if (!node || typeof node !== "object" || !Object.hasOwn(node, part)) return null;
-            node = node[part];
-          }
-          return node;
-        };
-        function visit(node, p, depth = 0, ancestors = /* @__PURE__ */ new Set()) {
-          if (node === true) {
-            add(p, "unknown", "json-schema");
-            return;
-          }
-          if (!node || typeof node !== "object" || Array.isArray(node) || depth > MAX_DEPTH || ++work > MAX_NODES || ancestors.has(node)) return;
-          const next = new Set(ancestors);
-          next.add(node);
-          const types = [].concat(node.type || []).filter((t) => ["object", "array", "null", "string", "number", "integer", "boolean"].includes(t));
-          if (node.properties && typeof node.properties === "object" && !Array.isArray(node.properties)) types.push("object");
-          if (node.items || node.prefixItems) types.push("array");
-          if (Array.isArray(node.enum)) types.push(...node.enum.map(jsonType));
-          if (Object.hasOwn(node, "const")) types.push(jsonType(node.const));
-          if (node.nullable === true) types.push("null");
-          if (types.length) add(p, types, "json-schema");
-          if (node.$ref) visit(resolve2(node.$ref), p, depth + 1, next);
-          for (const keyword of ["allOf", "anyOf", "oneOf"]) if (Array.isArray(node[keyword])) for (const variant of node[keyword]) visit(variant, p, depth + 1, next);
-          if (node.properties && typeof node.properties === "object" && !Array.isArray(node.properties)) {
-            for (const [name, definition] of Object.entries(node.properties)) if (fieldName(name)) visit(definition, `${p}.${name}`, depth + 1, next);
-          }
-          if (Array.isArray(node.items)) for (const item of node.items) visit(item, `${p}[]`, depth + 1, next);
-          else if (node.items) visit(node.items, `${p}[]`, depth + 1, next);
-          if (Array.isArray(node.prefixItems)) for (const item of node.prefixItems) visit(item, `${p}[]`, depth + 1, next);
-          if (!out2.has(p)) add(p, "unknown", "json-schema");
-        }
-        visit(root, prefix);
-      }
-      function avroSchema(root, prefix) {
-        const names = /* @__PURE__ */ new Map(), seen = /* @__PURE__ */ new Set();
-        const fullname = (node, namespace) => node.name?.includes(".") ? node.name : [node.namespace || namespace, node.name].filter(Boolean).join(".");
-        function collect(node, namespace = "", depth = 0) {
-          if (!node || typeof node !== "object" || seen.has(node) || depth > MAX_DEPTH || ++work > MAX_NODES) return;
-          seen.add(node);
-          if (Array.isArray(node)) {
-            for (const branch of node) collect(branch, namespace, depth + 1);
-            return;
-          }
-          if (["record", "enum", "fixed"].includes(node.type) && typeof node.name === "string") {
-            const full = fullname(node, namespace);
-            names.set(full, node);
-            namespace = full.split(".").slice(0, -1).join(".");
-          }
-          for (const f of Array.isArray(node.fields) ? node.fields : []) collect(f?.type, namespace, depth + 1);
-          collect(node.items, namespace, depth + 1);
-          collect(node.values, namespace, depth + 1);
-          if (typeof node.type === "object") collect(node.type, namespace, depth + 1);
-        }
-        collect(root);
-        function visit(node, p, namespace = "", depth = 0, ancestors = /* @__PURE__ */ new Set()) {
-          if (node == null || depth > MAX_DEPTH || ++work > MAX_NODES) return;
-          if (typeof node === "string") {
-            const type = primitive(node);
-            if (type) add(p, type, "avro-schema");
-            else {
-              const target = names.get(node.includes(".") ? node : [namespace, node].filter(Boolean).join("."));
-              if (target) visit(target, p, namespace, depth + 1, ancestors);
-              else add(p, "unknown", "avro-schema");
-            }
-            return;
-          }
-          if (typeof node !== "object" || ancestors.has(node)) return;
-          const next = new Set(ancestors);
-          next.add(node);
-          if (Array.isArray(node)) {
-            for (const branch of node) visit(branch, p, namespace, depth + 1, next);
-            return;
-          }
-          if (node.type === "record") {
-            add(p, "object", "avro-schema");
-            const full = fullname(node, namespace), ns = full.split(".").slice(0, -1).join(".");
-            for (const f of Array.isArray(node.fields) ? node.fields : []) if (f && fieldName(f.name)) visit(f.type, `${p}.${f.name}`, ns, depth + 1, next);
-          } else if (node.type === "array") {
-            add(p, "array", "avro-schema");
-            visit(node.items, `${p}[]`, namespace, depth + 1, next);
-          } else if (node.type === "map") add(p, "object", "avro-schema");
-          else if (node.type === "enum" || node.type === "fixed") add(p, "string", "avro-schema");
-          else visit(node.type, p, namespace, depth + 1, next);
-        }
-        visit(root, prefix);
-      }
-      for (const side of ["key", "value"]) {
-        const definition = schemaOf(topic[`${side}Schema`]);
-        if (definition) {
-          if (definition.kind === "avro-schema") avroSchema(definition.schema, side);
-          else jsonSchema(definition.schema, side);
-        }
-        const shaped = [...out2.values()].some((p) => p.path.startsWith(side) && [...p.types].some(scalar));
-        if (!shaped) {
-          if (side === "value" && topic.fields && typeof topic.fields === "object") {
-            const fields = Array.isArray(topic.fields) ? topic.fields.map((f) => [f?.path || f?.name, f?.type]) : Object.entries(topic.fields);
-            for (const [name, raw] of fields) if (typeof name === "string") {
-              const p = /^(value|key|headers)(\.|\[\])/.test(name) ? name : `value.${name}`;
-              const t = typeof raw === "object" && raw ? raw.type : raw;
-              add(p, [].concat(t || "unknown").map((x) => primitive(x) || (["object", "array", "null", "integer", "number", "boolean", "string"].includes(x) ? x : "unknown")), "cached-fields");
-              const tokens = p.match(/^(?:value|key|headers)|\.[\w-]+|\[\]/g) || [];
-              let parent = "";
-              for (let i = 0; i < tokens.length - 1; i++) {
-                parent += tokens[i];
-                add(parent, tokens[i + 1] === "[]" ? "array" : "object", "cached-fields");
-              }
-            }
-          }
-          for (const [i, sample] of (Array.isArray(topic.samples) ? topic.samples : []).entries()) if (sample && Object.hasOwn(sample, side)) walkSample(sample[side], side, "cached-sample", `cached sample[${i}]: ${side}`);
-        }
-      }
-      for (const [i, sample] of (Array.isArray(topic.samples) ? topic.samples : []).entries()) if (sample && Object.hasOwn(sample, "headers")) walkSample(sample.headers, "headers", "cached-sample", `cached sample[${i}]: headers`);
-      return [...out2.values()].sort((a, b) => a.path.localeCompare(b.path)).map((e) => ({ path: e.path, types: [...e.types].sort(), sources: [...e.sources].sort(), evidence: [...e.evidence].sort() }));
-    }
-    function validatePath(topic, path3) {
-      return validPath(path3) && (path3 === "headers" || path3.startsWith("headers.") || path3.startsWith("headers[]") || paths(topic).some((p) => p.path === path3));
-    }
-    function singular(name) {
-      if (/ies$/i.test(name)) return name.slice(0, -3) + "y";
-      if (/(?:sses|shes|ches|xes|zes|statuses)$/i.test(name)) return name.slice(0, -2);
-      return /s$/i.test(name) && !/(?:ss|us|is)$/i.test(name) ? name.slice(0, -1) : name;
-    }
-    function candidates(tables = [], topics = []) {
-      const columns = /* @__PURE__ */ new Map();
-      for (const t of tables) {
-        if (!t || typeof t !== "object") continue;
-        const table2 = t.table || (t.schema && t.name ? `${t.schema}.${t.name}` : null);
-        if (!table2 || !t.db) continue;
-        for (const c of t.columns || []) {
-          if (!c?.name) continue;
-          const aliases = /* @__PURE__ */ new Map([[normalized(c.name), `normalized field name equals column ${c.name}`]]);
-          if (normalized(c.name) === "id") {
-            const entity = table2.split(".").at(-1);
-            aliases.set(normalized(singular(entity) + "Id"), `table semantic id: ${table2}.id \u2192 ${singular(entity)}Id`);
-            aliases.set(normalized(entity + "Id"), `table semantic id: ${table2}.id \u2192 ${entity}Id`);
-          }
-          for (const [alias, evidence] of aliases) {
-            if (!alias) continue;
-            if (!columns.has(alias)) columns.set(alias, []);
-            columns.get(alias).push({ from: { db: t.db, table: table2, column: c.name }, evidence });
-          }
-        }
-      }
-      const out2 = /* @__PURE__ */ new Map();
-      for (const topic of topics) {
-        if (typeof topic?.topic !== "string" || !topic.topic) continue;
-        for (const p of paths(topic)) {
-          if (!p.types.some(scalar) || p.types.some((t) => t === "array" || t === "object")) continue;
-          const leaf = p.path.split(".").at(-1).replace(/(?:\[\])+$/, "");
-          for (const c of columns.get(normalized(leaf)) || []) {
-            const key = JSON.stringify([topic.topic, p.path, c.from]);
-            const evidence = [.../* @__PURE__ */ new Set([c.evidence, ...p.evidence, "Candidate only; confirm from service code or a schema contract before adding a match."])];
-            if (!out2.has(key)) out2.set(key, { topic: topic.topic, path: p.path, from: c.from, source: "candidate", verified: false, evidence });
-            else out2.get(key).evidence = [.../* @__PURE__ */ new Set([...out2.get(key).evidence, ...evidence])];
-          }
-        }
-      }
-      return [...out2.values()].sort((a, b) => JSON.stringify([a.topic, a.path, a.from]).localeCompare(JSON.stringify([b.topic, b.path, b.from])));
-    }
-    module2.exports = { paths, candidates, validatePath };
   }
 });
 
@@ -37645,19 +38203,15 @@ var require_catalog = __commonJS({
         return [];
       }
     }
-    var note = (name, db) => {
-      const n = notes.get(name, db);
-      return n ? `  # ${n.replace(/\s+/g, " ")}` : "";
-    };
-    function build(env) {
-      const lines = [];
-      const root = path3.join(CACHE2, env);
-      try {
-        require_pgindex().build(env);
-      } catch (e) {
-        console.error(`pg usage index: ${e.message}`);
-      }
-      const usedBy = require_pgindex().usedBySummary(env);
+    function writeLines(env, emit, usedBy) {
+      const lines = { push(...rows) {
+        for (const line of rows) emit(line);
+      } };
+      const root = path3.join(CACHE2, env), annotations = notes.all();
+      const note = (name, db) => {
+        const n = annotations[String(db ? db + ":" + name : name).toLowerCase()] || (db ? annotations[name.toLowerCase()] : null);
+        return n ? "  # " + n.replace(/\s+/g, " ") : "";
+      };
       for (const data of require_pg().loadAll(env)) {
         for (const t of data.tables) {
           const k = `${t.schema}.${t.name}`;
@@ -37725,50 +38279,134 @@ var require_catalog = __commonJS({
       } catch (e) {
         console.error(`site map: ${e.message}`);
       }
-      fs3.mkdirSync(root, { recursive: true });
-      fs3.writeFileSync(path3.join(root, "catalog.txt"), lines.join("\n") + "\n");
-      return lines.length;
     }
-    var prepared = /* @__PURE__ */ new Map();
-    function find(env, q, { limit = 200 } = {}) {
-      const file = path3.join(CACHE2, env, "catalog.txt");
-      const stamp = fileStamp(file);
-      if (!stamp) {
-        prepared.delete(env);
-        return [];
-      }
-      let cached = prepared.get(env);
-      if (cached?.stamp !== stamp) {
-        let text;
+    function inputSignature(env) {
+      const C = require_config(), files = [];
+      function walk(dir, depth = 0) {
+        if (depth > 4) return;
+        let entries;
         try {
-          text = fs3.readFileSync(file, "utf8");
+          entries = fs3.readdirSync(dir, { withFileTypes: true });
         } catch {
-          prepared.delete(env);
-          return [];
+          return;
         }
-        cached = { stamp, lines: text.split("\n").filter(Boolean).map((line) => {
-          const lower = line.toLowerCase(), cut = lower.indexOf(" | used by: ");
-          return { line, lower, main: cut < 0 ? lower : lower.slice(0, cut) };
-        }) };
-        prepared.set(env, cached);
+        for (const e of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+          if (e.name.startsWith("_stories") || e.name === "history" || e.name === "attachments" || e.name === "index") continue;
+          const f = path3.join(dir, e.name);
+          if (e.isDirectory()) walk(f, depth + 1);
+          else if (e.name.endsWith(".json") && !e.name.startsWith("_usage") && !e.name.endsWith(".dictionaries.json")) files.push([f, fileStamp(f)]);
+        }
       }
-      let kind = null;
-      const words = q.toLowerCase().split(/\s+/).filter(Boolean).filter((w) => {
-        const m = w.match(/^(pg|pgfn|es|kafka|consul|svc|api|site|repo|docs):$/);
-        if (m) kind = m[1];
-        return !m;
-      });
-      const direct = [], related = [];
-      for (const { line, lower, main: main2 } of cached.lines) {
+      for (const dir of [path3.join(CACHE2, env, "pg"), path3.join(CACHE2, env, "es"), path3.join(CACHE2, env, "kafka"), path3.join(CACHE2, "confluence"), C.PATHS.passports]) walk(dir);
+      for (const f of [path3.join(CACHE2, env, "consul.json"), path3.join(CACHE2, "bitbucket/_index.json"), path3.join(CACHE2, "routes.json"), notes.FILE, C.CONFIG_FILE]) files.push([f, fileStamp(f)]);
+      return require("node:crypto").createHash("sha256").update(JSON.stringify(files)).digest("hex");
+    }
+    function build(env, { force = false } = {}) {
+      require_access().checkEnv(env);
+      const S = require_catalog_store(), signature = inputSignature(env), root = path3.join(CACHE2, env), textFile = path3.join(root, "catalog.txt");
+      if (!force && fs3.existsSync(textFile) && readJson(path3.join(root, "catalog-export.json"))?.signature === signature && S.unchanged(env, signature)) return S.status(env).objects;
+      require_pgindex().build(env);
+      const writer = S.available() ? S.writer(env, signature, fileStamp(path3.join(root, "pg/_usage.json"))) : null;
+      fs3.mkdirSync(root, { recursive: true });
+      const temporary = textFile + "." + require("node:crypto").randomUUID() + ".tmp", fd = fs3.openSync(temporary, "wx");
+      let count2 = 0;
+      try {
+        if (writer) {
+          for (const e of require_pgindex().load(env).edges) writer.edge(e);
+          writer.finishEdges();
+        }
+        const usedBy = writer ? { get: (key) => writer.summary(key) } : require_pgindex().usedBySummary(env);
+        writeLines(env, (line) => {
+          require_execution().check();
+          if (writer) writer.line(line);
+          fs3.writeSync(fd, line + "\n");
+          count2++;
+        }, usedBy);
+        if (inputSignature(env) !== signature) throw Error("Catalog inputs changed during refresh; previous generation retained");
+        fs3.fsyncSync(fd);
+        fs3.closeSync(fd);
+        if (writer) writer.commit();
+        fs3.renameSync(temporary, textFile);
+        require_atomic_file().atomicFile(path3.join(root, "catalog-export.json"), JSON.stringify({ signature }));
+        return count2;
+      } catch (error) {
+        writer?.abort();
+        try {
+          fs3.closeSync(fd);
+        } catch {
+        }
+        fs3.rmSync(temporary, { force: true });
+        throw error;
+      }
+    }
+    function* textLines(file) {
+      const fd = fs3.openSync(file, "r"), buffer = Buffer.alloc(65536), decoder = new (require("node:string_decoder")).StringDecoder("utf8");
+      let pending = "";
+      try {
+        let n;
+        while (n = fs3.readSync(fd, buffer, 0, buffer.length, null)) {
+          pending += decoder.write(buffer.subarray(0, n));
+          let i;
+          while ((i = pending.indexOf("\n")) >= 0) {
+            yield pending.slice(0, i);
+            pending = pending.slice(i + 1);
+          }
+          if (Buffer.byteLength(pending) > 1024 * 1024) throw Error("Catalog line exceeds streaming budget");
+        }
+        pending += decoder.end();
+        if (pending) yield pending;
+      } finally {
+        fs3.closeSync(fd);
+      }
+    }
+    function find(env, q, { limit = 200 } = {}) {
+      require_access().checkEnv(env);
+      limit = Math.max(1, Math.min(500, Number(limit) || 200));
+      const S = require_catalog_store();
+      if (S.available()) {
+        const page = S.page(env, q, { limit });
+        if (page) return page.results.map((r) => r.line);
+      }
+      const file = path3.join(CACHE2, env, "catalog.txt");
+      if (!fs3.existsSync(file)) return [];
+      const { words, kind } = S.terms(q), direct = [], related = [];
+      for (const line of textLines(file)) {
+        const lower = line.toLowerCase(), cut = lower.indexOf(" | used by: "), main2 = cut < 0 ? lower : lower.slice(0, cut);
         if (kind && !line.startsWith(kind + " ")) continue;
         if (!words.every((w) => lower.includes(w))) continue;
-        (words.every((w) => main2.includes(w)) ? direct : related).push(line);
+        if (words.every((w) => main2.includes(w))) direct.push(line);
+        else if (related.length < limit) related.push(line);
         if (direct.length >= limit) break;
       }
-      const out2 = [...direct, ...related].slice(0, limit);
-      return out2;
+      return [...direct, ...related].slice(0, limit);
+    }
+    function search(env, q, options = {}) {
+      require_access().checkEnv(env);
+      const S = require_catalog_store();
+      const page = S.available() ? S.page(env, q, options) : null;
+      if (page) return page;
+      if (options.cursor || options.generation) throw Object.assign(Error("This cache has no retained index generation; refresh catalog_sync what=index first"), { code: "DT_CATALOG_GENERATION", statusCode: 409 });
+      return { protocol: "dt.catalog-page/v1", env, generation: null, backend: "stream", results: find(env, q, { limit: options.limit }).map((line) => ({ line })), nextCursor: null, complete: false, gaps: ["Legacy streaming cache; refresh an index for stable pagination."] };
+    }
+    function count(env) {
+      require_access().checkEnv(env);
+      try {
+        const indexed = require_catalog_store().status(env);
+        if (indexed.generation) return indexed.objects;
+      } catch {
+      }
+      const cached = readJson(path3.join(CACHE2, env, "_sources.json"))?.index?.lines;
+      if (Number.isSafeInteger(cached)) return cached;
+      const file = path3.join(CACHE2, env, "catalog.txt");
+      try {
+        if (fs3.statSync(file).size <= 1048576) return fs3.readFileSync(file, "utf8").split("\n").length - 1;
+      } catch (error) {
+        if (error.code === "ENOENT") return 0;
+      }
+      return null;
     }
     function status(env) {
+      require_access().checkEnv(env);
       const root = path3.join(CACHE2, env);
       return {
         catalog: fs3.existsSync(path3.join(root, "catalog.txt")),
@@ -37777,7 +38415,7 @@ var require_catalog = __commonJS({
         topics: readJson(path3.join(root, "kafka", "_index.json"))?.topics || null
       };
     }
-    module2.exports = { build, find, status };
+    module2.exports = { build, find, search, count, status, inputSignature, textLines };
   }
 });
 
@@ -38169,17 +38807,18 @@ var require_indexer = __commonJS({
     }
     var SOURCES = { pg: () => require_pg(), es: () => require_es(), kafka: () => require_kafka(), consul: () => require_consul() };
     async function syncSource(env, kind, only, log) {
-      await limit.take(`${kind}:${env}`);
-      const started = Date.now();
-      try {
-        const r = await SOURCES[kind]().sync(env, { only, log });
-        if (kind === "pg") for (const d of r) record(env, `pg:${d.db}`, d.error ? { ok: false, error: d.error } : { ok: true, ...d });
-        else record(env, kind, { ok: true, ms: Date.now() - started, ...typeof r === "object" && !Array.isArray(r) ? r : { count: Array.isArray(r) ? r.length : void 0 } });
-        return r;
-      } catch (e) {
-        record(env, only && kind === "pg" ? `pg:${only.join(",")}` : kind, { ok: false, ms: Date.now() - started, error: e.message });
-        throw e;
-      }
+      return limit.network(`${kind}:${env}`, async () => {
+        const started = Date.now();
+        try {
+          const r = await SOURCES[kind]().sync(env, { only, log });
+          if (kind === "pg") for (const d of r) record(env, `pg:${d.db}`, d.error ? { ok: false, error: d.error } : { ok: true, ...d });
+          else record(env, kind, { ok: true, ms: Date.now() - started, ...typeof r === "object" && !Array.isArray(r) ? r : { count: Array.isArray(r) ? r.length : void 0 } });
+          return r;
+        } catch (e) {
+          record(env, only && kind === "pg" ? `pg:${only.join(",")}` : kind, { ok: false, ms: Date.now() - started, error: e.message });
+          throw e;
+        }
+      });
     }
     async function rebuildPassports(only, log) {
       const pp = require_passport();
@@ -38212,8 +38851,48 @@ var require_indexer = __commonJS({
       return { ...docsIndex ? { docsIndex } : {}, docsGraph: { nodes: graph.nodes.length, relations: graph.relations.length, gaps: graph.gaps.length } };
     }
     function buildIndexes(env) {
-      require_pgindex().current(env, { rebuild: true });
       return { lines: require_catalog().build(env), edges: require_pgindex().load(env).edges.length };
+    }
+    var refreshes = /* @__PURE__ */ new Map();
+    function joinRefresh(key, log, run) {
+      const A = require_access(), E = require_execution(), C = require_config(), snapshot = C.snapshot(), sharedKey = key + ":" + snapshot.revision;
+      let entry = refreshes.get(sharedKey);
+      if (!entry) {
+        if (refreshes.size >= 128) throw Object.assign(Error("Refresh queue is full"), { code: "DT_QUEUE_FULL", statusCode: 429, retryAfter: 30 });
+        entry = { listeners: /* @__PURE__ */ new Set(), waiters: 0 };
+        refreshes.set(sharedKey, entry);
+        const owner = { principalId: "system", storyId: "catalog:" + require("node:crypto").createHash("sha256").update(sharedKey).digest("hex").slice(0, 24), role: "admin", multiUser: true };
+        entry.owner = owner;
+        entry.execution = A.run(owner, () => C.pin(snapshot, () => E.start({ kind: "job", tool: "catalog_refresh", title: "Shared catalog refresh", detached: true }, () => require_operational_metrics().measure("refresh", () => run((line) => {
+          for (const listener of entry.listeners) listener(line);
+        })))));
+        entry.promise = entry.execution.promise.finally(() => {
+          if (refreshes.get(sharedKey) === entry) refreshes.delete(sharedKey);
+        });
+      }
+      entry.waiters++;
+      entry.listeners.add(log);
+      let detached = false;
+      const detach = (cancel) => {
+        if (detached) return;
+        detached = true;
+        entry.waiters--;
+        entry.listeners.delete(log);
+        if (cancel && entry.waiters === 0) A.run(entry.owner, () => E.cancel(entry.execution.id, "All refresh requesters cancelled"));
+      };
+      const release = E.resource(() => detach(true));
+      const signal = E.signal();
+      let abort;
+      const cancellation = new Promise((resolve2, reject) => {
+        abort = () => reject(E.abortError(signal.reason));
+        if (signal?.aborted) abort();
+        else signal?.addEventListener("abort", abort, { once: true });
+      });
+      return Promise.race([entry.promise, cancellation]).finally(() => {
+        signal?.removeEventListener("abort", abort);
+        release();
+        detach(false);
+      });
     }
     function refresh({ env, what = "all", only, spaces, full = false } = {}) {
       env = env || envNames2()[0];
@@ -38223,7 +38902,7 @@ var require_indexer = __commonJS({
       const global2 = what === "passports" || what === "bitbucket" || what === "confluence";
       const title = `${what}${only?.length ? ` (${only.join(", ")})` : ""} ${global2 ? "" : env}`.trim();
       const key = what === "confluence" ? `${what}:${(only || []).join(",")}:${spaces || ""}:${full}` : global2 ? `${what}:${(only || []).join(",")}` : `${env}:${what}:${(only || []).join(",")}`;
-      return jobs.start(key, title, async (log) => {
+      return jobs.start(key, title, (log) => joinRefresh(key, log, async (log2) => {
         const lifecycle = require_state_machine2().create(require_lifecycles().refresh);
         const rebuild = (...args) => {
           if (lifecycle.is("sources")) lifecycle.to("indexing");
@@ -38232,43 +38911,43 @@ var require_indexer = __commonJS({
         try {
           const out2 = {};
           if (what === "confluence") {
-            out2.confluence = await require_docs_cache().sync({ spaces: spaces || only, full, log });
+            out2.confluence = await require_docs_cache().sync({ spaces: spaces || only, full, log: log2 });
             out2.graph = (await require_isolate().exec("indexer", "buildDocs", [env, { index: false }])).docsGraph;
-            for (const e of envNames2()) out2[e] = await rebuild(e, log);
+            for (const e of envNames2()) out2[e] = await rebuild(e, log2);
             lifecycle.to("ready");
             return out2;
           }
           if (what === "bitbucket") {
-            out2.bitbucket = await require_bbindex().build({ log, only, force: !!only });
-            for (const e of envNames2()) out2[e] = await rebuild(e, log);
+            out2.bitbucket = await require_bbindex().build({ log: log2, only, force: !!only });
+            for (const e of envNames2()) out2[e] = await rebuild(e, log2);
             lifecycle.to("ready");
             return out2;
           }
           if (what === "passports") {
-            out2.passports = await rebuildPassports(only, log);
-            for (const e of envNames2()) out2[e] = await rebuild(e, log);
+            out2.passports = await rebuildPassports(only, log2);
+            for (const e of envNames2()) out2[e] = await rebuild(e, log2);
             lifecycle.to("ready");
             return out2;
           }
           const kinds = what === "all" ? LIVE.filter((k) => configured(env, k)) : LIVE.includes(what) ? [what] : [];
           for (const k of kinds) {
-            log(`${k} ${env}: syncing${only?.length ? ` ${only.join(", ")}` : ""}`);
+            log2(`${k} ${env}: syncing${only?.length ? ` ${only.join(", ")}` : ""}`);
             try {
-              out2[k] = await syncSource(env, k, only, (l) => log(l));
+              out2[k] = await syncSource(env, k, only, (l) => log2(l));
             } catch (e) {
               out2[k] = { error: e.message };
-              log(`${k} ${env}: ERROR ${e.message}`);
+              log2(`${k} ${env}: ERROR ${e.message}`);
             }
           }
           if (what === "index") Object.assign(out2, await require_isolate().exec("indexer", "buildDocs", [env]));
-          Object.assign(out2, await rebuild(env, log));
+          Object.assign(out2, await rebuild(env, log2));
           lifecycle.to("ready");
           return out2;
         } catch (error) {
           if (!lifecycle.terminal) lifecycle.to("failed");
           throw error;
         }
-      });
+      }));
     }
     function status(env) {
       const e = getEnv2(env);
@@ -38294,11 +38973,7 @@ var require_indexer = __commonJS({
       const one = (kind, count) => ({ configured: configured(env, kind), syncedAt: count.syncedAt || src[kind]?.at || null, count: count.n, error: src[kind]?.ok === false ? src[kind].error : null, ms: src[kind]?.ms ?? null });
       const esI = idx("es"), kI = idx("kafka"), consul = readJson(path3.join(CACHE2, env, "consul.json"));
       const usage = require_pgindex().load(env);
-      let lines = 0;
-      try {
-        lines = require("fs").readFileSync(path3.join(CACHE2, env, "catalog.txt"), "utf8").split("\n").length - 1;
-      } catch {
-      }
+      const lines = require_catalog().count(env);
       return {
         env,
         envFile: e.envFile,
@@ -38309,7 +38984,7 @@ var require_indexer = __commonJS({
         consul: one("consul", { syncedAt: consul?.syncedAt, n: consul?.services ? Object.keys(consul.services).length : null }),
         confluence: require_docs_cache().status(),
         logs: { configured: e.logs.hosts.length > 0, index: e.logs.index },
-        index: { builtAt: usage.builtAt || null, catalogLines: lines, usageEdges: usage.edges.length }
+        index: { builtAt: usage.builtAt || null, catalogLines: lines, catalogCountKnown: lines !== null, usageEdges: usage.edges.length }
       };
     }
     var safeHost = (url) => {
@@ -60565,6 +61240,7 @@ var require_context = __commonJS({
       return p;
     }
     function atomic(file, data) {
+      require_catalog_references().retain(data, "context:" + file);
       require_atomic_file().atomicFile(file, data, { mode: 384 });
     }
     function metadata(a, previous = {}) {
@@ -64867,7 +65543,10 @@ var require_project_context = __commonJS({
           const blob = safe(id, "blobs", h);
           if (fs3.statSync(blob).size !== data.length || hash(fs3.readFileSync(blob)) !== h) fail("Retained blob is damaged; prior publication was preserved", "DT_PROJECT_CONTEXT_DAMAGED", 409);
         }
-        for (const h of newBlobs) require_atomic_file().atomicFile(safe(id, "blobs", h), pending.get(h), { mode: 384 });
+        for (const h of newBlobs) {
+          require_catalog_references().retain(pending.get(h), "project:" + id + ":" + h);
+          require_atomic_file().atomicFile(safe(id, "blobs", h), pending.get(h), { mode: 384 });
+        }
         lifecycle.to("files-written");
         require_atomic_file().atomicFile(safe(id, "revisions", revision + ".json"), body, { mode: 384 });
         lifecycle.to("revision-written");
@@ -72391,7 +73070,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "95cd738fcbca5f8625817aaba86c3a459174b4abda78b7bff685714f8aa5c5a2";
+      if (true) return "ef1fd6cd7ea5776dce1386042326df49d0f487283cba2f0d28d23d3764398834";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -72981,6 +73660,55 @@ var require_tools_dev = __commonJS({
   }
 });
 
+// contracts/v1/adapter-capabilities.schema.json
+var require_adapter_capabilities_schema = __commonJS({
+  "contracts/v1/adapter-capabilities.schema.json"(exports2, module2) {
+    module2.exports = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "urn:dt:adapter-capabilities:v1",
+      title: "Adapter capabilities and evidence limits",
+      type: "object",
+      required: ["protocol", "id", "scopeAware", "capabilities"],
+      properties: {
+        protocol: { const: "dt.adapter-capabilities/v1" },
+        id: { type: "string", minLength: 1, maxLength: 160 },
+        scopeAware: { type: "boolean" },
+        capabilities: { type: "array", maxItems: 100, items: { type: "object", required: ["operation", "languages", "evidence", "gaps"], properties: {
+          operation: { type: "string", maxLength: 160 },
+          languages: { type: "array", maxItems: 30, items: { type: "string", maxLength: 40 } },
+          evidence: { type: "string", enum: ["text", "static", "retained-semantic", "runtime", "fixture"] },
+          sourceIdentity: { type: "string", maxLength: 500 },
+          limits: { type: "object" },
+          gaps: { type: "array", maxItems: 50, items: { type: "string", maxLength: 1e3 } }
+        }, additionalProperties: false } }
+      },
+      additionalProperties: false
+    };
+  }
+});
+
+// lib/adapter-capabilities.js
+var require_adapter_capabilities = __commonJS({
+  "lib/adapter-capabilities.js"(exports2, module2) {
+    var schema = require_adapter_capabilities_schema();
+    function validate(value) {
+      const issues = require_schema().validate(value, schema);
+      if (issues.length) throw Object.assign(Error("Invalid adapter capability manifest: " + issues[0].message), { code: "DT_BACKEND_CONTRACT", issues });
+      return value;
+    }
+    function list() {
+      const builtins = { protocol: "dt.adapter-capabilities/v1", id: "dev-tool", scopeAware: true, capabilities: [
+        { operation: "code_search", languages: ["text"], evidence: "text", sourceIdentity: "repository commit + source digest", gaps: ["A text hit does not establish a call or data-flow edge."] },
+        { operation: "passport", languages: ["java", "kotlin"], evidence: "static", sourceIdentity: "repository and internal-library commits", gaps: ["Dynamic configuration, reflection and unindexed libraries remain explicit gaps."] },
+        { operation: "semantic_query", languages: ["java", "js", "ts", "tsx"], evidence: "retained-semantic", sourceIdentity: "commit + content digest + engine/script generation", gaps: ["Requires configured Joern and a retained analysis; static paths do not prove runtime execution."] }
+      ] };
+      const adapters = Object.entries(require_config().getTools().backends).map(([route, b]) => ({ route, protocol: "dt.tool/v1", transport: "http", authenticated: !!b.token, scopeAware: b.scopeAware === true, capabilities: b.capabilities ? validate(b.capabilities) : null, gaps: b.capabilities ? [] : ["No capability manifest configured; inspect the operation contract before use."] }));
+      return { builtin: builtins, adapters };
+    }
+    module2.exports = { validate, list };
+  }
+});
+
 // lib/evaluation-evidence.js
 var require_evaluation_evidence = __commonJS({
   "lib/evaluation-evidence.js"(exports2, module2) {
@@ -73342,6 +74070,7 @@ var require_contracts = __commonJS({
 var require_tools_discovery = __commonJS({
   "lib/tools-discovery.js"(exports2, module2) {
     module2.exports = ({ str, int, registry }) => [
+      { name: "adapter_capabilities", group: "catalog", description: "Inspect declared adapter/language capabilities and evidence gaps. Generic text search is separate from semantic analysis. Does not contact remote services.", input: {}, run: () => require_adapter_capabilities().list() },
       { name: "evaluation_evidence", strictInput: true, group: "history", description: "Inspect parent-recorded evaluation evidence separately: immutable inputs, hash-chained safe tool transcript, candidate patch digest, independent grade, mutations and tool-versus-external execution. Rechecks signatures and artifact hashes. No inline grading results are accepted. Omit run to list retained records.", input: { run: str("Retained evaluation id"), limit: { ...int("Records when listing", 20), minimum: 1, maximum: 100 } }, run: (a) => {
         const r = a.run ? require_evaluation_evidence().verify(a.run) : { records: require_evaluation_evidence().list(a.limit) };
         return { ...r, view: require_results().saveView("json", r, { title: "Evaluation evidence" }) };
@@ -75214,7 +75943,8 @@ var require_adapter_port = __commonJS({
       lifecycle.to("sending");
       try {
         const localSignal = AbortSignal.timeout(timeoutMs);
-        const response = await fetch(url, { method: "POST", redirect: "error", signal: signal ? AbortSignal.any([localSignal, signal]) : localSignal, headers: { "content-type": "application/json", accept: "application/json", ...context2 ? { "x-dt-principal": owner.principalId, "x-dt-story": owner.storyId, "x-dt-scope": owner.scopeKey } : {}, ...backend.token ? { authorization: `Bearer ${backend.token}` } : {} }, body: JSON.stringify(request) });
+        const trace2 = require_telemetry().carrier();
+        const response = await fetch(url, { method: "POST", redirect: "error", signal: signal ? AbortSignal.any([localSignal, signal]) : localSignal, headers: { "content-type": "application/json", accept: "application/json", ...trace2?.traceparent ? { traceparent: trace2.traceparent } : {}, ...context2 ? { "x-dt-principal": owner.principalId, "x-dt-story": owner.storyId, "x-dt-scope": owner.scopeKey } : {}, ...backend.token ? { authorization: `Bearer ${backend.token}` } : {} }, body: JSON.stringify(request) });
         if (!response.ok) throw Object.assign(new Error(`Tool backend ${tool}: HTTP ${response.status}; execution outcome may be unknown`), { code: "DT_BACKEND_FAILED", requestId: request.requestId });
         lifecycle.to("reading");
         let bytes = 0;
@@ -75288,6 +76018,9 @@ var require_tools = __commonJS({
           return lines.length ? lines : [`(no match for "${a.q}" in ${a.env}: try fewer or shorter words, a kind prefix, or catalog_sync if it should exist)`];
         }
       },
+      { name: "catalog_search", group: "catalog", description: "Page cached catalog names at one retained generation. Preserve nextCursor to continue; no live calls. Use catalog_manage pin before retaining a generation reference.", input: { q: str("All words must match; optional kind prefix"), env, generation: str("Retained generation"), cursor: str("Continuation cursor"), limit: int("Page size, up to 500", 50) }, run: (a) => require_catalog().search(a.env, a.q || "", a) },
+      { name: "catalog_usage", group: "catalog", description: "Page detected usage edges by exact object or db:schema.object. Historical source evidence only; private manual overlays are available in pg_usage.", input: { object: str("Table/function or db:schema.object"), env, generation: str("Retained generation"), cursor: str("Continuation cursor"), direction: { type: "string", enum: ["users", "uses"], default: "users" }, limit: int("Page size, up to 500", 50) }, required: ["object"], run: (a) => require_catalog_store().page(a.env, "", a) || { results: [], complete: false, gaps: ["Refresh catalog_sync what=index first"] } },
+      { name: "catalog_manage", group: "catalog", description: "Admin: list, pin, unpin or explicitly collect a catalog generation. Current and pinned generations cannot be collected. No automatic history deletion.", input: { env, action: { type: "string", enum: ["list", "pin", "unpin", "gc", "references", "release_ref"], default: "list" }, generation: str("Exact generation to manage"), reference: str("Owned reference id to release") }, run: (a) => require_catalog_store().manage(a.env, a) },
       {
         name: "catalog_sync",
         group: "catalog",
@@ -75307,8 +76040,8 @@ var require_tools = __commonJS({
             timer = setTimeout(() => r(null), wait);
           })]);
           clearTimeout(timer);
-          if (!done) return { job: job.id, state: "running", log: (J.get(job.id).log || []).slice(-3), note: `Still running after ${Math.round(wait / 1e3)} s. In a minute call catalog_sync with job="${job.id}" to wait for it (or get its result). Progress is on /admin (Jobs).` };
-          return { job: done.id, state: done.state, ms: done.ms, ...done.error ? { error: done.error } : done.result };
+          if (!done) return { job: job.id, executionId: job.executionId, executionView: "/admin#runtime?" + new URLSearchParams({ execution: job.executionId, story: require_access().owner().storyId }), state: "running", log: (J.get(job.id).log || []).slice(-3), note: `Still running after ${Math.round(wait / 1e3)} s. In a minute call catalog_sync with job="${job.id}" to wait for it (or get its result). Progress is on /admin (Jobs).` };
+          return { job: done.id, executionId: done.executionId, executionView: "/admin#runtime?" + new URLSearchParams({ execution: done.executionId, story: require_access().owner().storyId }), state: done.state, ms: done.ms, ...done.error ? { error: done.error } : done.result };
         }
       },
       {
@@ -76242,6 +76975,7 @@ var require_tools = __commonJS({
     function pluginSource(spec) {
       const s = typeof spec === "string" ? { url: spec } : { ...spec };
       if (!s.url) throw new Error(`plugin entry needs a path or url: ${JSON.stringify(spec)}`);
+      if (typeof s.sha256 === "string") s.sha256 = s.sha256.toLowerCase();
       const gh = s.url.match(/^github:([\w.-]+)\/([\w.-]+)\/(.+?)(?:@([\w./-]+))?$/);
       if (gh) s.url = `https://raw.githubusercontent.com/${gh[1]}/${gh[2]}/${gh[4] || "main"}/${gh[3]}`;
       if (/^https?:\/\//.test(s.url)) {
@@ -76262,14 +76996,22 @@ var require_tools = __commonJS({
         }
         if (!s.remote || !force && fs3.existsSync(s.file)) continue;
         try {
-          const res = await fetch(s.url, { signal: AbortSignal.timeout(2e4) });
+          if (require_config().getServer().securityProfile === "team" && (!s.url.startsWith("https:") || !/^[a-f0-9]{64}$/i.test(s.sha256 || ""))) throw Error("Team mode requires HTTPS and an approved sha256 for remote plugins");
+          const res = await fetch(s.url, { signal: AbortSignal.timeout(2e4), redirect: "error" });
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const code = await res.text();
+          let size = 0;
+          const chunks = [];
+          for await (const chunk of res.body) {
+            size += chunk.length;
+            if (size > 2 * 1024 * 1024) throw Error("Plugin exceeds 2 MiB");
+            chunks.push(chunk);
+          }
+          const code = Buffer.concat(chunks).toString("utf8");
           const sha256 = crypto.createHash("sha256").update(code).digest("hex");
           if (s.sha256 && s.sha256 !== sha256) throw new Error(`sha256 mismatch: expected ${s.sha256}, got ${sha256}`);
           fs3.mkdirSync(REMOTE_DIR, { recursive: true });
-          fs3.writeFileSync(s.file, code);
-          fs3.writeFileSync(s.file + ".json", JSON.stringify({ url: s.url, sha256, fetchedAt: (/* @__PURE__ */ new Date()).toISOString() }, null, 2));
+          require_atomic_file().atomicFile(s.file, code, { mode: 384 });
+          require_atomic_file().atomicFile(s.file + ".json", JSON.stringify({ protocol: "dt.plugin-lock/v1", url: s.url, sha256, approved: !!s.sha256, fetchedAt: (/* @__PURE__ */ new Date()).toISOString() }, null, 2), { mode: 384 });
           out2.push({ url: s.url, sha256 });
         } catch (e) {
           out2.push({ url: s.url, error: e.message });
@@ -76340,7 +77082,7 @@ var require_tools = __commonJS({
       const files = [...pluginFiles().map((f) => ({ file: f, label: `plugins/${path3.basename(f)}` })), ...t.plugins.map((spec) => {
         try {
           const s = pluginSource(spec);
-          return { file: s.file, label: s.url, remote: s.remote };
+          return { ...s, label: s.url };
         } catch (e) {
           errors.push({ source: JSON.stringify(spec), error: e.message });
           return null;
@@ -76352,7 +77094,10 @@ var require_tools = __commonJS({
           continue;
         }
         try {
-          all.push(...loadPluginFile(f.file, f.label, taken));
+          require_security().verifyPlugin(f.file, f);
+          const loaded = loadPluginFile(f.file, f.label, taken);
+          if (f.remote) for (const tool of loaded) tool.pluginApproval = { url: f.url, sha256: f.sha256?.toLowerCase() };
+          all.push(...loaded);
         } catch (e) {
           errors.push({ source: f.label, error: e.message });
         }
@@ -76446,12 +77191,27 @@ var require_tools = __commonJS({
     }
     var liveEnv = () => ({ ...env, enum: envNames2(), default: envNames2()[0] });
     var props = (input) => Object.fromEntries(Object.entries(input).map(([k, v]) => [k, v === env ? liveEnv() : v]));
+    function pluginApproved(tool) {
+      if (!tool.pluginApproval) return true;
+      return require_config().live(() => {
+        if (require_config().getServer().securityProfile !== "team") return true;
+        const p = tool.pluginApproval;
+        return !!p.sha256 && p.url.startsWith("https://") && require_config().getTools().plugins.some((spec) => {
+          try {
+            const s = pluginSource(spec);
+            return s.url === p.url && s.sha256?.toLowerCase() === p.sha256;
+          } catch {
+            return false;
+          }
+        });
+      });
+    }
     async function schemas({ profile = "all", metadata = false } = {}) {
       const r = await ready();
       return require_tool_profiles().select(r.active.filter((t) => {
         try {
           require_access().checkTool(t.name);
-          return true;
+          return pluginApproved(t);
         } catch {
           return false;
         }
@@ -76524,13 +77284,14 @@ var require_tools = __commonJS({
       require_execution().check();
       const t = (await ready()).byName[name];
       if (!t) throw Object.assign(new Error(`Unknown tool ${name}`), { code: "DT_TOOL_UNKNOWN" });
+      if (!pluginApproved(t)) throw Object.assign(new Error("Plugin approval changed; approve and reload its current source before execution"), { code: "DT_ACCESS_DENIED", statusCode: 403 });
       if (!args || typeof args !== "object" || Array.isArray(args)) throw Object.assign(new Error("Tool arguments must be an object"), { code: "DT_ARGUMENT_INVALID" });
       const a = { ...args };
       for (const [k, s] of Object.entries(props(t.input))) if (a[k] === void 0 && s.default !== void 0) a[k] = s.default;
       for (const k of t.required || []) if (a[k] === void 0 || a[k] === "") throw Object.assign(new Error(`Missing argument: ${k}`), { code: "DT_ARGUMENT_INVALID", issues: [{ path: `$.${k}`, message: "required" }] });
       require_schema().assert(a, { type: "object", properties: props(t.input), required: t.required || [], ...t.strictInput ? { additionalProperties: false } : {} });
       if (!require_config().live(() => enabled(require_config().getTools())(t))) throw Object.assign(new Error("Tool is disabled"), { code: "DT_ACCESS_DENIED", statusCode: 403 });
-      if (!admitted && t.limit) await limit.take(t.limit(a));
+      if (!admitted && t.limit) return limit.network(t.limit(a), () => callTool(name, a, { isolated, admitted: true }));
       require_execution().check();
       if (!isolated && require_isolate().enabled(name)) return require_isolate().run(name, a);
       const backend = require_adapter_port().route(name);
@@ -76566,12 +77327,14 @@ var require_tools = __commonJS({
 var require_isolate = __commonJS({
   "lib/isolate.js"(exports2, module2) {
     var { Worker, isMainThread } = require("worker_threads");
-    var HEAVY = /* @__PURE__ */ new Set(["impact", "code_symbols", "pg_usage", "pg_function", "pg_table", "field_trace", "who_uses", "feature", "docs_search", "docs_page", "docs_verify", "knowledge_graph", "knowledge_search"]);
+    var READERS = /* @__PURE__ */ new Set(["find", "catalog_search", "catalog_usage", "catalog_manage"]);
+    var HEAVY = /* @__PURE__ */ new Set(["find", "catalog_search", "catalog_usage", "catalog_manage", "impact", "code_symbols", "pg_usage", "pg_function", "pg_table", "field_trace", "who_uses", "feature", "docs_search", "docs_page", "docs_verify", "knowledge_graph", "knowledge_search"]);
     var heapMb = () => {
       const v = Number(process.env.DT_WORKER_HEAP_MB ?? require_config().getTools().workerHeapMb ?? 1024);
       return Number.isFinite(v) ? v : 1024;
     };
-    var workerLimitMb = () => {
+    var workerLimitMb = (resource = "cpu") => {
+      if (resource === "catalog") return require_config().getTools().catalogReaderHeapMb;
       const c = require_config().getTools();
       return Math.max(1, Math.min(heapMb(), Math.floor((c.workerMemoryMb || heapMb()) / (c.workerConcurrency || 1))));
     };
@@ -76591,18 +77354,18 @@ var require_isolate = __commonJS({
           }));
           parentPort.postMessage({ id, ok: true, value, steps, notes, heap: process.memoryUsage().heapUsed });
         } catch (e) {
-          parentPort.postMessage({ id, ok: false, steps, notes, error: { message: e.message, code: e.code, issues: e.issues }, heap: process.memoryUsage().heapUsed });
+          parentPort.postMessage({ id, ok: false, steps, notes, error: { message: e.message, code: e.code, issues: e.issues, statusCode: e.statusCode, retryAfter: e.retryAfter }, heap: process.memoryUsage().heapUsed });
         }
       });
     }
-    var MODULES = { indexer: () => require_indexer(), codeSearch: () => require_code_search(), passport: () => require_passport(), serviceArchitecture: () => require_service_architecture() };
+    var MODULES = { catalog: () => require_catalog(), catalogStore: () => require_catalog_store(), indexer: () => require_indexer(), codeSearch: () => require_code_search(), passport: () => require_passport(), serviceArchitecture: () => require_service_architecture() };
     var bundled = !/[\\/]lib[\\/]isolate\.js$/.test(__filename);
     var ENTRY = __filename;
     if (!isMainThread && require("worker_threads").workerData?.dtIsolate && !bundled) serve();
     var workers = /* @__PURE__ */ new Set();
     var seq = 0;
-    function spawn() {
-      const w = new Worker(ENTRY, { workerData: { dtIsolate: true }, resourceLimits: { maxOldGenerationSizeMb: workerLimitMb() }, env: process.env, stdout: false, stderr: false });
+    function spawn(resource) {
+      const w = new Worker(ENTRY, { workerData: { dtIsolate: true }, resourceLimits: { maxOldGenerationSizeMb: workerLimitMb(resource) }, env: process.env, stdout: false, stderr: false });
       w.telemetryProducer = "worker:" + w.threadId;
       w.lifecycle = require_state_machine2().create(require_lifecycles().worker);
       Object.defineProperty(w, "busy", { get: () => !w.lifecycle.is("idle") });
@@ -76613,7 +77376,8 @@ var require_isolate = __commonJS({
       };
       w.pending = /* @__PURE__ */ new Map();
       w.remoteExecutions = /* @__PURE__ */ new Map();
-      w.limitMb = workerLimitMb();
+      w.limitMb = workerLimitMb(resource);
+      w.resource = resource;
       w.on("message", (m) => {
         if (m.dtTelemetry) {
           require_telemetry().ingest(m.dtTelemetry, w.traceScope, w.telemetryProducer);
@@ -76634,7 +77398,7 @@ var require_isolate = __commonJS({
         }
         if (!w.pending.size) w.unref();
         w.heap = m.heap;
-        m.ok ? p.resolve(m.value) : p.reject(Object.assign(new Error(m.error.message), { code: m.error.code, issues: m.error.issues }));
+        m.ok ? p.resolve(m.value) : p.reject(Object.assign(new Error(m.error.message), { code: m.error.code, issues: m.error.issues, statusCode: m.error.statusCode, retryAfter: m.error.retryAfter }));
       });
       const fail = (e) => {
         require_telemetry().interruptProducer(w.telemetryProducer);
@@ -76667,13 +77431,14 @@ var require_isolate = __commonJS({
     }
     function run(name, args, extra = {}) {
       const E = require_execution();
-      return require_limit().schedule("cpu", async () => {
+      return require_limit().schedule(READERS.has(name) || extra.mod === "catalog" || extra.mod === "catalogStore" ? "catalog" : "cpu", async () => {
+        const resource = READERS.has(name) || extra.mod === "catalog" || extra.mod === "catalogStore" ? "catalog" : "cpu";
         E.check();
-        for (const idle of workers) if (!idle.busy && idle.limitMb !== workerLimitMb()) {
+        for (const idle of workers) if (!idle.busy && idle.resource === resource && idle.limitMb !== workerLimitMb(resource)) {
           workers.delete(idle);
           await idle.terminate();
         }
-        const w = [...workers].find((w2) => !w2.busy) || spawn(), id = ++seq;
+        const w = [...workers].find((w2) => !w2.busy && w2.resource === resource) || spawn(resource), id = ++seq;
         w.lifecycle.to("busy");
         w.traceScope = require_access().current().scopeKey;
         const release = E.resource((why) => {
@@ -76688,7 +77453,7 @@ var require_isolate = __commonJS({
             w.postMessage({ id, name, args, ...extra, execution: E.carrier(), trace: require_trace4().carrier() });
           });
           E.check();
-          if (w.heap > workerLimitMb() * 1e6 / 2) {
+          if (w.heap > w.limitMb * 1e6 / 2) {
             workers.delete(w);
             await w.terminate();
           }
@@ -76726,8 +77491,137 @@ var require_isolate = __commonJS({
       }
       return null;
     }
-    var status = () => ({ workers: workers.size, busy: [...workers].filter((w) => w.busy).length, heapLimitMb: workerLimitMb(), memoryBudgetMb: require_config().getTools().workerMemoryMb || heapMb() });
+    var status = () => ({ workers: workers.size, busy: [...workers].filter((w) => w.busy).length, heapLimitMb: workerLimitMb(), memoryBudgetMb: (require_config().getTools().workerMemoryMb || heapMb()) + require_config().getTools().catalogReadConcurrency * require_config().getTools().catalogReaderHeapMb });
     module2.exports = { hasExecution, cancelExecution, status, enabled, run, exec, stop, serve, HEAVY };
+  }
+});
+
+// lib/operational-metrics.js
+var require_operational_metrics = __commonJS({
+  "lib/operational-metrics.js"(exports2, module2) {
+    var { isMainThread } = require("node:worker_threads");
+    var { monitorEventLoopDelay } = require("node:perf_hooks");
+    var kinds = /* @__PURE__ */ new Set(["call", "job", "refresh", "network", "adapter", "admission"]);
+    var rows = /* @__PURE__ */ new Map();
+    var provider;
+    var reader;
+    var histogram;
+    var counter;
+    var cleanupCounter;
+    var loop;
+    var activeConfig;
+    var cleanupFailures = 0;
+    var started = false;
+    var failures = 0;
+    var lastError = null;
+    function config() {
+      try {
+        const C = require_config(), raw = C.load().raw.telemetry || {}, s = require_telemetry().settings();
+        return { enabled: process.env.DT_OPERATIONAL_METRICS ? process.env.DT_OPERATIONAL_METRICS === "1" : raw.operationalMetrics === true, endpoint: s.metricsEndpoint || (s.endpoint ? s.endpoint.replace(/\/$/, "") + "/v1/metrics" : "") };
+      } catch {
+        return { enabled: false, endpoint: "" };
+      }
+    }
+    function start() {
+      if (started || !isMainThread || !config().enabled) return;
+      started = true;
+      activeConfig = config();
+      loop = monitorEventLoopDelay({ resolution: 20 });
+      loop.enable();
+      try {
+        const { endpoint } = config();
+        if (!endpoint) return;
+        const { MeterProvider, PeriodicExportingMetricReader } = require_src5(), { OTLPMetricExporter } = require_src9();
+        const exporter = new OTLPMetricExporter({ url: endpoint, timeoutMillis: 2e3 }), send = exporter.export.bind(exporter);
+        exporter.export = (data, done) => send(data, (r) => {
+          if (r.code) {
+            failures++;
+            lastError = "OTLP metrics export failed";
+          }
+          done(r);
+        });
+        reader = new PeriodicExportingMetricReader({ exporter, exportIntervalMillis: 1e4, exportTimeoutMillis: 2500 });
+        provider = new MeterProvider({ readers: [reader] });
+        const meter = provider.getMeter("dev-tool.operations");
+        histogram = meter.createHistogram("dt.operations.duration", { unit: "ms" });
+        counter = meter.createCounter("dt.operations.completed");
+        cleanupCounter = meter.createCounter("dt.cleanup.incomplete");
+        const gauges = [["dt.process.rss", "By", () => process.memoryUsage().rss], ["dt.process.heap", "By", () => process.memoryUsage().heapUsed], ["dt.event_loop.p99", "ms", () => Number.isFinite(loop.percentile(99)) ? loop.percentile(99) / 1e6 : 0]];
+        for (const [name, unit, value] of gauges) meter.createObservableGauge(name, { unit }).addCallback((r) => r.observe(value()));
+        meter.createObservableGauge("dt.scheduler.active").addCallback((r) => {
+          for (const [resource, s] of Object.entries(require_limit().stats())) r.observe(s.running, { resource });
+        });
+        meter.createObservableGauge("dt.scheduler.queued").addCallback((r) => {
+          for (const [resource, s] of Object.entries(require_limit().stats())) r.observe(s.queued, { resource });
+        });
+        meter.createObservableGauge("dt.telemetry.export_failures").addCallback((r) => r.observe(failures));
+        meter.createObservableGauge("dt.catalog.age", { unit: "s" }).addCallback((r) => {
+          for (const env of require_config().envNames().slice(0, 50)) {
+            try {
+              const s = require_catalog_store().status(env);
+              if (s.at) r.observe(Math.max(0, (Date.now() - Date.parse(s.at)) / 1e3), { env });
+            } catch {
+            }
+          }
+        });
+        meter.createObservableGauge("dt.telemetry.dropped").addCallback((r) => r.observe(require_telemetry().health().dropped));
+      } catch {
+        failures++;
+        lastError = "Operational metrics initialization failed";
+      }
+    }
+    function record(kind, ms, outcome = "succeeded") {
+      if (!isMainThread || !config().enabled) return;
+      start();
+      kind = kinds.has(kind) ? kind : "call";
+      outcome = ["succeeded", "failed", "cancelled", "rejected"].includes(outcome) ? outcome : "failed";
+      const key = kind + ":" + outcome, row = rows.get(key) || { kind, outcome, count: 0, durationMs: 0 };
+      row.count++;
+      row.durationMs += Math.max(0, Number(ms) || 0);
+      rows.set(key, row);
+      try {
+        counter?.add(1, { kind, outcome });
+        histogram?.record(Math.max(0, Number(ms) || 0), { kind, outcome });
+      } catch {
+        failures++;
+      }
+    }
+    async function measure(kind, fn) {
+      const t = performance.now();
+      try {
+        const result = await fn();
+        record(kind, performance.now() - t);
+        return result;
+      } catch (e) {
+        record(kind, performance.now() - t, e.code === "DT_CANCELLED" || e.name === "AbortError" ? "cancelled" : "failed");
+        throw e;
+      }
+    }
+    function cleanup(count) {
+      if (!isMainThread || !config().enabled) return;
+      start();
+      cleanupFailures += count;
+      try {
+        cleanupCounter?.add(count);
+      } catch {
+        failures++;
+      }
+    }
+    function snapshot() {
+      require_access().requireAdmin();
+      start();
+      return { enabled: config().enabled, exportConfigured: !!config().endpoint, restartRequired: started && JSON.stringify(activeConfig) !== JSON.stringify(config()), memory: process.memoryUsage(), eventLoopP99Ms: loop && Number.isFinite(loop.percentile(99)) ? loop.percentile(99) / 1e6 : null, operations: [...rows.values()], cleanupFailures, exportFailures: failures, lastError, workers: require_isolate().status(), scheduler: require_limit().stats() };
+    }
+    async function flush() {
+      await provider?.forceFlush();
+    }
+    async function stop() {
+      loop?.disable();
+      await provider?.shutdown();
+      provider = null;
+      started = false;
+    }
+    module2.exports = { start, record, measure, snapshot, flush, stop, cleanup };
   }
 });
 
@@ -76924,6 +77818,7 @@ var require_execution = __commonJS({
         r.error = error?.message || (cancelling ? r.error : void 0);
         r.endedAt = (/* @__PURE__ */ new Date()).toISOString();
         r.ms = Date.now() - started;
+        if (r.cleanupIncomplete) require_operational_metrics().cleanup(r.cleanupIncomplete);
         if (!r.cleanupIncomplete) {
           r.resources.clear();
           r.cleanups.clear();
@@ -78132,7 +79027,7 @@ var require_runtime_admin = __commonJS({
         await S.flush();
       } catch {
       }
-      return { identity: A.owner(), executions: E.list({ limit: 100 }), jobs: require_jobs().list(50), storage: S.status(), config: { ...require_tools().registryStatus(), ...require_config().generation(), registryRevision: require_tools().registryStatus().revision }, scheduler: require_limit().status(), runtimes: require_js().runtimes(), cells: require_js().cells(), trace: require_trace4().export({ lines: 300 }) };
+      return { identity: A.owner(), executions: E.list({ limit: 100 }), jobs: require_jobs().list(50), storage: S.status(), config: { ...require_tools().registryStatus(), ...require_config().generation(), registryRevision: require_tools().registryStatus().revision }, scheduler: require_limit().status(), ...A.current().role === "admin" ? { operations: require_operational_metrics().snapshot(), catalogs: require_config().envNames().map((env) => ({ env, ...require_catalog_store().status(env) })) } : {}, runtimes: require_js().runtimes(), cells: require_js().cells(), trace: require_trace4().export({ lines: 300 }) };
     }
     async function handle(req, res, url, send, readBody) {
       const p = url.pathname;
@@ -78222,10 +79117,11 @@ var require_server2 = __commonJS({
     var VERSION3 = require_package().version;
     var mcpRequests = /* @__PURE__ */ new Map();
     function send(res, status2, body, extra = {}) {
+      if (status2 === 429) extra = { "retry-after": String(body?.retryAfter || body?.result?.retryAfter || 1), ...extra };
       res.writeHead(status2, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...extra });
       res.end(typeof body === "string" ? body : JSON.stringify(body));
     }
-    var readJsonBody = (req) => new Promise((resolve2, reject) => {
+    var readJsonBody = (req, form = false) => new Promise((resolve2, reject) => {
       const chunks = [];
       let size = 0, failed = false;
       req.on("data", (c) => {
@@ -78239,13 +79135,13 @@ var require_server2 = __commonJS({
       }).on("error", reject).on("end", () => {
         if (failed) return;
         try {
-          resolve2(chunks.length ? JSON.parse(Buffer.concat(chunks)) : {});
+          resolve2(chunks.length ? form ? Object.fromEntries(new URLSearchParams(Buffer.concat(chunks).toString("utf8"))) : JSON.parse(Buffer.concat(chunks)) : {});
         } catch (e) {
           reject(e);
         }
       });
     });
-    var errorPayload = (e) => require_redact().clean({ error: e.message, ...e.code ? { code: e.code } : {}, ...e.issues ? { issues: e.issues } : {} });
+    var errorPayload = (e) => require_redact().clean({ error: e.message, ...e.code ? { code: e.code } : {}, ...e.issues ? { issues: e.issues } : {}, ...e.retryAfter ? { retryAfter: e.retryAfter } : {} });
     var cookie = (req, name) => (String(req.headers.cookie || "").match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`)) || [])[1];
     function trusted(req) {
       return !!require_access().identity(req);
@@ -78259,11 +79155,7 @@ var require_server2 = __commonJS({
         envs: envNames2().map((env) => {
           const e = getEnv2(env);
           const synced = (f) => readJson(path3.join(CACHE2, env, f))?.syncedAt || null;
-          let lines = 0;
-          try {
-            lines = fs3.readFileSync(path3.join(CACHE2, env, "catalog.txt"), "utf8").split("\n").length - 1;
-          } catch {
-          }
+          const lines = catalog.count(env);
           return {
             env,
             envFileFound: e.envFileFound,
@@ -78285,7 +79177,7 @@ var require_server2 = __commonJS({
         }
         case "initialize":
           return reply({
-            protocolVersion: msg.params?.protocolVersion || "2025-03-26",
+            protocolVersion: "2025-03-26",
             capabilities: { tools: { listChanged: false } },
             serverInfo: { name: "dt", version: VERSION3 },
             instructions: require_webui().prompt()
@@ -78391,7 +79283,7 @@ var require_server2 = __commonJS({
         res.writeHead(200, { "content-type": "text/markdown; charset=utf-8" });
         res.end(require_webui().prompt());
       }],
-      ["GET", "/api/find", true, (req, res, url) => send(res, 200, catalog.find(url.searchParams.get("env") || envNames2()[0], url.searchParams.get("q") || "", { limit: Number(url.searchParams.get("limit")) || 300 }))],
+      ["GET", "/api/find", true, async (req, res, url) => send(res, 200, await require_isolate().exec("catalog", "find", [url.searchParams.get("env") || envNames2()[0], url.searchParams.get("q") || "", { limit: Number(url.searchParams.get("limit")) || 300 }]))],
       ["GET", "/api/tools", false, async (req, res, url) => send(res, 200, await tools.schemas({ profile: url.searchParams.get("profile") || "all" }))],
       ["POST", "/api/tool/*", true, async (req, res, url) => {
         try {
@@ -78413,15 +79305,24 @@ var require_server2 = __commonJS({
       }],
       ["POST", "/oapi/*", true, oapi],
       // admin: watch, edit and refresh the index
+      ["POST", "/api/session", false, async (req, res) => {
+        const form = String(req.headers["content-type"] || "").startsWith("application/x-www-form-urlencoded"), body = await readJsonBody(req, form), token = (String(req.headers.authorization || "").match(/^Bearer\s+(.+)$/i) || [])[1] || body.token;
+        if (typeof token !== "string" || token.length > 8192) return send(res, 401, { error: "A valid token is required" });
+        const identity = require_access().identity({ ...req, headers: { ...req.headers, authorization: "Bearer " + token } });
+        if (!identity) return send(res, 401, { error: "Invalid or expired token" });
+        const cookie2 = `dt_key=${encodeURIComponent(token)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400${getServer().securityProfile === "team" ? "; Secure" : ""}`;
+        res.writeHead(303, { location: "/admin", "set-cookie": cookie2, "cache-control": "no-store", "referrer-policy": "no-referrer" });
+        res.end();
+      }],
       ["GET", "/admin", false, (req, res, url) => {
-        const key = url.searchParams.get("key");
+        const key = getServer().securityProfile === "team" ? null : url.searchParams.get("key");
         if (key && require_access().identity({ ...req, headers: { ...req.headers, authorization: "Bearer " + key } })) {
-          res.writeHead(302, { location: "/admin", "set-cookie": `dt_key=${encodeURIComponent(key)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=2592000` });
+          res.writeHead(302, { location: "/admin", "set-cookie": `dt_key=${encodeURIComponent(key)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=2592000${getServer().securityProfile === "team" ? "; Secure" : ""}` });
           return res.end();
         }
         if (!trusted(req)) {
-          res.writeHead(401, { "content-type": "text/html; charset=utf-8" });
-          return res.end('<p style="font:14px system-ui;margin:40px">Open <code>/admin?key=&lt;DT_API_KEY&gt;</code> once to sign in.</p>');
+          res.writeHead(401, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "referrer-policy": "no-referrer", "content-security-policy": "default-src 'none'; style-src 'self'; form-action 'self'; frame-ancestors 'none'" });
+          return res.end('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in to dev-tool</title><link rel="stylesheet" href="/static/ui.css"><main class="wrap"><h1>Sign in to dev-tool</h1><p>Use your access token. It stays out of the URL.</p><form action="/api/session" method="post"><label for="token">Access token</label> <input id="token" name="token" type="password" required autocomplete="current-password"> <button type="submit">Sign in</button></form></main></html>');
         }
         page("admin.html")(req, res);
       }],
@@ -78711,6 +79612,7 @@ var require_server2 = __commonJS({
       ["DELETE", "/mcp", true, (req, res) => send(res, 200, {})]
     ];
     function start({ port = 4e3, host = "127.0.0.1" } = {}) {
+      require_operational_metrics().start();
       const server = httpMod.createServer(async (req, res) => {
         const controller = new AbortController();
         req.dtSignal = controller.signal;
@@ -78722,20 +79624,22 @@ var require_server2 = __commonJS({
         const url = new URL(req.url, "http://x"), A = require_access();
         let identity;
         try {
+          require_security().enforce(req);
           identity = A.identity(req);
         } catch (e) {
           return send(res, e.statusCode || 403, errorPayload(e));
         }
         const supplied = !!req.headers.authorization || !!cookie(req, "dt_key");
-        if (!identity && getServer().accessTokens.length && (["/api/tools", "/openapi.json"].includes(url.pathname) || url.pathname.startsWith("/openapi/"))) return send(res, 403, { error: "Authentication is required" });
+        if (!identity && getServer().securityProfile === "team" && url.pathname === "/api/status") return send(res, 403, { error: "Authentication is required" });
+        if (!identity && (getServer().accessTokens.length || getServer().securityProfile === "team") && (["/api/tools", "/openapi.json"].includes(url.pathname) || url.pathname.startsWith("/openapi/"))) return send(res, 403, { error: "Authentication is required" });
         const protectedRuntime = url.pathname.startsWith("/api/admin/runtime") || url.pathname.startsWith("/api/admin/execution/") || url.pathname.startsWith("/api/admin/metadata");
         let route = routes.find(([m, p]) => m === req.method && (p.endsWith("*") ? url.pathname.startsWith(p.slice(0, -1)) : url.pathname === p));
         if (protectedRuntime) route = [req.method, url.pathname, true, null];
         try {
           if (!route) return send(res, 404, { error: "not found" });
-          if (req.method !== "GET" && url.pathname !== "/api/admin/config" && require_config().generation().lastError) return send(res, 503, { error: "Configuration is invalid; repair it in Admin before starting new work", code: "DT_CONFIG_INVALID" });
+          if (req.method !== "GET" && url.pathname !== "/api/admin/config" && url.pathname !== "/api/session" && require_config().generation().lastError) return send(res, 503, { error: "Configuration is invalid; repair it in Admin before starting new work", code: "DT_CONFIG_INVALID" });
           if (route[2] && !identity) return send(res, 403, { error: "Authentication is required" });
-          if (supplied && !identity) return send(res, 403, { error: "Invalid access token" });
+          if (supplied && !identity && !["/admin", "/api/session"].includes(url.pathname)) return send(res, 403, { error: "Invalid access token" });
           let scope = identity || A.LEGACY;
           {
             const key = url.pathname.match(/\/(?:architecture|map|map-preview|show|patch|logs|view|result|files)\/([a-z0-9]+)(?:\.patch)?(?:\/|$)/)?.[1];
@@ -78770,6 +79674,8 @@ var require_server2 = __commonJS({
           else res.end();
         }
       });
+      server.once("close", () => require_operational_metrics().stop().catch(() => {
+      }));
       try {
         require_browser().writeSecrets();
       } catch (e) {
@@ -78927,7 +79833,7 @@ var commands = {
     return require_pgindex().describe(opts.env, opts._.join(" "));
   },
   async find(opts) {
-    return require_catalog().find(opts.env, opts._.join(" "), { limit: Number(opts.limit) || 200 });
+    return require_isolate().exec("catalog", "find", [opts.env, opts._.join(" "), { limit: Number(opts.limit) || 200 }]);
   },
   async pg(opts) {
     let sql = opts._.join(" ");
@@ -78973,6 +79879,7 @@ var commands = {
   },
   // dt doctor [--repo PROJECT/slug] [--deep]: what fetching and test runs need, checked
   async doctor(opts) {
+    if (opts.security) return require_security().report();
     const d = await require_doctor().check({ repo: opts.repo, deep: !!opts.deep });
     for (const c of d.checks) console.log(`${{ ok: "ok  ", warn: "WARN", fail: "FAIL" }[c.status]}  ${c.group.padEnd(10)} ${c.check}: ${c.detail}${c.fix ? `
       fix: ${c.fix}` : ""}`);

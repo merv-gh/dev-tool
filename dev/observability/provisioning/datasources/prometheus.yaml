@@ -1,0 +1,9 @@
+apiVersion: 1
+datasources:
+  - name: Dev-tool Prometheus
+    uid: dev-tool-prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false

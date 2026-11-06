@@ -1,0 +1,59 @@
+{
+  "protocol": "dt.catalog-scale/v1",
+  "sourceDigest": "891838d78cf535fa35ae15cc0db820561f3b244493c986e73d273d14e2ebacdd",
+  "observedAt": "2026-11-06T21:10:50.322Z",
+  "host": {
+    "node": "v24.22.0",
+    "platform": "darwin",
+    "architecture": "x64",
+    "cpus": 16,
+    "memoryBytes": 68719476736
+  },
+  "fixture": {
+    "objects": 1000000,
+    "environments": 10,
+    "sessions": 50,
+    "usageEdges": 2000000,
+    "queries": 500,
+    "rounds": 10
+  },
+  "timing": {
+    "warmP50Ms": 78.88303899997845,
+    "warmP95Ms": 167.6360309999436,
+    "coldMaxMs": 1006.9685980000068,
+    "updateMs": 58174.568824999966,
+    "unchangedRefreshMs": [
+      40.78483600000618,
+      3.4668449999880977,
+      20.685837999975774,
+      3.203994999988936,
+      4.735647000023164,
+      3.1923790000146255,
+      3.27079799992498,
+      4.27392599999439,
+      4.048794999951497,
+      3.8605380000080913
+    ]
+  },
+  "memory": {
+    "peakProcessRssBytes": 523722752,
+    "writerHeapLimitMb": 512,
+    "readerHeapLimitMb": 64,
+    "readerConcurrency": 4
+  },
+  "eventLoopP99Ms": 24.887295,
+  "errors": [],
+  "gates": {
+    "searchP95": true,
+    "responsiveEventLoop": true,
+    "boundedRss": true,
+    "noQueryErrors": true,
+    "retainedGeneration": true,
+    "unchangedRefresh": true
+  },
+  "limits": [
+    "Synthetic source/index load; no live database, network-latency or semantic-analysis throughput guarantee.",
+    "Measurements apply to the recorded host; the deployment target is 8 vCPU, 16 GiB and local SSD.",
+    "RSS includes all worker threads in this process; heap limits are not per-thread RSS measurements."
+  ]
+}

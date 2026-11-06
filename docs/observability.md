@@ -19,6 +19,26 @@ and process restart leave an end-unobserved marker. Durations include waits and
 are not CPU measurements. Child-process tracing covers runner command wall time,
 not JVM bytecode or subprocess CPU profiling.
 
+## Aggregate operational monitoring
+
+Aggregate monitoring is separate from task trace consent. Set
+`DT_OPERATIONAL_METRICS=1` or `telemetry.operationalMetrics=true` to export bounded
+operation counts/durations, scheduler queues, process memory, event-loop delay,
+catalog freshness, incomplete cleanup and telemetry health. Labels use fixed
+operation/resource categories and configured environment names, not task IDs,
+SQL, URLs or result payloads. Disabling a task's tracing does not disable these
+operator-approved aggregate metrics. Restart after exporter configuration changes.
+
+`./run.sh --observability up -d` enables the optional local Collector/Prometheus/
+Grafana profile. It is off by default and adds no required runtime dependency.
+[Operator setup, privacy boundaries and recovery](operator-guide.md#monitoring-and-recovery).
+The sample Collector logs trace summaries; local retained traces remain in Admin.
+Configure the Collector's trace exporter to use your existing external backend.
+
+`DT_LOG_FORMAT=json` selects structured correlated tool/job events on stderr;
+startup diagnostics can still be text. Operational logs keep their existing
+redaction/payload rules, separately from content-free OTLP traces and metrics.
+
 ## Instrumented boundaries
 
 | Boundary | Evidence |

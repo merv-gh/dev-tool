@@ -125,7 +125,7 @@ const commands = {
   },
 
   async find(opts) {
-    return require('./lib/catalog').find(opts.env, opts._.join(' '), { limit: Number(opts.limit) || 200 });
+    return require('./lib/isolate').exec('catalog','find',[opts.env, opts._.join(' '), { limit: Number(opts.limit) || 200 }]);
   },
 
   async pg(opts) {
@@ -171,6 +171,7 @@ const commands = {
   },
   // dt doctor [--repo PROJECT/slug] [--deep]: what fetching and test runs need, checked
   async doctor(opts) {
+    if(opts.security)return require('./lib/security').report();
     const d = await require('./lib/doctor').check({ repo: opts.repo, deep: !!opts.deep });
     for (const c of d.checks) console.log(`${{ ok: 'ok  ', warn: 'WARN', fail: 'FAIL' }[c.status]}  ${c.group.padEnd(10)} ${c.check}: ${c.detail}${c.fix ? `\n      fix: ${c.fix}` : ''}`);
     if (d.counts.fail) process.exitCode = 1;

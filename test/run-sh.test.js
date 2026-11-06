@@ -18,16 +18,18 @@ if [ "$1" = info ]; then exit 1; fi
 printf '%s\\n' "$COMPOSE_PROFILES" > "$CAPTURE.profiles"
 printf '%s\\n' "$DT_SEMANTIC_URL" > "$CAPTURE.url"
 printf '%s\\n' "$DT_BUNDLE_REVISION" > "$CAPTURE.revision"
+printf '%s\\n' "$DT_OPERATIONAL_METRICS" > "$CAPTURE.metrics"
+printf '%s\\n' "$OTEL_EXPORTER_OTLP_ENDPOINT" > "$CAPTURE.endpoint"
 printf '%s\\n' "$@" > "$CAPTURE.args"
 `, { mode: 0o755 });
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   return { home, code, bin, root, run(args = ['up', '-d'], extra = {}) {
     const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, CAPTURE: path.join(root, 'capture'), DT_DOCKER_GID: '0' };
-    for (const key of ['COMPOSE_PROFILES', 'DT_HOME', 'DT_SEMANTIC_ENABLED', 'DT_SEMANTIC_URL', 'DT_SEMANTIC_TOKEN']) delete env[key];
+    for (const key of ['COMPOSE_PROFILES', 'DT_HOME', 'DT_SEMANTIC_ENABLED', 'DT_SEMANTIC_URL', 'DT_SEMANTIC_TOKEN', 'DT_OPERATIONAL_METRICS', 'OTEL_EXPORTER_OTLP_ENDPOINT']) delete env[key];
     const result = spawnSync('sh', [path.join(code, 'run.sh'), '--home', home, ...args], { env: { ...env, ...extra }, encoding: 'utf8' });
     assert.equal(result.status, 0, result.stderr);
     const read = name => fs.readFileSync(path.join(root, 'capture.' + name), 'utf8').trim();
-    return { profiles: read('profiles'), url: read('url'), revision: read('revision'), args: read('args').split('\n'), secrets: fs.readFileSync(path.join(home, '.env'), 'utf8') };
+    return { profiles: read('profiles'), url: read('url'), revision: read('revision'), metrics: read('metrics'), endpoint: read('endpoint'), args: read('args').split('\n'), secrets: fs.readFileSync(path.join(home, '.env'), 'utf8') };
   } };
 }
 
@@ -101,6 +103,16 @@ test('no-webui respects explicit profiles, wildcard, empty selection and service
     ['', ['--no-webui','up','-d'], { COMPOSE_PROFILES: '' }, ''],
     ['', ['--no-webui','--tools-only','up','-d'], {}, ''],
   ]) assert.equal(fixture(t, contents).run(args, extra).profiles, profiles);
+});
+
+test('optional observability enables aggregate export without changing saved profiles', t => {
+  const f = fixture(t, 'COMPOSE_PROFILES=jdk,testdb\n'), r = f.run(['--no-webui', '--observability', 'up', '-d']);
+  assert.equal(r.profiles, 'jdk,testdb,semantic,observability');
+  assert.equal(r.metrics, '1'); assert.equal(r.endpoint, 'http://otel-collector:4318');
+  assert.match(r.secrets, /^COMPOSE_PROFILES=jdk,testdb$/m);
+  const external = f.run(['--observability', 'up', '-d'], { DT_OPERATIONAL_METRICS: '0', OTEL_EXPORTER_OTLP_ENDPOINT: 'https://collector.example' });
+  assert.equal(external.metrics, '0'); assert.equal(external.endpoint, 'https://collector.example');
+  assert.equal(f.run().metrics, '');
 });
 
 test('installer forwards no-webui to the launcher without contacting an existing chat', t => {

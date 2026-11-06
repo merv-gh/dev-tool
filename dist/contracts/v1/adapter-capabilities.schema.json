@@ -1,0 +1,19 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"urn:dt:adapter-capabilities:v1",
+  "title":"Adapter capabilities and evidence limits",
+  "type":"object","required":["protocol","id","scopeAware","capabilities"],
+  "properties":{
+    "protocol":{"const":"dt.adapter-capabilities/v1"},
+    "id":{"type":"string","minLength":1,"maxLength":160},
+    "scopeAware":{"type":"boolean"},
+    "capabilities":{"type":"array","maxItems":100,"items":{"type":"object","required":["operation","languages","evidence","gaps"],"properties":{
+      "operation":{"type":"string","maxLength":160},
+      "languages":{"type":"array","maxItems":30,"items":{"type":"string","maxLength":40}},
+      "evidence":{"type":"string","enum":["text","static","retained-semantic","runtime","fixture"]},
+      "sourceIdentity":{"type":"string","maxLength":500},
+      "limits":{"type":"object"},
+      "gaps":{"type":"array","maxItems":50,"items":{"type":"string","maxLength":1000}}
+    },"additionalProperties":false}}
+  },"additionalProperties":false
+}

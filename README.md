@@ -20,6 +20,50 @@ Read-only tools that let an AI agent (or you) investigate a microservice environ
 
 It plugs into **Open WebUI** (bundled, or one you already run) or any **MCP client** (Claude Code, Cursor, ...). The tool server runs as a single Node process with its dependencies bundled; optional containers provide browser, build and semantic analysis services.
 
+## Current capabilities and deployment
+
+Start with the [operator guide](docs/operator-guide.md): deployment profiles,
+capacity, authentication, approved plugins, monitoring, backup and release checks.
+**Local mode** preserves existing installations. Explicit **team mode** requires
+credentials even on a trusted network, supports principal/task isolation and
+optional environment/tool grants, and verifies remote-plugin hashes before load.
+
+Cached catalog search and detected usage have paginated, retained SQLite
+generations; refreshes stream the compatible text catalog and preserve published
+history. Separate bounded read workers keep searches independent of indexing.
+The target is ten environments, one million catalog objects and fifty active
+sessions. [Measured capacity evidence](docs/benchmarks/catalog-scale.json) states
+its actual host and workload; it is not a guarantee for arbitrary installations.
+
+Aggregate operational metrics work independently of opt-in task tracing. Existing
+OTLP export and upstream W3C context remain available. `./run.sh --observability up -d`
+adds a local Collector, Prometheus and read-only Grafana dashboard.
+[Tracing, metrics and coverage](docs/observability.md).
+
+## Known limitations and roadmap
+
+The supported team topology has **one coordinator**, local SQLite storage and
+optional workers. Horizontal failover, public multi-tenant hosting, OAuth delivery
+and new Python/Go semantic engines remain follow-up milestones. Generic text
+search and language-neutral HTTP adapters already exist; they do not imply
+semantic support for every stack. See [known limitations](docs/known-limitations.md)
+and the [roadmap](docs/roadmap.md).
+
+## Release verification
+
+The [implementation verification record](docs/benchmarks/team-readiness.json)
+includes local results and the hosted checks still required before release.
+
+[CI workflows](.github/workflows/ci.yml) cover Node 22/24, bundle/chart/docs checks,
+coverage, disposable PostgreSQL and browser workflows. Deep verification adds
+native PG/Kafka/ES, JVM, Joern and scale jobs; required groups reject skipped tests.
+Tag builds require deep verification before emitting an attested artifact and SBOM.
+The [tool verification inventory](docs/benchmarks/tool-verification.json) gives
+schema/test references, while [source/lifecycle coverage](docs/benchmarks/test-coverage.json)
+records actual execution and unmeasured files. Historical scenario counts remain
+dated evidence. New workflows still need a successful hosted run on the candidate
+commit before they establish release confidence.
+
 ![A question in Open WebUI answered with dt: who writes sales.orders, as an embedded table](docs/screenshots/chat-usage.png)
 
 ```
@@ -819,14 +863,14 @@ The bundled demo uses invented service data and real Postgres ([capture instruct
 
 ## Safety
 - Views run in sandboxed pages without network access (`connect-src 'none'`); their data is in the page.
-- Script JavaScript runs sandboxed (no files, no secrets, time and memory limits); `scripts.js: false` turns it off.
+- Script JavaScript has explicit engine/time/memory and scoped file/tool capabilities; `scripts.js: false` turns it off. Trusted workspace builds and in-process plugins are not an OS sandbox for hostile tenants; see the operator guide.
 - Writing is limited to:
   - file stores marked `"write": true` (never overwriting unless asked);
   - script `http` steps to the prefixes in `scripts.http.allow`;
-  - workspaces (`work/<id>`, checkouts of their own; their changes leave only as a patch, never committed or pushed);
+  - workspaces (`work/<id>`, separate checkouts; patches are explicit, and `workspace_push` is available only when configured, with protected-branch checks);
   - the `dt_test_*` databases of the test Postgres (`tests.pgUrl`, refused when it is an environment's database).
 - Postgres statements run in read-only transactions with their own `statement_timeout` (`SET LOCAL`, so it also holds behind PgBouncer): 60 s for queries, 2 min for indexing (`timeouts`); the other sources are only read.
-- Ports are published on 127.0.0.1 unless you change `DT_BIND`. Set `DT_API_KEY` before exposing dt.
+- Ports are published on 127.0.0.1 unless you change `DT_BIND`. Use the team security profile and a TLS gateway before shared network exposure; local mode retains the older API-key/trusted-network behavior.
 - Result pages load their data by unguessable ids or signed tokens, so embeds in a sandboxed chat iframe work. Everything else needs a trusted client.
 - The Bitbucket token is passed only as a per-command git header; it is never written to `.git/config`.
 

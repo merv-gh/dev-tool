@@ -41,6 +41,8 @@
     "workerConcurrency": 1,
     "workerHeapMb": 1024,
     "workerMemoryMb": 1024,
+    "catalogReadConcurrency": 4,
+    "catalogReaderHeapMb": 64,
     "codeConcurrency": 2,
     "buildConcurrency": 2,
     "maxQueued": 100,
@@ -114,9 +116,9 @@
   "pg": { "dictionaries": "^d_", "dictionaryRows": 10000 },
   "push": { "enabled": false, "protect": [], "author": "" },
   "tests": { "mavenSettings": "", "gradleProperties": [], "env": {}, "passEnv": [], "pgUrl": "${DT_TEST_DB_URL:-}", "offline": false, "timeoutMs": 900000, "workspaceDays": 7, "compileCheck": true, "compileFix": true, "compileWaitMs": 45000 },
-  "telemetry": { "enabled": true, "endpoint": "${OTEL_EXPORTER_OTLP_ENDPOINT:-}", "sampleRatio": 1 },
+  "telemetry": { "enabled": true, "operationalMetrics": false, "endpoint": "${OTEL_EXPORTER_OTLP_ENDPOINT:-}", "sampleRatio": 1 },
   "log": { "maxMb": 50, "files": 3 },
   "results": { "maxMb": 500 },
 
-  "server": { "publicUrl": "http://127.0.0.1:4000", "apiKey": "${DT_API_KEY}", "accessTokens": [], "ratePerSec": 1 }
+  "server": { "securityProfile": "local", "publicUrl": "http://127.0.0.1:4000", "apiKey": "${DT_API_KEY}", "accessTokens": [], "allowedOrigins": [], "trustedProxies": [], "ratePerSec": 1, "networkBudgets": {} }
 }

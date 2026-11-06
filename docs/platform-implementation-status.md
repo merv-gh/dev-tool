@@ -1,5 +1,11 @@
 # Integrated developer platform: implementation and boundaries
 
+**Historical integration report.** For current operation, limitations and automated
+release evidence, use the [operator guide](operator-guide.md),
+[known limitations](known-limitations.md) and
+[tool verification inventory](benchmarks/tool-verification.json). Counts and branch
+names below describe the dated integration, not the current release.
+
 Updated 2026-10-29. The implementation is integrated on `codex/openwebui-dev-platform` in a separate worktree. Confluence, capture/performance, PostgreSQL templates, scenario execution, collection suites, browser/API work and independent reviews were developed in separate worktrees. The original checkout is unchanged.
 
 The latest [readiness repair pass](readiness-implementation.md) supersedes the pre-repair gaps/counts in the historical verification sections below. It adds scoped impact/column lineage, Node execution, explicit targets and differential checks, mixed PG/ES/Kafka native replay/effects, typed retained failures, bounded workflow guides and actual isolated task-evaluator mechanics. External customer-dev and real smaller-model evaluation remain unverified.
@@ -61,4 +67,4 @@ With the repository's default enabled sources, the measured initial catalog is 1
 
 The subsequent [28-scenario verification](developer-scenarios.md) includes eight independently authored/graded cases and the four exact column/state/refactor/dev-test questions. All eight fixes/test submissions pass acceptance; native tool-only execution is proven for the Java case, while seven Node cases expose a test-runner gap. The additional enrichment refactor has native local/source-JDBC differential evidence, with remote-dev execution still unsupported in the evaluated setup.
 
-The new production readiness plan records reproducible impact identity/cache/coverage gaps, column read/write lineage, mixed ES/Kafka/PG recreation, conflicting test job identity and discovery limits. Two text-search defects found by the solver were repaired separately. The latest rebuilt suite passes 376/420 tests with zero failures and 44 opt-in skips; those results do not override the failing readiness gates. New bundled Open WebUI connections start with five `lean-find` definitions, while configured profiles remain selectable. No actual 27B model was evaluated.
+The new production readiness plan records reproducible impact identity/cache/coverage gaps, column read/write lineage, mixed ES/Kafka/PG recreation, conflicting test job identity and discovery limits. Two text-search defects found by the solver were repaired separately. The rebuilt suite at the time of this report passed 376/420 tests with zero failures and 44 opt-in skips; those results do not override the failing readiness gates. New bundled Open WebUI connections start with five `lean-find` definitions, while configured profiles remain selectable. No actual 27B model was evaluated.

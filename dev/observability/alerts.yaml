@@ -1,0 +1,23 @@
+groups:
+  - name: dev-tool-health
+    rules:
+      - alert: DevToolCollectorUnavailable
+        expr: up{job="dev-tool"} == 0
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "Collector metrics scrape is unavailable"}
+      - alert: DevToolQueuePressure
+        expr: dt_scheduler_queued > 80
+        for: 1m
+        labels: {severity: warning}
+        annotations: {summary: "A dev-tool execution queue is near capacity"}
+      - alert: DevToolEventLoopDelay
+        expr: dt_event_loop_p99_milliseconds > 100
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "dev-tool event-loop delay exceeds the reference budget"}
+      - alert: DevToolMetricsExportFailure
+        expr: dt_telemetry_export_failures > 0
+        for: 1m
+        labels: {severity: warning}
+        annotations: {summary: "Inspect dev-tool exporter failures in Admin Runtime"}

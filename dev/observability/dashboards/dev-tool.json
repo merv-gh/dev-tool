@@ -1,0 +1,10 @@
+{
+ "uid":"dev-tool-readiness","title":"Dev-tool operational health","schemaVersion":39,"version":1,
+ "refresh":"15s","time":{"from":"now-1h","to":"now"},"timezone":"browser",
+ "panels":[
+  {"id":1,"title":"Process RSS","type":"timeseries","datasource":{"uid":"dev-tool-prometheus"},"gridPos":{"x":0,"y":0,"w":12,"h":8},"fieldConfig":{"defaults":{"unit":"bytes"}},"targets":[{"expr":"dt_process_rss_bytes","refId":"A"}]},
+  {"id":2,"title":"Event-loop p99","type":"timeseries","datasource":{"uid":"dev-tool-prometheus"},"gridPos":{"x":12,"y":0,"w":12,"h":8},"fieldConfig":{"defaults":{"unit":"ms"}},"targets":[{"expr":"dt_event_loop_p99_milliseconds","refId":"A"}]},
+  {"id":3,"title":"Queued and active operations","type":"timeseries","datasource":{"uid":"dev-tool-prometheus"},"gridPos":{"x":0,"y":8,"w":12,"h":8},"targets":[{"expr":"dt_scheduler_queued","legendFormat":"queued {{resource}}","refId":"A"},{"expr":"dt_scheduler_active","legendFormat":"active {{resource}}","refId":"B"}]},
+  {"id":4,"title":"Operation completion rate","type":"timeseries","datasource":{"uid":"dev-tool-prometheus"},"gridPos":{"x":12,"y":8,"w":12,"h":8},"targets":[{"expr":"rate(dt_operations_completed_total[5m])","legendFormat":"{{kind}} {{outcome}}","refId":"A"}]}
+ ]
+}

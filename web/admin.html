@@ -471,9 +471,9 @@ function renderSources() {
   rows.push(`<tr class="group ${e.logs.configured ? '' : 'off'}"><td>Logs (ELK)</td><td>${e.logs.configured ? '<span class="st ok"><span class="dot"></span>live</span>' : '<span class="st"><span class="dot"></span>not configured</span>'}</td><td class="mono muted">${esc(e.logs.index)}</td><td class="num muted">queried live</td><td></td><td></td><td></td></tr>`);
   const ix = e.index;
   rows.push(`<tr class="group"><td>Catalog + usage index</td><td>${statusOf({ syncedAt: ix.builtAt }, k('index'))}</td><td class="muted">find, pg_usage, who_uses</td>
-    <td class="num">${ix.catalogLines} lines · ${ix.usageEdges} usages</td><td>${ago(ix.builtAt)}</td><td></td><td>${btn('index', '', 'Rebuild')}</td></tr>`);
+    <td class="num">${ix.catalogLines ?? 'Unknown'} lines · ${ix.usageEdges} usages</td><td>${ago(ix.builtAt)}</td><td></td><td>${btn('index', '', 'Rebuild')}</td></tr>`);
   $('sources').innerHTML = rows.join('');
-  $('indexSummary').textContent = `${ix.catalogLines} catalog lines, ${ix.usageEdges} usage edges`;
+  $('indexSummary').textContent = `${ix.catalogLines ?? 'Unknown'} catalog lines, ${ix.usageEdges} usage edges`;
 }
 
 function renderPassports() {
@@ -669,7 +669,7 @@ function show(t) {
   tab = t;
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   document.querySelectorAll('section[id^=tab-]').forEach(s => s.hidden = s.id !== `tab-${t}`);
-  history.replaceState(null, '', `#${['semantic','handbook','context'].includes(t) ? requested : t}`);
+  history.replaceState(null, '', `#${['semantic','handbook','context','runtime'].includes(t) ? requested : t}`);
   if (t === 'handbook') loadHandbook().catch(e => toast(e.message));
   if (t === 'architecture') loadArchitectureAdmin().catch(e => architectureMessage(e.message, true));
   if (t === 'context') loadContexts().catch(e => contextMessage(e.message, true));

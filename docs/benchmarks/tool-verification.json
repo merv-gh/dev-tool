@@ -1,0 +1,2858 @@
+{
+  "protocol": "dt.release-inventory/v1",
+  "sourceDigest": "ef1fd6cd7ea5776dce1386042326df49d0f487283cba2f0d28d23d3764398834",
+  "tools": [
+    {
+      "name": "find",
+      "group": "catalog",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/access.test.js",
+        "test/adapter-conformance.test.js",
+        "test/admin-runtime.test.js",
+        "test/catalog-generations.test.js",
+        "test/collections.test.js",
+        "test/context-ui.test.js",
+        "test/context.test.js",
+        "test/operational-readiness.test.js",
+        "test/pgindex.test.js",
+        "test/scripts.test.js",
+        "test/server.test.js",
+        "test/team-security.test.js",
+        "test/tool-contracts.test.js",
+        "test/units.test.js",
+        "test/workflows.test.js"
+      ],
+      "integrationReferences": [
+        "test/api-client.live.test.js",
+        "test/fastrun.live.test.js",
+        "test/flows.live.test.js",
+        "test/gradle.live.test.js",
+        "test/javacheck.live.test.js",
+        "test/pg.live.test.js",
+        "test/reproduction.live.test.js",
+        "test/semantic.live.test.js",
+        "test/showcase.live.test.js",
+        "test/template.live.test.js",
+        "test/testdata.live.test.js",
+        "test/workspace.live.test.js"
+      ]
+    },
+    {
+      "name": "catalog_search",
+      "group": "catalog",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/catalog-generations.test.js",
+        "test/team-security.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "catalog_usage",
+      "group": "catalog",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/catalog-generations.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "catalog_manage",
+      "group": "catalog",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/catalog-generations.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "catalog_sync",
+      "group": "catalog",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/catalog-sync.test.js",
+        "test/server.test.js"
+      ],
+      "integrationReferences": [
+        "test/testdata.live.test.js"
+      ]
+    },
+    {
+      "name": "pg_table",
+      "group": "pg",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/memory.test.js",
+        "test/pgindex.test.js",
+        "test/tool-contracts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "pg_function",
+      "group": "pg",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/pgindex.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "field_trace",
+      "group": "pg",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "pg_usage",
+      "group": "pg",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/execution-worker.test.js",
+        "test/impact-readiness.test.js",
+        "test/memory.test.js",
+        "test/pgindex.test.js",
+        "test/workflows.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "pg_query",
+      "group": "pg",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/admin-map.test.js",
+        "test/admin-runtime.test.js",
+        "test/code.test.js",
+        "test/context-ui.test.js",
+        "test/context.test.js",
+        "test/experiments.test.js",
+        "test/offline-js.test.js",
+        "test/pgindex.test.js",
+        "test/server.test.js",
+        "test/service-map.test.js",
+        "test/team-security.test.js",
+        "test/tool-contracts.test.js",
+        "test/tool-discovery.test.js",
+        "test/units.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "es_search",
+      "group": "es",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/tool-contracts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "kafka_topic",
+      "group": "kafka",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "kafka_last",
+      "group": "kafka",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/tool-contracts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "health",
+      "group": "consul",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/server.test.js",
+        "test/showcase.test.js"
+      ],
+      "integrationReferences": [
+        "test/showcase.live.test.js"
+      ]
+    },
+    {
+      "name": "es_health",
+      "group": "es",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "kafka_lag",
+      "group": "kafka",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/tool-contracts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "overview",
+      "group": "consul",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/model-discovery-eval.test.js",
+        "test/server.test.js",
+        "test/showcase.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "consul_service",
+      "group": "consul",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/showcase.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "bitbucket_repos",
+      "group": "bitbucket",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "bitbucket_files",
+      "group": "bitbucket",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/tool-contracts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "bitbucket_file",
+      "group": "bitbucket",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/tool-contracts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "bitbucket_prs",
+      "group": "bitbucket",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/tool-contracts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "docs_search",
+      "group": "confluence",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/confluence.test.js",
+        "test/semantic-knowledge.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "docs_page",
+      "group": "confluence",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/confluence.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "docs_verify",
+      "group": "confluence",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/confluence.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "feature",
+      "group": "confluence",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": [
+        "test/diagrams.live.test.js"
+      ]
+    },
+    {
+      "name": "diagram",
+      "group": "confluence",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/confluence.test.js",
+        "test/diagrams.test.js",
+        "test/inline-views.test.js",
+        "test/views.test.js"
+      ],
+      "integrationReferences": [
+        "test/diagrams.live.test.js"
+      ]
+    },
+    {
+      "name": "confluence_search",
+      "group": "confluence",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/config.test.js",
+        "test/confluence.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "confluence_page",
+      "group": "confluence",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/confluence.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "logs_search",
+      "group": "logs",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/pgindex.test.js",
+        "test/server.test.js",
+        "test/service-map.test.js",
+        "test/tool-contracts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "logs_trace",
+      "group": "logs",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/server.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "bitbucket_pr",
+      "group": "bitbucket",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/server.test.js",
+        "test/tool-contracts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "bitbucket_my_prs",
+      "group": "bitbucket",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "repo_fetch",
+      "group": "bitbucket",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "passport",
+      "group": "passport",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/adapter-conformance.test.js",
+        "test/admin-map.test.js",
+        "test/passport-modules.test.js",
+        "test/passport-resolution.test.js",
+        "test/scenario-runtime.test.js",
+        "test/server.test.js",
+        "test/service-architecture.test.js",
+        "test/showcase.test.js"
+      ],
+      "integrationReferences": [
+        "test/api-client.live.test.js",
+        "test/flows.live.test.js",
+        "test/pg.live.test.js",
+        "test/semantic.live.test.js",
+        "test/showcase.live.test.js",
+        "test/testdata.live.test.js"
+      ]
+    },
+    {
+      "name": "passports",
+      "group": "passport",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/api-client.live.test.js",
+        "test/api-client.test.js",
+        "test/confluence.test.js",
+        "test/impact-readiness.test.js",
+        "test/passport.test.js",
+        "test/pg.live.test.js",
+        "test/pgindex.test.js",
+        "test/scripts.test.js",
+        "test/semantic-runtime.test.js",
+        "test/server.test.js",
+        "test/service-map.test.js",
+        "test/units.test.js"
+      ],
+      "integrationReferences": [
+        "test/api-client.live.test.js",
+        "test/flows.live.test.js",
+        "test/pg.live.test.js",
+        "test/semantic.live.test.js"
+      ]
+    },
+    {
+      "name": "who_uses",
+      "group": "passport",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/pgindex.test.js",
+        "test/server.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "browser_sites",
+      "group": "browser",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/pgindex.test.js",
+        "test/scripts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "site_url",
+      "group": "browser",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/scripts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "api_routes",
+      "group": "api",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/scripts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "routes_learn",
+      "group": "api",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/scripts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "routes_discover",
+      "group": "api",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/scripts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "script_list",
+      "group": "scripts",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/automation.test.js",
+        "test/scripts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "script_collection",
+      "group": "scripts",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/automation.test.js",
+        "test/collections.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "script_get",
+      "group": "scripts",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/scripts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "script_save",
+      "group": "scripts",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/automation.test.js",
+        "test/collections.test.js",
+        "test/scripts.test.js",
+        "test/tool-contracts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "script_run",
+      "group": "scripts",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/automation.test.js",
+        "test/call-outcome.test.js",
+        "test/collections.test.js",
+        "test/scripts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "code",
+      "group": "scripts",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/access.test.js",
+        "test/admin-runtime.test.js",
+        "test/code.test.js",
+        "test/confluence.test.js",
+        "test/context.test.js",
+        "test/diagrams.live.test.js",
+        "test/diagrams.test.js",
+        "test/dist.test.js",
+        "test/impact-readiness.test.js",
+        "test/inline-views.test.js",
+        "test/project-context.test.js",
+        "test/reproduction.test.js",
+        "test/run-sh.test.js",
+        "test/scenario.test.js",
+        "test/testdata.test.js",
+        "test/tool-discovery.test.js",
+        "test/views.test.js"
+      ],
+      "integrationReferences": [
+        "test/diagrams.live.test.js",
+        "test/flows.live.test.js",
+        "test/reproduction.live.test.js",
+        "test/runtime-isolation.live.test.js",
+        "test/semantic.live.test.js",
+        "test/service-architecture.live.test.js",
+        "test/template.live.test.js",
+        "test/testdata.live.test.js"
+      ]
+    },
+    {
+      "name": "js_run",
+      "group": "scripts",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "show",
+      "group": "views",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/admin-map.test.js",
+        "test/memory.test.js",
+        "test/passport-modules.test.js",
+        "test/passport-resolution.test.js",
+        "test/push.test.js"
+      ],
+      "integrationReferences": [
+        "test/gradle.live.test.js",
+        "test/javacheck.live.test.js",
+        "test/semantic.live.test.js",
+        "test/showcase.live.test.js"
+      ]
+    },
+    {
+      "name": "diff",
+      "group": "views",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/code.test.js",
+        "test/views.test.js"
+      ],
+      "integrationReferences": [
+        "test/reproduction.live.test.js",
+        "test/template.live.test.js"
+      ]
+    },
+    {
+      "name": "view_list",
+      "group": "views",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "view_get",
+      "group": "views",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "view_save",
+      "group": "views",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "files_browse",
+      "group": "files",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/context.test.js",
+        "test/views.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "files_show",
+      "group": "files",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/views.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "call_history",
+      "group": "history",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/automation.test.js",
+        "test/call-outcome.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "dt_log",
+      "group": "history",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/trace.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "doctor",
+      "group": "history",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": [
+        "test/runner.live.test.js"
+      ]
+    },
+    {
+      "name": "job_cancel",
+      "group": "history",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/collections.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "call_patterns",
+      "group": "history",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "files_stores",
+      "group": "files",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/automation.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "files_list",
+      "group": "files",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/automation.test.js",
+        "test/code.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "files_search",
+      "group": "files",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/automation.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "files_read",
+      "group": "files",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/automation.test.js",
+        "test/code.test.js",
+        "test/views.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "files_write",
+      "group": "files",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/automation.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "files_copy",
+      "group": "files",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/automation.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "files_archive",
+      "group": "files",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/call-outcome.test.js",
+        "test/files-archive.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "showcase",
+      "group": "showcase",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/showcase.live.test.js"
+      ],
+      "integrationReferences": [
+        "test/showcase.live.test.js"
+      ]
+    },
+    {
+      "name": "code_index",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/code-revisions.test.js",
+        "test/flows.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "code_search",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/adapter-conformance.test.js",
+        "test/code-glob.test.js",
+        "test/code-revisions.test.js",
+        "test/code-search-fallback.test.js",
+        "test/code.index.test.js",
+        "test/flows.test.js",
+        "test/semantic-ui.test.js",
+        "test/tool-contracts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "code_symbols",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/code-revisions.test.js",
+        "test/code.index.test.js",
+        "test/impact-readiness.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "code_read",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "impact",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/code-revisions.test.js",
+        "test/code.index.test.js",
+        "test/readiness-contracts.test.js",
+        "test/views.test.js",
+        "test/workflows.test.js",
+        "test/workspace.live.test.js"
+      ],
+      "integrationReferences": [
+        "test/showcase.live.test.js",
+        "test/workspace.live.test.js"
+      ]
+    },
+    {
+      "name": "ddl_snapshot",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "workspace_open",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/trace.test.js"
+      ],
+      "integrationReferences": [
+        "test/javacheck.live.test.js"
+      ]
+    },
+    {
+      "name": "workspace_list",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "workspace_read",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/task-model-evaluation.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "workspace_write",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/evaluation-evidence.test.js",
+        "test/flows.live.test.js",
+        "test/javacheck.live.test.js",
+        "test/task-model-evaluation.test.js",
+        "test/testdata.live.test.js",
+        "test/workspace.live.test.js"
+      ],
+      "integrationReferences": [
+        "test/flows.live.test.js",
+        "test/javacheck.live.test.js",
+        "test/testdata.live.test.js",
+        "test/workspace.live.test.js"
+      ]
+    },
+    {
+      "name": "workspace_patch",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/fastrun.live.test.js",
+        "test/gradle.live.test.js",
+        "test/runner.live.test.js",
+        "test/workspace.live.test.js"
+      ],
+      "integrationReferences": [
+        "test/fastrun.live.test.js",
+        "test/gradle.live.test.js",
+        "test/runner.live.test.js",
+        "test/workspace.live.test.js"
+      ]
+    },
+    {
+      "name": "workspace_drop",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "test_context",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/flows.live.test.js",
+        "test/gradle.live.test.js",
+        "test/testdata.live.test.js",
+        "test/workspace.live.test.js"
+      ],
+      "integrationReferences": [
+        "test/flows.live.test.js",
+        "test/gradle.live.test.js",
+        "test/testdata.live.test.js",
+        "test/workspace.live.test.js"
+      ]
+    },
+    {
+      "name": "workspace_push",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/admin-map.test.js",
+        "test/experiments.test.js",
+        "test/push.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "test_data",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/testdata.live.test.js"
+      ],
+      "integrationReferences": [
+        "test/testdata.live.test.js"
+      ]
+    },
+    {
+      "name": "test_targets",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/node-targets.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "differential_check",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/dist.test.js",
+        "test/node-targets.test.js",
+        "test/tool-contracts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "test_run",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/call-outcome.test.js",
+        "test/evaluation-evidence.test.js",
+        "test/fastrun.live.test.js",
+        "test/fixture-runtime-bridge.test.js",
+        "test/flows.live.test.js",
+        "test/gradle.live.test.js",
+        "test/node-targets.test.js",
+        "test/reproduction.live.test.js",
+        "test/runner.live.test.js",
+        "test/state-store.test.js",
+        "test/target-secrets.test.js",
+        "test/task-model-evaluation.test.js",
+        "test/testdata.live.test.js",
+        "test/tool-contracts.test.js",
+        "test/workflows.test.js",
+        "test/workspace.live.test.js"
+      ],
+      "integrationReferences": [
+        "test/fastrun.live.test.js",
+        "test/flows.live.test.js",
+        "test/gradle.live.test.js",
+        "test/reproduction.live.test.js",
+        "test/runner.live.test.js",
+        "test/testdata.live.test.js",
+        "test/workspace.live.test.js"
+      ]
+    },
+    {
+      "name": "context_find",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/server.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "context_open",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/access.test.js",
+        "test/context.test.js",
+        "test/server.test.js",
+        "test/views.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "context_get",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/context.test.js",
+        "test/server.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "context_list",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/context.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "context_search",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/context.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "context_edit",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/context.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "context_update",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "context_read",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/access.test.js",
+        "test/context.test.js",
+        "test/server.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "context_write",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/access.test.js",
+        "test/context.test.js",
+        "test/server.test.js",
+        "test/views.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "context_delete_file",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "context_run",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/context.test.js",
+        "test/handbook.test.js",
+        "test/server.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "context_hint",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "project_context_find",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/project-context.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "project_context_get",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/project-context.test.js",
+        "test/service-architecture.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "project_context_save",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/project-context.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "handbook",
+      "group": "catalog",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/handbook.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "self_context",
+      "group": "context",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/handbook-http.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "map",
+      "group": "map",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/admin-map.test.js",
+        "test/service-map.test.js"
+      ],
+      "integrationReferences": [
+        "test/api-client.live.test.js",
+        "test/pg.live.test.js",
+        "test/reproduction.live.test.js",
+        "test/runner.live.test.js",
+        "test/semantic.live.test.js",
+        "test/service-architecture.live.test.js",
+        "test/showcase.live.test.js",
+        "test/template.live.test.js",
+        "test/testdata.live.test.js",
+        "test/workspace.live.test.js"
+      ]
+    },
+    {
+      "name": "map_search",
+      "group": "map",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "map_neighbors",
+      "group": "map",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "map_path",
+      "group": "map",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "map_node",
+      "group": "map",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/admin-map.test.js",
+        "test/map-model-eval.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "map_ui_preview",
+      "group": "map",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "map_adjustments",
+      "group": "map",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/admin-map.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "map_adjust",
+      "group": "map",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/map-model-eval.test.js",
+        "test/service-map.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "map_layers",
+      "group": "map",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "map_save",
+      "group": "map",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/service-map.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "architecture_service",
+      "group": "architecture",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/service-architecture.live.test.js",
+        "test/service-architecture.test.js"
+      ],
+      "integrationReferences": [
+        "test/service-architecture.live.test.js"
+      ]
+    },
+    {
+      "name": "architecture_list",
+      "group": "architecture",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "architecture_get",
+      "group": "architecture",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "architecture_save",
+      "group": "architecture",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/architecture.test.js",
+        "test/handbook-http.test.js",
+        "test/handbook.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "architecture_view",
+      "group": "architecture",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/architecture.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "architecture_flow",
+      "group": "architecture",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/architecture.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "architecture_refresh",
+      "group": "architecture",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "architecture_export",
+      "group": "architecture",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "observability",
+      "group": "runtime",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/admin-observability.test.js",
+        "test/views.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "test_coverage",
+      "group": "runtime",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "code_start",
+      "group": "runtime",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/access.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "code_wait",
+      "group": "runtime",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/access.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "code_cancel",
+      "group": "runtime",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/access.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "execution_list",
+      "group": "runtime",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "execution_get",
+      "group": "runtime",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "execution_cancel",
+      "group": "runtime",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "metadata_list",
+      "group": "runtime",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/dist.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "metadata_get",
+      "group": "runtime",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "metadata_edit",
+      "group": "runtime",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "semantic_capabilities",
+      "group": "semantic",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/semantic-ui.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "semantic_index",
+      "group": "semantic",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/semantic-ui.test.js",
+        "test/semantic.live.test.js"
+      ],
+      "integrationReferences": [
+        "test/semantic.live.test.js"
+      ]
+    },
+    {
+      "name": "semantic_search",
+      "group": "semantic",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/semantic-ui.test.js",
+        "test/semantic.live.test.js"
+      ],
+      "integrationReferences": [
+        "test/semantic.live.test.js"
+      ]
+    },
+    {
+      "name": "semantic_query",
+      "group": "semantic",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/admin-semantic.test.js",
+        "test/architecture.test.js",
+        "test/semantic-ui.test.js",
+        "test/semantic.live.test.js"
+      ],
+      "integrationReferences": [
+        "test/semantic.live.test.js"
+      ]
+    },
+    {
+      "name": "semantic_ports",
+      "group": "passport",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/passport-overrides.test.js",
+        "test/semantic-ui.test.js",
+        "test/semantic.live.test.js"
+      ],
+      "integrationReferences": [
+        "test/semantic.live.test.js"
+      ]
+    },
+    {
+      "name": "passport_adjustments",
+      "group": "passport",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/passport-overrides.test.js",
+        "test/semantic-ui.test.js",
+        "test/semantic.live.test.js",
+        "test/showcase.test.js"
+      ],
+      "integrationReferences": [
+        "test/semantic.live.test.js"
+      ]
+    },
+    {
+      "name": "passport_adjust",
+      "group": "passport",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/passport-overrides.test.js",
+        "test/semantic-ui.test.js",
+        "test/semantic.live.test.js"
+      ],
+      "integrationReferences": [
+        "test/semantic.live.test.js"
+      ]
+    },
+    {
+      "name": "fixture_schema",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/reproduction.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "fixture_plan",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/experiments.test.js",
+        "test/tool-contracts.test.js",
+        "test/workflows.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "fixture_capture",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/experiments.test.js",
+        "test/tool-contracts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "fixture_validate",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/reproduction.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "fixture_export",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/experiments.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "fixture_replay",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/challenges.test.js",
+        "test/experiments.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "fixture_runtime_preflight",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "fixture_runtime_start",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/reproduction-native.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "fixture_runtime_bindings",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "fixture_runtime_arm",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "fixture_runtime_observe",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/reproduction-native.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "fixture_runtime_check",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/reproduction-native.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "fixture_runtime_publish",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "fixture_runtime_stop",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "fixture_runtime_cleanup",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "experiment_save",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/experiments.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "experiment_run",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/experiments.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "experiment_list",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "experiment_compare",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/experiments.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "scenario_inventory",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/scenario-complex.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "scenario_state_plan",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/scenario-complex.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "scenario_state_capture",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/scenario-complex.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "scenario_state_get",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/scenario-complex.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "scenario_actions",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/scenario-complex.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "scenario_expectations",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/scenario-complex.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "scenario_check",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/call-outcome.test.js",
+        "test/scenario-complex.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "scenario_emulate",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/scenario-complex.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "scenario_export",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/scenario-complex.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "adapter_capabilities",
+      "group": "catalog",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/adapter-conformance.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "evaluation_evidence",
+      "group": "history",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/evaluation-evidence.test.js",
+        "test/tool-contracts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "workflow_plan",
+      "group": "catalog",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/workflows.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "tool_contracts",
+      "group": "catalog",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/readiness-contracts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "tool_profiles",
+      "group": "catalog",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/tool-contracts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "tool_search",
+      "group": "catalog",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/model-discovery-eval.test.js",
+        "test/tool-contracts.test.js",
+        "test/workflows.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "tool_describe",
+      "group": "catalog",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/model-discovery-eval.test.js",
+        "test/tool-contracts.test.js",
+        "test/workflows.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "tool_execute",
+      "group": "catalog",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/call-outcome.test.js",
+        "test/context.test.js",
+        "test/fixture-runtime-bridge.test.js",
+        "test/model-discovery-eval.test.js",
+        "test/node-targets.test.js",
+        "test/task-model-evaluation.test.js",
+        "test/tool-contracts.test.js",
+        "test/workflows.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "knowledge_sources",
+      "group": "knowledge",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/tool-contracts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "knowledge_sync",
+      "group": "knowledge",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "knowledge_search",
+      "group": "knowledge",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": true,
+      "referenceTests": [
+        "test/tool-contracts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "knowledge_verify",
+      "group": "knowledge",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "knowledge_graph",
+      "group": "knowledge",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": true,
+      "referenceTests": [
+        "test/semantic-knowledge.test.js",
+        "test/tool-contracts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "knowledge_entity",
+      "group": "knowledge",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "collection_get",
+      "group": "scripts",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/collections.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "collection_save",
+      "group": "scripts",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/collections.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "collection_plan",
+      "group": "scripts",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/collections.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "collection_validate",
+      "group": "scripts",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/collections.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "collection_run",
+      "group": "scripts",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/collections.test.js",
+        "test/tool-contracts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "collection_cancel",
+      "group": "scripts",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "collection_check",
+      "group": "scripts",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/collections.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "collection_history",
+      "group": "scripts",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/collections.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "collection_report",
+      "group": "scripts",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/collections.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "testdb_capabilities",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/template.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "testdb_template_plan",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/template.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "testdb_initialize",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/challenges.test.js",
+        "test/template.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "testdb_resources",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/template.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "testdb_template_build",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/challenges.test.js",
+        "test/template.test.js",
+        "test/tool-contracts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "testdb_template_list",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/template.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "testdb_template_inspect",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/template.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "testdb_template_verify",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/call-outcome.test.js",
+        "test/template.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "testdb_template_invalidate",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/template.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "testdb_template_pin",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/template.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "testdb_clone",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/adapter-scope.test.js",
+        "test/challenges.test.js",
+        "test/template.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "testdb_lease_inspect",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/template.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "testdb_lease_renew",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/template.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "testdb_reset",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/template.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "testdb_release",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/challenges.test.js",
+        "test/template.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "testdb_gc",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/call-outcome.test.js",
+        "test/template.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "scenario_package",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/scenario-runtime.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "scenario_import",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/scenario-runtime.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "scenario_verify",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/scenario-runtime.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "scenario_diff",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/scenario-runtime.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "scenario_explain",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/scenario-runtime.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "scenario_preflight",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/call-outcome.test.js",
+        "test/scenario-runtime.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "scenario_start",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/scenario-runtime.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "scenario_act",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/scenario-runtime.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "scenario_observe",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/scenario-runtime.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "scenario_assert",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/scenario-runtime.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "scenario_inspect",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/scenario-runtime.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "scenario_stop",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/scenario-runtime.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "scenario_cleanup",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/scenario-runtime.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "scenario_run",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/scenario-runtime.test.js",
+        "test/tool-contracts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "api_auth_profiles",
+      "group": "api",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/api-client.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "api_exchange_import",
+      "group": "api",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/api-client.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "api_exchange_list",
+      "group": "api",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/api-client.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "api_exchange_get",
+      "group": "api",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/api-client.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "api_request_prepare",
+      "group": "api",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/api-client.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "api_request_replay",
+      "group": "api",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/api-client.test.js",
+        "test/call-outcome.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "api_request_save",
+      "group": "api",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/api-client.test.js",
+        "test/tool-contracts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "api_browser_open",
+      "group": "browser",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/api-client.test.js",
+        "test/tool-contracts.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "api_browser_action",
+      "group": "browser",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/api-client.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "api_browser_capture",
+      "group": "browser",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/api-client.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "api_browser_close",
+      "group": "browser",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/api-client.test.js",
+        "test/service-map.test.js"
+      ],
+      "integrationReferences": []
+    }
+  ],
+  "views": [
+    "api-exchange",
+    "architecture",
+    "code",
+    "code-cell",
+    "collection-report",
+    "diagram",
+    "differential",
+    "impact",
+    "json",
+    "knowledge-map",
+    "list-diff",
+    "observability",
+    "passport-ports",
+    "patch",
+    "project-context",
+    "reproduction",
+    "scenario-run",
+    "semantic-analysis",
+    "table",
+    "test-coverage",
+    "tests",
+    "text-diff",
+    "xml"
+  ],
+  "capabilities": {
+    "protocol": "dt.adapter-capabilities/v1",
+    "id": "dev-tool",
+    "scopeAware": true,
+    "capabilities": [
+      {
+        "operation": "code_search",
+        "languages": [
+          "text"
+        ],
+        "evidence": "text",
+        "sourceIdentity": "repository commit + source digest",
+        "gaps": [
+          "A text hit does not establish a call or data-flow edge."
+        ]
+      },
+      {
+        "operation": "passport",
+        "languages": [
+          "java",
+          "kotlin"
+        ],
+        "evidence": "static",
+        "sourceIdentity": "repository and internal-library commits",
+        "gaps": [
+          "Dynamic configuration, reflection and unindexed libraries remain explicit gaps."
+        ]
+      },
+      {
+        "operation": "semantic_query",
+        "languages": [
+          "java",
+          "js",
+          "ts",
+          "tsx"
+        ],
+        "evidence": "retained-semantic",
+        "sourceIdentity": "commit + content digest + engine/script generation",
+        "gaps": [
+          "Requires configured Joern and a retained analysis; static paths do not prove runtime execution."
+        ]
+      }
+    ]
+  },
+  "limits": [
+    "References are navigation aids, not proof that a tool ran or every behavior is covered.",
+    "Actual transition/source coverage and browser/live reports are separate source-matched evidence.",
+    "Configured plugins and custom tools require their own integration tests."
+  ]
+}

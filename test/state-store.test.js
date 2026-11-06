@@ -130,6 +130,20 @@ test('explicit legacy backend remains usable without SQLite and reports its capa
   await assert.rejects(store.edit('calls', 'legacy', { expectedRevision: 1, patch: { notes: 'x' } }, a), { code: 'STATE_BACKEND_REQUIRED' });
 });
 
+test('journal initialization waits for a competing database creator', { skip: !sqliteAvailable() }, async t => {
+  const { cache, open } = fixture(t), directory = path.join(cache, 'state');
+  fs.mkdirSync(directory);
+  const db = new (require('node:sqlite').DatabaseSync)(path.join(directory, 'operational.sqlite'));
+  db.exec('BEGIN EXCLUSIVE; CREATE TABLE bootstrap_lock(id INTEGER);');
+  const store = open(), ready = store.ready();
+  // Leave enough time for the other worker to encounter the journal-mode lock.
+  await new Promise(resolve => setTimeout(resolve, 150));
+  db.exec('COMMIT'); db.close();
+  await ready;
+  store.recordCall(call('after-bootstrap')); await store.flush();
+  assert.equal((await store.list({ kind: 'calls' })).total, 1);
+});
+
 test('independent CLI/server owners safely commit concurrently to the same WAL database', { skip: !sqliteAvailable() }, async t => {
   const { cache, open } = fixture(t);
   const source = `const {createStore}=require(${JSON.stringify(require.resolve('../lib/state-store'))});

@@ -87,6 +87,13 @@ test('who uses a table: services (with file:line), procedures, triggers, views, 
   has(idx.usages('test', 'sales.order_audit'), e => e.user === 'sales.audit' && e.role === 'write', 'trigger function writes the audit table');
 });
 
+test('legacy summary groups service roles and reports omitted users', () => {
+  const all = idx.usedBySummary('test', 50).get('orders|sales.orders');
+  assert.match(all, /svc order-service\([^)]*read[^)]*write/);
+  const short = idx.usedBySummary('test', 1).get('orders|sales.orders');
+  assert.match(short, /; \+\d+ more$/);
+});
+
 test('what touches a function: services by SQL, @Procedure and SimpleJdbcCall; functions; triggers', () => {
   has(idx.usages('test', 'sales.order_total'), e => e.userKind === 'service' && /OrderDao\.java:13/.test(e.where), 'select sales.order_total(?) in code');
   has(idx.usages('test', 'sales.order_total'), e => e.user === 'sales.close_order' && e.role === 'calls', 'perform order_total() in a procedure');

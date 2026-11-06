@@ -1,0 +1,155 @@
+{
+  "protocol": "dt.team-readiness/v1",
+  "observedAt": "2026-11-06T21:15:45.968Z",
+  "baseCommit": "bdc81140828d1f753322950bd0bfc0b5cb362e60",
+  "sourceDigest": "ef1fd6cd7ea5776dce1386042326df49d0f487283cba2f0d28d23d3764398834",
+  "workingTree": true,
+  "profile": "one internal-team coordinator; optional isolated workers",
+  "tests": {
+    "tests": 868,
+    "failed": 0,
+    "passed": 816,
+    "cancelled": 0,
+    "skipped": 52,
+    "todo": 0,
+    "topLevel": 868,
+    "suites": 0,
+    "node": "v24.22.0",
+    "platform": "darwin",
+    "sourceMatched": true,
+    "coverage": {
+      "transitions": {
+        "hit": 338,
+        "total": 638,
+        "percent": 53
+      },
+      "lines": {
+        "hit": 24838,
+        "total": 26936,
+        "percent": 92.2
+      },
+      "functions": {
+        "hit": 5364,
+        "total": 6194,
+        "percent": 86.6
+      },
+      "branches": {
+        "hit": 18696,
+        "total": 22990,
+        "percent": 81.3
+      },
+      "testedFiles": 123,
+      "sourceFiles": {
+        "measured": 169,
+        "unmeasured": 26,
+        "total": 195
+      }
+    },
+    "artifact": "test-coverage.json"
+  },
+  "browser": {
+    "checks": 117,
+    "passed": 117,
+    "pageErrors": 0,
+    "defects": 0,
+    "inventoryVisits": 86,
+    "viewports": [
+      1440,
+      390
+    ],
+    "snapshotWriteAttempts": 0,
+    "readiness": {
+      "passed": 6,
+      "checks": [
+        "refresh returns an owned execution link",
+        "Admin exposes capacity, exporter health and indexed generations",
+        "mobile Admin has no document overflow",
+        "catalog evidence renders in the native sandboxed JSON view",
+        "saved inline evidence protects its source generation",
+        "no uncaught browser errors"
+      ],
+      "pageErrors": [],
+      "scope": "Disposable indexed Java and synthetic environment; native sandboxed renderer, not a separate live Open WebUI instance."
+    },
+    "scope": "Disposable source-indexed fixture with synthetic infrastructure and retained semantic projection; native inline rendering, no live Open WebUI deployment.",
+    "screenshots": [
+      "../screenshots/team-runtime-desktop.png",
+      "../screenshots/team-runtime-mobile.png"
+    ]
+  },
+  "catalog": {
+    "artifact": "catalog-scale.json",
+    "sourceDigest": "891838d78cf535fa35ae15cc0db820561f3b244493c986e73d273d14e2ebacdd",
+    "gates": {
+      "searchP95": true,
+      "responsiveEventLoop": true,
+      "boundedRss": true,
+      "noQueryErrors": true,
+      "retainedGeneration": true,
+      "unchangedRefresh": true
+    },
+    "fixture": {
+      "objects": 1000000,
+      "environments": 10,
+      "sessions": 50,
+      "usageEdges": 2000000,
+      "queries": 500,
+      "rounds": 10
+    },
+    "timing": {
+      "warmP50Ms": 78.88303899997845,
+      "warmP95Ms": 167.6360309999436,
+      "coldMaxMs": 1006.9685980000068,
+      "updateMs": 58174.568824999966,
+      "unchangedRefreshMs": [
+        40.78483600000618,
+        3.4668449999880977,
+        20.685837999975774,
+        3.203994999988936,
+        4.735647000023164,
+        3.1923790000146255,
+        3.27079799992498,
+        4.27392599999439,
+        4.048794999951497,
+        3.8605380000080913
+      ]
+    },
+    "memory": {
+      "peakProcessRssBytes": 523722752,
+      "writerHeapLimitMb": 512,
+      "readerHeapLimitMb": 64,
+      "readerConcurrency": 4
+    },
+    "eventLoopP99Ms": 24.887295,
+    "candidateDelta": {
+      "files": [
+        "lib/tools.js"
+      ],
+      "detail": "After the benchmark, configured plugin SHA-256 pins were normalized to lowercase. Catalog/index/search implementation is unchanged; the recorded benchmark digest is preserved."
+    }
+  },
+  "checks": {
+    "coveragePolicy": true,
+    "bundleFresh": true,
+    "stateCharts": {
+      "families": 88,
+      "charts": 97
+    },
+    "inventory": {
+      "tools": 232,
+      "views": 23
+    },
+    "composeConfiguration": true,
+    "workflowAndMonitoringYamlFiles": 8
+  },
+  "notExecuted": [
+    "Docker-backed native Postgres/Kafka/Elasticsearch and Joern suites: Docker daemon unavailable on this host.",
+    "Hosted Node 22/24 workflows, release SBOM/provenance and live Collector/Prometheus/Grafana: workflows/configuration added; successful hosted execution is still required."
+  ],
+  "limits": [
+    "Coverage describes measured sources, with unmeasured files reported explicitly.",
+    "Required integration groups reject missing prerequisites or skips in CI.",
+    "The capacity fixture has one million objects in total across ten environments, not one million per environment.",
+    "Scale measurements used the recorded 16-CPU, 64-GiB Mac, not the 8-vCPU, 16-GiB deployment target."
+  ]
+}
