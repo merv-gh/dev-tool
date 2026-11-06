@@ -48,6 +48,8 @@ const join = (folder, name) => (folder ? `${folder}/${name}` : name);
 
 // ── scripts: tree ──
 let SC = { scripts: [], collections: [] }, cur = null, subtab = 'steps', SITES = null;
+const scriptReads = new DTState.Revision(), viewReads = new DTState.Revision(), previewReads = new DTState.Revision();
+const scriptSaving = new DTState.Activity(), scriptRunning = new DTState.Activity(), siteSaving = new DTState.Activity(), viewSaving = new DTState.Activity();
 const openFolders = new Set(store.get('dt-pm-open', []));
 const saveOpen = () => store.set('dt-pm-open', [...openFolders]);
 
@@ -124,8 +126,9 @@ async function newFolder(parent) {
 
 function newScript(folder) {
   if (!confirmDiscard()) return;
+  scriptReads.advance();
   if (folder) { openFolders.add(folder); saveOpen(); }
-  cur = { id: null, folder, name: 'new-script', def: { description: '', params: {}, steps: [{ tool: '', args: {} }] }, dirty: true };
+  cur = DTState.flag({ id: null, folder, name: 'new-script', def: { description: '', params: {}, steps: [{ tool: '', args: {} }] }, dirty: true });
   subtab = 'steps';
   renderTree(); renderEditor();
   const t = document.querySelector('#pmMain input.title');
@@ -135,9 +138,11 @@ function newScript(folder) {
 async function openScript(id) {
   if (cur && cur.id === id) return;
   if (!confirmDiscard()) return;
+  const request = scriptReads.advance(), previous = cur, revision = DTState.editRevision(cur);
   try {
     const { id: _, savedAt, ...def } = await api(`/api/admin/script?id=${encodeURIComponent(id)}`);
-    cur = { id, folder: parentOf(id), name: base(id), def: { description: '', params: {}, steps: [], ...def }, dirty: false, savedAt };
+    if (!scriptReads.current(request) || cur !== previous || DTState.editRevision(cur) !== revision) return;
+    cur = DTState.flag({ id, folder: parentOf(id), name: base(id), def: { description: '', params: {}, steps: [], ...def }, dirty: false, savedAt });
     renderTree(); renderEditor();
   } catch (e) { toast(e.message); }
 }
@@ -262,7 +267,8 @@ async function openCollection(p) {
 // From the History tab: a suggested script, opened unsaved in the editor.
 function newScriptFrom(def, name) {
   if (!confirmDiscard()) return;
-  cur = { id: null, folder: 'suggested', name: name || 'shortcut', def: { description: def.description || '', params: def.params || {}, steps: def.steps || [] }, dirty: true };
+  scriptReads.advance();
+  cur = DTState.flag({ id: null, folder: 'suggested', name: name || 'shortcut', def: { description: def.description || '', params: def.params || {}, steps: def.steps || [] }, dirty: true });
   subtab = 'steps';
   show('scripts');
   renderTree(); renderEditor();
@@ -448,26 +454,38 @@ $('pmMain').addEventListener('click', async (ev) => {
 });
 
 async function saveScript() {
+  if (scriptSaving.value) return false;
   if (!readForm()) return toast('Fix the JSON first');
-  const id = join(cur.folder, cur.name);
+  const draft = cur, revision = DTState.editRevision(draft), id = join(draft.folder, draft.name);
+  const definition = JSON.parse(JSON.stringify(draft.def));
+  scriptSaving.value = true;
   try {
-    if (cur.id && cur.id !== id) await api('/api/admin/scripts/move', { from: cur.id, to: id });
-    const r = await api('/api/admin/script', { id, script: cur.def });
-    Object.assign(cur, { id: r.id, dirty: false, savedAt: new Date().toISOString() });
+    if (draft.id && draft.id !== id) {
+      await api('/api/admin/scripts/move', { from: draft.id, to: id });
+      draft.id = id; // The move succeeded even if the following save fails.
+    }
+    const r = await api('/api/admin/script', { id, script: definition });
+    draft.id = r.id; draft.savedAt = new Date().toISOString();
+    if (DTState.editRevision(draft) === revision) draft.dirty = false;
     toast(r.replaced ? 'Saved' : 'Created');
-    await loadScripts(); renderEditor();
+    await loadScripts(); if (cur === draft) renderEditor();
     return true;
   } catch (e) { toast(e.message); return false; }
+  finally { scriptSaving.value = false; }
 }
 
 async function runScript() {
+  if (scriptRunning.value) return;
+  const draft = cur;
   readForm();
-  if ((cur.dirty || !cur.id) && !(await saveScript())) return;
-  const params = Object.fromEntries(Object.entries(cur.runParams || {}).filter(([, v]) => v !== '').map(([k, v]) => [k, /^-?\d+(\.\d+)?$/.test(v) ? Number(v) : v]));
+  if ((draft.dirty || !draft.id) && !(await saveScript())) return;
+  if (cur !== draft || draft.dirty) return;
+  const params = Object.fromEntries(Object.entries(draft.runParams || {}).filter(([, v]) => v !== '').map(([k, v]) => [k, /^-?\d+(\.\d+)?$/.test(v) ? Number(v) : v]));
+  scriptRunning.value = true;
   $('pmRun').disabled = true; $('pmOut').innerHTML = '<div class="muted" style="margin-top:8px">Running…</div>';
-  try { cur.lastRun = await api('/api/admin/script/run', { id: cur.id, params }); } catch (e) { cur.lastRun = { ok: false, error: e.message, steps: [] }; }
-  $('pmOut').innerHTML = runHtml(cur.lastRun);
-  $('pmRun').disabled = false;
+  try { draft.lastRun = await api('/api/admin/script/run', { id: draft.id, params }); }
+  catch (e) { draft.lastRun = { ok: false, error: e.message, steps: [] }; }
+  finally { scriptRunning.value = false; if (cur === draft) { $('pmOut').innerHTML = runHtml(draft.lastRun); $('pmRun').disabled = false; } }
 }
 
 function runHtml(r) {
@@ -537,26 +555,32 @@ const touchSite = () => { site.dirty = true; $('stDirty').textContent = '● uns
 function openSite(name) {
   if (site && site.dirty && !confirm('Discard unsaved changes?')) return;
   const s = SITES.sites.find(x => x.name === name);
-  site = s ? { was: s.name, name: s.name, url: s.url, description: s.description, secrets: s.secrets.map(x => ({ ...x })), links: s.links.map(x => ({ ...x })), dirty: false } : null;
+  site = s ? DTState.flag({ was: s.name, name: s.name, url: s.url, description: s.description, secrets: s.secrets.map(x => ({ ...x })), links: s.links.map(x => ({ ...x })), dirty: false }) : null;
   loadSites(); renderSite();
 }
 
 async function saveSite() {
+  if (siteSaving.value) return;
   readSite();
+  const draft = site, revision = DTState.editRevision(draft);
+  siteSaving.value = true;
   try {
-    const r = await api('/api/admin/sites', { was: site.was || '', site: { name: site.name, url: site.url, description: site.description, secrets: site.secrets.map(s => s.name), links: site.links } });
-    site.was = r.site; site.dirty = false;
+    const r = await api('/api/admin/sites', { was: draft.was || '', site: { name: draft.name, url: draft.url, description: draft.description, secrets: draft.secrets.map(s => s.name), links: draft.links } });
+    draft.was = r.site;
+    if (DTState.editRevision(draft) === revision) draft.dirty = false;
     await loadSites();
-    openSite(r.site);
+    const current = site === draft;
+    if (current && !draft.dirty) openSite(r.site);
     toast('Saved');
-    if (/Restart/.test(r.note)) $('stMsg').textContent = r.note;
+    if (current && /Restart/.test(r.note)) $('stMsg').textContent = r.note;
   } catch (e) { toast(e.message); }
+  finally { siteSaving.value = false; }
 }
 
 $('stList').addEventListener('click', (ev) => { const tn = ev.target.closest('[data-site]'); if (tn) openSite(tn.dataset.site); });
 $('stNew').onclick = () => {
   if (site && site.dirty && !confirm('Discard unsaved changes?')) return;
-  site = { was: '', name: '', url: '', description: '', secrets: [], links: [{ link: '', path: '', description: '' }], dirty: true };
+  site = DTState.flag({ was: '', name: '', url: '', description: '', secrets: [], links: [{ link: '', path: '', description: '' }], dirty: true });
   renderSite(); $('stName').focus();
 };
 $('stMain').addEventListener('input', (ev) => {
@@ -621,9 +645,12 @@ async function loadViews() {
 }
 async function openView(name, copyAs) {
   if (vw && vw.dirty && !confirm('Discard unsaved changes?')) return;
+  const request = viewReads.advance(), previous = vw, revision = DTState.editRevision(vw);
   try {
     const v = await api(`/api/admin/view?name=${encodeURIComponent(name)}`);
-    vw = { name: copyAs || v.name, builtin: copyAs ? false : v.builtin, description: v.description, html: v.html, sample: v.sample, dirty: !!copyAs, saved: !copyAs };
+    if (!viewReads.current(request) || vw !== previous || DTState.editRevision(vw) !== revision) return;
+    previewReads.advance();
+    vw = DTState.flag({ name: copyAs || v.name, builtin: copyAs ? false : v.builtin, description: v.description, html: v.html, sample: v.sample, dirty: !!copyAs, saved: !copyAs });
     renderView(); loadViews();
   } catch (e) { toast(e.message); }
 }
@@ -643,10 +670,13 @@ function renderView() {
   preview();
 }
 async function preview() {
+  if (!vw) return;
+  const draft = vw, revision = DTState.editRevision(draft), request = previewReads.advance();
+  const current = () => vw === draft && DTState.editRevision(draft) === revision && previewReads.current(request);
   let sample;
   const t = $('vwSample').value.trim();
   try { sample = t ? JSON.parse(t) : null; $('vwErr').textContent = ''; } catch (e) { $('vwErr').textContent = `sample: ${e.message}`; return; }
-  try { const r = await api('/api/admin/view/preview', { name: vw.name, html: $('vwHtml').value, sample }); $('vwPrev').srcdoc = r.html; } catch (e) { $('vwErr').textContent = e.message; }
+  try { const r = await api('/api/admin/view/preview', { name: vw.name, html: $('vwHtml').value, sample }); if (current()) $('vwPrev').srcdoc = r.html; } catch (e) { if (current()) $('vwErr').textContent = e.message; }
 }
 function readView() {
   vw.name = $('vwName').value.trim(); vw.description = $('vwDesc').value; vw.html = $('vwHtml').value;
@@ -661,11 +691,14 @@ $('vwMain').addEventListener('click', async (ev) => {
   if (b.id === 'vwCopy') { const n = prompt('Name for the new view (lowercase, -)', `${vw.name}-copy`); if (n) { const src = vw.name; vw.dirty = false; openView(src, n); } return; }
   if (b.id === 'vwOverride') { vw.builtin = false; vw.dirty = true; vw.saved = false; return renderView(); }
   if (b.id === 'vwSave') {
-    readView();
-    try { const r = await api('/api/admin/view', { name: vw.name, description: vw.description, html: vw.html, sample: vw.sample }); vw.dirty = false; vw.saved = true; toast(r.replaced ? 'Saved' : 'Created'); loadViews(); renderView(); } catch (e) { toast(e.message); }
+    if (viewSaving.value) return;
+    readView(); const draft = vw, revision = DTState.editRevision(draft); viewSaving.value = true;
+    try { const r = await api('/api/admin/view', { name: draft.name, description: draft.description, html: draft.html, sample: draft.sample }); if (DTState.editRevision(draft) === revision) draft.dirty = false; draft.saved = true; toast(r.replaced ? 'Saved' : 'Created'); loadViews(); if (vw === draft) renderView(); } catch (e) { toast(e.message); }
+    finally { viewSaving.value = false; }
   }
   if (b.id === 'vwDel') {
     if (!confirm(`Delete view ${vw.name}?`)) return;
-    try { await api('/api/admin/view/delete', { name: vw.name }); vw = null; toast('Deleted'); loadViews(); } catch (e) { toast(e.message); }
+    const draft = vw;
+    try { await api('/api/admin/view/delete', { name: draft.name }); if (vw === draft) { vw = null; viewReads.advance(); previewReads.advance(); } toast('Deleted'); loadViews(); } catch (e) { toast(e.message); }
   }
 });

@@ -5,9 +5,9 @@ const runtimeStore = {
 };
 let runtimeStory = runtimeStore.get('story'), runtimePrincipal = runtimeStore.get('principal');
 const linkedAdminStory=new URL('http://localhost/?'+((location.hash||'').split('?')[1]||'')).searchParams.get('story');if(linkedAdminStory&&/^[a-zA-Z0-9][\w.:-]{0,159}$/.test(linkedAdminStory)){runtimeStory=linkedAdminStory;runtimeStore.set('story',runtimeStory);}
-let runtimeState = null, runtimeScopeVersion = 0, runtimeSelected = null, runtimeTimer = null, runtimeLoading = null, runtimeExecutionSequence = 0;
-let runtimeMetadata = [], runtimeMetadataCursor = null, runtimeMetadataSelected = null, runtimeMetadataDirty = false, runtimeMetadataVersion = 0, runtimeMetadataEditSequence = 0;
-let runtimeTools = [], runtimeCodePending = false, runtimeScopeInitialized = false;
+let runtimeState = null; const runtimeScopeVersion = new DTState.Revision(); let runtimeSelected = null; let runtimeTimer = null; let runtimeLoading = null; const runtimeExecutionSequence = new DTState.Revision();
+let runtimeMetadata = []; let runtimeMetadataCursor = null; let runtimeMetadataSelected = null; const runtimeMetadataDirty = new DTState.Dirty(); const runtimeMetadataVersion = new DTState.Revision(); const runtimeMetadataEditSequence = new DTState.Revision();
+let runtimeTools = []; const runtimeCodePending = new DTState.Activity(); let runtimeScopeInitialized = false;
 function adminRequestHeaders() {
   return { ...(runtimeStory ? { 'x-dt-story': runtimeStory } : {}), ...(runtimeState?.identity?.role === 'admin' && runtimePrincipal ? { 'x-dt-principal': runtimePrincipal } : {}) };
 }
@@ -63,10 +63,10 @@ function rtCancellation(record) {
 }
 async function runtimeSelectExecution(id, quiet = false) {
   const same = runtimeSelected === id, trace = same ? $('rtTrace')?.innerHTML || '' : '', reason = same ? $('rtCancelReason')?.value : null;
-  runtimeSelected = id; runtimeRenderExecutions(); const scope = runtimeScopeVersion, sequence = ++runtimeExecutionSequence;
+  runtimeSelected = id; runtimeRenderExecutions(); const scope = runtimeScopeVersion.value, sequence = ++runtimeExecutionSequence.value;
   try {
     const result = await api('/api/admin/execution/' + encodeURIComponent(id));
-    if (scope !== runtimeScopeVersion || id !== runtimeSelected || sequence !== runtimeExecutionSequence) return;
+    if (scope !== runtimeScopeVersion.value || id !== runtimeSelected || sequence !== runtimeExecutionSequence.value) return;
     const record = result.execution || result, owner = rtOwner(record);
     const canCancel = record.canCancel !== undefined ? record.canCancel : ['queued', 'running'].includes(rtState(record));
     $('rtExecution').innerHTML = `<div class="row"><h3>${rtEsc(rtTitle(record))}</h3>${rtBadge(record)}</div>${rtCancellation(record)}${record.error ? '<div class="rt-error">' + rtEsc(record.error) + '</div>' : ''}` + rtFacts([
@@ -78,19 +78,19 @@ async function runtimeSelectExecution(id, quiet = false) {
     if (reason && $('rtCancelReason')) $('rtCancelReason').value = reason;
     if ($('rtExecutionCancel')) $('rtExecutionCancel').onclick = async () => {
       const button = $('rtExecutionCancel'); button.disabled = true; button.textContent = 'Requesting cancellation…';
-      try { await api('/api/admin/execution/' + encodeURIComponent(id) + '/cancel', { reason: $('rtCancelReason').value }); if (scope === runtimeScopeVersion) { runtimeMessage('Cancellation requested. Refreshing execution and cleanup state.'); await loadRuntime(); if (runtimeSelected === id) await runtimeSelectExecution(id); } }
-      catch (error) { if (scope === runtimeScopeVersion) { runtimeMessage(error.message, true); button.disabled = false; button.textContent = 'Cancel execution'; } }
+      try { await api('/api/admin/execution/' + encodeURIComponent(id) + '/cancel', { reason: $('rtCancelReason').value }); if (scope === runtimeScopeVersion.value) { runtimeMessage('Cancellation requested. Refreshing execution and cleanup state.'); await loadRuntime(); if (runtimeSelected === id) await runtimeSelectExecution(id); } }
+      catch (error) { if (scope === runtimeScopeVersion.value) { runtimeMessage(error.message, true); button.disabled = false; button.textContent = 'Cancel execution'; } }
     };
-  } catch (error) { if (!quiet && scope === runtimeScopeVersion) runtimeMessage(error.message, true); }
+  } catch (error) { if (!quiet && scope === runtimeScopeVersion.value) runtimeMessage(error.message, true); }
 }
 async function runtimeLoadTrace(id) {
-  const scope = runtimeScopeVersion, box = $('rtTrace'); box.textContent = 'Loading execution trace…';
+  const scope = runtimeScopeVersion.value, box = $('rtTrace'); box.textContent = 'Loading execution trace…';
   try {
     const trace = await api('/api/admin/runtime/trace?execution=' + encodeURIComponent(id));
-    if (scope !== runtimeScopeVersion || id !== runtimeSelected) return;
+    if (scope !== runtimeScopeVersion.value || id !== runtimeSelected) return;
     const spans = Array.isArray(trace) ? trace : trace.spans || trace.steps || trace.records || [];
     $('rtTrace').innerHTML = spans.length ? '<h2>Trace spans</h2><ol class="rt-spans">' + spans.slice(0, 200).map(span => `<li><div class="rt-span-name"><strong>${rtEsc(span.title || span.name || span.tool || span.message || span.id)}</strong>${rtBadge(span)}<span class="muted">${rtEsc(rtMs(span.ms))}</span></div>${rtFacts([['Span', span.spanId || span.id], ['Parent span', span.parentSpanId || span.parentId], ['Started', span.startedAt || span.at], ['Error', span.error]])}</li>`).join('') + '</ol>' + rtDisclosure('Trace data', trace) : rtDisclosure('Trace data', trace, true);
-  } catch (error) { if (scope === runtimeScopeVersion && id === runtimeSelected) $('rtTrace').innerHTML = '<div class="rt-error">' + rtEsc(error.message) + '</div>'; }
+  } catch (error) { if (scope === runtimeScopeVersion.value && id === runtimeSelected) $('rtTrace').innerHTML = '<div class="rt-error">' + rtEsc(error.message) + '</div>'; }
 }
 function rtSystemFacts(value, names) { return rtFacts(names.map(([label, key]) => [label, value?.[key]])); }
 function runtimeRenderSystem() {
@@ -121,65 +121,65 @@ function runtimeApplyIdentity(identity = {}) {
 }
 async function loadRuntime() {
   if (runtimeLoading) { await runtimeLoading; if (runtimeState?.identity?.storyId !== runtimeStory) return loadRuntime(); return; }
-  const scope = runtimeScopeVersion, bootstrap = !runtimeScopeInitialized;
+  const scope = runtimeScopeVersion.value, bootstrap = !runtimeScopeInitialized;
   runtimeLoading = (async () => { try {
     let result = await api('/api/admin/runtime', undefined, { identityOnly: bootstrap });
-    if (scope !== runtimeScopeVersion) return;
+    if (scope !== runtimeScopeVersion.value) return;
     runtimeState = result;
-    if (runtimeApplyIdentity(result.identity)) { result = await api('/api/admin/runtime'); if (scope !== runtimeScopeVersion) return; runtimeState = result; runtimeApplyIdentity(result.identity); }
+    if (runtimeApplyIdentity(result.identity)) { result = await api('/api/admin/runtime'); if (scope !== runtimeScopeVersion.value) return; runtimeState = result; runtimeApplyIdentity(result.identity); }
     runtimeRenderExecutions(); runtimeRenderSystem();
     if (bootstrap) { runtimeMessage(''); refresh(); runtimeLoadMetadata(); runtimeLoadCodeTools(); }
     $('rtUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString();
     if (runtimeSelected && tab === 'runtime') await runtimeSelectExecution(runtimeSelected, true);
-  } catch (error) { if (scope === runtimeScopeVersion) runtimeMessage(error.message, true); }
+  } catch (error) { if (scope === runtimeScopeVersion.value) runtimeMessage(error.message, true); }
   finally { clearTimeout(runtimeTimer); if ($('rtLive').checked) runtimeTimer = setTimeout(() => { if (tab === 'runtime') loadRuntime(); }, (runtimeState?.executions || []).some(rtActive) ? 1500 : 10000); }
   })();
   try { await runtimeLoading; } finally { runtimeLoading = null; }
 }
-function runtimeMetadataCanLeave() { return !runtimeMetadataDirty || confirm('Discard unsaved metadata notes?'); }
+function runtimeMetadataCanLeave() { return !runtimeMetadataDirty.value || confirm('Discard unsaved metadata notes?'); }
 function rtMetadataLabel(record) { return record.value?.metadata?.label || record.value?.title || record.value?.tool || record.value?.name || record.id; }
 function runtimeRenderMetadata() {
   $('rtMetadataList').innerHTML = runtimeMetadata.length ? runtimeMetadata.map(record => `<button class="rt-record${runtimeMetadataSelected?.id === record.id && runtimeMetadataSelected?.kind === record.kind ? ' on' : ''}" data-rt-record="${rtEsc(record.id)}" data-rt-kind="${rtEsc(record.kind || $('rtMetadataKind').value)}"><span class="rt-record-title"><strong>${rtEsc(rtMetadataLabel(record))}</strong><span class="muted">${rtEsc(record.kind || $('rtMetadataKind').value)}</span></span><span class="rt-execution-meta"><span>${rtEsc(record.id)}</span><span>${rtEsc(rtDate(record.updatedAt))}</span></span></button>`).join('') : '<div class="empty">No stored records in this scope. New calls, jobs and executions will appear here.</div>';
   $('rtMetadataMore').hidden = !runtimeMetadataCursor;
 }
 async function runtimeLoadMetadata(append = false) {
-  const scope = runtimeScopeVersion, version = ++runtimeMetadataVersion, kind = $('rtMetadataKind').value;
+  const scope = runtimeScopeVersion.value, version = ++runtimeMetadataVersion.value, kind = $('rtMetadataKind').value;
   try {
     const page = await api('/api/admin/metadata?kind=' + encodeURIComponent(kind) + '&limit=40' + (append && runtimeMetadataCursor ? '&after=' + encodeURIComponent(runtimeMetadataCursor) : ''));
-    if (scope !== runtimeScopeVersion || version !== runtimeMetadataVersion) return;
+    if (scope !== runtimeScopeVersion.value || version !== runtimeMetadataVersion.value) return;
     const records = page.records || page.items || [];
     runtimeMetadata = append ? [...runtimeMetadata, ...records.filter(record => !runtimeMetadata.some(previous => previous.id === record.id))] : records;
     runtimeMetadataCursor = page.nextCursor || page.after || null; runtimeRenderMetadata();
     $('rtMetadataCount').textContent = runtimeMetadata.length + (page.total != null ? ' of ' + page.total : '') + ' records';
-  } catch (error) { if (scope === runtimeScopeVersion) runtimeMessage(error.message, true); }
+  } catch (error) { if (scope === runtimeScopeVersion.value) runtimeMessage(error.message, true); }
 }
 async function runtimeSelectMetadata(kind, id, force = false) {
   if (!force && !runtimeMetadataCanLeave()) return;
-  const scope = runtimeScopeVersion, version = ++runtimeMetadataVersion, edits = runtimeMetadataEditSequence;
+  const scope = runtimeScopeVersion.value, version = ++runtimeMetadataVersion.value, edits = runtimeMetadataEditSequence.value;
   try {
     const response = await api('/api/admin/metadata/' + encodeURIComponent(kind) + '/' + encodeURIComponent(id));
-    if (scope !== runtimeScopeVersion || version !== runtimeMetadataVersion) return;
-    if (edits !== runtimeMetadataEditSequence) { runtimeMessage('Your notes changed while loading. Select the record again to replace the draft.', true); return; }
-    const record = response.record || response; runtimeMetadataSelected = record; runtimeMetadataDirty = false; runtimeRenderMetadata();
+    if (scope !== runtimeScopeVersion.value || version !== runtimeMetadataVersion.value) return;
+    if (edits !== runtimeMetadataEditSequence.value) { runtimeMessage('Your notes changed while loading. Select the record again to replace the draft.', true); return; }
+    const record = response.record || response; runtimeMetadataSelected = record; runtimeMetadataDirty.value = false; runtimeRenderMetadata();
     const metadata = record.value?.metadata || {}, editable = Array.isArray(record.editable) ? record.editable : [];
     $('rtMetadataEditor').innerHTML = '<div class="row"><h3>' + rtEsc(rtMetadataLabel(record)) + '</h3><span id="rtMetadataDirty" class="dirty"></span></div>' + rtFacts([['Kind', record.kind || kind], ['ID', record.id], ['Revision', record.revision], ['Updated', rtDate(record.updatedAt)], ['Principal', record.owner?.principalId], ['Chat / task', record.owner?.storyId]]) + '<div class="rt-annotation-grid"><label for="rtMetadataLabel">Label</label><input id="rtMetadataLabel" maxlength="200" value="' + rtEsc(metadata.label) + '"' + (editable.includes('label') ? '' : ' disabled') + '><label for="rtMetadataTags">Tags</label><input id="rtMetadataTags" value="' + rtEsc((metadata.tags || []).join(', ')) + '"' + (editable.includes('tags') ? '' : ' disabled') + '><label for="rtMetadataNotes">Notes</label><textarea id="rtMetadataNotes" rows="6" maxlength="8192"' + (editable.includes('notes') ? '' : ' disabled') + '>' + rtEsc(metadata.notes || '') + '</textarea></div><div class="row"><button id="rtMetadataSave" class="primary"' + (editable.length ? '' : ' disabled') + '>Save notes</button><button id="rtMetadataReload">Reload record</button></div><p id="rtMetadataMessage" class="hint" role="status"></p>' + rtDisclosure('Stored data · read only', record.value, true);
-    ['rtMetadataLabel', 'rtMetadataTags', 'rtMetadataNotes'].forEach(name => $(name).addEventListener('input', () => { runtimeMetadataEditSequence++; runtimeMetadataDirty = true; $('rtMetadataDirty').textContent = 'Unsaved notes'; }));
+    ['rtMetadataLabel', 'rtMetadataTags', 'rtMetadataNotes'].forEach(name => $(name).addEventListener('input', () => { runtimeMetadataEditSequence.value++; runtimeMetadataDirty.value = true; $('rtMetadataDirty').textContent = 'Unsaved notes'; }));
     $('rtMetadataReload').onclick = () => runtimeSelectMetadata(kind, id);
     $('rtMetadataSave').onclick = () => runtimeSaveMetadata(kind, id);
-  } catch (error) { if (scope === runtimeScopeVersion) runtimeMessage(error.message, true); }
+  } catch (error) { if (scope === runtimeScopeVersion.value) runtimeMessage(error.message, true); }
 }
 async function runtimeSaveMetadata(kind, id) {
   const record = runtimeMetadataSelected; if (!record || record.id !== id) return;
-  const scope = runtimeScopeVersion, version = runtimeMetadataVersion, edits = runtimeMetadataEditSequence, button = $('rtMetadataSave'); button.disabled = true;
+  const scope = runtimeScopeVersion.value, version = runtimeMetadataVersion.value, edits = runtimeMetadataEditSequence.value, button = $('rtMetadataSave'); button.disabled = true;
   const patch = { label: $('rtMetadataLabel').value, notes: $('rtMetadataNotes').value, tags: $('rtMetadataTags').value.split(',').map(tag => tag.trim()).filter(Boolean) };
   try {
     const response = await api('/api/admin/metadata/' + encodeURIComponent(kind) + '/' + encodeURIComponent(id), { expected_revision: record.revision, patch });
-    if (scope !== runtimeScopeVersion || version !== runtimeMetadataVersion) return;
-    const saved = response.record || response; runtimeMetadataSelected = { ...record, ...saved }; runtimeMetadataDirty = edits !== runtimeMetadataEditSequence; $('rtMetadataDirty').textContent = runtimeMetadataDirty ? 'Unsaved notes' : '';
-    $('rtMetadataMessage').textContent = 'Notes saved. Revision ' + (saved.revision || 'updated') + '.' + (runtimeMetadataDirty ? ' Newer edits are still unsaved.' : '');
+    if (scope !== runtimeScopeVersion.value || version !== runtimeMetadataVersion.value) return;
+    const saved = response.record || response; runtimeMetadataSelected = { ...record, ...saved }; runtimeMetadataDirty.value = edits !== runtimeMetadataEditSequence.value; $('rtMetadataDirty').textContent = runtimeMetadataDirty.value ? 'Unsaved notes' : '';
+    $('rtMetadataMessage').textContent = 'Notes saved. Revision ' + (saved.revision || 'updated') + '.' + (runtimeMetadataDirty.value ? ' Newer edits are still unsaved.' : '');
     await runtimeLoadMetadata();
-  } catch (error) { if (scope === runtimeScopeVersion && version === runtimeMetadataVersion) { $('rtMetadataMessage').textContent = error.message + ' Your draft is preserved. Reload to read the current record.'; $('rtMetadataMessage').className = 'err-text'; } }
-  finally { if (scope === runtimeScopeVersion && runtimeMetadataSelected?.id === id) button.disabled = false; }
+  } catch (error) { if (scope === runtimeScopeVersion.value && version === runtimeMetadataVersion.value) { $('rtMetadataMessage').textContent = error.message + ' Your draft is preserved. Reload to read the current record.'; $('rtMetadataMessage').className = 'err-text'; } }
+  finally { if (scope === runtimeScopeVersion.value && runtimeMetadataSelected?.id === id) button.disabled = false; }
 }
 function runtimeCodeDefaults(tool) {
   const schema = tool?.inputSchema || { properties: {} }, value = {};
@@ -193,7 +193,7 @@ function runtimeCodeDefaults(tool) {
 function runtimeCodeSchema(reset = false) {
   const tool = runtimeTools.find(tool => tool.name === $('rtCodeTool').value);
   $('rtCodeDescription').textContent = tool ? tool.description + '\n\n' + rtJson(tool.inputSchema) : 'No code tools are enabled in this configuration.';
-  $('rtCodeRun').disabled = !tool || runtimeCodePending; if (reset) $('rtCodeArgs').value = rtJson(runtimeCodeDefaults(tool));
+  $('rtCodeRun').disabled = !tool || runtimeCodePending.value; if (reset) $('rtCodeArgs').value = rtJson(runtimeCodeDefaults(tool));
 }
 async function runtimeLoadCodeTools() {
   try {
@@ -207,11 +207,11 @@ function rtNativeView(view) {
   try { const url = new URL(view, location.href), route = url.pathname.match(/\/(?:show|view|logs|pr|map|map-preview|files|passport|architecture)\/[^/]+$/); if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || !route) return null; return route[0] + url.search + (url.search ? '&' : '?') + 'embed=1'; } catch { return null; }
 }
 async function runtimeRunCode() {
-  if (runtimeCodePending) return;
+  if (runtimeCodePending.value) return;
   let args; try { args = JSON.parse($('rtCodeArgs').value); if (!args || typeof args !== 'object' || Array.isArray(args)) throw Error('Arguments must be a JSON object'); } catch (error) { $('rtCodeStatus').textContent = error.message; return; }
-  const name = $('rtCodeTool').value, scope = runtimeScopeVersion; runtimeCodePending = true; $('rtCodeRun').disabled = true; $('rtCodeStatus').textContent = 'Running ' + name + '…';
+  const name = $('rtCodeTool').value, scope = runtimeScopeVersion.value; runtimeCodePending.value = true; $('rtCodeRun').disabled = true; $('rtCodeStatus').textContent = 'Running ' + name + '…';
   try {
-    const response = await api('/api/tool/' + encodeURIComponent(name), args); if (scope !== runtimeScopeVersion) return;
+    const response = await api('/api/tool/' + encodeURIComponent(name), args); if (scope !== runtimeScopeVersion.value) return;
     const result = response.result; const view = rtNativeView(result?.view), rows = Array.isArray(result) ? result : result?.rows || result?.calls || result?.pending;
     $('rtCodeOutput').innerHTML = (view ? '<iframe id="rtCodeView" class="rt-code-view" title="Code tool visualization" sandbox="allow-scripts allow-popups allow-downloads"></iframe>' : rtTable(rows)) + rtDisclosure('Code result', result, !view);
     if (view) $('rtCodeView').src = view;
@@ -222,22 +222,22 @@ async function runtimeRunCode() {
       $('rtCodeOutput').prepend(controls);
     }
     await loadRuntime();
-  } catch (error) { if (scope === runtimeScopeVersion) $('rtCodeStatus').textContent = error.message; }
-  finally { runtimeCodePending = false; if (scope === runtimeScopeVersion) $('rtCodeRun').disabled = false; }
+  } catch (error) { if (scope === runtimeScopeVersion.value) $('rtCodeStatus').textContent = error.message; }
+  finally { runtimeCodePending.value = false; if (scope === runtimeScopeVersion.value) $('rtCodeRun').disabled = false; }
 }
 async function runtimeChangeScope(event) {
   event?.preventDefault();
   if(typeof uxBeforeScopeChange==='function'&&!uxBeforeScopeChange())return;
-  if (runtimeCodePending) { $('rtScopeStatus').textContent = 'Wait for the code tool response before changing scope.'; return; }
-  if (typeof semanticAdminPending !== 'undefined' && semanticAdminPending) { $('rtScopeStatus').textContent = 'Wait for the semantic tool response before changing scope.'; return; }
+  if (runtimeCodePending.value) { $('rtScopeStatus').textContent = 'Wait for the code tool response before changing scope.'; return; }
+  if ((typeof semanticAdminPending === 'undefined' ? 'undefined' : typeof semanticAdminPending.value) !== 'undefined' && semanticAdminPending.value) { $('rtScopeStatus').textContent = 'Wait for the semantic tool response before changing scope.'; return; }
   if (typeof architectureCanLeave === 'function' && !architectureCanLeave()) return;
   if (!runtimeMetadataCanLeave() || typeof contextCanLeave === 'function' && !contextCanLeave()) return;
-  if (typeof semanticAdminDirty !== 'undefined' && semanticAdminDirty && !confirm('Discard unsaved semantic arguments?')) return;
+  if ((typeof semanticAdminDirty === 'undefined' ? 'undefined' : typeof semanticAdminDirty.value) !== 'undefined' && semanticAdminDirty.value && !confirm('Discard unsaved semantic arguments?')) return;
   const story = $('rtStory').value.trim() || 'default', principal = runtimeState?.identity?.role === 'admin' ? $('rtPrincipal').value.trim() : '';
   const identifier = /^[a-zA-Z0-9][\w.:-]{0,159}$/;
   if (!identifier.test(story) || principal && !identifier.test(principal)) { $('rtScopeStatus').textContent = 'Use up to 160 letters, digits, dots, colons, underscores or hyphens, starting with a letter or digit.'; return; }
   runtimeStory = story; runtimePrincipal = principal; runtimeStore.set('story', story); runtimeStore.set('principal', principal);
-  runtimeScopeVersion++; runtimeMetadataVersion++; runtimeSelected = null; runtimeMetadataSelected = null; runtimeMetadataDirty = false; runtimeMetadata = []; runtimeMetadataCursor = null;
+  runtimeScopeVersion.value++; if(typeof diagnosticsScopeChanged==='function')diagnosticsScopeChanged(); runtimeMetadataVersion.value++; runtimeSelected = null; runtimeMetadataSelected = null; runtimeMetadataDirty.value = false; runtimeMetadata = []; runtimeMetadataCursor = null;
   if(typeof clearHandbook==='function')clearHandbook();
   if (runtimeState) runtimeState = { ...runtimeState, executions: [], jobs: [] };
   $('rtExecutions').replaceChildren(); $('rtMetadataList').replaceChildren();
@@ -274,7 +274,7 @@ function runtimeInit() {
     const record = event.target.closest('[data-rt-record]'); if (record) runtimeSelectMetadata(record.dataset.rtKind, record.dataset.rtRecord);
     if (event.target.closest('[data-tab="runtime"]')) { if (!runtimeMetadata.length) runtimeLoadMetadata(); if (!runtimeTools.length) runtimeLoadCodeTools(); }
   });
-  window.addEventListener('beforeunload', event => { if (runtimeMetadataDirty) { event.preventDefault(); event.returnValue = ''; } });
+  window.addEventListener('beforeunload', event => { if (runtimeMetadataDirty.value) { event.preventDefault(); event.returnValue = ''; } });
   window.addEventListener('message', runtimeViewMessage);
   loadRuntime(); if (tab === 'runtime') { runtimeLoadMetadata(); runtimeLoadCodeTools(); }
 }

@@ -285,3 +285,12 @@ test('an unavailable explicit import is not silently replaced by an unrelated sa
   assert.equal(r.suggestions[0].options[0].import, 'org.other.Money');
   assert.equal(r.suggestions[0].options.length, 1);
 });
+
+test('concurrent warm compiler requests keep Unicode filenames and settle independently', { skip: !JDK && 'no JDK', timeout: 30000 }, async () => {
+  const root=path.join(home,'unicode-compiler');fs.mkdirSync(root,{recursive:true});
+  const files=['Заказ','客户'].map(name=>{const file=path.join(root,name+'.java');fs.writeFileSync(file,`class ${name} { String value = "😀"; }`);return file;});
+  const options=['-encoding','UTF-8','-proc:none','-d',root];
+  const answers=await Promise.all(files.map(file=>require('../lib/javacheck').compileHere({options,files:[file]})));
+  assert.ok(answers.every(x=>x.ok),JSON.stringify(answers));
+  for (const name of ['Заказ','客户']) assert.ok(fs.existsSync(path.join(root,name+'.class')));
+});

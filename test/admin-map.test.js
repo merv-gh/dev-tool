@@ -3,7 +3,7 @@ function harness(call=async()=>({})) {
   const elements = new Map(), $ = id => { if (!elements.has(id)) elements.set(id, { hidden: true }); return elements.get(id); };
   const location = { href: 'https://tools.example/admin', origin: 'https://tools.example' };
   const handlers=[],sent=[]; $('cxMapFrame').contentWindow={postMessage:value=>sent.push(value)};
-  const context = vm.createContext({ $, location, URL, contextCall:call, window: { addEventListener(type,handler) {if(type==='message')handlers.push(handler);} } });
+  const context = vm.createContext({ DTState: require('../lib/state-machine'), $, location, URL, contextCall:call, window: { addEventListener(type,handler) {if(type==='message')handlers.push(handler);} } });
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../web/admin-map.js'), 'utf8'), context);
   return { $, sent, dispatch:async data=>{for(const handler of handlers)await handler({source:$('cxMapFrame').contentWindow,data});}, foreign:async data=>{for(const handler of handlers)await handler({source:{},data});}, run: s => vm.runInContext(s, context) };
 }

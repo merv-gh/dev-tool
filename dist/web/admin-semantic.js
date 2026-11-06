@@ -1,5 +1,5 @@
 // Native semantic and passport tools share the authenticated Admin transport.
-let semanticAdminTools = [], semanticAdminLoaded = false, semanticAdminPending = false, semanticAdminVersion = 0, semanticAdminDirty = false, semanticAdminJob = null, semanticAdminJobTimer = null, semanticAdminPorts = null, semanticAdminEdits = 0, semanticAdminCurrentTool = null;
+let semanticAdminTools = []; let semanticAdminLoaded = false; const semanticAdminPending = new DTState.Activity(); const semanticAdminVersion = new DTState.Revision(); const semanticAdminDirty = new DTState.Dirty(); let semanticAdminJob = null; let semanticAdminJobTimer = null; let semanticAdminPorts = null; const semanticAdminEdits = new DTState.Revision(); let semanticAdminCurrentTool = null;
 let semanticAdminLoading = null, semanticAdminHash = '', semanticAutoPortHash = '';
 const semanticToolNames = ["semantic_capabilities", "semantic_index", "semantic_search", "semantic_query", "semantic_ports", "passport_adjustments", "passport_adjust"];
 function semanticAdminMessage(text, error = false) {
@@ -23,7 +23,7 @@ function semanticAdminPrepare(name, args) {
     semanticAdminMessage("Tool is not enabled: " + name, true);
     return false;
   }
-  if (semanticAdminDirty && !confirm("Replace the current argument draft?")) { if (semanticAdminCurrentTool) $("smTool").value=semanticAdminCurrentTool; return false; }
+  if (semanticAdminDirty.value && !confirm("Replace the current argument draft?")) { if (semanticAdminCurrentTool) $("smTool").value=semanticAdminCurrentTool; return false; }
   const scope = semanticAdminScope(), value = args || semanticAdminDefaults(tool.inputSchema), props = tool.inputSchema.properties || {};
   if (!args) {
     for (const key of ["service", "repo", "env", "analysis"]) if (scope[key] && key in props) value[key] = scope[key];
@@ -47,7 +47,7 @@ function semanticAdminPrepare(name, args) {
   semanticAdminCurrentTool = name;
   $("smArgs").value = JSON.stringify(value, null, 2);
   $("smSchema").textContent = tool.description + "\n\n" + JSON.stringify(tool.inputSchema, null, 2);
-  semanticAdminDirty = false;
+  semanticAdminDirty.value = false;
   $("smRunStatus").textContent = "Arguments prepared. Review before running.";
   return true;
 }
@@ -103,7 +103,7 @@ function semanticAdminMetadataEdit() {
   semanticAdminPrepare('passport_adjust',value);$('smArgs').focus();
 }
 async function semanticAdminRun() {
-  if (semanticAdminPending) return;
+  if (semanticAdminPending.value) return;
   let args;
   try {
     args = JSON.parse($("smArgs").value);
@@ -112,38 +112,38 @@ async function semanticAdminRun() {
     semanticAdminMessage(error.message, true);
     return;
   }
-  const name = $("smTool").value, scope = runtimeScopeVersion, version = ++semanticAdminVersion, edits = semanticAdminEdits;
-  semanticAdminPending = true;
+  const name = $("smTool").value, scope = runtimeScopeVersion.value, version = ++semanticAdminVersion.value, edits = semanticAdminEdits.value;
+  semanticAdminPending.value = true;
   $("smRun").disabled = true;
   $("smRunStatus").textContent = "Running " + name + "\u2026";
   semanticAdminMessage("");
   try {
     const response = await api("/api/tool/" + encodeURIComponent(name), args);
-    if (scope !== runtimeScopeVersion || version !== semanticAdminVersion) return;
-    semanticAdminDirty = edits !== semanticAdminEdits;
+    if (scope !== runtimeScopeVersion.value || version !== semanticAdminVersion.value) return;
+    semanticAdminDirty.value = edits !== semanticAdminEdits.value;
     semanticAdminRender(response.result, name);
     $("smRunStatus").textContent = response.result?.state ? "State: " + response.result.state : response.result?.error ? "Completed with a reported error." : "Completed.";
   } catch (error) {
-    if (scope === runtimeScopeVersion && version === semanticAdminVersion) {
+    if (scope === runtimeScopeVersion.value && version === semanticAdminVersion.value) {
       semanticAdminMessage(error.message, true);
       $("smRunStatus").textContent = "Call failed. Your argument draft is preserved.";
     }
   } finally {
-    semanticAdminPending = false;
+    semanticAdminPending.value = false;
     $("smRun").disabled = false;
   }
 }
 async function semanticAdminPollJob(id) {
-  const scope = runtimeScopeVersion;
+  const scope = runtimeScopeVersion.value;
   try {
     const job = await api("/api/admin/job/" + encodeURIComponent(id));
-    if (scope !== runtimeScopeVersion || id !== semanticAdminJob) return;
+    if (scope !== runtimeScopeVersion.value || id !== semanticAdminJob) return;
     $("smJobStatus").textContent = [job.title, job.state, job.stage, job.log?.at(-1), job.error].filter(Boolean).join(" \xB7 ");
     $("smCancel").hidden = !["queued", "running", "cancelling", "draining"].includes(job.state);
     if (["queued", "running", "cancelling", "draining"].includes(job.state) && tab === "semantic") semanticAdminJobTimer = setTimeout(() => semanticAdminPollJob(id), 1500);
     else if (job.state === "done" && job.result) {
       const result = await api("/api/tool/show", { view: "semantic-analysis", data: job.result, title: "Semantic job result" });
-      if (scope !== runtimeScopeVersion || id !== semanticAdminJob) return;
+      if (scope !== runtimeScopeVersion.value || id !== semanticAdminJob) return;
       const view = rtNativeView(result.result?.view);
       if (view) {
         $("smAdminOutput").innerHTML = '<iframe id="smAdminView" class="sm-admin-view" title="Semantic job result" sandbox="allow-scripts allow-popups allow-downloads"></iframe>' + rtDisclosure("Job result", job.result);
@@ -151,7 +151,7 @@ async function semanticAdminPollJob(id) {
       }
     }
   } catch (error) {
-    if (scope === runtimeScopeVersion) $("smJobStatus").textContent = error.message;
+    if (scope === runtimeScopeVersion.value) $("smJobStatus").textContent = error.message;
   }
 }
 async function loadSemanticAdmin() {
@@ -173,10 +173,10 @@ async function loadSemanticAdmin() {
   if (semanticAdminJob) semanticAdminPollJob(semanticAdminJob);
 }
 function semanticAdminClear() {
-  semanticAdminVersion++;semanticAutoPortHash='';if(typeof uxClearScope==='function')uxClearScope();
+  semanticAdminVersion.value++;semanticAutoPortHash='';if(typeof uxClearScope==='function')uxClearScope();
   semanticAdminPorts = null;
   semanticAdminJob = null;
-  semanticAdminDirty = false;
+  semanticAdminDirty.value = false;
   clearTimeout(semanticAdminJobTimer);
   for (const id of ["smRetained", "smPortRows", "smAdminOutput"]) $(id).replaceChildren();
   $("smPortEditor").hidden = true;
@@ -192,8 +192,8 @@ function semanticAdminInit() {
   $("smPrepare").onclick = () => semanticAdminPrepare($("smTool").value);
   $("smTool").onchange = () => semanticAdminPrepare($("smTool").value);
   $("smArgs").oninput = () => {
-    semanticAdminDirty = true;
-    semanticAdminEdits++;
+    semanticAdminDirty.value = true;
+    semanticAdminEdits.value++;
   };
   $("smRun").onclick = semanticAdminRun;
   for (const [id, name] of [["smCapabilities", "semantic_capabilities"], ["smList", "semantic_index"], ["smPorts", "passport_adjustments"], ["smIndex", "semantic_index"]]) $(id).onclick = async () => {
@@ -223,7 +223,7 @@ function semanticAdminInit() {
     if (frame && event.source === frame.contentWindow && event.data?.type === "iframe:height" && Number.isFinite(event.data.height)) frame.style.height = Math.max(72, Math.min(1100, Math.ceil(event.data.height))) + "px";
   });
   window.addEventListener("beforeunload", (event) => {
-    if (semanticAdminDirty) {
+    if (semanticAdminDirty.value) {
       event.preventDefault();
       event.returnValue = "";
     }

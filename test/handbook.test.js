@@ -7,7 +7,7 @@ fs.writeFileSync(path.join(home,'.env'),'PRIVATE_BEARER='+secret+'\n');fs.writeF
 const H=require('../lib/handbook'),T=require('../lib/tools'),A=require('../lib/access'),context=require('../lib/context'),content=require('../lib/handbook-content');
 test.after(async()=>{await require('../lib/state-store').close();fs.rmSync(home,{recursive:true,force:true});});
 test('live handbook covers the exact enabled registry, native views and every chapter crosslink',async()=>{
- const catalog=await H.catalog(),tools=await T.schemas({metadata:true});assert.deepEqual(catalog.tools.map(t=>t.name),tools.map(t=>t.name));assert.ok(catalog.tools.some(t=>t.name==='local_probe'));assert.equal(catalog.views.filter(v=>v.builtin).length,20);assert.ok(catalog.chapters.length>=20);
+ const catalog=await H.catalog(),tools=await T.schemas({metadata:true});assert.deepEqual(catalog.tools.map(t=>t.name),tools.map(t=>t.name));assert.ok(catalog.tools.some(t=>t.name==='local_probe'));assert.deepEqual(catalog.views.filter(v=>v.builtin).map(v=>v.name),require('../lib/views').list().filter(v=>v.builtin).map(v=>v.name));assert.ok(catalog.chapters.length>=20);
  const ids=new Set(catalog.chapters.map(c=>c.id));for(const chapter of catalog.chapters){assert.ok(chapter.sections.length);for(const related of chapter.related)assert.ok(ids.has(related),related);}
  for(const tool of catalog.tools)assert.ok(ids.has(tool.chapter),tool.name);
  for(const view of catalog.views)assert.ok(content.visualHelp[view.name]||!view.builtin);

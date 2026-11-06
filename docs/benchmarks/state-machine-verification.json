@@ -1,0 +1,50 @@
+{
+  "schema": "dt.state-machines.verification/v1",
+  "date": "2026-11-05",
+  "scope": "Working-tree refactor based on 5c33058; baseline inventory remains pinned to that commit.",
+  "runtime": {
+    "node": "24.22.0",
+    "java": "Temurin 24.0.2"
+  },
+  "auditFamilies": 88,
+  "sharedExecutableCharts": 93,
+  "automated": {
+    "command": "node --test --test-concurrency=6 test/*.test.js",
+    "tests": 819,
+    "passed": 767,
+    "failed": 0,
+    "skipped": 52,
+    "finalFocusedChecks": {
+      "command": "node --test test/state-machine.test.js test/lifecycle-regressions.test.js test/config.test.js test/dist.test.js",
+      "passed": 23,
+      "failed": 0
+    }
+  },
+  "browser": {
+    "fixture": "demo/ui-ux.js (disposable synthetic environment)",
+    "walkthrough": {
+      "checks": 111,
+      "passed": 111,
+      "pageErrors": 0,
+      "defects": 0,
+      "pageVisits": 80
+    },
+    "runtime": {
+      "checks": 14,
+      "errors": []
+    }
+  },
+  "otherChecks": [
+    "npm run build",
+    "npm run build:check",
+    "node dev/state-machines.js --check",
+    "docker compose config --quiet",
+    "git diff --check",
+    "Documentation links and portable repository paths"
+  ],
+  "limits": [
+    "Docker Engine API timed out; no real container execution or live Postgres scratch-resource tests were claimed.",
+    "Synthetic browser fixtures do not verify real Joern, Kafka or Postgres connections.",
+    "The suite ran on local Node 24, not the Compose Node 22 image."
+  ]
+}

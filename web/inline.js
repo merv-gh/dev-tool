@@ -6,9 +6,10 @@ const dtInline = {
   actions(root = document) {
     const menus = [...root.querySelectorAll('details.dt-more')];
     if (!menus.length) return;
+    const states = new WeakMap(menus.map(menu => [menu, DTState.create(DTState.disclosureModel, menu.open ? 'open' : 'closed')]));
     let spacer;
     const close = (menu, focus = false) => {
-      menu.open = false;
+      states.get(menu).to('closed');menu.open = false;
       if (focus) menu.querySelector('summary').focus();
     };
     const size = () => {
@@ -48,6 +49,7 @@ const dtInline = {
         queueMicrotask(update);
       });
       menu.addEventListener('toggle', () => {
+        states.get(menu).to(menu.open ? 'open' : 'closed');
         if (menu.open) for (const other of menus) if (other !== menu && other.open) close(other);
         if (typeof panel.showPopover === 'function') {
           panel.setAttribute('popover', 'manual');
@@ -167,9 +169,9 @@ const dtInline = {
   files(el, entries, render) {
     el.innerHTML = '<div class="file-layout"><nav class="file-nav" aria-label="Changed files"><label class="file-filter">Filter files<input type="search" placeholder="Path or filename" aria-label="Filter changed files"></label><div class="file-tree"></div></nav><section class="file-preview" aria-label="Selected file diff"></section></div>';
     const tree = el.querySelector('.file-tree'), panel = el.querySelector('.file-preview'), search = el.querySelector('input');
-    const expanded = new Set(); let selected = entries[0];
+    const expanded = new Set(); const selection = new DTState.Selection(entries[0]);
     const ancestors = p => { const parts = p.split('/'); parts.pop(); for (let i = 1; i <= parts.length; i++) expanded.add(parts.slice(0, i).join('/')); };
-    if (selected) ancestors(selected.path);
+    if (selection.value) ancestors(selection.value.path);
     const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
     function draw() {
       const root = { dirs: new Map(), files: [] }, q = search.value.trim().toLowerCase();
@@ -183,11 +185,11 @@ const dtInline = {
         }
         node.files.push({ f, index, name: parts.at(-1) });
       });
-      const html = node => [...node.dirs.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([path, dir]) => `<details data-folder="${esc(path)}" ${q || expanded.has(path) ? 'open' : ''}><summary>${esc(dir.name)}</summary><div>${html(dir)}</div></details>`).join('') + node.files.sort((a,b) => a.name.localeCompare(b.name)).map(({f,index,name}) => `<button type="button" data-file="${index}" aria-current="${selected === f}" title="${esc(f.path)}"><span class="file-name">${esc(name)}</span><span class="file-count"><span class="file-added">+${Number(f.added)||0}</span> <span class="file-removed">−${Number(f.removed)||0}</span></span></button>`).join('');
+      const html = node => [...node.dirs.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([path, dir]) => `<details data-folder="${esc(path)}" ${q || expanded.has(path) ? 'open' : ''}><summary>${esc(dir.name)}</summary><div>${html(dir)}</div></details>`).join('') + node.files.sort((a,b) => a.name.localeCompare(b.name)).map(({f,index,name}) => `<button type="button" data-file="${index}" aria-current="${selection.value === f}" title="${esc(f.path)}"><span class="file-name">${esc(name)}</span><span class="file-count"><span class="file-added">+${Number(f.added)||0}</span> <span class="file-removed">−${Number(f.removed)||0}</span></span></button>`).join('');
       tree.innerHTML = html(root) || '<p class="empty">No matching files.</p>';
     }
     function select(f) {
-      selected = f;
+      selection.value = f;
       if (f) ancestors(f.path);
       tree.querySelectorAll('button[data-file]').forEach(b => b.setAttribute('aria-current', String(entries[Number(b.dataset.file)] === f)));
       panel.innerHTML = f ? `<h3 class="file-path">${esc(f.path)}</h3><div class="file-body"></div>` : '<p class="empty">No changed files.</p>';
@@ -196,7 +198,7 @@ const dtInline = {
     tree.addEventListener('toggle', e => { const p = e.target.dataset.folder; if (p !== undefined && !search.value) e.target.open ? expanded.add(p) : expanded.delete(p); }, true);
     tree.onclick = e => { const b = e.target.closest('button[data-file]'); if (b) select(entries[Number(b.dataset.file)]); };
     search.oninput = draw;
-    draw(); select(selected);
+    draw(); select(selection.value);
     return { select(path) { const f = entries.find(f => f.path === path); if (!f) return; ancestors(f.path); draw(); select(f); } };
   },
 };

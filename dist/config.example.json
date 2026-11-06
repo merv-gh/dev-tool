@@ -114,6 +114,7 @@
   "pg": { "dictionaries": "^d_", "dictionaryRows": 10000 },
   "push": { "enabled": false, "protect": [], "author": "" },
   "tests": { "mavenSettings": "", "gradleProperties": [], "env": {}, "passEnv": [], "pgUrl": "${DT_TEST_DB_URL:-}", "offline": false, "timeoutMs": 900000, "workspaceDays": 7, "compileCheck": true, "compileFix": true, "compileWaitMs": 45000 },
+  "telemetry": { "enabled": true, "endpoint": "${OTEL_EXPORTER_OTLP_ENDPOINT:-}", "sampleRatio": 1 },
   "log": { "maxMb": 50, "files": 3 },
   "results": { "maxMb": 500 },
 

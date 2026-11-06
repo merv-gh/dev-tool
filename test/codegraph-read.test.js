@@ -31,6 +31,7 @@ test('large duplicated edge arrays stream under a 48 MiB heap instead of allocat
   const row = JSON.stringify(['pkg.Source#run', 'pkg.Destination#apply', 'calls', 'src/main/java/pkg/'+'part/'.repeat(12)+'Source.java:12', 1, ['Object'], 'pkg.Source#run(Object)']);
   try { fs.writeSync(fd, '{"classes":[],"edges":['); for(let i=0;i<count;i++)fs.writeSync(fd,(i?',':'')+row); fs.writeSync(fd,'],"preciseEdges":[');for(let i=0;i<count;i++)fs.writeSync(fd,(i?',':'')+row);fs.writeSync(fd,']}'); } finally { fs.closeSync(fd); }
   const script = `const g=require(process.argv[1]).load(process.argv[2]);let count=0;for(const edge of g.preciseEdges){if(edge[2]!=='calls')throw Error('wrong edge');count++;}console.log(JSON.stringify({count,heap:process.memoryUsage().heapUsed}));`;
-  const result = JSON.parse(execFileSync(process.execPath,['--max-old-space-size=48','-e',script,require.resolve('../lib/codegraph-read'),file],{encoding:'utf8',timeout:30000}));
+  // V8 coverage changes the memory/timing experiment; keep this proof process unprofiled.
+  const result = JSON.parse(execFileSync(process.execPath,['--max-old-space-size=48','-e',script,require.resolve('../lib/codegraph-read'),file],{encoding:'utf8',timeout:30000,env:{...process.env,NODE_V8_COVERAGE:''}}));
   assert.equal(result.count,count); assert.ok(result.heap < 48*1024*1024);
 });

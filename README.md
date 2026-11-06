@@ -930,6 +930,18 @@ npm run build                                                # rebuild dist/ aft
 
 Notes for coding agents are in [AGENTS.md](AGENTS.md).
 
+The [state-machine inventory](docs/state-machines.md) maps runtime lifecycles,
+artifact publication, editor protocols and parser state, with source references,
+guards, recovery paths and suggested transition tests.
+The [executable state contracts](docs/state-machine-runtime.md) map those families
+to shared transition charts, compact parser states and UTF-8 runner boundaries.
+Run `node dev/state-machines.js --check` to verify the chart catalog.
+
+[Tracing and test evidence](docs/observability.md) explains per-chat OpenTelemetry,
+local trace inspection, OTLP export and the interactive source/lifecycle coverage
+report (`npm run test:coverage`). Both views are available in Admin Runtime and
+as Open WebUI tool results.
+
 ## License
 MIT
 

@@ -10,7 +10,7 @@ function harness(override) {
   const element = () => ({ value: '', textContent: '', hidden: false, disabled: false, options: [], children: [], append(...items) { this.children.push(...items); this.options.push(...items); }, replaceChildren() { this.children = []; this.options = []; }, addEventListener() {}, focus() {} });
   const $ = id => { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); };
   let discard = true;
-  const runtime = vm.createContext({ $, console, URLSearchParams, location:{hash:'#context'}, setTimeout, clearTimeout, confirm: () => discard, window: { addEventListener() {} }, document: { createElement: element, querySelectorAll: () => [...elements.values()] }, api: async (url, args) => override?.(url,args) ?? (url === '/api/tools' ? tools.schemas() : { result: await tools.call(url.split('/').pop(), args) }) });
+  const runtime = vm.createContext({ DTState: require('../lib/state-machine'), $, console, URLSearchParams, location:{hash:'#context'}, setTimeout, clearTimeout, confirm: () => discard, window: { addEventListener() {} }, document: { createElement: element, querySelectorAll: () => [...elements.values()] }, api: async (url, args) => override?.(url,args) ?? (url === '/api/tools' ? tools.schemas() : { result: await tools.call(url.split('/').pop(), args) }) });
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../web/admin-context.js'), 'utf8'), runtime);
   return { $, run: code => vm.runInContext(code, runtime), discard: value => discard = value };
 }
@@ -27,15 +27,15 @@ test('editor saves notes and metadata independently without losing drafts; stale
   h.$('cxContent').value = '# first progress'; h.run('contextMarkDirty(true)');
   await h.$('cxSaveFile').onclick();
   assert.equal(C.read({ id: c.id, path: 'progress.md' }).content, '# first progress');
-  assert.equal(h.$('cxTitle').value, 'Pending title'); assert.equal(h.run('contextDirty'), true);
-  await h.$('cxSaveMeta').onclick(); assert.equal(C.get(c.id).title, 'Pending title'); assert.equal(h.run('contextDirty'), false);
+  assert.equal(h.$('cxTitle').value, 'Pending title'); assert.equal(h.run('contextDraft.dirty'), true);
+  await h.$('cxSaveMeta').onclick(); assert.equal(C.get(c.id).title, 'Pending title'); assert.equal(h.run('contextDraft.dirty'), false);
   h.$('cxContent').value = '# unsaved progress'; h.run('contextMarkDirty(true)');
   h.$('cxTitle').value = 'Saved title'; h.run('contextMarkDirty(false)');
   await h.$('cxSaveMeta').onclick();
-  assert.equal(C.get(c.id).title, 'Saved title'); assert.equal(h.$('cxContent').value, '# unsaved progress'); assert.equal(h.run('contextDirty'), true);
+  assert.equal(C.get(c.id).title, 'Saved title'); assert.equal(h.$('cxContent').value, '# unsaved progress'); assert.equal(h.run('contextDraft.dirty'), true);
   C.write({ id: c.id, path: 'progress.md', content: '# another chat changed it' });
   await h.$('cxSaveFile').onclick();
-  assert.match(h.$('cxMessage').textContent, /changed/); assert.equal(h.run('contextDirty'), true); assert.equal(h.$('cxContent').value, '# unsaved progress');
+  assert.match(h.$('cxMessage').textContent, /changed/); assert.equal(h.run('contextDraft.dirty'), true); assert.equal(h.$('cxContent').value, '# unsaved progress');
   assert.equal(C.read({ id: c.id, path: 'progress.md' }).content, '# another chat changed it');
   const second = C.open({ title: 'Another task' }); h.discard(false);
   await h.run(`contextSelect(${JSON.stringify(second.id)})`); assert.equal(h.run('contextState.id'), c.id);
@@ -52,7 +52,7 @@ test('scratchpad captures failures and keeps output visible without overwriting 
   await h.$('cxRun').onclick();
   assert.match(h.$('cxRunOutput').textContent, /Missing argument: sql/); assert.equal(h.$('cxCaptured').hidden, false);
   assert.ok(C.get(c.id).files.some(f => f.path.startsWith('calls/')));
-  assert.equal(h.$('cxContent').value, '# draft'); assert.equal(h.run('contextDirty'), true);
+  assert.equal(h.$('cxContent').value, '# draft'); assert.equal(h.run('contextDraft.dirty'), true);
   assert.equal(h.$('cxRun').disabled, false);
 });
 
@@ -76,7 +76,7 @@ test('saving a file cannot hide a concurrent metadata edit from another chat', a
   assert.equal(h.$('cxTitle').value, 'My title draft');
   await h.$('cxSaveMeta').onclick();
   assert.match(h.$('cxMessage').textContent, /changed/); assert.equal(C.get(c.id).title, 'Other chat title');
-  assert.equal(h.$('cxTitle').value, 'My title draft'); assert.equal(h.run('contextDirty'), true);
+  assert.equal(h.$('cxTitle').value, 'My title draft'); assert.equal(h.run('contextDraft.dirty'), true);
 });
 
 test('editor archives a saved file and preserves an unsaved draft when discard is declined', async () => {

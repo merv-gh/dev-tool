@@ -6,6 +6,7 @@
 <title>Developer workspace · dt</title>
 <link rel="stylesheet" href="/static/ui.css">
 <link rel="stylesheet" href="/static/admin-runtime.css">
+<link rel="stylesheet" href="/static/diagnostics.css">
 <link rel="stylesheet" href="/static/admin-semantic.css"><link rel="stylesheet" href="/static/admin-architecture.css">
 <style>
   .cx-label { display: block; margin: 12px 0 5px; font-size: 12px; color: var(--muted); }
@@ -312,8 +313,11 @@
   </section>
 
   <section id="tab-runtime" hidden>
-    <div class="rt-heading"><div><h2>Execution activity</h2><p class="hint">Calls, code cells and background jobs in the selected chat / task. Cancellation stays visible until work and cleanup settle.</p></div><div class="row"><label><input id="rtLive" type="checkbox" checked> Live</label><button id="rtRefresh">Refresh runtime</button><span id="rtUpdated" class="muted"></span></div></div>
+    <div class="rt-heading" id="rtActivityHeading"><div><h2>Execution activity</h2><p class="hint">Calls, code cells and background jobs in the selected chat / task. Cancellation stays visible until work and cleanup settle.</p></div><div class="row"><label><input id="rtLive" type="checkbox" checked> Live</label><button id="rtRefresh">Refresh runtime</button><span id="rtUpdated" class="muted"></span></div></div>
     <div id="rtMessage" class="hint" role="status" aria-live="polite"></div>
+    <div class="workspace-mode-tabs" aria-label="Runtime views"><button data-diagnostics-mode="activity" aria-pressed="true">Activity</button><button data-diagnostics-mode="traces" aria-pressed="false">Traces & observability</button><button data-diagnostics-mode="coverage" aria-pressed="false">Test coverage</button></div>
+    <div id="dgAdminPanel" hidden><div class="row" style="margin:14px 0"><div id="dgTraceControls" hidden><button id="dgTraceToggle">Enable tracing in this chat</button></div><button id="dgAdminRefresh">Refresh evidence</button></div><div id="dgAdminOutput" aria-live="polite"></div></div>
+    <div id="rtActivityBody">
     <div class="rt-layout">
       <div class="card rt-activity"><div class="rt-toolbar"><label class="rt-search-label" for="rtSearch">Find execution</label><input id="rtSearch" placeholder="Tool, execution or error…"><label class="rt-search-label" for="rtState">State</label><select id="rtState"><option value="">All states</option><option>queued</option><option>running</option><option>cancelling</option><option>draining</option><option>failed</option><option>cancelled</option><option>done</option><option>interrupted</option></select></div><div id="rtExecutions" class="rt-executions" aria-label="Execution tree"></div></div>
       <div class="card detail rt-inspector" id="rtExecution"><div class="empty">Select an execution to inspect its ownership, child calls, resources and trace.</div></div>
@@ -324,6 +328,7 @@
       <div class="rt-layout"><div class="card"><div id="rtMetadataList" class="rt-record-list"></div><div class="rt-toolbar"><button id="rtMetadataMore" hidden>Load older records</button><span id="rtMetadataCount" class="muted"></span></div></div><div class="card detail" id="rtMetadataEditor"><div class="empty">Select a record to read its data and add a note for this chat / task.</div></div></div>
     </div>
     <details class="rt-section" id="rtCodePanel"><summary>Code cells & tool scratchpad</summary><p class="hint">Use Node code to combine tool calls and network fetches. Inspect engine capabilities before choosing another runtime. Pending cells use the same returned cell ID; each call uses the selected principal and chat / task.</p><div class="row"><label for="rtCodeTool">Tool</label><select id="rtCodeTool"></select><button id="rtCodeSchema">Reset arguments</button></div><details><summary>Description & argument schema</summary><pre id="rtCodeDescription" class="code cx-wrap"></pre></details><label class="cx-label" for="rtCodeArgs">Arguments (JSON)</label><textarea id="rtCodeArgs" rows="8" spellcheck="false">{}</textarea><div class="row"><button id="rtCodeRun" class="primary">Run code tool</button><span id="rtCodeStatus" class="hint" role="status"></span></div><div id="rtCodeOutput"></div></details>
+    </div>
   </section>
 
   <section id="tab-semantic" hidden>
@@ -379,12 +384,13 @@
     <div class="card scroll"><table><thead><tr><th>Source</th><th>sha256</th><th>Downloaded</th><th>Pinned</th></tr></thead><tbody id="plugins"></tbody></table></div>
   </section>
 </div>
-<script src="/static/ui.js"></script>
+<script src="/static/state-machine.js"></script><script src="/static/ui.js"></script>
 <script src="/static/admin-scripts.js"></script>
 <script src="/static/tool-form.js"></script><script src="/static/port-editor.js"></script>
 <script src="/static/admin-context.js"></script>
 <script src="/static/admin-map.js"></script>
 <script src="/static/admin-runtime.js"></script>
+<script src="/static/trace-format.js"></script><script src="/static/diagnostics.js"></script><script src="/static/admin-observability.js"></script>
 <script src="/static/admin-semantic.js"></script><script src="/static/admin-architecture.js"></script>
 <script src="/static/handbook.js"></script><script src="/static/admin-handbook.js"></script>
 <script>

@@ -489,6 +489,48 @@
       "width": 390,
       "origin": "disposable UI fixture; actual Java indexing, synthetic infrastructure and retained semantic rows",
       "overflow": false
+    },
+    {
+      "file": "admin-observability-desktop.png",
+      "title": "Chat trace waterfall",
+      "width": 1440,
+      "origin": "real local nested tools; synthetic infrastructure",
+      "overflow": false
+    },
+    {
+      "file": "admin-observability-mobile.png",
+      "title": "Mobile chat trace waterfall",
+      "width": 390,
+      "origin": "real local nested tools; synthetic infrastructure",
+      "overflow": false
+    },
+    {
+      "file": "admin-test-coverage-desktop.png",
+      "title": "Lifecycle coverage and test provenance",
+      "width": 1440,
+      "origin": "executed repository test coverage; local demo shell",
+      "overflow": false
+    },
+    {
+      "file": "admin-test-coverage-mobile.png",
+      "title": "Mobile lifecycle coverage",
+      "width": 390,
+      "origin": "executed repository test coverage; local demo shell",
+      "overflow": false
+    },
+    {
+      "file": "sample-observability.png",
+      "title": "Open WebUI trace result",
+      "width": 1440,
+      "origin": "real local nested tools; synthetic infrastructure",
+      "overflow": false
+    },
+    {
+      "file": "sample-test-coverage.png",
+      "title": "Open WebUI coverage result",
+      "width": 1440,
+      "origin": "executed repository test coverage; local demo shell",
+      "overflow": false
     }
   ],
   "errors": [],

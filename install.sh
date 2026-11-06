@@ -6,6 +6,13 @@
 #          --no-webui (keep supporting services)   --tools-only (only dt)   --ref BRANCH|TAG   --no-start
 # Run it again to update the code and restart; your config folder is never overwritten.
 set -e
+# Self-contained because this entry point is also piped directly into sh.
+INSTALL_PHASE=options
+install_phase() {
+  case "$INSTALL_PHASE:$1" in options:preflight|preflight:checkout|checkout:config|config:starting|config:ready|starting:waiting|waiting:ready|waiting:unhealthy) INSTALL_PHASE=$1 ;;
+    *) echo "invalid install transition $INSTALL_PHASE -> $1" >&2; exit 1 ;;
+  esac
+}
 REPO=${DT_REPO:-https://github.com/merv-gh/dev-tool.git}
 REF=${DT_REF:-main}
 CODE=${DT_CODE_DIR:-$HOME/.dev-tool}
@@ -24,8 +31,10 @@ while [ $# -gt 0 ]; do
     *) echo "unknown option $1" >&2; exit 1 ;;
   esac
 done
+install_phase preflight
 for c in git docker; do command -v $c >/dev/null 2>&1 || { echo "dt needs $c" >&2; exit 1; }; done
 docker compose version >/dev/null 2>&1 || { echo "dt needs docker compose v2" >&2; exit 1; }
+install_phase checkout
 
 if [ -d "$CODE/.git" ]; then
   echo "updating $CODE"
@@ -35,16 +44,24 @@ else
   git clone -q --depth 1 --branch "$REF" "$REPO" "$CODE"
 fi
 
+install_phase config
 mkdir -p "$HOME_DIR"
 FRESH=
 [ -f "$HOME_DIR/config.json" ] || [ -f "$HOME_DIR/envs.json" ] || { cp "$CODE/config.example.json" "$HOME_DIR/config.json"; FRESH=1; }
 [ -f "$HOME_DIR/.env" ] || [ -f "$HOME_DIR/.env.personal" ] || { cp "$CODE/.env.example" "$HOME_DIR/.env"; chmod 600 "$HOME_DIR/.env"; FRESH=1; }
 
 if [ -n "$START" ]; then
+  install_phase starting
   "$CODE/run.sh" --home "$HOME_DIR" $RUN_ARGS up -d
+  install_phase waiting
   printf 'waiting for dt'
-  i=0; until curl -fsS -o /dev/null http://127.0.0.1:${DT_PORT:-4000}/health 2>/dev/null; do i=$((i+1)); [ $i -gt 60 ] && break; printf .; sleep 2; done; echo
+  i=0; until curl -fsS -o /dev/null http://127.0.0.1:${DT_PORT:-4000}/health 2>/dev/null; do i=$((i+1)); [ $i -gt 60 ] && { install_phase unhealthy; break; }; printf .; sleep 2; done; echo
+  if [ "$INSTALL_PHASE" = unhealthy ]; then
+    echo "dt did not become healthy; inspect $CODE/run.sh --home $HOME_DIR logs dt" >&2
+    exit 1
+  fi
 fi
+install_phase ready
 
 cat <<MSG
 

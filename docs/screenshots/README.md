@@ -2,6 +2,20 @@
 
 Captured from the running demo with `demo/gallery.js`, `demo/screenshots.js` and `demo/chat-screenshots.js`. Synthetic samples demonstrate rendering; real Joern captures use retained end-to-end test results. Open WebUI uses a scripted model with real tool calls. This gallery does not imply every integration was executed. [Capture instructions](../../demo/README.md).
 
+## Tracing and test evidence
+
+Captured with `dev/check-observability-browser.js` against `demo/ui-ux.js`.
+The trace is from real local nested tool calls. The coverage explorer uses the
+full executed repository report, including missing paths and test-file evidence.
+Infrastructure remains synthetic; no live-service correctness is implied.
+See [setup and interpretation](../observability.md).
+
+| | |
+| --- | --- |
+| ![Trace waterfall](admin-observability-desktop.png) **Traces** · parentage, outcomes and lifecycle events | ![Lifecycle coverage](admin-test-coverage-desktop.png) **Coverage** · missing edges and test provenance |
+| ![Mobile trace explorer](admin-observability-mobile.png) **Mobile traces** | ![Mobile lifecycle coverage](admin-test-coverage-mobile.png) **Mobile coverage** |
+| ![Inline trace result](sample-observability.png) **Open WebUI traces** | ![Inline coverage result](sample-test-coverage.png) **Open WebUI coverage** |
+
 ## Field guide and self-context
 
 Captured from `demo/ui-ux.js` with `dev/check-handbook-browser.js`. The guide

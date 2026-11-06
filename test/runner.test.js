@@ -18,7 +18,7 @@ fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ envs: { dev: {
 
 let server, base;
 test.before(() => new Promise((r) => { server = require('../lib/runner').serve({ port: 0, host: '127.0.0.1' }); server.on('listening', () => { base = `http://127.0.0.1:${server.address().port}`; r(); }); }));
-test.after(async () => { server.close(); await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, { recursive: true, force: true }); });
+test.after(async () => { await require('../lib/telemetry').shutdown(); server.close(); await require('../lib/isolate').stop(); await require('../lib/state-store').close(); fs.rmSync(home, { recursive: true, force: true }); });
 
 const post = (p, body, token = 'runner-test-token') => fetch(base + p, { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify(body) });
 
@@ -81,4 +81,55 @@ test('an unreachable runner: builds run in dt, said once', async () => {
   const b = await R.exec('echo', ['x'], { cwd: home });
   assert.equal(b.quiet, true, 'not asked again for a minute');
   delete process.env.DT_RUNNER_URL;
+});
+
+test('runner forces UTF-8 locale and preserves Unicode filenames across split output chunks', async () => {
+  const name = 'Заказ_客户😀.java', root = path.join(home, 'work', 'ws');
+  fs.writeFileSync(path.join(root, name), 'generated source', 'utf8');
+  const code = `const fs=require('fs'); const value={names:fs.readdirSync('.'),lang:process.env.LANG,all:process.env.LC_ALL,ctype:process.env.LC_CTYPE,java:process.env.JAVA_TOOL_OPTIONS}; const bytes=Buffer.from(JSON.stringify(value));let i=0;const timer=setInterval(()=>{if(i===bytes.length){clearInterval(timer);return;}process.stdout.write(bytes.subarray(i,i+1));i++;},1);`;
+  const r = await require('../lib/runner').exec(process.execPath, ['-e', code], { runnerUrl: base, runnerToken: 'runner-test-token', cwd: root,
+    env: { LANG: 'C', LC_ALL: 'C', LC_CTYPE: 'C', JAVA_TOOL_OPTIONS: '-Xms16m -Dfile.encoding=US-ASCII' } });
+  assert.equal(r.code, 0);
+  const value = JSON.parse(r.out);
+  assert.ok(value.names.includes(name));
+  assert.match(value.all, /UTF-8$/);
+  assert.equal(value.lang, value.all);
+  assert.equal(value.ctype, value.all);
+  assert.equal(value.java, '-Xms16m -Dfile.encoding=UTF-8');
+});
+
+test('runner client decodes Unicode split inside an NDJSON response', async () => {
+  const http = require('http'), name = 'Заказ_客户😀.java';
+  const peer = http.createServer((req, res) => {
+    req.resume();res.writeHead(200, { 'content-type': 'application/x-ndjson' });
+    const bytes = Buffer.from(JSON.stringify({ out: name }) + '\n' + JSON.stringify({ done: true, code: 0 }) + '\n');
+    let offset = 0;
+    const timer = setInterval(() => { if (offset === bytes.length) { clearInterval(timer);res.end(); } else res.write(bytes.subarray(offset, ++offset)); }, 1);
+    res.on('close', () => clearInterval(timer));
+  });
+  await new Promise(resolve => peer.listen(0, '127.0.0.1', resolve));
+  try {
+    const r = await require('../lib/runner').exec('unused', [], { runnerUrl: `http://127.0.0.1:${peer.address().port}`, cwd: home });
+    assert.equal(r.code, 0); assert.equal(r.out, name);
+  } finally { await new Promise(resolve => peer.close(resolve)); }
+});
+
+test('a lost runner response has unknown outcome and never authorizes local re-execution', async () => {
+  const http = require('http'); let requests = 0;
+  const peer = http.createServer((req,res) => { requests++;req.resume();res.writeHead(200,{'content-type':'application/x-ndjson'});res.write('{"out":"started"}\n');setImmediate(()=>res.destroy()); });
+  await new Promise(resolve=>peer.listen(0,'127.0.0.1',resolve));
+  try {
+    const result = await require('../lib/runner').exec('unused',[],{runnerUrl:`http://127.0.0.1:${peer.address().port}`,cwd:home});
+    assert.equal(result.runnerError,true);assert.equal(result.unreachable,undefined);assert.match(result.out,/unknown/);assert.equal(requests,1);
+  } finally { await new Promise(resolve=>peer.close(resolve)); }
+});
+
+test('runner execution joins the client trace without passing telemetry or credentials into the build environment',async()=>{
+ const O=require('../lib/telemetry');O.setEnabled(true);
+ try {
+  await O.run('runner.parent',{'dt.kind':'build'},async()=>{
+   const result=await require('../lib/runner').exec(process.execPath,['-e','console.log(process.env.traceparent || "no-trace-env")'],{runnerUrl:base,runnerToken:'runner-test-token',cwd:path.join(home,'work/ws')});assert.equal(result.code,0);assert.match(result.out,/no-trace-env/);
+  });
+  const rows=(await O.snapshot()).spans,parent=rows.find(r=>r.name==='runner.parent'),child=rows.find(r=>r.name==='runner.exec');assert.ok(child);assert.equal(child.traceId,parent.traceId);assert.equal(child.parentSpanId,parent.spanId);assert.equal(child.status,'ok');assert.doesNotMatch(JSON.stringify(rows),/runner-test-token/);
+ } finally {O.setEnabled(false);}
 });

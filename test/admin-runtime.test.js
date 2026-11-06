@@ -5,7 +5,7 @@ function harness(api = async () => ({})) {
   const element = () => ({ value: '', textContent: '', innerHTML: '', hidden: false, disabled: false, checked: false, dataset: {}, children: [], handlers: {}, append(...items) { this.children.push(...items); }, prepend(...items) { this.children.unshift(...items); }, replaceChildren() { this.children = []; }, focus() {}, addEventListener(type, handler) { this.handlers[type] = handler; } });
   const $ = id => { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); };
   let discard = true;
-  const context = vm.createContext({ $, URL, console, Date, crypto: { randomUUID: () => 'new-tab' }, location: { href: 'https://tools.example/admin' }, tab: 'runtime', contextState: null, contextFile: null, selectedJob: null, refresh: async () => {}, loadContexts: async () => {}, loadHistory: async () => {}, show() {}, contextCanLeave: () => true, confirm: () => discard, setTimeout: () => 1, clearTimeout() {}, sessionStorage: { getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) }, window: { addEventListener() {} }, document: { addEventListener() {}, querySelectorAll: () => [], createElement: element }, api: async (url, body, options) => { requests.push({ url, body, options }); return api(url, body, options); } });
+  const context = vm.createContext({ DTState: require('../lib/state-machine'), $, URL, console, Date, crypto: { randomUUID: () => 'new-tab' }, location: { href: 'https://tools.example/admin' }, tab: 'runtime', contextState: null, contextFile: null, selectedJob: null, refresh: async () => {}, loadContexts: async () => {}, loadHistory: async () => {}, show() {}, contextCanLeave: () => true, confirm: () => discard, setTimeout: () => 1, clearTimeout() {}, sessionStorage: { getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) }, window: { addEventListener() {} }, document: { addEventListener() {}, querySelectorAll: () => [], createElement: element }, api: async (url, body, options) => { requests.push({ url, body, options }); return api(url, body, options); } });
   vm.runInContext(source, context);
   return { $, requests, run: code => vm.runInContext(code, context), discard: value => discard = value, storage };
 }
@@ -34,7 +34,7 @@ test('metadata annotation edits send a revision, preserve stale drafts and never
   await h.run("runtimeSelectMetadata('executions','one')"); h.$('rtMetadataLabel').value = 'Useful calculation'; h.$('rtMetadataNotes').value = 'My unsaved note'; h.$('rtMetadataTags').value = 'orders, incident'; h.$('rtMetadataNotes').handlers.input();
   await h.run("runtimeSaveMetadata('executions','one')");
   const saved = h.requests.find(request => request.body); assert.equal(saved.body.expected_revision, 'v1'); assert.deepEqual(Object.keys(saved.body.patch), ['label', 'notes', 'tags']); assert.equal(saved.body.patch.state, undefined);
-  assert.equal(h.$('rtMetadataNotes').value, 'My unsaved note'); assert.equal(h.run('runtimeMetadataDirty'), true); assert.match(h.$('rtMetadataMessage').textContent, /draft is preserved/);
+  assert.equal(h.$('rtMetadataNotes').value, 'My unsaved note'); assert.equal(h.run('runtimeMetadataDirty.value'), true); assert.match(h.$('rtMetadataMessage').textContent, /draft is preserved/);
   h.discard(false); await h.run("runtimeSelectMetadata('executions','two')"); assert.equal(h.run('runtimeMetadataSelected.id'), 'one');
 });
 test('metadata save cannot hide edits typed while the write was pending', async () => {
@@ -43,13 +43,13 @@ test('metadata save cannot hide edits typed while the write was pending', async 
   await h.run("runtimeSelectMetadata('calls','one')"); h.$('rtMetadataNotes').value = 'First note'; h.$('rtMetadataNotes').handlers.input();
   const saving = h.run("runtimeSaveMetadata('calls','one')"); h.$('rtMetadataNotes').value = 'Newer draft'; h.$('rtMetadataNotes').handlers.input();
   finish({ kind: 'calls', id: 'one', revision: 'v2', value: { metadata: { notes: 'First note' } } }); await saving;
-  assert.equal(h.run('runtimeMetadataSelected.revision'), 'v2'); assert.equal(h.run('runtimeMetadataDirty'), true); assert.equal(h.$('rtMetadataNotes').value, 'Newer draft'); assert.match(h.$('rtMetadataMessage').textContent, /Newer edits/);
+  assert.equal(h.run('runtimeMetadataSelected.revision'), 'v2'); assert.equal(h.run('runtimeMetadataDirty.value'), true); assert.equal(h.$('rtMetadataNotes').value, 'Newer draft'); assert.match(h.$('rtMetadataMessage').textContent, /Newer edits/);
 });
 test('an old scope cannot populate the inspector after scope changes', async () => {
   let finish; const pending = new Promise(resolve => finish = resolve), h = harness(async () => pending);
-  const loading = h.run("runtimeSelectExecution('old-execution')"); h.run('runtimeScopeVersion++'); finish({ id: 'old-execution', title: 'Old private result', state: 'done' }); await loading;
+  const loading = h.run("runtimeSelectExecution('old-execution')"); h.run('runtimeScopeVersion.value++'); finish({ id: 'old-execution', title: 'Old private result', state: 'done' }); await loading;
   assert.ok(!h.$('rtExecution').innerHTML.includes('Old private result'));
-  h.run("runtimeState={identity:{role:'user'}}; runtimeCodePending=true"); h.$('rtStory').value = 'another'; await h.run('runtimeChangeScope()'); assert.match(h.$('rtScopeStatus').textContent, /Wait for the code tool response/);
+  h.run("runtimeState={identity:{role:'user'}}; runtimeCodePending.value=true"); h.$('rtStory').value = 'another'; await h.run('runtimeChangeScope()'); assert.match(h.$('rtScopeStatus').textContent, /Wait for the code tool response/);
 });
 test('cancellation and code results expose incomplete outcomes and only embed recognized native views', () => {
   const h = harness(); assert.match(h.run("rtCancellation({state:'draining'})"), /still active/); assert.match(h.run("rtCancellation({state:'cancelled',cleanupIncomplete:1})"), /unknown/);

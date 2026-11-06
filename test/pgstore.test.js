@@ -100,7 +100,8 @@ test('a 200+ MiB catalog migrates, indexes and answers functions under a 64 MiB 
     const manifest=JSON.parse(fs.readFileSync(${JSON.stringify(f)},'utf8'));const dataBytes=fs.statSync(require('path').join(require('path').dirname(${JSON.stringify(f)}),manifest.data)).size;
     console.log(JSON.stringify({dataBytes,heapMiB:Math.round(process.memoryUsage().heapUsed/1048576),lookupMs,manifestBytes:fs.statSync(${JSON.stringify(f)}).size,cacheBytes:S.stats().bytes}));
   `;
-  const r = spawnSync(process.execPath, ['--max-old-space-size=64', '-e', script], { cwd: root, env: { ...process.env, DT_HOME: home, DT_LOG: 'quiet', DT_PG_SLIM_BYTES: 'invalid' }, encoding: 'utf8', maxBuffer: 2 * 1024 * 1024, timeout: 150000 });
+  // Keep the fixed-heap experiment independent of inherited V8 profiling overhead.
+  const r = spawnSync(process.execPath, ['--max-old-space-size=64', '-e', script], { cwd: root, env: { ...process.env, DT_HOME: home, DT_LOG: 'quiet', DT_PG_SLIM_BYTES: 'invalid', NODE_V8_COVERAGE: '' }, encoding: 'utf8', maxBuffer: 2 * 1024 * 1024, timeout: 150000 });
   assert.equal(r.status, 0, `${r.signal || ''}\n${r.stdout}\n${r.stderr}`);
   const metrics = JSON.parse(r.stdout.trim());
   assert.ok(metrics.manifestBytes < 100000);

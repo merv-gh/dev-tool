@@ -7,6 +7,14 @@
 #   ./run.sh --home ~/dt logs -f dt           ./run.sh --home ~/dt down
 # DIR defaults to $DT_HOME, else this folder. It holds config.json + .env (or the older .env.<env> files).
 set -e
+# Local bootstrap protocol: exec transfers ownership to Compose; it is not a
+# claim that the containers are healthy. No host Node installation is needed.
+RUN_PHASE=options
+run_phase() {
+  case "$RUN_PHASE:$1" in options:home|home:configured|configured:prepared|prepared:delegating) RUN_PHASE=$1 ;;
+    *) echo "invalid run transition $RUN_PHASE -> $1" >&2; exit 1 ;;
+  esac
+}
 cd "$(dirname "$0")"
 CODE=$(pwd)
 HOME_DIR=${DT_HOME:-$CODE}
@@ -23,6 +31,7 @@ while [ $# -gt 0 ]; do
     *) break ;;
   esac
 done
+run_phase home
 mkdir -p "$HOME_DIR"
 HOME_DIR=$(cd "$HOME_DIR" && pwd)
 
@@ -35,6 +44,7 @@ else
 fi
 [ -f "$HOME_DIR/config.json" ] || [ -f "$HOME_DIR/envs.json" ] || ls "$HOME_DIR"/.env.* >/dev/null 2>&1 ||
   echo "note: no config.json in $HOME_DIR; dt starts, but has no environments to index" >&2
+run_phase configured
 
 # bind mounts: create them as you, not as root
 mkdir -p "$HOME_DIR/cache" "$HOME_DIR/repos" "$HOME_DIR/passports" "$HOME_DIR/plugins"
@@ -93,6 +103,7 @@ else
   fi
   export COMPOSE_PROFILES
 fi
+run_phase prepared
 # Compose cannot see bind-mounted changes. Include every runtime asset: views and
 # worker scripts can be cached by a long-lived process too.
 export DT_BUNDLE_REVISION=$(cd "$CODE/dist" && find . -type f -exec cksum {} + | LC_ALL=C sort | cksum | awk '{print $1 "-" $2}')
@@ -101,4 +112,5 @@ if [ "${1:-}" = up ]; then
   shift
   case " $* " in *' --no-build '*|*' --build '*) set -- up "$@" ;; *) set -- up --build "$@" ;; esac
 fi
+run_phase delegating
 exec docker compose --project-directory "$CODE" -f "$CODE/docker-compose.yml" --env-file "$ENV_FILE" "$@"

@@ -73,13 +73,15 @@ async function mcpHandle(msg, session, requestSignal) {
     case 'tools/list': return reply({ tools: await tools.schemas() });
     case 'tools/call': {
       if(mcpRequests.has(key))return {jsonrpc:'2.0',id:msg.id,error:{code:-32600,message:'Request id is already active in this session'}};
-      const controller=new AbortController(),onAbort=()=>controller.abort(requestSignal.reason);if(requestSignal?.aborted)onAbort();else requestSignal?.addEventListener('abort',onAbort,{once:true});mcpRequests.set(key,controller);
+      const lifecycle=require('./lib/state-machine').create(require('./lib/lifecycles').mcp),controller=new AbortController(),abort=controller.abort.bind(controller);controller.abort=why=>{if(lifecycle.terminal)return;lifecycle.to('cancelling');abort(why);};const onAbort=()=>controller.abort(requestSignal.reason);if(requestSignal?.aborted)onAbort();else requestSignal?.addEventListener('abort',onAbort,{once:true});mcpRequests.set(key,controller);
       try {
         const result = await tools.call(msg.params.name, msg.params.arguments || {}, { source: 'mcp', session,signal:controller.signal });
+        lifecycle.to('replied');
         return reply({ content: [{ type: 'text', text: typeof result === 'string' ? result : JSON.stringify(result) }] });
       } catch (e) {
+        lifecycle.to('replied');
         return reply({ content: [{ type: 'text', text: `Error: ${errorPayload(e).error}` }], structuredContent: errorPayload(e), isError: true });
-      } finally {mcpRequests.delete(key);requestSignal?.removeEventListener('abort',onAbort);}
+      } finally {lifecycle.to('closed');mcpRequests.delete(key);requestSignal?.removeEventListener('abort',onAbort);}
     }
     default:
       if (msg.id === undefined) return null; // notifications/initialized etc.
@@ -363,12 +365,20 @@ function start({ port = 4000, host = '127.0.0.1' } = {}) {
       // Keyed immutable result links remain read-only capabilities for sandboxed embeds.
       // Explicit story headers are enforced; same-principal browser embeds restore their saved story.
       {const key=url.pathname.match(/\/(?:architecture|map|map-preview|show|patch|logs|view|result|files)\/([a-z0-9]+)(?:\.patch)?(?:\/|$)/)?.[1];if(key){const value=results.raw(key);if(value?.owner&&(!identity||(!req.headers['x-dt-story']&&!req.headers['x-openwebui-chat-id']&&!req.headers['x-chat-id']&&!identity.storyBound&&identity.principalId===value.owner.principalId)))scope={...value.owner,role:'user'};}}
-      await A.run(scope,async()=>{
+      const workRequest=url.pathname==='/mcp'||url.pathname.startsWith('/api/tool/')||url.pathname==='/api/admin/refresh';
+      await A.run(scope,()=>require('./lib/telemetry').withCarrier(workRequest?{traceparent:req.headers.traceparent}:null,async()=>{
+        const observation=workRequest?require('./lib/telemetry').begin('http.server',{'dt.kind':'http','http.request.method':req.method,'http.route':route[1]},{kind:1}):null;
+        const handle=async()=>{
+        try {
         const globalWrite=req.method!=='GET'&&['/api/admin/tools/reload','/api/admin/refresh','/api/admin/notes','/api/admin/repos','/api/admin/sites'].includes(url.pathname);
         if(url.pathname==='/api/admin/config'||globalWrite)A.requireAdmin();
         if(protectedRuntime){if(!await require('./lib/runtime-admin').handle(req,res,url,send,readJsonBody))send(res,404,{error:'Unknown runtime endpoint'});return;}
         await route[3](req,res,url);
-      });
+        } catch(error){observation?.end(error,{'http.response.status_code':error.statusCode||500});throw error;}
+        finally{observation?.end(null,{'http.response.status_code':res.statusCode});}
+        };
+        return observation?observation.run(handle):handle();
+      }));
     } catch (e) {
       if (!res.headersSent) send(res, e.statusCode || (['DT_NOT_FOUND','NOT_FOUND'].includes(e.code)?404:['STATE_CONFLICT','STALE_REVISION'].includes(e.code)?409:e.code === 'DT_PROFILE_UNKNOWN' || e.code === 'DT_ARGUMENT_INVALID' ? 400 : 500), errorPayload(e)); else res.end();
     }

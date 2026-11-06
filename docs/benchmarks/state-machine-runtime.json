@@ -1,0 +1,3830 @@
+{
+  "schema": "dt.state-machines.runtime/v1",
+  "baselineCommit": "5c330586fb3209d7d2560da34a718ee2700ed273",
+  "families": [
+    {
+      "id": "SM01",
+      "name": "Owned invocation and cleanup",
+      "owners": [
+        "lib/execution.js"
+      ],
+      "representation": "SM01.* (see charts)",
+      "orthogonalState": "state × aborted × cleanup completeness × owner"
+    },
+    {
+      "id": "SM02",
+      "name": "Background job wrapper and recovery",
+      "owners": [
+        "lib/jobs.js"
+      ],
+      "representation": "SM02.* (see charts)",
+      "orthogonalState": "job.state × execution.state × result hydrated"
+    },
+    {
+      "id": "SM03",
+      "name": "Trace spans and process-tree termination",
+      "owners": [
+        "lib/trace.js",
+        "lib/process-tree.js"
+      ],
+      "representation": "SM03.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM04",
+      "name": "Fair CPU/code/build admission",
+      "owners": [
+        "lib/limit.js"
+      ],
+      "representation": "SM04.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM05",
+      "name": "Per-target network admission",
+      "owners": [
+        "lib/limit.js"
+      ],
+      "representation": "SM05.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM06",
+      "name": "Heap-limited worker pool",
+      "owners": [
+        "lib/isolate.js"
+      ],
+      "representation": "SM06.* (see charts)",
+      "orthogonalState": "worker × pending RPCs × remote executions"
+    },
+    {
+      "id": "SM07",
+      "name": "Node sandbox session and tool RPC",
+      "owners": [
+        "lib/js.js"
+      ],
+      "representation": "SM07.* (see charts)",
+      "orthogonalState": "session × child process × in-flight RPC × deadline"
+    },
+    {
+      "id": "SM08",
+      "name": "Owned code cell, output cursor and observation",
+      "owners": [
+        "lib/js.js"
+      ],
+      "representation": "SM08.* (see charts)",
+      "orthogonalState": "execution × cell result status × output availability"
+    },
+    {
+      "id": "SM09",
+      "name": "QuickJS worker settlement",
+      "owners": [
+        "lib/quickjs.js"
+      ],
+      "representation": "SM09.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM10",
+      "name": "Remote build runner and endpoint circuit",
+      "owners": [
+        "lib/runner.js"
+      ],
+      "representation": "SM10.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM11",
+      "name": "Operational-store owner worker lifecycle",
+      "owners": [
+        "lib/state-store.js"
+      ],
+      "representation": "SM11.* (see charts)",
+      "orthogonalState": "ready × worker presence × durable × closing flags"
+    },
+    {
+      "id": "SM12",
+      "name": "Metadata acceptance, projection and durability",
+      "owners": [
+        "lib/state-store.js"
+      ],
+      "representation": "SM12.* (see charts)",
+      "orthogonalState": "accepted ≠ persisted ≠ visible projection ≠ flushed"
+    },
+    {
+      "id": "SM13",
+      "name": "SQLite migration and restart reconciliation",
+      "owners": [
+        "lib/state-worker.js"
+      ],
+      "representation": "SM13.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM14",
+      "name": "Configuration last-good generation and pinned calls",
+      "owners": [
+        "lib/config.js"
+      ],
+      "representation": "SM14.* (see charts)",
+      "orthogonalState": "on-disk validity × active revision × call-pinned revision"
+    },
+    {
+      "id": "SM15",
+      "name": "Tool registry and remote plugin activation",
+      "owners": [
+        "lib/tools.js"
+      ],
+      "representation": "SM15.* (see charts)",
+      "orthogonalState": "registry revision × config revision × current permissions"
+    },
+    {
+      "id": "SM16",
+      "name": "Authenticated request scope and result handoff",
+      "owners": [
+        "lib/access.js"
+      ],
+      "representation": "SM16.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM17",
+      "name": "Server MCP request correlation and disconnect cancellation",
+      "owners": [
+        "server.js"
+      ],
+      "representation": "SM17.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM18",
+      "name": "Playwright MCP session handshake and requests",
+      "owners": [
+        "lib/browser-mcp.js"
+      ],
+      "representation": "SM18.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM19",
+      "name": "SFTP connection and stream operation lifetime",
+      "owners": [
+        "lib/files.js"
+      ],
+      "representation": "SM19.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM20",
+      "name": "Read-only PG connection and cancellable transaction",
+      "owners": [
+        "lib/pg.js"
+      ],
+      "representation": "SM20.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM21",
+      "name": "Scratch-cluster initialization and ownership adoption",
+      "owners": [
+        "lib/testdb.js"
+      ],
+      "representation": "SM21.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM22",
+      "name": "Scratch database and application-role lifecycle",
+      "owners": [
+        "lib/testdb.js"
+      ],
+      "representation": "SM22.* (see charts)",
+      "orthogonalState": "registry state × DB existence × ownership × role existence"
+    },
+    {
+      "id": "SM23",
+      "name": "Immutable PostgreSQL template lifecycle",
+      "owners": [
+        "lib/testdb-templates.js"
+      ],
+      "representation": "SM23.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM24",
+      "name": "Private DB lease and expiry",
+      "owners": [
+        "lib/testdb-templates.js"
+      ],
+      "representation": "SM24.* (see charts)",
+      "orthogonalState": "lease state × clock expiry × resource set × request hash"
+    },
+    {
+      "id": "SM25",
+      "name": "Lease reset and template/lease garbage collection",
+      "owners": [
+        "lib/testdb-templates.js"
+      ],
+      "representation": "SM25.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM26",
+      "name": "Native PG/Kafka/ES fixture runtime",
+      "owners": [
+        "lib/reproduction-runtime.js"
+      ],
+      "representation": "SM26.* (see charts)",
+      "orthogonalState": "status × starting PID × stopRequestedAt × TTL × actual containers"
+    },
+    {
+      "id": "SM27",
+      "name": "Native fixture independent-effect contract",
+      "owners": [
+        "lib/reproduction-runtime.js"
+      ],
+      "representation": "SM27.* (see charts)",
+      "orthogonalState": "lifecycle readiness × contract armed × actual application/effect proof"
+    },
+    {
+      "id": "SM28",
+      "name": "Scenario container session lifecycle",
+      "owners": [
+        "lib/scenario-runtime.js"
+      ],
+      "representation": "SM28.* (see charts)",
+      "orthogonalState": "status × lease expiry × physical container × cleanupError"
+    },
+    {
+      "id": "SM29",
+      "name": "Scenario per-action execution and request emulation",
+      "owners": [
+        "lib/scenario-runtime.js"
+      ],
+      "representation": "SM29.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM30",
+      "name": "Temporal assertion quiet-window protocol",
+      "owners": [
+        "lib/scenario-runtime.js"
+      ],
+      "representation": "SM30.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM31",
+      "name": "Capture → validate → export → replay",
+      "owners": [
+        "lib/reproduction.js"
+      ],
+      "representation": "SM31.* (see charts)",
+      "orthogonalState": "coverage × capture completeness × export validity × replay resources"
+    },
+    {
+      "id": "SM32",
+      "name": "Scenario binding, emulation and portable package",
+      "owners": [
+        "lib/scenario-state.js"
+      ],
+      "representation": "SM32.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM33",
+      "name": "Script scope/hooks/steps/finally lifecycle",
+      "owners": [
+        "lib/scripts.js"
+      ],
+      "representation": "SM33.* (see charts)",
+      "orthogonalState": "primary outcome × cleanup outcome × assertions × browser/session"
+    },
+    {
+      "id": "SM34",
+      "name": "Script retry/poll subprotocol",
+      "owners": [
+        "lib/scripts.js"
+      ],
+      "representation": "SM34.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM35",
+      "name": "Collection run, inherited hook scopes and cases",
+      "owners": [
+        "lib/collections.js"
+      ],
+      "representation": "SM35.* (see charts)",
+      "orthogonalState": "run status × cases × hooks × cancellation × cleanup"
+    },
+    {
+      "id": "SM36",
+      "name": "Git resolution, reuse and fallback",
+      "owners": [
+        "lib/git.js"
+      ],
+      "representation": "SM36.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM37",
+      "name": "Workspace edit/index/patch/push/base/expiry",
+      "owners": [
+        "lib/workspace.js"
+      ],
+      "representation": "SM37.* (see charts)",
+      "orthogonalState": "source base × dirty files × index revision × Git staging × last use"
+    },
+    {
+      "id": "SM38",
+      "name": "Test execution and retained red/green/differential proof",
+      "owners": [
+        "lib/testrun.js"
+      ],
+      "representation": "SM38.* (see charts)",
+      "orthogonalState": "invocation × application assertions × source/test fingerprint × target × cleanup"
+    },
+    {
+      "id": "SM39",
+      "name": "Fast Maven preparation and incremental compilation",
+      "owners": [
+        "lib/fastrun.js"
+      ],
+      "representation": "SM39.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM40",
+      "name": "Warm compiler, classpath warmup and compile fixes",
+      "owners": [
+        "lib/javacheck.js",
+        "lib/keyed-work.js"
+      ],
+      "representation": "SM40.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM41",
+      "name": "Immutable code-index publication and lazy cache ownership",
+      "owners": [
+        "lib/codeindex.js"
+      ],
+      "representation": "SM41.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM42",
+      "name": "PG catalog generations, migration and lazy pages",
+      "owners": [
+        "lib/pgstore.js"
+      ],
+      "representation": "SM42.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM43",
+      "name": "Environment sync and derived-index freshness",
+      "owners": [
+        "lib/indexer.js"
+      ],
+      "representation": "SM43.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM44",
+      "name": "Passport build and internal-library resolution",
+      "owners": [
+        "lib/passport/index.js"
+      ],
+      "representation": "SM44.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM45",
+      "name": "Remote Joern admission/upload/parse/query job",
+      "owners": [
+        "lib/semantic-worker.js"
+      ],
+      "representation": "SM45.* (see charts)",
+      "orthogonalState": "job label × memory/slot reservation × process × worker instance"
+    },
+    {
+      "id": "SM46",
+      "name": "Local retained analysis and latest-generation publication",
+      "owners": [
+        "lib/semantic-code.js"
+      ],
+      "representation": "SM46.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM47",
+      "name": "Semantic query, worker budgets and continuation",
+      "owners": [
+        "lib/semantic-code.js"
+      ],
+      "representation": "SM47.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM48",
+      "name": "Confluence incremental refresh, retries and reconciliation",
+      "owners": [
+        "lib/docs-cache.js"
+      ],
+      "representation": "SM48.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM49",
+      "name": "Configured knowledge-source revision and evidence cache",
+      "owners": [
+        "lib/semantic-knowledge.js"
+      ],
+      "representation": "SM49.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM50",
+      "name": "Operational architecture observation freshness",
+      "owners": [
+        "lib/architecture-observations.js"
+      ],
+      "representation": "SM50.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM51",
+      "name": "Self-context generated refresh and capture/save split",
+      "owners": [
+        "lib/context.js"
+      ],
+      "representation": "SM51.* (see charts)",
+      "orthogonalState": "tool outcome × save outcome × generated revision × human-note revision"
+    },
+    {
+      "id": "SM52",
+      "name": "Generated TestData versus manually retained resources",
+      "owners": [
+        "lib/testdata.js"
+      ],
+      "representation": "SM52.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM53",
+      "name": "Context creation/reuse/status and revision editing",
+      "owners": [
+        "lib/context.js"
+      ],
+      "representation": "SM53.* (see charts)",
+      "orthogonalState": "metadata status × metadata revision × each file revision × discovery links"
+    },
+    {
+      "id": "SM54",
+      "name": "Archive/move with verified copy and compensation",
+      "owners": [
+        "lib/files.js",
+        "lib/context.js"
+      ],
+      "representation": "SM54.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM55",
+      "name": "Passport metadata/typed-port overlay revisions",
+      "owners": [
+        "lib/passport/overrides.js",
+        "lib/passport/edges.js"
+      ],
+      "representation": "SM55.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM56",
+      "name": "Map-adjustment revision publication",
+      "owners": [
+        "lib/map-adjustments.js"
+      ],
+      "representation": "SM56.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM57",
+      "name": "Shared architecture publish/archive/history",
+      "owners": [
+        "lib/architecture-store.js"
+      ],
+      "representation": "SM57.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM58",
+      "name": "Saved scripts, seeded starters and custom-view activation",
+      "owners": [
+        "lib/views.js",
+        "lib/scripts.js"
+      ],
+      "representation": "SM58.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM59",
+      "name": "Sanitized exchange → prepared request → explicit send/save",
+      "owners": [
+        "lib/api-client.js"
+      ],
+      "representation": "SM59.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM60",
+      "name": "Browser API capture session and pending responses",
+      "owners": [
+        "lib/api-client.js"
+      ],
+      "representation": "SM60.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM61",
+      "name": "Retained result expiry and signed/keyed view access",
+      "owners": [
+        "lib/results.js"
+      ],
+      "representation": "SM61.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM62",
+      "name": "Admin identity/environment scope frontier",
+      "owners": [
+        "web/admin-runtime.js"
+      ],
+      "representation": "Revision (applied scope generation)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM63",
+      "name": "Context editor files/metadata/scratchpad/results",
+      "owners": [
+        "web/admin-context.js"
+      ],
+      "representation": "Draft × Pending × Revision",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM64",
+      "name": "Runtime polling, selected execution and metadata annotation",
+      "owners": [
+        "web/admin-runtime.js"
+      ],
+      "representation": "Dirty × Activity × Revision",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM65",
+      "name": "Semantic workbench and job observation",
+      "owners": [
+        "web/admin-semantic.js"
+      ],
+      "representation": "Dirty × Activity × Revision",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM66",
+      "name": "Graph/list port CRUD editor",
+      "owners": [
+        "web/port-editor.js"
+      ],
+      "representation": "Dirty × Activity × Revision",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM67",
+      "name": "Architecture publication and dossier editor",
+      "owners": [
+        "web/admin-architecture.js",
+        "web/architecture-ui.js"
+      ],
+      "representation": "Dirty × Activity × Revision",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM68",
+      "name": "Map host bridge, selection and tool inspector",
+      "owners": [
+        "web/admin-map.js",
+        "web/map.js"
+      ],
+      "representation": "Revision (map/selection/inspection generations)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM69",
+      "name": "API explorer request/auth/send/save draft",
+      "owners": [
+        "web/api-explorer.js"
+      ],
+      "representation": "Dirty × Revision",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM70",
+      "name": "Script/collection/view/config editor drafts and runs",
+      "owners": [
+        "web/admin-scripts.js"
+      ],
+      "representation": "flag / editRevision × Activity × Revision",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM71",
+      "name": "Handbook draft, applied scope and persistent briefing",
+      "owners": [
+        "web/handbook.js"
+      ],
+      "representation": "Dirty × Activity × Revision",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM72",
+      "name": "Result selection, folder tree, filters, diff and graph interaction",
+      "owners": [
+        "web/inline.js"
+      ],
+      "representation": "Selection; selected IDs and expanded/filter sets are payload",
+      "orthogonalState": "interaction patterns across the 20 native view types and legacy pages; each view implements a subset"
+    },
+    {
+      "id": "SM73",
+      "name": "Disclosures, overflow menus, keyboard focus and iframe resize",
+      "owners": [
+        "web/inline.js"
+      ],
+      "representation": "UI.disclosure; native details.open mirrored on toggle",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM74",
+      "name": "Launcher/install/build/config-layout lifecycle",
+      "owners": [
+        "run.sh",
+        "install.sh",
+        "build.js",
+        "lib/migrate.js"
+      ],
+      "representation": "POSIX case tables; SM74.bundle; SM74.config-migration",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM75",
+      "name": "Elasticsearch point-in-time capture lifetime",
+      "owners": [
+        "lib/reproduction-es.js"
+      ],
+      "representation": "SM75.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM76",
+      "name": "Outgoing HTTP, read-host failover and one-shot adapter outcome",
+      "owners": [
+        "lib/adapter-port.js",
+        "lib/util.js"
+      ],
+      "representation": "SM76.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM77",
+      "name": "Search backend availability and indexed/raw fallback",
+      "owners": [
+        "lib/code-search.js"
+      ],
+      "representation": "SM77.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "SM78",
+      "name": "Offline scenario/experiment program realm and RPC budget",
+      "owners": [
+        "lib/offline-js.js"
+      ],
+      "representation": "SM78.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "P01",
+      "name": "Bounded JSON streaming and deferred-field scanning",
+      "owners": [
+        "lib/pgstore.js",
+        "lib/codegraph-read.js"
+      ],
+      "representation": "JSON_MODE.VALUE / STRING / ESCAPE × P01.descriptor",
+      "orthogonalState": ""
+    },
+    {
+      "id": "P02",
+      "name": "Packed map/string-table binary cursor",
+      "owners": [
+        "web/map-format.js"
+      ],
+      "representation": "P02.binary",
+      "orthogonalState": ""
+    },
+    {
+      "id": "P03",
+      "name": "Java/Kotlin/source/config lexical scanners",
+      "owners": [
+        "lib/testdata.js",
+        "lib/passport/extract.js",
+        "lib/codegraph.js"
+      ],
+      "representation": "P03.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "P04",
+      "name": "SQL statement splitter and DDL dependency walk",
+      "owners": [
+        "lib/testrun.js",
+        "lib/ddl.js"
+      ],
+      "representation": "MODE.SQL / STRING / DOLLAR; dependency sets stay separate",
+      "orthogonalState": ""
+    },
+    {
+      "id": "P05",
+      "name": "MCP SSE and sandbox newline JSON framing",
+      "owners": [
+        "web/state-machine.js",
+        "lib/browser-mcp.js",
+        "lib/js.js",
+        "lib/runner.js",
+        "lib/javacheck.js"
+      ],
+      "representation": "P05.framing × request correlation IDs",
+      "orthogonalState": ""
+    },
+    {
+      "id": "P06",
+      "name": "Node/JUnit report event aggregation",
+      "owners": [
+        "lib/node-test.js",
+        "lib/testrun.js"
+      ],
+      "representation": "P06.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "P07",
+      "name": "Confluence document tree/headings/block identity",
+      "owners": [
+        "lib/docs-parse.js"
+      ],
+      "representation": "P07.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "P08",
+      "name": "Bounded graph traversal, path feasibility and export layout",
+      "owners": [
+        "lib/service-map.js"
+      ],
+      "representation": "P08.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "P09",
+      "name": "Bounded page enumeration and batch-worker cursors",
+      "owners": [
+        "lib/util.js",
+        "lib/atlassian.js",
+        "lib/docs-cache.js"
+      ],
+      "representation": "P09.* (see charts)",
+      "orthogonalState": ""
+    },
+    {
+      "id": "P10",
+      "name": "Stack/log folding and source diagnostic parsing",
+      "owners": [
+        "lib/testout.js"
+      ],
+      "representation": "SECTION.HEADER / FRAMES × ORIGIN.BEFORE_REPO / AFTER_REPO",
+      "orthogonalState": ""
+    }
+  ],
+  "charts": [
+    {
+      "name": "IO.atomic-file",
+      "initial": "new",
+      "states": [
+        "new",
+        "staging",
+        "installed",
+        "aborted"
+      ],
+      "terminal": [
+        "installed",
+        "aborted"
+      ],
+      "transitions": {
+        "new": [
+          "staging",
+          "aborted"
+        ],
+        "staging": [
+          "installed",
+          "aborted"
+        ],
+        "installed": [],
+        "aborted": []
+      }
+    },
+    {
+      "name": "P01.descriptor",
+      "initial": "open",
+      "states": [
+        "open",
+        "closed"
+      ],
+      "terminal": [
+        "closed"
+      ],
+      "transitions": {
+        "open": [
+          "closed"
+        ],
+        "closed": []
+      }
+    },
+    {
+      "name": "P02.binary",
+      "initial": "header",
+      "states": [
+        "header",
+        "tables",
+        "ready",
+        "failed"
+      ],
+      "terminal": [
+        "ready",
+        "failed"
+      ],
+      "transitions": {
+        "header": [
+          "tables",
+          "failed"
+        ],
+        "tables": [
+          "ready",
+          "failed"
+        ],
+        "ready": [],
+        "failed": []
+      }
+    },
+    {
+      "name": "P03.source-span",
+      "initial": "code",
+      "states": [
+        "code",
+        "quoted",
+        "text-block",
+        "line-comment",
+        "block-comment",
+        "done"
+      ],
+      "terminal": [
+        "done"
+      ],
+      "transitions": {
+        "code": [
+          "quoted",
+          "text-block",
+          "line-comment",
+          "block-comment",
+          "done"
+        ],
+        "quoted": [
+          "code"
+        ],
+        "text-block": [
+          "code"
+        ],
+        "line-comment": [
+          "code"
+        ],
+        "block-comment": [
+          "code"
+        ],
+        "done": []
+      }
+    },
+    {
+      "name": "P05.framing",
+      "initial": "empty",
+      "states": [
+        "empty",
+        "partial",
+        "closed"
+      ],
+      "terminal": [
+        "closed"
+      ],
+      "transitions": {
+        "empty": [
+          "partial",
+          "closed"
+        ],
+        "partial": [
+          "empty",
+          "closed"
+        ],
+        "closed": []
+      }
+    },
+    {
+      "name": "P06.report-file",
+      "initial": "clean",
+      "states": [
+        "clean",
+        "failed"
+      ],
+      "terminal": [
+        "failed"
+      ],
+      "transitions": {
+        "clean": [
+          "failed"
+        ],
+        "failed": []
+      }
+    },
+    {
+      "name": "P07.markup-stack",
+      "initial": "root",
+      "states": [
+        "root",
+        "nested"
+      ],
+      "terminal": [],
+      "transitions": {
+        "root": [
+          "nested"
+        ],
+        "nested": [
+          "root"
+        ]
+      }
+    },
+    {
+      "name": "P08.traversal",
+      "initial": "searching",
+      "states": [
+        "searching",
+        "found",
+        "exhausted",
+        "truncated"
+      ],
+      "terminal": [
+        "found",
+        "exhausted",
+        "truncated"
+      ],
+      "transitions": {
+        "searching": [
+          "found",
+          "exhausted",
+          "truncated"
+        ],
+        "found": [],
+        "exhausted": [],
+        "truncated": []
+      }
+    },
+    {
+      "name": "P09.enumeration",
+      "initial": "available",
+      "states": [
+        "available",
+        "exhausted"
+      ],
+      "terminal": [
+        "exhausted"
+      ],
+      "transitions": {
+        "available": [
+          "exhausted"
+        ],
+        "exhausted": []
+      }
+    },
+    {
+      "name": "SM01.execution",
+      "initial": "queued",
+      "states": [
+        "queued",
+        "running",
+        "cancelling",
+        "draining",
+        "done",
+        "failed",
+        "cancelled",
+        "interrupted"
+      ],
+      "terminal": [
+        "done",
+        "failed",
+        "cancelled",
+        "interrupted"
+      ],
+      "transitions": {
+        "queued": [
+          "running",
+          "cancelling",
+          "draining",
+          "failed",
+          "cancelled",
+          "interrupted"
+        ],
+        "running": [
+          "cancelling",
+          "draining",
+          "done",
+          "failed",
+          "interrupted"
+        ],
+        "cancelling": [
+          "draining",
+          "cancelled",
+          "interrupted"
+        ],
+        "draining": [
+          "cancelling",
+          "done",
+          "failed",
+          "cancelled",
+          "interrupted"
+        ],
+        "done": [],
+        "failed": [],
+        "cancelled": [],
+        "interrupted": []
+      }
+    },
+    {
+      "name": "SM02.job",
+      "initial": "running",
+      "states": [
+        "queued",
+        "running",
+        "cancelling",
+        "draining",
+        "done",
+        "failed",
+        "cancelled",
+        "interrupted"
+      ],
+      "terminal": [
+        "done",
+        "failed",
+        "cancelled",
+        "interrupted"
+      ],
+      "transitions": {
+        "queued": [
+          "running",
+          "cancelled",
+          "interrupted"
+        ],
+        "running": [
+          "done",
+          "failed",
+          "cancelled",
+          "interrupted"
+        ],
+        "cancelling": [
+          "cancelled",
+          "interrupted"
+        ],
+        "draining": [
+          "done",
+          "failed",
+          "cancelled",
+          "interrupted"
+        ],
+        "done": [],
+        "failed": [],
+        "cancelled": [],
+        "interrupted": []
+      }
+    },
+    {
+      "name": "SM03.process",
+      "initial": "running",
+      "states": [
+        "running",
+        "terminating",
+        "killing",
+        "exited"
+      ],
+      "terminal": [
+        "exited"
+      ],
+      "transitions": {
+        "running": [
+          "terminating",
+          "exited"
+        ],
+        "terminating": [
+          "killing",
+          "exited"
+        ],
+        "killing": [
+          "exited"
+        ],
+        "exited": []
+      }
+    },
+    {
+      "name": "SM03.span",
+      "initial": "running",
+      "states": [
+        "running",
+        "succeeded",
+        "failed"
+      ],
+      "terminal": [
+        "succeeded",
+        "failed"
+      ],
+      "transitions": {
+        "running": [
+          "succeeded",
+          "failed"
+        ],
+        "succeeded": [],
+        "failed": []
+      }
+    },
+    {
+      "name": "SM04.admission",
+      "initial": "queued",
+      "states": [
+        "queued",
+        "running",
+        "fulfilled",
+        "rejected",
+        "cancelled"
+      ],
+      "terminal": [
+        "fulfilled",
+        "rejected",
+        "cancelled"
+      ],
+      "transitions": {
+        "queued": [
+          "running",
+          "cancelled"
+        ],
+        "running": [
+          "fulfilled",
+          "rejected"
+        ],
+        "fulfilled": [],
+        "rejected": [],
+        "cancelled": []
+      }
+    },
+    {
+      "name": "SM05.network-admission",
+      "initial": "eligible",
+      "states": [
+        "eligible",
+        "reserved",
+        "waiting",
+        "admitted",
+        "cancelled"
+      ],
+      "terminal": [
+        "admitted",
+        "cancelled"
+      ],
+      "transitions": {
+        "eligible": [
+          "reserved"
+        ],
+        "reserved": [
+          "waiting",
+          "admitted",
+          "cancelled"
+        ],
+        "waiting": [
+          "admitted",
+          "cancelled"
+        ],
+        "admitted": [],
+        "cancelled": []
+      }
+    },
+    {
+      "name": "SM06.worker",
+      "initial": "idle",
+      "states": [
+        "idle",
+        "busy",
+        "stopping",
+        "stopped"
+      ],
+      "terminal": [
+        "stopped"
+      ],
+      "transitions": {
+        "idle": [
+          "busy",
+          "stopping",
+          "stopped"
+        ],
+        "busy": [
+          "idle",
+          "stopping",
+          "stopped"
+        ],
+        "stopping": [
+          "stopped"
+        ],
+        "stopped": []
+      }
+    },
+    {
+      "name": "SM07.sandbox",
+      "initial": "absent",
+      "states": [
+        "absent",
+        "alive"
+      ],
+      "terminal": [],
+      "transitions": {
+        "absent": [
+          "alive"
+        ],
+        "alive": [
+          "absent"
+        ]
+      }
+    },
+    {
+      "name": "SM07.session",
+      "initial": "idle",
+      "states": [
+        "idle",
+        "running"
+      ],
+      "terminal": [],
+      "transitions": {
+        "idle": [
+          "running"
+        ],
+        "running": [
+          "idle"
+        ]
+      }
+    },
+    {
+      "name": "SM08.cell",
+      "initial": "queued",
+      "states": [
+        "queued",
+        "done",
+        "failed",
+        "cancelled"
+      ],
+      "terminal": [
+        "done",
+        "failed",
+        "cancelled"
+      ],
+      "transitions": {
+        "queued": [
+          "done",
+          "failed",
+          "cancelled"
+        ],
+        "done": [],
+        "failed": [],
+        "cancelled": []
+      }
+    },
+    {
+      "name": "SM09.settlement",
+      "initial": "pending",
+      "states": [
+        "pending",
+        "settled"
+      ],
+      "terminal": [
+        "settled"
+      ],
+      "transitions": {
+        "pending": [
+          "settled"
+        ],
+        "settled": []
+      }
+    },
+    {
+      "name": "SM10.endpoint",
+      "initial": "available",
+      "states": [
+        "available",
+        "cooldown"
+      ],
+      "terminal": [],
+      "transitions": {
+        "available": [
+          "cooldown"
+        ],
+        "cooldown": [
+          "available"
+        ]
+      }
+    },
+    {
+      "name": "SM10.request",
+      "initial": "requesting",
+      "states": [
+        "requesting",
+        "streaming",
+        "completed",
+        "failed"
+      ],
+      "terminal": [
+        "completed",
+        "failed"
+      ],
+      "transitions": {
+        "requesting": [
+          "streaming",
+          "failed"
+        ],
+        "streaming": [
+          "completed",
+          "failed"
+        ],
+        "completed": [],
+        "failed": []
+      }
+    },
+    {
+      "name": "SM11.close",
+      "initial": "open",
+      "states": [
+        "open",
+        "flushing",
+        "closing",
+        "closed"
+      ],
+      "terminal": [
+        "closed"
+      ],
+      "transitions": {
+        "open": [
+          "flushing"
+        ],
+        "flushing": [
+          "closing",
+          "closed",
+          "open"
+        ],
+        "closing": [
+          "closed",
+          "open"
+        ],
+        "closed": []
+      }
+    },
+    {
+      "name": "SM11.store",
+      "initial": "cold",
+      "states": [
+        "cold",
+        "starting",
+        "ready",
+        "failed",
+        "closed"
+      ],
+      "terminal": [
+        "closed"
+      ],
+      "transitions": {
+        "cold": [
+          "starting",
+          "ready",
+          "closed"
+        ],
+        "starting": [
+          "ready",
+          "failed",
+          "closed"
+        ],
+        "ready": [
+          "failed",
+          "closed"
+        ],
+        "failed": [
+          "starting",
+          "closed"
+        ],
+        "closed": []
+      }
+    },
+    {
+      "name": "SM12.writer",
+      "initial": "idle",
+      "states": [
+        "idle",
+        "writing",
+        "failed"
+      ],
+      "terminal": [],
+      "transitions": {
+        "idle": [
+          "writing"
+        ],
+        "writing": [
+          "idle",
+          "failed"
+        ],
+        "failed": [
+          "writing"
+        ]
+      }
+    },
+    {
+      "name": "SM13.migration",
+      "initial": "new",
+      "states": [
+        "new",
+        "reading",
+        "paused",
+        "complete"
+      ],
+      "terminal": [],
+      "transitions": {
+        "new": [
+          "reading"
+        ],
+        "reading": [
+          "paused",
+          "complete"
+        ],
+        "paused": [
+          "reading"
+        ],
+        "complete": [
+          "reading"
+        ]
+      }
+    },
+    {
+      "name": "SM14.config",
+      "initial": "cold",
+      "states": [
+        "cold",
+        "stale",
+        "validating",
+        "ready",
+        "rejected"
+      ],
+      "terminal": [],
+      "transitions": {
+        "cold": [
+          "stale",
+          "validating"
+        ],
+        "stale": [
+          "validating"
+        ],
+        "validating": [
+          "ready",
+          "rejected"
+        ],
+        "ready": [
+          "stale"
+        ],
+        "rejected": [
+          "stale",
+          "validating"
+        ]
+      }
+    },
+    {
+      "name": "SM15.registry",
+      "initial": "missing",
+      "states": [
+        "missing",
+        "active",
+        "building",
+        "superseded",
+        "rejected"
+      ],
+      "terminal": [
+        "rejected"
+      ],
+      "transitions": {
+        "missing": [
+          "building"
+        ],
+        "active": [
+          "building"
+        ],
+        "building": [
+          "active",
+          "superseded",
+          "rejected"
+        ],
+        "superseded": [
+          "building",
+          "rejected"
+        ],
+        "rejected": []
+      }
+    },
+    {
+      "name": "SM16.identity",
+      "initial": "unverified",
+      "states": [
+        "unverified",
+        "authenticated",
+        "scoped",
+        "rejected"
+      ],
+      "terminal": [
+        "scoped",
+        "rejected"
+      ],
+      "transitions": {
+        "unverified": [
+          "authenticated",
+          "rejected"
+        ],
+        "authenticated": [
+          "scoped",
+          "rejected"
+        ],
+        "scoped": [],
+        "rejected": []
+      }
+    },
+    {
+      "name": "SM17.request",
+      "initial": "running",
+      "states": [
+        "running",
+        "cancelling",
+        "replied",
+        "closed"
+      ],
+      "terminal": [
+        "closed"
+      ],
+      "transitions": {
+        "running": [
+          "cancelling",
+          "replied",
+          "closed"
+        ],
+        "cancelling": [
+          "replied",
+          "closed"
+        ],
+        "replied": [
+          "closed"
+        ],
+        "closed": []
+      }
+    },
+    {
+      "name": "SM18.handshake",
+      "initial": "disconnected",
+      "states": [
+        "disconnected",
+        "initializing",
+        "ready",
+        "closing"
+      ],
+      "terminal": [],
+      "transitions": {
+        "disconnected": [
+          "initializing",
+          "closing"
+        ],
+        "initializing": [
+          "ready",
+          "disconnected",
+          "closing"
+        ],
+        "ready": [
+          "closing"
+        ],
+        "closing": [
+          "disconnected"
+        ]
+      }
+    },
+    {
+      "name": "SM19.operation",
+      "initial": "pending",
+      "states": [
+        "pending",
+        "settled"
+      ],
+      "terminal": [
+        "settled"
+      ],
+      "transitions": {
+        "pending": [
+          "settled"
+        ],
+        "settled": []
+      }
+    },
+    {
+      "name": "SM19.sftp",
+      "initial": "connecting",
+      "states": [
+        "connecting",
+        "opening",
+        "ready",
+        "closing",
+        "failed",
+        "closed"
+      ],
+      "terminal": [
+        "closed"
+      ],
+      "transitions": {
+        "connecting": [
+          "opening",
+          "closing",
+          "failed",
+          "closed"
+        ],
+        "opening": [
+          "ready",
+          "closing",
+          "failed",
+          "closed"
+        ],
+        "ready": [
+          "closing",
+          "failed",
+          "closed"
+        ],
+        "closing": [
+          "failed",
+          "closed"
+        ],
+        "failed": [
+          "closing",
+          "closed"
+        ],
+        "closed": []
+      }
+    },
+    {
+      "name": "SM20.transaction",
+      "initial": "opening",
+      "states": [
+        "opening",
+        "reading",
+        "committed",
+        "rolled-back",
+        "cancelled"
+      ],
+      "terminal": [
+        "committed",
+        "rolled-back",
+        "cancelled"
+      ],
+      "transitions": {
+        "opening": [
+          "reading",
+          "rolled-back",
+          "cancelled"
+        ],
+        "reading": [
+          "committed",
+          "rolled-back",
+          "cancelled"
+        ],
+        "committed": [],
+        "rolled-back": [],
+        "cancelled": []
+      }
+    },
+    {
+      "name": "SM21.control",
+      "initial": "opening",
+      "states": [
+        "opening",
+        "locked",
+        "initializing",
+        "verifying",
+        "ready",
+        "failed",
+        "releasing",
+        "closed",
+        "cleanup-failed"
+      ],
+      "terminal": [
+        "closed",
+        "cleanup-failed"
+      ],
+      "transitions": {
+        "opening": [
+          "locked",
+          "failed"
+        ],
+        "locked": [
+          "initializing",
+          "verifying",
+          "failed"
+        ],
+        "initializing": [
+          "verifying",
+          "failed"
+        ],
+        "verifying": [
+          "ready",
+          "failed"
+        ],
+        "ready": [
+          "releasing",
+          "failed"
+        ],
+        "failed": [
+          "releasing"
+        ],
+        "releasing": [
+          "closed",
+          "cleanup-failed"
+        ],
+        "closed": [],
+        "cleanup-failed": []
+      }
+    },
+    {
+      "name": "SM22.scratch-resource",
+      "initial": "creating",
+      "states": [
+        "creating",
+        "ready",
+        "frozen",
+        "failed",
+        "cleanup-failed",
+        "deleted"
+      ],
+      "terminal": [
+        "deleted"
+      ],
+      "transitions": {
+        "creating": [
+          "ready",
+          "failed",
+          "cleanup-failed",
+          "deleted"
+        ],
+        "ready": [
+          "frozen",
+          "cleanup-failed",
+          "deleted"
+        ],
+        "frozen": [
+          "cleanup-failed",
+          "deleted"
+        ],
+        "failed": [
+          "cleanup-failed",
+          "deleted"
+        ],
+        "cleanup-failed": [
+          "deleted"
+        ],
+        "deleted": []
+      }
+    },
+    {
+      "name": "SM23.template",
+      "initial": "building",
+      "states": [
+        "building",
+        "ready",
+        "failed",
+        "invalid",
+        "deleted"
+      ],
+      "terminal": [
+        "deleted"
+      ],
+      "transitions": {
+        "building": [
+          "ready",
+          "failed",
+          "invalid",
+          "deleted"
+        ],
+        "ready": [
+          "invalid",
+          "deleted"
+        ],
+        "failed": [
+          "invalid",
+          "deleted"
+        ],
+        "invalid": [
+          "deleted"
+        ],
+        "deleted": []
+      }
+    },
+    {
+      "name": "SM24.lease",
+      "initial": "creating",
+      "states": [
+        "creating",
+        "active",
+        "cleanup-failed",
+        "released"
+      ],
+      "terminal": [
+        "released"
+      ],
+      "transitions": {
+        "creating": [
+          "active",
+          "released",
+          "cleanup-failed"
+        ],
+        "active": [
+          "released",
+          "cleanup-failed"
+        ],
+        "cleanup-failed": [
+          "released"
+        ],
+        "released": []
+      }
+    },
+    {
+      "name": "SM25.reset",
+      "initial": "allocating",
+      "states": [
+        "allocating",
+        "replacement-ready",
+        "releasing-old",
+        "compensating",
+        "completed",
+        "failed",
+        "cleanup-failed"
+      ],
+      "terminal": [
+        "completed",
+        "failed",
+        "cleanup-failed"
+      ],
+      "transitions": {
+        "allocating": [
+          "replacement-ready",
+          "failed"
+        ],
+        "replacement-ready": [
+          "releasing-old",
+          "compensating"
+        ],
+        "releasing-old": [
+          "completed",
+          "compensating"
+        ],
+        "compensating": [
+          "failed",
+          "cleanup-failed"
+        ],
+        "completed": [],
+        "failed": [],
+        "cleanup-failed": []
+      }
+    },
+    {
+      "name": "SM26.fixture",
+      "initial": "starting",
+      "states": [
+        "starting",
+        "ready",
+        "cleanup-failed",
+        "stopped"
+      ],
+      "terminal": [
+        "stopped"
+      ],
+      "transitions": {
+        "starting": [
+          "ready",
+          "cleanup-failed",
+          "stopped"
+        ],
+        "ready": [
+          "cleanup-failed",
+          "stopped"
+        ],
+        "cleanup-failed": [
+          "stopped"
+        ],
+        "stopped": []
+      }
+    },
+    {
+      "name": "SM27.effects",
+      "initial": "unarmed",
+      "states": [
+        "unarmed",
+        "arming",
+        "armed",
+        "observing",
+        "checked",
+        "rejected",
+        "failed"
+      ],
+      "terminal": [
+        "checked",
+        "rejected",
+        "failed"
+      ],
+      "transitions": {
+        "unarmed": [
+          "arming"
+        ],
+        "arming": [
+          "armed",
+          "rejected"
+        ],
+        "armed": [
+          "observing"
+        ],
+        "observing": [
+          "checked",
+          "failed"
+        ],
+        "checked": [],
+        "rejected": [],
+        "failed": []
+      }
+    },
+    {
+      "name": "SM28.scenario",
+      "initial": "starting",
+      "states": [
+        "starting",
+        "ready",
+        "failed",
+        "stopped"
+      ],
+      "terminal": [
+        "stopped"
+      ],
+      "transitions": {
+        "starting": [
+          "ready",
+          "failed",
+          "stopped"
+        ],
+        "ready": [
+          "failed",
+          "stopped"
+        ],
+        "failed": [
+          "stopped"
+        ],
+        "stopped": []
+      }
+    },
+    {
+      "name": "SM29.action",
+      "initial": "reserved",
+      "states": [
+        "reserved",
+        "executing",
+        "completed",
+        "unknown"
+      ],
+      "terminal": [
+        "completed",
+        "unknown"
+      ],
+      "transitions": {
+        "reserved": [
+          "executing"
+        ],
+        "executing": [
+          "completed",
+          "unknown"
+        ],
+        "completed": [],
+        "unknown": []
+      }
+    },
+    {
+      "name": "SM30.quiet-window",
+      "initial": "sampling",
+      "states": [
+        "sampling",
+        "quiet",
+        "stable",
+        "timed-out",
+        "cancelled",
+        "failed"
+      ],
+      "terminal": [
+        "stable",
+        "timed-out",
+        "cancelled",
+        "failed"
+      ],
+      "transitions": {
+        "sampling": [
+          "quiet",
+          "timed-out",
+          "cancelled",
+          "failed"
+        ],
+        "quiet": [
+          "sampling",
+          "stable",
+          "timed-out",
+          "cancelled",
+          "failed"
+        ],
+        "stable": [],
+        "timed-out": [],
+        "cancelled": [],
+        "failed": []
+      }
+    },
+    {
+      "name": "SM31.capture",
+      "initial": "planned",
+      "states": [
+        "planned",
+        "reading",
+        "validating",
+        "complete",
+        "incomplete",
+        "failed"
+      ],
+      "terminal": [
+        "complete",
+        "incomplete",
+        "failed"
+      ],
+      "transitions": {
+        "planned": [
+          "reading"
+        ],
+        "reading": [
+          "validating",
+          "failed"
+        ],
+        "validating": [
+          "complete",
+          "incomplete",
+          "failed"
+        ],
+        "complete": [],
+        "incomplete": [],
+        "failed": []
+      }
+    },
+    {
+      "name": "SM32.binding",
+      "initial": "planned",
+      "states": [
+        "planned",
+        "reading",
+        "missing",
+        "captured",
+        "partial",
+        "failed"
+      ],
+      "terminal": [
+        "missing",
+        "captured",
+        "partial",
+        "failed"
+      ],
+      "transitions": {
+        "planned": [
+          "missing",
+          "reading"
+        ],
+        "reading": [
+          "captured",
+          "partial",
+          "failed"
+        ],
+        "missing": [],
+        "captured": [],
+        "partial": [],
+        "failed": []
+      }
+    },
+    {
+      "name": "SM33.script",
+      "initial": "before",
+      "states": [
+        "before",
+        "steps",
+        "after",
+        "cleaning",
+        "settled"
+      ],
+      "terminal": [
+        "settled"
+      ],
+      "transitions": {
+        "before": [
+          "steps",
+          "cleaning"
+        ],
+        "steps": [
+          "after",
+          "cleaning"
+        ],
+        "after": [
+          "cleaning"
+        ],
+        "cleaning": [
+          "settled"
+        ],
+        "settled": []
+      }
+    },
+    {
+      "name": "SM34.retry",
+      "initial": "ready",
+      "states": [
+        "ready",
+        "attempting",
+        "waiting",
+        "matched",
+        "stopped"
+      ],
+      "terminal": [
+        "matched",
+        "stopped"
+      ],
+      "transitions": {
+        "ready": [
+          "attempting"
+        ],
+        "attempting": [
+          "matched",
+          "waiting",
+          "stopped"
+        ],
+        "waiting": [
+          "attempting",
+          "stopped"
+        ],
+        "matched": [],
+        "stopped": []
+      }
+    },
+    {
+      "name": "SM35.collection",
+      "initial": "running",
+      "states": [
+        "running",
+        "passed",
+        "failed",
+        "cancelled"
+      ],
+      "terminal": [
+        "passed",
+        "failed",
+        "cancelled"
+      ],
+      "transitions": {
+        "running": [
+          "passed",
+          "failed",
+          "cancelled"
+        ],
+        "passed": [],
+        "failed": [],
+        "cancelled": []
+      }
+    },
+    {
+      "name": "SM36.fetch",
+      "initial": "initializing",
+      "states": [
+        "initializing",
+        "fetching",
+        "repairing",
+        "fallback",
+        "checking-out",
+        "recording",
+        "ready",
+        "failed"
+      ],
+      "terminal": [
+        "ready",
+        "failed"
+      ],
+      "transitions": {
+        "initializing": [
+          "fetching",
+          "failed"
+        ],
+        "fetching": [
+          "checking-out",
+          "repairing",
+          "fallback",
+          "failed"
+        ],
+        "repairing": [
+          "fetching",
+          "fallback",
+          "failed"
+        ],
+        "fallback": [
+          "checking-out",
+          "failed"
+        ],
+        "checking-out": [
+          "recording",
+          "fallback",
+          "failed"
+        ],
+        "recording": [
+          "ready",
+          "failed"
+        ],
+        "ready": [],
+        "failed": []
+      }
+    },
+    {
+      "name": "SM37.push",
+      "initial": "checking",
+      "states": [
+        "checking",
+        "staging",
+        "committing",
+        "committed",
+        "replaying",
+        "replayed",
+        "pushing",
+        "pushed",
+        "recording",
+        "completed",
+        "failed",
+        "conflict",
+        "unknown",
+        "metadata-failed"
+      ],
+      "terminal": [
+        "completed",
+        "failed",
+        "conflict",
+        "unknown",
+        "metadata-failed"
+      ],
+      "transitions": {
+        "checking": [
+          "staging",
+          "failed"
+        ],
+        "staging": [
+          "committing",
+          "failed"
+        ],
+        "committing": [
+          "committed",
+          "failed"
+        ],
+        "committed": [
+          "replaying",
+          "pushing",
+          "failed"
+        ],
+        "replaying": [
+          "replayed",
+          "conflict",
+          "failed"
+        ],
+        "replayed": [
+          "pushing",
+          "failed"
+        ],
+        "pushing": [
+          "pushed",
+          "unknown"
+        ],
+        "pushed": [
+          "recording",
+          "metadata-failed"
+        ],
+        "recording": [
+          "completed",
+          "metadata-failed"
+        ],
+        "completed": [],
+        "failed": [],
+        "conflict": [],
+        "unknown": [],
+        "metadata-failed": []
+      }
+    },
+    {
+      "name": "SM38.invocation",
+      "initial": "running",
+      "states": [
+        "running",
+        "settled",
+        "failed"
+      ],
+      "terminal": [
+        "settled",
+        "failed"
+      ],
+      "transitions": {
+        "running": [
+          "settled",
+          "failed"
+        ],
+        "settled": [],
+        "failed": []
+      }
+    },
+    {
+      "name": "SM38.proof-evidence",
+      "initial": "no-red",
+      "states": [
+        "no-red",
+        "red-seen",
+        "changed-green-seen"
+      ],
+      "terminal": [
+        "changed-green-seen"
+      ],
+      "transitions": {
+        "no-red": [
+          "red-seen"
+        ],
+        "red-seen": [
+          "changed-green-seen"
+        ],
+        "changed-green-seen": []
+      }
+    },
+    {
+      "name": "SM39.maven-prepare",
+      "initial": "checking",
+      "states": [
+        "checking",
+        "building",
+        "classpath",
+        "launcher",
+        "publishing",
+        "reused",
+        "ready",
+        "failed"
+      ],
+      "terminal": [
+        "reused",
+        "ready",
+        "failed"
+      ],
+      "transitions": {
+        "checking": [
+          "reused",
+          "building"
+        ],
+        "building": [
+          "classpath",
+          "failed"
+        ],
+        "classpath": [
+          "launcher",
+          "failed"
+        ],
+        "launcher": [
+          "publishing",
+          "failed"
+        ],
+        "publishing": [
+          "ready",
+          "failed"
+        ],
+        "reused": [],
+        "ready": [],
+        "failed": []
+      }
+    },
+    {
+      "name": "SM40.compiler",
+      "initial": "starting",
+      "states": [
+        "starting",
+        "ready",
+        "stopping",
+        "stopped"
+      ],
+      "terminal": [
+        "stopped"
+      ],
+      "transitions": {
+        "starting": [
+          "ready",
+          "stopped"
+        ],
+        "ready": [
+          "stopping",
+          "stopped"
+        ],
+        "stopping": [
+          "stopped"
+        ],
+        "stopped": []
+      }
+    },
+    {
+      "name": "SM40.preparation",
+      "initial": "queued",
+      "states": [
+        "queued",
+        "running",
+        "ready",
+        "failed"
+      ],
+      "terminal": [
+        "ready",
+        "failed"
+      ],
+      "transitions": {
+        "queued": [
+          "running"
+        ],
+        "running": [
+          "ready",
+          "failed"
+        ],
+        "ready": [],
+        "failed": []
+      }
+    },
+    {
+      "name": "SM41.publication",
+      "initial": "checking",
+      "states": [
+        "checking",
+        "staging",
+        "verified",
+        "committed",
+        "reused",
+        "published",
+        "aborted",
+        "alias-failed"
+      ],
+      "terminal": [
+        "published",
+        "aborted",
+        "alias-failed"
+      ],
+      "transitions": {
+        "checking": [
+          "reused",
+          "staging",
+          "aborted"
+        ],
+        "staging": [
+          "verified",
+          "aborted"
+        ],
+        "verified": [
+          "committed",
+          "aborted"
+        ],
+        "committed": [
+          "published",
+          "alias-failed"
+        ],
+        "reused": [
+          "published",
+          "alias-failed"
+        ],
+        "published": [],
+        "aborted": [],
+        "alias-failed": []
+      }
+    },
+    {
+      "name": "SM42.catalog-writer",
+      "initial": "open",
+      "states": [
+        "open",
+        "flushing",
+        "synced",
+        "published",
+        "aborted"
+      ],
+      "terminal": [
+        "published",
+        "aborted"
+      ],
+      "transitions": {
+        "open": [
+          "flushing",
+          "aborted"
+        ],
+        "flushing": [
+          "synced",
+          "aborted"
+        ],
+        "synced": [
+          "published",
+          "aborted"
+        ],
+        "published": [],
+        "aborted": []
+      }
+    },
+    {
+      "name": "SM43.refresh",
+      "initial": "sources",
+      "states": [
+        "sources",
+        "indexing",
+        "ready",
+        "failed"
+      ],
+      "terminal": [
+        "ready",
+        "failed"
+      ],
+      "transitions": {
+        "sources": [
+          "indexing",
+          "failed"
+        ],
+        "indexing": [
+          "ready",
+          "failed"
+        ],
+        "ready": [],
+        "failed": []
+      }
+    },
+    {
+      "name": "SM44.passport",
+      "initial": "resolving",
+      "states": [
+        "resolving",
+        "fetching",
+        "extracting",
+        "libraries",
+        "analyzing",
+        "publishing",
+        "ready",
+        "failed"
+      ],
+      "terminal": [
+        "ready",
+        "failed"
+      ],
+      "transitions": {
+        "resolving": [
+          "fetching",
+          "failed"
+        ],
+        "fetching": [
+          "extracting",
+          "failed"
+        ],
+        "extracting": [
+          "libraries",
+          "failed"
+        ],
+        "libraries": [
+          "analyzing",
+          "failed"
+        ],
+        "analyzing": [
+          "publishing",
+          "failed"
+        ],
+        "publishing": [
+          "ready",
+          "failed"
+        ],
+        "ready": [],
+        "failed": []
+      }
+    },
+    {
+      "name": "SM45.semantic",
+      "initial": "uploading",
+      "states": [
+        "uploading",
+        "queued",
+        "parsing",
+        "enriching",
+        "querying",
+        "cancelling",
+        "draining",
+        "ready",
+        "failed",
+        "cancelled",
+        "interrupted"
+      ],
+      "terminal": [
+        "ready",
+        "failed",
+        "cancelled",
+        "interrupted"
+      ],
+      "transitions": {
+        "uploading": [
+          "queued",
+          "failed",
+          "interrupted"
+        ],
+        "queued": [
+          "parsing",
+          "querying",
+          "cancelling",
+          "failed",
+          "cancelled",
+          "interrupted"
+        ],
+        "parsing": [
+          "enriching",
+          "cancelling",
+          "failed",
+          "cancelled",
+          "interrupted"
+        ],
+        "enriching": [
+          "ready",
+          "cancelling",
+          "failed",
+          "cancelled",
+          "interrupted"
+        ],
+        "querying": [
+          "ready",
+          "cancelling",
+          "failed",
+          "cancelled",
+          "interrupted"
+        ],
+        "cancelling": [
+          "cancelled",
+          "failed",
+          "interrupted"
+        ],
+        "draining": [
+          "ready",
+          "cancelled",
+          "failed",
+          "interrupted"
+        ],
+        "ready": [],
+        "failed": [],
+        "cancelled": [],
+        "interrupted": []
+      }
+    },
+    {
+      "name": "SM46.publication",
+      "initial": "checking",
+      "states": [
+        "checking",
+        "staging",
+        "accepted",
+        "waiting",
+        "downloading",
+        "verified",
+        "committed",
+        "reused",
+        "published",
+        "superseded",
+        "alias-failed",
+        "compensating",
+        "aborted",
+        "cleanup-failed"
+      ],
+      "terminal": [
+        "reused",
+        "published",
+        "superseded",
+        "alias-failed",
+        "aborted",
+        "cleanup-failed"
+      ],
+      "transitions": {
+        "checking": [
+          "reused",
+          "staging"
+        ],
+        "staging": [
+          "accepted",
+          "compensating"
+        ],
+        "accepted": [
+          "waiting",
+          "compensating"
+        ],
+        "waiting": [
+          "downloading",
+          "compensating"
+        ],
+        "downloading": [
+          "verified",
+          "compensating"
+        ],
+        "verified": [
+          "committed",
+          "compensating"
+        ],
+        "committed": [
+          "published",
+          "superseded",
+          "alias-failed"
+        ],
+        "reused": [],
+        "published": [],
+        "superseded": [],
+        "alias-failed": [],
+        "compensating": [
+          "aborted",
+          "cleanup-failed"
+        ],
+        "aborted": [],
+        "cleanup-failed": []
+      }
+    },
+    {
+      "name": "SM47.deep-query",
+      "initial": "checking",
+      "states": [
+        "checking",
+        "submitting",
+        "waiting",
+        "reading",
+        "saving",
+        "ready",
+        "reused",
+        "failed",
+        "compensating",
+        "cleanup-failed"
+      ],
+      "terminal": [
+        "reused",
+        "ready",
+        "failed",
+        "cleanup-failed"
+      ],
+      "transitions": {
+        "checking": [
+          "reused",
+          "submitting",
+          "failed"
+        ],
+        "submitting": [
+          "waiting",
+          "compensating"
+        ],
+        "waiting": [
+          "reading",
+          "compensating"
+        ],
+        "reading": [
+          "saving",
+          "compensating"
+        ],
+        "saving": [
+          "ready",
+          "compensating"
+        ],
+        "ready": [],
+        "reused": [],
+        "failed": [],
+        "compensating": [
+          "failed",
+          "cleanup-failed"
+        ],
+        "cleanup-failed": []
+      }
+    },
+    {
+      "name": "SM48.refresh",
+      "initial": "listing",
+      "states": [
+        "listing",
+        "pages",
+        "reconciling",
+        "watermark",
+        "current",
+        "partial",
+        "failed"
+      ],
+      "terminal": [
+        "current",
+        "partial",
+        "failed"
+      ],
+      "transitions": {
+        "listing": [
+          "pages",
+          "failed"
+        ],
+        "pages": [
+          "reconciling",
+          "failed"
+        ],
+        "reconciling": [
+          "watermark",
+          "partial",
+          "failed"
+        ],
+        "watermark": [
+          "current",
+          "failed"
+        ],
+        "current": [],
+        "partial": [],
+        "failed": []
+      }
+    },
+    {
+      "name": "SM49.refresh",
+      "initial": "reading",
+      "states": [
+        "reading",
+        "writing",
+        "unchanged",
+        "updated",
+        "failed"
+      ],
+      "terminal": [
+        "unchanged",
+        "updated",
+        "failed"
+      ],
+      "transitions": {
+        "reading": [
+          "unchanged",
+          "writing",
+          "failed"
+        ],
+        "writing": [
+          "updated",
+          "failed"
+        ],
+        "unchanged": [],
+        "updated": [],
+        "failed": []
+      }
+    },
+    {
+      "name": "SM50.observation",
+      "initial": "refreshing",
+      "states": [
+        "refreshing",
+        "fresh",
+        "stale",
+        "missing"
+      ],
+      "terminal": [
+        "fresh",
+        "stale",
+        "missing"
+      ],
+      "transitions": {
+        "refreshing": [
+          "fresh",
+          "stale",
+          "missing"
+        ],
+        "fresh": [],
+        "stale": [],
+        "missing": []
+      }
+    },
+    {
+      "name": "SM51.capture-call",
+      "initial": "invoking",
+      "states": [
+        "invoking",
+        "succeeded",
+        "failed",
+        "saving",
+        "saved",
+        "save-failed"
+      ],
+      "terminal": [
+        "saved",
+        "save-failed"
+      ],
+      "transitions": {
+        "invoking": [
+          "succeeded",
+          "failed"
+        ],
+        "succeeded": [
+          "saving"
+        ],
+        "failed": [
+          "saving"
+        ],
+        "saving": [
+          "saved",
+          "save-failed"
+        ],
+        "saved": [],
+        "save-failed": []
+      }
+    },
+    {
+      "name": "SM52.generated-resource",
+      "initial": "checking",
+      "states": [
+        "checking",
+        "writing",
+        "retained",
+        "preview",
+        "written",
+        "failed"
+      ],
+      "terminal": [
+        "retained",
+        "preview",
+        "written",
+        "failed"
+      ],
+      "transitions": {
+        "checking": [
+          "retained",
+          "preview",
+          "writing"
+        ],
+        "writing": [
+          "written",
+          "failed"
+        ],
+        "retained": [],
+        "preview": [],
+        "written": [],
+        "failed": []
+      }
+    },
+    {
+      "name": "SM53.context",
+      "initial": "active",
+      "states": [
+        "active",
+        "paused",
+        "done"
+      ],
+      "terminal": [],
+      "transitions": {
+        "active": [
+          "paused",
+          "done"
+        ],
+        "paused": [
+          "active",
+          "done"
+        ],
+        "done": [
+          "active",
+          "paused"
+        ]
+      }
+    },
+    {
+      "name": "SM54.archive",
+      "initial": "checking",
+      "states": [
+        "checking",
+        "copied",
+        "verified",
+        "removing",
+        "archived",
+        "failed",
+        "source-retained",
+        "recovery-needed"
+      ],
+      "terminal": [
+        "archived",
+        "failed",
+        "source-retained",
+        "recovery-needed"
+      ],
+      "transitions": {
+        "checking": [
+          "copied",
+          "archived",
+          "failed"
+        ],
+        "copied": [
+          "verified",
+          "failed"
+        ],
+        "verified": [
+          "removing"
+        ],
+        "removing": [
+          "archived",
+          "source-retained",
+          "recovery-needed"
+        ],
+        "archived": [],
+        "failed": [],
+        "source-retained": [],
+        "recovery-needed": []
+      }
+    },
+    {
+      "name": "SM54.context-archive",
+      "initial": "checking",
+      "states": [
+        "checking",
+        "renamed",
+        "restoring",
+        "published",
+        "restored",
+        "recovery-needed"
+      ],
+      "terminal": [
+        "published",
+        "restored",
+        "recovery-needed"
+      ],
+      "transitions": {
+        "checking": [
+          "renamed"
+        ],
+        "renamed": [
+          "published",
+          "restoring"
+        ],
+        "restoring": [
+          "restored",
+          "recovery-needed"
+        ],
+        "published": [],
+        "restored": [],
+        "recovery-needed": []
+      }
+    },
+    {
+      "name": "SM54.source-removal",
+      "initial": "source",
+      "states": [
+        "source",
+        "holding",
+        "verified",
+        "restoring",
+        "removed",
+        "restored",
+        "recovery-needed"
+      ],
+      "terminal": [
+        "removed",
+        "restored",
+        "recovery-needed"
+      ],
+      "transitions": {
+        "source": [
+          "holding",
+          "removed"
+        ],
+        "holding": [
+          "verified",
+          "restoring"
+        ],
+        "verified": [
+          "removed",
+          "restoring"
+        ],
+        "restoring": [
+          "restored",
+          "recovery-needed"
+        ],
+        "removed": [],
+        "restored": [],
+        "recovery-needed": []
+      }
+    },
+    {
+      "name": "SM55.edge-snapshot",
+      "initial": "missing",
+      "states": [
+        "missing",
+        "valid",
+        "stale",
+        "invalid",
+        "removed"
+      ],
+      "terminal": [
+        "removed"
+      ],
+      "transitions": {
+        "missing": [
+          "valid",
+          "invalid",
+          "removed"
+        ],
+        "valid": [
+          "valid",
+          "stale",
+          "removed"
+        ],
+        "stale": [
+          "valid",
+          "stale",
+          "removed"
+        ],
+        "invalid": [
+          "valid",
+          "invalid",
+          "removed"
+        ],
+        "removed": []
+      }
+    },
+    {
+      "name": "SM55.passport-edit",
+      "initial": "checking",
+      "states": [
+        "checking",
+        "locked",
+        "checked",
+        "revision-written",
+        "head-written",
+        "completed",
+        "failed"
+      ],
+      "terminal": [
+        "completed",
+        "failed"
+      ],
+      "transitions": {
+        "checking": [
+          "locked",
+          "checked",
+          "failed"
+        ],
+        "locked": [
+          "checked",
+          "failed"
+        ],
+        "checked": [
+          "revision-written",
+          "head-written",
+          "failed"
+        ],
+        "revision-written": [
+          "head-written",
+          "failed"
+        ],
+        "head-written": [
+          "completed",
+          "failed"
+        ],
+        "completed": [],
+        "failed": []
+      }
+    },
+    {
+      "name": "SM56.map-edit",
+      "initial": "checking",
+      "states": [
+        "checking",
+        "locked",
+        "checked",
+        "revision-written",
+        "head-written",
+        "completed",
+        "failed"
+      ],
+      "terminal": [
+        "completed",
+        "failed"
+      ],
+      "transitions": {
+        "checking": [
+          "locked",
+          "checked",
+          "failed"
+        ],
+        "locked": [
+          "checked",
+          "failed"
+        ],
+        "checked": [
+          "revision-written",
+          "head-written",
+          "failed"
+        ],
+        "revision-written": [
+          "head-written",
+          "failed"
+        ],
+        "head-written": [
+          "completed",
+          "failed"
+        ],
+        "completed": [],
+        "failed": []
+      }
+    },
+    {
+      "name": "SM57.architecture-edit",
+      "initial": "checking",
+      "states": [
+        "checking",
+        "locked",
+        "checked",
+        "revision-written",
+        "head-written",
+        "completed",
+        "failed"
+      ],
+      "terminal": [
+        "completed",
+        "failed"
+      ],
+      "transitions": {
+        "checking": [
+          "locked",
+          "checked",
+          "failed"
+        ],
+        "locked": [
+          "checked",
+          "failed"
+        ],
+        "checked": [
+          "revision-written",
+          "head-written",
+          "failed"
+        ],
+        "revision-written": [
+          "head-written",
+          "failed"
+        ],
+        "head-written": [
+          "completed",
+          "failed"
+        ],
+        "completed": [],
+        "failed": []
+      }
+    },
+    {
+      "name": "SM58.definition",
+      "initial": "checking",
+      "states": [
+        "checking",
+        "custom",
+        "builtin",
+        "missing"
+      ],
+      "terminal": [
+        "custom",
+        "builtin",
+        "missing"
+      ],
+      "transitions": {
+        "checking": [
+          "custom",
+          "builtin",
+          "missing"
+        ],
+        "custom": [],
+        "builtin": [],
+        "missing": []
+      }
+    },
+    {
+      "name": "SM58.starter",
+      "initial": "checking",
+      "states": [
+        "checking",
+        "copying",
+        "retained",
+        "copied"
+      ],
+      "terminal": [
+        "retained",
+        "copied"
+      ],
+      "transitions": {
+        "checking": [
+          "retained",
+          "copying"
+        ],
+        "copying": [
+          "copied"
+        ],
+        "retained": [],
+        "copied": []
+      }
+    },
+    {
+      "name": "SM59.replay",
+      "initial": "prepared",
+      "states": [
+        "prepared",
+        "sending",
+        "received",
+        "saved",
+        "unknown",
+        "save-failed"
+      ],
+      "terminal": [
+        "saved",
+        "unknown",
+        "save-failed"
+      ],
+      "transitions": {
+        "prepared": [
+          "sending"
+        ],
+        "sending": [
+          "received",
+          "unknown"
+        ],
+        "received": [
+          "saved",
+          "save-failed"
+        ],
+        "saved": [],
+        "unknown": [],
+        "save-failed": []
+      }
+    },
+    {
+      "name": "SM60.browser-lease",
+      "initial": "opening",
+      "states": [
+        "opening",
+        "ready",
+        "capturing",
+        "expired",
+        "failed",
+        "closing",
+        "closed"
+      ],
+      "terminal": [
+        "closed"
+      ],
+      "transitions": {
+        "opening": [
+          "ready",
+          "failed"
+        ],
+        "ready": [
+          "capturing",
+          "expired",
+          "closing"
+        ],
+        "capturing": [
+          "ready",
+          "expired",
+          "closing"
+        ],
+        "expired": [
+          "closing"
+        ],
+        "failed": [
+          "closing"
+        ],
+        "closing": [
+          "closed"
+        ],
+        "closed": []
+      }
+    },
+    {
+      "name": "SM61.result",
+      "initial": "allocating",
+      "states": [
+        "allocating",
+        "serialized",
+        "stored",
+        "failed"
+      ],
+      "terminal": [
+        "stored",
+        "failed"
+      ],
+      "transitions": {
+        "allocating": [
+          "serialized",
+          "failed"
+        ],
+        "serialized": [
+          "stored",
+          "failed"
+        ],
+        "stored": [],
+        "failed": []
+      }
+    },
+    {
+      "name": "SM74.bundle",
+      "initial": "bundling",
+      "states": [
+        "bundling",
+        "collecting",
+        "comparing",
+        "writing",
+        "verified",
+        "stale",
+        "written"
+      ],
+      "terminal": [
+        "verified",
+        "stale",
+        "written"
+      ],
+      "transitions": {
+        "bundling": [
+          "collecting"
+        ],
+        "collecting": [
+          "comparing"
+        ],
+        "comparing": [
+          "verified",
+          "stale",
+          "writing"
+        ],
+        "writing": [
+          "written"
+        ],
+        "verified": [],
+        "stale": [],
+        "written": []
+      }
+    },
+    {
+      "name": "SM74.config-migration",
+      "initial": "planning",
+      "states": [
+        "planning",
+        "staging",
+        "secrets-published",
+        "config-published",
+        "compensating",
+        "preview",
+        "ready",
+        "rolled-back",
+        "cleanup-failed"
+      ],
+      "terminal": [
+        "preview",
+        "ready",
+        "rolled-back",
+        "cleanup-failed"
+      ],
+      "transitions": {
+        "planning": [
+          "preview",
+          "staging"
+        ],
+        "staging": [
+          "secrets-published",
+          "compensating"
+        ],
+        "secrets-published": [
+          "config-published",
+          "compensating"
+        ],
+        "config-published": [
+          "ready",
+          "compensating"
+        ],
+        "compensating": [
+          "rolled-back",
+          "cleanup-failed"
+        ],
+        "preview": [],
+        "ready": [],
+        "rolled-back": [],
+        "cleanup-failed": []
+      }
+    },
+    {
+      "name": "SM75.pit",
+      "initial": "opening",
+      "states": [
+        "opening",
+        "open",
+        "reading",
+        "closing",
+        "closed",
+        "close-failed"
+      ],
+      "terminal": [
+        "closed",
+        "close-failed"
+      ],
+      "transitions": {
+        "opening": [
+          "open"
+        ],
+        "open": [
+          "reading",
+          "closing"
+        ],
+        "reading": [
+          "closing"
+        ],
+        "closing": [
+          "closed",
+          "close-failed"
+        ],
+        "closed": [],
+        "close-failed": []
+      }
+    },
+    {
+      "name": "SM76.adapter",
+      "initial": "prepared",
+      "states": [
+        "prepared",
+        "sending",
+        "reading",
+        "verified",
+        "succeeded",
+        "rejected",
+        "unknown"
+      ],
+      "terminal": [
+        "succeeded",
+        "rejected",
+        "unknown"
+      ],
+      "transitions": {
+        "prepared": [
+          "sending"
+        ],
+        "sending": [
+          "reading",
+          "unknown"
+        ],
+        "reading": [
+          "verified",
+          "unknown"
+        ],
+        "verified": [
+          "succeeded",
+          "rejected"
+        ],
+        "succeeded": [],
+        "rejected": [],
+        "unknown": []
+      }
+    },
+    {
+      "name": "SM76.http",
+      "initial": "sending",
+      "states": [
+        "sending",
+        "reading",
+        "completed",
+        "failed"
+      ],
+      "terminal": [
+        "completed",
+        "failed"
+      ],
+      "transitions": {
+        "sending": [
+          "reading",
+          "failed"
+        ],
+        "reading": [
+          "completed",
+          "failed"
+        ],
+        "completed": [],
+        "failed": []
+      }
+    },
+    {
+      "name": "SM77.backend",
+      "initial": "unknown",
+      "states": [
+        "unknown",
+        "available",
+        "unavailable"
+      ],
+      "terminal": [
+        "unavailable"
+      ],
+      "transitions": {
+        "unknown": [
+          "available",
+          "unavailable"
+        ],
+        "available": [
+          "unavailable"
+        ],
+        "unavailable": []
+      }
+    },
+    {
+      "name": "SM78.program",
+      "initial": "prepared",
+      "states": [
+        "prepared",
+        "executing",
+        "settled",
+        "rejected",
+        "failed"
+      ],
+      "terminal": [
+        "settled",
+        "rejected",
+        "failed"
+      ],
+      "transitions": {
+        "prepared": [
+          "executing",
+          "rejected"
+        ],
+        "executing": [
+          "settled",
+          "failed"
+        ],
+        "settled": [],
+        "rejected": [],
+        "failed": []
+      }
+    },
+    {
+      "name": "SM79.diagnostic-store",
+      "initial": "cold",
+      "states": [
+        "cold",
+        "starting",
+        "ready",
+        "failed",
+        "closed"
+      ],
+      "terminal": [
+        "closed"
+      ],
+      "transitions": {
+        "cold": [
+          "starting",
+          "closed",
+          "failed"
+        ],
+        "starting": [
+          "ready",
+          "failed",
+          "closed"
+        ],
+        "ready": [
+          "failed",
+          "closed"
+        ],
+        "failed": [
+          "closed"
+        ],
+        "closed": []
+      }
+    },
+    {
+      "name": "UI.activity",
+      "initial": "idle",
+      "states": [
+        "idle",
+        "active"
+      ],
+      "terminal": [],
+      "transitions": {
+        "idle": [
+          "active"
+        ],
+        "active": [
+          "idle"
+        ]
+      }
+    },
+    {
+      "name": "UI.diagnostics-view",
+      "initial": "activity",
+      "states": [
+        "activity",
+        "traces",
+        "coverage"
+      ],
+      "terminal": [],
+      "transitions": {
+        "activity": [
+          "traces",
+          "coverage"
+        ],
+        "traces": [
+          "activity",
+          "coverage"
+        ],
+        "coverage": [
+          "activity",
+          "traces"
+        ]
+      }
+    },
+    {
+      "name": "UI.disclosure",
+      "initial": "closed",
+      "states": [
+        "closed",
+        "open"
+      ],
+      "terminal": [],
+      "transitions": {
+        "closed": [
+          "open"
+        ],
+        "open": [
+          "closed"
+        ]
+      }
+    },
+    {
+      "name": "UI.draft-field",
+      "initial": "clean",
+      "states": [
+        "clean",
+        "dirty"
+      ],
+      "terminal": [],
+      "transitions": {
+        "clean": [
+          "dirty"
+        ],
+        "dirty": [
+          "clean"
+        ]
+      }
+    },
+    {
+      "name": "UI.pending",
+      "initial": "idle",
+      "states": [
+        "idle",
+        "busy"
+      ],
+      "terminal": [],
+      "transitions": {
+        "idle": [
+          "busy"
+        ],
+        "busy": [
+          "idle"
+        ]
+      }
+    },
+    {
+      "name": "UI.selection",
+      "initial": "empty",
+      "states": [
+        "empty",
+        "selected"
+      ],
+      "terminal": [],
+      "transitions": {
+        "empty": [
+          "selected"
+        ],
+        "selected": [
+          "empty"
+        ]
+      }
+    }
+  ]
+}

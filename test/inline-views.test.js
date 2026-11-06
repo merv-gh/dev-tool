@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
-const context = vm.createContext({ TextEncoder, TextDecoder });
+const context = vm.createContext({ DTState: require('../lib/state-machine'), TextEncoder, TextDecoder });
 vm.runInContext(fs.readFileSync(path.join(__dirname, '../web/inline.js'), 'utf8') + '\nthis.inline = dtInline;', context);
 const inline = context.inline;
 

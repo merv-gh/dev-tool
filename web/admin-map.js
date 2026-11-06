@@ -1,5 +1,5 @@
 // The map frame never runs tools itself. Parent verifies sender + node against the registry.
-let adminMapResult=null,adminMapEnv=null,adminMapSequence=0;
+let adminMapResult=null; let adminMapEnv=null; const adminMapSequence=new DTState.Revision();
 function adminMapViewUrl(view,page){
   const supplied=new URL(view,location.href);
   const route=supplied.pathname.match(new RegExp('/'+page+'/[a-z0-9]+$'));
@@ -15,9 +15,9 @@ async function adminMapOpen(view,selectedEnv){
 $('cxMapOpen').onclick=async()=>{const b=$('cxMapOpen');b.disabled=true;try{const r=await contextCall('map',{env:env()});await adminMapOpen(r.view,r.env);}catch(e){contextMessage(e.message,true);}finally{b.disabled=false;}};
 window.addEventListener('message',async e=>{
   if(e.source!==$('cxMapFrame').contentWindow||!['dt:map-selected','dt:map-action'].includes(e.data?.type)||e.data.map!==adminMapResult)return;
-  const sequence=++adminMapSequence;
+  const sequence=++adminMapSequence.value;
   try{
-    const r=await contextCall('map_node',{env:adminMapEnv,id:e.data.node});if(sequence!==adminMapSequence)return;
+    const r=await contextCall('map_node',{env:adminMapEnv,id:e.data.node});if(sequence!==adminMapSequence.value)return;
     $('cxMapSelection').textContent=r.node.label+' · '+r.node.kind;$('cxMapActions').replaceChildren();
     for(const link of r.links||[]){const a=document.createElement('a');a.href=link.url;a.textContent=link.label;a.target='_blank';a.rel='noopener';$('cxMapActions').append(a);}
     for(const a of r.actions.filter(a=>a.valid)){

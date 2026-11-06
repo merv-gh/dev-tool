@@ -1,0 +1,121 @@
+{
+  "schema": "dt.observability.verification/v1",
+  "date": "2026-11-05",
+  "scope": "Working tree based on 5c33058; existing state-machine and UTF-8 refactor retained.",
+  "references": {
+    "happen": "meoyawn/happen@d13a5de54d1137e1d966c41a1560dcab254e97ec",
+    "principles": [
+      "Per-chat opt-in",
+      "Explicit authenticated worker/runner carriers",
+      "Separate bounded diagnostic writer",
+      "Content exclusion",
+      "Open spans retain unknown ends",
+      "Reproducible evidence with stated limits"
+    ]
+  },
+  "sourceDigest": "79f4ad5a4ff9b535b93ca04e47d7e3d7cbfc24848a0c7e67431bfa8309f8b15b",
+  "coverageArtifact": {
+    "path": "docs/benchmarks/test-coverage.json",
+    "sha256": "3f82082ced7c9e6f74405c47ad35b241887174718153f84978b7976238c21f09",
+    "bytes": 609910
+  },
+  "automated": {
+    "sourceDigest": "79f4ad5a4ff9b535b93ca04e47d7e3d7cbfc24848a0c7e67431bfa8309f8b15b",
+    "command": "npm run test:coverage",
+    "scope": "full-suite",
+    "exitCode": 0,
+    "node": "v24.22.0",
+    "counts": {
+      "tests": 835,
+      "failed": 0,
+      "passed": 783,
+      "cancelled": 0,
+      "skipped": 52,
+      "todo": 0,
+      "topLevel": 835,
+      "suites": 0
+    }
+  },
+  "coverage": {
+    "transitions": {
+      "hit": 330,
+      "total": 627,
+      "percent": 52.6
+    },
+    "lines": {
+      "hit": 24216,
+      "total": 26432,
+      "percent": 91.6
+    },
+    "functions": {
+      "hit": 5115,
+      "total": 5939,
+      "percent": 86.1
+    },
+    "branches": {
+      "hit": 17892,
+      "total": 21991,
+      "percent": 81.4
+    },
+    "testedFiles": 116,
+    "sourceFiles": {
+      "measured": 161,
+      "unmeasured": 24,
+      "total": 185
+    }
+  },
+  "focused": {
+    "command": "node --test test/telemetry.test.js test/runner.test.js test/coverage.test.js test/admin-observability.test.js test/handbook.test.js",
+    "passed": 30,
+    "failed": 0
+  },
+  "browser": {
+    "fixture": "demo/ui-ux.js; disposable synthetic infrastructure",
+    "feature": {
+      "passed": 11,
+      "checks": [
+        "explicit per-chat tracing opt-in",
+        "real nested parallel tool calls",
+        "waterfall and parent/span inspector",
+        "valid content-free Perfetto download",
+        "missing transition remains inspectable",
+        "actual transition provenance and test names",
+        "source and exact executed/missed lines",
+        "mobile layout without document overflow",
+        "sandboxed Open WebUI observability view",
+        "sandboxed Open WebUI test-coverage view",
+        "scope change clears previous trace evidence"
+      ],
+      "pageErrors": []
+    },
+    "regression": {
+      "checks": 115,
+      "passed": 115,
+      "defects": 0,
+      "pageErrors": 0,
+      "visits": 84
+    }
+  },
+  "realBoundariesVerified": [
+    "Official OTLP/HTTP JSON trace and metric receipt",
+    "W3C HTTP context and parallel parentage",
+    "Worker mailbox and runner HTTP correlation",
+    "Collector outage and storage failure isolation",
+    "Scoped SQLite retention and restart",
+    "Standalone bundle without source-tree or node_modules dependencies",
+    "Content-free Perfetto export",
+    "Source hit/miss inspection and stale-scope response fences"
+  ],
+  "testHarnessChanges": [
+    "Fixed-heap stress subprocesses disable inherited V8 profiling; original heap limits, counts and assertions remain.",
+    "Descendant cancellation waits for ESRCH within the process-group cleanup deadline instead of sleeping a fixed 150 ms."
+  ],
+  "limits": [
+    "52 optional/live tests skipped; no live Docker, Postgres, Kafka or Joern proof is claimed.",
+    "Node 24.22.0 ran the suite; the Compose Node 22 image was not executed.",
+    "Browser tests exercised the sandbox renderer used by Open WebUI, without a separate live Open WebUI installation.",
+    "Source percentages describe 161 measured files; 24 unloaded files remain unmeasured.",
+    "330 of 627 declared lifecycle edges were observed in passing files; test-file attribution does not prove individual assertions.",
+    "Generated dist/dt.js contains upstream SDK template-string indentation; whitespace checking ignores space-before-tab for that generated content."
+  ]
+}
