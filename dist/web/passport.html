@@ -198,13 +198,15 @@ async function passportEditing(){
  try{const response=await fetch('/api/tools');if(!response.ok)return;const tools=await response.json();if(!tools.some(t=>t.name==='passport_adjust'))return;button.hidden=false;
  button.onclick=()=>{const panel=$('passportPortWorkspace');if(editor?.pending())return toast('Wait for the port correction response.');if(!panel.hidden&&editor?.dirty()&&!confirm('Discard the unsaved port draft?'))return;panel.hidden=!panel.hidden;button.setAttribute('aria-expanded',String(!panel.hidden));if(panel.hidden)return;
  const identity={service:p.service,env:qs.get('env')||p.env||null,repo:p.repo.project+'/'+p.repo.repo,revision:p.repo.sha};
- editor=dtPortEditor.mount($('passportPorts'),{identity,story:qs.get('story'),selectedPort:qs.get('port'),call:async(name,args)=>{const r=await fetch('/api/tool/'+name,{method:'POST',headers:{'content-type':'application/json',...(qs.get('story')?{'x-dt-story':qs.get('story')}:{})},body:JSON.stringify(args)}),value=await r.json();if(!r.ok||value.error)throw Error(value.error||'Request failed');return value.result;},onSaved:()=>toast('Port correction saved. Reload the passport to refresh its summary.')});panel.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth',block:'start'});};if(qs.has('port'))button.click();
+ editor=dtPortEditor.mount($('passportPorts'),{identity,story:qs.get('story'),selectedPort:qs.get('port'),call:async(name,args)=>{const r=await fetch('/api/tool/'+name,{method:'POST',headers:{'content-type':'application/json',...(qs.get('story')?{'x-dt-story':qs.get('story')}:{})},body:JSON.stringify(args)}),value=await r.json();if(!r.ok||value.error)throw Error(value.error||'Request failed');return value.result;},onSaved:()=>toast(snapshot?'Port correction saved. Run passport again to collect a fresh snapshot.':'Port correction saved. Reload the passport to refresh its summary.')});panel.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth',block:'start'});};if(qs.has('port'))button.click();
  }catch{}
 }
 
-fetch(`/api/passport/${encodeURIComponent(service)}?t=${encodeURIComponent(qs.get('t') || '')}${qs.get('env')?'&env='+encodeURIComponent(qs.get('env')):''}`,{headers:qs.get('story')?{'x-dt-story':qs.get('story')}:{}})
+const snapshot=qs.get('snapshot');
+if(snapshot&&/^[a-z0-9]+$/.test(snapshot))window.META={id:snapshot,story:qs.get('story')||'default'};
+fetch(snapshot?`/api/result/${encodeURIComponent(snapshot)}`:`/api/passport/${encodeURIComponent(service)}?t=${encodeURIComponent(qs.get('t') || '')}${qs.get('env')?'&env='+encodeURIComponent(qs.get('env')):''}`,{headers:!snapshot&&qs.get('story')?{'x-dt-story':qs.get('story')}:{}})
   .then(r => r.ok ? r.json() : r.json().then(j => Promise.reject(new Error(j.error))))
-  .then(d => { p = d; render(); passportEditing(); }).catch(fail);
+  .then(d => { p = snapshot?d.data:d; render(); passportEditing(); }).catch(fail);
 </script>
 </body>
 </html>

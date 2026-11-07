@@ -1,0 +1,204 @@
+{
+  "version": 1,
+  "groups": [
+    {
+      "id": "understand",
+      "title": "Understand a service",
+      "description": "Start from its boundaries and follow the evidence.",
+      "intents": [
+        {
+          "id": "service-boundaries",
+          "title": "Inspect a service and its connections",
+          "tools": [
+            "passport",
+            "architecture_service",
+            "scenario_inventory",
+            "map"
+          ],
+          "goal": "Inspect the service's entry points, tables, topics and downstream calls."
+        },
+        {
+          "id": "follow-code",
+          "title": "Find code and follow a data flow",
+          "tools": [
+            "code_search",
+            "code_symbols",
+            "code_read",
+            "impact",
+            "semantic_search",
+            "semantic_query"
+          ],
+          "goal": "Locate exact source evidence and follow entry points to their effects."
+        },
+        {
+          "id": "correct-boundary",
+          "title": "Review or correct a detected boundary",
+          "tools": [
+            "passport_adjustments",
+            "passport_adjust",
+            "semantic_ports"
+          ],
+          "goal": "Inspect detected evidence before making a documented manual correction."
+        }
+      ]
+    },
+    {
+      "id": "data",
+      "title": "Explore data",
+      "description": "Resolve exact names before a live query.",
+      "intents": [
+        {
+          "id": "find-object",
+          "title": "Find a table, topic or API",
+          "tools": ["catalog_search", "find", "api_routes"],
+          "goal": "Find the exact cached object name and preserve its source generation."
+        },
+        {
+          "id": "table-usage",
+          "title": "Inspect a table and who uses it",
+          "guide": "column-lineage",
+          "tools": ["pg_table", "pg_usage", "catalog_usage", "pg_function"],
+          "goal": "Inspect the selected table or function and its detected readers and writers."
+        },
+        {
+          "id": "query-data",
+          "title": "Query rows, documents or messages",
+          "tools": ["pg_query", "es_search", "kafka_last", "kafka_topic"],
+          "goal": "Read a bounded sample from an explicitly selected source."
+        }
+      ]
+    },
+    {
+      "id": "investigate",
+      "title": "Investigate a bug",
+      "description": "Connect the symptom to deployment, code and state.",
+      "intents": [
+        {
+          "id": "incident",
+          "title": "Investigate an unexplained symptom",
+          "guide": "investigate-incident",
+          "tools": [
+            "health",
+            "consul_service",
+            "logs_search",
+            "logs_trace",
+            "passport"
+          ],
+          "goal": "Collect deployment, health and log evidence before diagnosing the symptom."
+        },
+        {
+          "id": "reproduce",
+          "title": "Recreate related state and replay a bug",
+          "guide": "reproduce-state",
+          "tools": [
+            "scenario_inventory",
+            "fixture_plan",
+            "fixture_capture",
+            "fixture_validate",
+            "fixture_runtime_preflight"
+          ],
+          "goal": "Prepare a bounded reproduction with independent expectations and explicit gaps."
+        }
+      ]
+    },
+    {
+      "id": "verify",
+      "title": "Change and verify code",
+      "description": "Use exact source revisions and explicit execution targets.",
+      "intents": [
+        {
+          "id": "regression",
+          "title": "Prepare an integration regression",
+          "guide": "write-tests",
+          "tools": [
+            "workspace_list",
+            "workspace_open",
+            "test_context",
+            "test_data",
+            "test_targets",
+            "test_run"
+          ],
+          "goal": "Drive an application entry point and independently check its exit effects."
+        },
+        {
+          "id": "compare",
+          "title": "Compare behavior across a refactor",
+          "guide": "differential-refactor",
+          "tools": [
+            "impact",
+            "differential_check",
+            "workspace_patch",
+            "test_run"
+          ],
+          "goal": "Compare baseline and candidate behavior using representative inputs."
+        }
+      ]
+    },
+    {
+      "id": "connect",
+      "title": "APIs and reusable checks",
+      "description": "Inspect a request before sending it.",
+      "intents": [
+        {
+          "id": "api-check",
+          "title": "Explore or replay an API request",
+          "guide": "ui-api-collection",
+          "tools": [
+            "api_routes",
+            "api_request_prepare",
+            "api_request_replay",
+            "api_exchange_list"
+          ],
+          "goal": "Prepare an attributed API request and inspect its actual response."
+        },
+        {
+          "id": "automation",
+          "title": "Run or build a reusable workflow",
+          "tools": [
+            "script_list",
+            "script_run",
+            "script_save",
+            "collection_validate",
+            "collection_run",
+            "code"
+          ],
+          "goal": "Compose a repeatable investigation with editable parameters and explicit assertions."
+        }
+      ]
+    },
+    {
+      "id": "knowledge",
+      "title": "Knowledge and task memory",
+      "description": "Resume prior findings or prepare shared understanding.",
+      "intents": [
+        {
+          "id": "architecture",
+          "title": "Explain architecture and data flows",
+          "guide": "knowledge-refresh",
+          "tools": [
+            "project_context_find",
+            "architecture_list",
+            "architecture_service",
+            "knowledge_search",
+            "knowledge_graph"
+          ],
+          "goal": "Inspect source-linked project understanding and keep assumptions explicit."
+        },
+        {
+          "id": "task-files",
+          "title": "Resume a task or work with files",
+          "tools": [
+            "context_find",
+            "context_get",
+            "context_list",
+            "context_read",
+            "files_stores",
+            "files_list",
+            "files_archive"
+          ],
+          "goal": "Find prior work, consult its progress and preserve useful evidence."
+        }
+      ]
+    }
+  ]
+}

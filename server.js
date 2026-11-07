@@ -183,6 +183,12 @@ const routes = [
     page('admin.html')(req, res);
   }],
   ['GET', '/api/admin/status', true, async (req, res) => send(res, 200, await admin.status())],
+  ['GET', '/api/admin/workbench', true, async (req, res, url) => send(res, 200, await require('./lib/workbench').bootstrap({ env: url.searchParams.get('env') || undefined }))],
+  ['POST', '/api/admin/workbench/choices', true, async (req, res) => send(res, 200, await require('./lib/workbench').choices(await readJsonBody(req)))],
+  ['POST', '/api/admin/workbench/run', true, async (req, res) => send(res, 202, await require('./lib/workbench').start(await readJsonBody(req)))],
+  ['GET', '/api/admin/workbench/run/*', true, (req, res, url) => send(res, 200, require('./lib/workbench').state(url.pathname.split('/').pop()))],
+  ['GET', '/api/admin/workbench/evidence/*', true, (req, res, url) => send(res, 200, require('./lib/workbench').evidence(url.pathname.split('/').pop()))],
+  ['POST', '/api/admin/workbench/assist', true, async (req, res) => { const body = await readJsonBody(req); send(res, 200, await require('./lib/execution').run({ kind: 'tool', tool: 'workbench_help', source: 'workbench', signal: req.dtSignal }, () => require('./lib/workbench').assist(body))); }],
   ['POST', '/api/admin/job/*/cancel', true, (req, res, url) => {
     try { send(res, 200, require('./lib/jobs').cancel(url.pathname.split('/').slice(-2)[0], 'cancelled from /admin')); } catch (e) { send(res, 404, { error: e.message }); }
   }],
@@ -363,7 +369,9 @@ function start({ port = 4000, host = '127.0.0.1' } = {}) {
     if(!identity&&getServer().securityProfile==='team'&&url.pathname==='/api/status')return send(res,403,{error:'Authentication is required'});
     if(!identity&&(getServer().accessTokens.length||getServer().securityProfile==='team')&&(['/api/tools','/openapi.json'].includes(url.pathname)||url.pathname.startsWith('/openapi/')))return send(res,403,{error:'Authentication is required'});
     const protectedRuntime=url.pathname.startsWith('/api/admin/runtime')||url.pathname.startsWith('/api/admin/execution/')||url.pathname.startsWith('/api/admin/metadata');
-    let route = routes.find(([m, p]) => m === req.method && (p.endsWith('*') ? url.pathname.startsWith(p.slice(0, -1)) : url.pathname === p));
+    let route = routes.find(([m, p]) => m === req.method && (p.includes('*/')
+      ? new RegExp('^' + p.split('*').map(part => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[^/]+') + '$').test(url.pathname)
+      : p.endsWith('*') ? url.pathname.startsWith(p.slice(0, -1)) : url.pathname === p));
     if(protectedRuntime)route=[req.method,url.pathname,true,null];
     try {
       if (!route) return send(res, 404, { error: 'not found' });

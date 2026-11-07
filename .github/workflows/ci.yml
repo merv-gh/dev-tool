@@ -68,11 +68,12 @@ jobs:
           DT_TEST_PG_URL: postgres://postgres:disposable-test-password@127.0.0.1:55432/postgres
       - run: npx playwright install --with-deps chromium
       - run: |
-          node demo/ui-ux.js 4064 work/ci/fixture.json >work-fixture.log 2>&1 &
+          DT_DEMO_WORKBENCH=1 node demo/ui-ux.js 4064 work/ci/fixture.json >work-fixture.log 2>&1 &
           for attempt in $(seq 1 60); do test -f work/ci/fixture.json && break; sleep 1; done
           test -f work/ci/fixture.json
           node dev/check-ux-browser.js work/ci/fixture.json work/ci/browser
           node dev/check-readiness-browser.js work/ci/fixture.json work/ci/readiness-browser
+          node dev/check-workbench-browser.js work/ci/fixture.json work/ci/workbench
       - if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:

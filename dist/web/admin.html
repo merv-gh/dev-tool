@@ -125,7 +125,7 @@
   iframe.vw-prev { width: 100%; height: 520px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
   details summary { cursor: pointer; color: var(--muted); font-size: 12px; margin: 8px 0; }
 </style>
-<link rel="stylesheet" href="/static/admin-ux.css"><link rel="stylesheet" href="/static/handbook.css"><link rel="stylesheet" href="/static/port-editor.css">
+<link rel="stylesheet" href="/static/admin-ux.css"><link rel="stylesheet" href="/static/handbook.css"><link rel="stylesheet" href="/static/port-editor.css"><link rel="stylesheet" href="/static/workbench.css">
 </head>
 <body>
 <div class="wrap">
@@ -146,7 +146,8 @@
   </form>
   <div class="running-bar" id="running" hidden></div>
   <nav class="tabs" id="tabs">
-    <button data-tab="index" class="on">Index</button>
+    <button data-tab="workbench" class="on">Workbench</button>
+    <button data-tab="index">Index</button>
     <button data-tab="explore">Explore</button>
     <button data-tab="passports">Passports<span class="n" id="nPassports"></span></button>
     <button data-tab="context">Context & scratchpad</button>
@@ -162,7 +163,8 @@
     <button data-tab="config">Config</button>
   </nav>
 
-  <section id="tab-index">
+  <section id="tab-workbench"><div id="wbRoot"></div></section>
+  <section id="tab-index" hidden>
     <div class="row" style="margin-bottom:10px">
       <button class="primary" data-refresh="all">Refresh everything</button>
       <button data-refresh="index" title="Rebuild catalog.txt and the usage index from the cache, no network">Rebuild index only</button>
@@ -411,19 +413,21 @@
 </div>
 <script src="/static/state-machine.js"></script><script src="/static/ui.js"></script>
 <script src="/static/admin-scripts.js"></script>
+<script src="/static/combobox.js"></script><script src="/static/tool-schema.js"></script>
 <script src="/static/tool-form.js"></script><script src="/static/port-editor.js"></script>
 <script src="/static/admin-context.js"></script><script src="/static/project-context-ui.js"></script><script src="/static/admin-project-context.js"></script>
 <script src="/static/admin-map.js"></script>
 <script src="/static/admin-runtime.js"></script>
+<script src="/static/admin-workbench.js"></script>
 <script src="/static/trace-format.js"></script><script src="/static/diagnostics.js"></script><script src="/static/admin-observability.js"></script>
 <script src="/static/admin-semantic.js"></script><script src="/static/admin-architecture.js"></script>
 <script src="/static/handbook.js"></script><script src="/static/admin-handbook.js"></script>
 <script>
-let S = null, tab = 'index', selectedJob = null, timer = null;
-const api = async (p, body, { identityOnly = false } = {}) => {
+let S = null, tab = 'workbench', selectedJob = null, timer = null;
+const api = async (p, body, { identityOnly = false, signal } = {}) => {
   const scope = adminRequestScope();
   const headers = identityOnly ? {} : adminRequestHeaders();
-  const r = await fetch(p, body ? { method: 'POST', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify(body) } : { headers });
+  const r = await fetch(p, body ? { method: 'POST', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify(body), signal } : { headers, signal });
   const j = await r.json().catch(() => ({}));
   if (scope !== adminRequestScope()) throw new Error('Scope changed while the request was running; the previous response was ignored.');
   if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
@@ -669,7 +673,8 @@ function show(t) {
   tab = t;
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   document.querySelectorAll('section[id^=tab-]').forEach(s => s.hidden = s.id !== `tab-${t}`);
-  history.replaceState(null, '', `#${['semantic','handbook','context','runtime'].includes(t) ? requested : t}`);
+  history.replaceState(null, '', `#${['semantic','handbook','context','runtime','workbench'].includes(t) ? requested : t}`);
+  if (t === 'workbench') loadWorkbench().catch(e => wbMessage(e.message, true));
   if (t === 'handbook') loadHandbook().catch(e => toast(e.message));
   if (t === 'architecture') loadArchitectureAdmin().catch(e => architectureMessage(e.message, true));
   if (t === 'context') loadContexts().catch(e => contextMessage(e.message, true));
@@ -717,8 +722,8 @@ const toolsReload = async (update) => {
 };
 $('toolsReload').onclick = () => toolsReload(false);
 $('toolsUpdate').onclick = () => toolsReload(true);
-show((location.hash || '#index').slice(1));
-window.addEventListener('hashchange', () => { const t = location.hash.slice(1); if (t && (t.split('?')[0] !== tab || t.includes('?')) && $(`tab-${t.split('?')[0]}`)) show(t); });
+show((location.hash || '#workbench').slice(1));
+window.addEventListener('hashchange', () => { const t = location.hash.slice(1); const linkedStory = t.startsWith('workbench?') && new URLSearchParams(t.split('?')[1]).get('story'); if (linkedStory && linkedStory !== runtimeStory && /^[a-zA-Z0-9][\w.:-]{0,159}$/.test(linkedStory)) { location.reload(); return; } if (t && (t.split('?')[0] !== tab || t.includes('?')) && $(`tab-${t.split('?')[0]}`)) show(t); });
 refresh();
 </script>
 <script src="/static/admin-ux.js"></script>

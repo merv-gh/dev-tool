@@ -56,7 +56,7 @@ async function run(manifestFile = 'work/ux-pass/demo.json', out = 'work/ux-pass/
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     await context.addInitScript(() => { try { sessionStorage.setItem('dt-admin-story', 'default'); } catch {} });
     const page = await context.newPage(); attach(page);
-    const areas = ['index', 'explore', 'passports', 'map', 'context', 'scripts', 'sites', 'api', 'views', 'history', 'runtime', 'architecture', 'semantic', 'jobs', 'config', 'handbook'];
+    const areas = ['workbench', 'index', 'explore', 'passports', 'map', 'context', 'scripts', 'sites', 'api', 'views', 'history', 'runtime', 'architecture', 'semantic', 'jobs', 'config', 'handbook'];
     await attempt('admin-boot', async () => { await ready(page, manifest.admin); await page.locator('#tabs [data-tab=map]').waitFor(); assert.deepEqual((await page.locator('#tabs [data-tab]').evaluateAll(elements => elements.map(e => e.dataset.tab))).sort(), [...areas].sort()); }, page);
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 1000 });

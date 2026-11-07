@@ -1,0 +1,69 @@
+{
+  "protocol": "dt.workbench-browser/v1",
+  "at": "2026-11-06T23:05:35.603Z",
+  "sourceDigest": "ae4a63dff4dc0894a6464777d138f6d35ca12548c02a006ec8317309292f1de7",
+  "scope": "Disposable fixture; synthetic model/infrastructure, actual indexed Java source, browser and owned HTTP execution. No real model, production database or separate live Open WebUI instance.",
+  "checks": [
+    {
+      "name": "default entry and empty catalog recovery are clickable",
+      "ok": true
+    },
+    {
+      "name": "mouse-only service → passport → table → usage → bounded SQL draft",
+      "ok": true
+    },
+    {
+      "name": "syntax and tool-call insertion use the real enabled registry",
+      "ok": true
+    },
+    {
+      "name": "structured arrays, objects and nullable values need no JSON",
+      "ok": true
+    },
+    {
+      "name": "model help returns editable suggestions and interprets the selected evidence",
+      "ok": true
+    },
+    {
+      "name": "owned runs expose progress and cancellation, and preserve previous evidence",
+      "ok": true
+    },
+    {
+      "name": "owned run links reopen without submitting another action",
+      "ok": true
+    },
+    {
+      "name": "inline chat evidence has a workbench continuation with no replay",
+      "ok": true
+    },
+    {
+      "name": "new task scope clears earlier evidence and ignores delayed choice responses",
+      "ok": true
+    }
+  ],
+  "pageErrors": [],
+  "broaderUI": {
+    "checks": 119,
+    "passed": 119,
+    "defects": 0,
+    "pageErrors": 0,
+    "inventoryVisits": 88,
+    "snapshotWriteAttempts": 0
+  },
+  "readinessChecks": 6,
+  "independentReview": {
+    "findings": 7,
+    "addressed": 7
+  },
+  "screenshots": [
+    "docs/screenshots/workbench-desktop.png",
+    "docs/screenshots/workbench-mobile.png",
+    "docs/screenshots/workbench-evidence-desktop.png",
+    "docs/screenshots/workbench-evidence-mobile.png"
+  ],
+  "limits": [
+    "Browser flows provide separate acceptance evidence; Node V8 coverage does not instrument these client controllers.",
+    "New free-form notes, identifiers and custom code still require authored input.",
+    "An existing two-process project publication test failed intermittently once; ten isolated repeats and a subsequent full run passed that case. Test diagnostics now include both child outcomes."
+  ]
+}

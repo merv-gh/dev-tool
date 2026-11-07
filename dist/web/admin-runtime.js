@@ -196,6 +196,7 @@ function runtimeCodeSchema(reset = false) {
   const tool = runtimeTools.find(tool => tool.name === $('rtCodeTool').value);
   $('rtCodeDescription').textContent = tool ? tool.description + '\n\n' + rtJson(tool.inputSchema) : 'No code tools are enabled in this configuration.';
   $('rtCodeRun').disabled = !tool || runtimeCodePending.value; if (reset) $('rtCodeArgs').value = rtJson(runtimeCodeDefaults(tool));
+  if(tool&&typeof dtToolForm!=='undefined'){let root=$('rtCodeFields');if(!root){root=document.createElement('div');root.id='rtCodeFields';$('rtCodeArgs').before(root);}try{dtToolForm.mount(root,tool.inputSchema,JSON.parse($('rtCodeArgs').value),args=>{$('rtCodeArgs').value=rtJson(args);},{tool:tool.name});}catch{}}
 }
 async function runtimeLoadCodeTools() {
   try {
@@ -256,6 +257,10 @@ async function runtimeChangeScope(event) {
   await loadRuntime(); await refresh(); await runtimeLoadMetadata();
   if (tab === 'context') await loadContexts(); if (tab === 'history') await loadHistory();
   if(tab==='handbook')await loadHandbook();
+  if(tab==='workbench'&&typeof loadWorkbench==='function') {
+    history.replaceState(null,'','#workbench?'+new URLSearchParams({story:runtimeStory,env:env()}));
+    await loadWorkbench();
+  }
   runtimeMessage('Scope applied. New tools and requests use this chat / task.');
 }
 function runtimeViewMessage(event) {

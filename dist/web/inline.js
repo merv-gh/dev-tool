@@ -132,6 +132,11 @@ const dtInline = {
       if (/^https?:$/.test(location.protocol)) {
         const url = new URL(location.href); url.searchParams.delete('embed');
         const link = document.createElement('a'); link.href = url.href; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.className = 'inline-full'; link.textContent = 'Open full view'; content.prepend(link);
+        const meta = typeof META === 'object' ? META : {};
+        const resultId = meta.id || url.pathname.match(/^\/show\/([a-z0-9]+)$/)?.[1];
+        if (/^[a-z0-9]+$/.test(resultId || '')) {
+          const next = document.createElement('a'); next.href = '/admin#workbench?' + new URLSearchParams({result:resultId,story:meta.story||'default'});next.target='_blank';next.rel='noopener noreferrer';next.className='inline-full';next.textContent='Continue in Workbench';content.prepend(next);
+        }
         const legacyLink = target.querySelector('#openfull'); if (legacyLink) legacyLink.hidden = true;
       }
       shell.addEventListener('toggle', () => window.dispatchEvent(new Event('resize')));

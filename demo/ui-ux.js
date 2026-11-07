@@ -16,6 +16,15 @@ async function main() {
   config.files = { notes: { type: 'local', path: 'notes', write: true } };
   config.scripts = { starters: false, http: { allow: [apiBase + '/api'] } };
   config.api = { authProfiles: { demo: { label: 'Demo API · server bearer', url: apiBase + '/api', bearerToken: '${UX_DEMO_TOKEN}', autoPrefill: true } } };
+  if (process.env.DT_DEMO_WORKBENCH === '1') {
+    config.envs.dev.postgres={orders:'postgres://127.0.0.1:1/synthetic_unavailable'};
+    fs.mkdirSync(path.join(home,'cache/dev/pg'),{recursive:true});
+    fs.writeFileSync(path.join(home,'cache/dev/pg/orders.json'),JSON.stringify({db:'orders',syncedAt:new Date().toISOString(),tables:[{schema:'sales',name:'refunds',kind:'table',est_rows:'0',columns:[{name:'id',type:'bigint'},{name:'status',type:'text'}],constraints:[],indexes:[],triggers:[]}],functions:[]}));
+    fs.writeFileSync(path.join(home,'cache/dev/pg/_index.json'),JSON.stringify({schemas:{sales:['orders']}}));
+    config.llm = {baseUrl:apiBase,model:'synthetic-workbench-helper'};
+    config.tools = {...config.tools,plugins:['workbench-demo.js']};
+    fs.writeFileSync(path.join(home,'workbench-demo.js'), `module.exports=[{name:'demo_workbench',group:'demo',description:'Synthetic structured arguments, cancellation and failure fixture. No external effects.',strictInput:true,input:{items:{type:'array',items:{type:'object',properties:{name:{type:'string',enum:['checkout','refunds']},count:{type:'integer',default:1}},required:['name'],additionalProperties:false}},options:{type:'object',additionalProperties:true},nullable:{type:['integer','null']},slow:{type:'boolean',default:false},fail:{type:'boolean',default:false}},run:async a=>{if(a.slow){const E=require(${JSON.stringify(path.resolve(__dirname,'../lib/execution'))});await new Promise((resolve,reject)=>{const timer=setTimeout(resolve,15000);E.signal().addEventListener('abort',()=>{clearTimeout(timer);reject(E.abortError());},{once:true});});}if(a.fail)throw Error('Synthetic failure; prior evidence is safe');return {fixture:true,arguments:a,service:'checkout',table:'sales.refunds'};}}];`);
+  }
   fs.writeFileSync(path.join(home, '.env'), 'UX_DEMO_TOKEN=synthetic-demo-bearer\n');
   fs.writeFileSync(configFile, JSON.stringify(config));
   require('../lib/config').reload();
@@ -40,6 +49,9 @@ async function main() {
   const passportView = await tools.call('passport', { service: 'checkout' }), map = await tools.call('map', { env: 'dev', focus: 'svc:checkout', depth: 1 }), dossier = await require('../lib/service-architecture').collect({ service: 'checkout', env: 'dev', joern: false });
   await tools.call('project_context_save',{id:'checkout-platform',expected_revision:null,reason:'Demonstrate shared understanding from real indexed fixture code; infrastructure is synthetic.',document:{title:'Checkout platform',summary:'Entry-to-exit understanding, source pins and reusable investigation evidence.',body:'Explore checkout through its public entry points, real service chain and exit effects. This is a synthetic demonstration environment; no runtime integration or fresh Joern parse is claimed.',repositories:['DEMO/checkout'],services:[],tags:['checkout','outside-in']},dossier:dossier.view,files:[{path:'notes/verification.md',content:'# Verification scope\n\nSource indexing is real. Infrastructure observations and retained semantic projections are synthetic. Drive an entry and assert independently expected exit effects.\n',summary:'Evidence limits and recommended outside-in verification'},{path:'queries/inspect-refunds.sql',content:'-- Example only. Confirm the exact catalog identity before running.\nselect * from sales.refunds limit 10;\n',summary:'Inert example query; check the catalog before use'}]});
   const echo = http.createServer((request, response) => {
+    if (process.env.DT_DEMO_WORKBENCH === '1' && request.url === '/chat/completions') {
+      let body='';request.on('data',chunk=>body+=chunk).on('end',()=>{const input=JSON.parse(JSON.parse(body).messages[1].content), candidate=input.tools.find(t=>t.name==='catalog_search')||input.tools[0];response.writeHead(200,{'content-type':'application/json'});response.end(JSON.stringify({choices:[{message:{content:JSON.stringify({summary:'Synthetic model help: inspect retained evidence before testing runtime behavior.',observations:[input.evidence?'Retained evidence was supplied.':'An editable action is prepared.'],uncertainties:['This fixture does not contact a real model or production system.'],next:[{tool:candidate.name,arguments:candidate.name==='catalog_search'?{q:'checkout',env:'dev'}:{},reason:'Review this prepared call before running it.',missing:[]}]})}}]}));});return;
+    }
     response.writeHead(200, { 'content-type': 'application/json' });
     response.end(JSON.stringify({ id: 42, status: 'fixture', bearerApplied: request.headers.authorization === 'Bearer synthetic-demo-bearer', path: request.url }));
   });
