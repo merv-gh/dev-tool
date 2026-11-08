@@ -1,6 +1,6 @@
 {
   "protocol": "dt.release-inventory/v1",
-  "sourceDigest": "ae4a63dff4dc0894a6464777d138f6d35ca12548c02a006ec8317309292f1de7",
+  "sourceDigest": "de6f9bf3e693b20f5bd2279e39eed6e53b5e786db7b0a58bdd6ef22c955a8217",
   "tools": [
     {
       "name": "find",
@@ -34,6 +34,7 @@
         "test/javacheck.live.test.js",
         "test/pg.live.test.js",
         "test/reproduction.live.test.js",
+        "test/semantic-branches.live.test.js",
         "test/semantic.live.test.js",
         "test/showcase.live.test.js",
         "test/template.live.test.js",
@@ -338,7 +339,8 @@
       "resultContract": false,
       "referenceTests": [],
       "integrationReferences": [
-        "test/diagrams.live.test.js"
+        "test/diagrams.live.test.js",
+        "test/semantic-branches.live.test.js"
       ]
     },
     {
@@ -649,6 +651,7 @@
         "test/flows.live.test.js",
         "test/reproduction.live.test.js",
         "test/runtime-isolation.live.test.js",
+        "test/semantic-branches.live.test.js",
         "test/semantic.live.test.js",
         "test/service-architecture.live.test.js",
         "test/template.live.test.js",
@@ -1011,6 +1014,7 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
+        "test/code-search-fallback.test.js",
         "test/task-model-evaluation.test.js",
         "test/workbench.test.js"
       ],
@@ -1023,6 +1027,7 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
+        "test/code-search-fallback.test.js",
         "test/evaluation-evidence.test.js",
         "test/flows.live.test.js",
         "test/javacheck.live.test.js",
@@ -1691,10 +1696,12 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
+        "test/semantic-branches.live.test.js",
         "test/semantic-ui.test.js",
         "test/semantic.live.test.js"
       ],
       "integrationReferences": [
+        "test/semantic-branches.live.test.js",
         "test/semantic.live.test.js"
       ]
     },
@@ -1721,11 +1728,13 @@
       "referenceTests": [
         "test/admin-semantic.test.js",
         "test/architecture.test.js",
+        "test/semantic-branches.live.test.js",
         "test/semantic-ui.test.js",
         "test/semantic.live.test.js",
         "test/workbench.test.js"
       ],
       "integrationReferences": [
+        "test/semantic-branches.live.test.js",
         "test/semantic.live.test.js"
       ]
     },

@@ -43,7 +43,7 @@ var require_semantic_query_engine = __commonJS({
     var digest = (value) => crypto.createHash("sha256").update(JSON.stringify(value)).digest("hex");
     var bounded = (value, fallback, min, max) => Number.isInteger(value) ? Math.max(min, Math.min(max, value)) : fallback;
     var identity = (a, symbol) => require_semantic_identity().code(a.repo, a.revisionKey || a.sha, symbol);
-    var sources = (a) => a.sources || a.manifest?.sources || [{ repo: a.repo, sha: a.sha, revisionKey: a.revisionKey, sourceDigest: a.sourceDigest, prefix: "" }];
+    var sources = (a) => a.sources || a.manifest?.sources || [{ repo: a.repo, sha: a.sha, revisionKey: a.workspace ? `${a.revisionKey}+source:${a.sourceDigest}` : a.revisionKey, sourceDigest: a.sourceDigest, prefix: "" }];
     function origin(a, file = "") {
       const matches = sources(a).filter((s) => !s.prefix || file === s.prefix || file.startsWith(s.prefix.replace(/\/$/, "") + "/")).sort((x, y) => (y.prefix || "").length - (x.prefix || "").length);
       const source = matches[0] || a, prefix = (source.prefix || "").replace(/\/$/, "");
@@ -486,7 +486,7 @@ var require_semantic_query_engine = __commonJS({
         for (const a of analyses) databases.push(await index(a));
         const graph = createGraph(analyses, databases, { ...options, budgetMs: args.budgetMs }), operation = args.operation || "symbols", mode = args.mode || "reachability", limit = bounded(args.limit, 30, 1, 200), maxHops = bounded(args.maxHops, 8, 1, 30), maxPaths = bounded(args.maxPaths, 8, 1, 20), deadline = Date.now() + bounded(args.budgetMs, 5e3, 100, 3e4);
         const coverage = databases.map((db, i) => ({ analysisId: analyses[i].id, ...JSON.parse(db.prepare("select value from metadata where key=?").get("coverage").value) }));
-        const base = { protocol: "dt.semantic/v1", operation, mode, analyses: analyses.map(({ id, repo, sha, sourceDigest, revisionKey }) => ({ id, repo, sha, sourceDigest, revisionKey })), results: [], truncated: coverage.some((c) => c.summary.truncated), gaps: graph.gaps, ambiguity: graph.ambiguities, coverage, proof: { kind: mode === "reachability" ? "call-reachability" : mode, status: "static-candidate", feasibility: "unknown" }, dependencies: graph.bindings };
+        const base = { protocol: "dt.semantic/v1", operation, mode, analyses: analyses.map(({ id, repo, sha, sourceDigest, revisionKey, language, workspace }) => ({ id, repo, sha, sourceDigest, revisionKey, language, workspace })), results: [], truncated: coverage.some((c) => c.summary.truncated), gaps: graph.gaps, ambiguity: graph.ambiguities, coverage, proof: { kind: mode === "reachability" ? "call-reachability" : mode, status: "static-candidate", feasibility: "unknown" }, dependencies: graph.bindings };
         const choose = (s) => {
           const out = graph.select(s || {});
           if (out.length > 1) graph.ambiguities.push({ selector: s, candidates: out.slice(0, 200).map((n) => n.id), truncated: out.length > 200 });
@@ -513,6 +513,7 @@ var require_semantic_query_engine = __commonJS({
           paged = true;
           base.total = total;
           base.nextCursor = offset + limit < total ? Buffer.from(JSON.stringify({ key: queryKey, offset: offset + limit })).toString("base64url") : null;
+          if (!total && q) base.suggestion = { tool: "code_search", arguments: { pattern: args.query, ...analyses.length === 1 ? { repo: analyses[0].revisionKey } : { repos: [...new Set(analyses.map((a) => a.revisionKey))].join(",") } }, reason: "Symbol search matches method names/signatures, not parameter/local-variable names or source expressions; search source text or use a method selector with parameter" };
         } else if (operation === "ports") base.results = graph.ports.filter((p) => !args.kind || p.portType === args.kind);
         else if (operation === "compare") {
           if (analyses.length !== 2) throw Error("compare requires exactly two immutable analyses");
@@ -533,14 +534,18 @@ var require_semantic_query_engine = __commonJS({
           }
         } else if (["paths", "slice"].includes(operation)) {
           const from = choose(args.from), to = choose(args.to || args.target), targets = new Set(to.map((n) => n.id));
+          const selectedValue = (node, selector = {}) => ({ kind: node.kind, name: node.name, file: node.file, line: node.line, ...node.code ? { call: node.code } : {}, ...selector.argument !== void 0 ? { argument: selector.argument, value: node.arguments?.find((p) => p.index === selector.argument)?.code ?? null } : {}, ...selector.parameter !== void 0 ? { parameter: selector.parameter } : {} });
+          base.selectedValues = { from: from.slice(0, 8).map((n) => selectedValue(n, args.from)), to: to.slice(0, 8).map((n) => selectedValue(n, args.to || args.target)), omitted: Math.max(0, from.length - 8) + Math.max(0, to.length - 8), meaning: "Source expressions at selected values; these are not observed runtime amounts" };
+          if (!from.length || !to.length) base.gaps.push({ kind: "endpoint-not-found", detail: "No exact " + (!from.length ? "source" : "target") + " matched in this retained analysis; inspect semantic_search with the same analysis" });
           if (mode !== "reachability") {
             base.deepRequests = [];
             for (const a of graph.byAnalysis.values()) {
               const starts = from.filter((n) => n.analysisId === a.id), ends = to.filter((n) => n.analysisId === a.id);
               if (!starts.length || !ends.length) continue;
               const nodeIds = (ns, source) => ns.flatMap((n) => {
-                if (n.kind === "method") return mode === "controlflow" ? [n.locator.nodeId] : source ? n.parameters.filter((p) => p.index > 0 && (!args.from?.parameter || p.name === args.from.parameter || p.index === args.from.parameter)).map((p) => String(p.id)) : n.returnId ? [String(n.returnId)] : [];
-                if (n.kind === "call") return mode === "controlflow" || source ? [n.locator.nodeId] : n.arguments.filter((p) => p.index > 0).map((p) => String(p.id));
+                const selector = source ? args.from : args.to || args.target, parameter = selector?.parameter, argument = selector?.argument;
+                if (n.kind === "method") return mode === "controlflow" ? [n.locator.nodeId] : source || parameter !== void 0 ? n.parameters.filter((p) => p.index > 0 && (parameter === void 0 || p.name === parameter || p.index === parameter)).map((p) => String(p.id)) : n.returnId ? [String(n.returnId)] : [];
+                if (n.kind === "call") return mode === "controlflow" || source ? [n.locator.nodeId] : n.arguments.filter((p) => p.index > 0 && (argument === void 0 || p.index === argument)).map((p) => String(p.id));
                 if (n.kind === "port") {
                   if (n.callId) {
                     const record = parse(a.db.prepare("select raw from records where type='call' and id=?").get(String(n.callId)));
@@ -557,6 +562,7 @@ var require_semantic_query_engine = __commonJS({
               });
               const fromNodeIds = nodeIds(starts, true), toNodeIds = nodeIds(ends, false);
               if (fromNodeIds.length && toNodeIds.length) base.deepRequests.push({ analysisId: a.id, request: { operation, mode, fromNodeIds, toNodeIds, maxPaths, maxHops, budgetMs: bounded(args.budgetMs, 5e3, 100, 3e4) } });
+              else base.gaps.push({ kind: "endpoint-value-unavailable", analysisId: a.id, detail: "Resolved symbols have no matching value endpoint; check parameter name/index and one-based call argument index" });
             }
             if (!base.deepRequests.length) base.gaps.push({ kind: "dataflow-boundary", detail: "No single CPG contains both resolved value endpoints; call/transport reachability cannot prove distributed value flow" });
             base.proof = { kind: mode, status: "requires-deep-query", feasibility: "unknown" };

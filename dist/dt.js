@@ -25649,18 +25649,25 @@ ${BUILD_OUTPUT.join("\n")}
       }
       return { full, rel: path3.relative(m.path, full).split(path3.sep).join("/") };
     }
-    function read(id, rel, { from = 1, to } = {}) {
+    function read(id, rel, { from = 1, to, lineNumbers = true } = {}) {
       const m = checkId(id);
       const { full, rel: r } = resolvePath(m, rel, { allowRoot: true });
-      if (!fs3.existsSync(full)) throw new Error(`no file ${r} in ${id}`);
+      if (!fs3.existsSync(full)) {
+        let parent = path3.dirname(full);
+        while (!fs3.existsSync(parent) && parent !== m.path) parent = path3.dirname(parent);
+        const folder = path3.relative(m.path, parent).split(path3.sep).join("/") || ".";
+        const entries = fs3.readdirSync(parent, { withFileTypes: true }).filter((e) => e.name !== ".git").slice(0, 12).map((e) => (folder === "." ? "" : folder + "/") + e.name + (e.isDirectory() ? "/" : ""));
+        throw Object.assign(new Error(`no file ${r} in ${id}. Do not repeat this path. Read workspace_read with path="${folder}"; available entries: ${entries.join(", ") || "(empty)"}`), { code: "DT_WORKSPACE_FILE_MISSING" });
+      }
       if (fs3.statSync(full).isDirectory()) return { id, path: r, entries: fs3.readdirSync(full, { withFileTypes: true }).filter((e) => e.name !== ".git").map((e) => e.name + (e.isDirectory() ? "/" : "")).sort() };
       const lines = fs3.readFileSync(full, "utf8").split("\n");
       const end = Math.min(lines.length, to || from + 399);
-      return { id, path: r, from, to: end, lines: lines.length, text: lines.slice(from - 1, end).map((l, i) => `${String(from + i).padStart(5)}  ${l}`).join("\n") };
+      return { id, path: r, from, to: end, lines: lines.length, ...!lineNumbers ? { line_numbers: false } : {}, text: lineNumbers ? lines.slice(from - 1, end).map((l, i) => `${String(from + i).padStart(5)}  ${l}`).join("\n") : lines.slice(from - 1, end).join("\n") };
     }
     function write(id, rel, { content, edits } = {}) {
       const m = checkId(id);
       const { full, rel: r } = resolvePath(m, rel);
+      if (!edits?.length && /\.java$/i.test(r) && typeof content === "string" && /^\s*\d+ {2,}\S/.test(content) && content.split("\n").filter((line) => /^\s*\d+ {2}/.test(line)).length >= 3) throw Object.assign(new Error("Java content contains display line-number prefixes. The source was preserved. Use edits with exact find/replace, or workspace_read with line_numbers:false and write plain source."), { code: "DT_WORKSPACE_NUMBERED_CONTENT" });
       let text;
       const existed = fs3.existsSync(full);
       if (edits && edits.length) {
@@ -62311,6 +62318,90 @@ var require_semantic_protocol = __commonJS({
   }
 });
 
+// lib/semantic-compare.js
+var require_semantic_compare = __commonJS({
+  "lib/semantic-compare.js"(exports2, module2) {
+    var { digest, error } = require_semantic_protocol();
+    function validate(args, analyses) {
+      if (analyses.length !== 2 || analyses[0].id === analyses[1].id) throw error("Data-flow compare requires exactly two distinct immutable analyses, ordered before then after");
+      if (analyses[0].repo !== analyses[1].repo || analyses[0].language && analyses[1].language && analyses[0].language !== analyses[1].language) throw error("Data-flow compare requires two revisions of the same repository and language");
+      if (!args.from || !args.to) throw error("Data-flow compare requires both from and to selectors");
+      for (const s of [args.from, args.to]) if (s.id || s.sha || s.analysisId) throw error("Use revision-neutral from/to selectors (name, signature, file, parameter or argument); analyses select the two exact revisions");
+    }
+    var identity = (a) => ({ id: a.id, repo: a.repo, sha: a.sha, sourceDigest: a.sourceDigest, revisionKey: a.revisionKey });
+    function comparable(path3) {
+      return digest({ kind: path3.kind, nodes: (path3.nodes || []).map((n) => [n.repo, n.file, n.label, n.code, n.kind, n.name, n.signature, n.boundary]), conditions: (path3.conditions || []).map((c) => [c.expression, c.polarity, c.status]), segments: (path3.segments || []).map((s) => ({ status: s.status, paths: (s.paths || []).map(comparable).sort() })), boundaries: (path3.boundaries || []).map((b) => ({ kind: b.kind, status: b.status, mappings: (b.mappings || []).map((m) => ({ from: m.from, to: m.to, transport: m.transport })) })) });
+    }
+    var evidence = (path3) => path3.kind === "data-flow" || path3.kind === "composed-data-lineage";
+    function status(result) {
+      const failure = result.gaps.some((g) => ["endpoint-not-found", "endpoint-value-unavailable", "deep-query-failed", "deep-query-unavailable", "dataflow-boundary", "local-query-unavailable", "local-query-failed", "local-dataflow-gap"].includes(g.kind));
+      if (failure || result.ambiguity?.length || result.results.some((p) => !evidence(p) || p.proof?.status !== (p.kind === "data-flow" ? "static-dataflow" : "composed-static-lineage"))) return "unavailable";
+      if (result.truncated || result.results.some((p) => p.truncated)) return "bounded";
+      return result.results.length ? result.results.some((p) => p.kind === "composed-data-lineage") ? "composed-static-lineage" : "static-dataflow" : "no-supported-path";
+    }
+    async function compare(args, analyses, query) {
+      validate(args, analyses);
+      const sides = [];
+      for (const a of analyses) {
+        require_execution().check();
+        const { cursor, analysis, analyses: ids, revisionSet, ...request } = args;
+        try {
+          sides.push(await query({ ...request, operation: "paths", mode: "dataflow", limit: 200 }, a));
+        } catch (e) {
+          if (require_execution().signal()?.aborted) throw e;
+          sides.push({ results: [], gaps: [{ kind: "deep-query-failed", analysisId: a.id, detail: e.message }], ambiguity: [], truncated: false, proof: { status: "unavailable", feasibility: "unknown" } });
+        }
+      }
+      const sideStatus = sides.map(status), inconclusive = sideStatus.some((s) => ["unavailable", "bounded"].includes(s));
+      const gapList = sides.flatMap((s, i) => s.gaps.map((g) => ({ ...g, side: i ? "after" : "before", analysisId: g.analysisId || analyses[i].id })));
+      if (sideStatus.includes("no-supported-path")) gapList.push({ kind: "bounded-absence", detail: "No supported path means this bounded static query found none; it is not proof that runtime flow is absent or that the change is safe" });
+      const maps = sides.map((s) => new Map(s.results.filter(evidence).map((p) => [comparable(p), p])));
+      const results = [];
+      let unchanged = 0;
+      for (const key2 of /* @__PURE__ */ new Set([...maps[0].keys(), ...maps[1].keys()])) {
+        const before = maps[0].get(key2), after = maps[1].get(key2);
+        if (before && after) {
+          unchanged++;
+          continue;
+        }
+        results.push({ category: "data-flow", change: inconclusive ? "inconclusive" : before ? "removed" : "added", ...before ? { before } : {}, ...after ? { after } : {} });
+      }
+      if (results.length === 2 && results.filter((r) => r.before).length === 1 && results.filter((r) => r.after).length === 1) {
+        const before = results.find((r) => r.before).before, after = results.find((r) => r.after).after;
+        results.splice(0, 2, { category: "data-flow", change: inconclusive ? "inconclusive" : "changed", before, after });
+      }
+      const key = digest([analyses.map((a) => a.id), sides.map((s) => s.overlayId), args.from, args.to, args.maxPaths, args.maxHops, args.budgetMs]);
+      let offset = 0;
+      if (args.cursor) {
+        let cursor;
+        try {
+          cursor = JSON.parse(Buffer.from(args.cursor, "base64url"));
+        } catch {
+        }
+        if (!cursor || cursor.key !== key || !Number.isInteger(cursor.offset) || cursor.offset < 0) throw error("Cursor belongs to another immutable query");
+        offset = cursor.offset;
+      }
+      const limit = Math.max(1, Math.min(200, args.limit || 30));
+      return {
+        protocol: "dt.semantic/v1",
+        operation: "compare",
+        mode: "dataflow",
+        analyses: analyses.map(identity),
+        comparison: { before: { ...identity(analyses[0]), status: sideStatus[0], paths: maps[0].size, selectedValues: sides[0].selectedValues }, after: { ...identity(analyses[1]), status: sideStatus[1], paths: maps[1].size, selectedValues: sides[1].selectedValues }, from: args.from, to: args.to, unchanged, behaviorVerified: false },
+        results: results.slice(offset, offset + limit),
+        total: results.length,
+        nextCursor: offset + limit < results.length ? Buffer.from(JSON.stringify({ key, offset: offset + limit })).toString("base64url") : null,
+        truncated: sides.some((s) => s.truncated),
+        ambiguity: sides.flatMap((s, i) => (s.ambiguity || []).map((a) => ({ ...a, side: i ? "after" : "before" }))),
+        gaps: gapList,
+        coverage: sides.map((s, i) => ({ side: i ? "after" : "before", analyses: s.coverage })),
+        proof: { kind: "dataflow-comparison", status: inconclusive ? "inconclusive" : "static-comparison", feasibility: "unknown", runtime: "unknown", scope: "Two independent retained CPG queries; paths matched by source expressions, never by generation-local IDs or shifted lines. Static flow membership does not prove value equality: predicates can produce conservative coupling. Confirm behavior with entry-to-exit tests." }
+      };
+    }
+    module2.exports = { compare, validate, comparable };
+  }
+});
+
 // lib/semantic-query.js
 var require_semantic_query = __commonJS({
   "lib/semantic-query.js"(exports2, module2) {
@@ -62354,6 +62445,7 @@ var require_semantic_query = __commonJS({
           return { ...a, ports: [], portGaps: [{ kind: "passport-port-unavailable", detail: error.message }] };
         }
       });
+      if (args.operation === "compare" && args.mode === "dataflow") return require_semantic_compare().compare(args, analyses, (request, analysis) => query(request, [analysis], { runQuery, ports, bindings }));
       if (!analyses.length) return { protocol: "dt.semantic/v1", operation: args.operation || "symbols", results: [], analyses: [], readiness: "missing-analysis", gaps: [{ kind: "missing-analysis", detail: "Build or select an immutable semantic analysis; native code search remains available" }], truncated: false, proof: { status: "unavailable" } };
       const E = require_execution();
       E.check();
@@ -62448,7 +62540,9 @@ var require_semantic_query = __commonJS({
           }
           result.proof = { kind: args.mode || "dataflow", status: result.results.length ? "static-candidate" : "no-supported-path", feasibility: "unknown", scope: "single-cpg" };
           result.total = result.results.length;
-          result.results = result.results.slice(0, Math.max(1, Math.min(200, args.limit || 30)));
+          const size = Math.max(1, Math.min(200, args.limit || 30));
+          if (result.results.length > size) result.truncated = true;
+          result.results = result.results.slice(0, size);
         }
       }
       result.gaps.push(...analyses.flatMap((a) => a.portGaps || []), ...analyses.flatMap((a) => (a.coverage?.gaps || []).filter((g) => g && typeof g === "object").map((g) => ({ ...g, analysisId: a.id }))));
@@ -62523,6 +62617,7 @@ var require_semantic_code = __commonJS({
         analyses = analyses.filter((m) => keys.has(m.revisionKey) || m.service === args.service);
       }
       if (args.ref) analyses = analyses.filter((m) => m.sha === args.ref || m.ref === args.ref);
+      if (args.language) analyses = analyses.filter((m) => m.language === args.language);
       if (!args.versions) {
         const aliases = path3.join(base(), "aliases");
         let names2 = [];
@@ -62545,6 +62640,7 @@ var require_semantic_code = __commonJS({
       const all = list({ ...args, versions: true }).analyses, current = new Set(list({ ...args, versions: false }).analyses.map((m) => m.id));
       const selectors = String(args.repos || args.revisionKey || args.repo || "").split(",").filter(Boolean);
       let selected = all.filter((m) => (!selectors.length || selectors.some((s) => m.repo === s || m.revisionKey === s || m.id === s || m.repo.split("/").pop() === s)) && (!args.env || !m.env || m.env === args.env));
+      selected = selected.filter((m) => !m.workspace || selectors.some((s) => s === m.revisionKey || s === m.id || s === `work/${m.workspace}`));
       if (args.service) {
         const passport = require_passport().load(args.service), keys = new Set([passport?.codeIndex, ...(passport?.libraries || []).map((l) => l.index)].filter(Boolean));
         if (keys.size) selected = selected.filter((m) => keys.has(m.revisionKey));
@@ -62688,7 +62784,7 @@ var require_semantic_code = __commonJS({
           require_workspace().index(String(idx.key).slice(5));
           idx = CI.load(idx.key);
         }
-        return { ...idx, key: idx.revisionKey || idx.key, repoName: idx.baseKey || String(idx.key).split("@")[0] };
+        return { ...idx, key: idx.revisionKey || idx.key, repoName: idx.workspace && idx.project && idx.repo ? `${idx.project}/${idx.repo}` : idx.baseKey || String(idx.key).split("@")[0] };
       });
       if (args.ref && args.service && snapshots[0]?.sha !== args.ref && snapshots[0]?.ref !== args.ref) throw P.error("Requested revision does not match the pinned service passport", "DT_SEMANTIC_REVISION_MISSING", 404);
       const dependencies = [];
@@ -62722,7 +62818,7 @@ var require_semantic_code = __commonJS({
       const sourceDigest = source.sourceDigest || P.digest(source.list.map((f) => [f.path, P.digest(fs3.readFileSync(path3.join(source.root, f.path)))]));
       const stableDependencies = [...new Map(dependencies.map(({ evidence, ...d }) => [P.digest(d), d])).entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, d]) => d);
       const identity = { repo: source.repoName, sha: source.sha, sourceDigest, sources: source.sources?.map(({ root, ...s }) => s).sort((a, b) => a.repo.localeCompare(b.repo)), language, image: info.image, version: info.version, enrichmentDigest: info.enrichmentDigest || info.scriptsDigest, dependencies: stableDependencies, protocol: P.VERSION };
-      const key = P.digest(identity), alias = P.digest([source.repoName, language]);
+      const key = P.digest(identity), alias = P.digest([source.workspace ? source.key : source.repoName, language]);
       let ticket = crypto.randomBytes(16).toString("hex"), resumed = false;
       const aliasFile = path3.join(base(), "aliases", `${alias}.json`), requestFile = path3.join(base(), "requests", `${alias}.json`);
       if (!args.reparse) {
@@ -62801,6 +62897,7 @@ var require_semantic_code = __commonJS({
           revisionKey: source.key,
           root: source.root,
           language,
+          ...source.workspace ? { workspace: source.workspace } : {},
           service: args.service || source.service || null,
           env: args.env || null,
           dependencies,
@@ -62870,9 +62967,9 @@ var require_semantic_code = __commonJS({
         const tasks = snapshots.flatMap((source) => {
           const languages = [...new Set(source.list.flatMap((f) => /\.java$/i.test(f.path) ? ["java"] : /\.(?:[cm]?js|jsx|ts|tsx)$/i.test(f.path) ? ["js"] : []))];
           if (!languages.length) log(`No supported Java/JS/TS source in ${source.repoName}`);
-          return languages.filter((language) => !composite || language !== "java").map((language) => () => buildOne(source, language, args, info, dependencies, log));
+          return languages.filter((language) => (!args.language || args.language === language) && (!composite || language !== "java")).map((language) => () => buildOne(source, language, args, info, dependencies, log));
         });
-        if (composite) tasks.push(() => buildOne(composite, "java", args, info, dependencies, log));
+        if (composite && (!args.language || args.language === "java")) tasks.push(() => buildOne(composite, "java", args, info, dependencies, log));
         if (!tasks.length) throw P.error("Selected snapshots contain no Java or JS/TS sources");
         const analyses = [];
         for (let i = 0; i < tasks.length; i += 2) analyses.push(...await Promise.all(tasks.slice(i, i + 2).map((fn) => fn())));
@@ -62943,7 +63040,8 @@ var require_semantic_code = __commonJS({
       const analyses = resolve2(args);
       if (!analyses.length) return { protocol: P.VERSION, ready: false, analyses: [], nodes: [], paths: [], gaps: [{ kind: "semantic-index-missing", message: "Run semantic_index for the selected exact source revisions" }], coverage: { complete: false }, backend: "native-search-available" };
       const operation = args.operation || "symbols";
-      if (!["slice", "paths", "assertions"].includes(operation)) return require_semantic_query().query({ ...args, operation }, analyses, { runQuery });
+      if (operation === "compare" && args.mode === "dataflow") require_semantic_compare().validate(args, analyses);
+      if (!["slice", "paths", "assertions"].includes(operation) && !(operation === "compare" && args.mode === "dataflow")) return require_semantic_query().query({ ...args, operation }, analyses, { runQuery });
       const job = J.start(`semantic:query:${P.digest([analyses.map((a) => a.id), args])}`, `semantic ${operation}`, () => require_semantic_query().query({ ...args, operation }, analyses, { runQuery }));
       return waitJob(job, args.waitMs);
     }
@@ -65099,7 +65197,7 @@ var require_code_search = __commonJS({
         }
       }
       if (spec.length) for (const w of require_workspace().list()) {
-        const source = { key: "work/" + w.id, repo: w.repo, workspace: w.id, root: require_workspace().checkId(w.id).path };
+        const meta = require_workspace().checkId(w.id), source = { key: "work/" + w.id, repo: meta.repo, workspace: w.id, root: meta.path };
         if (w.exists && matches(rawSpec, source) && !indexed2.includes(source.key) && !raw.some((s) => s.key === source.key)) raw.push(source);
       }
       return { indexed: indexed2, raw: raw.sort((a, b) => a.key.localeCompare(b.key)) };
@@ -68148,7 +68246,7 @@ var require_tools_code = __commonJS({
             const r = await require_code_search().search(a), single = r.sources.length === 1;
             const rows = r.hits.map((h) => ({ ...!single ? { repo: h.repo } : {}, file: `${h.path}:${h.line}`, text: h.text, ...h.context ? { context: h.context } : {} }));
             const t = tabular("code-search", rows, { query: `${a.pattern}${a.glob ? ` in ${a.glob}` : ""}`, ...single ? { repository: r.sources[0] } : {} }, { preview: 30 });
-            return { ...t, ...single ? { repository: r.sources[0] } : {}, files: r.files, repos: r.sources.length, scanned: r.scanned, candidates: r.candidates, truncated: r.truncated || void 0, ms: r.ms, prefilter: r.plan || r.backends.join(" + "), backends: r.backends, ...r.unindexed.length ? { unindexed: r.unindexed } : {}, ...!r.sources.length ? { note: "No matching local source or retained index; code_index, passport or workspace_open can fetch it." } : {} };
+            return { ...t, ...single ? { repository: r.sources[0] } : {}, files: r.files, repos: r.sources.length, scanned: r.scanned, candidates: r.candidates, truncated: r.truncated || void 0, ms: r.ms, prefilter: r.plan || r.backends.join(" + "), backends: r.backends, ...r.unindexed.length ? { unindexed: r.unindexed } : {}, ...!r.sources.length ? { note: "No matching local source or retained index; code_index, passport or workspace_open can fetch it." } : {}, ...!rows.length && !a.regex && /[|[\]()*+?]/.test(a.pattern) ? { hint: "This was a literal search (regex=false). If the operators are intended as a regular expression, retry with regex:true; otherwise simplify the text or check the path glob." } : {} };
           }
         },
         {
@@ -68256,10 +68354,10 @@ var require_tools_code = __commonJS({
         {
           name: "workspace_read",
           group: "code",
-          description: "Read a file of a workspace with line numbers (or list a folder).",
-          input: { workspace: str("Workspace id"), path: str("File or folder path"), from: int("First line", 1), to: int("Last line") },
+          description: "Read copyable workspace source with its line range, or list a folder. line_numbers=true adds display prefixes; never copy those prefixes into workspace_write content. Prefer exact find/replace edits for small fixes.",
+          input: { workspace: str("Workspace id"), path: str("File or folder path"), from: int("First line", 1), to: int("Last line"), line_numbers: bool("Add display line-number prefixes (plain source by default)", false) },
           required: ["workspace", "path"],
-          run: (a) => require_workspace().read(a.workspace, a.path, { from: a.from || 1, to: a.to })
+          run: (a) => require_workspace().read(a.workspace, a.path, { from: a.from || 1, to: a.to, lineNumbers: a.line_numbers === true })
         },
         {
           name: "workspace_write",
@@ -73140,7 +73238,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "ae4a63dff4dc0894a6464777d138f6d35ca12548c02a006ec8317309292f1de7";
+      if (true) return "de6f9bf3e693b20f5bd2279e39eed6e53b5e786db7b0a58bdd6ef22c955a8217";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -73292,28 +73390,108 @@ var require_tools_runtime = __commonJS({
   }
 });
 
+// lib/semantic-response.js
+var require_semantic_response = __commonJS({
+  "lib/semantic-response.js"(exports2, module2) {
+    var pick = (value, keys) => Object.fromEntries(keys.filter((k) => value?.[k] !== void 0).map((k) => [k, value[k]]));
+    function compact(value, budget = 16384) {
+      const out2 = { ...value, format: "compact", detail: 'Full evidence is retained at view. Use format:"full" or narrow limit/maxPaths for original JSON.', omitted: {} };
+      for (const key of ["gaps", "dependencies", "ambiguity"]) if (Array.isArray(out2[key])) out2[key] = out2[key].slice();
+      const shortCode = (node) => {
+        const n = pick(node, ["name", "signature", "file", "line", "label", "code", "inCondition", "repo", "sha"]);
+        if (typeof n.code === "string" && n.code.length > 400) {
+          n.code = n.code.slice(0, 400);
+          n.codeTruncated = true;
+          out2.previewTruncated = true;
+        }
+        return n;
+      };
+      const path3 = (item) => {
+        const p = pick(item, ["kind", "analysisId", "proof", "truncated", "caveats", "conditions", "gaps", "boundaries"]);
+        for (const key of ["conditions", "gaps", "boundaries"]) if (Array.isArray(p[key])) p[key] = p[key].slice();
+        if (item.nodes) p.nodes = item.nodes.map(shortCode);
+        if (item.edges) p.edges = item.edges.map((e) => pick(e, ["kind", "certainty", "nature"]));
+        if (item.segments) p.segments = item.segments.map((s) => ({ ...pick(s, ["id", "analysisId", "status", "from", "to", "ms"]), paths: (s.paths || []).map(path3) }));
+        return p;
+      };
+      if (out2.analyses) out2.analyses = out2.analyses.map((a) => pick(a, ["id", "repo", "sha", "ref", "revisionKey", "sourceDigest", "workspace", "state", "language", "sources", "coverage", "reused"]));
+      if (out2.coverage) out2.coverage = out2.coverage.map ? out2.coverage.map((c) => ({ ...pick(c, ["analysisId", "side"]), ...c.summary ? { counts: c.summary.counts, truncated: c.summary.truncated, gaps: c.summary.gaps } : { analyses: c.analyses?.map((a) => ({ analysisId: a.analysisId, truncated: a.summary?.truncated, gaps: a.summary?.gaps })) } })) : out2.coverage;
+      if (out2.results) out2.results = out2.results.map((r) => {
+        if (r.nodes || r.segments) return path3(r);
+        if (r.category === "data-flow") return { category: r.category, change: r.change, ...r.before ? { before: path3(r.before) } : {}, ...r.after ? { after: path3(r.after) } : {} };
+        if (r.parameters) return { ...pick(r, ["id", "kind", "name", "signature", "file", "line", "repo", "sha", "analysisId"]), parameters: r.parameters.filter((p) => p.index > 0).map((p) => pick(p, ["name", "index", "type"])) };
+        return r;
+      });
+      const size = () => Buffer.byteLength(JSON.stringify(out2));
+      const remove = (object, key, label, minimum = 0) => {
+        const a = object[key];
+        if (!Array.isArray(a) || a.length <= minimum) return false;
+        a.pop();
+        out2.omitted[label] = (out2.omitted[label] || 0) + 1;
+        out2.previewTruncated = true;
+        return true;
+      };
+      while (size() > budget) {
+        if (remove(out2, "results", "results", 1)) continue;
+        const shrink = (item) => {
+          for (const key2 of ["segments", "boundaries", "edges", "conditions"]) if (remove(item, key2, key2)) return true;
+          if (item.nodes?.length > 2) {
+            item.nodes.splice(item.nodes.length - 2, 1);
+            item.nodesOmitted = (item.nodesOmitted || 0) + 1;
+            out2.omitted.nodes = (out2.omitted.nodes || 0) + 1;
+            out2.previewTruncated = true;
+            return true;
+          }
+          if (item.before && shrink(item.before)) return true;
+          if (item.after && shrink(item.after)) return true;
+          return false;
+        };
+        if (out2.results?.some(shrink)) continue;
+        if (remove(out2, "coverage", "coverage") || remove(out2, "dependencies", "dependencies") || remove(out2, "ambiguity", "ambiguity") || remove(out2, "gaps", "gaps", 1) || remove(out2, "analyses", "analyses", 2)) continue;
+        if (remove(out2, "results", "results")) continue;
+        const key = Object.keys(out2).find((k) => !["protocol", "operation", "mode", "job", "state", "revisionSet", "view", "proof", "total", "truncated", "nextCursor", "format", "detail", "omitted", "previewTruncated"].includes(k) && JSON.stringify(out2[k]).length > 800);
+        if (key) {
+          out2.omitted[key] = Array.isArray(out2[key]) ? out2[key].length : 1;
+          delete out2[key];
+          out2.previewTruncated = true;
+          continue;
+        }
+        break;
+      }
+      if (!Object.keys(out2.omitted).length) delete out2.omitted;
+      return out2;
+    }
+    module2.exports = { compact };
+  }
+});
+
 // lib/tools-semantic.js
 var require_tools_semantic = __commonJS({
   "lib/tools-semantic.js"(exports2, module2) {
-    var present = (value, { view = "semantic-analysis", title = "Semantic analysis" } = {}) => {
+    var present = (value, { view = "semantic-analysis", title = "Semantic analysis", format, max_output_bytes } = {}) => {
       try {
-        return { ...value, view: require_results().saveView(view, value, { title }) };
+        const result = { ...value, view: require_results().saveView(view, value, { title }) };
+        return format === "compact" ? require_semantic_response().compact(result, max_output_bytes || 16384) : result;
       } catch (error) {
         return { ...value, visualizationError: error.message };
       }
     };
     module2.exports = ({ str, int, env }) => {
       const S = () => require_semantic_code();
-      const scope = { env, service: str("Service passport; resolves its pinned repository"), repo: str("Repository index key or PROJECT/repo"), project: str("Bitbucket project, with slug"), slug: str("Repository slug, with project"), ref: str("Exact SHA, tag or branch resolved once"), revisionKey: str("Retained revision key from semantic_index"), repos: str("Comma-separated exact repository or revision keys") };
+      const scope = { env, service: str("Service passport; resolves its pinned repository"), repo: str("Repository index key or PROJECT/repo"), project: str("Bitbucket project, with slug"), slug: str("Repository slug, with project"), ref: str("Exact SHA, tag or branch resolved once"), revisionKey: str("Retained revision key from semantic_index"), repos: str("Comma-separated exact repository or revision keys"), language: { type: "string", enum: ["java", "js"], description: "Select one frontend (js also covers TS); avoids mixing analyses of different languages" } };
       const selection = { ...scope, revisionSet: str("Exact resolved source/dependency set from semantic_index"), analysis: str("Retained analysis id"), analyses: { type: "array", maxItems: 20, items: { type: "string" }, description: "Exact retained analysis ids, including both revisions for compare" } };
-      const selector = { type: "object", properties: { id: str("Canonical symbol/port id"), analysisId: str("Retained analysis id"), repo: str("PROJECT/repo"), sha: str("Full source SHA"), signature: str("Exact method signature"), name: str("Symbol or boundary name"), file: str("Relative source file"), line: { type: "integer", minimum: 1 }, kind: str("Symbol or typed boundary kind"), env: str("Environment"), cluster: str("Kafka cluster identity"), db: str("Database identity"), schema: str("Database schema"), topic: str("Resolved Kafka topic"), route: str("HTTP path"), method: str("HTTP verb"), service: str("Exact service identity") }, additionalProperties: false };
-      const bounds = { limit: { ...int("Result page size", 30), minimum: 1, maximum: 200 }, cursor: str("Opaque cursor from the same retained result"), budgetMs: { ...int("Query time budget", 5e3), minimum: 100, maximum: 3e4 } };
+      const selector = { type: "object", properties: { id: str("Canonical symbol/port id"), analysisId: str("Retained analysis id"), repo: str("PROJECT/repo"), sha: str("Full source SHA"), signature: str("Exact method signature"), name: str("Symbol or boundary name"), file: str("Relative source file"), line: { type: "integer", minimum: 1 }, parameter: { oneOf: [{ type: "string", minLength: 1 }, { type: "integer", minimum: 1, maximum: 100 }], description: "Exact method parameter name or one-based index for value flow" }, argument: { type: "integer", minimum: 1, maximum: 64, description: "Exact one-based sink call argument for value flow" }, kind: str("Symbol or typed boundary kind"), env: str("Environment"), cluster: str("Kafka cluster identity"), db: str("Database identity"), schema: str("Database schema"), topic: str("Resolved Kafka topic"), route: str("HTTP path"), method: str("HTTP verb"), service: str("Exact service identity") }, additionalProperties: false };
+      const response = { format: { type: "string", enum: ["compact", "full"], default: "compact", description: "Bounded model preview or original JSON; inline view always retains full evidence" }, max_output_bytes: { type: "integer", minimum: 4096, maximum: 65536, default: 16384, description: "Compact JSON byte budget; preview omissions are explicit" } };
+      const bounds = { limit: { ...int("Result page size", 30), minimum: 1, maximum: 200 }, cursor: str("Opaque cursor from the same retained result"), budgetMs: { ...int("Query time budget", 5e3), minimum: 100, maximum: 3e4 }, ...response };
       return [
         { name: "semantic_capabilities", description: "Read semantic engine readiness, versions, supported operations and resource limits. Missing semantic coverage never changes native code search.", input: {}, run: () => present(S().capabilities(), { title: "Semantic capabilities" }) },
         { name: "semantic_index", description: "Index an exact repository/service revision as an owned job; use job to inspect it. No target lists retained analyses. Reparse preserves the last good generation. Cancel through job_cancel.", input: { ...scope, versions: { type: "boolean", default: false }, composite: { type: "boolean", default: false, description: "Parse the exact service Java dependency closure together" }, reparse: { type: "boolean", default: false }, job: str("Existing semantic job id; observes the same job"), waitMs: { ...int("Observation wait, max 30000 ms", 0), minimum: 0, maximum: 3e4 } }, run: async (a) => present(await S().index(a.slug && !a.repo ? { ...a, repo: a.slug } : a), { title: "Semantic index" }) },
         { name: "semantic_search", description: "Search retained symbols or typed ports, with source locations and exact revisions. Missing analysis reports a build suggestion; it never starts an implicit parse.", input: { ...selection, query: str("Symbol, signature, file or port words"), kind: str("Optional symbol or typed port kind"), ports: { type: "boolean", default: false, description: "Search typed boundary ports instead of symbols" }, ...bounds }, run: async (a) => present(await S().query({ ...a, operation: a.ports ? "ports" : "symbols" }), { title: "Semantic search" }) },
         { name: "semantic_query", description: "Query exact retained analyses: callers, callees, slices, bounded paths, guards or revision comparisons. Choose reachability/controlflow/dataflow explicitly. Read proof status, gaps and coverage; a call chain does not prove value flow.", input: { ...selection, job: str("Existing semantic query job id; observe without repeating it"), waitMs: { ...int("Observation wait", 0), minimum: 0, maximum: 3e4 }, operation: { type: "string", enum: ["symbols", "ports", "callers", "callees", "neighborhood", "neighbors", "paths", "slice", "assertions", "compare"] }, from: selector, to: selector, target: selector, mode: { type: "string", enum: ["reachability", "controlflow", "dataflow"], default: "reachability" }, query: str("Symbol/port query where supported"), kind: str("Optional result kind"), ...bounds, maxHops: { ...int("Bounded traversal depth", 8), minimum: 1, maximum: 30 }, maxPaths: { ...int("Maximum returned paths", 8), minimum: 1, maximum: 20 }, includeBypasses: { type: "boolean", default: false, description: "Include supported bypass/counterexample evidence" } }, required: ["operation"], run: async (a) => present(await S().query(a), { title: "Semantic " + a.operation }) }
-      ].map((tool) => ({ ...tool, group: "semantic", origin: "built-in", strictInput: true }));
+      ].map((tool) => ({ ...tool, description: tool.description + (tool.name === "semantic_query" ? " compare+dataflow: analyses=[before,after] of one repo and revision-neutral from/to (parameter/argument supported); runs each CPG independently." : ""), input: { ...response, ...tool.input }, run: async (a) => {
+        const result = await tool.run(a);
+        return a.format === "full" ? result : require_semantic_response().compact(result, a.max_output_bytes || 16384);
+      }, group: "semantic", origin: "built-in", strictInput: true }));
     };
     module2.exports.present = present;
   }
@@ -73940,6 +74118,18 @@ var require_workflow_guides = __commonJS({
     module2.exports = {
       version: 1,
       guides: [
+        {
+          id: "branch-dataflow-review",
+          title: "Review a feature across branch data flows",
+          terms: "joern compare branch branches feature regression entrypoint parameter argument value flow dataflow changed service commit",
+          required: ["repository and before/after refs", "entry value and observable exits"],
+          stages: [
+            { id: "pin", goal: "Retain both source commits and select one frontend; list versions to obtain exact analysis IDs", tools: ["code_index", "semantic_index"] },
+            { id: "compare", goal: "Use semantic_query compare with mode=dataflow, analyses=[before,after], revision-neutral method parameter and sink argument selectors; inspect changed expressions and caveats", tools: ["semantic_search", "semantic_query", "code_read"] },
+            { id: "prove", goal: "Run a sensitive failing entry-to-exit regression, implement in a private workspace, rerun the regression, and compare the separately retained edited snapshot; a passing smoke test cannot establish the fix", tools: ["workspace_open", "workspace_write", "test_run", "semantic_index", "workspace_patch"] }
+          ],
+          boundaries: ["Static paths can conservatively couple predicate operands; membership does not prove equal values or runtime behavior.", "Missing bounded paths, failed/truncated sides and unchanged projections are not proofs of safety or equivalence."]
+        },
         {
           id: "column-lineage",
           title: "Locate column reads and writes",

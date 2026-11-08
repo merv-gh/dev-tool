@@ -12,6 +12,8 @@ Start with `semantic_capabilities` to read configuration, engine identity and na
 
 Select an exact `analysis`, `analyses` list or `revisionSet` for reproducible queries and comparisons. Continue cursors against the same retained selection. Reachability, control-flow and data-flow queries have distinct meanings: a call chain does not establish that a value reaches its sink. Conditions retain their recorded status, origin, branch evidence and source. Missing dispatch, field mappings, environment identities and feasibility stay visible as gaps.
 
+For branch work, use `semantic_query` with `operation:"compare"`, `mode:"dataflow"`, `analyses:[beforeId,afterId]` and revision-neutral `from`/`to` selectors. Select a method `parameter` and a sink call `argument` to avoid mixing tenant and amount flows. Each CPG is queried independently. Compare the selected expressions, then verify behavior with entry-to-exit tests: predicate operands can create conservative paths without equal values. [Complete workflow and reproducible model exercise](joern-branch-comparison.md).
+
 Open **Admin → Semantic & ports** to select a source, choose a named tool, inspect its exact typed schema, edit arguments and run it. Retained analyses can populate the query selection. Paths provide source hierarchy navigation and collapsible guard/evidence details. Open WebUI receives the same native saved-view embeds. Successful transient index jobs stay collapsed; query paths and failures expose the relevant detail.
 
 ## Passport boundary adjustments

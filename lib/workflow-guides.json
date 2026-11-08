@@ -2,6 +2,14 @@
   "version": 1,
   "guides": [
     {
+      "id": "branch-dataflow-review", "title": "Review a feature across branch data flows", "terms": "joern compare branch branches feature regression entrypoint parameter argument value flow dataflow changed service commit", "required": ["repository and before/after refs", "entry value and observable exits"],
+      "stages": [
+        { "id": "pin", "goal": "Retain both source commits and select one frontend; list versions to obtain exact analysis IDs", "tools": ["code_index", "semantic_index"] },
+        { "id": "compare", "goal": "Use semantic_query compare with mode=dataflow, analyses=[before,after], revision-neutral method parameter and sink argument selectors; inspect changed expressions and caveats", "tools": ["semantic_search", "semantic_query", "code_read"] },
+        { "id": "prove", "goal": "Run a sensitive failing entry-to-exit regression, implement in a private workspace, rerun the regression, and compare the separately retained edited snapshot; a passing smoke test cannot establish the fix", "tools": ["workspace_open", "workspace_write", "test_run", "semantic_index", "workspace_patch"] }
+      ], "boundaries": ["Static paths can conservatively couple predicate operands; membership does not prove equal values or runtime behavior.", "Missing bounded paths, failed/truncated sides and unchanged projections are not proofs of safety or equivalence."]
+    },
+    {
       "id": "column-lineage", "title": "Locate column reads and writes", "terms": "column field read write written reads writes functions repositories lineage usage impact", "required": ["environment", "database", "schema.table.column"],
       "stages": [
         { "id": "resolve", "goal": "Resolve the exact cached database/table/column; keep ambiguity explicit", "tools": ["find", "pg_table"] },

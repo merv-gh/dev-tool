@@ -35,6 +35,33 @@ test('missing pinned revisions never grep latest checkout and conflicting select
  await assert.rejects(T.call('code_search',{repo:'orders',repos:'billing',pattern:'x'}),/repo for one/);
  await assert.rejects(T.call('code_search',{repo:'_STORIES/other/work/private',pattern:'x'}),/Invalid code index/);
 });
+test('an exact repository stays searchable when an unindexed workspace of that repository exists',async()=>{
+ const id='same-repo-working-copy',root=path.join(home,'work',id),meta=path.join(home,'cache/work',id+'.json');
+ put('work/'+id+'/App.java','void unrelatedDraft() {}');
+ put(path.relative(home,meta),JSON.stringify({id,path:root,repo:'orders',project:'SHOP',createdAt:new Date().toISOString()}));
+ try{
+  const result=await T.call('code_search',{repo:'SHOP/orders',pattern:'orders.created'});
+  assert.equal(result.total,1);assert.equal(result.repository,'SHOP/orders');
+  assert.equal((await T.call('code_search',{repo:'work/'+id,pattern:'unrelatedDraft'})).total,1);
+  assert.throws(()=>require('../lib/workspace').read(id,'src/test/resources/missing.json'),e=>e.code==='DT_WORKSPACE_FILE_MISSING'&&/path="\."/.test(e.message)&&/App.java/.test(e.message)&&!/\.git/.test(e.message));
+  assert.throws(()=>require('../lib/workspace').read(id,'../../escape'),/outside the workspace/);
+ }finally{fs.rmSync(meta,{force:true});fs.rmSync(root,{recursive:true,force:true});}
+});
+test('regex-looking empty literal searches explain the flag without silently changing search semantics',async()=>{
+ const literal=await T.call('code_search',{repo:'SHOP/orders',pattern:'publish|sendOrder'});assert.equal(literal.total,0);assert.match(literal.hint,/regex:true/);
+ const regex=await T.call('code_search',{repo:'SHOP/orders',pattern:'publish|sendOrder',regex:true});assert.ok(regex.total>0);assert.equal(regex.hint,undefined);
+});
+test('workspace tool source is copyable; numbered Java read output cannot overwrite source accidentally',async()=>{
+ const id='plain-java-read',root=path.join(home,'work',id),meta=path.join(home,'cache/work',id+'.json'),source='package example;\npublic class App {\n  int amount;\n}\n';
+ put('work/'+id+'/App.java',source);put(path.relative(home,meta),JSON.stringify({id,path:root,repo:'java',project:'SHOP',createdAt:new Date().toISOString()}));
+ try{
+  const plain=await T.call('workspace_read',{workspace:id,path:'App.java'});assert.equal(plain.text,source);assert.equal(plain.line_numbers,false);
+  const numbered=await T.call('workspace_read',{workspace:id,path:'App.java',line_numbers:true});assert.match(numbered.text,/1  package example;/);
+  await assert.rejects(T.call('workspace_write',{workspace:id,path:'App.java',content:numbered.text,check:false}),e=>e.code==='DT_WORKSPACE_NUMBERED_CONTENT');
+  assert.equal(fs.readFileSync(path.join(root,'App.java'),'utf8'),source);
+  await T.call('workspace_write',{workspace:id,path:'App.java',edits:[{find:'int amount;',replace:'long amount;'}],check:false});assert.match(fs.readFileSync(path.join(root,'App.java'),'utf8'),/long amount;/);
+ }finally{fs.rmSync(meta,{force:true});fs.rmSync(root,{recursive:true,force:true});}
+});
 
 
 test('cancelling a cold grep stops its owned ripgrep process',async()=>{

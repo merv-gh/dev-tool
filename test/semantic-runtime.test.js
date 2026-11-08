@@ -109,3 +109,20 @@ test('an approximate passport version overrides older index metadata that claime
   const file=path.join(home,'passports','approx','passport.json');fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,JSON.stringify(passport));
   const resolved=await S.inputs({service:'approx'});assert.ok(resolved.dependencies.length);assert.ok(resolved.dependencies.every(d=>d.exact===false&&d.evidence==='approximate'));
 });
+test('dirty workspace snapshots keep their logical repository but cannot replace the committed default',async()=>{
+ const CI=require('../lib/codeindex'),S=require('../lib/semantic-code'),W=require('../lib/workspace'),id='branch-draft',root=path.join(home,'work',id),sha='7'.repeat(40);
+ fs.mkdirSync(root,{recursive:true});fs.writeFileSync(path.join(root,'Orders.java'),'class Orders {}');
+ const committed=CI.build(root,'P/branch-source',{project:'P',repo:'branch-source',sha});
+ const main=await S.index({revisionKey:committed.revisionKey,waitMs:30000});assert.equal(main.ready,true);
+ require('../lib/util').writeJson(path.join(home,'cache/work',id+'.json'),{id,path:root,project:'P',repo:'branch-source',sha,owner:A.owner(),createdAt:new Date().toISOString(),dirty:true});
+ W.write(id,'Orders.java',{content:'class Orders { int draft; }'});
+ W.index(id);
+ const one=await S.index({repo:'work/'+id,waitMs:30000});assert.equal(one.analyses[0].repo,'P/branch-source');assert.equal(one.analyses[0].workspace,id);
+ const first=await S.query({analysis:one.analyses[0].id});
+ W.write(id,'Orders.java',{content:'class Orders { int revisedDraft; }'});
+ const two=await S.index({repo:'work/'+id,waitMs:30000}),second=await S.query({analysis:two.analyses[0].id});
+ assert.notEqual(two.analyses[0].id,one.analyses[0].id);assert.notEqual(first.results[0].id,second.results[0].id);
+ assert.equal(S.resolve({repo:'P/branch-source'})[0].id,main.analyses[0].id);
+ assert.equal((await S.query({analysis:one.analyses[0].id})).results[0].id,first.results[0].id);
+ assert.equal((await S.index({repo:'P/branch-source',language:'java',versions:true})).analyses.every(a=>a.language==='java'),true);
+});

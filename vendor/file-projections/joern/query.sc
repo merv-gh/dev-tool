@@ -23,12 +23,13 @@ import io.joern.dataflowengineoss.layers.dataflows.OssDataFlow
   def emit(value: ujson.Obj): Unit = { writer.write(ujson.write(value)); writer.newLine(); emitted += 1 }
   def ids(key: String): Set[Long] = input.obj.get(key).map(_.arr.take(100).map(_.str.toLong).toSet).getOrElse(Set.empty)
   val fromIds = ids("fromNodeIds"); val toIds = ids("toNodeIds")
+  val conditionNodes = graph.controlStructure.take(10000).flatMap(_.condition.ast.take(1000).id).take(50000).toSet
   def location(n: io.shiftleft.codepropertygraph.generated.nodes.StoredNode): ujson.Obj = {
     val line = n match { case x: io.shiftleft.codepropertygraph.generated.nodes.CfgNode => x.lineNumber.getOrElse(0); case _ => 0 }
     val filename = n match { case method: io.shiftleft.codepropertygraph.generated.nodes.Method => method.filename; case cfg: io.shiftleft.codepropertygraph.generated.nodes.CfgNode => cfg.method.filename; case _ => "" }
     val clean = filename.replace('\\','/')
     val file = if(root.nonEmpty && clean.startsWith(root.stripSuffix("/")+"/")) clean.substring(root.stripSuffix("/").length+1) else if(!clean.startsWith("/")) clean else "<external>"
-    ujson.Obj("file"->file,"nodeId"->n.id.toString,"label"->n.label,"code"->n.propertyOption[String]("CODE").getOrElse("").take(2000),"line"->line)
+    ujson.Obj("file"->file,"nodeId"->n.id.toString,"label"->n.label,"code"->n.propertyOption[String]("CODE").getOrElse("").take(2000),"line"->line,"inCondition"->conditionNodes.contains(n.id))
   }
   try {
     if (mode == "dataflow") {
@@ -38,7 +39,7 @@ import io.joern.dataflowengineoss.layers.dataflows.OssDataFlow
       val paths = sink.iterator.reachableByFlows(source.iterator)
       while (paths.hasNext && emitted < maxPaths && System.currentTimeMillis() < deadline) {
         val p = paths.next(); val nodes = p.elements.take(maxHops + 1).toSeq
-        emit(ujson.Obj("type"->"path","kind"->"data-flow","nodes"->ujson.Arr.from(nodes.take(maxHops).map(location)),"truncated"->(nodes.size>maxHops),"proof"->ujson.Obj("status"->"static-dataflow","feasibility"->"unknown","scope"->"single-cpg")))
+        emit(ujson.Obj("type"->"path","kind"->"data-flow","nodes"->ujson.Arr.from(nodes.take(maxHops).map(location)),"truncated"->(nodes.size>maxHops),"caveats"->ujson.Arr.from(if(nodes.exists(n=>conditionNodes.contains(n.id)))Seq("Path includes predicate operands; conservative coupling can connect values that are not assigned to each other. Inspect expressions and test numeric/field equality.")else Seq.empty[String]),"proof"->ujson.Obj("status"->"static-dataflow","feasibility"->"unknown","scope"->"single-cpg")))
       }
       truncated = emitted >= maxPaths || System.currentTimeMillis() >= deadline
     } else if (mode == "controlflow") {

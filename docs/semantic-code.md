@@ -16,6 +16,8 @@ Default worker reservations are 12 GiB per parse, 6 GiB per query and 24 GiB tot
 
 ## Tools and revisions
 
+For before/after feature work, see [branch data-flow comparison and verification](joern-branch-comparison.md). Comparisons can select a method parameter and a particular sink argument. Model JSON is compact by default; full evidence stays in the inline view.
+
 - `semantic_capabilities`: configured engine, supported operations and last observed worker limits.
 - `semantic_index`: build from an existing `revisionKey`, repository index or pinned service passport. A service includes its pinned libraries. `composite:true` parses their Java sources together and preserves each source's repository, SHA and location. Without a target, list analyses; `versions:true` includes retained generations. `reparse:true` creates a new generation.
 - `semantic_search`: symbols or ports, with exact analysis/revision-set selectors and paginated compact results.

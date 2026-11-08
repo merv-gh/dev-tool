@@ -1,0 +1,605 @@
+{
+  "protocol": "dt.joern-branch-evaluation/v1",
+  "observedAt": "2026-11-08T08:16:44.991Z",
+  "sourceDigest": "de6f9bf3e693b20f5bd2279e39eed6e53b5e786db7b0a58bdd6ef22c955a8217",
+  "verificationPending": false,
+  "scope": "Disposable synthetic Git service, real Joern Java frontend and real remote model through SSH loopback forwarding. No business environment read or write.",
+  "engine": {
+    "version": "4.0.564",
+    "image": "ghcr.io/joernio/joern@sha256:54c7f728f813c1cefd4303e7c69c5d35003f0fc9fde1459872230e5bc4e4b7b4"
+  },
+  "model": {
+    "name": "qwen3.5:4b",
+    "model": "qwen3.5:4b",
+    "modified_at": "2026-10-29T19:58:04.029778554Z",
+    "size": 3324173934,
+    "digest": "d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04",
+    "details": {
+      "parent_model": "model.gguf",
+      "format": "gguf",
+      "family": "qwen35",
+      "families": [
+        "qwen35"
+      ],
+      "parameter_size": "4.2B",
+      "quantization_level": "Q4_K_M",
+      "context_length": 262144,
+      "embedding_length": 2560,
+      "runner": "llamacpp"
+    },
+    "capabilities": [
+      "completion",
+      "vision",
+      "tools",
+      "thinking"
+    ]
+  },
+  "fixture": {
+    "repo": "DEMO/payments",
+    "baseline": "dd780d8ae42ed2305267f77b2f9d211eb038d7bc",
+    "feature": "23999f81229633930d54d4a51d3e1a90e8a96e97"
+  },
+  "verification": {
+    "realJoern": {
+      "bugConfirmed": true,
+      "fixFlowConfirmed": true,
+      "originalPreserved": true,
+      "workspaceRefresh": true,
+      "compactFullEvidence": true
+    },
+    "browser": {
+      "passed": 10,
+      "pageErrors": 0,
+      "desktopAndMobile": true,
+      "nativeOpenWebUIEmbedTransport": true,
+      "fullView": true
+    }
+  },
+  "responseExample": {
+    "fullBytes": 13335,
+    "compactBytes": 3796,
+    "budget": 4096,
+    "omitted": {
+      "nodes": 6,
+      "coverage": 2,
+      "gaps": 7,
+      "results": 1
+    },
+    "fullEvidenceRetained": true
+  },
+  "runs": [
+    {
+      "id": "baseline",
+      "task": "bug",
+      "profile": "direct",
+      "format": "default",
+      "verification": "smoke",
+      "finish": "turn-budget",
+      "passed": false,
+      "independentBehavior": false,
+      "independentCases": null,
+      "modelDiscoveredComparison": false,
+      "turns": 22,
+      "modelToolCalls": 22,
+      "prefetchedToolCalls": 0,
+      "responseBytes": 3989,
+      "semanticResponseBytes": 0,
+      "peakRequestBytes": 30969,
+      "usage": {
+        "promptTokens": 149550,
+        "completionTokens": 1513
+      },
+      "sourceSha256": "5b93ee3ef264ce260a742fc9423a150e619dc847cb73034b9cc9f80ac073ad06",
+      "sourceChangedDuringRun": null,
+      "publicRuns": [],
+      "interpretation": "Exploratory feedback; intermediate code and guidance changed. Not a controlled before/after quality score."
+    },
+    {
+      "id": "compact-bug",
+      "task": "bug",
+      "profile": "direct",
+      "format": "compact",
+      "verification": "smoke",
+      "finish": "turn-budget",
+      "passed": false,
+      "independentBehavior": false,
+      "independentCases": null,
+      "workflow": {
+        "semanticDiscovered": false,
+        "branchFlowCompared": true,
+        "publicTestsRun": false,
+        "wroteFix": false
+      },
+      "modelDiscoveredComparison": false,
+      "turns": 22,
+      "modelToolCalls": 22,
+      "prefetchedToolCalls": 0,
+      "responseBytes": 11463,
+      "semanticResponseBytes": 6261,
+      "peakRequestBytes": 40855,
+      "usage": {
+        "promptTokens": 224074,
+        "completionTokens": 2035
+      },
+      "sourceSha256": "11d00b158b806873b47fbb343572ee73cf5b3e30644dd2330b149b628c0ce7c8",
+      "sourceChangedDuringRun": null,
+      "publicRuns": [],
+      "interpretation": "Exploratory feedback; intermediate code and guidance changed. Not a controlled before/after quality score."
+    },
+    {
+      "id": "compact-bug-v2",
+      "task": "bug",
+      "profile": "direct",
+      "format": "compact",
+      "verification": "smoke",
+      "finish": "turn-budget",
+      "passed": false,
+      "independentBehavior": false,
+      "independentCases": null,
+      "workflow": {
+        "semanticDiscovered": true,
+        "branchFlowCompared": false,
+        "comparedBeforeWriting": false,
+        "publicTestsRun": true,
+        "wroteFix": false
+      },
+      "modelDiscoveredComparison": false,
+      "turns": 22,
+      "modelToolCalls": 22,
+      "prefetchedToolCalls": 0,
+      "responseBytes": 17842,
+      "semanticResponseBytes": 2921,
+      "peakRequestBytes": 51998,
+      "usage": {
+        "promptTokens": 280374,
+        "completionTokens": 4570
+      },
+      "sourceSha256": "d8397caf6199a82fdbeccc475192ad2c6a3c7dc71dc5b41c53bc1d8d0cc77e96",
+      "sourceChangedDuringRun": null,
+      "publicRuns": [
+        {
+          "by": "model",
+          "tests": [
+            "test/payment.test.cjs"
+          ],
+          "outcome": "passed",
+          "counts": {
+            "tests": 1,
+            "passed": 1,
+            "failed": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ],
+      "interpretation": "Exploratory feedback; intermediate code and guidance changed. Not a controlled before/after quality score."
+    },
+    {
+      "id": "evidence-compact",
+      "task": "bug",
+      "profile": "evidence",
+      "format": "compact",
+      "verification": "smoke",
+      "finish": "assistant-finished",
+      "passed": true,
+      "independentBehavior": true,
+      "independentCases": 13,
+      "workflow": {
+        "semanticDiscovered": true,
+        "branchFlowCompared": true,
+        "comparedBeforeWriting": true,
+        "publicTestsRun": true,
+        "wroteFix": true
+      },
+      "modelDiscoveredComparison": false,
+      "turns": 5,
+      "modelToolCalls": 4,
+      "prefetchedToolCalls": 2,
+      "responseBytes": 20116,
+      "semanticResponseBytes": 16294,
+      "peakRequestBytes": 39608,
+      "usage": {
+        "promptTokens": 62390,
+        "completionTokens": 783
+      },
+      "sourceSha256": "5d3b2714d9b3e4d0e36cdd00b2a8310956d1909615b69e4d124763190d875d93",
+      "sourceChangedDuringRun": null,
+      "publicRuns": [
+        {
+          "by": "model",
+          "tests": [
+            "test/payment.test.cjs"
+          ],
+          "outcome": "passed",
+          "counts": {
+            "tests": 1,
+            "passed": 1,
+            "failed": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ],
+      "interpretation": "Exploratory feedback; intermediate code and guidance changed. Not a controlled before/after quality score."
+    },
+    {
+      "id": "evidence-full",
+      "task": "bug",
+      "profile": "evidence",
+      "format": "full",
+      "verification": "smoke",
+      "finish": "turn-budget",
+      "passed": true,
+      "independentBehavior": true,
+      "independentCases": 13,
+      "workflow": {
+        "semanticDiscovered": true,
+        "branchFlowCompared": true,
+        "comparedBeforeWriting": true,
+        "publicTestsRun": true,
+        "wroteFix": true
+      },
+      "modelDiscoveredComparison": false,
+      "turns": 12,
+      "modelToolCalls": 12,
+      "prefetchedToolCalls": 2,
+      "responseBytes": 32836,
+      "semanticResponseBytes": 25158,
+      "peakRequestBytes": 55399,
+      "usage": {
+        "promptTokens": 232496,
+        "completionTokens": 1497
+      },
+      "sourceSha256": "b0d7a0c542fd312de06994674db1f8a854f01e1efbcb2ae27a5620f86ad9c820",
+      "sourceChangedDuringRun": true,
+      "publicRuns": [
+        {
+          "by": "model",
+          "tests": [
+            "test/payment.test.cjs"
+          ],
+          "outcome": "failed",
+          "counts": {
+            "tests": 1,
+            "passed": 0,
+            "failed": 1,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "by": "model",
+          "tests": [
+            "test/payment.test.cjs"
+          ],
+          "outcome": "passed",
+          "counts": {
+            "tests": 1,
+            "passed": 1,
+            "failed": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ],
+      "interpretation": "Exploratory feedback; intermediate code and guidance changed. Not a controlled before/after quality score."
+    },
+    {
+      "id": "final-bug-compact",
+      "task": "bug",
+      "profile": "evidence",
+      "format": "compact",
+      "verification": "smoke",
+      "finish": "turn-budget",
+      "passed": true,
+      "independentBehavior": true,
+      "independentCases": 13,
+      "workflow": {
+        "semanticDiscovered": true,
+        "branchFlowCompared": true,
+        "comparedBeforeWriting": true,
+        "publicTestsRun": true,
+        "wroteFix": true
+      },
+      "modelDiscoveredComparison": false,
+      "turns": 12,
+      "modelToolCalls": 12,
+      "prefetchedToolCalls": 2,
+      "responseBytes": 26465,
+      "semanticResponseBytes": 18016,
+      "peakRequestBytes": 49784,
+      "usage": {
+        "promptTokens": 166042,
+        "completionTokens": 1731
+      },
+      "sourceSha256": "51dbe48ccb5bbe5b1af3930970654ca9f2627c71cdccf6d2a9e925321e557c7f",
+      "sourceChangedDuringRun": false,
+      "publicRuns": [
+        {
+          "by": "model",
+          "tests": [
+            "test/payment.test.cjs"
+          ],
+          "outcome": "failed",
+          "counts": {
+            "tests": 1,
+            "passed": 0,
+            "failed": 1,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "by": "model",
+          "tests": [
+            "test/payment.test.cjs"
+          ],
+          "outcome": "passed",
+          "counts": {
+            "tests": 1,
+            "passed": 1,
+            "failed": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ],
+      "explanationReview": "Patch behavior is independently graded. Model prose is not automatically verified."
+    },
+    {
+      "id": "final-feature-compact",
+      "task": "feature",
+      "profile": "evidence",
+      "format": "compact",
+      "verification": "smoke",
+      "finish": "turn-budget",
+      "passed": false,
+      "independentBehavior": false,
+      "independentCases": null,
+      "workflow": {
+        "semanticDiscovered": true,
+        "branchFlowCompared": true,
+        "comparedBeforeWriting": true,
+        "publicTestsRun": false,
+        "wroteFix": true
+      },
+      "modelDiscoveredComparison": false,
+      "turns": 12,
+      "modelToolCalls": 12,
+      "prefetchedToolCalls": 2,
+      "responseBytes": 25373,
+      "semanticResponseBytes": 18016,
+      "peakRequestBytes": 46286,
+      "usage": {
+        "promptTokens": 163131,
+        "completionTokens": 1379
+      },
+      "sourceSha256": "51dbe48ccb5bbe5b1af3930970654ca9f2627c71cdccf6d2a9e925321e557c7f",
+      "sourceChangedDuringRun": true,
+      "publicRuns": [
+        {
+          "by": "model",
+          "tests": [
+            "test/payment.test.cjs"
+          ],
+          "outcome": "failed",
+          "counts": {
+            "tests": 1,
+            "passed": 0,
+            "failed": 1,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ],
+      "explanationReview": "Patch behavior is independently graded. Model prose is not automatically verified."
+    },
+    {
+      "id": "final-bug-full",
+      "task": "bug",
+      "profile": "evidence",
+      "format": "full",
+      "verification": "smoke",
+      "finish": "assistant-finished",
+      "passed": true,
+      "independentBehavior": true,
+      "independentCases": 13,
+      "workflow": {
+        "semanticDiscovered": true,
+        "branchFlowCompared": true,
+        "comparedBeforeWriting": true,
+        "publicTestsRun": true,
+        "wroteFix": true
+      },
+      "modelDiscoveredComparison": false,
+      "turns": 10,
+      "modelToolCalls": 9,
+      "prefetchedToolCalls": 2,
+      "responseBytes": 34348,
+      "semanticResponseBytes": 26880,
+      "peakRequestBytes": 57517,
+      "usage": {
+        "promptTokens": 198316,
+        "completionTokens": 1315
+      },
+      "sourceSha256": "40ba84a817857e27a16a59c935abe3c6b7185f3c7a08896c7b8811197f805e75",
+      "sourceChangedDuringRun": false,
+      "publicRuns": [
+        {
+          "by": "model",
+          "tests": [
+            "test/payment.test.cjs"
+          ],
+          "outcome": "passed",
+          "counts": {
+            "tests": 1,
+            "passed": 1,
+            "failed": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "by": "model",
+          "tests": [
+            "test/payment.test.cjs"
+          ],
+          "outcome": "passed",
+          "counts": {
+            "tests": 1,
+            "passed": 1,
+            "failed": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ],
+      "explanationReview": "Patch behavior is independently graded. Model prose is not automatically verified."
+    },
+    {
+      "id": "verified-feature-compact",
+      "task": "feature",
+      "profile": "evidence",
+      "format": "compact",
+      "verification": "smoke",
+      "finish": "assistant-finished",
+      "passed": false,
+      "independentBehavior": false,
+      "independentCases": null,
+      "workflow": {
+        "semanticDiscovered": true,
+        "branchFlowCompared": true,
+        "comparedBeforeWriting": true,
+        "publicTestsRun": true,
+        "wroteFix": true
+      },
+      "modelDiscoveredComparison": false,
+      "turns": 6,
+      "modelToolCalls": 5,
+      "prefetchedToolCalls": 2,
+      "responseBytes": 22095,
+      "semanticResponseBytes": 18016,
+      "peakRequestBytes": 42304,
+      "usage": {
+        "promptTokens": 77843,
+        "completionTokens": 967
+      },
+      "sourceSha256": "40ba84a817857e27a16a59c935abe3c6b7185f3c7a08896c7b8811197f805e75",
+      "sourceChangedDuringRun": false,
+      "publicRuns": [
+        {
+          "by": "model",
+          "tests": [
+            "test/payment.test.cjs"
+          ],
+          "outcome": "passed",
+          "counts": {
+            "tests": 1,
+            "passed": 1,
+            "failed": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ],
+      "interpretation": "Exploratory feedback; intermediate code and guidance changed. Not a controlled before/after quality score."
+    },
+    {
+      "id": "regression-feature-compact",
+      "task": "feature",
+      "profile": "evidence",
+      "format": "compact",
+      "verification": "regression",
+      "finish": "assistant-finished",
+      "passed": true,
+      "independentBehavior": true,
+      "independentCases": 13,
+      "workflow": {
+        "semanticDiscovered": true,
+        "branchFlowCompared": true,
+        "comparedBeforeWriting": true,
+        "publicTestsRun": true,
+        "wroteFix": true,
+        "publicRegressionPassed": true
+      },
+      "modelDiscoveredComparison": false,
+      "turns": 12,
+      "modelToolCalls": 11,
+      "prefetchedToolCalls": 3,
+      "responseBytes": 30243,
+      "semanticResponseBytes": 18350,
+      "peakRequestBytes": 54766,
+      "usage": {
+        "promptTokens": 182547,
+        "completionTokens": 1892
+      },
+      "sourceSha256": "2cb2de223764ecdb8b91e5c08b0a4ba28a70894a05e40f0d38269aeb478680a0",
+      "sourceChangedDuringRun": false,
+      "publicRuns": [
+        {
+          "by": "harness",
+          "tests": [
+            "test/payment.test.cjs",
+            "test/rebate.test.cjs"
+          ],
+          "outcome": "failed",
+          "counts": {
+            "tests": 2,
+            "passed": 1,
+            "failed": 1,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "by": "model",
+          "tests": [
+            "test/payment.test.cjs",
+            "test/rebate.test.cjs"
+          ],
+          "outcome": "failed",
+          "counts": {
+            "tests": 2,
+            "passed": 1,
+            "failed": 1,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "by": "model",
+          "tests": [
+            "test/payment.test.cjs",
+            "test/rebate.test.cjs"
+          ],
+          "outcome": "passed",
+          "counts": {
+            "tests": 2,
+            "passed": 2,
+            "failed": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ],
+      "interpretation": "Exploratory feedback; intermediate code and guidance changed. Not a controlled before/after quality score."
+    }
+  ],
+  "limits": [
+    "A few synthetic cases do not establish model or production reliability.",
+    "The evidence profile prefetches real analysis results; this is not model-discovered comparison.",
+    "The public smoke test passes the deliberate bug; independent Java checks, not a smoke pass or model prose, establish fixture behavior.",
+    "Static Joern paths can couple predicate operands without equal values; absence, unchanged paths and static membership do not prove safety.",
+    "Model identity and quantization are provider-reported. No independent weight verification.",
+    "In-process ledger/event adapters are not PostgreSQL/Kafka integrations.",
+    "Exploratory trials changed code/guidance and must not be used as a controlled quality score.",
+    "No production Open WebUI instance was driven; the browser checks exercise its native OpenAPI/embed response contract."
+  ],
+  "findings": [
+    "The broad-tool 4B trials repeated unproductive queries and failed their task budgets.",
+    "Guided bug repair produced a correct patch; model prose still overstated smoke-test evidence.",
+    "A smoke-only feature trial claimed the ledger was updated but left it using gross; the hidden grader rejected it.",
+    "The guided public-regression feature trial first missed the ledger, received API/ledger/event mismatch feedback, then passed both public tests and all 13 hidden cases.",
+    "Feedback drove exact-repository search isolation, actionable complete missing-file paths, copyable source reads, a numbered-Java write guard, explicit sink values, compact previews and independent behavioral verification."
+  ]
+}
