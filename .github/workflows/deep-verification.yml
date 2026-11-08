@@ -20,7 +20,7 @@ jobs:
       CONTEXT_TEST_RESULT_BYTES: '4096'
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 24
           cache: npm
@@ -47,7 +47,7 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 24
           cache: npm
@@ -64,7 +64,7 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 24
           cache: npm
@@ -102,7 +102,7 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 24
       - run: npm ci --ignore-scripts
