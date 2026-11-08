@@ -22,6 +22,19 @@ test('missing rg uses the bounded native scanner; JavaScript regex keeps lookbeh
   const r=await T.call('code_search',{repo:'orders',pattern:'(?<=void )publish',regex:true,glob:'**/*.java'});assert.equal(r.total,1);assert.deepEqual(r.backends,['native-scan']);assert.match(r.rows[0].file,/App.java:2$/);
  }finally{delete process.env.DT_RG;}
 });
+test('an available rg enumerates candidates while JavaScript matching preserves regex semantics',async()=>{
+ // A subprocess fixture covers the optional backend even on hosts without rg.
+ const executable=path.join(home,'candidate-rg'),argsFile=path.join(home,'rg-arguments.json');
+ fs.writeFileSync(executable,'#!'+process.execPath+'\nconst fs=require("fs");fs.writeFileSync('+JSON.stringify(argsFile)+',JSON.stringify(process.argv.slice(2)));process.stdout.write("./src/App.java\\0./config.yml\\0");',{mode:0o755});
+ process.env.DT_RG=executable;
+ try{
+  const result=await T.call('code_search',{repo:'orders',pattern:'(?<=void )publish',regex:true,glob:'**/*.java'});
+  assert.deepEqual(result.backends,['ripgrep']);assert.equal(result.total,1);assert.match(result.rows[0].file,/App.java:2$/);
+  assert.ok(JSON.parse(fs.readFileSync(argsFile)).includes('--files'),'rg enumerates regex candidates without interpreting JavaScript expressions');
+  const empty=await T.call('code_search',{repo:'orders',pattern:'absentMarker'});assert.equal(empty.total,0);assert.deepEqual(empty.backends,['ripgrep']);
+  const args=JSON.parse(fs.readFileSync(argsFile));assert.ok(args.includes('--fixed-strings'));assert.ok(args.includes('!**/.git/**'));
+ }finally{delete process.env.DT_RG;}
+});
 test('service alias and private workspaces can be searched before indexing, without cross-story access',async()=>{
  put('passports/order-service/passport.json',JSON.stringify({service:'order-service',repo:{project:'SHOP',repo:'orders'}}));
  assert.equal((await T.call('code_search',{repo:'order-service',pattern:'orders.created'})).total,1);

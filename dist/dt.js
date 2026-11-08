@@ -18900,6 +18900,7 @@ var require_catalog_store = __commonJS({
     var crypto = require("node:crypto");
     var fail = (message, code = "DT_CATALOG_INDEX") => Object.assign(Error(message), { code, statusCode: 409 });
     var digest = (value) => crypto.createHash("sha256").update(value).digest("hex");
+    var textValue = (value) => Buffer.from(value).toString("utf8");
     function available() {
       try {
         return !!require("node:sqlite").DatabaseSync;
@@ -18998,7 +18999,7 @@ var require_catalog_store = __commonJS({
       }
       const previous = generation(db), id = (previous?.id || 0) + 1;
       const seen = db.prepare("INSERT OR IGNORE INTO seen VALUES (?)"), edgeSeen = db.prepare("INSERT OR IGNORE INTO edge_seen VALUES (?)");
-      const old = db.prepare("SELECT id,line FROM objects WHERE key=? AND stop IS NULL"), stop = db.prepare("UPDATE objects SET stop=? WHERE id=?");
+      const old = db.prepare("SELECT id,CAST(line AS BLOB) AS line FROM objects WHERE key=? AND stop IS NULL"), stop = db.prepare("UPDATE objects SET stop=? WHERE id=?");
       const add = db.prepare("INSERT INTO objects(key,line,text,main,kind,start) VALUES (?,?,?,?,?,?)"), fts = db.prepare("INSERT INTO search(rowid,text) VALUES (?,?)");
       const oldEdge = db.prepare("SELECT id FROM edges WHERE key=? AND stop IS NULL"), addEdge = db.prepare("INSERT INTO edges(key,db,target,base_target,user,base_user,userKind,role,payload,start) VALUES (?,?,?,?,?,?,?,?,?,?)");
       function check() {
@@ -19013,7 +19014,7 @@ var require_catalog_store = __commonJS({
         count++;
         hash.update(value + "\n");
         const row = old.get(key);
-        if (row?.line === value) return;
+        if (row && textValue(row.line) === value) return;
         if (row) stop.run(id, row.id);
         const text = value.toLowerCase(), cut = text.indexOf(" | used by: "), r = add.run(key, value, text, cut < 0 ? text : text.slice(0, cut), value.split(" ")[0], id);
         fts.run(r.lastInsertRowid, text);
@@ -19100,7 +19101,7 @@ var require_catalog_store = __commonJS({
         const result = [], visible = "o.start<=? AND (o.stop IS NULL OR o.stop>?)";
         let more = false, bytes = 0, last = cursor;
         const push = (row, rank) => {
-          const value = options.object ? JSON.parse(row.payload) : { line: row.line };
+          const value = options.object ? JSON.parse(row.payload) : { line: textValue(row.line) };
           const size = Buffer.byteLength(JSON.stringify(value));
           if (size > 2 * 1024 * 1024) throw fail("Catalog record exceeds the result budget; inspect its source directly", "DT_RESULT_TOO_LARGE");
           if (result.length >= limit || bytes + size > 2 * 1024 * 1024) {
@@ -19121,7 +19122,7 @@ var require_catalog_store = __commonJS({
           const { words, kind } = terms(q), fts = words.filter((w) => [...w].length >= 3).map((w) => '"' + w.replaceAll('"', '""') + '"').join(" AND ");
           const exact = words.map(() => "instr(o.text,?)>0").join(" AND ") || "1", main2 = words.map(() => "instr(o.main,?)>0").join(" AND ") || "1";
           for (let rank = cursor?.rank || 0; rank < 2 && !more; rank++) {
-            const sql = `SELECT o.id,o.line FROM ${fts ? "search JOIN objects o ON o.id=search.rowid" : "objects o"} WHERE ${fts ? "search MATCH ? AND " : ""}${visible} ${kind ? "AND o.kind=?" : ""} AND ${exact} AND ${rank ? "NOT " : ""}(${main2}) AND o.id>? ORDER BY o.id LIMIT ?`;
+            const sql = `SELECT o.id,CAST(o.line AS BLOB) AS line FROM ${fts ? "search JOIN objects o ON o.id=search.rowid" : "objects o"} WHERE ${fts ? "search MATCH ? AND " : ""}${visible} ${kind ? "AND o.kind=?" : ""} AND ${exact} AND ${rank ? "NOT " : ""}(${main2}) AND o.id>? ORDER BY o.id LIMIT ?`;
             const args = [...fts ? [fts] : [], g.id, g.id, ...kind ? [kind] : [], ...words, ...words, cursor?.rank === rank ? cursor.id : 0, limit - result.length + 1];
             for (const row of db.prepare(sql).iterate(...args)) if (!push(row, rank)) break;
           }
@@ -19155,11 +19156,11 @@ var require_catalog_store = __commonJS({
           const current = generation(db);
           if (g.id === current.id || g.pinned || require_catalog_references().list(env, g.revision).length) throw fail("Current, pinned or referenced generations cannot be collected");
           db.prepare("DELETE FROM generations WHERE id=?").run(g.id);
-          const dead = db.prepare("SELECT o.id,o.text FROM objects o WHERE o.stop IS NOT NULL AND NOT EXISTS (SELECT 1 FROM generations g WHERE o.start<=g.id AND o.stop>g.id)");
+          const dead = db.prepare("SELECT o.id,CAST(o.text AS BLOB) AS text FROM objects o WHERE o.stop IS NOT NULL AND NOT EXISTS (SELECT 1 FROM generations g WHERE o.start<=g.id AND o.stop>g.id)");
           const remove = db.prepare("DELETE FROM objects WHERE id=?"), fts = db.prepare("INSERT INTO search(search,rowid,text) VALUES ('delete',?,?)");
           let removed = 0;
           for (const row of dead.iterate()) {
-            fts.run(row.id, row.text);
+            fts.run(row.id, textValue(row.text));
             remove.run(row.id);
             if (++removed % 1e3 === 0 && typeof _heartbeat === "function") _heartbeat();
           }
@@ -73350,7 +73351,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "1c58c336af9bc4eaf74fbae4c04493e7eefc27dd106a4e3201f112d440d9b1cf";
+      if (true) return "fb0a9a5b90b82ee95e1c75c7b67cc3b02e2276cec93018be20ec68ab69874021";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");

@@ -103,7 +103,8 @@ async function run(manifestFile = 'work/ux-pass/demo.json', out = 'work/ux-pass/
       await capture(page, 'context-results-1440', '#cxWorkspaceModes'); await page.setViewportSize({ width: 390, height: 1000 }); await capture(page, 'context-results-390', '#cxWorkspaceModes'); await page.locator('[data-workspace-mode=files]').click(); await capture(page, 'context-files-390', '#cxWorkspaceModes'); return { preview: await page.locator('#cxNativeResult').getAttribute('src'), saved: await page.locator('#cxSavedResults button').count() };
     }, page);
 
-    const retained = await request('semantic_index', { versions: true }); const analysis = retained.analyses.find(a => a.service === 'fixture-orders' || a.engine?.image === 'synthetic-ui-fixture');
+    // This check needs service/engine metadata; model previews intentionally omit it.
+    const retained = await request('semantic_index', { versions: true, format: 'full' }); const analysis = retained.analyses.find(a => a.service === 'fixture-orders' || a.engine?.image === 'synthetic-ui-fixture');
     let semanticIdentity;
     await attempt('joern-hash-initial-scope', async () => {
       assert.ok(analysis, 'retained fixture-orders analysis required'); semanticIdentity = { service: 'fixture-orders', env: 'dev', repo: analysis.repo, revision: analysis.sha, analysis: analysis.id };

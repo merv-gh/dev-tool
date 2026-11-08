@@ -29,6 +29,16 @@ test('oversized escaped records fail explicitly instead of returning a stuck cur
  assert.throws(()=>S.page('dev',''),e=>e.code==='DT_RESULT_TOO_LARGE');
  publish(['pg orders sales.refund ~3: имя text'],'after-large-record');
 });
+test('embedded NUL and Unicode survive reads, unchanged refreshes and historical retention',()=>{
+ const line='pg orders sales.raw ~1: note text # before\0после 😀';
+ const first=publish([line],'raw-one',[]);
+ assert.equal(S.page('dev','sales.raw').results[0].line,line);
+ const same=publish([line],'raw-touch',[]);assert.equal(same.changed,0);assert.equal(same.generation,first.generation);
+ const next=line+' updated';publish([next],'raw-two',[]);
+ assert.equal(S.page('dev','',{generation:first.generation}).results[0].line,line);
+ S.manage('dev',{action:'gc',generation:first.generation});
+ assert.equal(S.page('dev','sales.raw').results[0].line,next);
+});
 test('saved results, task captures and shared files protect historical catalog evidence',async()=>{
  const first=publish(['pg orders sales.evidence ~1: id int'],'evidence-one'),page=S.page('dev','sales.evidence');
  require('../lib/results').saveView('json',page);

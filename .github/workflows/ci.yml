@@ -81,4 +81,5 @@ jobs:
           path: |
             work/ci/browser
             work/ci/readiness-browser
+            work/ci/workbench
             work-fixture.log

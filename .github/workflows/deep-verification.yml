@@ -42,6 +42,12 @@ jobs:
           distribution: temurin
           java-version: 21
       - run: npm ci --ignore-scripts
+      # The native adapter only uses existing images; provisioning is explicit here.
+      - name: Provision native fixture images
+        run: |
+          docker pull postgres:16-alpine
+          docker pull docker.elastic.co/elasticsearch/elasticsearch:8.17.3
+          docker pull docker.redpanda.com/redpandadata/redpanda:v24.3.6
       - run: |
           docker run -d --name dt-ci-pg -e POSTGRES_PASSWORD=disposable-test-password -p 127.0.0.1:55432:5432 postgres:16-alpine
           for attempt in $(seq 1 60); do docker exec dt-ci-pg pg_isready && break; sleep 1; done

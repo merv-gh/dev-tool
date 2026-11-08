@@ -54,6 +54,21 @@ test('execution/job ids and deduplication are scoped to both user and story', as
   await Promise.all([x.promise,y.promise,z.promise]);
 });
 
+test('restoring persisted jobs interrupts abandoned work and preserves live owners and completed results', async () => {
+  const exited = require('node:child_process').spawnSync(process.execPath, ['-e', '']);
+  assert.equal(exited.status, 0); assert.throws(() => process.kill(exited.pid, 0), { code: 'ESRCH' });
+  await A.run(identity('recovery', 'persisted-jobs'), async () => {
+    const owner = A.owner(), dir = A.scopedDirectory(path.join(home, 'cache'));
+    const records = ['running','queued','cancelling','draining'].map(state => ({ id: 'abandoned-' + state, state, processId: exited.pid, owner, log: [] }));
+    records.push({ id: 'live-owner', state: 'running', processId: process.pid, owner, log: [] }, { id: 'completed', state: 'done', result: { count: 42 }, owner, log: [] });
+    fs.mkdirSync(dir, { recursive: true }); fs.writeFileSync(path.join(dir, '_jobs.json'), JSON.stringify(records));
+    for (const state of ['running','queued','cancelling','draining']) assert.equal(J.get('abandoned-' + state).state, 'interrupted');
+    assert.equal(J.get('live-owner').state, 'running'); assert.deepEqual(J.get('completed').result, { count: 42 });
+    assert.equal(JSON.parse(fs.readFileSync(path.join(dir, '_jobs.json')))[0].state, 'running', 'reading recovery preserves the journal');
+  });
+  assert.equal(J.get('abandoned-running'), null, 'recovery retains story isolation');
+});
+
 test('parallel spans retain independent ancestry, and nested calls link to their parent span', async () => {
   await T.call('parallel_span_probe', {}, {}, () => Promise.all([
     T.step('left', async () => { await delay(15); await T.step('left child', () => T.call('nested_span_probe', {}, {}, async()=>{})); }),
