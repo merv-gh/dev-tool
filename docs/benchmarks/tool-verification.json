@@ -1,6 +1,6 @@
 {
   "protocol": "dt.release-inventory/v1",
-  "sourceDigest": "de6f9bf3e693b20f5bd2279e39eed6e53b5e786db7b0a58bdd6ef22c955a8217",
+  "sourceDigest": "1c58c336af9bc4eaf74fbae4c04493e7eefc27dd106a4e3201f112d440d9b1cf",
   "tools": [
     {
       "name": "find",
@@ -35,6 +35,7 @@
         "test/pg.live.test.js",
         "test/reproduction.live.test.js",
         "test/semantic-branches.live.test.js",
+        "test/semantic-flow-map.live.test.js",
         "test/semantic.live.test.js",
         "test/showcase.live.test.js",
         "test/template.live.test.js",
@@ -340,7 +341,8 @@
       "referenceTests": [],
       "integrationReferences": [
         "test/diagrams.live.test.js",
-        "test/semantic-branches.live.test.js"
+        "test/semantic-branches.live.test.js",
+        "test/semantic-flow-map.live.test.js"
       ]
     },
     {
@@ -644,7 +646,8 @@
         "test/scenario.test.js",
         "test/testdata.test.js",
         "test/tool-discovery.test.js",
-        "test/views.test.js"
+        "test/views.test.js",
+        "test/workbench-links.test.js"
       ],
       "integrationReferences": [
         "test/diagrams.live.test.js",
@@ -652,6 +655,7 @@
         "test/reproduction.live.test.js",
         "test/runtime-isolation.live.test.js",
         "test/semantic-branches.live.test.js",
+        "test/semantic-flow-map.live.test.js",
         "test/semantic.live.test.js",
         "test/service-architecture.live.test.js",
         "test/template.live.test.js",
@@ -953,6 +957,7 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
+        "test/workbench-links.test.js",
         "test/workbench.test.js"
       ],
       "integrationReferences": []
@@ -1384,6 +1389,7 @@
         "test/pg.live.test.js",
         "test/reproduction.live.test.js",
         "test/runner.live.test.js",
+        "test/semantic-flow-map.live.test.js",
         "test/semantic.live.test.js",
         "test/service-architecture.live.test.js",
         "test/showcase.live.test.js",
@@ -1697,11 +1703,13 @@
       "resultContract": false,
       "referenceTests": [
         "test/semantic-branches.live.test.js",
+        "test/semantic-flow-map.live.test.js",
         "test/semantic-ui.test.js",
         "test/semantic.live.test.js"
       ],
       "integrationReferences": [
         "test/semantic-branches.live.test.js",
+        "test/semantic-flow-map.live.test.js",
         "test/semantic.live.test.js"
       ]
     },
@@ -1729,12 +1737,14 @@
         "test/admin-semantic.test.js",
         "test/architecture.test.js",
         "test/semantic-branches.live.test.js",
+        "test/semantic-flow-map.live.test.js",
         "test/semantic-ui.test.js",
         "test/semantic.live.test.js",
         "test/workbench.test.js"
       ],
       "integrationReferences": [
         "test/semantic-branches.live.test.js",
+        "test/semantic-flow-map.live.test.js",
         "test/semantic.live.test.js"
       ]
     },
@@ -2827,6 +2837,7 @@
     "reproduction",
     "scenario-run",
     "semantic-analysis",
+    "semantic-flow-map",
     "table",
     "test-coverage",
     "tests",

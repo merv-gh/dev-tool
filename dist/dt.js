@@ -62402,12 +62402,116 @@ var require_semantic_compare = __commonJS({
   }
 });
 
+// lib/semantic-flow-map.js
+var require_semantic_flow_map = __commonJS({
+  "lib/semantic-flow-map.js"(exports2, module2) {
+    var { digest } = require_semantic_protocol();
+    var bound = (n, fallback, min, max) => Number.isInteger(n) ? Math.max(min, Math.min(max, n)) : fallback;
+    var INGRESS = ["http-ingress", "kafka-consume", "scheduled"];
+    function location(analysis, value) {
+      const source = (analysis.sources || analysis.manifest?.sources || []).filter((s) => s.prefix && value.file?.startsWith(s.prefix + "/")).sort((a, b) => b.prefix.length - a.prefix.length)[0];
+      return { ...value, analysisId: analysis.id, repo: source?.repo || analysis.repo, sha: source?.sha || analysis.sha, file: source ? value.file.slice(source.prefix.length + 1) : value.file, revisionKey: source?.revisionKey || analysis.revisionKey, locator: { analysisId: analysis.id, generation: analysis.id, nodeId: value.nodeId } };
+    }
+    async function hydrate(result, args, analyses, runQuery) {
+      const plan = result.flowPlan;
+      delete result.flowPlan;
+      const map = { protocol: "dt.flow-map/v1", entries: [], methods: [], nodes: [], edges: [], ports: plan.ports, assumptions: [
+        { id: "static", status: "unknown", detail: "Static control and reaching-definition edges are candidates. They do not prove feasibility, equal values, runtime order, or every-path enforcement." },
+        { id: "effects", status: "unknown", detail: "External calls may change data or throw. Unresolved dispatch, aliasing, reflection, async execution, and implicit exceptions are not exhaustively modeled." },
+        { id: "scope", status: "bounded", detail: "Bodies cover the selected entries and bounded reachable methods in exact retained CPGs. Transport boundaries are shown with their evidence; no distributed execution or field mapping is inferred." }
+      ], complete: false };
+      const stateId = (a, id) => `state:${a}:${id}`, methodByNative = new Map(plan.methods.map((m) => [m.analysisId + ":" + m.locator.nodeId, m]));
+      const groups = [...new Set(plan.methods.map((m) => m.analysisId))];
+      let remaining = plan.maxStates;
+      for (const analysisId of groups) {
+        require_execution().check();
+        const a = analyses.find((a2) => a2.id === analysisId), methods2 = plan.methods.filter((m) => m.analysisId === analysisId);
+        if (!runQuery || remaining < 2) {
+          result.gaps.push({ kind: !runQuery ? "flowmap-runtime-unavailable" : "state-budget", analysisId, detail: !runQuery ? "Retained CPG runtime is unavailable. No state/control/data edges were fabricated from source order." : "The global state budget was exhausted; callee bodies remain outside the map" });
+          continue;
+        }
+        let response;
+        try {
+          response = await runQuery(a, { operation: "flowmap", mode: "dataflow", methodNodeIds: methods2.map((m) => m.locator.nodeId), maxStates: remaining, budgetMs: bound(args.budgetMs, 5e3, 100, 3e4) });
+        } catch (error) {
+          require_execution().check();
+          result.gaps.push({ kind: "flowmap-query-failed", analysisId, detail: error.message });
+          continue;
+        }
+        let summarized = false;
+        for (const record of response.records || []) {
+          if (record.type === "summary") {
+            summarized = true;
+            result.truncated ||= !!record.truncated;
+            for (const detail of record.gaps || []) result.gaps.push({ kind: "flowmap-coverage", analysisId, detail });
+            if (record.truncated) result.gaps.push({ kind: "state-budget", analysisId, detail: "CPG state/edge/AST/time budget reached; some transitions or bodies are omitted" });
+          } else if (record.type === "method") {
+            const original = methodByNative.get(analysisId + ":" + record.nodeId);
+            if (!original) continue;
+            map.methods.push({ ...original, parameters: record.parameters || original.parameters, entry: stateId(analysisId, record.entryState), exit: stateId(analysisId, record.exitState) });
+          } else if (record.type === "state" && remaining > 0) {
+            const original = methodByNative.get(analysisId + ":" + record.methodId);
+            if (!original) continue;
+            map.nodes.push({ ...location(a, record), id: stateId(analysisId, record.nodeId), method: original.id });
+            remaining--;
+          } else if (record.type === "edge") map.edges.push({ ...record, from: stateId(analysisId, record.from), to: stateId(analysisId, record.to), evidence: { origin: "joern", relation: record.relation, analysisId, queryBundle: record.queryBundle }, proof: "static-candidate" });
+        }
+        if (!summarized) result.gaps.push({ kind: "flowmap-incomplete", analysisId, detail: "Worker did not return a final summary; treat this map as incomplete" });
+      }
+      for (const node of map.nodes.filter((n) => n.kind === "throw")) (node.assumptions ||= []).push("Explicit failure exit. Raw CPG continuations remain unresolved exception evidence and are excluded from normal control edges; exception handlers are not proven.");
+      const byId = new Map(map.nodes.map((n) => [n.id, n])), methods = new Map(map.methods.map((m) => [m.id, m]));
+      map.entries = plan.entries.map((id) => methods.get(id)?.entry).filter((id) => byId.has(id));
+      for (const call of plan.calls) {
+        const from = stateId(call.evidence.analysisId, call.evidence.nodeId), target = methods.get(call.to);
+        if (!byId.has(from)) continue;
+        if (!target || !byId.has(target.entry)) {
+          result.gaps.push({ kind: "callee-body-unavailable", state: from, detail: "Resolved callee body was not returned within the map budgets" });
+          continue;
+        }
+        const bindings = (call.arguments || []).filter((p) => p.index > 0).flatMap((arg) => (target.parameters || []).filter((p) => p.index === arg.index).map((p) => ({ argument: arg.index, expression: arg.code, parameter: p.name, status: "positional-static-binding" })));
+        map.edges.push({ from, to: target.entry, kind: "call", certainty: call.certainty, bindings, evidence: call.evidence, proof: call.proof, assumption: "Candidate call dispatch with positional bindings; local CFG continuation remains separate. No exhaustive exception or context-sensitive return proof." });
+      }
+      for (const port of plan.ports) {
+        const targets = port.callId ? [stateId(port.analysisId, port.callId)] : port.handlerCandidates.map((id) => methods.get(id)?.entry);
+        for (const id of targets.filter((id2) => byId.has(id2))) {
+          const node = byId.get(id);
+          (node.ports ||= []).push(port.id);
+          if (!port.callId && !INGRESS.includes(port.portType)) (node.assumptions ||= []).push("This boundary is bound at method scope; its exact call site is not recorded.");
+        }
+      }
+      for (const node of map.nodes.filter((n) => n.kind === "call")) {
+        node.callTargets = map.edges.filter((e) => e.kind === "call" && e.from === node.id).map((e) => e.to);
+        if (!node.callTargets.length) {
+          node.exit = "external-or-unexpanded-call";
+          (node.assumptions ||= []).push("Call effects, result semantics and exceptions are not established by a retained callee body in this map.");
+        }
+      }
+      const filtered = map.edges.filter((e) => byId.has(e.from) && byId.has(e.to));
+      if (filtered.length !== map.edges.length) result.gaps.push({ kind: "edge-endpoint-budget", detail: "Edges to omitted states are excluded from the rendered graph" });
+      map.edges = [...new Map(filtered.map((e) => {
+        const id = "transition:" + digest([e.from, e.to, e.kind, e.polarity, e.relation]).slice(0, 24);
+        return [id, { ...e, id }];
+      })).values()];
+      map.counts = { entries: map.entries.length, methods: map.methods.length, states: map.nodes.length, transitions: map.edges.length, decisions: map.nodes.filter((n) => n.kind === "decision").length, changes: map.nodes.filter((n) => n.changes?.length).length, exits: map.nodes.filter((n) => ["return", "throw", "exit"].includes(n.kind) || n.exit).length };
+      result.mapRequest = { ...args.env ? { env: args.env } : {}, ...args.service ? { service: args.service } : {}, ...args.from ? { from: args.from } : args.target ? { target: args.target } : {}, maxMethods: bound(args.maxMethods, 20, 1, 40), maxStates: plan.maxStates, maxHops: bound(args.maxHops, 8, 1, 30), budgetMs: bound(args.budgetMs, 5e3, 100, 3e4) };
+      result.counts = map.counts;
+      result.flowMap = map;
+      result.results = [];
+      result.total = map.nodes.length;
+      result.nextCursor = null;
+      result.proof = { kind: "entry-exit-state-map", status: map.nodes.length ? "partial-static-map" : "unavailable", feasibility: "unknown", runtime: "unknown", behaviorVerified: false };
+      return result;
+    }
+    module2.exports = { hydrate, location };
+  }
+});
+
 // lib/semantic-query.js
 var require_semantic_query = __commonJS({
   "lib/semantic-query.js"(exports2, module2) {
     var path3 = require("path");
     var { Worker } = require("worker_threads");
-    var OPERATIONS = ["symbols", "search", "ports", "callers", "callees", "neighborhood", "neighbors", "paths", "slice", "assertions", "compare"];
+    var OPERATIONS = ["symbols", "search", "ports", "callers", "callees", "neighborhood", "neighbors", "paths", "slice", "assertions", "compare", "flowmap"];
     function validate(args, analyses) {
       if (!args || typeof args !== "object" || Array.isArray(args)) throw Error("Semantic query arguments must be an object");
       if (!OPERATIONS.includes(args.operation || "symbols")) throw Error("Unsupported semantic operation");
@@ -62418,6 +62522,7 @@ var require_semantic_query = __commonJS({
     }
     async function query(args = {}, analyses = [], { runQuery, ports, bindings } = {}) {
       validate(args, analyses);
+      if (args.operation === "flowmap" && (args.to || args.cursor || [args.from, args.target].some((s) => s?.parameter !== void 0 || s?.argument !== void 0))) throw Error("flowmap maps whole entry methods; omit parameter/argument, to and cursor");
       let passportCandidates;
       analyses = analyses.map((a) => {
         if (a.ports) return a;
@@ -62468,6 +62573,7 @@ var require_semantic_query = __commonJS({
           if (!settled) finish(E.signal()?.aborted ? E.abortError(E.signal().reason) : new Error(`Semantic navigation worker stopped (${code})`));
         });
       }));
+      if (result.flowPlan) await require_semantic_flow_map().hydrate(result, args, analyses, runQuery);
       if (result.compositions?.length) {
         const composed = result.compositions;
         delete result.compositions;
@@ -62585,7 +62691,7 @@ var require_semantic_code = __commonJS({
         configured: !!(cfg.url && cfg.token),
         backend: "vendored-joern",
         languages: ["java", "js", "ts", "tsx"],
-        operations: ["symbols", "callers", "callees", "ports", "neighborhood", "paths", "slice", "assertions", "compare"],
+        operations: ["symbols", "callers", "callees", "ports", "neighborhood", "paths", "slice", "assertions", "compare", "flowmap"],
         retainedGenerations: true,
         editablePorts: true,
         ...info ? { worker: info } : {},
@@ -63041,7 +63147,7 @@ var require_semantic_code = __commonJS({
       if (!analyses.length) return { protocol: P.VERSION, ready: false, analyses: [], nodes: [], paths: [], gaps: [{ kind: "semantic-index-missing", message: "Run semantic_index for the selected exact source revisions" }], coverage: { complete: false }, backend: "native-search-available" };
       const operation = args.operation || "symbols";
       if (operation === "compare" && args.mode === "dataflow") require_semantic_compare().validate(args, analyses);
-      if (!["slice", "paths", "assertions"].includes(operation) && !(operation === "compare" && args.mode === "dataflow")) return require_semantic_query().query({ ...args, operation }, analyses, { runQuery });
+      if (!["slice", "paths", "assertions", "flowmap"].includes(operation) && !(operation === "compare" && args.mode === "dataflow")) return require_semantic_query().query({ ...args, operation }, analyses, { runQuery });
       const job = J.start(`semantic:query:${P.digest([analyses.map((a) => a.id), args])}`, `semantic ${operation}`, () => require_semantic_query().query({ ...args, operation }, analyses, { runQuery }));
       return waitJob(job, args.waitMs);
     }
@@ -68705,7 +68811,12 @@ var require_handbook_content = __commonJS({
           "Choose Trace calls or Trace values. Search/select the source entry and target exit symbols, review their source identity and exact arguments, then Run investigation. The UI follows the project/symbol-first interaction used by file-projections. Raw arguments remain available for callers, slices, guards, comparisons and cross-analysis selectors.",
           "Call reachability answers whether a supported call chain exists. Dataflow/controlflow modes answer narrower supported questions over recorded generations. A local CPG segment, a declared Kafka/HTTP mapping and a database usage edge have different proof. No chain through all three proves an end-to-end value arrived in production.",
           "Inspect source hierarchy, path cards, guards, bypasses, coverage, ambiguity and feasibility. A guard\u2019s presence does not prove dominance on every path. \u201CNo path\u201D can mean unsupported analysis or a budget limit; consult gaps before declaring impossibility. Keep exact analysis IDs in task memory for repeatable review."
-        ], { examples: [example("semantic_index", { versions: true }, "Select retained analyses", "Exact generation IDs; select one before searching symbols."), example("semantic_search", { service: "{{service}}", env: "{{env}}", query: "refund", limit: 12 }, "Search retained methods and boundaries", "Source locations or a missing-analysis/build suggestion.")], figure: figure("ux-joern-symbols.png", "Entry/exit selection with a synthetic retained projection; this screenshot is not evidence of a fresh Joern parse.") })
+        ], { examples: [example("semantic_index", { versions: true }, "Select retained analyses", "Exact generation IDs; select one before searching symbols."), example("semantic_search", { service: "{{service}}", env: "{{env}}", query: "refund", limit: 12 }, "Search retained methods and boundaries", "Source locations or a missing-analysis/build suggestion.")], figure: figure("ux-joern-symbols.png", "Entry/exit selection with a synthetic retained projection; this screenshot is not evidence of a fresh Joern parse.") }),
+        section("state-map", "Map entry decisions, data changes and exits", [
+          "Choose Map entries to exits in Joern & service ports, select an exact retained entry symbol and Run investigation. No target symbol is needed. Without an explicit entry, only uniquely bound ingress passport ports become entries; a method with no callers is not assumed to be public.",
+          "Call overview shows positional argument bindings across retained bodies. Select a method for its control states, assignment/compound expressions, field writes, calls, returns and explicit failure exits. Trace inputs highlights recorded dependencies. Branch polarity stays unknown where evidence is insufficient; raw throw continuations are unresolved exception evidence and are excluded from normal control paths.",
+          "Select a suspect state, inspect its source, copy fix context and export the full JSON/SVG/Mermaid before editing. Read source in Workbench prepares an exact code_read draft without executing it. Verify values at all affected effects and returns with a sensitive failing entry-to-exit regression, then retain a separate fixed snapshot. Model previews may omit detail explicitly; the full view retains the original bounded evidence."
+        ], { examples: [{ ...example("semantic_query", { operation: "flowmap", analysis: "{{analysis}}", maxMethods: 20, maxStates: 180 }, "Map the selected retained ingress points", "Select a returned analysis ID first. If no bound ingress exists, select a precise whole-method from selector in Joern & ports."), requires: ["analysis"] }], figure: figure("entry-exit-flow-map-1440.png", "Real retained Joern fixture: the ledger argument is gross while the transformed value is payable; static evidence still requires executable regression assertions.") })
       ], ["indices", "services", "case-library", "verify-changes"]),
       chapter("live-evidence", "Logs, SQL, Kafka and Elasticsearch", "Investigate", "Observe the same entity across systems without confusing clocks, tenants or stale projections.", "Create a correlated evidence timeline and identify the first unexplained boundary.", ["Environment, bounded time window and trace/entity/tenant identity."], [
         section("identity", "Write down the correlation tuple", [
@@ -68932,6 +69043,7 @@ node cli.js tool label_stats '{"label":"refund approved"}'` }
       patch: ["Which file/lines changed?", "Choose a folder/file, inspect one diff and preserve base/head, binary/deleted/renamed status."],
       reproduction: ["What supports this reproduction?", "Inspect inputs, scope, versions, required reads, capture gaps and independent execution proof."],
       "scenario-run": ["Where did the scenario fail?", "Read outcome/target, select actions/assertions, inspect actual versus expected and cleanup."],
+      "semantic-flow-map": ["Where do control and data change from entry to exits?", "Select the call overview or a retained method, inspect decisions, assignments, argument bindings and source, trace inputs and export JSON/SVG/Mermaid. Static dependencies and unresolved exceptions are not runtime proof."],
       "semantic-analysis": ["How can this call/value travel?", "Navigate source paths/guards, filter/select results and read mode, coverage, proof and feasibility."],
       table: ["Which rows answer the question?", "Filter/sort rows, inspect matching/total counts and use More for CSV/JSON exports."],
       tests: ["What failed and where?", "Summary first; inspect first failing test, expected/actual, focused stack and executed/skipped counts."],
@@ -73238,7 +73350,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "de6f9bf3e693b20f5bd2279e39eed6e53b5e786db7b0a58bdd6ef22c955a8217";
+      if (true) return "1c58c336af9bc4eaf74fbae4c04493e7eefc27dd106a4e3201f112d440d9b1cf";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -73422,6 +73534,63 @@ var require_semantic_response = __commonJS({
         if (r.parameters) return { ...pick(r, ["id", "kind", "name", "signature", "file", "line", "repo", "sha", "analysisId"]), parameters: r.parameters.filter((p) => p.index > 0).map((p) => pick(p, ["name", "index", "type"])) };
         return r;
       });
+      if (out2.flowMap) {
+        const m = out2.flowMap;
+        const states = new Map(m.nodes.map((n, i) => [n.id, "s" + i])), methods = new Map(m.methods.map((n, i) => [n.id, "m" + i]));
+        out2.flowMap = {
+          ...pick(m, ["protocol", "counts", "complete", "assumptions"]),
+          identity: "Local preview aliases; exact CPG/state identities and source locators are retained at view.",
+          entries: m.entries.map((id) => states.get(id)),
+          methods: m.methods.map((a) => ({ ...pick(a, ["name", "signature", "file", "line", "repo", "sha"]), id: methods.get(a.id), entry: states.get(a.entry), exit: states.get(a.exit) })),
+          nodes: m.nodes.map((n) => ({ ...pick(n, ["kind", "code", "textTruncated", "file", "line", "changes", "arguments", "ports", "exit", "assumptions"]), id: states.get(n.id), method: methods.get(n.method) })),
+          edges: m.edges.map((e) => ({ ...pick(e, ["kind", "polarity", "relation", "bindings", "certainty", "proof"]), from: states.get(e.from), to: states.get(e.to) })),
+          ports: m.ports.map((p2) => pick(p2, ["id", "portType", "boundary", "mappings", "certainty", "evidence"]))
+        };
+        const p = out2.flowMap, cap = (key, max) => {
+          if (p[key].length > max) {
+            out2.omitted["flowMap." + key] = (out2.omitted["flowMap." + key] || 0) + p[key].length - max;
+            p[key] = p[key].slice(0, max);
+            out2.previewTruncated = true;
+          }
+        };
+        const shorten = (text, max) => {
+          if (typeof text !== "string" || text.length <= max) return text;
+          out2.omitted["flowMap.text"] = (out2.omitted["flowMap.text"] || 0) + 1;
+          out2.previewTruncated = true;
+          return text.slice(0, max);
+        };
+        const score = (n) => p.entries.includes(n.id) ? 6 : n.kind === "call" && !n.exit || n.kind === "return" ? 5 : n.kind === "change" ? 4 : n.kind === "decision" ? 3 : 1;
+        p.nodes.sort((a, b) => score(b) - score(a));
+        cap("nodes", Math.min(40, Math.max(4, Math.floor(budget / 500))));
+        const included = new Set(p.nodes.map((n) => n.id)), before = p.edges.length;
+        p.edges = p.edges.filter((e) => included.has(e.from) && included.has(e.to));
+        if (before !== p.edges.length) {
+          out2.omitted["flowMap.edges"] = before - p.edges.length;
+          out2.previewTruncated = true;
+        }
+        p.edges.sort((a, b) => (a.kind === "call" ? 0 : a.kind === "control" ? 1 : 2) - (b.kind === "call" ? 0 : b.kind === "control" ? 1 : 2));
+        cap("edges", Math.min(80, Math.max(4, Math.floor(budget / 180))));
+        cap("ports", 5);
+        for (const n of p.nodes) {
+          n.code = shorten(n.code, 400);
+          if (n.arguments) {
+            if (n.arguments.length > 8) {
+              out2.omitted["flowMap.arguments"] = (out2.omitted["flowMap.arguments"] || 0) + n.arguments.length - 8;
+              out2.previewTruncated = true;
+            }
+            n.arguments = n.arguments.slice(0, 8).map((a) => ({ ...a, expression: shorten(a.expression, 200) }));
+          }
+          if (n.changes) n.changes = n.changes.map((c) => ({ ...c, target: shorten(c.target, 160), expression: shorten(c.expression, 400) }));
+        }
+        for (const method of p.methods) method.signature = shorten(method.signature, 400);
+        for (const edge of p.edges) if (edge.bindings) {
+          if (edge.bindings.length > 8) {
+            out2.omitted["flowMap.bindings"] = (out2.omitted["flowMap.bindings"] || 0) + edge.bindings.length - 8;
+            out2.previewTruncated = true;
+          }
+          edge.bindings = edge.bindings.slice(0, 8).map((b) => ({ ...b, expression: shorten(b.expression, 200) }));
+        }
+      }
       const size = () => Buffer.byteLength(JSON.stringify(out2));
       const remove = (object, key, label, minimum = 0) => {
         const a = object[key];
@@ -73432,6 +73601,22 @@ var require_semantic_response = __commonJS({
         return true;
       };
       while (size() > budget) {
+        if (out2.flowMap) {
+          const m = out2.flowMap;
+          if (remove(m, "ports", "flowMap.ports") || remove(m, "edges", "flowMap.edges", 4)) continue;
+          if (m.nodes.length > 2) {
+            const index = m.nodes.findLastIndex((n) => !m.entries.includes(n.id));
+            if (index >= 0) {
+              const [node] = m.nodes.splice(index, 1), before = m.edges.length;
+              m.edges = m.edges.filter((e) => e.from !== node.id && e.to !== node.id);
+              out2.omitted["flowMap.nodes"] = (out2.omitted["flowMap.nodes"] || 0) + 1;
+              out2.omitted["flowMap.edges"] = (out2.omitted["flowMap.edges"] || 0) + before - m.edges.length;
+              out2.previewTruncated = true;
+              continue;
+            }
+          }
+          if (remove(m, "methods", "flowMap.methods", 1) || remove(m, "edges", "flowMap.edges")) continue;
+        }
         if (remove(out2, "results", "results", 1)) continue;
         const shrink = (item) => {
           for (const key2 of ["segments", "boundaries", "edges", "conditions"]) if (remove(item, key2, key2)) return true;
@@ -73457,6 +73642,10 @@ var require_semantic_response = __commonJS({
           continue;
         }
         break;
+      }
+      if (out2.flowMap) {
+        const ids = new Set(out2.flowMap.nodes.map((n) => n.id));
+        for (const method of out2.flowMap.methods) for (const key of ["entry", "exit"]) if (!ids.has(method[key])) delete method[key];
       }
       if (!Object.keys(out2.omitted).length) delete out2.omitted;
       return out2;
@@ -73487,8 +73676,11 @@ var require_tools_semantic = __commonJS({
         { name: "semantic_capabilities", description: "Read semantic engine readiness, versions, supported operations and resource limits. Missing semantic coverage never changes native code search.", input: {}, run: () => present(S().capabilities(), { title: "Semantic capabilities" }) },
         { name: "semantic_index", description: "Index an exact repository/service revision as an owned job; use job to inspect it. No target lists retained analyses. Reparse preserves the last good generation. Cancel through job_cancel.", input: { ...scope, versions: { type: "boolean", default: false }, composite: { type: "boolean", default: false, description: "Parse the exact service Java dependency closure together" }, reparse: { type: "boolean", default: false }, job: str("Existing semantic job id; observes the same job"), waitMs: { ...int("Observation wait, max 30000 ms", 0), minimum: 0, maximum: 3e4 } }, run: async (a) => present(await S().index(a.slug && !a.repo ? { ...a, repo: a.slug } : a), { title: "Semantic index" }) },
         { name: "semantic_search", description: "Search retained symbols or typed ports, with source locations and exact revisions. Missing analysis reports a build suggestion; it never starts an implicit parse.", input: { ...selection, query: str("Symbol, signature, file or port words"), kind: str("Optional symbol or typed port kind"), ports: { type: "boolean", default: false, description: "Search typed boundary ports instead of symbols" }, ...bounds }, run: async (a) => present(await S().query({ ...a, operation: a.ports ? "ports" : "symbols" }), { title: "Semantic search" }) },
-        { name: "semantic_query", description: "Query exact retained analyses: callers, callees, slices, bounded paths, guards or revision comparisons. Choose reachability/controlflow/dataflow explicitly. Read proof status, gaps and coverage; a call chain does not prove value flow.", input: { ...selection, job: str("Existing semantic query job id; observe without repeating it"), waitMs: { ...int("Observation wait", 0), minimum: 0, maximum: 3e4 }, operation: { type: "string", enum: ["symbols", "ports", "callers", "callees", "neighborhood", "neighbors", "paths", "slice", "assertions", "compare"] }, from: selector, to: selector, target: selector, mode: { type: "string", enum: ["reachability", "controlflow", "dataflow"], default: "reachability" }, query: str("Symbol/port query where supported"), kind: str("Optional result kind"), ...bounds, maxHops: { ...int("Bounded traversal depth", 8), minimum: 1, maximum: 30 }, maxPaths: { ...int("Maximum returned paths", 8), minimum: 1, maximum: 20 }, includeBypasses: { type: "boolean", default: false, description: "Include supported bypass/counterexample evidence" } }, required: ["operation"], run: async (a) => present(await S().query(a), { title: "Semantic " + a.operation }) }
-      ].map((tool) => ({ ...tool, description: tool.description + (tool.name === "semantic_query" ? " compare+dataflow: analyses=[before,after] of one repo and revision-neutral from/to (parameter/argument supported); runs each CPG independently." : ""), input: { ...response, ...tool.input }, run: async (a) => {
+        { name: "semantic_query", description: "Query retained CPGs: symbols, calls, paths/slices, guards, branch comparisons or entry-to-exit state maps. Inspect proof/gaps; static reachability does not prove value flow.", input: { ...selection, job: str("Existing semantic query job id; observe without repeating it"), waitMs: { ...int("Observation wait", 0), minimum: 0, maximum: 3e4 }, operation: { type: "string", enum: ["symbols", "ports", "callers", "callees", "neighborhood", "neighbors", "paths", "slice", "assertions", "compare", "flowmap"] }, from: selector, to: selector, target: selector, mode: { type: "string", enum: ["reachability", "controlflow", "dataflow"], default: "reachability" }, query: str("Symbol/port query where supported"), kind: str("Optional result kind"), ...bounds, maxMethods: { ...int("flowmap reachable method budget", 20), minimum: 1, maximum: 40 }, maxStates: { ...int("flowmap state budget", 180), minimum: 20, maximum: 400 }, maxHops: { ...int("Bounded traversal depth", 8), minimum: 1, maximum: 30 }, maxPaths: { ...int("Maximum returned paths", 8), minimum: 1, maximum: 20 }, includeBypasses: { type: "boolean", default: false, description: "Include supported bypass/counterexample evidence" } }, required: ["operation"], run: async (a) => {
+          const value = await S().query(a);
+          return present(value, { view: value.flowMap || a.operation === "flowmap" ? "semantic-flow-map" : "semantic-analysis", title: a.operation === "flowmap" || value.flowMap ? "Entry-to-exit flow map" : "Semantic " + a.operation });
+        } }
+      ].map((tool) => ({ ...tool, description: tool.description + (tool.name === "semantic_query" ? " compare+dataflow uses analyses=[before,after] and revision-neutral from/to. flowmap uses a whole-method/ingress from (no to), or discovers bound ingress ports; includes controls, changes, exits and assumptions." : ""), input: { ...response, ...tool.input }, run: async (a) => {
         const result = await tool.run(a);
         return a.format === "full" ? result : require_semantic_response().compact(result, a.max_output_bytes || 16384);
       }, group: "semantic", origin: "built-in", strictInput: true }));
@@ -74118,6 +74310,50 @@ var require_workflow_guides = __commonJS({
     module2.exports = {
       version: 1,
       guides: [
+        {
+          id: "entry-exit-state-map",
+          title: "Map decisions and data changes from entry to exits",
+          terms: "flow map state graph joern dataflow controlflow assignments transformations entrypoint exit branches guards changes fix debug",
+          required: [
+            "exact retained source revision",
+            "entry method or uniquely bound ingress port"
+          ],
+          stages: [
+            {
+              id: "select",
+              goal: "Select one exact source snapshot per repo and frontend; discover the entry signature or bound ingress. Use composite indexing for a pinned Java library closure. Never combine two branch snapshots into one map.",
+              tools: [
+                "semantic_index",
+                "semantic_search",
+                "semantic_ports"
+              ]
+            },
+            {
+              id: "map",
+              goal: "Run semantic_query operation=flowmap with from selecting a whole entry method (no to). Inspect control states, changed expressions, true/false/unknown branches, callee argument bindings, and all assumptions. Narrow entry or adjust maxMethods/maxStates when bounded.",
+              tools: [
+                "semantic_query",
+                "code_read"
+              ]
+            },
+            {
+              id: "verify",
+              goal: "Save full JSON/SVG/Mermaid evidence; inspect suspect state source and write a sensitive failing entry-to-exit regression before editing a private workspace. Retain a separate fixed snapshot and compare values at every return/effect.",
+              tools: [
+                "context_write",
+                "workspace_open",
+                "workspace_write",
+                "test_run",
+                "semantic_query"
+              ]
+            }
+          ],
+          boundaries: [
+            "Maps retain CFG, CDG and reaching-definition evidence; they never establish runtime feasibility or equal values.",
+            "Explicit throw continuations are unresolved exception evidence, excluded from normal execution edges.",
+            "Unknown call effects, async/transport field mappings, dynamic dispatch and bounded bodies remain gaps."
+          ]
+        },
         {
           id: "branch-dataflow-review",
           title: "Review a feature across branch data flows",
@@ -78625,7 +78861,7 @@ var require_semantic_worker = __commonJS({
             if (source.state !== "ready" || source.kind !== "parse") throw P.error("Query analysis is not ready", "DT_SEMANTIC_NOT_READY", 409);
             job.state = "querying";
             persist(job);
-            await command(job, config.joern, [`-J-Xmx${heap}m`, "--script", path3.join(scriptDirectory(), "query.sc"), "--param", `cpgPath=${path3.join(file(job.owner, job.analysisId), "cpg.bin")}`, "--param", `out=${path3.join(dir, "query.jsonl")}`, "--param", `request=${path3.join(dir, "request.json")}`, "--param", `root=${path3.join(file(job.owner, job.analysisId), "source")}`], dir, controller.signal);
+            await command(job, config.joern, [`-J-Xmx${heap}m`, "--script", path3.join(scriptDirectory(), job.operation === "flowmap" ? "flow-map.sc" : "query.sc"), "--param", `cpgPath=${path3.join(file(job.owner, job.analysisId), "cpg.bin")}`, "--param", `out=${path3.join(dir, "query.jsonl")}`, "--param", `request=${path3.join(dir, "request.json")}`, "--param", `root=${path3.join(file(job.owner, job.analysisId), "source")}`], dir, controller.signal);
             if (fs3.statSync(path3.join(dir, "query.jsonl")).size > 4 * 1048576) throw P.error("Query output exceeds byte budget", "DT_SEMANTIC_LIMIT", 413);
           }
           controller.signal.throwIfAborted();
@@ -78720,7 +78956,7 @@ var require_semantic_worker = __commonJS({
           const url = new URL(req.url, "http://semantic");
           if (req.method === "GET" && url.pathname === "/health") return json(res, 200, { ok: true });
           const owner = ownerOf(req);
-          if (req.method === "GET" && url.pathname === "/v1/info") return json(res, 200, { protocol: P.VERSION, version: config.version, image: config.image, scriptsDigest: scriptsDigest(), enrichmentDigest: P.digest(fs3.readFileSync(path3.join(scriptDirectory(), "enrich-project.sc"))), queryDigest: P.digest(fs3.readFileSync(path3.join(scriptDirectory(), "query.sc"))), languages: ["java", "js"], limits: { parseMemoryMb: config.parseMemoryMb, queryMemoryMb: config.queryMemoryMb, totalMemoryMb: config.totalMemoryMb, parseConcurrency: config.parseConcurrency, queryConcurrency: config.queryConcurrency, timeoutMs: config.timeoutMs, maxProjectionBytes: config.maxProjectionBytes }, ...owner.role === "admin" ? { scheduler: admission.status() } : {} });
+          if (req.method === "GET" && url.pathname === "/v1/info") return json(res, 200, { protocol: P.VERSION, version: config.version, image: config.image, scriptsDigest: scriptsDigest(), enrichmentDigest: P.digest(fs3.readFileSync(path3.join(scriptDirectory(), "enrich-project.sc"))), queryDigest: P.digest(["query.sc", "flow-map.sc"].map((name2) => [name2, P.digest(fs3.readFileSync(path3.join(scriptDirectory(), name2)))])), languages: ["java", "js"], limits: { parseMemoryMb: config.parseMemoryMb, queryMemoryMb: config.queryMemoryMb, totalMemoryMb: config.totalMemoryMb, parseConcurrency: config.parseConcurrency, queryConcurrency: config.queryConcurrency, timeoutMs: config.timeoutMs, maxProjectionBytes: config.maxProjectionBytes }, ...owner.role === "admin" ? { scheduler: admission.status() } : {} });
           if (req.method === "POST" && url.pathname === "/v1/jobs") {
             const job2 = await submit(req, owner);
             return json(res, 202, job2);
@@ -78734,14 +78970,14 @@ var require_semantic_worker = __commonJS({
               chunks.push(chunk);
             }
             const body = JSON.parse(Buffer.concat(chunks));
-            if (!P.ID.test(body.id || "") || !P.ID.test(body.analysisId || "") || !["slice", "paths", "assertions"].includes(body.request?.operation)) throw P.error("Invalid named query request");
+            if (!P.ID.test(body.id || "") || !P.ID.test(body.analysisId || "") || !["slice", "paths", "assertions", "flowmap"].includes(body.request?.operation)) throw P.error("Invalid named query request");
             const analysis = load(owner, body.analysisId);
             if (analysis.state !== "ready") throw P.error("Analysis is not ready", "DT_SEMANTIC_NOT_READY", 409);
             const dir = file(owner, body.id);
             if (fs3.existsSync(dir)) return json(res, 202, load(owner, body.id));
             fs3.mkdirSync(dir);
             writeJson(path3.join(dir, "request.json"), body.request);
-            const job2 = { protocol: P.VERSION, id: body.id, analysisId: body.analysisId, kind: "query", instance, owner, state: "queued", startedAt: (/* @__PURE__ */ new Date()).toISOString(), log: [] };
+            const job2 = { protocol: P.VERSION, id: body.id, analysisId: body.analysisId, kind: "query", operation: body.request.operation, instance, owner, state: "queued", startedAt: (/* @__PURE__ */ new Date()).toISOString(), log: [] };
             persist(job2);
             schedule(job2);
             return json(res, 202, job2);
@@ -79112,6 +79348,18 @@ var require_workbench_intents = __commonJS({
               goal: "Locate exact source evidence and follow entry points to their effects."
             },
             {
+              id: "map-entry-exit",
+              title: "Map decisions and data changes",
+              guide: "entry-exit-state-map",
+              tools: [
+                "semantic_index",
+                "semantic_search",
+                "semantic_query",
+                "code_read"
+              ],
+              goal: "Follow an exact entry through control decisions, transformations, callee bodies and exits; inspect assumptions before fixing the bug."
+            },
+            {
               id: "correct-boundary",
               title: "Review or correct a detected boundary",
               tools: [
@@ -79131,20 +79379,34 @@ var require_workbench_intents = __commonJS({
             {
               id: "find-object",
               title: "Find a table, topic or API",
-              tools: ["catalog_search", "find", "api_routes"],
+              tools: [
+                "catalog_search",
+                "find",
+                "api_routes"
+              ],
               goal: "Find the exact cached object name and preserve its source generation."
             },
             {
               id: "table-usage",
               title: "Inspect a table and who uses it",
               guide: "column-lineage",
-              tools: ["pg_table", "pg_usage", "catalog_usage", "pg_function"],
+              tools: [
+                "pg_table",
+                "pg_usage",
+                "catalog_usage",
+                "pg_function"
+              ],
               goal: "Inspect the selected table or function and its detected readers and writers."
             },
             {
               id: "query-data",
               title: "Query rows, documents or messages",
-              tools: ["pg_query", "es_search", "kafka_last", "kafka_topic"],
+              tools: [
+                "pg_query",
+                "es_search",
+                "kafka_last",
+                "kafka_topic"
+              ],
               goal: "Read a bounded sample from an explicitly selected source."
             }
           ]

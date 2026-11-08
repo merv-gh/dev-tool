@@ -8,7 +8,7 @@ vm.runInContext(fs.readFileSync(path.join(__dirname, '../web/inline.js'), 'utf8'
 const inline = context.inline;
 
 test('inline policy collapses routine output and opens actionable failures across result families', () => {
-  for (const view of ['code', 'code-cell', 'semantic-analysis', 'passport-ports', 'json', 'table', 'patch', 'tests', 'collection-report', 'reproduction', 'scenario-run', 'list-diff', 'text-diff', 'api-exchange', 'differential']) {
+  for (const view of ['code', 'code-cell', 'semantic-analysis', 'semantic-flow-map', 'passport-ports', 'json', 'table', 'patch', 'tests', 'collection-report', 'reproduction', 'scenario-run', 'list-diff', 'text-diff', 'api-exchange', 'differential']) {
     assert.equal(inline.describe(view, {}).open, false, view);
   }
   assert.equal(inline.describe('json', { cases: { not: 'a test suite' } }).open, false);

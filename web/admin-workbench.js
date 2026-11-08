@@ -345,7 +345,7 @@ async function loadWorkbench(force = false) {
         const first = data.groups[0]?.intents[0];
         if (first) wbIntent(first.id);
       }
-      wbMessage("Choose indexed values, then Run. Model help is optional.");
+      if(!wb.loadedLink)wbMessage("Choose indexed values, then Run. Model help is optional.");
     } catch (e) {
       if (request === wb.request) {
         if (!wbLife.is("failed")) wbLife.to("failed");
@@ -358,7 +358,21 @@ async function loadWorkbench(force = false) {
   return wb.loading;
 }
 async function wbOpenLinked() {
-  const params = new URLSearchParams(location.hash.split("?")[1] || ""),
+  const params = new URLSearchParams(location.hash.split("?")[1] || "");
+  // Evidence views can link to an editable, scope-authorized source-reading draft.
+  // A URL never executes a tool or changes the selected principal/story.
+  if (params.has('tool')) {
+    const key='draft:'+params.toString();if(key===wb.loadedLink)return;
+    if(wbActive()){wbMessage('Wait for this run or cancel it before opening a tool draft.');return;}
+    try {
+      const text=params.get('args')||'{}';if(text.length>20000)throw Error('Linked argument draft is too large');
+      const args=JSON.parse(text);if(!args||typeof args!=='object'||Array.isArray(args))throw Error('Linked arguments must be an object');
+      if(!wb.data?.tools.some(t=>t.name===params.get('tool')))throw Error('Linked tool is unavailable for the current scope');
+      wbPrepare(params.get('tool'),args);wb.loadedLink=key;wbMessage('Source-reading draft prepared. Review the exact revision and arguments, then choose Run.');
+    }catch(error){wbMessage(error.message,true);}
+    return;
+  }
+  const
     kind = params.has("job") ? "job" : params.has("result") ? "result" : null;
   const key = kind ? kind + ":" + params.get(kind) : "";
   if (!key || key === wb.loadedLink) return;

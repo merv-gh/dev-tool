@@ -31,6 +31,53 @@ var require_semantic_identity = __commonJS({
   }
 });
 
+// lib/semantic-flow-plan.js
+var require_semantic_flow_plan = __commonJS({
+  "lib/semantic-flow-plan.js"(exports2, module2) {
+    var bound = (n, fallback, min, max) => Number.isInteger(n) ? Math.max(min, Math.min(max, n)) : fallback;
+    var INGRESS = ["http-ingress", "kafka-consume", "scheduled"];
+    function plan(graph, args, base) {
+      if (args.to || args.cursor || args.from?.parameter !== void 0 || args.from?.argument !== void 0) throw Error("flowmap maps whole entry methods; use from/target without parameter/argument, to or cursor");
+      const revisions = /* @__PURE__ */ new Map();
+      for (const a of graph.byAnalysis.values()) for (const s of a.sources || a.manifest?.sources || [a]) {
+        const previous = revisions.get(s.repo), revision = JSON.stringify([s.sha, s.sourceDigest]);
+        if (previous && previous !== revision) throw Error("flowmap requires one retained source snapshot per repository; map branches independently");
+        revisions.set(s.repo, revision);
+      }
+      const selector = args.from || args.target, selected = selector ? graph.select(selector) : graph.ports.filter((p) => INGRESS.includes(p.portType));
+      let entries = [...new Map(selected.flatMap((n) => n.kind === "method" ? [n] : n.kind === "port" && INGRESS.includes(n.portType) && n.handlerCandidates.length === 1 ? n.handlerCandidates.map((id) => graph.nodes.get(id)).filter(Boolean) : []).map((n) => [n.id, n])).values()];
+      if (selector && entries.length > 1) {
+        base.ambiguity.push({ selector, candidates: entries.map((n) => ({ id: n.id, signature: n.signature, file: n.file, line: n.line })) });
+        base.gaps.push({ kind: "entry-ambiguous", detail: "Select one exact method signature or port; overloaded entry methods are not merged" });
+        entries = [];
+      }
+      if (!entries.length) base.gaps.push({ kind: "entry-not-found", detail: 'No uniquely bound entry method. Select from:{kind:"method",signature:\u2026} using semantic_search, or bind an ingress passport port. Methods with no callers are not assumed to be public entries.' });
+      const maxMethods = bound(args.maxMethods, 20, 1, 40), maxStates = bound(args.maxStates, 180, 20, 400), maxDepth = bound(args.maxHops, 8, 1, 30), methods = [], calls = [], seen = /* @__PURE__ */ new Set(), queue = entries.map((n) => ({ n, depth: 0 }));
+      while (queue.length && methods.length < maxMethods) {
+        const { n, depth } = queue.shift();
+        if (seen.has(n.id)) continue;
+        seen.add(n.id);
+        methods.push(n);
+        graph.loadCalls(n);
+        for (const edge of graph.adjacency.get(n.id) || []) {
+          const target = graph.nodes.get(edge.to);
+          if (target?.kind !== "method" || edge.proof !== "call-reachability") continue;
+          calls.push(edge);
+          if (depth < maxDepth) queue.push({ n: target, depth: depth + 1 });
+          else if (!seen.has(target.id)) base.gaps.push({ kind: "method-depth-budget", symbol: target.id, detail: "Callee body lies outside the selected method depth" });
+        }
+      }
+      if (queue.some((item) => !seen.has(item.n.id))) base.gaps.push({ kind: "method-budget", detail: `Map includes at most ${maxMethods} reachable methods; narrow the entry or increase maxMethods` });
+      if (base.gaps.some((g) => ["method-budget", "method-depth-budget"].includes(g.kind))) base.truncated = true;
+      const ports = graph.ports.filter((p) => p.handlerCandidates.some((id) => seen.has(id)));
+      base.flowPlan = { methods, entries: entries.filter((n) => seen.has(n.id)).map((n) => n.id), calls, ports, maxStates };
+      base.proof = { kind: "entry-exit-state-map", status: entries.length ? "requires-deep-query" : "unavailable", feasibility: "unknown", runtime: "unknown", behaviorVerified: false };
+      base.mode = "dataflow";
+    }
+    module2.exports = { plan };
+  }
+});
+
 // lib/semantic-query-engine.js
 var require_semantic_query_engine = __commonJS({
   "lib/semantic-query-engine.js"(exports2, module2) {
@@ -514,7 +561,8 @@ var require_semantic_query_engine = __commonJS({
           base.total = total;
           base.nextCursor = offset + limit < total ? Buffer.from(JSON.stringify({ key: queryKey, offset: offset + limit })).toString("base64url") : null;
           if (!total && q) base.suggestion = { tool: "code_search", arguments: { pattern: args.query, ...analyses.length === 1 ? { repo: analyses[0].revisionKey } : { repos: [...new Set(analyses.map((a) => a.revisionKey))].join(",") } }, reason: "Symbol search matches method names/signatures, not parameter/local-variable names or source expressions; search source text or use a method selector with parameter" };
-        } else if (operation === "ports") base.results = graph.ports.filter((p) => !args.kind || p.portType === args.kind);
+        } else if (operation === "flowmap") require_semantic_flow_plan().plan(graph, args, base);
+        else if (operation === "ports") base.results = graph.ports.filter((p) => !args.kind || p.portType === args.kind);
         else if (operation === "compare") {
           if (analyses.length !== 2) throw Error("compare requires exactly two immutable analyses");
           compare(analyses, databases, base);

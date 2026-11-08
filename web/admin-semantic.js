@@ -142,7 +142,7 @@ async function semanticAdminPollJob(id) {
     $("smCancel").hidden = !["queued", "running", "cancelling", "draining"].includes(job.state);
     if (["queued", "running", "cancelling", "draining"].includes(job.state) && tab === "semantic") semanticAdminJobTimer = setTimeout(() => semanticAdminPollJob(id), 1500);
     else if (job.state === "done" && job.result) {
-      const result = await api("/api/tool/show", { view: "semantic-analysis", data: job.result, title: "Semantic job result" });
+      const result = await api("/api/tool/show", { view: job.result.flowMap ? "semantic-flow-map" : "semantic-analysis", data: job.result, title: "Semantic job result" });
       if (scope !== runtimeScopeVersion.value || id !== semanticAdminJob) return;
       const view = rtNativeView(result.result?.view);
       if (view) {
@@ -200,6 +200,10 @@ function semanticAdminInit() {
     await loadSemanticAdmin();
     if (!semanticAdminPrepare(name, id === "smList" ? { versions: true } : void 0)) return;
     if (id !== "smIndex") await semanticAdminRun();
+  };
+  $("smFlowMap").onclick = async () => {
+    await loadSemanticAdmin(); const s=semanticAdminScope();
+    semanticAdminPrepare('semantic_query',{operation:'flowmap',mode:'dataflow',...(s.service?{service:s.service}:{}),...(s.repo?{repo:s.repo}:{}),...(s.analysis?{analysis:s.analysis}:{}),env:s.env,waitMs:0,maxMethods:20,maxStates:180});
   };
   $("smPortAdd").onclick = () => semanticAdminPortEdit("add");
   $('smMetadataEdit').onclick=semanticAdminMetadataEdit;

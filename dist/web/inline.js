@@ -91,6 +91,10 @@ const dtInline = {
     } else if (view === 'code-cell') {
       failed ||= !!d.result?.error || ['failed', 'cancelled', 'interrupted'].includes(d.state) || (d.result?.tests || []).some(test => !test.ok);
       summary = `${d.state || 'unknown'}${d.engine ? ' · ' + d.engine : ''} · ${(d.output || []).length} output events${d.result?.returned !== undefined ? ' · returned '+JSON.stringify(d.result.returned).slice(0,100) : ''}`;
+    } else if (view === 'semantic-flow-map') {
+      const counts=d.flowMap?.counts||{};
+      failed ||= ['failed','interrupted'].includes(d.state);
+      summary = [d.state, `${counts.entries||0} entries`,`${counts.states||0} states`,`${counts.changes||0} changes`,`${counts.exits||0} exits`,d.truncated?'map bounded':null].filter(Boolean).join(' · ');
     } else if (view === 'semantic-analysis') {
       const state = typeof d.job === 'object' ? d.job.state : d.state;
       failed ||= ['failed', 'interrupted'].includes(state);

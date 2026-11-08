@@ -16,6 +16,8 @@ For branch work, use `semantic_query` with `operation:"compare"`, `mode:"dataflo
 
 Open **Admin → Semantic & ports** to select a source, choose a named tool, inspect its exact typed schema, edit arguments and run it. Retained analyses can populate the query selection. Paths provide source hierarchy navigation and collapsible guard/evidence details. Open WebUI receives the same native saved-view embeds. Successful transient index jobs stay collapsed; query paths and failures expose the relevant detail.
 
+For a whole entry investigation, use `semantic_query operation:"flowmap"` with a whole-method `from` selector and no `to`. Inspect the call overview, state graphs, input dependencies, changes, exits and assumptions, then verify the fix at all affected exits. [Map workflow, exports and limits](entry-exit-flow-map.md).
+
 ## Passport boundary adjustments
 
 `semantic_ports` lists effective typed ports. `passport_adjustments` also returns detected findings, disabled ports, immutable history and the current adjustment revision. Read that revision before changing a port. `passport_adjust` saves add/correct/disable deltas in a separate story-scoped overlay; it does not replace automatic source findings. A new identity uses `expected_revision:null`. Existing identities require the hash returned by the read.

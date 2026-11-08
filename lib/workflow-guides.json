@@ -2,6 +2,50 @@
   "version": 1,
   "guides": [
     {
+      "id": "entry-exit-state-map",
+      "title": "Map decisions and data changes from entry to exits",
+      "terms": "flow map state graph joern dataflow controlflow assignments transformations entrypoint exit branches guards changes fix debug",
+      "required": [
+        "exact retained source revision",
+        "entry method or uniquely bound ingress port"
+      ],
+      "stages": [
+        {
+          "id": "select",
+          "goal": "Select one exact source snapshot per repo and frontend; discover the entry signature or bound ingress. Use composite indexing for a pinned Java library closure. Never combine two branch snapshots into one map.",
+          "tools": [
+            "semantic_index",
+            "semantic_search",
+            "semantic_ports"
+          ]
+        },
+        {
+          "id": "map",
+          "goal": "Run semantic_query operation=flowmap with from selecting a whole entry method (no to). Inspect control states, changed expressions, true/false/unknown branches, callee argument bindings, and all assumptions. Narrow entry or adjust maxMethods/maxStates when bounded.",
+          "tools": [
+            "semantic_query",
+            "code_read"
+          ]
+        },
+        {
+          "id": "verify",
+          "goal": "Save full JSON/SVG/Mermaid evidence; inspect suspect state source and write a sensitive failing entry-to-exit regression before editing a private workspace. Retain a separate fixed snapshot and compare values at every return/effect.",
+          "tools": [
+            "context_write",
+            "workspace_open",
+            "workspace_write",
+            "test_run",
+            "semantic_query"
+          ]
+        }
+      ],
+      "boundaries": [
+        "Maps retain CFG, CDG and reaching-definition evidence; they never establish runtime feasibility or equal values.",
+        "Explicit throw continuations are unresolved exception evidence, excluded from normal execution edges.",
+        "Unknown call effects, async/transport field mappings, dynamic dispatch and bounded bodies remain gaps."
+      ]
+    },
+    {
       "id": "branch-dataflow-review", "title": "Review a feature across branch data flows", "terms": "joern compare branch branches feature regression entrypoint parameter argument value flow dataflow changed service commit", "required": ["repository and before/after refs", "entry value and observable exits"],
       "stages": [
         { "id": "pin", "goal": "Retain both source commits and select one frontend; list versions to obtain exact analysis IDs", "tools": ["code_index", "semantic_index"] },

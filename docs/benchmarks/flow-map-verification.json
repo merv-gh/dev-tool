@@ -1,0 +1,86 @@
+{
+  "protocol": "dt.flow-map-verification/v1",
+  "sourceDigest": "1c58c336af9bc4eaf74fbae4c04493e7eefc27dd106a4e3201f112d440d9b1cf",
+  "liveSourceDigest": "1c58c336af9bc4eaf74fbae4c04493e7eefc27dd106a4e3201f112d440d9b1cf",
+  "queryScriptDigest": "13a33230cbdae6410f672f3d303ed1e8d69108bfa3add638849330cf3a80e71d",
+  "live": {
+    "engine": {
+      "version": "4.0.564",
+      "image": "ghcr.io/joernio/joern@sha256:54c7f728f813c1cefd4303e7c69c5d35003f0fc9fde1459872230e5bc4e4b7b4",
+      "queryDigest": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+    },
+    "repository": "DEMO/payments",
+    "sha": "23999f81229633930d54d4a51d3e1a90e8a96e97",
+    "counts": {
+      "entries": 1,
+      "methods": 3,
+      "states": 28,
+      "transitions": 124,
+      "decisions": 5,
+      "changes": 9,
+      "exits": 9
+    },
+    "checks": {
+      "decisions": true,
+      "throws": true,
+      "exceptionContinuationHonest": true,
+      "fieldChanges": true,
+      "increments": true,
+      "branchPolarity": true,
+      "dataDependencies": true,
+      "controlDependencies": true,
+      "calleeBindings": true,
+      "wrongAmountExposed": true,
+      "fixedAmountExposed": true,
+      "oracleBeforeFailsAfterPasses": true,
+      "originalPreserved": true,
+      "stateBudget": true,
+      "compactFullEvidence": true,
+      "loopCycles": true,
+      "compoundWrites": true,
+      "javascript": true
+    },
+    "fullBytes": 139060,
+    "previewBytes": 3757,
+    "previewOmissions": {
+      "flowMap.nodes": 26,
+      "flowMap.edges": 124,
+      "flowMap.methods": 2,
+      "coverage": 1,
+      "gaps": 5
+    }
+  },
+  "browser": {
+    "passed": 18,
+    "checks": [
+      "Native Open WebUI embed with bounded model JSON and retained full graph",
+      "Transient inline map is collapsed by default; full graph opens on demand",
+      "1440/light: actual arguments, call bindings and input dependency tracing",
+      "1440/light: entry-to-callee field changes and back",
+      "1440/light: keyboard selection, zoom/fit and no page overflow",
+      "1440/dark: actual arguments, call bindings and input dependency tracing",
+      "1440/dark: entry-to-callee field changes and back",
+      "1440/dark: keyboard selection, zoom/fit and no page overflow",
+      "390/light: actual arguments, call bindings and input dependency tracing",
+      "390/light: entry-to-callee field changes and back",
+      "390/light: keyboard selection, zoom/fit and no page overflow",
+      "390/dark: actual arguments, call bindings and input dependency tracing",
+      "390/dark: entry-to-callee field changes and back",
+      "390/dark: keyboard selection, zoom/fit and no page overflow",
+      "Whole-flow call overview exposes differing ledger/event values and opens each body",
+      "Full JSON, self-contained SVG, and all-method Mermaid downloads",
+      "Admin mouse-only map preset with exact retained entry symbol picker",
+      "Exact source link prepares authorized code_read draft without executing"
+    ],
+    "pageErrors": [],
+    "nativeOpenWebUIEmbedTransport": true,
+    "productionOpenWebUIInstance": false
+  },
+  "limits": [
+    "Disposable Java Git fixture and independent behavior oracle; no production database or broker was exercised.",
+    "Actual Java and JavaScript CPGs were queried; this is not exhaustive language/framework coverage.",
+    "Graph candidates and positional bindings do not prove feasible runtime behavior or field equality.",
+    "Desktop/mobile light/dark browser checks exercise the native inline transport, not a production Open WebUI deployment.",
+    "No model was called in this state-map verification; the prior branch-model exercise remains separate."
+  ]
+}
