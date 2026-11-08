@@ -50,3 +50,10 @@ test('two real publisher processes cannot both advance the same head',async()=>{
  const publish=title=>new Promise((resolve,reject)=>{const p=spawn(process.execPath,['-e',script,current.revision,title],{cwd:path.join(__dirname,'..'),env:{...process.env,DT_HOME:home},stdio:['ignore','pipe','pipe']});let out='',err='';p.stdout.on('data',x=>out+=x);p.stderr.on('data',x=>err+=x);p.on('error',reject);p.on('close',code=>code?reject(Error(err)):resolve(JSON.parse(out)));});
  const results=await Promise.all([publish('Writer one'),publish('Writer two')]);assert.equal(results.filter(r=>r.saved).length,1,JSON.stringify(results));assert.equal(results.filter(r=>r.code==='STATE_CONFLICT').length,1,JSON.stringify(results));assert.equal(P.get({id:'orders'}).parent,current.revision);assert.equal(P.get({id:'orders',revision:current.revision}).revision,current.revision);
 });
+
+test('an owner journal still being published cannot escape the CAS conflict guard',()=>{
+ const current=P.get({id:'orders'}),lock=path.join(P.ROOT,'orders','.lock');
+ fs.mkdirSync(lock);fs.writeFileSync(path.join(lock,'owner.json'),'');
+ try{assert.throws(()=>P.save({id:'orders',expected_revision:current.revision,reason:'Concurrent lock journal',document:{title:'Must not publish'}}),e=>e.code==='STATE_CONFLICT');assert.equal(P.get({id:'orders'}).revision,current.revision);}
+ finally{fs.rmSync(lock,{recursive:true,force:true});}
+});

@@ -1,6 +1,6 @@
 {
   "protocol": "dt.release-inventory/v1",
-  "sourceDigest": "fb0a9a5b90b82ee95e1c75c7b67cc3b02e2276cec93018be20ec68ab69874021",
+  "sourceDigest": "1d4555fe26444b17d1c6d8a9ab467341e895bf7947fd9a2036d354ac9766fc82",
   "tools": [
     {
       "name": "find",
@@ -23,6 +23,7 @@
         "test/team-security.test.js",
         "test/tool-contracts.test.js",
         "test/units.test.js",
+        "test/webui-context.test.js",
         "test/workbench.test.js",
         "test/workflows.test.js"
       ],
@@ -647,6 +648,7 @@
         "test/testdata.test.js",
         "test/tool-discovery.test.js",
         "test/views.test.js",
+        "test/webui-context.test.js",
         "test/workbench-links.test.js"
       ],
       "integrationReferences": [
@@ -1177,6 +1179,18 @@
         "test/testdata.live.test.js",
         "test/workspace.live.test.js"
       ]
+    },
+    {
+      "name": "result_read",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/chat-context.test.js",
+        "test/webui-context.test.js"
+      ],
+      "integrationReferences": []
     },
     {
       "name": "context_find",
@@ -2158,6 +2172,7 @@
       "referenceTests": [
         "test/model-discovery-eval.test.js",
         "test/tool-contracts.test.js",
+        "test/webui-context.test.js",
         "test/workflows.test.js"
       ],
       "integrationReferences": []
@@ -2171,6 +2186,7 @@
       "referenceTests": [
         "test/model-discovery-eval.test.js",
         "test/tool-contracts.test.js",
+        "test/webui-context.test.js",
         "test/workflows.test.js"
       ],
       "integrationReferences": []
@@ -2189,6 +2205,7 @@
         "test/node-targets.test.js",
         "test/task-model-evaluation.test.js",
         "test/tool-contracts.test.js",
+        "test/webui-context.test.js",
         "test/workflows.test.js"
       ],
       "integrationReferences": []

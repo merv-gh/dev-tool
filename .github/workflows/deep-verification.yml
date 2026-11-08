@@ -11,6 +11,37 @@ env:
   LC_ALL: C.UTF-8
   DT_NO_DOCTOR: '1'
 jobs:
+  chat-context:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CONTEXT_TEST_WINDOW: '8192'
+      CONTEXT_TEST_THRESHOLD: '2000'
+      CONTEXT_TEST_RESULT_BYTES: '4096'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: mkdir -p work/ci
+      - run: docker compose -p dt-context-ci -f demo/context-compaction/compose.yml up -d
+      - run: |
+          for attempt in $(seq 1 90); do curl --fail --silent http://127.0.0.1:44402/health && break; sleep 2; done
+          curl --fail http://127.0.0.1:44402/health
+          node dev/check-chat-context.js http://127.0.0.1:44402 http://127.0.0.1:44400 http://127.0.0.1:44401 work/ci/chat-context.json
+      - if: always()
+        run: |
+          docker compose -p dt-context-ci -f demo/context-compaction/compose.yml logs --no-color >work/ci/chat-context-containers.log 2>&1
+          docker compose -p dt-context-ci -f demo/context-compaction/compose.yml down -v
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: chat-context-${{ github.sha }}
+          path: |
+            work/ci/chat-context.json
+            work/ci/chat-context-containers.log
   scale:
     runs-on: ubuntu-latest
     timeout-minutes: 40

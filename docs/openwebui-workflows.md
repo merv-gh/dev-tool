@@ -18,7 +18,13 @@ for host binding and authentication.
 
 ## Choose a small starting tool list
 
-The bundled compose and the default configuration use the `direct` profile: about fifty everyday tools by name (`find`, `pg_query`, `pg_table`, `es_search`, `kafka_last`, `logs_search`, `bitbucket_file`, `bitbucket_pr`, `code_search`, the workspace and test tools, `feature`, `show`, `code`) plus `tool_search`, `tool_describe` and `tool_execute` for the specialised rest (fixtures, scenarios, collections, test databases, UI-to-API capture). A model asked for rows, an index, a topic, a repo file or a pull request calls that tool at once instead of searching for it. The repo tools take a slug alone; dt finds its project. Set `DT_TOOL_PROFILE` or `tools.profile` to choose another, or pick one per connection:
+The launcher enables native rolling context compaction, including between tool
+rounds. Configure the actual serving window with `LLM_CONTEXT_WINDOW`; defaults
+are 32768 tokens with compaction at 16384. Large dt tool replies become bounded
+previews with exact retrieval through `result_read`. Chat history and inline
+views remain available. See [context management and recovery](chat-context.md).
+
+The bundled compose and the default configuration use the `direct` profile: everyday tools by name (`find`, `pg_query`, `pg_table`, `es_search`, `kafka_last`, `logs_search`, `bitbucket_file`, `bitbucket_pr`, `code_search`, the workspace and test tools, `feature`, `show`, `code`) plus `tool_search`, `tool_describe` and `tool_execute` for the specialised rest (fixtures, scenarios, collections, test databases, UI-to-API capture). A model asked for rows, an index, a topic, a repo file or a pull request calls that tool at once instead of searching for it. The repo tools take a slug alone; dt finds its project. Set `DT_TOOL_PROFILE` or `tools.profile` to choose another, or pick one per connection:
 
 For testers, connect a model to `openapi/tester.json` (or set `DT_TOOL_PROFILE=tester`). It starts with `checks`, a collection of ready-made scripts copied into `scripts/checks/` on first start: `service` (health, version, ERROR logs, lag), `environment`, `versions`, `table`, `trace`, `capture-data` and `reuse-data`. Their tests fail when a source cannot be reached, never pass. Edit or copy them like any saved script; `scripts.starters: false` skips the copy, and a deleted collection is not re-created.
 

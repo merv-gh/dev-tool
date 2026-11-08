@@ -1,0 +1,54 @@
+# An isolated real Open WebUI with synthetic source tools and a deterministic provider.
+# docker compose -p dt-context-demo -f demo/context-compaction/compose.yml up -d
+services:
+  dt:
+    image: ${DT_NODE_IMAGE:-node:24-bookworm}
+    entrypoint: [node, /fixture/fixture.js, dt]
+    environment:
+      DT_HOME: /data
+      DT_PUBLIC_URL: http://127.0.0.1:${CONTEXT_DT_PORT:-44400}
+      DT_LOG: quiet
+      DT_NO_DOCTOR: '1'
+      CONTEXT_TEST_WINDOW: ${CONTEXT_TEST_WINDOW:-32768}
+      CONTEXT_TEST_THRESHOLD: ${CONTEXT_TEST_THRESHOLD:-5000}
+      CONTEXT_TEST_RESULT_BYTES: ${CONTEXT_TEST_RESULT_BYTES:-12288}
+    volumes:
+      - ../../dist:/app:ro
+      - .:/fixture:ro
+      - dt-data:/data
+    ports: ['127.0.0.1:${CONTEXT_DT_PORT:-44400}:4000']
+  model:
+    image: ${DT_NODE_IMAGE:-node:24-bookworm}
+    entrypoint: [node, /fixture/fixture.js, model]
+    environment:
+      CONTEXT_SUMMARY_URL: ${CONTEXT_SUMMARY_URL:-}
+      CONTEXT_SUMMARY_MODEL: ${CONTEXT_SUMMARY_MODEL:-qwen3.5:4b}
+      CONTEXT_SUMMARY_NATIVE: ${CONTEXT_SUMMARY_NATIVE:-}
+      CONTEXT_TEST_WINDOW: ${CONTEXT_TEST_WINDOW:-32768}
+    volumes: ['.:/fixture:ro']
+    ports: ['127.0.0.1:${CONTEXT_MODEL_PORT:-44401}:5000']
+  webui:
+    image: ghcr.io/open-webui/open-webui:${OPEN_WEBUI_VERSION:-v0.12.4}
+    environment:
+      WEBUI_AUTH: 'false'
+      ENABLE_PERSISTENT_CONFIG: 'false'
+      ENABLE_OLLAMA_API: 'false'
+      OPENAI_API_BASE_URL: http://model:5000/v1
+      OPENAI_API_KEY: synthetic-fixture-key
+      ENABLE_TOOL_SERVERS: 'true'
+      ENABLE_TOOL_SEARCH: 'true'
+      TOOL_SEARCH_DEFER_THRESHOLD: '0'
+      TOOL_SEARCH_ALWAYS_LOADED: context_payload,result_read,tool_execute
+      ENABLE_CONTEXT_COMPACTION: 'true'
+      CONTEXT_COMPACTION_TOKEN_THRESHOLD: '5000'
+      CONTEXT_COMPACTION_RETENTION_PERCENTAGE: '25'
+      ENABLE_TITLE_GENERATION: 'false'
+      ENABLE_TAGS_GENERATION: 'false'
+      ENABLE_FOLLOW_UP_GENERATION: 'false'
+      ENABLE_FORWARD_USER_INFO_HEADERS: 'true'
+      OFFLINE_MODE: 'true'
+    volumes: ['webui-data:/app/backend/data']
+    ports: ['127.0.0.1:${CONTEXT_WEBUI_PORT:-44402}:8080']
+volumes:
+  dt-data:
+  webui-data:

@@ -57,12 +57,14 @@ test('timeout and cancellation kill a subprocess descendant', async () => {
   // Cancellation settles before the process-group escalation/reaping deadline.
   // Observe the required terminal condition instead of assuming a 150 ms scheduler delay.
   const gone=async pid=>{const deadline=Date.now()+2500;while(Date.now()<deadline){try{process.kill(pid,0);}catch(e){assert.equal(e.code,'ESRCH');return;}await new Promise(r=>setTimeout(r,20));}assert.throws(()=>process.kill(pid,0),{code:'ESRCH'});};
-  const script=`const {spawn}=require('child_process');const p=spawn(process.execPath,['-e','setInterval(()=>{},1000)']);require('fs').writeFileSync(${JSON.stringify(pidfile)},String(p.pid));setInterval(()=>{},1000);`;
+  // Publish the complete PID atomically: existsSync must never observe an empty
+  // newly opened file, whose Number('') would accidentally probe process group 0.
+  const script=`const {spawn}=require('child_process'),fs=require('fs');const p=spawn(process.execPath,['-e','setInterval(()=>{},1000)']);fs.writeFileSync(${JSON.stringify(pidfile+'.tmp')},String(p.pid));fs.renameSync(${JSON.stringify(pidfile+'.tmp')},${JSON.stringify(pidfile)});setInterval(()=>{},1000);`;
   const r=await execLocal(process.execPath,['-e',script],{cwd:home,env:{PATH:process.env.PATH},timeoutMs:2000});assert.equal(r.killed,true);
   const pid=Number(fs.readFileSync(pidfile)); await gone(pid);
   fs.unlinkSync(pidfile);
   const J=require('../lib/jobs');const j=J.start('cancel-node','cancel node',()=>execLocal(process.execPath,['-e',script],{cwd:home,env:{PATH:process.env.PATH},timeoutMs:10000}));
-  const readyDeadline=Date.now()+5000;while(!fs.existsSync(pidfile)&&Date.now()<readyDeadline)await new Promise(r=>setTimeout(r,20));const child=Number(fs.readFileSync(pidfile));assert.equal(J.cancel(j.id).stopped,1);await j.promise;await gone(child);
+  const readyDeadline=Date.now()+5000;while(!fs.existsSync(pidfile)&&Date.now()<readyDeadline)await new Promise(r=>setTimeout(r,20));const child=Number(fs.readFileSync(pidfile));assert.ok(Number.isInteger(child)&&child>1,'fixture published a complete descendant PID');assert.equal(J.cancel(j.id).stopped,1);await j.promise;await gone(child);
 });
 test('differential tool preserves types/order/null/error/effects and reports exact executable evidence', async () => {
   workspace('before',{'src/projection.cjs':`exports.load=(n)=>{if(n==='error')throw new TypeError('invalid');require('fs').writeFileSync('result.txt',String(n));return {id:'9007199254740993',amount:'1.2300',optional:null,items:[n,undefined,1n,-0]}}`});

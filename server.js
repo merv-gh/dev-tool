@@ -75,7 +75,7 @@ async function mcpHandle(msg, session, requestSignal) {
       if(mcpRequests.has(key))return {jsonrpc:'2.0',id:msg.id,error:{code:-32600,message:'Request id is already active in this session'}};
       const lifecycle=require('./lib/state-machine').create(require('./lib/lifecycles').mcp),controller=new AbortController(),abort=controller.abort.bind(controller);controller.abort=why=>{if(lifecycle.terminal)return;lifecycle.to('cancelling');abort(why);};const onAbort=()=>controller.abort(requestSignal.reason);if(requestSignal?.aborted)onAbort();else requestSignal?.addEventListener('abort',onAbort,{once:true});mcpRequests.set(key,controller);
       try {
-        const result = await tools.call(msg.params.name, msg.params.arguments || {}, { source: 'mcp', session,signal:controller.signal });
+        const result = require('./lib/chat-context').prepare(msg.params.name, await tools.call(msg.params.name, msg.params.arguments || {}, { source: 'mcp', session,signal:controller.signal }));
         lifecycle.to('replied');
         return reply({ content: [{ type: 'text', text: typeof result === 'string' ? result : JSON.stringify(result) }] });
       } catch (e) {
@@ -128,7 +128,7 @@ async function oapi(req, res, url) {
   let result;
   // Open WebUI says which chat a call comes from when ENABLE_FORWARD_USER_INFO_HEADERS is on
   const session = req.headers['x-openwebui-chat-id'] || req.headers['x-chat-id'] || null;
-  try { result = await tools.call(name, await readJsonBody(req), { source: 'openapi', session, signal:req.dtSignal }); }
+  try { result = require('./lib/chat-context').prepare(name, await tools.call(name, await readJsonBody(req), { source: 'openapi', session, signal:req.dtSignal })); }
   catch (e) { return send(res, e.statusCode || 400, errorPayload(e)); }
   const target = result && typeof result === 'object' && (result.view || result.dashboard);
   const embed = typeof target === 'string' ? target + (target.includes('?') ? '&' : '?') + 'embed=1' : null;

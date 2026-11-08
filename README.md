@@ -135,6 +135,10 @@ The development loop has `npm run test:local`, `npm run test:changed -- --list`,
 
 ### Your own Open WebUI
 
+Long investigations use native rolling compaction and bounded tool previews;
+full evidence remains retrievable with `result_read`. Set `LLM_CONTEXT_WINDOW`
+to your model server's actual limit. See [chat context and recovery](docs/chat-context.md).
+
 Start dt and its supporting services without launching another Open WebUI:
 
 ```bash
