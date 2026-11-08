@@ -36,7 +36,7 @@ jobs:
           docker compose -p dt-context-ci -f demo/context-compaction/compose.yml logs --no-color >work/ci/chat-context-containers.log 2>&1
           docker compose -p dt-context-ci -f demo/context-compaction/compose.yml down -v
       - if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: chat-context-${{ github.sha }}
           path: |
@@ -54,7 +54,7 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: node dev/catalog-scale.js --objects 1000000 --environments 10 --sessions 50 --seconds 10 --check --out work/ci/catalog-scale.json
       - if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: catalog-scale-${{ github.sha }}
           path: work/ci/catalog-scale.json
@@ -91,7 +91,7 @@ jobs:
           DT_TEST_NATIVE_BRIDGE: '1'
           DT_NATIVE_EVIDENCE: work/ci/native.json
       - if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: native-${{ github.sha }}
           path: work/ci/native.json
@@ -120,7 +120,7 @@ jobs:
       - if: always()
         run: docker logs dt-semantic-ci > semantic-ci.log 2>&1; docker rm -f dt-semantic-ci
       - if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: joern-${{ github.sha }}
           path: semantic-ci.log
