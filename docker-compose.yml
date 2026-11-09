@@ -247,18 +247,15 @@ services:
       ENABLE_PERSISTENT_CONFIG: "false"                    # this file stays the source of truth on every start
       ENABLE_TOOL_SERVERS: "true"
       ENABLE_FORWARD_USER_INFO_HEADERS: "true"           # tool calls say which chat they come from: dt reuses that chat's workspace
-      # Native rolling checkpoints run between turns AND native tool rounds.
+      # Keep the native Compact action. Setup enables automatic summaries only in auto mode.
       ENABLE_CONTEXT_COMPACTION: ${ENABLE_CONTEXT_COMPACTION:-true}
-      CONTEXT_COMPACTION_TOKEN_THRESHOLD: ${LLM_COMPACT_AT:-16384}
+      CONTEXT_COMPACTION_TOKEN_THRESHOLD: "2147483647"       # manual until setup applies the selected policy
       CONTEXT_COMPACTION_RETENTION_PERCENTAGE: "25"
       CONTEXT_COMPACTION_MODEL: ${LLM_COMPACTION_MODEL:-}
       # Keep the starting schemas small. Every other enabled tool remains discoverable.
       ENABLE_TOOL_SEARCH: "true"
       TOOL_SEARCH_DEFER_THRESHOLD: "0"
-      TOOL_SEARCH_ALWAYS_LOADED: >-
-        find,result_read,tool_search,tool_describe,tool_execute,pg_query,es_search,kafka_last,logs_search,passport,code_search,
-        context_find,context_open,context_read,context_write,workspace_open,workspace_read,workspace_write,test_run,show,code,job_cancel,
-        browser_browser_navigate,browser_browser_snapshot,browser_browser_click
+      TOOL_SEARCH_ALWAYS_LOADED: find,result_read,tool_search,tool_describe,tool_execute,code
       # dt over OpenAPI so results can embed the viewer/dashboard in the chat; browser over MCP.
       TOOL_SERVER_CONNECTIONS: >-
         [{"type":"openapi","url":"http://dt:4000","path":"openapi.json","auth_type":"none","key":"",

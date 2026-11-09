@@ -31,6 +31,31 @@ jobs:
           for attempt in $(seq 1 90); do curl --fail --silent http://127.0.0.1:44402/health && break; sleep 2; done
           curl --fail http://127.0.0.1:44402/health
           node dev/check-chat-context.js http://127.0.0.1:44402 http://127.0.0.1:44400 http://127.0.0.1:44401 work/ci/chat-context.json
+      - name: Check normal compaction frequency
+        env:
+          CONTEXT_TEST_WINDOW: '32768'
+          CONTEXT_TEST_THRESHOLD: default
+          CONTEXT_TEST_RESULT_BYTES: '12288'
+        run: |
+          docker compose -p dt-context-ci -f demo/context-compaction/compose.yml up -d --force-recreate
+          for attempt in $(seq 1 90); do
+            if curl --fail --silent http://127.0.0.1:44400/health && curl --fail --silent http://127.0.0.1:44401/v1/models && curl --fail --silent http://127.0.0.1:44402/health; then break; fi
+            sleep 2
+          done
+          node dev/check-chat-context.js http://127.0.0.1:44402 http://127.0.0.1:44400 http://127.0.0.1:44401 work/ci/chat-context-default.json
+      - name: Keep 262K chats manual until Compact is requested
+        env:
+          CONTEXT_TEST_WINDOW: '262144'
+          CONTEXT_TEST_THRESHOLD: default
+          CONTEXT_TEST_RESULT_BYTES: '12288'
+          CONTEXT_TEST_MODE: manual
+        run: |
+          docker compose -p dt-context-ci -f demo/context-compaction/compose.yml up -d --force-recreate
+          for attempt in $(seq 1 90); do
+            if curl --fail --silent http://127.0.0.1:44400/health && curl --fail --silent http://127.0.0.1:44401/v1/models && curl --fail --silent http://127.0.0.1:44402/health; then break; fi
+            sleep 2
+          done
+          node dev/check-chat-context.js http://127.0.0.1:44402 http://127.0.0.1:44400 http://127.0.0.1:44401 work/ci/chat-context-manual.json
       - if: always()
         run: |
           docker compose -p dt-context-ci -f demo/context-compaction/compose.yml logs --no-color >work/ci/chat-context-containers.log 2>&1
@@ -41,6 +66,8 @@ jobs:
           name: chat-context-${{ github.sha }}
           path: |
             work/ci/chat-context.json
+            work/ci/chat-context-default.json
+            work/ci/chat-context-manual.json
             work/ci/chat-context-containers.log
   scale:
     runs-on: ubuntu-latest

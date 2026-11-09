@@ -1,6 +1,6 @@
 {
   "protocol": "dt.release-inventory/v1",
-  "sourceDigest": "4625c159dd0b464890d14eaf027e99d4a0a76b5f5bda72c9240e4d400e6562aa",
+  "sourceDigest": "d51f4d49bc56cd0a4d489f21d67b06c61a646a8735d44afde8afd1f52829e3e2",
   "tools": [
     {
       "name": "find",
@@ -169,6 +169,7 @@
         "test/tool-contracts.test.js",
         "test/tool-discovery.test.js",
         "test/units.test.js",
+        "test/webui-context.test.js",
         "test/workbench.test.js"
       ],
       "integrationReferences": []

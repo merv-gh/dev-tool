@@ -120,6 +120,6 @@
   "log": { "maxMb": 50, "files": 3 },
   "results": { "maxMb": 500 },
 
-  "llm": { "contextWindow": "${LLM_CONTEXT_WINDOW}", "compactAt": "${LLM_COMPACT_AT}" },
+  "llm": { "contextWindow": "${LLM_CONTEXT_WINDOW}", "compactAt": "${LLM_COMPACT_AT}", "compactionMode": "${LLM_COMPACTION_MODE}" },
   "server": { "securityProfile": "local", "publicUrl": "http://127.0.0.1:4000", "apiKey": "${DT_API_KEY}", "accessTokens": [], "allowedOrigins": [], "trustedProxies": [], "ratePerSec": 1, "networkBudgets": {} }
 }

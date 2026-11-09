@@ -18,9 +18,10 @@ for host binding and authentication.
 
 ## Choose a small starting tool list
 
-The launcher enables native rolling context compaction, including between tool
-rounds. Configure the actual serving window with `LLM_CONTEXT_WINDOW`; defaults
-are 32768 tokens with compaction at 16384. Large dt tool replies become bounded
+The launcher keeps Open WebUI's native Compact action available, with automatic
+summaries off by default. Qwen3.8-27B defaults to 262144 tokens; configure the actual
+serving window with `LLM_CONTEXT_WINDOW`. Set `LLM_COMPACTION_MODE=auto` to opt into
+rolling summaries at 75% of that window. Large dt tool replies become bounded
 previews with exact retrieval through `result_read`. Chat history and inline
 views remain available. See [context management and recovery](chat-context.md).
 

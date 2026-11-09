@@ -1,6 +1,6 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const home=fs.mkdtempSync(path.join(os.tmpdir(),'dt-chat-context-'));
-for(const k of ['DT_CONFIG_DIR','DT_CACHE_DIR','DT_PASSPORTS_DIR','DT_TOOLS','LLM_CONTEXT_WINDOW','LLM_COMPACT_AT','LLM_CONTEXT_RESERVE','ENABLE_CONTEXT_COMPACTION'])delete process.env[k];
+for(const k of ['DT_CONFIG_DIR','DT_CACHE_DIR','DT_PASSPORTS_DIR','DT_TOOLS','LLM_MODEL','LLM_CONTEXT_WINDOW','LLM_COMPACT_AT','LLM_CONTEXT_RESERVE','LLM_COMPACTION_MODE','ENABLE_CONTEXT_COMPACTION'])delete process.env[k];
 Object.assign(process.env,{DT_HOME:home,DT_STATE_BACKEND:'legacy',DT_LOG:'quiet',DT_NO_DOCTOR:'1'});
 const config={envs:{dev:{}},scripts:{starters:false},tools:{plugins:['fixture.js']}};
 fs.writeFileSync(path.join(home,'config.json'),JSON.stringify(config));
@@ -40,8 +40,14 @@ test('original visualizations survive response compaction and nested data stays 
  const id=value.modelContext.resultId;assert.equal(JSON.parse(C.read({id,path:'/view'}).text),original.view);
 });
 test('policy reserves space, supports exact per-model windows and rejects unsafe thresholds',()=>{
- const cfg=require('../lib/config');assert.equal(C.policy().compactAt,16384);
- fs.writeFileSync(path.join(home,'config.json'),JSON.stringify({...config,llm:{contextWindow:32768,contextWindows:{wide:65536}}}));cfg.reload();assert.equal(C.policy('wide').compactAt,32768);
+ const cfg=require('../lib/config');assert.equal(C.policy().compactAt,24576);assert.equal(C.policy().mode,'manual');assert.ok(C.policy().automaticThreshold>10000000);
+ const qwen=C.policy('qwen3.8:27b');assert.equal(qwen.contextWindow,262144);assert.equal(qwen.reserveTokens,32768);assert.equal(qwen.compactAt,196608);assert.equal(qwen.mode,'manual');
+ fs.writeFileSync(path.join(home,'config.json'),JSON.stringify({...config,llm:{contextWindow:32768,contextWindows:{wide:65536,tiny:8192}}}));cfg.reload();assert.equal(C.policy('wide').compactAt,49152);assert.equal(C.policy('tiny').compactAt,6144);
+ assert.equal(C.policy('qwen3.8:27b').contextWindow,32768,'explicit serving limits override the model preset');
+ fs.writeFileSync(path.join(home,'config.json'),JSON.stringify({...config,llm:{compactionMode:'auto'}}));cfg.reload();assert.equal(C.policy().automaticThreshold,24576);
+ fs.writeFileSync(path.join(home,'config.json'),JSON.stringify({...config,llm:{compactionMode:'invalid'}}));cfg.reload();assert.throws(()=>C.policy(),/compactionMode/);
+ fs.writeFileSync(path.join(home,'config.json'),JSON.stringify({...config,llm:{contextWindow:32768,contextReserve:12288}}));cfg.reload();assert.equal(C.policy().compactAt,20480,'a larger explicit reserve takes precedence over 75%');
+ fs.writeFileSync(path.join(home,'config.json'),JSON.stringify({...config,llm:{contextWindow:32768,compactAt:12000}}));cfg.reload();assert.equal(C.policy().compactAt,12000,'explicit conservative thresholds remain supported');
  fs.writeFileSync(path.join(home,'config.json'),JSON.stringify({...config,llm:{contextWindow:4096,compactAt:4000}}));cfg.reload();assert.throws(()=>C.policy(),/llm.compactAt/);
  fs.writeFileSync(path.join(home,'config.json'),JSON.stringify({...config,llm:{compaction:'False'}}));cfg.reload();assert.equal(C.policy().enabled,false);
  fs.writeFileSync(path.join(home,'config.json'),JSON.stringify({...config,tools:{...config.tools,modelResultBytes:0}}));cfg.reload();const raw={text:'x'.repeat(30000)};assert.equal(C.prepare('raw-client',raw),raw,'operators can retain legacy unbounded transport shapes');

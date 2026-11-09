@@ -2,21 +2,22 @@
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),{spawn}=require('node:child_process');
 if(process.argv[2]==='dt'){
  fs.mkdirSync('/data',{recursive:true});
- fs.writeFileSync('/data/config.json',JSON.stringify({envs:{dev:{}},scripts:{starters:false},server:{trustNetwork:true},llm:{contextWindow:Number(process.env.CONTEXT_TEST_WINDOW||32768),compactAt:Number(process.env.CONTEXT_TEST_THRESHOLD||5000)},tools:{modelResultBytes:Number(process.env.CONTEXT_TEST_RESULT_BYTES||12288),plugins:['fixture.js'],profiles:{'context-fixture':{includeCore:false,names:['context_payload','result_read','tool_execute']}}}}));
+ const defaultPolicy=process.env.CONTEXT_TEST_THRESHOLD==='default';
+ fs.writeFileSync('/data/config.json',JSON.stringify({envs:{dev:{}},scripts:{starters:false},server:{trustNetwork:true},llm:{contextWindow:Number(process.env.CONTEXT_TEST_WINDOW||32768),...(defaultPolicy?{}:{compactAt:Number(process.env.CONTEXT_TEST_THRESHOLD||5000)})},tools:{modelResultBytes:Number(process.env.CONTEXT_TEST_RESULT_BYTES||12288),plugins:['fixture.js'],profiles:{'context-fixture':{includeCore:false,names:['context_payload','result_read','tool_execute'],...(defaultPolicy?{prefixes:['']}: {})}}}}));
  fs.writeFileSync('/data/fixture.js',`let calls=0;module.exports=[{name:'context_payload',description:'Synthetic calculation evidence. Inspect this result before requesting the next step.',input:{step:{type:'integer'}},required:['step'],run:({step})=>({step,calls:++calls,total:step*(step+1)/2,constraint:'CTX-17: do not push',evidence:'synthetic rows; no production effects',rows:Array.from({length:60},(_,i)=>({i,note:'large synthetic tool evidence '.repeat(100)}))})},{name:'context_payload_count',description:'Fixture invocation count',input:{},run:()=>calls}];`);
  const child=spawn(process.execPath,['/app/dt.js','serve','--lan','--port','4000'],{stdio:'inherit'});
  process.on('SIGTERM',()=>child.kill('SIGTERM'));process.on('SIGINT',()=>child.kill('SIGINT'));child.on('close',code=>process.exit(code||0));
 }else{
  const fresh=()=>({rounds:0,summaries:0,maxRequestBytes:0,requests:[],protocolErrors:[],summaryTexts:[],summaryModel:process.env.CONTEXT_SUMMARY_URL?(process.env.CONTEXT_SUMMARY_MODEL||'qwen3.5:4b'):'deterministic-fixture'});let stats=fresh();
- const window=Number(process.env.CONTEXT_TEST_WINDOW||32768),requestCap=(window-Math.min(8192,Math.floor(window/4)))*4;
+ const window=Number(process.env.CONTEXT_TEST_WINDOW||32768),requestCap=(window-(process.env.CONTEXT_TEST_THRESHOLD==='default'?512:Math.min(8192,Math.floor(window/4))))*4;
  const server=http.createServer(async(req,res)=>{
   if(req.url==='/reset'&&req.method==='POST'){stats=fresh();res.setHeader('content-type','application/json');return res.end('{\"reset\":true}');}
-  if(req.url==='/stats'){res.setHeader('content-type','application/json');return res.end(JSON.stringify(stats));}
+  if(req.url==='/stats'){res.setHeader('content-type','application/json');return res.end(JSON.stringify({...stats,requestCapBytes:requestCap}));}
   if(req.url==='/v1/models'){res.setHeader('content-type','application/json');return res.end(JSON.stringify({object:'list',data:[{id:'context-fixture',object:'model',owned_by:'disposable-fixture'}]}));}
   if(req.url!=='/v1/chat/completions'){res.writeHead(404);return res.end('{}');}
   let text='';for await(const b of req)text+=b;const body=JSON.parse(text),messages=body.messages||[];
   const ids=new Set();for(const m of messages){if(m.role==='assistant')for(const t of m.tool_calls||[])ids.add(t.id);if(m.role==='tool'&&!ids.delete(m.tool_call_id))stats.protocolErrors.push('orphan '+m.tool_call_id);}if(ids.size)stats.protocolErrors.push('missing tool results');
-  const n=Buffer.byteLength(text);stats.maxRequestBytes=Math.max(stats.maxRequestBytes,n);stats.requests.push({bytes:n,messages:messages.length,stream:!!body.stream,intentPinned:messages.some(m=>m.role==='user'&&typeof m.content==='string'&&m.content.includes('Continue CTX-17.')&&m.content.includes('Do not push.')),hasSummary:messages.some(m=>typeof m.content==='string'&&m.content.includes('[CONVERSATION SUMMARY]')),toolResults:messages.filter(m=>m.role==='tool').length});
+  const n=Buffer.byteLength(text);stats.maxRequestBytes=Math.max(stats.maxRequestBytes,n);stats.requests.push({bytes:n,messages:messages.length,stream:!!body.stream,afterToolRound:stats.rounds,systemBytes:Buffer.byteLength(JSON.stringify(messages.filter(m=>m.role==='system'))),toolSchemaBytes:Buffer.byteLength(JSON.stringify(body.tools||[])),intentPinned:messages.some(m=>m.role==='user'&&typeof m.content==='string'&&m.content.includes('Continue CTX-17.')&&m.content.includes('Do not push.')),hasSummary:messages.some(m=>typeof m.content==='string'&&m.content.includes('[CONVERSATION SUMMARY]')),toolResults:messages.filter(m=>m.role==='tool').length});
   if(n>requestCap){res.writeHead(400,{'content-type':'application/json'});return res.end(JSON.stringify({error:{code:'context_length_exceeded',message:'Synthetic serving limit exceeded'}}));}
   let message,finish='stop';
   if(!body.stream){
