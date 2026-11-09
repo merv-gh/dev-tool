@@ -96,3 +96,5 @@ Context collection is bounded to 40 bodies, 600 facts, depth 12 and a time budge
 | Unchanged control | Same entry-to-exit behavior and source | No source-context or selected-path change noise |
 
 `test/semantic-flow-stress.live.test.js` asserts these cases against a real worker, including a 4 KiB model preview, independent revisions and saved-view routing. Unit tests cover missing libraries, context budgets, failed local composition, callback-role preservation and UTF-8 preview bounds. Passing this finite corpus is regression evidence, not proof of complete Java path discovery.
+
+[Discoverability review](trace-discoverability.md) explains when to choose tracing versus a whole-entry map, impact analysis or plain code search, with measured small-model limitations.

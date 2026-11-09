@@ -61247,8 +61247,16 @@ var require_tool_search = __commonJS({
       [/\b(health|status|down|broken)\b/, ["health", "overview"]],
       [/\b(docs?|confluence|wiki|feature|architecture)\b/, ["feature", "docs_search", "confluence_search"]]
     ];
+    function sourceIntent(q) {
+      const text = q.replace(/[-_]/g, " "), code = /\b(retained|snapshots?|analys(?:is|es)|joern|source|code|method|handler|parameter|argument|entrypoint|ingress)\b/.test(text);
+      if (/\b(impact|affected|affect)\b/.test(text) && /\b(services|callers|endpoints|tests)\b/.test(text)) return ["impact"];
+      if (code && /\b(no|missing|prepare|index|build)\b/.test(text) && /\b(retained analysis|analysis yet|dependency closure|library closure)\b/.test(text)) return ["semantic_index", "semantic_capabilities", "semantic_search"];
+      if (code && /\b(state graph|state map|flow map|all (bound )?(ingress|entrypoints|entries|entry points))\b/.test(text)) return ["semantic_query", "semantic_index", "semantic_search"];
+      if (code && (/\b(retained|snapshots?|analys(?:is|es))\b/.test(text) && /\b(parameters?|arguments?|identifiers?|lines?)\b/.test(text) && /\b(change|changed|before|after|compare|guards?|conditions?)\b/.test(text) || /\bparameters?\b/.test(text) && /\barguments?\b/.test(text) || /\b(data ?flow|value flow|control flow|entry to exit|sink)\b/.test(text) || /\bpath\b/.test(text) && /\b(parameters?|arguments?|lines?|guards?|snapshots?|return|exit|inherited)\b/.test(text) || /\b(filters?|callbacks?|loops?|guards?|inherited|abstract|extends)\b/.test(text) && /\b(parameters?|arguments?|snapshots?|handlers?|paths?|conditions?)\b/.test(text))) return ["semantic_trace", "semantic_query", "semantic_index", "semantic_search"];
+      return [];
+    }
     function intents(query, names) {
-      const q = String(query || "").toLowerCase(), out2 = [];
+      const q = String(query || "").toLowerCase(), out2 = sourceIntent(q).filter((name) => names.has(name));
       for (const [re2, tools] of INTENTS) if (re2.test(q)) {
         for (const name of tools) if (names.has(name) && !out2.includes(name)) out2.push(name);
       }
@@ -69995,7 +70003,7 @@ var require_tool_profiles = __commonJS({
     ];
     var PROFILES = {
       architecture: { description: "Shared architecture explanations, C4 and feature/data flows, environment observations and exports. Admins publish; everyone reads.", prefixes: ["architecture_", "project_context_"], names: [...CORE, "semantic_query", "semantic_trace", "passport", "consul_service"] },
-      semantic: { description: "Exact semantic revisions, source paths and guards, plus typed passport ports and separately versioned corrections.", includeCore: false, names: [...DISCOVERY, "semantic_capabilities", "semantic_index", "semantic_search", "semantic_query", "semantic_trace", "semantic_ports", "passport_adjustments", "passport_adjust", "passport", "code_search", "code_read", "job_cancel", "call_history"] },
+      semantic: { description: "Entry-to-exit change paths, before/after branches, conditions, loops, stream callbacks and inherited library logic; whole-entry maps, exact revisions and editable passport ports.", includeCore: false, names: [...DISCOVERY, "semantic_capabilities", "semantic_index", "semantic_search", "semantic_query", "semantic_trace", "semantic_ports", "passport_adjustments", "passport_adjust", "passport", "code_search", "code_read", "job_cancel", "call_history"] },
       map: { description: "Microservice map, saved feature flows and bounded graph exploration, with inspection tools and discovery for the rest.", includeCore: false, names: [...DISCOVERY, "map", "map_search", "map_neighbors", "map_path", "map_node", "map_adjustments", "map_adjust", "map_layers", "map_save", "map_ui_preview", "passport", "pg_table", "pg_query", "kafka_topic", "kafka_last", "logs_search", "es_search"] },
       tester: { description: "Testing by name: ready-made checks (service, environment, versions, table, trace, test data capture and reuse), test data and scratch databases, scenarios, API and UI capture, scripts and suites, tests in a workspace; tool_search reaches the rest.", includeCore: false, names: TESTER },
       direct: { description: "Everyday tools by name (databases, indices, topics, logs, repo files and PRs, code, docs); tool_search, tool_describe and tool_execute reach the rest.", includeCore: false, names: DIRECT },
@@ -74284,7 +74292,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "a46714f6b68d8dc3bfcbf785aff220ad3ed3c2503bd9e67279c033c96507637f";
+      if (true) return "4625c159dd0b464890d14eaf027e99d4a0a76b5f5bda72c9240e4d400e6562aa";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -74450,16 +74458,17 @@ var require_tools_semantic = __commonJS({
     module2.exports = ({ str, int, env }) => {
       const S = () => require_semantic_code();
       const scope = { env, service: str("Service passport; resolves its pinned repository"), repo: str("Repository index key or PROJECT/repo"), project: str("Bitbucket project, with slug"), slug: str("Repository slug, with project"), ref: str("Exact SHA, tag or branch resolved once"), revisionKey: str("Retained revision key from semantic_index"), repos: str("Comma-separated exact repository or revision keys"), language: { type: "string", enum: ["java", "js"], description: "Select one frontend (js also covers TS); avoids mixing analyses of different languages" } };
-      const selection = { ...scope, revisionSet: str("Exact resolved source/dependency set from semantic_index"), analysis: str("Retained analysis id"), analyses: { type: "array", maxItems: 20, items: { type: "string" }, description: "Exact retained analysis ids, including both revisions for compare" } };
+      const selection = { ...scope, revisionSet: str("Exact resolved source/dependency set from semantic_index"), analysis: str("Exact semantic_index analyses[].id; not a service name or ref"), analyses: { type: "array", maxItems: 20, items: { type: "string" }, description: "Exact retained analysis ids; compare uses [before,after] for the same repository/frontend" } };
       const selector = { type: "object", properties: { id: str("Canonical symbol/port id"), analysisId: str("Retained analysis id"), repo: str("PROJECT/repo"), sha: str("Full source SHA"), signature: str("Exact method signature"), name: str("Symbol or boundary name"), receiver: str("Exact concrete class; resolves inherited methods through retained type declarations"), file: str("Relative source file"), line: { type: "integer", minimum: 1 }, column: { type: "integer", minimum: 1 }, code: str("Exact expression for a line endpoint"), nodeLabel: str("CPG expression label, e.g. IDENTIFIER or CALL"), nodeId: str("Exact CPG node id from this analysis only"), parameter: { oneOf: [{ type: "string", minLength: 1 }, { type: "integer", minimum: 1, maximum: 100 }], description: "Exact method parameter name or one-based index for value flow" }, argument: { type: "integer", minimum: 1, maximum: 64, description: "Exact one-based sink call argument for value flow" }, kind: str("Symbol or typed boundary kind"), env: str("Environment"), cluster: str("Kafka cluster identity"), db: str("Database identity"), schema: str("Database schema"), topic: str("Resolved Kafka topic"), route: str("HTTP path"), method: str("HTTP verb"), service: str("Exact service identity") }, additionalProperties: false };
       const traceSelector = { ...selector, properties: { ...selector.properties, kind: { type: "string", enum: ["method", "line", "call", "http-ingress", "kafka-consume", "scheduled", "http-egress", "kafka-produce", "db-write", "table", "port"], description: "Endpoint kind; line requires exact relative file and line" } } };
+      const traceRules = { if: { required: ["job"] }, then: { properties: { job: { minLength: 1 } } }, else: { if: { anyOf: [{ required: ["analysis"] }, { required: ["analyses"] }, { required: ["from"] }, { required: ["to"] }] }, then: { required: ["from", "to"], anyOf: [{ required: ["analysis"], properties: { analysis: { minLength: 1 } } }, { required: ["analyses"], properties: { analyses: { minItems: 1, maxItems: 2, uniqueItems: true } } }] } }, examples: [{ analyses: ["before-analysis-id", "after-analysis-id"], from: { kind: "method", name: "entryMethod", parameter: "input" }, to: { kind: "call", name: "exitCall", argument: 1 } }, { job: "returned-job-id", waitMs: 1e3 }] };
       const response = { format: { type: "string", enum: ["compact", "full"], default: "compact", description: "Bounded model preview or original JSON; inline view always retains full evidence" }, max_output_bytes: { type: "integer", minimum: 4096, maximum: 65536, default: 16384, description: "Compact JSON byte budget; preview omissions are explicit" } };
       const bounds = { limit: { ...int("Result page size", 30), minimum: 1, maximum: 200 }, cursor: str("Opaque cursor from the same retained result"), budgetMs: { ...int("Query time budget", 5e3), minimum: 100, maximum: 3e4 }, ...response };
       return [
         { name: "semantic_capabilities", description: "Read semantic engine readiness, versions, supported operations and resource limits. Missing semantic coverage never changes native code search.", input: {}, run: () => present(S().capabilities(), { title: "Semantic capabilities" }) },
         { name: "semantic_index", description: "Index an exact repository/service revision as an owned job; use job to inspect it. No target lists retained analyses. Reparse preserves the last good generation. Cancel through job_cancel.", input: { ...scope, versions: { type: "boolean", default: false }, composite: { type: "boolean", default: false, description: "Parse the exact service Java dependency closure together" }, reparse: { type: "boolean", default: false }, job: str("Existing semantic job id; observes the same job"), waitMs: { ...int("Observation wait, max 30000 ms", 0), minimum: 0, maximum: 3e4 } }, run: async (a) => present(await S().index(a.slug && !a.repo ? { ...a, repo: a.slug } : a), { title: "Semantic index" }) },
         { name: "semantic_search", description: "Search retained symbols or typed ports, with source locations and exact revisions. Missing analysis reports a build suggestion; it never starts an implicit parse.", input: { ...selection, query: str("Symbol, signature, file or port words"), kind: str("Optional symbol or typed port kind"), ports: { type: "boolean", default: false, description: "Search typed boundary ports instead of symbols" }, ...bounds }, run: async (a) => present(await S().query({ ...a, operation: a.ports ? "ports" : "symbols" }), { title: "Semantic search" }) },
-        { name: "semantic_trace", description: "Trace entry/line to exit/line in retained Joern CPGs. One analysis explains a change path; two ordered analyses show before/after expressions and guards. Optional assumptions annotate CFG candidates, never prove feasibility or behavior.", input: { env, analysis: selection.analysis, analyses: { ...selection.analyses, maxItems: 2 }, from: traceSelector, to: traceSelector, after_from: { ...traceSelector, description: "Complete source selector for the after revision when lines/expressions moved" }, after_to: { ...traceSelector, description: "Complete target selector for the after revision when lines/expressions moved" }, assumptions: { type: "array", maxItems: 20, items: { type: "object", properties: { expression: { type: "string", minLength: 1, maxLength: 1e3 }, holds: { type: "boolean" } }, required: ["expression", "holds"], additionalProperties: false } }, includeControl: { type: "boolean", default: true }, includeContext: { type: "boolean", default: true, description: "Collect bounded reachable source changes, loops, stream callbacks and library dispatch assumptions separately from selected paths" }, maxPaths: { ...int("Paths per layer per revision", 8), minimum: 1, maximum: 20 }, maxHops: { ...int("Nodes per path", 60), minimum: 1, maximum: 100 }, budgetMs: bounds.budgetMs, job: str("Observe this owned trace job without repeating it"), waitMs: { ...int("Observation wait", 0), minimum: 0, maximum: 3e4 } }, run: async (a) => {
+        { name: "semantic_trace", inputRules: traceRules, description: "Explain a change path: analysis=<id> or analyses=[beforeId,afterId], from and to required. Method input: from.name + parameter; sink: to.name + argument. Collects conditions, loops, stream filters/maps and inherited-library logic; from.receiver selects a concrete subclass. Graph/readable evidence, not runtime proof. List missing analyses: semantic_index; whole-entry map: semantic_query flowmap.", input: { env, analysis: selection.analysis, analyses: { ...selection.analyses, maxItems: 2 }, from: { ...traceSelector, description: "Start method parameter, ingress port or exact code line; receiver selects an inherited concrete class" }, to: { ...traceSelector, description: "Target call argument, return, exit port or exact code line" }, after_from: { ...traceSelector, description: "Complete source selector for the after revision when lines/expressions moved" }, after_to: { ...traceSelector, description: "Complete target selector for the after revision when lines/expressions moved" }, assumptions: { type: "array", maxItems: 20, items: { type: "object", properties: { expression: { type: "string", minLength: 1, maxLength: 1e3 }, holds: { type: "boolean" } }, required: ["expression", "holds"], additionalProperties: false } }, includeControl: { type: "boolean", default: true }, includeContext: { type: "boolean", default: true, description: "Collect bounded reachable source changes, loops, stream callbacks and library dispatch assumptions separately from selected paths" }, maxPaths: { ...int("Paths per layer per revision", 8), minimum: 1, maximum: 20 }, maxHops: { ...int("Nodes per path", 60), minimum: 1, maximum: 100 }, budgetMs: bounds.budgetMs, job: str("Observe this owned trace job without repeating it"), waitMs: { ...int("Observation wait", 0), minimum: 0, maximum: 3e4 } }, run: async (a) => {
           const value = await S().query({ ...a, operation: "trace" });
           return present(value, { view: "semantic-path-trace", title: "Change path \xB7 entry to exit" });
         } },
@@ -75142,115 +75151,466 @@ var require_workflow_guides = __commonJS({
           ]
         },
         {
+          id: "selected-change-path",
+          title: "Explain a change path and its collected assumptions",
+          terms: "entry exit path line identifier parameter argument guards conditions conditional loop continue stream filter map callback inherited abstract parent superclass receiver handler before after compare branch snapshot transformation",
+          required: [
+            "one exact retained analysis, or ordered before/after analyses",
+            "source value/line and target call argument/return/line",
+            "explicit concrete receiver for inherited service templates"
+          ],
+          stages: [
+            {
+              id: "select",
+              goal: "List retained analyses with semantic_index. Resolve exact endpoints with semantic_search. If missing, index exact code revisions; composite=true retains the pinned Java internal-library closure.",
+              tools: [
+                "semantic_index",
+                "semantic_search"
+              ]
+            },
+            {
+              id: "trace",
+              goal: "Use semantic_trace with analysis or analyses=[before,after], from/to, optional after_from/after_to for moved lines. from.parameter selects an input; to.argument selects a sink value. Set from.receiver for inherited handlers; includeContext defaults true.",
+              tools: [
+                "semantic_trace",
+                "code_read"
+              ]
+            },
+            {
+              id: "interpret",
+              goal: "Read independent value/control evidence and collected context: conditions, loops, stream predicates/mappings and parent helpers. Inspect declared receiver joins, gaps and exact source locators. A whole-entry overview instead uses semantic_query operation=flowmap; cross-service impact uses impact.",
+              tools: [
+                "semantic_trace",
+                "semantic_query",
+                "impact"
+              ]
+            },
+            {
+              id: "verify",
+              goal: "Copy retained graph/briefing, save assumptions and source identities, then exercise entry-to-exit regressions. Check accepted/rejected inputs and effect values/counts; a static comparison is not execution proof.",
+              tools: [
+                "context_write",
+                "test_context",
+                "test_run"
+              ]
+            }
+          ],
+          boundaries: [
+            "Collected source facts do not establish applicability to the selected path, dominance, loop counts or callback invocation.",
+            "Receiver-bound composed lineage consists of independently checked local slices and declared call/return joins; Spring runtime wiring stays unknown.",
+            "Missing, ambiguous or bounded paths do not prove absence, behavioral equivalence or release safety."
+          ]
+        },
+        {
           id: "branch-dataflow-review",
           title: "Review a feature across branch data flows",
           terms: "joern compare branch branches feature regression entrypoint parameter argument value flow dataflow changed service commit",
-          required: ["repository and before/after refs", "entry value and observable exits"],
-          stages: [
-            { id: "pin", goal: "Retain both source commits and select one frontend; list versions to obtain exact analysis IDs", tools: ["code_index", "semantic_index"] },
-            { id: "compare", goal: "Use semantic_query compare with mode=dataflow, analyses=[before,after], revision-neutral method parameter and sink argument selectors; inspect changed expressions and caveats", tools: ["semantic_search", "semantic_query", "code_read"] },
-            { id: "prove", goal: "Run a sensitive failing entry-to-exit regression, implement in a private workspace, rerun the regression, and compare the separately retained edited snapshot; a passing smoke test cannot establish the fix", tools: ["workspace_open", "workspace_write", "test_run", "semantic_index", "workspace_patch"] }
+          required: [
+            "repository and before/after refs",
+            "entry value and observable exits"
           ],
-          boundaries: ["Static paths can conservatively couple predicate operands; membership does not prove equal values or runtime behavior.", "Missing bounded paths, failed/truncated sides and unchanged projections are not proofs of safety or equivalence."]
+          stages: [
+            {
+              id: "pin",
+              goal: "Retain both source commits and select one frontend; list versions to obtain exact analysis IDs",
+              tools: [
+                "code_index",
+                "semantic_index"
+              ]
+            },
+            {
+              id: "compare",
+              goal: "Use semantic_trace for a paired entry/line-to-exit change briefing with guards and collected assumptions. semantic_query compare with mode=dataflow is the lower-level value-only comparison. Select analyses=[before,after] and exact source parameter/sink argument; inspect caveats.",
+              tools: [
+                "semantic_search",
+                "semantic_trace",
+                "semantic_query",
+                "code_read"
+              ]
+            },
+            {
+              id: "prove",
+              goal: "Run a sensitive failing entry-to-exit regression, implement in a private workspace, rerun the regression, and compare the separately retained edited snapshot; a passing smoke test cannot establish the fix",
+              tools: [
+                "workspace_open",
+                "workspace_write",
+                "test_run",
+                "semantic_index",
+                "workspace_patch"
+              ]
+            }
+          ],
+          boundaries: [
+            "Static paths can conservatively couple predicate operands; membership does not prove equal values or runtime behavior.",
+            "Missing bounded paths, failed/truncated sides and unchanged projections are not proofs of safety or equivalence."
+          ]
         },
         {
           id: "column-lineage",
           title: "Locate column reads and writes",
           terms: "column field read write written reads writes functions repositories lineage usage impact",
-          required: ["environment", "database", "schema.table.column"],
-          stages: [
-            { id: "resolve", goal: "Resolve the exact cached database/table/column; keep ambiguity explicit", tools: ["find", "pg_table"] },
-            { id: "lineage", goal: "Inspect classified column accesses, caller chains, revisions and incomplete coverage", tools: ["pg_usage", "impact"] },
-            { id: "verify", goal: "Read exact function/source evidence, including dynamic SQL and generated-code gaps", tools: ["pg_function", "code_search", "code_read"] }
+          required: [
+            "environment",
+            "database",
+            "schema.table.column"
           ],
-          boundaries: ["A text hit is not proof of read/write access. Unknown dynamic SQL, missing revisions or bounded traversal prevent an exhaustive claim."]
+          stages: [
+            {
+              id: "resolve",
+              goal: "Resolve the exact cached database/table/column; keep ambiguity explicit",
+              tools: [
+                "find",
+                "pg_table"
+              ]
+            },
+            {
+              id: "lineage",
+              goal: "Inspect classified column accesses, caller chains, revisions and incomplete coverage",
+              tools: [
+                "pg_usage",
+                "impact"
+              ]
+            },
+            {
+              id: "verify",
+              goal: "Read exact function/source evidence, including dynamic SQL and generated-code gaps",
+              tools: [
+                "pg_function",
+                "code_search",
+                "code_read"
+              ]
+            }
+          ],
+          boundaries: [
+            "A text hit is not proof of read/write access. Unknown dynamic SQL, missing revisions or bounded traversal prevent an exhaustive claim."
+          ]
         },
         {
           id: "reproduce-state",
           title: "Recreate a cross-system bug",
           terms: "recreate reproduce reproduction bug related entities databases postgres pg tables elasticsearch es kafka messages streams capture fixture state tenant",
-          required: ["environment", "service/passport", "entity and tenant identity", "bounded event window"],
-          stages: [
-            { id: "inventory", goal: "Inventory every known read and action from the selected service/passport", tools: ["scenario_inventory", "passport"] },
-            { id: "plan", goal: "Bind scoped relational tuples and explicit PG/ES/Kafka obligations, schemas and windows", tools: ["fixture_plan", "scenario_state_plan"] },
-            { id: "capture", goal: "Capture read-only source state and inspect completeness, precision, hashes and consistency", tools: ["fixture_capture", "fixture_validate", "scenario_state_capture"] },
-            { id: "export", goal: "Export hashed test resources and independently verify SQL constraints", tools: ["fixture_export", "fixture_replay"] },
-            { id: "replay", goal: "Preflight reviewed native dependency adapters, start isolated replay and inspect connection bindings", tools: ["fixture_runtime_preflight", "fixture_runtime_start", "fixture_runtime_bindings"] },
-            { id: "effects", goal: "Freeze independent effects; execute actual application tests with fixture_runtime and explicit datasource bindings, or publish a declared owned broker action; then independently observe and check writes or rejected-action no-writes", tools: ["fixture_runtime_arm", "test_run", "fixture_runtime_publish", "fixture_runtime_observe", "fixture_runtime_check", "scenario_run"] },
-            { id: "cleanup", goal: "Stop only owned resources and retain cleanup failures", tools: ["fixture_runtime_stop", "fixture_runtime_cleanup"] }
+          required: [
+            "environment",
+            "service/passport",
+            "entity and tenant identity",
+            "bounded event window"
           ],
-          boundaries: ["Separate per-source snapshots do not establish a distributed atomic snapshot or exactly-once delivery.", "Truncated windows, missing schemas/codecs or unbound reads must remain gaps."]
+          stages: [
+            {
+              id: "inventory",
+              goal: "Inventory every known read and action from the selected service/passport",
+              tools: [
+                "scenario_inventory",
+                "passport"
+              ]
+            },
+            {
+              id: "plan",
+              goal: "Bind scoped relational tuples and explicit PG/ES/Kafka obligations, schemas and windows",
+              tools: [
+                "fixture_plan",
+                "scenario_state_plan"
+              ]
+            },
+            {
+              id: "capture",
+              goal: "Capture read-only source state and inspect completeness, precision, hashes and consistency",
+              tools: [
+                "fixture_capture",
+                "fixture_validate",
+                "scenario_state_capture"
+              ]
+            },
+            {
+              id: "export",
+              goal: "Export hashed test resources and independently verify SQL constraints",
+              tools: [
+                "fixture_export",
+                "fixture_replay"
+              ]
+            },
+            {
+              id: "replay",
+              goal: "Preflight reviewed native dependency adapters, start isolated replay and inspect connection bindings",
+              tools: [
+                "fixture_runtime_preflight",
+                "fixture_runtime_start",
+                "fixture_runtime_bindings"
+              ]
+            },
+            {
+              id: "effects",
+              goal: "Freeze independent effects; execute actual application tests with fixture_runtime and explicit datasource bindings, or publish a declared owned broker action; then independently observe and check writes or rejected-action no-writes",
+              tools: [
+                "fixture_runtime_arm",
+                "test_run",
+                "fixture_runtime_publish",
+                "fixture_runtime_observe",
+                "fixture_runtime_check",
+                "scenario_run"
+              ]
+            },
+            {
+              id: "cleanup",
+              goal: "Stop only owned resources and retain cleanup failures",
+              tools: [
+                "fixture_runtime_stop",
+                "fixture_runtime_cleanup"
+              ]
+            }
+          ],
+          boundaries: [
+            "Separate per-source snapshots do not establish a distributed atomic snapshot or exactly-once delivery.",
+            "Truncated windows, missing schemas/codecs or unbound reads must remain gaps."
+          ]
         },
         {
           id: "differential-refactor",
           title: "Prove a refactor preserves behavior",
           terms: "refactor method function results fills fields enrichment compare differential old new baseline same locally dev environment",
-          required: ["baseline and candidate revisions", "representative captured inputs", "independent expectations", "reviewed execution target"],
-          stages: [
-            { id: "scope", goal: "Resolve function and library versions, enrichment precedence and affected callers", tools: ["impact", "pg_function", "code_search"] },
-            { id: "inputs", goal: "Capture source function/schema versions and representative null/error/precision inputs", tools: ["ddl_snapshot", "fixture_plan", "fixture_capture"] },
-            { id: "compare", goal: "Compare old/new exact values, ordering, errors and independently observed effects using reviewed runners", tools: ["differential_check", "test_run", "workspace_patch"] }
+          required: [
+            "baseline and candidate revisions",
+            "representative captured inputs",
+            "independent expectations",
+            "reviewed execution target"
           ],
-          boundaries: ["Captured-dev local equivalence and observations of a deployed dev process are separate verdicts.", "Normalization must be explicit; it must not erase business differences."]
+          stages: [
+            {
+              id: "scope",
+              goal: "Resolve function and library versions, enrichment precedence and affected callers",
+              tools: [
+                "impact",
+                "pg_function",
+                "code_search"
+              ]
+            },
+            {
+              id: "inputs",
+              goal: "Capture source function/schema versions and representative null/error/precision inputs",
+              tools: [
+                "ddl_snapshot",
+                "fixture_plan",
+                "fixture_capture"
+              ]
+            },
+            {
+              id: "compare",
+              goal: "Compare old/new exact values, ordering, errors and independently observed effects using reviewed runners",
+              tools: [
+                "differential_check",
+                "test_run",
+                "workspace_patch"
+              ]
+            }
+          ],
+          boundaries: [
+            "Captured-dev local equivalence and observations of a deployed dev process are separate verdicts.",
+            "Normalization must be explicit; it must not erase business differences."
+          ]
         },
         {
           id: "test-target",
           title: "Run a test against an explicit target",
           terms: "run execute test tests dev environment staging target remote deployment",
-          required: ["workspace", "test selector", "reviewed target profile"],
-          stages: [
-            { id: "inspect", goal: "Inspect workspace language/build capability and target placement, dependencies and allowed effects", tools: ["test_targets", "doctor", "workspace_read"] },
-            { id: "run", goal: "Run the selected supported test on the exact reviewed target and poll its job", tools: ["test_run", "call_history"] },
-            { id: "verify", goal: "Check executed assertions, cleanup and target revision; retain red/green evidence", tools: ["workspace_patch", "call_history"] }
+          required: [
+            "workspace",
+            "test selector",
+            "reviewed target profile"
           ],
-          boundaries: ["env=dev alone selects source context; it does not select a remote runner or a deployed application.", "No tests, skipped-only runs, unsupported targets or cleanup failures cannot prove success."]
+          stages: [
+            {
+              id: "inspect",
+              goal: "Inspect workspace language/build capability and target placement, dependencies and allowed effects",
+              tools: [
+                "test_targets",
+                "doctor",
+                "workspace_read"
+              ]
+            },
+            {
+              id: "run",
+              goal: "Run the selected supported test on the exact reviewed target and poll its job",
+              tools: [
+                "test_run",
+                "call_history"
+              ]
+            },
+            {
+              id: "verify",
+              goal: "Check executed assertions, cleanup and target revision; retain red/green evidence",
+              tools: [
+                "workspace_patch",
+                "call_history"
+              ]
+            }
+          ],
+          boundaries: [
+            "env=dev alone selects source context; it does not select a remote runner or a deployed application.",
+            "No tests, skipped-only runs, unsupported targets or cleanup failures cannot prove success."
+          ]
         },
         {
           id: "investigate-incident",
           title: "Investigate an unexplained service symptom",
           terms: "bug exception error incident production failing wrong timeout intermittent service reservation invoice reconciliation",
-          required: ["environment", "service or entrypoint", "time/trace/entity identity"],
-          stages: [
-            { id: "evidence", goal: "Identify deployment revision, health, configuration and relevant logs before diagnosing", tools: ["find", "consul_service", "health", "logs_search", "logs_trace"] },
-            { id: "chain", goal: "Follow the entrypoint through service/library code and scoped data reads", tools: ["passport", "code_search", "impact", "scenario_inventory"] },
-            { id: "prove", goal: "Capture a minimal failing state and run an independent regression", tools: ["fixture_plan", "test_context", "test_run"] }
+          required: [
+            "environment",
+            "service or entrypoint",
+            "time/trace/entity identity"
           ],
-          boundaries: ["Symptom keyword matches route investigation; they do not identify the cause."]
+          stages: [
+            {
+              id: "evidence",
+              goal: "Identify deployment revision, health, configuration and relevant logs before diagnosing",
+              tools: [
+                "find",
+                "consul_service",
+                "health",
+                "logs_search",
+                "logs_trace"
+              ]
+            },
+            {
+              id: "chain",
+              goal: "Follow the entrypoint through service/library code and scoped data reads",
+              tools: [
+                "passport",
+                "code_search",
+                "impact",
+                "scenario_inventory"
+              ]
+            },
+            {
+              id: "prove",
+              goal: "Capture a minimal failing state and run an independent regression",
+              tools: [
+                "fixture_plan",
+                "test_context",
+                "test_run"
+              ]
+            }
+          ],
+          boundaries: [
+            "Symptom keyword matches route investigation; they do not identify the cause."
+          ]
         },
         {
           id: "write-tests",
           title: "Implement a sensitive regression test",
           terms: "implement write create add unit integration contract regression tests test mocks fixture complexity",
-          required: ["workspace and behavior contract", "test level", "independent expected values"],
-          stages: [
-            { id: "context", goal: "Resolve actual application entrypoints, dependencies and supported build capability", tools: ["test_context", "code_search", "scenario_inventory"] },
-            { id: "arrange", goal: "Create valid edge objects or replay related state without inventing missing inputs", tools: ["test_data", "fixture_plan", "scenario_state_plan"] },
-            { id: "prove", goal: "Execute the application, show failure before the fix and pass after; reject a relevant defect", tools: ["workspace_write", "test_run", "workspace_patch"] }
+          required: [
+            "workspace and behavior contract",
+            "test level",
+            "independent expected values"
           ],
-          boundaries: ["An external grader pass cannot substitute for supported tool execution."]
+          stages: [
+            {
+              id: "context",
+              goal: "Resolve actual application entrypoints, dependencies and supported build capability",
+              tools: [
+                "test_context",
+                "code_search",
+                "scenario_inventory"
+              ]
+            },
+            {
+              id: "arrange",
+              goal: "Create valid edge objects or replay related state without inventing missing inputs",
+              tools: [
+                "test_data",
+                "fixture_plan",
+                "scenario_state_plan"
+              ]
+            },
+            {
+              id: "prove",
+              goal: "Execute the application, show failure before the fix and pass after; reject a relevant defect",
+              tools: [
+                "workspace_write",
+                "test_run",
+                "workspace_patch"
+              ]
+            }
+          ],
+          boundaries: [
+            "An external grader pass cannot substitute for supported tool execution."
+          ]
         },
         {
           id: "ui-api-collection",
           title: "Turn UI traffic into a reusable API check",
           terms: "browser playwright ui network request response api routes discover client json pretty scripts collections reuse save",
-          required: ["reviewed site URL", "interaction scope", "independent response assertions"],
-          stages: [
-            { id: "observe", goal: "Inspect the UI and capture bounded browser network evidence with secrets removed", tools: ["api_browser_open", "api_browser_action", "api_browser_capture", "routes_discover"] },
-            { id: "inspect", goal: "Inspect attributed routes and request/response JSON in the interactive client", tools: ["api_exchange_get", "api_request_prepare", "api_routes"] },
-            { id: "reuse", goal: "Replay only allowlisted intended requests and save a parameterized script/collection", tools: ["api_request_replay", "api_request_save", "collection_validate", "collection_run", "api_browser_close"] }
+          required: [
+            "reviewed site URL",
+            "interaction scope",
+            "independent response assertions"
           ],
-          boundaries: ["Captured credentials remain placeholders. Replaying a mutation requires the user's intended action scope."]
+          stages: [
+            {
+              id: "observe",
+              goal: "Inspect the UI and capture bounded browser network evidence with secrets removed",
+              tools: [
+                "api_browser_open",
+                "api_browser_action",
+                "api_browser_capture",
+                "routes_discover"
+              ]
+            },
+            {
+              id: "inspect",
+              goal: "Inspect attributed routes and request/response JSON in the interactive client",
+              tools: [
+                "api_exchange_get",
+                "api_request_prepare",
+                "api_routes"
+              ]
+            },
+            {
+              id: "reuse",
+              goal: "Replay only allowlisted intended requests and save a parameterized script/collection",
+              tools: [
+                "api_request_replay",
+                "api_request_save",
+                "collection_validate",
+                "collection_run",
+                "api_browser_close"
+              ]
+            }
+          ],
+          boundaries: [
+            "Captured credentials remain placeholders. Replaying a mutation requires the user's intended action scope."
+          ]
         },
         {
           id: "knowledge-refresh",
           title: "Update understandable architecture knowledge",
           terms: "knowledge confluence rag graph documentation architecture semantic mirror update migration source",
-          required: ["source id and revision", "environment/scope"],
-          stages: [
-            { id: "inspect", goal: "Inspect source provenance, stale records and exact citations", tools: ["knowledge_search", "knowledge_graph", "tool_contracts"] },
-            { id: "refresh", goal: "Refresh a selected source, then inspect typed edges and coverage", tools: ["knowledge_sync", "knowledge_graph"] }
+          required: [
+            "source id and revision",
+            "environment/scope"
           ],
-          boundaries: ["Knowledge projections retain source identity; a successful mirror does not prove runtime dependencies."]
+          stages: [
+            {
+              id: "inspect",
+              goal: "Inspect source provenance, stale records and exact citations",
+              tools: [
+                "knowledge_search",
+                "knowledge_graph",
+                "tool_contracts"
+              ]
+            },
+            {
+              id: "refresh",
+              goal: "Refresh a selected source, then inspect typed edges and coverage",
+              tools: [
+                "knowledge_sync",
+                "knowledge_graph"
+              ]
+            }
+          ],
+          boundaries: [
+            "Knowledge projections retain source identity; a successful mirror does not prove runtime dependencies."
+          ]
         }
       ]
     };
@@ -75373,13 +75733,13 @@ var require_tools_discovery = __commonJS({
       {
         name: "tool_search",
         group: "catalog",
-        description: "Find enabled capabilities and planning guides for compound tasks. Keyword matches route investigation, not diagnosis. Use tool_describe for exact arguments, then tool_execute. Results are bounded; the view retains omitted matches.",
-        input: { query: { ...str("Task or exact tool name; compound tasks also return planning guides"), maxLength: 4e3 }, group: str("Optional exact group"), limit: { ...int("Max matches", 8), minimum: 1, maximum: 30 }, max_bytes: { ...int("JSON response budget; full oversized result in view", 4096), minimum: 2048, maximum: 16384 } },
+        description: "Find enabled tools by action (compare a change path, search code, assess impact), not by a service/class/file name alone. Results are capabilities, not source matches or diagnosis. Describe an exact match, then execute it. Compound tasks may include planning guides.",
+        input: { query: { ...str("Task/action or exact tool name; object names alone do not search code"), maxLength: 4e3 }, group: str("Optional exact group"), limit: { ...int("Max matches", 8), minimum: 1, maximum: 30 }, max_bytes: { ...int("JSON response budget; full oversized result in view", 4096), minimum: 2048, maximum: 16384 } },
         required: ["query"],
         run: async (a) => {
           const tools = await registry(), W = require_workflows();
           const { matches, lexical } = require_tool_search().search(tools, a.query, a.group, require_config().getTools().discoveryRanker);
-          return W.bounded({ total: matches.length, tools: matches.slice(0, a.limit).map(({ t }) => ({ name: t.name, group: t.group, description: t.description.slice(0, 450), required: t.inputSchema.required, next: { tool: "tool_describe", args: { name: t.name } } })), lexical, ...!a.group ? { workflows: W.suggest(a.query, tools), workflowKind: "planning-guides-not-diagnosis" } : {} }, a.max_bytes);
+          return W.bounded({ total: matches.length, tools: matches.slice(0, a.limit).map(({ t }) => ({ name: t.name, group: t.group, description: t.description.slice(0, 450), required: t.inputSchema.required, next: { tool: "tool_describe", args: { name: t.name } } })), lexical, ...!matches.length ? { hint: "No matching capability. Search for the action (impact, text search, change path), not just an object name. Try tool_profiles; do not repeat the same query." } : {}, ...!a.group ? { workflows: W.suggest(a.query, tools), workflowKind: "planning-guides-not-diagnosis" } : {} }, a.max_bytes);
         }
       },
       { name: "tool_describe", group: "catalog", description: "Read the exact input schema and guidance for one enabled tool. Inspect required fields and defaults before tool_execute; discoverability does not grant additional permissions.", input: { name: str("Exact tool name") }, required: ["name"], run: async (a) => {
@@ -78489,6 +78849,9 @@ var require_tools = __commonJS({
         });
       });
     }
+    function toolInputSchema(t) {
+      return { ...t.inputRules, type: "object", properties: props(t.input), required: t.required || [], ...t.strictInput ? { additionalProperties: false } : {} };
+    }
     async function schemas({ profile = "all", metadata = false } = {}) {
       const r = await ready();
       return require_tool_profiles().select(r.active.filter((t) => {
@@ -78502,7 +78865,7 @@ var require_tools = __commonJS({
         name: t.name,
         description: t.description,
         ...metadata ? { group: t.group, origin: t.origin, execution: { protocol: "dt.tool/v1", transport: require_adapter_port().route(t.name) ? "http" : "in-process", ...t.adapterSchema ? { resultSchema: t.adapterSchema } : {} } } : {},
-        inputSchema: { type: "object", properties: props(t.input), required: t.required || [], ...t.strictInput ? { additionalProperties: false } : {} }
+        inputSchema: toolInputSchema(t)
       }));
     }
     async function call(name, args = {}, { source, session, signal, _owned = false } = {}) {
@@ -78572,7 +78935,7 @@ var require_tools = __commonJS({
       const a = { ...args };
       for (const [k, s] of Object.entries(props(t.input))) if (a[k] === void 0 && s.default !== void 0) a[k] = s.default;
       for (const k of t.required || []) if (a[k] === void 0 || a[k] === "") throw Object.assign(new Error(`Missing argument: ${k}`), { code: "DT_ARGUMENT_INVALID", issues: [{ path: `$.${k}`, message: "required" }] });
-      require_schema().assert(a, { type: "object", properties: props(t.input), required: t.required || [], ...t.strictInput ? { additionalProperties: false } : {} });
+      require_schema().assert(a, toolInputSchema(t));
       if (!require_config().live(() => enabled(require_config().getTools())(t))) throw Object.assign(new Error("Tool is disabled"), { code: "DT_ACCESS_DENIED", statusCode: 403 });
       if (!admitted && t.limit) return limit.network(t.limit(a), () => callTool(name, a, { isolated, admitted: true }));
       require_execution().check();

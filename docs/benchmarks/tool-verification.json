@@ -1,6 +1,6 @@
 {
   "protocol": "dt.release-inventory/v1",
-  "sourceDigest": "a46714f6b68d8dc3bfcbf785aff220ad3ed3c2503bd9e67279c033c96507637f",
+  "sourceDigest": "4625c159dd0b464890d14eaf027e99d4a0a76b5f5bda72c9240e4d400e6562aa",
   "tools": [
     {
       "name": "find",
@@ -401,7 +401,8 @@
         "test/pgindex.test.js",
         "test/server.test.js",
         "test/service-map.test.js",
-        "test/tool-contracts.test.js"
+        "test/tool-contracts.test.js",
+        "test/trace-discovery.test.js"
       ],
       "integrationReferences": []
     },
@@ -942,7 +943,8 @@
         "test/code.index.test.js",
         "test/flows.test.js",
         "test/semantic-ui.test.js",
-        "test/tool-contracts.test.js"
+        "test/tool-contracts.test.js",
+        "test/trace-discovery-eval.test.js"
       ],
       "integrationReferences": []
     },
@@ -966,6 +968,8 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
+        "test/trace-discovery-eval.test.js",
+        "test/trace-discovery.test.js",
         "test/workbench-links.test.js",
         "test/workbench.test.js"
       ],
@@ -981,6 +985,7 @@
         "test/code-revisions.test.js",
         "test/code.index.test.js",
         "test/readiness-contracts.test.js",
+        "test/trace-discovery-eval.test.js",
         "test/views.test.js",
         "test/workflows.test.js",
         "test/workspace.live.test.js"
@@ -1740,7 +1745,8 @@
         "test/semantic-flow-map.live.test.js",
         "test/semantic-path-trace.live.test.js",
         "test/semantic-ui.test.js",
-        "test/semantic.live.test.js"
+        "test/semantic.live.test.js",
+        "test/trace-discovery.test.js"
       ],
       "integrationReferences": [
         "test/semantic-branches.live.test.js",
@@ -1770,10 +1776,13 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
+        "test/model-discovery-eval.test.js",
         "test/semantic-path-trace-ui.test.js",
         "test/semantic-path-trace.live.test.js",
         "test/semantic-path-trace.test.js",
-        "test/semantic-ui.test.js"
+        "test/semantic-ui.test.js",
+        "test/trace-discovery-eval.test.js",
+        "test/trace-discovery.test.js"
       ],
       "integrationReferences": [
         "test/semantic-path-trace.live.test.js"
@@ -1792,6 +1801,7 @@
         "test/semantic-flow-map.live.test.js",
         "test/semantic-ui.test.js",
         "test/semantic.live.test.js",
+        "test/trace-discovery.test.js",
         "test/workbench.test.js"
       ],
       "integrationReferences": [
@@ -2175,6 +2185,7 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
+        "test/trace-discovery.test.js",
         "test/workflows.test.js"
       ],
       "integrationReferences": []
@@ -2197,7 +2208,8 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
-        "test/tool-contracts.test.js"
+        "test/tool-contracts.test.js",
+        "test/trace-discovery.test.js"
       ],
       "integrationReferences": []
     },
@@ -2210,6 +2222,7 @@
       "referenceTests": [
         "test/model-discovery-eval.test.js",
         "test/tool-contracts.test.js",
+        "test/trace-discovery.test.js",
         "test/webui-context.test.js",
         "test/workflows.test.js"
       ],
@@ -2224,6 +2237,8 @@
       "referenceTests": [
         "test/model-discovery-eval.test.js",
         "test/tool-contracts.test.js",
+        "test/trace-discovery-eval.test.js",
+        "test/trace-discovery.test.js",
         "test/webui-context.test.js",
         "test/workflows.test.js"
       ],
@@ -2243,6 +2258,7 @@
         "test/node-targets.test.js",
         "test/task-model-evaluation.test.js",
         "test/tool-contracts.test.js",
+        "test/trace-discovery-eval.test.js",
         "test/webui-context.test.js",
         "test/workflows.test.js"
       ],

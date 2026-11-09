@@ -32,6 +32,7 @@ test('scripted endpoint tests transport, judgment isolation, invalid-argument re
     const { stdout } = await execFile(process.execPath, [require.resolve('../dev/eval-discovery-model'), '--endpoint', `http://127.0.0.1:${server.address().port}/v1`, '--model', 'scripted-test', '--scripted-endpoint', '--limit', '1', '--input-usd-per-million', '1', '--output-usd-per-million', '2']);
     const report = JSON.parse(stdout);
     assert.equal(report.kind, 'scripted-endpoint-contract-check');
+    assert.equal(report.provenance.instructionSha256, require('crypto').createHash('sha256').update(requests[0].messages[0].content).digest('hex'));
     assert.equal(report.provenance.schemaCount, 4);
     assert.equal(report.provenance.modelSizeVerified, false);
     assert.equal(report.samples[0].applicationExecutionPerformed, false);
@@ -50,4 +51,12 @@ test('scripted endpoint tests transport, judgment isolation, invalid-argument re
     assert.equal(budget.estimatedCostUsd, null);
     assert.equal(requests.length, beforeBudget, 'over-budget context never reaches inference endpoint');
   } finally { server.closeAllConnections(); await new Promise(r => server.close(r)); }
+});
+
+test('native Ollama transport keeps tools, a bounded non-thinking context and withheld custom-corpus judgments',async()=>{
+ const corpus={version:1,cases:[{id:'private-oracle-id',query:'Inspect a path between two source values.',relevant:['semantic_trace']}]},requests=[];let count=0;
+ const actions=[['tool_describe',{name:'semantic_trace'}],['tool_execute',{name:'semantic_trace',arguments:{analysis:'synthetic-v1',from:{kind:'method',name:'submit',parameter:'rebate'},to:{kind:'call',name:'save',argument:2}}}]];
+ const server=http.createServer(async(req,res)=>{res.setHeader('content-type','application/json');if(req.method==='GET')return res.end(JSON.stringify({models:[{name:'scripted-test',digest:'provider-digest',details:{parameter_size:'4B'}}]}));let raw='';for await(const chunk of req)raw+=chunk;const body=JSON.parse(raw);requests.push(body);const action=actions[count++];res.end(JSON.stringify({model:'scripted-test',prompt_eval_count:10,eval_count:5,message:{role:'assistant',content:action?'':'No operation ran.',...(action?{tool_calls:[{type:'function',function:{name:action[0],arguments:action[1]}}]}:{})}}));});await new Promise(r=>server.listen(0,'127.0.0.1',r));
+ try{const endpoint='http://127.0.0.1:'+server.address().port,code=`const E=require('./dev/eval-discovery-model');E.run(E.args(['--endpoint',${JSON.stringify(endpoint)},'--model','scripted-test','--scripted-endpoint','--limit','1']),{corpus:${JSON.stringify(corpus)},transport:'ollama'}).then(r=>console.log(JSON.stringify(r))).catch(e=>{console.error(e);process.exitCode=1;});`,{stdout}=await execFile(process.execPath,['-e',code]);const r=JSON.parse(stdout);assert.equal(r.kind,'scripted-endpoint-contract-check');assert.equal(r.samples[0].calls[1].arguments.arguments.analysis,'synthetic-v1');assert.equal(r.samples[0].applicationExecutionPerformed,false);assert.equal(r.provenance.advertised.models[0].details.parameter_size,'4B');assert.ok(requests.every(q=>q.think===false&&q.options.num_ctx===16384));assert.ok(requests.at(-1).messages.some(m=>m.role==='tool'&&m.tool_name==='tool_execute'));assert.ok(requests.every(q=>!JSON.stringify(q.messages).includes('private-oracle-id')));assert.equal(r.usage.reportedCalls,3);
+ }finally{server.closeAllConnections();await new Promise(r=>server.close(r));}
 });

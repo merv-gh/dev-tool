@@ -27,7 +27,11 @@ function validateEndpoint(endpoint, allowRemote) {
   if (!['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname) && !allowRemote) throw new Error('Remote endpoint requires explicit --allow-remote; only synthetic evaluation input will be sent');
   return url.toString().replace(/\/$/, '');
 }
-async function run(options) {
+async function run(options, { corpus: evaluationCorpus = corpus, instruction, onSample = () => {}, transport = 'openai' } = {}) {
+  if (evaluationCorpus.version !== 1 || !Array.isArray(evaluationCorpus.cases) || !evaluationCorpus.cases.length || evaluationCorpus.cases.length > 32) throw new Error('Expected a bounded v1 discovery corpus');
+  if (!['openai','ollama'].includes(transport)) throw new Error('Unknown model transport');
+  const evaluationText = evaluationCorpus === corpus ? corpusText : JSON.stringify(evaluationCorpus);
+  const systemInstruction = instruction || 'Find the correct dev-tool capability for the user task. Start with available discovery tools, inspect exact schemas and choose useful next tools. Keep environment and identities explicit. More profiles are available through tool_profiles. This is an offline discovery evaluation: task operations only validate arguments and return executionPerformed=false. Do not claim application execution or task completion.';
   if (require.cache[require.resolve('../lib/tools')]) throw new Error('Run model evaluation in a fresh process before importing the registry');
   let configured;
   if (options['use-configured-llm']) {
@@ -63,19 +67,21 @@ async function run(options) {
       return JSON.parse(Buffer.concat(chunks).toString('utf8'));
     }
     let advertised;
-    try { const r = await request('/models'); advertised = { status: 'available', models: (r.data || []).slice(0, 100).map(m => ({ id: m.id, owned_by: m.owned_by })) }; }
+    try { const r = await request(transport === 'ollama' ? '/api/tags' : '/models'); advertised = { status: 'available', models: (r.data || r.models || []).slice(0, 100).map(m => ({ id: m.id || m.name, owned_by: m.owned_by, ...(m.details ? {details:m.details,digest:m.digest} : {}) })) }; }
     catch (e) { advertised = { status: 'unavailable', reason: e.message }; }
     const usage = { prompt_tokens: 0, completion_tokens: 0, reportedCalls: 0 }, samples = [], returnedModels = new Set();
-    for (const item of corpus.cases.slice(0, options.limit)) {
+    for (const item of evaluationCorpus.cases.slice(0, options.limit)) {
       if (performance.now() >= deadline) break;
-      const messages = [{ role: 'system', content: 'Find the correct dev-tool capability for the user task. Start with available discovery tools, inspect exact schemas and choose useful next tools. Keep environment and identities explicit. More profiles are available through tool_profiles. This is an offline discovery evaluation: task operations only validate arguments and return executionPerformed=false. Do not claim application execution or task completion.' }, { role: 'user', content: item.query }];
+      const messages = [{ role: 'system', content: systemInstruction }, { role: 'user', content: item.query }];
       const selected = new Set(), calls = [], start = performance.now(); let finish = 'turn-budget', turns = 0;
       for (; turns < options.maxTurns; turns++) {
         if (performance.now() >= deadline) { finish = 'wall-clock-budget'; break; }
-        const body = { model, temperature: 0, max_tokens: options.maxOutputTokens, tools: schemas, tool_choice: 'auto', messages };
+        const nativeMessages = () => messages.map(m => m.role === 'tool' ? {role:'tool',tool_name:messages.flatMap(x=>x.tool_calls||[]).find(x=>x.id===m.tool_call_id)?.function?.name,content:m.content} : {...m,...(m.tool_calls?{tool_calls:m.tool_calls.map(c=>({type:'function',function:{name:c.function.name,arguments:JSON.parse(c.function.arguments)}}))}: {})});
+        const body = transport === 'ollama' ? {model,messages:nativeMessages(),tools:schemas,stream:false,think:false,options:{temperature:0,seed:42,num_ctx:16384,num_predict:options.maxOutputTokens}} : { model, temperature: 0, max_tokens: options.maxOutputTokens, tools: schemas, tool_choice: 'auto', messages };
         if (Buffer.byteLength(JSON.stringify(body)) > options.maxContextBytes) { finish = 'context-budget'; break; }
         let response;
-        try { response = await request('/chat/completions', body); } catch (e) { finish = e.name === 'TimeoutError' ? 'timeout' : 'endpoint-error'; break; }
+        try { response = await request(transport === 'ollama' ? '/api/chat' : '/chat/completions', body); } catch (e) { finish = e.name === 'TimeoutError' ? 'timeout' : 'endpoint-error'; break; }
+        if (transport === 'ollama' && response.message) response = {model:response.model,usage:{prompt_tokens:response.prompt_eval_count,completion_tokens:response.eval_count},choices:[{message:{role:response.message.role,content:response.message.content, ...(response.message.tool_calls?.length ? {tool_calls:response.message.tool_calls.map((c,i)=>({id:'turn-'+turns+'-call-'+i,type:'function',function:{name:c.function?.name,arguments:JSON.stringify(c.function?.arguments)}}))} : {})}}]};
         if (response.model) returnedModels.add(response.model);
         if (response.usage) { usage.reportedCalls++; for (const k of ['prompt_tokens', 'completion_tokens']) if (Number.isSafeInteger(response.usage[k]) && response.usage[k] >= 0) usage[k] += response.usage[k]; }
         const message = response.choices?.[0]?.message;
@@ -100,18 +106,19 @@ async function run(options) {
               const definition = all.find(t => t.name === target);
               if (!definition) throw Object.assign(new Error('Unknown or disabled tool'), { code: 'DT_TOOL_UNKNOWN' });
               Schema.assert(name === 'tool_execute' ? input.arguments : input, definition.inputSchema);
-              selected.add(target); result = { evaluation: 'schema-validation-only', executionPerformed: false, tool: target, validArguments: true };
+              selected.add(target); result = target === 'workflow_plan' ? await T.call(target, name === 'tool_execute' ? input.arguments : input) : { evaluation: 'schema-validation-only', executionPerformed: false, tool: target, validArguments: true };
             }
-            calls.push({ tool: name, target: input?.name, ok: true });
+            calls.push({ tool: name, target: input?.name, arguments: input, ok: true });
           } catch (e) { result = { error: e.message, code: e.code || 'DT_ARGUMENT_INVALID', issues: e.issues }; calls.push({ tool: name, target: input?.name, ok: false, code: result.code }); }
           messages.push({ role: 'tool', tool_call_id: c.id || 'invalid', content: JSON.stringify(result) });
         }
       }
       // Relevance judgments are used only after the model conversation finishes.
-      samples.push({ id: item.id, selected: [...selected], relevant: item.relevant, recall: item.relevant.filter(t => selected.has(t)).length / item.relevant.length, finish, turns: Math.min(turns + 1, options.maxTurns), calls, latencyMs: performance.now() - start, lastContextBytes: Buffer.byteLength(JSON.stringify(messages)), applicationExecutionPerformed: false });
+      const sample = { id: item.id, selected: [...selected], relevant: item.relevant, recall: item.relevant.filter(t => selected.has(t)).length / item.relevant.length, finish, turns: Math.min(turns + 1, options.maxTurns), calls, latencyMs: performance.now() - start, lastContextBytes: Buffer.byteLength(JSON.stringify(messages)), final: messages.at(-1)?.role === 'assistant' ? messages.at(-1).content : null, applicationExecutionPerformed: false };
+      samples.push(sample); await onSample(sample);
     }
     const scripted = options['scripted-endpoint'] || model === 'demo-model';
-    return { version: 1, kind: scripted ? 'scripted-endpoint-contract-check' : 'model-discovery-evaluation', observedAt: new Date().toISOString(), provenance: { endpoint, requestedModel: model, returnedModels: [...returnedModels], advertised, modelSizeVerified: false, corpusSha256: hash(corpusText), schemaSha256: hash(JSON.stringify(schemas)), profile: options.profile, ranker: options.discoveryRanker, schemaCount: schemas.length, schemaUtf8Bytes: Buffer.byteLength(JSON.stringify(schemas)), runtime: process.version }, budget: { maxTurns: options.maxTurns, maxCalls: options.maxCalls, maxContextBytes: options.maxContextBytes, maxOutputTokens: options.maxOutputTokens, maxDurationMs: options.maxDurationMs, requestedCases: options.limit, exhausted: performance.now() >= deadline }, usage, estimatedCostUsd: usage.reportedCalls && options.inputPrice !== undefined && options.outputPrice !== undefined ? (usage.prompt_tokens * options.inputPrice + usage.completion_tokens * options.outputPrice) / 1e6 : null, metrics: { cases: samples.length, meanSelectionRecall: samples.length ? samples.reduce((n, c) => n + c.recall, 0) / samples.length : null, invalidCalls: samples.reduce((n, s) => n + s.calls.filter(c => !c.ok).length, 0) }, limits: 'Only discovery/schema selection is measured. No code execution, fixture/task answer, live system access, model size verification or production certification. Token usage is provider-reported; cost is estimated only with explicit prices. Scripted endpoints are never model evidence.', samples };
+    return { version: 1, kind: scripted ? 'scripted-endpoint-contract-check' : 'model-discovery-evaluation', observedAt: new Date().toISOString(), provenance: { endpoint, requestedModel: model, returnedModels: [...returnedModels], advertised, modelSizeVerified: false, corpusSha256: hash(evaluationText), schemaSha256: hash(JSON.stringify(schemas)), instructionSha256: hash(systemInstruction), profile: options.profile, ranker: options.discoveryRanker, schemaCount: schemas.length, schemaUtf8Bytes: Buffer.byteLength(JSON.stringify(schemas)), runtime: process.version }, budget: { maxTurns: options.maxTurns, maxCalls: options.maxCalls, maxContextBytes: options.maxContextBytes, maxOutputTokens: options.maxOutputTokens, maxDurationMs: options.maxDurationMs, requestedCases: options.limit, exhausted: performance.now() >= deadline }, usage, estimatedCostUsd: usage.reportedCalls && options.inputPrice !== undefined && options.outputPrice !== undefined ? (usage.prompt_tokens * options.inputPrice + usage.completion_tokens * options.outputPrice) / 1e6 : null, metrics: { cases: samples.length, meanSelectionRecall: samples.length ? samples.reduce((n, c) => n + c.recall, 0) / samples.length : null, invalidCalls: samples.reduce((n, s) => n + s.calls.filter(c => !c.ok).length, 0) }, limits: 'Only discovery/schema selection is measured. No code execution, fixture/task answer, live system access, model size verification or production certification. Token usage is provider-reported; cost is estimated only with explicit prices. Scripted endpoints are never model evidence.', samples };
   } finally {
     await require('../lib/isolate').stop();
     await require('../lib/state-store').close();
