@@ -144,6 +144,7 @@ const CORS = { 'access-control-allow-origin': '*' };
 // Pages are plain HTML; their data comes from trusted endpoints, or from ones keyed by an unguessable
 // result id / signed token (embeds in Open WebUI load them from a sandboxed, cross-origin iframe).
 const routes = [
+  ['GET', '/api/capabilities', true, async (req,res,url) => send(res,200,await require('./lib/capability-map').graph({env:url.searchParams.get('env')||undefined}))],
   ['GET', '/handbook', true, page('handbook.html')],
   ['GET', '/api/handbook', true, async (req,res) => send(res,200,await require('./lib/handbook').catalog())],
   ['GET', '/api/handbook/context', true, async (req,res,url) => send(res,200,await require('./lib/handbook').selfContext({env:url.searchParams.get('env')||undefined}))],
@@ -321,10 +322,10 @@ const routes = [
     if (!r) return send(res, 404, { error: 'No such result (results are kept for the latest 500 runs)' });
     const data = r.kind === 'view' ? r.data : r.rows;
     const view = url.searchParams.get('view') || (r.kind === 'view' ? r.view : 'table');
-    let html;
-    try { html = require('./lib/views').render(view, data, { title: r.title || r.query || '', at: r.at, id: r.id, client:r.client, story:r.owner?.storyId }, { embed: url.searchParams.has('embed') }); }
+    let html, policy;
+    try { const V=require('./lib/views'),definition=V.get(view);policy=V.policy(definition);html = V.render(view, data, { title: r.title || r.query || '', at: r.at, id: r.id, client:r.client, story:r.owner?.storyId }, { embed: url.searchParams.has('embed'),definition }); }
     catch (e) { return send(res, 404, { error: e.message }); }
-    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'content-security-policy': require('./lib/views').CSP, 'cache-control': 'no-cache', 'x-content-type-options': 'nosniff' });
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'content-security-policy': policy, 'cache-control': 'no-cache', 'x-content-type-options': 'nosniff' });
     res.end(html);
   }],
   // a workspace patch as a file (the unguessable result id is the key, like /show)

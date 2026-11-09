@@ -31,12 +31,35 @@ import io.shiftleft.semanticcpg.language.*
     val overlays = graph.metaData.overlays.toSet
     if (!overlays.contains(OssDataFlow.overlayName)) new OssDataFlow(new OssDataFlowOptions()).run(new LayerCreatorContext(graph))
     val activeOverlays = graph.metaData.overlays.toSeq
-    emit(ujson.Obj("type"->"meta", "protocol"->"dt.semantic.projection/v1", "version"->1, "language"->graph.metaData.language.headOption.getOrElse("unknown"), "overlays"->ujson.Arr.from(activeOverlays), "capabilities"->ujson.Obj("calls"->true,"controlFlow"->true,"dataFlow"->activeOverlays.contains(OssDataFlow.overlayName)), "limits"->ujson.Obj("records"->maxRecords,"bytes"->maxBytes)))
+    emit(ujson.Obj("type"->"meta", "protocol"->"dt.semantic.projection/v1", "version"->1, "language"->graph.metaData.language.headOption.getOrElse("unknown"), "overlays"->ujson.Arr.from(activeOverlays), "capabilities"->ujson.Obj("pathContext"->true,"inheritance"->true,"calls"->true,"controlFlow"->true,"dataFlow"->activeOverlays.contains(OssDataFlow.overlayName)), "limits"->ujson.Obj("records"->maxRecords,"bytes"->maxBytes)))
+    val types = graph.typeDecl.filter(t => !t.isExternal)
+    while(types.hasNext && !truncated) { val t=types.next(); emit(ujson.Obj("type"->"type","id"->t.id.toString,"name"->t.name,"fullName"->t.fullName,"file"->relative(t.filename),"line"->t.lineNumber.getOrElse(0),"inherits"->ujson.Arr.from(t.inheritsFromTypeFullName))) }
     val methods = graph.method.filter(m => !m.isExternal)
     while (methods.hasNext && !truncated) {
       val m = methods.next()
+      val bodyHash=java.security.MessageDigest.getInstance("SHA-256")
+      m.ast.take(10000).foreach(n=>bodyHash.update((n.label+":"+n.propertyOption[String]("CODE").getOrElse("")+"\n").getBytes(StandardCharsets.UTF_8)))
       val parameters = m.parameter.take(100).map(p => ujson.Obj("id"->p.id.toString,"name"->p.name,"type"->p.typeFullName,"index"->p.index)).toSeq
-      emit(ujson.Obj("type"->"symbol","id"->m.id.toString,"kind"->"method","name"->m.name,"fullName"->m.fullName,"signature"->m.signature,"file"->relative(m.filename),"line"->m.lineNumber.getOrElse(0),"endLine"->m.lineNumberEnd.getOrElse(0),"isExternal"->false,"parameters"->ujson.Arr.from(parameters),"returnId"->m.methodReturn.id.toString,"returnType"->m.methodReturn.typeFullName))
+      emit(ujson.Obj("type"->"symbol","id"->m.id.toString,"kind"->"method","name"->m.name,"fullName"->m.fullName,"signature"->m.signature,"file"->relative(m.filename),"line"->m.lineNumber.getOrElse(0),"endLine"->m.lineNumberEnd.getOrElse(0),"isExternal"->false,"owner"->m.fullName.takeWhile(_ != ':').split('.').dropRight(1).mkString("."),"abstract"->m.modifier.modifierType.exists(_=="ABSTRACT"),"bodyDigest"->bodyHash.digest().map(b=>f"${b & 0xff}%02x").mkString,"parameters"->ujson.Arr.from(parameters),"returnId"->m.methodReturn.id.toString,"returnType"->m.methodReturn.typeFullName))
+      val facts = m.ast.collect {case n: io.shiftleft.codepropertygraph.generated.nodes.CfgNode => n}.take(10001).toSeq
+      if(facts.size>10000) truncated=true
+      var factCount=0
+      for(n <- facts.take(10000) if factCount<400 && !truncated) {
+        val kind = n match {
+          case c: io.shiftleft.codepropertygraph.generated.nodes.Call if c.name.startsWith("<operator>.assignment") || Set("<operator>.postIncrement","<operator>.preIncrement","<operator>.postDecrement","<operator>.preDecrement").contains(c.name) => "transformation"
+          case c: io.shiftleft.codepropertygraph.generated.nodes.Call if Set("filter","map","mapToInt","mapToLong","mapToDouble","flatMap","takeWhile","dropWhile","limit","skip","sorted","distinct","peek","forEach","forEachOrdered","sum","reduce","collect","count","anyMatch","allMatch","noneMatch","findFirst","findAny").contains(c.name) => "pipeline-stage"
+          case r: io.shiftleft.codepropertygraph.generated.nodes.Return => "return"
+          case _ => ""
+        }
+        if(kind.nonEmpty) {
+          val refs=n match {case c: io.shiftleft.codepropertygraph.generated.nodes.Call => c.argument.filter(_.argumentIndex>0).flatMap(_.ast).collect{case r: io.shiftleft.codepropertygraph.generated.nodes.MethodRef => r.methodFullName}.take(21).toSeq;case _ => Seq.empty[String]}
+          val name=n.propertyOption[String]("NAME").getOrElse("")
+          val signature=n.propertyOption[String]("METHOD_FULL_NAME").getOrElse("")
+          val javaStream=signature.startsWith("java.util.stream.") || n.code.contains(".stream(") || n.code.contains(".parallelStream(")
+          emit(ujson.Obj("type"->"fact","id"->n.id.toString,"method"->m.id.toString,"kind"->kind,"name"->name,"signature"->signature,"expression"->n.code.take(2000),"textTruncated"->(n.code.length>2000),"file"->relative(m.filename),"line"->n.lineNumber.getOrElse(0),"lambdaTargets"->ujson.Arr.from(refs.take(20)),"lambdaTargetsTruncated"->(refs.size>20),"javaStream"->javaStream,"status"->"source-context")); factCount+=1
+        }
+      }
+      if(factCount>=400) truncated=true
       m.annotation.foreach { annotation =>
         val code = annotation.code
         val kind = if (code.contains("KafkaListener")) "kafka-consume" else if (code.contains("Scheduled")) "scheduled" else if (code.matches("(?s).*(RequestMapping|GetMapping|PostMapping|PutMapping|DeleteMapping|PatchMapping).*")) "http-ingress" else ""

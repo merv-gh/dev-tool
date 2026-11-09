@@ -242,6 +242,7 @@ async function runtimeChangeScope(event) {
   runtimeStory = story; runtimePrincipal = principal; runtimeStore.set('story', story); runtimeStore.set('principal', principal);
   runtimeScopeVersion.value++; if(typeof diagnosticsScopeChanged==='function')diagnosticsScopeChanged(); runtimeMetadataVersion.value++; runtimeSelected = null; runtimeMetadataSelected = null; runtimeMetadataDirty.value = false; runtimeMetadata = []; runtimeMetadataCursor = null;
   if(typeof clearHandbook==='function')clearHandbook();
+  if(typeof clearCapabilities==='function')clearCapabilities();
   if (runtimeState) runtimeState = { ...runtimeState, executions: [], jobs: [] };
   $('rtExecutions').replaceChildren(); $('rtMetadataList').replaceChildren();
   $('rtExecution').innerHTML = '<div class="empty">Select an execution in this chat / task.</div>'; $('rtMetadataEditor').innerHTML = '<div class="empty">Select a record in this chat / task.</div>';
@@ -257,6 +258,7 @@ async function runtimeChangeScope(event) {
   await loadRuntime(); await refresh(); await runtimeLoadMetadata();
   if (tab === 'context') await loadContexts(); if (tab === 'history') await loadHistory();
   if(tab==='handbook')await loadHandbook();
+  if(tab==='capabilities')await loadCapabilities();
   if(tab==='workbench'&&typeof loadWorkbench==='function') {
     history.replaceState(null,'','#workbench?'+new URLSearchParams({story:runtimeStory,env:env()}));
     await loadWorkbench();

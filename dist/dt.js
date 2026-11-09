@@ -61742,6 +61742,9 @@ var require_views = __commonJS({
       "base-uri 'none'",
       "frame-ancestors *"
     ].join("; ");
+    function policy(view) {
+      return view.name === "capabilities" && view.builtin ? CSP.replace("allow-popups ", "allow-popups allow-popups-to-escape-sandbox ") : CSP;
+    }
     function parse(text) {
       const m = text.match(/^\s*<!--\s*(\{[\s\S]*?\})\s*-->\s*/);
       let meta = {};
@@ -61818,19 +61821,20 @@ dt.diffLines = ${diffLines.toString()};
       }
       return shared;
     }
-    function render(name, data, meta = {}, { embed = false, html, metaCsp = false } = {}) {
-      const v = html !== void 0 ? { name, html: parse(html).html } : get(name);
+    function render(name, data, meta = {}, { embed = false, html, metaCsp = false, definition } = {}) {
+      const v = definition || (html !== void 0 ? { name, html: parse(html).html } : get(name));
       const a = assets();
       const projectContext = name === "project-context" ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../project-context.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../project-context-ui.js"), "utf8") + "</script>" : "";
       const diagnostics = ["test-coverage", "observability"].includes(name) ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../diagnostics.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../trace-format.js"), "utf8") + "\n" + fs3.readFileSync(path3.join(BUILTIN, "../diagnostics.js"), "utf8") + "</script>" : "";
+      const capabilities = name === "capabilities" ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../capability-map.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../capability-layout.js"), "utf8") + "\n" + fs3.readFileSync(path3.join(BUILTIN, "../capability-map.js"), "utf8") + "</script>" : "";
       const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
       return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(meta.title || name)}</title>${metaCsp ? `<meta http-equiv="Content-Security-Policy" content="${esc(CSP.split("; ").filter((d) => !/^(sandbox|frame-ancestors)/.test(d)).join("; "))}">` : ""}
 <style>${a.css}</style>
 <script>window.DATA = ${safeJson(data)}; window.META = ${safeJson({ view: name, ...meta })};</script>
-<script>${a.js}</script>${diagnostics}${projectContext}</head>
+<script>${a.js}</script>${diagnostics}${projectContext}${capabilities}</head>
 <body class="${embed ? "embed" : ""}"><div class="wrap">${v.html}</div><script>dtInline.mount(document.querySelector('.wrap'), dtInline.describe(META.view, DATA, META));</script></body></html>`;
     }
-    module2.exports = { list, get, save, remove, render, CSP, BUILTIN, DIR };
+    module2.exports = { list, get, save, remove, render, policy, CSP, BUILTIN, DIR };
   }
 });
 
@@ -62436,6 +62440,533 @@ var require_semantic_compare = __commonJS({
   }
 });
 
+// lib/semantic-receiver-lineage.js
+var require_semantic_receiver_lineage = __commonJS({
+  "lib/semantic-receiver-lineage.js"(exports2, module2) {
+    async function compose(result, request, analysis, query) {
+      const context2 = result.pathContext;
+      if (!context2?.receiver || context2.receiverConstraints?.unsafe || !context2.bindings?.length) return;
+      result.receiverLineage = { status: "bounded", receiver: context2.receiver, composed: 0, attempted: 0, attempts: [] };
+      for (const binding of context2.bindings.slice(0, 4)) for (const parameter of binding.parameters.slice(0, 4)) {
+        require_execution().check();
+        if (result.receiverLineage.attempted >= 4) break;
+        result.receiverLineage.attempted++;
+        const requests = [{ from: request.from, to: { ...binding.call, argument: parameter.index } }, { from: { ...binding.target, parameter: parameter.index }, to: binding.target }, { from: binding.call, to: request.to }];
+        const segments = [];
+        for (const endpoints of requests) {
+          const response = await query({ ...request, ...endpoints, operation: "slice", mode: "dataflow", includeContext: false, maxPaths: 2, limit: 200 }, analysis);
+          const paths = (response.results || []).filter((p) => p.kind === "data-flow" && p.proof?.status === "static-dataflow" && !p.truncated);
+          segments.push({ gaps: response.gaps, truncated: response.truncated, ambiguity: response.ambiguity, analysisId: analysis.id, status: paths.length && !response.truncated && !response.ambiguity?.some((a) => a.selector) ? "static-dataflow" : "unresolved", paths, from: endpoints.from, to: endpoints.to });
+        }
+        result.receiverLineage.attempts.push({ binding, segments: segments.map((s) => ({ status: s.status, paths: s.paths.length, from: s.from, to: s.to, truncated: s.truncated, ambiguity: s.ambiguity, gaps: s.gaps })) });
+        if (!segments.every((s) => s.status === "static-dataflow")) {
+          result.gaps.push({ kind: "receiver-local-lineage-gap", detail: "At least one exact local value segment is unavailable; no receiver-bound lineage was fabricated" });
+          continue;
+        }
+        const nodes = segments.flatMap((s) => s.paths[0].nodes), path3 = { kind: "composed-data-lineage", nodes, segments, boundaries: [{ kind: "declared-receiver-call", status: "declared", receiver: binding.receiver, call: binding.call, target: binding.target, mappings: [{ from: "argument:" + parameter.index, to: "parameter:" + parameter.index }] }, { kind: "return-binding", status: "declared", mappings: [{ from: "callee:return", to: "call:result" }] }], conditions: [], proof: { status: "composed-static-lineage", feasibility: "unknown", runtime: "unknown", fieldMappings: "declared", receiver: binding.receiver, note: "Three independently checked local CPG slices joined through a retained positional call/return binding under an explicitly declared receiver. This is not one Joern path or verified Spring dispatch." } };
+        result.results.push(path3);
+        result.receiverLineage.composed++;
+      }
+      if (result.receiverLineage.composed) result.proof = { kind: "composed-data-lineage", status: "composed-static-lineage", feasibility: "unknown", runtime: "unknown", receiver: context2.receiver };
+      result.total = result.results.length;
+      result.receiverLineage.status = result.receiverLineage.composed ? "composed-static-lineage" : "unavailable";
+    }
+    module2.exports = { compose };
+  }
+});
+
+// lib/semantic-path-context.js
+var require_semantic_path_context = __commonJS({
+  "lib/semantic-path-context.js"(exports2, module2) {
+    var { digest } = require_semantic_protocol();
+    var caches = /* @__PURE__ */ new WeakMap();
+    var cache = (a) => {
+      if (!caches.has(a)) caches.set(a, { hierarchies: /* @__PURE__ */ new Map() });
+      return caches.get(a);
+    };
+    var records = (a, type, method, limit = 401) => a.db.prepare("select raw from records where type=?" + (method === void 0 ? "" : " and method=?") + " order by file,line,id limit ?").all(...method === void 0 ? [type, limit] : [type, String(method), limit]).map((r) => JSON.parse(r.raw));
+    function origin(a, r) {
+      const s = (a.sources || a.manifest?.sources || []).filter((s2) => s2.prefix && r.file?.startsWith(s2.prefix + "/")).sort((x, y) => y.prefix.length - x.prefix.length)[0];
+      return { ...r, analysisId: a.id, repo: s?.repo || r.repo || a.repo, sha: s?.sha || r.sha || a.sha, file: s ? r.file.slice(s.prefix.length + 1) : r.file, locator: { analysisId: a.id, generation: a.id, nodeId: String(r.id) } };
+    }
+    function hierarchy(a, receiver) {
+      const cached = cache(a);
+      if (cached.hierarchies.has(receiver)) return cached.hierarchies.get(receiver);
+      const all = cached.types || (cached.types = records(a, "type", void 0, 10001)), byName = /* @__PURE__ */ new Map();
+      for (const t of all) {
+        if (!byName.has(t.fullName)) byName.set(t.fullName, []);
+        byName.get(t.fullName).push(t);
+      }
+      const levels = [], queue = [{ name: receiver, depth: 0 }], seen = /* @__PURE__ */ new Set();
+      let incomplete = all.length > 1e4;
+      while (queue.length && levels.length < 100) {
+        const t = queue.shift();
+        if (seen.has(t.name)) continue;
+        seen.add(t.name);
+        const matches = byName.get(t.name) || [];
+        if (matches.length !== 1) {
+          if (t.name !== "java.lang.Object") incomplete = true;
+          levels.push({ ...t, missing: !matches.length, ambiguous: matches.length > 1 });
+          continue;
+        }
+        const row = matches[0];
+        levels.push({ ...t, type: origin(a, row) });
+        for (const name of row.inherits || []) if (name !== "java.lang.Object") {
+          if (t.depth < 16) queue.push({ name, depth: t.depth + 1 });
+          else incomplete = true;
+        }
+      }
+      const result = { levels, incomplete: incomplete || queue.length > 0 };
+      if (cached.hierarchies.size < 200) cached.hierarchies.set(receiver, result);
+      return result;
+    }
+    function inherited(graph, selector) {
+      const out2 = [];
+      for (const a of graph.byAnalysis.values()) {
+        if (selector.analysisId && selector.analysisId !== a.id) continue;
+        const h = hierarchy(a, selector.receiver), root = h.levels.find((l) => l.depth === 0);
+        if (!root?.type || root.ambiguous) continue;
+        if (selector.repo && selector.repo !== root.type.repo) continue;
+        const { receiver, repo, sha, ...methodSelector } = selector;
+        if (sha && root.type.sha !== sha) continue;
+        const methods = graph.selectSymbols(a, methodSelector, 201), nearest = /* @__PURE__ */ new Map();
+        if (methods.length > 200) graph.gaps.push({ kind: "inheritance-selector-budget", detail: "More than 200 matching methods; narrow the method signature to avoid incomplete inherited selection", receiver });
+        for (const m of methods) {
+          const level = h.levels.find((l) => l.name === m.owner);
+          if (!level) continue;
+          const key = m.methodSignature || m.signature, previous = nearest.get(key);
+          if (!previous || level.depth < previous.depth) nearest.set(key, { depth: level.depth, methods: [m] });
+          else if (level.depth === previous.depth) previous.methods.push(m);
+        }
+        for (const v of nearest.values()) for (const m of v.methods) out2.push({ ...m, receiverBinding: { receiver, declaredOwner: m.owner, depth: v.depth, ancestry: h.levels.map((l) => ({ name: l.name, depth: l.depth, ...l.type ? { repo: l.type.repo, sha: l.type.sha, file: l.type.file } : { missing: l.missing, ambiguous: l.ambiguous } })), status: "retained-type-inheritance", runtime: "unknown" } });
+        if (h.incomplete) graph.gaps.push({ kind: "inheritance-gap", detail: "The receiver hierarchy is incomplete; index the exact internal-library closure with composite:true", receiver });
+      }
+      if (!out2.length) graph.gaps.push({ kind: "inherited-entry-missing", receiver: selector.receiver, detail: "No exact inherited method bound to this receiver. Retain the exact service/library closure and reindex with composite:true." });
+      return out2;
+    }
+    function collect(graph, args, from, to) {
+      const methods = [], facts = [], gaps = [], queue = [], seen = /* @__PURE__ */ new Set(), excludedMethods = /* @__PURE__ */ new Set();
+      let truncated = false;
+      const push = (a, m, depth, via) => {
+        if (m) queue.push({ a, m, depth, via });
+      };
+      for (const n of from) {
+        const a = graph.byAnalysis.get(n.analysisId);
+        if (!a) continue;
+        if (n.kind === "method") push(a, n, 0, "selected entry");
+        else if (n.kind === "call") {
+          const row = a.db.prepare("select method from records where type='call' and id=?").get(n.locator.nodeId);
+          push(a, graph.local(a, row?.method), 0, "source call owner");
+        } else for (const id of n.handlerCandidates || []) push(a, graph.nodes.get(id), 0, "entry port");
+      }
+      if (args.from?.kind === "line") for (const a of graph.byAnalysis.values()) {
+        const matched = graph.selectSymbols(a, args.from, 201);
+        if (matched.length === 1) push(a, matched[0], 0, "line owner");
+        else gaps.push({ kind: "context-line-owner", detail: "The line owner is missing or ambiguous; no method context was guessed" });
+      }
+      const deadline = Date.now() + Math.min(1e4, args.budgetMs || 5e3), receiver = args.from?.receiver || from.find((n) => n.receiverBinding)?.receiverBinding.receiver;
+      while (queue.length && methods.length < 40 && Date.now() < deadline) {
+        const { a, m, depth, via } = queue.shift(), key = a.id + ":" + m.locator.nodeId;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const meta = JSON.parse(a.db.prepare("select value from metadata where key='coverage'").get().value);
+        if (!meta.meta?.capabilities?.pathContext) {
+          gaps.push({ kind: "context-projection-missing", analysisId: a.id, detail: "This retained projection predates path-context facts; reindex to collect lambda bodies, transformations and inheritance" });
+          continue;
+        }
+        methods.push({ ...m, via, depth });
+        const append = (r) => {
+          if (facts.length >= 600) {
+            truncated = true;
+            return;
+          }
+          facts.push({ ...origin(a, r), owner: m.signature, method: m.id, contextVia: via, applicability: "reachable-method source context; applicability to a selected value/CFG path is unproven" });
+        };
+        const batches = ["guard", "fact", "call"].map((type) => records(a, type, m.locator.nodeId));
+        truncated ||= batches.some((rows) => rows.length > 400);
+        const local = batches.flatMap((rows) => rows.slice(0, 400)), callbackRoles = /* @__PURE__ */ new Map();
+        for (const r of local) if (r.kind === "pipeline-stage") for (const signature of r.lambdaTargets || []) {
+          if (!callbackRoles.has(signature)) callbackRoles.set(signature, /* @__PURE__ */ new Set());
+          callbackRoles.get(signature).add(`${r.name} callback`);
+        }
+        for (const r of local) {
+          append({ ...r, expression: r.expression || r.code, kind: r.type === "call" ? "call-site" : r.kind === "return" && via === "filter callback" ? "stream-filter-predicate" : r.kind === "return" && m.returnType === "boolean" ? "predicate-return" : r.kind === "return" && /^(map|flatMap)/.test(via) ? "stream-mapping" : r.type === "guard" ? ["FOR", "WHILE", "DO"].includes(r.kind) ? "loop" : r.kind === "IF" ? "conditional" : r.kind : r.kind, status: "source-context", ...r.kind === "return" && (via === "filter callback" || m.returnType === "boolean") ? { predicate: (r.expression || "").replace(/^return\s+|;$/g, ""), outcome: "unknown", assumption: via === "filter callback" ? "Callback predicate source; stream invocation and element acceptance are not proven" : "Helper predicate source; callsite outcome, dominance and feasibility remain unproven" } : {}, ...r.type === "guard" && ["FOR", "WHILE", "DO"].includes(r.kind) ? { iterations: "unknown", assumption: "Loop iterations and exit conditions are not unrolled or proven" } : {}, ...r.kind === "pipeline-stage" ? { stage: r.name, assumption: r.javaStream ? "Stream execution requires a terminal operation; callback invocation, order, exceptions and cardinality are unverified" : "Name-based pipeline candidate; Java stream identity and callback execution remain unverified" } : {} });
+          if (r.lambdaTargetsTruncated) truncated = true;
+          for (const signature of r.lambdaTargets || []) {
+            const targets = graph.selectSymbols(a, { signature }, 21);
+            if (targets.length === 1 && depth < 12) push(a, targets[0], depth + 1, callbackRoles.get(signature)?.size === 1 ? [...callbackRoles.get(signature)][0] : "lambda/method reference");
+            else gaps.push({ kind: "callback-unresolved", detail: "Callback target is missing, ambiguous or outside the depth budget", signature });
+          }
+        }
+        graph.loadCalls(m);
+        for (const edge of graph.adjacency.get(m.id) || []) {
+          let target = graph.nodes.get(edge.to);
+          if (target?.kind !== "method") continue;
+          let targets = [target];
+          if (target.abstract) {
+            const h = receiver ? hierarchy(a, receiver) : null, symbols = cache(a).symbols || (cache(a).symbols = records(a, "symbol", void 0, 10001));
+            truncated ||= symbols.length > 1e4;
+            targets = [];
+            for (const row of symbols) {
+              if (row.name !== target.name || row.abstract || row.signature !== target.methodSignature) continue;
+              const chain = hierarchy(a, row.owner);
+              if (!chain.levels.some((l) => l.name === target.owner)) continue;
+              if (h && !h.levels.some((l) => l.name === row.owner)) {
+                excludedMethods.add(String(row.id));
+                continue;
+              }
+              targets.push(graph.symbol(a, row));
+            }
+            append({ id: String(edge.evidence?.nodeId || edge.id), type: "fact", kind: "dispatch", expression: target.signature, repo: edge.evidence?.repo, sha: edge.evidence?.sha, receiver: receiver || null, candidates: targets.map((n) => ({ signature: n.signature, repo: n.repo, file: n.file, line: n.line })), status: "candidate-dispatch", file: edge.evidence?.file, line: edge.evidence?.line });
+            gaps.push({ kind: "dispatch-runtime-unknown", detail: receiver ? "Receiver class was explicitly selected; Spring bean choice, proxies and runtime dispatch remain unverified" : "Multiple runtime implementations can apply; select a receiver to narrow retained candidates" });
+          }
+          for (const n of targets) if (depth < 12) push(graph.byAnalysis.get(n.analysisId), n, depth + 1, target.abstract ? "candidate virtual dispatch" : edge.kind);
+          else {
+            truncated = true;
+            gaps.push({ kind: "context-depth-budget", detail: "Reachable body is outside the context depth budget" });
+          }
+        }
+      }
+      truncated ||= queue.length > 0 || Date.now() >= deadline;
+      if (truncated) gaps.push({ kind: "context-budget", detail: "Context is bounded to 40 bodies, 600 facts and depth 12; additional reachable facts remain unexamined" });
+      const constraints = graph.receiverConstraints();
+      const bindings = receiver ? constraints.dispatch.flatMap((d) => {
+        const selected = [];
+        for (const a of graph.byAnalysis.values()) {
+          const row = a.db.prepare("select raw from records where type='call' and id=?").get(d.callId);
+          if (!row) continue;
+          const call = origin(a, JSON.parse(row.raw));
+          for (const id of d.targets) {
+            const target = graph.local(a, id);
+            if (!target || target.abstract) continue;
+            selected.push({ call: { kind: "call", repo: call.repo, name: call.name, file: call.file, line: call.line, column: call.column }, target: { kind: "method", signature: target.signature, repo: target.repo }, parameters: target.parameters.filter((p) => p.index > 0).map((p) => ({ index: p.index, name: p.name })), receiver, status: "declared-receiver-positional-binding" });
+          }
+        }
+        return selected;
+      }).slice(0, 4) : [];
+      const unique = [...new Map(facts.map((f) => [digest([f.analysisId, f.kind, f.id, f.owner, f.expression]), f])).values()];
+      return { protocol: "dt.path-context/v1", status: !methods.length ? "unavailable" : truncated ? "bounded" : "collected", methods, facts: unique, gaps, truncated, receiver: receiver || null, complete: !truncated && !gaps.length, bindings, receiverConstraints: receiver ? { ...constraints, status: "declared-receiver-filter", meaning: "Selected receiver narrows retained implicit-this call targets; it does not prove Spring bean wiring" } : null, scope: "Bounded reachable source bodies, including callbacks and candidate dispatch. These facts do not prove invocation, dominance, loop counts, stream execution or path feasibility." };
+    }
+    function compare(before, after) {
+      const projection = (c) => {
+        const result = /* @__PURE__ */ new Map();
+        for (const m of c?.methods || []) result.set("body:" + JSON.stringify([m.repo, m.file, m.signature]), { kind: "body", repo: m.repo, file: m.file, signature: m.signature, line: m.line, bodyDigest: m.bodyDigest });
+        for (const f of c?.facts || []) {
+          const key = JSON.stringify([f.repo, f.file, f.owner, f.kind]);
+          if (!result.has(key)) result.set(key, []);
+          result.get(key).push(f);
+        }
+        return result;
+      }, maps = [projection(before), projection(after)], changes = [];
+      const normalized = (v) => Array.isArray(v) ? v.map(({ expression, kind, name, lambdaTargets, candidates, javaStream, textTruncated }) => ({ expression, kind, name, lambdaTargets, candidates: candidates?.map(({ signature, repo }) => ({ signature, repo })), javaStream, textTruncated })) : v && { bodyDigest: v.bodyDigest };
+      for (const key of /* @__PURE__ */ new Set([...maps[0].keys(), ...maps[1].keys()])) {
+        const a = maps[0].get(key), b = maps[1].get(key);
+        if (JSON.stringify(normalized(a)) !== JSON.stringify(normalized(b))) changes.push({ change: !a ? "added" : !b ? "removed" : "changed", before: a, after: b });
+      }
+      return changes;
+    }
+    module2.exports = { inherited, collect, compare, hierarchy };
+  }
+});
+
+// lib/semantic-response.js
+var require_semantic_response = __commonJS({
+  "lib/semantic-response.js"(exports2, module2) {
+    var pick = (value, keys) => Object.fromEntries(keys.filter((k) => value?.[k] !== void 0).map((k) => [k, value[k]]));
+    function compact(value, budget = 16384) {
+      const out2 = { ...value, format: "compact", detail: 'Full evidence is retained at view. Use format:"full" or narrow limit/maxPaths for original JSON.', omitted: {} };
+      for (const key of ["gaps", "dependencies", "ambiguity"]) if (Array.isArray(out2[key])) out2[key] = out2[key].slice();
+      const shortCode = (node) => {
+        const n = pick(node, ["name", "signature", "file", "line", "label", "code", "inCondition", "repo", "sha"]);
+        if (typeof n.code === "string" && n.code.length > 400) {
+          n.code = n.code.slice(0, 400);
+          n.codeTruncated = true;
+          out2.previewTruncated = true;
+        }
+        return n;
+      };
+      const path3 = (item) => {
+        const p = pick(item, ["kind", "analysisId", "side", "layer", "assumptionEvaluation", "proof", "truncated", "caveats", "conditions", "gaps", "boundaries"]);
+        for (const key of ["conditions", "gaps", "boundaries"]) if (Array.isArray(p[key])) p[key] = p[key].slice();
+        if (item.nodes) p.nodes = item.nodes.map(shortCode);
+        if (item.edges) p.edges = item.edges.map((e) => pick(e, ["kind", "certainty", "nature"]));
+        if (item.segments) p.segments = item.segments.map((s) => ({ ...pick(s, ["id", "analysisId", "status", "from", "to", "ms"]), paths: (s.paths || []).map(path3) }));
+        return p;
+      };
+      if (out2.analyses) out2.analyses = out2.analyses.map((a) => pick(a, ["id", "repo", "sha", "ref", "revisionKey", "sourceDigest", "workspace", "state", "language", "sources", "coverage", "reused"]));
+      if (out2.coverage) out2.coverage = out2.coverage.map ? out2.coverage.map((c) => ({ ...pick(c, ["analysisId", "side"]), ...c.summary ? { counts: c.summary.counts, truncated: c.summary.truncated, gaps: c.summary.gaps } : { analyses: c.analyses?.map((a) => ({ analysisId: a.analysisId, truncated: a.summary?.truncated, gaps: a.summary?.gaps })) } })) : out2.coverage;
+      if (out2.results) out2.results = out2.results.map((r) => {
+        if (r.nodes || r.segments) return path3(r);
+        if (r.category === "data-flow") return { category: r.category, change: r.change, ...r.before ? { before: path3(r.before) } : {}, ...r.after ? { after: path3(r.after) } : {} };
+        if (r.parameters) return { ...pick(r, ["id", "kind", "name", "signature", "file", "line", "repo", "sha", "analysisId"]), parameters: r.parameters.filter((p) => p.index > 0).map((p) => pick(p, ["name", "index", "type"])) };
+        return r;
+      });
+      if (out2.flowMap) {
+        const m = out2.flowMap;
+        const states = new Map(m.nodes.map((n, i) => [n.id, "s" + i])), methods = new Map(m.methods.map((n, i) => [n.id, "m" + i]));
+        out2.flowMap = {
+          ...pick(m, ["protocol", "counts", "complete", "assumptions"]),
+          identity: "Local preview aliases; exact CPG/state identities and source locators are retained at view.",
+          entries: m.entries.map((id) => states.get(id)),
+          methods: m.methods.map((a) => ({ ...pick(a, ["name", "signature", "file", "line", "repo", "sha"]), id: methods.get(a.id), entry: states.get(a.entry), exit: states.get(a.exit) })),
+          nodes: m.nodes.map((n) => ({ ...pick(n, ["kind", "code", "textTruncated", "file", "line", "changes", "arguments", "ports", "exit", "assumptions"]), id: states.get(n.id), method: methods.get(n.method) })),
+          edges: m.edges.map((e) => ({ ...pick(e, ["kind", "polarity", "relation", "bindings", "certainty", "proof"]), from: states.get(e.from), to: states.get(e.to) })),
+          ports: m.ports.map((p2) => pick(p2, ["id", "portType", "boundary", "mappings", "certainty", "evidence"]))
+        };
+        const p = out2.flowMap, cap = (key, max) => {
+          if (p[key].length > max) {
+            out2.omitted["flowMap." + key] = (out2.omitted["flowMap." + key] || 0) + p[key].length - max;
+            p[key] = p[key].slice(0, max);
+            out2.previewTruncated = true;
+          }
+        };
+        const shorten = (text, max) => {
+          if (typeof text !== "string" || text.length <= max) return text;
+          out2.omitted["flowMap.text"] = (out2.omitted["flowMap.text"] || 0) + 1;
+          out2.previewTruncated = true;
+          return text.slice(0, max);
+        };
+        const score = (n) => p.entries.includes(n.id) ? 6 : n.kind === "call" && !n.exit || n.kind === "return" ? 5 : n.kind === "change" ? 4 : n.kind === "decision" ? 3 : 1;
+        p.nodes.sort((a, b) => score(b) - score(a));
+        cap("nodes", Math.min(40, Math.max(4, Math.floor(budget / 500))));
+        const included = new Set(p.nodes.map((n) => n.id)), before = p.edges.length;
+        p.edges = p.edges.filter((e) => included.has(e.from) && included.has(e.to));
+        if (before !== p.edges.length) {
+          out2.omitted["flowMap.edges"] = before - p.edges.length;
+          out2.previewTruncated = true;
+        }
+        p.edges.sort((a, b) => (a.kind === "call" ? 0 : a.kind === "control" ? 1 : 2) - (b.kind === "call" ? 0 : b.kind === "control" ? 1 : 2));
+        cap("edges", Math.min(80, Math.max(4, Math.floor(budget / 180))));
+        cap("ports", 5);
+        for (const n of p.nodes) {
+          n.code = shorten(n.code, 400);
+          if (n.arguments) {
+            if (n.arguments.length > 8) {
+              out2.omitted["flowMap.arguments"] = (out2.omitted["flowMap.arguments"] || 0) + n.arguments.length - 8;
+              out2.previewTruncated = true;
+            }
+            n.arguments = n.arguments.slice(0, 8).map((a) => ({ ...a, expression: shorten(a.expression, 200) }));
+          }
+          if (n.changes) n.changes = n.changes.map((c) => ({ ...c, target: shorten(c.target, 160), expression: shorten(c.expression, 400) }));
+        }
+        for (const method of p.methods) method.signature = shorten(method.signature, 400);
+        for (const edge of p.edges) if (edge.bindings) {
+          if (edge.bindings.length > 8) {
+            out2.omitted["flowMap.bindings"] = (out2.omitted["flowMap.bindings"] || 0) + edge.bindings.length - 8;
+            out2.previewTruncated = true;
+          }
+          edge.bindings = edge.bindings.slice(0, 8).map((b) => ({ ...b, expression: shorten(b.expression, 200) }));
+        }
+      }
+      const size = () => Buffer.byteLength(JSON.stringify(out2));
+      const remove = (object, key, label, minimum = 0) => {
+        const a = object[key];
+        if (!Array.isArray(a) || a.length <= minimum) return false;
+        a.pop();
+        out2.omitted[label] = (out2.omitted[label] || 0) + 1;
+        out2.previewTruncated = true;
+        return true;
+      };
+      while (size() > budget) {
+        if (out2.flowMap) {
+          const m = out2.flowMap;
+          if (remove(m, "ports", "flowMap.ports") || remove(m, "edges", "flowMap.edges", 4)) continue;
+          if (m.nodes.length > 2) {
+            const index = m.nodes.findLastIndex((n) => !m.entries.includes(n.id));
+            if (index >= 0) {
+              const [node] = m.nodes.splice(index, 1), before = m.edges.length;
+              m.edges = m.edges.filter((e) => e.from !== node.id && e.to !== node.id);
+              out2.omitted["flowMap.nodes"] = (out2.omitted["flowMap.nodes"] || 0) + 1;
+              out2.omitted["flowMap.edges"] = (out2.omitted["flowMap.edges"] || 0) + before - m.edges.length;
+              out2.previewTruncated = true;
+              continue;
+            }
+          }
+          if (remove(m, "methods", "flowMap.methods", 1) || remove(m, "edges", "flowMap.edges")) continue;
+        }
+        if (remove(out2, "results", "results", 1)) continue;
+        const shrink = (item) => {
+          for (const key2 of ["segments", "boundaries", "edges", "conditions"]) if (remove(item, key2, key2)) return true;
+          if (item.nodes?.length > 2) {
+            item.nodes.splice(item.nodes.length - 2, 1);
+            item.nodesOmitted = (item.nodesOmitted || 0) + 1;
+            out2.omitted.nodes = (out2.omitted.nodes || 0) + 1;
+            out2.previewTruncated = true;
+            return true;
+          }
+          if (item.before && shrink(item.before)) return true;
+          if (item.after && shrink(item.after)) return true;
+          return false;
+        };
+        if (out2.results?.some(shrink)) continue;
+        if (remove(out2, "coverage", "coverage") || remove(out2, "dependencies", "dependencies") || remove(out2, "ambiguity", "ambiguity") || remove(out2, "gaps", "gaps", 1) || remove(out2, "analyses", "analyses", 2)) continue;
+        if (remove(out2, "results", "results")) continue;
+        const key = Object.keys(out2).filter((k) => !["protocol", "operation", "mode", "job", "state", "revisionSet", "view", "proof", "assessment", "summary", "total", "truncated", "nextCursor", "format", "detail", "omitted", "previewTruncated"].includes(k) && (JSON.stringify(out2[k])?.length || 0) > 0).sort((a, b) => (JSON.stringify(out2[b])?.length || 0) - (JSON.stringify(out2[a])?.length || 0))[0];
+        if (key) {
+          out2.omitted[key] = Array.isArray(out2[key]) ? out2[key].length : 1;
+          delete out2[key];
+          out2.previewTruncated = true;
+          continue;
+        }
+        break;
+      }
+      if (out2.flowMap) {
+        const ids = new Set(out2.flowMap.nodes.map((n) => n.id));
+        for (const method of out2.flowMap.methods) for (const key of ["entry", "exit"]) if (!ids.has(method[key])) delete method[key];
+      }
+      if (!Object.keys(out2.omitted).length) delete out2.omitted;
+      return out2;
+    }
+    module2.exports = { compact };
+  }
+});
+
+// lib/semantic-path-trace.js
+var require_semantic_path_trace = __commonJS({
+  "lib/semantic-path-trace.js"(exports2, module2) {
+    var P = require_semantic_protocol();
+    var identity = (a) => ({ id: a.id, repo: a.repo, sha: a.sha, sourceDigest: a.sourceDigest, revisionKey: a.revisionKey, language: a.language });
+    function validate(args, analyses) {
+      if (![1, 2].includes(analyses.length) || new Set(analyses.map((a) => a.id)).size !== analyses.length) throw P.error("Trace requires one analysis, or two distinct analyses ordered before, after");
+      if (analyses.length === 2 && (analyses[0].repo !== analyses[1].repo || analyses[0].language !== analyses[1].language)) throw P.error("Trace comparison requires the same repository and frontend");
+      if (!args.from || !args.to) throw P.error("Trace requires from and to selectors");
+      if (analyses.length === 1 && (args.after_from || args.after_to)) throw P.error("After selectors require two analyses");
+      for (const selector of [args.from, args.to, args.after_from, args.after_to].filter(Boolean)) {
+        if (selector.kind === "line") {
+          P.relative(selector.file);
+          if (!Number.isInteger(selector.line) || selector.line < 1) throw P.error("A line endpoint requires a positive line");
+          if (selector.parameter !== void 0 || selector.argument !== void 0) throw P.error("Line endpoints select expressions; use code, column, nodeLabel or nodeId to disambiguate");
+        }
+        if (analyses.length === 2 && (selector.id || selector.analysisId || selector.sha)) throw P.error("Select exact revisions through analyses; use separate after_from/after_to for shifted lines");
+        if (analyses.length === 2 && selector.nodeId && (selector === args.from && !args.after_from || selector === args.to && !args.after_to)) throw P.error("CPG nodeIds are revision-local; provide separate after selectors or use code/column/nodeLabel");
+      }
+      if (!Array.isArray(args.assumptions || []) || (args.assumptions || []).length > 20) throw P.error("At most 20 explicit assumptions are supported");
+      for (const a of args.assumptions || []) if (typeof a.expression !== "string" || !a.expression.trim() || a.expression.length > 1e3 || typeof a.holds !== "boolean") throw P.error("Each assumption needs an exact expression and boolean holds");
+    }
+    var failedKinds = /* @__PURE__ */ new Set(["endpoint-not-found", "endpoint-value-unavailable", "endpoint-resolution", "line-source-ambiguous", "deep-query-failed", "deep-query-unavailable", "deep-query-incomplete", "dataflow-boundary", "local-query-failed", "local-dataflow-gap"]);
+    function status(r, layer) {
+      if (r.receiverLineage?.status === "unavailable" || r.pathContext?.receiverConstraints?.unsafe) return "unavailable";
+      if ((r.ambiguity || []).length || (r.gaps || []).some((g) => failedKinds.has(g.kind) || String(g.detail).startsWith("Unsupported cross-method control flow"))) return "unavailable";
+      if ((r.results || []).some((p) => layer === "data" ? !["static-dataflow", "composed-static-lineage"].includes(p.proof?.status) : p.proof?.status !== "path_condition")) return "unavailable";
+      if (r.truncated || (r.results || []).some((p) => p.truncated)) return "bounded";
+      return r.results?.length ? "static-candidates" : "no-supported-path";
+    }
+    function underAssumptions(path3, assumptions, layer) {
+      if (!assumptions.length) return { status: "unconditioned", matches: [], conflicts: [], unresolved: [] };
+      const matches = [], conflicts = [], unresolved = [];
+      for (const a of assumptions) {
+        const conditions = layer === "control" ? (path3.conditions || []).filter((c) => c.expression === a.expression && c.status === "path_condition" && ["true", "false"].includes(c.polarity)) : [];
+        if (!conditions.length) unresolved.push(a);
+        else if (conditions.some((c) => c.polarity === "true" !== a.holds)) conflicts.push(a);
+        else matches.push(a);
+      }
+      return { status: conflicts.length ? "contradicts-assumptions" : unresolved.length ? "unresolved" : "matches-assumptions", matches, conflicts, unresolved };
+    }
+    var fingerprint = (p) => require_semantic_compare().comparable(p);
+    function delta(before, after, layer, inconclusive) {
+      const maps = [before, after].map((paths) => new Map(paths.map((p) => [fingerprint(p), p]))), results = [];
+      for (const key of /* @__PURE__ */ new Set([...maps[0].keys(), ...maps[1].keys()])) {
+        const a = maps[0].get(key), b = maps[1].get(key);
+        results.push({ layer, change: a && b ? "unchanged" : inconclusive ? "inconclusive" : a ? "removed" : "added", ...a ? { before: a } : {}, ...b ? { after: b } : {} });
+      }
+      const changed = results.filter((r) => r.change !== "unchanged");
+      if (changed.length === 2 && changed.filter((r) => r.before).length === 1 && changed.filter((r) => r.after).length === 1) {
+        const a = changed.find((r) => r.before).before, b = changed.find((r) => r.after).after;
+        return [...results.filter((r) => r.change === "unchanged"), { layer, change: inconclusive ? "inconclusive" : "changed", before: a, after: b }];
+      }
+      return results;
+    }
+    async function trace2(args, analyses, query) {
+      validate(args, analyses);
+      const assumptions = args.assumptions || [], sides = [];
+      for (const [i, analysis] of analyses.entries()) {
+        require_execution().check();
+        const from = i ? args.after_from || args.from : args.from, to = i ? args.after_to || args.to : args.to;
+        const request = { operation: "paths", from, to, maxPaths: args.maxPaths || 8, maxHops: args.maxHops || 60, budgetMs: args.budgetMs || 5e3, limit: 200 };
+        const run = async (mode) => {
+          try {
+            return await query({ ...request, mode, includeContext: mode === "dataflow" && args.includeContext !== false }, analysis);
+          } catch (e) {
+            require_execution().check();
+            return { results: [], gaps: [{ kind: "deep-query-failed", detail: e.message }], proof: { status: "unavailable" } };
+          }
+        };
+        const data = await run("dataflow");
+        if (!data.results?.length && data.pathContext?.receiver) try {
+          await require_semantic_receiver_lineage().compose(data, request, analysis, query);
+        } catch (error) {
+          require_execution().check();
+          data.gaps.push({ kind: "receiver-local-lineage-gap", detail: error.message });
+        }
+        const control = args.includeControl === false ? null : await run("controlflow");
+        const decorate = (r, layer) => (r?.results || []).map((p) => ({ ...p, assumptionEvaluation: underAssumptions(p, assumptions, layer) }));
+        sides.push({
+          side: analyses.length === 1 ? "current" : i ? "after" : "before",
+          analysis: identity(analysis),
+          from,
+          to,
+          data: { status: status(data, "data"), paths: decorate(data, "data"), selectedValues: data.selectedValues, receiverLineage: data.receiverLineage, endpoints: data.endpointResolution || [], proof: data.proof },
+          context: data.pathContext || { status: "unavailable", methods: [], facts: [], gaps: [], complete: false },
+          control: control ? { status: status(control, "control"), paths: decorate(control, "control"), endpoints: control.endpointResolution || [], proof: control.proof } : { status: "not-requested", paths: [] },
+          gaps: [...data.gaps || [], ...control?.gaps || []],
+          ambiguity: [...data.ambiguity || [], ...control?.ambiguity || []],
+          truncated: !!(data.truncated || control?.truncated)
+        });
+      }
+      const comparison = sides.length === 2;
+      const inconclusive = sides.some((s) => [s.data.status, s.control.status].some((v) => ["unavailable", "bounded"].includes(v)));
+      const layerIncomplete = (layer) => sides.some((s) => ["unavailable", "bounded"].includes(s[layer].status));
+      const changes = comparison ? ["data", "control"].flatMap((layer) => delta(sides[0][layer].paths, sides[1][layer].paths, layer, layerIncomplete(layer))) : [];
+      const contextChanges = comparison ? require_semantic_path_context().compare(sides[0].context, sides[1].context) : [];
+      const changed = changes.filter((r) => !["unchanged", "inconclusive"].includes(r.change));
+      const assessment = {
+        status: inconclusive ? changed.length ? "partial-static-path-change" : "inconclusive" : !comparison ? "single-revision" : changed.length ? "static-path-changed" : contextChanges.length ? "source-context-changed" : "no-observed-path-change",
+        exhaustive: false,
+        contextChanges: contextChanges.length,
+        layers: Object.fromEntries(["data", "control"].map((layer) => [layer, !comparison ? sides[0][layer].status : layerIncomplete(layer) ? "inconclusive" : changed.some((r) => r.layer === layer) ? "static-path-changed" : "no-observed-path-change"])),
+        inconclusiveCandidates: changes.filter((r) => r.change === "inconclusive").length,
+        dataChanges: changed.filter((r) => r.layer === "data").length,
+        controlChanges: changed.filter((r) => r.layer === "control").length,
+        behaviorVerified: false,
+        meaning: "A changed source expression or condition on a selected static path is evidence that this path differs. It does not prove that the changed line executes, the requested behavior is correct, or every affected path is covered."
+      };
+      const reading = sides.map((s) => `${s.side}: ${s.data.paths.length} value path(s) (${s.data.status}); ${s.control.paths.length} local control path(s) (${s.control.status}).`);
+      reading.push(comparison ? `${assessment.status}: ${assessment.dataChanges} value and ${assessment.controlChanges} control path differences; ${assessment.inconclusiveCandidates} inconclusive candidate(s). Match ignores shifted lines and CPG node IDs, and retains changed expressions.` : "Select a second retained analysis to compare the change.");
+      reading.push(`${contextChanges.length} reachable source-context change(s); ${sides.map((s) => s.side + ": " + s.context.facts.length + " collected facts (" + s.context.status + ")").join("; ")}. Context facts include loops, callbacks and candidate inherited/library bodies; applicability to the selected paths remains unproven.`);
+      reading.push("For a regression, exercise the entry with inputs that satisfy the recorded guards; assert values, identity and effect counts at each selected exit. Also test rejected inputs produce no effects.");
+      return {
+        protocol: "dt.path-trace/v1",
+        operation: "trace",
+        analyses: analyses.map(identity),
+        request: { tool: "semantic_trace", arguments: { analyses: analyses.map((a) => a.id), from: args.from, to: args.to, ...args.after_from ? { after_from: args.after_from } : {}, ...args.after_to ? { after_to: args.after_to } : {}, assumptions, includeControl: args.includeControl !== false, includeContext: args.includeContext !== false, maxPaths: args.maxPaths || 8, maxHops: args.maxHops || 60, budgetMs: args.budgetMs || 5e3 } },
+        assessment,
+        reading,
+        assumptions,
+        sides,
+        changes,
+        contextChanges,
+        truncated: sides.some((s) => s.truncated),
+        gaps: sides.flatMap((s) => [...s.gaps, ...s.context.gaps || []].map((g) => ({ ...g, side: s.side }))),
+        proof: { kind: "selected-path-comparison", status: assessment.status, feasibility: "unknown", runtime: "unknown", behaviorVerified: false, assumptions: "User declarations match exact displayed CFG predicates only. They do not constrain Joern value-flow queries or prove satisfiability. Data and control paths are independent evidence; no correlation is inferred.", scope: "Value flow is retained-CPG evidence; control paths are local CFG walks with explicit throws stopped. Aliasing, dispatch, loops, exceptions, and external effects can remain unresolved. No solver or runtime coverage is claimed." }
+      };
+    }
+    function compact(value, budget = 16384) {
+      if (!value.sides) return require_semantic_response().compact(value, budget);
+      const { changes: originalChanges, ...retained } = value;
+      const preview = {
+        ...retained,
+        sides: value.sides.map((s) => ({ side: s.side, analysisId: s.analysisId, truncated: s.truncated, context: { status: s.context?.status || "unavailable", complete: !!s.context?.complete }, data: { status: s.data.status, composed: s.data.receiverLineage?.composed || 0 }, control: { status: s.control.status } })),
+        contextChanges: (value.contextChanges || []).slice(0, 4),
+        results: value.sides.flatMap((s) => ["data", "control"].flatMap((layer) => s[layer].paths.map((p) => ({ ...p, side: s.side, layer })))),
+        total: value.sides.reduce((n, s) => n + s.data.paths.length + s.control.paths.length, 0)
+      };
+      preview.summary = value.sides.map((s) => ({ side: s.side, dataPaths: s.data.paths.length, controlPaths: s.control.paths.length, dataStatus: s.data.status, controlStatus: s.control.status, contextStatus: s.context?.status || "unavailable", contextFacts: s.context?.facts?.length || 0, contextMethods: s.context?.methods?.length || 0 }));
+      return require_semantic_response().compact(preview, budget);
+    }
+    module2.exports = { trace: trace2, validate, underAssumptions, delta, compact };
+  }
+});
+
 // lib/semantic-flow-map.js
 var require_semantic_flow_map = __commonJS({
   "lib/semantic-flow-map.js"(exports2, module2) {
@@ -62545,7 +63076,7 @@ var require_semantic_query = __commonJS({
   "lib/semantic-query.js"(exports2, module2) {
     var path3 = require("path");
     var { Worker } = require("worker_threads");
-    var OPERATIONS = ["symbols", "search", "ports", "callers", "callees", "neighborhood", "neighbors", "paths", "slice", "assertions", "compare", "flowmap"];
+    var OPERATIONS = ["symbols", "search", "ports", "callers", "callees", "neighborhood", "neighbors", "paths", "slice", "assertions", "compare", "flowmap", "trace"];
     function validate(args, analyses) {
       if (!args || typeof args !== "object" || Array.isArray(args)) throw Error("Semantic query arguments must be an object");
       if (!OPERATIONS.includes(args.operation || "symbols")) throw Error("Unsupported semantic operation");
@@ -62556,6 +63087,7 @@ var require_semantic_query = __commonJS({
     }
     async function query(args = {}, analyses = [], { runQuery, ports, bindings } = {}) {
       validate(args, analyses);
+      if (args.operation !== "trace" && (args.mode || "reachability") === "reachability" && [args.from, args.to].some((s) => s?.kind === "line")) throw Error("Line endpoints require dataflow or controlflow mode");
       if (args.operation === "flowmap" && (args.to || args.cursor || [args.from, args.target].some((s) => s?.parameter !== void 0 || s?.argument !== void 0))) throw Error("flowmap maps whole entry methods; omit parameter/argument, to and cursor");
       let passportCandidates;
       analyses = analyses.map((a) => {
@@ -62584,6 +63116,7 @@ var require_semantic_query = __commonJS({
           return { ...a, ports: [], portGaps: [{ kind: "passport-port-unavailable", detail: error.message }] };
         }
       });
+      if (args.operation === "trace") return require_semantic_path_trace().trace(args, analyses, (request, analysis) => query(request, [analysis], { runQuery, ports, bindings }));
       if (args.operation === "compare" && args.mode === "dataflow") return require_semantic_compare().compare(args, analyses, (request, analysis) => query(request, [analysis], { runQuery, ports, bindings }));
       if (!analyses.length) return { protocol: "dt.semantic/v1", operation: args.operation || "symbols", results: [], analyses: [], readiness: "missing-analysis", gaps: [{ kind: "missing-analysis", detail: "Build or select an immutable semantic analysis; native code search remains available" }], truncated: false, proof: { status: "unavailable" } };
       const E = require_execution();
@@ -62671,10 +63204,18 @@ var require_semantic_query = __commonJS({
               continue;
             }
             const response = item.value;
+            if (!(response.records || []).some((r) => r.type === "summary")) {
+              result.truncated = true;
+              result.gaps.push({ kind: "deep-query-incomplete", analysisId: response.analysisId, detail: "Missing final query summary; evidence is incomplete" });
+            }
             for (const record of response.records || []) {
               if (record.type === "summary") {
                 result.truncated ||= record.truncated;
                 for (const gap of record.gaps || []) result.gaps.push({ kind: "deep-query-coverage", analysisId: response.analysisId, detail: gap });
+              } else if (record.type === "endpoints") {
+                (result.endpointResolution ||= []).push({ ...record, analysisId: response.analysisId });
+                if (record.status !== "resolved") result.gaps.push({ kind: "endpoint-resolution", analysisId: response.analysisId, detail: record.status });
+                if (record.status === "ambiguous") result.ambiguity.push({ analysisId: response.analysisId, from: record.from, to: record.to });
               } else result.results.push({ ...normalizePath(record, analyses.find((a) => a.id === response.analysisId)), analysisId: response.analysisId, id: record.id || `semantic-path:${response.analysisId}:${result.results.length}` });
             }
           }
@@ -62725,7 +63266,7 @@ var require_semantic_code = __commonJS({
         configured: !!(cfg.url && cfg.token),
         backend: "vendored-joern",
         languages: ["java", "js", "ts", "tsx"],
-        operations: ["symbols", "callers", "callees", "ports", "neighborhood", "paths", "slice", "assertions", "compare", "flowmap"],
+        operations: ["symbols", "callers", "callees", "ports", "neighborhood", "paths", "slice", "assertions", "compare", "flowmap", "trace"],
         retainedGenerations: true,
         editablePorts: true,
         ...info ? { worker: info } : {},
@@ -63177,11 +63718,13 @@ var require_semantic_code = __commonJS({
         if (!job2 || !String(job2.key).startsWith("semantic:query:")) throw P.error("Semantic query job is not available", "DT_NOT_FOUND", 404);
         return waitJob(job2, args.waitMs);
       }
+      if (args.operation === "trace" && !args.analysis && !args.analyses?.length) return { protocol: P.VERSION, operation: "trace", ready: false, analyses: [], gaps: [{ kind: "missing-selection", message: "Select one exact analysis, or two analyses ordered before, after. List retained snapshots using semantic_index with versions:true." }] };
       const analyses = resolve2(args);
       if (!analyses.length) return { protocol: P.VERSION, ready: false, analyses: [], nodes: [], paths: [], gaps: [{ kind: "semantic-index-missing", message: "Run semantic_index for the selected exact source revisions" }], coverage: { complete: false }, backend: "native-search-available" };
       const operation = args.operation || "symbols";
+      if (operation === "trace") require_semantic_path_trace().validate(args, analyses);
       if (operation === "compare" && args.mode === "dataflow") require_semantic_compare().validate(args, analyses);
-      if (!["slice", "paths", "assertions", "flowmap"].includes(operation) && !(operation === "compare" && args.mode === "dataflow")) return require_semantic_query().query({ ...args, operation }, analyses, { runQuery });
+      if (!["slice", "paths", "assertions", "flowmap", "trace"].includes(operation) && !(operation === "compare" && args.mode === "dataflow")) return require_semantic_query().query({ ...args, operation }, analyses, { runQuery });
       const job = J.start(`semantic:query:${P.digest([analyses.map((a) => a.id), args])}`, `semantic ${operation}`, () => require_semantic_query().query({ ...args, operation }, analyses, { runQuery }));
       return waitJob(job, args.waitMs);
     }
@@ -65819,7 +66362,14 @@ var require_project_context = __commonJS({
         } catch (e2) {
           if (!(e2 instanceof SyntaxError)) throw e2;
         }
-        let alive = Date.now() - fs3.statSync(lock).mtimeMs < 3e4;
+        let modified;
+        try {
+          modified = fs3.statSync(lock).mtimeMs;
+        } catch (e2) {
+          if (e2.code === "ENOENT") fail("Project context publisher finished; reload before retrying", "STATE_CONFLICT", 409);
+          throw e2;
+        }
+        let alive = Date.now() - modified < 3e4;
         if (owner?.pid) {
           try {
             process.kill(owner.pid, 0);
@@ -69235,6 +69785,7 @@ node cli.js tool label_stats '{"label":"refund approved"}'` }
       section("outside-in", "Test from the entry to observable exits", ["Start from the independently expected business outcome. test_context defaults to public callers of a requested class; choose a relevant entry when several candidates exist. Keep the real service and internal-library chain. Inspect integrationPlan and its proof limits.", "Assert responses and externally meaningful table, topic, API or Elasticsearch effects, including negative paths and duplicate/failure behavior. Current flow skeletons use boundary doubles. For real SQL/transaction claims use an owned scratch PostgreSQL lease; for wire/broker claims use isolated transport fixtures. flow=false or strategy=unit explicitly selects narrow unit isolation. Never equate mocked repository/producer calls with database or delivery proof."])
     ], ["task-memory", "verify-changes", "services"]));
     var visualHelp = {
+      capabilities: ["What can I do with this object?", "Select a task, service, component or database; follow a question to a tool, inspect inputs and prepare an editable Workbench draft. The graph covers the current authorized registry; saved snapshots can age."],
       "project-context": ["What is already understood about this project?", "Choose a service and flow, inspect assumptions and exact source revisions, then read retained evidence files. Admins publish immutable changes."],
       observability: ["Where did this operation wait or fail?", "Select a span, inspect its parent and lifecycle events, and export a content-free Perfetto snapshot."],
       "test-coverage": ["What was exercised and what is still missing?", "Choose a lifecycle edge or source file; inspect actual test-file provenance, missing lines, run scope and freshness."],
@@ -69253,6 +69804,7 @@ node cli.js tool label_stats '{"label":"refund approved"}'` }
       patch: ["Which file/lines changed?", "Choose a folder/file, inspect one diff and preserve base/head, binary/deleted/renamed status."],
       reproduction: ["What supports this reproduction?", "Inspect inputs, scope, versions, required reads, capture gaps and independent execution proof."],
       "scenario-run": ["Where did the scenario fail?", "Read outcome/target, select actions/assertions, inspect actual versus expected and cleanup."],
+      "semantic-path-trace": ["Did the change alter the required path?", "Select value or local control evidence, inspect paired expressions and exact source, review explicit path assumptions, copy a regression briefing or export JSON/SVG/Mermaid. Static differences are not execution or behavior proof."],
       "semantic-flow-map": ["Where do control and data change from entry to exits?", "Select the call overview or a retained method, inspect decisions, assignments, argument bindings and source, trace inputs and export JSON/SVG/Mermaid. Static dependencies and unresolved exceptions are not runtime proof."],
       "semantic-analysis": ["How can this call/value travel?", "Navigate source paths/guards, filter/select results and read mode, coverage, proof and feasibility."],
       table: ["Which rows answer the question?", "Filter/sort rows, inspect matching/total counts and use More for CSV/JSON exports."],
@@ -69442,8 +69994,8 @@ var require_tool_profiles = __commonJS({
       "tool_execute"
     ];
     var PROFILES = {
-      architecture: { description: "Shared architecture explanations, C4 and feature/data flows, environment observations and exports. Admins publish; everyone reads.", prefixes: ["architecture_", "project_context_"], names: [...CORE, "semantic_query", "passport", "consul_service"] },
-      semantic: { description: "Exact semantic revisions, source paths and guards, plus typed passport ports and separately versioned corrections.", includeCore: false, names: [...DISCOVERY, "semantic_capabilities", "semantic_index", "semantic_search", "semantic_query", "semantic_ports", "passport_adjustments", "passport_adjust", "passport", "code_search", "code_read", "job_cancel", "call_history"] },
+      architecture: { description: "Shared architecture explanations, C4 and feature/data flows, environment observations and exports. Admins publish; everyone reads.", prefixes: ["architecture_", "project_context_"], names: [...CORE, "semantic_query", "semantic_trace", "passport", "consul_service"] },
+      semantic: { description: "Exact semantic revisions, source paths and guards, plus typed passport ports and separately versioned corrections.", includeCore: false, names: [...DISCOVERY, "semantic_capabilities", "semantic_index", "semantic_search", "semantic_query", "semantic_trace", "semantic_ports", "passport_adjustments", "passport_adjust", "passport", "code_search", "code_read", "job_cancel", "call_history"] },
       map: { description: "Microservice map, saved feature flows and bounded graph exploration, with inspection tools and discovery for the rest.", includeCore: false, names: [...DISCOVERY, "map", "map_search", "map_neighbors", "map_path", "map_node", "map_adjustments", "map_adjust", "map_layers", "map_save", "map_ui_preview", "passport", "pg_table", "pg_query", "kafka_topic", "kafka_last", "logs_search", "es_search"] },
       tester: { description: "Testing by name: ready-made checks (service, environment, versions, table, trace, test data capture and reuse), test data and scratch databases, scenarios, API and UI capture, scripts and suites, tests in a workspace; tool_search reaches the rest.", includeCore: false, names: TESTER },
       direct: { description: "Everyday tools by name (databases, indices, topics, logs, repo files and PRs, code, docs); tool_search, tool_describe and tool_execute reach the rest.", includeCore: false, names: DIRECT },
@@ -69562,10 +70114,179 @@ var require_handbook = __commonJS({
   }
 });
 
+// lib/capability-map.js
+var require_capability_map = __commonJS({
+  "lib/capability-map.js"(exports2, module2) {
+    var objects = [
+      ["task", "Task", "The question, bug or change you are working on."],
+      ["workspace", "Workspace", "An editable checkout and its verification."],
+      ["context", "Task context", "Private progress, notes, files and saved evidence."],
+      ["memory", "Project memory", "Shared, versioned understanding across tasks."],
+      ["service", "Service", "Boundaries, consumers, dependencies and corrections."],
+      ["component", "Component & code", "Symbols, entry points, control and data flows."],
+      ["repository", "Repository", "Source revisions, files and pull requests."],
+      ["database", "Database", "Read-only queries and catalog discovery."],
+      ["table", "Table & function", "Definitions, readers, writers and field lineage."],
+      ["topic", "Kafka topic", "Messages, schemas and consumer lag."],
+      ["search-index", "Search index", "Elasticsearch documents and health."],
+      ["environment", "Environment", "Deployment registrations, health and logs."],
+      ["api", "API & browser", "Routes, captured traffic and explicit requests."],
+      ["documentation", "Documentation", "Requirements, verified quotations and diagrams."],
+      ["files", "File store", "Configured local/SFTP files and archives."],
+      ["automation", "Script & collection", "Reusable checks and bounded computation."],
+      ["reproduction", "Reproduction", "Fixtures, scenarios and isolated runtime evidence."],
+      ["test-database", "Test database", "Owned scratch databases, templates and leases."],
+      ["execution", "Execution", "Progress, cancellation, diagnostics and coverage."],
+      ["evidence", "Evidence & view", "Retained results, comparisons and renderers."],
+      ["tools", "Tool catalog", "Discover exact capabilities and extension contracts."]
+    ].map(([key, label, description]) => ({ id: "object:" + key, key, label, description, kind: "object" }));
+    var groupObject = { catalog: "tools", pg: "table", es: "search-index", kafka: "topic", consul: "environment", logs: "environment", bitbucket: "repository", confluence: "documentation", passport: "service", showcase: "service", browser: "api", api: "api", scripts: "automation", views: "evidence", files: "files", history: "execution", context: "context", map: "service", architecture: "memory", runtime: "execution", semantic: "component", knowledge: "memory" };
+    var exact = { find: "database", catalog_search: "database", catalog_usage: "table", pg_query: "database", ddl_snapshot: "database", feature: "documentation", result_read: "evidence", self_context: "task", workflow_plan: "task", handbook: "task", checks: "task", test_coverage: "workspace", differential_check: "workspace", impact: "component", job_cancel: "execution", call_patterns: "automation", evaluation_evidence: "evidence" };
+    var questions = {
+      handbook: "How can I learn this workflow?",
+      self_context: "What is configured and available here?",
+      workflow_plan: "Which steps and proof does this task need?",
+      find: "Where can I find a table, function, topic or service?",
+      catalog_search: "Which exact cached object matches?",
+      catalog_sync: "How can I refresh the cached evidence?",
+      catalog_manage: "How can I retain or collect index generations?",
+      workspace_list: "Which working checkouts already exist?",
+      workspace_read: "What is the current file content?",
+      workspace_write: "How can I edit a file and check compilation?",
+      workspace_drop: "How can I remove an unused checkout?",
+      test_data: "Which valid inputs fit this service?",
+      test_targets: "Where will the test actually run?",
+      differential_check: "Did behavior change between these revisions?",
+      context_edit: "How can I safely update a saved note?",
+      context_delete_file: "How can I permanently remove a context file?",
+      architecture_view: "How can I explore published C4 views?",
+      architecture_refresh: "How can I refresh deployment observations?",
+      architecture_save: "How can an admin publish reviewed architecture?",
+      knowledge_graph: "How can I explore cross-source knowledge?",
+      code: "How can I compute across several tool results?",
+      doctor: "What is missing for fetching or testing?",
+      dt_log: "Why did a dev-tool operation fail or stall?",
+      call_history: "Which tool calls ran and what happened?",
+      passports: "Which services have cached passports?",
+      showcase: "How can I inspect this service in one place?",
+      overview: "What is deployed in this environment?",
+      bitbucket_file: "What does this repository file contain?",
+      bitbucket_pr: "What changed in this pull request?",
+      bitbucket_prs: "Which pull requests affect this repository?",
+      bitbucket_my_prs: "Which pull requests need my attention?",
+      repo_fetch: "How can I fetch an exact source revision?",
+      passport: "What enters and leaves this service?",
+      who_uses: "Who depends on this service?",
+      architecture_service: "How do its requirements and data flows connect?",
+      passport_adjust: "How can I correct a detected boundary?",
+      semantic_ports: "Which entry and exit ports were detected?",
+      code_search: "Where is this implemented?",
+      code_read: "What does the exact source say?",
+      code_symbols: "Which symbols implement this?",
+      impact: "What would a change affect?",
+      semantic_trace: "Did this change alter the required entry-to-exit path?",
+      semantic_query: "Which decisions and data changes lead to an exit?",
+      semantic_index: "How can I index this exact revision?",
+      pg_table: "What columns and constraints does it have?",
+      pg_function: "What does this function do?",
+      pg_usage: "Who reads or writes this object?",
+      field_trace: "Where does this field travel?",
+      pg_query: "What do the actual rows show?",
+      ddl_snapshot: "How can I retain its schema?",
+      kafka_last: "Which messages were produced?",
+      kafka_topic: "What is the topic schema and configuration?",
+      kafka_lag: "Which consumers are falling behind?",
+      es_search: "Which documents match?",
+      es_health: "Is the search cluster healthy?",
+      workspace_open: "Where can I change and test code?",
+      workspace_patch: "How can I export the change for review?",
+      workspace_push: "How can I commit and push an authorized change?",
+      test_run: "Does the change pass the selected tests?",
+      test_context: "How should I test from entry to exit?",
+      context_open: "Where can I keep this task\u2019s progress?",
+      context_find: "Have we investigated this before?",
+      context_write: "How can I save progress or findings?",
+      context_run: "How can I run a tool and retain its evidence?",
+      context_hint: "What tool could help with this question?",
+      project_context_find: "What does the project already know?",
+      project_context_save: "How can an admin publish reviewed understanding?",
+      result_read: "How can I recover the full tool result?",
+      show: "How can I visualize this evidence?",
+      diff: "What changed between these results?",
+      files_archive: "How can I archive files without deleting them?",
+      api_request_prepare: "How can I inspect a request before sending?",
+      api_request_replay: "How can I explicitly send this request?",
+      api_exchange_get: "What request and response were captured?",
+      logs_trace: "What happened across this trace?",
+      logs_search: "What do the logs show?",
+      health: "Which services are unhealthy?",
+      consul_service: "Where is this service deployed?",
+      tool_search: "Which tool answers this question?",
+      tool_describe: "What arguments and rules does this tool have?",
+      tool_execute: "How can I invoke a discovered tool?",
+      capability_map: "What can I do with each kind of object?"
+    };
+    function objectFor(tool) {
+      if (exact[tool.name]) return exact[tool.name];
+      for (const [prefix, key] of [["workspace_", "workspace"], ["testdb_", "test-database"], ["test_", "workspace"], ["fixture_", "reproduction"], ["scenario_", "reproduction"], ["experiment_", "reproduction"], ["project_context_", "memory"], ["code_", "component"]]) if (tool.name.startsWith(prefix)) return key;
+      return groupObject[tool.group] || "tools";
+    }
+    function question(tool) {
+      if (questions[tool.name]) return questions[tool.name];
+      const first = String(tool.description || "").split(/\.\s(?=[A-Z])|\n/)[0].trim().replace(/[.!]$/, "");
+      if (first.length <= 110 && /^(Read|Find|Search|Inspect|List|Get|Show|Compare|Create|Build|Run|Save|Export|Import|Update|Edit|Delete|Cancel|Stop|Validate|Verify|Discover|Explain|Refresh|Prepare|Capture|Release|Reset|Renew|Open|Collect|Generate|Describe|Browse|Clone|Check)\b/i.test(first)) return "How can I " + first[0].toLowerCase() + first.slice(1) + "?";
+      const action = tool.name.split("_").at(-1), verbs = { list: "find available items", get: "inspect the saved details", read: "read its contents", search: "find matching evidence", save: "save a reusable definition", run: "run and inspect the outcome", cancel: "cancel owned work", stop: "stop the owned runtime", cleanup: "clean up owned resources", verify: "verify its evidence", validate: "check its validity", export: "export it for reuse", import: "import a saved package", start: "start an owned run", observe: "inspect what actually happened", check: "check the expected outcome", plan: "prepare a reviewable plan", inspect: "inspect its state" };
+      return verbs[action] ? "How can I " + verbs[action] + "?" : "What can " + tool.name + " do with this?";
+    }
+    var connections = [
+      ["task", "workspace", "Where do I change and verify code?"],
+      ["task", "context", "Where do I keep progress and evidence?"],
+      ["task", "memory", "What understanding can I reuse?"],
+      ["task", "service", "Which service should I investigate?"],
+      ["task", "reproduction", "How can I reproduce the symptom?"],
+      ["task", "execution", "What is running and how can I stop it?"],
+      ["task", "evidence", "What did we actually verify?"],
+      ["workspace", "repository", "Which source revision am I changing?"],
+      ["service", "component", "Which code path implements this?"],
+      ["service", "table", "Which data can I investigate?"],
+      ["service", "topic", "Which messages can I investigate?"],
+      ["service", "api", "Which entry points can I inspect?"],
+      ["database", "table", "Which tables and functions can I inspect?"],
+      ["context", "files", "Which nearby files can I keep?"],
+      ["memory", "documentation", "Which requirements support this understanding?"]
+    ];
+    async function graph({ env: requested } = {}) {
+      const tools = await require_tools().schemas({ metadata: true }), owner = require_access().owner();
+      const nodes = tools.map((t) => ({ id: "tool:" + t.name, kind: "tool", name: t.name, label: t.name, description: t.description.slice(0, 1800), group: t.group || "other", origin: t.origin || "extension", object: objectFor(t), parameters: Object.entries(t.inputSchema.properties || {}).map(([name, s]) => ({ name, type: s.type, required: (t.inputSchema.required || []).includes(name) })), chapter: require_handbook().chapterFor(t) }));
+      const edges = nodes.map((n) => ({ id: "question:" + n.name, from: "object:" + n.object, to: n.id, kind: "question", question: question(tools.find((t) => t.name === n.name)) }));
+      for (const [object, names] of [["service", ["impact", "logs_search", "consul_service", "test_context", "architecture_service"]], ["task", ["context_open", "workspace_open", "project_context_find", "workflow_plan"]], ["component", ["test_context", "differential_check"]], ["table", ["pg_query"]], ["evidence", ["context_run"]]]) for (const name of names) {
+        const tool = nodes.find((n) => n.name === name);
+        if (tool && !edges.some((e) => e.from === "object:" + object && e.to === tool.id)) edges.push({ id: "question:" + object + ":" + name, from: "object:" + object, to: tool.id, kind: "question", question: question(tools.find((t) => t.name === name)) });
+      }
+      for (const [from, to, label] of connections) edges.push({ id: "orientation:" + from + ":" + to, from: "object:" + from, to: "object:" + to, kind: "orientation", question: label });
+      const env = requested || require_config().envNames().find((name) => require_access().allowsEnv(name)) || "";
+      if (env) {
+        require_access().checkEnv(env);
+        require_config().getEnv(env);
+      }
+      return { schema: "dt.capability-map/v1", title: "What can I do with this?", publicUrl: require_results().publicUrl(), nodes: [...objects.map((o) => ({ ...o, count: edges.filter((e) => e.from === o.id && e.kind === "question").length })), ...nodes], edges, scope: { story: owner.storyId, env }, coverage: { tools: nodes.length, objects: objects.length, questionEdges: edges.filter((e) => e.kind === "question").length }, guidance: "Every enabled, authorized tool is a node. Question edges describe capabilities, not observed service dependencies. Links prepare drafts; execution still requires Run." };
+    }
+    async function show({ object, query = "" } = {}) {
+      if (object && !objects.some((o) => o.key === object)) throw Object.assign(Error("Unknown capability object"), { statusCode: 400, code: "DT_ARGUMENT_INVALID" });
+      const model = await graph();
+      model.initial = { object: object || "", query };
+      const view = require_results().saveView("capabilities", model, { title: "Tool capability map" });
+      return { ...model.coverage, view, url: "/admin#capabilities", guidance: model.guidance };
+    }
+    module2.exports = { graph, show, objectFor, question, objects };
+  }
+});
+
 // lib/tools-handbook.js
 var require_tools_handbook = __commonJS({
   "lib/tools-handbook.js"(exports2, module2) {
     module2.exports = ({ str, int, env }) => [
+      { name: "capability_map", group: "catalog", strictInput: true, description: "Show every enabled, authorized tool in one capability graph. Objects (task, workspace, context, project memory, service, code, database and more) lead through questions to tools. Opens editable Workbench drafts; browsing never executes a tool. Question links are navigation, not service dependency evidence.", input: { object: { type: "string", enum: require_capability_map().objects.map((o) => o.key), description: "Optional starting object; task connects workspace, context and shared memory" }, query: { ...str("Optional question or tool search"), maxLength: 300 } }, run: (a) => require_capability_map().show(a) },
       { name: "handbook", group: "catalog", description: "Find dev-tool workflow chapters or read one chapter: prerequisites, examples, indices, visualization guidance and proof limits. Does not execute examples.", input: { query: str("Workflow/question words"), chapter: str("Exact chapter id"), env, limit: int("Maximum chapter matches", 6) }, run: (a) => require_handbook().query(a) },
       { name: "self_context", group: "context", strictInput: true, description: "Read a safe briefing of this installation\u2019s enabled tools, cache metadata and current story. save=true refreshes generated files in the scoped dev-tool-self context, preserving operator-notes.md. No remote refresh or credentials.", input: { env, save: { type: "boolean", default: false } }, run: (a) => require_handbook().selfContext(a) }
     ];
@@ -73563,7 +74284,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "1d4555fe26444b17d1c6d8a9ab467341e895bf7947fd9a2036d354ac9766fc82";
+      if (true) return "a46714f6b68d8dc3bfcbf785aff220ad3ed3c2503bd9e67279c033c96507637f";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -73715,158 +74436,6 @@ var require_tools_runtime = __commonJS({
   }
 });
 
-// lib/semantic-response.js
-var require_semantic_response = __commonJS({
-  "lib/semantic-response.js"(exports2, module2) {
-    var pick = (value, keys) => Object.fromEntries(keys.filter((k) => value?.[k] !== void 0).map((k) => [k, value[k]]));
-    function compact(value, budget = 16384) {
-      const out2 = { ...value, format: "compact", detail: 'Full evidence is retained at view. Use format:"full" or narrow limit/maxPaths for original JSON.', omitted: {} };
-      for (const key of ["gaps", "dependencies", "ambiguity"]) if (Array.isArray(out2[key])) out2[key] = out2[key].slice();
-      const shortCode = (node) => {
-        const n = pick(node, ["name", "signature", "file", "line", "label", "code", "inCondition", "repo", "sha"]);
-        if (typeof n.code === "string" && n.code.length > 400) {
-          n.code = n.code.slice(0, 400);
-          n.codeTruncated = true;
-          out2.previewTruncated = true;
-        }
-        return n;
-      };
-      const path3 = (item) => {
-        const p = pick(item, ["kind", "analysisId", "proof", "truncated", "caveats", "conditions", "gaps", "boundaries"]);
-        for (const key of ["conditions", "gaps", "boundaries"]) if (Array.isArray(p[key])) p[key] = p[key].slice();
-        if (item.nodes) p.nodes = item.nodes.map(shortCode);
-        if (item.edges) p.edges = item.edges.map((e) => pick(e, ["kind", "certainty", "nature"]));
-        if (item.segments) p.segments = item.segments.map((s) => ({ ...pick(s, ["id", "analysisId", "status", "from", "to", "ms"]), paths: (s.paths || []).map(path3) }));
-        return p;
-      };
-      if (out2.analyses) out2.analyses = out2.analyses.map((a) => pick(a, ["id", "repo", "sha", "ref", "revisionKey", "sourceDigest", "workspace", "state", "language", "sources", "coverage", "reused"]));
-      if (out2.coverage) out2.coverage = out2.coverage.map ? out2.coverage.map((c) => ({ ...pick(c, ["analysisId", "side"]), ...c.summary ? { counts: c.summary.counts, truncated: c.summary.truncated, gaps: c.summary.gaps } : { analyses: c.analyses?.map((a) => ({ analysisId: a.analysisId, truncated: a.summary?.truncated, gaps: a.summary?.gaps })) } })) : out2.coverage;
-      if (out2.results) out2.results = out2.results.map((r) => {
-        if (r.nodes || r.segments) return path3(r);
-        if (r.category === "data-flow") return { category: r.category, change: r.change, ...r.before ? { before: path3(r.before) } : {}, ...r.after ? { after: path3(r.after) } : {} };
-        if (r.parameters) return { ...pick(r, ["id", "kind", "name", "signature", "file", "line", "repo", "sha", "analysisId"]), parameters: r.parameters.filter((p) => p.index > 0).map((p) => pick(p, ["name", "index", "type"])) };
-        return r;
-      });
-      if (out2.flowMap) {
-        const m = out2.flowMap;
-        const states = new Map(m.nodes.map((n, i) => [n.id, "s" + i])), methods = new Map(m.methods.map((n, i) => [n.id, "m" + i]));
-        out2.flowMap = {
-          ...pick(m, ["protocol", "counts", "complete", "assumptions"]),
-          identity: "Local preview aliases; exact CPG/state identities and source locators are retained at view.",
-          entries: m.entries.map((id) => states.get(id)),
-          methods: m.methods.map((a) => ({ ...pick(a, ["name", "signature", "file", "line", "repo", "sha"]), id: methods.get(a.id), entry: states.get(a.entry), exit: states.get(a.exit) })),
-          nodes: m.nodes.map((n) => ({ ...pick(n, ["kind", "code", "textTruncated", "file", "line", "changes", "arguments", "ports", "exit", "assumptions"]), id: states.get(n.id), method: methods.get(n.method) })),
-          edges: m.edges.map((e) => ({ ...pick(e, ["kind", "polarity", "relation", "bindings", "certainty", "proof"]), from: states.get(e.from), to: states.get(e.to) })),
-          ports: m.ports.map((p2) => pick(p2, ["id", "portType", "boundary", "mappings", "certainty", "evidence"]))
-        };
-        const p = out2.flowMap, cap = (key, max) => {
-          if (p[key].length > max) {
-            out2.omitted["flowMap." + key] = (out2.omitted["flowMap." + key] || 0) + p[key].length - max;
-            p[key] = p[key].slice(0, max);
-            out2.previewTruncated = true;
-          }
-        };
-        const shorten = (text, max) => {
-          if (typeof text !== "string" || text.length <= max) return text;
-          out2.omitted["flowMap.text"] = (out2.omitted["flowMap.text"] || 0) + 1;
-          out2.previewTruncated = true;
-          return text.slice(0, max);
-        };
-        const score = (n) => p.entries.includes(n.id) ? 6 : n.kind === "call" && !n.exit || n.kind === "return" ? 5 : n.kind === "change" ? 4 : n.kind === "decision" ? 3 : 1;
-        p.nodes.sort((a, b) => score(b) - score(a));
-        cap("nodes", Math.min(40, Math.max(4, Math.floor(budget / 500))));
-        const included = new Set(p.nodes.map((n) => n.id)), before = p.edges.length;
-        p.edges = p.edges.filter((e) => included.has(e.from) && included.has(e.to));
-        if (before !== p.edges.length) {
-          out2.omitted["flowMap.edges"] = before - p.edges.length;
-          out2.previewTruncated = true;
-        }
-        p.edges.sort((a, b) => (a.kind === "call" ? 0 : a.kind === "control" ? 1 : 2) - (b.kind === "call" ? 0 : b.kind === "control" ? 1 : 2));
-        cap("edges", Math.min(80, Math.max(4, Math.floor(budget / 180))));
-        cap("ports", 5);
-        for (const n of p.nodes) {
-          n.code = shorten(n.code, 400);
-          if (n.arguments) {
-            if (n.arguments.length > 8) {
-              out2.omitted["flowMap.arguments"] = (out2.omitted["flowMap.arguments"] || 0) + n.arguments.length - 8;
-              out2.previewTruncated = true;
-            }
-            n.arguments = n.arguments.slice(0, 8).map((a) => ({ ...a, expression: shorten(a.expression, 200) }));
-          }
-          if (n.changes) n.changes = n.changes.map((c) => ({ ...c, target: shorten(c.target, 160), expression: shorten(c.expression, 400) }));
-        }
-        for (const method of p.methods) method.signature = shorten(method.signature, 400);
-        for (const edge of p.edges) if (edge.bindings) {
-          if (edge.bindings.length > 8) {
-            out2.omitted["flowMap.bindings"] = (out2.omitted["flowMap.bindings"] || 0) + edge.bindings.length - 8;
-            out2.previewTruncated = true;
-          }
-          edge.bindings = edge.bindings.slice(0, 8).map((b) => ({ ...b, expression: shorten(b.expression, 200) }));
-        }
-      }
-      const size = () => Buffer.byteLength(JSON.stringify(out2));
-      const remove = (object, key, label, minimum = 0) => {
-        const a = object[key];
-        if (!Array.isArray(a) || a.length <= minimum) return false;
-        a.pop();
-        out2.omitted[label] = (out2.omitted[label] || 0) + 1;
-        out2.previewTruncated = true;
-        return true;
-      };
-      while (size() > budget) {
-        if (out2.flowMap) {
-          const m = out2.flowMap;
-          if (remove(m, "ports", "flowMap.ports") || remove(m, "edges", "flowMap.edges", 4)) continue;
-          if (m.nodes.length > 2) {
-            const index = m.nodes.findLastIndex((n) => !m.entries.includes(n.id));
-            if (index >= 0) {
-              const [node] = m.nodes.splice(index, 1), before = m.edges.length;
-              m.edges = m.edges.filter((e) => e.from !== node.id && e.to !== node.id);
-              out2.omitted["flowMap.nodes"] = (out2.omitted["flowMap.nodes"] || 0) + 1;
-              out2.omitted["flowMap.edges"] = (out2.omitted["flowMap.edges"] || 0) + before - m.edges.length;
-              out2.previewTruncated = true;
-              continue;
-            }
-          }
-          if (remove(m, "methods", "flowMap.methods", 1) || remove(m, "edges", "flowMap.edges")) continue;
-        }
-        if (remove(out2, "results", "results", 1)) continue;
-        const shrink = (item) => {
-          for (const key2 of ["segments", "boundaries", "edges", "conditions"]) if (remove(item, key2, key2)) return true;
-          if (item.nodes?.length > 2) {
-            item.nodes.splice(item.nodes.length - 2, 1);
-            item.nodesOmitted = (item.nodesOmitted || 0) + 1;
-            out2.omitted.nodes = (out2.omitted.nodes || 0) + 1;
-            out2.previewTruncated = true;
-            return true;
-          }
-          if (item.before && shrink(item.before)) return true;
-          if (item.after && shrink(item.after)) return true;
-          return false;
-        };
-        if (out2.results?.some(shrink)) continue;
-        if (remove(out2, "coverage", "coverage") || remove(out2, "dependencies", "dependencies") || remove(out2, "ambiguity", "ambiguity") || remove(out2, "gaps", "gaps", 1) || remove(out2, "analyses", "analyses", 2)) continue;
-        if (remove(out2, "results", "results")) continue;
-        const key = Object.keys(out2).find((k) => !["protocol", "operation", "mode", "job", "state", "revisionSet", "view", "proof", "total", "truncated", "nextCursor", "format", "detail", "omitted", "previewTruncated"].includes(k) && JSON.stringify(out2[k]).length > 800);
-        if (key) {
-          out2.omitted[key] = Array.isArray(out2[key]) ? out2[key].length : 1;
-          delete out2[key];
-          out2.previewTruncated = true;
-          continue;
-        }
-        break;
-      }
-      if (out2.flowMap) {
-        const ids = new Set(out2.flowMap.nodes.map((n) => n.id));
-        for (const method of out2.flowMap.methods) for (const key of ["entry", "exit"]) if (!ids.has(method[key])) delete method[key];
-      }
-      if (!Object.keys(out2.omitted).length) delete out2.omitted;
-      return out2;
-    }
-    module2.exports = { compact };
-  }
-});
-
 // lib/tools-semantic.js
 var require_tools_semantic = __commonJS({
   "lib/tools-semantic.js"(exports2, module2) {
@@ -73882,20 +74451,25 @@ var require_tools_semantic = __commonJS({
       const S = () => require_semantic_code();
       const scope = { env, service: str("Service passport; resolves its pinned repository"), repo: str("Repository index key or PROJECT/repo"), project: str("Bitbucket project, with slug"), slug: str("Repository slug, with project"), ref: str("Exact SHA, tag or branch resolved once"), revisionKey: str("Retained revision key from semantic_index"), repos: str("Comma-separated exact repository or revision keys"), language: { type: "string", enum: ["java", "js"], description: "Select one frontend (js also covers TS); avoids mixing analyses of different languages" } };
       const selection = { ...scope, revisionSet: str("Exact resolved source/dependency set from semantic_index"), analysis: str("Retained analysis id"), analyses: { type: "array", maxItems: 20, items: { type: "string" }, description: "Exact retained analysis ids, including both revisions for compare" } };
-      const selector = { type: "object", properties: { id: str("Canonical symbol/port id"), analysisId: str("Retained analysis id"), repo: str("PROJECT/repo"), sha: str("Full source SHA"), signature: str("Exact method signature"), name: str("Symbol or boundary name"), file: str("Relative source file"), line: { type: "integer", minimum: 1 }, parameter: { oneOf: [{ type: "string", minLength: 1 }, { type: "integer", minimum: 1, maximum: 100 }], description: "Exact method parameter name or one-based index for value flow" }, argument: { type: "integer", minimum: 1, maximum: 64, description: "Exact one-based sink call argument for value flow" }, kind: str("Symbol or typed boundary kind"), env: str("Environment"), cluster: str("Kafka cluster identity"), db: str("Database identity"), schema: str("Database schema"), topic: str("Resolved Kafka topic"), route: str("HTTP path"), method: str("HTTP verb"), service: str("Exact service identity") }, additionalProperties: false };
+      const selector = { type: "object", properties: { id: str("Canonical symbol/port id"), analysisId: str("Retained analysis id"), repo: str("PROJECT/repo"), sha: str("Full source SHA"), signature: str("Exact method signature"), name: str("Symbol or boundary name"), receiver: str("Exact concrete class; resolves inherited methods through retained type declarations"), file: str("Relative source file"), line: { type: "integer", minimum: 1 }, column: { type: "integer", minimum: 1 }, code: str("Exact expression for a line endpoint"), nodeLabel: str("CPG expression label, e.g. IDENTIFIER or CALL"), nodeId: str("Exact CPG node id from this analysis only"), parameter: { oneOf: [{ type: "string", minLength: 1 }, { type: "integer", minimum: 1, maximum: 100 }], description: "Exact method parameter name or one-based index for value flow" }, argument: { type: "integer", minimum: 1, maximum: 64, description: "Exact one-based sink call argument for value flow" }, kind: str("Symbol or typed boundary kind"), env: str("Environment"), cluster: str("Kafka cluster identity"), db: str("Database identity"), schema: str("Database schema"), topic: str("Resolved Kafka topic"), route: str("HTTP path"), method: str("HTTP verb"), service: str("Exact service identity") }, additionalProperties: false };
+      const traceSelector = { ...selector, properties: { ...selector.properties, kind: { type: "string", enum: ["method", "line", "call", "http-ingress", "kafka-consume", "scheduled", "http-egress", "kafka-produce", "db-write", "table", "port"], description: "Endpoint kind; line requires exact relative file and line" } } };
       const response = { format: { type: "string", enum: ["compact", "full"], default: "compact", description: "Bounded model preview or original JSON; inline view always retains full evidence" }, max_output_bytes: { type: "integer", minimum: 4096, maximum: 65536, default: 16384, description: "Compact JSON byte budget; preview omissions are explicit" } };
       const bounds = { limit: { ...int("Result page size", 30), minimum: 1, maximum: 200 }, cursor: str("Opaque cursor from the same retained result"), budgetMs: { ...int("Query time budget", 5e3), minimum: 100, maximum: 3e4 }, ...response };
       return [
         { name: "semantic_capabilities", description: "Read semantic engine readiness, versions, supported operations and resource limits. Missing semantic coverage never changes native code search.", input: {}, run: () => present(S().capabilities(), { title: "Semantic capabilities" }) },
         { name: "semantic_index", description: "Index an exact repository/service revision as an owned job; use job to inspect it. No target lists retained analyses. Reparse preserves the last good generation. Cancel through job_cancel.", input: { ...scope, versions: { type: "boolean", default: false }, composite: { type: "boolean", default: false, description: "Parse the exact service Java dependency closure together" }, reparse: { type: "boolean", default: false }, job: str("Existing semantic job id; observes the same job"), waitMs: { ...int("Observation wait, max 30000 ms", 0), minimum: 0, maximum: 3e4 } }, run: async (a) => present(await S().index(a.slug && !a.repo ? { ...a, repo: a.slug } : a), { title: "Semantic index" }) },
         { name: "semantic_search", description: "Search retained symbols or typed ports, with source locations and exact revisions. Missing analysis reports a build suggestion; it never starts an implicit parse.", input: { ...selection, query: str("Symbol, signature, file or port words"), kind: str("Optional symbol or typed port kind"), ports: { type: "boolean", default: false, description: "Search typed boundary ports instead of symbols" }, ...bounds }, run: async (a) => present(await S().query({ ...a, operation: a.ports ? "ports" : "symbols" }), { title: "Semantic search" }) },
+        { name: "semantic_trace", description: "Trace entry/line to exit/line in retained Joern CPGs. One analysis explains a change path; two ordered analyses show before/after expressions and guards. Optional assumptions annotate CFG candidates, never prove feasibility or behavior.", input: { env, analysis: selection.analysis, analyses: { ...selection.analyses, maxItems: 2 }, from: traceSelector, to: traceSelector, after_from: { ...traceSelector, description: "Complete source selector for the after revision when lines/expressions moved" }, after_to: { ...traceSelector, description: "Complete target selector for the after revision when lines/expressions moved" }, assumptions: { type: "array", maxItems: 20, items: { type: "object", properties: { expression: { type: "string", minLength: 1, maxLength: 1e3 }, holds: { type: "boolean" } }, required: ["expression", "holds"], additionalProperties: false } }, includeControl: { type: "boolean", default: true }, includeContext: { type: "boolean", default: true, description: "Collect bounded reachable source changes, loops, stream callbacks and library dispatch assumptions separately from selected paths" }, maxPaths: { ...int("Paths per layer per revision", 8), minimum: 1, maximum: 20 }, maxHops: { ...int("Nodes per path", 60), minimum: 1, maximum: 100 }, budgetMs: bounds.budgetMs, job: str("Observe this owned trace job without repeating it"), waitMs: { ...int("Observation wait", 0), minimum: 0, maximum: 3e4 } }, run: async (a) => {
+          const value = await S().query({ ...a, operation: "trace" });
+          return present(value, { view: "semantic-path-trace", title: "Change path \xB7 entry to exit" });
+        } },
         { name: "semantic_query", description: "Query retained CPGs: symbols, calls, paths/slices, guards, branch comparisons or entry-to-exit state maps. Inspect proof/gaps; static reachability does not prove value flow.", input: { ...selection, job: str("Existing semantic query job id; observe without repeating it"), waitMs: { ...int("Observation wait", 0), minimum: 0, maximum: 3e4 }, operation: { type: "string", enum: ["symbols", "ports", "callers", "callees", "neighborhood", "neighbors", "paths", "slice", "assertions", "compare", "flowmap"] }, from: selector, to: selector, target: selector, mode: { type: "string", enum: ["reachability", "controlflow", "dataflow"], default: "reachability" }, query: str("Symbol/port query where supported"), kind: str("Optional result kind"), ...bounds, maxMethods: { ...int("flowmap reachable method budget", 20), minimum: 1, maximum: 40 }, maxStates: { ...int("flowmap state budget", 180), minimum: 20, maximum: 400 }, maxHops: { ...int("Bounded traversal depth", 8), minimum: 1, maximum: 30 }, maxPaths: { ...int("Maximum returned paths", 8), minimum: 1, maximum: 20 }, includeBypasses: { type: "boolean", default: false, description: "Include supported bypass/counterexample evidence" } }, required: ["operation"], run: async (a) => {
           const value = await S().query(a);
           return present(value, { view: value.flowMap || a.operation === "flowmap" ? "semantic-flow-map" : "semantic-analysis", title: a.operation === "flowmap" || value.flowMap ? "Entry-to-exit flow map" : "Semantic " + a.operation });
         } }
       ].map((tool) => ({ ...tool, description: tool.description + (tool.name === "semantic_query" ? " compare+dataflow uses analyses=[before,after] and revision-neutral from/to. flowmap uses a whole-method/ingress from (no to), or discovers bound ingress ports; includes controls, changes, exits and assumptions." : ""), input: { ...response, ...tool.input }, run: async (a) => {
         const result = await tool.run(a);
-        return a.format === "full" ? result : require_semantic_response().compact(result, a.max_output_bytes || 16384);
+        return a.format === "full" ? result : (tool.name === "semantic_trace" ? require_semantic_path_trace() : require_semantic_response()).compact(result, a.max_output_bytes || 16384);
       }, group: "semantic", origin: "built-in", strictInput: true }));
     };
     module2.exports.present = present;
@@ -80985,6 +81559,7 @@ var require_server2 = __commonJS({
     var tokenOk = (url, value) => results.verify(value, url.searchParams.get("t"));
     var CORS = { "access-control-allow-origin": "*" };
     var routes = [
+      ["GET", "/api/capabilities", true, async (req, res, url) => send(res, 200, await require_capability_map().graph({ env: url.searchParams.get("env") || void 0 }))],
       ["GET", "/handbook", true, page("handbook.html")],
       ["GET", "/api/handbook", true, async (req, res) => send(res, 200, await require_handbook().catalog())],
       ["GET", "/api/handbook/context", true, async (req, res, url) => send(res, 200, await require_handbook().selfContext({ env: url.searchParams.get("env") || void 0 }))],
@@ -81298,13 +81873,15 @@ var require_server2 = __commonJS({
         if (!r) return send(res, 404, { error: "No such result (results are kept for the latest 500 runs)" });
         const data = r.kind === "view" ? r.data : r.rows;
         const view = url.searchParams.get("view") || (r.kind === "view" ? r.view : "table");
-        let html;
+        let html, policy;
         try {
-          html = require_views().render(view, data, { title: r.title || r.query || "", at: r.at, id: r.id, client: r.client, story: r.owner?.storyId }, { embed: url.searchParams.has("embed") });
+          const V = require_views(), definition = V.get(view);
+          policy = V.policy(definition);
+          html = V.render(view, data, { title: r.title || r.query || "", at: r.at, id: r.id, client: r.client, story: r.owner?.storyId }, { embed: url.searchParams.has("embed"), definition });
         } catch (e) {
           return send(res, 404, { error: e.message });
         }
-        res.writeHead(200, { "content-type": "text/html; charset=utf-8", "content-security-policy": require_views().CSP, "cache-control": "no-cache", "x-content-type-options": "nosniff" });
+        res.writeHead(200, { "content-type": "text/html; charset=utf-8", "content-security-policy": policy, "cache-control": "no-cache", "x-content-type-options": "nosniff" });
         res.end(html);
       }],
       // a workspace patch as a file (the unguessable result id is the key, like /show)

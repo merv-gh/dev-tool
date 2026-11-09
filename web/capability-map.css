@@ -1,0 +1,25 @@
+/* Inherits the Admin / result-view palette and operating controls. */
+.cm-root{min-width:0;font-size:13px;--muted:color-mix(in srgb,var(--fg) 72%,var(--bg));color:var(--fg)}
+.cm-root :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.cm-root ::selection{background:var(--accent-soft);color:var(--fg)}
+.cm-toolbar{display:flex;align-items:end;gap:8px;flex-wrap:wrap;padding:0 0 14px;border-bottom:1px solid var(--line)}
+.cm-toolbar>label{display:grid;gap:5px;flex:1;min-width:220px;max-width:500px;font-weight:600}
+.cm-toolbar input{width:100%;caret-color:var(--accent)}
+.cm-toolbar button,.cm-toolbar summary{min-height:34px}
+.cm-more{position:relative;margin-left:auto}.cm-more summary{cursor:pointer;padding:6px 9px}.cm-more[open]{z-index:2}.cm-more button{display:block;width:100%;margin:6px 0;text-align:left}.cm-more[open]{background:var(--panel);padding:0 10px 10px;border:1px solid var(--line);border-radius:8px}
+.cm-note{margin:14px 0 4px;max-width:75ch;line-height:1.6}.cm-status{margin:4px 0 14px;color:var(--muted);font-variant-numeric:tabular-nums}.cm-error{color:var(--bad)}
+.cm-layout{display:grid;grid-template-columns:190px minmax(240px,1fr) 285px;gap:18px;align-items:start}
+.cm-objects{max-height:680px;overflow:auto;padding-right:5px}.cm-objects h3,.cm-detail h3{font-size:15px;margin:0 0 12px;overflow-wrap:anywhere}
+.cm-objects button{width:100%;display:flex;justify-content:space-between;text-align:left;margin:0 0 3px;gap:8px;border-color:transparent;background:transparent;white-space:normal;padding:7px 8px}
+.cm-objects button small{font-variant-numeric:tabular-nums;color:var(--muted)}.cm-objects button:hover{background:var(--soft)}.cm-objects button[aria-pressed=true]{color:var(--accent);background:var(--accent-soft)}
+.cm-stage{height:650px;max-height:75vh;min-height:400px;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;touch-action:pan-x pan-y;scrollbar-color:var(--muted) var(--soft)}
+.cm-stage svg{display:block;max-width:none;min-width:0;user-select:none}.cm-stage svg:active{cursor:grabbing}
+.cm-detail{max-height:680px;overflow:auto;overflow-wrap:anywhere;padding-right:5px}.cm-detail p{line-height:1.6;margin:8px 0 16px;max-width:73ch}.cm-detail h4{font-size:13px;margin:24px 0 8px}.cm-meta,.cm-legend{color:var(--muted);font-size:12px}.cm-inputs{font-family:ui-monospace,monospace;font-size:12px}
+.cm-question{display:block;width:100%;white-space:normal;text-align:left;background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:11px 2px;line-height:1.5}.cm-question:hover{background:var(--soft)}.cm-question code{display:block;color:var(--muted);margin-top:4px;font-size:11px}.cm-primary,.cm-prepare{display:inline-block;background:var(--accent);color:var(--on-accent,#fff);border:0;padding:8px 12px;border-radius:6px}.cm-prepare:hover{color:var(--on-accent,#fff)}
+.cm-legend{padding:12px 0;margin:0;max-width:90ch}
+@media(max-width:1500px){.cm-layout{grid-template-columns:170px minmax(220px,1fr)}.cm-detail{grid-column:1/-1;max-height:400px;columns:2;column-gap:28px}.cm-detail>*{break-inside:avoid}.cm-stage{height:580px}.cm-objects{max-height:580px}}
+@media(max-width:700px){.cm-layout{grid-template-columns:minmax(0,1fr);gap:12px}.cm-objects{display:flex;overflow-x:auto;max-height:none;gap:5px;padding-bottom:5px}.cm-objects h3{display:none}.cm-objects button{width:auto;flex-shrink:0;gap:8px;border:1px solid var(--line);border-radius:6px;align-items:center}.cm-stage{min-height:360px;height:440px;max-height:65vh}.cm-detail{grid-column:auto;columns:1;max-height:400px}.cm-toolbar>label{max-width:none;flex-basis:100%}.cm-more{margin-left:0}.cm-note{font-size:12px}.cm-root button{min-height:34px}}
+
+@media(max-width:1100px){.cm-layout{grid-template-columns:minmax(0,1fr)}.cm-objects{display:flex;overflow-x:auto;max-height:none;gap:5px;padding-bottom:5px}.cm-objects h3{display:none}.cm-objects button{width:auto;flex-shrink:0;gap:8px;border:1px solid var(--line);border-radius:6px;align-items:center}.cm-detail{grid-column:auto}.cm-stage{height:600px}}
+
+.cm-root .cm-primary:hover{background:var(--accent);color:var(--on-accent,#fff)}

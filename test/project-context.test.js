@@ -57,3 +57,11 @@ test('an owner journal still being published cannot escape the CAS conflict guar
  try{assert.throws(()=>P.save({id:'orders',expected_revision:current.revision,reason:'Concurrent lock journal',document:{title:'Must not publish'}}),e=>e.code==='STATE_CONFLICT');assert.equal(P.get({id:'orders'}).revision,current.revision);}
  finally{fs.rmSync(lock,{recursive:true,force:true});}
 });
+
+
+test('a publisher releasing its lock during contention remains a CAS conflict, not a filesystem error',()=>{
+ const current=P.get({id:'orders'}),lock=path.join(P.ROOT,'orders','.lock'),stat=fs.statSync;fs.mkdirSync(lock);let intercepted=false;
+ fs.statSync=function(file,...args){if(String(file)===lock&&!intercepted){intercepted=true;fs.rmSync(lock,{recursive:true,force:true});const error=Error('lock released');error.code='ENOENT';throw error;}return stat.call(this,file,...args);};
+ try{assert.throws(()=>P.save({id:'orders',expected_revision:current.revision,reason:'Concurrent release',document:{title:'Must not publish'}}),e=>e.code==='STATE_CONFLICT');assert.equal(intercepted,true);assert.equal(P.get({id:'orders'}).revision,current.revision);}
+ finally{fs.statSync=stat;fs.rmSync(lock,{recursive:true,force:true});}
+});

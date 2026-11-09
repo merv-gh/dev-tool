@@ -31,6 +31,244 @@ var require_semantic_identity = __commonJS({
   }
 });
 
+// lib/semantic-protocol.js
+var require_semantic_protocol = __commonJS({
+  "lib/semantic-protocol.js"(exports2, module2) {
+    var crypto = require("node:crypto");
+    var VERSION = "dt.semantic/v1";
+    var digest = (value) => crypto.createHash("sha256").update(typeof value === "string" || Buffer.isBuffer(value) ? value : JSON.stringify(value)).digest("hex");
+    var ID = /^[a-f0-9]{32,64}-[a-f0-9]{16,32}$/;
+    var error = (message, code = "DT_SEMANTIC_INVALID", statusCode = 400) => Object.assign(new Error(message), { code, statusCode });
+    function integer(value, fallback, min, max) {
+      const n = value == null || value === "" ? fallback : Number(value);
+      if (!Number.isSafeInteger(n) || n < min || n > max) throw error(`Expected an integer in ${min}..${max}`);
+      return n;
+    }
+    function relative(value) {
+      if (typeof value !== "string" || !value || value.length > 1e3 || /[\\\x00-\x1f]/.test(value) || value.startsWith("/") || value.split("/").some((p) => !p || p === "." || p === "..") || /^[A-Za-z]:/.test(value)) throw error("Source path must be a relative file path");
+      return value;
+    }
+    async function* lines(stream, { maxBytes = 512 * 1048576, maxLineBytes = 3 * 1048576, signal } = {}) {
+      const decoder = new TextDecoder("utf-8", { fatal: true });
+      let pending = "", bytes = 0;
+      for await (const chunk of stream) {
+        signal?.throwIfAborted();
+        bytes += chunk.length;
+        if (bytes > maxBytes) throw error("Semantic stream exceeds its byte budget", "DT_SEMANTIC_LIMIT", 413);
+        pending += decoder.decode(chunk, { stream: true });
+        let index;
+        while ((index = pending.indexOf("\n")) >= 0) {
+          const line = pending.slice(0, index);
+          pending = pending.slice(index + 1);
+          if (Buffer.byteLength(line) > maxLineBytes) throw error("Semantic record exceeds its byte budget", "DT_SEMANTIC_LIMIT", 413);
+          if (line.trim()) yield line;
+        }
+        if (Buffer.byteLength(pending) > maxLineBytes) throw error("Semantic record exceeds its byte budget", "DT_SEMANTIC_LIMIT", 413);
+      }
+      pending += decoder.decode();
+      if (pending.trim()) {
+        if (Buffer.byteLength(pending) > maxLineBytes) throw error("Semantic record exceeds its byte budget", "DT_SEMANTIC_LIMIT", 413);
+        yield pending;
+      }
+    }
+    module2.exports = { VERSION, ID, digest, integer, relative, lines, error };
+  }
+});
+
+// lib/semantic-path-context.js
+var require_semantic_path_context = __commonJS({
+  "lib/semantic-path-context.js"(exports2, module2) {
+    var { digest } = require_semantic_protocol();
+    var caches = /* @__PURE__ */ new WeakMap();
+    var cache = (a) => {
+      if (!caches.has(a)) caches.set(a, { hierarchies: /* @__PURE__ */ new Map() });
+      return caches.get(a);
+    };
+    var records = (a, type, method, limit = 401) => a.db.prepare("select raw from records where type=?" + (method === void 0 ? "" : " and method=?") + " order by file,line,id limit ?").all(...method === void 0 ? [type, limit] : [type, String(method), limit]).map((r) => JSON.parse(r.raw));
+    function origin(a, r) {
+      const s = (a.sources || a.manifest?.sources || []).filter((s2) => s2.prefix && r.file?.startsWith(s2.prefix + "/")).sort((x, y) => y.prefix.length - x.prefix.length)[0];
+      return { ...r, analysisId: a.id, repo: s?.repo || r.repo || a.repo, sha: s?.sha || r.sha || a.sha, file: s ? r.file.slice(s.prefix.length + 1) : r.file, locator: { analysisId: a.id, generation: a.id, nodeId: String(r.id) } };
+    }
+    function hierarchy(a, receiver) {
+      const cached = cache(a);
+      if (cached.hierarchies.has(receiver)) return cached.hierarchies.get(receiver);
+      const all = cached.types || (cached.types = records(a, "type", void 0, 10001)), byName = /* @__PURE__ */ new Map();
+      for (const t of all) {
+        if (!byName.has(t.fullName)) byName.set(t.fullName, []);
+        byName.get(t.fullName).push(t);
+      }
+      const levels = [], queue = [{ name: receiver, depth: 0 }], seen = /* @__PURE__ */ new Set();
+      let incomplete = all.length > 1e4;
+      while (queue.length && levels.length < 100) {
+        const t = queue.shift();
+        if (seen.has(t.name)) continue;
+        seen.add(t.name);
+        const matches = byName.get(t.name) || [];
+        if (matches.length !== 1) {
+          if (t.name !== "java.lang.Object") incomplete = true;
+          levels.push({ ...t, missing: !matches.length, ambiguous: matches.length > 1 });
+          continue;
+        }
+        const row = matches[0];
+        levels.push({ ...t, type: origin(a, row) });
+        for (const name of row.inherits || []) if (name !== "java.lang.Object") {
+          if (t.depth < 16) queue.push({ name, depth: t.depth + 1 });
+          else incomplete = true;
+        }
+      }
+      const result = { levels, incomplete: incomplete || queue.length > 0 };
+      if (cached.hierarchies.size < 200) cached.hierarchies.set(receiver, result);
+      return result;
+    }
+    function inherited(graph, selector) {
+      const out = [];
+      for (const a of graph.byAnalysis.values()) {
+        if (selector.analysisId && selector.analysisId !== a.id) continue;
+        const h = hierarchy(a, selector.receiver), root = h.levels.find((l) => l.depth === 0);
+        if (!root?.type || root.ambiguous) continue;
+        if (selector.repo && selector.repo !== root.type.repo) continue;
+        const { receiver, repo, sha, ...methodSelector } = selector;
+        if (sha && root.type.sha !== sha) continue;
+        const methods = graph.selectSymbols(a, methodSelector, 201), nearest = /* @__PURE__ */ new Map();
+        if (methods.length > 200) graph.gaps.push({ kind: "inheritance-selector-budget", detail: "More than 200 matching methods; narrow the method signature to avoid incomplete inherited selection", receiver });
+        for (const m of methods) {
+          const level = h.levels.find((l) => l.name === m.owner);
+          if (!level) continue;
+          const key = m.methodSignature || m.signature, previous = nearest.get(key);
+          if (!previous || level.depth < previous.depth) nearest.set(key, { depth: level.depth, methods: [m] });
+          else if (level.depth === previous.depth) previous.methods.push(m);
+        }
+        for (const v of nearest.values()) for (const m of v.methods) out.push({ ...m, receiverBinding: { receiver, declaredOwner: m.owner, depth: v.depth, ancestry: h.levels.map((l) => ({ name: l.name, depth: l.depth, ...l.type ? { repo: l.type.repo, sha: l.type.sha, file: l.type.file } : { missing: l.missing, ambiguous: l.ambiguous } })), status: "retained-type-inheritance", runtime: "unknown" } });
+        if (h.incomplete) graph.gaps.push({ kind: "inheritance-gap", detail: "The receiver hierarchy is incomplete; index the exact internal-library closure with composite:true", receiver });
+      }
+      if (!out.length) graph.gaps.push({ kind: "inherited-entry-missing", receiver: selector.receiver, detail: "No exact inherited method bound to this receiver. Retain the exact service/library closure and reindex with composite:true." });
+      return out;
+    }
+    function collect(graph, args, from, to) {
+      const methods = [], facts = [], gaps = [], queue = [], seen = /* @__PURE__ */ new Set(), excludedMethods = /* @__PURE__ */ new Set();
+      let truncated = false;
+      const push = (a, m, depth, via) => {
+        if (m) queue.push({ a, m, depth, via });
+      };
+      for (const n of from) {
+        const a = graph.byAnalysis.get(n.analysisId);
+        if (!a) continue;
+        if (n.kind === "method") push(a, n, 0, "selected entry");
+        else if (n.kind === "call") {
+          const row = a.db.prepare("select method from records where type='call' and id=?").get(n.locator.nodeId);
+          push(a, graph.local(a, row?.method), 0, "source call owner");
+        } else for (const id of n.handlerCandidates || []) push(a, graph.nodes.get(id), 0, "entry port");
+      }
+      if (args.from?.kind === "line") for (const a of graph.byAnalysis.values()) {
+        const matched = graph.selectSymbols(a, args.from, 201);
+        if (matched.length === 1) push(a, matched[0], 0, "line owner");
+        else gaps.push({ kind: "context-line-owner", detail: "The line owner is missing or ambiguous; no method context was guessed" });
+      }
+      const deadline = Date.now() + Math.min(1e4, args.budgetMs || 5e3), receiver = args.from?.receiver || from.find((n) => n.receiverBinding)?.receiverBinding.receiver;
+      while (queue.length && methods.length < 40 && Date.now() < deadline) {
+        const { a, m, depth, via } = queue.shift(), key = a.id + ":" + m.locator.nodeId;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const meta = JSON.parse(a.db.prepare("select value from metadata where key='coverage'").get().value);
+        if (!meta.meta?.capabilities?.pathContext) {
+          gaps.push({ kind: "context-projection-missing", analysisId: a.id, detail: "This retained projection predates path-context facts; reindex to collect lambda bodies, transformations and inheritance" });
+          continue;
+        }
+        methods.push({ ...m, via, depth });
+        const append = (r) => {
+          if (facts.length >= 600) {
+            truncated = true;
+            return;
+          }
+          facts.push({ ...origin(a, r), owner: m.signature, method: m.id, contextVia: via, applicability: "reachable-method source context; applicability to a selected value/CFG path is unproven" });
+        };
+        const batches = ["guard", "fact", "call"].map((type) => records(a, type, m.locator.nodeId));
+        truncated ||= batches.some((rows) => rows.length > 400);
+        const local = batches.flatMap((rows) => rows.slice(0, 400)), callbackRoles = /* @__PURE__ */ new Map();
+        for (const r of local) if (r.kind === "pipeline-stage") for (const signature of r.lambdaTargets || []) {
+          if (!callbackRoles.has(signature)) callbackRoles.set(signature, /* @__PURE__ */ new Set());
+          callbackRoles.get(signature).add(`${r.name} callback`);
+        }
+        for (const r of local) {
+          append({ ...r, expression: r.expression || r.code, kind: r.type === "call" ? "call-site" : r.kind === "return" && via === "filter callback" ? "stream-filter-predicate" : r.kind === "return" && m.returnType === "boolean" ? "predicate-return" : r.kind === "return" && /^(map|flatMap)/.test(via) ? "stream-mapping" : r.type === "guard" ? ["FOR", "WHILE", "DO"].includes(r.kind) ? "loop" : r.kind === "IF" ? "conditional" : r.kind : r.kind, status: "source-context", ...r.kind === "return" && (via === "filter callback" || m.returnType === "boolean") ? { predicate: (r.expression || "").replace(/^return\s+|;$/g, ""), outcome: "unknown", assumption: via === "filter callback" ? "Callback predicate source; stream invocation and element acceptance are not proven" : "Helper predicate source; callsite outcome, dominance and feasibility remain unproven" } : {}, ...r.type === "guard" && ["FOR", "WHILE", "DO"].includes(r.kind) ? { iterations: "unknown", assumption: "Loop iterations and exit conditions are not unrolled or proven" } : {}, ...r.kind === "pipeline-stage" ? { stage: r.name, assumption: r.javaStream ? "Stream execution requires a terminal operation; callback invocation, order, exceptions and cardinality are unverified" : "Name-based pipeline candidate; Java stream identity and callback execution remain unverified" } : {} });
+          if (r.lambdaTargetsTruncated) truncated = true;
+          for (const signature of r.lambdaTargets || []) {
+            const targets = graph.selectSymbols(a, { signature }, 21);
+            if (targets.length === 1 && depth < 12) push(a, targets[0], depth + 1, callbackRoles.get(signature)?.size === 1 ? [...callbackRoles.get(signature)][0] : "lambda/method reference");
+            else gaps.push({ kind: "callback-unresolved", detail: "Callback target is missing, ambiguous or outside the depth budget", signature });
+          }
+        }
+        graph.loadCalls(m);
+        for (const edge of graph.adjacency.get(m.id) || []) {
+          let target = graph.nodes.get(edge.to);
+          if (target?.kind !== "method") continue;
+          let targets = [target];
+          if (target.abstract) {
+            const h = receiver ? hierarchy(a, receiver) : null, symbols = cache(a).symbols || (cache(a).symbols = records(a, "symbol", void 0, 10001));
+            truncated ||= symbols.length > 1e4;
+            targets = [];
+            for (const row of symbols) {
+              if (row.name !== target.name || row.abstract || row.signature !== target.methodSignature) continue;
+              const chain = hierarchy(a, row.owner);
+              if (!chain.levels.some((l) => l.name === target.owner)) continue;
+              if (h && !h.levels.some((l) => l.name === row.owner)) {
+                excludedMethods.add(String(row.id));
+                continue;
+              }
+              targets.push(graph.symbol(a, row));
+            }
+            append({ id: String(edge.evidence?.nodeId || edge.id), type: "fact", kind: "dispatch", expression: target.signature, repo: edge.evidence?.repo, sha: edge.evidence?.sha, receiver: receiver || null, candidates: targets.map((n) => ({ signature: n.signature, repo: n.repo, file: n.file, line: n.line })), status: "candidate-dispatch", file: edge.evidence?.file, line: edge.evidence?.line });
+            gaps.push({ kind: "dispatch-runtime-unknown", detail: receiver ? "Receiver class was explicitly selected; Spring bean choice, proxies and runtime dispatch remain unverified" : "Multiple runtime implementations can apply; select a receiver to narrow retained candidates" });
+          }
+          for (const n of targets) if (depth < 12) push(graph.byAnalysis.get(n.analysisId), n, depth + 1, target.abstract ? "candidate virtual dispatch" : edge.kind);
+          else {
+            truncated = true;
+            gaps.push({ kind: "context-depth-budget", detail: "Reachable body is outside the context depth budget" });
+          }
+        }
+      }
+      truncated ||= queue.length > 0 || Date.now() >= deadline;
+      if (truncated) gaps.push({ kind: "context-budget", detail: "Context is bounded to 40 bodies, 600 facts and depth 12; additional reachable facts remain unexamined" });
+      const constraints = graph.receiverConstraints();
+      const bindings = receiver ? constraints.dispatch.flatMap((d) => {
+        const selected = [];
+        for (const a of graph.byAnalysis.values()) {
+          const row = a.db.prepare("select raw from records where type='call' and id=?").get(d.callId);
+          if (!row) continue;
+          const call = origin(a, JSON.parse(row.raw));
+          for (const id of d.targets) {
+            const target = graph.local(a, id);
+            if (!target || target.abstract) continue;
+            selected.push({ call: { kind: "call", repo: call.repo, name: call.name, file: call.file, line: call.line, column: call.column }, target: { kind: "method", signature: target.signature, repo: target.repo }, parameters: target.parameters.filter((p) => p.index > 0).map((p) => ({ index: p.index, name: p.name })), receiver, status: "declared-receiver-positional-binding" });
+          }
+        }
+        return selected;
+      }).slice(0, 4) : [];
+      const unique = [...new Map(facts.map((f) => [digest([f.analysisId, f.kind, f.id, f.owner, f.expression]), f])).values()];
+      return { protocol: "dt.path-context/v1", status: !methods.length ? "unavailable" : truncated ? "bounded" : "collected", methods, facts: unique, gaps, truncated, receiver: receiver || null, complete: !truncated && !gaps.length, bindings, receiverConstraints: receiver ? { ...constraints, status: "declared-receiver-filter", meaning: "Selected receiver narrows retained implicit-this call targets; it does not prove Spring bean wiring" } : null, scope: "Bounded reachable source bodies, including callbacks and candidate dispatch. These facts do not prove invocation, dominance, loop counts, stream execution or path feasibility." };
+    }
+    function compare(before, after) {
+      const projection = (c) => {
+        const result = /* @__PURE__ */ new Map();
+        for (const m of c?.methods || []) result.set("body:" + JSON.stringify([m.repo, m.file, m.signature]), { kind: "body", repo: m.repo, file: m.file, signature: m.signature, line: m.line, bodyDigest: m.bodyDigest });
+        for (const f of c?.facts || []) {
+          const key = JSON.stringify([f.repo, f.file, f.owner, f.kind]);
+          if (!result.has(key)) result.set(key, []);
+          result.get(key).push(f);
+        }
+        return result;
+      }, maps = [projection(before), projection(after)], changes = [];
+      const normalized = (v) => Array.isArray(v) ? v.map(({ expression, kind, name, lambdaTargets, candidates, javaStream, textTruncated }) => ({ expression, kind, name, lambdaTargets, candidates: candidates?.map(({ signature, repo }) => ({ signature, repo })), javaStream, textTruncated })) : v && { bodyDigest: v.bodyDigest };
+      for (const key of /* @__PURE__ */ new Set([...maps[0].keys(), ...maps[1].keys()])) {
+        const a = maps[0].get(key), b = maps[1].get(key);
+        if (JSON.stringify(normalized(a)) !== JSON.stringify(normalized(b))) changes.push({ change: !a ? "added" : !b ? "removed" : "changed", before: a, after: b });
+      }
+      return changes;
+    }
+    module2.exports = { inherited, collect, compare, hierarchy };
+  }
+});
+
 // lib/semantic-flow-plan.js
 var require_semantic_flow_plan = __commonJS({
   "lib/semantic-flow-plan.js"(exports2, module2) {
@@ -86,7 +324,7 @@ var require_semantic_query_engine = __commonJS({
     var crypto = require("crypto");
     var readline = require("readline");
     var { DatabaseSync } = require("node:sqlite");
-    var INDEX_VERSION = "dt.semantic.navigation/v1";
+    var INDEX_VERSION = "dt.semantic.navigation/v2";
     var digest = (value) => crypto.createHash("sha256").update(JSON.stringify(value)).digest("hex");
     var bounded = (value, fallback, min, max) => Number.isInteger(value) ? Math.max(min, Math.min(max, value)) : fallback;
     var identity = (a, symbol) => require_semantic_identity().code(a.repo, a.revisionKey || a.sha, symbol);
@@ -134,7 +372,7 @@ var require_semantic_query_engine = __commonJS({
             summary = r;
             continue;
           }
-          if (!["symbol", "call", "guard", "port"].includes(r.type)) continue;
+          if (!["symbol", "call", "guard", "port", "type", "fact"].includes(r.type)) continue;
           put.run(r.type, String(r.id), r.name || "", r.fullName || r.methodFullName || "", r.signature || "", r.file || "", r.line || 0, String(r.caller || r.method || ""), line);
           if (r.type === "call") for (const id of (r.targets || []).slice(0, 20)) targetPut.run(String(r.id), String(id));
         }
@@ -160,6 +398,7 @@ var require_semantic_query_engine = __commonJS({
     var rows = (db, sql, args = []) => db.prepare(sql).all(...args).map(parse);
     function createGraph(analyses, databases, options) {
       const byAnalysis = new Map(analyses.map((a, i) => [a.id, { ...a, db: databases[i] }])), nodes = /* @__PURE__ */ new Map(), adjacency = /* @__PURE__ */ new Map(), reverse = /* @__PURE__ */ new Map(), ambiguities = [], gaps = [];
+      const receiverDispatch = [], excludedMethods = /* @__PURE__ */ new Set(), explicitMethods = /* @__PURE__ */ new Set();
       let edgeCount = 0, graphTruncated = false;
       const deadline = Date.now() + bounded(options.budgetMs, 5e3, 100, 3e4);
       const bindings = [...new Map(analyses.flatMap((a) => a.bindings || a.manifest?.dependencies || []).concat(options.bindings || []).map((b) => [digest(b), b])).values()];
@@ -181,7 +420,7 @@ var require_semantic_query_engine = __commonJS({
         if (nodes.size >= 2e4) throw Object.assign(Error("Semantic navigation reached its 20000-node budget; narrow the selected symbols or revisions"), { code: "DT_SEMANTIC_QUERY_BUDGET" });
         const key = (r.fullName || `${r.file}:${r.line}:${r.name}:${r.signature}`) + (/<unresolved|<unknown/.test(r.fullName || "") ? "#dt-source=" + JSON.stringify([source.file, r.line, r.signature]) : ""), id = identity(source, key);
         if (nodes.has(id)) return nodes.get(id);
-        const n = { id, kind: "method", name: r.name, signature: r.fullName || r.signature, methodSignature: r.signature, file: source.file, projectionFile: r.file, line: r.line, endLine: r.endLine, repo: source.repo, sha: source.sha, analysisId: a.id, locator: { analysisId: a.id, generation: a.manifest?.generation || a.id, nodeId: String(r.id) }, parameters: r.parameters || [], returnId: r.returnId, coverage: "static-cpg" };
+        const n = { id, kind: "method", name: r.name, signature: r.fullName || r.signature, methodSignature: r.signature, file: source.file, projectionFile: r.file, line: r.line, endLine: r.endLine, repo: source.repo, sha: source.sha, analysisId: a.id, locator: { analysisId: a.id, generation: a.manifest?.generation || a.id, nodeId: String(r.id) }, parameters: r.parameters || [], returnId: r.returnId, returnType: r.returnType, owner: r.owner && r.owner !== "<empty>" ? r.owner : (r.fullName || "").split(":")[0].split(".").slice(0, -1).join("."), abstract: r.abstract, bodyDigest: r.bodyDigest, coverage: "static-cpg" };
         nodes.set(id, n);
         return n;
       }
@@ -338,7 +577,23 @@ var require_semantic_query_engine = __commonJS({
               }
             }
           }
+          if (!targets.length && options.receiver && call.arguments?.some((arg) => arg.index === 0 && ["this", "super"].includes(arg.code))) {
+            const found = require_semantic_path_context().inherited({ byAnalysis, nodes, ambiguities: [], gaps: [], symbol, selectSymbols }, { kind: "method", name: call.name, receiver: options.receiver, analysisId: a.id }).filter((n) => n.parameters.filter((p) => p.index > 0).length === (call.arguments || []).filter((p) => p.index > 0).length);
+            if (found.length === 1) {
+              targets = found;
+              resolution = "retained-inherited-this-candidate";
+            }
+          }
           targets = [...new Map(targets.map((target) => [target.id, target])).values()];
+          if (options.receiver && call.dispatch === "DYNAMIC_DISPATCH") {
+            const h = require_semantic_path_context().hierarchy(a, options.receiver), levels = new Map(h.levels.filter((l) => l.type).map((l) => [l.name, l.depth])), isThis = call.arguments?.some((arg) => arg.index === 0 && ["this", "super"].includes(arg.code));
+            if (isThis && levels.has(node.owner) && targets.some((t) => levels.has(t.owner))) {
+              const valid = targets.filter((t) => levels.has(t.owner)), depth = Math.min(...valid.map((t) => levels.get(t.owner))), selected = valid.filter((t) => levels.get(t.owner) === depth);
+              receiverDispatch.push({ callId: String(call.id), targets: selected.map((t) => t.locator.nodeId), status: "declared-this-dispatch", receiver: options.receiver });
+              for (const t of targets) if (!selected.some((s) => s.id === t.id)) excludedMethods.add(t.locator.nodeId);
+              targets = selected;
+            } else for (const t of targets) explicitMethods.add(t.locator.nodeId);
+          }
           const callSource = origin(a, call.file);
           if (targets.length > 1) ambiguities.push({ call: { analysisId: a.id, nodeId: call.id, repo: callSource.repo, sha: callSource.sha, file: callSource.file, line: call.line }, candidates: targets.map((t) => t.id) });
           if (!targets.length && !call.name.startsWith("<operator>")) gaps.push({ kind: "unresolved-call", analysisId: a.id, repo: callSource.repo, sha: callSource.sha, file: callSource.file, line: call.line, name: call.name, methodFullName: call.methodFullName });
@@ -359,6 +614,7 @@ var require_semantic_query_engine = __commonJS({
       }
       function select(selector = {}) {
         const selected = [];
+        if (selector.receiver) return require_semantic_path_context().inherited({ byAnalysis, nodes, ambiguities, gaps, symbol, selectSymbols }, selector);
         for (const a of byAnalysis.values()) if (belongs(a, selector) && (!selector.kind || ["method", "symbol", "function"].includes(selector.kind)) && !["topic", "route", "cluster", "db", "schema", "service"].some((k) => selector[k])) selected.push(...selectSymbols(a, selector));
         if (selector.kind === "call") {
           for (const a of byAnalysis.values()) if (belongs(a, selector)) {
@@ -394,7 +650,7 @@ var require_semantic_query_engine = __commonJS({
         for (const n of nodes.values()) if ((selector.id || selector.kind && !["method", "symbol", "function"].includes(selector.kind) || ["topic", "route", "cluster", "db", "schema", "service"].some((k) => selector[k])) && n.kind !== "method" && (!selector.id || selector.id === n.id) && (!selector.kind || selector.kind === n.kind || selector.kind === n.portType || selector.kind === "topic" && n.portType?.startsWith("kafka-")) && (!selector.name || selector.name === n.name || selector.name === n.boundary?.topic || selector.name === n.boundary?.table) && (!selector.env || selector.env === n.env) && (!selector.service || selector.service === n.service) && (!selector.cluster || selector.cluster === n.boundary?.cluster) && (!selector.db || selector.db === n.db || selector.db === n.boundary?.db) && (!selector.schema || selector.schema === n.schema || selector.schema === n.boundary?.schema) && (!selector.topic || selector.topic === n.boundary?.topic) && (!selector.route || selector.route === n.boundary?.path) && (!selector.method || selector.method === n.boundary?.method) && (!selector.repo || selector.repo === n.repo) && (!selector.sha || selector.sha === n.sha)) selected.push(n);
         return [...new Map(selected.map((n) => [n.id, n])).values()];
       }
-      return { byAnalysis, nodes, ports, gaps, ambiguities, bindings, select, loadCalls, incoming, adjacency, reverse, local, symbol, callNode, truncated: () => graphTruncated };
+      return { byAnalysis, nodes, ports, gaps, ambiguities, bindings, select, loadCalls, incoming, adjacency, reverse, local, symbol, callNode, selectSymbols, receiverConstraints: () => ({ receiver: options.receiver, dispatch: receiverDispatch, excludedMethodIds: [...excludedMethods].filter((id) => !explicitMethods.has(id)).slice(0, 100), unsafe: [...excludedMethods].some((id) => explicitMethods.has(id)) }), truncated: () => graphTruncated };
     }
     function planComposition(graph, path2, args) {
       const segments = [], boundaries = [], gaps = [];
@@ -531,7 +787,7 @@ var require_semantic_query_engine = __commonJS({
       const databases = [];
       try {
         for (const a of analyses) databases.push(await index(a));
-        const graph = createGraph(analyses, databases, { ...options, budgetMs: args.budgetMs }), operation = args.operation || "symbols", mode = args.mode || "reachability", limit = bounded(args.limit, 30, 1, 200), maxHops = bounded(args.maxHops, 8, 1, 30), maxPaths = bounded(args.maxPaths, 8, 1, 20), deadline = Date.now() + bounded(args.budgetMs, 5e3, 100, 3e4);
+        const graph = createGraph(analyses, databases, { ...options, budgetMs: args.budgetMs, receiver: args.from?.receiver }), operation = args.operation || "symbols", mode = args.mode || "reachability", limit = bounded(args.limit, 30, 1, 200), maxHops = bounded(args.maxHops, 8, 1, 100), maxPaths = bounded(args.maxPaths, 8, 1, 20), deadline = Date.now() + bounded(args.budgetMs, 5e3, 100, 3e4);
         const coverage = databases.map((db, i) => ({ analysisId: analyses[i].id, ...JSON.parse(db.prepare("select value from metadata where key=?").get("coverage").value) }));
         const base = { protocol: "dt.semantic/v1", operation, mode, analyses: analyses.map(({ id, repo, sha, sourceDigest, revisionKey, language, workspace }) => ({ id, repo, sha, sourceDigest, revisionKey, language, workspace })), results: [], truncated: coverage.some((c) => c.summary.truncated), gaps: graph.gaps, ambiguity: graph.ambiguities, coverage, proof: { kind: mode === "reachability" ? "call-reachability" : mode, status: "static-candidate", feasibility: "unknown" }, dependencies: graph.bindings };
         const choose = (s) => {
@@ -581,18 +837,20 @@ var require_semantic_query_engine = __commonJS({
             for (const edge of operation === "callers" ? incoming : operation === "callees" ? outgoing : [...incoming, ...outgoing]) base.results.push({ edge, node: graph.nodes.get(edge.from === node.id ? edge.to : edge.from) });
           }
         } else if (["paths", "slice"].includes(operation)) {
-          const from = choose(args.from), to = choose(args.to || args.target), targets = new Set(to.map((n) => n.id));
+          const fromLine = args.from?.kind === "line", toLine = (args.to || args.target)?.kind === "line";
+          const from = fromLine ? [] : choose(args.from), to = toLine ? [] : choose(args.to || args.target), targets = new Set(to.map((n) => n.id));
           const selectedValue = (node, selector = {}) => ({ kind: node.kind, name: node.name, file: node.file, line: node.line, ...node.code ? { call: node.code } : {}, ...selector.argument !== void 0 ? { argument: selector.argument, value: node.arguments?.find((p) => p.index === selector.argument)?.code ?? null } : {}, ...selector.parameter !== void 0 ? { parameter: selector.parameter } : {} });
+          if (args.includeContext) base.pathContext = require_semantic_path_context().collect(graph, args, from, to);
           base.selectedValues = { from: from.slice(0, 8).map((n) => selectedValue(n, args.from)), to: to.slice(0, 8).map((n) => selectedValue(n, args.to || args.target)), omitted: Math.max(0, from.length - 8) + Math.max(0, to.length - 8), meaning: "Source expressions at selected values; these are not observed runtime amounts" };
-          if (!from.length || !to.length) base.gaps.push({ kind: "endpoint-not-found", detail: "No exact " + (!from.length ? "source" : "target") + " matched in this retained analysis; inspect semantic_search with the same analysis" });
+          if (!fromLine && !from.length || !toLine && !to.length) base.gaps.push({ kind: "endpoint-not-found", detail: "No exact " + (!from.length ? "source" : "target") + " matched in this retained analysis; inspect semantic_search with the same analysis" });
           if (mode !== "reachability") {
             base.deepRequests = [];
             for (const a of graph.byAnalysis.values()) {
               const starts = from.filter((n) => n.analysisId === a.id), ends = to.filter((n) => n.analysisId === a.id);
-              if (!starts.length || !ends.length) continue;
+              if (!fromLine && !starts.length || !toLine && !ends.length) continue;
               const nodeIds = (ns, source) => ns.flatMap((n) => {
                 const selector = source ? args.from : args.to || args.target, parameter = selector?.parameter, argument = selector?.argument;
-                if (n.kind === "method") return mode === "controlflow" ? [n.locator.nodeId] : source || parameter !== void 0 ? n.parameters.filter((p) => p.index > 0 && (parameter === void 0 || p.name === parameter || p.index === parameter)).map((p) => String(p.id)) : n.returnId ? [String(n.returnId)] : [];
+                if (n.kind === "method") return mode === "controlflow" ? source ? [n.locator.nodeId] : n.returnId ? [String(n.returnId)] : [] : source || parameter !== void 0 ? n.parameters.filter((p) => p.index > 0 && (parameter === void 0 || p.name === parameter || p.index === parameter)).map((p) => String(p.id)) : n.returnId ? [String(n.returnId)] : [];
                 if (n.kind === "call") return mode === "controlflow" || source ? [n.locator.nodeId] : n.arguments.filter((p) => p.index > 0 && (argument === void 0 || p.index === argument)).map((p) => String(p.id));
                 if (n.kind === "port") {
                   if (n.callId) {
@@ -608,8 +866,21 @@ var require_semantic_query_engine = __commonJS({
                 }
                 return [];
               });
+              const location = (selector) => {
+                if (selector?.kind !== "line") return null;
+                const relative = require_semantic_protocol().relative(selector.file);
+                if (!Number.isInteger(selector.line) || selector.line < 1) throw Error("A line endpoint requires a positive line and relative file");
+                if (selector.analysisId && selector.analysisId !== a.id) return null;
+                const matches = sources(a).filter((s) => (!selector.repo || s.repo === selector.repo) && (!selector.sha || s.sha === selector.sha));
+                if (matches.length !== 1) {
+                  base.gaps.push({ kind: "line-source-ambiguous", detail: "Select an exact repo for a line endpoint in a composite CPG" });
+                  return null;
+                }
+                return { file: matches[0].prefix ? matches[0].prefix + "/" + relative : relative, line: selector.line, ...Object.fromEntries(["column", "code", "nodeLabel", "nodeId"].filter((k) => selector[k] !== void 0).map((k) => [k, selector[k]])) };
+              };
+              const fromLocation = location(args.from), toLocation = location(args.to || args.target);
               const fromNodeIds = nodeIds(starts, true), toNodeIds = nodeIds(ends, false);
-              if (fromNodeIds.length && toNodeIds.length) base.deepRequests.push({ analysisId: a.id, request: { operation, mode, fromNodeIds, toNodeIds, maxPaths, maxHops, budgetMs: bounded(args.budgetMs, 5e3, 100, 3e4) } });
+              if ((fromLine ? fromLocation : fromNodeIds.length) && (toLine ? toLocation : toNodeIds.length) && from.length <= 1 && to.length <= 1) base.deepRequests.push({ analysisId: a.id, request: { operation, mode, fromNodeIds, toNodeIds, ...base.pathContext?.receiverConstraints ? { receiverConstraints: { receiver: base.pathContext.receiverConstraints.receiver, excludedMethodIds: base.pathContext.receiverConstraints.excludedMethodIds, unsafe: base.pathContext.receiverConstraints.unsafe } } : {}, ...fromLocation ? { fromLocation } : {}, ...toLocation ? { toLocation } : {}, maxPaths, maxHops, budgetMs: bounded(args.budgetMs, 5e3, 100, 3e4) } });
               else base.gaps.push({ kind: "endpoint-value-unavailable", analysisId: a.id, detail: "Resolved symbols have no matching value endpoint; check parameter name/index and one-based call argument index" });
             }
             if (!base.deepRequests.length) base.gaps.push({ kind: "dataflow-boundary", detail: "No single CPG contains both resolved value endpoints; call/transport reachability cannot prove distributed value flow" });

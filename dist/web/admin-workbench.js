@@ -116,6 +116,7 @@ function wbEnsure() {
  <section id="wbEvidence" class="wb-evidence" hidden><div class="wb-evidence-heading"><div><h3 id="wbResultTitle">Evidence</h3><p id="wbResultMeta" class="hint"></p></div><div class="row"><a id="wbOpenResult" target="_blank" rel="noopener" hidden>Open full result</a><button id="wbShare" type="button">Copy run link</button><button id="wbExport" type="button">Download recipe</button><button id="wbAgain" type="button">Prepare again</button></div></div><div id="wbOutcome" class="wb-outcome" role="status"></div><p id="wbPreviewStatus" class="hint" role="status" hidden>Loading native preview… Open full result if it cannot be displayed here.</p><iframe id="wbNative" title="Workbench native tool result" sandbox="allow-scripts allow-popups allow-downloads" hidden></iframe><details id="wbValues" open><summary>Use evidence in another action</summary><p class="hint">Choose a value to carry forward. Preparing an action preserves its exact identifiers.</p><div id="wbFacts" class="wb-facts"></div><div id="wbSelectedFacts" class="wb-selected-facts"></div><div id="wbFollowups" class="wb-followups"></div></details><details><summary>Invocation, source and complete preview</summary><pre id="wbResultRaw" class="code cx-wrap"></pre></details></section>
  </div></div>`;
   $("wbHelp").closest(".wb-assistance").before($("wbEvidence"));
+  const mapLink=document.createElement('a');mapLink.href='/admin#capabilities';mapLink.textContent='Explore tool map';mapLink.className='wb-map-link';$('wbGuide').before(mapLink);
   $("wbViewEvidence").onclick = () => wbReveal("wbEvidence");
   $("wbContextRetry").onclick = wbContexts;
   $("wbRun").onclick = wbRun;
@@ -507,6 +508,7 @@ function wbLabel(name) {
       code_search: "Search source code",
       code_read: "Read exact source",
       semantic_query: "Trace semantic evidence",
+      semantic_trace: "Compare a change path",
       scenario_inventory: "Inspect entry points and effects",
       health: "Check service health",
       map: "Explore service map",

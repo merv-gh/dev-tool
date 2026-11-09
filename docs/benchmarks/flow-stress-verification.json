@@ -1,0 +1,428 @@
+{
+  "protocol": "dt.flow-stress/v1",
+  "sourceDigest": "a46714f6b68d8dc3bfcbf785aff220ad3ed3c2503bd9e67279c033c96507637f",
+  "queryDigest": "5012e6590fe8a7eb74037da130bbe46cf6fd43414d0823fd9052b07e0265c20c",
+  "enrichmentDigest": "f194a96138123791980a18d313f906097587ba9b4877a528c8e683c3a6801600",
+  "analyses": [
+    "dbeee44e5953d376d5dab162248d6abf4111a2a2682a4f8529b5cc1269672b6f-8c8f4669dfad7635629129aefcd22dd6",
+    "51dc5eccd7e474c5a8ec526e5175c56b3c308ec8baa2d446504a9e80c76ec811-9b7b23686d7296a400981b74d59bab37"
+  ],
+  "oracles": [
+    {
+      "side": "before",
+      "result": "7 scenarios passed"
+    },
+    {
+      "side": "after",
+      "result": "7 scenarios passed"
+    }
+  ],
+  "cases": [
+    {
+      "id": "conditional",
+      "entry": "conditional",
+      "parameter": "amount",
+      "sink": "accept",
+      "file": "src/example/Scenarios.java",
+      "expected": [
+        "amount > 0",
+        "amount >= 0"
+      ],
+      "change": "Branch boundary changes for zero",
+      "arguments": {
+        "analyses": [
+          "dbeee44e5953d376d5dab162248d6abf4111a2a2682a4f8529b5cc1269672b6f-8c8f4669dfad7635629129aefcd22dd6",
+          "51dc5eccd7e474c5a8ec526e5175c56b3c308ec8baa2d446504a9e80c76ec811-9b7b23686d7296a400981b74d59bab37"
+        ],
+        "from": {
+          "kind": "method",
+          "name": "conditional",
+          "parameter": "amount"
+        },
+        "to": {
+          "kind": "call",
+          "name": "accept",
+          "file": "src/example/Scenarios.java",
+          "line": 7,
+          "argument": 2
+        },
+        "maxPaths": 4,
+        "maxHops": 100,
+        "budgetMs": 15000
+      },
+      "status": "static-path-changed",
+      "contextChanges": 2,
+      "previewBytes": 3798,
+      "fullBytes": 132238,
+      "sides": [
+        {
+          "side": "before",
+          "dataStatus": "static-candidates",
+          "controlStatus": "static-candidates",
+          "contextStatus": "collected",
+          "facts": 7,
+          "methods": 2,
+          "composed": 0
+        },
+        {
+          "side": "after",
+          "dataStatus": "static-candidates",
+          "controlStatus": "static-candidates",
+          "contextStatus": "collected",
+          "facts": 7,
+          "methods": 2,
+          "composed": 0
+        }
+      ]
+    },
+    {
+      "id": "loop",
+      "entry": "loop",
+      "parameter": "limit",
+      "sink": "accept",
+      "file": "src/example/Scenarios.java",
+      "expected": [
+        "i < limit",
+        "i <= limit"
+      ],
+      "change": "Loop bound changes the accumulated value; continue bypass is retained",
+      "arguments": {
+        "analyses": [
+          "dbeee44e5953d376d5dab162248d6abf4111a2a2682a4f8529b5cc1269672b6f-8c8f4669dfad7635629129aefcd22dd6",
+          "51dc5eccd7e474c5a8ec526e5175c56b3c308ec8baa2d446504a9e80c76ec811-9b7b23686d7296a400981b74d59bab37"
+        ],
+        "from": {
+          "kind": "method",
+          "name": "loop",
+          "parameter": "limit"
+        },
+        "to": {
+          "kind": "call",
+          "name": "accept",
+          "file": "src/example/Scenarios.java",
+          "line": 16,
+          "argument": 2
+        },
+        "maxPaths": 4,
+        "maxHops": 100,
+        "budgetMs": 15000
+      },
+      "status": "inconclusive",
+      "contextChanges": 2,
+      "previewBytes": 3729,
+      "fullBytes": 107062,
+      "sides": [
+        {
+          "side": "before",
+          "dataStatus": "static-candidates",
+          "controlStatus": "bounded",
+          "contextStatus": "collected",
+          "facts": 11,
+          "methods": 2,
+          "composed": 0
+        },
+        {
+          "side": "after",
+          "dataStatus": "static-candidates",
+          "controlStatus": "bounded",
+          "contextStatus": "collected",
+          "facts": 11,
+          "methods": 2,
+          "composed": 0
+        }
+      ]
+    },
+    {
+      "id": "stream-filter",
+      "entry": "filtered",
+      "parameter": "values",
+      "sink": "accept",
+      "file": "src/example/Scenarios.java",
+      "expected": [
+        "x > 0",
+        "x >= 0"
+      ],
+      "change": "A lazy stream filter now admits zero",
+      "arguments": {
+        "analyses": [
+          "dbeee44e5953d376d5dab162248d6abf4111a2a2682a4f8529b5cc1269672b6f-8c8f4669dfad7635629129aefcd22dd6",
+          "51dc5eccd7e474c5a8ec526e5175c56b3c308ec8baa2d446504a9e80c76ec811-9b7b23686d7296a400981b74d59bab37"
+        ],
+        "from": {
+          "kind": "method",
+          "name": "filtered",
+          "parameter": "values"
+        },
+        "to": {
+          "kind": "call",
+          "name": "accept",
+          "file": "src/example/Scenarios.java",
+          "line": 21,
+          "argument": 2
+        },
+        "maxPaths": 4,
+        "maxHops": 100,
+        "budgetMs": 15000
+      },
+      "status": "static-path-changed",
+      "contextChanges": 4,
+      "previewBytes": 3910,
+      "fullBytes": 180018,
+      "sides": [
+        {
+          "side": "before",
+          "dataStatus": "static-candidates",
+          "controlStatus": "static-candidates",
+          "contextStatus": "collected",
+          "facts": 14,
+          "methods": 4,
+          "composed": 0
+        },
+        {
+          "side": "after",
+          "dataStatus": "static-candidates",
+          "controlStatus": "static-candidates",
+          "contextStatus": "collected",
+          "facts": 14,
+          "methods": 4,
+          "composed": 0
+        }
+      ]
+    },
+    {
+      "id": "stream-map",
+      "entry": "mapped",
+      "parameter": "values",
+      "sink": "accept",
+      "file": "src/example/Scenarios.java",
+      "expected": [
+        "x * 2",
+        "x * 3"
+      ],
+      "change": "A lambda transformation changes each emitted contribution",
+      "arguments": {
+        "analyses": [
+          "dbeee44e5953d376d5dab162248d6abf4111a2a2682a4f8529b5cc1269672b6f-8c8f4669dfad7635629129aefcd22dd6",
+          "51dc5eccd7e474c5a8ec526e5175c56b3c308ec8baa2d446504a9e80c76ec811-9b7b23686d7296a400981b74d59bab37"
+        ],
+        "from": {
+          "kind": "method",
+          "name": "mapped",
+          "parameter": "values"
+        },
+        "to": {
+          "kind": "call",
+          "name": "accept",
+          "file": "src/example/Scenarios.java",
+          "line": 26,
+          "argument": 2
+        },
+        "maxPaths": 4,
+        "maxHops": 100,
+        "budgetMs": 15000
+      },
+      "status": "static-path-changed",
+      "contextChanges": 4,
+      "previewBytes": 3908,
+      "fullBytes": 156622,
+      "sides": [
+        {
+          "side": "before",
+          "dataStatus": "static-candidates",
+          "controlStatus": "static-candidates",
+          "contextStatus": "collected",
+          "facts": 11,
+          "methods": 3,
+          "composed": 0
+        },
+        {
+          "side": "after",
+          "dataStatus": "static-candidates",
+          "controlStatus": "static-candidates",
+          "contextStatus": "collected",
+          "facts": 11,
+          "methods": 3,
+          "composed": 0
+        }
+      ]
+    },
+    {
+      "id": "inherited-library",
+      "entry": "handle",
+      "receiver": "example.PaymentService",
+      "parameter": "amount",
+      "sink": "accept",
+      "file": "src/internal/AbstractHandler.java",
+      "expected": [
+        "amount + 5",
+        "amount - 5",
+        "amount >= 0",
+        "amount > 0"
+      ],
+      "change": "Unchanged Spring service inherits a changed two-level library template",
+      "arguments": {
+        "analyses": [
+          "dbeee44e5953d376d5dab162248d6abf4111a2a2682a4f8529b5cc1269672b6f-8c8f4669dfad7635629129aefcd22dd6",
+          "51dc5eccd7e474c5a8ec526e5175c56b3c308ec8baa2d446504a9e80c76ec811-9b7b23686d7296a400981b74d59bab37"
+        ],
+        "from": {
+          "kind": "method",
+          "name": "handle",
+          "parameter": "amount",
+          "receiver": "example.PaymentService"
+        },
+        "to": {
+          "kind": "call",
+          "name": "accept",
+          "file": "src/internal/AbstractHandler.java",
+          "line": 7,
+          "argument": 2
+        },
+        "maxPaths": 4,
+        "maxHops": 100,
+        "budgetMs": 15000
+      },
+      "status": "static-path-changed",
+      "contextChanges": 4,
+      "previewBytes": 3863,
+      "fullBytes": 236318,
+      "sides": [
+        {
+          "side": "before",
+          "dataStatus": "static-candidates",
+          "controlStatus": "static-candidates",
+          "contextStatus": "collected",
+          "facts": 12,
+          "methods": 4,
+          "composed": 1
+        },
+        {
+          "side": "after",
+          "dataStatus": "static-candidates",
+          "controlStatus": "static-candidates",
+          "contextStatus": "collected",
+          "facts": 12,
+          "methods": 4,
+          "composed": 1
+        }
+      ]
+    },
+    {
+      "id": "fanout-budget",
+      "entry": "fanout",
+      "parameter": "amount",
+      "sink": "accept",
+      "file": "src/example/Scenarios.java",
+      "expected": [
+        "amount + 1",
+        "amount + 9"
+      ],
+      "change": "A late sink changes beyond the selected path count; coverage must stay bounded",
+      "arguments": {
+        "analyses": [
+          "dbeee44e5953d376d5dab162248d6abf4111a2a2682a4f8529b5cc1269672b6f-8c8f4669dfad7635629129aefcd22dd6",
+          "51dc5eccd7e474c5a8ec526e5175c56b3c308ec8baa2d446504a9e80c76ec811-9b7b23686d7296a400981b74d59bab37"
+        ],
+        "from": {
+          "kind": "method",
+          "name": "fanout",
+          "parameter": "amount"
+        },
+        "to": {
+          "kind": "call",
+          "name": "accept",
+          "file": "src/example/Scenarios.java",
+          "line": 57,
+          "argument": 2
+        },
+        "maxPaths": 4,
+        "maxHops": 100,
+        "budgetMs": 15000
+      },
+      "status": "partial-static-path-change",
+      "contextChanges": 2,
+      "previewBytes": 3757,
+      "fullBytes": 319763,
+      "sides": [
+        {
+          "side": "before",
+          "dataStatus": "static-candidates",
+          "controlStatus": "bounded",
+          "contextStatus": "collected",
+          "facts": 59,
+          "methods": 2,
+          "composed": 0
+        },
+        {
+          "side": "after",
+          "dataStatus": "static-candidates",
+          "controlStatus": "bounded",
+          "contextStatus": "collected",
+          "facts": 59,
+          "methods": 2,
+          "composed": 0
+        }
+      ]
+    },
+    {
+      "id": "unchanged",
+      "entry": "stable",
+      "parameter": "amount",
+      "sink": "accept",
+      "file": "src/example/Scenarios.java",
+      "expected": [],
+      "change": "Unchanged control prevents noisy false change claims",
+      "arguments": {
+        "analyses": [
+          "dbeee44e5953d376d5dab162248d6abf4111a2a2682a4f8529b5cc1269672b6f-8c8f4669dfad7635629129aefcd22dd6",
+          "51dc5eccd7e474c5a8ec526e5175c56b3c308ec8baa2d446504a9e80c76ec811-9b7b23686d7296a400981b74d59bab37"
+        ],
+        "from": {
+          "kind": "method",
+          "name": "stable",
+          "parameter": "amount"
+        },
+        "to": {
+          "kind": "call",
+          "name": "accept",
+          "file": "src/example/Scenarios.java",
+          "line": 60,
+          "argument": 2
+        },
+        "maxPaths": 4,
+        "maxHops": 100,
+        "budgetMs": 15000
+      },
+      "status": "no-observed-path-change",
+      "contextChanges": 0,
+      "previewBytes": 3797,
+      "fullBytes": 47983,
+      "sides": [
+        {
+          "side": "before",
+          "dataStatus": "static-candidates",
+          "controlStatus": "static-candidates",
+          "contextStatus": "collected",
+          "facts": 4,
+          "methods": 2,
+          "composed": 0
+        },
+        {
+          "side": "after",
+          "dataStatus": "static-candidates",
+          "controlStatus": "static-candidates",
+          "contextStatus": "collected",
+          "facts": 4,
+          "methods": 2,
+          "composed": 0
+        }
+      ]
+    }
+  ],
+  "exhaustive": false,
+  "limits": [
+    "All named changes in this finite corpus are checked. This is not completeness proof for arbitrary Java programs.",
+    "Library composition depends on a declared receiver and exact retained sources; Spring runtime bean/proxy wiring remains unverified.",
+    "Loop iteration counts and callback invocation remain explicit assumptions."
+  ]
+}

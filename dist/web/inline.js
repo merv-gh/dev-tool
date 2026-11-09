@@ -91,6 +91,9 @@ const dtInline = {
     } else if (view === 'code-cell') {
       failed ||= !!d.result?.error || ['failed', 'cancelled', 'interrupted'].includes(d.state) || (d.result?.tests || []).some(test => !test.ok);
       summary = `${d.state || 'unknown'}${d.engine ? ' · ' + d.engine : ''} · ${(d.output || []).length} output events${d.result?.returned !== undefined ? ' · returned '+JSON.stringify(d.result.returned).slice(0,100) : ''}`;
+    } else if (view === 'semantic-path-trace') {
+      failed ||= ['failed','interrupted'].includes(d.state) || ['inconclusive','partial-static-path-change'].includes(d.assessment?.status);
+      summary = [d.assessment?.status || d.state || 'Preparing trace', `${d.sides?.length||0} retained revisions`,d.assessment ? `${d.assessment.dataChanges||0} value / ${d.assessment.controlChanges||0} control differences` : null].filter(Boolean).join(' · ');
     } else if (view === 'semantic-flow-map') {
       const counts=d.flowMap?.counts||{};
       failed ||= ['failed','interrupted'].includes(d.state);

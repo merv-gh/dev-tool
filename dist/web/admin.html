@@ -147,6 +147,7 @@
   <div class="running-bar" id="running" hidden></div>
   <nav class="tabs" id="tabs">
     <button data-tab="workbench" class="on">Workbench</button>
+    <button data-tab="capabilities">Tool map</button>
     <button data-tab="index">Index</button>
     <button data-tab="explore">Explore</button>
     <button data-tab="passports">Passports<span class="n" id="nPassports"></span></button>
@@ -164,6 +165,7 @@
   </nav>
 
   <section id="tab-workbench"><div id="wbRoot"></div></section>
+  <section id="tab-capabilities" hidden><div id="capabilityRoot"></div></section>
   <section id="tab-index" hidden>
     <div class="row" style="margin-bottom:10px">
       <button class="primary" data-refresh="all">Refresh everything</button>
@@ -419,6 +421,7 @@
 <script src="/static/admin-map.js"></script>
 <script src="/static/admin-runtime.js"></script>
 <script src="/static/admin-workbench.js"></script>
+<link rel="stylesheet" href="/static/capability-map.css"><script src="/static/capability-layout.js"></script><script src="/static/capability-map.js"></script><script src="/static/admin-capabilities.js"></script>
 <script src="/static/trace-format.js"></script><script src="/static/diagnostics.js"></script><script src="/static/admin-observability.js"></script>
 <script src="/static/admin-semantic.js"></script><script src="/static/admin-architecture.js"></script>
 <script src="/static/handbook.js"></script><script src="/static/admin-handbook.js"></script>
@@ -673,7 +676,8 @@ function show(t) {
   tab = t;
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   document.querySelectorAll('section[id^=tab-]').forEach(s => s.hidden = s.id !== `tab-${t}`);
-  history.replaceState(null, '', `#${['semantic','handbook','context','runtime','workbench'].includes(t) ? requested : t}`);
+  history.replaceState(null, '', `#${['semantic','handbook','context','runtime','workbench','capabilities'].includes(t) ? requested : t}`);
+  if (t === 'capabilities') loadCapabilities().catch(e => toast(e.message));
   if (t === 'workbench') loadWorkbench().catch(e => wbMessage(e.message, true));
   if (t === 'handbook') loadHandbook().catch(e => toast(e.message));
   if (t === 'architecture') loadArchitectureAdmin().catch(e => architectureMessage(e.message, true));

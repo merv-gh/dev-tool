@@ -1,6 +1,6 @@
 {
   "protocol": "dt.release-inventory/v1",
-  "sourceDigest": "1d4555fe26444b17d1c6d8a9ab467341e895bf7947fd9a2036d354ac9766fc82",
+  "sourceDigest": "a46714f6b68d8dc3bfcbf785aff220ad3ed3c2503bd9e67279c033c96507637f",
   "tools": [
     {
       "name": "find",
@@ -12,6 +12,7 @@
         "test/access.test.js",
         "test/adapter-conformance.test.js",
         "test/admin-runtime.test.js",
+        "test/capability-map.test.js",
         "test/catalog-generations.test.js",
         "test/collections.test.js",
         "test/context-ui.test.js",
@@ -37,6 +38,7 @@
         "test/reproduction.live.test.js",
         "test/semantic-branches.live.test.js",
         "test/semantic-flow-map.live.test.js",
+        "test/semantic-path-trace.live.test.js",
         "test/semantic.live.test.js",
         "test/showcase.live.test.js",
         "test/template.live.test.js",
@@ -135,6 +137,8 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
+        "test/capability-map.test.js",
+        "test/capability-ui.test.js",
         "test/execution-worker.test.js",
         "test/impact-readiness.test.js",
         "test/memory.test.js",
@@ -152,6 +156,7 @@
       "referenceTests": [
         "test/admin-map.test.js",
         "test/admin-runtime.test.js",
+        "test/capability-map.test.js",
         "test/code.test.js",
         "test/context-ui.test.js",
         "test/context.test.js",
@@ -343,7 +348,8 @@
       "integrationReferences": [
         "test/diagrams.live.test.js",
         "test/semantic-branches.live.test.js",
-        "test/semantic-flow-map.live.test.js"
+        "test/semantic-flow-map.live.test.js",
+        "test/semantic-path-trace.live.test.js"
       ]
     },
     {
@@ -658,6 +664,7 @@
         "test/runtime-isolation.live.test.js",
         "test/semantic-branches.live.test.js",
         "test/semantic-flow-map.live.test.js",
+        "test/semantic-path-trace.live.test.js",
         "test/semantic.live.test.js",
         "test/service-architecture.live.test.js",
         "test/template.live.test.js",
@@ -1104,6 +1111,7 @@
       "resultContract": false,
       "referenceTests": [
         "test/admin-map.test.js",
+        "test/capability-map.test.js",
         "test/experiments.test.js",
         "test/push.test.js"
       ],
@@ -1369,6 +1377,16 @@
       "integrationReferences": []
     },
     {
+      "name": "capability_map",
+      "group": "catalog",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/capability-map.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
       "name": "handbook",
       "group": "catalog",
       "inputSchema": true,
@@ -1396,6 +1414,7 @@
       "resultContract": false,
       "referenceTests": [
         "test/admin-map.test.js",
+        "test/semantic-path-context.test.js",
         "test/service-map.test.js"
       ],
       "integrationReferences": [
@@ -1543,6 +1562,7 @@
       "resultContract": false,
       "referenceTests": [
         "test/architecture.test.js",
+        "test/capability-map.test.js",
         "test/handbook-http.test.js",
         "test/handbook.test.js"
       ],
@@ -1718,12 +1738,14 @@
       "referenceTests": [
         "test/semantic-branches.live.test.js",
         "test/semantic-flow-map.live.test.js",
+        "test/semantic-path-trace.live.test.js",
         "test/semantic-ui.test.js",
         "test/semantic.live.test.js"
       ],
       "integrationReferences": [
         "test/semantic-branches.live.test.js",
         "test/semantic-flow-map.live.test.js",
+        "test/semantic-path-trace.live.test.js",
         "test/semantic.live.test.js"
       ]
     },
@@ -1739,6 +1761,22 @@
       ],
       "integrationReferences": [
         "test/semantic.live.test.js"
+      ]
+    },
+    {
+      "name": "semantic_trace",
+      "group": "semantic",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/semantic-path-trace-ui.test.js",
+        "test/semantic-path-trace.live.test.js",
+        "test/semantic-path-trace.test.js",
+        "test/semantic-ui.test.js"
+      ],
+      "integrationReferences": [
+        "test/semantic-path-trace.live.test.js"
       ]
     },
     {
@@ -2838,6 +2876,7 @@
   "views": [
     "api-exchange",
     "architecture",
+    "capabilities",
     "code",
     "code-cell",
     "collection-report",
@@ -2855,6 +2894,7 @@
     "scenario-run",
     "semantic-analysis",
     "semantic-flow-map",
+    "semantic-path-trace",
     "table",
     "test-coverage",
     "tests",

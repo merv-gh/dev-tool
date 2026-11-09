@@ -1,7 +1,7 @@
 // Native semantic and passport tools share the authenticated Admin transport.
 let semanticAdminTools = []; let semanticAdminLoaded = false; const semanticAdminPending = new DTState.Activity(); const semanticAdminVersion = new DTState.Revision(); const semanticAdminDirty = new DTState.Dirty(); let semanticAdminJob = null; let semanticAdminJobTimer = null; let semanticAdminPorts = null; const semanticAdminEdits = new DTState.Revision(); let semanticAdminCurrentTool = null;
 let semanticAdminLoading = null, semanticAdminHash = '', semanticAutoPortHash = '';
-const semanticToolNames = ["semantic_capabilities", "semantic_index", "semantic_search", "semantic_query", "semantic_ports", "passport_adjustments", "passport_adjust"];
+const semanticToolNames = ["semantic_capabilities", "semantic_index", "semantic_search", "semantic_query", "semantic_trace", "semantic_ports", "passport_adjustments", "passport_adjust"];
 function semanticAdminMessage(text, error = false) {
   $("smAdminMessage").textContent = text;
   $("smAdminMessage").className = error ? "err-text" : "hint";
@@ -31,9 +31,8 @@ function semanticAdminPrepare(name, args) {
       if ("revision" in props) value.revision = scope.revision;
       else if ("ref" in props) value.ref = scope.revision;
     }
-    if (name === "semantic_query") {
-      value.operation = "paths";
-      value.mode = "reachability";
+    if (name === "semantic_query" || name === "semantic_trace") {
+      if(name === "semantic_query"){value.operation = "paths"; value.mode = "reachability";}
       value.from = { signature: "" };
       value.to = { signature: "" };
     }
@@ -142,7 +141,7 @@ async function semanticAdminPollJob(id) {
     $("smCancel").hidden = !["queued", "running", "cancelling", "draining"].includes(job.state);
     if (["queued", "running", "cancelling", "draining"].includes(job.state) && tab === "semantic") semanticAdminJobTimer = setTimeout(() => semanticAdminPollJob(id), 1500);
     else if (job.state === "done" && job.result) {
-      const result = await api("/api/tool/show", { view: job.result.flowMap ? "semantic-flow-map" : "semantic-analysis", data: job.result, title: "Semantic job result" });
+      const result = await api("/api/tool/show", { view: job.result.operation==='trace' ? "semantic-path-trace" : job.result.flowMap ? "semantic-flow-map" : "semantic-analysis", data: job.result, title: "Semantic job result" });
       if (scope !== runtimeScopeVersion.value || id !== semanticAdminJob) return;
       const view = rtNativeView(result.result?.view);
       if (view) {

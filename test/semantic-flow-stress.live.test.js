@@ -1,0 +1,5 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('fs'),os=require('os'),path=require('path');
+const enabled=!!(process.env.DT_SEMANTIC_LIVE_URL&&process.env.DT_SEMANTIC_LIVE_TOKEN);
+test('real Java conditional, loop, stream, inherited-library and bounded fanout changes remain visible',{skip:!enabled,timeout:25*60000},async t=>{
+ const keep=process.env.DT_FLOW_STRESS_HOME,home=keep||fs.mkdtempSync(path.join(os.tmpdir(),'dt-flow-stress-live-'));t.after(async()=>{await require('../lib/isolate').stop();await require('../lib/state-store').close();if(!keep)fs.rmSync(home,{recursive:true,force:true});});const {report}=await require('../dev/eval-flow-stress').run({home,url:process.env.DT_SEMANTIC_LIVE_URL,token:process.env.DT_SEMANTIC_LIVE_TOKEN,onCase:async(row)=>{await t.test(row.id,()=>{assert.ok(row.previewBytes<=4096);assert.ok(row.view);assert.ok(row.sides.every(s=>s.contextStatus==='collected'));});}});assert.equal(report.cases.length,7);assert.equal(report.oracles.length,2);assert.equal(report.exhaustive,false);
+});
