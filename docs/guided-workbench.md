@@ -1,6 +1,10 @@
 # Click-through investigation workbench
 
-Open `/admin` to start in **Workbench**. Pick a goal on the left, review the
+Open `/admin` to start in **Workbench**. The left navigator switches between
+**Contexts**, **Services** and ticket/task groups, with nested files and related
+workspaces. Use the [object workbench walkthrough](workbench-explorer.md) for
+branch navigation, source editing, saved queries/scripts and live service actions.
+For goal discovery, expand **Browse goals and all tools**. Pick a goal, review the
 prepared tool, choose known names, and click **Run**. Preparing a tool, selecting
 a value, asking for help and opening a saved link never execute a suggested call.
 The specialist Admin tabs remain available for deeper editing and configuration.

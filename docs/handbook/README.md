@@ -100,6 +100,60 @@ Before executing application tests, inspect test_targets and the selected target
 
 Expected: Configured execution placement and prerequisites; listing does not start a test.
 
+### Browse the work before choosing a tool
+
+Admin → Workbench and /workbench show a vertical folder navigator. Switch Contexts, Services or Tasks. Tasks group exact ticket/task metadata with related contexts and explicitly linked workspaces; these are separate from running jobs. Services group by common prefix, with declared context links, scripts, saved recipes and attributed API exchanges. Browsing retained names does not query live infrastructure.
+
+Choose a service or file to see relevant actions. Select an evidence context; prepare tests, Consul status, SQL, scripts or API requests, review editable arguments, then Run. Branch navigation explicitly refreshes remote refs and opens a separate owned checkout. Attach it to the evidence context to rediscover it under the ticket. Dirty sources in the original workspace stay there.
+
+The text editor keeps up to 12 dirty drafts in the current user/task scope and supports UTF-8 files up to 64 KiB. Saves reject stale revisions. Reload preserves the draft and shows the saved version for reconciliation. Large, binary and non-UTF8 files remain read-only. Save prepared action retains a redacted recipe in the selected context; reopening prepares it without running. Verify naming-only script candidates before reuse.
+
+Copy view link shares a live selection requiring the recipient’s normal authentication and tool grants. Copy run link retains the invocation/result rather than replaying it. Optional model suggestions remain editable. A successful invocation does not prove passing tests or a successful HTTP response.
+
+**Open the interactive service workbench** · `workbench_open`
+
+```json
+{
+  "mode": "services",
+  "service": "{{service}}",
+  "env": "{{env}}"
+}
+```
+
+Expected: An authenticated live page; no action executes when opened.
+
+**Browse a ticket and related work** · `workbench_open`
+
+```json
+{
+  "mode": "tasks",
+  "task": "{{ticket}}"
+}
+```
+
+Expected: Contexts and explicitly linked workspaces in the current story.
+
+**Retain a prepared service check** · `workbench_save`
+
+```json
+{
+  "context": "{{context}}",
+  "title": "Service status",
+  "tool": "consul_service",
+  "arguments": {
+    "env": "{{env}}",
+    "name": "{{service}}"
+  },
+  "service": "{{service}}"
+}
+```
+
+Expected: A revision-checked context recipe, with credentials redacted; does not execute.
+
+![Interactive service/task navigator; disposable Git/Node demo with local Consul/HTTP fixtures.](../screenshots/workbench-explorer-desktop.png)
+
+Interactive service/task navigator; disposable Git/Node demo with local Consul/HTTP fixtures.
+
 ### Build an answer someone can audit
 
 A useful first answer names the symptom, environment, deployed/source identity, observed evidence and uncertainty. Link the native view, cite exact file:line or documentation blocks, and distinguish an observation from a proposed cause. A service-name match, green health badge or path through a graph is a starting point.
@@ -1844,6 +1898,16 @@ A visual index of native results and standalone workbenches.
 
 Successful transient chat results normally start collapsed. Open a result to inspect the relevant table, file, case or source path; failed tests/calls expose actionable detail. Editing and tool execution happen in authenticated workspaces, not saved snapshots. Use Open full view for more room, and More/Export for secondary formats.
 
+#### workbench
+
+Which contexts, services and tickets relate to this work? Switch retained navigator lenses, inspect selected identity and related items, then open the authenticated live workbench to edit files or explicitly run actions. The chat snapshot cannot query infrastructure or grant execution.
+
+<details><summary>View labeled presentation example</summary>
+
+![Built-in workbench presentation sample](../screenshots/sample-workbench.png)
+
+</details>
+
 #### workspace-coverage
 
 Which changed lines and branches need a regression? Select a production file, inspect missed/unknown lines and source freshness, prepare an editable source read or coverage run, copy a regression briefing or export JSON. Covered lines prove execution, not assertions.
@@ -2158,7 +2222,7 @@ Search a task term, tool name or group. Select a tool to read its contract, requ
 
 The portable repository reference records built-in tools at generation time. The running registry remains authoritative for extensions and permissions. A required field can still need a real returned ID; blank values or an invented analysis/lease/workspace ID are not useful arguments.
 
-The [complete built-in reference](tools.md) contains 248 tools with exact schemas. In the app, the reference uses the current authorized registry and includes configured extensions.
+The [complete built-in reference](tools.md) contains 252 tools with exact schemas. In the app, the reference uses the current authorized registry and includes configured extensions.
 
 ### When a tool is missing
 

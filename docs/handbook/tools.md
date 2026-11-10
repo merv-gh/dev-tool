@@ -442,7 +442,7 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
 
 ### tool_profiles
 
-List task-oriented tool profiles and their exact enabled tools. Profiles reduce model context for Open WebUI; configured tool enable/disable permissions still apply.
+List client tool profiles. Listing changes no exposed names; call tool_execute for a described target. Profiles do not grant permissions.
 
 Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: built-in
 
@@ -462,7 +462,7 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
 
 ### tool_search
 
-Find enabled tools by action (compare a change path, search code, assess impact), not by a service/class/file name alone. Results are capabilities, not source matches or diagnosis. Describe an exact match, then execute it. Compound tasks may include planning guides.
+Find enabled capabilities by action, not an object name. Inspect tool_describe, then call tool_execute. Results can include planning guides; no task runs
 
 Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: built-in
 
@@ -479,7 +479,7 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
     },
     "group": {
       "type": "string",
-      "description": "Optional exact group"
+      "description": "Optional tool category (context/views/code/consul), never an object/ticket. Omit if unsure."
     },
     "limit": {
       "type": "integer",
@@ -508,7 +508,7 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
 
 ### tool_describe
 
-Read the exact input schema and guidance for one enabled tool. Inspect required fields and defaults before tool_execute; discoverability does not grant additional permissions.
+Read one enabled tool’s exact schema, required fields and guidance before tool_execute. Grants stay unchanged.
 
 Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: built-in
 
@@ -535,7 +535,7 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
 
 ### tool_execute
 
-Execute one discovered enabled tool with its exact arguments. Uses the same validation, rate limits, trace and permissions as calling that tool directly, and preserves its visualization. Call tool_describe first. Cannot recursively call discovery dispatchers.
+Call a described tool with exact arguments and normal permissions, validation and tracing. Preserves native views; cannot dispatch discovery recursively.
 
 Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: built-in
 
@@ -3455,6 +3455,13 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
 {
   "type": "object",
   "properties": {
+    "expected_revision": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Optional editor revision; null requires a new script"
+    },
     "id": {
       "type": "string",
       "description": "collection/name, e.g. \"orders/support/refund-check\""
@@ -4084,6 +4091,7 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
 - [`view_list`](#tool-view_list)
 - [`view_get`](#tool-view_get)
 - [`view_save`](#tool-view_save)
+- [`workbench_open`](#tool-workbench_open)
 
 <a id="tool-show"></a>
 
@@ -4265,6 +4273,53 @@ Workflow: [Every visualization: what to read and do](README.md#visualizations) �
     "description",
     "html"
   ]
+}
+```
+
+</details>
+
+<a id="tool-workbench_open"></a>
+
+### workbench_open
+
+Open a clickable explorer to browse ticket notes, files and related checkouts, or a service with scripts/queries, tests, Consul and API actions. Chat shows a retained navigator linking to the authenticated live workbench. Normal tool permissions apply; opening executes no actions.
+
+Workflow: [Your first investigation](README.md#start) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "mode": {
+      "type": "string",
+      "enum": [
+        "contexts",
+        "services",
+        "tasks"
+      ],
+      "description": "Navigator lens. Omit to infer from task, service or context; Tasks groups tickets with contexts and workspaces."
+    },
+    "env": {
+      "type": "string",
+      "description": "Configured environment, e.g. dev."
+    },
+    "context": {
+      "type": "string",
+      "description": "Exact context folder ID from context_find; not its ticket number. Choose one selected object."
+    },
+    "service": {
+      "type": "string",
+      "description": "Exact service name. Choose one selected object."
+    },
+    "task": {
+      "type": "string",
+      "description": "Ticket/task identifier from the user, e.g. ORDERS-142. No context creation or prior lookup required."
+    }
+  },
+  "required": [],
+  "additionalProperties": false
 }
 ```
 
@@ -4943,6 +4998,8 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
 - [`workspace_coverage_plan`](#tool-workspace_coverage_plan)
 - [`workspace_coverage`](#tool-workspace_coverage)
 - [`test_run`](#tool-test_run)
+- [`workspace_branches`](#tool-workspace_branches)
+- [`workspace_branch`](#tool-workspace_branch)
 - [`fixture_schema`](#tool-fixture_schema)
 - [`fixture_plan`](#tool-fixture_plan)
 - [`fixture_capture`](#tool-fixture_capture)
@@ -5494,6 +5551,13 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
       },
       "description": "Replacements, applied in order"
     },
+    "expected_revision": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Optional SHA256 from an editor read; null requires a new file. Rejects concurrent edits"
+    },
     "check": {
       "type": "boolean",
       "default": true,
@@ -6001,6 +6065,71 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
   "required": [
     "workspace"
   ]
+}
+```
+
+</details>
+
+<a id="tool-workspace_branches"></a>
+
+### workspace_branches
+
+List retained branch choices for an owned workspace. refresh=true explicitly reads remote refs (30s timeout). No checkout or source edits.
+
+Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "workspace": {
+      "type": "string",
+      "description": "Exact owned workspace ID from workspace_list or context_get.workspaces; never a service/repository name."
+    },
+    "refresh": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "workspace"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-workspace_branch"></a>
+
+### workspace_branch
+
+Open/reuse a separate owned workspace at a branch/ref of this repository. Leaves all uncommitted files in the original workspace untouched. Does not push, reset or clean either checkout.
+
+Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "workspace": {
+      "type": "string",
+      "description": "Exact owned workspace ID from workspace_list or context_get.workspaces; never a service/repository name."
+    },
+    "ref": {
+      "type": "string",
+      "description": "Exact branch/ref from workspace_branches or the user."
+    }
+  },
+  "required": [
+    "workspace",
+    "ref"
+  ],
+  "additionalProperties": false
 }
 ```
 
@@ -8271,6 +8400,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
 - [`context_hint`](#tool-context_hint)
 - [`chat_context_status`](#tool-chat_context_status)
 - [`chat_compaction_request`](#tool-chat_compaction_request)
+- [`workbench_save`](#tool-workbench_save)
 - [`project_context_find`](#tool-project_context_find)
 - [`project_context_get`](#tool-project_context_get)
 - [`project_context_save`](#tool-project_context_save)
@@ -8962,7 +9092,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
 
 ### context_run
 
-Run one concrete enabled tool and save a redacted snapshot of its arguments, result or failure with timestamps in the context. Uses normal permissions and validation; tool side effects still apply. Inspect ok and saved/saveError separately: a call may succeed even if saving fails. Never automatically retry state-changing calls.
+Run AND retain actual evidence in task memory: call a concrete tool once and save its redacted arguments, result/failure and timestamps. Use this instead of a bare source call when asked to inspect and retain. Browsing with context_get/workbench_open saves no evidence. Check ok and saved/saveError separately; never retry a state-changing call merely to save it.
 
 Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
 
@@ -9088,6 +9218,65 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
   "required": [
     "context",
     "checkpoint"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-workbench_save"></a>
+
+### workbench_save
+
+Save the prepared tool invocation as a revision-checked action recipe in a task context, optionally linked to a service/repository. Redacts credentials; saved artifacts never execute automatically. Reopen through the interactive workbench.
+
+Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "context": {
+      "type": "string",
+      "description": "Existing folder ID returned by context_find, not a ticket number."
+    },
+    "title": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "tool": {
+      "type": "string",
+      "description": "Exact target from tool_describe, e.g. consul_service."
+    },
+    "arguments": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Prepared target arguments matching tool_describe inputSchema. Saving never runs them."
+    },
+    "service": {
+      "type": "string"
+    },
+    "repository": {
+      "type": "string"
+    },
+    "path": {
+      "type": "string"
+    },
+    "expected_revision": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "context",
+    "title",
+    "tool",
+    "arguments"
   ],
   "additionalProperties": false
 }

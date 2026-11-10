@@ -1,0 +1,872 @@
+{
+  "schema": "dt.workbench-discoverability/v1",
+  "sourceDigest": "ac72554a50d2d0e2cb12ddcc1d17cdb3ae3c64012d2bd6336796a3119cf84572",
+  "model": {
+    "name": "qwen3.5:4b",
+    "digest": "d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04",
+    "details": {
+      "parent_model": "model.gguf",
+      "format": "gguf",
+      "family": "qwen35",
+      "families": [
+        "qwen35"
+      ],
+      "parameter_size": "4.2B",
+      "quantization_level": "Q4_K_M",
+      "context_length": 262144,
+      "embedding_length": 2560,
+      "runner": "llamacpp"
+    }
+  },
+  "transport": "Ollama native /api/chat; think=false; temperature=0; seed=42; num_ctx=32768",
+  "corpus": {
+    "path": "dev/eval/workbench.corpus.json",
+    "sha256": "d78379310027f762d89480aa7530aa7bf97e83d4280f9438d9969075208d1ed7",
+    "cases": 6
+  },
+  "instructionSha256": "69aece3dac63a3d5c184787f539c6b11ae764321eb6de07f1afd5c2982bbd9f8",
+  "budget": {
+    "maxTurns": 12,
+    "maxCalls": 30,
+    "maxTokens": 1536,
+    "maxContextBytes": 180000,
+    "maxDurationMs": 900000
+  },
+  "status": "focused-profile-passed; lean-discovery-incomplete",
+  "final": {
+    "sourceDigest": "ac72554a50d2d0e2cb12ddcc1d17cdb3ae3c64012d2bd6336796a3119cf84572",
+    "sourceChanged": false,
+    "profile": "workbench",
+    "wire": {
+      "tools": 14,
+      "bytes": 9916,
+      "sha256": "4b28b08512117e7a4ca52c11350863d643fbd1189f1401af867204b944e2a15e"
+    },
+    "summary": {
+      "cases": 6,
+      "passed": 6,
+      "failed": 0,
+      "invocationErrors": 1,
+      "forbiddenAttempts": 0
+    },
+    "startedAt": "2026-11-10T11:43:32.470Z",
+    "completedAt": "2026-11-10T11:43:46.549Z",
+    "cases": [
+      {
+        "id": "ticket",
+        "query": "I was handed ticket ORDERS-142. Give me a clickable place where I can browse its related notes, files and working checkouts together. Do not run checks or change anything.",
+        "turns": 2,
+        "finish": "assistant-finished",
+        "grade": {
+          "passed": true,
+          "evidence": {
+            "selected": true,
+            "nativeSnapshot": true
+          },
+          "forbiddenAttempts": 0,
+          "invocationErrors": 0
+        },
+        "tools": [
+          {
+            "name": "workbench_open",
+            "ok": true
+          }
+        ],
+        "liveFixtureRequests": 0,
+        "usage": {
+          "input": 5433,
+          "output": 118
+        }
+      },
+      {
+        "id": "service",
+        "query": "For orders-api in dev, open a mouse-driven place where I can explore related notes, saved queries/scripts, API calls and checkouts, choose a branch and run tests later. Do not execute any checks now.",
+        "turns": 2,
+        "finish": "assistant-finished",
+        "grade": {
+          "passed": true,
+          "evidence": {
+            "selected": true,
+            "nativeSnapshot": true
+          },
+          "forbiddenAttempts": 0,
+          "invocationErrors": 0
+        },
+        "tools": [
+          {
+            "name": "workbench_open",
+            "ok": true
+          }
+        ],
+        "liveFixtureRequests": 0,
+        "usage": {
+          "input": 5440,
+          "output": 137
+        }
+      },
+      {
+        "id": "context",
+        "query": "Find the existing note folder for ORDERS-142 and open an interactive file navigator for that exact folder so I can read and edit nearby files. Do not create another folder or edit anything now.",
+        "turns": 3,
+        "finish": "assistant-finished",
+        "grade": {
+          "passed": true,
+          "evidence": {
+            "selected": true,
+            "nativeSnapshot": true
+          },
+          "forbiddenAttempts": 0,
+          "invocationErrors": 0
+        },
+        "tools": [
+          {
+            "name": "context_find",
+            "ok": true
+          },
+          {
+            "name": "workbench_open",
+            "ok": true
+          }
+        ],
+        "liveFixtureRequests": 0,
+        "usage": {
+          "input": 9018,
+          "output": 139
+        }
+      },
+      {
+        "id": "save",
+        "query": "Keep an editable action named Deployment check in the existing ORDERS-142 investigation, linked to orders-api. It should inspect that service's deployment instances in dev when I run it later. Save the prepared arguments; do not execute the check now.",
+        "turns": 4,
+        "finish": "assistant-finished",
+        "grade": {
+          "passed": true,
+          "evidence": {
+            "persistedRecipe": true,
+            "correctArguments": true,
+            "recipe": {
+              "title": "Deployment check - orders-api dev instances",
+              "tool": "consul_service",
+              "service": null,
+              "arguments": {
+                "env": "dev",
+                "name": "orders-api"
+              }
+            }
+          },
+          "forbiddenAttempts": 0,
+          "invocationErrors": 1
+        },
+        "tools": [
+          {
+            "name": "workbench_save",
+            "ok": false,
+            "code": "DT_CONTEXT_INVALID"
+          },
+          {
+            "name": "context_find",
+            "ok": true
+          },
+          {
+            "name": "workbench_save",
+            "ok": true
+          }
+        ],
+        "liveFixtureRequests": 0,
+        "usage": {
+          "input": 12092,
+          "output": 276
+        }
+      },
+      {
+        "id": "branch",
+        "query": "The orders-api checkout linked to ORDERS-142 has uncommitted edits. Open feature/fee in a separate working checkout of the same repository and retain the existing edits. Do not run tests, push, reset, clean or delete anything.",
+        "turns": 4,
+        "finish": "assistant-finished",
+        "grade": {
+          "passed": true,
+          "evidence": {
+            "separateCheckout": true,
+            "originalDraftPreserved": true
+          },
+          "forbiddenAttempts": 0,
+          "invocationErrors": 0
+        },
+        "tools": [
+          {
+            "name": "workspace_list",
+            "ok": true
+          },
+          {
+            "name": "workspace_branches",
+            "ok": true
+          },
+          {
+            "name": "workspace_branch",
+            "ok": true
+          }
+        ],
+        "liveFixtureRequests": 0,
+        "usage": {
+          "input": 11873,
+          "output": 392
+        }
+      },
+      {
+        "id": "retain",
+        "query": "Inspect the deployment status of orders-api in dev, retain the actual tool result in the existing ORDERS-142 note folder, then give me a clickable ticket view to continue the investigation. Do not change code or deployments.",
+        "turns": 5,
+        "finish": "assistant-finished",
+        "grade": {
+          "passed": true,
+          "evidence": {
+            "ticketView": true,
+            "savedActualStatus": true,
+            "liveContinuation": true
+          },
+          "forbiddenAttempts": 0,
+          "invocationErrors": 0
+        },
+        "tools": [
+          {
+            "name": "context_find",
+            "ok": true
+          },
+          {
+            "name": "context_get",
+            "ok": true
+          },
+          {
+            "name": "context_read",
+            "ok": true
+          },
+          {
+            "name": "context_run",
+            "ok": true
+          }
+        ],
+        "liveFixtureRequests": 3,
+        "usage": {
+          "input": 18262,
+          "output": 328
+        }
+      }
+    ]
+  },
+  "confirmation": {
+    "sourceDigest": "ac72554a50d2d0e2cb12ddcc1d17cdb3ae3c64012d2bd6336796a3119cf84572",
+    "sourceChanged": false,
+    "profile": "workbench",
+    "wire": {
+      "tools": 14,
+      "bytes": 9916,
+      "sha256": "4b28b08512117e7a4ca52c11350863d643fbd1189f1401af867204b944e2a15e"
+    },
+    "summary": {
+      "cases": 6,
+      "passed": 6,
+      "failed": 0,
+      "invocationErrors": 1,
+      "forbiddenAttempts": 0
+    },
+    "startedAt": "2026-11-10T11:39:49.401Z",
+    "completedAt": "2026-11-10T11:40:02.683Z",
+    "cases": [
+      {
+        "id": "ticket",
+        "query": "I was handed ticket ORDERS-142. Give me a clickable place where I can browse its related notes, files and working checkouts together. Do not run checks or change anything.",
+        "turns": 2,
+        "finish": "assistant-finished",
+        "grade": {
+          "passed": true,
+          "evidence": {
+            "selected": true,
+            "nativeSnapshot": true
+          },
+          "forbiddenAttempts": 0,
+          "invocationErrors": 0
+        },
+        "tools": [
+          {
+            "name": "workbench_open",
+            "ok": true
+          }
+        ],
+        "liveFixtureRequests": 0,
+        "usage": {
+          "input": 5432,
+          "output": 118
+        }
+      },
+      {
+        "id": "service",
+        "query": "For orders-api in dev, open a mouse-driven place where I can explore related notes, saved queries/scripts, API calls and checkouts, choose a branch and run tests later. Do not execute any checks now.",
+        "turns": 2,
+        "finish": "assistant-finished",
+        "grade": {
+          "passed": true,
+          "evidence": {
+            "selected": true,
+            "nativeSnapshot": true
+          },
+          "forbiddenAttempts": 0,
+          "invocationErrors": 0
+        },
+        "tools": [
+          {
+            "name": "workbench_open",
+            "ok": true
+          }
+        ],
+        "liveFixtureRequests": 0,
+        "usage": {
+          "input": 5440,
+          "output": 149
+        }
+      },
+      {
+        "id": "context",
+        "query": "Find the existing note folder for ORDERS-142 and open an interactive file navigator for that exact folder so I can read and edit nearby files. Do not create another folder or edit anything now.",
+        "turns": 3,
+        "finish": "assistant-finished",
+        "grade": {
+          "passed": true,
+          "evidence": {
+            "selected": true,
+            "nativeSnapshot": true
+          },
+          "forbiddenAttempts": 0,
+          "invocationErrors": 0
+        },
+        "tools": [
+          {
+            "name": "context_find",
+            "ok": true
+          },
+          {
+            "name": "workbench_open",
+            "ok": true
+          }
+        ],
+        "liveFixtureRequests": 0,
+        "usage": {
+          "input": 9020,
+          "output": 140
+        }
+      },
+      {
+        "id": "save",
+        "query": "Keep an editable action named Deployment check in the existing ORDERS-142 investigation, linked to orders-api. It should inspect that service's deployment instances in dev when I run it later. Save the prepared arguments; do not execute the check now.",
+        "turns": 4,
+        "finish": "assistant-finished",
+        "grade": {
+          "passed": true,
+          "evidence": {
+            "persistedRecipe": true,
+            "correctArguments": true,
+            "recipe": {
+              "title": "Deployment check - orders-api dev instances",
+              "tool": "consul_service",
+              "service": null,
+              "arguments": {
+                "env": "dev",
+                "name": "orders-api"
+              }
+            }
+          },
+          "forbiddenAttempts": 0,
+          "invocationErrors": 1
+        },
+        "tools": [
+          {
+            "name": "workbench_save",
+            "ok": false,
+            "code": "DT_CONTEXT_INVALID"
+          },
+          {
+            "name": "context_find",
+            "ok": true
+          },
+          {
+            "name": "workbench_save",
+            "ok": true
+          }
+        ],
+        "liveFixtureRequests": 0,
+        "usage": {
+          "input": 12094,
+          "output": 276
+        }
+      },
+      {
+        "id": "branch",
+        "query": "The orders-api checkout linked to ORDERS-142 has uncommitted edits. Open feature/fee in a separate working checkout of the same repository and retain the existing edits. Do not run tests, push, reset, clean or delete anything.",
+        "turns": 3,
+        "finish": "assistant-finished",
+        "grade": {
+          "passed": true,
+          "evidence": {
+            "separateCheckout": true,
+            "originalDraftPreserved": true
+          },
+          "forbiddenAttempts": 0,
+          "invocationErrors": 0
+        },
+        "tools": [
+          {
+            "name": "workspace_list",
+            "ok": true
+          },
+          {
+            "name": "workspace_branch",
+            "ok": true
+          }
+        ],
+        "liveFixtureRequests": 0,
+        "usage": {
+          "input": 8577,
+          "output": 279
+        }
+      },
+      {
+        "id": "retain",
+        "query": "Inspect the deployment status of orders-api in dev, retain the actual tool result in the existing ORDERS-142 note folder, then give me a clickable ticket view to continue the investigation. Do not change code or deployments.",
+        "turns": 5,
+        "finish": "assistant-finished",
+        "grade": {
+          "passed": true,
+          "evidence": {
+            "ticketView": true,
+            "savedActualStatus": true,
+            "liveContinuation": true
+          },
+          "forbiddenAttempts": 0,
+          "invocationErrors": 0
+        },
+        "tools": [
+          {
+            "name": "context_find",
+            "ok": true
+          },
+          {
+            "name": "context_get",
+            "ok": true
+          },
+          {
+            "name": "context_read",
+            "ok": true
+          },
+          {
+            "name": "context_run",
+            "ok": true
+          }
+        ],
+        "liveFixtureRequests": 3,
+        "usage": {
+          "input": 18275,
+          "output": 328
+        }
+      }
+    ]
+  },
+  "lean": {
+    "sourceDigest": "ac72554a50d2d0e2cb12ddcc1d17cdb3ae3c64012d2bd6336796a3119cf84572",
+    "sourceChanged": false,
+    "profile": "lean-find",
+    "wire": {
+      "tools": 5,
+      "bytes": 3010,
+      "sha256": "4a81f09c51b20600f29cae1f921821d7e22a679a332168109ad86124ce0a0260"
+    },
+    "summary": {
+      "cases": 6,
+      "passed": 2,
+      "failed": 4,
+      "invocationErrors": 1,
+      "forbiddenAttempts": 0
+    },
+    "startedAt": "2026-11-10T11:42:36.247Z",
+    "completedAt": "2026-11-10T11:43:05.078Z",
+    "cases": [
+      {
+        "id": "ticket",
+        "query": "I was handed ticket ORDERS-142. Give me a clickable place where I can browse its related notes, files and working checkouts together. Do not run checks or change anything.",
+        "turns": 12,
+        "finish": "assistant-finished",
+        "grade": {
+          "passed": false,
+          "evidence": {
+            "selected": false,
+            "nativeSnapshot": false
+          },
+          "forbiddenAttempts": 0,
+          "invocationErrors": 0
+        },
+        "tools": [
+          {
+            "name": "find",
+            "ok": true
+          },
+          {
+            "name": "tool_search",
+            "ok": true
+          },
+          {
+            "name": "tool_search",
+            "ok": true
+          },
+          {
+            "name": "tool_search",
+            "ok": true
+          },
+          {
+            "name": "tool_search",
+            "ok": true
+          },
+          {
+            "name": "tool_search",
+            "ok": true
+          },
+          {
+            "name": "tool_search",
+            "ok": true
+          },
+          {
+            "name": "tool_search",
+            "ok": true
+          },
+          {
+            "name": "tool_search",
+            "ok": true
+          },
+          {
+            "name": "tool_search",
+            "ok": true
+          },
+          {
+            "name": "tool_search",
+            "ok": true
+          }
+        ],
+        "liveFixtureRequests": 0,
+        "usage": {
+          "input": 52230,
+          "output": 567
+        }
+      },
+      {
+        "id": "service",
+        "query": "For orders-api in dev, open a mouse-driven place where I can explore related notes, saved queries/scripts, API calls and checkouts, choose a branch and run tests later. Do not execute any checks now.",
+        "turns": 5,
+        "finish": "assistant-finished",
+        "grade": {
+          "passed": true,
+          "evidence": {
+            "selected": true,
+            "nativeSnapshot": true
+          },
+          "forbiddenAttempts": 0,
+          "invocationErrors": 0
+        },
+        "tools": [
+          {
+            "name": "find",
+            "ok": true
+          },
+          {
+            "name": "tool_search",
+            "ok": true
+          },
+          {
+            "name": "tool_describe",
+            "ok": true
+          },
+          {
+            "name": "workbench_open",
+            "ok": true
+          }
+        ],
+        "liveFixtureRequests": 0,
+        "usage": {
+          "input": 7631,
+          "output": 242
+        }
+      },
+      {
+        "id": "context",
+        "query": "Find the existing note folder for ORDERS-142 and open an interactive file navigator for that exact folder so I can read and edit nearby files. Do not create another folder or edit anything now.",
+        "turns": 9,
+        "finish": "assistant-finished",
+        "grade": {
+          "passed": false,
+          "evidence": {
+            "selected": false,
+            "nativeSnapshot": false
+          },
+          "forbiddenAttempts": 0,
+          "invocationErrors": 1
+        },
+        "tools": [
+          {
+            "name": "find",
+            "ok": true
+          },
+          {
+            "name": "tool_search",
+            "ok": true
+          },
+          {
+            "name": "tool_search",
+            "ok": true
+          },
+          {
+            "name": "context_find",
+            "ok": false,
+            "code": "DT_ARGUMENT_INVALID"
+          },
+          {
+            "name": "tool_describe",
+            "ok": true
+          },
+          {
+            "name": "context_find",
+            "ok": true
+          },
+          {
+            "name": "context_get",
+            "ok": true
+          },
+          {
+            "name": "context_list",
+            "ok": true
+          }
+        ],
+        "liveFixtureRequests": 0,
+        "usage": {
+          "input": 25650,
+          "output": 480
+        }
+      },
+      {
+        "id": "save",
+        "query": "Keep an editable action named Deployment check in the existing ORDERS-142 investigation, linked to orders-api. It should inspect that service's deployment instances in dev when I run it later. Save the prepared arguments; do not execute the check now.",
+        "turns": 10,
+        "finish": "assistant-finished",
+        "grade": {
+          "passed": true,
+          "evidence": {
+            "persistedRecipe": true,
+            "correctArguments": true,
+            "recipe": {
+              "title": "Deployment check ORDERS-142",
+              "tool": "consul_service",
+              "service": "orders-api",
+              "arguments": {
+                "env": "dev",
+                "name": "orders-api"
+              }
+            }
+          },
+          "forbiddenAttempts": 0,
+          "invocationErrors": 0
+        },
+        "tools": [
+          {
+            "name": "tool_search",
+            "ok": true
+          },
+          {
+            "name": "tool_describe",
+            "ok": true
+          },
+          {
+            "name": "tool_search",
+            "ok": true
+          },
+          {
+            "name": "context_find",
+            "ok": true
+          },
+          {
+            "name": "context_get",
+            "ok": true
+          },
+          {
+            "name": "context_read",
+            "ok": true
+          },
+          {
+            "name": "tool_search",
+            "ok": true
+          },
+          {
+            "name": "tool_describe",
+            "ok": true
+          },
+          {
+            "name": "workbench_save",
+            "ok": true
+          }
+        ],
+        "liveFixtureRequests": 0,
+        "usage": {
+          "input": 31479,
+          "output": 539
+        }
+      },
+      {
+        "id": "branch",
+        "query": "The orders-api checkout linked to ORDERS-142 has uncommitted edits. Open feature/fee in a separate working checkout of the same repository and retain the existing edits. Do not run tests, push, reset, clean or delete anything.",
+        "turns": 12,
+        "finish": "turn-budget",
+        "grade": {
+          "passed": false,
+          "evidence": {
+            "separateCheckout": false,
+            "originalDraftPreserved": true
+          },
+          "forbiddenAttempts": 0,
+          "invocationErrors": 0
+        },
+        "tools": [
+          {
+            "name": "tool_search",
+            "ok": true
+          },
+          {
+            "name": "tool_search",
+            "ok": true
+          },
+          {
+            "name": "tool_search",
+            "ok": true
+          },
+          {
+            "name": "tool_search",
+            "ok": true
+          },
+          {
+            "name": "tool_search",
+            "ok": true
+          },
+          {
+            "name": "tool_search",
+            "ok": true
+          },
+          {
+            "name": "tool_search",
+            "ok": true
+          },
+          {
+            "name": "tool_search",
+            "ok": true
+          },
+          {
+            "name": "tool_search",
+            "ok": true
+          },
+          {
+            "name": "tool_search",
+            "ok": true
+          },
+          {
+            "name": "tool_search",
+            "ok": true
+          },
+          {
+            "name": "tool_search",
+            "ok": true
+          }
+        ],
+        "liveFixtureRequests": 0,
+        "usage": {
+          "input": 46437,
+          "output": 733
+        }
+      },
+      {
+        "id": "retain",
+        "query": "Inspect the deployment status of orders-api in dev, retain the actual tool result in the existing ORDERS-142 note folder, then give me a clickable ticket view to continue the investigation. Do not change code or deployments.",
+        "turns": 3,
+        "finish": "assistant-finished",
+        "grade": {
+          "passed": false,
+          "evidence": {
+            "ticketView": false,
+            "savedActualStatus": false,
+            "liveContinuation": false
+          },
+          "forbiddenAttempts": 0,
+          "invocationErrors": 0
+        },
+        "tools": [
+          {
+            "name": "tool_search",
+            "ok": true
+          },
+          {
+            "name": "consul_service",
+            "ok": true
+          }
+        ],
+        "liveFixtureRequests": 3,
+        "usage": {
+          "input": 4026,
+          "output": 193
+        }
+      }
+    ]
+  },
+  "iterations": [
+    {
+      "stage": "initial lean discovery",
+      "profile": "lean-find",
+      "sourceDigest": "10cd8e7a3eec22dc94b69f33270f94447f943bb0f5618e96b41ed32b2d05e895",
+      "passed": 0,
+      "cases": 6,
+      "note": "Exploratory baseline; earlier guard classified guessed context IDs as unauthorized. Not a controlled same-harness comparison."
+    },
+    {
+      "stage": "first focused profile",
+      "profile": "workbench",
+      "sourceDigest": "d7a471266f68b8ae4127f322c20b0a86bb5efeec630493d2acbd3ff490ab7d5b",
+      "passed": 4,
+      "cases": 6,
+      "note": "Recovered browsing and branching. Failed guessed context ID and falsely claimed persistence."
+    },
+    {
+      "stage": "capture fixed; continuation still missed",
+      "profile": "workbench",
+      "sourceDigest": "1aa6d1c364e2a009672eaa72cbe6841c37deac15c62eeebef5ae9545bdc11ef5",
+      "passed": 5,
+      "cases": 6,
+      "note": "Actual status persisted, but model invented a ticket link instead of opening the navigator."
+    }
+  ],
+  "changes": [
+    "Natural interaction/branch/task-memory intent routing with negative controls for graph and Kafka requests.",
+    "Invalid categories return a retry; overly narrow groups point at the authorized leading capability without widening filtered results.",
+    "Exact ID descriptions, actionable context lookup errors, inferred navigator modes and explicit selection found/gaps.",
+    "Fourteen-tool workbench profile; four/five-tool lean profile counts and budget remain unchanged.",
+    "Capture guidance distinguishes future recipes, live execution, retention and browsing.",
+    "A successful evidence capture returns an authenticated live investigation URL and optional retained-view action; failed storage and disabled tools do not advertise it."
+  ],
+  "grading": [
+    "Success comes from actual retained views, persisted JSON recipes, original dirty contents, separate checkout source and stored actual Consul response.",
+    "The capture task also accepts the validated live ticket continuation URL returned by context_run; no extra navigator call is needed.",
+    "Wrong context IDs/prepared arguments now reach normal validators within disposable fixture stores; unrelated effects remain blocked.",
+    "The direct profile confirmation used the earlier narrower prepared-argument guard; its single error was an invalid context ID and the guard difference did not affect its calls.",
+    "Model final prose alone never establishes success. A tool completion is separate from a passing application outcome."
+  ],
+  "limits": [
+    "Synthetic fixture only; no production systems, push, deployment, model-weight verification or browser interaction.",
+    "Fresh independent conversations, one sample per case; exploratory evidence, not general small-model reliability.",
+    "Fixture tool calls execute for real; final model prose never establishes success.",
+    "Prompts were frozen before implementation fixes but reused during iteration; this is not an unseen or independent benchmark.",
+    "Two final focused-profile runs passed 6/6 with one recovered context-ID error each; this does not guarantee arbitrary task success.",
+    "The final lean profile passed only 2/6: a folder listing was called interactive, a prepared action used wrong arguments, branching looped, and retention was falsely claimed.",
+    "No browser interaction by the model is claimed. Browser UI evidence is recorded separately in workbench-explorer.json.",
+    "No actual model weights were inspected; name/parameter metadata and digest are provider-reported.",
+    "Published summaries omit machine paths, private endpoint addresses and dynamic fixture ports; raw transcripts remain in ignored work/."
+  ]
+}

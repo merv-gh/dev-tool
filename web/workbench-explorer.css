@@ -1,0 +1,50 @@
+/* An object navigator inside the incumbent Workbench; standard native controls. */
+#wbRoot .wb-layout{grid-template-columns:280px minmax(0,1fr);gap:24px}
+#wbRoot .wb-toolbar{margin-bottom:16px;padding-bottom:12px;gap:8px}
+#wbRoot .wb-work{gap:16px}
+#wbRoot .wb-compose{padding:16px 0}
+#wbRoot .wb-history h3{font-size:12px;color:var(--muted)}
+#wbBrowseGoals{border-top:1px solid var(--line);margin-top:14px;padding-top:8px}
+#wbBrowseGoals>summary{font-size:12px;min-height:32px;align-content:center}
+#wbRoot .wb-assistance{padding:0 0 12px}
+#wbRoot .wb-assistance>summary{min-height:32px;align-content:center;font-size:13px}
+#wbRoot .wb-assistance-heading h3{display:none}
+.wbx-rail-head,.wbx-heading,.wbx-editor-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.wbx-rail-head h3{margin:0;font-size:15px}.wbx-rail-head button{padding:4px 8px;font-size:11px}
+.wbx-modes{display:flex;gap:2px;margin:12px 0}.wbx-modes button{flex:1;font-size:12px;padding:7px 3px;background:transparent;border-color:transparent}
+.wbx-modes button[aria-pressed=true]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+#wbxSearch{width:100%;min-width:0;box-sizing:border-box;font-size:12px}
+#wbxTreeStatus{font-size:11px;line-height:1.5;margin:8px 0 12px;overflow-wrap:anywhere}
+.wbx-tree{max-height:58vh;overflow:auto;scrollbar-color:var(--line) transparent;overscroll-behavior:contain}
+.wbx-tree ul{list-style:none;padding:0;margin:0}.wbx-tree ul ul{margin-left:8px;padding-left:10px;border-left:1px solid var(--line)}
+.wbx-tree summary,.wbx-tree .wbx-node{padding:8px 6px;font-size:12px;line-height:1.5;cursor:pointer;color:var(--fg);overflow-wrap:anywhere;border-radius:4px}
+.wbx-tree .wbx-node{width:100%;border:0;background:transparent;text-align:left;white-space:normal}
+.wbx-tree summary{margin:0;min-height:24px;align-content:center}
+.wbx-tree summary:hover,.wbx-tree .wbx-node:hover{background:var(--soft)}
+.wbx-tree [aria-current=true]{background:var(--accent-soft);color:var(--accent)}
+.wbx-tree small{display:block;color:var(--muted);font-size:10px;line-height:1.5;overflow-wrap:anywhere;margin-top:2px;font-weight:400}
+.wbx-tree details>div>.hint{font-size:11px;padding-left:8px}
+.wbx-heading{align-items:flex-start}.wbx-heading h2{font-size:21px;line-height:1.3;margin:0 0 6px;overflow-wrap:anywhere}.wbx-heading p{font-size:13px;color:var(--muted);margin:0}.wbx-heading>button{font-size:11px;padding:6px 8px}
+.wbx-identity{display:flex;flex-wrap:wrap;gap:5px 18px;font-size:11px;margin:12px 0;overflow-wrap:anywhere}.wbx-identity code{font-size:11px}
+.wbx-actions{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0}.wbx-actions button{font-size:12px}
+.wbx-workspace:not(:empty){border-top:1px solid var(--line);padding-top:12px;margin-top:16px;display:flex;gap:8px 12px;align-items:center;flex-wrap:wrap;font-size:12px}
+.wbx-workspace>select{max-width:100%;min-width:0;flex:1}.wbx-workspace>.wbx-actions,.wbx-branch{flex-basis:100%}.wbx-workspace .wbx-actions{margin:0}
+.wbx-branch summary{min-height:32px;align-content:center;font-size:12px;margin:0}.wbx-branch input{max-width:100%;min-width:0;width:240px}.wbx-branch button{font-size:11px;margin:7px 0}.wbx-branch label{display:block;margin:8px 0;font-size:12px}.wbx-branch p{font-size:11px;margin:6px 0}
+#wbxStatus{min-height:18px;overflow-wrap:anywhere;font-size:12px;margin:12px 0}
+.wbx-editor{margin-top:16px}.wbx-editor-head{justify-content:flex-start;gap:8px;font-size:12px;margin-bottom:8px}.wbx-editor-head label{font-weight:600}.wbx-editor-head button{font-size:11px}.wbx-editor-head button:first-of-type{margin-left:auto}
+#wbxEditor{display:block;width:100%;box-sizing:border-box;resize:vertical;tab-size:2;line-height:1.6;font-size:12px;min-height:220px;max-height:65vh;margin:0;background:var(--panel);color:var(--fg);white-space:pre;overflow:auto;scrollbar-color:var(--line) transparent}
+.wbx-save-action{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:12px;margin-top:12px;font-size:12px}.wbx-save-action>input{flex:1;min-width:140px;max-width:360px;font-size:12px}.wbx-save-action>span{flex-basis:100%;font-size:11px;overflow-wrap:anywhere}
+.wbx-related{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0}.wbx-related button{font-size:12px}
+.wbx-empty{padding:10px 0 30px}.wbx-empty h3{font-size:21px;margin:0 0 10px}.wbx-empty p{font-size:14px;color:var(--muted);max-width:60ch}
+.wb-standalone .tabs{display:none}.wb-standalone .wrap{max-width:1500px}.wb-standalone .top{margin-bottom:10px}.wb-standalone .rt-scope{margin-bottom:18px}.wb-standalone .running-bar:empty{display:none}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:960px){#wbRoot .wb-layout{grid-template-columns:230px minmax(0,1fr);gap:16px}.wbx-tree{max-height:50vh}#wbRoot .wb-intents{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto}}
+@media(max-width:720px){#wbRoot .wb-layout{grid-template-columns:minmax(0,1fr);gap:20px}#wbRoot .wb-intents{position:static;max-height:none}.wbx-tree{max-height:290px}.wbx-heading h2{font-size:19px}.wbx-modes{max-width:390px}.wbx-rail-head button{min-height:34px}.wbx-tree summary,.wbx-tree .wbx-node{min-height:28px}.wbx-editor-head button:first-of-type{margin-left:0}.wbx-save-action>label{flex-basis:100%}.wbx-workspace>select{flex-basis:100%}.wb-standalone .rt-scope{font-size:11px}.wbx-branch input{width:100%;box-sizing:border-box}}
+/* The compact route uses the full content column of the existing Admin shell. */
+.wb-standalone .admin-workspace{display:block;margin-top:14px}
+.wb-standalone #tab-workbench>.workspace-heading{display:none}
+#wbxNavPanel>summary{display:none}
+#wbxScope{margin:8px 0 16px;font-size:12px}#wbxScope>summary{min-height:28px;align-content:center;margin:0;color:var(--muted)}#wbxScope .rt-scope{margin:8px 0}
+#wbRoot [hidden]{display:none!important}
+@media(max-width:720px){#wbxNavPanel>summary{display:list-item;min-height:36px;align-content:center;font-size:13px;overflow-wrap:anywhere;color:var(--fg);margin:0}#wbxNavPanel[open]>summary{margin-bottom:12px}.wb-standalone .wb-toolbar{margin-bottom:8px}#wbRoot .wb-layout{gap:12px}}
+.wbx-instance-scroll{max-width:100%;overflow:auto;max-height:260px}.wbx-instance-scroll table{font-size:12px}.wbx-instance-scroll td{overflow-wrap:anywhere;max-width:250px}.wbx-instance-scroll th{text-transform:none;white-space:nowrap}#wbObjectResult:empty{display:none}

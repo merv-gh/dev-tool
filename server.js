@@ -175,7 +175,7 @@ const routes = [
     if(typeof token!=='string'||token.length>8192)return send(res,401,{error:'A valid token is required'});
     const identity=require('./lib/access').identity({...req,headers:{...req.headers,authorization:'Bearer '+token}});if(!identity)return send(res,401,{error:'Invalid or expired token'});
     const cookie=`dt_key=${encodeURIComponent(token)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400${getServer().securityProfile==='team'?'; Secure':''}`;
-    res.writeHead(303,{location:'/admin','set-cookie':cookie,'cache-control':'no-store','referrer-policy':'no-referrer'});res.end();
+    let next='/admin';if(typeof body.next==='string'&&body.next.length<5000){const target=new URL(body.next,'http://local');if(target.origin==='http://local'&&target.pathname==='/workbench')next=target.pathname+target.search;}res.writeHead(303,{location:next,'set-cookie':cookie,'cache-control':'no-store','referrer-policy':'no-referrer'});res.end();
   }],
   ['GET', '/admin', false, (req, res, url) => {
     const key = getServer().securityProfile==='team'?null:url.searchParams.get('key');
@@ -187,6 +187,11 @@ const routes = [
     page('admin.html')(req, res);
   }],
   ['GET', '/api/admin/status', true, async (req, res) => send(res, 200, await admin.status())],
+  ['GET','/workbench',false,(req,res,url)=>{
+    if(!trusted(req)){const next='/workbench'+url.search;res.writeHead(401,{'content-type':'text/html; charset=utf-8','cache-control':'no-store','referrer-policy':'no-referrer','content-security-policy':"default-src 'none'; style-src 'self'; form-action 'self'; frame-ancestors 'none'"});return res.end('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in to Workbench</title><link rel="stylesheet" href="/static/ui.css"><main class="wrap"><h1>Sign in to Workbench</h1><p>Open this page directly if your chat blocks authenticated embeds. Use your access token; it stays out of the URL.</p><form action="/api/session" method="post"><input type="hidden" name="next" value="'+next.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))+'"><label for="token">Access token</label> <input id="token" name="token" type="password" required autocomplete="current-password"> <button type="submit">Sign in</button></form></main></html>');}page('admin.html')(req,res);
+  }],
+  ['POST','/api/admin/workbench/tree',true,async(req,res)=>send(res,200,await require('./lib/workbench-explorer').tree(await readJsonBody(req)))],
+  ['POST','/api/admin/workbench/detail',true,async(req,res)=>send(res,200,await require('./lib/workbench-explorer').detail(await readJsonBody(req)))],
   ['GET', '/api/admin/workbench', true, async (req, res, url) => send(res, 200, await require('./lib/workbench').bootstrap({ env: url.searchParams.get('env') || undefined }))],
   ['POST', '/api/admin/workbench/choices', true, async (req, res) => send(res, 200, await require('./lib/workbench').choices(await readJsonBody(req)))],
   ['POST', '/api/admin/workbench/run', true, async (req, res) => send(res, 202, await require('./lib/workbench').start(await readJsonBody(req)))],

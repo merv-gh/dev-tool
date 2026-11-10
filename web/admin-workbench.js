@@ -108,12 +108,12 @@ function wbEnsure() {
   $("wbRoot").dataset.ready = "1";
   $("wbRoot").innerHTML = `
  <div class="wb-toolbar"><label for="wbContext">Save evidence to task</label><select id="wbContext"><option value="">Session only</option></select><button id="wbNewTask" type="button">New investigation</button><button id="wbResume" type="button">Refresh choices</button><a href="/admin#handbook?chapter=start" id="wbGuide">How to investigate</a><span id="wbContextStatus" class="hint" role="status"></span><button id="wbContextRetry" type="button" hidden>Retry task folders</button></div>
- <div class="wb-layout"><aside class="wb-intents"><div class="wb-rail-title"><h3>What do you want to do?</h3><button id="wbAllTools" type="button">All tools</button></div><p class="hint">Browse a goal. Every action starts as an editable draft.</p><nav id="wbIntentTree" aria-label="Investigation intent tree"></nav><div class="wb-history"><h3>Runs in this session</h3><div id="wbHistory"><p class="hint">Run a prepared action to keep evidence here.</p></div></div></aside>
- <div class="wb-work"><div id="wbIntentHeading"><h3>Choose a starting point</h3><p>Inspect a service, find data, investigate a symptom, or browse every enabled tool.</p></div><div id="wbCatalog" class="wb-catalog" hidden></div><div id="wbStages" class="wb-stages"></div><div id="wbCandidates" class="wb-candidates"></div>
- <div class="wb-compose"><div class="wb-tool-heading"><h3>Prepare an action</h3><span id="wbPrepared" class="hint">Nothing executes until you choose Run.</span></div><div class="wb-tool-picker"><label for="wbToolGroup">Tool group</label><select id="wbToolGroup"><option value="">Every group</option></select><label for="wbTool">Tool</label><input id="wbTool" placeholder="Browse or search enabled tools" autocomplete="off"></div><p id="wbDescription" class="wb-description"></p><div id="wbFields"></div><details id="wbExact"><summary>Exact arguments and full contract</summary><label for="wbArgs">Editable arguments (JSON)</label><textarea id="wbArgs" rows="8" spellcheck="false">{}</textarea><pre id="wbContract" class="code cx-wrap"></pre><div class="row"><button id="wbApplyJson" type="button">Apply JSON to form</button><button id="wbReset" type="button">Reset this draft</button><button id="wbCopyArgs" type="button">Copy arguments</button></div></details>
+ <div class="wb-layout"><aside class="wb-intents"><div id="wbExplorerRail"></div><details id="wbBrowseGoals"><summary>Browse goals and all tools</summary><div class="wb-rail-title"><h3>What do you want to do?</h3><button id="wbAllTools" type="button">All tools</button></div><p class="hint">Browse a goal. Every action starts as an editable draft.</p><nav id="wbIntentTree" aria-label="Investigation intent tree"></nav></details><div class="wb-history"><h3>Runs in this session</h3><div id="wbHistory"><p class="hint">Run a prepared action to keep evidence here.</p></div></div></aside>
+ <div class="wb-work"><section id="wbExplorerDetail"></section><div id="wbIntentArea" hidden><div id="wbIntentHeading"><h3>Choose a starting point</h3><p>Inspect a service, find data, investigate a symptom, or browse every enabled tool.</p></div><div id="wbCatalog" class="wb-catalog" hidden></div><div id="wbStages" class="wb-stages"></div><div id="wbCandidates" class="wb-candidates"></div></div>
+ <div class="wb-compose" hidden><div class="wb-tool-heading"><h3>Prepare an action</h3><span id="wbPrepared" class="hint">Nothing executes until you choose Run.</span></div><details id="wbToolPickerDetails"><summary id="wbToolPickerSummary">Choose or change action</summary><div class="wb-tool-picker"><label for="wbToolGroup">Tool group</label><select id="wbToolGroup"><option value="">Every group</option></select><label for="wbTool">Tool</label><input id="wbTool" placeholder="Browse or search enabled tools" autocomplete="off"></div><p id="wbDescription" class="wb-description"></p></details><div id="wbFields"></div><details id="wbExact"><summary>Exact arguments and full contract</summary><label for="wbArgs">Editable arguments (JSON)</label><textarea id="wbArgs" rows="8" spellcheck="false">{}</textarea><pre id="wbContract" class="code cx-wrap"></pre><div class="row"><button id="wbApplyJson" type="button">Apply JSON to form</button><button id="wbReset" type="button">Reset this draft</button><button id="wbCopyArgs" type="button">Copy arguments</button></div></details>
  <div class="wb-runbar"><button id="wbRun" type="button" class="primary" disabled>Run action</button><button id="wbCancel" type="button" hidden>Cancel run</button><button id="wbViewEvidence" type="button" hidden>View evidence</button><a id="wbExecution" hidden target="_blank" rel="noopener">Open execution</a><span id="wbElapsed" class="hint"></span></div><p id="wbStatus" class="wb-status hint" role="status" aria-live="polite">Choose an intent or browse the tool selector.</p></div>
- <div class="wb-assistance"><div class="wb-assistance-heading"><h3>Help with the next decision</h3><span id="wbModelCaption" class="hint"></span></div><label for="wbGoal">Question or investigation note</label><textarea id="wbGoal" rows="2" placeholder="Optional: describe expected and actual behavior"></textarea><div class="row"><button id="wbSuggest" type="button">Suggest next action</button><button id="wbInterpret" type="button" disabled>Interpret this result</button><button id="wbCancelHelp" type="button" hidden>Cancel model help</button><label class="wb-check"><input type="checkbox" id="wbAutoHelp"> Interpret completed runs automatically</label></div><p class="hint">Model help sends the selected question and bounded, redacted evidence to your configured model. Suggestions remain editable and never run automatically.</p><div id="wbHelp" aria-live="polite"></div></div>
- <section id="wbEvidence" class="wb-evidence" hidden><div class="wb-evidence-heading"><div><h3 id="wbResultTitle">Evidence</h3><p id="wbResultMeta" class="hint"></p></div><div class="row"><a id="wbOpenResult" target="_blank" rel="noopener" hidden>Open full result</a><button id="wbShare" type="button">Copy run link</button><button id="wbExport" type="button">Download recipe</button><button id="wbAgain" type="button">Prepare again</button></div></div><div id="wbOutcome" class="wb-outcome" role="status"></div><p id="wbPreviewStatus" class="hint" role="status" hidden>Loading native preview… Open full result if it cannot be displayed here.</p><iframe id="wbNative" title="Workbench native tool result" sandbox="allow-scripts allow-popups allow-downloads" hidden></iframe><details id="wbValues" open><summary>Use evidence in another action</summary><p class="hint">Choose a value to carry forward. Preparing an action preserves its exact identifiers.</p><div id="wbFacts" class="wb-facts"></div><div id="wbSelectedFacts" class="wb-selected-facts"></div><div id="wbFollowups" class="wb-followups"></div></details><details><summary>Invocation, source and complete preview</summary><pre id="wbResultRaw" class="code cx-wrap"></pre></details></section>
+ <details class="wb-assistance"><summary>Ask the model for help</summary><div class="wb-assistance-heading"><h3>Help with the next decision</h3><span id="wbModelCaption" class="hint"></span></div><label for="wbGoal">Question or investigation note</label><textarea id="wbGoal" rows="2" placeholder="Optional: describe expected and actual behavior"></textarea><div class="row"><button id="wbSuggest" type="button">Suggest next action</button><button id="wbInterpret" type="button" disabled>Interpret this result</button><button id="wbCancelHelp" type="button" hidden>Cancel model help</button><label class="wb-check"><input type="checkbox" id="wbAutoHelp"> Interpret completed runs automatically</label></div><p class="hint">Model help sends the selected question and bounded, redacted evidence to your configured model. Suggestions remain editable and never run automatically.</p><div id="wbHelp" aria-live="polite"></div></details>
+ <section id="wbEvidence" class="wb-evidence" hidden><div class="wb-evidence-heading"><div><h3 id="wbResultTitle">Evidence</h3><p id="wbResultMeta" class="hint"></p></div><div class="row"><a id="wbOpenResult" target="_blank" rel="noopener" hidden>Open full result</a><button id="wbShare" type="button">Copy run link</button><button id="wbExport" type="button">Download recipe</button><button id="wbAgain" type="button">Prepare again</button></div></div><div id="wbOutcome" class="wb-outcome" role="status"></div><div id="wbObjectResult"></div><p id="wbPreviewStatus" class="hint" role="status" hidden>Loading native preview… Open full result if it cannot be displayed here.</p><iframe id="wbNative" title="Workbench native tool result" sandbox="allow-scripts allow-popups allow-downloads" hidden></iframe><details id="wbValues"><summary>Use evidence in another action</summary><p class="hint">Choose a value to carry forward. Preparing an action preserves its exact identifiers.</p><div id="wbFacts" class="wb-facts"></div><div id="wbSelectedFacts" class="wb-selected-facts"></div><div id="wbFollowups" class="wb-followups"></div></details><details><summary>Invocation, source and complete preview</summary><pre id="wbResultRaw" class="code cx-wrap"></pre></details></section>
  </div></div>`;
   $("wbHelp").closest(".wb-assistance").before($("wbEvidence"));
   const mapLink=document.createElement('a');mapLink.href='/admin#capabilities';mapLink.textContent='Explore tool map';mapLink.className='wb-map-link';$('wbGuide').before(mapLink);
@@ -192,6 +192,7 @@ function wbEnsure() {
           summary:
             $("wbGoal").value || wb.intent?.goal || "Interactive investigation",
           tasks: [runtimeStory || "default"],
+          ...(window.wbx?.links()||{}),
         })
       ).result;
       const context = r.contexts?.[0] || r;
@@ -220,6 +221,7 @@ function wbEnsure() {
               : { job: wb.selected.id }),
             env: wb.selected.result?.env || env(),
             story: runtimeStory || "default",
+            ...(window.wbx?.query()||{}),
           }),
         "owned run link",
       );
@@ -249,6 +251,7 @@ function wbEnsure() {
     if (wb.selected?.result)
       wbPrepare(wb.selected.result.tool, wb.selected.result.arguments);
   };
+  window.wbx?.mount();
   $("wbNative").addEventListener("load", () => {
     $("wbPreviewStatus").hidden = true;
   });
@@ -303,6 +306,7 @@ async function loadWorkbench(force = false) {
   if (wb.data && wb.scope === wbScope() && !force) {
     try {
       await wbOpenLinked();
+      await window.wbx?.load();
     } catch (e) {
       wbMessage(e.message, true);
     }
@@ -342,9 +346,10 @@ async function loadWorkbench(force = false) {
       wbCatalog();
       await wbContexts();
       await wbOpenLinked();
+      await window.wbx?.load();
       if (!wb.tool) {
         const first = data.groups[0]?.intents[0];
-        if (first) wbIntent(first.id);
+        if (first && !window.wbx) wbIntent(first.id);
       }
       if(!wb.loadedLink)wbMessage("Choose indexed values, then Run. Model help is optional.");
     } catch (e) {
@@ -459,6 +464,7 @@ function wbTree() {
   }
 }
 function wbIntent(id) {
+  if($("wbIntentArea"))$("wbIntentArea").hidden=false;
   if (wbActive()) {
     wbMessage(
       "Wait for this run or cancel it before preparing another action.",
@@ -609,9 +615,11 @@ function wbPrepare(name, args) {
   if (wb.tool) wb.drafts.set(wb.tool.name, structuredClone(wb.args));
   while (wb.drafts.size > 30) wb.drafts.delete(wb.drafts.keys().next().value);
   wb.tool = t;
+  if($("wbFields")?.closest?.(".wb-compose"))$("wbFields").closest(".wb-compose").hidden=false;
   wb.args = structuredClone(args || wb.drafts.get(name) || wbDefaults(t));
   $("wbTool").value = name;
   $("wbDescription").textContent = t.description;
+  if($("wbToolPickerSummary"))$("wbToolPickerSummary").textContent=name+" · change action";
   $("wbContract").textContent = JSON.stringify(t.inputSchema, null, 2);
   $("wbPrepared").textContent = "Prepared only · " + (t.group || "tool");
   $("wbRun").textContent = "Run " + name;
@@ -634,10 +642,10 @@ function wbForm() {
     },
     {
       tool: wb.tool.name,
-      secondary:
+      secondary: window.wbx?.secondary(wb.tool) || (
         wb.tool.name === "passport"
           ? ["repo", "ref", "refresh", "libraries", "graph", "job"]
-          : [],
+          : []),
       epoch: wbScope,
       onChoice: (item, path, args) => {
         wb.facts = [
@@ -852,6 +860,7 @@ async function wbPoll(id) {
       job: run.id,
       env: run.result?.env || env(),
       story: runtimeStory || "default",
+      ...(window.wbx?.query()||{}),
     });
     if (tab === "workbench")
       history.replaceState(null, "", "#workbench?" + params);
@@ -1008,13 +1017,13 @@ function wbShowRun(run) {
               ? "Tool completed; saving evidence failed: " +
                 r.saveError +
                 ". Do not rerun solely to save it."
-              : "Tool invocation completed. Inspect the application verdict and evidence gaps before drawing a conclusion.";
+              : r.result?.state === "running" ? "Background tool job is still running. Refresh its status or cancel that job below." : r.result?.outcome ? "Test outcome: "+r.result.outcome+". Inspect counts and evidence before drawing a conclusion." : "Tool invocation completed. Inspect the application verdict and evidence gaps before drawing a conclusion.";
   $("wbResultRaw").textContent = JSON.stringify(r || run, null, 2);
   $("wbAgain").hidden = !r?.tool;
   const view = rtNativeView(r?.result?.view || r?.recordView);
   $("wbNative").hidden = !view;
   $("wbPreviewStatus").hidden = !view;
-  if (view) $("wbNative").src = view;
+  if (view) {$("wbNative").style.height="90px";$("wbNative").src = view;}
   else $("wbNative").removeAttribute("src");
   $("wbOpenResult").hidden = !view;
   if (view) $("wbOpenResult").href = view.replace(/[?&]embed=1/, "");
@@ -1056,6 +1065,7 @@ function wbShowRun(run) {
       : "Evidence is ready. Choose a value or prepare the next action.",
     r?.ok === false || run.state === "failed",
   );
+  window.wbx?.result(run);
 }
 function wbSelectedFacts() {
   $("wbSelectedFacts").replaceChildren();
@@ -1230,6 +1240,7 @@ async function wbHelp(mode) {
   }
 }
 function clearWorkbench() {
+  window.wbx?.clear();
   wb.request++;
   wb.poll++;
   clearTimeout(wb.timer);
@@ -1308,7 +1319,7 @@ document.addEventListener("DOMContentLoaded", () => {
       e.data?.type === "iframe:height" &&
       Number.isFinite(e.data.height)
     )
-      frame.style.height = Math.min(1000, Math.max(140, e.data.height)) + "px";
+      frame.style.height = Math.min(1000, Math.max(72, e.data.height)) + "px";
   });
   if (tab === "workbench") loadWorkbench();
 });

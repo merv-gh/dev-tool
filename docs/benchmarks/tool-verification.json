@@ -1,6 +1,6 @@
 {
   "protocol": "dt.release-inventory/v1",
-  "sourceDigest": "76561f2ef694b464233fe8badb88a08e5645816c32e9cfd66a9506a4e63c0991",
+  "sourceDigest": "ac72554a50d2d0e2cb12ddcc1d17cdb3ae3c64012d2bd6336796a3119cf84572",
   "tools": [
     {
       "name": "find",
@@ -25,6 +25,7 @@
         "test/tool-contracts.test.js",
         "test/units.test.js",
         "test/webui-context.test.js",
+        "test/workbench-explorer-ui.test.js",
         "test/workbench.test.js",
         "test/workflows.test.js"
       ],
@@ -171,6 +172,7 @@
         "test/tool-discovery.test.js",
         "test/units.test.js",
         "test/webui-context.test.js",
+        "test/workbench-explorer-ui.test.js",
         "test/workbench.test.js"
       ],
       "integrationReferences": []
@@ -260,7 +262,10 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
-        "test/showcase.test.js"
+        "test/showcase.test.js",
+        "test/workbench-discovery.test.js",
+        "test/workbench-explorer-ui.test.js",
+        "test/workbench-model-eval.test.js"
       ],
       "integrationReferences": []
     },
@@ -346,7 +351,9 @@
       "origin": "built-in",
       "inputSchema": true,
       "resultContract": false,
-      "referenceTests": [],
+      "referenceTests": [
+        "test/workbench-explorer-ui.test.js"
+      ],
       "integrationReferences": [
         "test/diagrams.live.test.js",
         "test/semantic-branches.live.test.js",
@@ -615,7 +622,8 @@
         "test/automation.test.js",
         "test/collections.test.js",
         "test/scripts.test.js",
-        "test/tool-contracts.test.js"
+        "test/tool-contracts.test.js",
+        "test/workbench-explorer.test.js"
       ],
       "integrationReferences": []
     },
@@ -629,7 +637,8 @@
         "test/automation.test.js",
         "test/call-outcome.test.js",
         "test/collections.test.js",
-        "test/scripts.test.js"
+        "test/scripts.test.js",
+        "test/workbench-explorer.test.js"
       ],
       "integrationReferences": []
     },
@@ -658,6 +667,7 @@
         "test/tool-discovery.test.js",
         "test/views.test.js",
         "test/webui-context.test.js",
+        "test/workbench-explorer-ui.test.js",
         "test/workbench-links.test.js"
       ],
       "integrationReferences": [
@@ -811,7 +821,8 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
-        "test/collections.test.js"
+        "test/collections.test.js",
+        "test/workbench-explorer-ui.test.js"
       ],
       "integrationReferences": []
     },
@@ -1026,7 +1037,10 @@
       "origin": "built-in",
       "inputSchema": true,
       "resultContract": false,
-      "referenceTests": [],
+      "referenceTests": [
+        "test/workbench-discovery.test.js",
+        "test/workbench-model-eval.test.js"
+      ],
       "integrationReferences": []
     },
     {
@@ -1055,6 +1069,7 @@
         "test/javacheck.live.test.js",
         "test/task-model-evaluation.test.js",
         "test/testdata.live.test.js",
+        "test/workbench-explorer-ui.test.js",
         "test/workspace.live.test.js"
       ],
       "integrationReferences": [
@@ -1089,7 +1104,9 @@
       "origin": "built-in",
       "inputSchema": true,
       "resultContract": false,
-      "referenceTests": [],
+      "referenceTests": [
+        "test/workbench-model-eval.test.js"
+      ],
       "integrationReferences": []
     },
     {
@@ -1122,7 +1139,8 @@
         "test/capability-map.test.js",
         "test/ci-iteration.test.js",
         "test/experiments.test.js",
-        "test/push.test.js"
+        "test/push.test.js",
+        "test/workbench-model-eval.test.js"
       ],
       "integrationReferences": []
     },
@@ -1202,6 +1220,8 @@
         "test/task-model-evaluation.test.js",
         "test/testdata.live.test.js",
         "test/tool-contracts.test.js",
+        "test/workbench-explorer-ui.test.js",
+        "test/workbench-explorer.test.js",
         "test/workflows.test.js",
         "test/workspace.live.test.js"
       ],
@@ -1235,6 +1255,9 @@
       "resultContract": false,
       "referenceTests": [
         "test/server.test.js",
+        "test/workbench-discovery.test.js",
+        "test/workbench-explorer.test.js",
+        "test/workbench-model-eval.test.js",
         "test/workbench.test.js"
       ],
       "integrationReferences": []
@@ -1262,7 +1285,10 @@
       "resultContract": false,
       "referenceTests": [
         "test/context.test.js",
-        "test/server.test.js"
+        "test/server.test.js",
+        "test/workbench-discovery.test.js",
+        "test/workbench-explorer-ui.test.js",
+        "test/workbench-explorer.test.js"
       ],
       "integrationReferences": []
     },
@@ -1305,7 +1331,9 @@
       "origin": "built-in",
       "inputSchema": true,
       "resultContract": false,
-      "referenceTests": [],
+      "referenceTests": [
+        "test/workbench-explorer-ui.test.js"
+      ],
       "integrationReferences": []
     },
     {
@@ -1333,6 +1361,8 @@
         "test/context.test.js",
         "test/server.test.js",
         "test/views.test.js",
+        "test/workbench-explorer-ui.test.js",
+        "test/workbench-explorer.test.js",
         "test/workbench.test.js"
       ],
       "integrationReferences": []
@@ -1356,6 +1386,8 @@
         "test/context.test.js",
         "test/handbook.test.js",
         "test/server.test.js",
+        "test/workbench-discovery.test.js",
+        "test/workbench-model-eval.test.js",
         "test/workbench.test.js"
       ],
       "integrationReferences": []
@@ -1483,6 +1515,60 @@
       "resultContract": false,
       "referenceTests": [
         "test/ci-iteration.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "workbench_open",
+      "group": "views",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/context.test.js",
+        "test/workbench-discovery.test.js",
+        "test/workbench-explorer.test.js",
+        "test/workbench-model-eval.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "workbench_save",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/workbench-discovery.test.js",
+        "test/workbench-explorer-ui.test.js",
+        "test/workbench-explorer.test.js",
+        "test/workbench-model-eval.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "workspace_branches",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/workbench-explorer-ui.test.js",
+        "test/workbench-explorer.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "workspace_branch",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/workbench-discovery.test.js",
+        "test/workbench-explorer-ui.test.js",
+        "test/workbench-explorer.test.js",
+        "test/workbench-model-eval.test.js"
       ],
       "integrationReferences": []
     },
@@ -2364,6 +2450,7 @@
         "test/tool-contracts.test.js",
         "test/trace-discovery.test.js",
         "test/webui-context.test.js",
+        "test/workbench-discovery.test.js",
         "test/workflows.test.js"
       ],
       "integrationReferences": []
@@ -2400,6 +2487,7 @@
         "test/tool-contracts.test.js",
         "test/trace-discovery-eval.test.js",
         "test/webui-context.test.js",
+        "test/workbench-model-eval.test.js",
         "test/workflows.test.js"
       ],
       "integrationReferences": []
@@ -2954,7 +3042,8 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
-        "test/api-client.test.js"
+        "test/api-client.test.js",
+        "test/workbench-explorer.test.js"
       ],
       "integrationReferences": []
     },
@@ -2966,7 +3055,8 @@
       "resultContract": false,
       "referenceTests": [
         "test/api-client.test.js",
-        "test/call-outcome.test.js"
+        "test/call-outcome.test.js",
+        "test/workbench-explorer.test.js"
       ],
       "integrationReferences": []
     },
@@ -3056,6 +3146,7 @@
     "test-coverage",
     "tests",
     "text-diff",
+    "workbench",
     "workspace-coverage",
     "xml"
   ],

@@ -2,6 +2,19 @@
 
 Captured from the running demo with `demo/gallery.js`, `demo/screenshots.js` and `demo/chat-screenshots.js`. Synthetic samples demonstrate rendering; real Joern captures use retained end-to-end test results. Open WebUI uses a scripted model with real tool calls. This gallery does not imply every integration was executed. [Capture instructions](../../demo/README.md).
 
+## Interactive object workbench
+
+Captured from `demo/workbench-explorer/run.js` through the real browser UI.
+The Git branches and Node regression execute locally; Consul and HTTP data are
+explicit disposable fixtures. The mobile image is a 390px document-frame
+preview, not a physical mobile browser. See the [walkthrough](../workbench-explorer.md).
+
+| | |
+| --- | --- |
+| ![Service navigator and retained Consul status](workbench-explorer-desktop.png) **Service work** · nested related evidence, workspace and status | ![Ticket context and source editor](workbench-explorer-editor.png) **Task work** · ticket metadata, linked workspaces and editable nested notes |
+| ![390px Workbench preview](workbench-explorer-mobile.png) **Narrow layout** · collapsible navigator and direct actions | ![Native chat navigator](sample-workbench.png) **Chat result** · retained names and authenticated continuation |
+| ![390px native-view preview](workbench-explorer-inline-mobile.png) **Native narrow layout** · retained service selection | |
+
 ## Shared project knowledge
 
 Captured with `dev/check-project-context-browser.js` against the disposable

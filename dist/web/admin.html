@@ -125,7 +125,7 @@
   iframe.vw-prev { width: 100%; height: 520px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
   details summary { cursor: pointer; color: var(--muted); font-size: 12px; margin: 8px 0; }
 </style>
-<link rel="stylesheet" href="/static/admin-ux.css"><link rel="stylesheet" href="/static/handbook.css"><link rel="stylesheet" href="/static/port-editor.css"><link rel="stylesheet" href="/static/workbench.css">
+<link rel="stylesheet" href="/static/admin-ux.css"><link rel="stylesheet" href="/static/handbook.css"><link rel="stylesheet" href="/static/port-editor.css"><link rel="stylesheet" href="/static/workbench.css"><link rel="stylesheet" href="/static/workbench-explorer.css">
 </head>
 <body>
 <div class="wrap">
@@ -413,6 +413,7 @@
     <div class="card scroll"><table><thead><tr><th>Source</th><th>sha256</th><th>Downloaded</th><th>Pinned</th></tr></thead><tbody id="plugins"></tbody></table></div>
   </section>
 </div>
+<script>if(location.pathname==='/workbench'){document.documentElement.classList.add('wb-standalone');if(!location.hash)history.replaceState(null,'','#workbench?'+new URLSearchParams(location.search));}</script>
 <script src="/static/state-machine.js"></script><script src="/static/ui.js"></script>
 <script src="/static/admin-scripts.js"></script>
 <script src="/static/combobox.js"></script><script src="/static/tool-schema.js"></script>
@@ -420,7 +421,7 @@
 <script src="/static/admin-context.js"></script><script src="/static/project-context-ui.js"></script><script src="/static/admin-project-context.js"></script>
 <script src="/static/admin-map.js"></script>
 <script src="/static/admin-runtime.js"></script>
-<script src="/static/admin-workbench.js"></script>
+<script src="/static/admin-workbench.js"></script><script src="/static/workbench-explorer.js"></script>
 <link rel="stylesheet" href="/static/capability-map.css"><script src="/static/capability-layout.js"></script><script src="/static/capability-map.js"></script><script src="/static/admin-capabilities.js"></script>
 <script src="/static/trace-format.js"></script><script src="/static/diagnostics.js"></script><script src="/static/admin-observability.js"></script>
 <script src="/static/admin-semantic.js"></script><script src="/static/admin-architecture.js"></script>

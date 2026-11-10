@@ -1,0 +1,137 @@
+{
+  "schema": "dt.workbench-verification/v1",
+  "sourceDigest": "ac72554a50d2d0e2cb12ddcc1d17cdb3ae3c64012d2bd6336796a3119cf84572",
+  "status": "passed",
+  "tests": {
+    "files": [
+      "test/workbench-explorer.test.js",
+      "test/workbench-explorer-ui.test.js",
+      "test/workbench-explorer-view.test.js",
+      "test/views.test.js"
+    ],
+    "targeted": {
+      "tests": 23,
+      "passed": 23,
+      "failed": 0
+    },
+    "inventory": {
+      "passed": true,
+      "reason": "The new built-in workbench view is included in the exact renderer inventory"
+    },
+    "fullSuite": {
+      "tests": 1025,
+      "failed": 0,
+      "passed": 969,
+      "cancelled": 0,
+      "skipped": 56,
+      "todo": 0,
+      "topLevel": 1025,
+      "suites": 0,
+      "command": "npm run test:coverage",
+      "sourceDigest": "ac72554a50d2d0e2cb12ddcc1d17cdb3ae3c64012d2bd6336796a3119cf84572"
+    },
+    "coverage": {
+      "gate": "passed against retained comparable baseline",
+      "summary": {
+        "transitions": {
+          "hit": 345,
+          "total": 638,
+          "percent": 54.1
+        },
+        "lines": {
+          "hit": 27681,
+          "total": 29755,
+          "percent": 93
+        },
+        "functions": {
+          "hit": 6183,
+          "total": 7057,
+          "percent": 87.6
+        },
+        "branches": {
+          "hit": 21749,
+          "total": 26526,
+          "percent": 82
+        },
+        "testedFiles": 151,
+        "sourceFiles": {
+          "measured": 196,
+          "unmeasured": 28,
+          "total": 224
+        }
+      }
+    },
+    "jvmIntegration": {
+      "maven": "3.9.11",
+      "gradle": "9.2.0",
+      "jdk": "24.0.2",
+      "scope": "Specialized Lombok and changed-code coverage live regressions enabled"
+    },
+    "standaloneBundle": {
+      "tests": 5,
+      "passed": 5,
+      "failed": 0
+    }
+  },
+  "browser": {
+    "driver": "CUA against running application",
+    "livePage": [
+      "service prefix tree",
+      "indexed test picker",
+      "main regression passed",
+      "feature/fee regression failed: expected25 actual30",
+      "separate branch checkout and context attachment",
+      "ticket/context/workspace rediscovery",
+      "revision-checked note save",
+      "script inspect/run/save/rediscovery",
+      "API replay with configured bearer profile",
+      "Consul status with instance table"
+    ],
+    "nativeView": [
+      "actual OpenAPI result Location",
+      "CSP-sandboxed retained navigator",
+      "lens switching and ticket selection",
+      "selection-preserving continuation URL",
+      "Enter and Space retain row focus",
+      "Tab reaches still-collapsed disclosure"
+    ],
+    "screenshots": [
+      "docs/screenshots/workbench-explorer-desktop.png",
+      "docs/screenshots/workbench-explorer-editor.png",
+      "docs/screenshots/workbench-explorer-mobile.png",
+      "docs/screenshots/sample-workbench.png",
+      "docs/screenshots/workbench-explorer-inline-mobile.png"
+    ],
+    "sourceDigest": "10cd8e7a3eec22dc94b69f33270f94447f943bb0f5618e96b41ed32b2d05e895"
+  },
+  "review": {
+    "livePage": "ship: full supplied surface review",
+    "nativeView": "full review found P2 focus/disclosure issue; follow-up scored resolved, disposition ship at listed-fix scope",
+    "documentation": "incumbent system retained; missing system files left absent"
+  },
+  "limits": [
+    "Consul and HTTP observations are disposable fixtures, not production integrations.",
+    "Git branches and Node tests execute for real; no model assistance invocation or remote JVM deployment is claimed.",
+    "390px captures are document-frame previews, not physical mobile browsers.",
+    "IAB did not expose popup creation; continuation payload, copy control and built-in-only CSP policy verified.",
+    "Design context/detector launchers refused unverified download; no detector findings produced.",
+    "Chat navigator is a retained read-only snapshot; live editing/execution requires normal browser authentication and tool permissions.",
+    "Browser captures precede the subsequent discovery/receipt metadata improvements; browser source digest is recorded separately."
+  ],
+  "checks": {
+    "docs": true,
+    "portableGuides": true,
+    "diffWhitespace": true,
+    "bundleFreshness": true
+  },
+  "modelDiscovery": {
+    "report": "docs/benchmarks/workbench-discoverability.json",
+    "model": "qwen3.5:4b",
+    "profile": "workbench",
+    "passed": 6,
+    "cases": 6,
+    "confirmationRuns": 2,
+    "leanPassed": 2,
+    "leanCases": 6
+  }
+}

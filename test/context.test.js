@@ -58,9 +58,11 @@ test('context store rejects traversal, symlink escapes, index overwrite and corr
 });
 
 test('registry capture uses tool validation, persists success/failure and redacts secrets', async () => {
-  const c = await tools.call('context_open', { title: 'Tool capture', tasks: ['capture'] });
+  const c = await tools.call('context_open', { title: 'Tool capture', tasks: ['capture'], tickets:['CAPTURE-1'] });
   const r = await tools.call('context_run', { id: c.id, tool: 'find', arguments: { q: 'orders', token: 'secret-1234' } });
   assert.equal(r.ok, true); assert.ok(r.saved); assert.ok(!r.preview.includes('secret-1234'));
+  assert.deepEqual(r.next.arguments,{task:'CAPTURE-1'});assert.equal(r.next.tool,'workbench_open');
+  assert.equal(new URL(r.workbenchUrl).pathname,'/workbench');assert.equal(new URL(r.workbenchUrl).searchParams.get('task'),'CAPTURE-1');
   const snapshot = JSON.parse(C.read({ id: c.id, path: r.saved }).content);
   assert.equal(snapshot.arguments.token, '[redacted]'); assert.equal(snapshot.tool, 'find'); assert.ok(snapshot.completedAt);
   const bad = await tools.call('context_run', { id: c.id, tool: 'pg_query', arguments: {} });
@@ -103,13 +105,16 @@ test('capture respects disabled tools and distinguishes an oversized save from t
   const c = C.open({ title: 'Capture limits' });
   const cfg = path.join(tmp, 'config.json'), plugin = path.join(tmp, 'capture-fixture.js');
   fs.writeFileSync(plugin, `let calls=0; module.exports=[{name:'fixture_large_output',description:'Capture test',input:{large:{type:'boolean'}},run:a=>a.large?{calls:++calls,payload:'x'.repeat(2*1024*1024+1)}:{calls}}];`);
-  fs.writeFileSync(cfg, JSON.stringify({ envs: { test: {} }, tools: { plugins: ['capture-fixture.js'], disable: ['find'] } })); require('../lib/config').reload(); await tools.reload();
+  fs.writeFileSync(cfg, JSON.stringify({ envs: { test: {} }, tools: { plugins: ['capture-fixture.js'], disable: ['find','workbench_open'] } })); require('../lib/config').reload(); await tools.reload();
   try {
     const disabled = await C.run({ id: c.id, tool: 'find', arguments: { q: 'orders' } });
     assert.equal(disabled.ok, false); assert.match(disabled.error.message, /Unknown tool/); assert.ok(disabled.saved);
+    assert.equal(disabled.next,undefined,'a follow-up cannot advertise a disabled tool');
+    assert.equal(disabled.workbenchUrl,undefined);
     assert.ok(!(await C.hint({ id: c.id, goal: 'find' })).candidates.some(t => t.name === 'find'));
     const large = await C.run({ id: c.id, tool: 'fixture_large_output', arguments: { large: true } });
     assert.equal(large.ok, true); assert.equal(large.saved, null); assert.match(large.saveError, /exceeds/); assert.equal(large.truncated, true); assert.ok(large.preview.length <= 24000);
+    assert.equal(large.next,undefined,'failed evidence storage must not advertise a saved investigation');
     assert.equal((await tools.call('fixture_large_output', {})).calls, 1, 'capture failures never retry execution');
   } finally { fs.unlinkSync(cfg); fs.unlinkSync(plugin); require('../lib/config').reload(); await tools.reload(); }
 });

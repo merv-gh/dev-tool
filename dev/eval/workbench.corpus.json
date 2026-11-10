@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "cases": [
+    {"id":"ticket","query":"I was handed ticket ORDERS-142. Give me a clickable place where I can browse its related notes, files and working checkouts together. Do not run checks or change anything.","expect":"ticket-view"},
+    {"id":"service","query":"For orders-api in dev, open a mouse-driven place where I can explore related notes, saved queries/scripts, API calls and checkouts, choose a branch and run tests later. Do not execute any checks now.","expect":"service-view"},
+    {"id":"context","query":"Find the existing note folder for ORDERS-142 and open an interactive file navigator for that exact folder so I can read and edit nearby files. Do not create another folder or edit anything now.","expect":"context-view"},
+    {"id":"save","query":"Keep an editable action named Deployment check in the existing ORDERS-142 investigation, linked to orders-api. It should inspect that service's deployment instances in dev when I run it later. Save the prepared arguments; do not execute the check now.","expect":"saved-action"},
+    {"id":"branch","query":"The orders-api checkout linked to ORDERS-142 has uncommitted edits. Open feature/fee in a separate working checkout of the same repository and retain the existing edits. Do not run tests, push, reset, clean or delete anything.","expect":"separate-branch"},
+    {"id":"retain","query":"Inspect the deployment status of orders-api in dev, retain the actual tool result in the existing ORDERS-142 note folder, then give me a clickable ticket view to continue the investigation. Do not change code or deployments.","expect":"retained-status"}
+  ]
+}

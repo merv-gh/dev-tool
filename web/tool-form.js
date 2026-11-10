@@ -82,7 +82,7 @@
       }
       s = s && typeof s === "object" ? s : {};
       const key = path.join("."),
-        name = path.at(-1),
+        name = typeof path.at(-1)==="number" || /^\d+$/.test(path.at(-1)) ? String(path.at(-2))+" item "+(Number(path.at(-1))+1) : path.at(-1),
         current = get(path),
         type =
           []
