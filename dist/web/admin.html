@@ -531,6 +531,7 @@ function renderConfig() {
   $('integrations').innerHTML = [
     ['Bitbucket', S.integrations.bitbucket || 'not configured (BITBUCKET_URL + BITBUCKET_HTTP_TOKEN in .env.personal)'],
     ['Confluence', S.integrations.confluence || 'not configured'],
+    ['Jenkins', S.integrations.jenkins || 'not configured (JENKINS_URL, JENKINS_USER, JENKINS_API_TOKEN)'],
     ['Code graph', S.integrations.graph || 'not configured (GRAPH_URL)'],
     ['Internal library groups', S.integrations.internalGroups.join(', ') || '(own group prefix of each service)'],
     ['Config folder', `${S.config.dir} (${S.config.format === 'config.json' ? 'config.json + .env' : 'older layout: run "dt migrate-config"'})`],

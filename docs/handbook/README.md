@@ -27,6 +27,9 @@ Examples use illustrative `checkout`, `DEMO/checkout`, `orders`, `HANDBOOK-101` 
 - [Every visualization: what to read and do](#visualizations)
 - [Complete live tool reference](#tool-reference)
 - [Glossary and common mistakes](#glossary)
+- [Trace work and inspect test coverage](#observability)
+- [Build shared project understanding](#project-knowledge)
+- [Build and review a draft change](#ci-review)
 
 [Complete built-in tool reference](tools.md) · [Source and verification](../benchmarks/handbook-verification.json) · [Task-based novice review](novice-task-review.md)
 
@@ -267,6 +270,16 @@ Use context_read to obtain the current revision before context_edit or a guarded
 3. Inspect both destination and sourceRemoved; resolve partial outcomes without deleting the only good copy.
 4. Prefer archival to context_delete_file when the evidence may be useful later.
 
+### Continue long investigations
+
+Compaction is manual by default: use Open WebUI’s Compact action after the current reply finishes. Chat and tool rounds do not automatically summarize. Qwen3.8-27B defaults to a 262144-token window with a 32768-token reserve; other models default to 32768. Set LLM_CONTEXT_WINDOW to the actual serving limit. LLM_COMPACTION_MODE=auto opts into rolling summaries at 75% of the window. Smaller models benefit from the lean-find connection profile.
+
+Open WebUI shows compaction progress and a readable checkpoint, preserving chat history and inline views. Its context status and manual Compact action help recover an old long chat. An invalid request alone does not prove overflow: inspect the provider error for context length versus unsupported parameters or malformed arguments.
+
+A modelContext.compacted tool response is a bounded preview. result_read retrieves exact retained JSON with a pointer such as /rows/0 and continuation cursors; use code to aggregate pages. Do not rerun an action to retrieve output. Important evidence belongs in task memory because result references expire under normal retention.
+
+Keep progress.md updated before large investigations: goal, user constraints, branch/SHA/environment, current findings, tests and actual verdicts, running resources, actions already performed and next steps. After compaction, read that checkpoint and only the relevant evidence. Saved task context is private to the authorized story; publishing shared understanding remains an explicit admin action.
+
 **Related chapters:** [Dev-tool’s own operating context](#self-context) · [Scripts, collections and long calculations](#automation) · [Monitor work and effectiveness](#operations) · [Workspaces, regressions, patches and push](#verify-changes)
 
 <a id="indices"></a>
@@ -286,6 +299,24 @@ Cached metadata answers what exists and what code appears to touch. Live queries
 The index atlas below explains each retained layer, where it comes from, its identity and its refresh tool. Paths are relative to DT_HOME/configured cache roots; they are explanatory, not instructions to copy another user’s absolute directory. File timestamps in Self-context show cache presence/change, not a distributed consistency guarantee.
 
 A source refresh and a derived-index rebuild are different operations. catalog_sync what=index rebuilds catalog/usage from existing caches; it cannot fetch a missing database table definition or a new Confluence page. Refresh the relevant source first, then rebuild derived views.
+
+#### Shared project understanding
+
+Reuse versioned project understanding across users and tasks; private task progress remains separate.
+
+- Source: Admin-published service contracts, assumptions and retained evidence files
+- Relative location: `project-contexts/{project}/head.json`
+- Identity: Immutable publication and file hashes, exact service source SHAs, author and reason.
+- Query tools: `project_context_find`, `project_context_get`, `knowledge_search`
+- Limit: Declared knowledge is untrusted. Static/Joern paths are not runtime proof; publication limits preserve old history.
+
+Prepared action: `project_context_find`
+
+```json
+{
+  "query": "{{service}}"
+}
+```
 
 #### Environment catalog
 
@@ -847,6 +878,31 @@ Expected: Source locations or a missing-analysis/build suggestion.
 
 Entry/exit selection with a synthetic retained projection; this screenshot is not evidence of a fresh Joern parse.
 
+### Map entry decisions, data changes and exits
+
+Choose Map entries to exits in Joern & service ports, select an exact retained entry symbol and Run investigation. No target symbol is needed. Without an explicit entry, only uniquely bound ingress passport ports become entries; a method with no callers is not assumed to be public.
+
+Call overview shows positional argument bindings across retained bodies. Select a method for its control states, assignment/compound expressions, field writes, calls, returns and explicit failure exits. Trace inputs highlights recorded dependencies. Branch polarity stays unknown where evidence is insufficient; raw throw continuations are unresolved exception evidence and are excluded from normal control paths.
+
+Select a suspect state, inspect its source, copy fix context and export the full JSON/SVG/Mermaid before editing. Read source in Workbench prepares an exact code_read draft without executing it. Verify values at all affected effects and returns with a sensitive failing entry-to-exit regression, then retain a separate fixed snapshot. Model previews may omit detail explicitly; the full view retains the original bounded evidence.
+
+**Map the selected retained ingress points** · `semantic_query`
+
+```json
+{
+  "operation": "flowmap",
+  "analysis": "{{analysis}}",
+  "maxMethods": 20,
+  "maxStates": 180
+}
+```
+
+Expected: Select a returned analysis ID first. If no bound ingress exists, select a precise whole-method from selector in Joern & ports. Required returned variables: analysis.
+
+![Real retained Joern fixture: the ledger argument is gross while the transformed value is payable; static evidence still requires executable regression assertions.](../screenshots/entry-exit-flow-map-1440.png)
+
+Real retained Joern fixture: the ledger argument is gross while the transformed value is payable; static evidence still requires executable regression assertions.
+
 **Related chapters:** [Indices, freshness and exact versions](#indices) · [Explore a service and its surroundings](#services) · [Case: the bug hides in a shared library version](#case-library) · [Workspaces, regressions, patches and push](#verify-changes)
 
 <a id="live-evidence"></a>
@@ -1367,6 +1423,48 @@ Keep the test selector, source identity, fixture hash and execution ID in contex
 
 Native test summary sample: first failure details, expected/actual and focused stack evidence.
 
+### Cover executable changes
+
+workspace_coverage_plan identifies added/modified production lines against the workspace base or a selected base. No earlier project coverage is required. test_run coverage=true collects JaCoCo evidence for selected Maven/Gradle tests; workspace_coverage reopens missed lines, partial branches and source pins.
+
+In the native coverage view, choose a file, toggle uncovered/all changed lines, prepare an editable source read, copy a regression briefing or download the complete JSON. Unknown mappings remain unknown. Editing production code, tests or build inputs makes the old result stale. Covered means executed; add assertions of observable entry-to-exit effects.
+
+Lombok and annotation-processed modules use the project compiler for checks and fast iterations, so builders and generated sources are refreshed together. Generated-symbol diagnostics never cause speculative import auto-fixes. Coverage is opt-in; standard JVM production roots are supported, Node/custom roots remain a documented gap.
+
+**Plan changed production lines** · `workspace_coverage_plan`
+
+```json
+{
+  "workspace": "{{workspace}}"
+}
+```
+
+Expected: Exact base SHA and candidate changed-line ranges; no test execution.
+
+**Measure the selected regression** · `test_run`
+
+```json
+{
+  "workspace": "{{workspace}}",
+  "tests": [
+    "QuoteTest"
+  ],
+  "coverage": true
+}
+```
+
+Expected: Actual test outcome and changed-line/branch coverage, or an explicit unavailable reason.
+
+**Inspect retained coverage gaps** · `workspace_coverage`
+
+```json
+{
+  "workspace": "{{workspace}}"
+}
+```
+
+Expected: Source freshness, missed changed lines/branches and an interactive file view.
+
 ### Patch versus push
 
 workspace_patch exports the current diff and reports retained test proof without committing or publishing. Inspect the folder tree and selected file diff; remove unrelated files and review generated/compile-fix edits. A patch is useful even when pushing is not authorized.
@@ -1746,6 +1844,66 @@ A visual index of native results and standalone workbenches.
 
 Successful transient chat results normally start collapsed. Open a result to inspect the relevant table, file, case or source path; failed tests/calls expose actionable detail. Editing and tool execution happen in authenticated workspaces, not saved snapshots. Use Open full view for more room, and More/Export for secondary formats.
 
+#### workspace-coverage
+
+Which changed lines and branches need a regression? Select a production file, inspect missed/unknown lines and source freshness, prepare an editable source read or coverage run, copy a regression briefing or export JSON. Covered lines prove execution, not assertions.
+
+<details><summary>View labeled presentation example</summary>
+
+![Built-in workspace-coverage presentation sample](../screenshots/sample-workspace-coverage.png)
+
+</details>
+
+#### ci
+
+What happened to this exact build or PR commit? Inspect revision proof, checks, review comments, JUnit failures and gaps; resume the pinned wait or prepare an editable follow-up in Workbench.
+
+<details><summary>View labeled presentation example</summary>
+
+![Built-in ci presentation sample](../screenshots/sample-ci.png)
+
+</details>
+
+#### capabilities
+
+What can I do with this object? Select a task, service, component or database; follow a question to a tool, inspect inputs and prepare an editable Workbench draft. The graph covers the current authorized registry; saved snapshots can age.
+
+<details><summary>View labeled presentation example</summary>
+
+![Built-in capabilities presentation sample](../screenshots/sample-capabilities.png)
+
+</details>
+
+#### project-context
+
+What is already understood about this project? Choose a service and flow, inspect assumptions and exact source revisions, then read retained evidence files. Admins publish immutable changes.
+
+<details><summary>View labeled presentation example</summary>
+
+![Built-in project-context presentation sample](../screenshots/sample-project-context.png)
+
+</details>
+
+#### observability
+
+Where did this operation wait or fail? Select a span, inspect its parent and lifecycle events, and export a content-free Perfetto snapshot.
+
+<details><summary>View labeled presentation example</summary>
+
+![Built-in observability presentation sample](../screenshots/sample-observability.png)
+
+</details>
+
+#### test-coverage
+
+What was exercised and what is still missing? Choose a lifecycle edge or source file; inspect actual test-file provenance, missing lines, run scope and freshness.
+
+<details><summary>View labeled presentation example</summary>
+
+![Built-in test-coverage presentation sample](../screenshots/sample-test-coverage.png)
+
+</details>
+
 #### api-exchange
 
 What was sent and returned? Read status/timing, request/response JSON and headers; open API explorer to prepare a new send.
@@ -1896,6 +2054,26 @@ Where did the scenario fail? Read outcome/target, select actions/assertions, ins
 
 </details>
 
+#### semantic-path-trace
+
+Did the change alter the required path? Select value or local control evidence, inspect paired expressions and exact source, review explicit path assumptions, copy a regression briefing or export JSON/SVG/Mermaid. Static differences are not execution or behavior proof.
+
+<details><summary>View labeled presentation example</summary>
+
+![Built-in semantic-path-trace presentation sample](../screenshots/sample-semantic-path-trace.png)
+
+</details>
+
+#### semantic-flow-map
+
+Where do control and data change from entry to exits? Select the call overview or a retained method, inspect decisions, assignments, argument bindings and source, trace inputs and export JSON/SVG/Mermaid. Static dependencies and unresolved exceptions are not runtime proof.
+
+<details><summary>View labeled presentation example</summary>
+
+![Built-in semantic-flow-map presentation sample](../screenshots/sample-semantic-flow-map.png)
+
+</details>
+
 #### semantic-analysis
 
 How can this call/value travel? Navigate source paths/guards, filter/select results and read mode, coverage, proof and feasibility.
@@ -1980,7 +2158,7 @@ Search a task term, tool name or group. Select a tool to read its contract, requ
 
 The portable repository reference records built-in tools at generation time. The running registry remains authoritative for extensions and permissions. A required field can still need a real returned ID; blank values or an invented analysis/lease/workspace ID are not useful arguments.
 
-The [complete built-in reference](tools.md) contains 223 tools with exact schemas. In the app, the reference uses the current authorized registry and includes configured extensions.
+The [complete built-in reference](tools.md) contains 248 tools with exact schemas. In the app, the reference uses the current authorized registry and includes configured extensions.
 
 ### When a tool is missing
 
@@ -2030,3 +2208,173 @@ API cannot send → check base URL, placeholders, optional bearer selection and 
 Huge output → narrow the query, use summaries/search/views and save bounded evidence in context. A beautiful graph with missing sources → inspect certainty/gaps and add only evidence-backed declarations. “Latest” source with an old deployment → resolve and pin the actual version first.
 
 **Related chapters:** [Your first investigation](#start) · [Indices, freshness and exact versions](#indices) · [Monitor work and effectiveness](#operations)
+
+<a id="observability"></a>
+
+## Trace work and inspect test coverage
+
+Follow owned work across tools, workers and runners, then inspect exact coverage gaps.
+
+**Outcome:** A content-free trace and source-matched coverage evidence with explicit limits.
+
+**Before you start:** Choose the intended chat/task in Admin Runtime.
+
+### Trace this chat
+
+In Admin → Runtime → Traces & observability, enable tracing explicitly, run a tool and refresh. Other chats remain unchanged. Inspect a span’s parent, execution ID, outcome and lifecycle events. Open spans and interrupted producers keep their unknown end; durations include waits.
+
+The observability tool embeds the same explorer in Open WebUI. Export Perfetto JSON without stopping work. Local SQLite capture needs no collector; optional OTLP/HTTP JSON export is configured by the operator. Arguments, outputs, SQL, credentials and error messages are excluded.
+
+**Inspect this chat trace** · `observability`
+
+```json
+{}
+```
+
+Expected: A bounded content-free diagnostic snapshot; tracing must already be enabled.
+
+### Inspect executed coverage
+
+Run npm run build, npm run test:coverage, then npm run build. Open Runtime → Test coverage or call test_coverage. Check source freshness, full-suite versus selected-file scope, and test failures first.
+
+Select a lifecycle edge for actual test-file provenance and rejected-transition observations. Green means an edge executed in a passing test file; it does not prove every guard or assertion. Select Source files for missed executable lines and source inspection. Never-loaded files are explicitly unmeasured; browser evidence is separate.
+
+**Read test coverage** · `test_coverage`
+
+```json
+{}
+```
+
+Expected: A source-digested report or an explicit missing-report state.
+
+**Related chapters:** [Monitor work and effectiveness](#operations) · [Workspaces, regressions, patches and push](#verify-changes)
+
+<a id="project-knowledge"></a>
+
+## Build shared project understanding
+
+Reuse versioned service maps and evidence across tasks without losing assumptions.
+
+**Outcome:** A source-pinned project index and an outside-in regression design.
+
+**Before you start:** A readable service passport or reviewed findings.
+
+### Read before investigating
+
+Use project_context_find by project, repository, service or finding. Read project_context_get at the returned revision and compare each source SHA with your workspace. Global knowledge is declared, untrusted evidence; task progress remains private in context_* folders.
+
+knowledge_search and knowledge_graph include published project understanding. Historical quotes remain verifiable with source=project-context and the exact publication revision.
+
+**Find shared understanding** · `project_context_find`
+
+```json
+{
+  "query": "{{service}}"
+}
+```
+
+Expected: Shared publications, authors and source identities.
+
+**Inspect the document template** · `project_context_get`
+
+```json
+{}
+```
+
+Expected: Typed service entry/exit/flow structure, publication policy and storage limits.
+
+### Preserve a useful finding
+
+Admins publish with project_context_save: id, expected_revision from the last read, reason, and a complete document or file changes. New projects use expected_revision=null. Everyone can read. Readers can keep a proposed change in private task memory.
+
+Import an owned architecture_service result using dossier= to retain its full JSON and PlantUML paths. Its compact index keeps source pins, assumptions and gaps. Joern paths remain specific local evidence, not end-to-end runtime proof. Save screenshots as base64 and scripts/queries as inert files, or promote a reviewed context file with from_context and its exact revision.
+
+Each revision pins a file inventory. Archive moves only the current inventory path; historical files survive. Restore publishes an old inventory as a new revision with a new reason and current expected_revision. Storage limits reject new publication while preserving retained history.
+
+### Test from the entry to observable exits
+
+Start from the independently expected business outcome. test_context defaults to public callers of a requested class; choose a relevant entry when several candidates exist. Keep the real service and internal-library chain. Inspect integrationPlan and its proof limits.
+
+Assert responses and externally meaningful table, topic, API or Elasticsearch effects, including negative paths and duplicate/failure behavior. Current flow skeletons use boundary doubles. For real SQL/transaction claims use an owned scratch PostgreSQL lease; for wire/broker claims use isolated transport fixtures. flow=false or strategy=unit explicitly selects narrow unit isolation. Never equate mocked repository/producer calls with database or delivery proof.
+
+**Related chapters:** [Contexts, nearby files and handoffs](#task-memory) · [Workspaces, regressions, patches and push](#verify-changes) · [Explore a service and its surroundings](#services)
+
+<a id="ci-review"></a>
+
+## Build and review a draft change
+
+Follow one commit through Jenkins and Bitbucket review without losing revision proof.
+
+**Outcome:** A tested fix with fresh build checks, review feedback and a reproducible next call.
+
+**Before you start:** Configured Jenkins REST credentials; Bitbucket Server/DC for PR review.
+
+### Start from a job or PR
+
+Browse jenkins_jobs one folder at a time. Choose an exact fullName, then inspect jenkins_build with the full source SHA. Build parameters are not checkout proof. Read bounded jenkins_log excerpts and jenkins_tests published JUnit results. Missing checkout SHAs and missing reports remain gaps.
+
+bitbucket_pr_status combines commit checks with reviewer decisions and comments. Only approvals tied to this SHA count. No checks is not success; ready is a selected-check policy, not all merge restrictions.
+
+**Browse Jenkins jobs** · `jenkins_jobs`
+
+```json
+{}
+```
+
+Expected: Immediate children, folder markers and exact fullName values.
+
+**Read PR build and review evidence** · `bitbucket_pr_status`
+
+```json
+{
+  "repo": "{{repo}}",
+  "id": 42
+}
+```
+
+Expected: Current source SHA, check keys, review decisions and comments.
+
+![A resumable Jenkins observation with an editable follow-up call.](../screenshots/sample-ci.png)
+
+A resumable Jenkins observation with an editable follow-up call.
+
+### Wait, inspect, fix, repeat
+
+jenkins_wait and bitbucket_pr_wait poll for at most 25 seconds, then return pending plus resume arguments. Continue the same build and SHA. Cancel owned execution to stop polling; the remote build is left running. A new push returns superseded; read the new patch and obtain fresh checks and approvals.
+
+Inspect untrusted review text as evidence. Reproduce the problem, edit and test. workspace_patch exports; workspace_push commits/pushes only when requested. Explicitly requested jenkins_start and bitbucket_pr_create need operator enablement and a stable request_id. Reuse that key after a lost reply; inspect an unknown outcome instead of blindly submitting again. Native drafts require DC 8.18+. No tool merges or publishes the draft.
+
+Set an attempt count and deadline for the loop. Save commit pins, queue/build/PR ids, review findings, completed submissions and next steps in task context. A high advisory modelContext.pressure hint suggests saving a checkpoint and requesting compaction; it does not prove the full client context is filled. Native context_compact queues an explicit action after the reply ends. Other MCP clients must implement their own Compact action.
+
+**Prepare a bounded build wait** · `jenkins_wait`
+
+```json
+{
+  "job": "team/orders/PR-42",
+  "build": 17,
+  "wait_ms": 15000
+}
+```
+
+Expected: Pending is resumable, never implicit success.
+
+**Wait for review feedback** · `bitbucket_pr_wait`
+
+```json
+{
+  "repo": "{{repo}}",
+  "id": 42,
+  "until": "review",
+  "wait_ms": 15000
+}
+```
+
+Expected: A cursor detects added, edited or changed review feedback.
+
+### Inspect and reproduce
+
+The CI result shows commit binding, gaps, build checks, current reviewer decisions and bounded feedback. Pending and successful results collapse in chat; failures open. Choose a follow-up tool, edit arguments and Prepare in Workbench, then explicitly Run. Opening a draft never calls the tool.
+
+Download API script reproduces the selected call and story with curl. Supply the same principal through DT_API_KEY; credentials are not embedded. Saved views are snapshots; refresh with the same exact revision and policy before claiming current readiness.
+
+**Related chapters:** [Workspaces, regressions, patches and push](#verify-changes) · [Contexts, nearby files and handoffs](#task-memory) · [Monitor work and effectiveness](#operations)

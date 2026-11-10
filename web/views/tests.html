@@ -51,6 +51,7 @@
   <details class="card sect" id="log-card"><summary>Build output (compact)</summary><pre class="stack" id="tail"></pre></details>
   <div class="muted" id="cmd" style="font: 11.5px ui-monospace, Menlo, monospace; word-break: break-all"></div>
 </div>
+<div id="change-coverage"></div>
 <script>
   const D = DATA, cases = D.cases || [], c = D.counts || {};
   const icon = { passed: '✓', failed: '✗', error: '!', skipped: '⊘' };
@@ -145,5 +146,6 @@
   dt.$('#filt').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; filter = b.dataset.f; for (const x of dt.$('#filt').children) x.classList.toggle('on', x === b); if(selected&&!show(selected))selected=cases.find(show);drawTree();drawDet(); };
   dt.$('#tree').onclick = (e) => { const r = e.target.closest('.row[data-i]'); if (!r || r.dataset.i === '') return; selected = cases[Number(r.dataset.i)]; drawTree(); drawDet(); };
   dt.$('#tree').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { const row = e.target.closest('[data-i]'); if (row && row.dataset.i !== '') { e.preventDefault(); selected = cases[Number(row.dataset.i)]; drawTree(); drawDet(); dt.$(`#tree [data-i="${cases.indexOf(selected)}"]`)?.focus(); } } };
+  if(DATA.coverage){const c=DATA.coverage,box=dt.$('#change-coverage');box.innerHTML='<details '+(dtInline.coverageAttention(c)?'open':'')+'><summary>Changed code coverage · '+dt.esc(dtInline.coverageSummary(c))+'</summary><p>'+dt.esc((c.gaps||[]).join(' '))+'</p></details>';if(c.view&&/^https?:\/\//i.test(c.view)){const a=document.createElement('a');a.href=c.view;a.textContent='Inspect changed lines and branches';a.target='_blank';a.rel='noopener noreferrer';box.querySelector('details').append(a);}}
   drawTree(); drawDet();
 </script>

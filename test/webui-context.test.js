@@ -2,12 +2,14 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const home=fs.mkdtempSync(path.join(os.tmpdir(),'dt-webui-context-'));process.env.DT_HOME=home;process.env.DT_LOG='quiet';
 for(const k of ['DT_CONFIG_DIR','DT_CACHE_DIR','LLM_CONTEXT_WINDOW','LLM_COMPACT_AT','LLM_CONTEXT_RESERVE','LLM_COMPACTION_MODE','ENABLE_CONTEXT_COMPACTION'])delete process.env[k];
 fs.writeFileSync(path.join(home,'config.json'),JSON.stringify({envs:{dev:{}},llm:{compactionMode:'auto',contextWindows:{wide:65536}}}));
-const W=require('../lib/webui');let server,base,broken=false,custom='',imports=[],models=[],separate=false,available=['small','wide'],denied=false,collision=false,alias=false,previousThreshold;
+const W=require('../lib/webui');let server,base,broken=false,custom='',imports=[],models=[],separate=false,available=['small','wide'],denied=false,collision=false,alias=false,previousThreshold,contextTool;
 const settings={'chat.context_compaction.enable':false,'unrelated.value':'preserved'},presets=new Map();
 test.before(async()=>{server=http.createServer(async(req,res)=>{let text='';for await(const b of req)text+=b;const body=text?JSON.parse(text):null;res.setHeader('content-type','application/json');
  const reply=(x,code=200)=>{res.statusCode=code;res.end(JSON.stringify(x));};
  if(req.url==='/health')return reply({status:true});
  assert.equal(req.headers.authorization,'Bearer fixture-admin');
+ if(req.url==='/api/v1/tools/id/dt_chat_context')return contextTool?reply(contextTool):reply({},404);
+ if(req.url==='/api/v1/tools/create'||req.url==='/api/v1/tools/id/dt_chat_context/update'){contextTool=body;return reply(body);}
  if(req.url==='/api/v1/tools/')return reply([{id:'dt'}]);if(req.url==='/api/models')return reply({data:available.map(id=>({id}))});
  if(req.url==='/api/v1/configs/namespace/chat')return broken?reply({error:'unsupported'},404):reply({...settings,'chat.context_compaction.prompt_template':custom||settings['chat.context_compaction.prompt_template']||''});
  if(req.url==='/api/v1/configs/import'){imports.push(body.config);Object.assign(settings,body.config);return reply(settings);}
@@ -22,8 +24,8 @@ test('setup enables and verifies native compaction using only a partial config u
  const result=await W.setup({base,key:'fixture-admin',log:()=>{}});assert.equal(result.contextCompaction.enabled,true);assert.equal(settings['chat.context_compaction.token_threshold'],24576);assert.equal(settings['chat.context_compaction.token_cap'],49152);
  assert.ok(Object.keys(imports[0]).every(k=>k.startsWith('chat.context_compaction.')||k.startsWith('chat.tool_search.')));assert.equal(settings['unrelated.value'],'preserved');assert.equal(settings['chat.tool_search.enable'],true);assert.equal(settings['chat.tool_search.defer_threshold'],0);
  assert.equal(models[0].params.compact_token_threshold,24576);assert.equal(models[1].params.compact_token_threshold,49152);assert.equal(models[0].params.temperature,0.2);assert.match(models[0].params.system,/^User instruction/);assert.equal(models[0].meta.custom,'kept');assert.deepEqual(models[0].access_control,{read:{group_ids:['team']}});
- assert.deepEqual(result.contextCompaction.alwaysLoaded,['find','result_read','tool_search','tool_describe','tool_execute','code'],'32K windows defer specialized schemas too');
- assert.match(settings['chat.context_compaction.prompt_template'],/actions already sent/);
+ assert.deepEqual(result.contextCompaction.alwaysLoaded,['find','result_read','tool_search','tool_describe','tool_execute','code','context_status','context_compact'],'32K windows defer specialized schemas too');
+ assert.match(settings['chat.context_compaction.prompt_template'],/actions already sent/);assert.equal(contextTool.meta.dtContextTools,true);assert.ok(contextTool.access_grants.some(g=>g.principal_id==='source-owner'));assert.ok(result.toolIds.includes('dt_chat_context'));
  assert.equal(result.contextCompaction.summaryModel,'','different chat models must not send history to another model by default');const helper=presets.get(result.contextCompaction.preparedSummaryModel);assert.equal(helper.base_model_id,'wide');assert.deepEqual(helper.meta.toolIds,[]);assert.equal(helper.meta.capabilities.function_calling,false);assert.doesNotMatch(helper.params.system,/pg_query/);assert.deepEqual(helper.access_control,models[0].access_control);
  assert.deepEqual(helper.access_grants,[{principal_type:'group',principal_id:'team',permission:'read'},{principal_type:'user',principal_id:'source-owner',permission:'read'}]);assert.deepEqual(models[0].access_grants,[{principal_type:'group',principal_id:'team',permission:'read'}]);
 });
@@ -63,7 +65,7 @@ test('one model selects a tool-free summary preset and keeps provider aliases',a
  available=['wide'];alias=true;settings['chat.context_compaction.model']='';
  const result=await W.setup({base,key:'fixture-admin',model:'wide',log:()=>{}}),helper=presets.get(result.contextCompaction.summaryModel);
  assert.equal(result.contextCompaction.summaryModel,result.contextCompaction.preparedSummaryModel);assert.equal(helper.base_model_id,'provider-base');assert.ok(helper.access_grants.some(g=>g.principal_id==='source-owner'));
- assert.deepEqual(result.contextCompaction.alwaysLoaded,['find','result_read','tool_search','tool_describe','tool_execute','code']);
+ assert.deepEqual(result.contextCompaction.alwaysLoaded,['find','result_read','tool_search','tool_describe','tool_execute','code','context_status','context_compact']);
  alias=false;available=['small','wide'];fs.writeFileSync(file,original);config.reload();
 });
 test('explicit shared-model selection is respected and access failures never become public presets',async()=>{

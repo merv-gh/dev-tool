@@ -69,3 +69,21 @@ test('small retained primitives, damaged files and invalid page arguments fail e
  fs.appendFileSync(path.join(home,'cache/results',id+'.json'),'x');assert.throws(()=>C.read({id}),e=>e.code==='DT_NOT_FOUND');fs.rmSync(path.join(home,'cache/results',id+'.json'));
  assert.throws(()=>R.saveTool('oversized','x'.repeat(20000001)),/retention budget/);
 });
+test('context pressure is advisory, session-scoped and does not compact or alter normal result types',async()=>{
+ const P=require('../lib/chat-pressure');assert.equal(P.status('isolated').pressure,'unknown');
+ const low=P.response('small',false,{session:'low'});assert.equal(low.value,false);assert.equal(low.meta.reportedUsedTokens,null);
+ const high=P.response('small',{ok:true,job:'already-submitted'},{session:'high',usage:{usedTokens:240000,contextWindow:262144,model:'qwen3.8:27b'}});
+ assert.equal(high.value.ok,true);assert.equal(high.value.modelContext.pressure.pressure,'high');assert.equal(high.meta.advisory,true);assert.equal(P.status('low').compactionRecommended,false);
+ assert.equal(A.run({principalId:'other',storyId:'one'},()=>P.status('high')).pressure,'unknown');
+ const invalid=P.response('small',{ok:true},{session:'high',usage:'invalid json'});assert.equal(invalid.value.ok,true);assert.match(invalid.meta.reportError,/ignored/);
+ const context=require('../lib/context');context.open({id:'compact-check',title:'Check progress'});const before=P.status().toolResponses,request=P.compactRequest({context:'compact-check',checkpoint:'Goal: preserve exact SHA and failed build #17. Next: fix the identity mapping.'});assert.equal(request.compacted,false);assert.equal(P.status().toolResponses,before);assert.match(context.read({id:'compact-check',path:request.checkpoint.path}).content,/build #17/);
+});
+test('MCP metadata and OpenAPI headers carry pressure without changing full direct API results',async()=>{
+ const usage={usedTokens:250000,contextWindow:262144};const r=await post('/mcp',{jsonrpc:'2.0',id:9,method:'tools/call',params:{name:'context_payload_count',arguments:{},_meta:{'dev-tool/context':usage}}});const m=await r.json();assert.equal(m.result._meta['dev-tool/context'].pressure,'high');assert.equal(JSON.parse(m.result.content[0].text).modelContext.pressure.pressure,'high');
+ const o=await fetch(base+'/oapi/context_payload_count',{method:'POST',headers:{'content-type':'application/json','x-dt-context-usage':JSON.stringify(usage)},body:'{}'});assert.equal(JSON.parse(o.headers.get('x-dt-context')).pressure,'high');
+ const api=await(await post('/api/tool/context_payload_count',{})).json();assert.equal(typeof api.result,'number');
+});
+test('high pressure hints respect a small model response budget and retain original evidence once',()=>{
+ const cfg=require('../lib/config'),P=require('../lib/chat-pressure');fs.writeFileSync(path.join(home,'config.json'),JSON.stringify({...config,tools:{modelResultBytes:4096}}));cfg.reload();
+ try{const value=P.response('big',{ok:true,job:'submitted-once',rows:['😀'.repeat(10000)]},{session:'small-pressure',usage:{usedTokens:4000,contextWindow:4096}}).value;assert.ok(Buffer.byteLength(JSON.stringify(value))<=4096);assert.equal(value.ok,true);assert.equal(value.job,'submitted-once');assert.equal(value.modelContext.pressure.pressure,'high');assert.equal(R.load(value.modelContext.resultId).data.rows.length,1);}finally{fs.writeFileSync(path.join(home,'config.json'),JSON.stringify(config));cfg.reload();}
+});

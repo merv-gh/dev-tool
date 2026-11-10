@@ -1,0 +1,132 @@
+{
+  "schema": "dt.ci-iteration-verification/v1",
+  "sourceDigest": "86fb5bd1c4df83db920ec559b07c7e45ef005f7d6e72f89748a9a4d32f0897b2",
+  "suite": {
+    "command": "npm run test:coverage",
+    "passed": 928,
+    "failed": 0,
+    "skipped": 56,
+    "total": 984,
+    "coverage": {
+      "transitions": {
+        "hit": 345,
+        "total": 638,
+        "percent": 54.1
+      },
+      "lines": {
+        "hit": 27168,
+        "total": 29293,
+        "percent": 92.7
+      },
+      "functions": {
+        "hit": 5923,
+        "total": 6787,
+        "percent": 87.3
+      },
+      "branches": {
+        "hit": 20820,
+        "total": 25452,
+        "percent": 81.8
+      },
+      "testedFiles": 144,
+      "sourceFiles": {
+        "measured": 190,
+        "unmeasured": 28,
+        "total": 218
+      }
+    }
+  },
+  "rest": {
+    "proof": "Controllable Jenkins and Bitbucket DC HTTP fixtures; plus actual local bare-Git workspace failure/fix/push cycle.",
+    "tests": "test/ci-iteration.test.js",
+    "checks": [
+      "checkout evidence vs requested parameters",
+      "pinned build resume and same-SHA review",
+      "old approval invalidated by a real push",
+      "concurrent PR head change supersedes ancillary reads",
+      "no checks is not green; selected-policy/incomplete-page gaps",
+      "idempotent native draft/build submission receipts and unknown outcomes",
+      "bounded UTF-8 console and JUnit details; credential scrubbing",
+      "MCP cancellation drains polling; target/story cursor isolation",
+      "REST redirects, malformed/oversized replies and invalid inputs reject",
+      "Jenkins job choices use local Jenkins observations, not internal job ids"
+    ]
+  },
+  "nativeWebui": {
+    "passed": true,
+    "version": "v0.12.5-slim",
+    "modelSelection": "deterministic fixture",
+    "sourceCalls": 12,
+    "summaries": 1,
+    "explicitModelAction": true,
+    "checkpoint": {
+      "compacted": true,
+      "summaries": 1,
+      "checkpointSaved": true,
+      "historyPreserved": true
+    },
+    "protocolErrors": [],
+    "summaryQuality": [
+      {
+        "taskId": true,
+        "prohibition": true,
+        "compact": true,
+        "inventedTools": false
+      }
+    ],
+    "historyPreserved": true,
+    "inlineViewsPreserved": true,
+    "receiptStatus": "Twelve recent receipts plus active work; older request ids remain replay-safe."
+  },
+  "modelSelection": {
+    "model": "qwen3.5:4b",
+    "passed": true,
+    "proof": "Actual model selection on synthetic inputs; proposed calls were not executed.",
+    "cases": [
+      {
+        "case": "inspect-before-action",
+        "ms": 5271,
+        "attempts": 1,
+        "tools": [
+          "bitbucket_pr_status"
+        ],
+        "validationErrors": []
+      },
+      {
+        "case": "explicit-compaction",
+        "ms": 3286,
+        "attempts": 1,
+        "tools": [
+          "context_compact"
+        ],
+        "validationErrors": []
+      }
+    ]
+  },
+  "ui": {
+    "review": "ship",
+    "scope": "CI result view and inline disclosure integration",
+    "desktopWidth": 1280,
+    "responsiveFrameWidth": 390,
+    "proof": [
+      "invalid JSON disables Prepare and Download",
+      "Prepare opens editable Workbench with repository/PR/full SHA",
+      "read execution exposes progress/cancel then collapsed ready result",
+      "pending/success collapsed; failures open; first failed JUnit visible"
+    ],
+    "screenshot": "docs/screenshots/sample-ci.png",
+    "limits": [
+      "390px evidence is an iframe viewport, not mobile browser chrome.",
+      "Automated Impeccable detector refused an unverifiable executable; browser checks and fresh screenshot/source reviewer completed."
+    ]
+  },
+  "limits": [
+    "No live Jenkins or Bitbucket credentials were used; compatibility is covered against REST fixtures and documented vendor API contracts.",
+    "Actual Qwen 4B selection uses synthetic inputs; proposed calls are not executed by the selection check.",
+    "The Qwen3.8-27B selection request at its configured 262K serving window timed out at 120 seconds; this run supplies no successful 27B selection evidence.",
+    "Python queue tests use native API doubles; the separate real WebUI HTTP run proves explicit model-selected queuing and native checkpoint persistence.",
+    "Generic MCP metadata sees delivered tool bytes and optional caller usage, not full client context; compaction remains client-specific and explicit.",
+    "Native receipt reservation requires workers sharing the same local DATA_DIR."
+  ],
+  "nativeToolSha256": "d371287f2c4c38504128baf560b64e94a9ea9e52496914613215faec338921a0"
+}

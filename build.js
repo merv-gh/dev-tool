@@ -61,6 +61,7 @@ for (const f of fs.readdirSync(path.join(ROOT, 'web'), { recursive: true })) {
 }
 files['agent-prompt.md'] = fs.readFileSync(path.join(ROOT, 'lib', 'agent-prompt.md'));
 files['compaction-prompt.md'] = fs.readFileSync(path.join(ROOT, 'lib', 'compaction-prompt.md'));
+files['webui-context-tools.py'] = fs.readFileSync(path.join(ROOT, 'lib', 'webui-context-tools.py'));
 // Handbook examples remain available in the standalone bundle, without a docs checkout.
 for(const name of require('./lib/handbook').imageNames())files['web/handbook-images/'+name]=fs.readFileSync(path.join(ROOT,'docs/screenshots',name));
 // Ready-made script collections, copied into the dt home once (lib/scripts.js seedStarters).

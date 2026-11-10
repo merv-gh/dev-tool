@@ -1,6 +1,6 @@
 {
   "protocol": "dt.release-inventory/v1",
-  "sourceDigest": "d51f4d49bc56cd0a4d489f21d67b06c61a646a8735d44afde8afd1f52829e3e2",
+  "sourceDigest": "76561f2ef694b464233fe8badb88a08e5645816c32e9cfd66a9506a4e63c0991",
   "tools": [
     {
       "name": "find",
@@ -34,6 +34,7 @@
         "test/flows.live.test.js",
         "test/gradle.live.test.js",
         "test/javacheck.live.test.js",
+        "test/lombok-coverage.live.test.js",
         "test/pg.live.test.js",
         "test/reproduction.live.test.js",
         "test/semantic-branches.live.test.js",
@@ -662,6 +663,7 @@
       "integrationReferences": [
         "test/diagrams.live.test.js",
         "test/flows.live.test.js",
+        "test/lombok-coverage.live.test.js",
         "test/reproduction.live.test.js",
         "test/runtime-isolation.live.test.js",
         "test/semantic-branches.live.test.js",
@@ -1118,6 +1120,7 @@
       "referenceTests": [
         "test/admin-map.test.js",
         "test/capability-map.test.js",
+        "test/ci-iteration.test.js",
         "test/experiments.test.js",
         "test/push.test.js"
       ],
@@ -1158,6 +1161,24 @@
         "test/node-targets.test.js",
         "test/tool-contracts.test.js"
       ],
+      "integrationReferences": []
+    },
+    {
+      "name": "workspace_coverage_plan",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "workspace_coverage",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
       "integrationReferences": []
     },
     {
@@ -1346,6 +1367,123 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "jenkins_jobs",
+      "group": "jenkins",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/ci-iteration.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "jenkins_build",
+      "group": "jenkins",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/ci-iteration.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "jenkins_log",
+      "group": "jenkins",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "jenkins_tests",
+      "group": "jenkins",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "jenkins_wait",
+      "group": "jenkins",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/ci-iteration.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "jenkins_start",
+      "group": "jenkins",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/ci-iteration.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "bitbucket_pr_status",
+      "group": "bitbucket",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/ci-iteration.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "bitbucket_pr_wait",
+      "group": "bitbucket",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/ci-iteration.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "bitbucket_pr_create",
+      "group": "bitbucket",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/ci-iteration.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "chat_context_status",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/ci-iteration.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "chat_compaction_request",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/ci-iteration.test.js"
+      ],
       "integrationReferences": []
     },
     {
@@ -2221,6 +2359,7 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
+        "test/ci-iteration.test.js",
         "test/model-discovery-eval.test.js",
         "test/tool-contracts.test.js",
         "test/trace-discovery.test.js",
@@ -2894,6 +3033,7 @@
     "api-exchange",
     "architecture",
     "capabilities",
+    "ci",
     "code",
     "code-cell",
     "collection-report",
@@ -2916,6 +3056,7 @@
     "test-coverage",
     "tests",
     "text-diff",
+    "workspace-coverage",
     "xml"
   ],
   "capabilities": {

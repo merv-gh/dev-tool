@@ -157,3 +157,14 @@ Actual static analysis of the bundled Java fixture; environment and requirement 
 | ![admin service architecture](admin-service-architecture.png) **admin service architecture** | ![service architecture c4](service-architecture-c4.png) **service architecture c4** |
 | ![service architecture flow](service-architecture-flow.png) **service architecture flow** | ![service architecture mobile](service-architecture-mobile.png) **service architecture mobile** |
 | ![service architecture requirements](service-architecture-requirements.png) **service architecture requirements** | ![service architecture runtime](service-architecture-runtime.png) **service architecture runtime** |
+
+## Coverage of workspace changes
+
+![Missed changed production path](sample-workspace-coverage.png)
+
+Captured from the real local Lombok/JUnit/JaCoCo regression with
+[the retained-result demo](../../demo/change-coverage/README.md). The report
+identifies a missed changed line; adding the missing path assertion closes the
+gap, and another edit invalidates the old report. Source-read and coverage-run
+actions prepare editable Workbench drafts. This is coverage of the selected JVM
+change, separate from dev-tool’s own coverage report.

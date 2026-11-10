@@ -8,7 +8,7 @@ if(process.argv[2]==='dt'){
  const child=spawn(process.execPath,['/app/dt.js','serve','--lan','--port','4000'],{stdio:'inherit'});
  process.on('SIGTERM',()=>child.kill('SIGTERM'));process.on('SIGINT',()=>child.kill('SIGINT'));child.on('close',code=>process.exit(code||0));
 }else{
- const fresh=()=>({rounds:0,summaries:0,maxRequestBytes:0,requests:[],protocolErrors:[],summaryTexts:[],summaryModel:process.env.CONTEXT_SUMMARY_URL?(process.env.CONTEXT_SUMMARY_MODEL||'qwen3.5:4b'):'deterministic-fixture'});let stats=fresh();
+ const fresh=()=>({rounds:0,summaries:0,compactionRequests:0,maxRequestBytes:0,requests:[],protocolErrors:[],summaryTexts:[],summaryModel:process.env.CONTEXT_SUMMARY_URL?(process.env.CONTEXT_SUMMARY_MODEL||'qwen3.5:4b'):'deterministic-fixture'});let stats=fresh();
  const window=Number(process.env.CONTEXT_TEST_WINDOW||32768),requestCap=(window-(process.env.CONTEXT_TEST_THRESHOLD==='default'?512:Math.min(8192,Math.floor(window/4))))*4;
  const server=http.createServer(async(req,res)=>{
   if(req.url==='/reset'&&req.method==='POST'){stats=fresh();res.setHeader('content-type','application/json');return res.end('{\"reset\":true}');}
@@ -29,6 +29,10 @@ if(process.argv[2]==='dt'){
    const tool=(body.tools||[]).find(t=>t.function.name.endsWith('context_payload'))||(body.tools||[]).find(t=>t.function.name.endsWith('tool_execute'));
    if(!tool){res.writeHead(400,{'content-type':'application/json'});return res.end(JSON.stringify({error:{message:'Fixture tool was not enabled',tools:(body.tools||[]).map(t=>t.function.name)}}));}
    const step=++stats.rounds;message={role:'assistant',content:null,tool_calls:[{id:'fixture-step-'+step,type:'function',function:{name:tool.function.name,arguments:JSON.stringify(tool.function.name.endsWith('tool_execute')?{name:'context_payload',arguments:{step}}:{step})}}]};finish='tool_calls';
+  }else if(process.env.CONTEXT_TEST_MODEL_COMPACT==='1'&&!stats.compactionRequests){
+   const tool=(body.tools||[]).find(t=>t.function.name.endsWith('context_compact'));
+   if(!tool){res.writeHead(400,{'content-type':'application/json'});return res.end(JSON.stringify({error:{message:'Native explicit compaction tool missing',tools:(body.tools||[]).map(t=>t.function.name)}}));}
+   stats.compactionRequests++;message={role:'assistant',content:null,tool_calls:[{id:'fixture-explicit-compact',type:'function',function:{name:tool.function.name,arguments:JSON.stringify({request_id:'CTX-17-explicit',reason:'Calculation complete; preserve CTX-17 and no-push constraint'})}}]};finish='tool_calls';
   }else message={role:'assistant',content:'CTX-17 complete: sum 1 through 12 = 78. No push performed.'};
   const usage={prompt_tokens:Math.ceil(n/4),completion_tokens:40,total_tokens:Math.ceil(n/4)+40},id='chatcmpl-fixture-'+Date.now();
   if(body.stream){res.writeHead(200,{'content-type':'text/event-stream'});res.write('data: '+JSON.stringify({id,object:'chat.completion.chunk',model:body.model,choices:[{index:0,delta:{...message,...(message.tool_calls?{tool_calls:message.tool_calls.map((t,i)=>({...t,index:i}))}:{})},finish_reason:null}]})+'\n\n');res.write('data: '+JSON.stringify({id,object:'chat.completion.chunk',choices:[{index:0,delta:{},finish_reason:finish}],usage})+'\n\ndata: [DONE]\n\n');res.end();}

@@ -40,7 +40,8 @@ inputs and provider tokenizers vary. Reserves allow for tool definitions, new
 results and generation; they do not impose a generation-token setting.
 Use `openapi/lean-find.json` for small windows or exceptionally large registries.
 Managed setup enables native Tool Search, defers built-in/specialized schemas,
-and starts windows up to 32K with six core tools. Other enabled tools remain
+and starts windows up to 32K with six dt core tools plus two native context
+actions (`context_status`, `context_compact`). Other enabled tools remain
 available on demand through discovery and `tool_execute`. Larger windows retain
 the everyday starting set. This bounds definitions as well as result previews.
 
@@ -101,7 +102,8 @@ Frequent summaries can mean that the system prompt, active tool schemas, previou
 summary and latest result already approach the trigger. Summarizing older turns
 cannot remove that fixed overhead. The old defaults triggered at 50% of the window
 and kept 26 everyday tool schemas loaded on 32K models; the six-tool starting set
-reduces dt's schema JSON from about 26 KB to 5.5 KB. Specialized tools remain
+reduces dt's schema JSON from about 26 KB to 5.5 KB, before the two native
+context schemas. Specialized tools remain
 discoverable. This is a byte comparison, not a tokenizer measurement.
 
 Earlier setup also kept the smaller of the old and configured model thresholds,
@@ -219,3 +221,12 @@ counts, user intent, call/result pairing, stored history and inline views.
 
 See [Open WebUI's context-window guidance](https://docs.openwebui.com/troubleshooting/context-window/)
 for the native UI controls and tokenizer limitations.
+
+## Explicit model action and pressure metadata
+
+Managed setup also installs owned-chat `context_status`, `context_compact` and
+`context_compact_cancel`. The model can save progress and explicitly queue a
+summary after its current reply finishes. Manual mode remains the default.
+Generic MCP/OpenAPI clients receive advisory pressure metadata and a checkpoint
+tool; actual compaction depends on the client. See [CI loop and context protocol](ci-review-loop.md#context-pressure-and-explicit-compaction)
+for usage reports, ownership, receipts, cancellation and limitations.

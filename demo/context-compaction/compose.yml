@@ -21,6 +21,7 @@ services:
     image: ${DT_NODE_IMAGE:-node:24-bookworm}
     entrypoint: [node, /fixture/fixture.js, model]
     environment:
+      CONTEXT_TEST_MODEL_COMPACT: ${CONTEXT_TEST_MODEL_COMPACT:-0}
       CONTEXT_SUMMARY_URL: ${CONTEXT_SUMMARY_URL:-}
       CONTEXT_SUMMARY_MODEL: ${CONTEXT_SUMMARY_MODEL:-qwen3.5:4b}
       CONTEXT_SUMMARY_NATIVE: ${CONTEXT_SUMMARY_NATIVE:-}

@@ -1,0 +1,121 @@
+{
+  "schema": "dt.workspace-change-coverage-verification/v1",
+  "sourceDigest": "76561f2ef694b464233fe8badb88a08e5645816c32e9cfd66a9506a4e63c0991",
+  "suite": {
+    "command": "npm run test:coverage",
+    "counts": {
+      "tests": 996,
+      "failed": 0,
+      "passed": 940,
+      "cancelled": 0,
+      "skipped": 56,
+      "todo": 0,
+      "topLevel": 996,
+      "suites": 0
+    },
+    "coverage": {
+      "transitions": {
+        "hit": 345,
+        "total": 638,
+        "percent": 54.1
+      },
+      "lines": {
+        "hit": 27435,
+        "total": 29505,
+        "percent": 93
+      },
+      "functions": {
+        "hit": 6009,
+        "total": 6871,
+        "percent": 87.5
+      },
+      "branches": {
+        "hit": 21182,
+        "total": 25849,
+        "percent": 81.9
+      },
+      "testedFiles": 146,
+      "sourceFiles": {
+        "measured": 192,
+        "unmeasured": 28,
+        "total": 220
+      }
+    }
+  },
+  "live": {
+    "fixture": "test/fixtures/lombok-service",
+    "tests": "test/lombok-coverage.live.test.js",
+    "builds": [
+      "Maven 3.9.11",
+      "Gradle 9.2.0"
+    ],
+    "jdk": "24.0.2",
+    "lombok": "1.18.42",
+    "jacoco": "0.8.16",
+    "workspacePathIncludesSpaces": true,
+    "asserted": [
+      "former per-file compilation rejects the changed generated builder API",
+      "project compiler accepts edited builder use",
+      "missing builder bytecode is regenerated",
+      "unchanged successful compile is reused",
+      "fast Maven and full build preserve actual pass/fail outcomes",
+      "Gradle resolves coverage through its own repositories without Maven cache or project JaCoCo plugin"
+    ],
+    "partial": {
+      "covered": 1,
+      "missed": 1,
+      "unknown": 0,
+      "nonExecutable": 1,
+      "coveredBranches": 0,
+      "missedBranches": 0,
+      "executable": 2,
+      "percent": 50,
+      "branchPercent": null,
+      "complete": true,
+      "fullyCovered": false
+    },
+    "covered": {
+      "covered": 2,
+      "missed": 0,
+      "unknown": 0,
+      "nonExecutable": 1,
+      "coveredBranches": 0,
+      "missedBranches": 0,
+      "executable": 2,
+      "percent": 100,
+      "branchPercent": null,
+      "complete": true,
+      "fullyCovered": true
+    },
+    "stale": {
+      "state": "stale",
+      "stale": true,
+      "fullyCovered": false
+    }
+  },
+  "ui": {
+    "review": "ship: both listed fixes scored resolved; not a backend integration verdict",
+    "checked": [
+      "desktop selected-file view",
+      "390px iframe layout preview",
+      "stale source warning",
+      "native inline missed result opens",
+      "passing test with branch-only coverage gap opens both disclosures",
+      "all/uncovered filter",
+      "copy regression briefing",
+      "prepared source-read arguments in real Admin Workbench",
+      "file selection preserves focus"
+    ],
+    "capture": "docs/screenshots/sample-workspace-coverage.png",
+    "limits": [
+      "Narrow iframe preview is not physical mobile browser testing.",
+      "Branch-only test disclosure fixture is illustrative; compiler and coverage regressions executed real local builds.",
+      "The context and detector launchers refused an unverified executable, so no automated design detector ran."
+    ]
+  },
+  "limits": [
+    "Changed executable JVM lines and branches only; no full-service coverage claim.",
+    "Selected tests and covered lines do not prove assertions or business behavior.",
+    "External service integrations and unsupported source roots were not measured."
+  ]
+}

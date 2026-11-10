@@ -147,6 +147,19 @@
           "goal": "Drive an application entry point and independently check its exit effects."
         },
         {
+          "id": "changed-coverage",
+          "title": "Cover the changed lines and branches",
+          "guide": "changed-code-coverage",
+          "tools": [
+            "workspace_list",
+            "workspace_coverage_plan",
+            "test_run",
+            "workspace_coverage",
+            "workspace_read"
+          ],
+          "goal": "Find missed executable changes without an existing coverage baseline; add sensitive entry-to-exit tests and collect fresh evidence."
+        },
+        {
           "id": "compare",
           "title": "Compare behavior across a refactor",
           "guide": "differential-refactor",
@@ -223,6 +236,47 @@
             "files_archive"
           ],
           "goal": "Find prior work, consult its progress and preserve useful evidence."
+        }
+      ]
+    },
+    {
+      "id": "ci-review",
+      "title": "Build and review a change",
+      "description": "Follow one source commit through Jenkins and draft PR review.",
+      "intents": [
+        {
+          "id": "inspect-ci",
+          "title": "Inspect a build or failed test",
+          "goal": "Browse Jenkins folders, select the exact job and inspect checkout proof, bounded logs and published tests.",
+          "tools": [
+            "jenkins_jobs",
+            "jenkins_build",
+            "jenkins_log",
+            "jenkins_tests"
+          ]
+        },
+        {
+          "id": "wait-review",
+          "title": "Wait for build checks or review feedback",
+          "guide": "draft-pr-ci-loop",
+          "goal": "Pin the source SHA; resume bounded waits. New pushes supersede old checks and approvals.",
+          "tools": [
+            "bitbucket_pr_status",
+            "bitbucket_pr_wait",
+            "jenkins_wait",
+            "context_write"
+          ]
+        },
+        {
+          "id": "draft-change",
+          "title": "Prepare an authorized build or draft PR",
+          "goal": "Review arguments and intended effect before explicit submission. Reuse request_id after a lost reply; never blindly retry an unknown outcome.",
+          "tools": [
+            "workspace_patch",
+            "workspace_push",
+            "bitbucket_pr_create",
+            "jenkins_start"
+          ]
         }
       ]
     }

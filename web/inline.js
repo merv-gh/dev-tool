@@ -73,6 +73,8 @@ const dtInline = {
     }, true);
   },
 
+  coverageAttention(c) { const s=c?.summary;return !!c&&(c.stale||['stale','unavailable'].includes(c.state)||c.available===false||!s?.complete||!!(s.missed||s.unknown||s.missedBranches)); },
+  coverageSummary(c) { const s=c?.summary||{};return [c?.state||'unavailable',s.executable!=null?`${s.covered||0}/${s.executable} executable lines covered`:null,s.missedBranches?`${s.missedBranches} branches missed`:null,s.unknown?`${s.unknown} lines unknown`:null,c?.stale?'stale source':null,!s.complete?'incomplete measurement':null].filter(Boolean).join(' · '); },
   describe(view, data, meta = {}) {
     const d = data && typeof data === 'object' ? data : {}, c = d.counts || {};
     const failedCase = (Array.isArray(d.cases) ? d.cases : []).some(k => ['failed', 'error', 'cancelled'].includes(k.status) || k.equal === false);
@@ -82,6 +84,7 @@ const dtInline = {
       failed ||= failedCase || !!(c.failed || c.errors) || !!d.compile?.length || !!d.cleanupErrors?.length || (d.hooks || []).some(h => h.result?.ok === false);
       summary = `${c.passed || 0} passed · ${c.failed || 0} failed${c.errors ? ` · ${c.errors} ${c.errors === 1 ? 'error' : 'errors'}` : ''}${c.skipped ? ` · ${c.skipped} skipped` : ''}${d.ms != null ? ` · ${(d.ms / 1000).toFixed(1)} s` : ''}`;
       if (d.outcome === 'compile-error' || d.compile?.length) summary = 'Compilation failed · ' + summary;
+      if(d.coverage&&view==='tests'){failed ||= this.coverageAttention(d.coverage);summary+=' · coverage '+this.coverageSummary(d.coverage);}
     } else if (view === 'patch' || view === 'pr') {
       const files = d.files || [];
       summary = `${files.length} files · +${files.reduce((n, f) => n + (Number(f.added ?? f.add) || 0), 0)} −${files.reduce((n, f) => n + (Number(f.removed ?? f.del) || 0), 0)}`;
@@ -116,6 +119,12 @@ const dtInline = {
       const r = d.result || d;
       failed ||= r.ok === false || !!r.checks?.failed || !!r.violations?.length;
       summary = failed ? 'Checks need attention' : r.ok === true ? 'Stage passed' : 'Scenario evidence';
+    } else if (view === 'workspace-coverage') {
+      failed ||= d.stale||d.state==='stale'||(d.summary?.missed||0)>0||(d.summary?.unknown||0)>0||(d.summary?.missedBranches||0)>0||d.state==='unavailable';
+      summary=[d.state,(d.summary?.covered||0)+' covered',(d.summary?.missed||0)+' missed',(d.summary?.unknown||0)?d.summary.unknown+' unknown':null].filter(Boolean).join(' · ');
+    } else if (view === 'ci') {
+      failed ||= ['failed','build_failed','changes_requested','unstable','aborted','unknown','needs_attention','superseded','not_built','cancelled'].includes(d.state)||d.revision?.match===false||!!d.counts?.failed;
+      summary=[d.state?.replaceAll('_',' ')||d.kind,d.build?'#'+d.build:null,(d.sha||d.revision?.expected)?.slice(0,12),d.wait?.state==='pending'?'wait ended · resumable':null].filter(Boolean).join(' · ');
     } else if (view === 'table') summary = `${(Array.isArray(data) ? data : d.rows || []).length} rows`;
     else if (view === 'json') summary = Array.isArray(data) ? `${data.length} items` : data && typeof data === 'object' ? `${Object.keys(data).length} fields` : 'Result';
     else if (view === 'list-diff') summary = d.counts ? `${(c.onlyFirst || 0) + (c.onlyLast || 0)} differences` : 'Compare values';

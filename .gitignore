@@ -40,3 +40,6 @@ node_modules/
 
 # Shared project publications are runtime knowledge, backed up separately.
 /project-contexts/
+
+# Local Impeccable screenshot/review artifacts; published examples live in docs/screenshots.
+.impeccable/review/

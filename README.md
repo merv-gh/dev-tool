@@ -24,6 +24,8 @@ For a focused source/line-to-exit change briefing, paired graphs, explicit path 
 
 It plugs into **Open WebUI** (bundled, or one you already run) or any **MCP client** (Claude Code, Cursor, ...). The tool server runs as a single Node process with its dependencies bundled; optional containers provide browser, build and semantic analysis services.
 
+Jenkins builds and draft PR review loops: [configuration, waits, revision proof and explicit chat compaction](docs/ci-review-loop.md).
+
 ## Current capabilities and deployment
 
 Start with the [operator guide](docs/operator-guide.md): deployment profiles,
@@ -577,10 +579,11 @@ On the fixture `test/fixtures/shipping-service` (with the library `test/fixtures
    - **code parts to work on**: the frames of the stack trace that are in the repo, with the lines around them;
    - compile errors with their lines.
    With `env` + `db` (or `ddl_path`), the run gets a throwaway database on the test Postgres, loaded with the snapshot. Spring gets it as `SPRING_DATASOURCE_*` env vars, which reach the test JVM under both Maven and Gradle; Flyway, Liquibase and `spring.sql.init` are off. Long runs answer "running" with a job id, like `catalog_sync`.
-   **Fast by default.** On a Maven project, the first run of a workspace module calls Maven once to compile everything and write the test classpath. After that, each run compiles only the changed sources, plus the classes that use a changed class (from the code graph), with `javac`. The selected tests then run in one JVM through a small JUnit Platform launcher of dt's own. A rerun takes about a second, a fix plus run about 5 s, a Spring slice 5–9 s; a full Maven build of the same tests takes 11–14 s (measured on the fixture).
+   **Fast by default.** On a Maven project, the first run of a workspace module calls Maven once to compile everything and write the test classpath. After that, ordinary Java modules compile changed sources and their callers with `javac`. Modules with Lombok, annotation processors or generated sources use the project’s `test-compile` / `testClasses` configuration, then retain fast test selection. Changed production/config inputs trigger regeneration; unchanged successful outputs are reused. The selected tests then run in one JVM through a small JUnit Platform launcher of dt's own. A rerun takes about a second, a fix plus run about 5 s, a Spring slice 5–9 s; a full Maven build of the same tests takes 11–14 s (measured on the fixture).
    - `files: [{path, content | edits}]` writes before running, so each try is one call.
    - `mode: "build"` runs the project's own Maven/Gradle: do it once before the patch. Gradle and Kotlin projects always use the build.
    - Every result is kept per test, with a fingerprint of the code under test (not the tests).
+   **Coverage of changes.** `workspace_coverage_plan` finds added/modified JVM production lines against the workspace base (or `base`). Run `test_run` with `coverage: true` and optionally `coverage_base`; `workspace_coverage` shows missed lines/branches, retained source excerpts and exact source freshness. No previous project coverage is needed. The native view selects one file, prepares a source read and exports a regression briefing/JSON. Unknown mappings and stale reports cannot claim full coverage. See [setup, limitations and reproducible Lombok regression](docs/workspace-change-coverage.md).
    **Compile checks on every write.** `workspace_write` (and `test_run files=`) compiles a written Java file right away against its module's classpath, and answers `compile` with:
    - `errors`: what does not compile, with the line;
    - `fixed`: what dt already fixed in the file, when there is one clear fix:
@@ -594,7 +597,7 @@ On the fixture `test/fixtures/shipping-service` (with the library `test/fixtures
 
    With errors left, `test_run files=` does not run: the errors are the answer. After a run, failures that need a mechanical fix come back as `suggestions` too: an unused Mockito stubbing (`lenient()` or remove it), a stubbing with other arguments than the call, mixed matchers, a `@Value` property the test's context lacks (`@TestPropertySource` with the value from the application properties), a bean the slice lacks (`@MockitoBean`/`@MockBean` field, or `@Import` for the service's own classes).
 
-   The compiler stays warm: a small Java program of dt's own runs the JDK's compiler (`javax.tools`) in one JVM per JDK, on the runner when there is one. It checks only the written files (plus the sources they reference, from the sourcepath), stops before writing classes, and runs annotation processors (Lombok). A check takes 0.2–0.6 s; the first one of a workspace waits for its classpath:
+   The compiler stays warm: a small Java program of dt's own runs the JDK's compiler (`javax.tools`) in one JVM per JDK, on the runner when there is one. It checks only the written files (plus the sources they reference, from the sourcepath), stops before writing classes, for ordinary Java. Lombok/annotation-processed modules use the project compiler to regenerate builders, accessors and other generated APIs; generated-symbol errors never trigger guessed import fixes. An ordinary warm check takes 0.2–0.6 s; the first one of a workspace waits for its classpath:
    - Maven: `compile dependency:build-classpath` with compile errors not failing it, so a broken test file doesn't block it (or the fast run's prepare when there is one);
    - Gradle: a small init script prints the test compile classpath, the annotation processors, the release and the sources of the modules it depends on; nothing is compiled.
 

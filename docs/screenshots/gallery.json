@@ -566,6 +566,13 @@
       "width": 1440,
       "origin": "built-in illustrative sample; presentation only",
       "overflow": false
+    },
+    {
+      "file": "sample-workspace-coverage.png",
+      "title": "workspace-coverage",
+      "width": 1280,
+      "origin": "retained real local Maven/Lombok/JUnit/JaCoCo regression; temporary source workspace cleaned up",
+      "overflow": false
     }
   ],
   "errors": [],

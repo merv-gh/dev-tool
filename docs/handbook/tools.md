@@ -5,8 +5,13 @@ Generated from a clean configuration. The running handbook includes current exte
 ## catalog
 
 - [`find`](#tool-find)
+- [`catalog_search`](#tool-catalog_search)
+- [`catalog_usage`](#tool-catalog_usage)
+- [`catalog_manage`](#tool-catalog_manage)
 - [`catalog_sync`](#tool-catalog_sync)
+- [`capability_map`](#tool-capability_map)
 - [`handbook`](#tool-handbook)
+- [`adapter_capabilities`](#tool-adapter_capabilities)
 - [`workflow_plan`](#tool-workflow_plan)
 - [`tool_contracts`](#tool-tool_contracts)
 - [`tool_profiles`](#tool-tool_profiles)
@@ -49,6 +54,157 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
   "required": [
     "q"
   ]
+}
+```
+
+</details>
+
+<a id="tool-catalog_search"></a>
+
+### catalog_search
+
+Page cached catalog names at one retained generation. Preserve nextCursor to continue; no live calls. Use catalog_manage pin before retaining a generation reference.
+
+Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "q": {
+      "type": "string",
+      "description": "All words must match; optional kind prefix"
+    },
+    "env": {
+      "type": "string",
+      "enum": [
+        "dev"
+      ],
+      "default": "dev",
+      "description": "Environment"
+    },
+    "generation": {
+      "type": "string",
+      "description": "Retained generation"
+    },
+    "cursor": {
+      "type": "string",
+      "description": "Continuation cursor"
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Page size, up to 500",
+      "default": 50
+    }
+  },
+  "required": []
+}
+```
+
+</details>
+
+<a id="tool-catalog_usage"></a>
+
+### catalog_usage
+
+Page detected usage edges by exact object or db:schema.object. Historical source evidence only; private manual overlays are available in pg_usage.
+
+Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "object": {
+      "type": "string",
+      "description": "Table/function or db:schema.object"
+    },
+    "env": {
+      "type": "string",
+      "enum": [
+        "dev"
+      ],
+      "default": "dev",
+      "description": "Environment"
+    },
+    "generation": {
+      "type": "string",
+      "description": "Retained generation"
+    },
+    "cursor": {
+      "type": "string",
+      "description": "Continuation cursor"
+    },
+    "direction": {
+      "type": "string",
+      "enum": [
+        "users",
+        "uses"
+      ],
+      "default": "users"
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Page size, up to 500",
+      "default": 50
+    }
+  },
+  "required": [
+    "object"
+  ]
+}
+```
+
+</details>
+
+<a id="tool-catalog_manage"></a>
+
+### catalog_manage
+
+Admin: list, pin, unpin or explicitly collect a catalog generation. Current and pinned generations cannot be collected. No automatic history deletion.
+
+Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "env": {
+      "type": "string",
+      "enum": [
+        "dev"
+      ],
+      "default": "dev",
+      "description": "Environment"
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "list",
+        "pin",
+        "unpin",
+        "gc",
+        "references",
+        "release_ref"
+      ],
+      "default": "list"
+    },
+    "generation": {
+      "type": "string",
+      "description": "Exact generation to manage"
+    },
+    "reference": {
+      "type": "string",
+      "description": "Owned reference id to release"
+    }
+  },
+  "required": []
 }
 ```
 
@@ -115,6 +271,60 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
 
 </details>
 
+<a id="tool-capability_map"></a>
+
+### capability_map
+
+Show every enabled, authorized tool in one capability graph. Objects (task, workspace, context, project memory, service, code, database and more) lead through questions to tools. Opens editable Workbench drafts; browsing never executes a tool. Question links are navigation, not service dependency evidence.
+
+Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: undefined
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "object": {
+      "type": "string",
+      "enum": [
+        "task",
+        "workspace",
+        "context",
+        "memory",
+        "service",
+        "component",
+        "repository",
+        "database",
+        "table",
+        "topic",
+        "search-index",
+        "environment",
+        "api",
+        "documentation",
+        "files",
+        "automation",
+        "reproduction",
+        "test-database",
+        "execution",
+        "evidence",
+        "tools"
+      ],
+      "description": "Optional starting object; task connects workspace, context and shared memory"
+    },
+    "query": {
+      "type": "string",
+      "description": "Optional question or tool search",
+      "maxLength": 300
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
 <a id="tool-handbook"></a>
 
 ### handbook
@@ -151,6 +361,26 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
       "default": 6
     }
   },
+  "required": []
+}
+```
+
+</details>
+
+<a id="tool-adapter_capabilities"></a>
+
+### adapter_capabilities
+
+Inspect declared adapter/language capabilities and evidence gaps. Generic text search is separate from semantic analysis. Does not contact remote services.
+
+Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {},
   "required": []
 }
 ```
@@ -232,7 +462,7 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
 
 ### tool_search
 
-Find enabled capabilities and planning guides for compound tasks. Keyword matches route investigation, not diagnosis. Use tool_describe for exact arguments, then tool_execute. Results are bounded; the view retains omitted matches.
+Find enabled tools by action (compare a change path, search code, assess impact), not by a service/class/file name alone. Results are capabilities, not source matches or diagnosis. Describe an exact match, then execute it. Compound tasks may include planning guides.
 
 Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: built-in
 
@@ -244,7 +474,7 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
   "properties": {
     "query": {
       "type": "string",
-      "description": "Task or exact tool name; compound tasks also return planning guides",
+      "description": "Task/action or exact tool name; object names alone do not search code",
       "maxLength": 4000
     },
     "group": {
@@ -863,6 +1093,9 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
 - [`bitbucket_pr`](#tool-bitbucket_pr)
 - [`bitbucket_my_prs`](#tool-bitbucket_my_prs)
 - [`repo_fetch`](#tool-repo_fetch)
+- [`bitbucket_pr_status`](#tool-bitbucket_pr_status)
+- [`bitbucket_pr_wait`](#tool-bitbucket_pr_wait)
+- [`bitbucket_pr_create`](#tool-bitbucket_pr_create)
 
 <a id="tool-bitbucket_repos"></a>
 
@@ -1121,6 +1354,233 @@ Workflow: [Case: the bug hides in a shared library version](README.md#case-libra
     "project",
     "repo"
   ]
+}
+```
+
+</details>
+
+<a id="tool-bitbucket_pr_status"></a>
+
+### bitbucket_pr_status
+
+Inspect draft PR build checks, review decisions and comments bound to its exact source SHA. Old approvals and zero checks cannot prove readiness. Returns a cursor for waiting; never merges or publishes.
+
+Workflow: [Case: the bug hides in a shared library version](README.md#case-library) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "repo": {
+      "type": "string",
+      "description": "Bitbucket repository slug or PROJECT/repo",
+      "maxLength": 400
+    },
+    "project": {
+      "type": "string",
+      "description": "Project key when the repository slug is ambiguous",
+      "maxLength": 200
+    },
+    "id": {
+      "type": "integer",
+      "description": "Pull request number",
+      "minimum": 1
+    },
+    "sha": {
+      "type": "string",
+      "description": "Full source commit SHA to verify, not a branch label",
+      "pattern": "^[a-fA-F0-9]{40}([a-fA-F0-9]{24})?$"
+    },
+    "cursor": {
+      "type": "string",
+      "description": "Opaque target/story cursor from status or wait",
+      "maxLength": 2048
+    },
+    "required_builds": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "string",
+        "maxLength": 200
+      },
+      "description": "Exact commit-status keys required; omitted means all reported checks and at least one"
+    },
+    "min_approvals": {
+      "type": "integer",
+      "description": "Minimum current-SHA approvals",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 20
+    }
+  },
+  "required": [
+    "repo",
+    "id"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-bitbucket_pr_wait"></a>
+
+### bitbucket_pr_wait
+
+Bounded wait for PR change, new review feedback, or current-commit checks and approvals. A new source SHA returns superseded. Read feedback, edit/test, push only when authorized, then start fresh proof for the new SHA.
+
+Workflow: [Case: the bug hides in a shared library version](README.md#case-library) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "repo": {
+      "type": "string",
+      "description": "Bitbucket repository slug or PROJECT/repo",
+      "maxLength": 400
+    },
+    "project": {
+      "type": "string",
+      "description": "Project key when the repository slug is ambiguous",
+      "maxLength": 200
+    },
+    "id": {
+      "type": "integer",
+      "description": "Pull request number",
+      "minimum": 1
+    },
+    "sha": {
+      "type": "string",
+      "description": "Full source commit SHA to verify, not a branch label",
+      "pattern": "^[a-fA-F0-9]{40}([a-fA-F0-9]{24})?$"
+    },
+    "cursor": {
+      "type": "string",
+      "description": "Opaque target/story cursor from status or wait",
+      "maxLength": 2048
+    },
+    "required_builds": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "string",
+        "maxLength": 200
+      },
+      "description": "Exact commit-status keys required; omitted means all reported checks and at least one"
+    },
+    "min_approvals": {
+      "type": "integer",
+      "description": "Minimum current-SHA approvals",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 20
+    },
+    "until": {
+      "type": "string",
+      "enum": [
+        "change",
+        "review",
+        "ready"
+      ],
+      "default": "change"
+    },
+    "wait_ms": {
+      "type": "integer",
+      "description": "Bounded observation window; pending is resumable",
+      "default": 15000,
+      "minimum": 0,
+      "maximum": 25000
+    },
+    "poll_ms": {
+      "type": "integer",
+      "description": "Poll interval; target rate limits still apply",
+      "default": 3000,
+      "minimum": 100,
+      "maximum": 10000
+    }
+  },
+  "required": [
+    "repo",
+    "id"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-bitbucket_pr_create"></a>
+
+### bitbucket_pr_create
+
+Create an explicitly requested native draft PR (Bitbucket Server/DC 8.18+, bitbucket.allowDraftCreate=true). Reuses an open PR for the same branches. Stable request_id prevents duplicate POSTs; never publishes or merges.
+
+Workflow: [Case: the bug hides in a shared library version](README.md#case-library) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "repo": {
+      "type": "string",
+      "description": "Bitbucket repository slug or PROJECT/repo",
+      "maxLength": 400
+    },
+    "project": {
+      "type": "string",
+      "description": "Project key when the repository slug is ambiguous",
+      "maxLength": 200
+    },
+    "from": {
+      "type": "string",
+      "description": "Source branch",
+      "maxLength": 500
+    },
+    "to": {
+      "type": "string",
+      "description": "Destination branch",
+      "maxLength": 500
+    },
+    "title": {
+      "type": "string",
+      "description": "Draft PR title",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "description": {
+      "type": "string",
+      "description": "Problem, resulting behavior and actual validation",
+      "maxLength": 20000
+    },
+    "reviewers": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "string",
+        "maxLength": 200
+      }
+    },
+    "request_id": {
+      "type": "string",
+      "description": "Stable idempotency key for this exact action; reuse it after a lost reply",
+      "maxLength": 160
+    }
+  },
+  "required": [
+    "repo",
+    "from",
+    "to",
+    "title",
+    "request_id"
+  ],
+  "additionalProperties": false
 }
 ```
 
@@ -4480,6 +4940,8 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
 - [`test_data`](#tool-test_data)
 - [`test_targets`](#tool-test_targets)
 - [`differential_check`](#tool-differential_check)
+- [`workspace_coverage_plan`](#tool-workspace_coverage_plan)
+- [`workspace_coverage`](#tool-workspace_coverage)
 - [`test_run`](#tool-test_run)
 - [`fixture_schema`](#tool-fixture_schema)
 - [`fixture_plan`](#tool-fixture_plan)
@@ -4945,7 +5407,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
 
 ### workspace_read
 
-Read a file of a workspace with line numbers (or list a folder).
+Read copyable workspace source with its line range, or list a folder. line_numbers=true adds display prefixes; never copy those prefixes into workspace_write content. Prefer exact find/replace edits for small fixes.
 
 Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) · Origin: built-in
 
@@ -4971,6 +5433,11 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     "to": {
       "type": "integer",
       "description": "Last line"
+    },
+    "line_numbers": {
+      "type": "boolean",
+      "default": false,
+      "description": "Add display line-number prefixes (plain source by default)"
     }
   },
   "required": [
@@ -5105,7 +5572,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
 
 ### test_context
 
-Everything needed to write an isolated test for a class or method of a workspace ("PaymentService", "PaymentService#settle", a file path), or for a whole flow from an entry point (an endpoint, also one a library controller serves; a Kafka listener; a @Scheduled job): for a flow, the chain through the service and its libraries (interface dispatch into the service's implementations), what leaves the service (topics, HTTP, tables), the real beans to @Import, the mocks at its edge, the @Value properties, and a @WebMvcTest / @SpringJUnitConfig skeleton with what to verify. For a class or method: its source, Spring role and the test style that fits (unit, Mockito with @Mock/@InjectMocks, @WebMvcTest + MockMvc, @DataJpaTest / @JdbcTest against the real schema), its dependencies and their methods, what each method calls on them (what to stub), endpoints, tables and functions it touches, the project test setup (JUnit, Mockito, AssertJ, Spring Boot version: @MockBean or @MockitoBean, Testcontainers), an existing test to copy the style from, rules, and a skeleton test that compiles. With env, writes the DDL snapshot of the tables it touches into the test resources and suggests insert statements (parents first).
+Plan an outside-in test from an HTTP/listener/job entry through real service and internal-library code to observable exits. A class target resolves to public callers; multiple callers require choosing the behavior. Returns chain, boundary doubles, fixtures, source, skeleton and an explicit integrationPlan. Database/client mocks do not prove SQL, wire or broker behavior. Use flow=false or strategy=unit for intentional class isolation; env supplies real-schema DDL.
 
 Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) · Origin: built-in
 
@@ -5137,7 +5604,16 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "flow": {
       "type": "boolean",
-      "description": "true: a flow test from this method (real beans on the chain, the edge mocked); false: a unit test. Default: flow for endpoints, listeners, jobs and library classes"
+      "description": "true: a flow test from this method (real beans on the chain, the edge mocked); false: a unit test. Default: outside-in for evidenced entry callers"
+    },
+    "strategy": {
+      "type": "string",
+      "enum": [
+        "outside-in",
+        "unit"
+      ],
+      "default": "outside-in",
+      "description": "Prefer entry-to-exit behavior; unit explicitly requests class isolation"
     }
   },
   "required": [
@@ -5324,11 +5800,77 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
 
 </details>
 
+<a id="tool-workspace_coverage_plan"></a>
+
+### workspace_coverage_plan
+
+Plan added/modified JVM production lines against the workspace base commit (or an exact base), including untracked files. No old project coverage baseline is needed. Lines become executable/missed/unknown only after measurement.
+
+Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "workspace": {
+      "type": "string",
+      "description": "Workspace id"
+    },
+    "base": {
+      "type": "string",
+      "description": "Optional Git base commit/ref; defaults to the workspace checkout base"
+    }
+  },
+  "required": [
+    "workspace"
+  ]
+}
+```
+
+</details>
+
+<a id="tool-workspace_coverage"></a>
+
+### workspace_coverage
+
+Read retained change coverage: uncovered changed lines/branches, unknown mappings, exact source/base pins and freshness. This is workspace JVM coverage, separate from dev-tool test_coverage. A stale report cannot claim full coverage; covered lines do not prove assertions.
+
+Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "workspace": {
+      "type": "string",
+      "description": "Workspace id"
+    },
+    "report": {
+      "type": "string",
+      "description": "Optional retained coverage report id"
+    },
+    "file": {
+      "type": "string",
+      "description": "Optional exact source path for full line detail"
+    }
+  },
+  "required": [
+    "workspace"
+  ]
+}
+```
+
+</details>
+
 <a id="tool-test_run"></a>
 
 ### test_run
 
-Run tests of a workspace using reviewed Node node:test file execution or the JVM build. Select target for actual execution placement/dependencies; env is source-catalog provenance. Fast by default on Maven projects: after one Maven prepare per workspace, only changed sources are compiled and the tests run in one JVM (seconds); mode="build" runs the project's Maven/Gradle (the final check). files=[{path, content|edits}] writes before running, so a try is one call. Every result is kept per test, so workspace_patch can show which tests failed before the fix and pass after it (red-green). The answer has: each test, its status and time, failures with message and the code parts to work on (the repo frames of the stack trace with the lines around them), compile errors with their lines, and the output tail. With env + db (or ddl_path), the run gets a throwaway Postgres database loaded with the DDL snapshot, passed to Spring as SPRING_DATASOURCE_*. Shown as a view. Takes a while: if it answers "running", call it again with that job id.
+Run tests of a workspace using reviewed Node node:test file execution or the JVM build. Select target for actual execution placement/dependencies; env is source-catalog provenance. Fast by default on Maven projects: after one Maven prepare per workspace, only changed sources are compiled and the tests run in one JVM (seconds); mode="build" runs the project's Maven/Gradle (the final check). files=[{path, content|edits}] writes before running, so a try is one call. Every result is kept per test, so workspace_patch can show which tests failed before the fix and pass after it (red-green). coverage=true measures changed production lines/branches with fresh JaCoCo data; workspace_coverage_plan previews scope; workspace_coverage reads remaining gaps. The answer has: each test, its status and time, failures with message and the code parts to work on (the repo frames of the stack trace with the lines around them), compile errors with their lines, and the output tail. With env + db (or ddl_path), the run gets a throwaway Postgres database loaded with the DDL snapshot, passed to Spring as SPRING_DATASOURCE_*. Shown as a view. Takes a while: if it answers "running", call it again with that job id.
 
 Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) · Origin: built-in
 
@@ -5390,6 +5932,15 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
       ],
       "default": "auto",
       "description": "fast: compile only what changed and run in one JVM (Maven projects; a few seconds); build: the project's Maven/Gradle (the final check before the patch); auto: fast where it fits"
+    },
+    "coverage": {
+      "type": "boolean",
+      "default": false,
+      "description": "Collect fresh JaCoCo coverage of changed JVM production lines only; no project-wide coverage baseline required"
+    },
+    "coverage_base": {
+      "type": "string",
+      "description": "Optional Git comparison base for coverage; defaults to the workspace base commit"
     },
     "target": {
       "type": "string",
@@ -7705,6 +8256,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
 
 ## context
 
+- [`result_read`](#tool-result_read)
 - [`context_find`](#tool-context_find)
 - [`context_open`](#tool-context_open)
 - [`context_get`](#tool-context_get)
@@ -7717,7 +8269,55 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
 - [`context_delete_file`](#tool-context_delete_file)
 - [`context_run`](#tool-context_run)
 - [`context_hint`](#tool-context_hint)
+- [`chat_context_status`](#tool-chat_context_status)
+- [`chat_compaction_request`](#tool-chat_compaction_request)
+- [`project_context_find`](#tool-project_context_find)
+- [`project_context_get`](#tool-project_context_get)
+- [`project_context_save`](#tool-project_context_save)
 - [`self_context`](#tool-self_context)
+
+<a id="tool-result_read"></a>
+
+### result_read
+
+Read a retained full tool response without rerunning its action. Use modelContext.resultId and an optional JSON pointer (/rows/0, /flowMap). UTF-8 JSON text pages have nextCursor; concatenate inside code before JSON.parse. References expire with result retention; save important evidence to task memory. Private to the original user/story.
+
+Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "modelContext.resultId from a compacted tool response"
+    },
+    "path": {
+      "type": "string",
+      "description": "RFC 6901 JSON pointer; empty reads the root"
+    },
+    "cursor": {
+      "type": "string",
+      "description": "nextCursor for the same id/path"
+    },
+    "max_bytes": {
+      "type": "integer",
+      "description": "Maximum UTF-8 JSON text bytes per page",
+      "default": 1024,
+      "minimum": 128,
+      "maximum": 1536
+    }
+  },
+  "required": [
+    "id"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
 
 <a id="tool-context_find"></a>
 
@@ -8438,6 +9038,288 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
 
 </details>
 
+<a id="tool-chat_context_status"></a>
+
+### chat_context_status
+
+Read advisory chat context pressure. Only delivered tool bytes are known unless the client reports usage; estimates omit unknown prompt/history/attachments. This does not compact or clear the chat.
+
+Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {},
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-chat_compaction_request"></a>
+
+### chat_compaction_request
+
+Save an explicit task checkpoint and request client compaction. This generic MCP tool cannot force a client to compact. If native context_compact is available, invoke it after saving; otherwise use the client Compact action.
+
+Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "context": {
+      "type": "string",
+      "description": "Existing owned task context id",
+      "maxLength": 200
+    },
+    "checkpoint": {
+      "type": "string",
+      "description": "Goal, constraints, exact revisions, build/PR ids, review findings, completed actions and next steps; no credentials",
+      "minLength": 1,
+      "maxLength": 12000
+    }
+  },
+  "required": [
+    "context",
+    "checkpoint"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-project_context_find"></a>
+
+### project_context_find
+
+Find shared, versioned project understanding across chats: services, entry-to-exit flows, assumptions and saved evidence. Read exact revisions before reuse; private task notes stay in context_find.
+
+Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "query": {
+      "type": "string",
+      "description": "Project, service, repository, finding or artifact words"
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Max matches",
+      "default": 20,
+      "minimum": 1,
+      "maximum": 200
+    },
+    "offset": {
+      "type": "integer",
+      "description": "Page offset",
+      "default": 0
+    },
+    "include_archived": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-project_context_get"></a>
+
+### project_context_get
+
+Read published project understanding, files and immutable history. Omit id for the document template and limits. Optional path reads one retained file; scripts/queries are stored evidence and never executed. Returns an inline flow view.
+
+Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Project context id"
+    },
+    "revision": {
+      "type": "string",
+      "description": "Exact retained publication; default current"
+    },
+    "path": {
+      "type": "string",
+      "description": "Optional relative file path"
+    },
+    "diagram": {
+      "type": "boolean",
+      "default": false,
+      "description": "Open retained dossier JSON as its original interactive service graph; reads saved data only"
+    },
+    "flow": {
+      "type": "string",
+      "description": "Optional retained dossier flow id when diagram=true"
+    },
+    "encoding": {
+      "type": "string",
+      "enum": [
+        "utf8",
+        "base64"
+      ],
+      "default": "utf8"
+    },
+    "from": {
+      "type": "integer",
+      "description": "Optional first text line"
+    },
+    "to": {
+      "type": "integer",
+      "description": "Optional last text line"
+    },
+    "history_limit": {
+      "type": "integer",
+      "description": "History entries",
+      "default": 20,
+      "minimum": 1,
+      "maximum": 100
+    },
+    "view": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-project_context_save"></a>
+
+### project_context_save
+
+Admin: publish project understanding and files as one immutable revision. Read first; expected_revision prevents lost edits. Everyone can read publications. Import an owned architecture_service dossier to retain pinned flows/Joern evidence. Private drafts stay in task contexts. No tools or scripts are executed.
+
+Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable project context id"
+    },
+    "expected_revision": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Last publication revision; null only for creation"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Why this publication changes shared understanding"
+    },
+    "restore_revision": {
+      "type": "string",
+      "description": "Restore a retained document and file inventory as a new publication; expected_revision still names the current head"
+    },
+    "document": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Full document from project_context_get/template: title, summary, body, repositories, tags, architecture references, services with entries/exits/flows/assumptions/gaps. Omit to retain current metadata."
+    },
+    "dossier": {
+      "type": "string",
+      "description": "Optional owned architecture_service result URL/id; merges one service and saves full JSON plus flow PlantUML"
+    },
+    "files": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Relative artifact path"
+          },
+          "content": {
+            "type": "string",
+            "description": "UTF-8 or base64 contents; no credentials"
+          },
+          "encoding": {
+            "type": "string",
+            "enum": [
+              "utf8",
+              "base64"
+            ]
+          },
+          "summary": {
+            "type": "string",
+            "description": "Searchable artifact purpose and provenance"
+          },
+          "archive": {
+            "type": "boolean",
+            "description": "Move current file under archived/; historical revisions stay intact"
+          },
+          "from_context": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "path",
+              "expected_revision"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Readable task context"
+              },
+              "path": {
+                "type": "string",
+                "description": "Saved task file"
+              },
+              "expected_revision": {
+                "type": "string",
+                "description": "Revision from context_read; prevents publishing changed evidence"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "id",
+    "expected_revision",
+    "reason"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
 <a id="tool-self_context"></a>
 
 ### self_context
@@ -8466,6 +9348,350 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     }
   },
   "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+## jenkins
+
+- [`jenkins_jobs`](#tool-jenkins_jobs)
+- [`jenkins_build`](#tool-jenkins_build)
+- [`jenkins_log`](#tool-jenkins_log)
+- [`jenkins_tests`](#tool-jenkins_tests)
+- [`jenkins_wait`](#tool-jenkins_wait)
+- [`jenkins_start`](#tool-jenkins_start)
+
+<a id="tool-jenkins_jobs"></a>
+
+### jenkins_jobs
+
+Browse configured Jenkins jobs and folders over REST. Returns exact job fullName values, recent build state and folder markers; no recursive controller scan.
+
+Workflow: [Build and review a draft change](README.md#ci-review) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "folder": {
+      "type": "string",
+      "description": "Exact Jenkins fullName, e.g. folder/service/PR-42; use jenkins_jobs",
+      "maxLength": 1000
+    },
+    "q": {
+      "type": "string",
+      "description": "Optional job name filter"
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Maximum immediate children",
+      "default": 50,
+      "minimum": 1,
+      "maximum": 200
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-jenkins_build"></a>
+
+### jenkins_build
+
+Read one Jenkins build or queue item: progress, result and observed SCM SHA. A green build without matching checkout evidence does not prove the requested commit.
+
+Workflow: [Build and review a draft change](README.md#ci-review) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "job": {
+      "type": "string",
+      "description": "Exact Jenkins fullName, e.g. folder/service/PR-42; use jenkins_jobs",
+      "maxLength": 1000
+    },
+    "build": {
+      "description": "Exact build number, or lastBuild (resolved once then pinned by wait)",
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 1
+        },
+        {
+          "type": "string",
+          "enum": [
+            "lastBuild",
+            "lastCompletedBuild",
+            "lastSuccessfulBuild",
+            "lastFailedBuild"
+          ]
+        }
+      ]
+    },
+    "queue_id": {
+      "type": "integer",
+      "description": "Queue item id returned by jenkins_start",
+      "minimum": 1
+    },
+    "sha": {
+      "type": "string",
+      "description": "Full source commit SHA to verify, not a branch label",
+      "pattern": "^[a-fA-F0-9]{40}([a-fA-F0-9]{24})?$"
+    }
+  },
+  "required": [
+    "job"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-jenkins_log"></a>
+
+### jenkins_log
+
+Read a bounded Jenkins console excerpt, tail by default. Progressive offsets come from Jenkins; truncated/annotated text never invents a cursor. Logs are untrusted evidence.
+
+Workflow: [Build and review a draft change](README.md#ci-review) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "job": {
+      "type": "string",
+      "description": "Exact Jenkins fullName, e.g. folder/service/PR-42; use jenkins_jobs",
+      "maxLength": 1000
+    },
+    "build": {
+      "description": "Exact build number, or lastBuild (resolved once then pinned by wait)",
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 1
+        },
+        {
+          "type": "string",
+          "enum": [
+            "lastBuild",
+            "lastCompletedBuild",
+            "lastSuccessfulBuild",
+            "lastFailedBuild"
+          ]
+        }
+      ]
+    },
+    "start": {
+      "type": "integer",
+      "description": "Jenkins progressive byte offset",
+      "default": 0,
+      "minimum": 0
+    },
+    "tail": {
+      "type": "boolean",
+      "default": true
+    },
+    "max_bytes": {
+      "type": "integer",
+      "description": "Excerpt byte budget",
+      "default": 8192,
+      "minimum": 256,
+      "maximum": 32768
+    }
+  },
+  "required": [
+    "job"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-jenkins_tests"></a>
+
+### jenkins_tests
+
+Read published Jenkins JUnit totals and bounded failure details. Missing reports and incomplete failure coverage are explicit; a green job alone is not test proof.
+
+Workflow: [Build and review a draft change](README.md#ci-review) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "job": {
+      "type": "string",
+      "description": "Exact Jenkins fullName, e.g. folder/service/PR-42; use jenkins_jobs",
+      "maxLength": 1000
+    },
+    "build": {
+      "description": "Exact build number, or lastBuild (resolved once then pinned by wait)",
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 1
+        },
+        {
+          "type": "string",
+          "enum": [
+            "lastBuild",
+            "lastCompletedBuild",
+            "lastSuccessfulBuild",
+            "lastFailedBuild"
+          ]
+        }
+      ]
+    }
+  },
+  "required": [
+    "job"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-jenkins_wait"></a>
+
+### jenkins_wait
+
+Wait up to 25 seconds for one pinned Jenkins build/queue to finish. Returns pending with resume arguments, not a restarted build. Cancellation stops polling; normal timeout leaves Jenkins running.
+
+Workflow: [Build and review a draft change](README.md#ci-review) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "job": {
+      "type": "string",
+      "description": "Exact Jenkins fullName, e.g. folder/service/PR-42; use jenkins_jobs",
+      "maxLength": 1000
+    },
+    "build": {
+      "description": "Exact build number, or lastBuild (resolved once then pinned by wait)",
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 1
+        },
+        {
+          "type": "string",
+          "enum": [
+            "lastBuild",
+            "lastCompletedBuild",
+            "lastSuccessfulBuild",
+            "lastFailedBuild"
+          ]
+        }
+      ]
+    },
+    "queue_id": {
+      "type": "integer",
+      "description": "Queue item id returned by jenkins_start",
+      "minimum": 1
+    },
+    "sha": {
+      "type": "string",
+      "description": "Full source commit SHA to verify, not a branch label",
+      "pattern": "^[a-fA-F0-9]{40}([a-fA-F0-9]{24})?$"
+    },
+    "cursor": {
+      "type": "string",
+      "description": "Opaque target/story cursor from status or wait",
+      "maxLength": 2048
+    },
+    "wait_ms": {
+      "type": "integer",
+      "description": "Bounded observation window; pending is resumable",
+      "default": 15000,
+      "minimum": 0,
+      "maximum": 25000
+    },
+    "poll_ms": {
+      "type": "integer",
+      "description": "Poll interval; target rate limits still apply",
+      "default": 3000,
+      "minimum": 100,
+      "maximum": 10000
+    }
+  },
+  "required": [
+    "job"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-jenkins_start"></a>
+
+### jenkins_start
+
+Explicitly submit a Jenkins build when requested and jenkins.allowBuild=true. request_id prevents replay of the same POST. Returns its queue id; lost outcomes must be inspected, never blindly retried.
+
+Workflow: [Build and review a draft change](README.md#ci-review) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "job": {
+      "type": "string",
+      "description": "Exact Jenkins fullName, e.g. folder/service/PR-42; use jenkins_jobs",
+      "maxLength": 1000
+    },
+    "request_id": {
+      "type": "string",
+      "description": "Stable idempotency key for this exact action; reuse it after a lost reply",
+      "maxLength": 160
+    },
+    "parameters": {
+      "type": "object",
+      "maxProperties": 50,
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 4000
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "boolean"
+          }
+        ]
+      }
+    }
+  },
+  "required": [
+    "job",
+    "request_id"
+  ],
   "additionalProperties": false
 }
 ```
@@ -10041,6 +11267,8 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
 
 ## runtime
 
+- [`observability`](#tool-observability)
+- [`test_coverage`](#tool-test_coverage)
 - [`code_start`](#tool-code_start)
 - [`code_wait`](#tool-code_wait)
 - [`code_cancel`](#tool-code_cancel)
@@ -10050,6 +11278,62 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
 - [`metadata_list`](#tool-metadata_list)
 - [`metadata_get`](#tool-metadata_get)
 - [`metadata_edit`](#tool-metadata_edit)
+
+<a id="tool-observability"></a>
+
+### observability
+
+Read sampled diagnostic spans for this chat. Tracing is opt-in in Admin Runtime. Payloads and error messages are excluded.
+
+Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "trace": {
+      "type": "string",
+      "description": "Optional trace id"
+    },
+    "view": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-test_coverage"></a>
+
+### test_coverage
+
+Read dev-tool source and lifecycle test evidence, gaps, source freshness and test files. Execution hits do not prove every assertion.
+
+Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "view": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
 
 <a id="tool-code_start"></a>
 
@@ -10399,6 +11683,7 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
 - [`semantic_capabilities`](#tool-semantic_capabilities)
 - [`semantic_index`](#tool-semantic_index)
 - [`semantic_search`](#tool-semantic_search)
+- [`semantic_trace`](#tool-semantic_trace)
 - [`semantic_query`](#tool-semantic_query)
 
 <a id="tool-semantic_capabilities"></a>
@@ -10414,7 +11699,24 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
 ```json
 {
   "type": "object",
-  "properties": {},
+  "properties": {
+    "format": {
+      "type": "string",
+      "enum": [
+        "compact",
+        "full"
+      ],
+      "default": "compact",
+      "description": "Bounded model preview or original JSON; inline view always retains full evidence"
+    },
+    "max_output_bytes": {
+      "type": "integer",
+      "minimum": 4096,
+      "maximum": 65536,
+      "default": 16384,
+      "description": "Compact JSON byte budget; preview omissions are explicit"
+    }
+  },
   "required": [],
   "additionalProperties": false
 }
@@ -10436,6 +11738,22 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
 {
   "type": "object",
   "properties": {
+    "format": {
+      "type": "string",
+      "enum": [
+        "compact",
+        "full"
+      ],
+      "default": "compact",
+      "description": "Bounded model preview or original JSON; inline view always retains full evidence"
+    },
+    "max_output_bytes": {
+      "type": "integer",
+      "minimum": 4096,
+      "maximum": 65536,
+      "default": 16384,
+      "description": "Compact JSON byte budget; preview omissions are explicit"
+    },
     "env": {
       "type": "string",
       "enum": [
@@ -10471,6 +11789,14 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
     "repos": {
       "type": "string",
       "description": "Comma-separated exact repository or revision keys"
+    },
+    "language": {
+      "type": "string",
+      "enum": [
+        "java",
+        "js"
+      ],
+      "description": "Select one frontend (js also covers TS); avoids mixing analyses of different languages"
     },
     "versions": {
       "type": "boolean",
@@ -10518,6 +11844,22 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
 {
   "type": "object",
   "properties": {
+    "format": {
+      "type": "string",
+      "enum": [
+        "compact",
+        "full"
+      ],
+      "default": "compact",
+      "description": "Bounded model preview or original JSON; inline view always retains full evidence"
+    },
+    "max_output_bytes": {
+      "type": "integer",
+      "minimum": 4096,
+      "maximum": 65536,
+      "default": 16384,
+      "description": "Compact JSON byte budget; preview omissions are explicit"
+    },
     "env": {
       "type": "string",
       "enum": [
@@ -10554,13 +11896,21 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
       "type": "string",
       "description": "Comma-separated exact repository or revision keys"
     },
+    "language": {
+      "type": "string",
+      "enum": [
+        "java",
+        "js"
+      ],
+      "description": "Select one frontend (js also covers TS); avoids mixing analyses of different languages"
+    },
     "revisionSet": {
       "type": "string",
       "description": "Exact resolved source/dependency set from semantic_index"
     },
     "analysis": {
       "type": "string",
-      "description": "Retained analysis id"
+      "description": "Exact semantic_index analyses[].id; not a service name or ref"
     },
     "analyses": {
       "type": "array",
@@ -10568,7 +11918,7 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
       "items": {
         "type": "string"
       },
-      "description": "Exact retained analysis ids, including both revisions for compare"
+      "description": "Exact retained analysis ids; compare uses [before,after] for the same repository/frontend"
     },
     "query": {
       "type": "string",
@@ -10609,11 +11959,734 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
 
 </details>
 
+<a id="tool-semantic_trace"></a>
+
+### semantic_trace
+
+Explain a change path: analysis=<id> or analyses=[beforeId,afterId], from and to required. Method input: from.name + parameter; sink: to.name + argument. Collects conditions, loops, stream filters/maps and inherited-library logic; from.receiver selects a concrete subclass. Graph/readable evidence, not runtime proof. List missing analyses: semantic_index; whole-entry map: semantic_query flowmap.
+
+Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "if": {
+    "required": [
+      "job"
+    ]
+  },
+  "then": {
+    "properties": {
+      "job": {
+        "minLength": 1
+      }
+    }
+  },
+  "else": {
+    "if": {
+      "anyOf": [
+        {
+          "required": [
+            "analysis"
+          ]
+        },
+        {
+          "required": [
+            "analyses"
+          ]
+        },
+        {
+          "required": [
+            "from"
+          ]
+        },
+        {
+          "required": [
+            "to"
+          ]
+        }
+      ]
+    },
+    "then": {
+      "required": [
+        "from",
+        "to"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "analysis"
+          ],
+          "properties": {
+            "analysis": {
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "required": [
+            "analyses"
+          ],
+          "properties": {
+            "analyses": {
+              "minItems": 1,
+              "maxItems": 2,
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    }
+  },
+  "examples": [
+    {
+      "analyses": [
+        "before-analysis-id",
+        "after-analysis-id"
+      ],
+      "from": {
+        "kind": "method",
+        "name": "entryMethod",
+        "parameter": "input"
+      },
+      "to": {
+        "kind": "call",
+        "name": "exitCall",
+        "argument": 1
+      }
+    },
+    {
+      "job": "returned-job-id",
+      "waitMs": 1000
+    }
+  ],
+  "type": "object",
+  "properties": {
+    "format": {
+      "type": "string",
+      "enum": [
+        "compact",
+        "full"
+      ],
+      "default": "compact",
+      "description": "Bounded model preview or original JSON; inline view always retains full evidence"
+    },
+    "max_output_bytes": {
+      "type": "integer",
+      "minimum": 4096,
+      "maximum": 65536,
+      "default": 16384,
+      "description": "Compact JSON byte budget; preview omissions are explicit"
+    },
+    "env": {
+      "type": "string",
+      "enum": [
+        "dev"
+      ],
+      "default": "dev",
+      "description": "Environment"
+    },
+    "analysis": {
+      "type": "string",
+      "description": "Exact semantic_index analyses[].id; not a service name or ref"
+    },
+    "analyses": {
+      "type": "array",
+      "maxItems": 2,
+      "items": {
+        "type": "string"
+      },
+      "description": "Exact retained analysis ids; compare uses [before,after] for the same repository/frontend"
+    },
+    "from": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Canonical symbol/port id"
+        },
+        "analysisId": {
+          "type": "string",
+          "description": "Retained analysis id"
+        },
+        "repo": {
+          "type": "string",
+          "description": "PROJECT/repo"
+        },
+        "sha": {
+          "type": "string",
+          "description": "Full source SHA"
+        },
+        "signature": {
+          "type": "string",
+          "description": "Exact method signature"
+        },
+        "name": {
+          "type": "string",
+          "description": "Symbol or boundary name"
+        },
+        "receiver": {
+          "type": "string",
+          "description": "Exact concrete class; resolves inherited methods through retained type declarations"
+        },
+        "file": {
+          "type": "string",
+          "description": "Relative source file"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "code": {
+          "type": "string",
+          "description": "Exact expression for a line endpoint"
+        },
+        "nodeLabel": {
+          "type": "string",
+          "description": "CPG expression label, e.g. IDENTIFIER or CALL"
+        },
+        "nodeId": {
+          "type": "string",
+          "description": "Exact CPG node id from this analysis only"
+        },
+        "parameter": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          ],
+          "description": "Exact method parameter name or one-based index for value flow"
+        },
+        "argument": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64,
+          "description": "Exact one-based sink call argument for value flow"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "method",
+            "line",
+            "call",
+            "http-ingress",
+            "kafka-consume",
+            "scheduled",
+            "http-egress",
+            "kafka-produce",
+            "db-write",
+            "table",
+            "port"
+          ],
+          "description": "Endpoint kind; line requires exact relative file and line"
+        },
+        "env": {
+          "type": "string",
+          "description": "Environment"
+        },
+        "cluster": {
+          "type": "string",
+          "description": "Kafka cluster identity"
+        },
+        "db": {
+          "type": "string",
+          "description": "Database identity"
+        },
+        "schema": {
+          "type": "string",
+          "description": "Database schema"
+        },
+        "topic": {
+          "type": "string",
+          "description": "Resolved Kafka topic"
+        },
+        "route": {
+          "type": "string",
+          "description": "HTTP path"
+        },
+        "method": {
+          "type": "string",
+          "description": "HTTP verb"
+        },
+        "service": {
+          "type": "string",
+          "description": "Exact service identity"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Start method parameter, ingress port or exact code line; receiver selects an inherited concrete class"
+    },
+    "to": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Canonical symbol/port id"
+        },
+        "analysisId": {
+          "type": "string",
+          "description": "Retained analysis id"
+        },
+        "repo": {
+          "type": "string",
+          "description": "PROJECT/repo"
+        },
+        "sha": {
+          "type": "string",
+          "description": "Full source SHA"
+        },
+        "signature": {
+          "type": "string",
+          "description": "Exact method signature"
+        },
+        "name": {
+          "type": "string",
+          "description": "Symbol or boundary name"
+        },
+        "receiver": {
+          "type": "string",
+          "description": "Exact concrete class; resolves inherited methods through retained type declarations"
+        },
+        "file": {
+          "type": "string",
+          "description": "Relative source file"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "code": {
+          "type": "string",
+          "description": "Exact expression for a line endpoint"
+        },
+        "nodeLabel": {
+          "type": "string",
+          "description": "CPG expression label, e.g. IDENTIFIER or CALL"
+        },
+        "nodeId": {
+          "type": "string",
+          "description": "Exact CPG node id from this analysis only"
+        },
+        "parameter": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          ],
+          "description": "Exact method parameter name or one-based index for value flow"
+        },
+        "argument": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64,
+          "description": "Exact one-based sink call argument for value flow"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "method",
+            "line",
+            "call",
+            "http-ingress",
+            "kafka-consume",
+            "scheduled",
+            "http-egress",
+            "kafka-produce",
+            "db-write",
+            "table",
+            "port"
+          ],
+          "description": "Endpoint kind; line requires exact relative file and line"
+        },
+        "env": {
+          "type": "string",
+          "description": "Environment"
+        },
+        "cluster": {
+          "type": "string",
+          "description": "Kafka cluster identity"
+        },
+        "db": {
+          "type": "string",
+          "description": "Database identity"
+        },
+        "schema": {
+          "type": "string",
+          "description": "Database schema"
+        },
+        "topic": {
+          "type": "string",
+          "description": "Resolved Kafka topic"
+        },
+        "route": {
+          "type": "string",
+          "description": "HTTP path"
+        },
+        "method": {
+          "type": "string",
+          "description": "HTTP verb"
+        },
+        "service": {
+          "type": "string",
+          "description": "Exact service identity"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Target call argument, return, exit port or exact code line"
+    },
+    "after_from": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Canonical symbol/port id"
+        },
+        "analysisId": {
+          "type": "string",
+          "description": "Retained analysis id"
+        },
+        "repo": {
+          "type": "string",
+          "description": "PROJECT/repo"
+        },
+        "sha": {
+          "type": "string",
+          "description": "Full source SHA"
+        },
+        "signature": {
+          "type": "string",
+          "description": "Exact method signature"
+        },
+        "name": {
+          "type": "string",
+          "description": "Symbol or boundary name"
+        },
+        "receiver": {
+          "type": "string",
+          "description": "Exact concrete class; resolves inherited methods through retained type declarations"
+        },
+        "file": {
+          "type": "string",
+          "description": "Relative source file"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "code": {
+          "type": "string",
+          "description": "Exact expression for a line endpoint"
+        },
+        "nodeLabel": {
+          "type": "string",
+          "description": "CPG expression label, e.g. IDENTIFIER or CALL"
+        },
+        "nodeId": {
+          "type": "string",
+          "description": "Exact CPG node id from this analysis only"
+        },
+        "parameter": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          ],
+          "description": "Exact method parameter name or one-based index for value flow"
+        },
+        "argument": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64,
+          "description": "Exact one-based sink call argument for value flow"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "method",
+            "line",
+            "call",
+            "http-ingress",
+            "kafka-consume",
+            "scheduled",
+            "http-egress",
+            "kafka-produce",
+            "db-write",
+            "table",
+            "port"
+          ],
+          "description": "Endpoint kind; line requires exact relative file and line"
+        },
+        "env": {
+          "type": "string",
+          "description": "Environment"
+        },
+        "cluster": {
+          "type": "string",
+          "description": "Kafka cluster identity"
+        },
+        "db": {
+          "type": "string",
+          "description": "Database identity"
+        },
+        "schema": {
+          "type": "string",
+          "description": "Database schema"
+        },
+        "topic": {
+          "type": "string",
+          "description": "Resolved Kafka topic"
+        },
+        "route": {
+          "type": "string",
+          "description": "HTTP path"
+        },
+        "method": {
+          "type": "string",
+          "description": "HTTP verb"
+        },
+        "service": {
+          "type": "string",
+          "description": "Exact service identity"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Complete source selector for the after revision when lines/expressions moved"
+    },
+    "after_to": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Canonical symbol/port id"
+        },
+        "analysisId": {
+          "type": "string",
+          "description": "Retained analysis id"
+        },
+        "repo": {
+          "type": "string",
+          "description": "PROJECT/repo"
+        },
+        "sha": {
+          "type": "string",
+          "description": "Full source SHA"
+        },
+        "signature": {
+          "type": "string",
+          "description": "Exact method signature"
+        },
+        "name": {
+          "type": "string",
+          "description": "Symbol or boundary name"
+        },
+        "receiver": {
+          "type": "string",
+          "description": "Exact concrete class; resolves inherited methods through retained type declarations"
+        },
+        "file": {
+          "type": "string",
+          "description": "Relative source file"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "code": {
+          "type": "string",
+          "description": "Exact expression for a line endpoint"
+        },
+        "nodeLabel": {
+          "type": "string",
+          "description": "CPG expression label, e.g. IDENTIFIER or CALL"
+        },
+        "nodeId": {
+          "type": "string",
+          "description": "Exact CPG node id from this analysis only"
+        },
+        "parameter": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          ],
+          "description": "Exact method parameter name or one-based index for value flow"
+        },
+        "argument": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64,
+          "description": "Exact one-based sink call argument for value flow"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "method",
+            "line",
+            "call",
+            "http-ingress",
+            "kafka-consume",
+            "scheduled",
+            "http-egress",
+            "kafka-produce",
+            "db-write",
+            "table",
+            "port"
+          ],
+          "description": "Endpoint kind; line requires exact relative file and line"
+        },
+        "env": {
+          "type": "string",
+          "description": "Environment"
+        },
+        "cluster": {
+          "type": "string",
+          "description": "Kafka cluster identity"
+        },
+        "db": {
+          "type": "string",
+          "description": "Database identity"
+        },
+        "schema": {
+          "type": "string",
+          "description": "Database schema"
+        },
+        "topic": {
+          "type": "string",
+          "description": "Resolved Kafka topic"
+        },
+        "route": {
+          "type": "string",
+          "description": "HTTP path"
+        },
+        "method": {
+          "type": "string",
+          "description": "HTTP verb"
+        },
+        "service": {
+          "type": "string",
+          "description": "Exact service identity"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Complete target selector for the after revision when lines/expressions moved"
+    },
+    "assumptions": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "properties": {
+          "expression": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "holds": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "expression",
+          "holds"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "includeControl": {
+      "type": "boolean",
+      "default": true
+    },
+    "includeContext": {
+      "type": "boolean",
+      "default": true,
+      "description": "Collect bounded reachable source changes, loops, stream callbacks and library dispatch assumptions separately from selected paths"
+    },
+    "maxPaths": {
+      "type": "integer",
+      "description": "Paths per layer per revision",
+      "default": 8,
+      "minimum": 1,
+      "maximum": 20
+    },
+    "maxHops": {
+      "type": "integer",
+      "description": "Nodes per path",
+      "default": 60,
+      "minimum": 1,
+      "maximum": 100
+    },
+    "budgetMs": {
+      "type": "integer",
+      "description": "Query time budget",
+      "default": 5000,
+      "minimum": 100,
+      "maximum": 30000
+    },
+    "job": {
+      "type": "string",
+      "description": "Observe this owned trace job without repeating it"
+    },
+    "waitMs": {
+      "type": "integer",
+      "description": "Observation wait",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 30000
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
 <a id="tool-semantic_query"></a>
 
 ### semantic_query
 
-Query exact retained analyses: callers, callees, slices, bounded paths, guards or revision comparisons. Choose reachability/controlflow/dataflow explicitly. Read proof status, gaps and coverage; a call chain does not prove value flow.
+Query retained CPGs: symbols, calls, paths/slices, guards, branch comparisons or entry-to-exit state maps. Inspect proof/gaps; static reachability does not prove value flow. compare+dataflow uses analyses=[before,after] and revision-neutral from/to. flowmap uses a whole-method/ingress from (no to), or discovers bound ingress ports; includes controls, changes, exits and assumptions.
 
 Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
 
@@ -10623,6 +12696,22 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
 {
   "type": "object",
   "properties": {
+    "format": {
+      "type": "string",
+      "enum": [
+        "compact",
+        "full"
+      ],
+      "default": "compact",
+      "description": "Bounded model preview or original JSON; inline view always retains full evidence"
+    },
+    "max_output_bytes": {
+      "type": "integer",
+      "minimum": 4096,
+      "maximum": 65536,
+      "default": 16384,
+      "description": "Compact JSON byte budget; preview omissions are explicit"
+    },
     "env": {
       "type": "string",
       "enum": [
@@ -10659,13 +12748,21 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
       "type": "string",
       "description": "Comma-separated exact repository or revision keys"
     },
+    "language": {
+      "type": "string",
+      "enum": [
+        "java",
+        "js"
+      ],
+      "description": "Select one frontend (js also covers TS); avoids mixing analyses of different languages"
+    },
     "revisionSet": {
       "type": "string",
       "description": "Exact resolved source/dependency set from semantic_index"
     },
     "analysis": {
       "type": "string",
-      "description": "Retained analysis id"
+      "description": "Exact semantic_index analyses[].id; not a service name or ref"
     },
     "analyses": {
       "type": "array",
@@ -10673,7 +12770,7 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
       "items": {
         "type": "string"
       },
-      "description": "Exact retained analysis ids, including both revisions for compare"
+      "description": "Exact retained analysis ids; compare uses [before,after] for the same repository/frontend"
     },
     "job": {
       "type": "string",
@@ -10698,7 +12795,8 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
         "paths",
         "slice",
         "assertions",
-        "compare"
+        "compare",
+        "flowmap"
       ]
     },
     "from": {
@@ -10728,6 +12826,10 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
           "type": "string",
           "description": "Symbol or boundary name"
         },
+        "receiver": {
+          "type": "string",
+          "description": "Exact concrete class; resolves inherited methods through retained type declarations"
+        },
         "file": {
           "type": "string",
           "description": "Relative source file"
@@ -10735,6 +12837,42 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
         "line": {
           "type": "integer",
           "minimum": 1
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "code": {
+          "type": "string",
+          "description": "Exact expression for a line endpoint"
+        },
+        "nodeLabel": {
+          "type": "string",
+          "description": "CPG expression label, e.g. IDENTIFIER or CALL"
+        },
+        "nodeId": {
+          "type": "string",
+          "description": "Exact CPG node id from this analysis only"
+        },
+        "parameter": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          ],
+          "description": "Exact method parameter name or one-based index for value flow"
+        },
+        "argument": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64,
+          "description": "Exact one-based sink call argument for value flow"
         },
         "kind": {
           "type": "string",
@@ -10802,6 +12940,10 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
           "type": "string",
           "description": "Symbol or boundary name"
         },
+        "receiver": {
+          "type": "string",
+          "description": "Exact concrete class; resolves inherited methods through retained type declarations"
+        },
         "file": {
           "type": "string",
           "description": "Relative source file"
@@ -10809,6 +12951,42 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
         "line": {
           "type": "integer",
           "minimum": 1
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "code": {
+          "type": "string",
+          "description": "Exact expression for a line endpoint"
+        },
+        "nodeLabel": {
+          "type": "string",
+          "description": "CPG expression label, e.g. IDENTIFIER or CALL"
+        },
+        "nodeId": {
+          "type": "string",
+          "description": "Exact CPG node id from this analysis only"
+        },
+        "parameter": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          ],
+          "description": "Exact method parameter name or one-based index for value flow"
+        },
+        "argument": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64,
+          "description": "Exact one-based sink call argument for value flow"
         },
         "kind": {
           "type": "string",
@@ -10876,6 +13054,10 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
           "type": "string",
           "description": "Symbol or boundary name"
         },
+        "receiver": {
+          "type": "string",
+          "description": "Exact concrete class; resolves inherited methods through retained type declarations"
+        },
         "file": {
           "type": "string",
           "description": "Relative source file"
@@ -10883,6 +13065,42 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
         "line": {
           "type": "integer",
           "minimum": 1
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "code": {
+          "type": "string",
+          "description": "Exact expression for a line endpoint"
+        },
+        "nodeLabel": {
+          "type": "string",
+          "description": "CPG expression label, e.g. IDENTIFIER or CALL"
+        },
+        "nodeId": {
+          "type": "string",
+          "description": "Exact CPG node id from this analysis only"
+        },
+        "parameter": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          ],
+          "description": "Exact method parameter name or one-based index for value flow"
+        },
+        "argument": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64,
+          "description": "Exact one-based sink call argument for value flow"
         },
         "kind": {
           "type": "string",
@@ -10957,6 +13175,20 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
       "default": 5000,
       "minimum": 100,
       "maximum": 30000
+    },
+    "maxMethods": {
+      "type": "integer",
+      "description": "flowmap reachable method budget",
+      "default": 20,
+      "minimum": 1,
+      "maximum": 40
+    },
+    "maxStates": {
+      "type": "integer",
+      "description": "flowmap state budget",
+      "default": 180,
+      "minimum": 20,
+      "maximum": 400
     },
     "maxHops": {
       "type": "integer",

@@ -25,7 +25,8 @@
     }
   },
 
-  "bitbucket": { "url": "https://bitbucket.example.com", "token": "${BITBUCKET_TOKEN}" },
+  "bitbucket": { "url": "https://bitbucket.example.com", "token": "${BITBUCKET_TOKEN}", "allowDraftCreate": false },
+  "jenkins": { "url": "${JENKINS_URL}", "user": "${JENKINS_USER}", "token": "${JENKINS_API_TOKEN}", "allowBuild": false, "allowedJobs": [] },
   "confluence": {
     "url": "https://confluence.example.com", "type": "server", "token": "${CONFLUENCE_TOKEN}",
     "spaces": ["SHOP", "PAY"], "vision": false, "rerank": false, "extractRelations": false,
@@ -115,7 +116,7 @@
 
   "pg": { "dictionaries": "^d_", "dictionaryRows": 10000 },
   "push": { "enabled": false, "protect": [], "author": "" },
-  "tests": { "mavenSettings": "", "gradleProperties": [], "env": {}, "passEnv": [], "pgUrl": "${DT_TEST_DB_URL:-}", "offline": false, "timeoutMs": 900000, "workspaceDays": 7, "compileCheck": true, "compileFix": true, "compileWaitMs": 45000 },
+  "tests": { "mavenSettings": "", "gradleProperties": [], "env": {}, "passEnv": [], "pgUrl": "${DT_TEST_DB_URL:-}", "offline": false, "timeoutMs": 900000, "workspaceDays": 7, "compileCheck": true, "compileFix": true, "compileWaitMs": 45000, "coverage": { "version": "0.8.16" } },
   "telemetry": { "enabled": true, "operationalMetrics": false, "endpoint": "${OTEL_EXPORTER_OTLP_ENDPOINT:-}", "sampleRatio": 1 },
   "log": { "maxMb": 50, "files": 3 },
   "results": { "maxMb": 500 },

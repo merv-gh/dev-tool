@@ -13,7 +13,7 @@ async function main(){
   token=(await request(webui,'/api/v1/auths/signin',{email:'',password:''})).token;assert.ok(token);
   assert.ok((await request(webui,'/api/models')).data.some(m=>m.id==='context-fixture'),'Not the disposable Open WebUI model');
   Object.assign(process.env,{DT_HOME:home,DT_LOG:'quiet',DT_NO_DOCTOR:'1'});for(const key of ['DT_CONFIG_DIR','DT_CACHE_DIR'])delete process.env[key];
-  const window=Number(process.env.CONTEXT_TEST_WINDOW||32768),mode=process.env.CONTEXT_TEST_MODE||'auto',defaultPolicy=process.env.CONTEXT_TEST_THRESHOLD==='default',threshold=defaultPolicy?undefined:Number(process.env.CONTEXT_TEST_THRESHOLD||5000);
+  const window=Number(process.env.CONTEXT_TEST_WINDOW||32768),modelCompact=process.env.CONTEXT_TEST_MODEL_COMPACT==='1',mode=process.env.CONTEXT_TEST_MODE||'auto',defaultPolicy=process.env.CONTEXT_TEST_THRESHOLD==='default',threshold=defaultPolicy?undefined:Number(process.env.CONTEXT_TEST_THRESHOLD||5000);
   fs.writeFileSync(path.join(home,'config.json'),JSON.stringify({envs:{dev:{}},llm:{contextWindow:window,...(defaultPolicy?{}:{compactAt:threshold,contextReserve:Math.min(8192,Math.floor(window/4))}),compaction:true,compactionMode:mode,compactionModel:''}}));
   const setup=await require('../lib/webui').setup({base:webui,dtUrl:'http://dt:4000',profile:'context-fixture',model:'context-fixture',key:token,log:()=>{}});
   const histories=[],messages={};let parent=null;
@@ -25,9 +25,10 @@ async function main(){
   await request(webui,'/api/chat/completions',{model:'context-fixture',stream:true,messages:[...histories,user].map(({id,role,content})=>({id,role,content})),chat_id:chat.id,id:aid,session_id:'context-fixture-client',user_message:user,tool_ids:setup.toolIds,params:{function_calling:'native'},background_tasks:{title_generation:false,tags_generation:false,follow_up_generation:false}});
   let saved,output=[];const deadline=Date.now()+600000;
   while(Date.now()<deadline){saved=await request(webui,'/api/v1/chats/'+chat.id);const message=saved.chat.history.messages[aid];assert.ok(!message.error,JSON.stringify(message.error));output=message.output||[];if(message.done&&JSON.stringify(output).includes('sum 1 through 12 = 78'))break;await new Promise(r=>setTimeout(r,500));}
-  const stats=await request(model,'/stats');
+  let stats=await request(model,'/stats');
   assert.equal(stats.rounds,12,'all intended tool rounds execute once');
-  if(mode==='manual')assert.equal(stats.summaries,0,'manual mode never summarizes between tool rounds');
+  if(mode==='manual'&&!modelCompact)assert.equal(stats.summaries,0,'manual mode never summarizes between tool rounds');
+  else if(mode==='manual'&&modelCompact)assert.ok(stats.summaries<=1,'only the explicit model action can compact');
   else if(defaultPolicy)assert.ok(stats.summaries<=Number(process.env.CONTEXT_TEST_MAX_SUMMARIES||4),`default policy compacted ${stats.summaries}/12 rounds; compaction must leave room for several tool rounds`);
   else assert.ok(stats.summaries>=2,'forced low-threshold compaction must repeat during the tool loop');
   assert.deepEqual(stats.protocolErrors,[],'calls/results remain paired');
@@ -36,14 +37,17 @@ async function main(){
   const summaryQuality=stats.summaryTexts.map(summary=>({taskId:/CTX-17/.test(summary),prohibition:/(?:do not|no|never|don't)[^\n]{0,60}push/i.test(summary),compact:summary.length<4000,inventedTools:/pg_usage|es_search|kafka_last|Postgres compaction/.test(summary)}));
   assert.ok(summaryQuality.every(q=>q.compact&&!q.inventedTools),'summaries stay concise and do not invent unrelated tool activity');
   if(process.env.CONTEXT_REQUIRE_SUMMARY_CONSTRAINTS==='1')assert.ok(summaryQuality.every(q=>q.taskId&&q.prohibition),'summary model must retain exact task/prohibition');
-  if(stats.summaries){assert.ok(stats.requests.some(r=>r.stream&&r.hasSummary),'summaries reach subsequent model requests');assert.ok(output.some(o=>o.type==='open_webui:context_compaction'),'visible native checkpoint is retained');}
+  if(stats.summaries&&!modelCompact){assert.ok(stats.requests.some(r=>r.stream&&r.hasSummary),'summaries reach subsequent model requests');assert.ok(output.some(o=>o.type==='open_webui:context_compaction'),'visible native checkpoint is retained');}
   assert.match(JSON.stringify(output),/sum 1 through 12 = 78/);assert.match(JSON.stringify(output),/embed/,'inline visualizations survive compaction');assert.ok(saved.chat.history.messages[histories[0].id],'full conversation is still stored');
   let manualAction;
   if(mode==='manual'){
    // The same endpoint as the native Compact button; active response cleanup may
    // finish just after its final saved message becomes visible.
    let result;
-   for(let i=0;i<30;i++){
+   if(modelCompact){
+    for(let i=0;i<120;i++){const current=await request(webui,'/api/v1/chats/'+chat.id);if(Object.values(current.chat.history.messages).some(m=>m.contextSummary||m.context_summary)){result={compacted:true};break;}await new Promise(r=>setTimeout(r,250));}
+    assert.equal(stats.compactionRequests,1,'model invoked explicit queued compaction once');
+   }else for(let i=0;i<30;i++){
     const r=await fetch(webui+'/api/v1/chats/'+chat.id+'/compact',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+token},body:JSON.stringify({model:'context-fixture'}),signal:AbortSignal.timeout(180000)});
     if(r.status===409){await new Promise(r=>setTimeout(r,100));continue;}
     result=await r.json();assert.ok(r.ok,JSON.stringify(result));break;
@@ -54,9 +58,12 @@ async function main(){
    assert.ok(Object.values(checkpoint.chat.history.messages).some(m=>m.contextSummary||m.context_summary),'manual checkpoint is saved');
    assert.ok(checkpoint.chat.history.messages[histories[0].id],'manual compaction keeps full stored history');
    assert.equal((await request(dt,'/api/tool/context_payload_count',{})).result-before,12,'manual compaction never replays tools');
+   stats=after;
+   summaryQuality.splice(0,summaryQuality.length,...stats.summaryTexts.map(summary=>({taskId:/CTX-17/.test(summary),prohibition:/(?:do not|no|never|don't)[^\n]{0,60}push/i.test(summary),compact:summary.length<4000,inventedTools:/pg_usage|es_search|kafka_last|Postgres compaction/.test(summary)})));
+   assert.ok(summaryQuality.every(q=>q.compact&&!q.inventedTools),'explicit summary remains bounded and grounded');
    manualAction={compacted:true,summaries:after.summaries,checkpointSaved:true,historyPreserved:true};
   }
-  const report={passed:true,proof:'Real Open WebUI HTTP pipeline; synthetic source tools and deterministic tool selection.',defaultPolicy,summaryModel:stats.summaryModel,setup:setup.contextCompaction,chat:chat.id,rounds:stats.rounds,summaries:stats.summaries,...(manualAction?{manualAction}:{}),summaryAfterRounds:stats.requests.filter(r=>!r.stream).map(r=>r.afterToolRound),requests:stats.requests,maxRequestBytes:stats.maxRequestBytes,maxAgentRequestBytes:Math.max(...stats.requests.filter(r=>r.stream).map(r=>r.bytes)),maxSummaryRequestBytes:Math.max(0,...stats.requests.filter(r=>!r.stream).map(r=>r.bytes)),syntheticRequestCapBytes:stats.requestCapBytes,protocolErrors:stats.protocolErrors,summaryTexts:stats.summaryTexts,summaryQuality,currentIntentPinned:true,markers:output.filter(o=>o.type==='open_webui:context_compaction').length,historyPreserved:true,inlineViewsPreserved:true};
+  const report={passed:true,proof:'Real Open WebUI HTTP pipeline; synthetic source tools and deterministic tool selection.',defaultPolicy,summaryModel:stats.summaryModel,setup:setup.contextCompaction,chat:chat.id,rounds:stats.rounds,summaries:stats.summaries,...(manualAction?{manualAction}:{}),summaryAfterRounds:stats.requests.filter(r=>!r.stream).map(r=>r.afterToolRound),requests:stats.requests,maxRequestBytes:stats.maxRequestBytes,maxAgentRequestBytes:Math.max(...stats.requests.filter(r=>r.stream).map(r=>r.bytes)),maxSummaryRequestBytes:Math.max(0,...stats.requests.filter(r=>!r.stream).map(r=>r.bytes)),syntheticRequestCapBytes:stats.requestCapBytes,protocolErrors:stats.protocolErrors,summaryTexts:stats.summaryTexts,summaryQuality,currentIntentPinned:true,modelRequestedCompaction:modelCompact,markers:output.filter(o=>o.type==='open_webui:context_compaction').length,historyPreserved:true,inlineViewsPreserved:true};
   fs.mkdirSync(path.dirname(out),{recursive:true});fs.writeFileSync(out,JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify({...report,summaryTexts:undefined}));
  }finally{fs.rmSync(home,{recursive:true,force:true});}
 }

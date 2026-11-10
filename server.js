@@ -75,9 +75,10 @@ async function mcpHandle(msg, session, requestSignal) {
       if(mcpRequests.has(key))return {jsonrpc:'2.0',id:msg.id,error:{code:-32600,message:'Request id is already active in this session'}};
       const lifecycle=require('./lib/state-machine').create(require('./lib/lifecycles').mcp),controller=new AbortController(),abort=controller.abort.bind(controller);controller.abort=why=>{if(lifecycle.terminal)return;lifecycle.to('cancelling');abort(why);};const onAbort=()=>controller.abort(requestSignal.reason);if(requestSignal?.aborted)onAbort();else requestSignal?.addEventListener('abort',onAbort,{once:true});mcpRequests.set(key,controller);
       try {
-        const result = require('./lib/chat-context').prepare(msg.params.name, await tools.call(msg.params.name, msg.params.arguments || {}, { source: 'mcp', session,signal:controller.signal }));
+        const delivered = require('./lib/chat-pressure').response(msg.params.name, await tools.call(msg.params.name, msg.params.arguments || {}, { source: 'mcp', session,signal:controller.signal }),{session,usage:msg.params?._meta?.['dev-tool/context']});
+        const result = delivered.value;
         lifecycle.to('replied');
-        return reply({ content: [{ type: 'text', text: typeof result === 'string' ? result : JSON.stringify(result) }] });
+        return reply({ content: [{ type: 'text', text: typeof result === 'string' ? result : JSON.stringify(result) }],_meta:{'dev-tool/context':delivered.meta} });
       } catch (e) {
         lifecycle.to('replied');
         return reply({ content: [{ type: 'text', text: `Error: ${errorPayload(e).error}` }], structuredContent: errorPayload(e), isError: true });
@@ -128,12 +129,14 @@ async function oapi(req, res, url) {
   let result;
   // Open WebUI says which chat a call comes from when ENABLE_FORWARD_USER_INFO_HEADERS is on
   const session = req.headers['x-openwebui-chat-id'] || req.headers['x-chat-id'] || null;
-  try { result = require('./lib/chat-context').prepare(name, await tools.call(name, await readJsonBody(req), { source: 'openapi', session, signal:req.dtSignal })); }
+  let pressure;
+  try { const delivered = require('./lib/chat-pressure').response(name, await tools.call(name, await readJsonBody(req), { source: 'openapi', session, signal:req.dtSignal }),{session,usage:req.headers['x-dt-context-usage']});result=delivered.value;pressure=delivered.meta; }
   catch (e) { return send(res, e.statusCode || 400, errorPayload(e)); }
   const target = result && typeof result === 'object' && (result.view || result.dashboard);
   const embed = typeof target === 'string' ? target + (target.includes('?') ? '&' : '?') + 'embed=1' : null;
-  if (embed) return send(res, 200, ['embed', result], { 'content-disposition': 'inline', location: embed, 'access-control-expose-headers': 'Content-Disposition, Location' });
-  send(res, 200, result);
+  const headers={'x-dt-context':JSON.stringify(pressure),'access-control-expose-headers':'Content-Disposition, Location, X-Dt-Context'};
+  if (embed) return send(res, 200, ['embed', result], { ...headers,'content-disposition': 'inline', location: embed });
+  send(res, 200, result,headers);
 }
 
 const admin = require('./lib/admin');

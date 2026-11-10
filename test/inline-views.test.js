@@ -8,13 +8,13 @@ vm.runInContext(fs.readFileSync(path.join(__dirname, '../web/inline.js'), 'utf8'
 const inline = context.inline;
 
 test('inline policy collapses routine output and opens actionable failures across result families', () => {
-  for (const view of ['code', 'code-cell', 'semantic-analysis', 'semantic-flow-map', 'passport-ports', 'json', 'table', 'patch', 'tests', 'collection-report', 'reproduction', 'scenario-run', 'list-diff', 'text-diff', 'api-exchange', 'differential']) {
+  for (const view of ['workspace-coverage', 'ci', 'code', 'code-cell', 'semantic-analysis', 'semantic-flow-map', 'passport-ports', 'json', 'table', 'patch', 'tests', 'collection-report', 'reproduction', 'scenario-run', 'list-diff', 'text-diff', 'api-exchange', 'differential']) {
     assert.equal(inline.describe(view, {}).open, false, view);
   }
   assert.equal(inline.describe('json', { cases: { not: 'a test suite' } }).open, false);
   assert.equal(inline.describe('tests', { outcome: 'passed', counts: { passed: 42, tests: 42 }, ms: 1250 }).summary, '42 passed · 0 failed · 1.3 s');
   for (const [view, data] of [
-    ['tests', { counts: { errors: 1 } }], ['tests', { compile: ['javac failed'] }],
+    ['workspace-coverage',{summary:{missed:1}}],['workspace-coverage',{summary:{missedBranches:1}}],['workspace-coverage',{summary:{unknown:1}}],['workspace-coverage',{state:'stale'}],['ci',{state:'build_failed'}],['ci',{state:'passed',revision:{match:false}}],['ci',{kind:'jenkins-tests',counts:{failed:1}}],['tests', { counts: { errors: 1 } }], ['tests', { compile: ['javac failed'] }],
     ['tests', { cases: [{ status: 'error' }] }], ['tests', { outcome: 'timeout' }],
     ['collection-report', { hooks: [{ result: { ok: false } }] }],
     ['collection-report', { cleanupErrors: [{ error: 'cleanup' }] }],
@@ -53,4 +53,17 @@ test('every shipped view keeps executable scripts and the shared inline policy a
     assert.match(html, /dtInline.mount\(document.querySelector/);
     assert.match(html, /class="embed"/);
   }
+});
+test('a passing test run opens attached coverage gaps, including branch-only, unknown, stale and unavailable data',()=>{
+ const fresh={available:true,state:'measured',summary:{covered:3,executable:3,missed:0,unknown:0,missedBranches:0,complete:true}};
+ assert.equal(inline.describe('tests',{outcome:'passed',coverage:fresh}).open,false);
+ for(const coverage of [{...fresh,summary:{...fresh.summary,missedBranches:1}},{...fresh,summary:{...fresh.summary,unknown:1}},{...fresh,summary:{...fresh.summary,complete:false}},{...fresh,stale:true},{available:false,state:'unavailable',gaps:['No execution data']}])assert.equal(inline.describe('tests',{outcome:'passed',coverage}).open,true,JSON.stringify(coverage));
+ assert.match(inline.coverageSummary({...fresh,summary:{...fresh.summary,missedBranches:1}}),/1 branches missed/);assert.match(inline.coverageSummary({available:false,state:'unavailable'}),/unavailable.*incomplete/);
+});
+test('coverage source selection preserves focus and retains branch gaps in the default filter',()=>{
+ const elements=new Map(),focus=[],el=id=>{if(!elements.has(id))elements.set(id,{id,checked:true,classList:{add(){}},querySelector:s=>({focus:()=>focus.push(s)})});return elements.get(id);};
+ const DATA={workspace:'owned',base:'base-sha',sourceFingerprint:'pin',state:'measured',available:true,summary:{complete:true},files:[{path:'A.java',counts:{},lines:[{line:4,state:'covered',missedBranches:1,source:'if (b)'}]},{path:'B.java',counts:{},lines:[{line:9,state:'missed',source:'save();'}]}]},html=require('../lib/views').get('workspace-coverage').html,script=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)][0][1];
+ vm.runInNewContext(script,{DATA,META:{publicUrl:'https://tools.example.test',scope:{story:'ticket'}},dt:{esc:s=>String(s??''),json(){},copy(){}},URL:class extends URL {static createObjectURL(){return 'blob:sample';}},URLSearchParams,Blob,document:{getElementById:el},location:{href:'https://tools.example.test/show/id'}});
+ assert.match(el('wc-lines').innerHTML,/branches missed/);
+ el('wc-files').onclick({target:{closest:()=>({dataset:{file:'1'}})}});assert.equal(el('wc-path').textContent,'B.java');assert.deepEqual(focus,['[data-file="1"]']);assert.match(el('wc-read').href,/story=ticket/);
 });
