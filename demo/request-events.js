@@ -1,0 +1,25 @@
+// Real local HTTP/tool transports and retention; model replies are fixtures.
+const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),http=require('node:http');
+(async()=>{const port=Number(process.argv[2]||44440),home=fs.mkdtempSync(path.join(os.tmpdir(),'dt-request-demo-'));for(const k of ['DT_CONFIG_DIR','DT_CACHE_DIR','DT_TOOLS','DT_TOOL_PROFILE','DT_SECURITY_PROFILE','DT_MODEL_GATEWAY','DT_REQUEST_EVENTS'])delete process.env[k];Object.assign(process.env,{DT_HOME:home,DT_PUBLIC_URL:'http://127.0.0.1:'+port,DT_NO_DOCTOR:'1',DT_STATE_BACKEND:'legacy',DT_RATE_PER_SEC:'0',DT_LOG:'quiet'});
+ let mode='json';
+ const provider=http.createServer(async(req,res)=>{
+  for await(const chunk of req){} // Consume synthetic input without retaining it.
+  await new Promise(r=>setTimeout(r,mode==='error'?35:80));
+  if(mode==='error'){res.writeHead(503,{'content-type':'application/json','retry-after':'2'});return res.end(JSON.stringify({error:{message:'Service temporarily overloaded (demo fixture)'}}));}
+  if(mode==='stream'){
+   res.writeHead(200,{'content-type':'text/event-stream'});
+   res.write('data: '+JSON.stringify({choices:[{delta:{content:'Fixture: instance health passing'}}]})+'\n\n');
+   await new Promise(r=>setTimeout(r,25));
+   return res.end('data: '+JSON.stringify({choices:[],usage:{prompt_tokens:1800,completion_tokens:38,total_tokens:1838}})+'\n\ndata: [DONE]\n\n');
+  }
+  res.writeHead(200,{'content-type':'application/json'});
+  res.end(JSON.stringify({choices:[{message:{content:JSON.stringify({explanation:'Fixture health lookup',tool:'consul_service',arguments:{name:'orders-api',env:'dev'},missing:[]})}}],usage:{prompt_tokens:920,completion_tokens:48,total_tokens:968}}));
+ });
+ await new Promise(r=>provider.listen(0,'127.0.0.1',r));const origin='http://127.0.0.1:'+provider.address().port;
+ fs.writeFileSync(path.join(home,'config.json'),JSON.stringify({envs:{dev:{}},scripts:{starters:false},llm:{baseUrl:origin+'/v1',key:'fixture-only',model:'qwen-27b-demo',gatewayEnabled:true},tools:{workerHeapMb:0}}));const A=require('../lib/access'),T=require('../lib/tools'),O=require('../lib/observations'),server=require('../server').start({port});await new Promise(r=>server.once('listening',r));const base='http://127.0.0.1:'+port,scope={principalId:'local',storyId:'ORDERS-142',role:'admin'};
+ await A.run(scope,async()=>{for(const q of ['orders','refunds','fee'])await T.call('find',{q,env:'dev'});await T.call('pg_query',{}).catch(()=>{});const c=require('../lib/context').open({title:'ORDERS-142 · Request investigation',tickets:['ORDERS-142']});await T.call('context_find',{tickets:['ORDERS-142']});await T.call('context_hint',{id:c.id,goal:'Inspect orders service health',use_model:true});for(const purpose of ['docs.rerank','docs.embed','admin.interpret'])await require('../lib/util').http(origin+'/v1/chat/completions',{method:'POST',body:{model:'qwen-27b-demo',messages:[{role:'user',content:'Synthetic fixture only'}]},observe:{purpose}});});
+ for(const selected of ['stream','error','stream']){mode=selected;await(await fetch(base+'/model/v1/chat/completions',{method:'POST',headers:{'content-type':'application/json','x-dt-story':'ORDERS-142'},body:JSON.stringify({model:'qwen-27b-demo',stream:true,messages:[{role:'user',content:'Synthetic deployment question'}]})})).text();}
+ await A.run({principalId:'local',storyId:'BILLING-81',role:'admin'},()=>T.call('find',{q:'billing'}));await O.flush();const inline=await A.run(scope,()=>T.call('observability',{mode:'events'}));
+ const mobile=http.createServer((req,res)=>{const wide=req.url==='/desktop',capacity=req.url==='/capacity',width=wide?1440:390;res.setHeader('content-type','text/html; charset=utf-8');res.end('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>Requests · 390px document preview</title><body style="margin:0"><iframe title="request inspector document preview" width="'+width+'" height="2600" style="border:0;display:block" src="'+(req.url==='/inline'?inline.view:base+'/admin#runtime?view=events&story=ORDERS-142'+(capacity?'&outcome=capacity':''))+'"></iframe>');});await new Promise(r=>mobile.listen(port+1,'127.0.0.1',r));const data={home,base,admin:base+'/admin#runtime?view=events&story=ORDERS-142',inline:inline.view,mobile:'http://127.0.0.1:'+(port+1),fixture:'Provider responses are synthetic. HTTP transports, tool calls and persistence execute for real.'};fs.mkdirSync(path.join(__dirname,'../work/request-events'),{recursive:true});fs.writeFileSync(path.join(__dirname,'../work/request-events/demo.json'),JSON.stringify(data,null,2));console.log(JSON.stringify(data));
+ async function stop(){server.closeAllConnections();server.close();provider.closeAllConnections();provider.close();mobile.closeAllConnections();mobile.close();await O.close();await require('../lib/state-store').close();await require('../lib/isolate').stop();fs.rmSync(home,{recursive:true,force:true});process.exit();}process.on('SIGINT',stop);process.on('SIGTERM',stop);
+})().catch(error=>{console.error(error);process.exitCode=1;});

@@ -51,7 +51,7 @@ test('standalone telemetry persists scoped spans and reads its portable coverage
  const fs=require('node:fs'),os=require('node:os'),net=require('node:net'),{spawn}=require('node:child_process');
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'dt-bundle-observability-')),bundle=path.join(root,'bundle'),home=path.join(root,'home');
  fs.mkdirSync(bundle);fs.mkdirSync(home);fs.writeFileSync(path.join(home,'config.json'),JSON.stringify({envs:{dev:{}},scripts:{starters:false},tools:{workerHeapMb:128}}));
- for(const file of ['dt.js','telemetry-worker.js'])fs.copyFileSync(path.join(__dirname,'../dist',file),path.join(bundle,file));
+ for(const file of ['dt.js','telemetry-worker.js','observation-worker.js'])fs.copyFileSync(path.join(__dirname,'../dist',file),path.join(bundle,file));
  const coverageFile=path.join(__dirname,'../dist/test-coverage.json'),hasCoverage=fs.existsSync(coverageFile);if(hasCoverage)fs.copyFileSync(coverageFile,path.join(bundle,'test-coverage.json'));
  const listener=net.createServer();await new Promise(r=>listener.listen(0,'127.0.0.1',r));const port=listener.address().port;await new Promise(r=>listener.close(r));
  const base=`http://127.0.0.1:${port}`,env={PATH:process.env.PATH,DT_HOME:home,DT_LOG:'quiet',DT_NO_DOCTOR:'1',DT_STATE_BACKEND:'legacy',NODE_PATH:''};let child,stderr='';
@@ -62,7 +62,9 @@ test('standalone telemetry persists scoped spans and reads its portable coverage
   await start();let r=await fetch(base+'/api/admin/runtime/observability',{method:'POST',headers:{'content-type':'application/json','x-dt-story':'bundle'},body:'{"enabled":true}'});assert.equal(r.status,200);await r.json();
   r=await fetch(base+'/api/tool/find',{method:'POST',headers:{'content-type':'application/json','x-dt-story':'bundle'},body:'{"q":"local-fixture","env":"dev"}'});assert.equal(r.status,200);await r.json();
   const traced=await read();assert.ok(traced.spans.some(s=>s.name==='http.server'));assert.equal(traced.storage.persistence,'sqlite');assert.equal((await read('neighbor')).spans.length,0);
+  const events=()=>fetch(base+'/api/admin/runtime/events',{headers:{'x-dt-story':'bundle'}}).then(r=>r.json());
+  const recorded=await events();assert.equal(recorded.storage.persistence,'sqlite');assert.equal(recorded.summary.tools,1);assert.equal(recorded.records[0].name,'find');
   const coverage=await fetch(base+'/api/admin/runtime/coverage').then(r=>r.json());assert.equal(coverage.available,hasCoverage);if(hasCoverage){const expected=require('../lib/source-version').digest();assert.equal(coverage.currentSourceDigest,expected);assert.equal(coverage.stale,JSON.parse(fs.readFileSync(coverageFile,'utf8')).run.sourceDigest!==expected);}
-  await stop();await start();assert.equal((await read()).enabled,true);assert.ok((await read()).spans.length>0);assert.equal((await read('neighbor')).spans.length,0);
+  await stop();await start();assert.equal((await read()).enabled,true);assert.ok((await read()).spans.length>0);assert.equal((await read('neighbor')).spans.length,0);assert.equal((await events()).summary.tools,1);assert.equal((await fetch(base+'/api/admin/runtime/events',{headers:{'x-dt-story':'neighbor'}}).then(r=>r.json())).summary.total,0);
  }finally{await stop();fs.rmSync(root,{recursive:true,force:true});}
 });

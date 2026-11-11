@@ -32,6 +32,19 @@ restore and retained graph reopening were exercised through the real app.
 
 ## Tracing and test evidence
 
+The request-journal captures below come from `node demo/request-events.js` via
+the in-app browser. HTTP/tool/storage paths execute locally; model responses,
+usage and the 503 are synthetic fixtures. Desktop and mobile use 1440px/390px
+document frames (blank wrapper tails retained); the purpose capture uses the
+actual 877px browser width. The inline capture is the native sandboxed renderer,
+not a live Open WebUI session. Mobile layout was checked; mobile keyboard
+behavior and production GPUStack traffic were not assessed.
+
+| | |
+| --- | --- |
+| ![Request journal](admin-request-events-desktop.png) **Requests & models** · purposes, outcomes and window totals | ![Purpose drill-down](admin-request-events-purpose.png) **Active filters** · visible purpose and direct clear action |
+| ![Narrow request journal](admin-request-events-mobile.png) **390px** · filtered capacity response and unknown usage | ![Inline request inspector](request-events-inline.png) **Inline snapshot** · selected 503 and safe metadata |
+
 Captured with `dev/check-observability-browser.js` against `demo/ui-ux.js`.
 The trace is from real local nested tool calls. The coverage explorer uses the
 full executed repository report, including missing paths and test-file evidence.

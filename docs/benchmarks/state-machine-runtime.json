@@ -3758,6 +3758,43 @@
       }
     },
     {
+      "name": "SM81.ci-wait",
+      "initial": "checking",
+      "states": [
+        "checking",
+        "sleeping",
+        "complete",
+        "pending",
+        "cancelled",
+        "failed"
+      ],
+      "terminal": [
+        "complete",
+        "pending",
+        "cancelled",
+        "failed"
+      ],
+      "transitions": {
+        "checking": [
+          "sleeping",
+          "complete",
+          "pending",
+          "cancelled",
+          "failed"
+        ],
+        "sleeping": [
+          "checking",
+          "pending",
+          "cancelled",
+          "failed"
+        ],
+        "complete": [],
+        "pending": [],
+        "cancelled": [],
+        "failed": []
+      }
+    },
+    {
       "name": "UI.activity",
       "initial": "idle",
       "states": [
@@ -3779,21 +3816,30 @@
       "initial": "activity",
       "states": [
         "activity",
+        "events",
         "traces",
         "coverage"
       ],
       "terminal": [],
       "transitions": {
         "activity": [
+          "events",
+          "traces",
+          "coverage"
+        ],
+        "events": [
+          "activity",
           "traces",
           "coverage"
         ],
         "traces": [
           "activity",
+          "events",
           "coverage"
         ],
         "coverage": [
           "activity",
+          "events",
           "traces"
         ]
       }

@@ -1440,7 +1440,7 @@ Make the smallest change and prove the behavior on an explicit target.
 
 ### Choose memory or a checkout
 
-Use contexts for notes/results when no code checkout is needed. workspace_open resolves a repository/source/deployed ref for a writable checkout; inspect returned identity and path through tools. A workspace’s files are editable; the cached source used for discovery is separate. workspace_list/read/write/patch manage that work, and workspace_drop removes a disposable workspace when intended.
+Use contexts for notes/results when no code checkout is needed. workspace_open reuses the matching repo/ref in the current authenticated task across reconnects/restarts; fresh=true creates a separate checkout. Different task/principal scopes have separate lists; a stable X-DT-Story or story-bound token continues one task across chats. Reuse never pulls/resets. Inspect returned identity; workspace_list shows retained checkouts and last use. Idle cleanup preserves edits, local commits, context links and active builds; workspace_drop explicitly removes owned work.
 
 Before writing tests, test_context reads the real target, chain, dependencies, style and edge mocks. test_data builds valid objects/dictionaries with agreeing IDs; generated skeletons are a starting point, not execution proof. Current test_run supports declared JVM selectors and explicit Node .test.js/.cjs/.mjs paths; old benchmark reports may describe earlier runner gaps.
 
@@ -2282,6 +2282,24 @@ Follow owned work across tools, workers and runners, then inspect exact coverage
 **Outcome:** A content-free trace and source-matched coverage evidence with explicit limits.
 
 **Before you start:** Choose the intended chat/task in Admin Runtime.
+
+### Find model traffic and failed responses
+
+Open Admin → Runtime → Requests & models. Filter the retained journal by time, task, tool/model or outcome, then inspect a row for purpose, latency, HTTP status, reported usage and execution/result links. Counts and p95 cover the matching window, independently of paging. An application/test failure is distinct from an invocation failure. Missing usage is unknown.
+
+Model helpers include context hints, Admin suggestions/interpretations and documentation processing. Direct Open WebUI → GPUStack traffic is invisible unless that connection uses the explicitly enabled /model/v1 gateway; see docs/observability.md for setup. The journal stores metadata without prompts, SQL or response text. Diagnostic traces remain a separate opt-in. Inline event views are snapshots whose filters apply only to displayed rows.
+
+**Inspect model capacity responses** · `observability`
+
+```json
+{
+  "mode": "events",
+  "kind": "model",
+  "outcome": "capacity"
+}
+```
+
+Expected: Retained observed HTTP 429/503/529 responses, not a diagnosis of provider overload.
 
 ### Trace this chat
 

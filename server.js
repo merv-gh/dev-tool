@@ -147,6 +147,8 @@ const CORS = { 'access-control-allow-origin': '*' };
 // Pages are plain HTML; their data comes from trusted endpoints, or from ones keyed by an unguessable
 // result id / signed token (embeds in Open WebUI load them from a sandboxed, cross-origin iframe).
 const routes = [
+  ['GET','/model/v1/models',true,(req,res)=>require('./lib/model-gateway').handle(req,res,'models')],
+  ['POST','/model/v1/chat/completions',true,async(req,res)=>require('./lib/model-gateway').handle(req,res,'chat/completions',await readJsonBody(req))],
   ['GET', '/api/capabilities', true, async (req,res,url) => send(res,200,await require('./lib/capability-map').graph({env:url.searchParams.get('env')||undefined}))],
   ['GET', '/handbook', true, page('handbook.html')],
   ['GET', '/api/handbook', true, async (req,res) => send(res,200,await require('./lib/handbook').catalog())],
@@ -391,7 +393,7 @@ function start({ port = 4000, host = '127.0.0.1' } = {}) {
       // Keyed immutable result links remain read-only capabilities for sandboxed embeds.
       // Explicit story headers are enforced; same-principal browser embeds restore their saved story.
       {const key=url.pathname.match(/\/(?:architecture|map|map-preview|show|patch|logs|view|result|files)\/([a-z0-9]+)(?:\.patch)?(?:\/|$)/)?.[1];if(key){const value=results.raw(key);if(value?.owner&&(!identity||(!req.headers['x-dt-story']&&!req.headers['x-openwebui-chat-id']&&!req.headers['x-chat-id']&&!identity.storyBound&&identity.principalId===value.owner.principalId)))scope={...value.owner,role:'user'};}}
-      const workRequest=url.pathname==='/mcp'||url.pathname.startsWith('/api/tool/')||url.pathname==='/api/admin/refresh';
+      const workRequest=url.pathname==='/mcp'||url.pathname.startsWith('/api/tool/')||url.pathname==='/api/admin/refresh'||url.pathname==='/model/v1/chat/completions';
       await A.run(scope,()=>require('./lib/telemetry').withCarrier(workRequest?{traceparent:req.headers.traceparent}:null,async()=>{
         const observation=workRequest?require('./lib/telemetry').begin('http.server',{'dt.kind':'http','http.request.method':req.method,'http.route':route[1]},{kind:1}):null;
         const handle=async()=>{

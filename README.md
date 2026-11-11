@@ -226,7 +226,7 @@ Saving `config.json` (on `/admin`, or in an editor) applies it without a restart
 
 ## Runtime and task isolation
 
-Admin's **Runtime** tab shows parent/child executions, cancellation and cleanup, jobs, traces, paged operational metadata with revision-checked annotations, config generations, scheduler limits, and code engine capabilities. Its scratchpad executes editable tool arguments and renders the resulting native views.
+Admin's **Runtime** tab shows parent/child executions, cancellation and cleanup, jobs, traces, paged operational metadata with revision-checked annotations, config generations, scheduler limits, and code engine capabilities. **Requests & models** adds a searchable metadata journal with purpose, response status, latency, reported token usage and failure breakdowns. Tool/model helpers are captured independently of tracing; optional `/model/v1` routing observes external chat traffic. [Coverage and gateway setup](docs/observability.md#requests-and-model-activity). Its scratchpad executes editable tool arguments and renders the resulting native views.
 
 Configure `server.accessTokens` for separate principals and send `X-DT-Story` for each chat or task. Mutable folders, handles and histories are scoped to that pair; shared infrastructure catalogs stay reusable. `code_start`, `code_wait` and `code_cancel` support resumable observations without repeating tool effects. Node code keeps direct `fetch`; optional QuickJS handles pure transforms. See [runtime administration and token setup](docs/runtime-administration.md) and [metadata storage](docs/operational-metadata.md) for boundaries, limits, persistence and backup.
 
@@ -922,11 +922,11 @@ dt runs it once at start and prints the problems to the log.
 - the log rotates at `log.maxMb` (50) MB and keeps `log.files` (3) files;
 - the call history keeps 5,000 calls and at most `log.maxMb` (50) MB;
 - stored results: the newest 500, at most `results.maxMb` (500) MB;
-- workspaces unused for `tests.workspaceDays` (7) days are removed.
+- clean workspaces unused for `tests.workspaceDays` (7) days may be removed; edits, untracked files, local commits, context links, active builds and unknown Git state protect them. Set `tests.workspaceDays: 0` to disable automatic workspace cleanup.
 
 **Workspaces and builds:**
-- `workspace_open` asks Bitbucket which commit the ref points to. If the passport's checkout or another workspace has that commit, it takes it from there and downloads nothing.
-- In the same chat (Open WebUI forwards the chat id, `ENABLE_FORWARD_USER_INFO_HEADERS`, on in compose), the same repo and ref give back that chat's workspace, with its changes and its prepared build. `fresh=true` gets a new checkout.
+- `workspace_open` first reuses the matching repo/ref in the authenticated task, preserving edits and prepared builds across reconnects and process restarts. Reuse does not pull, reset or contact Bitbucket. `fresh=true` creates a separate checkout; existing work stays intact. A new checkout can copy an already-fetched commit locally.
+- Different principals and chat/task scopes remain isolated. To continue one task across chats or MCP reconnects, send a stable `X-DT-Story` (for example a ticket ID) or use a story-bound token. Without it, Open WebUI chat IDs and MCP session IDs select separate scopes. Start with `workspace_list` in the intended scope; an empty list in a different chat does not mean the old checkout was deleted.
 - It runs as a job, so a big repo answers "running" instead of hitting the chat client's timeout.
 - Builds run with a clean environment: PATH, HOME, locale, proxies and JAVA_HOME, plus `tests.passEnv`, `tests.env` and the repository settings. Build scripts and tests can't read dt's API key or tokens.
 - Gradle uses its build cache (`--build-cache`), shared by all workspaces through the Gradle home.

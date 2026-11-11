@@ -39,6 +39,8 @@ services:
       DT_LOG_FORMAT: ${DT_LOG_FORMAT:-}
       DT_OPERATIONAL_METRICS: ${DT_OPERATIONAL_METRICS:-}
       DT_TELEMETRY_ENABLED: ${DT_TELEMETRY_ENABLED:-1}  # permits explicit per-chat opt-in
+      DT_REQUEST_EVENTS: ${DT_REQUEST_EVENTS:-1}      # bounded metadata journal; no request/response text
+      DT_MODEL_GATEWAY: ${DT_MODEL_GATEWAY:-0}        # optional /model/v1 observation boundary
       OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-dev-tool}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:-}
@@ -58,6 +60,7 @@ services:
       DT_JAVA_HOME: ${DT_JAVA_HOME:-/opt/jdk/java}
       DT_MAVEN: ${DT_MAVEN:-/opt/jdk/maven/bin/mvn}
       DT_WORK_DIR: ${DT_WORK_DIR:-/var/dt-work}
+      DT_WORKSPACE_DAYS: ${DT_WORKSPACE_DAYS:-}               # config defaults to 7; 0 disables cleanup
       DT_MAVEN_REPO: ${DT_MAVEN_REPO:-/var/dt-build/m2}
       DT_GRADLE_USER_HOME: ${DT_GRADLE_USER_HOME:-/var/dt-build/gradle}
       DT_TEST_DB_URL: ${DT_TEST_DB_URL:-postgres://dt:dt@testdb:5432/postgres}

@@ -42,6 +42,7 @@ for (const name of ['quickjs-emscripten', 'quickjs-emscripten-core', '@jitl/quic
   files[`licenses/${name.replace(/\//g, '-')}.txt`] = fs.readFileSync(path.join(directory, 'LICENSE'));
 }
 files['telemetry-worker.js'] = fs.readFileSync(path.join(ROOT, 'lib', 'telemetry-worker.js'));
+files['observation-worker.js'] = fs.readFileSync(path.join(ROOT, 'lib', 'observation-worker.js'));
 // Keep upstream notices with the standalone OpenTelemetry distribution.
 const otelPackages = path.join(ROOT, 'node_modules', '@opentelemetry');
 for (const name of fs.readdirSync(otelPackages).sort()) {

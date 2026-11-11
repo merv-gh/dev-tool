@@ -1,6 +1,6 @@
 {
   "protocol": "dt.release-inventory/v1",
-  "sourceDigest": "ac72554a50d2d0e2cb12ddcc1d17cdb3ae3c64012d2bd6336796a3119cf84572",
+  "sourceDigest": "ec6aa43272a17c2c50b408bafedc6926e0488621831c8d8a5e83ec83585bc3fd",
   "tools": [
     {
       "name": "find",
@@ -17,8 +17,10 @@
         "test/collections.test.js",
         "test/context-ui.test.js",
         "test/context.test.js",
+        "test/dist.test.js",
         "test/operational-readiness.test.js",
         "test/pgindex.test.js",
+        "test/request-events.test.js",
         "test/scripts.test.js",
         "test/server.test.js",
         "test/team-security.test.js",
@@ -165,6 +167,7 @@
         "test/experiments.test.js",
         "test/offline-js.test.js",
         "test/pgindex.test.js",
+        "test/request-events.test.js",
         "test/server.test.js",
         "test/service-map.test.js",
         "test/team-security.test.js",
@@ -1025,7 +1028,8 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
-        "test/trace.test.js"
+        "test/trace.test.js",
+        "test/workspace-retention.test.js"
       ],
       "integrationReferences": [
         "test/javacheck.live.test.js"
@@ -1052,7 +1056,8 @@
       "referenceTests": [
         "test/code-search-fallback.test.js",
         "test/task-model-evaluation.test.js",
-        "test/workbench.test.js"
+        "test/workbench.test.js",
+        "test/workspace-retention.test.js"
       ],
       "integrationReferences": []
     },
@@ -1070,6 +1075,7 @@
         "test/task-model-evaluation.test.js",
         "test/testdata.live.test.js",
         "test/workbench-explorer-ui.test.js",
+        "test/workspace-retention.test.js",
         "test/workspace.live.test.js"
       ],
       "integrationReferences": [
@@ -1214,6 +1220,7 @@
         "test/gradle.live.test.js",
         "test/node-targets.test.js",
         "test/reproduction.live.test.js",
+        "test/request-events-ui.test.js",
         "test/runner.live.test.js",
         "test/state-store.test.js",
         "test/target-secrets.test.js",

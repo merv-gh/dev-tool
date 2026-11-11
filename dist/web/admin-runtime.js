@@ -5,6 +5,7 @@ const runtimeStore = {
 };
 let runtimeStory = runtimeStore.get('story'), runtimePrincipal = runtimeStore.get('principal');
 const linkedAdminStory=new URL('http://localhost/?'+((location.hash||'').split('?')[1]||'')).searchParams.get('story');if(linkedAdminStory&&/^[a-zA-Z0-9][\w.:-]{0,159}$/.test(linkedAdminStory)){runtimeStory=linkedAdminStory;runtimeStore.set('story',runtimeStory);}
+const linkedAdminPrincipal=new URL('http://localhost/?'+((location.hash||'').split('?')[1]||'')).searchParams.get('principal');if(linkedAdminPrincipal&&/^[a-zA-Z0-9][\w.:-]{0,159}$/.test(linkedAdminPrincipal)){runtimePrincipal=linkedAdminPrincipal;runtimeStore.set('principal',runtimePrincipal);}
 let runtimeState = null; const runtimeScopeVersion = new DTState.Revision(); let runtimeSelected = null; let runtimeTimer = null; let runtimeLoading = null; const runtimeExecutionSequence = new DTState.Revision();
 let runtimeMetadata = []; let runtimeMetadataCursor = null; let runtimeMetadataSelected = null; const runtimeMetadataDirty = new DTState.Dirty(); const runtimeMetadataVersion = new DTState.Revision(); const runtimeMetadataEditSequence = new DTState.Revision();
 let runtimeTools = []; const runtimeCodePending = new DTState.Activity(); let runtimeScopeInitialized = false;

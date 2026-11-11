@@ -41,6 +41,31 @@ Put random tokens of at least 16 characters in `.env`. Each request sends `Autho
 
 Contexts, workspaces, workspace indexes and compiler/run sidecars, scripts, custom views, API captures, browser handles, map corrections, code cells, jobs, executions, metadata and configured private file stores are scoped by principal and story. Their folder namespace uses a stable hash; supplied identifiers cannot select another namespace. Cached infrastructure catalogs, repository/library indexes and immutable test templates remain shared. A configured file store with `"shared": true` is readable across scopes and writable only by administrators. Existing unscoped work remains in the single-user `default` namespace; introducing tokens does not silently adopt it into a user's story.
 
+**Resuming work across chats:** send the same `X-DT-Story` or use a token bound
+to the task. A reconnecting MCP session or a different Open WebUI chat can then
+reuse that task's repo/ref checkout. Without a stable task identity, the chat or
+MCP session fallback selects another namespace; its empty `workspace_list` is
+not evidence of deletion. Selecting the same task in Admin also restores its
+list. Authentication/principal restrictions still apply.
+For existing work, use its original story/chat ID. Choosing a new ticket ID now
+creates another scope; it does not adopt checkouts from the previous chat.
+
+`workspace_open` reuses the existing checkout without fetching/resetting it;
+`fresh=true` explicitly creates another. Concurrent opens of the same task/repo/ref
+converge. Check the returned workspace ID and `reused: true`; `reusedFrom` alone
+means a new checkout copied committed Git objects locally, not that it retained
+another checkout's uncommitted files. Workspace reads and other accesses refresh `usedAt`, shown by
+`workspace_list`. After `tests.workspaceDays` (default seven), cleanup considers
+only clean, unchanged checkouts with no context link or active build. Modified,
+staged or untracked files, local commits, broken/unavailable Git state and
+unreadable context metadata prevent automatic removal. Set `tests.workspaceDays`
+or `DT_WORKSPACE_DAYS` to `0` to disable cleanup; explicit `workspace_drop` still
+removes a selected owned checkout. Keep both workspace files (`DT_WORK_DIR`) and
+metadata (`DT_HOME/cache/work`) on persistent storage; mount separate Git data
+(`DT_GIT_DIR`) persistently too. The bundled Compose already uses volumes for
+the workspace and Git files and a bind mount for configuration/metadata.
+[Workspace retention regression evidence](benchmarks/workspace-retention-verification.json).
+
 Result URLs are unguessable read-only capabilities for chat embeds. Anyone holding a result URL can view its saved result. Browser embeds restore the saved story for the same principal; explicit story headers and other authenticated principals remain checked. Treat result links as sensitive evidence. Scope isolation protects application state and handles; executing trusted workspace builds on a shared host is **not** an operating-system sandbox for hostile users. Use separate isolated deployments/runners when users must not share host or network capabilities. Direct `fetch` remains enabled for the Node code engine.
 
 ## Remote tool adapters

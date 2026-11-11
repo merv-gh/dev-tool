@@ -5389,7 +5389,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
 
 ### workspace_open
 
-Check out a repo at master/main, a branch, tag or commit (or what is deployed in env) into a writable workspace (a commit already fetched by a passport or another workspace is reused, nothing downloaded; the same repo and ref in the same chat gives back that workspace), indexed for code_search, impact and test_context. Write tests and fixes there with workspace_write, run them with test_run, take the result with workspace_patch (or, when the user asks and push is enabled, workspace_push to a branch that is not protected).
+Open/reuse a writable repo/ref checkout in the current authenticated task. Reconnects and restarts preserve its files and build state; reuse never pulls or resets. fresh=true creates a separate checkout. Different principals/tasks remain isolated. Indexed for code_search, impact and test_context. Edit with workspace_write, run test_run, export workspace_patch; workspace_push publishes only when requested and enabled.
 
 Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) · Origin: built-in
 
@@ -5422,7 +5422,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     "fresh": {
       "type": "boolean",
       "default": false,
-      "description": "A new checkout even if this chat opened the same repo and ref"
+      "description": "Create a separate checkout; preserve the existing task workspace unchanged"
     },
     "libraries": {
       "type": "boolean",
@@ -5444,7 +5444,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
 
 ### workspace_list
 
-Open workspaces: id, repo, ref, commit.
+Retained workspaces in this authenticated task: id, repo, ref, commit, last use and whether files still exist. Another chat/task scope has its own list.
 
 Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) · Origin: built-in
 
@@ -11472,7 +11472,7 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
 
 ### observability
 
-Read sampled diagnostic spans for this chat. Tracing is opt-in in Admin Runtime. Payloads and error messages are excluded.
+Inspect this chat’s request timings, tool outcomes and model calls with mode=events, or opt-in sampled spans with mode=traces. Events show model purpose, HTTP failures, reported usage and result links. Direct Open WebUI → GPUStack calls are invisible unless routed through the optional model gateway. No payloads or error messages.
 
 Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: built-in
 
@@ -11482,9 +11482,58 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
 {
   "type": "object",
   "properties": {
+    "mode": {
+      "type": "string",
+      "enum": [
+        "traces",
+        "events"
+      ],
+      "default": "traces"
+    },
     "trace": {
       "type": "string",
-      "description": "Optional trace id"
+      "description": "Optional trace id for traces mode"
+    },
+    "q": {
+      "type": "string",
+      "description": "Literal request metadata search for events mode"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "tool",
+        "model"
+      ]
+    },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "failed",
+        "ok",
+        "error",
+        "cancelled",
+        "open",
+        "capacity"
+      ]
+    },
+    "from": {
+      "type": "integer",
+      "description": "Window start, epoch milliseconds; default last hour"
+    },
+    "to": {
+      "type": "integer",
+      "description": "Window end, epoch milliseconds; maximum window seven days"
+    },
+    "cursor": {
+      "type": "string",
+      "description": "Next page cursor"
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Event page size",
+      "default": 50,
+      "minimum": 1,
+      "maximum": 200
     },
     "view": {
       "type": "boolean",

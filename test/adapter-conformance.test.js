@@ -21,4 +21,4 @@ test('capability discovery separates text and semantic support without contactin
  assert.doesNotMatch(JSON.stringify(result),/private-adapter-token|https:\/\//);
  assert.throws(()=>M.validate({...manifest,capabilities:[{...manifest.capabilities[0],evidence:'imagined'}]}),e=>e.code==='DT_BACKEND_CONTRACT');
 });
-test.after(async()=>{await require('../lib/state-store').close();fs.rmSync(home,{recursive:true,force:true});});
+test.after(async()=>{await require('../lib/observations').close();await require('../lib/state-store').close();fs.rmSync(home,{recursive:true,force:true});});

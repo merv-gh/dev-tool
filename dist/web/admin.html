@@ -6,7 +6,7 @@
 <title>Developer workspace · dt</title>
 <link rel="stylesheet" href="/static/ui.css">
 <link rel="stylesheet" href="/static/admin-runtime.css">
-<link rel="stylesheet" href="/static/diagnostics.css"><link rel="stylesheet" href="/static/project-context.css">
+<link rel="stylesheet" href="/static/diagnostics.css"><link rel="stylesheet" href="/static/request-events.css"><link rel="stylesheet" href="/static/project-context.css">
 <link rel="stylesheet" href="/static/admin-semantic.css"><link rel="stylesheet" href="/static/admin-architecture.css">
 <style>
   .cx-label { display: block; margin: 12px 0 5px; font-size: 12px; color: var(--muted); }
@@ -344,7 +344,7 @@
   <section id="tab-runtime" hidden>
     <div class="rt-heading" id="rtActivityHeading"><div><h2>Execution activity</h2><p class="hint">Calls, code cells and background jobs in the selected chat / task. Cancellation stays visible until work and cleanup settle.</p></div><div class="row"><label><input id="rtLive" type="checkbox" checked> Live</label><button id="rtRefresh">Refresh runtime</button><span id="rtUpdated" class="muted"></span></div></div>
     <div id="rtMessage" class="hint" role="status" aria-live="polite"></div>
-    <div class="workspace-mode-tabs" aria-label="Runtime views"><button data-diagnostics-mode="activity" aria-pressed="true">Activity</button><button data-diagnostics-mode="traces" aria-pressed="false">Traces & observability</button><button data-diagnostics-mode="coverage" aria-pressed="false">Test coverage</button></div>
+    <div class="workspace-mode-tabs" aria-label="Runtime views"><button data-diagnostics-mode="activity" aria-pressed="true">Activity</button><button data-diagnostics-mode="events" aria-pressed="false">Requests & models</button><button data-diagnostics-mode="traces" aria-pressed="false">Traces & observability</button><button data-diagnostics-mode="coverage" aria-pressed="false">Test coverage</button></div>
     <div id="dgAdminPanel" hidden><div class="row" style="margin:14px 0"><div id="dgTraceControls" hidden><button id="dgTraceToggle">Enable tracing in this chat</button></div><button id="dgAdminRefresh">Refresh evidence</button></div><div id="dgAdminOutput" aria-live="polite"></div></div>
     <div id="rtActivityBody">
     <div class="rt-layout">
@@ -423,7 +423,7 @@
 <script src="/static/admin-runtime.js"></script>
 <script src="/static/admin-workbench.js"></script><script src="/static/workbench-explorer.js"></script>
 <link rel="stylesheet" href="/static/capability-map.css"><script src="/static/capability-layout.js"></script><script src="/static/capability-map.js"></script><script src="/static/admin-capabilities.js"></script>
-<script src="/static/trace-format.js"></script><script src="/static/diagnostics.js"></script><script src="/static/admin-observability.js"></script>
+<script src="/static/trace-format.js"></script><script src="/static/diagnostics.js"></script><script src="/static/request-events.js"></script><script src="/static/admin-observability.js"></script>
 <script src="/static/admin-semantic.js"></script><script src="/static/admin-architecture.js"></script>
 <script src="/static/handbook.js"></script><script src="/static/admin-handbook.js"></script>
 <script>

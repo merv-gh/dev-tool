@@ -1,0 +1,108 @@
+{
+  "schema": "dt.workspace-retention.verification/v1",
+  "sourceDigest": "769d0edd655417acbe17f0ba707c1f834283948cf9c7051eaf1cdc7542649f0b",
+  "scope": "Workspace reuse and non-destructive idle retention in the working tree.",
+  "findings": [
+    {
+      "cause": "Session-based reuse",
+      "detail": "A stable authenticated task without a trace session, or with a changed transport session, could create another checkout."
+    },
+    {
+      "cause": "Story namespace",
+      "detail": "Different authenticated principal/story pairs intentionally have separate lists. Empty discovery does not establish that files were removed."
+    },
+    {
+      "cause": "Idle sweep",
+      "detail": "The previous age-only sweep could remove edits or locally committed work; reads did not refresh the retention timestamp."
+    }
+  ],
+  "changes": [
+    "Reuse repo/ref/remote within the authenticated task; no pull or reset on reuse.",
+    "Converge concurrent default opens; fresh=true creates a separate checkout.",
+    "Track last use for workspace access and protect active test executions.",
+    "Idle removal requires a clean checkout at its recorded base with no context reference; unknown Git/context state preserves it.",
+    "Zero disables automatic cleanup through config/environment; Compose forwards the override.",
+    "Keep generated patch sidecars in the owning story namespace."
+  ],
+  "regression": {
+    "file": "test/workspace-retention.test.js",
+    "cases": [
+      "Missing/changing transport session retains edits",
+      "Concurrent default open, explicit fresh and remote identity",
+      "Actual process restart with an unavailable remote",
+      "Principal/task isolation and stable task headers",
+      "Modified/untracked files, local commits, context links, active builds and missing Git metadata survive expiry",
+      "Read-only activity refreshes retention; zero disables expiry; corrupt context metadata preserves evidence",
+      "Activity during cleanup inspection and private patch paths",
+      "Failed preparation is cleaned and can be retried",
+      "Actual HTTP workspace operations across changed Open WebUI chat IDs under one task"
+    ]
+  },
+  "tests": {
+    "sourceDigest": "769d0edd655417acbe17f0ba707c1f834283948cf9c7051eaf1cdc7542649f0b",
+    "platform": "darwin",
+    "architecture": "x64",
+    "command": "npm run test:coverage",
+    "scope": "full-suite",
+    "exitCode": 0,
+    "node": "v24.22.0",
+    "counts": {
+      "tests": 1055,
+      "failed": 0,
+      "passed": 999,
+      "cancelled": 0,
+      "skipped": 56,
+      "todo": 0,
+      "topLevel": 1055,
+      "suites": 0
+    },
+    "coverage": {
+      "transitions": {
+        "hit": 357,
+        "total": 653,
+        "percent": 54.7
+      },
+      "lines": {
+        "hit": 27940,
+        "total": 29993,
+        "percent": 93.2
+      },
+      "functions": {
+        "hit": 6268,
+        "total": 7148,
+        "percent": 87.7
+      },
+      "branches": {
+        "hit": 22287,
+        "total": 27162,
+        "percent": 82.1
+      },
+      "testedFiles": 154,
+      "sourceFiles": {
+        "measured": 200,
+        "unmeasured": 28,
+        "total": 228
+      }
+    },
+    "coverageGate": "passed against the pre-change same-platform full-suite baseline",
+    "ciWaitRegression": "Deadline expiry after entering polling sleep is driven explicitly, avoiding dependence on a short wall-clock race."
+  },
+  "limitations": [
+    "No affected production workspace ID was provided; this is a local reproduction, not reconstruction of a particular deletion.",
+    "Different chats share a checkout only when the client selects the same original authenticated task/story.",
+    "Files already deleted before this change cannot be reconstructed by this fix.",
+    "Explicit workspace_drop remains destructive for the selected owned workspace.",
+    "Private task data is never automatically adopted into another principal/story."
+  ],
+  "generatedAt": "2026-11-10T21:27:29.858Z",
+  "postCoverage": {
+    "standaloneBundle": {
+      "passed": 5,
+      "failed": 0
+    },
+    "buildCheck": "passed",
+    "docsCheck": "passed",
+    "handbookCheck": "passed",
+    "stateMachineCheck": "passed"
+  }
+}

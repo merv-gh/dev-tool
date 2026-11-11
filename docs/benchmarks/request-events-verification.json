@@ -1,0 +1,152 @@
+{
+  "schema": "dt.request-events.verification/v1",
+  "date": "2026-11-10",
+  "sourceDigest": "5e3b194073a3073ac4b645a65f1e1058a09b5c4255656158067a4ff6a7c30d29",
+  "scope": "Working tree request journal, model-helper measurements and opt-in OpenAI-compatible gateway.",
+  "automated": {
+    "sourceDigest": "5e3b194073a3073ac4b645a65f1e1058a09b5c4255656158067a4ff6a7c30d29",
+    "platform": "darwin",
+    "architecture": "x64",
+    "command": "npm run test:coverage",
+    "scope": "full-suite",
+    "exitCode": 0,
+    "node": "v24.22.0",
+    "counts": {
+      "tests": 1045,
+      "failed": 0,
+      "passed": 989,
+      "cancelled": 0,
+      "skipped": 56,
+      "todo": 0,
+      "topLevel": 1045,
+      "suites": 0
+    }
+  },
+  "coverage": {
+    "transitions": {
+      "hit": 357,
+      "total": 653,
+      "percent": 54.7
+    },
+    "lines": {
+      "hit": 27883,
+      "total": 29957,
+      "percent": 93.1
+    },
+    "functions": {
+      "hit": 6257,
+      "total": 7137,
+      "percent": 87.7
+    },
+    "branches": {
+      "hit": 22219,
+      "total": 27085,
+      "percent": 82
+    },
+    "testedFiles": 153,
+    "sourceFiles": {
+      "measured": 200,
+      "unmeasured": 28,
+      "total": 228
+    }
+  },
+  "coverageGate": {
+    "passed": true,
+    "comparison": "Same Node major/platform pre-change full-suite baseline; no floors lowered; unmeasured files remain 28."
+  },
+  "boundaries": [
+    "Unsampled metadata while per-task tracing is off",
+    "Authenticated principal/task scope and admin installation access",
+    "Full-window totals with paged rows and literal search",
+    "One unchanged upstream JSON request, upstream 503/Retry-After preserved",
+    "UTF-8 SSE bytes, usage, first content and incomplete-stream failure",
+    "Client disconnect and timeout release upstream without retry",
+    "Opt-in gateway, model allowlist, server credentials, self-loop rejection",
+    "Journal restart, open interrupted requests, row/time retention and queue drops",
+    "Unavailable storage and disabled recording do not change successful model results",
+    "Existing standalone bundle persists scoped request events across restart"
+  ],
+  "browser": {
+    "driver": "In-app browser through cua_repl",
+    "fixture": "demo/request-events.js; disposable local provider responses, no production model",
+    "observations": {
+      "selectedTaskEvents": 13,
+      "toolTargets": 6,
+      "modelCalls": 7,
+      "failures": 2,
+      "capacityResponses": 1,
+      "usageReported": 6
+    },
+    "checks": [
+      "Admin mixed journal",
+      "Model filter returns seven events",
+      "Capacity filter returns one 503 with unknown usage",
+      "Native inline failed-response inspector",
+      "Filtered-out selection resets inspector",
+      "Purpose drill-down visibly labels operation/purpose and clear action",
+      "Responsive 1440/390 document previews plus actual877 and inline1280 widths"
+    ],
+    "screenshots": [
+      {
+        "path": "docs/screenshots/admin-request-events-desktop.png",
+        "bytes": 548058,
+        "sha256": "67f5be089deeb04b42dae74a5c5b00c8343502bdb8c92c26f806399c73a8b025"
+      },
+      {
+        "path": "docs/screenshots/admin-request-events-mobile.png",
+        "bytes": 304049,
+        "sha256": "8cc526906996756c3e3d3ddfcc277c38d41f179ec33b98ccc940b48786dec401"
+      },
+      {
+        "path": "docs/screenshots/admin-request-events-purpose.png",
+        "bytes": 366802,
+        "sha256": "ef9a8cd68144eb741939bb52a441e82d620867db8130c1040eb471241042571c"
+      },
+      {
+        "path": "docs/screenshots/request-events-inline.png",
+        "bytes": 488519,
+        "sha256": "009065caace8d34408196f977563f3d6b8e19715b614cc76ceaeed272c0d17b0"
+      }
+    ],
+    "review": {
+      "fullReview": "fix",
+      "materialFixes": 2,
+      "verdict": "ship",
+      "scope": "Both listed fixes scored resolved; ordinary extension preserved incumbent UI."
+    }
+  },
+  "reproduce": [
+    "node demo/request-events.js",
+    "node --test test/request-events.test.js test/request-events-ui.test.js test/admin-observability.test.js test/adapter-conformance.test.js",
+    "npm run build",
+    "npm run test:coverage",
+    "npm run build",
+    "node --test test/dist.test.js",
+    "npm run build:check",
+    "node dev/docs-check.js"
+  ],
+  "limits": [
+    "Synthetic provider responses do not measure production GPUStack capacity.",
+    "Direct Open WebUI connections are not observed unless explicitly routed through the disabled-by-default gateway.",
+    "Mobile captures are document previews; full mobile keyboard interaction was not verified.",
+    "Inline native rendering was checked; a live Open WebUI chat was not exercised.",
+    "Gateway does not add retries, admission control or automatic compaction.",
+    "Metadata only; payloads remain excluded and token usage is unknown when not reported.",
+    "Counters cover retained captured events; dropped writes, interrupted ends and scope attribution bound completeness.",
+    "Background job completion must be followed in Activity/Jobs separately.",
+    "56 integration tests were skipped for unavailable optional infrastructure."
+  ],
+  "postCoverage": {
+    "build": "passed",
+    "standaloneBundle": {
+      "command": "node --test test/dist.test.js",
+      "passed": 5,
+      "failed": 0
+    },
+    "buildCheck": "passed",
+    "docsCheck": "passed"
+  },
+  "testEnvironment": {
+    "lombok": "Real Maven/Gradle Lombok regression enabled with DT_TEST_LOMBOK_MAVEN and DT_TEST_LOMBOK_GRADLE pointing at installed executables; other optional live infrastructure not configured."
+  }
+}

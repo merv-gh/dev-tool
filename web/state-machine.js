@@ -163,7 +163,7 @@ class Framer {
   }
 }
 
-const diagnosticsModel = define('UI.diagnostics-view','activity',{activity:['traces','coverage'],traces:['activity','coverage'],coverage:['activity','traces']});
+const diagnosticsModel = define('UI.diagnostics-view','activity',{activity:['events','traces','coverage'],events:['activity','traces','coverage'],traces:['activity','events','coverage'],coverage:['activity','events','traces']});
 const projectContextScopeModel=define('UI.project-context-scope','task',{task:['project'],project:['task']});
 const models = Object.freeze({ projectContextScope:projectContextScopeModel, diagnostics:diagnosticsModel, pending: pendingModel, dirty: dirtyModel, activity: activityModel, selection: selectionModel, disclosure: disclosureModel, framing: framingModel });
 return { define, create, bind, next, assertState, observe, Revision, Pending, Dirty, Draft, Activity, Selection, disclosureModel, flag, editRevision, Framer, models };

@@ -1,6 +1,6 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
-function harness(api){const elements=new Map(),buttons=['activity','traces','coverage'].map(mode=>({dataset:{diagnosticsMode:mode},setAttribute(){}}));const $=id=>{if(!elements.has(id))elements.set(id,{textContent:'',hidden:false,replaceChildren(){this.textContent='';}});return elements.get(id);};let render;
- const c=vm.createContext({$,api,DTState:require('../lib/state-machine'),runtimeScopeVersion:new(require('../lib/state-machine').Revision)(),DTDiagnostics:{traces:(el,value)=>{render=value;},coverage:(el,value)=>{render=value;}},document:{addEventListener(){},querySelectorAll:()=>buttons}});
+function harness(api){const elements=new Map(),buttons=['activity','events','traces','coverage'].map(mode=>({dataset:{diagnosticsMode:mode},setAttribute(){}}));const $=id=>{if(!elements.has(id))elements.set(id,{textContent:'',hidden:false,replaceChildren(){this.textContent='';}});return elements.get(id);};let render;
+ const c=vm.createContext({$,api,URL,URLSearchParams,runtimeState:{identity:{role:'admin'}},DTRequestEvents:{render:(el,value)=>{render=value;return{dispose(){},refresh:()=>{render={refreshed:true};}};}},DTState:require('../lib/state-machine'),runtimeScopeVersion:new(require('../lib/state-machine').Revision)(),DTDiagnostics:{traces:(el,value)=>{render=value;},coverage:(el,value)=>{render=value;}},document:{addEventListener(){},querySelectorAll:()=>buttons}});
  vm.runInContext(fs.readFileSync(path.join(__dirname,'../web/admin-observability.js'),'utf8'),c);return{$,buttons,run:code=>vm.runInContext(code,c),render:()=>render};}
 test('switching views and scopes cannot deliver old trace evidence into the new selection',async()=>{
  let release;const late=new Promise(r=>release=r),h=harness(url=>url.endsWith('observability')?late:Promise.resolve({report:'coverage'}));
@@ -9,4 +9,10 @@ test('switching views and scopes cannot deliver old trace evidence into the new 
 });
 test('tracing remains off until an explicit user click sends the preference',async()=>{
  const calls=[],h=harness(async(url,body)=>{calls.push(body);return{enabled:false};});h.run('diagnosticsInit()');assert.equal(calls.length,0);await h.run("diagnosticsSelect('traces')");await new Promise(r=>setImmediate(r));assert.ok(calls.every(body=>body===undefined));await h.$('dgTraceToggle').onclick();assert.ok(calls.some(body=>body?.enabled===true));
+});
+test('requests, traces, coverage and activity navigate without stale views or enabling tracing',async()=>{
+ const calls=[],h=harness(async(url,body)=>{calls.push({url,body});return{protocol:url.includes('/events')?'dt.request-events/v1':'fixture'};});
+ for(const mode of ['events','traces','events','coverage','events','activity','events']){h.run(`diagnosticsSelect('${mode}')`);await new Promise(r=>setImmediate(r));assert.equal(h.run('diagnosticsMode()'),mode);assert.equal(h.$('rtActivityBody').hidden,mode!=='activity');}
+ assert.equal(h.render().protocol,'dt.request-events/v1');assert.ok(calls.every(c=>!c.body));await h.run('diagnosticsLoad()');assert.deepEqual(h.render(),{refreshed:true});
+ let release;const other=harness(()=>new Promise(r=>release=r));other.run("diagnosticsSelect('events')");const firstRelease=release;other.run('runtimeScopeVersion.advance();diagnosticsScopeChanged()');firstRelease({old:true});await new Promise(r=>setImmediate(r));assert.equal(other.render(),undefined);
 });

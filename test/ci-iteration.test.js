@@ -19,6 +19,11 @@ test('bounded waits resume the pinned build; cancellation drains polling',async(
  await assert.rejects(A.run({principalId:'other',storyId:'other'},()=>J.wait({job,cursor:r.cursor,wait_ms:0})),/Cursor/);
  f.state.building=true;const signal=new AbortController(),cancel=E.run({kind:'test',signal:signal.signal},()=>J.wait({job,wait_ms:5000,poll_ms:100}));setTimeout(()=>signal.abort(),80);await assert.rejects(cancel);const reads=f.state.reads;await new Promise(r=>setTimeout(r,180));assert.equal(f.state.reads,reads);f.state.building=false;
 });
+test('a deadline during polling sleep returns pending without another observation',async t=>{
+ const deadline=new AbortController(),L=require('../lib/limit'),sleep=L.sleep;let entered,checks=0;const sleeping=new Promise(r=>entered=r);
+ t.mock.method(AbortSignal,'timeout',()=>deadline.signal);t.mock.method(L,'sleep',(ms,signal)=>{entered();return sleep(ms,signal);});
+ const pending=require('../lib/ci-wait').poll({observe:async()=>{checks++;return {building:true};},decide:()=>null,wait_ms:1000,poll_ms:100});await sleeping;deadline.abort(new DOMException('Fixture deadline elapsed','TimeoutError'));const result=await pending;assert.equal(result.wait.state,'pending');assert.equal(result.wait.timedOut,true);assert.equal(result.wait.observed,true);assert.equal(checks,1);
+});
 test('submission receipts suppress replay and uncertain outcomes, honoring configured allowlists',async()=>{
  let r=await J.start({job,request_id:'build-1',parameters:{SHA:F.SHA}}),posts=f.state.posts;assert.equal(r.queue_id,7);assert.equal((await J.start({job,request_id:'build-1',parameters:{SHA:F.SHA}})).replayed,true);assert.equal(f.state.posts,posts);
  await assert.rejects(J.start({job,request_id:'build-1',parameters:{SHA:F.NEXT}}),e=>e.code==='DT_CI_ACTION_CONFLICT');assert.equal((await J.queue({job,queue_id:7})).build,17);

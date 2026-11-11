@@ -103,18 +103,18 @@ test('workspaces: the commit from a local copy (no download), the local copy whe
   const a = await W.open({ project: 'P', repo: 'svc', ref: 'main', url, libraries: false });
   assert.equal(a.reusedFrom, undefined);
   let notes;
-  const b = await T.call('workspace_open', {}, {}, async () => { const w = await W.open({ project: 'P', repo: 'svc', ref: 'main', url, libraries: false }); notes = T.current().notes; return w; });
+  const b = await T.call('workspace_open', {}, {}, async () => { const w = await W.open({ project: 'P', repo: 'svc', ref: 'main', url, libraries: false, fresh:true }); notes = T.current().notes; return w; });
   assert.equal(b.sha, a.sha);
   assert.match(b.reusedFrom, /work\//);
   assert.match(notes.join(' '), /nothing downloaded/);
   // the remote moves on: the local copy is not that commit, so it is fetched
   fs.writeFileSync(path.join(src, 'B.java'), 'class B {}\n'); g('add', '.'); g('commit', '-qm', 'y');
-  const c = await W.open({ project: 'P', repo: 'svc', ref: 'main', url, libraries: false });
+  const c = await W.open({ project: 'P', repo: 'svc', ref: 'main', url, libraries: false, fresh:true });
   assert.notEqual(c.sha, a.sha);
   assert.equal(c.reusedFrom, undefined);
   // Bitbucket gone: the newest local copy, said so
   fs.renameSync(src, `${src}-gone`);
-  const d = await T.call('workspace_open', {}, {}, async () => { const w = await W.open({ project: 'P', repo: 'svc', ref: 'main', url, libraries: false }); notes = T.current().notes; return w; });
+  const d = await T.call('workspace_open', {}, {}, async () => { const w = await W.open({ project: 'P', repo: 'svc', ref: 'main', url, libraries: false, fresh:true }); notes = T.current().notes; return w; });
   assert.ok(d.reusedFrom);
   assert.match(notes.join(' '), /did not answer.*may be behind/);
   fs.renameSync(`${src}-gone`, src);
@@ -124,7 +124,7 @@ test('workspaces: the commit from a local copy (no download), the local copy whe
   assert.equal(s2.id, s1.id);
   assert.equal(s2.reused, true);
   const s3 = await T.call('workspace_open', {}, { session: 'chat-2' }, () => W.open({ project: 'P', repo: 'svc', ref: 'main', url, libraries: false }));
-  assert.notEqual(s3.id, s1.id);
+  assert.equal(s3.id, s1.id); // Transport sessions do not change the authenticated task.
   // the run history and fast-run state kept next to workspaces are not workspaces (this broke workspace_list)
   fs.writeFileSync(path.join(home, 'cache', 'work', `${a.id}.runs.json`), '[]');
   fs.writeFileSync(path.join(home, 'cache', 'work', `${a.id}.fast.json`), '{}');
