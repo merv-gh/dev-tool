@@ -62,6 +62,17 @@ test('SQLite retention survives restart, applies scope filters and bounds full q
  s.put(row(1));s.put(row(2));s.put(row(3));await s.flush();assert.ok(s.status().dropped>0);await s.close();
  s=new TraceStore(file,{maxRows:2});assert.equal((await s.read('b')).length,0);assert.equal((await s.read('a')).length,1);await s.close();
 });
+test('late diagnostic readiness cannot revive failed or closed storage',async()=>{
+ const {TraceStore}=require('../lib/telemetry-store'),s=new TraceStore(path.join(home,'late-start.sqlite'));
+ const starting=s.start(),worker=s.worker;
+ worker.emit('error',Error('Startup failed before its queued ready message'));
+ await assert.rejects(starting,/Diagnostic storage unavailable/);
+ assert.doesNotThrow(()=>worker.emit('message',{ready:true}));assert.equal(s.status().state,'failed');
+ s.put({scope:'a',traceId:'a'.repeat(32),spanId:'2'.repeat(16)});assert.equal(s.status().dropped,1);
+ await s.close();assert.doesNotThrow(()=>worker.emit('message',{ready:true}));assert.equal(s.status().state,'closed');
+ const ready=new TraceStore(path.join(home,'duplicate-ready.sqlite'));await ready.start();
+ assert.doesNotThrow(()=>ready.worker.emit('message',{ready:true}));assert.equal(ready.status().state,'ready');await ready.close();
+});
 
 test('changing local scope cannot attach another chat to the active trace',async()=>{
  await A.run(alice,()=>O.run('scope.a',{},async()=>{

@@ -1573,6 +1573,38 @@ Expected: Labels/scopes/readiness only; no secret values.
 
 Interactive API explorer with a populated route inventory; request selection does not execute it.
 
+### Trace a reproducible UI state to a database field
+
+Open UI trace from Admin API routes, or discover ui_trace with tool_search. Save a recipe with stable CSS selectors or accessible role/name locators; runtime placeholders supply credentials. Replay UI & capture explicitly runs authorization/navigation/form actions and records the last-state screenshot with observed HTTP exchanges. Opening the saved graph does not replay actions.
+
+Expand service groups to inspect exact retained Joern controls, transformations and call bindings. Declared field/transport corrections retain source repo/SHA/file/line and a reason. Missing analyses, ambiguous handlers, function-lineage gaps and unverified deployment/path feasibility stay visible. A browser observation does not prove a distributed runtime trace.
+
+Select a PostgreSQL field, edit the WHERE FALSE query draft with tenant/entity predicates and explicitly Run read-only query. Inspect function definitions before preparing calls. Export screenshot-bearing SVG and full JSON, or retain the result in task context. The native inline summary is collapsed by default.
+
+Multiple services use separate exact source groups. Cached procedure/function call dependencies continue through other routines to tables. ui_trace_edit patches reviewed service, source-to-database and database-to-database bindings with expected_revision; rebuild with previous and capture:false. Overload ambiguity and dynamic SQL stay explicit. The collapsed inline result expands into a network-free graph with selectable states, procedures and fields; live edits and SQL open the authenticated workbench.
+
+**Find saved UI states** · `ui_trace_list`
+
+```json
+{}
+```
+
+Expected: Task-private recipe identities; no browser, parse or SQL is run.
+
+**Correct an existing diagram definition** · `ui_trace_edit`
+
+```json
+{
+  "id": "order-status",
+  "expected_revision": "{{revisionKey}}",
+  "patch": {
+    "title": "Reviewed order path"
+  }
+}
+```
+
+Expected: Requires the current recipe revision; does not execute UI or SQL.
+
 ### Observe UI traffic, then reuse it
 
 browser_sites/site_url discover configured pages. api_browser_open starts an isolated Playwright session and installs capture before navigation; api_browser_action inspects or interacts with it; api_browser_capture drains bounded exchanges. UI actions can mutate the application, so keep their scope intentional. api_browser_close releases the session.
@@ -2188,6 +2220,16 @@ Which element matters? Read formatted hierarchy/source, wrap long lines and copy
 
 </details>
 
+#### ui-trace
+
+How does this UI action reach a database field? Inspect the captured UI state and observed API requests, expand exact retained service paths and their assumptions, then inspect catalog fields. Edit reproducible replay steps or source-pinned bindings; browser replay and read-only SQL require explicit actions.
+
+<details><summary>View labeled presentation example</summary>
+
+![Built-in ui-trace presentation sample](../screenshots/sample-ui-trace.png)
+
+</details>
+
 ### Standalone workbenches
 
 Passports combine service boundary graphs and detected/manual evidence; API explorer prepares and sends reviewed requests; Services map explores bounded relationships and editable tool inspections; architecture/dossiers add C4/environment/requirement views and exports. Logs/trace, PR, files, dashboard and showcase have their own explorers. Use the selected inspector before exporting or summarizing a large graph.
@@ -2222,7 +2264,7 @@ Search a task term, tool name or group. Select a tool to read its contract, requ
 
 The portable repository reference records built-in tools at generation time. The running registry remains authoritative for extensions and permissions. A required field can still need a real returned ID; blank values or an invented analysis/lease/workspace ID are not useful arguments.
 
-The [complete built-in reference](tools.md) contains 252 tools with exact schemas. In the app, the reference uses the current authorized registry and includes configured extensions.
+The [complete built-in reference](tools.md) contains 256 tools with exact schemas. In the app, the reference uses the current authorized registry and includes configured extensions.
 
 ### When a tool is missing
 

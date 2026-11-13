@@ -150,6 +150,7 @@ const routes = [
   ['GET','/model/v1/models',true,(req,res)=>require('./lib/model-gateway').handle(req,res,'models')],
   ['POST','/model/v1/chat/completions',true,async(req,res)=>require('./lib/model-gateway').handle(req,res,'chat/completions',await readJsonBody(req))],
   ['GET', '/api/capabilities', true, async (req,res,url) => send(res,200,await require('./lib/capability-map').graph({env:url.searchParams.get('env')||undefined}))],
+  ['GET', '/ui-trace', true, page('ui-trace.html')],
   ['GET', '/handbook', true, page('handbook.html')],
   ['GET', '/api/handbook', true, async (req,res) => send(res,200,await require('./lib/handbook').catalog())],
   ['GET', '/api/handbook/context', true, async (req,res,url) => send(res,200,await require('./lib/handbook').selfContext({env:url.searchParams.get('env')||undefined}))],

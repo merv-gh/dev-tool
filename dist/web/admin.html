@@ -228,6 +228,7 @@
 
   <section id="tab-api" hidden>
     <h2>API routes <span class="muted" id="rtCount"></span></h2>
+    <p><a href="/ui-trace" onclick="this.href='/ui-trace?story='+encodeURIComponent(typeof runtimeStory==='string'?runtimeStory:'default')" target="_blank" rel="noopener">Trace a UI state to database fields</a></p>
     <p class="hint">Endpoints from code (passports) merged with routes seen in the browser (saved scripts, routes_discover, or routes_learn from the chat). Ids show as <code>&lt;id&gt;</code>.</p>
     <div class="row" style="margin-bottom:8px"><input id="rtQ" class="filter" placeholder="path, service, handler, host…" style="width:360px"></div>
     <div class="card scroll"><table><thead><tr><th>Service</th><th>Method</th><th>Path</th><th>Host / site</th><th class="num">Seen</th><th>Status</th><th>Handler</th><th>Source</th><th>Request</th></tr></thead><tbody id="routes"></tbody></table></div>

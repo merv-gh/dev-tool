@@ -1,0 +1,114 @@
+{
+  "protocol": "dt.ui-trace-verification/v1",
+  "sourceDigest": "76003598b4a81f464482299af8a0455be10e13ac1b78b8def3e227c887f27556",
+  "generatedAt": "2026-11-13T19:27:10.882Z",
+  "tests": {
+    "focused": {
+      "command": "node --test test/ui-trace.test.js test/ui-trace-ui.test.js test/ui-trace-inline.test.js",
+      "passed": 34,
+      "failed": 0
+    },
+    "fullSuite": {
+      "command": "npm run test:coverage",
+      "counts": {
+        "tests": 1091,
+        "failed": 0,
+        "passed": 1035,
+        "cancelled": 0,
+        "skipped": 56,
+        "todo": 0,
+        "topLevel": 1091,
+        "suites": 0
+      },
+      "summary": {
+        "transitions": {
+          "hit": 357,
+          "total": 653,
+          "percent": 54.7
+        },
+        "lines": {
+          "hit": 28354,
+          "total": 30411,
+          "percent": 93.2
+        },
+        "functions": {
+          "hit": 6522,
+          "total": 7422,
+          "percent": 87.9
+        },
+        "branches": {
+          "hit": 23065,
+          "total": 28053,
+          "percent": 82.2
+        },
+        "testedFiles": 157,
+        "sourceFiles": {
+          "measured": 206,
+          "unmeasured": 28,
+          "total": 234
+        }
+      },
+      "coverageGate": "passed against the retained same-platform baseline"
+    },
+    "releaseRegressions": {
+      "command": "node --test test/ci-iteration.test.js test/telemetry.test.js test/tool-discovery.test.js",
+      "passed": 30,
+      "failed": 0,
+      "notes": [
+        "Late diagnostic worker readiness cannot revive failed or closed storage.",
+        "CI polling completion is checked independently of wall-clock scheduling."
+      ]
+    }
+  },
+  "browser": {
+    "checks": [
+      "Real browser authorization/navigation/form/wait recipe, final screenshot, sanitized network capture and session cleanup",
+      "HTTP route attribution, retained projection + synthetic deep Joern adapter, catalog field and explicit declared binding",
+      "1440/light: screenshot node, grouped service expansion and retained-only reopening",
+      "1440/light: editable field SQL draft, disclosure and no page overflow",
+      "1440/dark: screenshot node, grouped service expansion and retained-only reopening",
+      "1440/dark: editable field SQL draft, disclosure and no page overflow",
+      "390/light: screenshot node, grouped service expansion and retained-only reopening",
+      "390/light: editable field SQL draft, disclosure and no page overflow",
+      "390/dark: screenshot node, grouped service expansion and retained-only reopening",
+      "390/dark: editable field SQL draft, disclosure and no page overflow",
+      "No implicit SQL; explicit query surfaces missing live database configuration",
+      "Mouse-driven catalog field binding with source SHA, revision save and rebuild without browser replay",
+      "Model partial revision-checked edit adds a procedure-to-field link across two services without UI replay",
+      "Reproducible full JSON and SVG including the captured screenshot",
+      "Native Open WebUI inline snapshot collapsed by default, screenshot and authenticated workbench link",
+      "Network-free inline graph expands multiple services and selects procedure fields with authenticated live continuations",
+      "Cancelling an active replay closes its real isolated browser context"
+    ],
+    "passed": 17,
+    "pageErrors": [],
+    "realBrowserReplay": true,
+    "freshJoernParser": false,
+    "livePostgres": false,
+    "productionOpenWebUI": false
+  },
+  "visualReview": {
+    "verdict": "ship",
+    "scope": "Initial workbench readability, stable expansion anchors/camera, synchronized dark theme and evidence colors/dashes; follow-up correction review limited to toolbar contrast, column-kind labels and qualified field choices.",
+    "resolved": [
+      "F1",
+      "F2",
+      "F3",
+      "F4",
+      "UT-F01",
+      "UT-F02",
+      "UT-F03"
+    ]
+  },
+  "limits": [
+    "Browser replay uses a disposable local application and real Playwright.",
+    "The retained Joern projection/deep-query adapter and PostgreSQL catalog are synthetic.",
+    "Fresh Joern parsing, live PostgreSQL and production Open WebUI were not exercised.",
+    "Observed browser requests do not prove distributed execution, path feasibility or equal field values."
+  ],
+  "screenshots": [
+    "docs/screenshots/ui-trace-desktop.png",
+    "docs/screenshots/ui-trace-mobile-dark.png",
+    "docs/screenshots/sample-ui-trace.png"
+  ]
+}

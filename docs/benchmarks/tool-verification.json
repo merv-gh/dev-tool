@@ -1,6 +1,6 @@
 {
   "protocol": "dt.release-inventory/v1",
-  "sourceDigest": "ec6aa43272a17c2c50b408bafedc6926e0488621831c8d8a5e83ec83585bc3fd",
+  "sourceDigest": "76003598b4a81f464482299af8a0455be10e13ac1b78b8def3e227c887f27556",
   "tools": [
     {
       "name": "find",
@@ -25,6 +25,7 @@
         "test/server.test.js",
         "test/team-security.test.js",
         "test/tool-contracts.test.js",
+        "test/ui-trace-ui.test.js",
         "test/units.test.js",
         "test/webui-context.test.js",
         "test/workbench-explorer-ui.test.js",
@@ -109,6 +110,7 @@
         "test/memory.test.js",
         "test/pgindex.test.js",
         "test/tool-contracts.test.js",
+        "test/ui-trace-ui.test.js",
         "test/workbench.test.js"
       ],
       "integrationReferences": []
@@ -121,6 +123,7 @@
       "resultContract": false,
       "referenceTests": [
         "test/pgindex.test.js",
+        "test/ui-trace-ui.test.js",
         "test/workbench.test.js"
       ],
       "integrationReferences": []
@@ -173,6 +176,7 @@
         "test/team-security.test.js",
         "test/tool-contracts.test.js",
         "test/tool-discovery.test.js",
+        "test/ui-trace-ui.test.js",
         "test/units.test.js",
         "test/webui-context.test.js",
         "test/workbench-explorer-ui.test.js",
@@ -825,6 +829,7 @@
       "resultContract": false,
       "referenceTests": [
         "test/collections.test.js",
+        "test/ui-trace-ui.test.js",
         "test/workbench-explorer-ui.test.js"
       ],
       "integrationReferences": []
@@ -3124,6 +3129,52 @@
         "test/service-map.test.js"
       ],
       "integrationReferences": []
+    },
+    {
+      "name": "ui_trace_save",
+      "group": "browser",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/ui-trace-ui.test.js",
+        "test/ui-trace.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "ui_trace_edit",
+      "group": "browser",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/ui-trace.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "ui_trace_list",
+      "group": "browser",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/ui-trace-ui.test.js",
+        "test/ui-trace.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "ui_trace",
+      "group": "browser",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/ui-trace.test.js"
+      ],
+      "integrationReferences": []
     }
   ],
   "views": [
@@ -3153,6 +3204,7 @@
     "test-coverage",
     "tests",
     "text-diff",
+    "ui-trace",
     "workbench",
     "workspace-coverage",
     "xml"

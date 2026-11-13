@@ -2,6 +2,24 @@
 
 Captured from the running demo with `demo/gallery.js`, `demo/screenshots.js` and `demo/chat-screenshots.js`. Synthetic samples demonstrate rendering; real Joern captures use retained end-to-end test results. Open WebUI uses a scripted model with real tool calls. This gallery does not imply every integration was executed. [Capture instructions](../../demo/README.md).
 
+### UI state to database field
+
+The [UI trace demo](../ui-trace.md) performs real Playwright login, navigation,
+form actions, network capture and a final screenshot against a disposable app.
+Its retained Joern/deep-query adapter and PostgreSQL catalog are synthetic.
+The inline image uses the native sandboxed result renderer; production Open
+WebUI, a fresh Joern parser and live PostgreSQL were not exercised by this demo.
+
+| Service path and field query | Narrow dark layout |
+| --- | --- |
+| ![UI-to-field diagram](ui-trace-desktop.png) | ![Selected field on mobile](ui-trace-mobile-dark.png) |
+
+![Interactive inline UI trace result](sample-ui-trace.png)
+
+The expanded inline graph supports service groups, procedure dependencies,
+node selection and evidence inspection without network access. Its selected-node
+link opens the authenticated workbench for edits or explicit SQL.
+
 ## Interactive object workbench
 
 Captured from `demo/workbench-explorer/run.js` through the real browser UI.

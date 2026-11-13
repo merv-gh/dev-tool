@@ -24,6 +24,14 @@ test('a deadline during polling sleep returns pending without another observatio
  t.mock.method(AbortSignal,'timeout',()=>deadline.signal);t.mock.method(L,'sleep',(ms,signal)=>{entered();return sleep(ms,signal);});
  const pending=require('../lib/ci-wait').poll({observe:async()=>{checks++;return {building:true};},decide:()=>null,wait_ms:1000,poll_ms:100});await sleeping;deadline.abort(new DOMException('Fixture deadline elapsed','TimeoutError'));const result=await pending;assert.equal(result.wait.state,'pending');assert.equal(result.wait.timedOut,true);assert.equal(result.wait.observed,true);assert.equal(checks,1);
 });
+test('polling resumes after a pending observation and returns the completed result',async t=>{
+ const deadline=new AbortController(),delays=[];let checks=0;
+ // Keep this independent of machine load; HTTP deadline behavior is checked above.
+ t.mock.method(Date,'now',()=>1000);t.mock.method(AbortSignal,'timeout',()=>deadline.signal);
+ t.mock.method(require('../lib/limit'),'sleep',async ms=>{delays.push(ms);});
+ const result=await require('../lib/ci-wait').poll({observe:async()=>({building:++checks===1}),decide:r=>r.building?null:'complete',wait_ms:1000,poll_ms:100});
+ assert.deepEqual(delays,[100]);assert.equal(checks,2);assert.equal(result.building,false);assert.equal(result.wait.state,'complete');assert.equal(result.wait.checks,2);assert.equal(result.wait.timedOut,false);
+});
 test('submission receipts suppress replay and uncertain outcomes, honoring configured allowlists',async()=>{
  let r=await J.start({job,request_id:'build-1',parameters:{SHA:F.SHA}}),posts=f.state.posts;assert.equal(r.queue_id,7);assert.equal((await J.start({job,request_id:'build-1',parameters:{SHA:F.SHA}})).replayed,true);assert.equal(f.state.posts,posts);
  await assert.rejects(J.start({job,request_id:'build-1',parameters:{SHA:F.NEXT}}),e=>e.code==='DT_CI_ACTION_CONFLICT');assert.equal((await J.queue({job,queue_id:7})).build,17);

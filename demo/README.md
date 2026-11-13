@@ -115,3 +115,9 @@ generated with `node dev/build-handbook.js`; `--check` detects documentation
 staleness. `npm run build` ships the guide and allowlisted demo images in
 `dist/`, so the existing `./run.sh up -d` workflow includes it. Screenshots and
 review evidence are linked from the handbook and main README.
+
+## UI-to-database diagram
+
+Run `node demo/ui-trace.js work/ui-trace-demo` and open its printed URL. Select the saved order-status recipe, enter runtime parameters and choose **Replay UI & capture**. The login/form/screenshot/network capture is real Playwright; Joern responses and PostgreSQL catalogs are explicitly synthetic fixtures. No production database is queried.
+
+`node dev/check-ui-trace-browser.js work/ui-trace-check work/ui-trace-check/screenshots` checks desktop/mobile, two grouped services, a procedure calling another procedure and writing a table, model-driven revision edits, explicit field SQL, JSON/SVG exports and the interactive native inline graph. See [UI trace](../docs/ui-trace.md).

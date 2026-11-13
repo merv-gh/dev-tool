@@ -4,6 +4,8 @@ The API client connects Playwright UI inspection, observed network exchanges, ca
 
 Open WebUI receives a sandboxed response explorer by default. It includes status, timing, safe request/response headers, collapsible JSON, handler candidates, provenance, omissions and downloads. The separate `client` URL opens the editable API client; link it directly in chat. Sandboxed views have no network capability, and a popup from an embedded sandbox may inherit its restrictions. The view therefore offers **Copy API client URL**, while the top-level client uses the normal trusted `/api/tool/*` endpoints. The client keeps runtime parameter values in page memory, never local storage.
 
+For a reproducible screenshot-to-service-to-field diagram, open the [UI trace workbench](ui-trace.md). It joins captured exchanges to exact retained Joern paths and catalog fields, with editable replay steps and explicit SQL.
+
 ## Workflow
 
 1. `api_browser_open` opens an isolated browser session, detects the available capture adapter before navigation, then visits `site`/`link` with `params`, or a `url`. The configured Playwright MCP endpoint is `browser.mcp` / `DT_BROWSER_MCP`. Cookies stay in the browser; this session is distinct from an agent's own browser.

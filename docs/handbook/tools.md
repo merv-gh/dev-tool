@@ -2700,6 +2700,10 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
 - [`api_browser_action`](#tool-api_browser_action)
 - [`api_browser_capture`](#tool-api_browser_capture)
 - [`api_browser_close`](#tool-api_browser_close)
+- [`ui_trace_save`](#tool-ui_trace_save)
+- [`ui_trace_edit`](#tool-ui_trace_edit)
+- [`ui_trace_list`](#tool-ui_trace_list)
+- [`ui_trace`](#tool-ui_trace)
 
 <a id="tool-browser_sites"></a>
 
@@ -2894,6 +2898,190 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
   "required": [
     "session"
   ]
+}
+```
+
+</details>
+
+<a id="tool-ui_trace_save"></a>
+
+### ui_trace_save
+
+Save a versioned task-private UI-to-database diagram recipe without executing it. recipe={url,steps:[{action:"fill",selector:"[name=email]",value:"{{email}}"},{action:"click",role:"button",name:"Search"}]}. Actions: navigate/fill/click/select/check/press/wait. Credentials are runtime parameters. Reviewed service, transport, database and field bindings retain reasons. Use ui_trace_edit for partial edits.
+
+Workflow: [From a browser action to an API check](README.md#api-browser) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Recipe id"
+    },
+    "expected_revision": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "null for new; current revision to update"
+    },
+    "definition": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "title, description, recipe:{url,steps}; optional services, fields, transports, databases and database_links arrays. Read the handbook for reviewed binding shapes."
+    }
+  },
+  "required": [
+    "id",
+    "expected_revision",
+    "definition"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-ui_trace_edit"></a>
+
+### ui_trace_edit
+
+Manually correct a saved UI diagram with optimistic revision checking. patch replaces only supplied definition fields; omitted fields stay intact, [] removes a binding array. Allows title/description/recipe/services/fields/transports/databases/database_links. Corrections remain declared evidence; observed traffic cannot be rewritten. Rebuild with ui_trace previous=<result id>, capture=false to update the inline graph without replay.
+
+Workflow: [From a browser action to an API check](README.md#api-browser) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Recipe id"
+    },
+    "expected_revision": {
+      "type": "string",
+      "description": "Current recipe revision from ui_trace_list"
+    },
+    "patch": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Partial definition. databases:[{service,repo,sha,file,line,db,object,signature?,columns?,reason}]; database_links:[{db,object,signature?,target_db,target_object,target_signature?,columns?,access?,reason}]. services:[{service,analysis,entry,path?,method?,reason?}], fields:[{service,repo,sha,file,line,db,object,column,signature?,reason}], transports:[{service,repo,sha,file,line,target_service,method,path,reason}]."
+    }
+  },
+  "required": [
+    "id",
+    "expected_revision",
+    "patch"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-ui_trace_list"></a>
+
+### ui_trace_list
+
+Discover saved UI-to-Postgres diagram recipes in this task. Pass id to read replay steps and exact static bindings; no browser, indexing or SQL is run.
+
+Workflow: [From a browser action to an API check](README.md#api-browser) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "q": {
+      "type": "string",
+      "description": "Title/id search"
+    },
+    "id": {
+      "type": "string",
+      "description": "Read exact recipe"
+    },
+    "revision": {
+      "type": "string",
+      "description": "Optional immutable recipe revision"
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-ui_trace"></a>
+
+### ui_trace
+
+Diagram a reproducible UI state through observed API requests, multiple grouped service Joern paths and PostgreSQL procedure/function dependencies to tables/fields. capture=true EXPLICITLY replays UI, including form mutations, and takes its screenshot. Default only joins retained evidence (previous result or exchange_ids); no browser or SQL. Exact retained analyses; no implicit parsing. Compact preview and interactive inline graph. Correct missing paths with ui_trace_edit. Observe job or cancel with job_cancel.
+
+Workflow: [From a browser action to an API check](README.md#api-browser) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Saved UI recipe id"
+    },
+    "revision": {
+      "type": "string",
+      "description": "Pinned recipe revision"
+    },
+    "env": {
+      "type": "string",
+      "enum": [
+        "dev"
+      ],
+      "default": "dev",
+      "description": "Environment"
+    },
+    "capture": {
+      "type": "boolean",
+      "default": false
+    },
+    "params": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Runtime replay values; not retained in recipes, logs or jobs"
+    },
+    "previous": {
+      "type": "string",
+      "description": "Retained UI trace result id to reuse screenshot/traffic"
+    },
+    "exchange_ids": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "string"
+      }
+    },
+    "job": {
+      "type": "string",
+      "description": "Observe existing owned job"
+    },
+    "waitMs": {
+      "type": "integer",
+      "description": "Observation wait",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 30000
+    }
+  },
+  "required": [],
+  "additionalProperties": false
 }
 ```
 

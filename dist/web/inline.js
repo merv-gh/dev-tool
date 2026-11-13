@@ -97,6 +97,8 @@ const dtInline = {
     } else if (view === 'semantic-path-trace') {
       failed ||= ['failed','interrupted'].includes(d.state) || ['inconclusive','partial-static-path-change'].includes(d.assessment?.status);
       summary = [d.assessment?.status || d.state || 'Preparing trace', `${d.sides?.length||0} retained revisions`,d.assessment ? `${d.assessment.dataChanges||0} value / ${d.assessment.controlChanges||0} control differences` : null].filter(Boolean).join(' · ');
+    } else if (view === 'ui-trace') {
+      summary = `${c.requests||0} requests · ${c.services||0} services · ${c.states||0} static states · ${c.fields||0} fields`;
     } else if (view === 'semantic-flow-map') {
       const counts=d.flowMap?.counts||{};
       failed ||= ['failed','interrupted'].includes(d.state);

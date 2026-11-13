@@ -3375,6 +3375,7 @@ var require_telemetry_store = __commonJS({
           });
           worker.on("message", (message) => {
             if (message.ready) {
+              if (this.phase !== "starting") return;
               clearTimeout(timer);
               this.phase = "ready";
               worker.unref();
@@ -61072,7 +61073,7 @@ var require_fieldtrace = __commonJS({
       }
       return { name: `${r.source.name} field trace`, title: `${r.source.name} field trace`, nodes: [...nodes.values()], relations: relations.map(({ fields, ...x }) => x), flows: [] };
     }
-    module2.exports = { trace: trace2, rows, model, splitSql, selectList, aliases, reads, deprecations, selected, stripAlias };
+    module2.exports = { trace: trace2, rows, model, dbFields, splitSql, selectList, aliases, reads, deprecations, selected, stripAlias };
   }
 });
 
@@ -62359,7 +62360,7 @@ var require_views = __commonJS({
       "frame-ancestors *"
     ].join("; ");
     function policy(view) {
-      return ["capabilities", "ci", "workspace-coverage", "workbench"].includes(view.name) && view.builtin ? CSP.replace("allow-popups ", "allow-popups allow-popups-to-escape-sandbox ") : CSP;
+      return ["ui-trace", "capabilities", "ci", "workspace-coverage", "workbench"].includes(view.name) && view.builtin ? CSP.replace("allow-popups ", "allow-popups allow-popups-to-escape-sandbox ") : CSP;
     }
     function parse(text) {
       const m = text.match(/^\s*<!--\s*(\{[\s\S]*?\})\s*-->\s*/);
@@ -62443,11 +62444,12 @@ dt.diffLines = ${diffLines.toString()};
       const projectContext = name === "project-context" ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../project-context.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../project-context-ui.js"), "utf8") + "</script>" : "";
       const diagnostics = ["test-coverage", "observability"].includes(name) ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../diagnostics.css"), "utf8") + "\n" + fs3.readFileSync(path3.join(BUILTIN, "../request-events.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../trace-format.js"), "utf8") + "\n" + fs3.readFileSync(path3.join(BUILTIN, "../diagnostics.js"), "utf8") + "\n" + fs3.readFileSync(path3.join(BUILTIN, "../request-events.js"), "utf8") + "</script>" : "";
       const capabilities = name === "capabilities" ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../capability-map.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../capability-layout.js"), "utf8") + "\n" + fs3.readFileSync(path3.join(BUILTIN, "../capability-map.js"), "utf8") + "</script>" : "";
+      const uiTrace = name === "ui-trace" ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../ui-trace-inline.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../ui-trace-layout.js"), "utf8") + "\n" + fs3.readFileSync(path3.join(BUILTIN, "../ui-trace-inline.js"), "utf8") + "</script>" : "";
       const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
       return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(meta.title || name)}</title>${metaCsp ? `<meta http-equiv="Content-Security-Policy" content="${esc(CSP.split("; ").filter((d) => !/^(sandbox|frame-ancestors)/.test(d)).join("; "))}">` : ""}
 <style>${a.css}</style>
 <script>window.DATA = ${safeJson(data)}; window.META = ${safeJson({ view: name, ...meta })};</script>
-<script>${a.js}</script>${diagnostics}${projectContext}${capabilities}</head>
+<script>${a.js}</script>${diagnostics}${projectContext}${capabilities}${uiTrace}</head>
 <body class="${embed ? "embed" : ""}"><div class="wrap">${v.html}</div><script>dtInline.mount(document.querySelector('.wrap'), dtInline.describe(META.view, DATA, META));</script></body></html>`;
     }
     module2.exports = { list, get, save, remove, render, policy, CSP, BUILTIN, DIR };
@@ -70739,6 +70741,90 @@ var require_api_auth = __commonJS({
   }
 });
 
+// lib/ui-trace-browser.js
+var require_ui_trace_browser = __commonJS({
+  "lib/ui-trace-browser.js"(exports2, module2) {
+    var ACTIONS = ["navigate", "fill", "click", "select", "check", "press", "wait"];
+    var text = (v, name, max = 2e3) => {
+      if (typeof v !== "string" || !v.trim() || v.length > max) throw Error(`${name} must be non-empty text (max ${max})`);
+      return v;
+    };
+    function url(value) {
+      const u = new URL(value);
+      if (!/^https?:$/.test(u.protocol) || u.username || u.password) throw Error("UI URL must use http(s) without inline credentials");
+      return value;
+    }
+    function validate(recipe) {
+      if (!recipe || typeof recipe !== "object" || Array.isArray(recipe)) throw Error("recipe must be an object");
+      if (Buffer.byteLength(JSON.stringify(recipe)) > 65536) throw Error("recipe exceeds 64 KiB");
+      const out2 = { url: url(text(recipe.url, "recipe.url")), steps: [] };
+      if (!Array.isArray(recipe.steps) || recipe.steps.length > 40) throw Error("recipe.steps must contain at most 40 actions");
+      for (const s of recipe.steps) {
+        if (!ACTIONS.includes(s.action)) throw Error("Unsupported UI action");
+        if (Object.keys(s).some((k) => !["action", "selector", "role", "name", "value", "url", "checked"].includes(k))) throw Error("Unknown UI action property");
+        const step = { action: s.action };
+        if (s.action === "navigate") step.url = url(text(s.url, "step.url"));
+        else {
+          if (s.selector) step.selector = text(s.selector, "selector", 500);
+          else {
+            step.role = text(s.role, "role", 50);
+            step.name = text(s.name, "accessible name", 300);
+          }
+        }
+        if (["fill", "select", "press"].includes(s.action)) step.value = text(s.value, "step.value");
+        if (s.action === "check") step.checked = s.checked !== false;
+        out2.steps.push(step);
+      }
+      for (const u of [out2.url, ...out2.steps.filter((s) => s.url).map((s) => s.url)]) for (const [k, v] of new URL(u).searchParams) if (/token|pass|secret|key|session|auth|code/i.test(k) && !/^\{\{\w+\}\}$/.test(v)) throw Error("Use runtime {{parameters}} for credentials in URLs");
+      for (const s of out2.steps) if (s.action === "fill" && !/\{\{\w+\}\}/.test(s.value) && /pass|secret|token|auth|credential/i.test(s.selector || s.name)) throw Error("Credential fields require runtime {{parameters}}");
+      return out2;
+    }
+    function resolve2(recipe, params = {}) {
+      recipe = validate(recipe);
+      if (!params || typeof params !== "object" || Array.isArray(params) || Buffer.byteLength(JSON.stringify(params)) > 65536) throw Error("Runtime params must be an object up to 64 KiB");
+      const names = /* @__PURE__ */ new Set();
+      const fill = (v) => v.replace(/\{\{(\w+)\}\}/g, (_, name) => {
+        names.add(name);
+        if (!Object.hasOwn(params, name) || !["string", "number", "boolean"].includes(typeof params[name])) throw Error(`Missing runtime parameter ${name}`);
+        return String(params[name]);
+      });
+      const out2 = { url: url(fill(recipe.url)), steps: recipe.steps.map((s) => ({ ...s, ...s.value !== void 0 ? { value: fill(s.value) } : {}, ...s.url ? { url: url(fill(s.url)) } : {} })) };
+      return out2;
+    }
+    function code(recipe) {
+      return `async (page) => { const recipe=${JSON.stringify(recipe)}; page.setDefaultTimeout(10000); await page.goto(recipe.url,{waitUntil:'domcontentloaded',timeout:20000}); let completed=0; for(const s of recipe.steps){ if(s.action==='navigate')await page.goto(s.url,{waitUntil:'domcontentloaded',timeout:20000}); else {const l=s.selector?page.locator(s.selector):page.getByRole(s.role,{name:s.name,exact:true}); if(s.action==='fill')await l.fill(s.value); else if(s.action==='click')await l.click(); else if(s.action==='select')await l.selectOption(s.value); else if(s.action==='check')await l.setChecked(s.checked); else if(s.action==='press')await l.press(s.value); else await l.waitFor({state:'visible'});} completed++; } return {url:page.url(),completed}; }`;
+    }
+    async function capture(recipe, params = {}) {
+      const resolved = resolve2(recipe, params), C = require_api_client(), E = require_execution();
+      let session, release = () => {
+      };
+      try {
+        E.check();
+        session = (await C.browserOpen({})).session;
+        release = E.resource(() => C.browserClose({ session }));
+        const state = await C.browserRecipe({ session, recipe: resolved });
+        E.check();
+        const shot = await C.browserAction({ session, action: "take_screenshot", args: { type: "png", fullPage: false } });
+        E.check();
+        const captured = await C.browserCapture({ session, source: "Saved UI trace recipe" });
+        E.check();
+        const finalUrl = C.normalize({ url: state.url || resolved.url }, { kind: "ui-state" }).request.url;
+        return { state: { url: finalUrl, completed: state.completed, capturedAt: (/* @__PURE__ */ new Date()).toISOString(), image: shot.imageData?.[0] || null }, exchanges: captured.exchanges, gaps: [...captured.gaps, ...!shot.imageData?.length ? [{ kind: "screenshot-unavailable", detail: "Browser returned no bounded image" }] : []] };
+      } catch (error) {
+        E.check();
+        throw Object.assign(Error("UI replay failed. Check the page, locators and runtime parameters; no form values were retained."), { code: "DT_UI_REPLAY_FAILED" });
+      } finally {
+        try {
+          if (session) await C.browserClose({ session });
+        } finally {
+          release();
+        }
+      }
+    }
+    module2.exports = { ACTIONS, validate, resolve: resolve2, code, capture };
+  }
+});
+
 // lib/api-client.js
 var require_api_client = __commonJS({
   "lib/api-client.js"(exports2, module2) {
@@ -71323,12 +71409,17 @@ var require_api_client = __commonJS({
       }
       return { session, closed: true };
     }
+    async function browserRecipe({ session, recipe }) {
+      const s = await sessionGet(session);
+      if (!s.codeTool) throw Error("Replayable locator recipes require browser_run_code on the configured Playwright MCP");
+      return toolJson(await s.browser.call(s.codeTool, { code: require_ui_trace_browser().code(recipe) }, { timeout: 12e4 }));
+    }
     function show(exchange) {
       const e = typeof exchange === "string" ? get(exchange) : exchange;
       const client = `${require_results().publicUrl()}/api-client?exchange=${encodeURIComponent(e.id)}&story=${encodeURIComponent(require_access().owner().storyId)}`;
       return { ...e, client, view: require_results().saveView("api-exchange", e, { title: `${e.request.method} ${e.route.path || "API exchange"}`, client }) };
     }
-    module2.exports = { normalize, importExchanges, get, list, prepare, replay, save, browserOpen, browserAction, browserCapture, browserClose, show, MAX_BODY, DIR, captureInstall, captureRead, nativeList, nativeDetails };
+    module2.exports = { normalize, importExchanges, get, list, prepare, replay, save, browserOpen, browserAction, browserCapture, browserClose, browserRecipe, show, MAX_BODY, DIR, captureInstall, captureRead, nativeList, nativeDetails };
   }
 });
 
@@ -71930,6 +72021,12 @@ var require_handbook_content = __commonJS({
           "Optional named bearer profiles reference .env values and are bound to an exact origin/path scope plus the existing HTTP allowlist. The browser/model sees labels and readiness, not the token. autoPrefill=true explicitly enables automatic profile selection. No authentication remains selectable. A conflicting manually supplied Authorization header must be reconciled before using a profile.",
           "Send executes the request, including mutations for non-read methods. Preparation and route selection do not send. Redirects are not followed, browser cookies are not transferred and saved exchanges are sanitized. Review status, timing, headers, body, route candidates, redactions and capture gaps."
         ], { examples: [example("api_routes", { service: "{{service}}" }, "Find endpoints to prepare", "A route inventory with Open request links."), example("api_auth_profiles", {}, "Inspect optional bearer references", "Labels/scopes/readiness only; no secret values.")], figure: figure("ux-api-explorer.png", "Interactive API explorer with a populated route inventory; request selection does not execute it.") }),
+        section("ui-field", "Trace a reproducible UI state to a database field", [
+          "Open UI trace from Admin API routes, or discover ui_trace with tool_search. Save a recipe with stable CSS selectors or accessible role/name locators; runtime placeholders supply credentials. Replay UI & capture explicitly runs authorization/navigation/form actions and records the last-state screenshot with observed HTTP exchanges. Opening the saved graph does not replay actions.",
+          "Expand service groups to inspect exact retained Joern controls, transformations and call bindings. Declared field/transport corrections retain source repo/SHA/file/line and a reason. Missing analyses, ambiguous handlers, function-lineage gaps and unverified deployment/path feasibility stay visible. A browser observation does not prove a distributed runtime trace.",
+          "Select a PostgreSQL field, edit the WHERE FALSE query draft with tenant/entity predicates and explicitly Run read-only query. Inspect function definitions before preparing calls. Export screenshot-bearing SVG and full JSON, or retain the result in task context. The native inline summary is collapsed by default.",
+          "Multiple services use separate exact source groups. Cached procedure/function call dependencies continue through other routines to tables. ui_trace_edit patches reviewed service, source-to-database and database-to-database bindings with expected_revision; rebuild with previous and capture:false. Overload ambiguity and dynamic SQL stay explicit. The collapsed inline result expands into a network-free graph with selectable states, procedures and fields; live edits and SQL open the authenticated workbench."
+        ], { examples: [example("ui_trace_list", {}, "Find saved UI states", "Task-private recipe identities; no browser, parse or SQL is run."), example("ui_trace_edit", { id: "order-status", expected_revision: "{{revisionKey}}", patch: { title: "Reviewed order path" } }, "Correct an existing diagram definition", "Requires the current recipe revision; does not execute UI or SQL.")] }),
         section("capture", "Observe UI traffic, then reuse it", [
           "browser_sites/site_url discover configured pages. api_browser_open starts an isolated Playwright session and installs capture before navigation; api_browser_action inspects or interacts with it; api_browser_capture drains bounded exchanges. UI actions can mutate the application, so keep their scope intentional. api_browser_close releases the session.",
           "Import HAR/network text with api_exchange_import when appropriate. Network listings can lack bodies/headers and retain metadata-only gaps. Static and observed API routes can have several candidate handlers; inspect ambiguity rather than selecting a convenient one. routes_learn/discover add evidence but do not prove a handler implementation was exercised.",
@@ -72077,6 +72174,7 @@ node cli.js tool label_stats '{"label":"refund approved"}'` }
       "text-diff": ["Which lines changed?", "Navigate previous/next change and compare before/after identities and line numbers."],
       xml: ["Which element matters?", "Read formatted hierarchy/source, wrap long lines and copy/download only what is needed."]
     };
+    visualHelp["ui-trace"] = ["How does this UI action reach a database field?", "Inspect the captured UI state and observed API requests, expand exact retained service paths and their assumptions, then inspect catalog fields. Edit reproducible replay steps or source-pinned bindings; browser replay and read-only SQL require explicit actions."];
     module2.exports = { version: 1, title: "The dev-tool field guide", chapters, indexes, groupChapters, visualHelp };
   }
 });
@@ -72237,6 +72335,10 @@ var require_tool_profiles = __commonJS({
       "scenario_run",
       "scenario_inspect",
       "scenario_stop",
+      "ui_trace",
+      "ui_trace_save",
+      "ui_trace_edit",
+      "ui_trace_list",
       "browser_sites",
       "api_browser_open",
       "api_browser_action",
@@ -72276,7 +72378,7 @@ var require_tool_profiles = __commonJS({
     var PROFILES = {
       workbench: { description: "Clickable ticket/service/context exploration, saved actions, separate branch checkouts and retained deployment status. A small starting set for interactive task work.", includeCore: false, names: [...DISCOVERY, "workbench_open", "workbench_save", "context_find", "context_get", "context_read", "context_run", "consul_service", "workspace_list", "workspace_branches", "workspace_branch"] },
       ci: { description: "Pinned Jenkins builds, draft PR checks and review iteration with resumable waits and task checkpoints.", includeCore: false, prefixes: ["jenkins_", "bitbucket_pr_"], names: [...DISCOVERY, "workspace_patch", "workspace_push", "context_open", "context_read", "context_write", "chat_context_status", "chat_compaction_request"] },
-      architecture: { description: "Shared architecture explanations, C4 and feature/data flows, environment observations and exports. Admins publish; everyone reads.", prefixes: ["architecture_", "project_context_"], names: [...CORE, "semantic_query", "semantic_trace", "passport", "consul_service"] },
+      architecture: { description: "Shared architecture explanations, C4 and feature/data flows, environment observations and exports. Admins publish; everyone reads.", prefixes: ["ui_trace", "architecture_", "project_context_"], names: [...CORE, "semantic_query", "semantic_trace", "passport", "consul_service"] },
       semantic: { description: "Entry-to-exit change paths, before/after branches, conditions, loops, stream callbacks and inherited library logic; whole-entry maps, exact revisions and editable passport ports.", includeCore: false, names: [...DISCOVERY, "semantic_capabilities", "semantic_index", "semantic_search", "semantic_query", "semantic_trace", "semantic_ports", "passport_adjustments", "passport_adjust", "passport", "code_search", "code_read", "job_cancel", "call_history"] },
       map: { description: "Microservice map, saved feature flows and bounded graph exploration, with inspection tools and discovery for the rest.", includeCore: false, names: [...DISCOVERY, "map", "map_search", "map_neighbors", "map_path", "map_node", "map_adjustments", "map_adjust", "map_layers", "map_save", "map_ui_preview", "passport", "pg_table", "pg_query", "kafka_topic", "kafka_last", "logs_search", "es_search"] },
       tester: { description: "Testing by name: ready-made checks (service, environment, versions, table, trace, test data capture and reuse), test data and scratch databases, scenarios, API and UI capture, scripts and suites, tests in a workspace; tool_search reaches the rest.", includeCore: false, names: TESTER },
@@ -72426,6 +72528,10 @@ var require_capability_map = __commonJS({
     var groupObject = { jenkins: "execution", catalog: "tools", pg: "table", es: "search-index", kafka: "topic", consul: "environment", logs: "environment", bitbucket: "repository", confluence: "documentation", passport: "service", showcase: "service", browser: "api", api: "api", scripts: "automation", views: "evidence", files: "files", history: "execution", context: "context", map: "service", architecture: "memory", runtime: "execution", semantic: "component", knowledge: "memory" };
     var exact = { workbench_open: "task", workbench_save: "context", find: "database", catalog_search: "database", catalog_usage: "table", pg_query: "database", ddl_snapshot: "database", feature: "documentation", result_read: "evidence", self_context: "task", workflow_plan: "task", handbook: "task", checks: "task", test_coverage: "workspace", differential_check: "workspace", impact: "component", job_cancel: "execution", call_patterns: "automation", evaluation_evidence: "evidence" };
     var questions = {
+      ui_trace_edit: "How can I manually correct missing service or procedure links without replaying the UI?",
+      ui_trace: "How can I trace a reproducible UI state through services to a database field?",
+      ui_trace_save: "How can I save replay steps and correct missing field bindings?",
+      ui_trace_list: "Which reproducible UI states have we already mapped?",
       workbench_open: "How can I browse related contexts, services and tickets interactively?",
       workbench_save: "How can I retain this action as an editable service recipe?",
       workspace_branches: "Which branches can I open for this repository?",
@@ -76778,7 +76884,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "769d0edd655417acbe17f0ba707c1f834283948cf9c7051eaf1cdc7542649f0b";
+      if (true) return "76003598b4a81f464482299af8a0455be10e13ac1b78b8def3e227c887f27556";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -79452,6 +79558,408 @@ var require_tools_api_client = __commonJS({
   }
 });
 
+// lib/ui-trace.js
+var require_ui_trace = __commonJS({
+  "lib/ui-trace.js"(exports2, module2) {
+    var fs3 = require("node:fs");
+    var path3 = require("node:path");
+    var crypto = require("node:crypto");
+    var A = require_access();
+    var E = require_execution();
+    var C = require_config();
+    var { readJson, writeJson } = require_util2();
+    var digest = (x) => crypto.createHash("sha256").update(JSON.stringify(x)).digest("hex");
+    var dir = () => A.scopedDirectory(path3.join(C.PATHS.cache, "ui-traces"));
+    var validId = (id) => {
+      if (!/^[a-z0-9][a-z0-9_-]{0,79}$/i.test(id || "")) throw Error("Invalid UI trace id");
+      return id;
+    };
+    var arr = (x) => Array.isArray(x) ? x : [];
+    var quote = (x) => '"' + String(x).replace(/"/g, '""') + '"';
+    var bindingKeys = ["services", "fields", "transports", "databases", "database_links"];
+    var signature = (o) => String(o.signature ?? o.args ?? "").trim().replace(/\s+/g, " ");
+    var routine = (o) => ["function", "procedure", "aggregate", "window"].includes(o.kind);
+    var error = (message, code = "DT_ARGUMENT_INVALID", statusCode = 400) => Object.assign(Error(message), { code, statusCode });
+    function validate(def) {
+      if (!def || typeof def !== "object" || Array.isArray(def) || Buffer.byteLength(JSON.stringify(def)) > 131072) throw error("definition must be an object up to 128 KiB");
+      if (typeof def.title !== "string" || !def.title.trim() || def.title.length > 160) throw error("definition.title is required (max 160 characters)");
+      const recipe = require_ui_trace_browser().validate(def.recipe);
+      for (const key of bindingKeys) if (def[key] !== void 0 && (!Array.isArray(def[key]) || def[key].length > 50)) throw error(`${key} must be an array of at most 50 bindings`);
+      for (const s of arr(def.services)) if (!s.service || !s.analysis || !s.entry || typeof s.entry !== "object") throw error("Service bindings require service, exact analysis and entry selector");
+      for (const f of arr(def.fields)) if (!f.service || !f.repo || !/^[a-f0-9]{40}$/i.test(f.sha || "") || !f.file || !Number.isInteger(f.line) || f.line < 1 || !f.db || !f.object || !f.column || !f.reason) throw error("Field bindings require service, repo, full sha, exact file/line, db, object, column and reason");
+      for (const t of arr(def.transports)) if (!t.service || !t.repo || !/^[a-f0-9]{40}$/i.test(t.sha || "") || !t.file || !Number.isInteger(t.line) || t.line < 1 || !t.target_service || !t.path || !t.method || !t.reason) throw error("Transport bindings require service, repo, full sha, exact file/line, target_service, method, path and reason");
+      const text = (x) => typeof x === "string" && x.trim().length > 0 && x.length <= 2e3, object = (x) => text(x) && x.includes(".");
+      for (const b of arr(def.databases)) if (!text(b.service) || !text(b.repo) || !/^[a-f0-9]{40}$/i.test(b.sha || "") || !text(b.file) || !Number.isInteger(b.line) || b.line < 1 || !text(b.db) || !object(b.object) || !text(b.reason)) throw error("Database bindings require service, repo, full sha, exact file/line, db, qualified object and reason");
+      for (const b of arr(def.database_links)) if (!text(b.db) || !object(b.object) || !text(b.target_db) || !object(b.target_object) || !text(b.reason)) throw error("Database links require db, qualified object, target_db, target_object and reason");
+      for (const b of [...arr(def.fields), ...arr(def.databases), ...arr(def.database_links)]) {
+        for (const key of ["signature", "target_signature"]) if (b[key] !== void 0 && (typeof b[key] !== "string" || b[key].length > 2e3)) throw error("Routine signatures must be strings up to 2000 characters");
+        if (b.columns !== void 0 && (!Array.isArray(b.columns) || b.columns.length > 50 || b.columns.some((c) => !text(c)))) throw error("columns must contain at most 50 field names");
+      }
+      return { title: def.title, description: String(def.description || "").slice(0, 4e3), recipe, ...Object.fromEntries(bindingKeys.map((k) => [k, arr(def[k])])) };
+    }
+    function get(id, revision) {
+      validId(id);
+      if (revision && !/^[a-f0-9]{64}$/.test(revision)) throw error("Invalid recipe revision");
+      const value = readJson(revision ? path3.join(dir(), id, "revisions", revision + ".json") : path3.join(dir(), id, "current.json"));
+      if (!value) throw error("UI trace recipe is unavailable in this task", "DT_NOT_FOUND", 404);
+      return value;
+    }
+    function save({ id, definition, expected_revision }) {
+      validId(id);
+      definition = validate(definition);
+      let previous;
+      try {
+        previous = get(id);
+      } catch (e) {
+        if (e.code !== "DT_NOT_FOUND") throw e;
+      }
+      if ((previous?.revision || null) !== expected_revision) throw error("Recipe changed; reload it before saving", "DT_REVISION_CONFLICT", 409);
+      const revision = digest(definition), value = { id, revision, definition, at: (/* @__PURE__ */ new Date()).toISOString() };
+      writeJson(path3.join(dir(), id, "revisions", revision + ".json"), value);
+      writeJson(path3.join(dir(), id, "current.json"), value);
+      return value;
+    }
+    function edit({ id, expected_revision, patch }) {
+      if (!patch || typeof patch !== "object" || Array.isArray(patch) || Object.keys(patch).some((k) => !["title", "description", "recipe", ...bindingKeys].includes(k))) throw error("Patch may replace title, description, recipe or reviewed binding arrays only");
+      if (!expected_revision) throw error("Editing requires the current expected_revision");
+      return save({ id, expected_revision, definition: { ...get(id).definition, ...patch } });
+    }
+    function list({ q = "" } = {}) {
+      let names = [];
+      try {
+        names = fs3.readdirSync(dir());
+      } catch {
+      }
+      return { envs: C.envNames().filter((name) => A.allowsEnv(name)), recipes: names.filter((n) => /^[a-z0-9][a-z0-9_-]{0,79}$/i.test(n)).flatMap((id) => {
+        try {
+          const r = get(id);
+          return [{ id, title: r.definition.title, revision: r.revision, at: r.at }];
+        } catch {
+          return [];
+        }
+      }).filter((r) => (r.id + " " + r.title).toLowerCase().includes(q.toLowerCase())).slice(0, 200) };
+    }
+    function retained(result) {
+      const r = require_results().load(result);
+      if (r?.view !== "ui-trace") throw error("UI trace result is unavailable", "DT_NOT_FOUND", 404);
+      return r.data;
+    }
+    function publicExchange(e) {
+      return { id: e.id, at: e.at, request: { method: e.request.method, url: e.request.url }, response: { status: e.response.status }, route: e.route, gaps: e.gaps };
+    }
+    function staticAsset(e) {
+      if (arr(e.route?.candidates).length || !["GET", "HEAD"].includes(e.request.method)) return false;
+      return /\.(?:css|m?js|map|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|otf|eot|mp4|webm)$/i.test(new URL(e.request.url).pathname) || /^(?:image\/|font\/|text\/css|(?:application|text)\/(?:javascript|ecmascript))/i.test(e.response?.headers?.["content-type"] || "");
+    }
+    async function graph({ recipe, env, state = {}, exchanges = [], gaps = [] }, deps = {}) {
+      const definition = recipe.definition, nodes = [], edges = [], groups = [], all = /* @__PURE__ */ new Map(), edgeIds = /* @__PURE__ */ new Set(), expanded = /* @__PURE__ */ new Set(), queue = [], catalog = /* @__PURE__ */ new Map();
+      gaps = [...gaps];
+      const gap = (kind, detail, extra = {}) => {
+        if (gaps.length < 250) gaps.push({ kind, detail, ...extra });
+      };
+      let nodeClipped = false, edgeClipped = false;
+      const captured = exchanges.length;
+      exchanges = exchanges.filter((e) => !staticAsset(e));
+      if (exchanges.length < captured) gap("static-assets-omitted", `${captured - exchanges.length} unmatched static assets omitted before applying the request budget; cached handler matches remain included`);
+      const node = (n) => {
+        if (all.has(n.id)) return all.get(n.id);
+        if (nodes.length >= 600) {
+          if (!nodeClipped) gap("node-budget", "Diagram reached 600 nodes; narrow the captured requests");
+          nodeClipped = true;
+          return null;
+        }
+        nodes.push(n);
+        all.set(n.id, n);
+        return n;
+      };
+      const edge = (from, to, label, certainty, evidence, extra = {}) => {
+        if (!all.has(from) || !all.has(to)) return;
+        const id = digest([from, to, label, extra.kind]).slice(0, 24);
+        if (edgeIds.has(id)) return;
+        if (edges.length >= 1500) {
+          if (!edgeClipped) gap("edge-budget", "Diagram reached 1,500 edges; narrow the captured requests");
+          edgeClipped = true;
+          return;
+        }
+        edgeIds.add(id);
+        edges.push({ id, from, to, label, certainty, evidence, ...extra });
+      };
+      node({ id: "ui", kind: "ui", name: definition.title, state, recipe: definition.recipe });
+      const enqueue = (service, from, request, certainty, evidence) => {
+        if (!service) return;
+        queue.push({ service, from, request, certainty, evidence });
+      };
+      const manualRoutes = require_routes().resolver(arr(definition.services).filter((s) => s.path && s.method && s.reason).map((s) => ({ service: s.service, effective: { endpoints: [{ path: s.path, method: s.method }] } })));
+      for (const e of exchanges.slice(0, 50)) {
+        const id = "request:" + e.id;
+        node({ id, kind: "request", name: e.request.method + " " + (e.route?.path || new URL(e.request.url).pathname), exchange: e.id, url: e.request.url, status: e.response.status, route: e.route });
+        edge("ui", id, "HTTP " + (e.response.status || "pending"), "observed", { exchange: e.id, at: e.at }, { kind: "browser-request" });
+        const corrections = manualRoutes(e.request.url, e.request.method).candidates, candidates = corrections.length ? corrections : arr(e.route?.candidates);
+        if (corrections.length) gap("declared-route", "Handler attribution was supplied by a reviewed recipe binding", { request: id });
+        if (!candidates.length) gap("route-unresolved", "No cached handler matches this observed request", { request: id });
+        if (candidates.length > 1) gap("route-ambiguous", "Multiple handlers match the URL; candidate branches remain separate", { request: id });
+        if (candidates.length > 8) gap("route-budget", "Only the first eight handler candidates are included; narrow or correct route attribution", { request: id });
+        for (const candidate of candidates.slice(0, 8)) enqueue(candidate.service, id, candidate, corrections.length ? "declared" : candidates.length === 1 ? "static" : "candidate", { kind: corrections.length ? "manual-route-binding" : "route-pattern", exchange: e.id, candidate, ...corrections.length ? { reason: definition.services.find((s) => s.service === candidate.service && s.path === candidate.path && s.method === candidate.method)?.reason } : {} });
+      }
+      if (exchanges.length > 50) gap("request-budget", "Only the first 50 captured requests are included");
+      if (!state.image) gap("screenshot-unavailable", "Capture the saved UI recipe to attach its last-state screenshot");
+      if (!exchanges.length) gap("requests-missing", "Replay the UI recipe or select previously captured exchanges; no traffic was invented");
+      const passportCache = /* @__PURE__ */ new Map(), readPassport = deps.passport || ((s) => require_passport().load(s, { env }));
+      const loadPassport = (s) => {
+        if (!passportCache.has(s)) passportCache.set(s, readPassport(s));
+        return passportCache.get(s);
+      };
+      const analyses = deps.analyses || (() => require_semantic_code().list({ versions: true }).analyses);
+      let retainedAnalyses;
+      const describe = deps.describe || ((name) => require_pgindex().describe(env, name, { body: false }));
+      const query = deps.query || ((analysis, from) => require_semantic_query().query({ operation: "flowmap", env, from, maxMethods: 16, maxStates: 160, maxHops: 10, budgetMs: 5e3 }, [analysis], { runQuery: require_semantic_code().runQuery }));
+      const dbExpanded = /* @__PURE__ */ new Set(), dbStack = /* @__PURE__ */ new Set(), fieldExpanded = /* @__PURE__ */ new Set(), matchedDbLinks = /* @__PURE__ */ new Set();
+      function dbTarget(from, b, certainty, evidence, fields = [], depth = 0) {
+        E.check();
+        const name = b.object || (b.table?.includes(".") ? b.table : b.schema && b.table ? b.schema + "." + b.table : b.function);
+        if (!name) {
+          gap("database-object-unresolved", "Database boundary lacks a qualified table/function identity", { node: from });
+          return;
+        }
+        const key = (b.db ? b.db + ":" : "") + name;
+        if (!catalog.has(key)) {
+          try {
+            catalog.set(key, describe(key));
+          } catch {
+            catalog.set(key, []);
+          }
+        }
+        const candidates = catalog.get(key).filter((o2) => o2.kind !== "unknown"), found = candidates.filter((o2) => (!b.function || routine(o2)) && (b.signature === void 0 || routine(o2) && signature(o2) === signature({ signature: b.signature })));
+        if (found.length !== 1) {
+          gap("database-identity-unresolved", "Catalog object is missing or ambiguous; specify the database alias and exact schema/object", { node: from, object: key });
+          return;
+        }
+        const o = found[0], isFn = routine(o), sig = signature(o), id = "db:" + o.db + ":" + o.object + (isFn ? "@" + digest([o.kind, sig]).slice(0, 12) : "");
+        node({ id, kind: isFn ? o.kind === "procedure" ? "procedure" : "function" : "table", objectKind: o.kind, name: o.object + (isFn ? "(" + sig + ")" : ""), db: o.db, object: o.object, ...isFn ? { signature: sig } : {}, columns: arr(o.columns).map((c) => ({ name: c.name, type: c.type })), arguments: o.arg_list });
+        edge(from, id, b.access || "DB boundary", certainty, evidence, { kind: "database-boundary" });
+        for (const name2 of [...new Set(fields)].slice(0, 50)) {
+          const column = arr(o.columns).find((c) => c.name === name2) || arr(o.arg_list).find((c) => c.name === name2 && ["out", "table", "inout"].includes(c.mode));
+          if (!column) {
+            gap("column-unresolved", "Declared field is absent from the retained catalog", { object: key, column: name2 });
+            continue;
+          }
+          const cid = id + ":" + name2;
+          node({ id: cid, kind: "column", objectKind: o.kind, name: name2, db: o.db, object: o.object, ...isFn ? { signature: sig } : {}, column: name2, type: column.type });
+          edge(id, cid, "catalog field", "catalog", { db: o.db, object: o.object, column: name2 }, { kind: "catalog-membership" });
+          edge(from, cid, "field binding", certainty, evidence, { kind: "field-binding", assumption: "Field mapping is declared or statically extracted; runtime value equality remains unknown" });
+          if (isFn && !fieldExpanded.has(cid) && depth < 8) {
+            fieldExpanded.add(cid);
+            try {
+              const lineage = (deps.fieldLineage || ((name3) => require_fieldtrace().dbFields(env, name3)))(o.db + ":" + o.object);
+              const field = lineage.fields.find((f) => f.field === name2);
+              for (const read of arr(field?.reads)) {
+                const hit = read.match(/^([^.]+\.[^.]+)\.([^.]+)$/);
+                if (hit) dbTarget(cid, { db: o.db, table: hit[1], access: "SQL expression reads" }, "static", { object: o.object, field: name2, expression: field.expression, bodyLine: field.line }, [hit[2]], depth + 1);
+              }
+              if (!field?.reads?.length) gap("function-lineage-unresolved", "No supported SQL field expression was resolved; dynamic SQL and procedures may require manual inspection", { object: key, column: name2 });
+            } catch {
+              gap("function-lineage-unavailable", "Function body lineage could not be read from the retained catalog", { object: key });
+            }
+          }
+        }
+        if (dbStack.has(id)) {
+          gap("database-cycle", "A retained database dependency cycle was closed without repeating traversal", { object: key });
+          return;
+        }
+        if (dbExpanded.has(id)) return;
+        if (depth >= 8 || dbExpanded.size >= 64) {
+          gap("database-budget", "Database traversal reached eight hops or 64 objects; narrow the path", { object: key });
+          return;
+        }
+        dbExpanded.add(id);
+        dbStack.add(id);
+        if ((isFn || ["view", "matview"].includes(o.kind)) && candidates.length > 1) gap("routine-dependencies-ambiguous", "Usage dependencies are merged across overloads; supply reviewed signature-specific database_links", { object: key });
+        else if (isFn || ["view", "matview"].includes(o.kind)) {
+          for (const dep of arr(o.uses).filter((d) => d.source === "db" && !d.ambiguous && ["calls", "read", "write", "selects"].includes(d.role)).slice(0, 50)) dbTarget(id, { db: dep.db || o.db, object: dep.target, access: dep.role }, "static", { kind: "catalog-sql-dependency", source: o.object, sourceSignature: sig, detail: dep.detail, where: dep.where }, [], depth + 1);
+          if (arr(o.uses).some((d) => d.ambiguous)) gap("database-dependency-ambiguous", "Ambiguous SQL references were not followed", { object: key });
+          if (arr(o.uses).length > 50) gap("database-dependency-budget", "Only the first 50 dependencies per database object are followed", { object: key });
+          gap("sql-static-coverage", "Cached SQL dependencies are static; dynamic SQL, predicates, triggers and field-value equality are not proven", { object: key });
+        }
+        for (const [index, link] of arr(definition.database_links).entries()) if (link.db === o.db && link.object === o.object && (link.signature === void 0 || signature({ signature: link.signature }) === sig)) {
+          matchedDbLinks.add(index);
+          dbTarget(id, { db: link.target_db, object: link.target_object, signature: link.target_signature, access: link.access || "reviewed database link" }, "declared", { reason: link.reason, sourceSignature: sig, review: "Recheck this declaration after a catalog refresh" }, arr(link.columns), depth + 1);
+        }
+        dbStack.delete(id);
+      }
+      while (queue.length && expanded.size < 20) {
+        E.check();
+        const item = queue.shift(), { service, from, request } = item, sid = "service:" + service;
+        const bound = definition.services.find((s) => s.service === service && (!s.path || s.path === request.path) && (!s.method || s.method === request.method));
+        const visit = digest([service, bound?.entry || request.handler, request.path, request.method]);
+        node({ id: sid, kind: "service", name: service });
+        edge(from, sid, request.method + " " + request.path, item.certainty, item.evidence, { kind: "handler-candidate" });
+        if (expanded.has(visit)) continue;
+        expanded.add(visit);
+        let p;
+        try {
+          p = loadPassport(service);
+        } catch {
+          gap("passport-unavailable", "Service passport is unavailable", { service });
+          continue;
+        }
+        if (p?.env && p.env !== env) {
+          gap("environment-mismatch", "Passport environment differs from the diagram; no source path was attached", { service });
+          continue;
+        }
+        const repo = typeof p?.repo === "string" ? p.repo : p?.repo?.project + "/" + p?.repo?.repo, sha = p?.repo?.sha;
+        retainedAnalyses ??= analyses();
+        let selected = bound ? retainedAnalyses.find((a) => a.id === bound.analysis) : retainedAnalyses.find((a) => a.repo === repo && a.sha === sha && !a.workspace);
+        if (!selected || selected.repo !== repo || selected.sha !== sha) {
+          gap("analysis-missing", "Select an exact retained Joern analysis matching this passport revision; no parse is started", { service, repo, sha });
+          continue;
+        }
+        const analysis = deps.loadAnalysis ? deps.loadAnalysis(selected.id) : require_semantic_code().load(selected.id);
+        let selector = bound?.entry;
+        if (!request.handler && !request.where) {
+          const candidates = arr(p?.effective?.endpoints).filter((e) => (!e.method || e.method === "ANY" || e.method === request.method) && e.path === request.path);
+          if (candidates.length === 1) {
+            request.handler = candidates[0].handler;
+            request.where = candidates[0].file ? candidates[0].file + ":" + candidates[0].line : "";
+          } else if (candidates.length > 1) gap("downstream-handler-ambiguous", "Declared transport matches multiple ingress handlers", { service });
+        }
+        if (!selector) {
+          const at = String(request.where || "").match(/^(.*):(\d+)$/);
+          if (at) selector = { kind: "method", file: at[1], line: Number(at[2]) };
+          else if (request.handler) selector = { kind: "method", signature: request.handler };
+        }
+        if (!selector) {
+          gap("handler-unresolved", "A precise retained entry selector is required", { service });
+          continue;
+        }
+        let result;
+        try {
+          result = await query(analysis, selector);
+        } catch {
+          E.check();
+          gap("joern-unavailable", "Retained Joern map could not be queried; inspect semantic capabilities or select a compatible worker", { service, analysis: selected.id });
+          continue;
+        }
+        const map = result.flowMap;
+        if (!map?.entries?.length) {
+          gap("entry-unresolved", "No unique Joern entry was resolved; correct the service entry selector", { service, analysis: selected.id });
+          continue;
+        }
+        groups.push({ id: "group:" + digest(visit).slice(0, 12), service, analysis: selected.id, repo, sha, members: [] });
+        const group = groups.at(-1);
+        for (const n of map.nodes) {
+          const id = service + ":" + n.id;
+          if (node({ ...n, id, kind: n.kind || "state", name: n.code || n.kind, service, group: sid })) {
+            group.members.push(id);
+          }
+        }
+        for (const entry of map.entries) edge(sid, service + ":" + entry, "retained entry", bound ? "declared" : "static", { analysis: selected.id, selector, ...bound ? { reason: bound.reason || "Recipe-selected handler binding; runtime dispatch is unverified" } : {} }, { kind: "entry-binding" });
+        for (const { id, from: from2, to, ...e } of map.edges) edge(service + ":" + from2, service + ":" + to, e.polarity || e.kind, "static", e.evidence, e);
+        for (const n of map.nodes) {
+          const from2 = service + ":" + n.id;
+          for (const call of arr(p?.effective?.dbCalls).filter((c) => c.file === n.file && c.line === n.line)) dbTarget(from2, { db: call.db, function: call.function || call.name || call.call, access: "function / procedure call" }, "static", { repo, sha, file: n.file, line: n.line });
+          for (const portId of arr(n.ports)) {
+            const port = map.ports.find((p2) => p2.id === portId);
+            if (!port) continue;
+            const b = port.boundary || {};
+            if (["db-read", "db-write"].includes(port.portType)) dbTarget(from2, { ...b, access: port.portType }, port.certainty || "declared", port.evidence, arr(b.columns));
+            if (port.portType === "http-egress") {
+              if (b.target_service && b.path && b.method) enqueue(b.target_service, from2, { path: b.path, method: b.method }, "declared", { port: port.id, evidence: port.evidence, mappings: port.mappings });
+              else gap("http-target-unresolved", "HTTP boundary lacks an explicit target service, verb or path", { service, node: from2 });
+            }
+          }
+          for (const f of definition.fields.filter((f2) => f2.service === service && f2.repo === n.repo && f2.sha === n.sha && f2.file === n.file && f2.line === n.line)) dbTarget(from2, { db: f.db, object: f.object, signature: f.signature, access: "declared binding" }, "declared", { reason: f.reason, file: f.file, line: f.line }, [f.column]);
+          for (const b of arr(definition.databases).filter((b2) => b2.service === service && b2.repo === n.repo && b2.sha === n.sha && b2.file === n.file && b2.line === n.line)) dbTarget(from2, { db: b.db, object: b.object, signature: b.signature, access: "declared database binding" }, "declared", { reason: b.reason, file: b.file, line: b.line }, arr(b.columns));
+          for (const t of definition.transports.filter((t2) => t2.service === service && t2.repo === n.repo && t2.sha === n.sha && t2.file === n.file && t2.line === n.line)) enqueue(t.target_service, from2, { path: t.path, method: t.method }, "declared", { reason: t.reason, file: t.file, line: t.line });
+        }
+        for (const g of arr(result.gaps).slice(0, 30)) gap("joern-" + g.kind, g.detail || g.message || "Static analysis gap", { service });
+        for (const assumption of arr(map.assumptions)) gap("static-assumption", assumption.detail, { service });
+      }
+      if (queue.length) gap("service-budget", "Service traversal reached 20 distinct entries; remaining branches were omitted");
+      const dangling = edges.filter((e) => e.kind === "handler-candidate").length;
+      const atSource = (id, b) => {
+        const n = all.get(id);
+        return n?.service === b.service && n.repo === b.repo && n.sha === b.sha && n.file === b.file && n.line === b.line;
+      };
+      for (const f of definition.fields) if (!edges.some((e) => e.kind === "field-binding" && atSource(e.from, f) && all.get(e.to)?.db === f.db && all.get(e.to)?.object === f.object && all.get(e.to)?.column === f.column)) gap("field-binding-unmatched", "Declared field binding did not match a returned state and catalog field", { service: f.service, file: f.file, line: f.line, column: f.column });
+      for (const t of definition.transports) if (!edges.some((e) => e.kind === "handler-candidate" && atSource(e.from, t) && e.to === "service:" + t.target_service)) gap("transport-binding-unmatched", "Declared transport binding did not match the exact returned source state", { service: t.service, file: t.file, line: t.line });
+      for (const b of arr(definition.databases)) if (!edges.some((e) => e.kind === "database-boundary" && atSource(e.from, b) && all.get(e.to)?.db === b.db && all.get(e.to)?.object === b.object)) gap("database-binding-unmatched", "Declared database binding did not match the exact source state and catalog object", { service: b.service, file: b.file, line: b.line });
+      for (const [index, link] of arr(definition.database_links).entries()) if (!matchedDbLinks.has(index)) gap("database-link-unmatched", "Reviewed database link source was not reached or its signature did not match", { object: link.db + ":" + link.object });
+      return { protocol: "dt.ui-trace/v1", id: recipe.id, revision: recipe.revision, title: definition.title, description: definition.description, env, at: (/* @__PURE__ */ new Date()).toISOString(), definition, state, exchanges: exchanges.slice(0, 50).map(publicExchange), nodes, edges, groups, gaps, proof: { runtime: "browser-requests-only", distributedExecution: "unknown", feasibility: "unknown", fieldValues: "unverified", complete: false }, counts: { requests: exchanges.slice(0, 50).length, services: nodes.filter((n) => n.kind === "service").length, states: new Set(groups.flatMap((g) => g.members)).size, tables: nodes.filter((n) => n.kind === "table").length, routines: nodes.filter((n) => ["function", "procedure"].includes(n.kind)).length, fields: nodes.filter((n) => n.kind === "column").length, connections: edges.length, handlerCandidates: dangling } };
+    }
+    function present(model) {
+      const view = require_results().saveView("ui-trace", model, { title: model.title, env: model.env, story: A.owner().storyId });
+      const result = view.split("/").pop(), preview = { id: model.id, revision: model.revision, counts: model.counts, proof: model.proof, gaps: model.gaps.slice(0, 8).map((g) => Object.fromEntries(["kind", "detail", "service", "object", "column"].filter((k) => g[k] !== void 0).map((k) => [k, String(g[k]).slice(0, k === "detail" ? 350 : 120)]))), gapsTotal: model.gaps.length, view, workbench: require_results().publicUrl() + "/ui-trace?result=" + result + "&story=" + encodeURIComponent(A.owner().storyId), next: "Open the UI trace to expand service paths, inspect evidence, edit the replay recipe or run an explicit read-only field query." };
+      while (preview.gaps.length && Buffer.byteLength(JSON.stringify(preview)) > 7900) preview.gaps.pop();
+      preview.previewTruncated = preview.gaps.length < model.gaps.length || model.gaps.some((g) => String(g.detail || "").length > 350);
+      return preview;
+    }
+    async function collect(args, { log = () => {
+    } } = {}) {
+      const recipe = get(args.id, args.revision), env = args.env || C.envNames()[0];
+      A.checkEnv(env);
+      C.getEnv(env);
+      let state = {}, exchanges = [], gaps = [];
+      if (args.previous) {
+        const old = retained(args.previous);
+        if (old.id !== recipe.id) throw error("Previous result belongs to a different recipe");
+        state = old.state;
+        exchanges = old.exchanges;
+        gaps.push({ kind: "retained-browser-state", detail: "Screenshot and HTTP observations are retained from " + old.at + "; code/catalog evidence is collected again" });
+      }
+      if (args.capture) {
+        log("Replaying UI recipe in an isolated browser");
+        const r = await require_ui_trace_browser().capture(recipe.definition.recipe, args.params || {});
+        state = r.state;
+        exchanges = r.exchanges;
+        gaps = r.gaps;
+      }
+      if (args.exchange_ids?.length) exchanges = args.exchange_ids.map((id) => require_api_client().get(id));
+      log("Joining requests to retained Joern paths and catalog fields");
+      const model = await graph({ recipe, env, state, exchanges, gaps });
+      E.check();
+      return present(model);
+    }
+    async function run(args = {}) {
+      const J = require_jobs();
+      if (args.job) {
+        const job2 = J.find(args.job);
+        if (!job2?.key.startsWith("ui-trace:")) throw error("UI trace job is unavailable", "DT_NOT_FOUND", 404);
+        return require_semantic_code().waitJob(job2, args.waitMs || 0);
+      }
+      if (!args.id) throw error("id or job is required");
+      const recipe = get(args.id, args.revision);
+      args = { ...args, revision: recipe.revision };
+      const job = J.start("ui-trace:" + crypto.randomUUID(), "UI trace " + args.id, (log) => collect(args, { log }));
+      return require_semantic_code().waitJob(job, args.waitMs || 0);
+    }
+    function queryDraft(node, env) {
+      if (!node || !["table", "column"].includes(node.kind) || ["function", "procedure", "aggregate", "window"].includes(node.objectKind)) return null;
+      const parts = node.object.split(".");
+      if (parts.length !== 2) return null;
+      const columns = node.column ? quote(node.column) : arr(node.columns).slice(0, 8).map((c) => quote(c.name)).join(", ");
+      if (!columns) return null;
+      return { env, db: node.db, sql: `SELECT ${columns} FROM ${parts.map(quote).join(".")} WHERE FALSE LIMIT 20` };
+    }
+    module2.exports = { validate, save, edit, get, list, retained, graph, present, collect, run, queryDraft };
+  }
+});
+
+// lib/tools-ui-trace.js
+var require_tools_ui_trace = __commonJS({
+  "lib/tools-ui-trace.js"(exports2, module2) {
+    module2.exports = ({ str, int, env }) => {
+      const U = () => require_ui_trace();
+      const object = (description) => ({ type: "object", additionalProperties: true, description });
+      return [
+        { name: "ui_trace_save", logArgs: ["id"], description: 'Save a versioned task-private UI-to-database diagram recipe without executing it. recipe={url,steps:[{action:"fill",selector:"[name=email]",value:"{{email}}"},{action:"click",role:"button",name:"Search"}]}. Actions: navigate/fill/click/select/check/press/wait. Credentials are runtime parameters. Reviewed service, transport, database and field bindings retain reasons. Use ui_trace_edit for partial edits.', input: { id: str("Recipe id"), expected_revision: { type: ["string", "null"], description: "null for new; current revision to update" }, definition: object("title, description, recipe:{url,steps}; optional services, fields, transports, databases and database_links arrays. Read the handbook for reviewed binding shapes.") }, required: ["id", "expected_revision", "definition"], run: (a) => U().save(a) },
+        { name: "ui_trace_edit", logArgs: ["id"], description: "Manually correct a saved UI diagram with optimistic revision checking. patch replaces only supplied definition fields; omitted fields stay intact, [] removes a binding array. Allows title/description/recipe/services/fields/transports/databases/database_links. Corrections remain declared evidence; observed traffic cannot be rewritten. Rebuild with ui_trace previous=<result id>, capture=false to update the inline graph without replay.", input: { id: str("Recipe id"), expected_revision: str("Current recipe revision from ui_trace_list"), patch: object("Partial definition. databases:[{service,repo,sha,file,line,db,object,signature?,columns?,reason}]; database_links:[{db,object,signature?,target_db,target_object,target_signature?,columns?,access?,reason}]. services:[{service,analysis,entry,path?,method?,reason?}], fields:[{service,repo,sha,file,line,db,object,column,signature?,reason}], transports:[{service,repo,sha,file,line,target_service,method,path,reason}].") }, required: ["id", "expected_revision", "patch"], run: (a) => U().edit(a) },
+        { name: "ui_trace_list", description: "Discover saved UI-to-Postgres diagram recipes in this task. Pass id to read replay steps and exact static bindings; no browser, indexing or SQL is run.", input: { q: str("Title/id search"), id: str("Read exact recipe"), revision: str("Optional immutable recipe revision") }, run: (a) => a.id ? U().get(a.id, a.revision) : U().list(a) },
+        { name: "ui_trace", description: "Diagram a reproducible UI state through observed API requests, multiple grouped service Joern paths and PostgreSQL procedure/function dependencies to tables/fields. capture=true EXPLICITLY replays UI, including form mutations, and takes its screenshot. Default only joins retained evidence (previous result or exchange_ids); no browser or SQL. Exact retained analyses; no implicit parsing. Compact preview and interactive inline graph. Correct missing paths with ui_trace_edit. Observe job or cancel with job_cancel.", input: { id: str("Saved UI recipe id"), revision: str("Pinned recipe revision"), env, capture: { type: "boolean", default: false }, params: object("Runtime replay values; not retained in recipes, logs or jobs"), previous: str("Retained UI trace result id to reuse screenshot/traffic"), exchange_ids: { type: "array", maxItems: 50, items: { type: "string" } }, job: str("Observe existing owned job"), waitMs: { ...int("Observation wait", 0), minimum: 0, maximum: 3e4 } }, logArgs: ["id", "job", "capture"], run: (a) => U().run(a) }
+      ].map((t) => ({ ...t, group: "browser", origin: "built-in", strictInput: true }));
+    };
+  }
+});
+
 // lib/browser.js
 var require_browser = __commonJS({
   "lib/browser.js"(exports2, module2) {
@@ -80486,6 +80994,7 @@ var require_tools = __commonJS({
     TOOLS.push(...require_tools_testdb()({ str, int, env }).map((t) => ({ ...t, origin: "built-in" })));
     TOOLS.push(...require_tools_scenario_runtime()().map((t) => ({ ...t, origin: "built-in" })));
     TOOLS.push(...require_tools_api_client()({ str, int, env }).map((t) => ({ ...t, origin: "built-in" })));
+    TOOLS.push(...require_tools_ui_trace()({ str, int, env }));
     var ctx = { tabular, clip, getEnv: (e) => require_config().getEnv(e), pg: () => require_pg(), http: require_util2().http, limit };
     var PARAM_TYPES = /* @__PURE__ */ new Set(["string", "integer", "number", "boolean"]);
     function paramsSchema(params = {}) {
@@ -84211,6 +84720,7 @@ var require_server2 = __commonJS({
       ["GET", "/model/v1/models", true, (req, res) => require_model_gateway().handle(req, res, "models")],
       ["POST", "/model/v1/chat/completions", true, async (req, res) => require_model_gateway().handle(req, res, "chat/completions", await readJsonBody(req))],
       ["GET", "/api/capabilities", true, async (req, res, url) => send(res, 200, await require_capability_map().graph({ env: url.searchParams.get("env") || void 0 }))],
+      ["GET", "/ui-trace", true, page("ui-trace.html")],
       ["GET", "/handbook", true, page("handbook.html")],
       ["GET", "/api/handbook", true, async (req, res) => send(res, 200, await require_handbook().catalog())],
       ["GET", "/api/handbook/context", true, async (req, res, url) => send(res, 200, await require_handbook().selfContext({ env: url.searchParams.get("env") || void 0 }))],
