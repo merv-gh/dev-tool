@@ -1,0 +1,45 @@
+(function(root,factory){if(typeof module==='object'&&module.exports)module.exports=factory();else root.DTPage=factory();})(globalThis,function(){
+ 'use strict';
+ const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const json=value=>JSON.stringify(value,null,2),display=value=>value===null||value===undefined?'Not reported':typeof value==='object'?JSON.stringify(value):String(value);
+ const at=(value,field)=>field.split('.').reduce((v,k)=>v!=null&&Object.hasOwn(Object(v),k)?v[k]:undefined,value);
+ const labels={'only-left':'Only in baseline','only-right':'Only in comparison',changed:'Changed',same:'Same',unknown:'Unknown'};
+ function tone(value){return /^(passing|healthy|green|reported|same|STABLE|complete)$/i.test(value)?'good':/^(critical|down|red|only-left|only-right|changed)$/i.test(value)?'bad':'warn';}
+ const badge=value=>'<span class="dp-state dp-'+tone(value)+'">'+esc(labels[value]||value)+'</span>';
+ function matches(row,w){if(!w)return true;const v=at(row,w.field),x=w.value;switch(w.op){case'eq':return JSON.stringify(v)===JSON.stringify(x);case'ne':return JSON.stringify(v)!==JSON.stringify(x);case'contains':return display(v).toLowerCase().includes(display(x).toLowerCase());case'gt':return v!=null&&Number(v)>Number(x);case'lt':return v!=null&&Number(v)<Number(x);case'exists':return v!=null;default:return false;}}
+ function metric(w,d){const rows=d.rows.filter(row=>matches(row,w.where));let value,partial=!d.complete;
+  if((w.op||'count')==='count')value=rows.length;
+  if(w.op==='sum'){const values=rows.map(r=>at(r,w.field||''));partial=partial||values.some(v=>v==null||!Number.isFinite(Number(v)));value=values.filter(v=>v!=null&&Number.isFinite(Number(v))).reduce((n,v)=>n+Number(v),0);if(values.length&&!values.some(v=>v!=null&&Number.isFinite(Number(v))))value=null;}
+  if(w.op==='value')value=rows.length?at(rows[0],w.field||''):null;
+  return '<div class="dp-metric-value">'+esc(typeof value==='number'?value.toLocaleString():display(value))+(w.unit?' <small>'+esc(w.unit)+'</small>':'')+'</div>'+(partial?'<p class="dp-hint">Observed partial data; this value may be incomplete.</p>':'');
+ }
+ function fields(w,rows){return w.columns||Object.keys(rows[0]||{}).filter(k=>typeof rows[0][k]!=='object').slice(0,8).map(field=>({field,label:field}));}
+ function cell(value,format){if(format==='status')return badge(display(value));if(format==='number')return esc(value==null?'Not reported':Number.isFinite(Number(value))?Number(value).toLocaleString():display(value));return esc(display(value));}
+ function table(w,rows){const columns=fields(w,rows);return '<div class="dp-table-scroll" tabindex="0" aria-label="'+esc(w.title)+' table"><table><thead><tr>'+columns.map(c=>'<th scope="col">'+esc(c.label)+'</th>').join('')+'<th scope="col">Evidence</th></tr></thead><tbody>'+rows.map(row=>'<tr>'+columns.map(c=>'<td'+(c.format==='number'?' class="dp-number"':'')+'>'+cell(at(row,c.field),c.format)+'</td>').join('')+'<td><details><summary>Inspect row</summary><pre>'+esc(json(row).slice(0,12000))+'</pre></details></td></tr>').join('')+'</tbody></table></div>';}
+ function comparison(w,rows){const shown=(row,f)=>row?f==='returns'&&row.kind==='procedure'&&row[f]===null?'No return value':display(row[f]):'Absent from this result';return '<div class="dp-comparison">'+rows.map(row=>{const keys=Object.values(row.key||{}).map(display).join(' · '),fields=[...new Set([...Object.keys(row.before||{}),...Object.keys(row.after||{})])].slice(0,40);return '<details class="dp-difference"><summary>'+badge(row.status)+' <code>'+esc(keys)+'</code>'+(row.changes?.length?'<span class="dp-hint">'+esc(row.changes.join(', '))+'</span>':'')+'</summary><div class="dp-table-scroll" tabindex="0"><table><thead><tr><th>Field</th><th>'+esc(w.leftLabel||'Baseline')+'</th><th>'+esc(w.rightLabel||'Comparison')+'</th></tr></thead><tbody>'+fields.map(f=>'<tr'+(row.changes?.includes(f)?' class="dp-changed"':'')+'><th scope="row" title="'+esc(f)+'">'+esc(f.replaceAll('_',' '))+'</th><td>'+esc(shown(row.before,f))+'</td><td>'+esc(shown(row.after,f))+'</td></tr>').join('')+'</tbody></table></div>'+(row.status==='unknown'?'<p class="dp-hint">Missing or incomplete evidence cannot establish equality or absence. Refresh a narrower, complete read.</p>':'')+'</details>';}).join('')+'</div>';}
+ function widget(w,value,state={}){
+  const d=value.datasets?.[w.data],header='<h2>'+esc(w.title)+'</h2>'+(w.description?'<p class="dp-hint">'+esc(w.description)+'</p>':'');let body;
+  if(w.type==='text')body='<p class="dp-note">'+esc(w.text).replace(/\n/g,'<br>')+'</p>';
+  else if(!d)body='<p class="dp-empty">Refresh this page to collect '+esc(w.title.toLowerCase())+'. Opening a page does not run its sources.</p>';
+  else if(d.error)body='<div class="dp-error"><strong>Unavailable</strong><p>'+esc(d.error)+'</p>'+(d.gaps?.length?'<p>'+esc(d.gaps.join(' · '))+'</p>':'')+'</div>';
+  else if(w.type==='metric')body=metric(w,d);
+  else{
+   const q=(state.q||'').toLowerCase(),filter=state.filter||'differences',all=d.rows.filter(row=>(!q||JSON.stringify(row).toLowerCase().includes(q))&&(w.type!=='comparison'||filter==='all'||filter==='differences'&&row.status!=='same'||row.status===filter));
+   const offset=Math.max(0,Math.min(state.offset||0,Math.floor(Math.max(0,all.length-1)/50)*50)),rows=all.slice(offset,offset+50);
+   body='<div class="dp-widget-controls"><label class="sr-only" for="dp-filter-'+esc(w.id)+'">Filter '+esc(w.title)+'</label><input id="dp-filter-'+esc(w.id)+'" type="search" data-page-filter="'+esc(w.id)+'" value="'+esc(state.q||'')+'" placeholder="Filter results">'+(w.type==='comparison'?'<select data-page-status="'+esc(w.id)+'" aria-label="Comparison status">'+Object.entries({differences:'Differences',all:'All routines / services','only-left':w.leftLabel?'Only in '+w.leftLabel:'Only in baseline','only-right':w.rightLabel?'Only in '+w.rightLabel:'Only in comparison',changed:'Changed',unknown:'Unknown',same:'Same'}).map(([key,label])=>'<option value="'+key+'"'+(filter===key?' selected':'')+'>'+esc(label)+'</option>').join('')+'</select>':'')+'</div>';
+   if(!d.complete)body+='<p class="dp-warning">Incomplete source. Counts describe observed records; missing objects may be unknown.</p>';
+   body+=rows.length?(w.type==='comparison'?comparison(w,rows):table(w,rows)):'<p class="dp-empty">'+(q?'No matching records. Clear the filter to see the saved result.':w.type==='comparison'&&filter==='differences'?'No observed differences. Select All to inspect matching records.':'No records in this observation.')+'</p>';
+   body+='<div class="dp-pagination"><span>'+all.length+' matching · '+(rows.length?offset+1:0)+'–'+(offset+rows.length)+' shown</span><div><button data-page-offset="'+w.id+'" data-page-direction="previous" data-offset="'+(offset-50)+'"'+(offset===0?' disabled':'')+'>Previous</button><button data-page-offset="'+w.id+'" data-page-direction="next" data-offset="'+(offset+50)+'"'+(offset+50>=all.length?' disabled':'')+'>Next</button></div></div>';
+  }
+  return '<section class="dp-widget dp-kind-'+esc(w.type)+' dp-span-'+(w.span===2?'2':'1')+'" data-page-widget="'+esc(w.id)+'">'+(w.collapsed?'<details><summary>'+esc(w.title)+'</summary>'+body+'</details>':header+body)+'</section>';
+ }
+ function html(value,states={}){return '<div class="dp-grid">'+(value.definition?.widgets||[]).map(w=>widget(w,value,states[w.id])).join('')+'</div>';}
+ function mount(root,value){const states={};root.innerHTML=html(value,states);
+  const update=(id,patch,focus)=>{states[id]={...states[id],...patch};const w=value.definition.widgets.find(w=>w.id===id),host=root.querySelector('[data-page-widget="'+id+'"]');if(!w||!host)return;host.outerHTML=widget(w,value,states[id]);if(focus){let target;if(focus.kind==='status')target=root.querySelector('[data-page-status="'+id+'"]');else if(focus.kind==='page'){const preferred=root.querySelector('[data-page-offset="'+id+'"][data-page-direction="'+focus.direction+'"]');target=preferred&&!preferred.disabled?preferred:root.querySelector('[data-page-offset="'+id+'"]:not(:disabled)');}target||=root.querySelector('#dp-filter-'+id);target?.focus({preventScroll:true});if(focus.kind==='filter'&&target?.setSelectionRange&&focus.start!=null)target.setSelectionRange(focus.start,focus.end);}};
+  root.oninput=event=>{const id=event.target.dataset.pageFilter;if(id)update(id,{q:event.target.value,offset:0},{kind:'filter',start:event.target.selectionStart,end:event.target.selectionEnd});};
+  root.onchange=event=>{const id=event.target.dataset.pageStatus;if(id)update(id,{filter:event.target.value,offset:0},{kind:'status'});};
+  root.onclick=event=>{const button=event.target.closest('button[data-page-offset]');if(button&&!button.disabled)update(button.dataset.pageOffset,{offset:Number(button.dataset.offset)},{kind:'page',direction:button.dataset.pageDirection});};
+  return {states,update};
+ }
+ return {html,mount,widget,metric,matches,tone,display,esc};
+});

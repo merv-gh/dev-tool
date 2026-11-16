@@ -142,6 +142,7 @@ async function oapi(req, res, url) {
 const admin = require('./lib/admin');
 const tokenOk = (url, value) => results.verify(value, url.searchParams.get('t'));
 const CORS = { 'access-control-allow-origin': '*' };
+async function pageAccess(){if(!(await tools.schemas()).some(t=>t.name==='ui_page'))throw Object.assign(Error('Pages are unavailable for this credential'),{code:'DT_ACCESS_DENIED',statusCode:403});}
 
 // [method, path or prefix*, trusted only, handler]
 // Pages are plain HTML; their data comes from trusted endpoints, or from ones keyed by an unguessable
@@ -157,6 +158,13 @@ const routes = [
   ['GET', '/api/handbook/sample', true, (req,res,url) => { const view=require('./lib/views').get(url.searchParams.get('view'));if(view.sample===undefined)return send(res,404,{error:'This view has no sample'});send(res,200,{view:view.name,data:view.sample}); }],
   ['GET', '/handbook-images/*', false, (req,res,url) => { const file=require('./lib/handbook').imageFile(url.pathname.slice('/handbook-images/'.length));if(!file)return send(res,404,{error:'Unknown handbook image'});res.writeHead(200,{'content-type':'image/png','cache-control':'public, max-age=3600','x-content-type-options':'nosniff'});res.end(fs.readFileSync(file)); }],
   ['GET', '/api-client', true, page('api-client.html')],
+  ['GET','/pages',false,(req,res,url)=>{
+    if(!trusted(req)){const next='/pages'+url.search,escape=value=>value.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));res.writeHead(401,{'content-type':'text/html; charset=utf-8','cache-control':'no-store','referrer-policy':'no-referrer','content-security-policy':"default-src 'none'; style-src 'self'; form-action 'self'; frame-ancestors 'none'"});return res.end('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in to Pages</title><link rel="stylesheet" href="/static/ui.css"><main class="wrap"><h1>Sign in to Pages</h1><p>Shared definitions run with your own access. Your token stays out of the URL.</p><form action="/api/session" method="post"><input type="hidden" name="next" value="'+escape(next)+'"><label for="token">Access token</label> <input id="token" name="token" type="password" required autocomplete="current-password"> <button>Sign in</button></form></main></html>');}
+    res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store','referrer-policy':'no-referrer','content-security-policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self'; connect-src 'self'; img-src data:; object-src 'none'; base-uri 'none'; frame-ancestors 'self'"});res.end(fs.readFileSync(path.join(__dirname,'web/pages.html')));
+  }],
+  ['GET','/api/pages/catalog',true,async(req,res)=>{await pageAccess();send(res,200,await require('./lib/ui-pages').catalog());}],
+  ['POST','/api/pages/detail',true,async(req,res)=>{await pageAccess();send(res,200,await require('./lib/ui-pages').detail(await readJsonBody(req)));}],
+  ['GET','/api/pages/job',true,async(req,res,url)=>{await pageAccess();send(res,200,await require('./lib/ui-pages').run({job:url.searchParams.get('job')}));}],
   ['GET', '/', false, (req, res) => send(res, 200, { name: 'dt', mcp: '/mcp', openapi: '/openapi.json', tools: '/api/tools', status: '/api/status', admin: '/admin', results: '/view', prompt: '/api/prompt' })],
   ['GET', '/health', false, (req, res) => send(res, 200, { ok: true, version: VERSION })],
   ['GET', '/api/status', false, (req, res) => send(res, 200, { trusted: trusted(req), ...status() })],
@@ -178,7 +186,7 @@ const routes = [
     if(typeof token!=='string'||token.length>8192)return send(res,401,{error:'A valid token is required'});
     const identity=require('./lib/access').identity({...req,headers:{...req.headers,authorization:'Bearer '+token}});if(!identity)return send(res,401,{error:'Invalid or expired token'});
     const cookie=`dt_key=${encodeURIComponent(token)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400${getServer().securityProfile==='team'?'; Secure':''}`;
-    let next='/admin';if(typeof body.next==='string'&&body.next.length<5000){const target=new URL(body.next,'http://local');if(target.origin==='http://local'&&target.pathname==='/workbench')next=target.pathname+target.search;}res.writeHead(303,{location:next,'set-cookie':cookie,'cache-control':'no-store','referrer-policy':'no-referrer'});res.end();
+    let next='/admin';if(typeof body.next==='string'&&body.next.length<5000){const target=new URL(body.next,'http://local');if(target.origin==='http://local'&&['/workbench','/pages'].includes(target.pathname))next=target.pathname+target.search;}res.writeHead(303,{location:next,'set-cookie':cookie,'cache-control':'no-store','referrer-policy':'no-referrer'});res.end();
   }],
   ['GET', '/admin', false, (req, res, url) => {
     const key = getServer().securityProfile==='team'?null:url.searchParams.get('key');
@@ -195,6 +203,7 @@ const routes = [
   }],
   ['POST','/api/admin/workbench/tree',true,async(req,res)=>send(res,200,await require('./lib/workbench-explorer').tree(await readJsonBody(req)))],
   ['POST','/api/admin/workbench/detail',true,async(req,res)=>send(res,200,await require('./lib/workbench-explorer').detail(await readJsonBody(req)))],
+  ['POST','/api/admin/workbench/search',true,async(req,res)=>send(res,200,await require('./lib/workbench-explorer').search(await readJsonBody(req)))],
   ['GET', '/api/admin/workbench', true, async (req, res, url) => send(res, 200, await require('./lib/workbench').bootstrap({ env: url.searchParams.get('env') || undefined }))],
   ['POST', '/api/admin/workbench/choices', true, async (req, res) => send(res, 200, await require('./lib/workbench').choices(await readJsonBody(req)))],
   ['POST', '/api/admin/workbench/run', true, async (req, res) => send(res, 202, await require('./lib/workbench').start(await readJsonBody(req)))],

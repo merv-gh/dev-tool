@@ -202,6 +202,30 @@ Actual static analysis of the bundled Java fixture; environment and requirement 
 | ![service architecture flow](service-architecture-flow.png) **service architecture flow** | ![service architecture mobile](service-architecture-mobile.png) **service architecture mobile** |
 | ![service architecture requirements](service-architecture-requirements.png) **service architecture requirements** | ![service architecture runtime](service-architecture-runtime.png) **service architecture runtime** |
 
+## Declarative executable pages
+
+The [page examples](../../demo/pages/README.md) use local Consul-compatible HTTP
+and synthetic scoped PostgreSQL/ES/Kafka read adapters. Each page has explicit
+refresh, private observations and a shared revisioned definition. The inline
+snapshot is collapsed by default; shown here after opening its comparison.
+
+| | |
+| --- | --- |
+| ![Service versions across environments](pages-versions.png) **Service versions** | ![Procedure parity](pages-procedures.png) **Procedure parity** |
+| ![Procedure parity, mobile dark](pages-mobile-dark.png) **Mobile** | ![Environment watch](pages-monitor.png) **Monitoring** |
+| ![Inline page snapshot](sample-ui-page.png) **Inline result** | |
+
+## Task library and context files
+
+Captured with `dev/check-task-library-browser.js`: local Git, revision-checked
+notes and actual HTTP prepare/send/save; service passports are synthetic.
+The [task library guide](../task-library.md) explains search scope and limits.
+
+| | |
+| --- | --- |
+| ![Task overview](task-library-desktop.png) **Task overview** | ![Task overview, mobile dark](task-library-mobile-dark.png) **Task overview, mobile dark** |
+| ![Nested context files](context-library.png) **Nested context files** | ![Service API draft](service-api-draft.png) **Service API draft** |
+
 ## Coverage of workspace changes
 
 ![Missed changed production path](sample-workspace-coverage.png)

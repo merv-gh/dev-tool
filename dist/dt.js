@@ -454,7 +454,8 @@ var require_lifecycles = __commonJS({
     var diagnosticStore = define2("SM79.diagnostic-store", "cold", { cold: ["starting", "closed", "failed"], starting: ["ready", "failed", "closed"], ready: ["failed", "closed"], failed: ["closed"], closed: [] }, ["closed"]);
     var projectContextPublication = define2("SM80.project-context-publication", "draft", { draft: ["locked"], locked: ["checked", "failed"], checked: ["files-written", "failed"], "files-written": ["revision-written", "failed"], "revision-written": ["published", "failed"], published: [], failed: [] }, ["published", "failed"]);
     var ciWait = define2("SM81.ci-wait", "checking", { checking: ["sleeping", "complete", "pending", "cancelled", "failed"], sleeping: ["checking", "pending", "cancelled", "failed"], complete: [], pending: [], cancelled: [], failed: [] }, ["complete", "pending", "cancelled", "failed"]);
-    module2.exports = { ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process: process2, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context: context2, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http: http2, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };
+    var uiPageRun = define2("UI-page.run", "ready", { ready: ["reading"], reading: ["composing", "cancelled", "failed"], composing: ["retaining", "cancelled", "failed"], retaining: ["done", "cancelled", "failed"], done: [], cancelled: [], failed: [] }, ["done", "cancelled", "failed"]);
+    module2.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process: process2, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context: context2, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http: http2, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };
   }
 });
 
@@ -62360,7 +62361,7 @@ var require_views = __commonJS({
       "frame-ancestors *"
     ].join("; ");
     function policy(view) {
-      return ["ui-trace", "capabilities", "ci", "workspace-coverage", "workbench"].includes(view.name) && view.builtin ? CSP.replace("allow-popups ", "allow-popups allow-popups-to-escape-sandbox ") : CSP;
+      return ["ui-page", "ui-trace", "capabilities", "ci", "workspace-coverage", "workbench"].includes(view.name) && view.builtin ? CSP.replace("allow-popups ", "allow-popups allow-popups-to-escape-sandbox ") : CSP;
     }
     function parse(text) {
       const m = text.match(/^\s*<!--\s*(\{[\s\S]*?\})\s*-->\s*/);
@@ -62445,11 +62446,12 @@ dt.diffLines = ${diffLines.toString()};
       const diagnostics = ["test-coverage", "observability"].includes(name) ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../diagnostics.css"), "utf8") + "\n" + fs3.readFileSync(path3.join(BUILTIN, "../request-events.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../trace-format.js"), "utf8") + "\n" + fs3.readFileSync(path3.join(BUILTIN, "../diagnostics.js"), "utf8") + "\n" + fs3.readFileSync(path3.join(BUILTIN, "../request-events.js"), "utf8") + "</script>" : "";
       const capabilities = name === "capabilities" ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../capability-map.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../capability-layout.js"), "utf8") + "\n" + fs3.readFileSync(path3.join(BUILTIN, "../capability-map.js"), "utf8") + "</script>" : "";
       const uiTrace = name === "ui-trace" ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../ui-trace-inline.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../ui-trace-layout.js"), "utf8") + "\n" + fs3.readFileSync(path3.join(BUILTIN, "../ui-trace-inline.js"), "utf8") + "</script>" : "";
+      const uiPage = name === "ui-page" ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../pages.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../page-primitives.js"), "utf8") + "</script>" : "";
       const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
       return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(meta.title || name)}</title>${metaCsp ? `<meta http-equiv="Content-Security-Policy" content="${esc(CSP.split("; ").filter((d) => !/^(sandbox|frame-ancestors)/.test(d)).join("; "))}">` : ""}
 <style>${a.css}</style>
 <script>window.DATA = ${safeJson(data)}; window.META = ${safeJson({ view: name, ...meta })};</script>
-<script>${a.js}</script>${diagnostics}${projectContext}${capabilities}${uiTrace}</head>
+<script>${a.js}</script>${diagnostics}${projectContext}${capabilities}${uiTrace}${uiPage}</head>
 <body class="${embed ? "embed" : ""}"><div class="wrap">${v.html}</div><script>dtInline.mount(document.querySelector('.wrap'), dtInline.describe(META.view, DATA, META));</script></body></html>`;
     }
     module2.exports = { list, get, save, remove, render, policy, CSP, BUILTIN, DIR };
@@ -71423,6 +71425,175 @@ var require_api_client = __commonJS({
   }
 });
 
+// lib/workbench-library.js
+var require_workbench_library = __commonJS({
+  "lib/workbench-library.js"(exports2, module2) {
+    var fs3 = require("node:fs");
+    var path3 = require("node:path");
+    var crypto = require("node:crypto");
+    var M = require_context();
+    var W = require_workspace();
+    var S = require_scripts();
+    var hash = (x) => crypto.createHash("sha256").update(JSON.stringify(x)).digest("hex").slice(0, 24);
+    var kinds = ["contexts", "files", "workspaces", "scripts", "apis"];
+    module2.exports = ({ check, contexts, services, node, related }) => {
+      function allowed(name) {
+        try {
+          check(name);
+          return true;
+        } catch (e) {
+          if (e.code === "DT_ACCESS_DENIED") return false;
+          throw e;
+        }
+      }
+      function serviceApis(env, service, sourceServices) {
+        check("api_routes");
+        const rows = [];
+        for (const s of (sourceServices || services(env)).filter((s2) => !service || s2.service === service)) {
+          let p;
+          try {
+            p = require_passport().load(s.service, { env });
+          } catch {
+            continue;
+          }
+          if (p.env && p.env !== env) continue;
+          for (const e of p.effective?.endpoints || []) {
+            const method = String(e.method || "ANY").toUpperCase(), route = hash([method, e.path, e.handler, e.file, e.line]);
+            rows.push(node(method + " " + e.path, { kind: "api-route", service: s.service, route }, { category: "apis", detail: s.service + (e.handler ? " \xB7 " + e.handler : ""), api: { method, path: e.path, handler: e.handler, where: e.file ? e.file + ":" + e.line : "", repo: s.repo, sha: p.repo?.sha } }));
+          }
+        }
+        return rows;
+      }
+      function apiDetail(ref, env) {
+        const n = serviceApis(env, ref.service).find((n2) => n2.ref.route === ref.route);
+        if (!n) throw Error("Indexed endpoint changed or is unavailable; refresh the service API list");
+        const bases = [];
+        if (allowed("api_exchange_list")) for (const e of require_api_client().list({ limit: 500 })) {
+          if (e.route?.candidates?.length === 1 && e.route.candidates[0].service === ref.service) {
+            try {
+              const url = new URL(e.url);
+              if (!bases.some((b) => b.url === url.origin)) bases.push({ url: url.origin, source: "Observed exchange " + e.id });
+            } catch {
+            }
+          }
+        }
+        return { ...n.api, service: ref.service, bases, guidance: "Choose the deployment or gateway base URL. Indexed paths describe code, not a deployment address. Preparing never sends a request." };
+      }
+      function collections() {
+        check("script_list");
+        return S.list().collections.map((c) => {
+          const m = S.getCollection(c.collection);
+          return node(c.collection, { kind: "script-collection", collection: c.collection }, { category: "scripts", expandable: true, detail: [m.description, c.scripts + " scripts"].filter(Boolean).join(" \xB7 ") });
+        });
+      }
+      async function search({ env, query = "", kind = "all", context: context2, workspace, service, content = false, offset = 0, limit = 40 } = {}) {
+        env = env || require_config().envNames()[0];
+        require_config().getEnv(env);
+        if (typeof query !== "string" || query.length > 300 || !["all", ...kinds].includes(kind) || !Number.isSafeInteger(offset) || offset < 0 || offset > 1e4 || !Number.isSafeInteger(limit) || limit < 1 || limit > 100 || typeof content !== "boolean") throw Error("Invalid library query or page");
+        const words = query.toLowerCase().trim().split(/\s+/).filter(Boolean), matches = (v) => words.every((w) => v.toLowerCase().includes(w)), rows = [], gaps = [];
+        let scanned = 0;
+        const add = (n, text = "") => {
+          scanned++;
+          if (matches([n.label, n.detail, text].filter(Boolean).join(" "))) rows.push(n);
+        };
+        let cs = [], selectedWorkspace;
+        if (allowed("context_find")) {
+          const meta = contexts();
+          cs = meta.rows;
+          if (meta.errors) gaps.push(meta.errors + " unreadable context indexes omitted");
+        }
+        if (context2) {
+          check("context_get");
+          const c = M.get(context2);
+          cs = [c];
+        }
+        if (workspace) {
+          check("workspace_read");
+          selectedWorkspace = W.checkId(workspace);
+          if (!context2) cs = [];
+        }
+        const ss = allowed("passport") ? services(env) : [];
+        if (service) {
+          const s = ss.find((s2) => s2.service === service);
+          if (!s) throw Error("Service is unavailable in this environment");
+          cs = cs.filter((c) => related(c, s));
+        }
+        const relatedServices = (context2 ? ss.filter((s) => cs.some((c) => related(c, s))) : workspace ? ss.filter((s) => s.service === selectedWorkspace.service || s.repo === selectedWorkspace.project + "/" + selectedWorkspace.repo) : ss).filter((s) => !service || s.service === service);
+        if (["all", "contexts"].includes(kind)) for (const c of cs) add(node(c.title, { kind: "context", context: c.id }, { category: "contexts", expandable: true, detail: [c.summary, c.status, ...c.tickets || [], ...c.tasks || []].filter(Boolean).join(" \xB7 ") }), [c.id, ...c.repositories || [], ...c.tags || []].join(" "));
+        if (["all", "files"].includes(kind) && allowed("context_list")) for (const c of cs) for (const f of c.files || []) {
+          if (scanned >= 1e4) {
+            gaps.push("Metadata scan reached 10,000 entries; select a context or narrower category");
+            break;
+          }
+          add(node(f.path, { kind: "context-file", context: c.id, path: f.path }, { category: "files", detail: c.title + " \xB7 " + (f.summary || f.bytes + " B") }));
+        }
+        if (["all", "workspaces"].includes(kind) && allowed("workspace_list")) for (const w of W.list().filter((w2) => w2.exists && (!context2 || cs.some((c) => c.workspaces?.includes(w2.id))) && (!workspace || w2.id === workspace) && (!service || w2.service === service || ss.some((s) => s.service === service && s.repo === w2.repo)))) add(node(w.repo + " \xB7 " + (w.ref || w.id), { kind: "workspace", workspace: w.id }, { category: "workspaces", expandable: true, detail: w.id + " \xB7 " + w.sha }));
+        if (["all", "scripts"].includes(kind) && allowed("script_list")) {
+          const selected = relatedServices.map((s) => s.service), filter = (s) => !context2 && !service && !workspace || selected.some((name) => s.startsWith(name + "/") || s === name);
+          for (const c of collections().filter((n) => filter(n.ref.collection))) add(c);
+          for (const s of S.list().scripts.filter((s2) => filter(s2.id))) add(node(s.id, { kind: "script", script: s.id }, { category: "scripts", detail: s.description || "Saved script" }), s.params?.join(" ") || "");
+          if (context2 || service || workspace) gaps.push("Script associations use the service-named collection prefix; choose All work to discover other collections");
+        }
+        if (["all", "apis"].includes(kind) && allowed("api_routes") && allowed("passport")) for (const n of serviceApis(env, service, relatedServices)) add(n, n.api.where || "");
+        if (["all", "apis"].includes(kind) && allowed("api_exchange_list")) for (const e of require_api_client().list({ limit: 500 })) {
+          const candidates = e.route?.candidates || [], names = candidates.map((c) => c.service);
+          if ((context2 || service || workspace) && !names.some((n) => relatedServices.some((s) => s.service === n) && (!service || service === n))) continue;
+          add(node(e.method + " " + new URL(e.url).pathname, { kind: "api-exchange", exchange: e.id }, { category: "apis", detail: "Captured HTTP " + e.status + " \xB7 " + names.join(", ") + (candidates.length > 1 ? " \xB7 ambiguous service" : "") }), e.url);
+        }
+        if (content && words.length && ["all", "files"].includes(kind)) {
+          if (!context2 && !workspace) gaps.push("Select a context or workspace to search file contents");
+          if (context2) {
+            check("context_search");
+            const r = M.search({ id: context2, query, limit: 100 });
+            for (const m of r.hits) {
+              const existing = rows.find((n) => n.ref.context === context2 && n.ref.path === m.path);
+              if (existing) {
+                existing.match = m;
+                continue;
+              }
+              rows.push(node(m.path, { kind: "context-file", context: context2, path: m.path }, { category: "files", detail: "Content match \xB7 line " + m.line, match: m }));
+            }
+            if (r.truncated) gaps.push("Context content search reached its scan budget");
+          }
+          if (workspace) {
+            check("workspace_read");
+            const meta = W.checkId(workspace), queue = [""];
+            let files = 0, bytes = 0, dirs = 0;
+            while (queue.length && files < 1e3 && dirs++ < 1e3 && bytes < 16 * 1024 * 1024) {
+              const dir = queue.shift();
+              for (const name of W.read(workspace, dir || ".").entries || []) {
+                if (name.startsWith(".") || ["node_modules/", "target/", "build/"].includes(name)) continue;
+                const p = [dir, name.replace(/\/$/, "")].filter(Boolean).join("/");
+                if (name.endsWith("/")) {
+                  if (queue.length < 1e3) queue.push(p);
+                  continue;
+                }
+                files++;
+                if (files > 1e3 || bytes >= 16 * 1024 * 1024) break;
+                try {
+                  const full = W.resolvePath(meta, p).full, st = fs3.statSync(full);
+                  if (!st.isFile() || st.size > 65536) continue;
+                  bytes += st.size;
+                  const raw = fs3.readFileSync(full);
+                  if (raw.includes(0) || !Buffer.from(raw.toString("utf8")).equals(raw)) continue;
+                  const lines = raw.toString("utf8").split("\n"), index = lines.findIndex(matches);
+                  if (index >= 0) rows.push(node(p, { kind: "workspace-file", workspace, path: p }, { category: "files", detail: "Workspace content \xB7 line " + (index + 1), match: { line: index + 1, text: lines[index].slice(0, 300) } }));
+                } catch {
+                  gaps.push("An unreadable workspace file was omitted");
+                }
+              }
+            }
+            if (queue.length || files >= 1e3 || bytes >= 16 * 1024 * 1024) gaps.push("Workspace content search reached 1,000 files or 16 MiB; use a narrower source search");
+          }
+        }
+        const unique = [...new Map(rows.map((n) => [n.id, n])).values()].sort((a, b) => Number(b.label.toLowerCase() === query.toLowerCase()) - Number(a.label.toLowerCase() === query.toLowerCase()) || a.category.localeCompare(b.category) || a.label.localeCompare(b.label));
+        return { query, kind, context: context2 || null, workspace: workspace || null, env, nodes: unique.slice(offset, offset + limit), total: unique.length, nextOffset: offset + limit < unique.length ? offset + limit : null, gaps: [...new Set(gaps)].slice(0, 10), source: "Retained task metadata, owned files/scripts and indexed service APIs; no network calls" };
+      }
+      return { search, serviceApis, apiDetail, collections };
+    };
+  }
+});
+
 // lib/workbench-explorer.js
 var require_workbench_explorer = __commonJS({
   "lib/workbench-explorer.js"(exports2, module2) {
@@ -71455,6 +71626,7 @@ var require_workbench_explorer = __commonJS({
       return ref;
     }
     var node = (label, ref, extra = {}) => ({ id: id(ref), label, kind: ref.kind, ref, ...extra });
+    var library = require_workbench_library()({ check, contexts, services, node, related });
     var text = (v, max = 1e3) => {
       if (typeof v !== "string" || v.length > max) throw fail("Invalid navigator text");
       return v;
@@ -71524,7 +71696,11 @@ var require_workbench_explorer = __commonJS({
       else if (ref.kind === "service") {
         const s = services(env).find((s2) => s2.service === ref.service);
         if (!s) throw fail("Service is absent from this environment");
-        rows = [node("Contexts", { kind: "service-contexts", service: s.service }, { expandable: true }), node("Workspaces", { kind: "service-workspaces", service: s.service }, { expandable: true }), node("API exchanges", { kind: "service-api", service: s.service }, { expandable: true }), node("Scripts & saved actions", { kind: "service-recipes", service: s.service }, { expandable: true })];
+        rows = [node("Contexts", { kind: "service-contexts", service: s.service }, { expandable: true }), node("Workspaces", { kind: "service-workspaces", service: s.service }, { expandable: true }), node("Service API endpoints", { kind: "service-routes", service: s.service }, { expandable: true }), node("Captured API exchanges", { kind: "service-api", service: s.service }, { expandable: true }), node("Scripts & saved actions", { kind: "service-recipes", service: s.service }, { expandable: true })];
+      } else if (ref.kind === "service-routes") rows = library.serviceApis(env, ref.service);
+      else if (ref.kind === "script-collection") {
+        check("script_list");
+        rows = require_scripts().list(ref.collection).scripts.map((s) => node(s.id.slice(ref.collection.length + 1), { kind: "script", script: s.id }, { detail: s.description }));
       } else if (["service-contexts", "service-workspaces", "service-recipes", "service-api"].includes(ref.kind)) {
         const s = services(env).find((s2) => s2.service === ref.service);
         if (!s) throw fail("Service is absent from this environment");
@@ -71603,6 +71779,14 @@ var require_workbench_explorer = __commonJS({
         d = { ...d, title: s.service, summary: s.repo || "Map its repository in Passports.", service: s.service, repo: s.repo, identity: { env, repo: s.repo, sha: s.sha, ref: s.ref, builtAt: s.builtAt } };
         actions.push(action("Consul status", "consul_service", { name: s.service, env }), action("Passport", "passport", { service: s.service, env }), action("Open workspace", "workspace_open", { service: s.service }), action("API routes", "api_routes", { service: s.service }), action("New query", "pg_query", { env, sql: "" }), action("Find scripts", "script_list", {}), action("Prepare API request", "api_request_prepare", { request: { method: "GET", url: "" } }));
         if (enabled.has("workspace_list")) ws = W.list().filter((w) => w.service === s.service || s.repo && w.repo === s.repo);
+      } else if (ref.kind === "api-route") {
+        const api = library.apiDetail(ref, env);
+        d = { ...d, title: api.method + " " + api.path, summary: api.service + " \xB7 Indexed service endpoint", service: api.service, repo: api.repo, identity: { env, repo: api.repo, sha: api.sha, handler: api.handler, source: api.where }, api };
+      } else if (ref.kind === "script-collection") {
+        check("script_list");
+        const c = require_scripts().getCollection(ref.collection);
+        d = { ...d, title: c.collection, summary: c.description, collection: { id: c.collection, count: c.scripts.length, tool: c.toolName } };
+        actions.push(action("Collection settings", "script_collection", { collection: c.collection }), action("New script", "script_save", { id: c.collection + "/new-script", description: "", steps: [], expected_revision: null }));
       } else if (ref.kind === "task") {
         const cs = contexts().rows.filter((c) => c.tasks.includes(ref.task) || c.tickets.includes(ref.task));
         if (!cs.length) throw fail("Task is unavailable in this scope");
@@ -71614,6 +71798,15 @@ var require_workbench_explorer = __commonJS({
         const c = M.get(ref.context);
         d = { ...d, title: ref.path || c.title, summary: c.summary, context: c.id, identity: { revision: c.revision, status: c.status, tickets: c.tickets, tasks: c.tasks, repositories: c.repositories }, contextMeta: { title: c.title, summary: c.summary, status: c.status, revision: c.revision, tickets: c.tickets, tasks: c.tasks, repositories: c.repositories, workspaces: c.workspaces, tags: c.tags } };
         actions.push(action("Edit task details", "context_update", { id: c.id, title: c.title, summary: c.summary, status: c.status, expected_revision: c.revision }), action("New note", "context_write", { id: c.id, path: "notes/new-note.md", content: "", expected_revision: null }));
+        if (ref.kind === "context") {
+          d.inventory = { files: c.files.length, actions: c.files.filter((f) => f.path.startsWith("recipes/")).length, workspaces: c.workspaces.length };
+          d.relatedServices = enabled.has("passport") ? services(env).filter((s) => related(c, s)).map((s) => ({ service: s.service, repo: s.repo })) : [];
+          d.recentFiles = [...c.files].sort((a, b) => {
+            const rank = (p) => p === "progress.md" ? 0 : p.endsWith("/progress.md") ? 1 : p.startsWith("recipes/") ? 2 : p.startsWith("calls/") ? 9 : 3;
+            return rank(a.path) - rank(b.path) || String(b.updatedAt || "").localeCompare(String(a.updatedAt || ""));
+          }).slice(0, 6).map((f) => ({ path: f.path, summary: f.summary, ref: { kind: "context-file", context: c.id, path: f.path } }));
+          actions.push(action("New saved script", "script_save", { id: (d.relatedServices[0]?.service || c.id) + "/new-script", description: "", steps: [], expected_revision: null }));
+        }
         if (enabled.has("workspace_list")) ws = W.list().filter((w) => c.workspaces.includes(w.id));
         if (ref.kind === "context-file") {
           actions.push(action("Preview file", "files_show", { store: "context:" + c.id, path: ref.path }));
@@ -71688,6 +71881,7 @@ var require_workbench_explorer = __commonJS({
       if (["context", "service", "task"].filter((k) => a[k]).length > 1) throw fail("Select one context, service or task; open another view to change the selected object");
       const mode = a.mode || (a.task ? "tasks" : a.service ? "services" : "contexts"), q = new URLSearchParams({ env, mode, story: A.owner().storyId || "default" });
       for (const k of ["context", "service", "task"]) if (a[k]) q.set(k, text(a[k], 300));
+      if (a.node) q.set("node", a.node);
       const url = require_results().publicUrl() + "/workbench?" + q, snapshot = { protocol: "dt.workbench-snapshot/v1", url, env, mode, at: (/* @__PURE__ */ new Date()).toISOString(), trees: {}, gaps: [] };
       for (const lens of modes) try {
         snapshot.trees[lens] = await tree({ env, mode: lens });
@@ -71703,17 +71897,17 @@ var require_workbench_explorer = __commonJS({
       } catch (error) {
         snapshot.gaps.push(error.message);
       }
-      const ref = a.service ? { kind: "service", service: a.service } : a.context ? { kind: "context", context: a.context } : a.task ? { kind: "task", task: a.task } : null;
+      const ref = a.node ? decode(a.node) : a.service ? { kind: "service", service: a.service } : a.context ? { kind: "context", context: a.context } : a.task ? { kind: "task", task: a.task } : null;
       if (ref) try {
         const d = await detail({ env, node: id(ref) });
         snapshot.selected = { ref, title: d.title, summary: d.summary, identity: d.identity, actions: d.actions.map((a2) => a2.label), workspaces: d.workspaces.map((w) => ({ ref: w.ref, id: w.id, repo: w.repo })) };
-        snapshot.children = await tree({ env, mode, parent: id(ref) });
+        snapshot.children = ["api-route", "api-exchange", "script", "context-file", "workspace-file"].includes(ref.kind) ? { nodes: [], total: 0, gaps: [] } : await tree({ env, mode, parent: id(ref) });
       } catch (error) {
         snapshot.gaps.push(error.message);
       }
       return { view: require_results().saveView("workbench", snapshot, { title: "Interactive workbench" }), url, mode, selection: ref ? { ...ref, found: !!snapshot.selected } : null, gaps: snapshot.gaps, ...ref?.context && !snapshot.selected && grants.getStore()?.has("context_find") ? { next: { tool: "context_find", arguments: { query: ref.context } } } : {}, note: "Chat shows a retained navigator; the authenticated workbench edits/runs actions with normal permissions. Opening only browses; it neither executes checks nor saves their results. Use context_run to run and retain evidence; verify its saved receipt." };
     }
-    module2.exports = { tree: authorized(tree), detail: authorized(detail), save: authorized(save), open: authorized(open), id, decode };
+    module2.exports = { tree: authorized(tree), detail: authorized(detail), search: authorized(library.search), save: authorized(save), open: authorized(open), id, decode };
   }
 });
 
@@ -71758,11 +71952,634 @@ var require_workspace_branches = __commonJS({
 var require_tools_workbench = __commonJS({
   "lib/tools-workbench.js"(exports2, module2) {
     module2.exports = () => [
-      { name: "workbench_open", group: "views", description: "Open a clickable explorer to browse ticket notes, files and related checkouts, or a service with scripts/queries, tests, Consul and API actions. Chat shows a retained navigator linking to the authenticated live workbench. Normal tool permissions apply; opening executes no actions.", input: { mode: { type: "string", enum: ["contexts", "services", "tasks"], description: "Navigator lens. Omit to infer from task, service or context; Tasks groups tickets with contexts and workspaces." }, env: { type: "string", description: "Configured environment, e.g. dev." }, context: { type: "string", description: "Exact context folder ID from context_find; not its ticket number. Choose one selected object." }, service: { type: "string", description: "Exact service name. Choose one selected object." }, task: { type: "string", description: "Ticket/task identifier from the user, e.g. ORDERS-142. No context creation or prior lookup required." } }, run: (a) => require_workbench_explorer().open(a) },
+      { name: "workbench_search", group: "context", description: "Search task/context files, owned workspaces, script collections and indexed service APIs together. Fast retained metadata by default; content=true searches text only in an explicit context/workspace with scan limits. Select a returned node with workbench_inspect or workbench_open. No execution or network calls.", input: { query: { type: "string", maxLength: 300 }, kind: { type: "string", enum: ["all", "contexts", "files", "workspaces", "scripts", "apis"], default: "all" }, context: { type: "string", description: "Optional exact context ID to scope related files, workspaces, scripts and service APIs." }, workspace: { type: "string", description: "Exact owned workspace for bounded source text search." }, service: { type: "string" }, env: { type: "string" }, content: { type: "boolean", default: false }, offset: { type: "integer", minimum: 0, maximum: 1e4, default: 0 }, limit: { type: "integer", minimum: 1, maximum: 100, default: 40 } }, run: (a) => require_workbench_explorer().search(a) },
+      { name: "workbench_inspect", group: "context", description: "Inspect a node returned by workbench_search: retained file/revision, workspace, script/collection or indexed endpoint with source evidence and available prepared actions. Does not run actions. API base URLs remain an explicit deployment choice.", input: { node: { type: "string", description: "Exact node ID from workbench_search." }, env: { type: "string" } }, required: ["node"], run: (a) => require_workbench_explorer().detail(a) },
+      { name: "workbench_open", group: "views", description: "Open a clickable explorer to browse ticket notes, files and related checkouts, or a service with scripts/queries, tests, Consul and API actions. Chat shows a retained navigator linking to the authenticated live workbench. Normal tool permissions apply; opening executes no actions.", input: { node: { type: "string", description: "Optional exact node ID from workbench_search; selects a file, workspace, script or API." }, mode: { type: "string", enum: ["contexts", "services", "tasks"], description: "Navigator lens. Omit to infer from task, service or context; Tasks groups tickets with contexts and workspaces." }, env: { type: "string", description: "Configured environment, e.g. dev." }, context: { type: "string", description: "Exact context folder ID from context_find; not its ticket number. Choose one selected object." }, service: { type: "string", description: "Exact service name. Choose one selected object." }, task: { type: "string", description: "Ticket/task identifier from the user, e.g. ORDERS-142. No context creation or prior lookup required." } }, run: (a) => require_workbench_explorer().open(a) },
       { name: "workbench_save", group: "context", description: "Save the prepared tool invocation as a revision-checked action recipe in a task context, optionally linked to a service/repository. Redacts credentials; saved artifacts never execute automatically. Reopen through the interactive workbench.", logArgs: ["context", "path", "title", "tool", "service"], input: { context: { type: "string", description: "Existing folder ID returned by context_find, not a ticket number." }, title: { type: "string", maxLength: 300 }, tool: { type: "string", description: "Exact target from tool_describe, e.g. consul_service." }, arguments: { type: "object", additionalProperties: true, description: "Prepared target arguments matching tool_describe inputSchema. Saving never runs them." }, service: { type: "string" }, repository: { type: "string" }, path: { type: "string" }, expected_revision: { type: ["string", "null"] } }, required: ["context", "title", "tool", "arguments"], run: (a) => require_workbench_explorer().save(a) },
       { name: "workspace_branches", group: "code", description: "List retained branch choices for an owned workspace. refresh=true explicitly reads remote refs (30s timeout). No checkout or source edits.", input: { workspace: { type: "string", description: "Exact owned workspace ID from workspace_list or context_get.workspaces; never a service/repository name." }, refresh: { type: "boolean", default: false } }, required: ["workspace"], run: (a) => require_workspace_branches().list(a.workspace, a) },
       { name: "workspace_branch", group: "code", description: "Open/reuse a separate owned workspace at a branch/ref of this repository. Leaves all uncommitted files in the original workspace untouched. Does not push, reset or clean either checkout.", input: { workspace: { type: "string", description: "Exact owned workspace ID from workspace_list or context_get.workspaces; never a service/repository name." }, ref: { type: "string", description: "Exact branch/ref from workspace_branches or the user." } }, required: ["workspace", "ref"], run: (a) => require_workspace_branches().open(a.workspace, a.ref) }
     ].map((t) => ({ ...t, origin: "built-in", strictInput: true }));
+  }
+});
+
+// lib/ui-page-model.js
+var require_ui_page_model = __commonJS({
+  "lib/ui-page-model.js"(exports2, module2) {
+    var crypto = require("node:crypto");
+    var invalid = (message) => Object.assign(Error(message), { code: "DT_ARGUMENT_INVALID", statusCode: 400 });
+    var id = (value) => typeof value === "string" && /^[a-z][a-z0-9_-]{0,63}$/.test(value) && !["constructor", "prototype", "__proto__"].includes(value);
+    var READ_TOOLS = ["ui_page_data", "pg_query", "consul_service", "health", "es_health", "kafka_lag", "kafka_topic", "kafka_last", "catalog_search", "find", "pg_table", "pg_function", "pg_usage", "api_routes", "bitbucket_pr_status"];
+    var MAX_ROWS = 2e3;
+    var MAX_BYTES = 2 * 1024 * 1024;
+    function keys(value, allowed, label) {
+      if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).some((k) => !allowed.includes(k))) throw invalid("Invalid " + label + " fields");
+    }
+    function path3(value) {
+      if (typeof value !== "string" || value.length > 300 || value.split(".").some((k) => !k || ["__proto__", "prototype", "constructor"].includes(k))) throw invalid("Invalid field path");
+      return value;
+    }
+    function at(value, field) {
+      if (field === "") return value;
+      for (const key of path3(field).split(".")) {
+        if (value == null || !Object.hasOwn(Object(value), key)) return void 0;
+        value = value[key];
+      }
+      return value;
+    }
+    function bind(value, params2, depth = 0) {
+      if (depth > 16) throw invalid("Page values are nested too deeply");
+      if (Array.isArray(value)) return value.map((v) => bind(v, params2, depth + 1));
+      if (value && typeof value === "object") {
+        if (Object.hasOwn(value, "$param")) {
+          keys(value, ["$param"], "parameter reference");
+          if (!id(value.$param) || !Object.hasOwn(params2, value.$param)) throw invalid("Unknown page input " + value.$param);
+          return structuredClone(params2[value.$param]);
+        }
+        return Object.fromEntries(Object.entries(value).map(([k, v]) => {
+          if (["__proto__", "prototype", "constructor"].includes(k)) throw invalid("Unsafe object key");
+          return [k, bind(v, params2, depth + 1)];
+        }));
+      }
+      return value;
+    }
+    function normalize(definition) {
+      let bytes;
+      try {
+        bytes = Buffer.byteLength(JSON.stringify(definition));
+      } catch {
+        throw invalid("Page definition must be JSON");
+      }
+      if (bytes > 131072) throw invalid("Page definition exceeds 128 KiB");
+      keys(definition, ["version", "title", "description", "inputs", "sources", "datasets", "widgets"], "page");
+      if (definition.version !== 1 || typeof definition.title !== "string" || !definition.title.trim() || definition.title.length > 160) throw invalid("Page version=1 and a title up to 160 characters are required");
+      if (definition.description !== void 0 && (typeof definition.description !== "string" || definition.description.length > 4e3)) throw invalid("Page description exceeds 4000 characters");
+      const d = structuredClone({ description: "", inputs: {}, datasets: [], ...definition });
+      keys(d.inputs, Object.keys(d.inputs), "inputs");
+      if (Object.keys(d.inputs).length > 12) throw invalid("At most 12 page inputs are supported");
+      for (const [name, input] of Object.entries(d.inputs)) {
+        if (!id(name) || require_redact().sensitive(name)) throw invalid("Input names must be simple identifiers, never credentials");
+        keys(input, ["type", "label", "default", "required", "options", "description", "environment"], "input");
+        if (!["string", "number", "boolean", "environment", "database", "services", "strings"].includes(input.type) || typeof input.label !== "string" || !input.label || input.label.length > 160) throw invalid("Each input needs a type and label");
+        if (input.options !== void 0 && (!Array.isArray(input.options) || input.options.length > 100 || input.options.some((x) => !["string", "number", "boolean"].includes(typeof x)))) throw invalid("Invalid input options");
+      }
+      for (const input of Object.values(d.inputs)) if (input.environment !== void 0 && (input.type !== "database" || d.inputs[input.environment]?.type !== "environment")) throw invalid("A database input environment must name an environment input");
+      if (!Array.isArray(d.sources) || d.sources.length > 16 || !Array.isArray(d.datasets) || d.datasets.length > 24 || !Array.isArray(d.widgets) || !d.widgets.length || d.widgets.length > 30) throw invalid("Pages support 16 sources, 24 datasets and 1..30 widgets");
+      const known = /* @__PURE__ */ new Set();
+      for (const s of d.sources) {
+        keys(s, ["id", "label", "tool", "arguments", "select", "rows"], "source");
+        if (!id(s.id) || known.has(s.id)) throw invalid("Source IDs must be unique");
+        known.add(s.id);
+        if (s.rows !== void 0) {
+          if (s.tool || !Array.isArray(s.rows) || s.rows.length > 200) throw invalid("Declared rows allow at most 200 records and no tool");
+        } else {
+          if (!READ_TOOLS.includes(s.tool)) throw invalid("Unsupported page source tool: " + s.tool);
+          keys(s.arguments || {}, Object.keys(s.arguments || {}), "source arguments");
+        }
+        if (s.select !== void 0 && s.select !== "") path3(s.select);
+      }
+      for (const data of d.datasets) {
+        keys(data, ["id", "op", "from", "fields", "left", "right", "key", "where", "required"], "dataset");
+        if (!id(data.id) || known.has(data.id) || !["select", "concat", "filter", "compare"].includes(data.op)) throw invalid("Invalid dataset id or operation");
+        const refs2 = data.op === "compare" ? [data.left, data.right] : data.op === "concat" ? data.from : [data.from];
+        if (!Array.isArray(refs2) || !refs2.length || refs2.length > 16 || refs2.some((r) => !known.has(r))) throw invalid("Datasets must reference earlier sources/datasets");
+        if (data.op === "select") {
+          keys(data.fields, Object.keys(data.fields || {}), "selected fields");
+          if (Object.keys(data.fields).length > 40) throw invalid("At most 40 selected fields");
+          for (const [key, value] of Object.entries(data.fields)) {
+            if (!id(key)) throw invalid("Invalid selected field");
+            if (typeof value === "string") path3(value);
+            else keys(value, ["value"], "literal field");
+          }
+        }
+        if (data.op === "compare") {
+          if (!Array.isArray(data.key) || !data.key.length || data.key.length > 8 || !Array.isArray(data.fields) || data.fields.length > 30) throw invalid("Comparison requires key and fields arrays");
+          [...data.key, ...data.fields].forEach(path3);
+          if (data.required !== void 0 && (!Array.isArray(data.required) || data.required.some((f) => !data.fields.includes(f)))) throw invalid("Required comparison fields must be declared fields");
+        }
+        if (data.op === "filter") validateWhere(data.where);
+        known.add(data.id);
+      }
+      const widgets = /* @__PURE__ */ new Set();
+      for (const w of d.widgets) {
+        keys(w, ["id", "type", "title", "description", "data", "text", "columns", "field", "op", "where", "unit", "span", "collapsed", "leftLabel", "rightLabel"], "widget");
+        if (!id(w.id) || widgets.has(w.id) || !["text", "table", "metric", "comparison"].includes(w.type) || typeof w.title !== "string" || !w.title || w.title.length > 160) throw invalid("Each widget needs a unique id, type and title");
+        widgets.add(w.id);
+        if (w.type !== "text" && !known.has(w.data)) throw invalid("Unknown widget dataset " + w.data);
+        if (w.type === "text" && (typeof w.text !== "string" || w.text.length > 6e3)) throw invalid("Text widgets need plain text up to 6000 characters");
+        if (w.span !== void 0 && ![1, 2].includes(w.span)) throw invalid("Widget span must be 1 or 2");
+        if (w.field !== void 0) path3(w.field);
+        if (w.where) validateWhere(w.where);
+        if (w.type === "metric" && !["count", "sum", "value"].includes(w.op || "count")) throw invalid("Metric operation must be count, sum or value");
+        if (w.columns !== void 0) {
+          if (!Array.isArray(w.columns) || w.columns.length > 30) throw invalid("At most 30 table columns");
+          for (const c of w.columns) {
+            keys(c, ["field", "label", "format"], "column");
+            path3(c.field);
+            if (typeof c.label !== "string" || c.label.length > 160 || c.format && !["text", "number", "status", "json", "time"].includes(c.format)) throw invalid("Invalid table column");
+          }
+        }
+      }
+      const refs = {};
+      for (const [name, input] of Object.entries(d.inputs)) refs[name] = Object.hasOwn(input, "default") ? input.default : null;
+      bind(d, refs);
+      if (JSON.stringify(require_redact().clean(d)) !== JSON.stringify(d)) throw invalid("Keep credentials in configured integrations, not page definitions");
+      return d;
+    }
+    function validateWhere(where) {
+      keys(where, ["field", "op", "value"], "filter");
+      path3(where.field);
+      if (!["eq", "ne", "contains", "gt", "lt", "exists"].includes(where.op)) throw invalid("Invalid filter operator");
+    }
+    function matches(row, where) {
+      if (!where) return true;
+      const v = at(row, where.field), x = where.value;
+      switch (where.op) {
+        case "eq":
+          return stable(v) === stable(x);
+        case "ne":
+          return stable(v) !== stable(x);
+        case "contains":
+          return String(v ?? "").toLowerCase().includes(String(x ?? "").toLowerCase());
+        case "gt":
+          return v != null && Number(v) > Number(x);
+        case "lt":
+          return v != null && Number(v) < Number(x);
+        case "exists":
+          return v !== void 0 && v !== null;
+      }
+    }
+    function params(definition, supplied = {}) {
+      keys(supplied, Object.keys(definition.inputs), "input values");
+      const out2 = {};
+      for (const [name, input] of Object.entries(definition.inputs)) {
+        const value = Object.hasOwn(supplied, name) ? supplied[name] : input.default;
+        if (value === void 0 || value === "" || Array.isArray(value) && !value.length) {
+          if (input.required !== false) throw invalid("Choose " + input.label);
+          out2[name] = value;
+          continue;
+        }
+        const valid = ["services", "strings"].includes(input.type) ? Array.isArray(value) && value.length <= 20 && value.every((v) => typeof v === "string" && v.length <= 300) : input.type === "number" ? typeof value === "number" && Number.isFinite(value) : input.type === "boolean" ? typeof value === "boolean" : typeof value === "string" && value.length <= 2e3;
+        if (!valid || input.options && !input.options.some((o) => stable(o) === stable(value))) throw invalid("Invalid value for " + input.label);
+        if (input.type === "environment") require_config().getEnv(value);
+        out2[name] = value;
+      }
+      for (const [name, input] of Object.entries(definition.inputs)) if (input.type === "database" && input.environment && out2[name] && !require_config().getEnv(out2[input.environment]).pg[out2[name]]) throw invalid("Database " + out2[name] + " is not configured for " + out2[input.environment]);
+      return out2;
+    }
+    var stable = (value) => value === void 0 ? "undefined" : JSON.stringify(value, (_key, v) => v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => a.localeCompare(b))) : v);
+    function bounded(rows, { complete = true, gaps = [], ...meta } = {}) {
+      if (!Array.isArray(rows)) throw invalid("Source selection must be an array of rows");
+      const kept = [];
+      let bytes = 0;
+      for (const row of rows) {
+        const size = Buffer.byteLength(JSON.stringify(row) ?? "null");
+        if (kept.length >= MAX_ROWS || bytes + size > MAX_BYTES) {
+          complete = false;
+          gaps = [...gaps, "Dataset clipped at 2,000 rows or 2 MiB"];
+          break;
+        }
+        kept.push(row);
+        bytes += size;
+      }
+      return { rows: kept, complete, gaps, ...meta };
+    }
+    function derive(definition, sources, inputs) {
+      const out2 = { ...sources };
+      for (const raw of definition.datasets) {
+        const d = bind(raw, inputs), refs = d.op === "compare" ? [d.left, d.right] : d.op === "concat" ? d.from : [d.from], from = refs.map((r) => out2[r]);
+        const problems = from.flatMap((s, i) => s.error ? [refs[i] + ": " + s.error] : []);
+        if (problems.length) {
+          out2[d.id] = { rows: [], complete: false, error: "Upstream source unavailable", gaps: problems };
+          continue;
+        }
+        const meta = { complete: from.every((s) => s.complete), gaps: [...new Set(from.flatMap((s) => s.gaps || []))] };
+        try {
+          let rows;
+          if (d.op === "concat") rows = from.flatMap((s) => s.rows);
+          if (d.op === "select") rows = from[0].rows.map((row) => Object.fromEntries(Object.entries(d.fields).map(([key, v]) => [key, typeof v === "string" ? at(row, v) : v.value])));
+          if (d.op === "filter") rows = from[0].rows.filter((row) => matches(row, d.where));
+          if (d.op === "compare") {
+            const index = (source) => {
+              const m = /* @__PURE__ */ new Map();
+              for (const row of source.rows) {
+                const values = d.key.map((k) => at(row, k));
+                if (values.some((v) => v === void 0 || v === null)) throw invalid("Comparison key is missing");
+                const key = stable(values);
+                if (m.has(key)) throw invalid("Duplicate comparison key; include overload arguments or a stronger identity");
+                m.set(key, row);
+              }
+              return m;
+            };
+            const left = index(from[0]), right = index(from[1]);
+            rows = [.../* @__PURE__ */ new Set([...left.keys(), ...right.keys()])].sort().map((k) => {
+              const before = left.get(k), after = right.get(k), changes = before && after ? d.fields.filter((f) => stable(at(before, f)) !== stable(at(after, f))) : [], unknown = before && after && (d.required || []).some((f) => [at(before, f), at(after, f)].some((v) => v == null || v === ""));
+              return { key: Object.fromEntries(d.key.map((f) => [f, at(before || after, f)])), status: !before ? from[0].complete ? "only-right" : "unknown" : !after ? from[1].complete ? "only-left" : "unknown" : unknown ? "unknown" : changes.length ? "changed" : "same", before: before || null, after: after || null, changes };
+            });
+          }
+          out2[d.id] = bounded(rows, meta);
+        } catch (e) {
+          out2[d.id] = { rows: [], complete: false, error: e.message, gaps: meta.gaps };
+        }
+      }
+      return out2;
+    }
+    module2.exports = { normalize, params, bind, derive, at, matches, bounded, stable, invalid, id, READ_TOOLS, MAX_ROWS, digest: (value) => crypto.createHash("sha256").update(stable(value)).digest("hex") };
+  }
+});
+
+// lib/ui-page-templates.js
+var require_ui_page_templates = __commonJS({
+  "lib/ui-page-templates.js"(exports2, module2) {
+    var ref = (name) => ({ $param: name });
+    var environments = { left_env: { type: "environment", label: "Baseline environment", default: "dev" }, right_env: { type: "environment", label: "Compare environment", default: "uat" } };
+    var templates = {
+      "service-versions": {
+        version: 1,
+        title: "Service versions across environments",
+        description: "Compare reported deployments without mistaking missing version information for a match.",
+        inputs: { ...environments, services: { type: "services", label: "Services", default: ["orders-api", "billing-api"] } },
+        sources: [{ id: "baseline", label: "Baseline deployments", tool: "ui_page_data", arguments: { kind: "service_versions", env: ref("left_env"), services: ref("services") } }, { id: "candidate", label: "Comparison deployments", tool: "ui_page_data", arguments: { kind: "service_versions", env: ref("right_env"), services: ref("services") } }],
+        datasets: [{ id: "all_deployments", op: "concat", from: ["baseline", "candidate"] }, { id: "version_changes", op: "compare", left: "baseline", right: "candidate", key: ["service"], fields: ["version", "commit", "version_state"], required: ["version"] }],
+        widgets: [
+          { id: "how_to", type: "text", collapsed: true, title: "Reported deployments", text: "Choose environments and services, then Refresh. Mixed replicas and unreported versions stay visible. This is an observation from Consul and /version, not proof that instances run identical code.", span: 2 },
+          { id: "replicas", type: "metric", title: "Registered replicas", data: "all_deployments", op: "sum", field: "replicas" },
+          { id: "changes", type: "metric", title: "Services with differing version reports", data: "version_changes", op: "count", where: { field: "status", op: "eq", value: "changed" } },
+          { id: "versions_table", type: "table", title: "Service versions by environment", data: "all_deployments", span: 2, columns: [{ field: "service", label: "Service" }, { field: "environment", label: "Environment" }, { field: "version", label: "Version" }, { field: "replicas", label: "Replicas", format: "number" }, { field: "passing", label: "Passing", format: "number" }, { field: "version_state", label: "Version evidence", format: "status" }] },
+          { id: "drift", type: "comparison", title: "Deployment report differences", data: "version_changes", leftLabel: "Baseline", rightLabel: "Comparison", span: 2 }
+        ]
+      },
+      "procedure-parity": {
+        version: 1,
+        title: "Database routine parity",
+        description: "Find missing procedures and changed function definitions across two exact environment/database targets.",
+        inputs: { ...environments, left_db: { type: "database", label: "Baseline database", default: "orders", environment: "left_env" }, right_db: { type: "database", label: "Compare database", default: "orders", environment: "right_env" }, schemas: { type: "strings", label: "Schemas", default: ["public"] } },
+        sources: [{ id: "baseline", label: "Baseline routines", tool: "ui_page_data", arguments: { kind: "pg_routines", env: ref("left_env"), db: ref("left_db"), schemas: ref("schemas") } }, { id: "candidate", label: "Comparison routines", tool: "ui_page_data", arguments: { kind: "pg_routines", env: ref("right_env"), db: ref("right_db"), schemas: ref("schemas") } }],
+        datasets: [{ id: "routine_changes", op: "compare", left: "baseline", right: "candidate", key: ["schema", "name", "arguments"], fields: ["kind", "returns", "language", "definition_hash"] }],
+        widgets: [
+          { id: "identity", type: "text", collapsed: true, title: "Compare exact routine signatures", text: "Function and procedure overloads are separate objects: schema + name + identity arguments. Only a successful, complete query establishes absence. Definition hashes detect changes without returning large procedure bodies.", span: 2 },
+          { id: "absent", type: "metric", title: "Only in baseline", data: "routine_changes", op: "count", where: { field: "status", op: "eq", value: "only-left" } },
+          { id: "changed", type: "metric", title: "Changed definitions or result types", data: "routine_changes", op: "count", where: { field: "status", op: "eq", value: "changed" } },
+          { id: "parity", type: "comparison", title: "Routine differences", data: "routine_changes", leftLabel: "Baseline database", rightLabel: "Comparison database", span: 2 }
+        ]
+      },
+      "environment-monitor": {
+        version: 1,
+        title: "Environment watch",
+        description: "A compact, explicitly refreshed health board with retained observations.",
+        inputs: { env: { type: "environment", label: "Environment", default: "dev" } },
+        sources: [{ id: "services", tool: "health", arguments: { env: ref("env"), only_unhealthy: true } }, { id: "service_summary", tool: "health", arguments: { env: ref("env") }, select: "summary" }, { id: "elastic", tool: "es_health", arguments: { env: ref("env") }, select: "summary" }, { id: "consumers", tool: "kafka_lag", arguments: { env: ref("env"), top: 20 } }],
+        datasets: [],
+        widgets: [
+          { id: "usage", type: "text", collapsed: true, title: "An observation you can reproduce", text: "Refresh runs only the listed read tools. Monitoring is paused by default; choose an interval to opt in. A failed source is unavailable, never a green zero.", span: 2 },
+          { id: "down", type: "metric", title: "Services down", data: "service_summary", op: "value", field: "down" },
+          { id: "es", type: "metric", title: "Elasticsearch status", data: "elastic", op: "value", field: "status" },
+          { id: "service_table", type: "table", title: "Services needing attention", data: "services", columns: [{ field: "service", label: "Service" }, { field: "status", label: "Status", format: "status" }, { field: "passing", label: "Passing", format: "number" }, { field: "instances", label: "Replicas", format: "number" }] },
+          { id: "lag", type: "table", title: "Consumer lag", data: "consumers", columns: [{ field: "group", label: "Group" }, { field: "lag", label: "Lag", format: "number" }, { field: "state", label: "State", format: "status" }] }
+        ]
+      }
+    };
+    module2.exports = { list: () => Object.entries(templates).map(([id, d]) => ({ id, title: d.title, description: d.description })), get: (id) => {
+      if (!Object.hasOwn(templates, id)) throw require_ui_page_model().invalid("Unknown page template");
+      return structuredClone(templates[id]);
+    } };
+  }
+});
+
+// lib/ui-pages.js
+var require_ui_pages = __commonJS({
+  "lib/ui-pages.js"(exports2, module2) {
+    var fs3 = require("node:fs");
+    var path3 = require("node:path");
+    var A = require_access();
+    var C = require_config();
+    var E = require_execution();
+    var M = require_ui_page_model();
+    var atomic = (file, value) => require_atomic_file().atomicFile(file, JSON.stringify(value) + "\n", { mode: 384 });
+    var read = (file) => {
+      try {
+        return JSON.parse(fs3.readFileSync(file, "utf8"));
+      } catch (e) {
+        if (e.code === "ENOENT") return null;
+        throw e;
+      }
+    };
+    var fail = (message, code = "DT_NOT_FOUND", statusCode = 404) => {
+      throw Object.assign(Error(message), { code, statusCode });
+    };
+    function directory(scope = "shared") {
+      if (!["private", "shared"].includes(scope)) throw M.invalid("Page scope must be private or shared");
+      const root = path3.join(C.HOME, "pages", scope);
+      return scope === "shared" ? root : A.scopedDirectory(root);
+    }
+    function folder(id, scope) {
+      if (!M.id(id)) throw M.invalid("Page id must be a lowercase identifier up to 64 characters");
+      return path3.join(directory(scope), id);
+    }
+    function get(id, scope = "shared", revision) {
+      if (revision && !/^[a-f0-9]{64}$/.test(revision)) throw M.invalid("Invalid page revision");
+      const dir = folder(id, scope), head = revision ? { revision } : read(path3.join(dir, "head.json"));
+      if (!head) fail("Page is unavailable in this task");
+      if (!/^[a-f0-9]{64}$/.test(head.revision || "")) fail("Page revision pointer is damaged", "STATE_CONFLICT", 409);
+      const value = read(path3.join(dir, "revisions", head.revision + ".json"));
+      if (!value || value.id !== id || value.revision !== head.revision) fail("Page revision is missing or damaged", "STATE_CONFLICT", 409);
+      const { revision: hash, ...body } = value;
+      if (M.digest(body) !== hash) fail("Page revision content is damaged", "STATE_CONFLICT", 409);
+      return value;
+    }
+    function save({ id, scope = "shared", expected_revision, definition }) {
+      if (scope === "shared") A.requireAdmin();
+      const dir = folder(id, scope), d = M.normalize(definition);
+      if (expected_revision !== null && !/^[a-f0-9]{64}$/.test(expected_revision || "")) throw M.invalid("Read the current revision before saving, or use expected_revision=null for a new page");
+      if (list().pages.length >= 200 && !fs3.existsSync(path3.join(dir, "head.json"))) throw M.invalid("Page budget reached (200); update an existing page");
+      fs3.mkdirSync(dir, { recursive: true });
+      const lock = path3.join(dir, ".lock");
+      try {
+        fs3.mkdirSync(lock);
+      } catch (e) {
+        if (e.code !== "EEXIST") throw e;
+        const owner = read(path3.join(lock, "owner.json"));
+        let alive = Date.now() - fs3.statSync(lock).mtimeMs < 3e4;
+        if (owner?.pid) try {
+          process.kill(owner.pid, 0);
+          alive = true;
+        } catch (error) {
+          alive = error.code !== "ESRCH";
+        }
+        if (alive) fail("Page is being saved; reload and retry", "STATE_CONFLICT", 409);
+        fs3.rmSync(lock, { recursive: true });
+        try {
+          fs3.mkdirSync(lock);
+        } catch {
+          fail("Page is being saved; reload and retry", "STATE_CONFLICT", 409);
+        }
+      }
+      try {
+        fs3.writeFileSync(path3.join(lock, "owner.json"), JSON.stringify({ pid: process.pid }));
+        const previous = read(path3.join(dir, "head.json"));
+        if ((previous?.revision || null) !== expected_revision) fail("Page changed; reload before saving. Your draft was not saved.", "STATE_CONFLICT", 409);
+        const record = { id, scope, parent: previous?.revision || null, definition: d, at: (/* @__PURE__ */ new Date()).toISOString(), author: { principalId: A.current().principalId, storyId: A.current().storyId } }, revision = M.digest(record), value = { ...record, revision };
+        atomic(path3.join(dir, "revisions", revision + ".json"), value);
+        atomic(path3.join(dir, "head.json"), { id, scope, revision, title: d.title, description: d.description, at: record.at, author: record.author });
+        return value;
+      } finally {
+        fs3.rmSync(lock, { recursive: true, force: true });
+      }
+    }
+    function list({ q = "" } = {}) {
+      if (typeof q !== "string" || q.length > 300) throw M.invalid("Invalid page search");
+      const pages = [], gaps = [];
+      for (const scope of ["private", "shared"]) {
+        let names = [];
+        try {
+          names = fs3.readdirSync(directory(scope));
+        } catch (e) {
+          if (e.code !== "ENOENT") throw e;
+        }
+        for (const name of names.filter(M.id).slice(0, 200)) {
+          try {
+            const h = read(path3.join(folder(name, scope), "head.json"));
+            if (h && [h.id, h.title, h.description].join(" ").toLowerCase().includes(q.toLowerCase())) pages.push(h);
+          } catch {
+            gaps.push("An unreadable page was omitted");
+          }
+        }
+      }
+      return { pages: pages.sort((a, b) => a.title.localeCompare(b.title)), gaps, canPublish: A.current().role === "admin", story: A.current().storyId };
+    }
+    function history(record) {
+      const rows = [];
+      let rev = record.revision;
+      while (rev && rows.length < 20) {
+        const r = get(record.id, record.scope, rev);
+        rows.push({ revision: r.revision, at: r.at, author: r.author, title: r.definition.title });
+        rev = r.parent;
+      }
+      return rows;
+    }
+    var runDirectory = (record) => A.scopedDirectory(path3.join(C.PATHS.cache, "ui-pages", record.scope, record.id));
+    function runs(record) {
+      const rows = read(path3.join(runDirectory(record), "runs.json")) || [];
+      return rows.filter((r) => r.revision === record.revision).slice(0, 20);
+    }
+    function url(record, run2) {
+      const q = new URLSearchParams({ id: record.id, scope: record.scope, revision: record.revision, story: A.current().storyId });
+      if (run2) q.set("run", run2);
+      return require_results().publicUrl() + "/pages?" + q;
+    }
+    async function authorize(record, values) {
+      const tools = new Map((await require_tools().schemas({ metadata: true })).map((t) => [t.name, t]));
+      const sources = record.definition.sources.map((s) => ({ ...s, arguments: M.bind(s.arguments || {}, values) }));
+      for (const s of sources) {
+        if (s.rows !== void 0) continue;
+        const t = tools.get(s.tool);
+        A.checkTool(s.tool);
+        if (!t || t.origin !== "built-in") fail("Read source is unavailable: " + s.tool, "DT_ACCESS_DENIED", 403);
+        if (s.arguments.env) C.getEnv(s.arguments.env);
+        if (s.tool === "ui_page_data") {
+          const dependency = s.arguments.kind === "service_versions" ? "consul_service" : "pg_query";
+          if (!tools.has(dependency)) fail("Required read tool is unavailable: " + dependency, "DT_ACCESS_DENIED", 403);
+        }
+        const withDefaults = { ...s.arguments };
+        for (const [k, p] of Object.entries(t.inputSchema.properties || {})) if (withDefaults[k] === void 0 && p.default !== void 0) withDefaults[k] = p.default;
+        require_schema().assert(withDefaults, t.inputSchema);
+      }
+      return sources;
+    }
+    function snapshot(record, run2) {
+      const R = require_results();
+      if (!run2) return null;
+      const r = R.load(run2);
+      if (r?.view !== "ui-page" || r.data?.page?.id !== record.id || r.data.page.scope !== record.scope || r.data.page.revision !== record.revision) fail("Saved run is unavailable for this page/revision");
+      return r.data;
+    }
+    async function detail({ id, scope = "shared", revision, run: run2 } = {}) {
+      const record = get(id, scope, revision), recent = runs(record), selected = run2 || recent[0]?.id;
+      let saved = null, notice;
+      try {
+        saved = selected ? snapshot(record, selected) : null;
+      } catch (e) {
+        if (e.code !== "DT_NOT_FOUND") throw e;
+        notice = "Saved observation is unavailable or expired. The definition is retained; Refresh to collect a new result.";
+      }
+      return { record, history: history(record), runs: recent, url: url(record, selected), canEdit: scope !== "shared" || A.current().role === "admin", snapshot: saved, ...notice ? { notice } : {} };
+    }
+    function summarize(value) {
+      return { status: value.status, at: value.at, ms: value.ms, sources: Object.entries(value.sources).map(([id, s]) => ({ id, tool: s.tool, rows: s.rows.length, complete: s.complete, error: s.error || null })), datasets: Object.fromEntries(Object.entries(value.datasets).map(([id, d]) => [id, { rows: d.rows.length, complete: d.complete, error: d.error || null }])), gaps: value.gaps };
+    }
+    async function execute(record, values, sources, log) {
+      const machine = require_state_machine2().create(require_lifecycles().uiPageRun), started = Date.now(), loaded = {};
+      machine.to("reading");
+      try {
+        for (const s of sources) {
+          E.check();
+          const at = (/* @__PURE__ */ new Date()).toISOString(), start = Date.now();
+          log("Reading " + s.id + (s.tool ? " \xB7 " + s.tool : " \xB7 declared rows"));
+          try {
+            const raw = s.rows !== void 0 ? { rows: s.rows } : await require_tools().call(s.tool, s.arguments, { source: "ui-page" });
+            E.check();
+            const selected = M.at(raw, s.select ?? "rows"), array = Array.isArray(selected) ? selected : selected && typeof selected === "object" ? [selected] : null;
+            if (!array) throw Error("Select an array/object in the source response (for example rows, instances or summary)");
+            const partial = raw.complete === false || raw.truncated === true || (s.select ?? "rows") === "rows" && typeof raw.total === "number" && raw.total > array.length;
+            loaded[s.id] = M.bounded(require_redact().clean(array), { complete: !partial, gaps: [...raw.gaps || [], ...partial ? ["Source is incomplete; unmatched comparisons remain unknown"] : []], tool: s.tool || null, kind: s.rows !== void 0 ? "declared" : "tool", arguments: require_redact().clean(s.arguments), at, ms: Date.now() - start, evidence: raw.view || raw.evidence || null });
+          } catch (e) {
+            E.check();
+            loaded[s.id] = { rows: [], complete: false, error: require_redact().clean(e.message), gaps: [], tool: s.tool || null, arguments: require_redact().clean(s.arguments), at, ms: Date.now() - start };
+            log("Unavailable " + s.id + ": " + loaded[s.id].error);
+          }
+        }
+        machine.to("composing");
+        E.check();
+        const datasets = M.derive(record.definition, loaded, values), gaps = [...new Set(Object.entries(datasets).flatMap(([id2, d]) => [...(d.gaps || []).map((g) => id2 + ": " + g), ...d.error ? [id2 + ": " + d.error] : []]))];
+        let total = 0;
+        for (const [id2, d] of Object.entries(datasets)) {
+          total += Buffer.byteLength(JSON.stringify(d));
+          if (total > 6 * 1024 * 1024) throw Error("Page results exceed the 6 MiB budget; select fewer fields or rows");
+        }
+        const value = { protocol: "dt.ui-page-run/v1", page: { id: record.id, scope: record.scope, revision: record.revision, title: record.definition.title }, definition: record.definition, params: require_redact().clean(values), at: (/* @__PURE__ */ new Date()).toISOString(), ms: Date.now() - started, status: Object.values(datasets).some((d) => d.error) ? "partial" : Object.values(datasets).some((d) => !d.complete) ? "incomplete" : "complete", sources: loaded, datasets, gaps, url: url(record) };
+        machine.to("retaining");
+        E.check();
+        const view = require_results().saveView("ui-page", value, { title: record.definition.title }), id = view.split("/").pop(), summary = { id, view, revision: record.revision, at: value.at, status: value.status, params: value.params };
+        const recent = [summary, ...read(path3.join(runDirectory(record), "runs.json")) || []].slice(0, 20);
+        atomic(path3.join(runDirectory(record), "runs.json"), recent);
+        machine.to("done");
+        return { run: id, view, url: url(record, id), revision: record.revision, ...summarize(value) };
+      } catch (e) {
+        if (!machine.terminal) machine.to(E.signal()?.aborted ? "cancelled" : "failed");
+        throw e;
+      }
+    }
+    async function run({ id, scope = "shared", revision, params = {}, job, waitMs = 0 } = {}) {
+      if (!Number.isInteger(waitMs) || waitMs < 0 || waitMs > 3e4) throw M.invalid("waitMs must be 0..30000");
+      const J = require_jobs();
+      let active;
+      if (job) {
+        active = J.find(job);
+        if (!active || !active.key.startsWith("ui-page:")) fail("Page job is unavailable");
+      } else {
+        const record = get(id, scope, revision), values = M.params(record.definition, params), sources = await authorize(record, values);
+        active = J.start("ui-page:" + M.digest([scope, id, record.revision, values]), "Page \xB7 " + record.definition.title, (log) => execute(record, values, sources, log));
+      }
+      if (waitMs && active.state === "running") {
+        let timer;
+        await Promise.race([active.promise, new Promise((r) => {
+          timer = setTimeout(r, waitMs);
+        })]);
+        clearTimeout(timer);
+      }
+      const current = J.get(active.id);
+      return { job: current.id, state: current.state, executionId: current.executionId, log: current.log.slice(-5), ...current.error ? { error: current.error } : {}, ...current.result || {} };
+    }
+    async function open(args) {
+      const d = await detail(args), data = d.snapshot || { protocol: "dt.ui-page-run/v1", page: { id: d.record.id, scope: d.record.scope, revision: d.record.revision, title: d.record.definition.title }, definition: d.record.definition, status: "not-run", sources: {}, datasets: {}, params: {}, gaps: [], url: url(d.record) };
+      return { url: d.url, view: require_results().saveView("ui-page", data, { title: d.record.definition.title }), revision: d.record.revision, status: data.status, note: "Opening never executes sources. Open the live page and choose Refresh; shared viewers use their own permissions." };
+    }
+    async function catalog() {
+      const envs = C.envNames().filter(A.allowsEnv), databases = Object.fromEntries(envs.map((env) => [env, require_pg().databases(env).map((d) => d.name)])), services = /* @__PURE__ */ new Set();
+      for (const env of envs) {
+        const cache = read(path3.join(C.PATHS.cache, env, "consul.json"));
+        for (const name of Object.keys(cache?.services || {})) services.add(name);
+      }
+      try {
+        for (const s of require_passport().list()) if (!s.env || envs.includes(s.env)) services.add(s.service);
+      } catch {
+      }
+      const tools = (await require_tools().schemas()).map((t) => t.name);
+      return { envs, databases, services: [...services].sort().slice(0, 2e3), sourceTools: M.READ_TOOLS.filter((n) => tools.includes(n)), canPublish: A.current().role === "admin", story: A.current().storyId, templates: require_ui_page_templates().list(), primitives: ["text", "table", "metric", "comparison"], operations: ["select", "concat", "filter", "compare"] };
+    }
+    async function tool(a) {
+      switch (a.action) {
+        case "save": {
+          const r = save(a);
+          return { id: r.id, scope: r.scope, revision: r.revision, title: r.definition.title, url: url(r), saved: true };
+        }
+        case "get": {
+          const r = get(a.id, a.scope, a.revision);
+          return { ...r, history: history(r), runs: runs(r), url: url(r) };
+        }
+        case "list":
+          return list(a);
+        case "templates":
+          return a.template ? { template: a.template, definition: require_ui_page_templates().get(a.template) } : catalog();
+        case "open":
+          return open(a);
+        case "run":
+          return run(a);
+        default:
+          throw M.invalid("Choose templates, save, get, list, open or run");
+      }
+    }
+    module2.exports = { save, get, list, detail, run, open, catalog, tool, authorize, snapshot, execute };
+  }
+});
+
+// lib/ui-page-data.js
+var require_ui_page_data = __commonJS({
+  "lib/ui-page-data.js"(exports2, module2) {
+    var M = require_ui_page_model();
+    var ROUTINES_SQL = `select n.nspname as schema, p.proname as name,
+ pg_catalog.pg_get_function_identity_arguments(p.oid) as arguments,
+ case p.prokind when 'p' then 'procedure' else 'function' end as kind,
+ pg_catalog.pg_get_function_result(p.oid) as returns, l.lanname as language,
+ md5(pg_catalog.pg_get_functiondef(p.oid)) as definition_hash
+from pg_catalog.pg_proc p join pg_catalog.pg_namespace n on n.oid=p.pronamespace
+join pg_catalog.pg_language l on l.oid=p.prolang
+where n.nspname=any($1::text[]) and p.prokind in ('f','p')
+order by n.nspname,p.proname,arguments limit 2001`;
+    function version(instance) {
+      let v = instance.version;
+      if (typeof v === "string") {
+        try {
+          const parsed = JSON.parse(v);
+          v = parsed && typeof parsed === "object" ? parsed : { version: typeof parsed === "string" ? parsed : v };
+        } catch {
+          v = { version: v };
+        }
+      }
+      if (!v || typeof v !== "object") v = {};
+      return { version: v.version || v.build?.version || v.app?.version || instance.meta?.version || null, commit: v.commit?.id || v.commit || v.git?.commit?.id || v.git?.commit || instance.meta?.commit || null };
+    }
+    async function data(a) {
+      const env = a.env || require_config().envNames()[0];
+      require_config().getEnv(env);
+      const T = require_tools(), required = a.kind === "service_versions" ? "consul_service" : "pg_query";
+      if (!(await T.schemas()).some((t) => t.name === required)) throw Object.assign(Error("Required read tool is unavailable: " + required), { code: "DT_ACCESS_DENIED", statusCode: 403 });
+      if (a.kind === "pg_routines") {
+        if (typeof a.db !== "string" || !a.db || !Array.isArray(a.schemas) || !a.schemas.length || a.schemas.length > 20 || a.schemas.some((s) => typeof s !== "string" || s.length > 200)) throw M.invalid("pg_routines requires an exact database and 1..20 schemas");
+        const r = await T.call("pg_query", { env, db: a.db, sql: ROUTINES_SQL, params: [a.schemas], all: true }, { source: "ui-page" }), rows2 = r.rows || [], complete2 = rows2.length <= 2e3 && r.total <= rows2.length;
+        return M.bounded(rows2.slice(0, 2e3), { complete: complete2, gaps: complete2 ? [] : ["Routine query reached its 2,000-row limit; narrow schemas before interpreting absence"], env, db: r.db, kind: a.kind, observedAt: (/* @__PURE__ */ new Date()).toISOString(), evidence: r.view });
+      }
+      if (a.kind !== "service_versions" || !Array.isArray(a.services) || !a.services.length || a.services.length > 20 || a.services.some((s) => typeof s !== "string" || !s || s.length > 300)) throw M.invalid("service_versions requires 1..20 exact service names");
+      const rows = [], gaps = [];
+      let complete = true;
+      for (const service of new Set(a.services)) {
+        require_execution().check();
+        try {
+          const r = await T.call("consul_service", { env, name: service }, { source: "ui-page" });
+          if (r.service !== service) {
+            rows.push({ service, environment: env, status: "not registered", replicas: 0, passing: 0, version: null, commit: null, version_state: "not registered" });
+            continue;
+          }
+          const instances = r.instances || [], versions = instances.map(version), reported = [...new Set(versions.map((v) => v.version).filter(Boolean))], commits = [...new Set(versions.map((v) => v.commit).filter(Boolean).map((x) => typeof x === "object" ? JSON.stringify(x) : String(x)))];
+          rows.push({ service, environment: env, status: instances.some((i) => i.status === "critical") ? "critical" : instances.some((i) => i.status === "warning") ? "warning" : instances.length ? "passing" : "no instances", replicas: instances.length, passing: instances.filter((i) => i.status === "passing").length, version: versions.every((v) => v.version) ? reported.join(", ") || null : null, reported_versions: reported, commit: commits.join(", ") || null, version_state: reported.length > 1 ? "mixed" : reported.length && versions.every((v) => v.version) ? "reported" : "not fully reported", instances: instances.slice(0, 200).map((i, n) => ({ id: i.id, status: i.status, ...versions[n] })) });
+        } catch (e) {
+          if (require_execution().signal()?.aborted) throw e;
+          complete = false;
+          gaps.push(service + ": " + require_redact().clean(e.message));
+        }
+      }
+      return M.bounded(rows, { complete, gaps, env, kind: a.kind, observedAt: (/* @__PURE__ */ new Date()).toISOString() });
+    }
+    module2.exports = { data, ROUTINES_SQL, version };
+  }
+});
+
+// lib/tools-ui-pages.js
+var require_tools_ui_pages = __commonJS({
+  "lib/tools-ui-pages.js"(exports2, module2) {
+    module2.exports = () => [
+      { name: "ui_page", group: "views", origin: "built-in", strictInput: true, logArgs: ["action", "id", "scope", "job"], description: "Create small reproducible dashboards/widgets from declarative JSON primitives, without HTML or JS. Start action=templates; read a named template for the schema/example. Save/get versioned definitions, list/open retained pages, or explicitly run read sources. Open/save never execute. Shared definitions by default (admins publish); scope=private saves a task draft. Execution results stay private; viewers refresh with their own access. Poll a run with job; job_cancel cancels it.", input: { action: { type: "string", enum: ["templates", "save", "get", "list", "open", "run"] }, id: { type: "string" }, scope: { type: "string", enum: ["private", "shared"], default: "shared" }, template: { type: "string" }, q: { type: "string" }, revision: { type: "string" }, expected_revision: { type: ["string", "null"] }, definition: { type: "object", additionalProperties: true, description: 'version:1, title, inputs, sources, datasets, widgets. Use templates first. Exact {$param:"input"} references preserve types; widgets: text/table/metric/comparison.' }, params: { type: "object", additionalProperties: true }, job: { type: "string" }, waitMs: { type: "integer", minimum: 0, maximum: 3e4, default: 0 } }, required: ["action"], run: (a) => require_ui_pages().tool(a) },
+      { name: "ui_page_data", group: "views", origin: "built-in", strictInput: true, description: "Bounded dashboard reads: service_versions aggregates exact Consul services/replicas and reported versions; pg_routines reads overload-aware procedure/function signatures and definition hashes from an exact database. Normal consul_service/pg_query permissions, rate limits and telemetry apply. Incomplete reads never prove absence.", input: { kind: { type: "string", enum: ["service_versions", "pg_routines"] }, env: { type: "string" }, services: { type: "array", minItems: 1, maxItems: 20, items: { type: "string" } }, db: { type: "string" }, schemas: { type: "array", minItems: 1, maxItems: 20, items: { type: "string" } } }, required: ["kind"], run: (a) => require_ui_page_data().data(a) }
+    ];
   }
 });
 
@@ -71829,10 +72646,17 @@ var require_handbook_content = __commonJS({
         ], { steps: ["Read Self-context to see which tools and caches are available here.", "Search previous task memory by ticket. Open an exact context, then read progress.md.", "Use find for names; inspect a passport or definition before querying live data.", "Record what is known, the source identity, the next question and what would disprove the current hypothesis."], examples: [example("find", { env: "{{env}}", q: "{{service}}" }, "Find the service in cached evidence", "Catalog lines or an explicit empty-catalog hint. If empty, see Indices; repeated identical searches do not create coverage."), example("tool_search", { query: "investigate service error and reproduce related state" }, "Discover a compound workflow", "Enabled tools and planning guides, not an automatic diagnosis.")] }),
         section("object-workbench", "Browse the work before choosing a tool", [
           "Admin \u2192 Workbench and /workbench show a vertical folder navigator. Switch Contexts, Services or Tasks. Tasks group exact ticket/task metadata with related contexts and explicitly linked workspaces; these are separate from running jobs. Services group by common prefix, with declared context links, scripts, saved recipes and attributed API exchanges. Browsing retained names does not query live infrastructure.",
+          "Start at a task/context overview to open recent files, linked workspaces, saved actions, service script collections and indexed APIs. Search library searches these retained sources together; choose All work or the selected context/workspace. Include file contents explicitly for bounded text search within a selected folder. Models use workbench_search, then workbench_inspect on a returned node. No network or model call is needed to search.",
           "Choose a service or file to see relevant actions. Select an evidence context; prepare tests, Consul status, SQL, scripts or API requests, review editable arguments, then Run. Branch navigation explicitly refreshes remote refs and opens a separate owned checkout. Attach it to the evidence context to rediscover it under the ticket. Dirty sources in the original workspace stay there.",
           "The text editor keeps up to 12 dirty drafts in the current user/task scope and supports UTF-8 files up to 64 KiB. Saves reject stale revisions. Reload preserves the draft and shows the saved version for reconciliation. Large, binary and non-UTF8 files remain read-only. Save prepared action retains a redacted recipe in the selected context; reopening prepares it without running. Verify naming-only script candidates before reuse.",
           "Copy view link shares a live selection requiring the recipient\u2019s normal authentication and tool grants. Copy run link retains the invocation/result rather than replaying it. Optional model suggestions remain editable. A successful invocation does not prove passing tests or a successful HTTP response."
-        ], { examples: [example("workbench_open", { mode: "services", service: "{{service}}", env: "{{env}}" }, "Open the interactive service workbench", "An authenticated live page; no action executes when opened."), example("workbench_open", { mode: "tasks", task: "{{ticket}}" }, "Browse a ticket and related work", "Contexts and explicitly linked workspaces in the current story."), example("workbench_save", { context: "{{context}}", title: "Service status", tool: "consul_service", arguments: { env: "{{env}}", name: "{{service}}" }, service: "{{service}}" }, "Retain a prepared service check", "A revision-checked context recipe, with credentials redacted; does not execute.")], figure: figure("workbench-explorer-desktop.png", "Interactive service/task navigator; disposable Git/Node demo with local Consul/HTTP fixtures.") }),
+        ], { examples: [example("workbench_search", { context: "{{context}}", kind: "all", query: "" }, "Find saved work for the task", "Retained notes, workspaces, script collections and indexed APIs with exact node IDs."), example("workbench_open", { mode: "services", service: "{{service}}", env: "{{env}}" }, "Open the interactive service workbench", "An authenticated live page; no action executes when opened."), example("workbench_open", { mode: "tasks", task: "{{ticket}}" }, "Browse a ticket and related work", "Contexts and explicitly linked workspaces in the current story."), example("workbench_save", { context: "{{context}}", title: "Service status", tool: "consul_service", arguments: { env: "{{env}}", name: "{{service}}" }, service: "{{service}}" }, "Retain a prepared service check", "A revision-checked context recipe, with credentials redacted; does not execute.")], figure: figure("workbench-explorer-desktop.png", "Interactive service/task navigator; disposable Git/Node demo with local Consul/HTTP fixtures.") }),
+        section("executable-pages", "Keep a question as an executable page", [
+          "Admin \u2192 Pages combines read tools with declarative text, metrics, tables and keyed comparisons. Start from service versions, database routine parity or environment watch; select targets, Save, then explicitly Refresh. Database choices follow their environment. Opening or filtering never executes sources.",
+          "Definitions are shared by default with admin publication; other users can keep private task drafts. Execution results remain scoped to each viewer and chat. Refresh uses the normal registry, permissions, rate limits and telemetry; jobs support cancellation. Monitoring starts paused and stops while hidden.",
+          "Procedure comparison keys include schema, name and identity arguments. Failed sources block comparison, and truncated reads cannot establish absence. Required unreported versions stay unknown. Open exact evidence before deciding that a deployment or routine is missing.",
+          "Copy page link shares a pinned definition. Copy result link deliberately shares one read-only snapshot through existing keyed-result access; it cannot execute or enumerate other results. Export definition/inputs/results or copy the pinned rerun command for reproduction."
+        ], { examples: [example("ui_page", { action: "templates", template: "procedure-parity" }, "Read the routine-parity starter", "A declarative definition; no database is queried."), example("ui_page", { action: "list" }, "Find reusable pages", "Shared definitions and private pages in this task.")], figure: figure("pages-procedures.png", "Disposable local app with scoped synthetic PostgreSQL read adapters; not a production observation.") }),
         section("first-answer", "Build an answer someone can audit", "A useful first answer names the symptom, environment, deployed/source identity, observed evidence and uncertainty. Link the native view, cite exact file:line or documentation blocks, and distinguish an observation from a proposed cause. A service-name match, green health badge or path through a graph is a starting point.", { table: { headers: ["Question", "Start with", "Check before concluding"], rows: [["What is this service?", "passport / showcase", "Source SHA, library resolution and missing evidence"], ["Who writes this field?", "find \u2192 pg_usage / field_trace", "Column classification, dynamic SQL and missing passports"], ["What failed around this request?", "logs_search \u2192 logs_trace", "Time window, trace/tenant/entity identity and instance"], ["Can I reproduce it?", "scenario_inventory \u2192 fixture_plan", "Required reads, scope, execution target and independent expectations"]] }, figure: figure("ux-admin-navigation.png", "Admin groups investigation, work and operations; synthetic demo environment.") })
       ], ["self-context", "task-memory", "indices", "case-contracts"]),
       chapter("self-context", "Dev-tool\u2019s own operating context", "Start here", "Understand this installation and keep a durable briefing without copying credentials.", "Refresh a scoped app briefing and preserve operator knowledge across chats.", ["Open the Self-context view in this handbook."], [
@@ -72175,6 +72999,7 @@ node cli.js tool label_stats '{"label":"refund approved"}'` }
       xml: ["Which element matters?", "Read formatted hierarchy/source, wrap long lines and copy/download only what is needed."]
     };
     visualHelp["ui-trace"] = ["How does this UI action reach a database field?", "Inspect the captured UI state and observed API requests, expand exact retained service paths and their assumptions, then inspect catalog fields. Edit reproducible replay steps or source-pinned bindings; browser replay and read-only SQL require explicit actions."];
+    visualHelp["ui-page"] = ["How can I keep this question as a reusable dashboard?", "Filter retained tables/comparisons, expand exact routine signatures and inspect saved inputs/revision. Open the live Pages host to choose targets and explicitly Refresh. Definitions are shared by default with admin publication; each viewer retains private results. Incomplete reads cannot establish absence."];
     module2.exports = { version: 1, title: "The dev-tool field guide", chapters, indexes, groupChapters, visualHelp };
   }
 });
@@ -72185,7 +73010,10 @@ var require_tool_profiles = __commonJS({
     var CORE = ["find", "tool_search", "tool_describe", "tool_execute", "tool_profiles", "tool_contracts", "knowledge_graph", "knowledge_search", "job_cancel", "call_history", "doctor"];
     var DISCOVERY = ["tool_search", "tool_describe", "tool_execute", "tool_profiles"];
     var DIRECT = [
+      "ui_page",
       "workbench_open",
+      "workbench_search",
+      "workbench_inspect",
       "workbench_save",
       "jenkins_jobs",
       "jenkins_build",
@@ -72282,7 +73110,10 @@ var require_tool_profiles = __commonJS({
       "tool_execute"
     ];
     var TESTER = [
+      "ui_page",
       "workbench_open",
+      "workbench_search",
+      "workbench_inspect",
       "workbench_save",
       "project_context_find",
       "project_context_get",
@@ -72376,7 +73207,8 @@ var require_tool_profiles = __commonJS({
       "tool_execute"
     ];
     var PROFILES = {
-      workbench: { description: "Clickable ticket/service/context exploration, saved actions, separate branch checkouts and retained deployment status. A small starting set for interactive task work.", includeCore: false, names: [...DISCOVERY, "workbench_open", "workbench_save", "context_find", "context_get", "context_read", "context_run", "consul_service", "workspace_list", "workspace_branches", "workspace_branch"] },
+      pages: { description: "Declarative widgets, monitoring dashboards and environment/database comparisons with retained results; no HTML or JS.", includeCore: false, names: [...DISCOVERY, "ui_page", "ui_page_data", "job_cancel", "result_read"] },
+      workbench: { description: "Clickable ticket/service/context exploration, saved actions, separate branch checkouts and retained deployment status. A small starting set for interactive task work.", includeCore: false, names: [...DISCOVERY, "workbench_open", "workbench_search", "workbench_inspect", "workbench_save", "context_find", "context_get", "context_read", "context_run", "consul_service", "workspace_list", "workspace_branches", "workspace_branch"] },
       ci: { description: "Pinned Jenkins builds, draft PR checks and review iteration with resumable waits and task checkpoints.", includeCore: false, prefixes: ["jenkins_", "bitbucket_pr_"], names: [...DISCOVERY, "workspace_patch", "workspace_push", "context_open", "context_read", "context_write", "chat_context_status", "chat_compaction_request"] },
       architecture: { description: "Shared architecture explanations, C4 and feature/data flows, environment observations and exports. Admins publish; everyone reads.", prefixes: ["ui_trace", "architecture_", "project_context_"], names: [...CORE, "semantic_query", "semantic_trace", "passport", "consul_service"] },
       semantic: { description: "Entry-to-exit change paths, before/after branches, conditions, loops, stream callbacks and inherited library logic; whole-entry maps, exact revisions and editable passport ports.", includeCore: false, names: [...DISCOVERY, "semantic_capabilities", "semantic_index", "semantic_search", "semantic_query", "semantic_trace", "semantic_ports", "passport_adjustments", "passport_adjust", "passport", "code_search", "code_read", "job_cancel", "call_history"] },
@@ -72526,8 +73358,12 @@ var require_capability_map = __commonJS({
       ["tools", "Tool catalog", "Discover exact capabilities and extension contracts."]
     ].map(([key, label, description]) => ({ id: "object:" + key, key, label, description, kind: "object" }));
     var groupObject = { jenkins: "execution", catalog: "tools", pg: "table", es: "search-index", kafka: "topic", consul: "environment", logs: "environment", bitbucket: "repository", confluence: "documentation", passport: "service", showcase: "service", browser: "api", api: "api", scripts: "automation", views: "evidence", files: "files", history: "execution", context: "context", map: "service", architecture: "memory", runtime: "execution", semantic: "component", knowledge: "memory" };
-    var exact = { workbench_open: "task", workbench_save: "context", find: "database", catalog_search: "database", catalog_usage: "table", pg_query: "database", ddl_snapshot: "database", feature: "documentation", result_read: "evidence", self_context: "task", workflow_plan: "task", handbook: "task", checks: "task", test_coverage: "workspace", differential_check: "workspace", impact: "component", job_cancel: "execution", call_patterns: "automation", evaluation_evidence: "evidence" };
+    var exact = { ui_page: "evidence", ui_page_data: "environment", workbench_search: "context", workbench_inspect: "context", workbench_open: "task", workbench_save: "context", find: "database", catalog_search: "database", catalog_usage: "table", pg_query: "database", ddl_snapshot: "database", feature: "documentation", result_read: "evidence", self_context: "task", workflow_plan: "task", handbook: "task", checks: "task", test_coverage: "workspace", differential_check: "workspace", impact: "component", job_cancel: "execution", call_patterns: "automation", evaluation_evidence: "evidence" };
     var questions = {
+      ui_page: "How can I keep this investigation as a shareable dashboard with a Refresh button?",
+      ui_page_data: "Which service versions or routine signatures exist in this exact environment?",
+      workbench_search: "Where are the notes, scripts, workspaces and service APIs for this task?",
+      workbench_inspect: "How can I inspect this saved artifact before editing or running it?",
       ui_trace_edit: "How can I manually correct missing service or procedure links without replaying the UI?",
       ui_trace: "How can I trace a reproducible UI state through services to a database field?",
       ui_trace_save: "How can I save replay steps and correct missing field bindings?",
@@ -76735,6 +77571,47 @@ var require_state_machine_runtime = __commonJS({
           }
         },
         {
+          name: "UI-page.run",
+          initial: "ready",
+          states: [
+            "ready",
+            "reading",
+            "composing",
+            "retaining",
+            "done",
+            "cancelled",
+            "failed"
+          ],
+          terminal: [
+            "done",
+            "cancelled",
+            "failed"
+          ],
+          transitions: {
+            ready: [
+              "reading"
+            ],
+            reading: [
+              "composing",
+              "cancelled",
+              "failed"
+            ],
+            composing: [
+              "retaining",
+              "cancelled",
+              "failed"
+            ],
+            retaining: [
+              "done",
+              "cancelled",
+              "failed"
+            ],
+            done: [],
+            cancelled: [],
+            failed: []
+          }
+        },
+        {
           name: "UI.activity",
           initial: "idle",
           states: [
@@ -76884,7 +77761,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "76003598b4a81f464482299af8a0455be10e13ac1b78b8def3e227c887f27556";
+      if (true) return "a066997b3325ca9b1c7be4bc4bd75d095ae5f6df15cd75e6211057b5c6cd71ee";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -80980,6 +81857,7 @@ var require_tools = __commonJS({
     TOOLS.push(...require_tools_context()({ str, int }));
     TOOLS.push(...require_tools_ci()({ str, int }));
     TOOLS.push(...require_tools_workbench()());
+    TOOLS.push(...require_tools_ui_pages()());
     TOOLS.push(...require_tools_project_context()({ str, int }));
     TOOLS.push(...require_tools_handbook()({ str, int, env }));
     TOOLS.push(...require_tools_map()({ str, int, env }));
@@ -84716,6 +85594,9 @@ var require_server2 = __commonJS({
     var admin = require_admin();
     var tokenOk = (url, value) => results.verify(value, url.searchParams.get("t"));
     var CORS = { "access-control-allow-origin": "*" };
+    async function pageAccess() {
+      if (!(await tools.schemas()).some((t) => t.name === "ui_page")) throw Object.assign(Error("Pages are unavailable for this credential"), { code: "DT_ACCESS_DENIED", statusCode: 403 });
+    }
     var routes = [
       ["GET", "/model/v1/models", true, (req, res) => require_model_gateway().handle(req, res, "models")],
       ["POST", "/model/v1/chat/completions", true, async (req, res) => require_model_gateway().handle(req, res, "chat/completions", await readJsonBody(req))],
@@ -84736,6 +85617,27 @@ var require_server2 = __commonJS({
         res.end(fs3.readFileSync(file));
       }],
       ["GET", "/api-client", true, page("api-client.html")],
+      ["GET", "/pages", false, (req, res, url) => {
+        if (!trusted(req)) {
+          const next = "/pages" + url.search, escape = (value) => value.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+          res.writeHead(401, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "referrer-policy": "no-referrer", "content-security-policy": "default-src 'none'; style-src 'self'; form-action 'self'; frame-ancestors 'none'" });
+          return res.end('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in to Pages</title><link rel="stylesheet" href="/static/ui.css"><main class="wrap"><h1>Sign in to Pages</h1><p>Shared definitions run with your own access. Your token stays out of the URL.</p><form action="/api/session" method="post"><input type="hidden" name="next" value="' + escape(next) + '"><label for="token">Access token</label> <input id="token" name="token" type="password" required autocomplete="current-password"> <button>Sign in</button></form></main></html>');
+        }
+        res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "referrer-policy": "no-referrer", "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self'; connect-src 'self'; img-src data:; object-src 'none'; base-uri 'none'; frame-ancestors 'self'" });
+        res.end(fs3.readFileSync(path3.join(__dirname, "web/pages.html")));
+      }],
+      ["GET", "/api/pages/catalog", true, async (req, res) => {
+        await pageAccess();
+        send(res, 200, await require_ui_pages().catalog());
+      }],
+      ["POST", "/api/pages/detail", true, async (req, res) => {
+        await pageAccess();
+        send(res, 200, await require_ui_pages().detail(await readJsonBody(req)));
+      }],
+      ["GET", "/api/pages/job", true, async (req, res, url) => {
+        await pageAccess();
+        send(res, 200, await require_ui_pages().run({ job: url.searchParams.get("job") }));
+      }],
       ["GET", "/", false, (req, res) => send(res, 200, { name: "dt", mcp: "/mcp", openapi: "/openapi.json", tools: "/api/tools", status: "/api/status", admin: "/admin", results: "/view", prompt: "/api/prompt" })],
       ["GET", "/health", false, (req, res) => send(res, 200, { ok: true, version: VERSION3 })],
       ["GET", "/api/status", false, (req, res) => send(res, 200, { trusted: trusted(req), ...status() })],
@@ -84774,7 +85676,7 @@ var require_server2 = __commonJS({
         let next = "/admin";
         if (typeof body.next === "string" && body.next.length < 5e3) {
           const target = new URL(body.next, "http://local");
-          if (target.origin === "http://local" && target.pathname === "/workbench") next = target.pathname + target.search;
+          if (target.origin === "http://local" && ["/workbench", "/pages"].includes(target.pathname)) next = target.pathname + target.search;
         }
         res.writeHead(303, { location: next, "set-cookie": cookie2, "cache-control": "no-store", "referrer-policy": "no-referrer" });
         res.end();
@@ -84802,6 +85704,7 @@ var require_server2 = __commonJS({
       }],
       ["POST", "/api/admin/workbench/tree", true, async (req, res) => send(res, 200, await require_workbench_explorer().tree(await readJsonBody(req)))],
       ["POST", "/api/admin/workbench/detail", true, async (req, res) => send(res, 200, await require_workbench_explorer().detail(await readJsonBody(req)))],
+      ["POST", "/api/admin/workbench/search", true, async (req, res) => send(res, 200, await require_workbench_explorer().search(await readJsonBody(req)))],
       ["GET", "/api/admin/workbench", true, async (req, res, url) => send(res, 200, await require_workbench().bootstrap({ env: url.searchParams.get("env") || void 0 }))],
       ["POST", "/api/admin/workbench/choices", true, async (req, res) => send(res, 200, await require_workbench().choices(await readJsonBody(req)))],
       ["POST", "/api/admin/workbench/run", true, async (req, res) => send(res, 202, await require_workbench().start(await readJsonBody(req)))],

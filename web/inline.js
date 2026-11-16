@@ -97,6 +97,9 @@ const dtInline = {
     } else if (view === 'semantic-path-trace') {
       failed ||= ['failed','interrupted'].includes(d.state) || ['inconclusive','partial-static-path-change'].includes(d.assessment?.status);
       summary = [d.assessment?.status || d.state || 'Preparing trace', `${d.sides?.length||0} retained revisions`,d.assessment ? `${d.assessment.dataChanges||0} value / ${d.assessment.controlChanges||0} control differences` : null].filter(Boolean).join(' · ');
+    } else if (view === 'ui-page') {
+      failed ||= ['partial','incomplete'].includes(d.status);
+      summary = `${d.status || 'not-run'} · ${d.definition?.widgets?.length||0} widgets${d.at?' · saved observation':''}`;
     } else if (view === 'ui-trace') {
       summary = `${c.requests||0} requests · ${c.services||0} services · ${c.states||0} static states · ${c.fields||0} fields`;
     } else if (view === 'semantic-flow-map') {

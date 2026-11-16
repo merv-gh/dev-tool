@@ -1,0 +1,130 @@
+{
+  "version": 1,
+  "title": "Environment watch",
+  "description": "A compact, explicitly refreshed health board with retained observations.",
+  "inputs": {
+    "env": {
+      "type": "environment",
+      "label": "Environment",
+      "default": "dev"
+    }
+  },
+  "sources": [
+    {
+      "id": "services",
+      "tool": "health",
+      "arguments": {
+        "env": {
+          "$param": "env"
+        },
+        "only_unhealthy": true
+      }
+    },
+    {
+      "id": "service_summary",
+      "tool": "health",
+      "arguments": {
+        "env": {
+          "$param": "env"
+        }
+      },
+      "select": "summary"
+    },
+    {
+      "id": "elastic",
+      "tool": "es_health",
+      "arguments": {
+        "env": {
+          "$param": "env"
+        }
+      },
+      "select": "summary"
+    },
+    {
+      "id": "consumers",
+      "tool": "kafka_lag",
+      "arguments": {
+        "env": {
+          "$param": "env"
+        },
+        "top": 20
+      }
+    }
+  ],
+  "datasets": [],
+  "widgets": [
+    {
+      "id": "usage",
+      "type": "text",
+      "collapsed": true,
+      "title": "An observation you can reproduce",
+      "text": "Refresh runs only the listed read tools. Monitoring is paused by default; choose an interval to opt in. A failed source is unavailable, never a green zero.",
+      "span": 2
+    },
+    {
+      "id": "down",
+      "type": "metric",
+      "title": "Services down",
+      "data": "service_summary",
+      "op": "value",
+      "field": "down"
+    },
+    {
+      "id": "es",
+      "type": "metric",
+      "title": "Elasticsearch status",
+      "data": "elastic",
+      "op": "value",
+      "field": "status"
+    },
+    {
+      "id": "service_table",
+      "type": "table",
+      "title": "Services needing attention",
+      "data": "services",
+      "columns": [
+        {
+          "field": "service",
+          "label": "Service"
+        },
+        {
+          "field": "status",
+          "label": "Status",
+          "format": "status"
+        },
+        {
+          "field": "passing",
+          "label": "Passing",
+          "format": "number"
+        },
+        {
+          "field": "instances",
+          "label": "Replicas",
+          "format": "number"
+        }
+      ]
+    },
+    {
+      "id": "lag",
+      "type": "table",
+      "title": "Consumer lag",
+      "data": "consumers",
+      "columns": [
+        {
+          "field": "group",
+          "label": "Group"
+        },
+        {
+          "field": "lag",
+          "label": "Lag",
+          "format": "number"
+        },
+        {
+          "field": "state",
+          "label": "State",
+          "format": "status"
+        }
+      ]
+    }
+  ]
+}

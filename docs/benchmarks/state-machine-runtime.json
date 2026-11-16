@@ -3795,6 +3795,47 @@
       }
     },
     {
+      "name": "UI-page.run",
+      "initial": "ready",
+      "states": [
+        "ready",
+        "reading",
+        "composing",
+        "retaining",
+        "done",
+        "cancelled",
+        "failed"
+      ],
+      "terminal": [
+        "done",
+        "cancelled",
+        "failed"
+      ],
+      "transitions": {
+        "ready": [
+          "reading"
+        ],
+        "reading": [
+          "composing",
+          "cancelled",
+          "failed"
+        ],
+        "composing": [
+          "retaining",
+          "cancelled",
+          "failed"
+        ],
+        "retaining": [
+          "done",
+          "cancelled",
+          "failed"
+        ],
+        "done": [],
+        "cancelled": [],
+        "failed": []
+      }
+    },
+    {
       "name": "UI.activity",
       "initial": "idle",
       "states": [

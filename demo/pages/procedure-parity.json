@@ -1,0 +1,134 @@
+{
+  "version": 1,
+  "title": "Database routine parity",
+  "description": "Find missing procedures and changed function definitions across two exact environment/database targets.",
+  "inputs": {
+    "left_env": {
+      "type": "environment",
+      "label": "Baseline environment",
+      "default": "dev"
+    },
+    "right_env": {
+      "type": "environment",
+      "label": "Compare environment",
+      "default": "uat"
+    },
+    "left_db": {
+      "type": "database",
+      "label": "Baseline database",
+      "default": "orders",
+      "environment": "left_env"
+    },
+    "right_db": {
+      "type": "database",
+      "label": "Compare database",
+      "default": "orders",
+      "environment": "right_env"
+    },
+    "schemas": {
+      "type": "strings",
+      "label": "Schemas",
+      "default": [
+        "public"
+      ]
+    }
+  },
+  "sources": [
+    {
+      "id": "baseline",
+      "label": "Baseline routines",
+      "tool": "ui_page_data",
+      "arguments": {
+        "kind": "pg_routines",
+        "env": {
+          "$param": "left_env"
+        },
+        "db": {
+          "$param": "left_db"
+        },
+        "schemas": {
+          "$param": "schemas"
+        }
+      }
+    },
+    {
+      "id": "candidate",
+      "label": "Comparison routines",
+      "tool": "ui_page_data",
+      "arguments": {
+        "kind": "pg_routines",
+        "env": {
+          "$param": "right_env"
+        },
+        "db": {
+          "$param": "right_db"
+        },
+        "schemas": {
+          "$param": "schemas"
+        }
+      }
+    }
+  ],
+  "datasets": [
+    {
+      "id": "routine_changes",
+      "op": "compare",
+      "left": "baseline",
+      "right": "candidate",
+      "key": [
+        "schema",
+        "name",
+        "arguments"
+      ],
+      "fields": [
+        "kind",
+        "returns",
+        "language",
+        "definition_hash"
+      ]
+    }
+  ],
+  "widgets": [
+    {
+      "id": "identity",
+      "type": "text",
+      "collapsed": true,
+      "title": "Compare exact routine signatures",
+      "text": "Function and procedure overloads are separate objects: schema + name + identity arguments. Only a successful, complete query establishes absence. Definition hashes detect changes without returning large procedure bodies.",
+      "span": 2
+    },
+    {
+      "id": "absent",
+      "type": "metric",
+      "title": "Only in baseline",
+      "data": "routine_changes",
+      "op": "count",
+      "where": {
+        "field": "status",
+        "op": "eq",
+        "value": "only-left"
+      }
+    },
+    {
+      "id": "changed",
+      "type": "metric",
+      "title": "Changed definitions or result types",
+      "data": "routine_changes",
+      "op": "count",
+      "where": {
+        "field": "status",
+        "op": "eq",
+        "value": "changed"
+      }
+    },
+    {
+      "id": "parity",
+      "type": "comparison",
+      "title": "Routine differences",
+      "data": "routine_changes",
+      "leftLabel": "Baseline database",
+      "rightLabel": "Comparison database",
+      "span": 2
+    }
+  ]
+}

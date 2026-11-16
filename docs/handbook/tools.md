@@ -4280,6 +4280,8 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
 - [`view_get`](#tool-view_get)
 - [`view_save`](#tool-view_save)
 - [`workbench_open`](#tool-workbench_open)
+- [`ui_page`](#tool-ui_page)
+- [`ui_page_data`](#tool-ui_page_data)
 
 <a id="tool-show"></a>
 
@@ -4480,6 +4482,10 @@ Workflow: [Your first investigation](README.md#start) · Origin: built-in
 {
   "type": "object",
   "properties": {
+    "node": {
+      "type": "string",
+      "description": "Optional exact node ID from workbench_search; selects a file, workspace, script or API."
+    },
     "mode": {
       "type": "string",
       "enum": [
@@ -4507,6 +4513,138 @@ Workflow: [Your first investigation](README.md#start) · Origin: built-in
     }
   },
   "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-ui_page"></a>
+
+### ui_page
+
+Create small reproducible dashboards/widgets from declarative JSON primitives, without HTML or JS. Start action=templates; read a named template for the schema/example. Save/get versioned definitions, list/open retained pages, or explicitly run read sources. Open/save never execute. Shared definitions by default (admins publish); scope=private saves a task draft. Execution results stay private; viewers refresh with their own access. Poll a run with job; job_cancel cancels it.
+
+Workflow: [Every visualization: what to read and do](README.md#visualizations) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": {
+      "type": "string",
+      "enum": [
+        "templates",
+        "save",
+        "get",
+        "list",
+        "open",
+        "run"
+      ]
+    },
+    "id": {
+      "type": "string"
+    },
+    "scope": {
+      "type": "string",
+      "enum": [
+        "private",
+        "shared"
+      ],
+      "default": "shared"
+    },
+    "template": {
+      "type": "string"
+    },
+    "q": {
+      "type": "string"
+    },
+    "revision": {
+      "type": "string"
+    },
+    "expected_revision": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "definition": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "version:1, title, inputs, sources, datasets, widgets. Use templates first. Exact {$param:\"input\"} references preserve types; widgets: text/table/metric/comparison."
+    },
+    "params": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "job": {
+      "type": "string"
+    },
+    "waitMs": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 30000,
+      "default": 0
+    }
+  },
+  "required": [
+    "action"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-ui_page_data"></a>
+
+### ui_page_data
+
+Bounded dashboard reads: service_versions aggregates exact Consul services/replicas and reported versions; pg_routines reads overload-aware procedure/function signatures and definition hashes from an exact database. Normal consul_service/pg_query permissions, rate limits and telemetry apply. Incomplete reads never prove absence.
+
+Workflow: [Every visualization: what to read and do](README.md#visualizations) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "enum": [
+        "service_versions",
+        "pg_routines"
+      ]
+    },
+    "env": {
+      "type": "string"
+    },
+    "services": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "items": {
+        "type": "string"
+      }
+    },
+    "db": {
+      "type": "string"
+    },
+    "schemas": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "kind"
+  ],
   "additionalProperties": false
 }
 ```
@@ -8588,6 +8726,8 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
 - [`context_hint`](#tool-context_hint)
 - [`chat_context_status`](#tool-chat_context_status)
 - [`chat_compaction_request`](#tool-chat_compaction_request)
+- [`workbench_search`](#tool-workbench_search)
+- [`workbench_inspect`](#tool-workbench_inspect)
 - [`workbench_save`](#tool-workbench_save)
 - [`project_context_find`](#tool-project_context_find)
 - [`project_context_get`](#tool-project_context_get)
@@ -9406,6 +9546,105 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
   "required": [
     "context",
     "checkpoint"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-workbench_search"></a>
+
+### workbench_search
+
+Search task/context files, owned workspaces, script collections and indexed service APIs together. Fast retained metadata by default; content=true searches text only in an explicit context/workspace with scan limits. Select a returned node with workbench_inspect or workbench_open. No execution or network calls.
+
+Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "query": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "all",
+        "contexts",
+        "files",
+        "workspaces",
+        "scripts",
+        "apis"
+      ],
+      "default": "all"
+    },
+    "context": {
+      "type": "string",
+      "description": "Optional exact context ID to scope related files, workspaces, scripts and service APIs."
+    },
+    "workspace": {
+      "type": "string",
+      "description": "Exact owned workspace for bounded source text search."
+    },
+    "service": {
+      "type": "string"
+    },
+    "env": {
+      "type": "string"
+    },
+    "content": {
+      "type": "boolean",
+      "default": false
+    },
+    "offset": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000,
+      "default": 0
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100,
+      "default": 40
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-workbench_inspect"></a>
+
+### workbench_inspect
+
+Inspect a node returned by workbench_search: retained file/revision, workspace, script/collection or indexed endpoint with source evidence and available prepared actions. Does not run actions. API base URLs remain an explicit deployment choice.
+
+Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "node": {
+      "type": "string",
+      "description": "Exact node ID from workbench_search."
+    },
+    "env": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "node"
   ],
   "additionalProperties": false
 }

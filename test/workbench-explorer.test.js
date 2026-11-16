@@ -71,3 +71,36 @@ test('incomplete retained metadata reports gaps and remains navigable without li
  await assert.rejects(X.tree({parent:X.id({kind:'context-file',context:'orders-142',path:'notes/progress.md'})}),/no folders/);await assert.rejects(X.detail({node:X.id({kind:'task',task:'NOT-LINKED'})}),/unavailable/);
  });
 });
+test('task library searches related files, workspaces, script collections and indexed service APIs without requests',async()=>{
+ await owned(async()=>{const before=fixture.requests.length,M=require('../lib/context');M.write({id:'orders-142',path:'notes/opaque.txt',content:'Distinctive needle-from-body',summary:'Generic file'});
+ const all=await X.search({env:'dev',context:'orders-142'});for(const kind of ['context','context-file','workspace','script','script-collection','api-route'])assert.ok(all.nodes.some(n=>n.kind===kind),kind);
+ assert.ok(!all.nodes.some(n=>n.ref.service==='billing-api'));assert.ok(!JSON.stringify(all).includes('demo-server-side-token'));
+ const names=await X.search({env:'dev',context:'orders-142',kind:'files',query:'needle-from-body'});assert.equal(names.total,0);
+ const body=await X.search({env:'dev',context:'orders-142',kind:'files',query:'needle-from-body',content:true});assert.equal(body.nodes[0].ref.path,'notes/opaque.txt');assert.match(body.nodes[0].match.match,/needle-from-body/);
+ const source=await X.search({env:'dev',workspace:fixture.ws.id,kind:'files',query:'exports.total',content:true});assert.equal(source.nodes[0].ref.path,'orders.js');assert.equal(source.nodes[0].match.line,1);
+ const scoped=await X.search({env:'dev',workspace:fixture.ws.id});assert.ok(scoped.nodes.some(n=>n.ref.service==='orders-api'));assert.ok(!scoped.nodes.some(n=>n.ref.service==='billing-api'||n.ref.service==='orders-worker'));assert.ok(!scoped.nodes.some(n=>n.ref.context));
+ const first=await X.search({env:'dev',limit:1}),next=await X.search({env:'dev',limit:1,offset:first.nextOffset});assert.notEqual(first.nodes[0].id,next.nodes[0].id);assert.equal(fixture.requests.length,before);
+ });
+});
+test('API discovery retains all same-path services and never invents a deployment URL',async()=>{
+ await owned(async()=>{const T=require('../lib/tools'),before=fixture.requests.length,r=await T.call('workbench_search',{env:'dev',kind:'apis',query:'/api/orders'});const endpoints=r.nodes.filter(n=>n.kind==='api-route');assert.equal(endpoints.length,3);assert.equal(new Set(endpoints.map(n=>n.ref.service)).size,3);assert.ok(r.nodes.some(n=>n.kind==='api-exchange'));
+ const selected=r.nodes.find(n=>n.ref.service==='orders-api'),d=await T.call('workbench_inspect',{env:'dev',node:selected.id});assert.equal(d.api.path,'/api/orders/{id}');assert.equal(d.api.bases.length,0,'an ambiguous captured URL is not a deployment recommendation');assert.equal(d.identity.sha,fixture.sha);
+ const children=await X.tree({env:'dev',parent:X.id({kind:'service-routes',service:'orders-api'})});assert.equal(children.nodes[0].id,selected.id);
+ const opened=await T.call('workbench_open',{env:'dev',node:selected.id});assert.equal(new URL(opened.url).searchParams.get('node'),selected.id);assert.equal(opened.selection.found,true);
+ const collection=await X.detail({env:'dev',node:X.id({kind:'script-collection',collection:'orders-api'})});assert.ok(collection.actions.some(a=>a.tool==='script_save'));assert.equal(fixture.requests.length,before);
+ });
+});
+test('service scope excludes scripts and collections from other services',async()=>{
+ await owned(async()=>{const S=require('../lib/scripts');S.save('billing-api/scope-probe',{description:'Unrelated billing action',steps:[{http:'GET '+fixture.api+'/not-called'}]});
+ const before=fixture.requests.length,all=await X.search({env:'dev',kind:'scripts'});assert.ok(all.nodes.some(n=>n.ref.collection==='billing-api'));assert.ok(all.nodes.some(n=>n.ref.script==='billing-api/scope-probe'));
+ for(const args of [{service:'orders-api'},{context:'orders-142',service:'orders-api'},{workspace:fixture.ws.id,service:'orders-api'}]){const found=await X.search({env:'dev',kind:'scripts',...args});assert.ok(found.nodes.some(n=>n.ref.script==='orders-api/read-order'));assert.ok(found.nodes.every(n=>(n.ref.script||n.ref.collection).startsWith('orders-api')));}
+ assert.equal(fixture.requests.length,before);
+ });
+});
+test('library reads honor user, story, tool and environment boundaries including file content search',async()=>{
+ const alice=await post('/api/admin/workbench/search',{env:'dev',context:'orders-142'});assert.equal(alice.status,200);assert.ok(alice.body.nodes.length);
+ for(const [token,story]of [['bob-tree-token-01234567','case-one'],['alice-tree-token-012345','another']])assert.notEqual((await post('/api/admin/workbench/search',{env:'dev',context:'orders-142',content:true,query:'refund'},token,story)).status,200);
+ const limited=await post('/api/admin/workbench/search',{env:'dev'},'limited-tree-token-01234');assert.equal(limited.status,200);assert.equal(limited.body.nodes.length,0);
+ assert.equal((await post('/api/admin/workbench/search',{env:'uat'},'limited-tree-token-01234')).status,403);
+ await owned(async()=>{for(const args of [{kind:'unknown'},{limit:101},{offset:-1},{content:'true'}])await assert.rejects(X.search({env:'dev',...args}));});
+});

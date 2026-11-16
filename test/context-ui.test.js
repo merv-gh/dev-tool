@@ -7,7 +7,7 @@ const C = require('../lib/context'), tools = require('../lib/tools');
 test.after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 function harness(override) {
   const elements = new Map();
-  const element = () => ({ value: '', textContent: '', hidden: false, disabled: false, options: [], children: [], append(...items) { this.children.push(...items); this.options.push(...items); }, replaceChildren() { this.children = []; this.options = []; }, addEventListener() {}, focus() {} });
+  const element = () => ({ value: '', textContent: '', hidden: false, disabled: false, options: [], children: [], append(...items) { this.children.push(...items); this.options.push(...items); }, replaceChildren() { this.children = []; this.options = []; }, setAttribute(name,value) { this[name]=value; }, addEventListener() {}, focus() {} });
   const $ = id => { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); };
   let discard = true;
   const runtime = vm.createContext({ DTState: require('../lib/state-machine'), $, console, URLSearchParams, location:{hash:'#context'}, setTimeout, clearTimeout, confirm: () => discard, window: { addEventListener() {} }, document: { createElement: element, querySelectorAll: () => [...elements.values()] }, api: async (url, args) => override?.(url,args) ?? (url === '/api/tools' ? tools.schemas() : { result: await tools.call(url.split('/').pop(), args) }) });

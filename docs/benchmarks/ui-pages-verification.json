@@ -1,0 +1,119 @@
+{
+  "protocol": "dt.ui-pages-verification/v1",
+  "sourceDigest": "a066997b3325ca9b1c7be4bc4bd75d095ae5f6df15cd75e6211057b5c6cd71ee",
+  "generatedAt": "2026-11-16T20:19:39.632Z",
+  "tools": [
+    "ui_page",
+    "ui_page_data"
+  ],
+  "examples": [
+    "service-versions",
+    "procedure-parity",
+    "environment-monitor"
+  ],
+  "tests": {
+    "focused": {
+      "command": "node --test test/ui-pages.test.js test/ui-page-model.test.js test/page-primitives.test.js test/admin-ux.test.js test/admin-runtime.test.js test/inline-views.test.js test/capability-map.test.js test/tool-discovery.test.js test/handbook.test.js",
+      "passed": 52,
+      "failed": 0
+    },
+    "viewRegistry": {
+      "command": "node --test test/views.test.js",
+      "passed": 9,
+      "failed": 0
+    },
+    "fullSuite": {
+      "command": "npm run test:coverage",
+      "counts": {
+        "tests": 1119,
+        "failed": 0,
+        "passed": 1062,
+        "cancelled": 0,
+        "skipped": 57,
+        "todo": 0,
+        "topLevel": 1119,
+        "suites": 0
+      },
+      "summary": {
+        "transitions": {
+          "hit": 364,
+          "total": 663,
+          "percent": 54.9
+        },
+        "lines": {
+          "hit": 28805,
+          "total": 30866,
+          "percent": 93.3
+        },
+        "functions": {
+          "hit": 6726,
+          "total": 7639,
+          "percent": 88
+        },
+        "branches": {
+          "hit": 23800,
+          "total": 28969,
+          "percent": 82.2
+        },
+        "testedFiles": 161,
+        "sourceFiles": {
+          "measured": 213,
+          "unmeasured": 28,
+          "total": 241
+        }
+      },
+      "coverageGate": "passed against the retained same-platform full-suite baseline"
+    }
+  },
+  "browser": {
+    "passed": 14,
+    "checks": [
+      "Shared definition saves without reads; environment changes constrain database choices and Refresh uses typed inputs",
+      "Keyboard comparison filtering retains focus while missing procedures expand with exact overload evidence",
+      "Keyboard pagination restores an enabled focus target when the activated button becomes disabled",
+      "Portable JSON export retains definition revision, typed inputs and results",
+      "Pinned result links restore actual inputs without refreshing; monitoring is paused by default",
+      "Shared readers keep Save disabled through rendering; an explicit private copy can be edited and saved without reads",
+      "Native inline snapshot is collapsed by default; explicit expansion, filtering and JSON export execute no reads",
+      "Service version page reads actual local Consul registrations for two environments",
+      "Monitoring starter renders service health plus explicit Elasticsearch/Kafka read-adapter results",
+      "1440/light: target controls, result evidence and comparison fit the viewport",
+      "1440/dark: target controls, result evidence and comparison fit the viewport",
+      "390/light: target controls, result evidence and comparison fit the viewport",
+      "390/dark: target controls, result evidence and comparison fit the viewport",
+      "Admin Pages tab loads the same authenticated page catalog"
+    ],
+    "pageErrors": [],
+    "realHttp": true,
+    "realConsulApi": true,
+    "postgres": "synthetic scoped HTTP read adapter",
+    "elasticKafka": "synthetic scoped HTTP read adapters",
+    "configuredModelCalls": 0,
+    "productionOpenWebUI": false,
+    "livePostgres": false
+  },
+  "visualReview": {
+    "verdict": "ship",
+    "scope": "The independent scoped verdict scored the two initial material findings; the nine replacement captures were valid.",
+    "resolved": [
+      "F1: keyboard focus through status/filter/pagination replacement",
+      "F2: shared reader Save state and explicit private-copy editing"
+    ],
+    "documentation": "Independent comparison completed; incumbent design system preserved.",
+    "detector": "Unavailable: release checksum sidecar could not be verified; no unverified binary executed."
+  },
+  "limits": [
+    "Definitions are shared by default with admin publication; observations/history are principal/task scoped. Explicit result-link sharing retains the existing immutable capability-link policy.",
+    "The browser scenario used disposable local HTTP/Consul-compatible endpoints and synthetic scoped PostgreSQL/Elasticsearch/Kafka read adapters.",
+    "The optional real PostgreSQL test was skipped because no dedicated scratch cluster was configured; no production Open WebUI or configured model was exercised.",
+    "Monitoring is opt-in browser scheduling; this is not an unattended server monitor.",
+    "Coverage percentages describe measured sources. Skipped integrations and never-loaded sources remain explicit."
+  ],
+  "screenshots": [
+    "docs/screenshots/pages-versions.png",
+    "docs/screenshots/pages-procedures.png",
+    "docs/screenshots/pages-mobile-dark.png",
+    "docs/screenshots/pages-monitor.png",
+    "docs/screenshots/sample-ui-page.png"
+  ]
+}

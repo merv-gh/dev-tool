@@ -1,0 +1,157 @@
+{
+  "version": 1,
+  "title": "Service versions across environments",
+  "description": "Compare reported deployments without mistaking missing version information for a match.",
+  "inputs": {
+    "left_env": {
+      "type": "environment",
+      "label": "Baseline environment",
+      "default": "dev"
+    },
+    "right_env": {
+      "type": "environment",
+      "label": "Compare environment",
+      "default": "uat"
+    },
+    "services": {
+      "type": "services",
+      "label": "Services",
+      "default": [
+        "orders-api",
+        "billing-api"
+      ]
+    }
+  },
+  "sources": [
+    {
+      "id": "baseline",
+      "label": "Baseline deployments",
+      "tool": "ui_page_data",
+      "arguments": {
+        "kind": "service_versions",
+        "env": {
+          "$param": "left_env"
+        },
+        "services": {
+          "$param": "services"
+        }
+      }
+    },
+    {
+      "id": "candidate",
+      "label": "Comparison deployments",
+      "tool": "ui_page_data",
+      "arguments": {
+        "kind": "service_versions",
+        "env": {
+          "$param": "right_env"
+        },
+        "services": {
+          "$param": "services"
+        }
+      }
+    }
+  ],
+  "datasets": [
+    {
+      "id": "all_deployments",
+      "op": "concat",
+      "from": [
+        "baseline",
+        "candidate"
+      ]
+    },
+    {
+      "id": "version_changes",
+      "op": "compare",
+      "left": "baseline",
+      "right": "candidate",
+      "key": [
+        "service"
+      ],
+      "fields": [
+        "version",
+        "commit",
+        "version_state"
+      ],
+      "required": [
+        "version"
+      ]
+    }
+  ],
+  "widgets": [
+    {
+      "id": "how_to",
+      "type": "text",
+      "collapsed": true,
+      "title": "Reported deployments",
+      "text": "Choose environments and services, then Refresh. Mixed replicas and unreported versions stay visible. This is an observation from Consul and /version, not proof that instances run identical code.",
+      "span": 2
+    },
+    {
+      "id": "replicas",
+      "type": "metric",
+      "title": "Registered replicas",
+      "data": "all_deployments",
+      "op": "sum",
+      "field": "replicas"
+    },
+    {
+      "id": "changes",
+      "type": "metric",
+      "title": "Services with differing version reports",
+      "data": "version_changes",
+      "op": "count",
+      "where": {
+        "field": "status",
+        "op": "eq",
+        "value": "changed"
+      }
+    },
+    {
+      "id": "versions_table",
+      "type": "table",
+      "title": "Service versions by environment",
+      "data": "all_deployments",
+      "span": 2,
+      "columns": [
+        {
+          "field": "service",
+          "label": "Service"
+        },
+        {
+          "field": "environment",
+          "label": "Environment"
+        },
+        {
+          "field": "version",
+          "label": "Version"
+        },
+        {
+          "field": "replicas",
+          "label": "Replicas",
+          "format": "number"
+        },
+        {
+          "field": "passing",
+          "label": "Passing",
+          "format": "number"
+        },
+        {
+          "field": "version_state",
+          "label": "Version evidence",
+          "format": "status"
+        }
+      ]
+    },
+    {
+      "id": "drift",
+      "type": "comparison",
+      "title": "Deployment report differences",
+      "data": "version_changes",
+      "leftLabel": "Baseline",
+      "rightLabel": "Comparison",
+      "span": 2
+    }
+  ]
+}

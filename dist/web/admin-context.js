@@ -12,6 +12,9 @@ function contextRestoreMetadata() { if (!contextState) return; contextFormRevisi
 async function loadContexts() {
   if (!contextLoaded) {
     contextLoaded = true;
+    $('cxFileSearch').oninput=()=>contextFileList();
+    $('cxOpenWorkbench').onclick=()=>contextOpenLibrary(false);
+    $('cxSearchContents').onclick=()=>contextOpenLibrary(true);
     $('cxSearch').oninput = () => { clearTimeout(loadContexts.searchTimer); loadContexts.searchTimer = setTimeout(() => contextList().catch(e => contextMessage(e.message, true)), 250); };
     $('cxNew').onclick = () => {
       if (!contextCanLeave()) return;
@@ -28,7 +31,7 @@ async function loadContexts() {
     $('cxSaveFile').onclick = () => contextBusy($('cxSaveFile'), contextSaveFile);
     $('cxNewFile').onclick = () => {
       if (!contextCanLeave()) return;
-      contextRestoreMetadata(); contextClearDirty(); contextFile = null; $('cxPath').value = ''; $('cxFileSummary').value = ''; $('cxContent').value = ''; $('cxEncoding').value = 'utf8'; $('cxDirty').textContent = ''; $('cxPath').focus();
+      contextRestoreMetadata(); contextClearDirty(); contextFile = null; $('cxFilePanel').open=true; $('cxPath').value = ''; $('cxFileSummary').value = ''; $('cxContent').value = ''; $('cxEncoding').value = 'utf8'; $('cxDirty').textContent = ''; $('cxPath').focus();
     };
     $('cxDeleteFile').onclick = () => contextBusy($('cxDeleteFile'), async () => {
       if (!contextState || !contextFile) throw new Error('Select a saved file first');
@@ -118,18 +121,25 @@ async function contextSelect(id, force = false) {
   contextLinks.forEach(k => $('cx-' + k).value = c[k].join(', ')); $('cxDirty').textContent = ''; $('cxLocation').textContent = `context:${c.id}/`;
   $('cxPath').value = ''; $('cxContent').value = ''; $('cxFileSummary').value = ''; $('cxPreview').hidden = true;
   $('cxRunOutput').textContent = 'Run a tool to save its arguments and result here.'; $('cxCaptured').hidden = true; $('cxHintOutput').textContent = '';
-  contextFileList(); await contextList();
+  $('cxFileSearch').value='';$('cxFilePanel').open=false;contextFileList(); await contextList();
   if (!contextDraft.dirty && selection === contextSelectSequence.value && contextState.id === c.id && c.files.some(f => f.path === 'progress.md')) await contextRead('progress.md', true);
 }
 async function contextReload() {
   const c = await contextCall('context_get', { id: contextState.id }); contextState = c; if (!contextDraft.has('metadata')) contextRestoreMetadata(); contextFileList(); await contextList();
 }
+function contextOpenLibrary(content){
+ if(!contextState)return;const p=new URLSearchParams({context:contextState.id,mode:'contexts',story:runtimeStory||'default'});
+ if(content){p.set('library','true');p.set('kind','files');p.set('within','context');p.set('content','true');p.set('q',$('cxFileSearch').value);}
+ location.hash='workbench?'+p;
+}
 function contextFileList() {
-  $('cxFiles').replaceChildren();
-  for (const f of contextState.files) {
-    const b = document.createElement('button'); b.className = 'cx-file'; b.textContent = f.path + ' · ' + f.bytes.toLocaleString() + ' B'; b.title = f.summary;
-    b.onclick = () => contextRead(f.path).catch(e => contextMessage(e.message, true)); $('cxFiles').append(b);
+  $('cxFiles').replaceChildren();const query=($('cxFileSearch')?.value||'').trim().toLowerCase(),files=contextState.files.filter(f=>(f.path+' '+f.summary).toLowerCase().includes(query));
+  if($('cxInventory'))$('cxInventory').textContent=contextState.files.length+' files · '+contextState.files.filter(f=>f.path.startsWith('recipes/')).length+' saved actions · '+contextState.workspaces.length+' linked workspaces';
+  const folders=new Map([['',$('cxFiles')]]);
+  for(const f of [...files].sort((a,b)=>a.path.localeCompare(b.path))){const parts=f.path.split('/');let parent='';for(const name of parts.slice(0,-1)){const next=parent?parent+'/'+name:name;if(!folders.has(next)){const d=document.createElement('details'),summary=document.createElement('summary'),host=document.createElement('div');summary.textContent=name;d.open=!!query||!parent&&!['calls','archived','results'].includes(name);d.append(summary,host);folders.get(parent).append(d);folders.set(next,host);}parent=next;}
+   const button=document.createElement('button');button.className='cx-file';button.textContent=parts.at(-1);button.title=f.path+' · '+(f.summary||'')+' · '+f.bytes.toLocaleString()+' B';if(f.summary){const small=document.createElement('small');small.textContent=f.summary;button.append(small);}button.setAttribute('aria-current',String(contextFile?.path===f.path));button.onclick=()=>contextRead(f.path).catch(e=>contextMessage(e.message,true));folders.get(parent).append(button);
   }
+  if(!files.length)$('cxFiles').textContent=query?'No matching files. Search contents to look inside saved notes and results.':'No files yet. Add a note, upload a file or retain a tool result.';
 }
 async function contextRead(file, force = false) {
   if (!force && !contextCanLeave()) return;
@@ -138,9 +148,9 @@ async function contextRead(file, force = false) {
   const r = await contextCall('context_read', { id: contextState.id, path: file, encoding: binary ? 'base64' : 'utf8' });
   if (contextState?.id !== readingId || sequence !== contextReadSequence.value) return;
   if (editSequence !== contextDraft.revision) { contextMessage('Your draft changed while loading. Select the file again to replace it.', true); return; }
-  contextRestoreMetadata(); contextClearDirty(); contextFile = r; $('cxPath').value = r.path; $('cxContent').value = r.content; $('cxEncoding').value = r.encoding;
+  contextRestoreMetadata(); contextClearDirty(); contextFile = r; $('cxFilePanel').open=true; $('cxPath').value = r.path; $('cxContent').value = r.content; $('cxEncoding').value = r.encoding;
   $('cxFileSummary').value = contextState.files.find(f => f.path === file)?.summary || ''; $('cxPreview').hidden = true; $('cxDirty').textContent = '';
-  contextMessage(binary ? 'Binary file shown as base64. Download to open it in its native application.' : 'File loaded. Save edits to keep them for other chats.');
+  contextFileList();contextMessage(binary ? 'Binary file shown as base64. Download to open it in its native application.' : 'File loaded. Save edits to keep them for other chats.');
 }
 async function contextSaveFile() {
   const file = $('cxPath').value.trim(); if (!file) throw new Error('Enter a relative file name');

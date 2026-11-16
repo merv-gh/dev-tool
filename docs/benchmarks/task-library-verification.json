@@ -1,0 +1,94 @@
+{
+  "protocol": "dt.task-library-verification/v1",
+  "sourceDigest": "4ac18ed55abe2de191fb2265a792b6e88282494554a8132d00683acf514f0abe",
+  "generatedAt": "2026-11-16T18:26:03.125Z",
+  "tests": {
+    "focused": {
+      "command": "node --test test/workbench-explorer.test.js test/workbench-explorer-ui.test.js test/context-ui.test.js test/admin-scripts.test.js test/admin-ux.test.js test/workbench.test.js test/workbench-discovery.test.js test/capability-map.test.js test/handbook.test.js",
+      "passed": 65,
+      "failed": 0
+    },
+    "fullSuite": {
+      "command": "npm run test:coverage",
+      "counts": {
+        "tests": 1098,
+        "failed": 0,
+        "passed": 1042,
+        "cancelled": 0,
+        "skipped": 56,
+        "todo": 0,
+        "topLevel": 1098,
+        "suites": 0
+      },
+      "summary": {
+        "transitions": {
+          "hit": 357,
+          "total": 653,
+          "percent": 54.7
+        },
+        "lines": {
+          "hit": 28460,
+          "total": 30523,
+          "percent": 93.2
+        },
+        "functions": {
+          "hit": 6583,
+          "total": 7491,
+          "percent": 87.9
+        },
+        "branches": {
+          "hit": 23273,
+          "total": 28327,
+          "percent": 82.2
+        },
+        "testedFiles": 157,
+        "sourceFiles": {
+          "measured": 207,
+          "unmeasured": 28,
+          "total": 235
+        }
+      },
+      "coverageGate": "passed against the retained same-platform full-suite baseline"
+    }
+  },
+  "browser": {
+    "passed": 8,
+    "checks": [
+      "Nested context files, filtered discovery, collapsed scratchpad and revision-checked note save",
+      "Task overview connects to the related script collection and native editor",
+      "Shared library URL restores context-scoped content search and opens the matching evidence",
+      "Indexed endpoint becomes an editable parameterized request; preparing sends nothing, explicit send retains the result",
+      "1440/light: task overview and Admin context layout without document overflow",
+      "1440/dark: task overview and Admin context layout without document overflow",
+      "390/light: task overview and Admin context layout without document overflow",
+      "390/dark: task overview and Admin context layout without document overflow"
+    ],
+    "pageErrors": [],
+    "realLocalGit": true,
+    "realHttp": true,
+    "servicePassports": "synthetic retained fixtures",
+    "liveInfrastructure": false
+  },
+  "visualReview": {
+    "verdict": "ship",
+    "scope": "Task/context library extension against the incumbent Admin and Workbench. Scoped follow-up scored mobile shortcut placement and parameter regeneration after an edited API path.",
+    "resolved": [
+      "TL-F01",
+      "TL-F02"
+    ],
+    "documentation": "Independent comparison completed; incumbent design system preserved.",
+    "detector": "Unavailable: release checksum sidecar could not be verified; no unverified binary executed."
+  },
+  "limits": [
+    "Browser scenario uses disposable local Git, revision-checked context files and real HTTP requests.",
+    "Service passports are synthetic retained fixtures; no live infrastructure, fresh semantic index, configured model or production Open WebUI was exercised.",
+    "Metadata search uses retained discovery links; script associations use service-named collection prefixes. Content search requires an exact context/workspace and reports scan limits.",
+    "Coverage percentages describe measured sources; skipped integrations and never-loaded sources remain explicit."
+  ],
+  "screenshots": [
+    "docs/screenshots/task-library-desktop.png",
+    "docs/screenshots/task-library-mobile-dark.png",
+    "docs/screenshots/context-library.png",
+    "docs/screenshots/service-api-draft.png"
+  ]
+}

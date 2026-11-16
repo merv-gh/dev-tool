@@ -153,6 +153,7 @@
     <button data-tab="passports">Passports<span class="n" id="nPassports"></span></button>
     <button data-tab="context">Context & scratchpad</button>
     <button data-tab="scripts">Scripts<span class="n" id="nScripts"></span></button>
+    <button data-tab="pages">Pages</button>
     <button data-tab="sites">Sites<span class="n" id="nSites"></span></button>
     <button data-tab="api">API routes</button>
     <button data-tab="views">Views<span class="n" id="nViews"></span></button>
@@ -166,6 +167,7 @@
 
   <section id="tab-workbench"><div id="wbRoot"></div></section>
   <section id="tab-capabilities" hidden><div id="capabilityRoot"></div></section>
+  <section id="tab-pages" hidden><iframe id="adminPages" title="Declarative pages" style="width:100%;height:1100px;border:0" loading="lazy"></iframe></section>
   <section id="tab-index" hidden>
     <div class="row" style="margin-bottom:10px">
       <button class="primary" data-refresh="all">Refresh everything</button>
@@ -292,10 +294,10 @@
         </div>
         <div id="cxWorking" hidden>
           <p id="cxLocation" class="hint mono cx-wrap"></p>
-          <h2>Files & progress</h2>
+          <div class="cx-library-launch"><div><strong>Task library</strong><p id="cxInventory" class="hint"></p></div><button id="cxOpenWorkbench">Open task workbench</button></div><h2>Files & progress</h2><label class="cx-label" for="cxFileSearch">Find a file or saved action</label><input id="cxFileSearch" type="search" class="cx-wide" placeholder="File name, folder or summary"><button id="cxSearchContents">Search file contents</button>
           <div id="cxFiles" class="cx-files" aria-label="Context files"></div>
           <div class="row"><button id="cxNewFile">New file</button><label for="cxUpload">Upload file (up to 1 MiB)</label><input type="file" id="cxUpload"></div>
-          <div data-context-edit id="cxFileEdits">
+          <details id="cxFilePanel"><summary>File editor</summary><div data-context-edit id="cxFileEdits">
             <label class="cx-label" for="cxPath">Relative file name</label><input id="cxPath" class="cx-wide" placeholder="findings/orders.md">
             <label class="cx-label" for="cxFileSummary">File summary · used in search</label><input id="cxFileSummary" class="cx-wide">
             <label class="cx-label" for="cxEncoding">Encoding</label><select id="cxEncoding"><option value="utf8">Text (UTF-8)</option><option value="base64">Binary (base64)</option></select>
@@ -303,7 +305,7 @@
           </div>
           <div class="row"><button id="cxSaveFile" class="primary">Save file</button><button id="cxPreviewButton">Preview text</button><button id="cxDownload">Download saved file</button><button id="cxDeleteFile">Archive file</button></div>
           <pre id="cxPreview" class="code cx-wrap" hidden></pre>
-          <h2>Tool scratchpad</h2>
+          </details><details id="cxScratchpad"><summary>Tool scratchpad · run and retain evidence</summary>
           <p class="hint">Run any enabled tool and keep its result in this context. Tools have their usual effects. Review suggestions and arguments before running.</p>
           <label class="cx-label" for="cxGoal">What do you want to do in this context?</label><textarea id="cxGoal" rows="2" placeholder="Inspect who writes the order table for this ticket"></textarea>
           <div class="row"><label><input id="cxUseModel" type="checkbox"> Ask configured model (shares summary and progress excerpt)</label><button id="cxHint">Suggest tools</button></div>
@@ -312,7 +314,7 @@
           <details><summary>Description & exact argument schema</summary><pre id="cxSchema" class="code cx-wrap"></pre></details>
           <label class="cx-label" for="cxArgs">Arguments (JSON)</label><textarea id="cxArgs" rows="8" spellcheck="false">{}</textarea>
           <div class="row"><button id="cxRun" class="primary">Run & save result</button><button id="cxCaptured" hidden></button></div>
-          <pre id="cxRunOutput" class="code cx-wrap" aria-live="polite">Run a tool to save its arguments and result here.</pre>
+          <pre id="cxRunOutput" class="code cx-wrap" aria-live="polite">Run a tool to save its arguments and result here.</pre></details>
         </div>
       </div>
     </div>
@@ -679,9 +681,11 @@ function show(t) {
   tab = t;
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   document.querySelectorAll('section[id^=tab-]').forEach(s => s.hidden = s.id !== `tab-${t}`);
-  history.replaceState(null, '', `#${['semantic','handbook','context','runtime','workbench','capabilities'].includes(t) ? requested : t}`);
+  history.replaceState(null, '', `#${['semantic','handbook','context','scripts','runtime','workbench','capabilities'].includes(t) ? requested : t}`);
   if (t === 'capabilities') loadCapabilities().catch(e => toast(e.message));
   if (t === 'workbench') loadWorkbench().catch(e => wbMessage(e.message, true));
+  if(t==='pages')loadRuntime().then(()=>{if(tab!=='pages')return;const frame=$('adminPages'),src='/pages?'+new URLSearchParams({embed:'true',story:runtimeStory||'default',...(runtimePrincipal?{principal:runtimePrincipal}:{})});if(frame.getAttribute('src')!==src)frame.src=src;}).catch(e=>toast(e.message));
+  $('adminPages')?.contentWindow?.postMessage({type:'ui-page:visibility',visible:t==='pages'},location.origin);
   if (t === 'handbook') loadHandbook().catch(e => toast(e.message));
   if (t === 'architecture') loadArchitectureAdmin().catch(e => architectureMessage(e.message, true));
   if (t === 'context') loadContexts().catch(e => contextMessage(e.message, true));

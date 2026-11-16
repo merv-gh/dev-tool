@@ -104,11 +104,25 @@ Expected: Configured execution placement and prerequisites; listing does not sta
 
 Admin → Workbench and /workbench show a vertical folder navigator. Switch Contexts, Services or Tasks. Tasks group exact ticket/task metadata with related contexts and explicitly linked workspaces; these are separate from running jobs. Services group by common prefix, with declared context links, scripts, saved recipes and attributed API exchanges. Browsing retained names does not query live infrastructure.
 
+Start at a task/context overview to open recent files, linked workspaces, saved actions, service script collections and indexed APIs. Search library searches these retained sources together; choose All work or the selected context/workspace. Include file contents explicitly for bounded text search within a selected folder. Models use workbench_search, then workbench_inspect on a returned node. No network or model call is needed to search.
+
 Choose a service or file to see relevant actions. Select an evidence context; prepare tests, Consul status, SQL, scripts or API requests, review editable arguments, then Run. Branch navigation explicitly refreshes remote refs and opens a separate owned checkout. Attach it to the evidence context to rediscover it under the ticket. Dirty sources in the original workspace stay there.
 
 The text editor keeps up to 12 dirty drafts in the current user/task scope and supports UTF-8 files up to 64 KiB. Saves reject stale revisions. Reload preserves the draft and shows the saved version for reconciliation. Large, binary and non-UTF8 files remain read-only. Save prepared action retains a redacted recipe in the selected context; reopening prepares it without running. Verify naming-only script candidates before reuse.
 
 Copy view link shares a live selection requiring the recipient’s normal authentication and tool grants. Copy run link retains the invocation/result rather than replaying it. Optional model suggestions remain editable. A successful invocation does not prove passing tests or a successful HTTP response.
+
+**Find saved work for the task** · `workbench_search`
+
+```json
+{
+  "context": "{{context}}",
+  "kind": "all",
+  "query": ""
+}
+```
+
+Expected: Retained notes, workspaces, script collections and indexed APIs with exact node IDs.
 
 **Open the interactive service workbench** · `workbench_open`
 
@@ -153,6 +167,41 @@ Expected: A revision-checked context recipe, with credentials redacted; does not
 ![Interactive service/task navigator; disposable Git/Node demo with local Consul/HTTP fixtures.](../screenshots/workbench-explorer-desktop.png)
 
 Interactive service/task navigator; disposable Git/Node demo with local Consul/HTTP fixtures.
+
+### Keep a question as an executable page
+
+Admin → Pages combines read tools with declarative text, metrics, tables and keyed comparisons. Start from service versions, database routine parity or environment watch; select targets, Save, then explicitly Refresh. Database choices follow their environment. Opening or filtering never executes sources.
+
+Definitions are shared by default with admin publication; other users can keep private task drafts. Execution results remain scoped to each viewer and chat. Refresh uses the normal registry, permissions, rate limits and telemetry; jobs support cancellation. Monitoring starts paused and stops while hidden.
+
+Procedure comparison keys include schema, name and identity arguments. Failed sources block comparison, and truncated reads cannot establish absence. Required unreported versions stay unknown. Open exact evidence before deciding that a deployment or routine is missing.
+
+Copy page link shares a pinned definition. Copy result link deliberately shares one read-only snapshot through existing keyed-result access; it cannot execute or enumerate other results. Export definition/inputs/results or copy the pinned rerun command for reproduction.
+
+**Read the routine-parity starter** · `ui_page`
+
+```json
+{
+  "action": "templates",
+  "template": "procedure-parity"
+}
+```
+
+Expected: A declarative definition; no database is queried.
+
+**Find reusable pages** · `ui_page`
+
+```json
+{
+  "action": "list"
+}
+```
+
+Expected: Shared definitions and private pages in this task.
+
+![Disposable local app with scoped synthetic PostgreSQL read adapters; not a production observation.](../screenshots/pages-procedures.png)
+
+Disposable local app with scoped synthetic PostgreSQL read adapters; not a production observation.
 
 ### Build an answer someone can audit
 
@@ -2230,6 +2279,16 @@ How does this UI action reach a database field? Inspect the captured UI state an
 
 </details>
 
+#### ui-page
+
+How can I keep this question as a reusable dashboard? Filter retained tables/comparisons, expand exact routine signatures and inspect saved inputs/revision. Open the live Pages host to choose targets and explicitly Refresh. Definitions are shared by default with admin publication; each viewer retains private results. Incomplete reads cannot establish absence.
+
+<details><summary>View labeled presentation example</summary>
+
+![Built-in ui-page presentation sample](../screenshots/sample-ui-page.png)
+
+</details>
+
 ### Standalone workbenches
 
 Passports combine service boundary graphs and detected/manual evidence; API explorer prepares and sends reviewed requests; Services map explores bounded relationships and editable tool inspections; architecture/dossiers add C4/environment/requirement views and exports. Logs/trace, PR, files, dashboard and showcase have their own explorers. Use the selected inspector before exporting or summarizing a large graph.
@@ -2264,7 +2323,7 @@ Search a task term, tool name or group. Select a tool to read its contract, requ
 
 The portable repository reference records built-in tools at generation time. The running registry remains authoritative for extensions and permissions. A required field can still need a real returned ID; blank values or an invented analysis/lease/workspace ID are not useful arguments.
 
-The [complete built-in reference](tools.md) contains 256 tools with exact schemas. In the app, the reference uses the current authorized registry and includes configured extensions.
+The [complete built-in reference](tools.md) contains 260 tools with exact schemas. In the app, the reference uses the current authorized registry and includes configured extensions.
 
 ### When a tool is missing
 

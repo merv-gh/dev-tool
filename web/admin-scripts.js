@@ -58,6 +58,7 @@ async function loadScripts() {
   $('nScripts').textContent = SC.scripts.length || '';
   renderTree();
   if (!cur) renderEditor();
+  const linked=new URLSearchParams(location.hash.split('?')[1]||'');if(linked.get('script')&&cur?.id!==linked.get('script'))await openScript(linked.get('script'));else if(linked.get('collection')&&cur?.collection!==linked.get('collection'))await openCollection(linked.get('collection'));
 }
 
 function buildTree() {
