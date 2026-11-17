@@ -60,8 +60,13 @@ authentication shortcut. `DT_SECURITY_PROFILE=team` overrides the config profile
 HTTP/MCP clients send `Authorization: Bearer …` and `X-DT-Story`. Browser operators
 open Admin and use its token form; team login uses a POST and a Secure, HttpOnly,
 SameSite cookie. Do not use URL query tokens in team mode. Browser origins are
-allowlisted; cookie mutations require an allowed Origin. Machine Bearer requests
-may omit Origin. Unsupported MCP versions negotiate the tested 2025-03-26 baseline.
+allowed by default, including sandboxed `null` origins. The explicit origin list
+in the example restricts access to those origins and the configured public URL;
+use `["*"]`, an empty list, or omit `allowedOrigins` to accept every origin.
+Cookie mutations still require an Origin; machine Bearer requests may omit it.
+Preflights require no authentication; actual requests retain their token, tool,
+environment and task checks. [Browser CORS configuration and verification](browser-cors.md).
+Unsupported MCP versions negotiate the tested 2025-03-26 baseline.
 
 For rotation, give the replacement credential a new `id` and the **same principal**.
 Both may coexist during a short overlap. Remove/revoke the old entry or set its

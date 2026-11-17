@@ -578,14 +578,19 @@ var require_security = __commonJS({
     function settings(server = {}) {
       const profile = process.env.DT_SECURITY_PROFILE || server.securityProfile || "local";
       if (!["local", "team"].includes(profile)) throw Error("server.securityProfile must be local or team");
-      const origins = server.allowedOrigins || [], proxies = server.trustedProxies || [];
+      const origins = server.allowedOrigins || ["*"], proxies = server.trustedProxies || [];
       if (!Array.isArray(origins) || !Array.isArray(proxies) || origins.length > 100 || proxies.length > 100) throw Error("Origin and proxy policies must be bounded lists");
       for (const origin of origins) {
+        if (origin === "*" || origin === "null") continue;
         const u = new URL(origin);
-        if (!["http:", "https:"].includes(u.protocol) || u.origin !== origin || u.username) throw Error("allowedOrigins must contain exact HTTP(S) origins");
+        if (!["http:", "https:"].includes(u.protocol) || u.origin !== origin || u.username) throw Error("allowedOrigins must contain exact HTTP(S) origins, null, or *");
       }
       for (const proxy of proxies) if (typeof proxy !== "string" || !require("node:net").isIP(proxy)) throw Error("trustedProxies must contain exact proxy IP addresses");
       return { profile, allowedOrigins: origins, trustedProxies: proxies };
+    }
+    function originAllowed(origin, config) {
+      if (!origin) return false;
+      return !config.allowedOrigins.length || config.allowedOrigins.includes("*") || config.allowedOrigins.includes(origin) || origin === new URL(config.publicUrl).origin;
     }
     function enforce(req) {
       const c = require_config().getServer();
@@ -593,9 +598,9 @@ var require_security = __commonJS({
       const deny = (message) => {
         throw Object.assign(Error(message), { code: "DT_SECURITY_POLICY", statusCode: 403 });
       };
-      const origin = req.headers.origin, allowed = /* @__PURE__ */ new Set([new URL(c.publicUrl).origin, ...c.allowedOrigins]);
-      if (origin && !allowed.has(origin)) deny("Browser origin is not allowed");
-      if (!["GET", "HEAD", "OPTIONS"].includes(req.method) && !req.headers.authorization && /(?:^|;\s*)dt_key=/.test(req.headers.cookie || "") && !allowed.has(origin)) deny("Cookie mutations require an allowed Origin");
+      const origin = req.headers.origin;
+      if (origin && !originAllowed(origin, c)) deny("Browser origin is not allowed");
+      if (!["GET", "HEAD", "OPTIONS"].includes(req.method) && !req.headers.authorization && /(?:^|;\s*)dt_key=/.test(req.headers.cookie || "") && !originAllowed(origin, c)) deny("Cookie mutations require an allowed Origin");
       const remote = req.socket.remoteAddress || "";
       const forwarded = req.headers["x-forwarded-proto"];
       if (forwarded && !c.trustedProxies.includes(remote)) deny("Forwarded transport headers require a configured trusted proxy");
@@ -621,7 +626,7 @@ var require_security = __commonJS({
       add("trusted plugin boundary", "warn", "In-process plugins inherit server access; use authenticated external adapters for a separate trust boundary");
       return { profile: c.securityProfile, checks, counts: Object.fromEntries(["ok", "warn", "fail"].map((s) => [s, checks.filter((c2) => c2.status === s).length])) };
     }
-    module2.exports = { settings, enforce, verifyPlugin, report };
+    module2.exports = { settings, originAllowed, enforce, verifyPlugin, report };
   }
 });
 
@@ -80159,7 +80164,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "254d7214d34749882f94f66c8c0abf89de3186a45b65c0673f80f3d3438ca90e";
+      if (true) return "f5cfc520253816a9ab3bc080aab9151f34ffc5f8b5733665c9119fc0347b7455";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -87710,7 +87715,7 @@ var require_architecture_http = __commonJS({
     async function handle(req, res, url) {
       const R = require_results(), parts = url.pathname.split("/").filter(Boolean), result = R.load(parts[2]), action = parts[3] || "model";
       const send = (status, data) => {
-        res.writeHead(status, { "content-type": "application/json", "cache-control": "no-store", "access-control-allow-origin": "*" });
+        res.writeHead(status, { "content-type": "application/json", "cache-control": "no-store" });
         res.end(JSON.stringify(data));
       };
       if (result?.view !== "architecture") return send(404, { error: "Architecture result not found" });
@@ -87729,11 +87734,54 @@ var require_architecture_http = __commonJS({
         if (changed && original.semantic && model.env === original.env && model.flow?.id === original.flow?.id && model.document?.revision === original.document?.revision && ["dataflow", "dynamic"].includes(model.type)) model.semantic = original.semantic;
         if (action === "model") return send(200, model);
         const out2 = require_architecture_export().render(model, url.searchParams.get("format") || "svg");
-        res.writeHead(200, { "content-type": out2.type, "content-disposition": `attachment; filename="architecture-${model.type}.${out2.extension}"`, "cache-control": "no-store", "access-control-allow-origin": "*", "x-content-type-options": "nosniff", "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'" });
+        res.writeHead(200, { "content-type": out2.type, "content-disposition": `attachment; filename="architecture-${model.type}.${out2.extension}"`, "cache-control": "no-store", "x-content-type-options": "nosniff", "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'" });
         res.end(out2.body);
       } catch (e) {
         send(e.statusCode || 400, { error: e.message, code: e.code });
       }
+    }
+    module2.exports = { handle };
+  }
+});
+
+// lib/cors.js
+var require_cors = __commonJS({
+  "lib/cors.js"(exports2, module2) {
+    var { validateHeaderName } = require("node:http");
+    var EXPOSE = "Content-Disposition, Location, X-DT-Context, MCP-Session-Id, MCP-Protocol-Version, Retry-After, X-DT-Map-Focus, X-DT-Map-Libraries, X-DT-Map-Candidates, Traceparent";
+    var METHODS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"];
+    function token(value) {
+      try {
+        validateHeaderName(value);
+      } catch {
+        throw Object.assign(Error("Invalid CORS preflight method or header name"), { code: "DT_ARGUMENT_INVALID", statusCode: 400 });
+      }
+      return value;
+    }
+    function handle(req, res) {
+      const config = require_config().getServer(), origin = req.headers.origin;
+      res.setHeader("vary", "Origin");
+      if (origin && !require_security().originAllowed(origin, config)) {
+        res.writeHead(403, { "content-type": "application/json", "cache-control": "no-store" });
+        res.end(JSON.stringify({ error: "Browser origin is not allowed", code: "DT_SECURITY_POLICY" }));
+        return true;
+      }
+      res.setHeader("access-control-allow-origin", origin || "*");
+      if (origin) res.setHeader("access-control-allow-credentials", "true");
+      res.setHeader("access-control-expose-headers", EXPOSE);
+      if (req.method !== "OPTIONS") return false;
+      const method = req.headers["access-control-request-method"];
+      const requested = String(req.headers["access-control-request-headers"] || "").split(",").map((s) => s.trim()).filter(Boolean);
+      requested.forEach(token);
+      if (method) token(method);
+      res.setHeader("vary", "Origin, Access-Control-Request-Method, Access-Control-Request-Headers, Access-Control-Request-Private-Network");
+      res.setHeader("access-control-allow-methods", [.../* @__PURE__ */ new Set([...METHODS, ...method ? [method] : []])].join(", "));
+      res.setHeader("access-control-allow-headers", requested.length ? requested.join(", ") : "Authorization, Content-Type, X-DT-Story, X-DT-Principal, MCP-Session-Id, MCP-Protocol-Version, Traceparent, Tracestate, Baggage");
+      res.setHeader("access-control-max-age", "600");
+      if (req.headers["access-control-request-private-network"] === "true") res.setHeader("access-control-allow-private-network", "true");
+      res.writeHead(204);
+      res.end();
+      return true;
     }
     module2.exports = { handle };
   }
@@ -87991,13 +88039,12 @@ var require_server2 = __commonJS({
       }
       const target = result && typeof result === "object" && (result.view || result.dashboard);
       const embed = typeof target === "string" ? target + (target.includes("?") ? "&" : "?") + "embed=1" : null;
-      const headers = { "x-dt-context": JSON.stringify(pressure), "access-control-expose-headers": "Content-Disposition, Location, X-Dt-Context" };
+      const headers = { "x-dt-context": JSON.stringify(pressure) };
       if (embed) return send(res, 200, ["embed", result], { ...headers, "content-disposition": "inline", location: embed });
       send(res, 200, result, headers);
     }
     var admin = require_admin();
     var tokenOk = (url, value) => results.verify(value, url.searchParams.get("t"));
-    var CORS = { "access-control-allow-origin": "*" };
     async function pageAccess() {
       if (!(await tools.schemas()).some((t) => t.name === "ui_page")) throw Object.assign(Error("Pages are unavailable for this credential"), { code: "DT_ACCESS_DENIED", statusCode: 403 });
     }
@@ -88074,7 +88121,7 @@ var require_server2 = __commonJS({
       ["GET", "/contracts/*", false, (req, res, url) => {
         const full = require_contracts().resolve(url.pathname.slice("/contracts/".length));
         if (!full) return send(res, 404, { error: "Unknown contract" });
-        send(res, 200, fs3.readFileSync(full, "utf8"), CORS);
+        send(res, 200, fs3.readFileSync(full, "utf8"));
       }],
       ["POST", "/oapi/*", true, oapi],
       // admin: watch, edit and refresh the index
@@ -88301,13 +88348,13 @@ var require_server2 = __commonJS({
         const env = url.searchParams.get("env") || envNames2()[0];
         const ok = tokenOk(url, `dash:${env}`);
         if (!ok && !trusted(req)) return send(res, 403, { error: "needs a dashboard link from the overview tool" });
-        send(res, 200, await require_dashboard().overview(env), ok ? CORS : {});
+        send(res, 200, await require_dashboard().overview(env), {});
       }],
       ["GET", "/static/*", false, (req, res, url) => {
         const name = url.pathname.slice("/static/".length);
         const type = { ".css": "text/css", ".js": "text/javascript" }[path3.extname(name)];
         if (!type || !/^(?:views\/|vendor\/(?:ecs-canvas|codemirror)\/)?[\w.-]+$/.test(name) || !fs3.existsSync(path3.join(__dirname, "web", name))) return send(res, 404, { error: "not found" });
-        res.writeHead(200, { "content-type": `${type}; charset=utf-8`, "cache-control": "no-cache", ...CORS });
+        res.writeHead(200, { "content-type": `${type}; charset=utf-8`, "cache-control": "no-cache" });
         res.end(fs3.readFileSync(path3.join(__dirname, "web", name)));
       }],
       ["GET", "/logs/*", false, page("logs.html")],
@@ -88324,7 +88371,7 @@ var require_server2 = __commonJS({
       ["GET", "/api/map/*", false, async (req, res, url) => {
         try {
           const parts = url.pathname.split("/").filter(Boolean), id = parts[2], action = parts[3] || "graph", result = results.load(id);
-          if (!result || result.kind !== "map") return send(res, 404, { error: "Map result not found" }, CORS);
+          if (!result || result.kind !== "map") return send(res, 404, { error: "Map result not found" });
           const M = require_service_map(), a = { ...result.map };
           delete a.refresh;
           if (action === "graph") {
@@ -88332,18 +88379,18 @@ var require_server2 = __commonJS({
             if (url.searchParams.has("candidates")) a.include_candidates = url.searchParams.get("candidates") === "1";
             if (url.searchParams.has("libraries")) a.include_libraries = url.searchParams.get("libraries") === "1";
             const bytes = await M.snapshot(a);
-            res.writeHead(200, { "content-type": "application/vnd.dt.map", "cache-control": "no-store", "x-content-type-options": "nosniff", "x-dt-map-focus": encodeURIComponent(a.focus || (a.layer ? "feature:" + a.layer : "")), "x-dt-map-libraries": a.include_libraries ? "1" : "0", "x-dt-map-candidates": a.include_candidates ? "1" : "0", "access-control-expose-headers": "X-DT-Map-Focus, X-DT-Map-Libraries, X-DT-Map-Candidates", ...CORS });
+            res.writeHead(200, { "content-type": "application/vnd.dt.map", "cache-control": "no-store", "x-content-type-options": "nosniff", "x-dt-map-focus": encodeURIComponent(a.focus || (a.layer ? "feature:" + a.layer : "")), "x-dt-map-libraries": a.include_libraries ? "1" : "0", "x-dt-map-candidates": a.include_candidates ? "1" : "0" });
             res.end(bytes);
           } else if (action === "full") {
             const g = await M.graph(a.env);
-            res.writeHead(200, { "content-type": "application/vnd.dt.map", "content-disposition": 'attachment; filename="microservices.dtm"', ...CORS });
+            res.writeHead(200, { "content-type": "application/vnd.dt.map", "content-disposition": 'attachment; filename="microservices.dtm"' });
             res.end(g.bytes);
-          } else if (action === "node") send(res, 200, await M.inspect({ env: a.env, id: url.searchParams.get("id") }), CORS);
-          else if (action === "neighbors") send(res, 200, await M.neighbors({ env: a.env, id: url.searchParams.get("id"), limit: 30, include_candidates: url.searchParams.get("candidates") === "1", include_libraries: url.searchParams.get("libraries") === "1" }), CORS);
-          else if (action === "search") send(res, 200, await M.search({ env: a.env, query: url.searchParams.get("q") || "", include_libraries: url.searchParams.get("libraries") === "1", limit: 30 }), CORS);
-          else send(res, 404, { error: "Unknown map action" }, CORS);
+          } else if (action === "node") send(res, 200, await M.inspect({ env: a.env, id: url.searchParams.get("id") }));
+          else if (action === "neighbors") send(res, 200, await M.neighbors({ env: a.env, id: url.searchParams.get("id"), limit: 30, include_candidates: url.searchParams.get("candidates") === "1", include_libraries: url.searchParams.get("libraries") === "1" }));
+          else if (action === "search") send(res, 200, await M.search({ env: a.env, query: url.searchParams.get("q") || "", include_libraries: url.searchParams.get("libraries") === "1", limit: 30 }));
+          else send(res, 404, { error: "Unknown map action" });
         } catch (e) {
-          send(res, 400, errorPayload(e), CORS);
+          send(res, 400, errorPayload(e));
         }
       }],
       ["GET", "/pr/*", false, page("pr.html")],
@@ -88353,7 +88400,7 @@ var require_server2 = __commonJS({
         const ok = tokenOk(url, `passport:${service}`);
         if (!ok && !trusted(req)) return send(res, 403, { error: "needs a passport link from the passport tool" });
         const p = require_passport().load(service, { env: url.searchParams.get("env") || void 0 });
-        p ? send(res, 200, { ...p, bitbucketUrl: require_config().getPersonal().bitbucket.url }, ok ? CORS : {}) : send(res, 404, { error: `No passport for ${service}` }, ok ? CORS : {});
+        p ? send(res, 200, { ...p, bitbucketUrl: require_config().getPersonal().bitbucket.url }, {}) : send(res, 404, { error: `No passport for ${service}` }, {});
       }],
       ["GET", "/view", true, viewPage],
       ["GET", "/view/*", false, viewPage],
@@ -88391,27 +88438,27 @@ var require_server2 = __commonJS({
       ["GET", "/files/*", false, page("files.html")],
       ["GET", "/api/files/*", false, async (req, res, url) => {
         const r = results.load(url.pathname.split("/").pop());
-        if (!r || r.kind !== "view" || r.view !== "files") return send(res, 404, { error: "No such file listing" }, CORS);
+        if (!r || r.kind !== "view" || r.view !== "files") return send(res, 404, { error: "No such file listing" });
         const p = url.searchParams.get("path");
-        if (p === null) return send(res, 200, r, CORS);
+        if (p === null) return send(res, 200, r);
         const F = require_files();
         let rel;
         try {
           rel = F.rel(p);
         } catch (e) {
-          return send(res, 400, { error: e.message }, CORS);
+          return send(res, 400, { error: e.message });
         }
-        if (!r.data.entries.some((e) => !e.dir && e.path === rel)) return send(res, 403, { error: "not a file of this listing" }, CORS);
+        if (!r.data.entries.some((e) => !e.dir && e.path === rel)) return send(res, 403, { error: "not a file of this listing" });
         try {
-          send(res, 200, await F.preview(r.data.store, rel), CORS);
+          send(res, 200, await F.preview(r.data.store, rel));
         } catch (e) {
-          send(res, 400, { error: e.message }, CORS);
+          send(res, 400, { error: e.message });
         }
       }],
       ["GET", "/api/results", true, (req, res) => send(res, 200, results.list())],
       ["GET", "/api/result/*", false, (req, res, url) => {
         const r = results.load(url.pathname.split("/").pop());
-        r ? send(res, 200, r, CORS) : send(res, 404, { error: "No such result" }, CORS);
+        r ? send(res, 200, r) : send(res, 404, { error: "No such result" });
       }],
       ["POST", "/mcp", true, mcp],
       ["GET", "/mcp", true, (req, res) => send(res, 405, { error: "no SSE stream; POST JSON-RPC" }, { allow: "POST" })],
@@ -88430,6 +88477,7 @@ var require_server2 = __commonJS({
         const url = new URL(req.url, "http://x"), A = require_access();
         let identity;
         try {
+          if (require_cors().handle(req, res)) return;
           require_security().enforce(req);
           identity = A.identity(req);
         } catch (e) {

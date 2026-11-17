@@ -3,7 +3,7 @@ const home=fs.mkdtempSync(path.join(os.tmpdir(),'dt-team-'));
 for(const k of ['DT_CONFIG_DIR','DT_CACHE_DIR','DT_PLUGINS_DIR','DT_SCRIPTS_DIR','DT_SECURITY_PROFILE','DT_API_KEY','DT_TRUST_NETWORK'])delete process.env[k];
 Object.assign(process.env,{DT_HOME:home,DT_NO_DOCTOR:'1',DT_LOG:'quiet',DT_RATE_PER_SEC:'0',DT_STATE_BACKEND:'legacy'});
 const token='team-user-token-123456789',other='rotated-team-token-123456789',admin='team-admin-token-123456789';
-const config={server:{securityProfile:'team',trustNetwork:true,publicUrl:'https://tools.example',accessTokens:[{id:'alice-old',principal:'alice',token,envs:['dev'],tools:['find','catalog_search']},{id:'alice-new',principal:'alice',token:other,envs:['dev'],tools:['find','catalog_search']},{id:'operator',token:admin,role:'admin'}]},envs:{dev:{postgres:{}},uat:{postgres:{}}},tools:{workerHeapMb:0},scripts:{starters:false}};
+const config={server:{securityProfile:'team',trustNetwork:true,publicUrl:'https://tools.example',allowedOrigins:['https://tools.example'],accessTokens:[{id:'alice-old',principal:'alice',token,envs:['dev'],tools:['find','catalog_search']},{id:'alice-new',principal:'alice',token:other,envs:['dev'],tools:['find','catalog_search']},{id:'operator',token:admin,role:'admin'}]},envs:{dev:{postgres:{}},uat:{postgres:{}}},tools:{workerHeapMb:0},scripts:{starters:false}};
 fs.writeFileSync(path.join(home,'config.json'),JSON.stringify(config));
 const C=require('../lib/config'),A=require('../lib/access'),S=require('../lib/security');
 const req=(secret,headers={})=>({method:'POST',headers:{...(secret?{authorization:'Bearer '+secret}:{}),...headers},socket:{remoteAddress:'127.0.0.1'}});

@@ -53,19 +53,19 @@ test('mcp: initialize, tools/list, tools/call, notifications', async () => {
   assert.equal(call.result.isError, true);
 });
 
-test('result data is CORS-readable by id; dashboard only with a valid token', async () => {
+test('all responses are CORS-readable while dashboard access still needs a valid token', async () => {
   const view = require('../lib/results').save('pg', [{ a: 1 }], { query: 'q' });
   const id = view.split('/').pop();
   const r = await fetch(`${base}/api/result/${id}`);
   assert.equal(r.headers.get('access-control-allow-origin'), '*');
   assert.deepEqual((await r.json()).rows, [{ a: 1 }]);
-  assert.equal((await fetch(`${base}/api/results`)).headers.get('access-control-allow-origin'), null);
+  assert.equal((await fetch(`${base}/api/results`)).headers.get('access-control-allow-origin'), '*');
   const { sign } = require('../lib/results');
   const ok = sign('dash:dev'), bad = 'f'.repeat(32);
   // dashboard data itself needs live systems; only the headers matter here
   const h1 = await fetch(`${base}/api/dash?env=dev&t=${ok}`), h2 = await fetch(`${base}/api/dash?env=dev&t=${bad}`);
   assert.equal(h1.headers.get('access-control-allow-origin'), '*');
-  assert.equal(h2.headers.get('access-control-allow-origin'), null);
+  assert.equal(h2.headers.get('access-control-allow-origin'), '*');
 });
 
 test('pages and static assets are served', async () => {

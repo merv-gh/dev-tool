@@ -134,14 +134,13 @@ async function oapi(req, res, url) {
   catch (e) { return send(res, e.statusCode || 400, errorPayload(e)); }
   const target = result && typeof result === 'object' && (result.view || result.dashboard);
   const embed = typeof target === 'string' ? target + (target.includes('?') ? '&' : '?') + 'embed=1' : null;
-  const headers={'x-dt-context':JSON.stringify(pressure),'access-control-expose-headers':'Content-Disposition, Location, X-Dt-Context'};
+  const headers={'x-dt-context':JSON.stringify(pressure)};
   if (embed) return send(res, 200, ['embed', result], { ...headers,'content-disposition': 'inline', location: embed });
   send(res, 200, result,headers);
 }
 
 const admin = require('./lib/admin');
 const tokenOk = (url, value) => results.verify(value, url.searchParams.get('t'));
-const CORS = { 'access-control-allow-origin': '*' };
 async function pageAccess(){if(!(await tools.schemas()).some(t=>t.name==='ui_page'))throw Object.assign(Error('Pages are unavailable for this credential'),{code:'DT_ACCESS_DENIED',statusCode:403});}
 
 // [method, path or prefix*, trusted only, handler]
@@ -180,7 +179,7 @@ const routes = [
   }],
   ['GET', '/openapi.json', false, async (req, res, url) => send(res, 200, await openapi(url.searchParams.get('profile') || undefined))],
   ['GET', '/openapi/*', false, async (req, res, url) => { const name = url.pathname.slice('/openapi/'.length); if (!/^[a-z][\w-]*\.json$/.test(name)) return send(res, 404, { error: 'Unknown profile URL' }); send(res, 200, await openapi(name.slice(0, -5))); }],
-  ['GET', '/contracts/*', false, (req, res, url) => { const full = require('./lib/contracts').resolve(url.pathname.slice('/contracts/'.length)); if (!full) return send(res, 404, { error: 'Unknown contract' }); send(res, 200, fs.readFileSync(full, 'utf8'), CORS); }],
+  ['GET', '/contracts/*', false, (req, res, url) => { const full = require('./lib/contracts').resolve(url.pathname.slice('/contracts/'.length)); if (!full) return send(res, 404, { error: 'Unknown contract' }); send(res, 200, fs.readFileSync(full, 'utf8')); }],
   ['POST', '/oapi/*', true, oapi],
 
   // admin: watch, edit and refresh the index
@@ -297,13 +296,13 @@ const routes = [
     const env = url.searchParams.get('env') || envNames()[0];
     const ok = tokenOk(url, `dash:${env}`);
     if (!ok && !trusted(req)) return send(res, 403, { error: 'needs a dashboard link from the overview tool' });
-    send(res, 200, await require('./lib/dashboard').overview(env), ok ? CORS : {});
+    send(res, 200, await require('./lib/dashboard').overview(env), {});
   }],
   ['GET', '/static/*', false, (req, res, url) => {
     const name = url.pathname.slice('/static/'.length);
     const type = { '.css': 'text/css', '.js': 'text/javascript' }[path.extname(name)];
     if (!type || !/^(?:views\/|vendor\/(?:ecs-canvas|codemirror)\/)?[\w.-]+$/.test(name) || !fs.existsSync(path.join(__dirname, 'web', name))) return send(res, 404, { error: 'not found' });
-    res.writeHead(200, { 'content-type': `${type}; charset=utf-8`, 'cache-control': 'no-cache', ...CORS });
+    res.writeHead(200, { 'content-type': `${type}; charset=utf-8`, 'cache-control': 'no-cache' });
     res.end(fs.readFileSync(path.join(__dirname, 'web', name)));
   }],
   ['GET', '/logs/*', false, page('logs.html')],
@@ -314,19 +313,19 @@ const routes = [
   ['GET', '/api/map/*', false, async (req,res,url) => {
     try {
       const parts=url.pathname.split('/').filter(Boolean), id=parts[2], action=parts[3]||'graph', result=results.load(id);
-      if(!result||result.kind!=='map') return send(res,404,{error:'Map result not found'},CORS);
+      if(!result||result.kind!=='map') return send(res,404,{error:'Map result not found'});
       const M=require('./lib/service-map'), a={...result.map}; delete a.refresh;
       if(action==='graph') {
         if(url.searchParams.has('focus')) a.focus=url.searchParams.get('focus')||undefined;
         if(url.searchParams.has('candidates'))a.include_candidates=url.searchParams.get('candidates')==='1';
         if(url.searchParams.has('libraries'))a.include_libraries=url.searchParams.get('libraries')==='1';
-        const bytes=await M.snapshot(a);res.writeHead(200,{'content-type':'application/vnd.dt.map','cache-control':'no-store','x-content-type-options':'nosniff','x-dt-map-focus':encodeURIComponent(a.focus||(a.layer?'feature:'+a.layer:'')),'x-dt-map-libraries':a.include_libraries?'1':'0','x-dt-map-candidates':a.include_candidates?'1':'0','access-control-expose-headers':'X-DT-Map-Focus, X-DT-Map-Libraries, X-DT-Map-Candidates',...CORS});res.end(bytes);
-      } else if(action==='full'){const g=await M.graph(a.env);res.writeHead(200,{'content-type':'application/vnd.dt.map','content-disposition':'attachment; filename="microservices.dtm"',...CORS});res.end(g.bytes);}
-      else if(action==='node')send(res,200,await M.inspect({env:a.env,id:url.searchParams.get('id')}),CORS);
-      else if(action==='neighbors')send(res,200,await M.neighbors({env:a.env,id:url.searchParams.get('id'),limit:30,include_candidates:url.searchParams.get('candidates')==='1',include_libraries:url.searchParams.get('libraries')==='1'}),CORS);
-      else if(action==='search')send(res,200,await M.search({env:a.env,query:url.searchParams.get('q')||'',include_libraries:url.searchParams.get('libraries')==='1',limit:30}),CORS);
-      else send(res,404,{error:'Unknown map action'},CORS);
-    }catch(e){send(res,400,errorPayload(e),CORS);}
+        const bytes=await M.snapshot(a);res.writeHead(200,{'content-type':'application/vnd.dt.map','cache-control':'no-store','x-content-type-options':'nosniff','x-dt-map-focus':encodeURIComponent(a.focus||(a.layer?'feature:'+a.layer:'')),'x-dt-map-libraries':a.include_libraries?'1':'0','x-dt-map-candidates':a.include_candidates?'1':'0'});res.end(bytes);
+      } else if(action==='full'){const g=await M.graph(a.env);res.writeHead(200,{'content-type':'application/vnd.dt.map','content-disposition':'attachment; filename="microservices.dtm"'});res.end(g.bytes);}
+      else if(action==='node')send(res,200,await M.inspect({env:a.env,id:url.searchParams.get('id')}));
+      else if(action==='neighbors')send(res,200,await M.neighbors({env:a.env,id:url.searchParams.get('id'),limit:30,include_candidates:url.searchParams.get('candidates')==='1',include_libraries:url.searchParams.get('libraries')==='1'}));
+      else if(action==='search')send(res,200,await M.search({env:a.env,query:url.searchParams.get('q')||'',include_libraries:url.searchParams.get('libraries')==='1',limit:30}));
+      else send(res,404,{error:'Unknown map action'});
+    }catch(e){send(res,400,errorPayload(e));}
   }],
   ['GET', '/pr/*', false, page('pr.html')],
   ['GET', '/passport/*', false, page('passport.html')],
@@ -335,7 +334,7 @@ const routes = [
     const ok = tokenOk(url, `passport:${service}`);
     if (!ok && !trusted(req)) return send(res, 403, { error: 'needs a passport link from the passport tool' });
     const p = require('./lib/passport').load(service,{env:url.searchParams.get('env')||undefined});
-    p ? send(res, 200, { ...p, bitbucketUrl: require('./lib/config').getPersonal().bitbucket.url }, ok ? CORS : {}) : send(res, 404, { error: `No passport for ${service}` }, ok ? CORS : {});
+    p ? send(res, 200, { ...p, bitbucketUrl: require('./lib/config').getPersonal().bitbucket.url }, {}) : send(res, 404, { error: `No passport for ${service}` }, {});
   }],
   ['GET', '/view', true, viewPage],
   ['GET', '/view/*', false, viewPage],
@@ -363,19 +362,19 @@ const routes = [
   ['GET', '/files/*', false, page('files.html')],
   ['GET', '/api/files/*', false, async (req, res, url) => {
     const r = results.load(url.pathname.split('/').pop());
-    if (!r || r.kind !== 'view' || r.view !== 'files') return send(res, 404, { error: 'No such file listing' }, CORS);
+    if (!r || r.kind !== 'view' || r.view !== 'files') return send(res, 404, { error: 'No such file listing' });
     const p = url.searchParams.get('path');
-    if (p === null) return send(res, 200, r, CORS);
+    if (p === null) return send(res, 200, r);
     const F = require('./lib/files');
     let rel;
-    try { rel = F.rel(p); } catch (e) { return send(res, 400, { error: e.message }, CORS); }
-    if (!r.data.entries.some(e => !e.dir && e.path === rel)) return send(res, 403, { error: 'not a file of this listing' }, CORS);
-    try { send(res, 200, await F.preview(r.data.store, rel), CORS); } catch (e) { send(res, 400, { error: e.message }, CORS); }
+    try { rel = F.rel(p); } catch (e) { return send(res, 400, { error: e.message }); }
+    if (!r.data.entries.some(e => !e.dir && e.path === rel)) return send(res, 403, { error: 'not a file of this listing' });
+    try { send(res, 200, await F.preview(r.data.store, rel)); } catch (e) { send(res, 400, { error: e.message }); }
   }],
   ['GET', '/api/results', true, (req, res) => send(res, 200, results.list())],
   ['GET', '/api/result/*', false, (req, res, url) => {
     const r = results.load(url.pathname.split('/').pop());
-    r ? send(res, 200, r, CORS) : send(res, 404, { error: 'No such result' }, CORS);
+    r ? send(res, 200, r) : send(res, 404, { error: 'No such result' });
   }],
   ['POST', '/mcp', true, mcp],
   ['GET', '/mcp', true, (req, res) => send(res, 405, { error: 'no SSE stream; POST JSON-RPC' }, { allow: 'POST' })],
@@ -389,7 +388,7 @@ function start({ port = 4000, host = '127.0.0.1' } = {}) {
     const disconnected=()=>{if(!res.writableEnded)controller.abort('HTTP client disconnected');};
     req.once('aborted',disconnected);res.once('close',disconnected);
     const url = new URL(req.url, 'http://x'),A=require('./lib/access');
-    let identity;try{require('./lib/security').enforce(req);identity=A.identity(req);}catch(e){return send(res,e.statusCode||403,errorPayload(e));}
+    let identity;try{if(require('./lib/cors').handle(req,res))return;require('./lib/security').enforce(req);identity=A.identity(req);}catch(e){return send(res,e.statusCode||403,errorPayload(e));}
     const supplied=!!req.headers.authorization||!!cookie(req,'dt_key');
     if(!identity&&getServer().securityProfile==='team'&&url.pathname==='/api/status')return send(res,403,{error:'Authentication is required'});
     if(!identity&&(getServer().accessTokens.length||getServer().securityProfile==='team')&&(['/api/tools','/openapi.json'].includes(url.pathname)||url.pathname.startsWith('/openapi/')))return send(res,403,{error:'Authentication is required'});

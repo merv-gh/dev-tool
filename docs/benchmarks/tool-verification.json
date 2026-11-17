@@ -1,6 +1,6 @@
 {
   "protocol": "dt.release-inventory/v1",
-  "sourceDigest": "254d7214d34749882f94f66c8c0abf89de3186a45b65c0673f80f3d3438ca90e",
+  "sourceDigest": "f5cfc520253816a9ab3bc080aab9151f34ffc5f8b5733665c9119fc0347b7455",
   "tools": [
     {
       "name": "find",
@@ -18,6 +18,7 @@
         "test/context-ui.test.js",
         "test/context.test.js",
         "test/continuation.test.js",
+        "test/cors.test.js",
         "test/dist.test.js",
         "test/editor-ui.test.js",
         "test/operational-readiness.test.js",

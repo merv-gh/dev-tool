@@ -549,7 +549,7 @@ test("passport previews retain the effective owned snapshot for opaque-origin em
     headers: { origin: "null" },
   });
   assert.equal(r.status, 200);
-  assert.equal(r.headers.get("access-control-allow-origin"), "*");
+  assert.equal(r.headers.get("access-control-allow-origin"), "null");
   const snapshot = await r.json();
   assert.equal(snapshot.data.effective.tables[0].table, "sales.corrected");
   assert.equal(snapshot.owner.principalId, "alice");
