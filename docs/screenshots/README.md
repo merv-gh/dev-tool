@@ -236,3 +236,23 @@ identifies a missed changed line; adding the missing path assertion closes the
 gap, and another edit invalidates the old report. Source-read and coverage-run
 actions prepare editable Workbench drafts. This is coverage of the selected JVM
 change, separate from dev-tool’s own coverage report.
+
+## Developer studio
+
+Captured by `dev/check-studio-browser.js`, `demo/check-editor.js` and
+`dev/check-named-views-events-browser.js` against disposable local Git and HTTP
+fixtures. The [studio showcase](../../demo/studio/README.md) contains reproduction
+commands and portable diff/workflow TLA+ cases. Coverage in these graph images
+refers to declared model transitions, separate from source branch coverage.
+
+| | |
+| --- | --- |
+| ![Developer studio](studio-desktop.png) **Logic exploration** | ![Studio on mobile in dark mode](studio-mobile-dark.png) **Mobile actions and graph panning** |
+| ![Retained workflow checkpoints](studio-flow.png) **Parallel, wait and loop progress** | ![Workspace editor and dependency plan](workspace-editor.png) **Source, terminal and shared version owner** |
+| ![Diff without coverage](logic-diff.png) **Diff decision graph, coverage off** | ![Workflow coverage](logic-workflow.png) **Workflow recovery, coverage on** |
+| ![Backend API page action](pages-actions.png) **Collection, action and scoped live event** | ![Editor on mobile](workspace-editor-mobile.png) **Mobile source and terminal** |
+
+`sample-work-record.png` and `sample-logic-model.png` illustrate the new passive
+inline result types in the field guide. Shared definitions and private execution
+results retain their normal publication boundaries. These images do not show a
+production model or production infrastructure test.

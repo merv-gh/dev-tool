@@ -9,7 +9,7 @@ const actual = catalog.families.map(m=>m.id).sort();
 if (JSON.stringify(expected)!==JSON.stringify(actual)) throw Error('Runtime ownership map must cover every audited family exactly once');
 for (const family of catalog.families) for (const owner of family.owners) if (!fs.statSync(path.join(root,owner)).isFile()) throw Error('Missing owner '+owner);
 const { models } = require('../lib/state-machine');
-const charts = [...Object.values(require('../lib/lifecycles')), ...Object.values(models), require('../web/map-format').decoding, require('../lib/atomic-file').model].sort((a,b)=>a.name.localeCompare(b.name));
+const charts = [require('../lib/automation-flow').lifecycle,require('../lib/automation-flow').checkpointLifecycle,require('../lib/continuation').lifecycle,require('../lib/continuation').selection,...Object.values(require('../lib/lifecycles')), ...Object.values(models), require('../web/map-format').decoding, require('../lib/atomic-file').model].sort((a,b)=>a.name.localeCompare(b.name));
 if (new Set(charts.map(c=>c.name)).size!==charts.length) throw Error('Duplicate chart name');
 const updated = {...catalog, charts};
 const bytes = JSON.stringify(updated,null,2)+'\n';

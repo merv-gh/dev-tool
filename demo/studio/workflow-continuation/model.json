@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "title": "Workflow continuation after interruption",
+  "description": "A completed action is retained; an uncertain in-flight effect requires explicit resolution.",
+  "initial": "ready",
+  "states": [
+    {
+      "id": "ready"
+    },
+    {
+      "id": "running"
+    },
+    {
+      "id": "waiting"
+    },
+    {
+      "id": "interrupted"
+    },
+    {
+      "id": "uncertain",
+      "terminal": true
+    },
+    {
+      "id": "done",
+      "terminal": true
+    },
+    {
+      "id": "cancelled",
+      "terminal": true
+    },
+    {
+      "id": "replayed",
+      "terminal": true
+    }
+  ],
+  "transitions": [
+    {
+      "id": "start",
+      "from": "ready",
+      "to": "running"
+    },
+    {
+      "id": "wait",
+      "from": "running",
+      "to": "waiting"
+    },
+    {
+      "id": "resume-wait",
+      "from": "waiting",
+      "to": "running",
+      "assumption": "Persisted deadline elapsed; no tool effect is replayed"
+    },
+    {
+      "id": "finish",
+      "from": "running",
+      "to": "done"
+    },
+    {
+      "id": "interrupt",
+      "from": "running",
+      "to": "interrupted"
+    },
+    {
+      "id": "require-resolution",
+      "from": "interrupted",
+      "to": "uncertain"
+    },
+    {
+      "id": "cancel",
+      "from": "running",
+      "to": "cancelled"
+    },
+    {
+      "id": "cancel-wait",
+      "from": "waiting",
+      "to": "cancelled"
+    }
+  ],
+  "forbidden": [
+    "replayed"
+  ],
+  "assumptions": [
+    "Abstract lifecycle of the durable automation implementation; uncertain is an explicit stop requiring user resolution.",
+    "This safety graph abstracts node payloads, checkpoints and deadlines. It does not prove eventual completion or source equivalence.",
+    "Add interrupted → replayed to demonstrate a forbidden replay counterexample."
+  ]
+}

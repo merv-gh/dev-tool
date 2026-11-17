@@ -30,6 +30,7 @@ Examples use illustrative `checkout`, `DEMO/checkout`, `orders`, `HANDBOOK-101` 
 - [Trace work and inspect test coverage](#observability)
 - [Build shared project understanding](#project-knowledge)
 - [Build and review a draft change](#ci-review)
+- [Developer studio: continue, coordinate and verify](#developer-studio)
 
 [Complete built-in tool reference](tools.md) · [Source and verification](../benchmarks/handbook-verification.json) · [Task-based novice review](novice-task-review.md)
 
@@ -2289,6 +2290,26 @@ How can I keep this question as a reusable dashboard? Filter retained tables/com
 
 </details>
 
+#### work-record
+
+What was retained for this task, workflow or dependency change? Filter dependencies by source hierarchy, inspect task briefing or leaf checkpoints, export the record and open the authenticated Studio for explicit actions. This inline snapshot cannot execute or resume work.
+
+<details><summary>View labeled presentation example</summary>
+
+![Built-in work-record presentation sample](../screenshots/sample-work-record.png)
+
+</details>
+
+#### logic-model
+
+Which modeled paths were checked or sampled? Select a state or retained counterexample, compare model coverage with explicitly supplied source observations, hide the overlay, and export TLA+/TLC configuration. Finite abstraction checks do not prove source equivalence or liveness.
+
+<details><summary>View labeled presentation example</summary>
+
+![Built-in logic-model presentation sample](../screenshots/sample-logic-model.png)
+
+</details>
+
 ### Standalone workbenches
 
 Passports combine service boundary graphs and detected/manual evidence; API explorer prepares and sends reviewed requests; Services map explores bounded relationships and editable tool inspections; architecture/dossiers add C4/environment/requirement views and exports. Logs/trace, PR, files, dashboard and showcase have their own explorers. Use the selected inspector before exporting or summarizing a large graph.
@@ -2323,7 +2344,7 @@ Search a task term, tool name or group. Select a tool to read its contract, requ
 
 The portable repository reference records built-in tools at generation time. The running registry remains authoritative for extensions and permissions. A required field can still need a real returned ID; blank values or an invented analysis/lease/workspace ID are not useful arguments.
 
-The [complete built-in reference](tools.md) contains 260 tools with exact schemas. In the app, the reference uses the current authorized registry and includes configured extensions.
+The [complete built-in reference](tools.md) contains 285 tools with exact schemas. In the app, the reference uses the current authorized registry and includes configured extensions.
 
 ### When a tool is missing
 
@@ -2561,3 +2582,111 @@ The CI result shows commit binding, gaps, build checks, current reviewer decisio
 Download API script reproduces the selected call and story with curl. Supply the same principal through DT_API_KEY; credentials are not embedded. Saved views are snapshots; refresh with the same exact revision and policy before claiming current readiness.
 
 **Related chapters:** [Workspaces, regressions, patches and push](#verify-changes) · [Contexts, nearby files and handoffs](#task-memory) · [Monitor work and effectiveness](#operations)
+
+<a id="developer-studio"></a>
+
+## Developer studio: continue, coordinate and verify
+
+Resume durable tasks, coordinate repository changes and inspect finite logic models.
+
+**Outcome:** Retained task briefings, exact source revisions and reproducible model evidence.
+
+**Before you start:** Choose a stable authenticated user and task scope.
+
+### Continue the same task in another chat
+
+Open Admin → Developer studio → Resume a task. continuation_create establishes a stable principal-owned task; save findings/files and an explicit checkpoint. New chats start unattached: find the saved task, explicitly attach, and read its briefing before continuing. Shared project publication remains an admin action.
+
+**Discover durable tasks** · `continuation_find`
+
+```json
+{}
+```
+
+Expected: Metadata only, scoped to this principal across stories.
+
+**Inspect the attached task** · `continuation_get`
+
+```json
+{}
+```
+
+Expected: A new chat reports attached=false rather than loading another task silently.
+
+### Coordinate repositories and bounded programs
+
+Open the offline workspace editor for revision-checked files and a bounded terminal. Index all selected repositories’ Gradle files at exact immutable SHAs, inspect unresolved/shared owners, prepare a dependency upgrade plan, then explicitly apply it to a matching owned workspace.
+
+Save a loop/parallel/wait workflow before starting it. Model nodes require explicit permission; completed leaves never replay. Interrupted effects require explicit verified resolution before resume. Waits retain deadlines across restart.
+
+**Find an owned editable workspace** · `workspace_editor`
+
+```json
+{
+  "action": "list"
+}
+```
+
+Expected: Lists supported terminal commands and policy without executing them.
+
+**Browse exact Gradle indices** · `gradle_inventory`
+
+```json
+{
+  "action": "list"
+}
+```
+
+Expected: Reads retained generations; no repository is fetched.
+
+**Find saved workflow checkpoints** · `automation_flow_list`
+
+```json
+{}
+```
+
+Expected: Opening status does not resume or invoke a model.
+
+### Simulate logic and publish readable evidence
+
+Name a shared page or an explicitly shared retained result with named_view. The human path is a locator; private data requires owner access or explicit result capability. Page actions send requests through the backend with ordinary grants; scoped SSE events only update observations.
+
+logic_model exports actual TLA+ and TLC configuration for finite declared logic graphs. Check safety/deadlocks, simulate seeded paths, and inspect transition coverage or hide it. Source observations are separate from model exploration. Neither establishes arbitrary source-code equivalence or liveness.
+
+**Browse readable view names** · `named_view`
+
+```json
+{
+  "action": "list"
+}
+```
+
+Expected: Private aliases remain task scoped; sharing result data is explicit.
+
+**Simulate workflow continuation** · `logic_model`
+
+```json
+{
+  "action": "run",
+  "template": "workflow-continuation",
+  "mode": "simulate",
+  "seed": 42,
+  "steps": 30,
+  "traces": 10,
+  "coverage": true
+}
+```
+
+Expected: A finite abstraction with explicit assumptions and retained paths.
+
+**Explore concrete diff decision paths** · `logic_model`
+
+```json
+{
+  "action": "run",
+  "template": "diff-lines",
+  "coverage": false
+}
+```
+
+Expected: Fifty real diff runs inform this graph; general algorithm correctness is not established.

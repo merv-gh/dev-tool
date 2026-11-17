@@ -154,6 +154,7 @@
     <button data-tab="context">Context & scratchpad</button>
     <button data-tab="scripts">Scripts<span class="n" id="nScripts"></span></button>
     <button data-tab="pages">Pages</button>
+    <button data-tab="studio">Developer studio</button>
     <button data-tab="sites">Sites<span class="n" id="nSites"></span></button>
     <button data-tab="api">API routes</button>
     <button data-tab="views">Views<span class="n" id="nViews"></span></button>
@@ -167,6 +168,7 @@
 
   <section id="tab-workbench"><div id="wbRoot"></div></section>
   <section id="tab-capabilities" hidden><div id="capabilityRoot"></div></section>
+  <section id="tab-studio" hidden><iframe id="adminStudio" title="Developer studio" style="width:100%;height:1200px;border:0" loading="lazy"></iframe></section>
   <section id="tab-pages" hidden><iframe id="adminPages" title="Declarative pages" style="width:100%;height:1100px;border:0" loading="lazy"></iframe></section>
   <section id="tab-index" hidden>
     <div class="row" style="margin-bottom:10px">
@@ -684,6 +686,7 @@ function show(t) {
   history.replaceState(null, '', `#${['semantic','handbook','context','scripts','runtime','workbench','capabilities'].includes(t) ? requested : t}`);
   if (t === 'capabilities') loadCapabilities().catch(e => toast(e.message));
   if (t === 'workbench') loadWorkbench().catch(e => wbMessage(e.message, true));
+  if(t==='studio')loadRuntime().then(()=>{if(tab!=='studio')return;const frame=$('adminStudio'),src='/studio?'+new URLSearchParams({embed:'true',story:runtimeStory||'default',...(runtimePrincipal?{principal:runtimePrincipal}:{})});if(frame.getAttribute('src')!==src)frame.src=src;}).catch(e=>toast(e.message));
   if(t==='pages')loadRuntime().then(()=>{if(tab!=='pages')return;const frame=$('adminPages'),src='/pages?'+new URLSearchParams({embed:'true',story:runtimeStory||'default',...(runtimePrincipal?{principal:runtimePrincipal}:{})});if(frame.getAttribute('src')!==src)frame.src=src;}).catch(e=>toast(e.message));
   $('adminPages')?.contentWindow?.postMessage({type:'ui-page:visibility',visible:t==='pages'},location.origin);
   if (t === 'handbook') loadHandbook().catch(e => toast(e.message));

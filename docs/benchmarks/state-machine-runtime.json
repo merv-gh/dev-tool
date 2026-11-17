@@ -1024,6 +1024,135 @@
       }
     },
     {
+      "name": "SM.automation-flow-checkpoint",
+      "initial": "pending",
+      "states": [
+        "pending",
+        "running",
+        "waiting",
+        "uncertain",
+        "failed",
+        "done"
+      ],
+      "terminal": [
+        "done"
+      ],
+      "transitions": {
+        "pending": [
+          "running",
+          "waiting",
+          "done"
+        ],
+        "running": [
+          "done",
+          "uncertain"
+        ],
+        "waiting": [
+          "done"
+        ],
+        "uncertain": [
+          "pending",
+          "done"
+        ],
+        "failed": [
+          "pending",
+          "uncertain",
+          "done"
+        ],
+        "done": []
+      }
+    },
+    {
+      "name": "SM.automation-flow-run",
+      "initial": "pending",
+      "states": [
+        "pending",
+        "running",
+        "failed",
+        "cancelled",
+        "blocked",
+        "paused",
+        "done"
+      ],
+      "terminal": [
+        "done"
+      ],
+      "transitions": {
+        "pending": [
+          "running",
+          "failed"
+        ],
+        "running": [
+          "done",
+          "failed",
+          "cancelled",
+          "blocked",
+          "paused"
+        ],
+        "failed": [
+          "running",
+          "blocked",
+          "paused"
+        ],
+        "cancelled": [
+          "running",
+          "blocked",
+          "paused"
+        ],
+        "blocked": [
+          "running",
+          "paused"
+        ],
+        "paused": [
+          "running",
+          "blocked"
+        ],
+        "done": []
+      }
+    },
+    {
+      "name": "SM.continuation-selection",
+      "initial": "unselected",
+      "states": [
+        "unselected",
+        "selected"
+      ],
+      "terminal": [],
+      "transitions": {
+        "unselected": [
+          "selected"
+        ],
+        "selected": [
+          "selected",
+          "unselected"
+        ]
+      }
+    },
+    {
+      "name": "SM.continuation-task",
+      "initial": "active",
+      "states": [
+        "active",
+        "paused",
+        "done"
+      ],
+      "terminal": [],
+      "transitions": {
+        "active": [
+          "paused",
+          "done"
+        ],
+        "paused": [
+          "active",
+          "done"
+        ],
+        "done": [
+          "active",
+          "paused"
+        ]
+      }
+    },
+    {
       "name": "SM01.execution",
       "initial": "queued",
       "states": [

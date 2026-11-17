@@ -2089,11 +2089,18 @@ var require_diff = __commonJS({
       const o = opts || {};
       const split = (t) => t == null ? [] : String(t).replace(/\r\n/g, "\n").split("\n");
       const A = split(first), B = split(last);
+      const emit = (action, a, b) => {
+        if (Array.isArray(o.trace) && o.trace.length < 1e4) o.trace.push({ action, a, b });
+      };
       const eq = (x, y) => o.ignoreWhitespace ? x.replace(/\s+/g, " ").trim() === y.replace(/\s+/g, " ").trim() : x === y;
       let s = 0;
-      while (s < A.length && s < B.length && eq(A[s], B[s])) s++;
+      while (s < A.length && s < B.length && eq(A[s], B[s])) {
+        emit("trim-head", s + 1, s + 1);
+        s++;
+      }
       let ea = A.length, eb = B.length;
       while (ea > s && eb > s && eq(A[ea - 1], B[eb - 1])) {
+        emit("trim-tail", ea, eb);
         ea--;
         eb--;
       }
@@ -2101,27 +2108,33 @@ var require_diff = __commonJS({
       for (let i = 0; i < s; i++) ops.push({ op: " ", text: A[i], a: i + 1, b: i + 1 });
       const n = ea - s, m = eb - s;
       if (n * m > 4e6) {
+        emit("fallback", n, m);
         for (let i = s; i < ea; i++) ops.push({ op: "-", text: A[i], a: i + 1 });
         for (let j = s; j < eb; j++) ops.push({ op: "+", text: B[j], b: j + 1 });
       } else {
+        emit("matrix", n, m);
         const L = Array.from({ length: n + 1 }, () => new Uint32Array(m + 1));
         for (let i2 = n - 1; i2 >= 0; i2--) for (let j2 = m - 1; j2 >= 0; j2--) L[i2][j2] = eq(A[s + i2], B[s + j2]) ? L[i2 + 1][j2 + 1] + 1 : Math.max(L[i2 + 1][j2], L[i2][j2 + 1]);
         let i = 0, j = 0;
         while (i < n || j < m) {
           if (i < n && j < m && eq(A[s + i], B[s + j])) {
+            emit("keep", s + i + 1, s + j + 1);
             ops.push({ op: " ", text: A[s + i], a: s + i + 1, b: s + j + 1 });
             i++;
             j++;
           } else if (i < n && (j === m || L[i + 1][j] >= L[i][j + 1])) {
+            emit("remove", s + i + 1, s + j + 1);
             ops.push({ op: "-", text: A[s + i], a: s + i + 1 });
             i++;
           } else {
+            emit("add", s + i + 1, s + j + 1);
             ops.push({ op: "+", text: B[s + j], b: s + j + 1 });
             j++;
           }
         }
       }
       for (let i = ea, j = eb; i < A.length; i++, j++) ops.push({ op: " ", text: A[i], a: i + 1, b: j + 1 });
+      emit("finish", A.length, B.length);
       const added = ops.filter((x) => x.op === "+").length, removed = ops.filter((x) => x.op === "-").length;
       return { ops, counts: { first: A.length, last: B.length, added, removed, same: ops.length - added - removed }, same: added === 0 && removed === 0 };
     }

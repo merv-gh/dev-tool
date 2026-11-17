@@ -1,0 +1,192 @@
+{
+  "protocol": "dt.developer-studio-verification/v1",
+  "generatedAt": "2026-11-17T18:28:49.924Z",
+  "sourceDigest": "254d7214d34749882f94f66c8c0abf89de3186a45b65c0673f80f3d3438ca90e",
+  "scope": "Local integration and browser fixtures; production Qwen/GPUStack/Open WebUI not exercised",
+  "suite": {
+    "tests": 1184,
+    "failed": 0,
+    "passed": 1127,
+    "cancelled": 0,
+    "skipped": 57,
+    "todo": 0,
+    "topLevel": 1184,
+    "suites": 0,
+    "scope": "full-suite",
+    "node": "v24.22.0",
+    "platform": "darwin"
+  },
+  "coverage": {
+    "transitions": {
+      "hit": 384,
+      "total": 699,
+      "percent": 54.9
+    },
+    "lines": {
+      "hit": 30071,
+      "total": 32127,
+      "percent": 93.6
+    },
+    "functions": {
+      "hit": 7226,
+      "total": 8167,
+      "percent": 88.5
+    },
+    "branches": {
+      "hit": 25425,
+      "total": 30901,
+      "percent": 82.3
+    },
+    "testedFiles": 170,
+    "sourceFiles": {
+      "measured": 232,
+      "unmeasured": 28,
+      "total": 260
+    },
+    "comparison": "Passed dev/coverage-gate.js against retained previous full-suite baseline; no floors lowered"
+  },
+  "browser": {
+    "studio": {
+      "passed": 12,
+      "checks": [
+        "A new chat starts unattached, explicitly attaches the same principal-owned task, and reads the retained evidence index",
+        "Mouse-only Studio task discovery prepares arguments, runs the ordinary backend tool and renders its passive inline record",
+        "Mouse-only save/start/poll coordinates two parallel branches, a retained wait and two loop iterations without a model call",
+        "Human-named /show definition opens without executing any source",
+        "Retained workflow state graph supports state/path inspection and coverage on/off without backend execution",
+        "Exact Git-SHA Gradle evidence renders nested files and dependencies in the passive inline viewer",
+        "Authenticated offline source editor and terminal execute a real local Git inspection in the same task scope",
+        "1440/light: Studio actions, feedback and retained graph fit the viewport",
+        "1440/dark: Studio actions, feedback and retained graph fit the viewport",
+        "390/light: Studio actions, feedback and retained graph fit the viewport",
+        "390/dark: Studio actions, feedback and retained graph fit the viewport",
+        "Admin Studio inherits the selected runtime task scope"
+      ],
+      "pageErrors": [],
+      "realLocalGit": true,
+      "realHttp": true,
+      "consul": "local compatible fixture",
+      "postgresEsKafka": "synthetic scoped read adapters",
+      "configuredModelCalls": 0,
+      "productionInfrastructure": false
+    },
+    "editor": {
+      "checks": [
+        "desktop: locally bundled source editor loads Unicode Java file",
+        "desktop: real Unicode edit saved through revision-CAS tool",
+        "desktop: external edit blocks save and browser draft stays intact",
+        "desktop: terminal runs real git inspection and returns exit evidence",
+        "desktop: shared catalog upgrade previews affected consumers and applies guarded workspace change",
+        "mobile 390px: source, toolbar and terminal usable without horizontal page overflow",
+        "all editor assets/tool calls same origin; no page errors or failed requests"
+      ],
+      "errors": [],
+      "failed": [],
+      "requests": 22
+    },
+    "pages": {
+      "checks": [
+        "Opening shared definition subscribes to scoped signals without sending requests; panel starts collapsed",
+        "Explicit Refresh renders declared records; collection filtering retains keyboard focus and executes no API action",
+        "Explicit API button receives a retained response; completion notice reaches only the same principal/chat and preserves panel state",
+        "Named definition can be created from the existing Pages controls",
+        "1440px: nested collection, explicit API action, notice and named-link controls fit the viewport",
+        "390px: nested collection, explicit API action, notice and named-link controls fit the viewport",
+        "Named /show snapshot stays network-disabled and offers the authenticated live page for API actions"
+      ],
+      "pageErrors": [],
+      "apiRequests": 1,
+      "viewports": [
+        1440,
+        390
+      ],
+      "fixture": "Synthetic local HTTP API; no external traffic"
+    }
+  },
+  "formal": {
+    "engine": "Actual upstream TLA+ Tools 1.7.4 TLC with SHA256 pin",
+    "sha256": "936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88",
+    "cases": [
+      "diff-lines",
+      "workflow-continuation",
+      "unsafe lost-update invariant counterexample"
+    ],
+    "modes": [
+      "check",
+      "simulate"
+    ],
+    "coverage": [
+      true,
+      false
+    ],
+    "meaning": "Finite declared graph safety/deadlocks, not source equivalence or liveness"
+  },
+  "workflow": {
+    "productionCalls": 0,
+    "mockModelCalls": 1,
+    "loopIterations": 3,
+    "parallelBranches": [
+      "left",
+      "right"
+    ],
+    "restoredFromSecondStory": true,
+    "newChatInitiallyAttached": false,
+    "explicitlyAttached": true
+  },
+  "reviews": {
+    "ui": {
+      "disposition": "ship",
+      "scope": "Six original material findings scored resolved; verdict pass covers those fixes",
+      "resolved": [
+        "resting primary contrast",
+        "separate prepared/executed evidence",
+        "mobile intent and persistent Run",
+        "visible graph panning and selected-state reveal",
+        "current task navigation",
+        "keyboard graph focus"
+      ]
+    },
+    "backend": {
+      "scope": "Three original findings inspected and resolved",
+      "resolved": [
+        "nested task-workflow recursion",
+        "concurrent named-view stale-lock recovery",
+        "immutable result alias shadowing"
+      ]
+    },
+    "documentation": {
+      "completed": true,
+      "scope": "Ordinary extension comparison against incumbent; no design-system replacement",
+      "recheckedAfterEventCleanup": true
+    },
+    "eventCleanup": {
+      "scope": "One subsequently reported reader lifecycle finding independently scored resolved",
+      "finding": "Malformed or oversized SSE frames release the current reader before reconnect",
+      "tests": "test/ui-events-failures.test.js",
+      "cases": 4
+    }
+  },
+  "showcase": {
+    "guide": "docs/developer-studio.md",
+    "cases": "demo/studio/README.md",
+    "interactive": "node demo/studio/serve.js",
+    "interactiveSmoke": {
+      "authenticatedStudio": true,
+      "namedGraphs": 2,
+      "productionCalls": 0,
+      "backendApiAction": {
+        "status": 200,
+        "retained": true,
+        "productionCalls": 0
+      }
+    }
+  },
+  "limits": [
+    "Terminal is approved inspection commands plus explicitly enabled administrator builds on an authenticated runner, not an arbitrary shell",
+    "Editor is offline vendored CodeMirror, not Monaco",
+    "Gradle version ownership is static; dynamic/unresolved declarations block automatic bump",
+    "HTTP publication plus SSE replay; event signals never execute actions",
+    "Shared definitions require administrator publication; execution results remain private by default",
+    "Node VM controller coverage verifies semantics; actual layout/rendering is separate browser evidence"
+  ]
+}

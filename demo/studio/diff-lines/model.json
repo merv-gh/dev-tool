@@ -1,0 +1,480 @@
+{
+  "version": 1,
+  "title": "Line diff decision paths",
+  "description": "Abstract decision graph collected from 50 actual production diff runs, including the matrix-size fallback. Finite cases reconstruct both inputs.",
+  "initial": "start",
+  "states": [
+    {
+      "id": "start",
+      "label": "Start"
+    },
+    {
+      "id": "trim-head",
+      "label": "trim-head",
+      "terminal": false
+    },
+    {
+      "id": "trim-tail",
+      "label": "trim-tail",
+      "terminal": false
+    },
+    {
+      "id": "matrix",
+      "label": "matrix",
+      "terminal": false
+    },
+    {
+      "id": "keep",
+      "label": "keep",
+      "terminal": false
+    },
+    {
+      "id": "remove",
+      "label": "remove",
+      "terminal": false
+    },
+    {
+      "id": "add",
+      "label": "add",
+      "terminal": false
+    },
+    {
+      "id": "fallback",
+      "label": "fallback",
+      "terminal": false
+    },
+    {
+      "id": "finish",
+      "label": "finish",
+      "terminal": true
+    }
+  ],
+  "transitions": [
+    {
+      "id": "edge0",
+      "from": "start",
+      "to": "trim-head",
+      "label": "trim-head",
+      "source": {
+        "file": "lib/diff.js",
+        "function": "diffLines",
+        "action": "trim-head"
+      }
+    },
+    {
+      "id": "edge1",
+      "from": "trim-head",
+      "to": "matrix",
+      "label": "matrix",
+      "source": {
+        "file": "lib/diff.js",
+        "function": "diffLines",
+        "action": "matrix"
+      }
+    },
+    {
+      "id": "edge2",
+      "from": "matrix",
+      "to": "finish",
+      "label": "finish",
+      "source": {
+        "file": "lib/diff.js",
+        "function": "diffLines",
+        "action": "finish"
+      }
+    },
+    {
+      "id": "edge3",
+      "from": "start",
+      "to": "matrix",
+      "label": "matrix",
+      "source": {
+        "file": "lib/diff.js",
+        "function": "diffLines",
+        "action": "matrix"
+      }
+    },
+    {
+      "id": "edge4",
+      "from": "matrix",
+      "to": "remove",
+      "label": "remove",
+      "source": {
+        "file": "lib/diff.js",
+        "function": "diffLines",
+        "action": "remove"
+      }
+    },
+    {
+      "id": "edge5",
+      "from": "remove",
+      "to": "add",
+      "label": "add",
+      "source": {
+        "file": "lib/diff.js",
+        "function": "diffLines",
+        "action": "add"
+      }
+    },
+    {
+      "id": "edge6",
+      "from": "add",
+      "to": "finish",
+      "label": "finish",
+      "source": {
+        "file": "lib/diff.js",
+        "function": "diffLines",
+        "action": "finish"
+      }
+    },
+    {
+      "id": "edge7",
+      "from": "add",
+      "to": "add",
+      "label": "add",
+      "source": {
+        "file": "lib/diff.js",
+        "function": "diffLines",
+        "action": "add"
+      }
+    },
+    {
+      "id": "edge8",
+      "from": "matrix",
+      "to": "add",
+      "label": "add",
+      "source": {
+        "file": "lib/diff.js",
+        "function": "diffLines",
+        "action": "add"
+      }
+    },
+    {
+      "id": "edge9",
+      "from": "start",
+      "to": "trim-tail",
+      "label": "trim-tail",
+      "source": {
+        "file": "lib/diff.js",
+        "function": "diffLines",
+        "action": "trim-tail"
+      }
+    },
+    {
+      "id": "edge10",
+      "from": "trim-tail",
+      "to": "matrix",
+      "label": "matrix",
+      "source": {
+        "file": "lib/diff.js",
+        "function": "diffLines",
+        "action": "matrix"
+      }
+    },
+    {
+      "id": "edge11",
+      "from": "remove",
+      "to": "remove",
+      "label": "remove",
+      "source": {
+        "file": "lib/diff.js",
+        "function": "diffLines",
+        "action": "remove"
+      }
+    },
+    {
+      "id": "edge12",
+      "from": "remove",
+      "to": "finish",
+      "label": "finish",
+      "source": {
+        "file": "lib/diff.js",
+        "function": "diffLines",
+        "action": "finish"
+      }
+    },
+    {
+      "id": "edge13",
+      "from": "trim-head",
+      "to": "trim-head",
+      "label": "trim-head",
+      "source": {
+        "file": "lib/diff.js",
+        "function": "diffLines",
+        "action": "trim-head"
+      }
+    },
+    {
+      "id": "edge14",
+      "from": "remove",
+      "to": "keep",
+      "label": "keep",
+      "source": {
+        "file": "lib/diff.js",
+        "function": "diffLines",
+        "action": "keep"
+      }
+    },
+    {
+      "id": "edge15",
+      "from": "keep",
+      "to": "add",
+      "label": "add",
+      "source": {
+        "file": "lib/diff.js",
+        "function": "diffLines",
+        "action": "add"
+      }
+    },
+    {
+      "id": "edge16",
+      "from": "start",
+      "to": "fallback",
+      "label": "fallback",
+      "source": {
+        "file": "lib/diff.js",
+        "function": "diffLines",
+        "action": "fallback"
+      }
+    },
+    {
+      "id": "edge17",
+      "from": "fallback",
+      "to": "finish",
+      "label": "finish",
+      "source": {
+        "file": "lib/diff.js",
+        "function": "diffLines",
+        "action": "finish"
+      }
+    }
+  ],
+  "observations": [
+    "edge0",
+    "edge1",
+    "edge2",
+    "edge3",
+    "edge4",
+    "edge5",
+    "edge6",
+    "edge3",
+    "edge4",
+    "edge5",
+    "edge6",
+    "edge3",
+    "edge4",
+    "edge5",
+    "edge7",
+    "edge6",
+    "edge3",
+    "edge4",
+    "edge5",
+    "edge7",
+    "edge6",
+    "edge3",
+    "edge4",
+    "edge5",
+    "edge7",
+    "edge6",
+    "edge3",
+    "edge4",
+    "edge5",
+    "edge7",
+    "edge6",
+    "edge3",
+    "edge4",
+    "edge5",
+    "edge6",
+    "edge0",
+    "edge1",
+    "edge2",
+    "edge3",
+    "edge4",
+    "edge5",
+    "edge6",
+    "edge0",
+    "edge1",
+    "edge8",
+    "edge6",
+    "edge0",
+    "edge1",
+    "edge8",
+    "edge6",
+    "edge9",
+    "edge10",
+    "edge8",
+    "edge6",
+    "edge3",
+    "edge4",
+    "edge5",
+    "edge7",
+    "edge6",
+    "edge3",
+    "edge4",
+    "edge5",
+    "edge6",
+    "edge3",
+    "edge4",
+    "edge5",
+    "edge6",
+    "edge0",
+    "edge1",
+    "edge2",
+    "edge3",
+    "edge4",
+    "edge5",
+    "edge7",
+    "edge6",
+    "edge9",
+    "edge10",
+    "edge8",
+    "edge6",
+    "edge0",
+    "edge1",
+    "edge8",
+    "edge6",
+    "edge0",
+    "edge1",
+    "edge8",
+    "edge6",
+    "edge3",
+    "edge4",
+    "edge11",
+    "edge5",
+    "edge6",
+    "edge0",
+    "edge1",
+    "edge4",
+    "edge12",
+    "edge3",
+    "edge4",
+    "edge11",
+    "edge5",
+    "edge6",
+    "edge0",
+    "edge13",
+    "edge1",
+    "edge2",
+    "edge0",
+    "edge1",
+    "edge4",
+    "edge5",
+    "edge6",
+    "edge9",
+    "edge10",
+    "edge4",
+    "edge5",
+    "edge6",
+    "edge3",
+    "edge4",
+    "edge11",
+    "edge5",
+    "edge7",
+    "edge6",
+    "edge3",
+    "edge4",
+    "edge11",
+    "edge5",
+    "edge6",
+    "edge0",
+    "edge1",
+    "edge4",
+    "edge12",
+    "edge9",
+    "edge10",
+    "edge4",
+    "edge12",
+    "edge0",
+    "edge1",
+    "edge4",
+    "edge5",
+    "edge6",
+    "edge0",
+    "edge13",
+    "edge1",
+    "edge2",
+    "edge3",
+    "edge4",
+    "edge14",
+    "edge15",
+    "edge6",
+    "edge9",
+    "edge10",
+    "edge4",
+    "edge5",
+    "edge6",
+    "edge3",
+    "edge4",
+    "edge11",
+    "edge5",
+    "edge6",
+    "edge9",
+    "edge10",
+    "edge4",
+    "edge12",
+    "edge0",
+    "edge1",
+    "edge4",
+    "edge12",
+    "edge9",
+    "edge10",
+    "edge4",
+    "edge5",
+    "edge6",
+    "edge3",
+    "edge4",
+    "edge14",
+    "edge15",
+    "edge6",
+    "edge0",
+    "edge13",
+    "edge1",
+    "edge2",
+    "edge0",
+    "edge1",
+    "edge4",
+    "edge5",
+    "edge6",
+    "edge3",
+    "edge4",
+    "edge11",
+    "edge5",
+    "edge6",
+    "edge3",
+    "edge4",
+    "edge11",
+    "edge5",
+    "edge6",
+    "edge0",
+    "edge1",
+    "edge4",
+    "edge12",
+    "edge3",
+    "edge4",
+    "edge11",
+    "edge5",
+    "edge7",
+    "edge6",
+    "edge9",
+    "edge10",
+    "edge4",
+    "edge5",
+    "edge6",
+    "edge0",
+    "edge1",
+    "edge4",
+    "edge5",
+    "edge6",
+    "edge0",
+    "edge13",
+    "edge1",
+    "edge2",
+    "edge16",
+    "edge17"
+  ],
+  "assumptions": [
+    "This graph abstracts input positions, equality and LCS table values. It is not a proof for every possible input.",
+    "Observed source actions come from 49 pairs over a two-symbol alphabet up to two lines plus one 2001×2001 fallback case.",
+    "Trimming and tie-breaking semantics follow lib/diff.js; sampled graph walks may combine paths that no concrete input realizes."
+  ]
+}

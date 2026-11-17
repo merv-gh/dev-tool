@@ -1,6 +1,6 @@
 {
   "protocol": "dt.release-inventory/v1",
-  "sourceDigest": "a066997b3325ca9b1c7be4bc4bd75d095ae5f6df15cd75e6211057b5c6cd71ee",
+  "sourceDigest": "254d7214d34749882f94f66c8c0abf89de3186a45b65c0673f80f3d3438ca90e",
   "tools": [
     {
       "name": "find",
@@ -17,7 +17,9 @@
         "test/collections.test.js",
         "test/context-ui.test.js",
         "test/context.test.js",
+        "test/continuation.test.js",
         "test/dist.test.js",
+        "test/editor-ui.test.js",
         "test/operational-readiness.test.js",
         "test/pgindex.test.js",
         "test/request-events.test.js",
@@ -1618,6 +1620,9 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
+        "test/named-views-events.test.js",
+        "test/studio-tools.test.js",
+        "test/studio-ui.test.js",
         "test/ui-pages.live.test.js",
         "test/ui-pages.test.js"
       ],
@@ -1632,6 +1637,300 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "named_view",
+      "group": "views",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/studio-tools.test.js",
+        "test/studio-ui.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "ui_event",
+      "group": "views",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/named-views-events.test.js",
+        "test/studio-tools.test.js",
+        "test/studio-ui.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "workspace_editor",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/editor-ui.test.js",
+        "test/studio-tools.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "workspace_terminal",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/editor-ui.test.js",
+        "test/studio-tools.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "gradle_inventory",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/editor-ui.test.js",
+        "test/studio-tools.test.js",
+        "test/studio-ui.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "gradle_bump",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/editor-ui.test.js",
+        "test/studio-tools.test.js",
+        "test/studio-ui.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "automation_flow_save",
+      "group": "automation",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/automation-flow.test.js",
+        "test/studio-ui.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "automation_flow_get",
+      "group": "automation",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "automation_flow_list",
+      "group": "automation",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/studio-ui.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "automation_flow_start",
+      "group": "automation",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/automation-flow.test.js",
+        "test/studio-ui.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "automation_flow_status",
+      "group": "automation",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/automation-flow.test.js",
+        "test/continuation.test.js",
+        "test/studio-ui.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "automation_flow_resume",
+      "group": "automation",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/studio-ui.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "automation_flow_resolve",
+      "group": "automation",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "automation_flow_cancel",
+      "group": "automation",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/studio-ui.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "automation_flow_model",
+      "group": "automation",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/automation-flow.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "continuation_create",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/continuation.test.js",
+        "test/studio-tools.test.js",
+        "test/studio-ui.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "continuation_find",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/studio-tools.test.js",
+        "test/studio-ui.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "continuation_attach",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/continuation.test.js",
+        "test/studio-tools.test.js",
+        "test/studio-ui.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "continuation_get",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/continuation.test.js",
+        "test/studio-tools.test.js",
+        "test/studio-ui.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "continuation_checkpoint",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/studio-tools.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "continuation_read",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/studio-tools.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "continuation_write",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/studio-tools.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "continuation_flow",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/automation-flow.test.js",
+        "test/continuation.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "continuation_briefing",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/studio-tools.test.js",
+        "test/studio-ui.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "logic_model",
+      "group": "runtime",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/studio-tools.test.js",
+        "test/studio-ui.test.js"
+      ],
       "integrationReferences": []
     },
     {
@@ -1706,6 +2005,7 @@
       "resultContract": false,
       "referenceTests": [
         "test/admin-map.test.js",
+        "test/editor-gradle.test.js",
         "test/semantic-path-context.test.js",
         "test/service-map.test.js"
       ],
@@ -3245,6 +3545,7 @@
     "json",
     "knowledge-map",
     "list-diff",
+    "logic-model",
     "observability",
     "passport-ports",
     "patch",
@@ -3260,6 +3561,7 @@
     "text-diff",
     "ui-page",
     "ui-trace",
+    "work-record",
     "workbench",
     "workspace-coverage",
     "xml"

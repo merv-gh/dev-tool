@@ -4282,6 +4282,8 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
 - [`workbench_open`](#tool-workbench_open)
 - [`ui_page`](#tool-ui_page)
 - [`ui_page_data`](#tool-ui_page_data)
+- [`named_view`](#tool-named_view)
+- [`ui_event`](#tool-ui_event)
 
 <a id="tool-show"></a>
 
@@ -4523,7 +4525,7 @@ Workflow: [Your first investigation](README.md#start) · Origin: built-in
 
 ### ui_page
 
-Create small reproducible dashboards/widgets from declarative JSON primitives, without HTML or JS. Start action=templates; read a named template for the schema/example. Save/get versioned definitions, list/open retained pages, or explicitly run read sources. Open/save never execute. Shared definitions by default (admins publish); scope=private saves a task draft. Execution results stay private; viewers refresh with their own access. Poll a run with job; job_cancel cancels it.
+Create reproducible pages from declarative JSON. Save/open never execute. Shared definitions by default (admins publish); private drafts and all execution results stay principal/chat scoped. Widgets include collections, nested collapsible panels, explicit API action buttons and event notices. action=action explicitly sends the declared API request using the viewer permissions; events never send requests or refresh. Poll run/action with job; job_cancel cancels it.
 
 Workflow: [Every visualization: what to read and do](README.md#visualizations) · Origin: built-in
 
@@ -4541,8 +4543,12 @@ Workflow: [Every visualization: what to read and do](README.md#visualizations) �
         "get",
         "list",
         "open",
-        "run"
+        "run",
+        "action"
       ]
+    },
+    "actionId": {
+      "type": "string"
     },
     "id": {
       "type": "string"
@@ -4573,7 +4579,7 @@ Workflow: [Every visualization: what to read and do](README.md#visualizations) �
     "definition": {
       "type": "object",
       "additionalProperties": true,
-      "description": "version:1, title, inputs, sources, datasets, widgets. Use templates first. Exact {$param:\"input\"} references preserve types; widgets: text/table/metric/comparison."
+      "description": "version:1, title, inputs, sources, datasets, actions, widgets. Exact {$param:\"input\"} references preserve types. Widgets: text/table/metric/comparison/collection/panel/action."
     },
     "params": {
       "type": "object",
@@ -4644,6 +4650,119 @@ Workflow: [Every visualization: what to read and do](README.md#visualizations) �
   },
   "required": [
     "kind"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-named_view"></a>
+
+### named_view
+
+Name a /show view with a human-readable slug. Shared page definitions by default; admins publish. Retained result aliases default private to this principal/chat; publishing their data requires scope=shared and share=true, returning an explicit capability URL. Saving/opening never runs sources or actions. Compare expected_revision before replacing a name; revisionUrl and original immutable result links remain valid.
+
+Workflow: [Every visualization: what to read and do](README.md#visualizations) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": {
+      "type": "string",
+      "enum": [
+        "save",
+        "get",
+        "list"
+      ]
+    },
+    "name": {
+      "type": "string",
+      "maxLength": 160
+    },
+    "slug": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "scope": {
+      "type": "string",
+      "enum": [
+        "private",
+        "shared"
+      ]
+    },
+    "revision": {
+      "type": "string"
+    },
+    "expected_revision": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "{type:\"page\",id,scope?,revision?} or {type:\"result\",id}. Page targets pin an immutable definition revision."
+    },
+    "share": {
+      "type": "boolean",
+      "default": false
+    },
+    "q": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "action"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-ui_event"></a>
+
+### ui_event
+
+Scoped UI/backend event bus. Emit only signals in the current principal/chat; no event executes an API request or refresh. Read bounded events after an opaque reconnect cursor; expired cursors return reset=true. ui.* event names are reserved for backend lifecycle signals.
+
+Workflow: [Every visualization: what to read and do](README.md#visualizations) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": {
+      "type": "string",
+      "enum": [
+        "publish",
+        "read"
+      ]
+    },
+    "channel": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string"
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "after": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "action",
+    "channel"
   ],
   "additionalProperties": false
 }
@@ -5326,6 +5445,10 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
 - [`test_run`](#tool-test_run)
 - [`workspace_branches`](#tool-workspace_branches)
 - [`workspace_branch`](#tool-workspace_branch)
+- [`workspace_editor`](#tool-workspace_editor)
+- [`workspace_terminal`](#tool-workspace_terminal)
+- [`gradle_inventory`](#tool-gradle_inventory)
+- [`gradle_bump`](#tool-gradle_bump)
 - [`fixture_schema`](#tool-fixture_schema)
 - [`fixture_plan`](#tool-fixture_plan)
 - [`fixture_capture`](#tool-fixture_capture)
@@ -6455,6 +6578,227 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     "workspace",
     "ref"
   ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-workspace_editor"></a>
+
+### workspace_editor
+
+Offline workspace editor: list owned workspaces, list a folder, read complete UTF-8 text with a revision, or save with required expected_revision CAS. Open the UI at /editor?workspace=<id>. No compile fixes or external writes are implicit.
+
+Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": {
+      "type": "string",
+      "enum": [
+        "list",
+        "tree",
+        "read",
+        "save"
+      ],
+      "default": "list"
+    },
+    "workspace": {
+      "type": "string",
+      "description": "Owned workspace id"
+    },
+    "path": {
+      "type": "string",
+      "description": "Relative file or folder path"
+    },
+    "content": {
+      "type": "string",
+      "description": "Complete UTF-8 source for save"
+    },
+    "expected_revision": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "SHA-256 from read; null only to create a new file"
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-workspace_terminal"></a>
+
+### workspace_terminal
+
+Bounded, cancellable task-owned command terminal. Fixed inspection commands by default. Builds require an explicit allow_build plus administrator policy and authenticated runner; never accepts shell syntax, custom executables, options, or environment. read polls a job, clear hides prior terminal output.
+
+Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "workspace": {
+      "type": "string",
+      "description": "Owned workspace id"
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "run",
+        "read",
+        "cancel",
+        "clear"
+      ],
+      "default": "read"
+    },
+    "command": {
+      "type": "string",
+      "description": "Exact supported terminal command from workspace_editor list policy"
+    },
+    "job": {
+      "type": "string",
+      "description": "Terminal job id"
+    },
+    "allow_build": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "workspace"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-gradle_inventory"></a>
+
+### gradle_inventory
+
+Cross-repository Gradle inventory. list reads stored repos/revisions; index starts one cancellable job across selected PROJECT/repo values (empty: every Bitbucket repo). Each repo scans all tracked build.gradle/.kts, settings, properties and version catalogs at one immutable SHA, using one batch source read; repeated SHAs reuse snapshots. read shows declarations, literal/shared version ownership, internal project refs and explicit unresolved states without executing Gradle.
+
+Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": {
+      "type": "string",
+      "enum": [
+        "list",
+        "index",
+        "read",
+        "search"
+      ],
+      "default": "list"
+    },
+    "repos": {
+      "type": "array",
+      "maxItems": 2000,
+      "items": {
+        "type": "string"
+      },
+      "description": "PROJECT/repo selectors; omitted on index means all Bitbucket repos"
+    },
+    "ref": {
+      "type": "string",
+      "description": "Branch, tag or full SHA"
+    },
+    "revision": {
+      "type": "string",
+      "description": "Immutable inventory revision from list/index"
+    },
+    "job": {
+      "type": "string",
+      "description": "Observe an existing inventory job"
+    },
+    "q": {
+      "type": "string",
+      "description": "Cached cross-repository dependency/owner search words"
+    },
+    "dependency": {
+      "type": "string",
+      "description": "Exact group:artifact to find across cached repos"
+    },
+    "history": {
+      "type": "boolean",
+      "default": false,
+      "description": "Search retained history instead of each repo latest revision"
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Search row cap (1..500)",
+      "default": 300
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-gradle_bump"></a>
+
+### gradle_bump
+
+Plan a dependency upgrade using exact parsed source owners, preserving comments and unrelated versions. Shared variables/catalog versions show every affected consumer. Plan never edits source. Explicit apply reads a saved task-private plan and checks workspace repository, HEAD SHA and every file revision before guarded saves; unresolved/dynamic versions block apply. No commit, push, or remote write.
+
+Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": {
+      "type": "string",
+      "enum": [
+        "plan",
+        "apply"
+      ],
+      "default": "plan"
+    },
+    "revision": {
+      "type": "string",
+      "description": "Immutable Gradle inventory revision"
+    },
+    "dependency": {
+      "type": "string",
+      "description": "group:artifact (plugin:id for plugin) or declaration id"
+    },
+    "version": {
+      "type": "string",
+      "description": "New literal version"
+    },
+    "workspace": {
+      "type": "string",
+      "description": "Owned workspace matching inventory repository/SHA"
+    },
+    "plan": {
+      "type": "string",
+      "description": "Saved bump plan id for explicit apply"
+    }
+  },
+  "required": [],
   "additionalProperties": false
 }
 ```
@@ -8729,6 +9073,15 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
 - [`workbench_search`](#tool-workbench_search)
 - [`workbench_inspect`](#tool-workbench_inspect)
 - [`workbench_save`](#tool-workbench_save)
+- [`continuation_create`](#tool-continuation_create)
+- [`continuation_find`](#tool-continuation_find)
+- [`continuation_attach`](#tool-continuation_attach)
+- [`continuation_get`](#tool-continuation_get)
+- [`continuation_checkpoint`](#tool-continuation_checkpoint)
+- [`continuation_read`](#tool-continuation_read)
+- [`continuation_write`](#tool-continuation_write)
+- [`continuation_flow`](#tool-continuation_flow)
+- [`continuation_briefing`](#tool-continuation_briefing)
 - [`project_context_find`](#tool-project_context_find)
 - [`project_context_get`](#tool-project_context_get)
 - [`project_context_save`](#tool-project_context_save)
@@ -8781,7 +9134,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
 
 ### context_find
 
-Find durable task memory and similar previous work by ticket, repository, workspace, chat/task id or keywords. Consult before investigating; reuse a matching context, read progress.md, verify old evidence. Search indexes, file names and summaries; file bodies are read separately. Ticket/task/chat IDs also return candidates when indexed under another identity category; select an id explicitly to attach it. indexedContexts=0 means no readable saved memory: do not repeat searches. For new multi-step work, context_open before collecting evidence.
+Find durable task memory and similar previous work by ticket, repository, workspace, chat/task id or keywords. Consult before investigating; reuse a matching context, read progress.md, verify old evidence. Search indexes, file names and summaries; file bodies are read separately. Ticket/task/chat IDs also return candidates when indexed under another identity category; select an id explicitly to attach it. indexedContexts=0 means no readable saved memory: do not repeat searches. For new multi-step work, context_open before collecting evidence. These folders are chat-scoped; for continuation in another chat, use continuation_find and explicitly attach the stable task.
 
 Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
 
@@ -9711,6 +10064,540 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
 
 </details>
 
+<a id="tool-continuation_create"></a>
+
+### continuation_create
+
+Create principal-owned durable task memory independent of chat/story identity and explicitly attach it here. Stable task_id prevents accidental duplicates. Optional contexts copy only explicitly selected current-story context files/indexes; no other user’s notes are read. Shared projects are explicit pinned references, never automatic publication.
+
+Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "description": "Stable task/ticket identity across changing chats"
+    },
+    "title": {
+      "type": "string",
+      "description": "Task title"
+    },
+    "summary": {
+      "type": "string",
+      "description": "Goal/findings/discovery terms"
+    },
+    "contexts": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "type": "string",
+        "description": "Owned current-story context id to snapshot"
+      }
+    },
+    "projects": {
+      "type": "array",
+      "maxItems": 30,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "revision"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Explicitly selected published project context"
+          },
+          "revision": {
+            "type": "string",
+            "description": "Exact immutable published revision"
+          }
+        }
+      }
+    },
+    "tickets": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "string",
+        "maxLength": 500
+      },
+      "description": "Exact tickets discovery links; supplied lists replace the old list"
+    },
+    "repositories": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "string",
+        "maxLength": 500
+      },
+      "description": "Exact repositories discovery links; supplied lists replace the old list"
+    },
+    "workspaces": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "string",
+        "maxLength": 500
+      },
+      "description": "Exact workspaces discovery links; supplied lists replace the old list"
+    },
+    "chats": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "string",
+        "maxLength": 500
+      },
+      "description": "Exact chats discovery links; supplied lists replace the old list"
+    },
+    "tasks": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "string",
+        "maxLength": 500
+      },
+      "description": "Exact tasks discovery links; supplied lists replace the old list"
+    },
+    "tags": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "string",
+        "maxLength": 500
+      },
+      "description": "Exact tags discovery links; supplied lists replace the old list"
+    }
+  },
+  "required": [
+    "task_id",
+    "title"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-continuation_find"></a>
+
+### continuation_find
+
+Search this principal’s continuation task indexes across stories by explicit query/task identity. Returns metadata only. A new chat has no implicit selection; attach the chosen id explicitly before resuming. Other principals are isolated, including administrators.
+
+Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "query": {
+      "type": "string",
+      "description": "Task, ticket, repository, workspace or discovery terms"
+    },
+    "task_id": {
+      "type": "string",
+      "description": "Optional exact stable task identity"
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Maximum matches",
+      "default": 20,
+      "minimum": 1,
+      "maximum": 100
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-continuation_attach"></a>
+
+### continuation_attach
+
+Explicitly select a principal-owned continuation for this story. Selection survives restart and never carries into a new story automatically. detach=true clears this story’s selection; no notes are deleted or shared.
+
+Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable continuation id; omit only after explicit attachment in this story"
+    },
+    "detach": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-continuation_get"></a>
+
+### continuation_get
+
+Read a selected durable task index, links, retained file inventory and progress checkpoint. With no id/selection returns attached=false without loading other chats. Global project publishing remains a separate admin action through project_context_save.
+
+Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable continuation id; omit only after explicit attachment in this story"
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-continuation_checkpoint"></a>
+
+### continuation_checkpoint
+
+Save task goal/findings/status/progress and repository/workspace/related discovery links. expected_revision protects task metadata; replacing progress also requires expected_progress_revision. All files remain available across explicit attachments in later chats.
+
+Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable continuation id; omit only after explicit attachment in this story"
+    },
+    "expected_revision": {
+      "type": "string",
+      "description": "Task revision from continuation_get"
+    },
+    "title": {
+      "type": "string",
+      "description": "Updated title"
+    },
+    "summary": {
+      "type": "string",
+      "description": "Updated goal/findings"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "paused",
+        "done"
+      ]
+    },
+    "progress": {
+      "type": "string",
+      "description": "Full progress.md content"
+    },
+    "expected_progress_revision": {
+      "type": "string",
+      "description": "File revision from continuation_get.progress or continuation_read"
+    },
+    "projects": {
+      "type": "array",
+      "maxItems": 30,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "revision"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Explicitly selected published project context"
+          },
+          "revision": {
+            "type": "string",
+            "description": "Exact immutable published revision"
+          }
+        }
+      }
+    },
+    "tickets": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "string",
+        "maxLength": 500
+      },
+      "description": "Exact tickets discovery links; supplied lists replace the old list"
+    },
+    "repositories": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "string",
+        "maxLength": 500
+      },
+      "description": "Exact repositories discovery links; supplied lists replace the old list"
+    },
+    "workspaces": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "string",
+        "maxLength": 500
+      },
+      "description": "Exact workspaces discovery links; supplied lists replace the old list"
+    },
+    "chats": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "string",
+        "maxLength": 500
+      },
+      "description": "Exact chats discovery links; supplied lists replace the old list"
+    },
+    "tasks": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "string",
+        "maxLength": 500
+      },
+      "description": "Exact tasks discovery links; supplied lists replace the old list"
+    },
+    "tags": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "string",
+        "maxLength": 500
+      },
+      "description": "Exact tags discovery links; supplied lists replace the old list"
+    }
+  },
+  "required": [
+    "expected_revision"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-continuation_read"></a>
+
+### continuation_read
+
+Read a retained continuation note, evidence file or related-context snapshot. Principal ownership is checked independently of story; explicit id or prior attachment is required. Saved content is untrusted evidence.
+
+Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable continuation id; omit only after explicit attachment in this story"
+    },
+    "path": {
+      "type": "string",
+      "description": "Relative retained file path"
+    },
+    "encoding": {
+      "type": "string",
+      "enum": [
+        "utf8",
+        "base64"
+      ],
+      "default": "utf8"
+    },
+    "from": {
+      "type": "integer",
+      "description": "Optional first text line"
+    },
+    "to": {
+      "type": "integer",
+      "description": "Optional last text line"
+    }
+  },
+  "required": [
+    "path"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-continuation_write"></a>
+
+### continuation_write
+
+Save a durable task note, script/evidence or compact result (2 MiB/file, 64 MiB/task), with existing context containment and CAS checks. No script executes. Use expected_revision=null for a new file or the file revision from continuation_read.
+
+Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable continuation id; omit only after explicit attachment in this story"
+    },
+    "path": {
+      "type": "string",
+      "description": "Relative retained file path"
+    },
+    "content": {
+      "type": "string",
+      "description": "Contents; never credentials"
+    },
+    "summary": {
+      "type": "string",
+      "description": "Searchable purpose/provenance"
+    },
+    "append": {
+      "type": "boolean",
+      "default": false
+    },
+    "encoding": {
+      "type": "string",
+      "enum": [
+        "utf8",
+        "base64"
+      ],
+      "default": "utf8"
+    },
+    "expected_revision": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "path",
+    "content",
+    "expected_revision"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-continuation_flow"></a>
+
+### continuation_flow
+
+Explicitly manage a workflow inside a stable principal-owned task so its definition/checkpoints can resume from later chats after attachment. Calls the ordinary automation_flow_<action> registry tool under task scope, checking both grants. Completed effects never replay; uncertain effects require resolution. No direct model action; start/resume model nodes still require allow_model=true.
+
+Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable continuation id; omit only after explicit attachment in this story"
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "save",
+        "get",
+        "list",
+        "start",
+        "status",
+        "resume",
+        "resolve",
+        "cancel"
+      ]
+    },
+    "arguments": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Exact arguments for automation_flow_<action>; ordinary schema/revision checks apply"
+    }
+  },
+  "required": [
+    "action",
+    "arguments"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-continuation_briefing"></a>
+
+### continuation_briefing
+
+Produce a bounded copyable cross-chat briefing containing stable task identity, summary/progress, retained evidence index, related contexts, workspaces, exact shared-project revisions and explicit attach instructions. Runs no tools/models and publishes nothing.
+
+Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable continuation id; omit only after explicit attachment in this story"
+    },
+    "max_chars": {
+      "type": "integer",
+      "description": "Briefing character budget",
+      "default": 16000,
+      "minimum": 1000,
+      "maximum": 32000
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
 <a id="tool-project_context_find"></a>
 
 ### project_context_find
@@ -10307,6 +11194,912 @@ Workflow: [Build and review a draft change](README.md#ci-review) · Origin: buil
   "required": [
     "job",
     "request_id"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+## automation
+
+- [`automation_flow_save`](#tool-automation_flow_save)
+- [`automation_flow_get`](#tool-automation_flow_get)
+- [`automation_flow_list`](#tool-automation_flow_list)
+- [`automation_flow_start`](#tool-automation_flow_start)
+- [`automation_flow_status`](#tool-automation_flow_status)
+- [`automation_flow_resume`](#tool-automation_flow_resume)
+- [`automation_flow_resolve`](#tool-automation_flow_resolve)
+- [`automation_flow_cancel`](#tool-automation_flow_cancel)
+- [`automation_flow_model`](#tool-automation_flow_model)
+
+<a id="tool-automation_flow_save"></a>
+
+### automation_flow_save
+
+Save a reviewed durable program with explicit tool/model/wait/loop/parallel nodes. No work executes. Definitions are private to this user/story. Read docs/workflow-continuation.md for the bounded node contract.
+
+Workflow: [Developer studio: continue, coordinate and verify](README.md#developer-studio) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable flow id"
+    },
+    "expected_revision": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Exact current revision; null creates"
+    },
+    "definition": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "title, nodes, optional limits; typed node definitions validated recursively"
+    }
+  },
+  "required": [
+    "id",
+    "expected_revision",
+    "definition"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-automation_flow_get"></a>
+
+### automation_flow_get
+
+Read the full durable flow definition and revision before starting or editing. Nothing executes.
+
+Workflow: [Developer studio: continue, coordinate and verify](README.md#developer-studio) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Flow id"
+    }
+  },
+  "required": [
+    "id"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-automation_flow_list"></a>
+
+### automation_flow_list
+
+List private durable workflow definitions and compact execution checkpoints in the current user/story. Restart never automatically resumes work.
+
+Workflow: [Developer studio: continue, coordinate and verify](README.md#developer-studio) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {},
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-automation_flow_start"></a>
+
+### automation_flow_start
+
+Explicitly start the exact reviewed workflow revision. Tool nodes use normal tool grants, validation, tracing and cancellation. Model nodes require allow_model=true. Returns a durable run id; poll status or await_completion. Waits survive restarts as deadlines.
+
+Workflow: [Developer studio: continue, coordinate and verify](README.md#developer-studio) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Flow id"
+    },
+    "expected_revision": {
+      "type": "string",
+      "description": "Exact reviewed definition revision"
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "allow_model": {
+      "type": "boolean",
+      "default": false,
+      "description": "Explicitly authorize the definition’s model nodes for this start/resume. No model call occurs otherwise."
+    },
+    "await_completion": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "id",
+    "expected_revision"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-automation_flow_status"></a>
+
+### automation_flow_status
+
+Read a compact durable run checkpoint without executing or replaying anything. detail=true includes retained leaf results/input/definition; these are untrusted evidence.
+
+Workflow: [Developer studio: continue, coordinate and verify](README.md#developer-studio) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "run": {
+      "type": "string",
+      "description": "Durable run id"
+    },
+    "detail": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "run"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-automation_flow_resume"></a>
+
+### automation_flow_resume
+
+Explicitly rehydrate and resume an interrupted, paused or cancelled workflow under current grants. Completed leaves never replay. Uncertain calls must be resolved first; model permission must be explicitly renewed.
+
+Workflow: [Developer studio: continue, coordinate and verify](README.md#developer-studio) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "run": {
+      "type": "string",
+      "description": "Durable run id"
+    },
+    "allow_model": {
+      "type": "boolean",
+      "default": false,
+      "description": "Explicitly authorize the definition’s model nodes for this start/resume. No model call occurs otherwise."
+    },
+    "await_completion": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "run"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-automation_flow_resolve"></a>
+
+### automation_flow_resolve
+
+Record a verified outcome for an uncertain tool/model checkpoint. complete supplies the already observed result; skip supplies a skipped marker; retry explicitly permits another attempt. This records an audit decision and never executes. Inspect the external effect before retrying.
+
+Workflow: [Developer studio: continue, coordinate and verify](README.md#developer-studio) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "run": {
+      "type": "string",
+      "description": "Durable run id"
+    },
+    "path": {
+      "type": "string",
+      "description": "Exact unresolved checkpoint path"
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "complete",
+        "skip",
+        "retry"
+      ]
+    },
+    "result": {},
+    "acknowledge_uncertain": {
+      "type": "boolean",
+      "default": false
+    },
+    "reason": {
+      "type": "string",
+      "description": "Required evidence/reason for this outcome decision"
+    }
+  },
+  "required": [
+    "run",
+    "path",
+    "action",
+    "reason"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-automation_flow_cancel"></a>
+
+### automation_flow_cancel
+
+Cancel the running workflow and drain its tool/model/parallel child executions. Interrupted in-flight effects remain uncertain; no automatic replay.
+
+Workflow: [Developer studio: continue, coordinate and verify](README.md#developer-studio) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "run": {
+      "type": "string",
+      "description": "Durable run id"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Cancellation reason"
+    }
+  },
+  "required": [
+    "run"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-automation_flow_model"></a>
+
+### automation_flow_model
+
+Explicitly send one supplied prompt to the configured OpenAI-compatible provider and return text. No tools are automatically executed. Model choice is restricted to llm.model/gatewayModels; uses normal grants, cancellation and model request telemetry. Usually invoked by an explicitly authorized workflow model node.
+
+Workflow: [Developer studio: continue, coordinate and verify](README.md#developer-studio) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "prompt": {
+      "type": "string",
+      "description": "Explicit prompt; saved context is untrusted evidence",
+      "maxLength": 32000
+    },
+    "model": {
+      "type": "string",
+      "description": "Optional configured allowed model"
+    },
+    "max_tokens": {
+      "type": "integer",
+      "description": "Maximum completion tokens",
+      "default": 1200,
+      "minimum": 1,
+      "maximum": 8192
+    }
+  },
+  "required": [
+    "prompt"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+## runtime
+
+- [`logic_model`](#tool-logic_model)
+- [`observability`](#tool-observability)
+- [`test_coverage`](#tool-test_coverage)
+- [`code_start`](#tool-code_start)
+- [`code_wait`](#tool-code_wait)
+- [`code_cancel`](#tool-code_cancel)
+- [`execution_list`](#tool-execution_list)
+- [`execution_get`](#tool-execution_get)
+- [`execution_cancel`](#tool-execution_cancel)
+- [`metadata_list`](#tool-metadata_list)
+- [`metadata_get`](#tool-metadata_get)
+- [`metadata_edit`](#tool-metadata_edit)
+
+<a id="tool-logic_model"></a>
+
+### logic_model
+
+Create finite logic graphs, export real TLA+ and TLC config, check safety/deadlocks or simulate seeded paths, with optional transition coverage. Templates include actual diff decision observations and revision publication. Built-in exploration needs no external dependency; engine=tlc runs an explicitly configured SHA256-pinned TLC jar. These finite abstractions do not prove source equivalence. save/get/list keep task-scoped models; run returns an interactive retained graph.
+
+Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": {
+      "type": "string",
+      "enum": [
+        "templates",
+        "save",
+        "get",
+        "list",
+        "run",
+        "export",
+        "diagnostics"
+      ]
+    },
+    "name": {
+      "type": "string"
+    },
+    "template": {
+      "type": "string",
+      "enum": [
+        "diff-lines",
+        "workflow-continuation",
+        "revision-publication"
+      ]
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "expected_revision": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "engine": {
+      "type": "string",
+      "enum": [
+        "finite-graph",
+        "tlc"
+      ],
+      "default": "finite-graph"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "check",
+        "simulate"
+      ],
+      "default": "check"
+    },
+    "coverage": {
+      "type": "boolean",
+      "default": true
+    },
+    "seed": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2147483647,
+      "default": 1
+    },
+    "steps": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000,
+      "default": 100
+    },
+    "traces": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100,
+      "default": 10
+    },
+    "timeoutMs": {
+      "type": "integer",
+      "minimum": 1000,
+      "maximum": 120000,
+      "default": 30000
+    }
+  },
+  "required": [
+    "action"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-observability"></a>
+
+### observability
+
+Inspect this chat’s request timings, tool outcomes and model calls with mode=events, or opt-in sampled spans with mode=traces. Events show model purpose, HTTP failures, reported usage and result links. Direct Open WebUI → GPUStack calls are invisible unless routed through the optional model gateway. No payloads or error messages.
+
+Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "mode": {
+      "type": "string",
+      "enum": [
+        "traces",
+        "events"
+      ],
+      "default": "traces"
+    },
+    "trace": {
+      "type": "string",
+      "description": "Optional trace id for traces mode"
+    },
+    "q": {
+      "type": "string",
+      "description": "Literal request metadata search for events mode"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "tool",
+        "model"
+      ]
+    },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "failed",
+        "ok",
+        "error",
+        "cancelled",
+        "open",
+        "capacity"
+      ]
+    },
+    "from": {
+      "type": "integer",
+      "description": "Window start, epoch milliseconds; default last hour"
+    },
+    "to": {
+      "type": "integer",
+      "description": "Window end, epoch milliseconds; maximum window seven days"
+    },
+    "cursor": {
+      "type": "string",
+      "description": "Next page cursor"
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Event page size",
+      "default": 50,
+      "minimum": 1,
+      "maximum": 200
+    },
+    "view": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-test_coverage"></a>
+
+### test_coverage
+
+Read dev-tool source and lifecycle test evidence, gaps, source freshness and test files. Execution hits do not prove every assertion.
+
+Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "view": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-code_start"></a>
+
+### code_start
+
+Start an owned JavaScript cell and return its id immediately. Observe with code_wait; a short wait does not restart/cancel it. Node permits network fetch. QuickJS is an optional pure-transform engine.
+
+Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "code": {
+      "type": "string",
+      "description": "JavaScript with top-level await"
+    },
+    "context": {
+      "type": "string",
+      "description": "Optional owned context folder id"
+    },
+    "title": {
+      "type": "string",
+      "description": "Purpose of this cell"
+    },
+    "engine": {
+      "type": "string",
+      "enum": [
+        "node",
+        "quickjs"
+      ],
+      "default": "node",
+      "description": "Node supports tools and direct fetch; QuickJS prototype is for pure transforms"
+    }
+  },
+  "required": [
+    "code"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-code_wait"></a>
+
+### code_wait
+
+Observe an owned code cell with an output cursor. A wait timeout returns running state; it does not stop the cell or repeat tools.
+
+Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Cell id from code_start"
+    },
+    "cursor": {
+      "type": "integer",
+      "description": "Last observed output cursor",
+      "default": 0
+    },
+    "waitMs": {
+      "type": "integer",
+      "description": "Observation wait, up to 30000 ms",
+      "default": 1000
+    }
+  },
+  "required": [
+    "id"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-code_cancel"></a>
+
+### code_cancel
+
+Request cancellation of an owned cell and its unfinished nested work. Cleanup and unknown outcomes remain visible.
+
+Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Cell id"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Cancellation reason"
+    }
+  },
+  "required": [
+    "id"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-execution_list"></a>
+
+### execution_list
+
+List recent executions in the authenticated user and chat/story scope, including cancellation and cleanup state.
+
+Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "limit": {
+      "type": "integer",
+      "description": "Maximum entries",
+      "default": 50
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-execution_get"></a>
+
+### execution_get
+
+Inspect one owned execution, its parent and resource cleanup state.
+
+Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Execution id"
+    }
+  },
+  "required": [
+    "id"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-execution_cancel"></a>
+
+### execution_cancel
+
+Cancel one owned execution and its child work; unrelated stories continue.
+
+Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Execution id"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Reason"
+    }
+  },
+  "required": [
+    "id"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-metadata_list"></a>
+
+### metadata_list
+
+Read paged operational metadata for this story: calls, jobs or executions. Annotations are separate from execution facts.
+
+Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "enum": [
+        "calls",
+        "jobs",
+        "executions"
+      ],
+      "default": "calls"
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Page size",
+      "default": 50
+    },
+    "before": {
+      "type": "string",
+      "description": "Cursor from the previous page"
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-metadata_get"></a>
+
+### metadata_get
+
+Read one owned operational record and its annotation revision.
+
+Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "enum": [
+        "calls",
+        "jobs",
+        "executions"
+      ]
+    },
+    "id": {
+      "type": "string",
+      "description": "Record id"
+    }
+  },
+  "required": [
+    "kind",
+    "id"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-metadata_edit"></a>
+
+### metadata_edit
+
+Edit only label, notes and tags on an owned operational record. Supply expected_revision; execution facts and ownership cannot be edited.
+
+Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "enum": [
+        "calls",
+        "jobs",
+        "executions"
+      ]
+    },
+    "id": {
+      "type": "string",
+      "description": "Record id"
+    },
+    "expected_revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "patch": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Label"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Notes"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "kind",
+    "id",
+    "expected_revision",
+    "patch"
   ],
   "additionalProperties": false
 }
@@ -11875,468 +13668,6 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     }
   },
   "required": [],
-  "additionalProperties": false
-}
-```
-
-</details>
-
-## runtime
-
-- [`observability`](#tool-observability)
-- [`test_coverage`](#tool-test_coverage)
-- [`code_start`](#tool-code_start)
-- [`code_wait`](#tool-code_wait)
-- [`code_cancel`](#tool-code_cancel)
-- [`execution_list`](#tool-execution_list)
-- [`execution_get`](#tool-execution_get)
-- [`execution_cancel`](#tool-execution_cancel)
-- [`metadata_list`](#tool-metadata_list)
-- [`metadata_get`](#tool-metadata_get)
-- [`metadata_edit`](#tool-metadata_edit)
-
-<a id="tool-observability"></a>
-
-### observability
-
-Inspect this chat’s request timings, tool outcomes and model calls with mode=events, or opt-in sampled spans with mode=traces. Events show model purpose, HTTP failures, reported usage and result links. Direct Open WebUI → GPUStack calls are invisible unless routed through the optional model gateway. No payloads or error messages.
-
-Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: built-in
-
-<details><summary>Exact input schema</summary>
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "mode": {
-      "type": "string",
-      "enum": [
-        "traces",
-        "events"
-      ],
-      "default": "traces"
-    },
-    "trace": {
-      "type": "string",
-      "description": "Optional trace id for traces mode"
-    },
-    "q": {
-      "type": "string",
-      "description": "Literal request metadata search for events mode"
-    },
-    "kind": {
-      "type": "string",
-      "enum": [
-        "tool",
-        "model"
-      ]
-    },
-    "outcome": {
-      "type": "string",
-      "enum": [
-        "failed",
-        "ok",
-        "error",
-        "cancelled",
-        "open",
-        "capacity"
-      ]
-    },
-    "from": {
-      "type": "integer",
-      "description": "Window start, epoch milliseconds; default last hour"
-    },
-    "to": {
-      "type": "integer",
-      "description": "Window end, epoch milliseconds; maximum window seven days"
-    },
-    "cursor": {
-      "type": "string",
-      "description": "Next page cursor"
-    },
-    "limit": {
-      "type": "integer",
-      "description": "Event page size",
-      "default": 50,
-      "minimum": 1,
-      "maximum": 200
-    },
-    "view": {
-      "type": "boolean",
-      "default": true
-    }
-  },
-  "required": [],
-  "additionalProperties": false
-}
-```
-
-</details>
-
-<a id="tool-test_coverage"></a>
-
-### test_coverage
-
-Read dev-tool source and lifecycle test evidence, gaps, source freshness and test files. Execution hits do not prove every assertion.
-
-Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: built-in
-
-<details><summary>Exact input schema</summary>
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "view": {
-      "type": "boolean",
-      "default": true
-    }
-  },
-  "required": [],
-  "additionalProperties": false
-}
-```
-
-</details>
-
-<a id="tool-code_start"></a>
-
-### code_start
-
-Start an owned JavaScript cell and return its id immediately. Observe with code_wait; a short wait does not restart/cancel it. Node permits network fetch. QuickJS is an optional pure-transform engine.
-
-Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: built-in
-
-<details><summary>Exact input schema</summary>
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "code": {
-      "type": "string",
-      "description": "JavaScript with top-level await"
-    },
-    "context": {
-      "type": "string",
-      "description": "Optional owned context folder id"
-    },
-    "title": {
-      "type": "string",
-      "description": "Purpose of this cell"
-    },
-    "engine": {
-      "type": "string",
-      "enum": [
-        "node",
-        "quickjs"
-      ],
-      "default": "node",
-      "description": "Node supports tools and direct fetch; QuickJS prototype is for pure transforms"
-    }
-  },
-  "required": [
-    "code"
-  ],
-  "additionalProperties": false
-}
-```
-
-</details>
-
-<a id="tool-code_wait"></a>
-
-### code_wait
-
-Observe an owned code cell with an output cursor. A wait timeout returns running state; it does not stop the cell or repeat tools.
-
-Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: built-in
-
-<details><summary>Exact input schema</summary>
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "id": {
-      "type": "string",
-      "description": "Cell id from code_start"
-    },
-    "cursor": {
-      "type": "integer",
-      "description": "Last observed output cursor",
-      "default": 0
-    },
-    "waitMs": {
-      "type": "integer",
-      "description": "Observation wait, up to 30000 ms",
-      "default": 1000
-    }
-  },
-  "required": [
-    "id"
-  ],
-  "additionalProperties": false
-}
-```
-
-</details>
-
-<a id="tool-code_cancel"></a>
-
-### code_cancel
-
-Request cancellation of an owned cell and its unfinished nested work. Cleanup and unknown outcomes remain visible.
-
-Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: built-in
-
-<details><summary>Exact input schema</summary>
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "id": {
-      "type": "string",
-      "description": "Cell id"
-    },
-    "reason": {
-      "type": "string",
-      "description": "Cancellation reason"
-    }
-  },
-  "required": [
-    "id"
-  ],
-  "additionalProperties": false
-}
-```
-
-</details>
-
-<a id="tool-execution_list"></a>
-
-### execution_list
-
-List recent executions in the authenticated user and chat/story scope, including cancellation and cleanup state.
-
-Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: built-in
-
-<details><summary>Exact input schema</summary>
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "limit": {
-      "type": "integer",
-      "description": "Maximum entries",
-      "default": 50
-    }
-  },
-  "required": [],
-  "additionalProperties": false
-}
-```
-
-</details>
-
-<a id="tool-execution_get"></a>
-
-### execution_get
-
-Inspect one owned execution, its parent and resource cleanup state.
-
-Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: built-in
-
-<details><summary>Exact input schema</summary>
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "id": {
-      "type": "string",
-      "description": "Execution id"
-    }
-  },
-  "required": [
-    "id"
-  ],
-  "additionalProperties": false
-}
-```
-
-</details>
-
-<a id="tool-execution_cancel"></a>
-
-### execution_cancel
-
-Cancel one owned execution and its child work; unrelated stories continue.
-
-Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: built-in
-
-<details><summary>Exact input schema</summary>
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "id": {
-      "type": "string",
-      "description": "Execution id"
-    },
-    "reason": {
-      "type": "string",
-      "description": "Reason"
-    }
-  },
-  "required": [
-    "id"
-  ],
-  "additionalProperties": false
-}
-```
-
-</details>
-
-<a id="tool-metadata_list"></a>
-
-### metadata_list
-
-Read paged operational metadata for this story: calls, jobs or executions. Annotations are separate from execution facts.
-
-Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: built-in
-
-<details><summary>Exact input schema</summary>
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "kind": {
-      "type": "string",
-      "enum": [
-        "calls",
-        "jobs",
-        "executions"
-      ],
-      "default": "calls"
-    },
-    "limit": {
-      "type": "integer",
-      "description": "Page size",
-      "default": 50
-    },
-    "before": {
-      "type": "string",
-      "description": "Cursor from the previous page"
-    }
-  },
-  "required": [],
-  "additionalProperties": false
-}
-```
-
-</details>
-
-<a id="tool-metadata_get"></a>
-
-### metadata_get
-
-Read one owned operational record and its annotation revision.
-
-Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: built-in
-
-<details><summary>Exact input schema</summary>
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "kind": {
-      "type": "string",
-      "enum": [
-        "calls",
-        "jobs",
-        "executions"
-      ]
-    },
-    "id": {
-      "type": "string",
-      "description": "Record id"
-    }
-  },
-  "required": [
-    "kind",
-    "id"
-  ],
-  "additionalProperties": false
-}
-```
-
-</details>
-
-<a id="tool-metadata_edit"></a>
-
-### metadata_edit
-
-Edit only label, notes and tags on an owned operational record. Supply expected_revision; execution facts and ownership cannot be edited.
-
-Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: built-in
-
-<details><summary>Exact input schema</summary>
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "kind": {
-      "type": "string",
-      "enum": [
-        "calls",
-        "jobs",
-        "executions"
-      ]
-    },
-    "id": {
-      "type": "string",
-      "description": "Record id"
-    },
-    "expected_revision": {
-      "type": "integer",
-      "minimum": 1
-    },
-    "patch": {
-      "type": "object",
-      "properties": {
-        "label": {
-          "type": "string",
-          "description": "Label"
-        },
-        "notes": {
-          "type": "string",
-          "description": "Notes"
-        },
-        "tags": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "maxItems": 32
-        }
-      },
-      "additionalProperties": false
-    }
-  },
-  "required": [
-    "kind",
-    "id",
-    "expected_revision",
-    "patch"
-  ],
   "additionalProperties": false
 }
 ```

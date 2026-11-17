@@ -1,0 +1,33 @@
+{
+  "package": "codemirror",
+  "version": "5.65.16",
+  "license": "MIT",
+  "source": "https://registry.npmjs.org/codemirror/-/codemirror-5.65.16.tgz",
+  "upstream": "https://github.com/codemirror/codemirror5",
+  "archiveSha256": "396119102b345fc7a91b33fe395bf6b09fbf5703faf16e84a2241533919d6d39",
+  "javascript": [
+    "lib/codemirror.js",
+    "addon/edit/matchbrackets.js",
+    "addon/edit/closebrackets.js",
+    "addon/search/searchcursor.js",
+    "addon/search/search.js",
+    "addon/dialog/dialog.js",
+    "mode/clike/clike.js",
+    "mode/javascript/javascript.js",
+    "mode/xml/xml.js",
+    "mode/css/css.js",
+    "mode/python/python.js",
+    "mode/sql/sql.js",
+    "mode/properties/properties.js",
+    "mode/toml/toml.js",
+    "mode/groovy/groovy.js",
+    "mode/shell/shell.js",
+    "mode/markdown/markdown.js",
+    "mode/yaml/yaml.js"
+  ],
+  "css": [
+    "lib/codemirror.css",
+    "addon/dialog/dialog.css"
+  ],
+  "build": "Selected unmodified upstream files concatenated, no network required at runtime."
+}

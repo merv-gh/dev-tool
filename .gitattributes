@@ -1,0 +1,3 @@
+# Preserve the unmodified upstream editor assets recorded in PROVENANCE.json.
+web/vendor/codemirror/* -whitespace linguist-vendored
+dist/web/vendor/codemirror/* -whitespace linguist-vendored
