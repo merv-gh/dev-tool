@@ -6,6 +6,7 @@ Examples use illustrative `checkout`, `DEMO/checkout`, `orders`, `HANDBOOK-101` 
 
 ## Contents
 
+- [Explore dev-tool from its own sources](#self-reflection)
 - [Your first investigation](#start)
 - [Dev-tool’s own operating context](#self-context)
 - [Contexts, nearby files and handoffs](#task-memory)
@@ -33,6 +34,72 @@ Examples use illustrative `checkout`, `DEMO/checkout`, `orders`, `HANDBOOK-101` 
 - [Developer studio: continue, coordinate and verify](#developer-studio)
 
 [Complete built-in tool reference](tools.md) · [Source and verification](../benchmarks/handbook-verification.json) · [Task-based novice review](novice-task-review.md)
+
+<a id="self-reflection"></a>
+
+## Explore dev-tool from its own sources
+
+Connect executable source declarations, Joern control-flow graphs, TLA+ checks and sampled OpenTelemetry evidence.
+
+**Outcome:** Inspect one source-backed machine, reproduce its finite check and distinguish declared behavior from observed runtime events.
+
+**Before you start:** Open Admin → Self-reflection; choose a stable chat/task scope.
+
+### Start with our repository
+
+Admin → Self-reflection opens a hierarchy of components and executable lifecycle charts extracted at build time from this repository. Choose a machine, then a state. The graph shows the initial/terminal states; the evidence pane shows source file, line, file hash, declaration excerpt and explicit consumers. Independent charts are not a synchronized whole-program model.
+
+Select Check model for finite safety/deadlock exploration, or Export TLA+ for a real module and TLC configuration. No forbidden states are assumed by default. To check a safety claim, supply existing state IDs in forbidden. A reported deadlock can be an abstraction or extraction gap; inspect the source before reporting a defect.
+
+Use the Tool API explorer to search every authorized enabled tool, edit schema-based fields or JSON arguments, run through the backend and inspect timing, errors, retained results and inline visualizations. Merely selecting a tool sends no invocation.
+
+1. Run repo_model action=derive with no target. Keep the returned projection id.
+2. Choose a component and machine, such as SM37.push; inspect guards and effects in the source.
+3. Run check or export with that id and exact machine. Record the source digest and verification limits.
+
+**Derive dev-tool’s source model** · `repo_model`
+
+```json
+{
+  "action": "derive"
+}
+```
+
+Expected: A compact summary, owned projection id, next calls and retained interactive hierarchy. The full graph stays out of model context until requested.
+
+### Compare declarations with actual traces
+
+Enable tracing for this chat, run a relevant tool, and Refresh observations. Record a sample tool call executes only logic_model templates; select SM01.execution to see its real lifecycle events. Trace selection filters the observation overlay without rerunning tools.
+
+Only accepted declared transitions with the same source digest count as observed hits. Rejected transitions and missing/stale version events remain visible but do not count. Trace sampling, retained event/span limits and dropped events mean absence is inconclusive. Span timing measures the whole operation including waits, not a state transition’s CPU time.
+
+Inline /show views retain a network-free snapshot of hierarchy, source and observations. Reproduce selection prepares an exact tool call; checks and fresh observations run in the authenticated Self-reflection host. Copy selection link shares the view with users who can access the same retained chat scope. Export evidence preserves the complete supplied snapshot.
+
+### Derive finite models from retained Joern analyses
+
+First index an exact repository/service revision with semantic_index. Select its retained analysis in Self-reflection, optionally choose an entry method, then Derive from Joern. Parsing is explicit; this page never starts a repository parse on opening.
+
+The tool reuses the bounded semantic_query flowmap job. If pending, keep job and Observe existing job. Each retained method becomes a child graph. Only local CFG/control edges become TLA transitions. Data dependence, call dispatch, fields, assignments and guards remain separately retained annotations; a dependency is not an execution step.
+
+This is a nondeterministic finite control abstraction. It does not evaluate guard expressions, prove value relationships, synchronize calls/returns, prove source equivalence or establish liveness. All gaps and original static flow-map evidence remain in the exported result. Use semantic_trace for value-flow/change evidence and behavioral tests to validate a fix.
+
+**Discover retained analyses** · `semantic_index`
+
+```json
+{}
+```
+
+Expected: Exact analysis ids and source SHAs, or an explicit missing-index response. No implicit parse.
+
+### Reproduce and extend
+
+Run node demo/self-reflection.js for a disposable local showcase with real source declarations and real opt-in spans from harmless tool requests. No production infrastructure or model is contacted. Run node dev/check-self-reflection-browser.js for mouse, keyboard, mobile, dark, inline and API-explorer checks.
+
+The source catalog is generated by dev/repo-model-catalog.js and refreshed by npm run build. Build checks reject stale source models. The standalone bundle embeds declarations and source evidence, so this feature works without a source checkout or external Joern service. For other repositories, Joern remains the optional configured parser.
+
+A source model is private to the authenticated user/chat. Joern jobs, traces and results follow the existing scope boundary. Refresh creates a source snapshot or new observation result; it does not replace old semantic generations or claim that every tool has been executed.
+
+**Related chapters:** [Code search, impact and Joern](#joern) · [Trace work and inspect test coverage](#observability) · [Extend tools and result views](#extend)
 
 <a id="start"></a>
 
@@ -2300,6 +2367,16 @@ What was retained for this task, workflow or dependency change? Filter dependenc
 
 </details>
 
+#### repo-model
+
+How does the repository behave, and what was actually observed? Choose a component, machine and state; inspect source and guards, filter sampled source-matched OTel events and prepare finite TLA+ checks. The inline snapshot has no network access. Open Admin → Self-reflection for fresh observations and the tool API explorer.
+
+<details><summary>View labeled presentation example</summary>
+
+![Built-in repo-model presentation sample](../screenshots/sample-repo-model.png)
+
+</details>
+
 #### logic-model
 
 Which modeled paths were checked or sampled? Select a state or retained counterexample, compare model coverage with explicitly supplied source observations, hide the overlay, and export TLA+/TLC configuration. Finite abstraction checks do not prove source equivalence or liveness.
@@ -2344,7 +2421,7 @@ Search a task term, tool name or group. Select a tool to read its contract, requ
 
 The portable repository reference records built-in tools at generation time. The running registry remains authoritative for extensions and permissions. A required field can still need a real returned ID; blank values or an invented analysis/lease/workspace ID are not useful arguments.
 
-The [complete built-in reference](tools.md) contains 286 tools with exact schemas. In the app, the reference uses the current authorized registry and includes configured extensions.
+The [complete built-in reference](tools.md) contains 287 tools with exact schemas. In the app, the reference uses the current authorized registry and includes configured extensions.
 
 ### When a tool is missing
 

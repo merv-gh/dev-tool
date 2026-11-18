@@ -1,6 +1,6 @@
 {
   "protocol": "dt.release-inventory/v1",
-  "sourceDigest": "2cf6a04d59cce003a0fae3478658484e78dbd5cb88fbbc878a75a4d12cc7e39f",
+  "sourceDigest": "b1249397c80663b9ad8fa0653ea42736237b0e3572276962331e1edec6e2a877",
   "tools": [
     {
       "name": "find",
@@ -1929,8 +1929,22 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
+        "test/repo-model-ui.test.js",
+        "test/repo-model.test.js",
         "test/studio-tools.test.js",
         "test/studio-ui.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "repo_model",
+      "group": "semantic",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/repo-model-ui.test.js",
+        "test/repo-model.test.js"
       ],
       "integrationReferences": []
     },
@@ -3561,6 +3575,7 @@
     "passport-ports",
     "patch",
     "project-context",
+    "repo-model",
     "reproduction",
     "scenario-run",
     "semantic-analysis",

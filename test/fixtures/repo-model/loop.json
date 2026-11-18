@@ -1,0 +1,1089 @@
+{
+  "provenance": "Retained real Joern output from the disposable flow-map feature fixture; captured by test/semantic-flow-map.live.test.js. Replayed without a worker.",
+  "analyses": [
+    {
+      "id": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+      "repo": "DEMO/payments",
+      "sha": "23999f81229633930d54d4a51d3e1a90e8a96e97",
+      "language": "java",
+      "sourceDigest": "aa3bd22fb8a761e3ae5d78210ac202393f36f400ca46affdf736d0b4ebe696d6"
+    }
+  ],
+  "gaps": [
+    {
+      "kind": "flowmap-coverage",
+      "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+      "detail": "Reaching definitions may conservatively couple predicate operands; inspect assignments and assert values at every effect/return"
+    },
+    {
+      "kind": "flowmap-coverage",
+      "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+      "detail": "Implicit exceptions, external effects, concurrency and path feasibility are not exhaustively modeled"
+    }
+  ],
+  "flowMap": {
+    "protocol": "dt.flow-map/v1",
+    "entries": [
+      "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:107374182404"
+    ],
+    "methods": [
+      {
+        "id": "code:DEMO%2Fpayments@work%2Fpayments-feature-rebates-1e1d27b41bba8268%2Bsource%3Aaa3bd22fb8a761e3ae5d78210ac202393f36f400ca46affdf736d0b4ebe696d6:example.LoopProbe.sum:int(int)",
+        "kind": "method",
+        "name": "sum",
+        "signature": "example.LoopProbe.sum:int(int)",
+        "methodSignature": "int(int)",
+        "file": "src/main/java/example/LoopProbe.java",
+        "projectionFile": "src/main/java/example/LoopProbe.java",
+        "line": 1,
+        "endLine": 1,
+        "repo": "DEMO/payments",
+        "sha": "23999f81229633930d54d4a51d3e1a90e8a96e97",
+        "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+        "locator": {
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "generation": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "nodeId": "107374182404"
+        },
+        "parameters": [
+          {
+            "name": "n",
+            "type": "int",
+            "index": 1
+          }
+        ],
+        "returnId": "124554051588",
+        "coverage": "static-cpg",
+        "entry": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:107374182404",
+        "exit": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:124554051588"
+      }
+    ],
+    "nodes": [
+      {
+        "type": "state",
+        "nodeId": "107374182404",
+        "methodId": "107374182404",
+        "kind": "entry",
+        "label": "METHOD",
+        "code": "sum",
+        "file": "src/main/java/example/LoopProbe.java",
+        "line": 1,
+        "reads": [
+          "total",
+          "i",
+          "n"
+        ],
+        "changes": [],
+        "arguments": [],
+        "status": "static-candidate",
+        "textTruncated": false,
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+        "repo": "DEMO/payments",
+        "sha": "23999f81229633930d54d4a51d3e1a90e8a96e97",
+        "revisionKey": "work/payments-feature-rebates-1e1d27b41bba8268",
+        "locator": {
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "generation": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "nodeId": "107374182404"
+        },
+        "id": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:107374182404",
+        "method": "code:DEMO%2Fpayments@work%2Fpayments-feature-rebates-1e1d27b41bba8268%2Bsource%3Aaa3bd22fb8a761e3ae5d78210ac202393f36f400ca46affdf736d0b4ebe696d6:example.LoopProbe.sum:int(int)"
+      },
+      {
+        "type": "state",
+        "nodeId": "124554051588",
+        "methodId": "107374182404",
+        "kind": "exit",
+        "label": "METHOD_RETURN",
+        "code": "Method exit",
+        "file": "src/main/java/example/LoopProbe.java",
+        "line": 1,
+        "reads": [],
+        "changes": [],
+        "arguments": [],
+        "status": "static-candidate",
+        "textTruncated": false,
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+        "repo": "DEMO/payments",
+        "sha": "23999f81229633930d54d4a51d3e1a90e8a96e97",
+        "revisionKey": "work/payments-feature-rebates-1e1d27b41bba8268",
+        "locator": {
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "generation": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "nodeId": "124554051588"
+        },
+        "id": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:124554051588",
+        "method": "code:DEMO%2Fpayments@work%2Fpayments-feature-rebates-1e1d27b41bba8268%2Bsource%3Aaa3bd22fb8a761e3ae5d78210ac202393f36f400ca46affdf736d0b4ebe696d6:example.LoopProbe.sum:int(int)"
+      },
+      {
+        "type": "state",
+        "nodeId": "30064771090",
+        "methodId": "107374182404",
+        "kind": "change",
+        "label": "CALL",
+        "code": "int total = 0",
+        "file": "src/main/java/example/LoopProbe.java",
+        "line": 1,
+        "reads": [
+          "total"
+        ],
+        "changes": [
+          {
+            "target": "total",
+            "expression": "0",
+            "operation": "<operator>.assignment",
+            "status": "syntax"
+          }
+        ],
+        "arguments": [
+          {
+            "index": 1,
+            "expression": "total"
+          },
+          {
+            "index": 2,
+            "expression": "0"
+          }
+        ],
+        "status": "static-candidate",
+        "textTruncated": false,
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+        "repo": "DEMO/payments",
+        "sha": "23999f81229633930d54d4a51d3e1a90e8a96e97",
+        "revisionKey": "work/payments-feature-rebates-1e1d27b41bba8268",
+        "locator": {
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "generation": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "nodeId": "30064771090"
+        },
+        "id": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771090",
+        "method": "code:DEMO%2Fpayments@work%2Fpayments-feature-rebates-1e1d27b41bba8268%2Bsource%3Aaa3bd22fb8a761e3ae5d78210ac202393f36f400ca46affdf736d0b4ebe696d6:example.LoopProbe.sum:int(int)"
+      },
+      {
+        "type": "state",
+        "nodeId": "30064771091",
+        "methodId": "107374182404",
+        "kind": "change",
+        "label": "CALL",
+        "code": "int i = 0",
+        "file": "src/main/java/example/LoopProbe.java",
+        "line": 1,
+        "reads": [
+          "i"
+        ],
+        "changes": [
+          {
+            "target": "i",
+            "expression": "0",
+            "operation": "<operator>.assignment",
+            "status": "syntax"
+          }
+        ],
+        "arguments": [
+          {
+            "index": 1,
+            "expression": "i"
+          },
+          {
+            "index": 2,
+            "expression": "0"
+          }
+        ],
+        "status": "static-candidate",
+        "textTruncated": false,
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+        "repo": "DEMO/payments",
+        "sha": "23999f81229633930d54d4a51d3e1a90e8a96e97",
+        "revisionKey": "work/payments-feature-rebates-1e1d27b41bba8268",
+        "locator": {
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "generation": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "nodeId": "30064771091"
+        },
+        "id": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771091",
+        "method": "code:DEMO%2Fpayments@work%2Fpayments-feature-rebates-1e1d27b41bba8268%2Bsource%3Aaa3bd22fb8a761e3ae5d78210ac202393f36f400ca46affdf736d0b4ebe696d6:example.LoopProbe.sum:int(int)"
+      },
+      {
+        "type": "state",
+        "nodeId": "30064771092",
+        "methodId": "107374182404",
+        "kind": "decision",
+        "label": "CALL",
+        "code": "i < n",
+        "file": "src/main/java/example/LoopProbe.java",
+        "line": 1,
+        "reads": [
+          "i",
+          "n"
+        ],
+        "changes": [],
+        "arguments": [
+          {
+            "index": 1,
+            "expression": "i"
+          },
+          {
+            "index": 2,
+            "expression": "n"
+          }
+        ],
+        "status": "static-candidate",
+        "textTruncated": false,
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+        "repo": "DEMO/payments",
+        "sha": "23999f81229633930d54d4a51d3e1a90e8a96e97",
+        "revisionKey": "work/payments-feature-rebates-1e1d27b41bba8268",
+        "locator": {
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "generation": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "nodeId": "30064771092"
+        },
+        "id": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771092",
+        "method": "code:DEMO%2Fpayments@work%2Fpayments-feature-rebates-1e1d27b41bba8268%2Bsource%3Aaa3bd22fb8a761e3ae5d78210ac202393f36f400ca46affdf736d0b4ebe696d6:example.LoopProbe.sum:int(int)"
+      },
+      {
+        "type": "state",
+        "nodeId": "30064771093",
+        "methodId": "107374182404",
+        "kind": "change",
+        "label": "CALL",
+        "code": "i++",
+        "file": "src/main/java/example/LoopProbe.java",
+        "line": 1,
+        "reads": [
+          "i"
+        ],
+        "changes": [
+          {
+            "target": "i",
+            "expression": "i++",
+            "operation": "<operator>.postIncrement",
+            "status": "syntax"
+          }
+        ],
+        "arguments": [
+          {
+            "index": 1,
+            "expression": "i"
+          }
+        ],
+        "status": "static-candidate",
+        "textTruncated": false,
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+        "repo": "DEMO/payments",
+        "sha": "23999f81229633930d54d4a51d3e1a90e8a96e97",
+        "revisionKey": "work/payments-feature-rebates-1e1d27b41bba8268",
+        "locator": {
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "generation": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "nodeId": "30064771093"
+        },
+        "id": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771093",
+        "method": "code:DEMO%2Fpayments@work%2Fpayments-feature-rebates-1e1d27b41bba8268%2Bsource%3Aaa3bd22fb8a761e3ae5d78210ac202393f36f400ca46affdf736d0b4ebe696d6:example.LoopProbe.sum:int(int)"
+      },
+      {
+        "type": "state",
+        "nodeId": "30064771094",
+        "methodId": "107374182404",
+        "kind": "decision",
+        "label": "CALL",
+        "code": "i == 2",
+        "file": "src/main/java/example/LoopProbe.java",
+        "line": 1,
+        "reads": [
+          "i"
+        ],
+        "changes": [],
+        "arguments": [
+          {
+            "index": 1,
+            "expression": "i"
+          },
+          {
+            "index": 2,
+            "expression": "2"
+          }
+        ],
+        "status": "static-candidate",
+        "textTruncated": false,
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+        "repo": "DEMO/payments",
+        "sha": "23999f81229633930d54d4a51d3e1a90e8a96e97",
+        "revisionKey": "work/payments-feature-rebates-1e1d27b41bba8268",
+        "locator": {
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "generation": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "nodeId": "30064771094"
+        },
+        "id": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771094",
+        "method": "code:DEMO%2Fpayments@work%2Fpayments-feature-rebates-1e1d27b41bba8268%2Bsource%3Aaa3bd22fb8a761e3ae5d78210ac202393f36f400ca46affdf736d0b4ebe696d6:example.LoopProbe.sum:int(int)"
+      },
+      {
+        "type": "state",
+        "nodeId": "30064771095",
+        "methodId": "107374182404",
+        "kind": "change",
+        "label": "CALL",
+        "code": "total += i",
+        "file": "src/main/java/example/LoopProbe.java",
+        "line": 1,
+        "reads": [
+          "total",
+          "i"
+        ],
+        "changes": [
+          {
+            "target": "total",
+            "expression": "total += i",
+            "operation": "<operator>.assignmentPlus",
+            "status": "syntax"
+          }
+        ],
+        "arguments": [
+          {
+            "index": 1,
+            "expression": "total"
+          },
+          {
+            "index": 2,
+            "expression": "i"
+          }
+        ],
+        "status": "static-candidate",
+        "textTruncated": false,
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+        "repo": "DEMO/payments",
+        "sha": "23999f81229633930d54d4a51d3e1a90e8a96e97",
+        "revisionKey": "work/payments-feature-rebates-1e1d27b41bba8268",
+        "locator": {
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "generation": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "nodeId": "30064771095"
+        },
+        "id": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771095",
+        "method": "code:DEMO%2Fpayments@work%2Fpayments-feature-rebates-1e1d27b41bba8268%2Bsource%3Aaa3bd22fb8a761e3ae5d78210ac202393f36f400ca46affdf736d0b4ebe696d6:example.LoopProbe.sum:int(int)"
+      },
+      {
+        "type": "state",
+        "nodeId": "141733920768",
+        "methodId": "107374182404",
+        "kind": "return",
+        "label": "RETURN",
+        "code": "return total;",
+        "file": "src/main/java/example/LoopProbe.java",
+        "line": 1,
+        "reads": [
+          "total"
+        ],
+        "changes": [],
+        "arguments": [],
+        "status": "static-candidate",
+        "textTruncated": false,
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+        "repo": "DEMO/payments",
+        "sha": "23999f81229633930d54d4a51d3e1a90e8a96e97",
+        "revisionKey": "work/payments-feature-rebates-1e1d27b41bba8268",
+        "locator": {
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "generation": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "nodeId": "141733920768"
+        },
+        "id": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:141733920768",
+        "method": "code:DEMO%2Fpayments@work%2Fpayments-feature-rebates-1e1d27b41bba8268%2Bsource%3Aaa3bd22fb8a761e3ae5d78210ac202393f36f400ca46affdf736d0b4ebe696d6:example.LoopProbe.sum:int(int)"
+      }
+    ],
+    "edges": [
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:107374182404",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771090",
+        "kind": "control",
+        "relation": "CFG",
+        "polarity": "not-applicable",
+        "contractedExpressions": 2,
+        "condition": "",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "CFG",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:8601316bd911e57298b7f0d1"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771090",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771091",
+        "kind": "control",
+        "relation": "CFG",
+        "polarity": "not-applicable",
+        "contractedExpressions": 2,
+        "condition": "",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "CFG",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:8e109451cb0558015de5eafe"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771091",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771092",
+        "kind": "control",
+        "relation": "CFG",
+        "polarity": "not-applicable",
+        "contractedExpressions": 2,
+        "condition": "",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "CFG",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:acc92a6f7a33b63a16e517fb"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771092",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771094",
+        "kind": "control",
+        "relation": "CFG",
+        "polarity": "unknown",
+        "contractedExpressions": 2,
+        "condition": "i < n",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "CFG",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:37e029471eef473c5bb96db2"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771092",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:141733920768",
+        "kind": "control",
+        "relation": "CFG",
+        "polarity": "unknown",
+        "contractedExpressions": 1,
+        "condition": "i < n",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "CFG",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:6b33b1dab25686067eb9a63b"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771093",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771092",
+        "kind": "control",
+        "relation": "CFG",
+        "polarity": "not-applicable",
+        "contractedExpressions": 2,
+        "condition": "",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "CFG",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:770699a877c16290f7ba1a44"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771094",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771093",
+        "kind": "control",
+        "relation": "CFG",
+        "polarity": "true",
+        "contractedExpressions": 2,
+        "condition": "i == 2",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "CFG",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:ac1526d1034be0c23441309c"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771094",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771095",
+        "kind": "control",
+        "relation": "CFG",
+        "polarity": "false",
+        "contractedExpressions": 2,
+        "condition": "i == 2",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "CFG",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:f03ac6ad2232a3aa7c163a3b"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771095",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771093",
+        "kind": "control",
+        "relation": "CFG",
+        "polarity": "not-applicable",
+        "contractedExpressions": 1,
+        "condition": "",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "CFG",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:2c986718e07a6ecc8adcaa96"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:141733920768",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:124554051588",
+        "kind": "control",
+        "relation": "CFG",
+        "polarity": "not-applicable",
+        "contractedExpressions": 0,
+        "condition": "",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "CFG",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:a6c1c8c93682b8a9e345c987"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:107374182404",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:141733920768",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:435aab1411945a122fca6d2a"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:107374182404",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771093",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:bd51f117d697ae095e302d4b"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:107374182404",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771094",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:9947f3738460b6c6837e6a57"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:107374182404",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771092",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:30f39f4fd758472c8d75fa61"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:107374182404",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771095",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:34055e513061630a7a147baa"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:107374182404",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771090",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:04de454eacfc0e1f98c6c7b5"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:107374182404",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771091",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:ba6d6698bc608ce2c39b72de"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:107374182404",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:124554051588",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:c546391f1ee40ef75339532b"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771090",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:124554051588",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:4f0da9ceca1ba764a1252716"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771090",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771095",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:09dd0bbbc98aee35b48a4d9b"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771090",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:141733920768",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:9bdcbbb8bdb74f5274af8472"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771091",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:124554051588",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:147e1ec8e3da9d3f13075fd5"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771091",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771092",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:c84c05b8f2d75630c7719b69"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771092",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:124554051588",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:468197b05c9cf7486a3dd0f2"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771092",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771094",
+        "kind": "control-dependency",
+        "relation": "CDG",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "CDG",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:9ec61b8c414378649f7778ea"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771092",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771093",
+        "kind": "control-dependency",
+        "relation": "CDG",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "CDG",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:adc6af779492496589b19d50"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771092",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771094",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:551fbd99e0fd1d764421ba75"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771092",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:107374182404",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:733dfd281c7fa0f86bceaf22"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771093",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:124554051588",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:584664154f55d73be36352ea"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771093",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771092",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:3da61babaec3e283956835cb"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771094",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:124554051588",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:28b3b2de13f73798d06c3ce7"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771094",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771095",
+        "kind": "control-dependency",
+        "relation": "CDG",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "CDG",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:4a827227063b62bbde9d9cc3"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771094",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:107374182404",
+        "kind": "control-dependency",
+        "relation": "CDG",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "CDG",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:d52dccd0aee433f20f9686fd"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771094",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771095",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:21938129eb118da4ac6a8a8e"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771094",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771093",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:62f0fb1d9578e1f68d29c7cf"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771095",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:124554051588",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:204ebe83510e307c3e808e33"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771095",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:141733920768",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:b344a237c26424a253fe50be"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771095",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:30064771093",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:ae2f3271aca1a9643e6576d5"
+      },
+      {
+        "type": "edge",
+        "from": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:141733920768",
+        "to": "state:164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1:124554051588",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "164d266d1f624c1b257479e2ae7ed2f8ea064b213557ae02c10027767cbf67ad-fc0f3fc577ae1387ac3fd00e0c1297d1",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:ee6ebb80adcf99b4b098b226"
+      }
+    ],
+    "ports": [],
+    "assumptions": [
+      {
+        "id": "static",
+        "status": "unknown",
+        "detail": "Static control and reaching-definition edges are candidates. They do not prove feasibility, equal values, runtime order, or every-path enforcement."
+      },
+      {
+        "id": "effects",
+        "status": "unknown",
+        "detail": "External calls may change data or throw. Unresolved dispatch, aliasing, reflection, async execution, and implicit exceptions are not exhaustively modeled."
+      },
+      {
+        "id": "scope",
+        "status": "bounded",
+        "detail": "Bodies cover the selected entries and bounded reachable methods in exact retained CPGs. Transport boundaries are shown with their evidence; no distributed execution or field mapping is inferred."
+      }
+    ],
+    "complete": false,
+    "counts": {
+      "entries": 1,
+      "methods": 1,
+      "states": 9,
+      "transitions": 39,
+      "decisions": 2,
+      "changes": 4,
+      "exits": 2
+    }
+  }
+}

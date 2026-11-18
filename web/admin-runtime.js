@@ -211,6 +211,7 @@ function rtNativeView(view) {
   try { const url = new URL(view, location.href), route = url.pathname.match(/\/(?:show|view|logs|pr|map|map-preview|files|passport|architecture)\/[^/]+$/); if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || !route) return null; return route[0] + url.search + (url.search ? '&' : '?') + 'embed=1'; } catch { return null; }
 }
 async function runtimeRunCode() {
+  if ($('adminReflection')?.contentWindow?.reflectionCanLeave?.()===false) { $('rtScopeStatus').textContent='Wait for the Self-reflection tool response before changing scope.'; return; }
   if (runtimeCodePending.value) return;
   let args; try { args = JSON.parse($('rtCodeArgs').value); if (!args || typeof args !== 'object' || Array.isArray(args)) throw Error('Arguments must be a JSON object'); } catch (error) { $('rtCodeStatus').textContent = error.message; return; }
   const name = $('rtCodeTool').value, scope = runtimeScopeVersion.value; runtimeCodePending.value = true; $('rtCodeRun').disabled = true; $('rtCodeStatus').textContent = 'Running ' + name + '…';
@@ -232,6 +233,7 @@ async function runtimeRunCode() {
 async function runtimeChangeScope(event) {
   event?.preventDefault();
   if(typeof uxBeforeScopeChange==='function'&&!uxBeforeScopeChange())return;
+  if ($('adminReflection')?.contentWindow?.reflectionCanLeave?.()===false) { $('rtScopeStatus').textContent='Wait for the Self-reflection tool response before changing scope.'; return; }
   if (runtimeCodePending.value) { $('rtScopeStatus').textContent = 'Wait for the code tool response before changing scope.'; return; }
   if ((typeof semanticAdminPending === 'undefined' ? 'undefined' : typeof semanticAdminPending.value) !== 'undefined' && semanticAdminPending.value) { $('rtScopeStatus').textContent = 'Wait for the semantic tool response before changing scope.'; return; }
   if (typeof architectureCanLeave === 'function' && !architectureCanLeave()) return;
@@ -258,6 +260,7 @@ async function runtimeChangeScope(event) {
   if (typeof selectedJob !== 'undefined') selectedJob = null;
   await loadRuntime(); await refresh(); await runtimeLoadMetadata();
   if (tab === 'context') await loadContexts(); if (tab === 'history') await loadHistory();
+  if(tab==='reflection')$('adminReflection').src='/self-reflection?'+new URLSearchParams({embed:'true',story:runtimeStory,...(runtimePrincipal?{principal:runtimePrincipal}:{})});
   if(tab==='pages')$('adminPages').src='/pages?'+new URLSearchParams({embed:'true',story:runtimeStory,...(runtimePrincipal?{principal:runtimePrincipal}:{})});
   if(tab==='api')await loadRoutes();
   if(tab==='handbook')await loadHandbook();

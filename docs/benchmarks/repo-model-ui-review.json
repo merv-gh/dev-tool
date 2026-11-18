@@ -1,0 +1,49 @@
+{
+  "kind": "independent-ui-finish-review",
+  "scope": "Local extension of the existing Admin design system; no new visual identity",
+  "disposition": "ship",
+  "screenshots": [
+    "self-reflection-desktop.png",
+    "self-reflection-mobile.png",
+    "self-reflection-dark.png",
+    "self-reflection-api.png",
+    "self-reflection-inline.png"
+  ],
+  "findings": [
+    {
+      "finding": "Baseline graph edges too faint",
+      "resolution": "Higher-contrast baseline edges; selected and observed edges retain separate styles"
+    },
+    {
+      "finding": "Next-state navigation could leave the selected node outside the viewport",
+      "resolution": "Selection now scrolls the graph to the chosen state; Chromium verifies scrolling"
+    },
+    {
+      "finding": "Copied API call omitted principal and exact scope headers",
+      "resolution": "Copied and executed requests include actual story and optional principal headers, without a bearer token"
+    },
+    {
+      "finding": "JSON editor had a white surface in dark mode",
+      "resolution": "Textarea uses shared background, foreground and border tokens"
+    },
+    {
+      "finding": "Dark screenshot caught the shared theme transition before completion",
+      "resolution": "Recapture waits 250 ms for the existing button background transition to settle; independent reviewer confirmed readability"
+    }
+  ],
+  "preserved": "Declaration, Joern static candidates and sampled runtime evidence remain distinct. Inline snapshots keep their network sandbox.",
+  "limits": "Visual review covers these captures and scored fixes; it does not establish every integration path or source equivalence.",
+  "reviewedSourceDigest": "5375602815e0887a30b0d8b9bc66bd1be4dd1c19fce89637ff985f278e5cecbf",
+  "finalVerificationSourceDigest": "b1249397c80663b9ad8fa0653ea42736237b0e3572276962331e1edec6e2a877",
+  "designDocumentation": {
+    "changes": "none",
+    "authority": "web/ui.css",
+    "scope": "Local extension preserving the shared Admin system; no new root design documents",
+    "rules": [
+      "Existing neutral light/dark palette and blue accent",
+      "Shared control sizes, corners and focus outlines",
+      "Tree, graph and evidence columns collapse at 1150 and 700 pixels",
+      "Source declarations, static candidates and observations retain distinct meanings"
+    ]
+  }
+}

@@ -102,6 +102,9 @@ const dtInline = {
       summary = `${d.status || 'not-run'} · ${d.definition?.widgets?.length||0} widgets${d.at?' · saved observation':''}`;
     } else if (view === 'ui-trace') {
       summary = `${c.requests||0} requests · ${c.services||0} services · ${c.states||0} static states · ${c.fields||0} fields`;
+    } else if (view === 'repo-model') {
+      failed ||= d.fresh===false;
+      summary = `${c.machines||0} source-backed machines · ${c.states||0} states · ${c.observations||0} observed events${d.fresh===false?' · stale source':''}`;
     } else if (view === 'semantic-flow-map') {
       const counts=d.flowMap?.counts||{};
       failed ||= ['failed','interrupted'].includes(d.state);

@@ -160,6 +160,7 @@
     <button data-tab="views">Views<span class="n" id="nViews"></span></button>
     <button data-tab="history">History</button>
     <button data-tab="runtime">Runtime<span class="n" id="nExecutions"></span></button>
+    <button data-tab="reflection">Self-reflection</button>
     <button data-tab="architecture">Architecture</button>
     <button data-tab="semantic">Semantic & ports</button>
     <button data-tab="jobs">Jobs<span class="n" id="nJobs"></span></button>
@@ -405,6 +406,7 @@
     <details><summary>Refresh operational observations</summary><p class="hint">Read-only source queries in a cancellable job. PostgreSQL activity, Kafka stats and configured telemetry remain separate from published architecture. Failed sources retain older observations.</p><div class="row"><button id="arAdminRefresh">Refresh selected environment</button><button id="arAdminPoll" hidden>Observe job</button><button id="arAdminCancel" hidden>Cancel job</button></div><pre id="arAdminJob"></pre></details>
     <iframe id="arAdminPreview" title="Interactive architecture preview" allow="clipboard-write"></iframe>
   </section>
+  <section id="tab-reflection" hidden><iframe id="adminReflection" title="Source-backed repository reflection and tool API explorer" style="width:100%;height:1100px;border:0"></iframe></section>
   <section id="tab-handbook" hidden><div id="adminHandbook"></div></section>
   <section id="tab-config" hidden>
     <h2><span id="cfgName">config.json</span> <span class="muted" id="cfgFile"></span></h2>
@@ -694,6 +696,7 @@ function show(t) {
   history.replaceState(null, '', `#${['semantic','handbook','context','scripts','runtime','workbench','capabilities'].includes(t) ? requested : t}`);
   if (t === 'capabilities') loadCapabilities().catch(e => toast(e.message));
   if (t === 'workbench') loadWorkbench().catch(e => wbMessage(e.message, true));
+  if(t==='reflection')loadRuntime().then(()=>{if(tab!=='reflection')return;const frame=$('adminReflection'),src='/self-reflection?'+new URLSearchParams({embed:'true',story:runtimeStory||'default',...(runtimePrincipal?{principal:runtimePrincipal}:{})});if(frame.getAttribute('src')!==src)frame.src=src;}).catch(e=>toast(e.message));
   if(t==='studio')loadRuntime().then(()=>{if(tab!=='studio')return;const frame=$('adminStudio'),src='/studio?'+new URLSearchParams({embed:'true',story:runtimeStory||'default',...(runtimePrincipal?{principal:runtimePrincipal}:{})});if(frame.getAttribute('src')!==src)frame.src=src;}).catch(e=>toast(e.message));
   if(t==='pages')loadRuntime().then(()=>{if(tab!=='pages')return;const frame=$('adminPages'),src='/pages?'+new URLSearchParams({embed:'true',story:runtimeStory||'default',...(runtimePrincipal?{principal:runtimePrincipal}:{})});if(frame.getAttribute('src')!==src)frame.src=src;}).catch(e=>toast(e.message));
   $('adminPages')?.contentWindow?.postMessage({type:'ui-page:visibility',visible:t==='pages'},location.origin);

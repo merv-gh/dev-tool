@@ -11606,7 +11606,7 @@ Workflow: [Developer studio: continue, coordinate and verify](README.md#develope
 
 ### logic_model
 
-Create finite logic graphs, export real TLA+ and TLC config, check safety/deadlocks or simulate seeded paths, with optional transition coverage. Templates include actual diff decision observations and revision publication. Built-in exploration needs no external dependency; engine=tlc runs an explicitly configured SHA256-pinned TLC jar. These finite abstractions do not prove source equivalence. save/get/list keep task-scoped models; run returns an interactive retained graph.
+Create finite logic graphs, export real TLA+ and TLC config, check safety/deadlocks or simulate seeded paths, with optional transition coverage. Templates include diff decisions and revision publication. For actual repository lifecycles (including workspace push), Joern and telemetry use repo_model; these templates are separate abstractions. Built-in exploration needs no external dependency; engine=tlc runs an explicitly configured SHA256-pinned TLC jar. These finite abstractions do not prove source equivalence. save/get/list keep task-scoped models; run returns an interactive retained graph.
 
 Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: built-in
 
@@ -12144,6 +12144,1668 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
     "id",
     "expected_revision",
     "patch"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+## semantic
+
+- [`repo_model`](#tool-repo_model)
+- [`semantic_capabilities`](#tool-semantic_capabilities)
+- [`semantic_index`](#tool-semantic_index)
+- [`semantic_search`](#tool-semantic_search)
+- [`semantic_trace`](#tool-semantic_trace)
+- [`semantic_query`](#tool-semantic_query)
+
+<a id="tool-repo_model"></a>
+
+### repo_model
+
+Show repository lifecycle/Joern diagrams with TLA+ checks and sampled OpenTelemetry. To actually check dev-tool’s workspace push, call action=check,machine=SM37.push (no id needed); returns actual check and hierarchy links. For a diagram only, action=derive uses our sources. Another repo needs analysis=<retained Joern id> and optional from; observe its returned job. Then check/export with id + exact machine. Guards/data are annotations, not proved predicates. Compact output is default; full evidence lives in inline views.
+
+Workflow: [Explore dev-tool from its own sources](README.md#self-reflection) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": {
+      "type": "string",
+      "enum": [
+        "derive",
+        "get",
+        "observe",
+        "check",
+        "export"
+      ],
+      "default": "derive"
+    },
+    "id": {
+      "type": "string",
+      "description": "Owned repository projection id returned by derive"
+    },
+    "analysis": {
+      "type": "string",
+      "description": "Exact retained Joern analysis id from semantic_index"
+    },
+    "job": {
+      "type": "string",
+      "description": "Observe the existing Joern flow-map job"
+    },
+    "from": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "signature": {
+          "type": "string"
+        },
+        "file": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "receiver": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "waitMs": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 30000,
+      "default": 0
+    },
+    "machine": {
+      "type": "string",
+      "description": "Exact machine id from hierarchy, e.g. SM37.push"
+    },
+    "forbidden": {
+      "type": "array",
+      "maxItems": 40,
+      "items": {
+        "type": "string"
+      },
+      "description": "Optional existing states to test as forbidden; retained model is not changed"
+    },
+    "engine": {
+      "type": "string",
+      "enum": [
+        "finite-graph",
+        "tlc"
+      ],
+      "default": "finite-graph"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "check",
+        "simulate"
+      ],
+      "default": "check"
+    },
+    "trace": {
+      "type": "string",
+      "description": "Optional trace id for observation filter"
+    },
+    "format": {
+      "type": "string",
+      "enum": [
+        "compact",
+        "full"
+      ],
+      "default": "compact"
+    },
+    "view": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-semantic_capabilities"></a>
+
+### semantic_capabilities
+
+Read semantic engine readiness, versions, supported operations and resource limits. Missing semantic coverage never changes native code search.
+
+Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "format": {
+      "type": "string",
+      "enum": [
+        "compact",
+        "full"
+      ],
+      "default": "compact",
+      "description": "Bounded model preview or original JSON; inline view always retains full evidence"
+    },
+    "max_output_bytes": {
+      "type": "integer",
+      "minimum": 4096,
+      "maximum": 65536,
+      "default": 16384,
+      "description": "Compact JSON byte budget; preview omissions are explicit"
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-semantic_index"></a>
+
+### semantic_index
+
+Index an exact repository/service revision as an owned job; use job to inspect it. No target lists retained analyses. Reparse preserves the last good generation. Cancel through job_cancel.
+
+Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "format": {
+      "type": "string",
+      "enum": [
+        "compact",
+        "full"
+      ],
+      "default": "compact",
+      "description": "Bounded model preview or original JSON; inline view always retains full evidence"
+    },
+    "max_output_bytes": {
+      "type": "integer",
+      "minimum": 4096,
+      "maximum": 65536,
+      "default": 16384,
+      "description": "Compact JSON byte budget; preview omissions are explicit"
+    },
+    "env": {
+      "type": "string",
+      "enum": [
+        "dev"
+      ],
+      "default": "dev",
+      "description": "Environment"
+    },
+    "service": {
+      "type": "string",
+      "description": "Service passport; resolves its pinned repository"
+    },
+    "repo": {
+      "type": "string",
+      "description": "Repository index key or PROJECT/repo"
+    },
+    "project": {
+      "type": "string",
+      "description": "Bitbucket project, with slug"
+    },
+    "slug": {
+      "type": "string",
+      "description": "Repository slug, with project"
+    },
+    "ref": {
+      "type": "string",
+      "description": "Exact SHA, tag or branch resolved once"
+    },
+    "revisionKey": {
+      "type": "string",
+      "description": "Retained revision key from semantic_index"
+    },
+    "repos": {
+      "type": "string",
+      "description": "Comma-separated exact repository or revision keys"
+    },
+    "language": {
+      "type": "string",
+      "enum": [
+        "java",
+        "js"
+      ],
+      "description": "Select one frontend (js also covers TS); avoids mixing analyses of different languages"
+    },
+    "versions": {
+      "type": "boolean",
+      "default": false
+    },
+    "composite": {
+      "type": "boolean",
+      "default": false,
+      "description": "Parse the exact service Java dependency closure together"
+    },
+    "reparse": {
+      "type": "boolean",
+      "default": false
+    },
+    "job": {
+      "type": "string",
+      "description": "Existing semantic job id; observes the same job"
+    },
+    "waitMs": {
+      "type": "integer",
+      "description": "Observation wait, max 30000 ms",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 30000
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-semantic_search"></a>
+
+### semantic_search
+
+Search retained symbols or typed ports, with source locations and exact revisions. Missing analysis reports a build suggestion; it never starts an implicit parse.
+
+Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "format": {
+      "type": "string",
+      "enum": [
+        "compact",
+        "full"
+      ],
+      "default": "compact",
+      "description": "Bounded model preview or original JSON; inline view always retains full evidence"
+    },
+    "max_output_bytes": {
+      "type": "integer",
+      "minimum": 4096,
+      "maximum": 65536,
+      "default": 16384,
+      "description": "Compact JSON byte budget; preview omissions are explicit"
+    },
+    "env": {
+      "type": "string",
+      "enum": [
+        "dev"
+      ],
+      "default": "dev",
+      "description": "Environment"
+    },
+    "service": {
+      "type": "string",
+      "description": "Service passport; resolves its pinned repository"
+    },
+    "repo": {
+      "type": "string",
+      "description": "Repository index key or PROJECT/repo"
+    },
+    "project": {
+      "type": "string",
+      "description": "Bitbucket project, with slug"
+    },
+    "slug": {
+      "type": "string",
+      "description": "Repository slug, with project"
+    },
+    "ref": {
+      "type": "string",
+      "description": "Exact SHA, tag or branch resolved once"
+    },
+    "revisionKey": {
+      "type": "string",
+      "description": "Retained revision key from semantic_index"
+    },
+    "repos": {
+      "type": "string",
+      "description": "Comma-separated exact repository or revision keys"
+    },
+    "language": {
+      "type": "string",
+      "enum": [
+        "java",
+        "js"
+      ],
+      "description": "Select one frontend (js also covers TS); avoids mixing analyses of different languages"
+    },
+    "revisionSet": {
+      "type": "string",
+      "description": "Exact resolved source/dependency set from semantic_index"
+    },
+    "analysis": {
+      "type": "string",
+      "description": "Exact semantic_index analyses[].id; not a service name or ref"
+    },
+    "analyses": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "string"
+      },
+      "description": "Exact retained analysis ids; compare uses [before,after] for the same repository/frontend"
+    },
+    "query": {
+      "type": "string",
+      "description": "Symbol, signature, file or port words"
+    },
+    "kind": {
+      "type": "string",
+      "description": "Optional symbol or typed port kind"
+    },
+    "ports": {
+      "type": "boolean",
+      "default": false,
+      "description": "Search typed boundary ports instead of symbols"
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Result page size",
+      "default": 30,
+      "minimum": 1,
+      "maximum": 200
+    },
+    "cursor": {
+      "type": "string",
+      "description": "Opaque cursor from the same retained result"
+    },
+    "budgetMs": {
+      "type": "integer",
+      "description": "Query time budget",
+      "default": 5000,
+      "minimum": 100,
+      "maximum": 30000
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-semantic_trace"></a>
+
+### semantic_trace
+
+Explain a change path: analysis=<id> or analyses=[beforeId,afterId], from and to required. Method input: from.name + parameter; sink: to.name + argument. Collects conditions, loops, stream filters/maps and inherited-library logic; from.receiver selects a concrete subclass. Graph/readable evidence, not runtime proof. List missing analyses: semantic_index; whole-entry map: semantic_query flowmap.
+
+Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "if": {
+    "required": [
+      "job"
+    ]
+  },
+  "then": {
+    "properties": {
+      "job": {
+        "minLength": 1
+      }
+    }
+  },
+  "else": {
+    "if": {
+      "anyOf": [
+        {
+          "required": [
+            "analysis"
+          ]
+        },
+        {
+          "required": [
+            "analyses"
+          ]
+        },
+        {
+          "required": [
+            "from"
+          ]
+        },
+        {
+          "required": [
+            "to"
+          ]
+        }
+      ]
+    },
+    "then": {
+      "required": [
+        "from",
+        "to"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "analysis"
+          ],
+          "properties": {
+            "analysis": {
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "required": [
+            "analyses"
+          ],
+          "properties": {
+            "analyses": {
+              "minItems": 1,
+              "maxItems": 2,
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    }
+  },
+  "examples": [
+    {
+      "analyses": [
+        "before-analysis-id",
+        "after-analysis-id"
+      ],
+      "from": {
+        "kind": "method",
+        "name": "entryMethod",
+        "parameter": "input"
+      },
+      "to": {
+        "kind": "call",
+        "name": "exitCall",
+        "argument": 1
+      }
+    },
+    {
+      "job": "returned-job-id",
+      "waitMs": 1000
+    }
+  ],
+  "type": "object",
+  "properties": {
+    "format": {
+      "type": "string",
+      "enum": [
+        "compact",
+        "full"
+      ],
+      "default": "compact",
+      "description": "Bounded model preview or original JSON; inline view always retains full evidence"
+    },
+    "max_output_bytes": {
+      "type": "integer",
+      "minimum": 4096,
+      "maximum": 65536,
+      "default": 16384,
+      "description": "Compact JSON byte budget; preview omissions are explicit"
+    },
+    "env": {
+      "type": "string",
+      "enum": [
+        "dev"
+      ],
+      "default": "dev",
+      "description": "Environment"
+    },
+    "analysis": {
+      "type": "string",
+      "description": "Exact semantic_index analyses[].id; not a service name or ref"
+    },
+    "analyses": {
+      "type": "array",
+      "maxItems": 2,
+      "items": {
+        "type": "string"
+      },
+      "description": "Exact retained analysis ids; compare uses [before,after] for the same repository/frontend"
+    },
+    "from": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Canonical symbol/port id"
+        },
+        "analysisId": {
+          "type": "string",
+          "description": "Retained analysis id"
+        },
+        "repo": {
+          "type": "string",
+          "description": "PROJECT/repo"
+        },
+        "sha": {
+          "type": "string",
+          "description": "Full source SHA"
+        },
+        "signature": {
+          "type": "string",
+          "description": "Exact method signature"
+        },
+        "name": {
+          "type": "string",
+          "description": "Symbol or boundary name"
+        },
+        "receiver": {
+          "type": "string",
+          "description": "Exact concrete class; resolves inherited methods through retained type declarations"
+        },
+        "file": {
+          "type": "string",
+          "description": "Relative source file"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "code": {
+          "type": "string",
+          "description": "Exact expression for a line endpoint"
+        },
+        "nodeLabel": {
+          "type": "string",
+          "description": "CPG expression label, e.g. IDENTIFIER or CALL"
+        },
+        "nodeId": {
+          "type": "string",
+          "description": "Exact CPG node id from this analysis only"
+        },
+        "parameter": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          ],
+          "description": "Exact method parameter name or one-based index for value flow"
+        },
+        "argument": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64,
+          "description": "Exact one-based sink call argument for value flow"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "method",
+            "line",
+            "call",
+            "http-ingress",
+            "kafka-consume",
+            "scheduled",
+            "http-egress",
+            "kafka-produce",
+            "db-write",
+            "table",
+            "port"
+          ],
+          "description": "Endpoint kind; line requires exact relative file and line"
+        },
+        "env": {
+          "type": "string",
+          "description": "Environment"
+        },
+        "cluster": {
+          "type": "string",
+          "description": "Kafka cluster identity"
+        },
+        "db": {
+          "type": "string",
+          "description": "Database identity"
+        },
+        "schema": {
+          "type": "string",
+          "description": "Database schema"
+        },
+        "topic": {
+          "type": "string",
+          "description": "Resolved Kafka topic"
+        },
+        "route": {
+          "type": "string",
+          "description": "HTTP path"
+        },
+        "method": {
+          "type": "string",
+          "description": "HTTP verb"
+        },
+        "service": {
+          "type": "string",
+          "description": "Exact service identity"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Start method parameter, ingress port or exact code line; receiver selects an inherited concrete class"
+    },
+    "to": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Canonical symbol/port id"
+        },
+        "analysisId": {
+          "type": "string",
+          "description": "Retained analysis id"
+        },
+        "repo": {
+          "type": "string",
+          "description": "PROJECT/repo"
+        },
+        "sha": {
+          "type": "string",
+          "description": "Full source SHA"
+        },
+        "signature": {
+          "type": "string",
+          "description": "Exact method signature"
+        },
+        "name": {
+          "type": "string",
+          "description": "Symbol or boundary name"
+        },
+        "receiver": {
+          "type": "string",
+          "description": "Exact concrete class; resolves inherited methods through retained type declarations"
+        },
+        "file": {
+          "type": "string",
+          "description": "Relative source file"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "code": {
+          "type": "string",
+          "description": "Exact expression for a line endpoint"
+        },
+        "nodeLabel": {
+          "type": "string",
+          "description": "CPG expression label, e.g. IDENTIFIER or CALL"
+        },
+        "nodeId": {
+          "type": "string",
+          "description": "Exact CPG node id from this analysis only"
+        },
+        "parameter": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          ],
+          "description": "Exact method parameter name or one-based index for value flow"
+        },
+        "argument": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64,
+          "description": "Exact one-based sink call argument for value flow"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "method",
+            "line",
+            "call",
+            "http-ingress",
+            "kafka-consume",
+            "scheduled",
+            "http-egress",
+            "kafka-produce",
+            "db-write",
+            "table",
+            "port"
+          ],
+          "description": "Endpoint kind; line requires exact relative file and line"
+        },
+        "env": {
+          "type": "string",
+          "description": "Environment"
+        },
+        "cluster": {
+          "type": "string",
+          "description": "Kafka cluster identity"
+        },
+        "db": {
+          "type": "string",
+          "description": "Database identity"
+        },
+        "schema": {
+          "type": "string",
+          "description": "Database schema"
+        },
+        "topic": {
+          "type": "string",
+          "description": "Resolved Kafka topic"
+        },
+        "route": {
+          "type": "string",
+          "description": "HTTP path"
+        },
+        "method": {
+          "type": "string",
+          "description": "HTTP verb"
+        },
+        "service": {
+          "type": "string",
+          "description": "Exact service identity"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Target call argument, return, exit port or exact code line"
+    },
+    "after_from": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Canonical symbol/port id"
+        },
+        "analysisId": {
+          "type": "string",
+          "description": "Retained analysis id"
+        },
+        "repo": {
+          "type": "string",
+          "description": "PROJECT/repo"
+        },
+        "sha": {
+          "type": "string",
+          "description": "Full source SHA"
+        },
+        "signature": {
+          "type": "string",
+          "description": "Exact method signature"
+        },
+        "name": {
+          "type": "string",
+          "description": "Symbol or boundary name"
+        },
+        "receiver": {
+          "type": "string",
+          "description": "Exact concrete class; resolves inherited methods through retained type declarations"
+        },
+        "file": {
+          "type": "string",
+          "description": "Relative source file"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "code": {
+          "type": "string",
+          "description": "Exact expression for a line endpoint"
+        },
+        "nodeLabel": {
+          "type": "string",
+          "description": "CPG expression label, e.g. IDENTIFIER or CALL"
+        },
+        "nodeId": {
+          "type": "string",
+          "description": "Exact CPG node id from this analysis only"
+        },
+        "parameter": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          ],
+          "description": "Exact method parameter name or one-based index for value flow"
+        },
+        "argument": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64,
+          "description": "Exact one-based sink call argument for value flow"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "method",
+            "line",
+            "call",
+            "http-ingress",
+            "kafka-consume",
+            "scheduled",
+            "http-egress",
+            "kafka-produce",
+            "db-write",
+            "table",
+            "port"
+          ],
+          "description": "Endpoint kind; line requires exact relative file and line"
+        },
+        "env": {
+          "type": "string",
+          "description": "Environment"
+        },
+        "cluster": {
+          "type": "string",
+          "description": "Kafka cluster identity"
+        },
+        "db": {
+          "type": "string",
+          "description": "Database identity"
+        },
+        "schema": {
+          "type": "string",
+          "description": "Database schema"
+        },
+        "topic": {
+          "type": "string",
+          "description": "Resolved Kafka topic"
+        },
+        "route": {
+          "type": "string",
+          "description": "HTTP path"
+        },
+        "method": {
+          "type": "string",
+          "description": "HTTP verb"
+        },
+        "service": {
+          "type": "string",
+          "description": "Exact service identity"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Complete source selector for the after revision when lines/expressions moved"
+    },
+    "after_to": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Canonical symbol/port id"
+        },
+        "analysisId": {
+          "type": "string",
+          "description": "Retained analysis id"
+        },
+        "repo": {
+          "type": "string",
+          "description": "PROJECT/repo"
+        },
+        "sha": {
+          "type": "string",
+          "description": "Full source SHA"
+        },
+        "signature": {
+          "type": "string",
+          "description": "Exact method signature"
+        },
+        "name": {
+          "type": "string",
+          "description": "Symbol or boundary name"
+        },
+        "receiver": {
+          "type": "string",
+          "description": "Exact concrete class; resolves inherited methods through retained type declarations"
+        },
+        "file": {
+          "type": "string",
+          "description": "Relative source file"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "code": {
+          "type": "string",
+          "description": "Exact expression for a line endpoint"
+        },
+        "nodeLabel": {
+          "type": "string",
+          "description": "CPG expression label, e.g. IDENTIFIER or CALL"
+        },
+        "nodeId": {
+          "type": "string",
+          "description": "Exact CPG node id from this analysis only"
+        },
+        "parameter": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          ],
+          "description": "Exact method parameter name or one-based index for value flow"
+        },
+        "argument": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64,
+          "description": "Exact one-based sink call argument for value flow"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "method",
+            "line",
+            "call",
+            "http-ingress",
+            "kafka-consume",
+            "scheduled",
+            "http-egress",
+            "kafka-produce",
+            "db-write",
+            "table",
+            "port"
+          ],
+          "description": "Endpoint kind; line requires exact relative file and line"
+        },
+        "env": {
+          "type": "string",
+          "description": "Environment"
+        },
+        "cluster": {
+          "type": "string",
+          "description": "Kafka cluster identity"
+        },
+        "db": {
+          "type": "string",
+          "description": "Database identity"
+        },
+        "schema": {
+          "type": "string",
+          "description": "Database schema"
+        },
+        "topic": {
+          "type": "string",
+          "description": "Resolved Kafka topic"
+        },
+        "route": {
+          "type": "string",
+          "description": "HTTP path"
+        },
+        "method": {
+          "type": "string",
+          "description": "HTTP verb"
+        },
+        "service": {
+          "type": "string",
+          "description": "Exact service identity"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Complete target selector for the after revision when lines/expressions moved"
+    },
+    "assumptions": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "properties": {
+          "expression": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "holds": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "expression",
+          "holds"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "includeControl": {
+      "type": "boolean",
+      "default": true
+    },
+    "includeContext": {
+      "type": "boolean",
+      "default": true,
+      "description": "Collect bounded reachable source changes, loops, stream callbacks and library dispatch assumptions separately from selected paths"
+    },
+    "maxPaths": {
+      "type": "integer",
+      "description": "Paths per layer per revision",
+      "default": 8,
+      "minimum": 1,
+      "maximum": 20
+    },
+    "maxHops": {
+      "type": "integer",
+      "description": "Nodes per path",
+      "default": 60,
+      "minimum": 1,
+      "maximum": 100
+    },
+    "budgetMs": {
+      "type": "integer",
+      "description": "Query time budget",
+      "default": 5000,
+      "minimum": 100,
+      "maximum": 30000
+    },
+    "job": {
+      "type": "string",
+      "description": "Observe this owned trace job without repeating it"
+    },
+    "waitMs": {
+      "type": "integer",
+      "description": "Observation wait",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 30000
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-semantic_query"></a>
+
+### semantic_query
+
+Query retained CPGs: symbols, calls, paths/slices, guards, branch comparisons or entry-to-exit state maps. Inspect proof/gaps; static reachability does not prove value flow. compare+dataflow uses analyses=[before,after] and revision-neutral from/to. flowmap uses a whole-method/ingress from (no to), or discovers bound ingress ports; includes controls, changes, exits and assumptions.
+
+Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "format": {
+      "type": "string",
+      "enum": [
+        "compact",
+        "full"
+      ],
+      "default": "compact",
+      "description": "Bounded model preview or original JSON; inline view always retains full evidence"
+    },
+    "max_output_bytes": {
+      "type": "integer",
+      "minimum": 4096,
+      "maximum": 65536,
+      "default": 16384,
+      "description": "Compact JSON byte budget; preview omissions are explicit"
+    },
+    "env": {
+      "type": "string",
+      "enum": [
+        "dev"
+      ],
+      "default": "dev",
+      "description": "Environment"
+    },
+    "service": {
+      "type": "string",
+      "description": "Service passport; resolves its pinned repository"
+    },
+    "repo": {
+      "type": "string",
+      "description": "Repository index key or PROJECT/repo"
+    },
+    "project": {
+      "type": "string",
+      "description": "Bitbucket project, with slug"
+    },
+    "slug": {
+      "type": "string",
+      "description": "Repository slug, with project"
+    },
+    "ref": {
+      "type": "string",
+      "description": "Exact SHA, tag or branch resolved once"
+    },
+    "revisionKey": {
+      "type": "string",
+      "description": "Retained revision key from semantic_index"
+    },
+    "repos": {
+      "type": "string",
+      "description": "Comma-separated exact repository or revision keys"
+    },
+    "language": {
+      "type": "string",
+      "enum": [
+        "java",
+        "js"
+      ],
+      "description": "Select one frontend (js also covers TS); avoids mixing analyses of different languages"
+    },
+    "revisionSet": {
+      "type": "string",
+      "description": "Exact resolved source/dependency set from semantic_index"
+    },
+    "analysis": {
+      "type": "string",
+      "description": "Exact semantic_index analyses[].id; not a service name or ref"
+    },
+    "analyses": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "string"
+      },
+      "description": "Exact retained analysis ids; compare uses [before,after] for the same repository/frontend"
+    },
+    "job": {
+      "type": "string",
+      "description": "Existing semantic query job id; observe without repeating it"
+    },
+    "waitMs": {
+      "type": "integer",
+      "description": "Observation wait",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 30000
+    },
+    "operation": {
+      "type": "string",
+      "enum": [
+        "symbols",
+        "ports",
+        "callers",
+        "callees",
+        "neighborhood",
+        "neighbors",
+        "paths",
+        "slice",
+        "assertions",
+        "compare",
+        "flowmap"
+      ]
+    },
+    "from": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Canonical symbol/port id"
+        },
+        "analysisId": {
+          "type": "string",
+          "description": "Retained analysis id"
+        },
+        "repo": {
+          "type": "string",
+          "description": "PROJECT/repo"
+        },
+        "sha": {
+          "type": "string",
+          "description": "Full source SHA"
+        },
+        "signature": {
+          "type": "string",
+          "description": "Exact method signature"
+        },
+        "name": {
+          "type": "string",
+          "description": "Symbol or boundary name"
+        },
+        "receiver": {
+          "type": "string",
+          "description": "Exact concrete class; resolves inherited methods through retained type declarations"
+        },
+        "file": {
+          "type": "string",
+          "description": "Relative source file"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "code": {
+          "type": "string",
+          "description": "Exact expression for a line endpoint"
+        },
+        "nodeLabel": {
+          "type": "string",
+          "description": "CPG expression label, e.g. IDENTIFIER or CALL"
+        },
+        "nodeId": {
+          "type": "string",
+          "description": "Exact CPG node id from this analysis only"
+        },
+        "parameter": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          ],
+          "description": "Exact method parameter name or one-based index for value flow"
+        },
+        "argument": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64,
+          "description": "Exact one-based sink call argument for value flow"
+        },
+        "kind": {
+          "type": "string",
+          "description": "Symbol or typed boundary kind"
+        },
+        "env": {
+          "type": "string",
+          "description": "Environment"
+        },
+        "cluster": {
+          "type": "string",
+          "description": "Kafka cluster identity"
+        },
+        "db": {
+          "type": "string",
+          "description": "Database identity"
+        },
+        "schema": {
+          "type": "string",
+          "description": "Database schema"
+        },
+        "topic": {
+          "type": "string",
+          "description": "Resolved Kafka topic"
+        },
+        "route": {
+          "type": "string",
+          "description": "HTTP path"
+        },
+        "method": {
+          "type": "string",
+          "description": "HTTP verb"
+        },
+        "service": {
+          "type": "string",
+          "description": "Exact service identity"
+        }
+      },
+      "additionalProperties": false
+    },
+    "to": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Canonical symbol/port id"
+        },
+        "analysisId": {
+          "type": "string",
+          "description": "Retained analysis id"
+        },
+        "repo": {
+          "type": "string",
+          "description": "PROJECT/repo"
+        },
+        "sha": {
+          "type": "string",
+          "description": "Full source SHA"
+        },
+        "signature": {
+          "type": "string",
+          "description": "Exact method signature"
+        },
+        "name": {
+          "type": "string",
+          "description": "Symbol or boundary name"
+        },
+        "receiver": {
+          "type": "string",
+          "description": "Exact concrete class; resolves inherited methods through retained type declarations"
+        },
+        "file": {
+          "type": "string",
+          "description": "Relative source file"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "code": {
+          "type": "string",
+          "description": "Exact expression for a line endpoint"
+        },
+        "nodeLabel": {
+          "type": "string",
+          "description": "CPG expression label, e.g. IDENTIFIER or CALL"
+        },
+        "nodeId": {
+          "type": "string",
+          "description": "Exact CPG node id from this analysis only"
+        },
+        "parameter": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          ],
+          "description": "Exact method parameter name or one-based index for value flow"
+        },
+        "argument": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64,
+          "description": "Exact one-based sink call argument for value flow"
+        },
+        "kind": {
+          "type": "string",
+          "description": "Symbol or typed boundary kind"
+        },
+        "env": {
+          "type": "string",
+          "description": "Environment"
+        },
+        "cluster": {
+          "type": "string",
+          "description": "Kafka cluster identity"
+        },
+        "db": {
+          "type": "string",
+          "description": "Database identity"
+        },
+        "schema": {
+          "type": "string",
+          "description": "Database schema"
+        },
+        "topic": {
+          "type": "string",
+          "description": "Resolved Kafka topic"
+        },
+        "route": {
+          "type": "string",
+          "description": "HTTP path"
+        },
+        "method": {
+          "type": "string",
+          "description": "HTTP verb"
+        },
+        "service": {
+          "type": "string",
+          "description": "Exact service identity"
+        }
+      },
+      "additionalProperties": false
+    },
+    "target": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Canonical symbol/port id"
+        },
+        "analysisId": {
+          "type": "string",
+          "description": "Retained analysis id"
+        },
+        "repo": {
+          "type": "string",
+          "description": "PROJECT/repo"
+        },
+        "sha": {
+          "type": "string",
+          "description": "Full source SHA"
+        },
+        "signature": {
+          "type": "string",
+          "description": "Exact method signature"
+        },
+        "name": {
+          "type": "string",
+          "description": "Symbol or boundary name"
+        },
+        "receiver": {
+          "type": "string",
+          "description": "Exact concrete class; resolves inherited methods through retained type declarations"
+        },
+        "file": {
+          "type": "string",
+          "description": "Relative source file"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "code": {
+          "type": "string",
+          "description": "Exact expression for a line endpoint"
+        },
+        "nodeLabel": {
+          "type": "string",
+          "description": "CPG expression label, e.g. IDENTIFIER or CALL"
+        },
+        "nodeId": {
+          "type": "string",
+          "description": "Exact CPG node id from this analysis only"
+        },
+        "parameter": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          ],
+          "description": "Exact method parameter name or one-based index for value flow"
+        },
+        "argument": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64,
+          "description": "Exact one-based sink call argument for value flow"
+        },
+        "kind": {
+          "type": "string",
+          "description": "Symbol or typed boundary kind"
+        },
+        "env": {
+          "type": "string",
+          "description": "Environment"
+        },
+        "cluster": {
+          "type": "string",
+          "description": "Kafka cluster identity"
+        },
+        "db": {
+          "type": "string",
+          "description": "Database identity"
+        },
+        "schema": {
+          "type": "string",
+          "description": "Database schema"
+        },
+        "topic": {
+          "type": "string",
+          "description": "Resolved Kafka topic"
+        },
+        "route": {
+          "type": "string",
+          "description": "HTTP path"
+        },
+        "method": {
+          "type": "string",
+          "description": "HTTP verb"
+        },
+        "service": {
+          "type": "string",
+          "description": "Exact service identity"
+        }
+      },
+      "additionalProperties": false
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "reachability",
+        "controlflow",
+        "dataflow"
+      ],
+      "default": "reachability"
+    },
+    "query": {
+      "type": "string",
+      "description": "Symbol/port query where supported"
+    },
+    "kind": {
+      "type": "string",
+      "description": "Optional result kind"
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Result page size",
+      "default": 30,
+      "minimum": 1,
+      "maximum": 200
+    },
+    "cursor": {
+      "type": "string",
+      "description": "Opaque cursor from the same retained result"
+    },
+    "budgetMs": {
+      "type": "integer",
+      "description": "Query time budget",
+      "default": 5000,
+      "minimum": 100,
+      "maximum": 30000
+    },
+    "maxMethods": {
+      "type": "integer",
+      "description": "flowmap reachable method budget",
+      "default": 20,
+      "minimum": 1,
+      "maximum": 40
+    },
+    "maxStates": {
+      "type": "integer",
+      "description": "flowmap state budget",
+      "default": 180,
+      "minimum": 20,
+      "maximum": 400
+    },
+    "maxHops": {
+      "type": "integer",
+      "description": "Bounded traversal depth",
+      "default": 8,
+      "minimum": 1,
+      "maximum": 30
+    },
+    "maxPaths": {
+      "type": "integer",
+      "description": "Maximum returned paths",
+      "default": 8,
+      "minimum": 1,
+      "maximum": 20
+    },
+    "includeBypasses": {
+      "type": "boolean",
+      "default": false,
+      "description": "Include supported bypass/counterexample evidence"
+    }
+  },
+  "required": [
+    "operation"
   ],
   "additionalProperties": false
 }
@@ -13712,1547 +15374,6 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     }
   },
   "required": [],
-  "additionalProperties": false
-}
-```
-
-</details>
-
-## semantic
-
-- [`semantic_capabilities`](#tool-semantic_capabilities)
-- [`semantic_index`](#tool-semantic_index)
-- [`semantic_search`](#tool-semantic_search)
-- [`semantic_trace`](#tool-semantic_trace)
-- [`semantic_query`](#tool-semantic_query)
-
-<a id="tool-semantic_capabilities"></a>
-
-### semantic_capabilities
-
-Read semantic engine readiness, versions, supported operations and resource limits. Missing semantic coverage never changes native code search.
-
-Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
-
-<details><summary>Exact input schema</summary>
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "format": {
-      "type": "string",
-      "enum": [
-        "compact",
-        "full"
-      ],
-      "default": "compact",
-      "description": "Bounded model preview or original JSON; inline view always retains full evidence"
-    },
-    "max_output_bytes": {
-      "type": "integer",
-      "minimum": 4096,
-      "maximum": 65536,
-      "default": 16384,
-      "description": "Compact JSON byte budget; preview omissions are explicit"
-    }
-  },
-  "required": [],
-  "additionalProperties": false
-}
-```
-
-</details>
-
-<a id="tool-semantic_index"></a>
-
-### semantic_index
-
-Index an exact repository/service revision as an owned job; use job to inspect it. No target lists retained analyses. Reparse preserves the last good generation. Cancel through job_cancel.
-
-Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
-
-<details><summary>Exact input schema</summary>
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "format": {
-      "type": "string",
-      "enum": [
-        "compact",
-        "full"
-      ],
-      "default": "compact",
-      "description": "Bounded model preview or original JSON; inline view always retains full evidence"
-    },
-    "max_output_bytes": {
-      "type": "integer",
-      "minimum": 4096,
-      "maximum": 65536,
-      "default": 16384,
-      "description": "Compact JSON byte budget; preview omissions are explicit"
-    },
-    "env": {
-      "type": "string",
-      "enum": [
-        "dev"
-      ],
-      "default": "dev",
-      "description": "Environment"
-    },
-    "service": {
-      "type": "string",
-      "description": "Service passport; resolves its pinned repository"
-    },
-    "repo": {
-      "type": "string",
-      "description": "Repository index key or PROJECT/repo"
-    },
-    "project": {
-      "type": "string",
-      "description": "Bitbucket project, with slug"
-    },
-    "slug": {
-      "type": "string",
-      "description": "Repository slug, with project"
-    },
-    "ref": {
-      "type": "string",
-      "description": "Exact SHA, tag or branch resolved once"
-    },
-    "revisionKey": {
-      "type": "string",
-      "description": "Retained revision key from semantic_index"
-    },
-    "repos": {
-      "type": "string",
-      "description": "Comma-separated exact repository or revision keys"
-    },
-    "language": {
-      "type": "string",
-      "enum": [
-        "java",
-        "js"
-      ],
-      "description": "Select one frontend (js also covers TS); avoids mixing analyses of different languages"
-    },
-    "versions": {
-      "type": "boolean",
-      "default": false
-    },
-    "composite": {
-      "type": "boolean",
-      "default": false,
-      "description": "Parse the exact service Java dependency closure together"
-    },
-    "reparse": {
-      "type": "boolean",
-      "default": false
-    },
-    "job": {
-      "type": "string",
-      "description": "Existing semantic job id; observes the same job"
-    },
-    "waitMs": {
-      "type": "integer",
-      "description": "Observation wait, max 30000 ms",
-      "default": 0,
-      "minimum": 0,
-      "maximum": 30000
-    }
-  },
-  "required": [],
-  "additionalProperties": false
-}
-```
-
-</details>
-
-<a id="tool-semantic_search"></a>
-
-### semantic_search
-
-Search retained symbols or typed ports, with source locations and exact revisions. Missing analysis reports a build suggestion; it never starts an implicit parse.
-
-Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
-
-<details><summary>Exact input schema</summary>
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "format": {
-      "type": "string",
-      "enum": [
-        "compact",
-        "full"
-      ],
-      "default": "compact",
-      "description": "Bounded model preview or original JSON; inline view always retains full evidence"
-    },
-    "max_output_bytes": {
-      "type": "integer",
-      "minimum": 4096,
-      "maximum": 65536,
-      "default": 16384,
-      "description": "Compact JSON byte budget; preview omissions are explicit"
-    },
-    "env": {
-      "type": "string",
-      "enum": [
-        "dev"
-      ],
-      "default": "dev",
-      "description": "Environment"
-    },
-    "service": {
-      "type": "string",
-      "description": "Service passport; resolves its pinned repository"
-    },
-    "repo": {
-      "type": "string",
-      "description": "Repository index key or PROJECT/repo"
-    },
-    "project": {
-      "type": "string",
-      "description": "Bitbucket project, with slug"
-    },
-    "slug": {
-      "type": "string",
-      "description": "Repository slug, with project"
-    },
-    "ref": {
-      "type": "string",
-      "description": "Exact SHA, tag or branch resolved once"
-    },
-    "revisionKey": {
-      "type": "string",
-      "description": "Retained revision key from semantic_index"
-    },
-    "repos": {
-      "type": "string",
-      "description": "Comma-separated exact repository or revision keys"
-    },
-    "language": {
-      "type": "string",
-      "enum": [
-        "java",
-        "js"
-      ],
-      "description": "Select one frontend (js also covers TS); avoids mixing analyses of different languages"
-    },
-    "revisionSet": {
-      "type": "string",
-      "description": "Exact resolved source/dependency set from semantic_index"
-    },
-    "analysis": {
-      "type": "string",
-      "description": "Exact semantic_index analyses[].id; not a service name or ref"
-    },
-    "analyses": {
-      "type": "array",
-      "maxItems": 20,
-      "items": {
-        "type": "string"
-      },
-      "description": "Exact retained analysis ids; compare uses [before,after] for the same repository/frontend"
-    },
-    "query": {
-      "type": "string",
-      "description": "Symbol, signature, file or port words"
-    },
-    "kind": {
-      "type": "string",
-      "description": "Optional symbol or typed port kind"
-    },
-    "ports": {
-      "type": "boolean",
-      "default": false,
-      "description": "Search typed boundary ports instead of symbols"
-    },
-    "limit": {
-      "type": "integer",
-      "description": "Result page size",
-      "default": 30,
-      "minimum": 1,
-      "maximum": 200
-    },
-    "cursor": {
-      "type": "string",
-      "description": "Opaque cursor from the same retained result"
-    },
-    "budgetMs": {
-      "type": "integer",
-      "description": "Query time budget",
-      "default": 5000,
-      "minimum": 100,
-      "maximum": 30000
-    }
-  },
-  "required": [],
-  "additionalProperties": false
-}
-```
-
-</details>
-
-<a id="tool-semantic_trace"></a>
-
-### semantic_trace
-
-Explain a change path: analysis=<id> or analyses=[beforeId,afterId], from and to required. Method input: from.name + parameter; sink: to.name + argument. Collects conditions, loops, stream filters/maps and inherited-library logic; from.receiver selects a concrete subclass. Graph/readable evidence, not runtime proof. List missing analyses: semantic_index; whole-entry map: semantic_query flowmap.
-
-Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
-
-<details><summary>Exact input schema</summary>
-
-```json
-{
-  "if": {
-    "required": [
-      "job"
-    ]
-  },
-  "then": {
-    "properties": {
-      "job": {
-        "minLength": 1
-      }
-    }
-  },
-  "else": {
-    "if": {
-      "anyOf": [
-        {
-          "required": [
-            "analysis"
-          ]
-        },
-        {
-          "required": [
-            "analyses"
-          ]
-        },
-        {
-          "required": [
-            "from"
-          ]
-        },
-        {
-          "required": [
-            "to"
-          ]
-        }
-      ]
-    },
-    "then": {
-      "required": [
-        "from",
-        "to"
-      ],
-      "anyOf": [
-        {
-          "required": [
-            "analysis"
-          ],
-          "properties": {
-            "analysis": {
-              "minLength": 1
-            }
-          }
-        },
-        {
-          "required": [
-            "analyses"
-          ],
-          "properties": {
-            "analyses": {
-              "minItems": 1,
-              "maxItems": 2,
-              "uniqueItems": true
-            }
-          }
-        }
-      ]
-    }
-  },
-  "examples": [
-    {
-      "analyses": [
-        "before-analysis-id",
-        "after-analysis-id"
-      ],
-      "from": {
-        "kind": "method",
-        "name": "entryMethod",
-        "parameter": "input"
-      },
-      "to": {
-        "kind": "call",
-        "name": "exitCall",
-        "argument": 1
-      }
-    },
-    {
-      "job": "returned-job-id",
-      "waitMs": 1000
-    }
-  ],
-  "type": "object",
-  "properties": {
-    "format": {
-      "type": "string",
-      "enum": [
-        "compact",
-        "full"
-      ],
-      "default": "compact",
-      "description": "Bounded model preview or original JSON; inline view always retains full evidence"
-    },
-    "max_output_bytes": {
-      "type": "integer",
-      "minimum": 4096,
-      "maximum": 65536,
-      "default": 16384,
-      "description": "Compact JSON byte budget; preview omissions are explicit"
-    },
-    "env": {
-      "type": "string",
-      "enum": [
-        "dev"
-      ],
-      "default": "dev",
-      "description": "Environment"
-    },
-    "analysis": {
-      "type": "string",
-      "description": "Exact semantic_index analyses[].id; not a service name or ref"
-    },
-    "analyses": {
-      "type": "array",
-      "maxItems": 2,
-      "items": {
-        "type": "string"
-      },
-      "description": "Exact retained analysis ids; compare uses [before,after] for the same repository/frontend"
-    },
-    "from": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Canonical symbol/port id"
-        },
-        "analysisId": {
-          "type": "string",
-          "description": "Retained analysis id"
-        },
-        "repo": {
-          "type": "string",
-          "description": "PROJECT/repo"
-        },
-        "sha": {
-          "type": "string",
-          "description": "Full source SHA"
-        },
-        "signature": {
-          "type": "string",
-          "description": "Exact method signature"
-        },
-        "name": {
-          "type": "string",
-          "description": "Symbol or boundary name"
-        },
-        "receiver": {
-          "type": "string",
-          "description": "Exact concrete class; resolves inherited methods through retained type declarations"
-        },
-        "file": {
-          "type": "string",
-          "description": "Relative source file"
-        },
-        "line": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "column": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "code": {
-          "type": "string",
-          "description": "Exact expression for a line endpoint"
-        },
-        "nodeLabel": {
-          "type": "string",
-          "description": "CPG expression label, e.g. IDENTIFIER or CALL"
-        },
-        "nodeId": {
-          "type": "string",
-          "description": "Exact CPG node id from this analysis only"
-        },
-        "parameter": {
-          "oneOf": [
-            {
-              "type": "string",
-              "minLength": 1
-            },
-            {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            }
-          ],
-          "description": "Exact method parameter name or one-based index for value flow"
-        },
-        "argument": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 64,
-          "description": "Exact one-based sink call argument for value flow"
-        },
-        "kind": {
-          "type": "string",
-          "enum": [
-            "method",
-            "line",
-            "call",
-            "http-ingress",
-            "kafka-consume",
-            "scheduled",
-            "http-egress",
-            "kafka-produce",
-            "db-write",
-            "table",
-            "port"
-          ],
-          "description": "Endpoint kind; line requires exact relative file and line"
-        },
-        "env": {
-          "type": "string",
-          "description": "Environment"
-        },
-        "cluster": {
-          "type": "string",
-          "description": "Kafka cluster identity"
-        },
-        "db": {
-          "type": "string",
-          "description": "Database identity"
-        },
-        "schema": {
-          "type": "string",
-          "description": "Database schema"
-        },
-        "topic": {
-          "type": "string",
-          "description": "Resolved Kafka topic"
-        },
-        "route": {
-          "type": "string",
-          "description": "HTTP path"
-        },
-        "method": {
-          "type": "string",
-          "description": "HTTP verb"
-        },
-        "service": {
-          "type": "string",
-          "description": "Exact service identity"
-        }
-      },
-      "additionalProperties": false,
-      "description": "Start method parameter, ingress port or exact code line; receiver selects an inherited concrete class"
-    },
-    "to": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Canonical symbol/port id"
-        },
-        "analysisId": {
-          "type": "string",
-          "description": "Retained analysis id"
-        },
-        "repo": {
-          "type": "string",
-          "description": "PROJECT/repo"
-        },
-        "sha": {
-          "type": "string",
-          "description": "Full source SHA"
-        },
-        "signature": {
-          "type": "string",
-          "description": "Exact method signature"
-        },
-        "name": {
-          "type": "string",
-          "description": "Symbol or boundary name"
-        },
-        "receiver": {
-          "type": "string",
-          "description": "Exact concrete class; resolves inherited methods through retained type declarations"
-        },
-        "file": {
-          "type": "string",
-          "description": "Relative source file"
-        },
-        "line": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "column": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "code": {
-          "type": "string",
-          "description": "Exact expression for a line endpoint"
-        },
-        "nodeLabel": {
-          "type": "string",
-          "description": "CPG expression label, e.g. IDENTIFIER or CALL"
-        },
-        "nodeId": {
-          "type": "string",
-          "description": "Exact CPG node id from this analysis only"
-        },
-        "parameter": {
-          "oneOf": [
-            {
-              "type": "string",
-              "minLength": 1
-            },
-            {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            }
-          ],
-          "description": "Exact method parameter name or one-based index for value flow"
-        },
-        "argument": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 64,
-          "description": "Exact one-based sink call argument for value flow"
-        },
-        "kind": {
-          "type": "string",
-          "enum": [
-            "method",
-            "line",
-            "call",
-            "http-ingress",
-            "kafka-consume",
-            "scheduled",
-            "http-egress",
-            "kafka-produce",
-            "db-write",
-            "table",
-            "port"
-          ],
-          "description": "Endpoint kind; line requires exact relative file and line"
-        },
-        "env": {
-          "type": "string",
-          "description": "Environment"
-        },
-        "cluster": {
-          "type": "string",
-          "description": "Kafka cluster identity"
-        },
-        "db": {
-          "type": "string",
-          "description": "Database identity"
-        },
-        "schema": {
-          "type": "string",
-          "description": "Database schema"
-        },
-        "topic": {
-          "type": "string",
-          "description": "Resolved Kafka topic"
-        },
-        "route": {
-          "type": "string",
-          "description": "HTTP path"
-        },
-        "method": {
-          "type": "string",
-          "description": "HTTP verb"
-        },
-        "service": {
-          "type": "string",
-          "description": "Exact service identity"
-        }
-      },
-      "additionalProperties": false,
-      "description": "Target call argument, return, exit port or exact code line"
-    },
-    "after_from": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Canonical symbol/port id"
-        },
-        "analysisId": {
-          "type": "string",
-          "description": "Retained analysis id"
-        },
-        "repo": {
-          "type": "string",
-          "description": "PROJECT/repo"
-        },
-        "sha": {
-          "type": "string",
-          "description": "Full source SHA"
-        },
-        "signature": {
-          "type": "string",
-          "description": "Exact method signature"
-        },
-        "name": {
-          "type": "string",
-          "description": "Symbol or boundary name"
-        },
-        "receiver": {
-          "type": "string",
-          "description": "Exact concrete class; resolves inherited methods through retained type declarations"
-        },
-        "file": {
-          "type": "string",
-          "description": "Relative source file"
-        },
-        "line": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "column": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "code": {
-          "type": "string",
-          "description": "Exact expression for a line endpoint"
-        },
-        "nodeLabel": {
-          "type": "string",
-          "description": "CPG expression label, e.g. IDENTIFIER or CALL"
-        },
-        "nodeId": {
-          "type": "string",
-          "description": "Exact CPG node id from this analysis only"
-        },
-        "parameter": {
-          "oneOf": [
-            {
-              "type": "string",
-              "minLength": 1
-            },
-            {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            }
-          ],
-          "description": "Exact method parameter name or one-based index for value flow"
-        },
-        "argument": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 64,
-          "description": "Exact one-based sink call argument for value flow"
-        },
-        "kind": {
-          "type": "string",
-          "enum": [
-            "method",
-            "line",
-            "call",
-            "http-ingress",
-            "kafka-consume",
-            "scheduled",
-            "http-egress",
-            "kafka-produce",
-            "db-write",
-            "table",
-            "port"
-          ],
-          "description": "Endpoint kind; line requires exact relative file and line"
-        },
-        "env": {
-          "type": "string",
-          "description": "Environment"
-        },
-        "cluster": {
-          "type": "string",
-          "description": "Kafka cluster identity"
-        },
-        "db": {
-          "type": "string",
-          "description": "Database identity"
-        },
-        "schema": {
-          "type": "string",
-          "description": "Database schema"
-        },
-        "topic": {
-          "type": "string",
-          "description": "Resolved Kafka topic"
-        },
-        "route": {
-          "type": "string",
-          "description": "HTTP path"
-        },
-        "method": {
-          "type": "string",
-          "description": "HTTP verb"
-        },
-        "service": {
-          "type": "string",
-          "description": "Exact service identity"
-        }
-      },
-      "additionalProperties": false,
-      "description": "Complete source selector for the after revision when lines/expressions moved"
-    },
-    "after_to": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Canonical symbol/port id"
-        },
-        "analysisId": {
-          "type": "string",
-          "description": "Retained analysis id"
-        },
-        "repo": {
-          "type": "string",
-          "description": "PROJECT/repo"
-        },
-        "sha": {
-          "type": "string",
-          "description": "Full source SHA"
-        },
-        "signature": {
-          "type": "string",
-          "description": "Exact method signature"
-        },
-        "name": {
-          "type": "string",
-          "description": "Symbol or boundary name"
-        },
-        "receiver": {
-          "type": "string",
-          "description": "Exact concrete class; resolves inherited methods through retained type declarations"
-        },
-        "file": {
-          "type": "string",
-          "description": "Relative source file"
-        },
-        "line": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "column": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "code": {
-          "type": "string",
-          "description": "Exact expression for a line endpoint"
-        },
-        "nodeLabel": {
-          "type": "string",
-          "description": "CPG expression label, e.g. IDENTIFIER or CALL"
-        },
-        "nodeId": {
-          "type": "string",
-          "description": "Exact CPG node id from this analysis only"
-        },
-        "parameter": {
-          "oneOf": [
-            {
-              "type": "string",
-              "minLength": 1
-            },
-            {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            }
-          ],
-          "description": "Exact method parameter name or one-based index for value flow"
-        },
-        "argument": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 64,
-          "description": "Exact one-based sink call argument for value flow"
-        },
-        "kind": {
-          "type": "string",
-          "enum": [
-            "method",
-            "line",
-            "call",
-            "http-ingress",
-            "kafka-consume",
-            "scheduled",
-            "http-egress",
-            "kafka-produce",
-            "db-write",
-            "table",
-            "port"
-          ],
-          "description": "Endpoint kind; line requires exact relative file and line"
-        },
-        "env": {
-          "type": "string",
-          "description": "Environment"
-        },
-        "cluster": {
-          "type": "string",
-          "description": "Kafka cluster identity"
-        },
-        "db": {
-          "type": "string",
-          "description": "Database identity"
-        },
-        "schema": {
-          "type": "string",
-          "description": "Database schema"
-        },
-        "topic": {
-          "type": "string",
-          "description": "Resolved Kafka topic"
-        },
-        "route": {
-          "type": "string",
-          "description": "HTTP path"
-        },
-        "method": {
-          "type": "string",
-          "description": "HTTP verb"
-        },
-        "service": {
-          "type": "string",
-          "description": "Exact service identity"
-        }
-      },
-      "additionalProperties": false,
-      "description": "Complete target selector for the after revision when lines/expressions moved"
-    },
-    "assumptions": {
-      "type": "array",
-      "maxItems": 20,
-      "items": {
-        "type": "object",
-        "properties": {
-          "expression": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 1000
-          },
-          "holds": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "expression",
-          "holds"
-        ],
-        "additionalProperties": false
-      }
-    },
-    "includeControl": {
-      "type": "boolean",
-      "default": true
-    },
-    "includeContext": {
-      "type": "boolean",
-      "default": true,
-      "description": "Collect bounded reachable source changes, loops, stream callbacks and library dispatch assumptions separately from selected paths"
-    },
-    "maxPaths": {
-      "type": "integer",
-      "description": "Paths per layer per revision",
-      "default": 8,
-      "minimum": 1,
-      "maximum": 20
-    },
-    "maxHops": {
-      "type": "integer",
-      "description": "Nodes per path",
-      "default": 60,
-      "minimum": 1,
-      "maximum": 100
-    },
-    "budgetMs": {
-      "type": "integer",
-      "description": "Query time budget",
-      "default": 5000,
-      "minimum": 100,
-      "maximum": 30000
-    },
-    "job": {
-      "type": "string",
-      "description": "Observe this owned trace job without repeating it"
-    },
-    "waitMs": {
-      "type": "integer",
-      "description": "Observation wait",
-      "default": 0,
-      "minimum": 0,
-      "maximum": 30000
-    }
-  },
-  "required": [],
-  "additionalProperties": false
-}
-```
-
-</details>
-
-<a id="tool-semantic_query"></a>
-
-### semantic_query
-
-Query retained CPGs: symbols, calls, paths/slices, guards, branch comparisons or entry-to-exit state maps. Inspect proof/gaps; static reachability does not prove value flow. compare+dataflow uses analyses=[before,after] and revision-neutral from/to. flowmap uses a whole-method/ingress from (no to), or discovers bound ingress ports; includes controls, changes, exits and assumptions.
-
-Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
-
-<details><summary>Exact input schema</summary>
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "format": {
-      "type": "string",
-      "enum": [
-        "compact",
-        "full"
-      ],
-      "default": "compact",
-      "description": "Bounded model preview or original JSON; inline view always retains full evidence"
-    },
-    "max_output_bytes": {
-      "type": "integer",
-      "minimum": 4096,
-      "maximum": 65536,
-      "default": 16384,
-      "description": "Compact JSON byte budget; preview omissions are explicit"
-    },
-    "env": {
-      "type": "string",
-      "enum": [
-        "dev"
-      ],
-      "default": "dev",
-      "description": "Environment"
-    },
-    "service": {
-      "type": "string",
-      "description": "Service passport; resolves its pinned repository"
-    },
-    "repo": {
-      "type": "string",
-      "description": "Repository index key or PROJECT/repo"
-    },
-    "project": {
-      "type": "string",
-      "description": "Bitbucket project, with slug"
-    },
-    "slug": {
-      "type": "string",
-      "description": "Repository slug, with project"
-    },
-    "ref": {
-      "type": "string",
-      "description": "Exact SHA, tag or branch resolved once"
-    },
-    "revisionKey": {
-      "type": "string",
-      "description": "Retained revision key from semantic_index"
-    },
-    "repos": {
-      "type": "string",
-      "description": "Comma-separated exact repository or revision keys"
-    },
-    "language": {
-      "type": "string",
-      "enum": [
-        "java",
-        "js"
-      ],
-      "description": "Select one frontend (js also covers TS); avoids mixing analyses of different languages"
-    },
-    "revisionSet": {
-      "type": "string",
-      "description": "Exact resolved source/dependency set from semantic_index"
-    },
-    "analysis": {
-      "type": "string",
-      "description": "Exact semantic_index analyses[].id; not a service name or ref"
-    },
-    "analyses": {
-      "type": "array",
-      "maxItems": 20,
-      "items": {
-        "type": "string"
-      },
-      "description": "Exact retained analysis ids; compare uses [before,after] for the same repository/frontend"
-    },
-    "job": {
-      "type": "string",
-      "description": "Existing semantic query job id; observe without repeating it"
-    },
-    "waitMs": {
-      "type": "integer",
-      "description": "Observation wait",
-      "default": 0,
-      "minimum": 0,
-      "maximum": 30000
-    },
-    "operation": {
-      "type": "string",
-      "enum": [
-        "symbols",
-        "ports",
-        "callers",
-        "callees",
-        "neighborhood",
-        "neighbors",
-        "paths",
-        "slice",
-        "assertions",
-        "compare",
-        "flowmap"
-      ]
-    },
-    "from": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Canonical symbol/port id"
-        },
-        "analysisId": {
-          "type": "string",
-          "description": "Retained analysis id"
-        },
-        "repo": {
-          "type": "string",
-          "description": "PROJECT/repo"
-        },
-        "sha": {
-          "type": "string",
-          "description": "Full source SHA"
-        },
-        "signature": {
-          "type": "string",
-          "description": "Exact method signature"
-        },
-        "name": {
-          "type": "string",
-          "description": "Symbol or boundary name"
-        },
-        "receiver": {
-          "type": "string",
-          "description": "Exact concrete class; resolves inherited methods through retained type declarations"
-        },
-        "file": {
-          "type": "string",
-          "description": "Relative source file"
-        },
-        "line": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "column": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "code": {
-          "type": "string",
-          "description": "Exact expression for a line endpoint"
-        },
-        "nodeLabel": {
-          "type": "string",
-          "description": "CPG expression label, e.g. IDENTIFIER or CALL"
-        },
-        "nodeId": {
-          "type": "string",
-          "description": "Exact CPG node id from this analysis only"
-        },
-        "parameter": {
-          "oneOf": [
-            {
-              "type": "string",
-              "minLength": 1
-            },
-            {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            }
-          ],
-          "description": "Exact method parameter name or one-based index for value flow"
-        },
-        "argument": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 64,
-          "description": "Exact one-based sink call argument for value flow"
-        },
-        "kind": {
-          "type": "string",
-          "description": "Symbol or typed boundary kind"
-        },
-        "env": {
-          "type": "string",
-          "description": "Environment"
-        },
-        "cluster": {
-          "type": "string",
-          "description": "Kafka cluster identity"
-        },
-        "db": {
-          "type": "string",
-          "description": "Database identity"
-        },
-        "schema": {
-          "type": "string",
-          "description": "Database schema"
-        },
-        "topic": {
-          "type": "string",
-          "description": "Resolved Kafka topic"
-        },
-        "route": {
-          "type": "string",
-          "description": "HTTP path"
-        },
-        "method": {
-          "type": "string",
-          "description": "HTTP verb"
-        },
-        "service": {
-          "type": "string",
-          "description": "Exact service identity"
-        }
-      },
-      "additionalProperties": false
-    },
-    "to": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Canonical symbol/port id"
-        },
-        "analysisId": {
-          "type": "string",
-          "description": "Retained analysis id"
-        },
-        "repo": {
-          "type": "string",
-          "description": "PROJECT/repo"
-        },
-        "sha": {
-          "type": "string",
-          "description": "Full source SHA"
-        },
-        "signature": {
-          "type": "string",
-          "description": "Exact method signature"
-        },
-        "name": {
-          "type": "string",
-          "description": "Symbol or boundary name"
-        },
-        "receiver": {
-          "type": "string",
-          "description": "Exact concrete class; resolves inherited methods through retained type declarations"
-        },
-        "file": {
-          "type": "string",
-          "description": "Relative source file"
-        },
-        "line": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "column": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "code": {
-          "type": "string",
-          "description": "Exact expression for a line endpoint"
-        },
-        "nodeLabel": {
-          "type": "string",
-          "description": "CPG expression label, e.g. IDENTIFIER or CALL"
-        },
-        "nodeId": {
-          "type": "string",
-          "description": "Exact CPG node id from this analysis only"
-        },
-        "parameter": {
-          "oneOf": [
-            {
-              "type": "string",
-              "minLength": 1
-            },
-            {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            }
-          ],
-          "description": "Exact method parameter name or one-based index for value flow"
-        },
-        "argument": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 64,
-          "description": "Exact one-based sink call argument for value flow"
-        },
-        "kind": {
-          "type": "string",
-          "description": "Symbol or typed boundary kind"
-        },
-        "env": {
-          "type": "string",
-          "description": "Environment"
-        },
-        "cluster": {
-          "type": "string",
-          "description": "Kafka cluster identity"
-        },
-        "db": {
-          "type": "string",
-          "description": "Database identity"
-        },
-        "schema": {
-          "type": "string",
-          "description": "Database schema"
-        },
-        "topic": {
-          "type": "string",
-          "description": "Resolved Kafka topic"
-        },
-        "route": {
-          "type": "string",
-          "description": "HTTP path"
-        },
-        "method": {
-          "type": "string",
-          "description": "HTTP verb"
-        },
-        "service": {
-          "type": "string",
-          "description": "Exact service identity"
-        }
-      },
-      "additionalProperties": false
-    },
-    "target": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Canonical symbol/port id"
-        },
-        "analysisId": {
-          "type": "string",
-          "description": "Retained analysis id"
-        },
-        "repo": {
-          "type": "string",
-          "description": "PROJECT/repo"
-        },
-        "sha": {
-          "type": "string",
-          "description": "Full source SHA"
-        },
-        "signature": {
-          "type": "string",
-          "description": "Exact method signature"
-        },
-        "name": {
-          "type": "string",
-          "description": "Symbol or boundary name"
-        },
-        "receiver": {
-          "type": "string",
-          "description": "Exact concrete class; resolves inherited methods through retained type declarations"
-        },
-        "file": {
-          "type": "string",
-          "description": "Relative source file"
-        },
-        "line": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "column": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "code": {
-          "type": "string",
-          "description": "Exact expression for a line endpoint"
-        },
-        "nodeLabel": {
-          "type": "string",
-          "description": "CPG expression label, e.g. IDENTIFIER or CALL"
-        },
-        "nodeId": {
-          "type": "string",
-          "description": "Exact CPG node id from this analysis only"
-        },
-        "parameter": {
-          "oneOf": [
-            {
-              "type": "string",
-              "minLength": 1
-            },
-            {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            }
-          ],
-          "description": "Exact method parameter name or one-based index for value flow"
-        },
-        "argument": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 64,
-          "description": "Exact one-based sink call argument for value flow"
-        },
-        "kind": {
-          "type": "string",
-          "description": "Symbol or typed boundary kind"
-        },
-        "env": {
-          "type": "string",
-          "description": "Environment"
-        },
-        "cluster": {
-          "type": "string",
-          "description": "Kafka cluster identity"
-        },
-        "db": {
-          "type": "string",
-          "description": "Database identity"
-        },
-        "schema": {
-          "type": "string",
-          "description": "Database schema"
-        },
-        "topic": {
-          "type": "string",
-          "description": "Resolved Kafka topic"
-        },
-        "route": {
-          "type": "string",
-          "description": "HTTP path"
-        },
-        "method": {
-          "type": "string",
-          "description": "HTTP verb"
-        },
-        "service": {
-          "type": "string",
-          "description": "Exact service identity"
-        }
-      },
-      "additionalProperties": false
-    },
-    "mode": {
-      "type": "string",
-      "enum": [
-        "reachability",
-        "controlflow",
-        "dataflow"
-      ],
-      "default": "reachability"
-    },
-    "query": {
-      "type": "string",
-      "description": "Symbol/port query where supported"
-    },
-    "kind": {
-      "type": "string",
-      "description": "Optional result kind"
-    },
-    "limit": {
-      "type": "integer",
-      "description": "Result page size",
-      "default": 30,
-      "minimum": 1,
-      "maximum": 200
-    },
-    "cursor": {
-      "type": "string",
-      "description": "Opaque cursor from the same retained result"
-    },
-    "budgetMs": {
-      "type": "integer",
-      "description": "Query time budget",
-      "default": 5000,
-      "minimum": 100,
-      "maximum": 30000
-    },
-    "maxMethods": {
-      "type": "integer",
-      "description": "flowmap reachable method budget",
-      "default": 20,
-      "minimum": 1,
-      "maximum": 40
-    },
-    "maxStates": {
-      "type": "integer",
-      "description": "flowmap state budget",
-      "default": 180,
-      "minimum": 20,
-      "maximum": 400
-    },
-    "maxHops": {
-      "type": "integer",
-      "description": "Bounded traversal depth",
-      "default": 8,
-      "minimum": 1,
-      "maximum": 30
-    },
-    "maxPaths": {
-      "type": "integer",
-      "description": "Maximum returned paths",
-      "default": 8,
-      "minimum": 1,
-      "maximum": 20
-    },
-    "includeBypasses": {
-      "type": "boolean",
-      "default": false,
-      "description": "Include supported bypass/counterexample evidence"
-    }
-  },
-  "required": [
-    "operation"
-  ],
   "additionalProperties": false
 }
 ```

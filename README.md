@@ -29,6 +29,9 @@ It plugs into **Open WebUI** (bundled, or one you already run) or any **MCP clie
 
 Jenkins builds and draft PR review loops: [configuration, waits, revision proof and explicit chat compaction](docs/ci-review-loop.md).
 
+
+Explore this repository itself in **Admin → Self-reflection**: source-backed lifecycle/Joern hierarchies, finite TLA+ checks, sampled OpenTelemetry overlays, and an editable API explorer for every authorized tool. [Guide and screenshots](docs/repository-reflection.md).
+
 ## Current capabilities and deployment
 
 Start with the [operator guide](docs/operator-guide.md): deployment profiles,
@@ -814,7 +817,7 @@ Results shaped like tables return a preview plus a `view` link to the full resul
 
 ## Field guide and persistent self-context
 
-Open **Admin → Field guide** or `/handbook`. The guide includes 21 chapters,
+Open **Admin → Field guide** or `/handbook`. The guide includes 26 chapters,
 56 prepared examples, a live reference for every enabled tool, all 20 native
 result views and 14 index layers. It covers service/requirement exploration,
 Joern and exact revisions, contexts, reproduction, scripts, extensions and

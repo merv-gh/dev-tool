@@ -67,3 +67,7 @@ test('coverage source selection preserves focus and retains branch gaps in the d
  assert.match(el('wc-lines').innerHTML,/branches missed/);
  el('wc-files').onclick({target:{closest:()=>({dataset:{file:'1'}})}});assert.equal(el('wc-path').textContent,'B.java');assert.deepEqual(focus,['[data-file="1"]']);assert.match(el('wc-read').href,/story=ticket/);
 });
+
+test('repository model summaries keep inline output compact and surface stale source evidence',()=>{
+ const info=inline.describe('repo-model',{counts:{machines:103,states:522,observations:4},fresh:true});assert.match(info.summary,/103 source-backed machines/);assert.match(info.summary,/4 observed events/);assert.equal(info.open,false);const stale=inline.describe('repo-model',{fresh:false});assert.equal(stale.open,true);assert.equal(stale.failed,true);assert.match(stale.summary,/stale source/);
+});

@@ -1,0 +1,110 @@
+{
+  "protocol": "dt.repo-model-verification/v1",
+  "sourceDigest": "b1249397c80663b9ad8fa0653ea42736237b0e3572276962331e1edec6e2a877",
+  "tests": {
+    "tests": 1217,
+    "failed": 0,
+    "passed": 1160,
+    "cancelled": 0,
+    "skipped": 57,
+    "todo": 0,
+    "topLevel": 1217,
+    "suites": 0
+  },
+  "coverage": {
+    "transitions": {
+      "hit": 384,
+      "total": 699,
+      "percent": 54.9
+    },
+    "lines": {
+      "hit": 30357,
+      "total": 32393,
+      "percent": 93.7
+    },
+    "functions": {
+      "hit": 7351,
+      "total": 8305,
+      "percent": 88.5
+    },
+    "branches": {
+      "hit": 25795,
+      "total": 31359,
+      "percent": 82.3
+    },
+    "testedFiles": 175,
+    "sourceFiles": {
+      "measured": 238,
+      "unmeasured": 28,
+      "total": 266
+    }
+  },
+  "coverageGate": {
+    "passed": true,
+    "baseline": "Previous complete source-matched full-suite coverage; no floor was reduced"
+  },
+  "browser": {
+    "passed": 11,
+    "record": "repo-model-browser.json"
+  },
+  "smallModel": {
+    "model": "qwen3.5:4b",
+    "passed": true,
+    "cases": [
+      {
+        "id": "own",
+        "passed": true,
+        "actions": [
+          {
+            "action": "check",
+            "ok": true,
+            "bytes": 770
+          }
+        ]
+      },
+      {
+        "id": "joern",
+        "passed": true,
+        "actions": [
+          {
+            "action": "derive",
+            "ok": true,
+            "bytes": 3251
+          },
+          {
+            "action": "check",
+            "ok": true,
+            "bytes": 313
+          },
+          {
+            "action": "export",
+            "ok": true,
+            "bytes": 9278
+          }
+        ]
+      }
+    ],
+    "record": "repo-model-small-model.json"
+  },
+  "uiReview": {
+    "disposition": "ship",
+    "record": "repo-model-ui-review.json"
+  },
+  "sources": {
+    "own": "103 executable shared lifecycle charts from current source declarations, with file hashes and consumers",
+    "joern": "Retained real Joern Java, loop and JavaScript output from disposable synthetic repositories; fixture replay, not a fresh worker parse"
+  },
+  "developmentFeedback": [
+    "Discovery now prioritizes repository models for precise lifecycle/Joern/TLA requests while ordinary tracing retains its existing tools",
+    "Short method ids preserve native ids in full evidence",
+    "A one-call own-source check avoids stopping after derivation",
+    "Copied API requests retain exact chat/principal headers; next-state navigation scrolls to its target; graph and dark-editor contrast corrected"
+  ],
+  "limits": [
+    "Finite graph/TLC checks do not prove source equivalence, guard/value semantics, synchronized inter-machine behavior or liveness",
+    "OpenTelemetry overlays are opt-in sampled and chat-scoped; source digest must match before observations count as hits",
+    "External Joern method models remain static-only; no automatic external runtime trace correlation is claimed",
+    "Small-model evaluation is two bounded fixture conversations, not a general capability benchmark",
+    "Optional/live integration skips remain explicit in the full test report"
+  ]
+}

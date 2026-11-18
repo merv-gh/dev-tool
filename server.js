@@ -156,6 +156,7 @@ const routes = [
   ['GET', '/api/handbook/context', true, async (req,res,url) => send(res,200,await require('./lib/handbook').selfContext({env:url.searchParams.get('env')||undefined}))],
   ['GET', '/api/handbook/sample', true, (req,res,url) => { const view=require('./lib/views').get(url.searchParams.get('view'));if(view.sample===undefined)return send(res,404,{error:'This view has no sample'});send(res,200,{view:view.name,data:view.sample}); }],
   ['GET', '/handbook-images/*', false, (req,res,url) => { const file=require('./lib/handbook').imageFile(url.pathname.slice('/handbook-images/'.length));if(!file)return send(res,404,{error:'Unknown handbook image'});res.writeHead(200,{'content-type':'image/png','cache-control':'public, max-age=3600','x-content-type-options':'nosniff'});res.end(fs.readFileSync(file)); }],
+  ['GET', '/self-reflection', true, page('self-reflection.html')],
   ['GET', '/api-client', true, page('api-client.html')],
   ['GET', '/editor', true, page('editor.html')],
   ['GET', '/studio', true, page('studio.html')],

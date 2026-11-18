@@ -68,3 +68,10 @@ test('standalone telemetry persists scoped spans and reads its portable coverage
   await stop();await start();assert.equal((await read()).enabled,true);assert.ok((await read()).spans.length>0);assert.equal((await read('neighbor')).spans.length,0);assert.equal((await events()).summary.tools,1);assert.equal((await fetch(base+'/api/admin/runtime/events',{headers:{'x-dt-story':'neighbor'}}).then(r=>r.json())).summary.total,0);
  }finally{await stop();fs.rmSync(root,{recursive:true,force:true});}
 });
+
+test('standalone repository reflection derives and checks source models without the checkout or Joern',()=>{
+ const fs=require('node:fs'),os=require('node:os'),root=fs.mkdtempSync(path.join(os.tmpdir(),'dt-bundle-repo-model-')),bundle=path.join(root,'bundle'),home=path.join(root,'home');
+ try{fs.mkdirSync(bundle);fs.mkdirSync(home);fs.copyFileSync(path.join(__dirname,'../dist/dt.js'),path.join(bundle,'dt.js'));fs.writeFileSync(path.join(home,'config.json'),JSON.stringify({envs:{dev:{}},scripts:{starters:false}}));
+ const r=spawnSync(process.execPath,[path.join(bundle,'dt.js'),'tool','repo_model','{"action":"check","machine":"SM37.push"}'],{cwd:root,encoding:'utf8',timeout:15000,env:{PATH:process.env.PATH,DT_HOME:home,DT_LOG:'quiet',DT_NO_DOCTOR:'1',DT_STATE_BACKEND:'legacy',NODE_PATH:''}});assert.equal(r.status,0,r.stderr||r.stdout);const result=JSON.parse(r.stdout);assert.equal(result.status,'checked');assert.equal(result.machine,'SM37.push');assert.equal(result.sourceDigest,require('../lib/source-version').digest());const id=new URL(result.hierarchy).pathname.split('/').pop(),saved=JSON.parse(fs.readFileSync(path.join(home,'cache/results',id+'.json')));assert.equal(saved.view,'repo-model');assert.equal(saved.data.fresh,true);assert.ok(saved.data.machines.length>=100);assert.ok(saved.data.machines.find(m=>m.id==='SM37.push').consumers.some(c=>c.file==='lib/workspace.js'));
+ }finally{fs.rmSync(root,{recursive:true,force:true});}
+});

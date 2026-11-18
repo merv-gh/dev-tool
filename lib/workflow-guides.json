@@ -2,6 +2,46 @@
   "version": 1,
   "guides": [
     {
+      "id": "source-runtime-formal-model",
+      "title": "Reflect on a repository with source graphs, TLA+ and OpenTelemetry",
+      "terms": "repository self reflection sources state machine lifecycle hierarchy TLA formal model Joern CFG telemetry runtime observed transitions diagram",
+      "required": [
+        "dev-tool source catalog, or an exact retained Joern analysis"
+      ],
+      "stages": [
+        {
+          "id": "derive",
+          "goal": "Start with repo_model derive for our sources, or supply a retained Joern analysis. Keep the projection id and observe an existing job without re-parsing.",
+          "tools": [
+            "repo_model",
+            "semantic_index"
+          ]
+        },
+        {
+          "id": "inspect",
+          "goal": "Select a machine in the inline hierarchy and inspect declaration/source, states, transitions, guards and gaps.",
+          "tools": [
+            "repo_model",
+            "code_read"
+          ]
+        },
+        {
+          "id": "check",
+          "goal": "Check or export one finite abstraction, then compare source-matched sampled traces. A static graph or model check does not prove source behavior.",
+          "tools": [
+            "repo_model",
+            "observability",
+            "logic_model"
+          ]
+        }
+      ],
+      "boundaries": [
+        "Source digest and relative file/line evidence",
+        "Finite check/counterexample or pinned TLC result",
+        "Separate sampled observations, gaps and behavior tests"
+      ]
+    },
+    {
       "id": "changed-code-coverage",
       "title": "Measure and close gaps in changed JVM code",
       "terms": "coverage touched changed lines branches jacoco lombok generated builder incremental compiler",

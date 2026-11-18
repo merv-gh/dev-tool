@@ -18237,6 +18237,5130 @@ var require_src9 = __commonJS({
   }
 });
 
+// lib/self-model-catalog.json
+var require_self_model_catalog = __commonJS({
+  "lib/self-model-catalog.json"(exports2, module2) {
+    module2.exports = {
+      protocol: "dt.repo-source/v1",
+      repo: "dev-tool",
+      sourceDigest: "b1249397c80663b9ad8fa0653ea42736237b0e3572276962331e1edec6e2a877",
+      machines: [
+        {
+          id: "IO.atomic-file",
+          component: "lib/atomic-file.js",
+          label: "IO.atomic-file",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/atomic-file.js",
+            line: 3,
+            sha256: "9e11dfae28971011c61645277d3171443a35f76a50d3f1c0dea6d9e9bfbc9643",
+            snippet: "const { define, create } = require('./state-machine');\nconst model = define('IO.atomic-file', 'new', { new: ['staging', 'aborted'], staging: ['installed', 'aborted'], installed: [], aborted: [] }, ['installed', 'aborted']);\n// Shared by context, scripts, registry markers and revision/head publication.\n// Installed means the rename happened; it does not claim fsync durability.\nfunction atomicFile(file, bytes, { mode } = {}) {\n  const lifecycle = create(model), temporary = `${file}.${crypto.randomUUID()}.tmp`;\n  fs.mkdirSync(path.dirname(file), { recursive: true });\n  try {\n    fs.writeFileSync(temporary, bytes, { flag: 'wx', ...(mode === undefined ? {} : { mode }) }); lifecycle.to('staging');\n    fs.renameSync(temporary, file); lifecycle.to('installed');\n  } catch (error) { if (!lifecycle.terminal) lifecycle.to('aborted'); throw error; }\n  finally { fs.rmSync(temporary, { force: true }); }\n}\nmodule.exports = { atomicFile, model };\n"
+          },
+          consumers: [],
+          chart: {
+            name: "IO.atomic-file",
+            initial: "new",
+            states: [
+              "new",
+              "staging",
+              "installed",
+              "aborted"
+            ],
+            terminal: [
+              "installed",
+              "aborted"
+            ],
+            transitions: {
+              new: [
+                "staging",
+                "aborted"
+              ],
+              staging: [
+                "installed",
+                "aborted"
+              ],
+              installed: [],
+              aborted: []
+            }
+          }
+        },
+        {
+          id: "P01.descriptor",
+          component: "lib/pgstore.js",
+          label: "P01.descriptor",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 46,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {\n  disconnected: ['initializing', 'closing'], initializing: ['ready', 'disconnected', 'closing'], ready: ['closing'], closing: ['disconnected'],\n});\nconst fixture = define('SM26.fixture', 'starting', { starting: ['ready', 'cleanup-failed', 'stopped'], ready: ['cleanup-failed', 'stopped'], 'cleanup-failed': ['stopped'], stopped: [] }, ['stopped']);\nconst scenario = define('SM28.scenario', 'starting', { starting: ['ready', 'failed', 'stopped'], ready: ['failed', 'stopped'], failed: ['stopped'], stopped: [] }, ['stopped']);\nconst collection = define('SM35.collection', 'running', { running: ['passed', 'failed', 'cancelled'], passed: [], failed: [], cancelled: [] }, ['passed', 'failed', 'cancelled']);\nconst semantic = define('SM45.semantic', 'uploading', {\n  uploading: ['queued', 'failed', 'interrupted'], queued: ['parsing', 'querying', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  parsing: ['enriching', 'cancelling', 'failed', 'cancelled', 'interrupted'], enriching: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  querying: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'], cancelling: ['cancelled', 'failed', 'interrupted'],\n  draining: ['ready', 'cancelled', 'failed', 'interrupted'],\n  ready: [], failed: [], cancelled: [], interrupted: [],\n}, ['ready', 'failed', 'cancelled', 'interrupted']);\nconst sftp = define('SM19.sftp', 'connecting', { connecting: ['opening', 'closing', 'failed', 'closed'], opening: ['ready', 'closing', 'failed', 'closed'], ready: ['closing', 'failed', 'closed'], closing: ['failed', 'closed'], failed: ['closing', 'closed'], closed: [] }, ['closed']);"
+          },
+          consumers: [],
+          chart: {
+            name: "P01.descriptor",
+            initial: "open",
+            states: [
+              "open",
+              "closed"
+            ],
+            terminal: [
+              "closed"
+            ],
+            transitions: {
+              open: [
+                "closed"
+              ],
+              closed: []
+            }
+          }
+        },
+        {
+          id: "P02.binary",
+          component: "web/map-format.js",
+          label: "P02.binary",
+          origin: "executable-declaration",
+          source: {
+            file: "web/map-format.js",
+            line: 6,
+            sha256: "42d7f39a37fd6be7aff906c488112f1922b123f287219d8d2b0b448c5050dde6",
+            snippet: "  const S = typeof module === 'object' && module.exports ? require('./state-machine') : root.DTState;\n  const decoding = S.define('P02.binary', 'header', { header: ['tables', 'failed'], tables: ['ready', 'failed'], ready: [], failed: [] }, ['ready','failed']);\n  function decode(input) {\n    const lifecycle=S.create(decoding);\n    try {\n    const b = input instanceof Uint8Array ? input : new Uint8Array(input);\n    const dv = new DataView(b.buffer, b.byteOffset, b.byteLength), utf = new TextDecoder();\n    if (b.length < 24 || utf.decode(b.subarray(0,8)) !== MAGIC) throw new Error('Invalid map binary');\n    const count = dv.getUint32(8,true), edgeCount = dv.getUint32(12,true), strings = dv.getUint32(16,true), bytes = dv.getUint32(20,true);\n    const stringStart = 24 + (strings + 1) * 4, rowsStart = (stringStart + bytes + 3) & ~3;\n    if (strings < META || count > 2000000 || edgeCount > 10000000 || rowsStart < 0 || rowsStart + (count * NC + edgeCount * EC) * 4 !== b.length) throw new Error('Invalid map lengths');\n    lifecycle.to('tables');\n    const cached = new Map();\n    function str(i) {\n      if (i >= strings) throw new Error('Invalid map string reference');\n      if (cached.has(i)) return cached.get(i);"
+          },
+          consumers: [],
+          chart: {
+            name: "P02.binary",
+            initial: "header",
+            states: [
+              "header",
+              "tables",
+              "ready",
+              "failed"
+            ],
+            terminal: [
+              "ready",
+              "failed"
+            ],
+            transitions: {
+              header: [
+                "tables",
+                "failed"
+              ],
+              tables: [
+                "ready",
+                "failed"
+              ],
+              ready: [],
+              failed: []
+            }
+          }
+        },
+        {
+          id: "P03.source-span",
+          component: "lib/testdata.js",
+          label: "P03.source-span",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 102,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nmodule.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery"
+          },
+          consumers: [
+            {
+              file: "lib/testdata.js",
+              line: 20,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').sourceSpan);"
+            }
+          ],
+          chart: {
+            name: "P03.source-span",
+            initial: "code",
+            states: [
+              "code",
+              "quoted",
+              "text-block",
+              "line-comment",
+              "block-comment",
+              "done"
+            ],
+            terminal: [
+              "done"
+            ],
+            transitions: {
+              code: [
+                "quoted",
+                "text-block",
+                "line-comment",
+                "block-comment",
+                "done"
+              ],
+              quoted: [
+                "code"
+              ],
+              "text-block": [
+                "code"
+              ],
+              "line-comment": [
+                "code"
+              ],
+              "block-comment": [
+                "code"
+              ],
+              done: []
+            }
+          }
+        },
+        {
+          id: "P05.framing",
+          component: "web/state-machine.js",
+          label: "P05.framing",
+          origin: "executable-declaration",
+          source: {
+            file: "web/state-machine.js",
+            line: 118,
+            sha256: "702ba85fa114d91bf2d6766ef36a88deaa8e72608b4cdb06fba37c313c46c5f4",
+            snippet: "function editRevision(record, field = 'dirty') { return flagBindings.get(record)?.get(field)?.revision.value || 0; }\nconst framingModel = define('P05.framing', 'empty', { empty: ['partial', 'closed'], partial: ['empty', 'closed'], closed: [] }, ['closed']);\nconst utf8Bytes = value => typeof Buffer === 'function' ? Buffer.byteLength(value) : new TextEncoder().encode(value).length;\nclass Framer {\n  constructor({ separator = /\\n/, maxBytes = 20 * 1024 * 1024 } = {}) {\n    // Protocol delimiters have a finite carry. Never rescan/copy the growing\n    // record on every chunk: retain fragments and join once when it is complete.\n    const carry = { '\\\\n': 0, '\\\\n\\\\n': 1, '\\\\r?\\\\n\\\\r?\\\\n': 3 }[separator.source];\n    if (carry === undefined) throw new Error('Unsupported protocol delimiter');\n    this.separator = separator; this.carryChars = carry; this.maxBytes = maxBytes;\n    this.parts = []; this.partBytes = 0; this.tail = ''; this.pendingBytes = 0;\n    this.decoder = new TextDecoder(); this.lifecycle = create(framingModel);\n  }\n  get buffer() { return this.parts.join('') + this.tail; }\n  append(fragment) {\n    if (!fragment) return;"
+          },
+          consumers: [],
+          chart: {
+            name: "P05.framing",
+            initial: "empty",
+            states: [
+              "empty",
+              "partial",
+              "closed"
+            ],
+            terminal: [
+              "closed"
+            ],
+            transitions: {
+              empty: [
+                "partial",
+                "closed"
+              ],
+              partial: [
+                "empty",
+                "closed"
+              ],
+              closed: []
+            }
+          }
+        },
+        {
+          id: "P06.report-file",
+          component: "lib/node-test.js",
+          label: "P06.report-file",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 103,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nmodule.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBack"
+          },
+          consumers: [
+            {
+              file: "lib/node-test.js",
+              line: 36,
+              snippet: "const fileState = fileStates.get(d.file) || require('./state-machine').create(require('./lifecycles').reportFile); fileStates.set(d.file, fileState);"
+            }
+          ],
+          chart: {
+            name: "P06.report-file",
+            initial: "clean",
+            states: [
+              "clean",
+              "failed"
+            ],
+            terminal: [
+              "failed"
+            ],
+            transitions: {
+              clean: [
+                "failed"
+              ],
+              failed: []
+            }
+          }
+        },
+        {
+          id: "P07.markup-stack",
+          component: "lib/docs-parse.js",
+          label: "P07.markup-stack",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 104,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nmodule.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
+          },
+          consumers: [
+            {
+              file: "lib/docs-parse.js",
+              line: 12,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').markup);"
+            }
+          ],
+          chart: {
+            name: "P07.markup-stack",
+            initial: "root",
+            states: [
+              "root",
+              "nested"
+            ],
+            terminal: [],
+            transitions: {
+              root: [
+                "nested"
+              ],
+              nested: [
+                "root"
+              ]
+            }
+          }
+        },
+        {
+          id: "P08.traversal",
+          component: "lib/service-map.js",
+          label: "P08.traversal",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 105,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nmodule.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
+          },
+          consumers: [
+            {
+              file: "lib/service-map.js",
+              line: 125,
+              snippet: "async function route(a){const g=await graph(a.env),start=locate(g,a.from),end=locate(g,a.to),visited=new Map([[start,null]]),queue=[start],max=bounded(a.max_visited,10000,100000);const lifecycle=require('./state-machine').create(require('./lifecycles').traversal);"
+            }
+          ],
+          chart: {
+            name: "P08.traversal",
+            initial: "searching",
+            states: [
+              "searching",
+              "found",
+              "exhausted",
+              "truncated"
+            ],
+            terminal: [
+              "found",
+              "exhausted",
+              "truncated"
+            ],
+            transitions: {
+              searching: [
+                "found",
+                "exhausted",
+                "truncated"
+              ],
+              found: [],
+              exhausted: [],
+              truncated: []
+            }
+          }
+        },
+        {
+          id: "P09.enumeration",
+          component: "lib/util.js",
+          label: "P09.enumeration",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 106,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nmodule.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
+          },
+          consumers: [
+            {
+              file: "lib/util.js",
+              line: 11,
+              snippet: "const cursor = require('./state-machine').create(require('./lifecycles').enumeration, items.length ? 'available' : 'exhausted');"
+            }
+          ],
+          chart: {
+            name: "P09.enumeration",
+            initial: "available",
+            states: [
+              "available",
+              "exhausted"
+            ],
+            terminal: [
+              "exhausted"
+            ],
+            transitions: {
+              available: [
+                "exhausted"
+              ],
+              exhausted: []
+            }
+          }
+        },
+        {
+          id: "SM.automation-flow-checkpoint",
+          component: "lib/automation-flow.js",
+          label: "SM.automation-flow-checkpoint",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/automation-flow.js",
+            line: 12,
+            sha256: "a89a919ad9c732fe8fa21608d68eb1e3996cf6a0e812723c1959ffdd102b25f9",
+            snippet: "}, ['done']);\nconst checkpointLifecycle = define('SM.automation-flow-checkpoint', 'pending', {\n  pending: ['running', 'waiting', 'done'], running: ['done', 'uncertain'],\n  waiting: ['done'], uncertain: ['pending', 'done'], failed: ['pending', 'uncertain', 'done'], done: [],\n}, ['done']);\nconst LIMITS = Object.freeze({ nodes: 100, depth: 8, steps: 1000, iterations: 100, concurrency: 8, waitMs: 86400000, runMs: 7 * 86400000, resultBytes: 65536, runs: 200, definitions: 100 });\nconst fail = (message, code, status) => { throw D.invalid(message, code, status); };\nconst clone = value => JSON.parse(JSON.stringify(value));\nconst store = () => D.create(A.scopedDirectory(path.join(C.HOME, 'automation-flows')));\nfunction id(value) { if (!/^[a-z][a-z0-9_-]{0,59}$/.test(value || '') || ['constructor', 'prototype'].includes(value)) fail('Flow id must use lowercase letters, digits, _ or - (max 60), excluding reserved object keys'); return value; }\nfunction integer(value, fallback, min, max, name) { const n = value === undefined ? fallback : value; if (!Number.isSafeInteger(n) || n < min || n > max) fail(`${name} must be ${min}..${max}`); return n; }\nfunction object(value, name) { if (!value || typeof value !== 'object' || Array.isArray(value)) fail(`${name} must be an object`); }\nfunction cleanInput(value) { const data = JSON.stringify(value); if (!data || Buffer.byteLength(data) > 262144) fail('Flow definition/input exceeds 256 KiB'); const cleaned = require('./redact').clean(value); if (JSON.stringify(cleaned) !== data) fail('Do not save credentials in workflows; use configured authentication profiles'); return clone(value); }\nfunction normalize(definition) {\n  object(definition, 'definition');\n  if (Object.keys(definition).some(k => !['title', 'nodes', 'limits'].includes(k))) fail('Unsupported flow definition field');"
+          },
+          consumers: [],
+          chart: {
+            name: "SM.automation-flow-checkpoint",
+            initial: "pending",
+            states: [
+              "pending",
+              "running",
+              "waiting",
+              "uncertain",
+              "failed",
+              "done"
+            ],
+            terminal: [
+              "done"
+            ],
+            transitions: {
+              pending: [
+                "running",
+                "waiting",
+                "done"
+              ],
+              running: [
+                "done",
+                "uncertain"
+              ],
+              waiting: [
+                "done"
+              ],
+              uncertain: [
+                "pending",
+                "done"
+              ],
+              failed: [
+                "pending",
+                "uncertain",
+                "done"
+              ],
+              done: []
+            }
+          }
+        },
+        {
+          id: "SM.automation-flow-run",
+          component: "lib/automation-flow.js",
+          label: "SM.automation-flow-run",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/automation-flow.js",
+            line: 7,
+            sha256: "a89a919ad9c732fe8fa21608d68eb1e3996cf6a0e812723c1959ffdd102b25f9",
+            snippet: "const { define, bind } = require('./state-machine');\nconst lifecycle = define('SM.automation-flow-run', 'pending', {\n  pending: ['running', 'failed'], running: ['done', 'failed', 'cancelled', 'blocked', 'paused'],\n  failed: ['running', 'blocked', 'paused'], cancelled: ['running', 'blocked', 'paused'],\n  blocked: ['running', 'paused'], paused: ['running', 'blocked'], done: [],\n}, ['done']);\nconst checkpointLifecycle = define('SM.automation-flow-checkpoint', 'pending', {\n  pending: ['running', 'waiting', 'done'], running: ['done', 'uncertain'],\n  waiting: ['done'], uncertain: ['pending', 'done'], failed: ['pending', 'uncertain', 'done'], done: [],\n}, ['done']);\nconst LIMITS = Object.freeze({ nodes: 100, depth: 8, steps: 1000, iterations: 100, concurrency: 8, waitMs: 86400000, runMs: 7 * 86400000, resultBytes: 65536, runs: 200, definitions: 100 });\nconst fail = (message, code, status) => { throw D.invalid(message, code, status); };\nconst clone = value => JSON.parse(JSON.stringify(value));\nconst store = () => D.create(A.scopedDirectory(path.join(C.HOME, 'automation-flows')));\nfunction id(value) { if (!/^[a-z][a-z0-9_-]{0,59}$/.test(value || '') || ['constructor', 'prototype'].includes(value)) fail('Flow id must use lowercase letters, digits, _ or - (max 60), excluding reserved object keys'); return value; }\nfunction integer(value, fallback, min, max, name) { const n = value === undefined ? fallback : value; if (!Number.isSafeInteger(n) || n < min || n > max) fail(`${name} must be ${min}..${max}`); return n; }"
+          },
+          consumers: [],
+          chart: {
+            name: "SM.automation-flow-run",
+            initial: "pending",
+            states: [
+              "pending",
+              "running",
+              "failed",
+              "cancelled",
+              "blocked",
+              "paused",
+              "done"
+            ],
+            terminal: [
+              "done"
+            ],
+            transitions: {
+              pending: [
+                "running",
+                "failed"
+              ],
+              running: [
+                "done",
+                "failed",
+                "cancelled",
+                "blocked",
+                "paused"
+              ],
+              failed: [
+                "running",
+                "blocked",
+                "paused"
+              ],
+              cancelled: [
+                "running",
+                "blocked",
+                "paused"
+              ],
+              blocked: [
+                "running",
+                "paused"
+              ],
+              paused: [
+                "running",
+                "blocked"
+              ],
+              done: []
+            }
+          }
+        },
+        {
+          id: "SM.continuation-selection",
+          component: "lib/continuation.js",
+          label: "SM.continuation-selection",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/continuation.js",
+            line: 7,
+            sha256: "49f5e38a16cf62b45577d57160504474efb341d27acb8123b202170ad64af392",
+            snippet: "const lifecycle = define('SM.continuation-task', 'active', { active: ['paused', 'done'], paused: ['active', 'done'], done: ['active', 'paused'] });\nconst selection = define('SM.continuation-selection', 'unselected', { unselected: ['selected'], selected: ['selected', 'unselected'] });\nconst MAX_TASKS = 200, fields = ['tickets', 'repositories', 'workspaces', 'chats', 'tasks', 'tags'];\nconst fail = (message, code, status) => { throw D.invalid(message, code, status); };\nconst principal = () => ({ principalId: A.current().principalId, multiUser: A.current().multiUser });\nconst principalKey = () => D.hash(JSON.stringify(principal())).slice(0, 32);\nconst store = () => D.create(path.join(C.HOME, 'continuations', '_principals', principalKey()), 2 * 1048576);\nconst attachments = () => D.create(A.scopedDirectory(path.join(C.HOME, 'continuation-attachments')), 65536);\nconst context = () => require('./context');\nfunction canonical(record, fn) { return A.run({ ...A.owner(), principalId: record.owner.principalId, multiUser: true, storyId: 'task:' + record.id }, fn); }\nfunction load(id) { D.key(id); const r = store().read(id); if (!r || JSON.stringify(r.owner) !== JSON.stringify(principal())) fail('Continuation not found', 'DT_NOT_FOUND', 404); bind(r, lifecycle, 'status'); return r; }\nfunction selected(id) {\n  if (id) return load(id);\n  const a = attachments().read('selected');\n  if (!a?.id) fail('Select a continuation explicitly with continuation_attach, or supply its id', 'DT_CONTINUATION_UNSELECTED', 409);\n  return load(a.id);"
+          },
+          consumers: [],
+          chart: {
+            name: "SM.continuation-selection",
+            initial: "unselected",
+            states: [
+              "unselected",
+              "selected"
+            ],
+            terminal: [],
+            transitions: {
+              unselected: [
+                "selected"
+              ],
+              selected: [
+                "selected",
+                "unselected"
+              ]
+            }
+          }
+        },
+        {
+          id: "SM.continuation-task",
+          component: "lib/continuation.js",
+          label: "SM.continuation-task",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/continuation.js",
+            line: 6,
+            sha256: "49f5e38a16cf62b45577d57160504474efb341d27acb8123b202170ad64af392",
+            snippet: "const { define, bind } = require('./state-machine');\nconst lifecycle = define('SM.continuation-task', 'active', { active: ['paused', 'done'], paused: ['active', 'done'], done: ['active', 'paused'] });\nconst selection = define('SM.continuation-selection', 'unselected', { unselected: ['selected'], selected: ['selected', 'unselected'] });\nconst MAX_TASKS = 200, fields = ['tickets', 'repositories', 'workspaces', 'chats', 'tasks', 'tags'];\nconst fail = (message, code, status) => { throw D.invalid(message, code, status); };\nconst principal = () => ({ principalId: A.current().principalId, multiUser: A.current().multiUser });\nconst principalKey = () => D.hash(JSON.stringify(principal())).slice(0, 32);\nconst store = () => D.create(path.join(C.HOME, 'continuations', '_principals', principalKey()), 2 * 1048576);\nconst attachments = () => D.create(A.scopedDirectory(path.join(C.HOME, 'continuation-attachments')), 65536);\nconst context = () => require('./context');\nfunction canonical(record, fn) { return A.run({ ...A.owner(), principalId: record.owner.principalId, multiUser: true, storyId: 'task:' + record.id }, fn); }\nfunction load(id) { D.key(id); const r = store().read(id); if (!r || JSON.stringify(r.owner) !== JSON.stringify(principal())) fail('Continuation not found', 'DT_NOT_FOUND', 404); bind(r, lifecycle, 'status'); return r; }\nfunction selected(id) {\n  if (id) return load(id);\n  const a = attachments().read('selected');\n  if (!a?.id) fail('Select a continuation explicitly with continuation_attach, or supply its id', 'DT_CONTINUATION_UNSELECTED', 409);"
+          },
+          consumers: [],
+          chart: {
+            name: "SM.continuation-task",
+            initial: "active",
+            states: [
+              "active",
+              "paused",
+              "done"
+            ],
+            terminal: [],
+            transitions: {
+              active: [
+                "paused",
+                "done"
+              ],
+              paused: [
+                "active",
+                "done"
+              ],
+              done: [
+                "active",
+                "paused"
+              ]
+            }
+          }
+        },
+        {
+          id: "SM01.execution",
+          component: "lib/execution.js",
+          label: "SM01.execution",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 6,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const { define } = require('./state-machine');\nconst execution = define('SM01.execution', 'queued', {\n  queued: ['running', 'cancelling', 'draining', 'failed', 'cancelled', 'interrupted'],\n  running: ['cancelling', 'draining', 'done', 'failed', 'interrupted'],\n  cancelling: ['draining', 'cancelled', 'interrupted'],\n  draining: ['cancelling', 'done', 'failed', 'cancelled', 'interrupted'],\n  done: [], failed: [], cancelled: [], interrupted: [],\n}, ['done', 'failed', 'cancelled', 'interrupted']);\nconst job = define('SM02.job', 'running', {\n  queued: ['running', 'cancelled', 'interrupted'], running: ['done', 'failed', 'cancelled', 'interrupted'],\n  cancelling: ['cancelled', 'interrupted'], draining: ['done', 'failed', 'cancelled', 'interrupted'],\n  done: [], failed: [], cancelled: [], interrupted: [],\n}, ['done', 'failed', 'cancelled', 'interrupted']);\nconst admission = define('SM04.admission', 'queued', {\n  queued: ['running', 'cancelled'], running: ['fulfilled', 'rejected'], fulfilled: [], rejected: [], cancelled: [],\n}, ['fulfilled', 'rejected', 'cancelled']);"
+          },
+          consumers: [
+            {
+              file: "lib/execution.js",
+              line: 5,
+              snippet: "const { bind } = require('./state-machine'), lifecycle = require('./lifecycles').execution;"
+            }
+          ],
+          chart: {
+            name: "SM01.execution",
+            initial: "queued",
+            states: [
+              "queued",
+              "running",
+              "cancelling",
+              "draining",
+              "done",
+              "failed",
+              "cancelled",
+              "interrupted"
+            ],
+            terminal: [
+              "done",
+              "failed",
+              "cancelled",
+              "interrupted"
+            ],
+            transitions: {
+              queued: [
+                "running",
+                "cancelling",
+                "draining",
+                "failed",
+                "cancelled",
+                "interrupted"
+              ],
+              running: [
+                "cancelling",
+                "draining",
+                "done",
+                "failed",
+                "interrupted"
+              ],
+              cancelling: [
+                "draining",
+                "cancelled",
+                "interrupted"
+              ],
+              draining: [
+                "cancelling",
+                "done",
+                "failed",
+                "cancelled",
+                "interrupted"
+              ],
+              done: [],
+              failed: [],
+              cancelled: [],
+              interrupted: []
+            }
+          }
+        },
+        {
+          id: "SM02.job",
+          component: "lib/jobs.js",
+          label: "SM02.job",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 13,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "}, ['done', 'failed', 'cancelled', 'interrupted']);\nconst job = define('SM02.job', 'running', {\n  queued: ['running', 'cancelled', 'interrupted'], running: ['done', 'failed', 'cancelled', 'interrupted'],\n  cancelling: ['cancelled', 'interrupted'], draining: ['done', 'failed', 'cancelled', 'interrupted'],\n  done: [], failed: [], cancelled: [], interrupted: [],\n}, ['done', 'failed', 'cancelled', 'interrupted']);\nconst admission = define('SM04.admission', 'queued', {\n  queued: ['running', 'cancelled'], running: ['fulfilled', 'rejected'], fulfilled: [], rejected: [], cancelled: [],\n}, ['fulfilled', 'rejected', 'cancelled']);\nconst worker = define('SM06.worker', 'idle', {\n  idle: ['busy', 'stopping', 'stopped'], busy: ['idle', 'stopping', 'stopped'], stopping: ['stopped'], stopped: [],\n}, ['stopped']);\nconst session = define('SM07.session', 'idle', { idle: ['running'], running: ['idle'] });\nconst sandbox = define('SM07.sandbox', 'absent', { absent: ['alive'], alive: ['absent'] });\nconst cell = define('SM08.cell', 'queued', { queued: ['done', 'failed', 'cancelled'], done: [], failed: [], cancelled: [] }, ['done', 'failed', 'cancelled']);\nconst settlement = define('SM09.settlement', 'pending', { pending: ['settled'], settled: [] }, ['settled']);"
+          },
+          consumers: [
+            {
+              file: "lib/jobs.js",
+              line: 6,
+              snippet: "const { bind } = require('./state-machine'), lifecycle = require('./lifecycles').job;"
+            },
+            {
+              file: "lib/state-worker.js",
+              line: 155,
+              snippet: "const recovered = ['running', 'queued', 'cancelling', 'draining'].includes(value.state) ? { ...value, state: require('./state-machine').next(require('./lifecycles').job,value.state,'interrupted'), error: value.error || 'server restarted; operation was not replayed' } : value;"
+            }
+          ],
+          chart: {
+            name: "SM02.job",
+            initial: "running",
+            states: [
+              "queued",
+              "running",
+              "cancelling",
+              "draining",
+              "done",
+              "failed",
+              "cancelled",
+              "interrupted"
+            ],
+            terminal: [
+              "done",
+              "failed",
+              "cancelled",
+              "interrupted"
+            ],
+            transitions: {
+              queued: [
+                "running",
+                "cancelled",
+                "interrupted"
+              ],
+              running: [
+                "done",
+                "failed",
+                "cancelled",
+                "interrupted"
+              ],
+              cancelling: [
+                "cancelled",
+                "interrupted"
+              ],
+              draining: [
+                "done",
+                "failed",
+                "cancelled",
+                "interrupted"
+              ],
+              done: [],
+              failed: [],
+              cancelled: [],
+              interrupted: []
+            }
+          }
+        },
+        {
+          id: "SM03.process",
+          component: "lib/trace.js",
+          label: "SM03.process",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 28,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const settlement = define('SM09.settlement', 'pending', { pending: ['settled'], settled: [] }, ['settled']);\nconst process = define('SM03.process', 'running', { running: ['terminating', 'exited'], terminating: ['killing', 'exited'], killing: ['exited'], exited: [] }, ['exited']);\nconst span = define('SM03.span', 'running', { running: ['succeeded', 'failed'], succeeded: [], failed: [] }, ['succeeded', 'failed']);\nconst networkAdmission = define('SM05.network-admission', 'eligible', { eligible: ['reserved'], reserved: ['waiting', 'admitted', 'cancelled'], waiting: ['admitted', 'cancelled'], admitted: [], cancelled: [] }, ['admitted', 'cancelled']);\nconst runnerRequest = define('SM10.request', 'requesting', { requesting: ['streaming', 'failed'], streaming: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst circuit = define('SM10.endpoint', 'available', { available: ['cooldown'], cooldown: ['available'] });\nconst store = define('SM11.store', 'cold', { cold: ['starting', 'ready', 'closed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['starting', 'closed'], closed: [] }, ['closed']);\nconst storeClose = define('SM11.close', 'open', { open: ['flushing'], flushing: ['closing', 'closed', 'open'], closing: ['closed', 'open'], closed: [] }, ['closed']);\nconst writer = define('SM12.writer', 'idle', { idle: ['writing'], writing: ['idle', 'failed'], failed: ['writing'] });\nconst config = define('SM14.config', 'cold', { cold: ['stale', 'validating'], stale: ['validating'], validating: ['ready', 'rejected'], ready: ['stale'], rejected: ['stale', 'validating'] });\nconst registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);"
+          },
+          consumers: [
+            {
+              file: "lib/process-tree.js",
+              line: 14,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').process);"
+            }
+          ],
+          chart: {
+            name: "SM03.process",
+            initial: "running",
+            states: [
+              "running",
+              "terminating",
+              "killing",
+              "exited"
+            ],
+            terminal: [
+              "exited"
+            ],
+            transitions: {
+              running: [
+                "terminating",
+                "exited"
+              ],
+              terminating: [
+                "killing",
+                "exited"
+              ],
+              killing: [
+                "exited"
+              ],
+              exited: []
+            }
+          }
+        },
+        {
+          id: "SM03.span",
+          component: "lib/trace.js",
+          label: "SM03.span",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 29,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const process = define('SM03.process', 'running', { running: ['terminating', 'exited'], terminating: ['killing', 'exited'], killing: ['exited'], exited: [] }, ['exited']);\nconst span = define('SM03.span', 'running', { running: ['succeeded', 'failed'], succeeded: [], failed: [] }, ['succeeded', 'failed']);\nconst networkAdmission = define('SM05.network-admission', 'eligible', { eligible: ['reserved'], reserved: ['waiting', 'admitted', 'cancelled'], waiting: ['admitted', 'cancelled'], admitted: [], cancelled: [] }, ['admitted', 'cancelled']);\nconst runnerRequest = define('SM10.request', 'requesting', { requesting: ['streaming', 'failed'], streaming: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst circuit = define('SM10.endpoint', 'available', { available: ['cooldown'], cooldown: ['available'] });\nconst store = define('SM11.store', 'cold', { cold: ['starting', 'ready', 'closed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['starting', 'closed'], closed: [] }, ['closed']);\nconst storeClose = define('SM11.close', 'open', { open: ['flushing'], flushing: ['closing', 'closed', 'open'], closing: ['closed', 'open'], closed: [] }, ['closed']);\nconst writer = define('SM12.writer', 'idle', { idle: ['writing'], writing: ['idle', 'failed'], failed: ['writing'] });\nconst config = define('SM14.config', 'cold', { cold: ['stale', 'validating'], stale: ['validating'], validating: ['ready', 'rejected'], ready: ['stale'], rejected: ['stale', 'validating'] });\nconst registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);"
+          },
+          consumers: [
+            {
+              file: "lib/trace.js",
+              line: 9,
+              snippet: "const { bind } = require('./state-machine'), spanLifecycle = require('./lifecycles').span;"
+            }
+          ],
+          chart: {
+            name: "SM03.span",
+            initial: "running",
+            states: [
+              "running",
+              "succeeded",
+              "failed"
+            ],
+            terminal: [
+              "succeeded",
+              "failed"
+            ],
+            transitions: {
+              running: [
+                "succeeded",
+                "failed"
+              ],
+              succeeded: [],
+              failed: []
+            }
+          }
+        },
+        {
+          id: "SM04.admission",
+          component: "lib/limit.js",
+          label: "SM04.admission",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 18,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "}, ['done', 'failed', 'cancelled', 'interrupted']);\nconst admission = define('SM04.admission', 'queued', {\n  queued: ['running', 'cancelled'], running: ['fulfilled', 'rejected'], fulfilled: [], rejected: [], cancelled: [],\n}, ['fulfilled', 'rejected', 'cancelled']);\nconst worker = define('SM06.worker', 'idle', {\n  idle: ['busy', 'stopping', 'stopped'], busy: ['idle', 'stopping', 'stopped'], stopping: ['stopped'], stopped: [],\n}, ['stopped']);\nconst session = define('SM07.session', 'idle', { idle: ['running'], running: ['idle'] });\nconst sandbox = define('SM07.sandbox', 'absent', { absent: ['alive'], alive: ['absent'] });\nconst cell = define('SM08.cell', 'queued', { queued: ['done', 'failed', 'cancelled'], done: [], failed: [], cancelled: [] }, ['done', 'failed', 'cancelled']);\nconst settlement = define('SM09.settlement', 'pending', { pending: ['settled'], settled: [] }, ['settled']);\nconst process = define('SM03.process', 'running', { running: ['terminating', 'exited'], terminating: ['killing', 'exited'], killing: ['exited'], exited: [] }, ['exited']);\nconst span = define('SM03.span', 'running', { running: ['succeeded', 'failed'], succeeded: [], failed: [] }, ['succeeded', 'failed']);\nconst networkAdmission = define('SM05.network-admission', 'eligible', { eligible: ['reserved'], reserved: ['waiting', 'admitted', 'cancelled'], waiting: ['admitted', 'cancelled'], admitted: [], cancelled: [] }, ['admitted', 'cancelled']);\nconst runnerRequest = define('SM10.request', 'requesting', { requesting: ['streaming', 'failed'], streaming: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst circuit = define('SM10.endpoint', 'available', { available: ['cooldown'], cooldown: ['available'] });"
+          },
+          consumers: [
+            {
+              file: "lib/limit.js",
+              line: 4,
+              snippet: "const { create } = require('./state-machine'), admission = require('./lifecycles').admission;"
+            }
+          ],
+          chart: {
+            name: "SM04.admission",
+            initial: "queued",
+            states: [
+              "queued",
+              "running",
+              "fulfilled",
+              "rejected",
+              "cancelled"
+            ],
+            terminal: [
+              "fulfilled",
+              "rejected",
+              "cancelled"
+            ],
+            transitions: {
+              queued: [
+                "running",
+                "cancelled"
+              ],
+              running: [
+                "fulfilled",
+                "rejected"
+              ],
+              fulfilled: [],
+              rejected: [],
+              cancelled: []
+            }
+          }
+        },
+        {
+          id: "SM05.network-admission",
+          component: "lib/limit.js",
+          label: "SM05.network-admission",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 30,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const span = define('SM03.span', 'running', { running: ['succeeded', 'failed'], succeeded: [], failed: [] }, ['succeeded', 'failed']);\nconst networkAdmission = define('SM05.network-admission', 'eligible', { eligible: ['reserved'], reserved: ['waiting', 'admitted', 'cancelled'], waiting: ['admitted', 'cancelled'], admitted: [], cancelled: [] }, ['admitted', 'cancelled']);\nconst runnerRequest = define('SM10.request', 'requesting', { requesting: ['streaming', 'failed'], streaming: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst circuit = define('SM10.endpoint', 'available', { available: ['cooldown'], cooldown: ['available'] });\nconst store = define('SM11.store', 'cold', { cold: ['starting', 'ready', 'closed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['starting', 'closed'], closed: [] }, ['closed']);\nconst storeClose = define('SM11.close', 'open', { open: ['flushing'], flushing: ['closing', 'closed', 'open'], closing: ['closed', 'open'], closed: [] }, ['closed']);\nconst writer = define('SM12.writer', 'idle', { idle: ['writing'], writing: ['idle', 'failed'], failed: ['writing'] });\nconst config = define('SM14.config', 'cold', { cold: ['stale', 'validating'], stale: ['validating'], validating: ['ready', 'rejected'], ready: ['stale'], rejected: ['stale', 'validating'] });\nconst registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);"
+          },
+          consumers: [
+            {
+              file: "lib/limit.js",
+              line: 13,
+              snippet: "const reservation = create(require('./lifecycles').networkAdmission); reservation.to('reserved');"
+            }
+          ],
+          chart: {
+            name: "SM05.network-admission",
+            initial: "eligible",
+            states: [
+              "eligible",
+              "reserved",
+              "waiting",
+              "admitted",
+              "cancelled"
+            ],
+            terminal: [
+              "admitted",
+              "cancelled"
+            ],
+            transitions: {
+              eligible: [
+                "reserved"
+              ],
+              reserved: [
+                "waiting",
+                "admitted",
+                "cancelled"
+              ],
+              waiting: [
+                "admitted",
+                "cancelled"
+              ],
+              admitted: [],
+              cancelled: []
+            }
+          }
+        },
+        {
+          id: "SM06.worker",
+          component: "lib/isolate.js",
+          label: "SM06.worker",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 21,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "}, ['fulfilled', 'rejected', 'cancelled']);\nconst worker = define('SM06.worker', 'idle', {\n  idle: ['busy', 'stopping', 'stopped'], busy: ['idle', 'stopping', 'stopped'], stopping: ['stopped'], stopped: [],\n}, ['stopped']);\nconst session = define('SM07.session', 'idle', { idle: ['running'], running: ['idle'] });\nconst sandbox = define('SM07.sandbox', 'absent', { absent: ['alive'], alive: ['absent'] });\nconst cell = define('SM08.cell', 'queued', { queued: ['done', 'failed', 'cancelled'], done: [], failed: [], cancelled: [] }, ['done', 'failed', 'cancelled']);\nconst settlement = define('SM09.settlement', 'pending', { pending: ['settled'], settled: [] }, ['settled']);\nconst process = define('SM03.process', 'running', { running: ['terminating', 'exited'], terminating: ['killing', 'exited'], killing: ['exited'], exited: [] }, ['exited']);\nconst span = define('SM03.span', 'running', { running: ['succeeded', 'failed'], succeeded: [], failed: [] }, ['succeeded', 'failed']);\nconst networkAdmission = define('SM05.network-admission', 'eligible', { eligible: ['reserved'], reserved: ['waiting', 'admitted', 'cancelled'], waiting: ['admitted', 'cancelled'], admitted: [], cancelled: [] }, ['admitted', 'cancelled']);\nconst runnerRequest = define('SM10.request', 'requesting', { requesting: ['streaming', 'failed'], streaming: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst circuit = define('SM10.endpoint', 'available', { available: ['cooldown'], cooldown: ['available'] });\nconst store = define('SM11.store', 'cold', { cold: ['starting', 'ready', 'closed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['starting', 'closed'], closed: [] }, ['closed']);\nconst storeClose = define('SM11.close', 'open', { open: ['flushing'], flushing: ['closing', 'closed', 'open'], closing: ['closed', 'open'], closed: [] }, ['closed']);\nconst writer = define('SM12.writer', 'idle', { idle: ['writing'], writing: ['idle', 'failed'], failed: ['writing'] });"
+          },
+          consumers: [
+            {
+              file: "lib/isolate.js",
+              line: 34,
+              snippet: "w.lifecycle = require('./state-machine').create(require('./lifecycles').worker);"
+            }
+          ],
+          chart: {
+            name: "SM06.worker",
+            initial: "idle",
+            states: [
+              "idle",
+              "busy",
+              "stopping",
+              "stopped"
+            ],
+            terminal: [
+              "stopped"
+            ],
+            transitions: {
+              idle: [
+                "busy",
+                "stopping",
+                "stopped"
+              ],
+              busy: [
+                "idle",
+                "stopping",
+                "stopped"
+              ],
+              stopping: [
+                "stopped"
+              ],
+              stopped: []
+            }
+          }
+        },
+        {
+          id: "SM07.sandbox",
+          component: "lib/js.js",
+          label: "SM07.sandbox",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 25,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const session = define('SM07.session', 'idle', { idle: ['running'], running: ['idle'] });\nconst sandbox = define('SM07.sandbox', 'absent', { absent: ['alive'], alive: ['absent'] });\nconst cell = define('SM08.cell', 'queued', { queued: ['done', 'failed', 'cancelled'], done: [], failed: [], cancelled: [] }, ['done', 'failed', 'cancelled']);\nconst settlement = define('SM09.settlement', 'pending', { pending: ['settled'], settled: [] }, ['settled']);\nconst process = define('SM03.process', 'running', { running: ['terminating', 'exited'], terminating: ['killing', 'exited'], killing: ['exited'], exited: [] }, ['exited']);\nconst span = define('SM03.span', 'running', { running: ['succeeded', 'failed'], succeeded: [], failed: [] }, ['succeeded', 'failed']);\nconst networkAdmission = define('SM05.network-admission', 'eligible', { eligible: ['reserved'], reserved: ['waiting', 'admitted', 'cancelled'], waiting: ['admitted', 'cancelled'], admitted: [], cancelled: [] }, ['admitted', 'cancelled']);\nconst runnerRequest = define('SM10.request', 'requesting', { requesting: ['streaming', 'failed'], streaming: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst circuit = define('SM10.endpoint', 'available', { available: ['cooldown'], cooldown: ['available'] });\nconst store = define('SM11.store', 'cold', { cold: ['starting', 'ready', 'closed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['starting', 'closed'], closed: [] }, ['closed']);\nconst storeClose = define('SM11.close', 'open', { open: ['flushing'], flushing: ['closing', 'closed', 'open'], closing: ['closed', 'open'], closed: [] }, ['closed']);\nconst writer = define('SM12.writer', 'idle', { idle: ['writing'], writing: ['idle', 'failed'], failed: ['writing'] });\nconst config = define('SM14.config', 'cold', { cold: ['stale', 'validating'], stale: ['validating'], validating: ['ready', 'rejected'], ready: ['stale'], rejected: ['stale', 'validating'] });\nconst registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);"
+          },
+          consumers: [
+            {
+              file: "lib/js.js",
+              line: 167,
+              snippet: "this.sandbox = require('./state-machine').create(require('./lifecycles').sandbox);"
+            }
+          ],
+          chart: {
+            name: "SM07.sandbox",
+            initial: "absent",
+            states: [
+              "absent",
+              "alive"
+            ],
+            terminal: [],
+            transitions: {
+              absent: [
+                "alive"
+              ],
+              alive: [
+                "absent"
+              ]
+            }
+          }
+        },
+        {
+          id: "SM07.session",
+          component: "lib/js.js",
+          label: "SM07.session",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 24,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "}, ['stopped']);\nconst session = define('SM07.session', 'idle', { idle: ['running'], running: ['idle'] });\nconst sandbox = define('SM07.sandbox', 'absent', { absent: ['alive'], alive: ['absent'] });\nconst cell = define('SM08.cell', 'queued', { queued: ['done', 'failed', 'cancelled'], done: [], failed: [], cancelled: [] }, ['done', 'failed', 'cancelled']);\nconst settlement = define('SM09.settlement', 'pending', { pending: ['settled'], settled: [] }, ['settled']);\nconst process = define('SM03.process', 'running', { running: ['terminating', 'exited'], terminating: ['killing', 'exited'], killing: ['exited'], exited: [] }, ['exited']);\nconst span = define('SM03.span', 'running', { running: ['succeeded', 'failed'], succeeded: [], failed: [] }, ['succeeded', 'failed']);\nconst networkAdmission = define('SM05.network-admission', 'eligible', { eligible: ['reserved'], reserved: ['waiting', 'admitted', 'cancelled'], waiting: ['admitted', 'cancelled'], admitted: [], cancelled: [] }, ['admitted', 'cancelled']);\nconst runnerRequest = define('SM10.request', 'requesting', { requesting: ['streaming', 'failed'], streaming: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst circuit = define('SM10.endpoint', 'available', { available: ['cooldown'], cooldown: ['available'] });\nconst store = define('SM11.store', 'cold', { cold: ['starting', 'ready', 'closed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['starting', 'closed'], closed: [] }, ['closed']);\nconst storeClose = define('SM11.close', 'open', { open: ['flushing'], flushing: ['closing', 'closed', 'open'], closing: ['closed', 'open'], closed: [] }, ['closed']);\nconst writer = define('SM12.writer', 'idle', { idle: ['writing'], writing: ['idle', 'failed'], failed: ['writing'] });\nconst config = define('SM14.config', 'cold', { cold: ['stale', 'validating'], stale: ['validating'], validating: ['ready', 'rejected'], ready: ['stale'], rejected: ['stale', 'validating'] });\nconst registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);"
+          },
+          consumers: [
+            {
+              file: "lib/js.js",
+              line: 166,
+              snippet: "this.lifecycle = require('./state-machine').create(require('./lifecycles').session);"
+            }
+          ],
+          chart: {
+            name: "SM07.session",
+            initial: "idle",
+            states: [
+              "idle",
+              "running"
+            ],
+            terminal: [],
+            transitions: {
+              idle: [
+                "running"
+              ],
+              running: [
+                "idle"
+              ]
+            }
+          }
+        },
+        {
+          id: "SM08.cell",
+          component: "lib/js.js",
+          label: "SM08.cell",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 26,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const sandbox = define('SM07.sandbox', 'absent', { absent: ['alive'], alive: ['absent'] });\nconst cell = define('SM08.cell', 'queued', { queued: ['done', 'failed', 'cancelled'], done: [], failed: [], cancelled: [] }, ['done', 'failed', 'cancelled']);\nconst settlement = define('SM09.settlement', 'pending', { pending: ['settled'], settled: [] }, ['settled']);\nconst process = define('SM03.process', 'running', { running: ['terminating', 'exited'], terminating: ['killing', 'exited'], killing: ['exited'], exited: [] }, ['exited']);\nconst span = define('SM03.span', 'running', { running: ['succeeded', 'failed'], succeeded: [], failed: [] }, ['succeeded', 'failed']);\nconst networkAdmission = define('SM05.network-admission', 'eligible', { eligible: ['reserved'], reserved: ['waiting', 'admitted', 'cancelled'], waiting: ['admitted', 'cancelled'], admitted: [], cancelled: [] }, ['admitted', 'cancelled']);\nconst runnerRequest = define('SM10.request', 'requesting', { requesting: ['streaming', 'failed'], streaming: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst circuit = define('SM10.endpoint', 'available', { available: ['cooldown'], cooldown: ['available'] });\nconst store = define('SM11.store', 'cold', { cold: ['starting', 'ready', 'closed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['starting', 'closed'], closed: [] }, ['closed']);\nconst storeClose = define('SM11.close', 'open', { open: ['flushing'], flushing: ['closing', 'closed', 'open'], closing: ['closed', 'open'], closed: [] }, ['closed']);\nconst writer = define('SM12.writer', 'idle', { idle: ['writing'], writing: ['idle', 'failed'], failed: ['writing'] });\nconst config = define('SM14.config', 'cold', { cold: ['stale', 'validating'], stale: ['validating'], validating: ['ready', 'rejected'], ready: ['stale'], rejected: ['stale', 'validating'] });\nconst registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);"
+          },
+          consumers: [
+            {
+              file: "lib/js.js",
+              line: 284,
+              snippet: "require('./state-machine').bind(cell, require('./lifecycles').cell);"
+            }
+          ],
+          chart: {
+            name: "SM08.cell",
+            initial: "queued",
+            states: [
+              "queued",
+              "done",
+              "failed",
+              "cancelled"
+            ],
+            terminal: [
+              "done",
+              "failed",
+              "cancelled"
+            ],
+            transitions: {
+              queued: [
+                "done",
+                "failed",
+                "cancelled"
+              ],
+              done: [],
+              failed: [],
+              cancelled: []
+            }
+          }
+        },
+        {
+          id: "SM09.settlement",
+          component: "lib/quickjs.js",
+          label: "SM09.settlement",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 27,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const cell = define('SM08.cell', 'queued', { queued: ['done', 'failed', 'cancelled'], done: [], failed: [], cancelled: [] }, ['done', 'failed', 'cancelled']);\nconst settlement = define('SM09.settlement', 'pending', { pending: ['settled'], settled: [] }, ['settled']);\nconst process = define('SM03.process', 'running', { running: ['terminating', 'exited'], terminating: ['killing', 'exited'], killing: ['exited'], exited: [] }, ['exited']);\nconst span = define('SM03.span', 'running', { running: ['succeeded', 'failed'], succeeded: [], failed: [] }, ['succeeded', 'failed']);\nconst networkAdmission = define('SM05.network-admission', 'eligible', { eligible: ['reserved'], reserved: ['waiting', 'admitted', 'cancelled'], waiting: ['admitted', 'cancelled'], admitted: [], cancelled: [] }, ['admitted', 'cancelled']);\nconst runnerRequest = define('SM10.request', 'requesting', { requesting: ['streaming', 'failed'], streaming: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst circuit = define('SM10.endpoint', 'available', { available: ['cooldown'], cooldown: ['available'] });\nconst store = define('SM11.store', 'cold', { cold: ['starting', 'ready', 'closed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['starting', 'closed'], closed: [] }, ['closed']);\nconst storeClose = define('SM11.close', 'open', { open: ['flushing'], flushing: ['closing', 'closed', 'open'], closing: ['closed', 'open'], closed: [] }, ['closed']);\nconst writer = define('SM12.writer', 'idle', { idle: ['writing'], writing: ['idle', 'failed'], failed: ['writing'] });\nconst config = define('SM14.config', 'cold', { cold: ['stale', 'validating'], stale: ['validating'], validating: ['ready', 'rejected'], ready: ['stale'], rejected: ['stale', 'validating'] });\nconst registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);"
+          },
+          consumers: [
+            {
+              file: "lib/javacheck.js",
+              line: 148,
+              snippet: "const reply = create(L.settlement);"
+            },
+            {
+              file: "lib/quickjs.js",
+              line: 10,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').settlement);"
+            },
+            {
+              file: "lib/runner.js",
+              line: 90,
+              snippet: "const reply = require('./state-machine').create(require('./lifecycles').settlement);"
+            }
+          ],
+          chart: {
+            name: "SM09.settlement",
+            initial: "pending",
+            states: [
+              "pending",
+              "settled"
+            ],
+            terminal: [
+              "settled"
+            ],
+            transitions: {
+              pending: [
+                "settled"
+              ],
+              settled: []
+            }
+          }
+        },
+        {
+          id: "SM10.endpoint",
+          component: "lib/runner.js",
+          label: "SM10.endpoint",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 32,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const runnerRequest = define('SM10.request', 'requesting', { requesting: ['streaming', 'failed'], streaming: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst circuit = define('SM10.endpoint', 'available', { available: ['cooldown'], cooldown: ['available'] });\nconst store = define('SM11.store', 'cold', { cold: ['starting', 'ready', 'closed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['starting', 'closed'], closed: [] }, ['closed']);\nconst storeClose = define('SM11.close', 'open', { open: ['flushing'], flushing: ['closing', 'closed', 'open'], closing: ['closed', 'open'], closed: [] }, ['closed']);\nconst writer = define('SM12.writer', 'idle', { idle: ['writing'], writing: ['idle', 'failed'], failed: ['writing'] });\nconst config = define('SM14.config', 'cold', { cold: ['stale', 'validating'], stale: ['validating'], validating: ['ready', 'rejected'], ready: ['stale'], rejected: ['stale', 'validating'] });\nconst registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);"
+          },
+          consumers: [],
+          chart: {
+            name: "SM10.endpoint",
+            initial: "available",
+            states: [
+              "available",
+              "cooldown"
+            ],
+            terminal: [],
+            transitions: {
+              available: [
+                "cooldown"
+              ],
+              cooldown: [
+                "available"
+              ]
+            }
+          }
+        },
+        {
+          id: "SM10.request",
+          component: "lib/runner.js",
+          label: "SM10.request",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 31,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const networkAdmission = define('SM05.network-admission', 'eligible', { eligible: ['reserved'], reserved: ['waiting', 'admitted', 'cancelled'], waiting: ['admitted', 'cancelled'], admitted: [], cancelled: [] }, ['admitted', 'cancelled']);\nconst runnerRequest = define('SM10.request', 'requesting', { requesting: ['streaming', 'failed'], streaming: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst circuit = define('SM10.endpoint', 'available', { available: ['cooldown'], cooldown: ['available'] });\nconst store = define('SM11.store', 'cold', { cold: ['starting', 'ready', 'closed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['starting', 'closed'], closed: [] }, ['closed']);\nconst storeClose = define('SM11.close', 'open', { open: ['flushing'], flushing: ['closing', 'closed', 'open'], closing: ['closed', 'open'], closed: [] }, ['closed']);\nconst writer = define('SM12.writer', 'idle', { idle: ['writing'], writing: ['idle', 'failed'], failed: ['writing'] });\nconst config = define('SM14.config', 'cold', { cold: ['stale', 'validating'], stale: ['validating'], validating: ['ready', 'rejected'], ready: ['stale'], rejected: ['stale', 'validating'] });\nconst registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);"
+          },
+          consumers: [],
+          chart: {
+            name: "SM10.request",
+            initial: "requesting",
+            states: [
+              "requesting",
+              "streaming",
+              "completed",
+              "failed"
+            ],
+            terminal: [
+              "completed",
+              "failed"
+            ],
+            transitions: {
+              requesting: [
+                "streaming",
+                "failed"
+              ],
+              streaming: [
+                "completed",
+                "failed"
+              ],
+              completed: [],
+              failed: []
+            }
+          }
+        },
+        {
+          id: "SM11.close",
+          component: "lib/state-store.js",
+          label: "SM11.close",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 34,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const store = define('SM11.store', 'cold', { cold: ['starting', 'ready', 'closed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['starting', 'closed'], closed: [] }, ['closed']);\nconst storeClose = define('SM11.close', 'open', { open: ['flushing'], flushing: ['closing', 'closed', 'open'], closing: ['closed', 'open'], closed: [] }, ['closed']);\nconst writer = define('SM12.writer', 'idle', { idle: ['writing'], writing: ['idle', 'failed'], failed: ['writing'] });\nconst config = define('SM14.config', 'cold', { cold: ['stale', 'validating'], stale: ['validating'], validating: ['ready', 'rejected'], ready: ['stale'], rejected: ['stale', 'validating'] });\nconst registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {\n  disconnected: ['initializing', 'closing'], initializing: ['ready', 'disconnected', 'closing'], ready: ['closing'], closing: ['disconnected'],"
+          },
+          consumers: [],
+          chart: {
+            name: "SM11.close",
+            initial: "open",
+            states: [
+              "open",
+              "flushing",
+              "closing",
+              "closed"
+            ],
+            terminal: [
+              "closed"
+            ],
+            transitions: {
+              open: [
+                "flushing"
+              ],
+              flushing: [
+                "closing",
+                "closed",
+                "open"
+              ],
+              closing: [
+                "closed",
+                "open"
+              ],
+              closed: []
+            }
+          }
+        },
+        {
+          id: "SM11.store",
+          component: "lib/state-store.js",
+          label: "SM11.store",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 33,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const circuit = define('SM10.endpoint', 'available', { available: ['cooldown'], cooldown: ['available'] });\nconst store = define('SM11.store', 'cold', { cold: ['starting', 'ready', 'closed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['starting', 'closed'], closed: [] }, ['closed']);\nconst storeClose = define('SM11.close', 'open', { open: ['flushing'], flushing: ['closing', 'closed', 'open'], closing: ['closed', 'open'], closed: [] }, ['closed']);\nconst writer = define('SM12.writer', 'idle', { idle: ['writing'], writing: ['idle', 'failed'], failed: ['writing'] });\nconst config = define('SM14.config', 'cold', { cold: ['stale', 'validating'], stale: ['validating'], validating: ['ready', 'rejected'], ready: ['stale'], rejected: ['stale', 'validating'] });\nconst registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {"
+          },
+          consumers: [],
+          chart: {
+            name: "SM11.store",
+            initial: "cold",
+            states: [
+              "cold",
+              "starting",
+              "ready",
+              "failed",
+              "closed"
+            ],
+            terminal: [
+              "closed"
+            ],
+            transitions: {
+              cold: [
+                "starting",
+                "ready",
+                "closed"
+              ],
+              starting: [
+                "ready",
+                "failed",
+                "closed"
+              ],
+              ready: [
+                "failed",
+                "closed"
+              ],
+              failed: [
+                "starting",
+                "closed"
+              ],
+              closed: []
+            }
+          }
+        },
+        {
+          id: "SM12.writer",
+          component: "lib/state-store.js",
+          label: "SM12.writer",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 35,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const storeClose = define('SM11.close', 'open', { open: ['flushing'], flushing: ['closing', 'closed', 'open'], closing: ['closed', 'open'], closed: [] }, ['closed']);\nconst writer = define('SM12.writer', 'idle', { idle: ['writing'], writing: ['idle', 'failed'], failed: ['writing'] });\nconst config = define('SM14.config', 'cold', { cold: ['stale', 'validating'], stale: ['validating'], validating: ['ready', 'rejected'], ready: ['stale'], rejected: ['stale', 'validating'] });\nconst registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {\n  disconnected: ['initializing', 'closing'], initializing: ['ready', 'disconnected', 'closing'], ready: ['closing'], closing: ['disconnected'],\n});"
+          },
+          consumers: [],
+          chart: {
+            name: "SM12.writer",
+            initial: "idle",
+            states: [
+              "idle",
+              "writing",
+              "failed"
+            ],
+            terminal: [],
+            transitions: {
+              idle: [
+                "writing"
+              ],
+              writing: [
+                "idle",
+                "failed"
+              ],
+              failed: [
+                "writing"
+              ]
+            }
+          }
+        },
+        {
+          id: "SM13.migration",
+          component: "lib/state-worker.js",
+          label: "SM13.migration",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 91,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);\nconst revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);"
+          },
+          consumers: [
+            {
+              file: "lib/state-worker.js",
+              line: 99,
+              snippet: "const prior = migrationCursor(key), model = require('./lifecycles').migration;"
+            }
+          ],
+          chart: {
+            name: "SM13.migration",
+            initial: "new",
+            states: [
+              "new",
+              "reading",
+              "paused",
+              "complete"
+            ],
+            terminal: [],
+            transitions: {
+              new: [
+                "reading"
+              ],
+              reading: [
+                "paused",
+                "complete"
+              ],
+              paused: [
+                "reading"
+              ],
+              complete: [
+                "reading"
+              ]
+            }
+          }
+        },
+        {
+          id: "SM14.config",
+          component: "lib/config.js",
+          label: "SM14.config",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 36,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const writer = define('SM12.writer', 'idle', { idle: ['writing'], writing: ['idle', 'failed'], failed: ['writing'] });\nconst config = define('SM14.config', 'cold', { cold: ['stale', 'validating'], stale: ['validating'], validating: ['ready', 'rejected'], ready: ['stale'], rejected: ['stale', 'validating'] });\nconst registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {\n  disconnected: ['initializing', 'closing'], initializing: ['ready', 'disconnected', 'closing'], ready: ['closing'], closing: ['disconnected'],\n});\nconst fixture = define('SM26.fixture', 'starting', { starting: ['ready', 'cleanup-failed', 'stopped'], ready: ['cleanup-failed', 'stopped'], 'cleanup-failed': ['stopped'], stopped: [] }, ['stopped']);"
+          },
+          consumers: [
+            {
+              file: "lib/config.js",
+              line: 84,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').config);"
+            }
+          ],
+          chart: {
+            name: "SM14.config",
+            initial: "cold",
+            states: [
+              "cold",
+              "stale",
+              "validating",
+              "ready",
+              "rejected"
+            ],
+            terminal: [],
+            transitions: {
+              cold: [
+                "stale",
+                "validating"
+              ],
+              stale: [
+                "validating"
+              ],
+              validating: [
+                "ready",
+                "rejected"
+              ],
+              ready: [
+                "stale"
+              ],
+              rejected: [
+                "stale",
+                "validating"
+              ]
+            }
+          }
+        },
+        {
+          id: "SM15.registry",
+          component: "lib/tools.js",
+          label: "SM15.registry",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 37,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const config = define('SM14.config', 'cold', { cold: ['stale', 'validating'], stale: ['validating'], validating: ['ready', 'rejected'], ready: ['stale'], rejected: ['stale', 'validating'] });\nconst registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {\n  disconnected: ['initializing', 'closing'], initializing: ['ready', 'disconnected', 'closing'], ready: ['closing'], closing: ['disconnected'],\n});\nconst fixture = define('SM26.fixture', 'starting', { starting: ['ready', 'cleanup-failed', 'stopped'], ready: ['cleanup-failed', 'stopped'], 'cleanup-failed': ['stopped'], stopped: [] }, ['stopped']);\nconst scenario = define('SM28.scenario', 'starting', { starting: ['ready', 'failed', 'stopped'], ready: ['failed', 'stopped'], failed: ['stopped'], stopped: [] }, ['stopped']);"
+          },
+          consumers: [
+            {
+              file: "lib/tools.js",
+              line: 990,
+              snippet: "const activation=require('./state-machine').create(require('./lifecycles').registry,prior?'active':'missing');"
+            }
+          ],
+          chart: {
+            name: "SM15.registry",
+            initial: "missing",
+            states: [
+              "missing",
+              "active",
+              "building",
+              "superseded",
+              "rejected"
+            ],
+            terminal: [
+              "rejected"
+            ],
+            transitions: {
+              missing: [
+                "building"
+              ],
+              active: [
+                "building"
+              ],
+              building: [
+                "active",
+                "superseded",
+                "rejected"
+              ],
+              superseded: [
+                "building",
+                "rejected"
+              ],
+              rejected: []
+            }
+          }
+        },
+        {
+          id: "SM16.identity",
+          component: "lib/access.js",
+          label: "SM16.identity",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 69,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const pit = define('SM75.pit', 'opening', { opening: ['open'], open: ['reading', 'closing'], reading: ['closing'], closing: ['closed', 'close-failed'], closed: [], 'close-failed': [] }, ['closed', 'close-failed']);\nconst identity = define('SM16.identity', 'unverified', { unverified: ['authenticated', 'rejected'], authenticated: ['scoped', 'rejected'], scoped: [], rejected: [] }, ['scoped', 'rejected']);\nconst mcp = define('SM17.request', 'running', { running: ['cancelling', 'replied', 'closed'], cancelling: ['replied', 'closed'], replied: ['closed'], closed: [] }, ['closed']);\nconst effects = define('SM27.effects', 'unarmed', { unarmed: ['arming'], arming: ['armed', 'rejected'], armed: ['observing'], observing: ['checked', 'failed'], checked: [], rejected: [], failed: [] }, ['checked', 'rejected', 'failed']);\nconst action = define('SM29.action', 'reserved', { reserved: ['executing'], executing: ['completed', 'unknown'], completed: [], unknown: [] }, ['completed', 'unknown']);\nconst quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['c"
+          },
+          consumers: [
+            {
+              file: "lib/access.js",
+              line: 36,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').identity);"
+            }
+          ],
+          chart: {
+            name: "SM16.identity",
+            initial: "unverified",
+            states: [
+              "unverified",
+              "authenticated",
+              "scoped",
+              "rejected"
+            ],
+            terminal: [
+              "scoped",
+              "rejected"
+            ],
+            transitions: {
+              unverified: [
+                "authenticated",
+                "rejected"
+              ],
+              authenticated: [
+                "scoped",
+                "rejected"
+              ],
+              scoped: [],
+              rejected: []
+            }
+          }
+        },
+        {
+          id: "SM17.request",
+          component: "server.js",
+          label: "SM17.request",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 70,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const identity = define('SM16.identity', 'unverified', { unverified: ['authenticated', 'rejected'], authenticated: ['scoped', 'rejected'], scoped: [], rejected: [] }, ['scoped', 'rejected']);\nconst mcp = define('SM17.request', 'running', { running: ['cancelling', 'replied', 'closed'], cancelling: ['replied', 'closed'], replied: ['closed'], closed: [] }, ['closed']);\nconst effects = define('SM27.effects', 'unarmed', { unarmed: ['arming'], arming: ['armed', 'rejected'], armed: ['observing'], observing: ['checked', 'failed'], checked: [], rejected: [], failed: [] }, ['checked', 'rejected', 'failed']);\nconst action = define('SM29.action', 'reserved', { reserved: ['executing'], executing: ['completed', 'unknown'], completed: [], unknown: [] }, ['completed', 'unknown']);\nconst quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], "
+          },
+          consumers: [],
+          chart: {
+            name: "SM17.request",
+            initial: "running",
+            states: [
+              "running",
+              "cancelling",
+              "replied",
+              "closed"
+            ],
+            terminal: [
+              "closed"
+            ],
+            transitions: {
+              running: [
+                "cancelling",
+                "replied",
+                "closed"
+              ],
+              cancelling: [
+                "replied",
+                "closed"
+              ],
+              replied: [
+                "closed"
+              ],
+              closed: []
+            }
+          }
+        },
+        {
+          id: "SM18.handshake",
+          component: "lib/browser-mcp.js",
+          label: "SM18.handshake",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 47,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {\n  disconnected: ['initializing', 'closing'], initializing: ['ready', 'disconnected', 'closing'], ready: ['closing'], closing: ['disconnected'],\n});\nconst fixture = define('SM26.fixture', 'starting', { starting: ['ready', 'cleanup-failed', 'stopped'], ready: ['cleanup-failed', 'stopped'], 'cleanup-failed': ['stopped'], stopped: [] }, ['stopped']);\nconst scenario = define('SM28.scenario', 'starting', { starting: ['ready', 'failed', 'stopped'], ready: ['failed', 'stopped'], failed: ['stopped'], stopped: [] }, ['stopped']);\nconst collection = define('SM35.collection', 'running', { running: ['passed', 'failed', 'cancelled'], passed: [], failed: [], cancelled: [] }, ['passed', 'failed', 'cancelled']);\nconst semantic = define('SM45.semantic', 'uploading', {\n  uploading: ['queued', 'failed', 'interrupted'], queued: ['parsing', 'querying', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  parsing: ['enriching', 'cancelling', 'failed', 'cancelled', 'interrupted'], enriching: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  querying: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'], cancelling: ['cancelled', 'failed', 'interrupted'],\n  draining: ['ready', 'cancelled', 'failed', 'interrupted'],\n  ready: [], failed: [], cancelled: [], interrupted: [],\n}, ['ready', 'failed', 'cancelled', 'interrupted']);\nconst sftp = define('SM19.sftp', 'connecting', { connecting: ['opening', 'closing', 'failed', 'closed'], opening: ['ready', 'closing', 'failed', 'closed'], ready: ['closing', 'failed', 'closed'], closing: ['failed', 'closed'], failed: ['closing', 'closed'], closed: [] }, ['closed']);\nconst sftpOperation = define('SM19.operation', 'pending', { pending: ['settled'], settled: [] }, ['settled']);"
+          },
+          consumers: [
+            {
+              file: "lib/browser-mcp.js",
+              line: 12,
+              snippet: "this.lifecycle = require('./state-machine').create(require('./lifecycles').handshake);"
+            }
+          ],
+          chart: {
+            name: "SM18.handshake",
+            initial: "disconnected",
+            states: [
+              "disconnected",
+              "initializing",
+              "ready",
+              "closing"
+            ],
+            terminal: [],
+            transitions: {
+              disconnected: [
+                "initializing",
+                "closing"
+              ],
+              initializing: [
+                "ready",
+                "disconnected",
+                "closing"
+              ],
+              ready: [
+                "closing"
+              ],
+              closing: [
+                "disconnected"
+              ]
+            }
+          }
+        },
+        {
+          id: "SM19.operation",
+          component: "lib/files.js",
+          label: "SM19.operation",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 61,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const sftp = define('SM19.sftp', 'connecting', { connecting: ['opening', 'closing', 'failed', 'closed'], opening: ['ready', 'closing', 'failed', 'closed'], ready: ['closing', 'failed', 'closed'], closing: ['failed', 'closed'], failed: ['closing', 'closed'], closed: [] }, ['closed']);\nconst sftpOperation = define('SM19.operation', 'pending', { pending: ['settled'], settled: [] }, ['settled']);\nconst control = define('SM21.control', 'opening', { opening: ['locked', 'failed'], locked: ['initializing', 'verifying', 'failed'], initializing: ['verifying', 'failed'], verifying: ['ready', 'failed'], ready: ['releasing', 'failed'], failed: ['releasing'], releasing: ['closed', 'cleanup-failed'], closed: [], 'cleanup-failed': [] }, ['closed', 'cleanup-failed']);\nconst archive = define('SM54.archive', 'checking', { checking: ['copied', 'archived', 'failed'], copied: ['verified', 'failed'], verified: ['removing'], removing: ['archived', 'source-retained', 'recovery-needed'], archived: [], failed: [], 'source-retained': [], 'recovery-needed': [] }, ['archived', 'failed', 'source-retained', 'recovery-needed']);\nconst archiveRemoval = define('SM54.source-removal', 'source', { source: ['holding', 'removed'], holding: ['verified', 'restoring'], verified: ['removed', 'restoring'], restoring: ['restored', 'recovery-needed'], removed: [], restored: [], 'recovery-needed': [] }, ['removed', 'restored', 'recovery-needed']);\nconst contextArchive = define('SM54.context-archive', 'checking', { checking: ['renamed'], renamed: ['published', 'restoring'], restoring: ['restored', 'recovery-needed'], published: [], restored: [], 'recovery-needed': [] }, ['published', 'restored', 'recovery-needed']);\nconst context = define('SM53.context', 'active', { active: ['paused', 'done'], paused: ['active', 'done'], done: ['active', 'paused'] });\nconst captureCall = define('SM51.capture-call', 'invoking', { invoking: ['succeeded', 'failed'], succeeded: ['saving'], failed: ['saving'], saving: ['saved', 'save-failed'], saved: [], 'save-failed': [] }, ['saved', 'save-failed']);\nconst pit = define('SM75.pit', 'opening', { opening: ['open'], open: ['reading', 'closing'], reading: ['closing'], closing: ['closed', 'close-failed'], closed: [], 'close-failed': [] }, ['closed', 'close-failed']);\nconst identity = define('SM16.identity', 'unverified', { unverified: ['authenticated', 'rejected'], authenticated: ['scoped', 'rejected'], scoped: [], rejected: [] }, ['scoped', 'rejected']);\nconst mcp = define('SM17.request', 'running', { running: ['cancelling', 'replied', 'closed'], cancelling: ['replied', 'closed'], replied: ['closed'], closed: [] }, ['closed']);\nconst effects = define('SM27.effects', 'unarmed', { unarmed: ['arming'], arming: ['armed', 'rejected'], armed: ['observing'], observing: ['checked', 'failed'], checked: [], rejected: [], failed: [] }, ['checked', 'rejected', 'failed']);\nconst action = define('SM29.action', 'reserved', { reserved: ['executing'], executing: ['completed', 'unknown'], completed: [], unknown: [] }, ['completed', 'unknown']);\nconst quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading"
+          },
+          consumers: [
+            {
+              file: "lib/files.js",
+              line: 115,
+              snippet: "const operation = require('./state-machine').create(require('./lifecycles').sftpOperation);"
+            }
+          ],
+          chart: {
+            name: "SM19.operation",
+            initial: "pending",
+            states: [
+              "pending",
+              "settled"
+            ],
+            terminal: [
+              "settled"
+            ],
+            transitions: {
+              pending: [
+                "settled"
+              ],
+              settled: []
+            }
+          }
+        },
+        {
+          id: "SM19.sftp",
+          component: "lib/files.js",
+          label: "SM19.sftp",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 60,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "}, ['ready', 'failed', 'cancelled', 'interrupted']);\nconst sftp = define('SM19.sftp', 'connecting', { connecting: ['opening', 'closing', 'failed', 'closed'], opening: ['ready', 'closing', 'failed', 'closed'], ready: ['closing', 'failed', 'closed'], closing: ['failed', 'closed'], failed: ['closing', 'closed'], closed: [] }, ['closed']);\nconst sftpOperation = define('SM19.operation', 'pending', { pending: ['settled'], settled: [] }, ['settled']);\nconst control = define('SM21.control', 'opening', { opening: ['locked', 'failed'], locked: ['initializing', 'verifying', 'failed'], initializing: ['verifying', 'failed'], verifying: ['ready', 'failed'], ready: ['releasing', 'failed'], failed: ['releasing'], releasing: ['closed', 'cleanup-failed'], closed: [], 'cleanup-failed': [] }, ['closed', 'cleanup-failed']);\nconst archive = define('SM54.archive', 'checking', { checking: ['copied', 'archived', 'failed'], copied: ['verified', 'failed'], verified: ['removing'], removing: ['archived', 'source-retained', 'recovery-needed'], archived: [], failed: [], 'source-retained': [], 'recovery-needed': [] }, ['archived', 'failed', 'source-retained', 'recovery-needed']);\nconst archiveRemoval = define('SM54.source-removal', 'source', { source: ['holding', 'removed'], holding: ['verified', 'restoring'], verified: ['removed', 'restoring'], restoring: ['restored', 'recovery-needed'], removed: [], restored: [], 'recovery-needed': [] }, ['removed', 'restored', 'recovery-needed']);\nconst contextArchive = define('SM54.context-archive', 'checking', { checking: ['renamed'], renamed: ['published', 'restoring'], restoring: ['restored', 'recovery-needed'], published: [], restored: [], 'recovery-needed': [] }, ['published', 'restored', 'recovery-needed']);\nconst context = define('SM53.context', 'active', { active: ['paused', 'done'], paused: ['active', 'done'], done: ['active', 'paused'] });\nconst captureCall = define('SM51.capture-call', 'invoking', { invoking: ['succeeded', 'failed'], succeeded: ['saving'], failed: ['saving'], saving: ['saved', 'save-failed'], saved: [], 'save-failed': [] }, ['saved', 'save-failed']);\nconst pit = define('SM75.pit', 'opening', { opening: ['open'], open: ['reading', 'closing'], reading: ['closing'], closing: ['closed', 'close-failed'], closed: [], 'close-failed': [] }, ['closed', 'close-failed']);\nconst identity = define('SM16.identity', 'unverified', { unverified: ['authenticated', 'rejected'], authenticated: ['scoped', 'rejected'], scoped: [], rejected: [] }, ['scoped', 'rejected']);\nconst mcp = define('SM17.request', 'running', { running: ['cancelling', 'replied', 'closed'], cancelling: ['replied', 'closed'], replied: ['closed'], closed: [] }, ['closed']);\nconst effects = define('SM27.effects', 'unarmed', { unarmed: ['arming'], arming: ['armed', 'rejected'], armed: ['observing'], observing: ['checked', 'failed'], checked: [], rejected: [], failed: [] }, ['checked', 'rejected', 'failed']);\nconst action = define('SM29.action', 'reserved', { reserved: ['executing'], executing: ['completed', 'unknown'], completed: [], unknown: [] }, ['completed', 'unknown']);\nconst quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);"
+          },
+          consumers: [
+            {
+              file: "lib/files.js",
+              line: 90,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').sftp);"
+            }
+          ],
+          chart: {
+            name: "SM19.sftp",
+            initial: "connecting",
+            states: [
+              "connecting",
+              "opening",
+              "ready",
+              "closing",
+              "failed",
+              "closed"
+            ],
+            terminal: [
+              "closed"
+            ],
+            transitions: {
+              connecting: [
+                "opening",
+                "closing",
+                "failed",
+                "closed"
+              ],
+              opening: [
+                "ready",
+                "closing",
+                "failed",
+                "closed"
+              ],
+              ready: [
+                "closing",
+                "failed",
+                "closed"
+              ],
+              closing: [
+                "failed",
+                "closed"
+              ],
+              failed: [
+                "closing",
+                "closed"
+              ],
+              closed: []
+            }
+          }
+        },
+        {
+          id: "SM20.transaction",
+          component: "lib/pg.js",
+          label: "SM20.transaction",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 38,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {\n  disconnected: ['initializing', 'closing'], initializing: ['ready', 'disconnected', 'closing'], ready: ['closing'], closing: ['disconnected'],\n});\nconst fixture = define('SM26.fixture', 'starting', { starting: ['ready', 'cleanup-failed', 'stopped'], ready: ['cleanup-failed', 'stopped'], 'cleanup-failed': ['stopped'], stopped: [] }, ['stopped']);\nconst scenario = define('SM28.scenario', 'starting', { starting: ['ready', 'failed', 'stopped'], ready: ['failed', 'stopped'], failed: ['stopped'], stopped: [] }, ['stopped']);\nconst collection = define('SM35.collection', 'running', { running: ['passed', 'failed', 'cancelled'], passed: [], failed: [], cancelled: [] }, ['passed', 'failed', 'cancelled']);"
+          },
+          consumers: [
+            {
+              file: "lib/pg.js",
+              line: 31,
+              snippet: "const lifecycle=require('./state-machine').create(require('./lifecycles').transaction);"
+            }
+          ],
+          chart: {
+            name: "SM20.transaction",
+            initial: "opening",
+            states: [
+              "opening",
+              "reading",
+              "committed",
+              "rolled-back",
+              "cancelled"
+            ],
+            terminal: [
+              "committed",
+              "rolled-back",
+              "cancelled"
+            ],
+            transitions: {
+              opening: [
+                "reading",
+                "rolled-back",
+                "cancelled"
+              ],
+              reading: [
+                "committed",
+                "rolled-back",
+                "cancelled"
+              ],
+              committed: [],
+              "rolled-back": [],
+              cancelled: []
+            }
+          }
+        },
+        {
+          id: "SM21.control",
+          component: "lib/testdb.js",
+          label: "SM21.control",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 62,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const sftpOperation = define('SM19.operation', 'pending', { pending: ['settled'], settled: [] }, ['settled']);\nconst control = define('SM21.control', 'opening', { opening: ['locked', 'failed'], locked: ['initializing', 'verifying', 'failed'], initializing: ['verifying', 'failed'], verifying: ['ready', 'failed'], ready: ['releasing', 'failed'], failed: ['releasing'], releasing: ['closed', 'cleanup-failed'], closed: [], 'cleanup-failed': [] }, ['closed', 'cleanup-failed']);\nconst archive = define('SM54.archive', 'checking', { checking: ['copied', 'archived', 'failed'], copied: ['verified', 'failed'], verified: ['removing'], removing: ['archived', 'source-retained', 'recovery-needed'], archived: [], failed: [], 'source-retained': [], 'recovery-needed': [] }, ['archived', 'failed', 'source-retained', 'recovery-needed']);\nconst archiveRemoval = define('SM54.source-removal', 'source', { source: ['holding', 'removed'], holding: ['verified', 'restoring'], verified: ['removed', 'restoring'], restoring: ['restored', 'recovery-needed'], removed: [], restored: [], 'recovery-needed': [] }, ['removed', 'restored', 'recovery-needed']);\nconst contextArchive = define('SM54.context-archive', 'checking', { checking: ['renamed'], renamed: ['published', 'restoring'], restoring: ['restored', 'recovery-needed'], published: [], restored: [], 'recovery-needed': [] }, ['published', 'restored', 'recovery-needed']);\nconst context = define('SM53.context', 'active', { active: ['paused', 'done'], paused: ['active', 'done'], done: ['active', 'paused'] });\nconst captureCall = define('SM51.capture-call', 'invoking', { invoking: ['succeeded', 'failed'], succeeded: ['saving'], failed: ['saving'], saving: ['saved', 'save-failed'], saved: [], 'save-failed': [] }, ['saved', 'save-failed']);\nconst pit = define('SM75.pit', 'opening', { opening: ['open'], open: ['reading', 'closing'], reading: ['closing'], closing: ['closed', 'close-failed'], closed: [], 'close-failed': [] }, ['closed', 'close-failed']);\nconst identity = define('SM16.identity', 'unverified', { unverified: ['authenticated', 'rejected'], authenticated: ['scoped', 'rejected'], scoped: [], rejected: [] }, ['scoped', 'rejected']);\nconst mcp = define('SM17.request', 'running', { running: ['cancelling', 'replied', 'closed'], cancelling: ['replied', 'closed'], replied: ['closed'], closed: [] }, ['closed']);\nconst effects = define('SM27.effects', 'unarmed', { unarmed: ['arming'], arming: ['armed', 'rejected'], armed: ['observing'], observing: ['checked', 'failed'], checked: [], rejected: [], failed: [] }, ['checked', 'rejected', 'failed']);\nconst action = define('SM29.action', 'reserved', { reserved: ['executing'], executing: ['completed', 'unknown'], completed: [], unknown: [] }, ['completed', 'unknown']);\nconst quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: "
+          },
+          consumers: [
+            {
+              file: "lib/testdb.js",
+              line: 29,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').control);"
+            }
+          ],
+          chart: {
+            name: "SM21.control",
+            initial: "opening",
+            states: [
+              "opening",
+              "locked",
+              "initializing",
+              "verifying",
+              "ready",
+              "failed",
+              "releasing",
+              "closed",
+              "cleanup-failed"
+            ],
+            terminal: [
+              "closed",
+              "cleanup-failed"
+            ],
+            transitions: {
+              opening: [
+                "locked",
+                "failed"
+              ],
+              locked: [
+                "initializing",
+                "verifying",
+                "failed"
+              ],
+              initializing: [
+                "verifying",
+                "failed"
+              ],
+              verifying: [
+                "ready",
+                "failed"
+              ],
+              ready: [
+                "releasing",
+                "failed"
+              ],
+              failed: [
+                "releasing"
+              ],
+              releasing: [
+                "closed",
+                "cleanup-failed"
+              ],
+              closed: [],
+              "cleanup-failed": []
+            }
+          }
+        },
+        {
+          id: "SM22.scratch-resource",
+          component: "lib/testdb.js",
+          label: "SM22.scratch-resource",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 39,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {\n  disconnected: ['initializing', 'closing'], initializing: ['ready', 'disconnected', 'closing'], ready: ['closing'], closing: ['disconnected'],\n});\nconst fixture = define('SM26.fixture', 'starting', { starting: ['ready', 'cleanup-failed', 'stopped'], ready: ['cleanup-failed', 'stopped'], 'cleanup-failed': ['stopped'], stopped: [] }, ['stopped']);\nconst scenario = define('SM28.scenario', 'starting', { starting: ['ready', 'failed', 'stopped'], ready: ['failed', 'stopped'], failed: ['stopped'], stopped: [] }, ['stopped']);\nconst collection = define('SM35.collection', 'running', { running: ['passed', 'failed', 'cancelled'], passed: [], failed: [], cancelled: [] }, ['passed', 'failed', 'cancelled']);\nconst semantic = define('SM45.semantic', 'uploading', {"
+          },
+          consumers: [
+            {
+              file: "lib/testdb.js",
+              line: 129,
+              snippet: "require('./state-machine').next(require('./lifecycles').scratch, resource.state, 'deleted');"
+            }
+          ],
+          chart: {
+            name: "SM22.scratch-resource",
+            initial: "creating",
+            states: [
+              "creating",
+              "ready",
+              "frozen",
+              "failed",
+              "cleanup-failed",
+              "deleted"
+            ],
+            terminal: [
+              "deleted"
+            ],
+            transitions: {
+              creating: [
+                "ready",
+                "failed",
+                "cleanup-failed",
+                "deleted"
+              ],
+              ready: [
+                "frozen",
+                "cleanup-failed",
+                "deleted"
+              ],
+              frozen: [
+                "cleanup-failed",
+                "deleted"
+              ],
+              failed: [
+                "cleanup-failed",
+                "deleted"
+              ],
+              "cleanup-failed": [
+                "deleted"
+              ],
+              deleted: []
+            }
+          }
+        },
+        {
+          id: "SM23.template",
+          component: "lib/testdb-templates.js",
+          label: "SM23.template",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 40,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {\n  disconnected: ['initializing', 'closing'], initializing: ['ready', 'disconnected', 'closing'], ready: ['closing'], closing: ['disconnected'],\n});\nconst fixture = define('SM26.fixture', 'starting', { starting: ['ready', 'cleanup-failed', 'stopped'], ready: ['cleanup-failed', 'stopped'], 'cleanup-failed': ['stopped'], stopped: [] }, ['stopped']);\nconst scenario = define('SM28.scenario', 'starting', { starting: ['ready', 'failed', 'stopped'], ready: ['failed', 'stopped'], failed: ['stopped'], stopped: [] }, ['stopped']);\nconst collection = define('SM35.collection', 'running', { running: ['passed', 'failed', 'cancelled'], passed: [], failed: [], cancelled: [] }, ['passed', 'failed', 'cancelled']);\nconst semantic = define('SM45.semantic', 'uploading', {\n  uploading: ['queued', 'failed', 'interrupted'], queued: ['parsing', 'querying', 'cancelling', 'failed', 'cancelled', 'interrupted'],"
+          },
+          consumers: [
+            {
+              file: "lib/testdb-templates.js",
+              line: 281,
+              snippet: "if (!dryRun) { require('./state-machine').next(require('./lifecycles').template, template.state, 'deleted'); await sql.unsafe(`delete from ${SCHEMA}.templates where key=$1`, [template.key]); }"
+            }
+          ],
+          chart: {
+            name: "SM23.template",
+            initial: "building",
+            states: [
+              "building",
+              "ready",
+              "failed",
+              "invalid",
+              "deleted"
+            ],
+            terminal: [
+              "deleted"
+            ],
+            transitions: {
+              building: [
+                "ready",
+                "failed",
+                "invalid",
+                "deleted"
+              ],
+              ready: [
+                "invalid",
+                "deleted"
+              ],
+              failed: [
+                "invalid",
+                "deleted"
+              ],
+              invalid: [
+                "deleted"
+              ],
+              deleted: []
+            }
+          }
+        },
+        {
+          id: "SM24.lease",
+          component: "lib/testdb-templates.js",
+          label: "SM24.lease",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 41,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {\n  disconnected: ['initializing', 'closing'], initializing: ['ready', 'disconnected', 'closing'], ready: ['closing'], closing: ['disconnected'],\n});\nconst fixture = define('SM26.fixture', 'starting', { starting: ['ready', 'cleanup-failed', 'stopped'], ready: ['cleanup-failed', 'stopped'], 'cleanup-failed': ['stopped'], stopped: [] }, ['stopped']);\nconst scenario = define('SM28.scenario', 'starting', { starting: ['ready', 'failed', 'stopped'], ready: ['failed', 'stopped'], failed: ['stopped'], stopped: [] }, ['stopped']);\nconst collection = define('SM35.collection', 'running', { running: ['passed', 'failed', 'cancelled'], passed: [], failed: [], cancelled: [] }, ['passed', 'failed', 'cancelled']);\nconst semantic = define('SM45.semantic', 'uploading', {\n  uploading: ['queued', 'failed', 'interrupted'], queued: ['parsing', 'querying', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  parsing: ['enriching', 'cancelling', 'failed', 'cancelled', 'interrupted'], enriching: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'],"
+          },
+          consumers: [],
+          chart: {
+            name: "SM24.lease",
+            initial: "creating",
+            states: [
+              "creating",
+              "active",
+              "cleanup-failed",
+              "released"
+            ],
+            terminal: [
+              "released"
+            ],
+            transitions: {
+              creating: [
+                "active",
+                "released",
+                "cleanup-failed"
+              ],
+              active: [
+                "released",
+                "cleanup-failed"
+              ],
+              "cleanup-failed": [
+                "released"
+              ],
+              released: []
+            }
+          }
+        },
+        {
+          id: "SM25.reset",
+          component: "lib/testdb-templates.js",
+          label: "SM25.reset",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 42,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {\n  disconnected: ['initializing', 'closing'], initializing: ['ready', 'disconnected', 'closing'], ready: ['closing'], closing: ['disconnected'],\n});\nconst fixture = define('SM26.fixture', 'starting', { starting: ['ready', 'cleanup-failed', 'stopped'], ready: ['cleanup-failed', 'stopped'], 'cleanup-failed': ['stopped'], stopped: [] }, ['stopped']);\nconst scenario = define('SM28.scenario', 'starting', { starting: ['ready', 'failed', 'stopped'], ready: ['failed', 'stopped'], failed: ['stopped'], stopped: [] }, ['stopped']);\nconst collection = define('SM35.collection', 'running', { running: ['passed', 'failed', 'cancelled'], passed: [], failed: [], cancelled: [] }, ['passed', 'failed', 'cancelled']);\nconst semantic = define('SM45.semantic', 'uploading', {\n  uploading: ['queued', 'failed', 'interrupted'], queued: ['parsing', 'querying', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  parsing: ['enriching', 'cancelling', 'failed', 'cancelled', 'interrupted'], enriching: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  querying: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'], cancelling: ['cancelled', 'failed', 'interrupted'],"
+          },
+          consumers: [
+            {
+              file: "lib/testdb-templates.js",
+              line: 251,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').leaseReset);"
+            }
+          ],
+          chart: {
+            name: "SM25.reset",
+            initial: "allocating",
+            states: [
+              "allocating",
+              "replacement-ready",
+              "releasing-old",
+              "compensating",
+              "completed",
+              "failed",
+              "cleanup-failed"
+            ],
+            terminal: [
+              "completed",
+              "failed",
+              "cleanup-failed"
+            ],
+            transitions: {
+              allocating: [
+                "replacement-ready",
+                "failed"
+              ],
+              "replacement-ready": [
+                "releasing-old",
+                "compensating"
+              ],
+              "releasing-old": [
+                "completed",
+                "compensating"
+              ],
+              compensating: [
+                "failed",
+                "cleanup-failed"
+              ],
+              completed: [],
+              failed: [],
+              "cleanup-failed": []
+            }
+          }
+        },
+        {
+          id: "SM26.fixture",
+          component: "lib/reproduction-runtime.js",
+          label: "SM26.fixture",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 50,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "});\nconst fixture = define('SM26.fixture', 'starting', { starting: ['ready', 'cleanup-failed', 'stopped'], ready: ['cleanup-failed', 'stopped'], 'cleanup-failed': ['stopped'], stopped: [] }, ['stopped']);\nconst scenario = define('SM28.scenario', 'starting', { starting: ['ready', 'failed', 'stopped'], ready: ['failed', 'stopped'], failed: ['stopped'], stopped: [] }, ['stopped']);\nconst collection = define('SM35.collection', 'running', { running: ['passed', 'failed', 'cancelled'], passed: [], failed: [], cancelled: [] }, ['passed', 'failed', 'cancelled']);\nconst semantic = define('SM45.semantic', 'uploading', {\n  uploading: ['queued', 'failed', 'interrupted'], queued: ['parsing', 'querying', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  parsing: ['enriching', 'cancelling', 'failed', 'cancelled', 'interrupted'], enriching: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  querying: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'], cancelling: ['cancelled', 'failed', 'interrupted'],\n  draining: ['ready', 'cancelled', 'failed', 'interrupted'],\n  ready: [], failed: [], cancelled: [], interrupted: [],\n}, ['ready', 'failed', 'cancelled', 'interrupted']);\nconst sftp = define('SM19.sftp', 'connecting', { connecting: ['opening', 'closing', 'failed', 'closed'], opening: ['ready', 'closing', 'failed', 'closed'], ready: ['closing', 'failed', 'closed'], closing: ['failed', 'closed'], failed: ['closing', 'closed'], closed: [] }, ['closed']);\nconst sftpOperation = define('SM19.operation', 'pending', { pending: ['settled'], settled: [] }, ['settled']);\nconst control = define('SM21.control', 'opening', { opening: ['locked', 'failed'], locked: ['initializing', 'verifying', 'failed'], initializing: ['verifying', 'failed'], verifying: ['ready', 'failed'], ready: ['releasing', 'failed'], failed: ['releasing'], releasing: ['closed', 'cleanup-failed'], closed: [], 'cleanup-failed': [] }, ['closed', 'cleanup-failed']);\nconst archive = define('SM54.archive', 'checking', { checking: ['copied', 'archived', 'failed'], copied: ['verified', 'failed'], verified: ['removing'], removing: ['archived', 'source-retained', 'recovery-needed'], archived: [], failed: [], 'source-retained': [], 'recovery-needed': [] }, ['archived', 'failed', 'source-retained', 'recovery-needed']);\nconst archiveRemoval = define('SM54.source-removal', 'source', { source: ['holding', 'removed'], holding: ['verified', 'restoring'], verified: ['removed', 'restoring'], restoring: ['restored', 'recovery-needed'], removed: [], restored: [], 'recovery-needed': [] }, ['removed', 'restored', 'recovery-needed']);"
+          },
+          consumers: [
+            {
+              file: "lib/reproduction-runtime.js",
+              line: 10,
+              snippet: "const { bind } = require('./state-machine'), lifecycle = require('./lifecycles').fixture;"
+            }
+          ],
+          chart: {
+            name: "SM26.fixture",
+            initial: "starting",
+            states: [
+              "starting",
+              "ready",
+              "cleanup-failed",
+              "stopped"
+            ],
+            terminal: [
+              "stopped"
+            ],
+            transitions: {
+              starting: [
+                "ready",
+                "cleanup-failed",
+                "stopped"
+              ],
+              ready: [
+                "cleanup-failed",
+                "stopped"
+              ],
+              "cleanup-failed": [
+                "stopped"
+              ],
+              stopped: []
+            }
+          }
+        },
+        {
+          id: "SM27.effects",
+          component: "lib/reproduction-runtime.js",
+          label: "SM27.effects",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 71,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const mcp = define('SM17.request', 'running', { running: ['cancelling', 'replied', 'closed'], cancelling: ['replied', 'closed'], replied: ['closed'], closed: [] }, ['closed']);\nconst effects = define('SM27.effects', 'unarmed', { unarmed: ['arming'], arming: ['armed', 'rejected'], armed: ['observing'], observing: ['checked', 'failed'], checked: [], rejected: [], failed: [] }, ['checked', 'rejected', 'failed']);\nconst action = define('SM29.action', 'reserved', { reserved: ['executing'], executing: ['completed', 'unknown'], completed: [], unknown: [] }, ['completed', 'unknown']);\nconst quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fall"
+          },
+          consumers: [
+            {
+              file: "lib/reproduction-runtime.js",
+              line: 242,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').effects, session.expectations ? 'armed' : 'unarmed');"
+            },
+            {
+              file: "lib/reproduction-runtime.js",
+              line: 255,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').effects, 'armed'); lifecycle.to('observing');"
+            }
+          ],
+          chart: {
+            name: "SM27.effects",
+            initial: "unarmed",
+            states: [
+              "unarmed",
+              "arming",
+              "armed",
+              "observing",
+              "checked",
+              "rejected",
+              "failed"
+            ],
+            terminal: [
+              "checked",
+              "rejected",
+              "failed"
+            ],
+            transitions: {
+              unarmed: [
+                "arming"
+              ],
+              arming: [
+                "armed",
+                "rejected"
+              ],
+              armed: [
+                "observing"
+              ],
+              observing: [
+                "checked",
+                "failed"
+              ],
+              checked: [],
+              rejected: [],
+              failed: []
+            }
+          }
+        },
+        {
+          id: "SM28.scenario",
+          component: "lib/scenario-runtime.js",
+          label: "SM28.scenario",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 51,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const fixture = define('SM26.fixture', 'starting', { starting: ['ready', 'cleanup-failed', 'stopped'], ready: ['cleanup-failed', 'stopped'], 'cleanup-failed': ['stopped'], stopped: [] }, ['stopped']);\nconst scenario = define('SM28.scenario', 'starting', { starting: ['ready', 'failed', 'stopped'], ready: ['failed', 'stopped'], failed: ['stopped'], stopped: [] }, ['stopped']);\nconst collection = define('SM35.collection', 'running', { running: ['passed', 'failed', 'cancelled'], passed: [], failed: [], cancelled: [] }, ['passed', 'failed', 'cancelled']);\nconst semantic = define('SM45.semantic', 'uploading', {\n  uploading: ['queued', 'failed', 'interrupted'], queued: ['parsing', 'querying', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  parsing: ['enriching', 'cancelling', 'failed', 'cancelled', 'interrupted'], enriching: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  querying: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'], cancelling: ['cancelled', 'failed', 'interrupted'],\n  draining: ['ready', 'cancelled', 'failed', 'interrupted'],\n  ready: [], failed: [], cancelled: [], interrupted: [],\n}, ['ready', 'failed', 'cancelled', 'interrupted']);\nconst sftp = define('SM19.sftp', 'connecting', { connecting: ['opening', 'closing', 'failed', 'closed'], opening: ['ready', 'closing', 'failed', 'closed'], ready: ['closing', 'failed', 'closed'], closing: ['failed', 'closed'], failed: ['closing', 'closed'], closed: [] }, ['closed']);\nconst sftpOperation = define('SM19.operation', 'pending', { pending: ['settled'], settled: [] }, ['settled']);\nconst control = define('SM21.control', 'opening', { opening: ['locked', 'failed'], locked: ['initializing', 'verifying', 'failed'], initializing: ['verifying', 'failed'], verifying: ['ready', 'failed'], ready: ['releasing', 'failed'], failed: ['releasing'], releasing: ['closed', 'cleanup-failed'], closed: [], 'cleanup-failed': [] }, ['closed', 'cleanup-failed']);\nconst archive = define('SM54.archive', 'checking', { checking: ['copied', 'archived', 'failed'], copied: ['verified', 'failed'], verified: ['removing'], removing: ['archived', 'source-retained', 'recovery-needed'], archived: [], failed: [], 'source-retained': [], 'recovery-needed': [] }, ['archived', 'failed', 'source-retained', 'recovery-needed']);\nconst archiveRemoval = define('SM54.source-removal', 'source', { source: ['holding', 'removed'], holding: ['verified', 'restoring'], verified: ['removed', 'restoring'], restoring: ['restored', 'recovery-needed'], removed: [], restored: [], 'recovery-needed': [] }, ['removed', 'restored', 'recovery-needed']);\nconst contextArchive = define('SM54.context-archive', 'checking', { checking: ['renamed'], renamed: ['published', 'restoring'], restoring: ['restored', 'recovery-needed'], published: [], restored: [], 'recovery-needed': [] }, ['published', 'restored', 'recovery-needed']);"
+          },
+          consumers: [
+            {
+              file: "lib/scenario-runtime.js",
+              line: 10,
+              snippet: "const { bind } = require('./state-machine'), lifecycle = require('./lifecycles').scenario;"
+            }
+          ],
+          chart: {
+            name: "SM28.scenario",
+            initial: "starting",
+            states: [
+              "starting",
+              "ready",
+              "failed",
+              "stopped"
+            ],
+            terminal: [
+              "stopped"
+            ],
+            transitions: {
+              starting: [
+                "ready",
+                "failed",
+                "stopped"
+              ],
+              ready: [
+                "failed",
+                "stopped"
+              ],
+              failed: [
+                "stopped"
+              ],
+              stopped: []
+            }
+          }
+        },
+        {
+          id: "SM29.action",
+          component: "lib/scenario-runtime.js",
+          label: "SM29.action",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 72,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const effects = define('SM27.effects', 'unarmed', { unarmed: ['arming'], arming: ['armed', 'rejected'], armed: ['observing'], observing: ['checked', 'failed'], checked: [], rejected: [], failed: [] }, ['checked', 'rejected', 'failed']);\nconst action = define('SM29.action', 'reserved', { reserved: ['executing'], executing: ['completed', 'unknown'], completed: [], unknown: [] }, ['completed', 'unknown']);\nconst quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', "
+          },
+          consumers: [
+            {
+              file: "lib/ci-action.js",
+              line: 19,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').action); lifecycle.to('executing');"
+            },
+            {
+              file: "lib/scenario-runtime.js",
+              line: 282,
+              snippet: "const result = bind({ id: actionId, at: new Date().toISOString(), eventStart: before, status: 'reserved' }, require('./lifecycles').action, 'status');"
+            }
+          ],
+          chart: {
+            name: "SM29.action",
+            initial: "reserved",
+            states: [
+              "reserved",
+              "executing",
+              "completed",
+              "unknown"
+            ],
+            terminal: [
+              "completed",
+              "unknown"
+            ],
+            transitions: {
+              reserved: [
+                "executing"
+              ],
+              executing: [
+                "completed",
+                "unknown"
+              ],
+              completed: [],
+              unknown: []
+            }
+          }
+        },
+        {
+          id: "SM30.quiet-window",
+          component: "lib/scenario-runtime.js",
+          label: "SM30.quiet-window",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 73,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const action = define('SM29.action', 'reserved', { reserved: ['executing'], executing: ['completed', 'unknown'], completed: [], unknown: [] }, ['completed', 'unknown']);\nconst quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['repla"
+          },
+          consumers: [
+            {
+              file: "lib/scenario-runtime.js",
+              line: 337,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').quietWindow);"
+            }
+          ],
+          chart: {
+            name: "SM30.quiet-window",
+            initial: "sampling",
+            states: [
+              "sampling",
+              "quiet",
+              "stable",
+              "timed-out",
+              "cancelled",
+              "failed"
+            ],
+            terminal: [
+              "stable",
+              "timed-out",
+              "cancelled",
+              "failed"
+            ],
+            transitions: {
+              sampling: [
+                "quiet",
+                "timed-out",
+                "cancelled",
+                "failed"
+              ],
+              quiet: [
+                "sampling",
+                "stable",
+                "timed-out",
+                "cancelled",
+                "failed"
+              ],
+              stable: [],
+              "timed-out": [],
+              cancelled: [],
+              failed: []
+            }
+          }
+        },
+        {
+          id: "SM31.capture",
+          component: "lib/reproduction.js",
+          label: "SM31.capture",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 81,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['replaying', 'pushing', 'failed'], replaying: ['replayed', 'conflict', 'failed'], replayed: ['pushing', 'failed'], pushing: ['pushed', 'unknown'], pushed: ['recording', 'metadata-failed'], recording: ['completed', 'metadata-failed'], completed: [], failed: [], conflict: [], unknown: [], 'metadata-failed': [] }, ['completed', 'failed', 'conflict', 'unknown', 'metadata-failed']);\nconst refresh = define('SM43.refresh', 'sources', { sources: ['indexing', 'failed'], indexing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst passport = define('SM44.passport', 'resolving', { resolving: ['fetching', 'failed'], fetching: ['extracting', 'failed'], extracting: ['libraries', 'failed'], libraries: ['analyzing', 'failed'], analyzing: ['publishing', 'failed'], publishing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nconst http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);"
+          },
+          consumers: [
+            {
+              file: "lib/reproduction.js",
+              line: 232,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').capture); lifecycle.to('reading');"
+            }
+          ],
+          chart: {
+            name: "SM31.capture",
+            initial: "planned",
+            states: [
+              "planned",
+              "reading",
+              "validating",
+              "complete",
+              "incomplete",
+              "failed"
+            ],
+            terminal: [
+              "complete",
+              "incomplete",
+              "failed"
+            ],
+            transitions: {
+              planned: [
+                "reading"
+              ],
+              reading: [
+                "validating",
+                "failed"
+              ],
+              validating: [
+                "complete",
+                "incomplete",
+                "failed"
+              ],
+              complete: [],
+              incomplete: [],
+              failed: []
+            }
+          }
+        },
+        {
+          id: "SM32.binding",
+          component: "lib/scenario-state.js",
+          label: "SM32.binding",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 82,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['replaying', 'pushing', 'failed'], replaying: ['replayed', 'conflict', 'failed'], replayed: ['pushing', 'failed'], pushing: ['pushed', 'unknown'], pushed: ['recording', 'metadata-failed'], recording: ['completed', 'metadata-failed'], completed: [], failed: [], conflict: [], unknown: [], 'metadata-failed': [] }, ['completed', 'failed', 'conflict', 'unknown', 'metadata-failed']);\nconst refresh = define('SM43.refresh', 'sources', { sources: ['indexing', 'failed'], indexing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst passport = define('SM44.passport', 'resolving', { resolving: ['fetching', 'failed'], fetching: ['extracting', 'failed'], extracting: ['libraries', 'failed'], libraries: ['analyzing', 'failed'], analyzing: ['publishing', 'failed'], publishing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nconst http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);\nconst revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);"
+          },
+          consumers: [
+            {
+              file: "lib/scenario-state.js",
+              line: 119,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').scenarioState);"
+            }
+          ],
+          chart: {
+            name: "SM32.binding",
+            initial: "planned",
+            states: [
+              "planned",
+              "reading",
+              "missing",
+              "captured",
+              "partial",
+              "failed"
+            ],
+            terminal: [
+              "missing",
+              "captured",
+              "partial",
+              "failed"
+            ],
+            transitions: {
+              planned: [
+                "missing",
+                "reading"
+              ],
+              reading: [
+                "captured",
+                "partial",
+                "failed"
+              ],
+              missing: [],
+              captured: [],
+              partial: [],
+              failed: []
+            }
+          }
+        },
+        {
+          id: "SM33.script",
+          component: "lib/scripts.js",
+          label: "SM33.script",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 83,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['replaying', 'pushing', 'failed'], replaying: ['replayed', 'conflict', 'failed'], replayed: ['pushing', 'failed'], pushing: ['pushed', 'unknown'], pushed: ['recording', 'metadata-failed'], recording: ['completed', 'metadata-failed'], completed: [], failed: [], conflict: [], unknown: [], 'metadata-failed': [] }, ['completed', 'failed', 'conflict', 'unknown', 'metadata-failed']);\nconst refresh = define('SM43.refresh', 'sources', { sources: ['indexing', 'failed'], indexing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst passport = define('SM44.passport', 'resolving', { resolving: ['fetching', 'failed'], fetching: ['extracting', 'failed'], extracting: ['libraries', 'failed'], libraries: ['analyzing', 'failed'], analyzing: ['publishing', 'failed'], publishing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nconst http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);\nconst revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');"
+          },
+          consumers: [
+            {
+              file: "lib/scripts.js",
+              line: 550,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').script);"
+            }
+          ],
+          chart: {
+            name: "SM33.script",
+            initial: "before",
+            states: [
+              "before",
+              "steps",
+              "after",
+              "cleaning",
+              "settled"
+            ],
+            terminal: [
+              "settled"
+            ],
+            transitions: {
+              before: [
+                "steps",
+                "cleaning"
+              ],
+              steps: [
+                "after",
+                "cleaning"
+              ],
+              after: [
+                "cleaning"
+              ],
+              cleaning: [
+                "settled"
+              ],
+              settled: []
+            }
+          }
+        },
+        {
+          id: "SM34.retry",
+          component: "lib/scripts.js",
+          label: "SM34.retry",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 84,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['replaying', 'pushing', 'failed'], replaying: ['replayed', 'conflict', 'failed'], replayed: ['pushing', 'failed'], pushing: ['pushed', 'unknown'], pushed: ['recording', 'metadata-failed'], recording: ['completed', 'metadata-failed'], completed: [], failed: [], conflict: [], unknown: [], 'metadata-failed': [] }, ['completed', 'failed', 'conflict', 'unknown', 'metadata-failed']);\nconst refresh = define('SM43.refresh', 'sources', { sources: ['indexing', 'failed'], indexing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst passport = define('SM44.passport', 'resolving', { resolving: ['fetching', 'failed'], fetching: ['extracting', 'failed'], extracting: ['libraries', 'failed'], libraries: ['analyzing', 'failed'], analyzing: ['publishing', 'failed'], publishing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nconst http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);\nconst revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);"
+          },
+          consumers: [
+            {
+              file: "lib/scripts.js",
+              line: 437,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').retry);"
+            }
+          ],
+          chart: {
+            name: "SM34.retry",
+            initial: "ready",
+            states: [
+              "ready",
+              "attempting",
+              "waiting",
+              "matched",
+              "stopped"
+            ],
+            terminal: [
+              "matched",
+              "stopped"
+            ],
+            transitions: {
+              ready: [
+                "attempting"
+              ],
+              attempting: [
+                "matched",
+                "waiting",
+                "stopped"
+              ],
+              waiting: [
+                "attempting",
+                "stopped"
+              ],
+              matched: [],
+              stopped: []
+            }
+          }
+        },
+        {
+          id: "SM35.collection",
+          component: "lib/collections.js",
+          label: "SM35.collection",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 52,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const scenario = define('SM28.scenario', 'starting', { starting: ['ready', 'failed', 'stopped'], ready: ['failed', 'stopped'], failed: ['stopped'], stopped: [] }, ['stopped']);\nconst collection = define('SM35.collection', 'running', { running: ['passed', 'failed', 'cancelled'], passed: [], failed: [], cancelled: [] }, ['passed', 'failed', 'cancelled']);\nconst semantic = define('SM45.semantic', 'uploading', {\n  uploading: ['queued', 'failed', 'interrupted'], queued: ['parsing', 'querying', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  parsing: ['enriching', 'cancelling', 'failed', 'cancelled', 'interrupted'], enriching: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  querying: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'], cancelling: ['cancelled', 'failed', 'interrupted'],\n  draining: ['ready', 'cancelled', 'failed', 'interrupted'],\n  ready: [], failed: [], cancelled: [], interrupted: [],\n}, ['ready', 'failed', 'cancelled', 'interrupted']);\nconst sftp = define('SM19.sftp', 'connecting', { connecting: ['opening', 'closing', 'failed', 'closed'], opening: ['ready', 'closing', 'failed', 'closed'], ready: ['closing', 'failed', 'closed'], closing: ['failed', 'closed'], failed: ['closing', 'closed'], closed: [] }, ['closed']);\nconst sftpOperation = define('SM19.operation', 'pending', { pending: ['settled'], settled: [] }, ['settled']);\nconst control = define('SM21.control', 'opening', { opening: ['locked', 'failed'], locked: ['initializing', 'verifying', 'failed'], initializing: ['verifying', 'failed'], verifying: ['ready', 'failed'], ready: ['releasing', 'failed'], failed: ['releasing'], releasing: ['closed', 'cleanup-failed'], closed: [], 'cleanup-failed': [] }, ['closed', 'cleanup-failed']);\nconst archive = define('SM54.archive', 'checking', { checking: ['copied', 'archived', 'failed'], copied: ['verified', 'failed'], verified: ['removing'], removing: ['archived', 'source-retained', 'recovery-needed'], archived: [], failed: [], 'source-retained': [], 'recovery-needed': [] }, ['archived', 'failed', 'source-retained', 'recovery-needed']);\nconst archiveRemoval = define('SM54.source-removal', 'source', { source: ['holding', 'removed'], holding: ['verified', 'restoring'], verified: ['removed', 'restoring'], restoring: ['restored', 'recovery-needed'], removed: [], restored: [], 'recovery-needed': [] }, ['removed', 'restored', 'recovery-needed']);\nconst contextArchive = define('SM54.context-archive', 'checking', { checking: ['renamed'], renamed: ['published', 'restoring'], restoring: ['restored', 'recovery-needed'], published: [], restored: [], 'recovery-needed': [] }, ['published', 'restored', 'recovery-needed']);\nconst context = define('SM53.context', 'active', { active: ['paused', 'done'], paused: ['active', 'done'], done: ['active', 'paused'] });"
+          },
+          consumers: [
+            {
+              file: "lib/collections.js",
+              line: 187,
+              snippet: "require('./state-machine').bind(r, require('./lifecycles').collection, 'status');"
+            }
+          ],
+          chart: {
+            name: "SM35.collection",
+            initial: "running",
+            states: [
+              "running",
+              "passed",
+              "failed",
+              "cancelled"
+            ],
+            terminal: [
+              "passed",
+              "failed",
+              "cancelled"
+            ],
+            transitions: {
+              running: [
+                "passed",
+                "failed",
+                "cancelled"
+              ],
+              passed: [],
+              failed: [],
+              cancelled: []
+            }
+          }
+        },
+        {
+          id: "SM36.fetch",
+          component: "lib/git.js",
+          label: "SM36.fetch",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 85,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['replaying', 'pushing', 'failed'], replaying: ['replayed', 'conflict', 'failed'], replayed: ['pushing', 'failed'], pushing: ['pushed', 'unknown'], pushed: ['recording', 'metadata-failed'], recording: ['completed', 'metadata-failed'], completed: [], failed: [], conflict: [], unknown: [], 'metadata-failed': [] }, ['completed', 'failed', 'conflict', 'unknown', 'metadata-failed']);\nconst refresh = define('SM43.refresh', 'sources', { sources: ['indexing', 'failed'], indexing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst passport = define('SM44.passport', 'resolving', { resolving: ['fetching', 'failed'], fetching: ['extracting', 'failed'], extracting: ['libraries', 'failed'], libraries: ['analyzing', 'failed'], analyzing: ['publishing', 'failed'], publishing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nconst http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);\nconst revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);"
+          },
+          consumers: [
+            {
+              file: "lib/git.js",
+              line: 52,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').gitFetch);"
+            }
+          ],
+          chart: {
+            name: "SM36.fetch",
+            initial: "initializing",
+            states: [
+              "initializing",
+              "fetching",
+              "repairing",
+              "fallback",
+              "checking-out",
+              "recording",
+              "ready",
+              "failed"
+            ],
+            terminal: [
+              "ready",
+              "failed"
+            ],
+            transitions: {
+              initializing: [
+                "fetching",
+                "failed"
+              ],
+              fetching: [
+                "checking-out",
+                "repairing",
+                "fallback",
+                "failed"
+              ],
+              repairing: [
+                "fetching",
+                "fallback",
+                "failed"
+              ],
+              fallback: [
+                "checking-out",
+                "failed"
+              ],
+              "checking-out": [
+                "recording",
+                "fallback",
+                "failed"
+              ],
+              recording: [
+                "ready",
+                "failed"
+              ],
+              ready: [],
+              failed: []
+            }
+          }
+        },
+        {
+          id: "SM37.push",
+          component: "lib/workspace.js",
+          label: "SM37.push",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 86,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['replaying', 'pushing', 'failed'], replaying: ['replayed', 'conflict', 'failed'], replayed: ['pushing', 'failed'], pushing: ['pushed', 'unknown'], pushed: ['recording', 'metadata-failed'], recording: ['completed', 'metadata-failed'], completed: [], failed: [], conflict: [], unknown: [], 'metadata-failed': [] }, ['completed', 'failed', 'conflict', 'unknown', 'metadata-failed']);\nconst refresh = define('SM43.refresh', 'sources', { sources: ['indexing', 'failed'], indexing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst passport = define('SM44.passport', 'resolving', { resolving: ['fetching', 'failed'], fetching: ['extracting', 'failed'], extracting: ['libraries', 'failed'], libraries: ['analyzing', 'failed'], analyzing: ['publishing', 'failed'], publishing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nconst http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);\nconst revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);"
+          },
+          consumers: [
+            {
+              file: "lib/workspace.js",
+              line: 214,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').workspacePush);"
+            }
+          ],
+          chart: {
+            name: "SM37.push",
+            initial: "checking",
+            states: [
+              "checking",
+              "staging",
+              "committing",
+              "committed",
+              "replaying",
+              "replayed",
+              "pushing",
+              "pushed",
+              "recording",
+              "completed",
+              "failed",
+              "conflict",
+              "unknown",
+              "metadata-failed"
+            ],
+            terminal: [
+              "completed",
+              "failed",
+              "conflict",
+              "unknown",
+              "metadata-failed"
+            ],
+            transitions: {
+              checking: [
+                "staging",
+                "failed"
+              ],
+              staging: [
+                "committing",
+                "failed"
+              ],
+              committing: [
+                "committed",
+                "failed"
+              ],
+              committed: [
+                "replaying",
+                "pushing",
+                "failed"
+              ],
+              replaying: [
+                "replayed",
+                "conflict",
+                "failed"
+              ],
+              replayed: [
+                "pushing",
+                "failed"
+              ],
+              pushing: [
+                "pushed",
+                "unknown"
+              ],
+              pushed: [
+                "recording",
+                "metadata-failed"
+              ],
+              recording: [
+                "completed",
+                "metadata-failed"
+              ],
+              completed: [],
+              failed: [],
+              conflict: [],
+              unknown: [],
+              "metadata-failed": []
+            }
+          }
+        },
+        {
+          id: "SM38.invocation",
+          component: "lib/testrun.js",
+          label: "SM38.invocation",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 92,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);\nconst revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);"
+          },
+          consumers: [
+            {
+              file: "lib/testrun.js",
+              line: 516,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').testInvocation);"
+            }
+          ],
+          chart: {
+            name: "SM38.invocation",
+            initial: "running",
+            states: [
+              "running",
+              "settled",
+              "failed"
+            ],
+            terminal: [
+              "settled",
+              "failed"
+            ],
+            transitions: {
+              running: [
+                "settled",
+                "failed"
+              ],
+              settled: [],
+              failed: []
+            }
+          }
+        },
+        {
+          id: "SM38.proof-evidence",
+          component: "lib/testrun.js",
+          label: "SM38.proof-evidence",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 93,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);\nconst revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);"
+          },
+          consumers: [
+            {
+              file: "lib/testrun.js",
+              line: 481,
+              snippet: "const evidence = require('./state-machine').create(require('./lifecycles').testProof);"
+            }
+          ],
+          chart: {
+            name: "SM38.proof-evidence",
+            initial: "no-red",
+            states: [
+              "no-red",
+              "red-seen",
+              "changed-green-seen"
+            ],
+            terminal: [
+              "changed-green-seen"
+            ],
+            transitions: {
+              "no-red": [
+                "red-seen"
+              ],
+              "red-seen": [
+                "changed-green-seen"
+              ],
+              "changed-green-seen": []
+            }
+          }
+        },
+        {
+          id: "SM39.maven-prepare",
+          component: "lib/fastrun.js",
+          label: "SM39.maven-prepare",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 78,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['replaying', 'pushing', 'failed'], replaying: ['replayed', 'conflict', 'failed'], replayed: ['pushing', 'failed'], pushing: ['pushed', 'unknown'], pushed: ['recording', 'metadata-failed'], recording: ['completed', 'metadata-failed'], completed: [], failed: [], conflict: [], unknown: [], 'metadata-failed': [] }, ['completed', 'failed', 'conflict', 'unknown', 'metadata-failed']);\nconst refresh = define('SM43.refresh', 'sources', { sources: ['indexing', 'failed'], indexing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst passport = define('SM44.passport', 'resolving', { resolving: ['fetching', 'failed'], fetching: ['extracting', 'failed'], extracting: ['libraries', 'failed'], libraries: ['analyzing', 'failed'], analyzing: ['publishing', 'failed'], publishing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nconst http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['set"
+          },
+          consumers: [
+            {
+              file: "lib/fastrun.js",
+              line: 212,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').mavenPrepare);"
+            }
+          ],
+          chart: {
+            name: "SM39.maven-prepare",
+            initial: "checking",
+            states: [
+              "checking",
+              "building",
+              "classpath",
+              "launcher",
+              "publishing",
+              "reused",
+              "ready",
+              "failed"
+            ],
+            terminal: [
+              "reused",
+              "ready",
+              "failed"
+            ],
+            transitions: {
+              checking: [
+                "reused",
+                "building"
+              ],
+              building: [
+                "classpath",
+                "failed"
+              ],
+              classpath: [
+                "launcher",
+                "failed"
+              ],
+              launcher: [
+                "publishing",
+                "failed"
+              ],
+              publishing: [
+                "ready",
+                "failed"
+              ],
+              reused: [],
+              ready: [],
+              failed: []
+            }
+          }
+        },
+        {
+          id: "SM40.compiler",
+          component: "lib/javacheck.js",
+          label: "SM40.compiler",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 107,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nmodule.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
+          },
+          consumers: [
+            {
+              file: "lib/javacheck.js",
+              line: 107,
+              snippet: "const lifecycle = create(L.compiler), dir = await compilerDir(javaHome);"
+            }
+          ],
+          chart: {
+            name: "SM40.compiler",
+            initial: "starting",
+            states: [
+              "starting",
+              "ready",
+              "stopping",
+              "stopped"
+            ],
+            terminal: [
+              "stopped"
+            ],
+            transitions: {
+              starting: [
+                "ready",
+                "stopped"
+              ],
+              ready: [
+                "stopping",
+                "stopped"
+              ],
+              stopping: [
+                "stopped"
+              ],
+              stopped: []
+            }
+          }
+        },
+        {
+          id: "SM40.preparation",
+          component: "lib/javacheck.js",
+          label: "SM40.preparation",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 77,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['replaying', 'pushing', 'failed'], replaying: ['replayed', 'conflict', 'failed'], replayed: ['pushing', 'failed'], pushing: ['pushed', 'unknown'], pushed: ['recording', 'metadata-failed'], recording: ['completed', 'metadata-failed'], completed: [], failed: [], conflict: [], unknown: [], 'metadata-failed': [] }, ['completed', 'failed', 'conflict', 'unknown', 'metadata-failed']);\nconst refresh = define('SM43.refresh', 'sources', { sources: ['indexing', 'failed'], indexing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst passport = define('SM44.passport', 'resolving', { resolving: ['fetching', 'failed'], fetching: ['extracting', 'failed'], extracting: ['libraries', 'failed'], libraries: ['analyzing', 'failed'], analyzing: ['publishing', 'failed'], publishing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nconst http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', {"
+          },
+          consumers: [
+            {
+              file: "lib/javacheck.js",
+              line: 102,
+              snippet: "const compilerStarts = new (require('./keyed-work').KeyedWork)(L.preparation, { retainTick: false });"
+            },
+            {
+              file: "lib/javacheck.js",
+              line: 529,
+              snippet: "const preparing = new (require('./keyed-work').KeyedWork)(require('./lifecycles').preparation);"
+            },
+            {
+              file: "lib/workspace.js",
+              line: 352,
+              snippet: "function preparations(){return opening ||= new(require('./keyed-work').KeyedWork)(require('./lifecycles').preparation,{retainTick:false});}"
+            }
+          ],
+          chart: {
+            name: "SM40.preparation",
+            initial: "queued",
+            states: [
+              "queued",
+              "running",
+              "ready",
+              "failed"
+            ],
+            terminal: [
+              "ready",
+              "failed"
+            ],
+            transitions: {
+              queued: [
+                "running"
+              ],
+              running: [
+                "ready",
+                "failed"
+              ],
+              ready: [],
+              failed: []
+            }
+          }
+        },
+        {
+          id: "SM41.publication",
+          component: "lib/codeindex.js",
+          label: "SM41.publication",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 43,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {\n  disconnected: ['initializing', 'closing'], initializing: ['ready', 'disconnected', 'closing'], ready: ['closing'], closing: ['disconnected'],\n});\nconst fixture = define('SM26.fixture', 'starting', { starting: ['ready', 'cleanup-failed', 'stopped'], ready: ['cleanup-failed', 'stopped'], 'cleanup-failed': ['stopped'], stopped: [] }, ['stopped']);\nconst scenario = define('SM28.scenario', 'starting', { starting: ['ready', 'failed', 'stopped'], ready: ['failed', 'stopped'], failed: ['stopped'], stopped: [] }, ['stopped']);\nconst collection = define('SM35.collection', 'running', { running: ['passed', 'failed', 'cancelled'], passed: [], failed: [], cancelled: [] }, ['passed', 'failed', 'cancelled']);\nconst semantic = define('SM45.semantic', 'uploading', {\n  uploading: ['queued', 'failed', 'interrupted'], queued: ['parsing', 'querying', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  parsing: ['enriching', 'cancelling', 'failed', 'cancelled', 'interrupted'], enriching: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  querying: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'], cancelling: ['cancelled', 'failed', 'interrupted'],\n  draining: ['ready', 'cancelled', 'failed', 'interrupted'],"
+          },
+          consumers: [
+            {
+              file: "lib/codeindex.js",
+              line: 161,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').publication);"
+            }
+          ],
+          chart: {
+            name: "SM41.publication",
+            initial: "checking",
+            states: [
+              "checking",
+              "staging",
+              "verified",
+              "committed",
+              "reused",
+              "published",
+              "aborted",
+              "alias-failed"
+            ],
+            terminal: [
+              "published",
+              "aborted",
+              "alias-failed"
+            ],
+            transitions: {
+              checking: [
+                "reused",
+                "staging",
+                "aborted"
+              ],
+              staging: [
+                "verified",
+                "aborted"
+              ],
+              verified: [
+                "committed",
+                "aborted"
+              ],
+              committed: [
+                "published",
+                "alias-failed"
+              ],
+              reused: [
+                "published",
+                "alias-failed"
+              ],
+              published: [],
+              aborted: [],
+              "alias-failed": []
+            }
+          }
+        },
+        {
+          id: "SM42.catalog-writer",
+          component: "lib/pgstore.js",
+          label: "SM42.catalog-writer",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 45,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {\n  disconnected: ['initializing', 'closing'], initializing: ['ready', 'disconnected', 'closing'], ready: ['closing'], closing: ['disconnected'],\n});\nconst fixture = define('SM26.fixture', 'starting', { starting: ['ready', 'cleanup-failed', 'stopped'], ready: ['cleanup-failed', 'stopped'], 'cleanup-failed': ['stopped'], stopped: [] }, ['stopped']);\nconst scenario = define('SM28.scenario', 'starting', { starting: ['ready', 'failed', 'stopped'], ready: ['failed', 'stopped'], failed: ['stopped'], stopped: [] }, ['stopped']);\nconst collection = define('SM35.collection', 'running', { running: ['passed', 'failed', 'cancelled'], passed: [], failed: [], cancelled: [] }, ['passed', 'failed', 'cancelled']);\nconst semantic = define('SM45.semantic', 'uploading', {\n  uploading: ['queued', 'failed', 'interrupted'], queued: ['parsing', 'querying', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  parsing: ['enriching', 'cancelling', 'failed', 'cancelled', 'interrupted'], enriching: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  querying: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'], cancelling: ['cancelled', 'failed', 'interrupted'],\n  draining: ['ready', 'cancelled', 'failed', 'interrupted'],\n  ready: [], failed: [], cancelled: [], interrupted: [],\n}, ['ready', 'failed', 'cancelled', 'interrupted']);"
+          },
+          consumers: [
+            {
+              file: "lib/catalog-store.js",
+              line: 41,
+              snippet: "const db=open(env,{create:true}),life=require('./state-machine').create(require('./lifecycles').catalogWriter);"
+            }
+          ],
+          chart: {
+            name: "SM42.catalog-writer",
+            initial: "open",
+            states: [
+              "open",
+              "flushing",
+              "synced",
+              "published",
+              "aborted"
+            ],
+            terminal: [
+              "published",
+              "aborted"
+            ],
+            transitions: {
+              open: [
+                "flushing",
+                "aborted"
+              ],
+              flushing: [
+                "synced",
+                "aborted"
+              ],
+              synced: [
+                "published",
+                "aborted"
+              ],
+              published: [],
+              aborted: []
+            }
+          }
+        },
+        {
+          id: "SM43.refresh",
+          component: "lib/indexer.js",
+          label: "SM43.refresh",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 87,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['replaying', 'pushing', 'failed'], replaying: ['replayed', 'conflict', 'failed'], replayed: ['pushing', 'failed'], pushing: ['pushed', 'unknown'], pushed: ['recording', 'metadata-failed'], recording: ['completed', 'metadata-failed'], completed: [], failed: [], conflict: [], unknown: [], 'metadata-failed': [] }, ['completed', 'failed', 'conflict', 'unknown', 'metadata-failed']);\nconst refresh = define('SM43.refresh', 'sources', { sources: ['indexing', 'failed'], indexing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst passport = define('SM44.passport', 'resolving', { resolving: ['fetching', 'failed'], fetching: ['extracting', 'failed'], extracting: ['libraries', 'failed'], libraries: ['analyzing', 'failed'], analyzing: ['publishing', 'failed'], publishing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nconst http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);\nconst revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);"
+          },
+          consumers: [
+            {
+              file: "lib/indexer.js",
+              line: 115,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').refresh);"
+            }
+          ],
+          chart: {
+            name: "SM43.refresh",
+            initial: "sources",
+            states: [
+              "sources",
+              "indexing",
+              "ready",
+              "failed"
+            ],
+            terminal: [
+              "ready",
+              "failed"
+            ],
+            transitions: {
+              sources: [
+                "indexing",
+                "failed"
+              ],
+              indexing: [
+                "ready",
+                "failed"
+              ],
+              ready: [],
+              failed: []
+            }
+          }
+        },
+        {
+          id: "SM44.passport",
+          component: "lib/passport/index.js",
+          label: "SM44.passport",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 88,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const refresh = define('SM43.refresh', 'sources', { sources: ['indexing', 'failed'], indexing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst passport = define('SM44.passport', 'resolving', { resolving: ['fetching', 'failed'], fetching: ['extracting', 'failed'], extracting: ['libraries', 'failed'], libraries: ['analyzing', 'failed'], analyzing: ['publishing', 'failed'], publishing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nconst http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);\nconst revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);"
+          },
+          consumers: [],
+          chart: {
+            name: "SM44.passport",
+            initial: "resolving",
+            states: [
+              "resolving",
+              "fetching",
+              "extracting",
+              "libraries",
+              "analyzing",
+              "publishing",
+              "ready",
+              "failed"
+            ],
+            terminal: [
+              "ready",
+              "failed"
+            ],
+            transitions: {
+              resolving: [
+                "fetching",
+                "failed"
+              ],
+              fetching: [
+                "extracting",
+                "failed"
+              ],
+              extracting: [
+                "libraries",
+                "failed"
+              ],
+              libraries: [
+                "analyzing",
+                "failed"
+              ],
+              analyzing: [
+                "publishing",
+                "failed"
+              ],
+              publishing: [
+                "ready",
+                "failed"
+              ],
+              ready: [],
+              failed: []
+            }
+          }
+        },
+        {
+          id: "SM45.semantic",
+          component: "lib/semantic-worker.js",
+          label: "SM45.semantic",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 53,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const collection = define('SM35.collection', 'running', { running: ['passed', 'failed', 'cancelled'], passed: [], failed: [], cancelled: [] }, ['passed', 'failed', 'cancelled']);\nconst semantic = define('SM45.semantic', 'uploading', {\n  uploading: ['queued', 'failed', 'interrupted'], queued: ['parsing', 'querying', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  parsing: ['enriching', 'cancelling', 'failed', 'cancelled', 'interrupted'], enriching: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  querying: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'], cancelling: ['cancelled', 'failed', 'interrupted'],\n  draining: ['ready', 'cancelled', 'failed', 'interrupted'],\n  ready: [], failed: [], cancelled: [], interrupted: [],\n}, ['ready', 'failed', 'cancelled', 'interrupted']);\nconst sftp = define('SM19.sftp', 'connecting', { connecting: ['opening', 'closing', 'failed', 'closed'], opening: ['ready', 'closing', 'failed', 'closed'], ready: ['closing', 'failed', 'closed'], closing: ['failed', 'closed'], failed: ['closing', 'closed'], closed: [] }, ['closed']);\nconst sftpOperation = define('SM19.operation', 'pending', { pending: ['settled'], settled: [] }, ['settled']);\nconst control = define('SM21.control', 'opening', { opening: ['locked', 'failed'], locked: ['initializing', 'verifying', 'failed'], initializing: ['verifying', 'failed'], verifying: ['ready', 'failed'], ready: ['releasing', 'failed'], failed: ['releasing'], releasing: ['closed', 'cleanup-failed'], closed: [], 'cleanup-failed': [] }, ['closed', 'cleanup-failed']);\nconst archive = define('SM54.archive', 'checking', { checking: ['copied', 'archived', 'failed'], copied: ['verified', 'failed'], verified: ['removing'], removing: ['archived', 'source-retained', 'recovery-needed'], archived: [], failed: [], 'source-retained': [], 'recovery-needed': [] }, ['archived', 'failed', 'source-retained', 'recovery-needed']);\nconst archiveRemoval = define('SM54.source-removal', 'source', { source: ['holding', 'removed'], holding: ['verified', 'restoring'], verified: ['removed', 'restoring'], restoring: ['restored', 'recovery-needed'], removed: [], restored: [], 'recovery-needed': [] }, ['removed', 'restored', 'recovery-needed']);\nconst contextArchive = define('SM54.context-archive', 'checking', { checking: ['renamed'], renamed: ['published', 'restoring'], restoring: ['restored', 'recovery-needed'], published: [], restored: [], 'recovery-needed': [] }, ['published', 'restored', 'recovery-needed']);\nconst context = define('SM53.context', 'active', { active: ['paused', 'done'], paused: ['active', 'done'], done: ['active', 'paused'] });\nconst captureCall = define('SM51.capture-call', 'invoking', { invoking: ['succeeded', 'failed'], succeeded: ['saving'], failed: ['saving'], saving: ['saved', 'save-failed'], saved: [], 'save-failed': [] }, ['saved', 'save-failed']);"
+          },
+          consumers: [],
+          chart: {
+            name: "SM45.semantic",
+            initial: "uploading",
+            states: [
+              "uploading",
+              "queued",
+              "parsing",
+              "enriching",
+              "querying",
+              "cancelling",
+              "draining",
+              "ready",
+              "failed",
+              "cancelled",
+              "interrupted"
+            ],
+            terminal: [
+              "ready",
+              "failed",
+              "cancelled",
+              "interrupted"
+            ],
+            transitions: {
+              uploading: [
+                "queued",
+                "failed",
+                "interrupted"
+              ],
+              queued: [
+                "parsing",
+                "querying",
+                "cancelling",
+                "failed",
+                "cancelled",
+                "interrupted"
+              ],
+              parsing: [
+                "enriching",
+                "cancelling",
+                "failed",
+                "cancelled",
+                "interrupted"
+              ],
+              enriching: [
+                "ready",
+                "cancelling",
+                "failed",
+                "cancelled",
+                "interrupted"
+              ],
+              querying: [
+                "ready",
+                "cancelling",
+                "failed",
+                "cancelled",
+                "interrupted"
+              ],
+              cancelling: [
+                "cancelled",
+                "failed",
+                "interrupted"
+              ],
+              draining: [
+                "ready",
+                "cancelled",
+                "failed",
+                "interrupted"
+              ],
+              ready: [],
+              failed: [],
+              cancelled: [],
+              interrupted: []
+            }
+          }
+        },
+        {
+          id: "SM46.publication",
+          component: "lib/semantic-code.js",
+          label: "SM46.publication",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 74,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['replaying', 'pushing', 'failed'], replaying: ['replayed', 'conflict', 'failed'], replayed: ['pushing', 'failed'], pushing: ['pushed', 'unknown'], pushed: ['recording', 'metada"
+          },
+          consumers: [
+            {
+              file: "lib/semantic-code.js",
+              line: 161,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').semanticPublication);"
+            }
+          ],
+          chart: {
+            name: "SM46.publication",
+            initial: "checking",
+            states: [
+              "checking",
+              "staging",
+              "accepted",
+              "waiting",
+              "downloading",
+              "verified",
+              "committed",
+              "reused",
+              "published",
+              "superseded",
+              "alias-failed",
+              "compensating",
+              "aborted",
+              "cleanup-failed"
+            ],
+            terminal: [
+              "reused",
+              "published",
+              "superseded",
+              "alias-failed",
+              "aborted",
+              "cleanup-failed"
+            ],
+            transitions: {
+              checking: [
+                "reused",
+                "staging"
+              ],
+              staging: [
+                "accepted",
+                "compensating"
+              ],
+              accepted: [
+                "waiting",
+                "compensating"
+              ],
+              waiting: [
+                "downloading",
+                "compensating"
+              ],
+              downloading: [
+                "verified",
+                "compensating"
+              ],
+              verified: [
+                "committed",
+                "compensating"
+              ],
+              committed: [
+                "published",
+                "superseded",
+                "alias-failed"
+              ],
+              reused: [],
+              published: [],
+              superseded: [],
+              "alias-failed": [],
+              compensating: [
+                "aborted",
+                "cleanup-failed"
+              ],
+              aborted: [],
+              "cleanup-failed": []
+            }
+          }
+        },
+        {
+          id: "SM47.deep-query",
+          component: "lib/semantic-code.js",
+          label: "SM47.deep-query",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 79,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['replaying', 'pushing', 'failed'], replaying: ['replayed', 'conflict', 'failed'], replayed: ['pushing', 'failed'], pushing: ['pushed', 'unknown'], pushed: ['recording', 'metadata-failed'], recording: ['completed', 'metadata-failed'], completed: [], failed: [], conflict: [], unknown: [], 'metadata-failed': [] }, ['completed', 'failed', 'conflict', 'unknown', 'metadata-failed']);\nconst refresh = define('SM43.refresh', 'sources', { sources: ['indexing', 'failed'], indexing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst passport = define('SM44.passport', 'resolving', { resolving: ['fetching', 'failed'], fetching: ['extracting', 'failed'], extracting: ['libraries', 'failed'], libraries: ['analyzing', 'failed'], analyzing: ['publishing', 'failed'], publishing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nconst http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red"
+          },
+          consumers: [
+            {
+              file: "lib/semantic-code.js",
+              line: 248,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').deepQuery);"
+            }
+          ],
+          chart: {
+            name: "SM47.deep-query",
+            initial: "checking",
+            states: [
+              "checking",
+              "submitting",
+              "waiting",
+              "reading",
+              "saving",
+              "ready",
+              "reused",
+              "failed",
+              "compensating",
+              "cleanup-failed"
+            ],
+            terminal: [
+              "reused",
+              "ready",
+              "failed",
+              "cleanup-failed"
+            ],
+            transitions: {
+              checking: [
+                "reused",
+                "submitting",
+                "failed"
+              ],
+              submitting: [
+                "waiting",
+                "compensating"
+              ],
+              waiting: [
+                "reading",
+                "compensating"
+              ],
+              reading: [
+                "saving",
+                "compensating"
+              ],
+              saving: [
+                "ready",
+                "compensating"
+              ],
+              ready: [],
+              reused: [],
+              failed: [],
+              compensating: [
+                "failed",
+                "cleanup-failed"
+              ],
+              "cleanup-failed": []
+            }
+          }
+        },
+        {
+          id: "SM48.refresh",
+          component: "lib/docs-cache.js",
+          label: "SM48.refresh",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 108,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nmodule.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
+          },
+          consumers: [
+            {
+              file: "lib/docs-cache.js",
+              line: 181,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').docsRefresh);"
+            }
+          ],
+          chart: {
+            name: "SM48.refresh",
+            initial: "listing",
+            states: [
+              "listing",
+              "pages",
+              "reconciling",
+              "watermark",
+              "current",
+              "partial",
+              "failed"
+            ],
+            terminal: [
+              "current",
+              "partial",
+              "failed"
+            ],
+            transitions: {
+              listing: [
+                "pages",
+                "failed"
+              ],
+              pages: [
+                "reconciling",
+                "failed"
+              ],
+              reconciling: [
+                "watermark",
+                "partial",
+                "failed"
+              ],
+              watermark: [
+                "current",
+                "failed"
+              ],
+              current: [],
+              partial: [],
+              failed: []
+            }
+          }
+        },
+        {
+          id: "SM49.refresh",
+          component: "lib/semantic-knowledge.js",
+          label: "SM49.refresh",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 75,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['replaying', 'pushing', 'failed'], replaying: ['replayed', 'conflict', 'failed'], replayed: ['pushing', 'failed'], pushing: ['pushed', 'unknown'], pushed: ['recording', 'metadata-failed'], recording: ['completed', 'metadata-failed'], completed: [], failed: [], conflict: [], unknown: [], 'metadata-failed': [] }, ['completed', 'failed', 'conflict', 'unknown', 'metadata-failed']);\nconst refresh = define('SM43.refresh', 'sources', { sources: ['indexing', 'failed'], ind"
+          },
+          consumers: [
+            {
+              file: "lib/semantic-knowledge.js",
+              line: 102,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').knowledgeRefresh);"
+            }
+          ],
+          chart: {
+            name: "SM49.refresh",
+            initial: "reading",
+            states: [
+              "reading",
+              "writing",
+              "unchanged",
+              "updated",
+              "failed"
+            ],
+            terminal: [
+              "unchanged",
+              "updated",
+              "failed"
+            ],
+            transitions: {
+              reading: [
+                "unchanged",
+                "writing",
+                "failed"
+              ],
+              writing: [
+                "updated",
+                "failed"
+              ],
+              unchanged: [],
+              updated: [],
+              failed: []
+            }
+          }
+        },
+        {
+          id: "SM50.observation",
+          component: "lib/architecture-observations.js",
+          label: "SM50.observation",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 76,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['replaying', 'pushing', 'failed'], replaying: ['replayed', 'conflict', 'failed'], replayed: ['pushing', 'failed'], pushing: ['pushed', 'unknown'], pushed: ['recording', 'metadata-failed'], recording: ['completed', 'metadata-failed'], completed: [], failed: [], conflict: [], unknown: [], 'metadata-failed': [] }, ['completed', 'failed', 'conflict', 'unknown', 'metadata-failed']);\nconst refresh = define('SM43.refresh', 'sources', { sources: ['indexing', 'failed'], indexing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst passport = define('SM44.passport', 'resolving', { resolving: ['fetching', 'failed'], fetching: ['extracting', 'failed'], extracting: ['libraries', 'failed'], libraries: ['analyzing', 'failed'], analyzing: ['publishing', 'failed'], publishing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nc"
+          },
+          consumers: [
+            {
+              file: "lib/architecture-observations.js",
+              line: 50,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').observation);"
+            }
+          ],
+          chart: {
+            name: "SM50.observation",
+            initial: "refreshing",
+            states: [
+              "refreshing",
+              "fresh",
+              "stale",
+              "missing"
+            ],
+            terminal: [
+              "fresh",
+              "stale",
+              "missing"
+            ],
+            transitions: {
+              refreshing: [
+                "fresh",
+                "stale",
+                "missing"
+              ],
+              fresh: [],
+              stale: [],
+              missing: []
+            }
+          }
+        },
+        {
+          id: "SM51.capture-call",
+          component: "lib/context.js",
+          label: "SM51.capture-call",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 67,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const context = define('SM53.context', 'active', { active: ['paused', 'done'], paused: ['active', 'done'], done: ['active', 'paused'] });\nconst captureCall = define('SM51.capture-call', 'invoking', { invoking: ['succeeded', 'failed'], succeeded: ['saving'], failed: ['saving'], saving: ['saved', 'save-failed'], saved: [], 'save-failed': [] }, ['saved', 'save-failed']);\nconst pit = define('SM75.pit', 'opening', { opening: ['open'], open: ['reading', 'closing'], reading: ['closing'], closing: ['closed', 'close-failed'], closed: [], 'close-failed': [] }, ['closed', 'close-failed']);\nconst identity = define('SM16.identity', 'unverified', { unverified: ['authenticated', 'rejected'], authenticated: ['scoped', 'rejected'], scoped: [], rejected: [] }, ['scoped', 'rejected']);\nconst mcp = define('SM17.request', 'running', { running: ['cancelling', 'replied', 'closed'], cancelling: ['replied', 'closed'], replied: ['closed'], closed: [] }, ['closed']);\nconst effects = define('SM27.effects', 'unarmed', { unarmed: ['arming'], arming: ['armed', 'rejected'], armed: ['observing'], observing: ['checked', 'failed'], checked: [], rejected: [], failed: [] }, ['checked', 'rejected', 'failed']);\nconst action = define('SM29.action', 'reserved', { reserved: ['executing'], executing: ['completed', 'unknown'], completed: [], unknown: [] }, ['completed', 'unknown']);\nconst quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete"
+          },
+          consumers: [
+            {
+              file: "lib/context.js",
+              line: 271,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').captureCall);"
+            }
+          ],
+          chart: {
+            name: "SM51.capture-call",
+            initial: "invoking",
+            states: [
+              "invoking",
+              "succeeded",
+              "failed",
+              "saving",
+              "saved",
+              "save-failed"
+            ],
+            terminal: [
+              "saved",
+              "save-failed"
+            ],
+            transitions: {
+              invoking: [
+                "succeeded",
+                "failed"
+              ],
+              succeeded: [
+                "saving"
+              ],
+              failed: [
+                "saving"
+              ],
+              saving: [
+                "saved",
+                "save-failed"
+              ],
+              saved: [],
+              "save-failed": []
+            }
+          }
+        },
+        {
+          id: "SM52.generated-resource",
+          component: "lib/testdata.js",
+          label: "SM52.generated-resource",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 94,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);\nconst revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);"
+          },
+          consumers: [
+            {
+              file: "lib/testdata.js",
+              line: 1248,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').generatedResource);"
+            }
+          ],
+          chart: {
+            name: "SM52.generated-resource",
+            initial: "checking",
+            states: [
+              "checking",
+              "writing",
+              "retained",
+              "preview",
+              "written",
+              "failed"
+            ],
+            terminal: [
+              "retained",
+              "preview",
+              "written",
+              "failed"
+            ],
+            transitions: {
+              checking: [
+                "retained",
+                "preview",
+                "writing"
+              ],
+              writing: [
+                "written",
+                "failed"
+              ],
+              retained: [],
+              preview: [],
+              written: [],
+              failed: []
+            }
+          }
+        },
+        {
+          id: "SM53.context",
+          component: "lib/context.js",
+          label: "SM53.context",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 66,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const contextArchive = define('SM54.context-archive', 'checking', { checking: ['renamed'], renamed: ['published', 'restoring'], restoring: ['restored', 'recovery-needed'], published: [], restored: [], 'recovery-needed': [] }, ['published', 'restored', 'recovery-needed']);\nconst context = define('SM53.context', 'active', { active: ['paused', 'done'], paused: ['active', 'done'], done: ['active', 'paused'] });\nconst captureCall = define('SM51.capture-call', 'invoking', { invoking: ['succeeded', 'failed'], succeeded: ['saving'], failed: ['saving'], saving: ['saved', 'save-failed'], saved: [], 'save-failed': [] }, ['saved', 'save-failed']);\nconst pit = define('SM75.pit', 'opening', { opening: ['open'], open: ['reading', 'closing'], reading: ['closing'], closing: ['closed', 'close-failed'], closed: [], 'close-failed': [] }, ['closed', 'close-failed']);\nconst identity = define('SM16.identity', 'unverified', { unverified: ['authenticated', 'rejected'], authenticated: ['scoped', 'rejected'], scoped: [], rejected: [] }, ['scoped', 'rejected']);\nconst mcp = define('SM17.request', 'running', { running: ['cancelling', 'replied', 'closed'], cancelling: ['replied', 'closed'], replied: ['closed'], closed: [] }, ['closed']);\nconst effects = define('SM27.effects', 'unarmed', { unarmed: ['arming'], arming: ['armed', 'rejected'], armed: ['observing'], observing: ['checked', 'failed'], checked: [], rejected: [], failed: [] }, ['checked', 'rejected', 'failed']);\nconst action = define('SM29.action', 'reserved', { reserved: ['executing'], executing: ['completed', 'unknown'], completed: [], unknown: [] }, ['completed', 'unknown']);\nconst quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown:"
+          },
+          consumers: [
+            {
+              file: "lib/context.js",
+              line: 39,
+              snippet: "require('./state-machine').next(require('./lifecycles').context, previous.status || 'active', out.status);"
+            }
+          ],
+          chart: {
+            name: "SM53.context",
+            initial: "active",
+            states: [
+              "active",
+              "paused",
+              "done"
+            ],
+            terminal: [],
+            transitions: {
+              active: [
+                "paused",
+                "done"
+              ],
+              paused: [
+                "active",
+                "done"
+              ],
+              done: [
+                "active",
+                "paused"
+              ]
+            }
+          }
+        },
+        {
+          id: "SM54.archive",
+          component: "lib/files.js",
+          label: "SM54.archive",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 63,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const control = define('SM21.control', 'opening', { opening: ['locked', 'failed'], locked: ['initializing', 'verifying', 'failed'], initializing: ['verifying', 'failed'], verifying: ['ready', 'failed'], ready: ['releasing', 'failed'], failed: ['releasing'], releasing: ['closed', 'cleanup-failed'], closed: [], 'cleanup-failed': [] }, ['closed', 'cleanup-failed']);\nconst archive = define('SM54.archive', 'checking', { checking: ['copied', 'archived', 'failed'], copied: ['verified', 'failed'], verified: ['removing'], removing: ['archived', 'source-retained', 'recovery-needed'], archived: [], failed: [], 'source-retained': [], 'recovery-needed': [] }, ['archived', 'failed', 'source-retained', 'recovery-needed']);\nconst archiveRemoval = define('SM54.source-removal', 'source', { source: ['holding', 'removed'], holding: ['verified', 'restoring'], verified: ['removed', 'restoring'], restoring: ['restored', 'recovery-needed'], removed: [], restored: [], 'recovery-needed': [] }, ['removed', 'restored', 'recovery-needed']);\nconst contextArchive = define('SM54.context-archive', 'checking', { checking: ['renamed'], renamed: ['published', 'restoring'], restoring: ['restored', 'recovery-needed'], published: [], restored: [], 'recovery-needed': [] }, ['published', 'restored', 'recovery-needed']);\nconst context = define('SM53.context', 'active', { active: ['paused', 'done'], paused: ['active', 'done'], done: ['active', 'paused'] });\nconst captureCall = define('SM51.capture-call', 'invoking', { invoking: ['succeeded', 'failed'], succeeded: ['saving'], failed: ['saving'], saving: ['saved', 'save-failed'], saved: [], 'save-failed': [] }, ['saved', 'save-failed']);\nconst pit = define('SM75.pit', 'opening', { opening: ['open'], open: ['reading', 'closing'], reading: ['closing'], closing: ['closed', 'close-failed'], closed: [], 'close-failed': [] }, ['closed', 'close-failed']);\nconst identity = define('SM16.identity', 'unverified', { unverified: ['authenticated', 'rejected'], authenticated: ['scoped', 'rejected'], scoped: [], rejected: [] }, ['scoped', 'rejected']);\nconst mcp = define('SM17.request', 'running', { running: ['cancelling', 'replied', 'closed'], cancelling: ['replied', 'closed'], replied: ['closed'], closed: [] }, ['closed']);\nconst effects = define('SM27.effects', 'unarmed', { unarmed: ['arming'], arming: ['armed', 'rejected'], armed: ['observing'], observing: ['checked', 'failed'], checked: [], rejected: [], failed: [] }, ['checked', 'rejected', 'failed']);\nconst action = define('SM29.action', 'reserved', { reserved: ['executing'], executing: ['completed', 'unknown'], completed: [], unknown: [] }, ['completed', 'unknown']);\nconst quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { q"
+          },
+          consumers: [
+            {
+              file: "lib/files.js",
+              line: 341,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').archive);"
+            }
+          ],
+          chart: {
+            name: "SM54.archive",
+            initial: "checking",
+            states: [
+              "checking",
+              "copied",
+              "verified",
+              "removing",
+              "archived",
+              "failed",
+              "source-retained",
+              "recovery-needed"
+            ],
+            terminal: [
+              "archived",
+              "failed",
+              "source-retained",
+              "recovery-needed"
+            ],
+            transitions: {
+              checking: [
+                "copied",
+                "archived",
+                "failed"
+              ],
+              copied: [
+                "verified",
+                "failed"
+              ],
+              verified: [
+                "removing"
+              ],
+              removing: [
+                "archived",
+                "source-retained",
+                "recovery-needed"
+              ],
+              archived: [],
+              failed: [],
+              "source-retained": [],
+              "recovery-needed": []
+            }
+          }
+        },
+        {
+          id: "SM54.context-archive",
+          component: "lib/files.js",
+          label: "SM54.context-archive",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 65,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const archiveRemoval = define('SM54.source-removal', 'source', { source: ['holding', 'removed'], holding: ['verified', 'restoring'], verified: ['removed', 'restoring'], restoring: ['restored', 'recovery-needed'], removed: [], restored: [], 'recovery-needed': [] }, ['removed', 'restored', 'recovery-needed']);\nconst contextArchive = define('SM54.context-archive', 'checking', { checking: ['renamed'], renamed: ['published', 'restoring'], restoring: ['restored', 'recovery-needed'], published: [], restored: [], 'recovery-needed': [] }, ['published', 'restored', 'recovery-needed']);\nconst context = define('SM53.context', 'active', { active: ['paused', 'done'], paused: ['active', 'done'], done: ['active', 'paused'] });\nconst captureCall = define('SM51.capture-call', 'invoking', { invoking: ['succeeded', 'failed'], succeeded: ['saving'], failed: ['saving'], saving: ['saved', 'save-failed'], saved: [], 'save-failed': [] }, ['saved', 'save-failed']);\nconst pit = define('SM75.pit', 'opening', { opening: ['open'], open: ['reading', 'closing'], reading: ['closing'], closing: ['closed', 'close-failed'], closed: [], 'close-failed': [] }, ['closed', 'close-failed']);\nconst identity = define('SM16.identity', 'unverified', { unverified: ['authenticated', 'rejected'], authenticated: ['scoped', 'rejected'], scoped: [], rejected: [] }, ['scoped', 'rejected']);\nconst mcp = define('SM17.request', 'running', { running: ['cancelling', 'replied', 'closed'], cancelling: ['replied', 'closed'], replied: ['closed'], closed: [] }, ['closed']);\nconst effects = define('SM27.effects', 'unarmed', { unarmed: ['arming'], arming: ['armed', 'rejected'], armed: ['observing'], observing: ['checked', 'failed'], checked: [], rejected: [], failed: [] }, ['checked', 'rejected', 'failed']);\nconst action = define('SM29.action', 'reserved', { reserved: ['executing'], executing: ['completed', 'unknown'], completed: [], unknown: [] }, ['completed', 'unknown']);\nconst quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', "
+          },
+          consumers: [
+            {
+              file: "lib/context.js",
+              line: 246,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').contextArchive);"
+            }
+          ],
+          chart: {
+            name: "SM54.context-archive",
+            initial: "checking",
+            states: [
+              "checking",
+              "renamed",
+              "restoring",
+              "published",
+              "restored",
+              "recovery-needed"
+            ],
+            terminal: [
+              "published",
+              "restored",
+              "recovery-needed"
+            ],
+            transitions: {
+              checking: [
+                "renamed"
+              ],
+              renamed: [
+                "published",
+                "restoring"
+              ],
+              restoring: [
+                "restored",
+                "recovery-needed"
+              ],
+              published: [],
+              restored: [],
+              "recovery-needed": []
+            }
+          }
+        },
+        {
+          id: "SM54.source-removal",
+          component: "lib/files.js",
+          label: "SM54.source-removal",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 64,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const archive = define('SM54.archive', 'checking', { checking: ['copied', 'archived', 'failed'], copied: ['verified', 'failed'], verified: ['removing'], removing: ['archived', 'source-retained', 'recovery-needed'], archived: [], failed: [], 'source-retained': [], 'recovery-needed': [] }, ['archived', 'failed', 'source-retained', 'recovery-needed']);\nconst archiveRemoval = define('SM54.source-removal', 'source', { source: ['holding', 'removed'], holding: ['verified', 'restoring'], verified: ['removed', 'restoring'], restoring: ['restored', 'recovery-needed'], removed: [], restored: [], 'recovery-needed': [] }, ['removed', 'restored', 'recovery-needed']);\nconst contextArchive = define('SM54.context-archive', 'checking', { checking: ['renamed'], renamed: ['published', 'restoring'], restoring: ['restored', 'recovery-needed'], published: [], restored: [], 'recovery-needed': [] }, ['published', 'restored', 'recovery-needed']);\nconst context = define('SM53.context', 'active', { active: ['paused', 'done'], paused: ['active', 'done'], done: ['active', 'paused'] });\nconst captureCall = define('SM51.capture-call', 'invoking', { invoking: ['succeeded', 'failed'], succeeded: ['saving'], failed: ['saving'], saving: ['saved', 'save-failed'], saved: [], 'save-failed': [] }, ['saved', 'save-failed']);\nconst pit = define('SM75.pit', 'opening', { opening: ['open'], open: ['reading', 'closing'], reading: ['closing'], closing: ['closed', 'close-failed'], closed: [], 'close-failed': [] }, ['closed', 'close-failed']);\nconst identity = define('SM16.identity', 'unverified', { unverified: ['authenticated', 'rejected'], authenticated: ['scoped', 'rejected'], scoped: [], rejected: [] }, ['scoped', 'rejected']);\nconst mcp = define('SM17.request', 'running', { running: ['cancelling', 'replied', 'closed'], cancelling: ['replied', 'closed'], replied: ['closed'], closed: [] }, ['closed']);\nconst effects = define('SM27.effects', 'unarmed', { unarmed: ['arming'], arming: ['armed', 'rejected'], armed: ['observing'], observing: ['checked', 'failed'], checked: [], rejected: [], failed: [] }, ['checked', 'rejected', 'failed']);\nconst action = define('SM29.action', 'reserved', { reserved: ['executing'], executing: ['completed', 'unknown'], completed: [], unknown: [] }, ['completed', 'unknown']);\nconst quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: ["
+          },
+          consumers: [
+            {
+              file: "lib/files.js",
+              line: 320,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').archiveRemoval);"
+            }
+          ],
+          chart: {
+            name: "SM54.source-removal",
+            initial: "source",
+            states: [
+              "source",
+              "holding",
+              "verified",
+              "restoring",
+              "removed",
+              "restored",
+              "recovery-needed"
+            ],
+            terminal: [
+              "removed",
+              "restored",
+              "recovery-needed"
+            ],
+            transitions: {
+              source: [
+                "holding",
+                "removed"
+              ],
+              holding: [
+                "verified",
+                "restoring"
+              ],
+              verified: [
+                "removed",
+                "restoring"
+              ],
+              restoring: [
+                "restored",
+                "recovery-needed"
+              ],
+              removed: [],
+              restored: [],
+              "recovery-needed": []
+            }
+          }
+        },
+        {
+          id: "SM55.edge-snapshot",
+          component: "lib/passport/overrides.js",
+          label: "SM55.edge-snapshot",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 44,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {\n  disconnected: ['initializing', 'closing'], initializing: ['ready', 'disconnected', 'closing'], ready: ['closing'], closing: ['disconnected'],\n});\nconst fixture = define('SM26.fixture', 'starting', { starting: ['ready', 'cleanup-failed', 'stopped'], ready: ['cleanup-failed', 'stopped'], 'cleanup-failed': ['stopped'], stopped: [] }, ['stopped']);\nconst scenario = define('SM28.scenario', 'starting', { starting: ['ready', 'failed', 'stopped'], ready: ['failed', 'stopped'], failed: ['stopped'], stopped: [] }, ['stopped']);\nconst collection = define('SM35.collection', 'running', { running: ['passed', 'failed', 'cancelled'], passed: [], failed: [], cancelled: [] }, ['passed', 'failed', 'cancelled']);\nconst semantic = define('SM45.semantic', 'uploading', {\n  uploading: ['queued', 'failed', 'interrupted'], queued: ['parsing', 'querying', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  parsing: ['enriching', 'cancelling', 'failed', 'cancelled', 'interrupted'], enriching: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  querying: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'], cancelling: ['cancelled', 'failed', 'interrupted'],\n  draining: ['ready', 'cancelled', 'failed', 'interrupted'],\n  ready: [], failed: [], cancelled: [], interrupted: [],"
+          },
+          consumers: [],
+          chart: {
+            name: "SM55.edge-snapshot",
+            initial: "missing",
+            states: [
+              "missing",
+              "valid",
+              "stale",
+              "invalid",
+              "removed"
+            ],
+            terminal: [
+              "removed"
+            ],
+            transitions: {
+              missing: [
+                "valid",
+                "invalid",
+                "removed"
+              ],
+              valid: [
+                "valid",
+                "stale",
+                "removed"
+              ],
+              stale: [
+                "valid",
+                "stale",
+                "removed"
+              ],
+              invalid: [
+                "valid",
+                "invalid",
+                "removed"
+              ],
+              removed: []
+            }
+          }
+        },
+        {
+          id: "SM55.passport-edit",
+          component: "lib/passport/overrides.js",
+          label: "SM55.passport-edit",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 97,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);"
+          },
+          consumers: [],
+          chart: {
+            name: "SM55.passport-edit",
+            initial: "checking",
+            states: [
+              "checking",
+              "locked",
+              "checked",
+              "revision-written",
+              "head-written",
+              "completed",
+              "failed"
+            ],
+            terminal: [
+              "completed",
+              "failed"
+            ],
+            transitions: {
+              checking: [
+                "locked",
+                "checked",
+                "failed"
+              ],
+              locked: [
+                "checked",
+                "failed"
+              ],
+              checked: [
+                "revision-written",
+                "head-written",
+                "failed"
+              ],
+              "revision-written": [
+                "head-written",
+                "failed"
+              ],
+              "head-written": [
+                "completed",
+                "failed"
+              ],
+              completed: [],
+              failed: []
+            }
+          }
+        },
+        {
+          id: "SM56.map-edit",
+          component: "lib/map-adjustments.js",
+          label: "SM56.map-edit",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 97,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);"
+          },
+          consumers: [
+            {
+              file: "lib/map-adjustments.js",
+              line: 10,
+              snippet: "const lifecycle=require('./state-machine').create(require('./lifecycles').mapEdit);"
+            }
+          ],
+          chart: {
+            name: "SM56.map-edit",
+            initial: "checking",
+            states: [
+              "checking",
+              "locked",
+              "checked",
+              "revision-written",
+              "head-written",
+              "completed",
+              "failed"
+            ],
+            terminal: [
+              "completed",
+              "failed"
+            ],
+            transitions: {
+              checking: [
+                "locked",
+                "checked",
+                "failed"
+              ],
+              locked: [
+                "checked",
+                "failed"
+              ],
+              checked: [
+                "revision-written",
+                "head-written",
+                "failed"
+              ],
+              "revision-written": [
+                "head-written",
+                "failed"
+              ],
+              "head-written": [
+                "completed",
+                "failed"
+              ],
+              completed: [],
+              failed: []
+            }
+          }
+        },
+        {
+          id: "SM57.architecture-edit",
+          component: "lib/architecture-store.js",
+          label: "SM57.architecture-edit",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 97,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);"
+          },
+          consumers: [
+            {
+              file: "lib/architecture-store.js",
+              line: 84,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').architectureEdit); lifecycle.to('locked');"
+            }
+          ],
+          chart: {
+            name: "SM57.architecture-edit",
+            initial: "checking",
+            states: [
+              "checking",
+              "locked",
+              "checked",
+              "revision-written",
+              "head-written",
+              "completed",
+              "failed"
+            ],
+            terminal: [
+              "completed",
+              "failed"
+            ],
+            transitions: {
+              checking: [
+                "locked",
+                "checked",
+                "failed"
+              ],
+              locked: [
+                "checked",
+                "failed"
+              ],
+              checked: [
+                "revision-written",
+                "head-written",
+                "failed"
+              ],
+              "revision-written": [
+                "head-written",
+                "failed"
+              ],
+              "head-written": [
+                "completed",
+                "failed"
+              ],
+              completed: [],
+              failed: []
+            }
+          }
+        },
+        {
+          id: "SM58.definition",
+          component: "lib/views.js",
+          label: "SM58.definition",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 98,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);"
+          },
+          consumers: [
+            {
+              file: "lib/views.js",
+              line: 42,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').definition);"
+            }
+          ],
+          chart: {
+            name: "SM58.definition",
+            initial: "checking",
+            states: [
+              "checking",
+              "custom",
+              "builtin",
+              "missing"
+            ],
+            terminal: [
+              "custom",
+              "builtin",
+              "missing"
+            ],
+            transitions: {
+              checking: [
+                "custom",
+                "builtin",
+                "missing"
+              ],
+              custom: [],
+              builtin: [],
+              missing: []
+            }
+          }
+        },
+        {
+          id: "SM58.starter",
+          component: "lib/views.js",
+          label: "SM58.starter",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 109,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nmodule.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
+          },
+          consumers: [
+            {
+              file: "lib/scripts.js",
+              line: 213,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').starter);"
+            }
+          ],
+          chart: {
+            name: "SM58.starter",
+            initial: "checking",
+            states: [
+              "checking",
+              "copying",
+              "retained",
+              "copied"
+            ],
+            terminal: [
+              "retained",
+              "copied"
+            ],
+            transitions: {
+              checking: [
+                "retained",
+                "copying"
+              ],
+              copying: [
+                "copied"
+              ],
+              retained: [],
+              copied: []
+            }
+          }
+        },
+        {
+          id: "SM59.replay",
+          component: "lib/api-client.js",
+          label: "SM59.replay",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 99,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);"
+          },
+          consumers: [
+            {
+              file: "lib/api-client.js",
+              line: 174,
+              snippet: "const lifecycle=require('./state-machine').create(require('./lifecycles').apiReplay); lifecycle.to('sending');"
+            }
+          ],
+          chart: {
+            name: "SM59.replay",
+            initial: "prepared",
+            states: [
+              "prepared",
+              "sending",
+              "received",
+              "saved",
+              "unknown",
+              "save-failed"
+            ],
+            terminal: [
+              "saved",
+              "unknown",
+              "save-failed"
+            ],
+            transitions: {
+              prepared: [
+                "sending"
+              ],
+              sending: [
+                "received",
+                "unknown"
+              ],
+              received: [
+                "saved",
+                "save-failed"
+              ],
+              saved: [],
+              unknown: [],
+              "save-failed": []
+            }
+          }
+        },
+        {
+          id: "SM60.browser-lease",
+          component: "lib/api-client.js",
+          label: "SM60.browser-lease",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 100,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);"
+          },
+          consumers: [
+            {
+              file: "lib/api-client.js",
+              line: 280,
+              snippet: "const browser = require('./browser-mcp').session({ timeout: timeoutMs || 30000 }), key = id(),lifecycle=require('./state-machine').create(require('./lifecycles').browserLease);"
+            }
+          ],
+          chart: {
+            name: "SM60.browser-lease",
+            initial: "opening",
+            states: [
+              "opening",
+              "ready",
+              "capturing",
+              "expired",
+              "failed",
+              "closing",
+              "closed"
+            ],
+            terminal: [
+              "closed"
+            ],
+            transitions: {
+              opening: [
+                "ready",
+                "failed"
+              ],
+              ready: [
+                "capturing",
+                "expired",
+                "closing"
+              ],
+              capturing: [
+                "ready",
+                "expired",
+                "closing"
+              ],
+              expired: [
+                "closing"
+              ],
+              failed: [
+                "closing"
+              ],
+              closing: [
+                "closed"
+              ],
+              closed: []
+            }
+          }
+        },
+        {
+          id: "SM61.result",
+          component: "lib/results.js",
+          label: "SM61.result",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 101,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);"
+          },
+          consumers: [
+            {
+              file: "lib/results.js",
+              line: 18,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').result);"
+            }
+          ],
+          chart: {
+            name: "SM61.result",
+            initial: "allocating",
+            states: [
+              "allocating",
+              "serialized",
+              "stored",
+              "failed"
+            ],
+            terminal: [
+              "stored",
+              "failed"
+            ],
+            transitions: {
+              allocating: [
+                "serialized",
+                "failed"
+              ],
+              serialized: [
+                "stored",
+                "failed"
+              ],
+              stored: [],
+              failed: []
+            }
+          }
+        },
+        {
+          id: "SM74.bundle",
+          component: "run.sh",
+          label: "SM74.bundle",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 110,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nmodule.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
+          },
+          consumers: [],
+          chart: {
+            name: "SM74.bundle",
+            initial: "bundling",
+            states: [
+              "bundling",
+              "collecting",
+              "comparing",
+              "writing",
+              "verified",
+              "stale",
+              "written"
+            ],
+            terminal: [
+              "verified",
+              "stale",
+              "written"
+            ],
+            transitions: {
+              bundling: [
+                "collecting"
+              ],
+              collecting: [
+                "comparing"
+              ],
+              comparing: [
+                "verified",
+                "stale",
+                "writing"
+              ],
+              writing: [
+                "written"
+              ],
+              verified: [],
+              stale: [],
+              written: []
+            }
+          }
+        },
+        {
+          id: "SM74.config-migration",
+          component: "run.sh",
+          label: "SM74.config-migration",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 111,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nmodule.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
+          },
+          consumers: [
+            {
+              file: "lib/migrate.js",
+              line: 93,
+              snippet: "const lifecycle = create(require('./lifecycles').configMigration);"
+            }
+          ],
+          chart: {
+            name: "SM74.config-migration",
+            initial: "planning",
+            states: [
+              "planning",
+              "staging",
+              "secrets-published",
+              "config-published",
+              "compensating",
+              "preview",
+              "ready",
+              "rolled-back",
+              "cleanup-failed"
+            ],
+            terminal: [
+              "preview",
+              "ready",
+              "rolled-back",
+              "cleanup-failed"
+            ],
+            transitions: {
+              planning: [
+                "preview",
+                "staging"
+              ],
+              staging: [
+                "secrets-published",
+                "compensating"
+              ],
+              "secrets-published": [
+                "config-published",
+                "compensating"
+              ],
+              "config-published": [
+                "ready",
+                "compensating"
+              ],
+              compensating: [
+                "rolled-back",
+                "cleanup-failed"
+              ],
+              preview: [],
+              ready: [],
+              "rolled-back": [],
+              "cleanup-failed": []
+            }
+          }
+        },
+        {
+          id: "SM75.pit",
+          component: "lib/reproduction-es.js",
+          label: "SM75.pit",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 68,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const captureCall = define('SM51.capture-call', 'invoking', { invoking: ['succeeded', 'failed'], succeeded: ['saving'], failed: ['saving'], saving: ['saved', 'save-failed'], saved: [], 'save-failed': [] }, ['saved', 'save-failed']);\nconst pit = define('SM75.pit', 'opening', { opening: ['open'], open: ['reading', 'closing'], reading: ['closing'], closing: ['closed', 'close-failed'], closed: [], 'close-failed': [] }, ['closed', 'close-failed']);\nconst identity = define('SM16.identity', 'unverified', { unverified: ['authenticated', 'rejected'], authenticated: ['scoped', 'rejected'], scoped: [], rejected: [] }, ['scoped', 'rejected']);\nconst mcp = define('SM17.request', 'running', { running: ['cancelling', 'replied', 'closed'], cancelling: ['replied', 'closed'], replied: ['closed'], closed: [] }, ['closed']);\nconst effects = define('SM27.effects', 'unarmed', { unarmed: ['arming'], arming: ['armed', 'rejected'], armed: ['observing'], observing: ['checked', 'failed'], checked: [], rejected: [], failed: [] }, ['checked', 'rejected', 'failed']);\nconst action = define('SM29.action', 'reserved', { reserved: ['executing'], executing: ['completed', 'unknown'], completed: [], unknown: [] }, ['completed', 'unknown']);\nconst quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial',"
+          },
+          consumers: [
+            {
+              file: "lib/reproduction-es.js",
+              line: 30,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').pit); lifecycle.to('open');"
+            }
+          ],
+          chart: {
+            name: "SM75.pit",
+            initial: "opening",
+            states: [
+              "opening",
+              "open",
+              "reading",
+              "closing",
+              "closed",
+              "close-failed"
+            ],
+            terminal: [
+              "closed",
+              "close-failed"
+            ],
+            transitions: {
+              opening: [
+                "open"
+              ],
+              open: [
+                "reading",
+                "closing"
+              ],
+              reading: [
+                "closing"
+              ],
+              closing: [
+                "closed",
+                "close-failed"
+              ],
+              closed: [],
+              "close-failed": []
+            }
+          }
+        },
+        {
+          id: "SM76.adapter",
+          component: "lib/adapter-port.js",
+          label: "SM76.adapter",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 80,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['replaying', 'pushing', 'failed'], replaying: ['replayed', 'conflict', 'failed'], replayed: ['pushing', 'failed'], pushing: ['pushed', 'unknown'], pushed: ['recording', 'metadata-failed'], recording: ['completed', 'metadata-failed'], completed: [], failed: [], conflict: [], unknown: [], 'metadata-failed': [] }, ['completed', 'failed', 'conflict', 'unknown', 'metadata-failed']);\nconst refresh = define('SM43.refresh', 'sources', { sources: ['indexing', 'failed'], indexing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst passport = define('SM44.passport', 'resolving', { resolving: ['fetching', 'failed'], fetching: ['extracting', 'failed'], extracting: ['libraries', 'failed'], libraries: ['analyzing', 'failed'], analyzing: ['publishing', 'failed'], publishing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nconst http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'p"
+          },
+          consumers: [
+            {
+              file: "lib/adapter-port.js",
+              line: 23,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').adapter);"
+            }
+          ],
+          chart: {
+            name: "SM76.adapter",
+            initial: "prepared",
+            states: [
+              "prepared",
+              "sending",
+              "reading",
+              "verified",
+              "succeeded",
+              "rejected",
+              "unknown"
+            ],
+            terminal: [
+              "succeeded",
+              "rejected",
+              "unknown"
+            ],
+            transitions: {
+              prepared: [
+                "sending"
+              ],
+              sending: [
+                "reading",
+                "unknown"
+              ],
+              reading: [
+                "verified",
+                "unknown"
+              ],
+              verified: [
+                "succeeded",
+                "rejected"
+              ],
+              succeeded: [],
+              rejected: [],
+              unknown: []
+            }
+          }
+        },
+        {
+          id: "SM76.http",
+          component: "lib/adapter-port.js",
+          label: "SM76.http",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 90,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nconst http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);\nconst revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });"
+          },
+          consumers: [
+            {
+              file: "lib/util.js",
+              line: 36,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').http);"
+            }
+          ],
+          chart: {
+            name: "SM76.http",
+            initial: "sending",
+            states: [
+              "sending",
+              "reading",
+              "completed",
+              "failed"
+            ],
+            terminal: [
+              "completed",
+              "failed"
+            ],
+            transitions: {
+              sending: [
+                "reading",
+                "failed"
+              ],
+              reading: [
+                "completed",
+                "failed"
+              ],
+              completed: [],
+              failed: []
+            }
+          }
+        },
+        {
+          id: "SM77.backend",
+          component: "lib/code-search.js",
+          label: "SM77.backend",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 95,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);\nconst revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);"
+          },
+          consumers: [
+            {
+              file: "lib/code-search.js",
+              line: 39,
+              snippet: "const backend = backends.get(command) || require('./state-machine').create(require('./lifecycles').searchBackend); backends.set(command, backend);"
+            }
+          ],
+          chart: {
+            name: "SM77.backend",
+            initial: "unknown",
+            states: [
+              "unknown",
+              "available",
+              "unavailable"
+            ],
+            terminal: [
+              "unavailable"
+            ],
+            transitions: {
+              unknown: [
+                "available",
+                "unavailable"
+              ],
+              available: [
+                "unavailable"
+              ],
+              unavailable: []
+            }
+          }
+        },
+        {
+          id: "SM78.program",
+          component: "lib/offline-js.js",
+          label: "SM78.program",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 89,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const passport = define('SM44.passport', 'resolving', { resolving: ['fetching', 'failed'], fetching: ['extracting', 'failed'], extracting: ['libraries', 'failed'], libraries: ['analyzing', 'failed'], analyzing: ['publishing', 'failed'], publishing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nconst http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);\nconst revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);"
+          },
+          consumers: [
+            {
+              file: "lib/offline-js.js",
+              line: 155,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').realm);"
+            }
+          ],
+          chart: {
+            name: "SM78.program",
+            initial: "prepared",
+            states: [
+              "prepared",
+              "executing",
+              "settled",
+              "rejected",
+              "failed"
+            ],
+            terminal: [
+              "settled",
+              "rejected",
+              "failed"
+            ],
+            transitions: {
+              prepared: [
+                "executing",
+                "rejected"
+              ],
+              executing: [
+                "settled",
+                "failed"
+              ],
+              settled: [],
+              rejected: [],
+              failed: []
+            }
+          }
+        },
+        {
+          id: "SM79.diagnostic-store",
+          component: "lib/lifecycles.js",
+          label: "SM79.diagnostic-store",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 112,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nmodule.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
+          },
+          consumers: [
+            {
+              file: "lib/telemetry-store.js",
+              line: 8,
+              snippet: "require('./state-machine').bind(this, require('./lifecycles').diagnosticStore, 'phase');"
+            }
+          ],
+          chart: {
+            name: "SM79.diagnostic-store",
+            initial: "cold",
+            states: [
+              "cold",
+              "starting",
+              "ready",
+              "failed",
+              "closed"
+            ],
+            terminal: [
+              "closed"
+            ],
+            transitions: {
+              cold: [
+                "starting",
+                "closed",
+                "failed"
+              ],
+              starting: [
+                "ready",
+                "failed",
+                "closed"
+              ],
+              ready: [
+                "failed",
+                "closed"
+              ],
+              failed: [
+                "closed"
+              ],
+              closed: []
+            }
+          }
+        },
+        {
+          id: "SM80.project-context-publication",
+          component: "lib/lifecycles.js",
+          label: "SM80.project-context-publication",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 113,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nmodule.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
+          },
+          consumers: [
+            {
+              file: "lib/project-context.js",
+              line: 78,
+              snippet: "const lifecycle=require('./state-machine').create(require('./lifecycles').projectContextPublication);lifecycle.to('locked');"
+            }
+          ],
+          chart: {
+            name: "SM80.project-context-publication",
+            initial: "draft",
+            states: [
+              "draft",
+              "locked",
+              "checked",
+              "files-written",
+              "revision-written",
+              "published",
+              "failed"
+            ],
+            terminal: [
+              "published",
+              "failed"
+            ],
+            transitions: {
+              draft: [
+                "locked"
+              ],
+              locked: [
+                "checked",
+                "failed"
+              ],
+              checked: [
+                "files-written",
+                "failed"
+              ],
+              "files-written": [
+                "revision-written",
+                "failed"
+              ],
+              "revision-written": [
+                "published",
+                "failed"
+              ],
+              published: [],
+              failed: []
+            }
+          }
+        },
+        {
+          id: "SM81.ci-wait",
+          component: "lib/lifecycles.js",
+          label: "SM81.ci-wait",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 114,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nmodule.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
+          },
+          consumers: [
+            {
+              file: "lib/ci-wait.js",
+              line: 21,
+              snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').ciWait);"
+            }
+          ],
+          chart: {
+            name: "SM81.ci-wait",
+            initial: "checking",
+            states: [
+              "checking",
+              "sleeping",
+              "complete",
+              "pending",
+              "cancelled",
+              "failed"
+            ],
+            terminal: [
+              "complete",
+              "pending",
+              "cancelled",
+              "failed"
+            ],
+            transitions: {
+              checking: [
+                "sleeping",
+                "complete",
+                "pending",
+                "cancelled",
+                "failed"
+              ],
+              sleeping: [
+                "checking",
+                "pending",
+                "cancelled",
+                "failed"
+              ],
+              complete: [],
+              pending: [],
+              cancelled: [],
+              failed: []
+            }
+          }
+        },
+        {
+          id: "UI-page.run",
+          component: "lib/lifecycles.js",
+          label: "UI-page.run",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 115,
+            sha256: "2981d7793122010ba4ef4dde6dbbcc5d86dc08ec427aa25825e411976c13ced1",
+            snippet: "const ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nmodule.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
+          },
+          consumers: [
+            {
+              file: "lib/ui-pages.js",
+              line: 62,
+              snippet: "const machine=require('./state-machine').create(require('./lifecycles').uiPageRun),started=Date.now(),loaded={};machine.to('reading');"
+            }
+          ],
+          chart: {
+            name: "UI-page.run",
+            initial: "ready",
+            states: [
+              "ready",
+              "reading",
+              "composing",
+              "retaining",
+              "done",
+              "cancelled",
+              "failed"
+            ],
+            terminal: [
+              "done",
+              "cancelled",
+              "failed"
+            ],
+            transitions: {
+              ready: [
+                "reading"
+              ],
+              reading: [
+                "composing",
+                "cancelled",
+                "failed"
+              ],
+              composing: [
+                "retaining",
+                "cancelled",
+                "failed"
+              ],
+              retaining: [
+                "done",
+                "cancelled",
+                "failed"
+              ],
+              done: [],
+              cancelled: [],
+              failed: []
+            }
+          }
+        },
+        {
+          id: "UI.activity",
+          component: "web/state-machine.js",
+          label: "UI.activity",
+          origin: "executable-declaration",
+          source: {
+            file: "web/state-machine.js",
+            line: 85,
+            sha256: "702ba85fa114d91bf2d6766ef36a88deaa8e72608b4cdb06fba37c313c46c5f4",
+            snippet: "}\nconst activityModel = define('UI.activity', 'idle', { idle: ['active'], active: ['idle'] });\nclass Activity {\n  constructor() { this.lifecycle = create(activityModel); }\n  get value() { return this.lifecycle.is('active'); }\n  set value(value) { if (typeof value !== 'boolean') throw new Error('Activity must be boolean'); this.lifecycle.to(value ? 'active' : 'idle'); }\n}\nclass Draft {\n  constructor() { this.fields = new Map(); this.edits = new Revision(); }\n  get revision() { return this.edits.value; }\n  get dirty() { return [...this.fields.values()].some(field => field.value); }\n  has(name) { return this.fields.get(name)?.value || false; }\n  mark(name) { const field = this.fields.get(name) || new Dirty(); field.value = true; this.fields.set(name, field); this.edits.advance(); }\n  clear(name) { if (name === undefined) this.fields.clear(); else this.fields.delete(name); }\n}\n"
+          },
+          consumers: [],
+          chart: {
+            name: "UI.activity",
+            initial: "idle",
+            states: [
+              "idle",
+              "active"
+            ],
+            terminal: [],
+            transitions: {
+              idle: [
+                "active"
+              ],
+              active: [
+                "idle"
+              ]
+            }
+          }
+        },
+        {
+          id: "UI.diagnostics-view",
+          component: "web/state-machine.js",
+          label: "UI.diagnostics-view",
+          origin: "executable-declaration",
+          source: {
+            file: "web/state-machine.js",
+            line: 166,
+            sha256: "702ba85fa114d91bf2d6766ef36a88deaa8e72608b4cdb06fba37c313c46c5f4",
+            snippet: "\nconst diagnosticsModel = define('UI.diagnostics-view','activity',{activity:['events','traces','coverage'],events:['activity','traces','coverage'],traces:['activity','events','coverage'],coverage:['activity','events','traces']});\nconst projectContextScopeModel=define('UI.project-context-scope','task',{task:['project'],project:['task']});\nconst models = Object.freeze({ projectContextScope:projectContextScopeModel, diagnostics:diagnosticsModel, pending: pendingModel, dirty: dirtyModel, activity: activityModel, selection: selectionModel, disclosure: disclosureModel, framing: framingModel });\nreturn { define, create, bind, next, assertState, observe, Revision, Pending, Dirty, Draft, Activity, Selection, disclosureModel, flag, editRevision, Framer, models };\n\n});\n"
+          },
+          consumers: [],
+          chart: {
+            name: "UI.diagnostics-view",
+            initial: "activity",
+            states: [
+              "activity",
+              "events",
+              "traces",
+              "coverage"
+            ],
+            terminal: [],
+            transitions: {
+              activity: [
+                "events",
+                "traces",
+                "coverage"
+              ],
+              events: [
+                "activity",
+                "traces",
+                "coverage"
+              ],
+              traces: [
+                "activity",
+                "events",
+                "coverage"
+              ],
+              coverage: [
+                "activity",
+                "events",
+                "traces"
+              ]
+            }
+          }
+        },
+        {
+          id: "UI.disclosure",
+          component: "web/state-machine.js",
+          label: "UI.disclosure",
+          origin: "executable-declaration",
+          source: {
+            file: "web/state-machine.js",
+            line: 108,
+            sha256: "702ba85fa114d91bf2d6766ef36a88deaa8e72608b4cdb06fba37c313c46c5f4",
+            snippet: "}\nconst disclosureModel = define('UI.disclosure', 'closed', { closed: ['open'], open: ['closed'] });\nconst flagBindings = new WeakMap();\nfunction flag(record, field = 'dirty') {\n  if (!record) return record;\n  const fields = flagBindings.get(record) || new Map(); if (fields.has(field)) return record;\n  const dirty = new Dirty(), revision = new Revision(); dirty.value = !!record[field];\n  Object.defineProperty(record, field, { enumerable: true, configurable: false, get: () => dirty.value, set: value => { dirty.value = value; if (value) revision.advance(); } });\n  fields.set(field, { dirty, revision }); flagBindings.set(record, fields); return record;\n}\nfunction editRevision(record, field = 'dirty') { return flagBindings.get(record)?.get(field)?.revision.value || 0; }\nconst framingModel = define('P05.framing', 'empty', { empty: ['partial', 'closed'], partial: ['empty', 'closed'], closed: [] }, ['closed']);\nconst utf8Bytes = value => typeof Buffer === 'function' ? Buffer.byteLength(value) : new TextEncoder().encode(value).length;\nclass Framer {\n  constructor({ separator = /\\n/, maxBytes = 20 * 1024 * 1024 } = {}) {\n    // Protocol delimiters have a finite carry. Never rescan/copy the growing"
+          },
+          consumers: [],
+          chart: {
+            name: "UI.disclosure",
+            initial: "closed",
+            states: [
+              "closed",
+              "open"
+            ],
+            terminal: [],
+            transitions: {
+              closed: [
+                "open"
+              ],
+              open: [
+                "closed"
+              ]
+            }
+          }
+        },
+        {
+          id: "UI.draft-field",
+          component: "web/state-machine.js",
+          label: "UI.draft-field",
+          origin: "executable-declaration",
+          source: {
+            file: "web/state-machine.js",
+            line: 79,
+            sha256: "702ba85fa114d91bf2d6766ef36a88deaa8e72608b4cdb06fba37c313c46c5f4",
+            snippet: "}\nconst dirtyModel = define('UI.draft-field', 'clean', { clean: ['dirty'], dirty: ['clean'] });\nclass Dirty {\n  constructor() { this.lifecycle = create(dirtyModel); }\n  get value() { return this.lifecycle.is('dirty'); }\n  set value(value) { if (typeof value !== 'boolean') throw new Error('Draft flag must be boolean'); this.lifecycle.to(value ? 'dirty' : 'clean'); }\n}\nconst activityModel = define('UI.activity', 'idle', { idle: ['active'], active: ['idle'] });\nclass Activity {\n  constructor() { this.lifecycle = create(activityModel); }\n  get value() { return this.lifecycle.is('active'); }\n  set value(value) { if (typeof value !== 'boolean') throw new Error('Activity must be boolean'); this.lifecycle.to(value ? 'active' : 'idle'); }\n}\nclass Draft {\n  constructor() { this.fields = new Map(); this.edits = new Revision(); }\n  get revision() { return this.edits.value; }"
+          },
+          consumers: [],
+          chart: {
+            name: "UI.draft-field",
+            initial: "clean",
+            states: [
+              "clean",
+              "dirty"
+            ],
+            terminal: [],
+            transitions: {
+              clean: [
+                "dirty"
+              ],
+              dirty: [
+                "clean"
+              ]
+            }
+          }
+        },
+        {
+          id: "UI.pending",
+          component: "web/state-machine.js",
+          label: "UI.pending",
+          origin: "executable-declaration",
+          source: {
+            file: "web/state-machine.js",
+            line: 69,
+            sha256: "702ba85fa114d91bf2d6766ef36a88deaa8e72608b4cdb06fba37c313c46c5f4",
+            snippet: "}\nconst pendingModel = define('UI.pending', 'idle', { idle: ['busy'], busy: ['idle'] });\nclass Pending {\n  #count = 0;\n  constructor() { this.lifecycle = create(pendingModel); }\n  get value() { return this.#count; }\n  set value(value) {\n    if (!Number.isSafeInteger(value) || value < 0 || Math.abs(value - this.#count) !== 1) throw new Error('Invalid pending-operation transition');\n    this.lifecycle.to(value ? 'busy' : 'idle'); this.#count = value;\n  }\n}\nconst dirtyModel = define('UI.draft-field', 'clean', { clean: ['dirty'], dirty: ['clean'] });\nclass Dirty {\n  constructor() { this.lifecycle = create(dirtyModel); }\n  get value() { return this.lifecycle.is('dirty'); }\n  set value(value) { if (typeof value !== 'boolean') throw new Error('Draft flag must be boolean'); this.lifecycle.to(value ? 'dirty' : 'clean'); }"
+          },
+          consumers: [],
+          chart: {
+            name: "UI.pending",
+            initial: "idle",
+            states: [
+              "idle",
+              "busy"
+            ],
+            terminal: [],
+            transitions: {
+              idle: [
+                "busy"
+              ],
+              busy: [
+                "idle"
+              ]
+            }
+          }
+        },
+        {
+          id: "UI.project-context-scope",
+          component: "web/state-machine.js",
+          label: "UI.project-context-scope",
+          origin: "executable-declaration",
+          source: {
+            file: "web/state-machine.js",
+            line: 167,
+            sha256: "702ba85fa114d91bf2d6766ef36a88deaa8e72608b4cdb06fba37c313c46c5f4",
+            snippet: "const diagnosticsModel = define('UI.diagnostics-view','activity',{activity:['events','traces','coverage'],events:['activity','traces','coverage'],traces:['activity','events','coverage'],coverage:['activity','events','traces']});\nconst projectContextScopeModel=define('UI.project-context-scope','task',{task:['project'],project:['task']});\nconst models = Object.freeze({ projectContextScope:projectContextScopeModel, diagnostics:diagnosticsModel, pending: pendingModel, dirty: dirtyModel, activity: activityModel, selection: selectionModel, disclosure: disclosureModel, framing: framingModel });\nreturn { define, create, bind, next, assertState, observe, Revision, Pending, Dirty, Draft, Activity, Selection, disclosureModel, flag, editRevision, Framer, models };\n\n});\n"
+          },
+          consumers: [],
+          chart: {
+            name: "UI.project-context-scope",
+            initial: "task",
+            states: [
+              "task",
+              "project"
+            ],
+            terminal: [],
+            transitions: {
+              task: [
+                "project"
+              ],
+              project: [
+                "task"
+              ]
+            }
+          }
+        },
+        {
+          id: "UI.selection",
+          component: "web/state-machine.js",
+          label: "UI.selection",
+          origin: "executable-declaration",
+          source: {
+            file: "web/state-machine.js",
+            line: 101,
+            sha256: "702ba85fa114d91bf2d6766ef36a88deaa8e72608b4cdb06fba37c313c46c5f4",
+            snippet: "\nconst selectionModel = define('UI.selection', 'empty', { empty: ['selected'], selected: ['empty'] });\nclass Selection {\n  #value;\n  constructor(value) { this.lifecycle = create(selectionModel); this.value = value; }\n  get value() { return this.#value; }\n  set value(value) { this.lifecycle.to(value == null || value === '' ? 'empty' : 'selected'); this.#value = value; }\n}\nconst disclosureModel = define('UI.disclosure', 'closed', { closed: ['open'], open: ['closed'] });\nconst flagBindings = new WeakMap();\nfunction flag(record, field = 'dirty') {\n  if (!record) return record;\n  const fields = flagBindings.get(record) || new Map(); if (fields.has(field)) return record;\n  const dirty = new Dirty(), revision = new Revision(); dirty.value = !!record[field];\n  Object.defineProperty(record, field, { enumerable: true, configurable: false, get: () => dirty.value, set: value => { dirty.value = value; if (value) revision.advance(); } });\n  fields.set(field, { dirty, revision }); flagBindings.set(record, fields); return record;"
+          },
+          consumers: [],
+          chart: {
+            name: "UI.selection",
+            initial: "empty",
+            states: [
+              "empty",
+              "selected"
+            ],
+            terminal: [],
+            transitions: {
+              empty: [
+                "selected"
+              ],
+              selected: [
+                "empty"
+              ]
+            }
+          }
+        }
+      ]
+    };
+  }
+});
+
 // web/trace-format.js
 var require_trace_format = __commonJS({
   "web/trace-format.js"(exports2, module2) {
@@ -18338,7 +23462,7 @@ var require_telemetry = __commonJS({
       return { enabled: value };
     }
     var safeName = (value) => /^[a-zA-Z0-9_.:/ -]{1,100}$/.test(String(value || "")) ? String(value) : "operation";
-    var allowed = /* @__PURE__ */ new Set(["dt.scope_key", "dt.execution.id", "dt.parent_execution.id", "dt.call.id", "dt.tool.name", "dt.kind", "dt.state", "dt.runtime", "dt.cleanup.incomplete", "dt.cancelled", "dt.source", "dt.registry.revision", "http.request.method", "http.route", "http.response.status_code", "error.type", "dt.machine", "dt.from", "dt.to", "dt.accepted", "gen_ai.operation.name", "gen_ai.request.model", "gen_ai.usage.input_tokens", "gen_ai.usage.output_tokens", "dt.model.purpose"]);
+    var allowed = /* @__PURE__ */ new Set(["dt.source.digest", "dt.scope_key", "dt.execution.id", "dt.parent_execution.id", "dt.call.id", "dt.tool.name", "dt.kind", "dt.state", "dt.runtime", "dt.cleanup.incomplete", "dt.cancelled", "dt.source", "dt.registry.revision", "http.request.method", "http.route", "http.response.status_code", "error.type", "dt.machine", "dt.from", "dt.to", "dt.accepted", "gen_ai.operation.name", "gen_ai.request.model", "gen_ai.usage.input_tokens", "gen_ai.usage.output_tokens", "dt.model.purpose"]);
     function attributes(input = {}) {
       return Object.fromEntries(Object.entries(input).filter(([key, value]) => allowed.has(key) && (typeof value === "boolean" || typeof value === "number" && Number.isFinite(value) || typeof value === "string" && /^[a-zA-Z0-9_./: {}*-]{1,160}$/.test(value))).slice(0, 24));
     }
@@ -18519,7 +23643,7 @@ var require_telemetry = __commonJS({
         init();
         const current = api.context.active(), parentScope = current.getValue(scopeContext);
         const parent = options.root || parentScope && parentScope !== scopeKey() ? api.ROOT_CONTEXT : current;
-        const span = tracer.startSpan(safeName(name), { kind: options.kind ?? api.SpanKind.INTERNAL, attributes: attributes({ ...input, "dt.scope_key": scopeKey() }) }, parent);
+        const span = tracer.startSpan(safeName(name), { kind: options.kind ?? api.SpanKind.INTERNAL, attributes: attributes({ ...input, "dt.source.digest": require_self_model_catalog().sourceDigest, "dt.scope_key": scopeKey() }) }, parent);
         const context2 = api.trace.setSpan(parent, span).setValue(scopeContext, scopeKey());
         let ended = false;
         return {
@@ -46232,6 +51356,7 @@ var require_tool_search = __commonJS({
       return [];
     }
     function studioIntent(q) {
+      if (/\b(self.reflection|repo.model|repository behavior|code.backed|source.backed|workspace push lifecycle)\b/.test(q) || /\b(tla|finite model|formal model)\b/.test(q) && /\b(joern|repository|repo|source|workspace|lifecycle)\b/.test(q)) return ["repo_model", "logic_model"];
       if (/\b(tla|tlc|model checking|finite model|formal verification)\b/.test(q)) return ["logic_model"];
       if (/\b(gradle|dependencies|dependency versions?)\b/.test(q) && /\b(repositories|repos|upgrade|bump|inventory|versions?)\b/.test(q)) return ["gradle_inventory", "gradle_bump"];
       if (/\b(editor|terminal|vscode|monaco)\b/.test(q)) return ["workspace_editor", "workspace_terminal"];
@@ -62473,11 +67598,12 @@ dt.diffLines = ${diffLines.toString()};
       const capabilities = name === "capabilities" ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../capability-map.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../capability-layout.js"), "utf8") + "\n" + fs3.readFileSync(path3.join(BUILTIN, "../capability-map.js"), "utf8") + "</script>" : "";
       const uiTrace = name === "ui-trace" ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../ui-trace-inline.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../ui-trace-layout.js"), "utf8") + "\n" + fs3.readFileSync(path3.join(BUILTIN, "../ui-trace-inline.js"), "utf8") + "</script>" : "";
       const uiPage = name === "ui-page" ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../pages.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../page-primitives.js"), "utf8") + "</script>" : "";
+      const repoModel = name === "repo-model" ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../repo-model.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../repo-model.js"), "utf8") + "</script>" : "";
       const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
       return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(meta.title || name)}</title>${metaCsp ? `<meta http-equiv="Content-Security-Policy" content="${esc(CSP.split("; ").filter((d) => !/^(sandbox|frame-ancestors)/.test(d)).join("; "))}">` : ""}
 <style>${a.css}</style>
 <script>window.DATA = ${safeJson(data)}; window.META = ${safeJson({ view: name, ...meta })};</script>
-<script>${a.js}</script>${diagnostics}${projectContext}${capabilities}${uiTrace}${uiPage}</head>
+<script>${a.js}</script>${diagnostics}${projectContext}${capabilities}${uiTrace}${uiPage}${repoModel}</head>
 <body class="${embed ? "embed" : ""}"><div class="wrap">${v.html}</div><script>dtInline.mount(document.querySelector('.wrap'), dtInline.describe(META.view, DATA, META));</script></body></html>`;
     }
     module2.exports = { list, get, save, remove, render, policy, CSP, BUILTIN, DIR };
@@ -74810,7 +79936,7 @@ var require_logic_tlc = __commonJS({
 // lib/tools-logic-model.js
 var require_tools_logic_model = __commonJS({
   "lib/tools-logic-model.js"(exports2, module2) {
-    module2.exports = () => [{ name: "logic_model", group: "runtime", origin: "built-in", strictInput: true, description: "Create finite logic graphs, export real TLA+ and TLC config, check safety/deadlocks or simulate seeded paths, with optional transition coverage. Templates include actual diff decision observations and revision publication. Built-in exploration needs no external dependency; engine=tlc runs an explicitly configured SHA256-pinned TLC jar. These finite abstractions do not prove source equivalence. save/get/list keep task-scoped models; run returns an interactive retained graph.", input: { action: { type: "string", enum: ["templates", "save", "get", "list", "run", "export", "diagnostics"] }, name: { type: "string" }, template: { type: "string", enum: ["diff-lines", "workflow-continuation", "revision-publication"] }, model: { type: "object", additionalProperties: true }, expected_revision: { type: ["string", "null"] }, engine: { type: "string", enum: ["finite-graph", "tlc"], default: "finite-graph" }, mode: { type: "string", enum: ["check", "simulate"], default: "check" }, coverage: { type: "boolean", default: true }, seed: { type: "integer", minimum: 0, maximum: 2147483647, default: 1 }, steps: { type: "integer", minimum: 1, maximum: 1e3, default: 100 }, traces: { type: "integer", minimum: 1, maximum: 100, default: 10 }, timeoutMs: { type: "integer", minimum: 1e3, maximum: 12e4, default: 3e4 } }, required: ["action"], run: async (a) => {
+    module2.exports = () => [{ name: "logic_model", group: "runtime", origin: "built-in", strictInput: true, description: "Create finite logic graphs, export real TLA+ and TLC config, check safety/deadlocks or simulate seeded paths, with optional transition coverage. Templates include diff decisions and revision publication. For actual repository lifecycles (including workspace push), Joern and telemetry use repo_model; these templates are separate abstractions. Built-in exploration needs no external dependency; engine=tlc runs an explicitly configured SHA256-pinned TLC jar. These finite abstractions do not prove source equivalence. save/get/list keep task-scoped models; run returns an interactive retained graph.", input: { action: { type: "string", enum: ["templates", "save", "get", "list", "run", "export", "diagnostics"] }, name: { type: "string" }, template: { type: "string", enum: ["diff-lines", "workflow-continuation", "revision-publication"] }, model: { type: "object", additionalProperties: true }, expected_revision: { type: ["string", "null"] }, engine: { type: "string", enum: ["finite-graph", "tlc"], default: "finite-graph" }, mode: { type: "string", enum: ["check", "simulate"], default: "check" }, coverage: { type: "boolean", default: true }, seed: { type: "integer", minimum: 0, maximum: 2147483647, default: 1 }, steps: { type: "integer", minimum: 1, maximum: 1e3, default: 100 }, traces: { type: "integer", minimum: 1, maximum: 100, default: 10 }, timeoutMs: { type: "integer", minimum: 1e3, maximum: 12e4, default: 3e4 } }, required: ["action"], run: async (a) => {
       const M = require_logic_model();
       if (a.action === "templates") return a.template ? { model: M.template(a.template) } : { templates: M.templates(), schema: { version: 1, title: "...", initial: "start", states: [{ id: "start", label: "Start" }, { id: "done", terminal: true }], transitions: [{ id: "finish", from: "start", to: "done" }], forbidden: [], assumptions: ["Declared abstraction; source equivalence is not established"] } };
       if (a.action === "diagnostics") {
@@ -74825,6 +79951,135 @@ var require_tools_logic_model = __commonJS({
       const r = a.engine === "tlc" ? await require_logic_tlc().run(model, a) : M.explore(model, a);
       return { status: r.status, engine: r.engine, mode: r.mode, complete: r.complete, states: r.states, transitions: r.transitions, violations: r.violations, coverage: r.coverage ? { hit: r.coverage.hit, total: r.coverage.total, percent: r.coverage.percent, meaning: r.coverage.meaning } : null, view: require_results().saveView("logic-model", r, { title: model.title }) };
     } }];
+  }
+});
+
+// lib/source-version.js
+var require_source_version = __commonJS({
+  "lib/source-version.js"(exports2, module2) {
+    var fs3 = require("node:fs");
+    var path3 = require("node:path");
+    var crypto = require("node:crypto");
+    function files(root) {
+      return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
+    }
+    function digest(root = path3.join(__dirname, "..")) {
+      if (true) return "b1249397c80663b9ad8fa0653ea42736237b0e3572276962331e1edec6e2a877";
+      const h = crypto.createHash("sha256");
+      for (const file of files(root)) {
+        h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
+      }
+      return h.digest("hex");
+    }
+    module2.exports = { files, digest };
+  }
+});
+
+// lib/repo-model.js
+var require_repo_model = __commonJS({
+  "lib/repo-model.js"(exports2, module2) {
+    var path3 = require("node:path");
+    var crypto = require("node:crypto");
+    var M = require_logic_model();
+    var invalid = (message) => Object.assign(Error(message), { code: "DT_ARGUMENT_INVALID", statusCode: 400 });
+    var store = () => require_durable_private_store().create(require_access().scopedDirectory(path3.join(require_config().HOME, "repo-models")), 4 * 1048576);
+    function self2() {
+      const catalog = require_self_model_catalog();
+      return { repo: catalog.repo, sourceDigest: catalog.sourceDigest, fresh: catalog.sourceDigest === require_source_version().digest(), machines: catalog.machines.map((m) => ({ ...m, model: { version: 1, title: m.id, initial: m.chart.initial, states: m.chart.states.map((id) => ({ id, terminal: m.chart.terminal.includes(id), source: { file: m.source.file, line: m.source.line, sha256: m.source.sha256 } })), transitions: Object.entries(m.chart.transitions).flatMap(([from, targets]) => targets.map((to) => ({ id: "e" + crypto.createHash("sha256").update(from + "\0" + to).digest("hex").slice(0, 16), from, to, label: from + " \u2192 " + to, source: { file: m.source.file, line: m.source.line, sha256: m.source.sha256 } }))), assumptions: ["Exact executable transition declaration at the retained source digest. Caller guards, payloads, persistence, effects, concurrency and implicit exceptions are not modeled.", "Independent lifecycle charts are not a synchronized product; checks do not prove inter-machine behavior or liveness. Idempotent reassertions are omitted."] } })), gaps: [] };
+    }
+    function fromJoern(result) {
+      if (!result.flowMap) throw invalid("A completed Joern flow map is required; observe the returned job first");
+      const f = result.flowMap, machines = [];
+      for (const method of f.methods || []) {
+        const nodes = (f.nodes || []).filter((n) => n.method === method.id), ids = new Map(nodes.map((n, i) => [n.id, "s" + i]));
+        if (!ids.has(method.entry)) continue;
+        const edges = (f.edges || []).filter((e) => ids.has(e.from) && ids.has(e.to) && (e.kind === "control" || e.relation === "CFG"));
+        const model = { version: 1, title: (method.name || method.id).slice(0, 160), initial: ids.get(method.entry), states: nodes.map((n) => ({ id: ids.get(n.id), label: (n.code || n.kind || n.id).slice(0, 160), terminal: n.id === method.exit || n.kind === "throw" && !edges.some((e) => e.from === n.id), source: { file: n.file, line: n.line, analysisId: n.analysisId, sha: n.sha }, data: { kind: n.kind, changes: n.changes || [], assumptions: n.assumptions || [], nativeId: n.id } })), transitions: edges.map((e, i) => ({ id: "e" + i, from: ids.get(e.from), to: ids.get(e.to), label: String(e.polarity || e.kind || "CFG").slice(0, 300), assumption: String(e.assumption || "Static CFG candidate; branch feasibility, value constraints and exceptions are not established.").slice(0, 4e3), source: e.evidence })), assumptions: ["Nondeterministic method-local CFG abstraction. Guards and data changes are annotations, not executable TLA predicates. Unreachable, missing or non-CFG paths may produce abstraction deadlocks.", ...(f.assumptions || []).map((a) => String(a.detail || a))] };
+        M.normalize(model);
+        machines.push({ id: "m" + crypto.createHash("sha256").update(method.id).digest("hex").slice(0, 12), nativeId: method.id, label: method.name || method.id, component: method.file || method.repo || "Retained methods", origin: "joern-cfg", source: { file: method.file, line: method.line, sha: method.sha, analysisId: method.analysisId }, consumers: [], model });
+      }
+      if (!machines.length) throw invalid("Joern returned no method entries; choose an exact entry method or increase the explicit query budget");
+      return { repo: result.analyses?.[0]?.repo || "Joern repository", analyses: result.analyses || [], machines, gaps: [...result.gaps || [], { kind: "runtime-correlation-unavailable", detail: "Joern method CFGs are not automatically correlated with dt.machine spans or external service telemetry. This repository projection is static-only." }], flowMap: f, staticOnly: true };
+    }
+    function get(id) {
+      const r = store().read(id);
+      if (!r) throw Object.assign(Error("Repository model not found in this chat"), { code: "DT_NOT_FOUND", statusCode: 404 });
+      return r;
+    }
+    function retain(value) {
+      const id = "r" + crypto.createHash("sha256").update(JSON.stringify(value)).digest("hex").slice(0, 32), record = { ...value, id, at: (/* @__PURE__ */ new Date()).toISOString(), protocol: "dt.repo-model/v1" };
+      const s = store();
+      if (!s.read(id)) {
+        let count = 0;
+        try {
+          count = require("node:fs").readdirSync(s.safe()).filter((f) => f.endsWith(".json")).length;
+        } catch (e) {
+          if (e.code !== "ENOENT") throw e;
+        }
+        if (count >= 200) throw invalid("Repository model snapshot limit reached for this chat; use an existing projection id");
+      }
+      s.write(id, record);
+      return record;
+    }
+    function overlay(project, snapshot) {
+      const machines = new Map(project.machines.map((m) => [m.id, m])), hits = {}, events = [], unmatched = [];
+      for (const span of snapshot.spans || []) for (const event of span.events || []) {
+        if (!["state.transition", "state.rejected"].includes(event.name)) continue;
+        const a = event.attributes || {}, machine = machines.get(a["dt.machine"]);
+        if (!machine) continue;
+        const edge = machine.model.transitions.find((e) => e.from === a["dt.from"] && e.to === a["dt.to"]);
+        const version = span.attributes?.["dt.source.digest"], matched = !!project.sourceDigest && version === project.sourceDigest;
+        const row = { machine: machine.id, from: a["dt.from"], to: a["dt.to"], accepted: a["dt.accepted"] === true, traceId: span.traceId, spanId: span.spanId, name: span.name, durationMs: span.durationMs, startMs: span.startMs, sourceMatched: matched, edge: edge?.id || null };
+        events.push(row);
+        if (row.accepted && edge && matched) (hits[machine.id] ||= {})[edge.id] = ((hits[machine.id] || {})[edge.id] || 0) + 1;
+        else unmatched.push(row);
+      }
+      return { enabled: snapshot.enabled, sampled: snapshot.sampled, sampleRatio: snapshot.sampleRatio, at: (/* @__PURE__ */ new Date()).toISOString(), hits, events, unmatched: unmatched.length, spans: (snapshot.spans || []).length, meaning: "Sampled, chat-scoped observations. Only accepted declared edges from the same source digest count as hits. Unversioned/stale/rejected events remain visible. A span duration belongs to the whole operation, not an individual transition." };
+    }
+    async function run(a = {}) {
+      if (a.action && !["derive", "get", "observe", "check", "export"].includes(a.action)) throw invalid("Unknown repository model action");
+      if (a.action === "derive" || !a.action) {
+        let value;
+        if (a.analysis || a.job) {
+          const r = await require_semantic_code().query({ analysis: a.analysis, job: a.job, operation: "flowmap", from: a.from, maxMethods: 20, maxStates: 180, waitMs: a.waitMs || 0 });
+          if (!r.flowMap) return { ...r, next: r.job ? { tool: "repo_model", arguments: { action: "derive", job: r.job, waitMs: 1e3 } } : { tool: "semantic_index", arguments: {} }, note: "No model was fabricated while Joern is pending or unavailable." };
+          value = fromJoern(r);
+        } else value = self2();
+        const project2 = retain(value);
+        return report(project2, a);
+      }
+      const project = a.id ? get(a.id) : ["check", "export"].includes(a.action) ? retain(self2()) : (() => {
+        throw invalid("id is required; derive a repository model first");
+      })();
+      if (a.action === "observe" || a.action === "get") return report(project, a);
+      const machine = project.machines.find((m) => m.id === a.machine);
+      if (!machine) throw invalid("Select an exact machine id from repo_model derive/get");
+      if (a.action === "export") return { id: project.id, machine: machine.id, ...M.exportTla(machine.model) };
+      const model = structuredClone(machine.model);
+      if (a.forbidden?.length) {
+        if (a.forbidden.some((s) => !model.states.some((n) => n.id === s))) throw invalid("Forbidden states must exist in the selected machine");
+        model.forbidden = a.forbidden;
+      }
+      const check = a.engine === "tlc" ? await require_logic_tlc().run(model, { mode: a.mode || "check", timeoutMs: 3e4 }) : M.explore(model, { mode: a.mode || "check" });
+      const hierarchy = !a.id ? await report(project, { format: "compact" }) : null;
+      return { id: project.id, ...hierarchy ? { hierarchy: hierarchy.view, observations: hierarchy.telemetry, sourceDigest: project.sourceDigest } : {}, machine: machine.id, status: check.status, complete: check.complete, meaning: "Check applies only to the finite selected declaration/CFG abstraction. Static guards and data changes are annotations.", violations: check.violations, view: require_results().saveView("logic-model", check, { title: machine.label }), ...a.format === "full" ? { check } : {} };
+    }
+    async function report(project, a) {
+      if (project.sourceDigest) project = { ...project, fresh: project.sourceDigest === require_source_version().digest() };
+      const telemetry = overlay(project, await require_telemetry().snapshot({ traceId: a.trace, limit: 1e3 }));
+      const result = { ...project, telemetry, admin: "/self-reflection?" + new URLSearchParams({ id: project.id, story: require_access().current().storyId }), counts: { machines: project.machines.length, states: project.machines.reduce((n, m) => n + m.model.states.length, 0), transitions: project.machines.reduce((n, m) => n + m.model.transitions.length, 0), observations: telemetry.events.length }, next: [{ tool: "repo_model", arguments: { action: "check", id: project.id, machine: project.machines.find((m) => m.id === "SM37.push")?.id || project.machines[0]?.id } }, { tool: "repo_model", arguments: { action: "export", id: project.id, machine: project.machines.find((m) => m.id === "SM37.push")?.id || project.machines[0]?.id } }, { tool: "repo_model", arguments: { action: "observe", id: project.id } }] };
+      if (a.view !== false) result.view = require_results().saveView("repo-model", result, { title: "Repository reflection \xB7 " + project.repo });
+      if (a.format === "full") return result;
+      return { protocol: result.protocol, id: result.id, repo: result.repo, sourceDigest: project.sourceDigest, fresh: project.fresh, counts: result.counts, verification: { status: "not-checked", next: "Derivation does not run a check. If asked to check, execute the returned next check call." }, hierarchy: { meaning: "Containment only. No call/dependency relationships are inferred between components or machines.", components: new Set(project.machines.map((m) => m.component)).size }, machines: [...project.machines].sort((x, y) => Number(y.id === "SM37.push") - Number(x.id === "SM37.push")).slice(0, project.sourceDigest ? 1 : 4).map((m) => ({ id: m.id, label: m.label, component: m.component, origin: m.origin })), omittedMachines: Math.max(0, project.machines.length - (project.sourceDigest ? 1 : 4)), gaps: project.gaps.slice(0, 4), telemetry: { enabled: telemetry.enabled, observations: telemetry.events.length, unmatched: telemetry.unmatched, meaning: telemetry.meaning }, meaning: "Derived source hierarchy only. Return the retained view link; do not invent dependency edges from the preview. Execute next check/export calls when requested. Checks apply only to the finite selected abstraction.", admin: result.admin, view: result.view, next: result.next };
+    }
+    module2.exports = { self: self2, fromJoern, overlay, run, get };
+  }
+});
+
+// lib/tools-repo-model.js
+var require_tools_repo_model = __commonJS({
+  "lib/tools-repo-model.js"(exports2, module2) {
+    module2.exports = () => [{ name: "repo_model", group: "semantic", origin: "built-in", strictInput: true, description: "Show repository lifecycle/Joern diagrams with TLA+ checks and sampled OpenTelemetry. To actually check dev-tool\u2019s workspace push, call action=check,machine=SM37.push (no id needed); returns actual check and hierarchy links. For a diagram only, action=derive uses our sources. Another repo needs analysis=<retained Joern id> and optional from; observe its returned job. Then check/export with id + exact machine. Guards/data are annotations, not proved predicates. Compact output is default; full evidence lives in inline views.", input: { action: { type: "string", enum: ["derive", "get", "observe", "check", "export"], default: "derive" }, id: { type: "string", description: "Owned repository projection id returned by derive" }, analysis: { type: "string", description: "Exact retained Joern analysis id from semantic_index" }, job: { type: "string", description: "Observe the existing Joern flow-map job" }, from: { type: "object", properties: { name: { type: "string" }, signature: { type: "string" }, file: { type: "string" }, line: { type: "integer", minimum: 1 }, receiver: { type: "string" }, id: { type: "string" } }, additionalProperties: false }, waitMs: { type: "integer", minimum: 0, maximum: 3e4, default: 0 }, machine: { type: "string", description: "Exact machine id from hierarchy, e.g. SM37.push" }, forbidden: { type: "array", maxItems: 40, items: { type: "string" }, description: "Optional existing states to test as forbidden; retained model is not changed" }, engine: { type: "string", enum: ["finite-graph", "tlc"], default: "finite-graph" }, mode: { type: "string", enum: ["check", "simulate"], default: "check" }, trace: { type: "string", description: "Optional trace id for observation filter" }, format: { type: "string", enum: ["compact", "full"], default: "compact" }, view: { type: "boolean", default: true } }, run: (a) => require_repo_model().run(a) }];
   }
 });
 
@@ -74883,6 +80138,28 @@ var require_handbook_content = __commonJS({
       { id: "memory", name: "Task memory discovery index", path: "contexts/{context}/index.json", source: "Context title, summary, links, file names and per-file summaries", purpose: "Rediscover prior work and read only the evidence relevant to this task.", refresh: { tool: "context_find", args: { query: "{{ticket}}" } }, version: "Context/file revisions; stories isolate private memory. Read content separately.", queries: ["context_find", "context_get", "context_search", "context_read"], limit: "Saved findings can be stale or untrusted; verify environment, SHA and timestamps before reusing them." }
     ];
     var chapters = [
+      chapter("self-reflection", "Explore dev-tool from its own sources", "Architecture", "Connect executable source declarations, Joern control-flow graphs, TLA+ checks and sampled OpenTelemetry evidence.", "Inspect one source-backed machine, reproduce its finite check and distinguish declared behavior from observed runtime events.", ["Open Admin \u2192 Self-reflection; choose a stable chat/task scope."], [
+        section("own-source", "Start with our repository", [
+          "Admin \u2192 Self-reflection opens a hierarchy of components and executable lifecycle charts extracted at build time from this repository. Choose a machine, then a state. The graph shows the initial/terminal states; the evidence pane shows source file, line, file hash, declaration excerpt and explicit consumers. Independent charts are not a synchronized whole-program model.",
+          "Select Check model for finite safety/deadlock exploration, or Export TLA+ for a real module and TLC configuration. No forbidden states are assumed by default. To check a safety claim, supply existing state IDs in forbidden. A reported deadlock can be an abstraction or extraction gap; inspect the source before reporting a defect.",
+          "Use the Tool API explorer to search every authorized enabled tool, edit schema-based fields or JSON arguments, run through the backend and inspect timing, errors, retained results and inline visualizations. Merely selecting a tool sends no invocation."
+        ], { steps: ["Run repo_model action=derive with no target. Keep the returned projection id.", "Choose a component and machine, such as SM37.push; inspect guards and effects in the source.", "Run check or export with that id and exact machine. Record the source digest and verification limits."], examples: [example("repo_model", { action: "derive" }, "Derive dev-tool\u2019s source model", "A compact summary, owned projection id, next calls and retained interactive hierarchy. The full graph stays out of model context until requested.")] }),
+        section("observed", "Compare declarations with actual traces", [
+          "Enable tracing for this chat, run a relevant tool, and Refresh observations. Record a sample tool call executes only logic_model templates; select SM01.execution to see its real lifecycle events. Trace selection filters the observation overlay without rerunning tools.",
+          "Only accepted declared transitions with the same source digest count as observed hits. Rejected transitions and missing/stale version events remain visible but do not count. Trace sampling, retained event/span limits and dropped events mean absence is inconclusive. Span timing measures the whole operation including waits, not a state transition\u2019s CPU time.",
+          "Inline /show views retain a network-free snapshot of hierarchy, source and observations. Reproduce selection prepares an exact tool call; checks and fresh observations run in the authenticated Self-reflection host. Copy selection link shares the view with users who can access the same retained chat scope. Export evidence preserves the complete supplied snapshot."
+        ]),
+        section("other-repositories", "Derive finite models from retained Joern analyses", [
+          "First index an exact repository/service revision with semantic_index. Select its retained analysis in Self-reflection, optionally choose an entry method, then Derive from Joern. Parsing is explicit; this page never starts a repository parse on opening.",
+          "The tool reuses the bounded semantic_query flowmap job. If pending, keep job and Observe existing job. Each retained method becomes a child graph. Only local CFG/control edges become TLA transitions. Data dependence, call dispatch, fields, assignments and guards remain separately retained annotations; a dependency is not an execution step.",
+          "This is a nondeterministic finite control abstraction. It does not evaluate guard expressions, prove value relationships, synchronize calls/returns, prove source equivalence or establish liveness. All gaps and original static flow-map evidence remain in the exported result. Use semantic_trace for value-flow/change evidence and behavioral tests to validate a fix."
+        ], { examples: [example("semantic_index", {}, "Discover retained analyses", "Exact analysis ids and source SHAs, or an explicit missing-index response. No implicit parse.")] }),
+        section("reproduce", "Reproduce and extend", [
+          "Run node demo/self-reflection.js for a disposable local showcase with real source declarations and real opt-in spans from harmless tool requests. No production infrastructure or model is contacted. Run node dev/check-self-reflection-browser.js for mouse, keyboard, mobile, dark, inline and API-explorer checks.",
+          "The source catalog is generated by dev/repo-model-catalog.js and refreshed by npm run build. Build checks reject stale source models. The standalone bundle embeds declarations and source evidence, so this feature works without a source checkout or external Joern service. For other repositories, Joern remains the optional configured parser.",
+          "A source model is private to the authenticated user/chat. Joern jobs, traces and results follow the existing scope boundary. Refresh creates a source snapshot or new observation result; it does not replace old semantic generations or claim that every tool has been executed."
+        ])
+      ], ["joern", "observability", "extend"]),
       chapter("start", "Your first investigation", "Start here", "Get from an unfamiliar symptom to a bounded, reviewable answer.", "Find a real service/object, keep a task record and identify the next evidence gap.", ["Open Admin and choose the environment. A configured connection is not proof that its data is indexed."], [
         section("orientation", "Choose a surface and a scope", [
           "Open WebUI is the conversation surface. Admin is the operational workbench: Explore searches evidence, Passports/Services map/Architecture show relationships, Task memory keeps work, and Runtime/Jobs explain execution. This handbook is also available at /handbook and as a portable manual in the repository.",
@@ -75251,6 +80528,7 @@ node cli.js tool label_stats '{"label":"refund approved"}'` }
     visualHelp["ui-trace"] = ["How does this UI action reach a database field?", "Inspect the captured UI state and observed API requests, expand exact retained service paths and their assumptions, then inspect catalog fields. Edit reproducible replay steps or source-pinned bindings; browser replay and read-only SQL require explicit actions."];
     visualHelp["ui-page"] = ["How can I keep this question as a reusable dashboard?", "Filter retained tables/comparisons, expand exact routine signatures and inspect saved inputs/revision. Open the live Pages host to choose targets and explicitly Refresh. Definitions are shared by default with admin publication; each viewer retains private results. Incomplete reads cannot establish absence."];
     visualHelp["work-record"] = ["What was retained for this task, workflow or dependency change?", "Filter dependencies by source hierarchy, inspect task briefing or leaf checkpoints, export the record and open the authenticated Studio for explicit actions. This inline snapshot cannot execute or resume work."];
+    visualHelp["repo-model"] = ["How does the repository behave, and what was actually observed?", "Choose a component, machine and state; inspect source and guards, filter sampled source-matched OTel events and prepare finite TLA+ checks. The inline snapshot has no network access. Open Admin \u2192 Self-reflection for fresh observations and the tool API explorer."];
     visualHelp["logic-model"] = ["Which modeled paths were checked or sampled?", "Select a state or retained counterexample, compare model coverage with explicitly supplied source observations, hide the overlay, and export TLA+/TLC configuration. Finite abstraction checks do not prove source equivalence or liveness."];
     module2.exports = { version: 1, title: "The dev-tool field guide", chapters, indexes, groupChapters, visualHelp };
   }
@@ -75470,8 +80748,8 @@ var require_tool_profiles = __commonJS({
       pages: { description: "Declarative widgets, monitoring dashboards and environment/database comparisons with retained results; no HTML or JS.", includeCore: false, names: [...DISCOVERY, "named_view", "ui_event", "ui_page", "ui_page_data", "job_cancel", "result_read"] },
       workbench: { description: "Clickable ticket/service/context exploration, saved actions, separate branch checkouts and retained deployment status. A small starting set for interactive task work.", includeCore: false, names: [...DISCOVERY, "workbench_open", "workbench_search", "workbench_inspect", "workbench_save", "context_find", "context_get", "context_read", "context_run", "consul_service", "workspace_list", "workspace_branches", "workspace_branch"] },
       ci: { description: "Pinned Jenkins builds, draft PR checks and review iteration with resumable waits and task checkpoints.", includeCore: false, prefixes: ["jenkins_", "bitbucket_pr_"], names: [...DISCOVERY, "workspace_patch", "workspace_push", "context_open", "context_read", "context_write", "chat_context_status", "chat_compaction_request"] },
-      architecture: { description: "Shared architecture explanations, C4 and feature/data flows, environment observations and exports. Admins publish; everyone reads.", prefixes: ["ui_trace", "architecture_", "project_context_"], names: [...CORE, "semantic_query", "semantic_trace", "passport", "consul_service"] },
-      semantic: { description: "Entry-to-exit change paths, before/after branches, conditions, loops, stream callbacks and inherited library logic; whole-entry maps, exact revisions and editable passport ports.", includeCore: false, names: [...DISCOVERY, "semantic_capabilities", "semantic_index", "semantic_search", "semantic_query", "semantic_trace", "semantic_ports", "passport_adjustments", "passport_adjust", "passport", "code_search", "code_read", "job_cancel", "call_history"] },
+      architecture: { description: "Shared architecture explanations, C4 and feature/data flows, environment observations and exports. Admins publish; everyone reads.", prefixes: ["ui_trace", "architecture_", "project_context_"], names: [...CORE, "semantic_query", "semantic_trace", "repo_model", "passport", "consul_service"] },
+      semantic: { description: "Entry-to-exit change paths, before/after branches, conditions, loops, stream callbacks and inherited library logic; whole-entry maps, exact revisions and editable passport ports.", includeCore: false, names: [...DISCOVERY, "semantic_capabilities", "semantic_index", "semantic_search", "semantic_query", "semantic_trace", "repo_model", "semantic_ports", "passport_adjustments", "passport_adjust", "passport", "code_search", "code_read", "job_cancel", "call_history"] },
       map: { description: "Microservice map, saved feature flows and bounded graph exploration, with inspection tools and discovery for the rest.", includeCore: false, names: [...DISCOVERY, "map", "map_search", "map_neighbors", "map_path", "map_node", "map_adjustments", "map_adjust", "map_layers", "map_save", "map_ui_preview", "passport", "pg_table", "pg_query", "kafka_topic", "kafka_last", "logs_search", "es_search"] },
       tester: { description: "Testing by name: ready-made checks (service, environment, versions, table, trace, test data capture and reuse), test data and scratch databases, scenarios, API and UI capture, scripts and suites, tests in a workspace; tool_search reaches the rest.", includeCore: false, names: TESTER },
       direct: { description: "Everyday tools by name (databases, indices, topics, logs, repo files and PRs, code, docs); tool_search, tool_describe and tool_execute reach the rest.", includeCore: false, names: DIRECT },
@@ -75560,6 +80838,7 @@ var require_handbook = __commonJS({
       return snapshot;
     }
     function chapterFor(tool) {
+      if (tool.name === "repo_model") return "self-reflection";
       if (tool.name === "workbench_open") return "start";
       if (/^(fixture_|scenario_)/.test(tool.name)) return "reproduce";
       if (/^testdb_/.test(tool.name)) return "reproduce";
@@ -75618,8 +80897,9 @@ var require_capability_map = __commonJS({
       ["tools", "Tool catalog", "Discover exact capabilities and extension contracts."]
     ].map(([key, label, description]) => ({ id: "object:" + key, key, label, description, kind: "object" }));
     var groupObject = { jenkins: "execution", catalog: "tools", pg: "table", es: "search-index", kafka: "topic", consul: "environment", logs: "environment", bitbucket: "repository", confluence: "documentation", passport: "service", showcase: "service", browser: "api", api: "api", scripts: "automation", views: "evidence", files: "files", history: "execution", context: "context", map: "service", architecture: "memory", runtime: "execution", semantic: "component", knowledge: "memory" };
-    var exact = { logic_model: "evidence", workspace_editor: "workspace", workspace_terminal: "workspace", gradle_inventory: "repository", gradle_bump: "repository", named_view: "evidence", ui_event: "execution", continuation_create: "task", continuation_find: "task", continuation_attach: "task", continuation_get: "task", continuation_briefing: "task", automation_flow_save: "automation", automation_flow_start: "automation", automation_flow_resume: "automation", ui_page: "evidence", ui_page_data: "environment", workbench_search: "context", workbench_inspect: "context", workbench_open: "task", workbench_save: "context", find: "database", catalog_search: "database", catalog_usage: "table", pg_query: "database", ddl_snapshot: "database", feature: "documentation", result_read: "evidence", self_context: "task", workflow_plan: "task", handbook: "task", checks: "task", test_coverage: "workspace", differential_check: "workspace", impact: "component", job_cancel: "execution", call_patterns: "automation", evaluation_evidence: "evidence" };
+    var exact = { repo_model: "repository", logic_model: "evidence", workspace_editor: "workspace", workspace_terminal: "workspace", gradle_inventory: "repository", gradle_bump: "repository", named_view: "evidence", ui_event: "execution", continuation_create: "task", continuation_find: "task", continuation_attach: "task", continuation_get: "task", continuation_briefing: "task", automation_flow_save: "automation", automation_flow_start: "automation", automation_flow_resume: "automation", ui_page: "evidence", ui_page_data: "environment", workbench_search: "context", workbench_inspect: "context", workbench_open: "task", workbench_save: "context", find: "database", catalog_search: "database", catalog_usage: "table", pg_query: "database", ddl_snapshot: "database", feature: "documentation", result_read: "evidence", self_context: "task", workflow_plan: "task", handbook: "task", checks: "task", test_coverage: "workspace", differential_check: "workspace", impact: "component", job_cancel: "execution", call_patterns: "automation", evaluation_evidence: "evidence" };
     var questions = {
+      repo_model: "How do source lifecycle and Joern graphs relate to TLA+ checks and observed runtime transitions?",
       logic_model: "Which logic paths and assumptions can I simulate or check with TLA+?",
       workspace_editor: "Where can I edit this workspace and inspect commands interactively?",
       gradle_inventory: "Which Gradle dependency versions exist across these repositories at exact commits?",
@@ -80147,27 +85427,6 @@ var require_state_machine_runtime = __commonJS({
   }
 });
 
-// lib/source-version.js
-var require_source_version = __commonJS({
-  "lib/source-version.js"(exports2, module2) {
-    var fs3 = require("node:fs");
-    var path3 = require("node:path");
-    var crypto = require("node:crypto");
-    function files(root) {
-      return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
-    }
-    function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "2cf6a04d59cce003a0fae3478658484e78dbd5cb88fbbc878a75a4d12cc7e39f";
-      const h = crypto.createHash("sha256");
-      for (const file of files(root)) {
-        h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
-      }
-      return h.digest("hex");
-    }
-    module2.exports = { files, digest };
-  }
-});
-
 // lib/coverage.js
 var require_coverage = __commonJS({
   "lib/coverage.js"(exports2, module2) {
@@ -80971,6 +86230,46 @@ var require_workflow_guides = __commonJS({
     module2.exports = {
       version: 1,
       guides: [
+        {
+          id: "source-runtime-formal-model",
+          title: "Reflect on a repository with source graphs, TLA+ and OpenTelemetry",
+          terms: "repository self reflection sources state machine lifecycle hierarchy TLA formal model Joern CFG telemetry runtime observed transitions diagram",
+          required: [
+            "dev-tool source catalog, or an exact retained Joern analysis"
+          ],
+          stages: [
+            {
+              id: "derive",
+              goal: "Start with repo_model derive for our sources, or supply a retained Joern analysis. Keep the projection id and observe an existing job without re-parsing.",
+              tools: [
+                "repo_model",
+                "semantic_index"
+              ]
+            },
+            {
+              id: "inspect",
+              goal: "Select a machine in the inline hierarchy and inspect declaration/source, states, transitions, guards and gaps.",
+              tools: [
+                "repo_model",
+                "code_read"
+              ]
+            },
+            {
+              id: "check",
+              goal: "Check or export one finite abstraction, then compare source-matched sampled traces. A static graph or model check does not prove source behavior.",
+              tools: [
+                "repo_model",
+                "observability",
+                "logic_model"
+              ]
+            }
+          ],
+          boundaries: [
+            "Source digest and relative file/line evidence",
+            "Finite check/counterexample or pinned TLC result",
+            "Separate sampled observations, gaps and behavior tests"
+          ]
+        },
         {
           id: "changed-code-coverage",
           title: "Measure and close gaps in changed JVM code",
@@ -84354,6 +89653,7 @@ var require_tools = __commonJS({
     TOOLS.push(...require_studio_present().wrap(require_tools_automation_flow()({ str, int })));
     TOOLS.push(...require_studio_present().wrap(require_tools_continuation()({ str, int })));
     TOOLS.push(...require_tools_logic_model()());
+    TOOLS.push(...require_tools_repo_model()());
     TOOLS.push(...require_tools_project_context()({ str, int }));
     TOOLS.push(...require_tools_handbook()({ str, int, env }));
     TOOLS.push(...require_tools_map()({ str, int, env }));
@@ -88154,6 +93454,7 @@ var require_server2 = __commonJS({
         res.writeHead(200, { "content-type": "image/png", "cache-control": "public, max-age=3600", "x-content-type-options": "nosniff" });
         res.end(fs3.readFileSync(file));
       }],
+      ["GET", "/self-reflection", true, page("self-reflection.html")],
       ["GET", "/api-client", true, page("api-client.html")],
       ["GET", "/editor", true, page("editor.html")],
       ["GET", "/studio", true, page("studio.html")],

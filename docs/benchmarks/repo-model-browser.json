@@ -1,0 +1,18 @@
+{
+  "sourceDigest": "b1249397c80663b9ad8fa0653ea42736237b0e3572276962331e1edec6e2a877",
+  "checks": [
+    "Real source hierarchy opens with real sampled lifecycle events; no Joern parse or service request",
+    "Mouse-only source → machine → state → allowed transitions and source evidence",
+    "Selected source model checks through backend and renders retained logic result",
+    "TLA+ and TLC configuration export from selected source declaration",
+    "Trace selection and explicit refresh preserve real source-matched observations",
+    "Graph states support keyboard selection and next-state navigation brings the target into view",
+    "Desktop, mobile and dark-theme graph screenshots without page overflow",
+    "Full tool registry → editable JSON/schema form → backend invocation → timing and response",
+    "API errors show failure duration and an actionable response without stale visualizations",
+    "Sandboxed inline hierarchy works with prepared reproducible checks and no network dependency",
+    "Admin chapter mounts same workbench in selected chat scope"
+  ],
+  "passed": 11,
+  "screenshots": "docs/screenshots"
+}

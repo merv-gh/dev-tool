@@ -1,0 +1,766 @@
+{
+  "provenance": "Retained real Joern output from the disposable flow-map feature fixture; captured by test/semantic-flow-map.live.test.js. Replayed without a worker.",
+  "analyses": [
+    {
+      "id": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+      "repo": "DEMO/js-flow",
+      "sha": "4444444444444444444444444444444444444444",
+      "language": "js",
+      "sourceDigest": "37e8345adfdbb33e084cae46e53c3d5490b417f90b538252854f0de720be6d51"
+    }
+  ],
+  "gaps": [
+    {
+      "kind": "flowmap-coverage",
+      "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+      "detail": "Explicit throw at app.js:1 has a CPG continuation. It is retained as unresolved-exception, excluded from normal control flow; handler/exception routing is unverified."
+    },
+    {
+      "kind": "flowmap-coverage",
+      "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+      "detail": "Reaching definitions may conservatively couple predicate operands; inspect assignments and assert values at every effect/return"
+    },
+    {
+      "kind": "flowmap-coverage",
+      "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+      "detail": "Implicit exceptions, external effects, concurrency and path feasibility are not exhaustively modeled"
+    }
+  ],
+  "flowMap": {
+    "protocol": "dt.flow-map/v1",
+    "entries": [
+      "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:107374182400"
+    ],
+    "methods": [
+      {
+        "id": "code:DEMO%2Fjs-flow@DEMO%2Fjs-flow%404444444444444444444444444444444444444444-83f298d63451bb620a10780a:app.js::program:submit",
+        "kind": "method",
+        "name": "submit",
+        "signature": "app.js::program:submit",
+        "methodSignature": "",
+        "file": "app.js",
+        "projectionFile": "app.js",
+        "line": 1,
+        "endLine": 1,
+        "repo": "DEMO/js-flow",
+        "sha": "4444444444444444444444444444444444444444",
+        "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+        "locator": {
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "generation": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "nodeId": "107374182400"
+        },
+        "parameters": [
+          {
+            "name": "gross",
+            "type": "ANY",
+            "index": 1
+          },
+          {
+            "name": "rebate",
+            "type": "ANY",
+            "index": 2
+          }
+        ],
+        "returnId": "124554051584",
+        "coverage": "static-cpg",
+        "entry": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:107374182400",
+        "exit": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:124554051584"
+      }
+    ],
+    "nodes": [
+      {
+        "type": "state",
+        "nodeId": "107374182400",
+        "methodId": "107374182400",
+        "kind": "entry",
+        "label": "METHOD",
+        "code": "submit",
+        "file": "app.js",
+        "line": 1,
+        "reads": [
+          "payable",
+          "gross",
+          "rebate",
+          "_tmp_0",
+          "Error"
+        ],
+        "changes": [],
+        "arguments": [],
+        "status": "static-candidate",
+        "textTruncated": false,
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+        "repo": "DEMO/js-flow",
+        "sha": "4444444444444444444444444444444444444444",
+        "revisionKey": "DEMO/js-flow@4444444444444444444444444444444444444444-83f298d63451bb620a10780a",
+        "locator": {
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "generation": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "nodeId": "107374182400"
+        },
+        "id": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:107374182400",
+        "method": "code:DEMO%2Fjs-flow@DEMO%2Fjs-flow%404444444444444444444444444444444444444444-83f298d63451bb620a10780a:app.js::program:submit"
+      },
+      {
+        "type": "state",
+        "nodeId": "124554051584",
+        "methodId": "107374182400",
+        "kind": "exit",
+        "label": "METHOD_RETURN",
+        "code": "Method exit",
+        "file": "app.js",
+        "line": 1,
+        "reads": [],
+        "changes": [],
+        "arguments": [],
+        "status": "static-candidate",
+        "textTruncated": false,
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+        "repo": "DEMO/js-flow",
+        "sha": "4444444444444444444444444444444444444444",
+        "revisionKey": "DEMO/js-flow@4444444444444444444444444444444444444444-83f298d63451bb620a10780a",
+        "locator": {
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "generation": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "nodeId": "124554051584"
+        },
+        "id": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:124554051584",
+        "method": "code:DEMO%2Fjs-flow@DEMO%2Fjs-flow%404444444444444444444444444444444444444444-83f298d63451bb620a10780a:app.js::program:submit"
+      },
+      {
+        "type": "state",
+        "nodeId": "30064771072",
+        "methodId": "107374182400",
+        "kind": "change",
+        "label": "CALL",
+        "code": "const payable = gross - rebate",
+        "file": "app.js",
+        "line": 1,
+        "reads": [
+          "payable",
+          "gross",
+          "rebate"
+        ],
+        "changes": [
+          {
+            "target": "payable",
+            "expression": "gross - rebate",
+            "operation": "<operator>.assignment",
+            "status": "syntax"
+          }
+        ],
+        "arguments": [
+          {
+            "index": 1,
+            "expression": "payable"
+          },
+          {
+            "index": 2,
+            "expression": "gross - rebate"
+          }
+        ],
+        "status": "static-candidate",
+        "textTruncated": false,
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+        "repo": "DEMO/js-flow",
+        "sha": "4444444444444444444444444444444444444444",
+        "revisionKey": "DEMO/js-flow@4444444444444444444444444444444444444444-83f298d63451bb620a10780a",
+        "locator": {
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "generation": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "nodeId": "30064771072"
+        },
+        "id": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771072",
+        "method": "code:DEMO%2Fjs-flow@DEMO%2Fjs-flow%404444444444444444444444444444444444444444-83f298d63451bb620a10780a:app.js::program:submit"
+      },
+      {
+        "type": "state",
+        "nodeId": "30064771074",
+        "methodId": "107374182400",
+        "kind": "decision",
+        "label": "CALL",
+        "code": "payable < 0",
+        "file": "app.js",
+        "line": 1,
+        "reads": [
+          "payable"
+        ],
+        "changes": [],
+        "arguments": [
+          {
+            "index": 1,
+            "expression": "payable"
+          },
+          {
+            "index": 2,
+            "expression": "0"
+          }
+        ],
+        "status": "static-candidate",
+        "textTruncated": false,
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+        "repo": "DEMO/js-flow",
+        "sha": "4444444444444444444444444444444444444444",
+        "revisionKey": "DEMO/js-flow@4444444444444444444444444444444444444444-83f298d63451bb620a10780a",
+        "locator": {
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "generation": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "nodeId": "30064771074"
+        },
+        "id": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771074",
+        "method": "code:DEMO%2Fjs-flow@DEMO%2Fjs-flow%404444444444444444444444444444444444444444-83f298d63451bb620a10780a:app.js::program:submit"
+      },
+      {
+        "type": "state",
+        "nodeId": "30064771075",
+        "methodId": "107374182400",
+        "kind": "throw",
+        "label": "CALL",
+        "code": "throw new Error(\"invalid\");",
+        "file": "app.js",
+        "line": 1,
+        "reads": [
+          "_tmp_0",
+          "Error"
+        ],
+        "changes": [],
+        "arguments": [
+          {
+            "index": 1,
+            "expression": "new Error(\"invalid\")"
+          }
+        ],
+        "status": "static-candidate",
+        "textTruncated": false,
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+        "repo": "DEMO/js-flow",
+        "sha": "4444444444444444444444444444444444444444",
+        "revisionKey": "DEMO/js-flow@4444444444444444444444444444444444444444-83f298d63451bb620a10780a",
+        "locator": {
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "generation": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "nodeId": "30064771075"
+        },
+        "id": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771075",
+        "method": "code:DEMO%2Fjs-flow@DEMO%2Fjs-flow%404444444444444444444444444444444444444444-83f298d63451bb620a10780a:app.js::program:submit",
+        "assumptions": [
+          "Explicit failure exit. Raw CPG continuations remain unresolved exception evidence and are excluded from normal control edges; exception handlers are not proven."
+        ]
+      },
+      {
+        "type": "state",
+        "nodeId": "30064771076",
+        "methodId": "107374182400",
+        "kind": "change",
+        "label": "CALL",
+        "code": "_tmp_0 = .alloc",
+        "file": "app.js",
+        "line": 1,
+        "reads": [
+          "_tmp_0"
+        ],
+        "changes": [
+          {
+            "target": "_tmp_0",
+            "expression": ".alloc",
+            "operation": "<operator>.assignment",
+            "status": "syntax"
+          }
+        ],
+        "arguments": [
+          {
+            "index": 1,
+            "expression": "_tmp_0"
+          },
+          {
+            "index": 2,
+            "expression": ".alloc"
+          }
+        ],
+        "status": "static-candidate",
+        "textTruncated": false,
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+        "repo": "DEMO/js-flow",
+        "sha": "4444444444444444444444444444444444444444",
+        "revisionKey": "DEMO/js-flow@4444444444444444444444444444444444444444-83f298d63451bb620a10780a",
+        "locator": {
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "generation": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "nodeId": "30064771076"
+        },
+        "id": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771076",
+        "method": "code:DEMO%2Fjs-flow@DEMO%2Fjs-flow%404444444444444444444444444444444444444444-83f298d63451bb620a10780a:app.js::program:submit"
+      },
+      {
+        "type": "state",
+        "nodeId": "141733920768",
+        "methodId": "107374182400",
+        "kind": "return",
+        "label": "RETURN",
+        "code": "return payable",
+        "file": "app.js",
+        "line": 1,
+        "reads": [
+          "payable"
+        ],
+        "changes": [],
+        "arguments": [],
+        "status": "static-candidate",
+        "textTruncated": false,
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+        "repo": "DEMO/js-flow",
+        "sha": "4444444444444444444444444444444444444444",
+        "revisionKey": "DEMO/js-flow@4444444444444444444444444444444444444444-83f298d63451bb620a10780a",
+        "locator": {
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "generation": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "nodeId": "141733920768"
+        },
+        "id": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:141733920768",
+        "method": "code:DEMO%2Fjs-flow@DEMO%2Fjs-flow%404444444444444444444444444444444444444444-83f298d63451bb620a10780a:app.js::program:submit"
+      }
+    ],
+    "edges": [
+      {
+        "type": "edge",
+        "from": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:107374182400",
+        "to": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771072",
+        "kind": "control",
+        "relation": "CFG",
+        "polarity": "not-applicable",
+        "contractedExpressions": 4,
+        "condition": "",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "CFG",
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:7848ada582489f2f94ded07f"
+      },
+      {
+        "type": "edge",
+        "from": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771072",
+        "to": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771074",
+        "kind": "control",
+        "relation": "CFG",
+        "polarity": "not-applicable",
+        "contractedExpressions": 2,
+        "condition": "",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "CFG",
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:355059af9256e6e54bb031bd"
+      },
+      {
+        "type": "edge",
+        "from": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771074",
+        "to": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771076",
+        "kind": "control",
+        "relation": "CFG",
+        "polarity": "true",
+        "contractedExpressions": 2,
+        "condition": "payable < 0",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "CFG",
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:863c3a50bfe2ebd94409fc34"
+      },
+      {
+        "type": "edge",
+        "from": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771074",
+        "to": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:141733920768",
+        "kind": "control",
+        "relation": "CFG",
+        "polarity": "false",
+        "contractedExpressions": 1,
+        "condition": "payable < 0",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "CFG",
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:46a431e8364d615656aaf832"
+      },
+      {
+        "type": "edge",
+        "from": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771075",
+        "to": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:141733920768",
+        "kind": "unresolved-exception",
+        "relation": "CFG",
+        "polarity": "not-applicable",
+        "contractedExpressions": 1,
+        "condition": "",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "CFG",
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:173811605d5896b2406949de"
+      },
+      {
+        "type": "edge",
+        "from": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771076",
+        "to": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771075",
+        "kind": "control",
+        "relation": "CFG",
+        "polarity": "not-applicable",
+        "contractedExpressions": 6,
+        "condition": "",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "CFG",
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:d0b5dbba6d943224a7abbe9d"
+      },
+      {
+        "type": "edge",
+        "from": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:141733920768",
+        "to": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:124554051584",
+        "kind": "control",
+        "relation": "CFG",
+        "polarity": "not-applicable",
+        "contractedExpressions": 0,
+        "condition": "",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "CFG",
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:5d5e94cfc18dfa6b9185a5f3"
+      },
+      {
+        "type": "edge",
+        "from": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:107374182400",
+        "to": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:141733920768",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:5e7ef0fe661aa78544667585"
+      },
+      {
+        "type": "edge",
+        "from": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:107374182400",
+        "to": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771072",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:bfb4e93ccaa6f64e38895194"
+      },
+      {
+        "type": "edge",
+        "from": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:107374182400",
+        "to": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771075",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:6b882d461fff7e226fef06c8"
+      },
+      {
+        "type": "edge",
+        "from": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:107374182400",
+        "to": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771076",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:e397f465fa515c296f001034"
+      },
+      {
+        "type": "edge",
+        "from": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:107374182400",
+        "to": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771074",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:d497fd56bfcd63622314ae17"
+      },
+      {
+        "type": "edge",
+        "from": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:107374182400",
+        "to": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:124554051584",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:4632149e1236775941184234"
+      },
+      {
+        "type": "edge",
+        "from": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771072",
+        "to": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:124554051584",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:0c5a59bbe692734eead538cd"
+      },
+      {
+        "type": "edge",
+        "from": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771072",
+        "to": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771074",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:697987ed76f0804369b40255"
+      },
+      {
+        "type": "edge",
+        "from": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771072",
+        "to": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:107374182400",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:2fb8a81271bc6aa94ef2f567"
+      },
+      {
+        "type": "edge",
+        "from": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771074",
+        "to": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:124554051584",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:3f9a17014c287b7f524ed29a"
+      },
+      {
+        "type": "edge",
+        "from": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771074",
+        "to": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771075",
+        "kind": "control-dependency",
+        "relation": "CDG",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "CDG",
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:4d0fac8a8ceda28e5ae7817f"
+      },
+      {
+        "type": "edge",
+        "from": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771074",
+        "to": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771076",
+        "kind": "control-dependency",
+        "relation": "CDG",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "CDG",
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:dec323ccd2ac97cad0f62577"
+      },
+      {
+        "type": "edge",
+        "from": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771074",
+        "to": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:141733920768",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:e377e28e9dec14c4bf767b0f"
+      },
+      {
+        "type": "edge",
+        "from": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771075",
+        "to": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:124554051584",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:0b1c6304b22fcf41f845e21b"
+      },
+      {
+        "type": "edge",
+        "from": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771076",
+        "to": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:124554051584",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:f3577010aade2ddab7f7cfcd"
+      },
+      {
+        "type": "edge",
+        "from": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771076",
+        "to": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:30064771075",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:23abb8b6d5ff72eabddbae33"
+      },
+      {
+        "type": "edge",
+        "from": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:141733920768",
+        "to": "state:d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3:124554051584",
+        "kind": "data",
+        "relation": "REACHING_DEF",
+        "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d",
+        "evidence": {
+          "origin": "joern",
+          "relation": "REACHING_DEF",
+          "analysisId": "d6d8168346f28c3b5c9a208fd40a31400bd2eca1d86fbca4ea98b9919eba535c-3ba1b9c73e29ffc30376abca929c9ac3",
+          "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+        },
+        "proof": "static-candidate",
+        "id": "transition:8d7a7c3f77e3f9eb5bcc0ce5"
+      }
+    ],
+    "ports": [],
+    "assumptions": [
+      {
+        "id": "static",
+        "status": "unknown",
+        "detail": "Static control and reaching-definition edges are candidates. They do not prove feasibility, equal values, runtime order, or every-path enforcement."
+      },
+      {
+        "id": "effects",
+        "status": "unknown",
+        "detail": "External calls may change data or throw. Unresolved dispatch, aliasing, reflection, async execution, and implicit exceptions are not exhaustively modeled."
+      },
+      {
+        "id": "scope",
+        "status": "bounded",
+        "detail": "Bodies cover the selected entries and bounded reachable methods in exact retained CPGs. Transport boundaries are shown with their evidence; no distributed execution or field mapping is inferred."
+      }
+    ],
+    "complete": false,
+    "counts": {
+      "entries": 1,
+      "methods": 1,
+      "states": 7,
+      "transitions": 24,
+      "decisions": 1,
+      "changes": 2,
+      "exits": 3
+    }
+  }
+}

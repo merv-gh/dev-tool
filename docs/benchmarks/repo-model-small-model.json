@@ -1,0 +1,905 @@
+{
+  "protocol": "dt.repo-model-eval/v1",
+  "model": "qwen3.5:4b",
+  "sourceDigest": "b1249397c80663b9ad8fa0653ea42736237b0e3572276962331e1edec6e2a877",
+  "kind": "real-model-with-bounded-fixture-tools",
+  "limits": [
+    "Two fresh deterministic small-model conversations, not a general benchmark.",
+    "Own source declarations are real; Joern case replays previously captured real output for a synthetic test repository. No fresh worker parse or production call."
+  ],
+  "cases": [
+    {
+      "id": "own",
+      "events": [
+        {
+          "tool": "tool_search",
+          "args": {
+            "query": "workspace push lifecycle finite model",
+            "group": "code",
+            "limit": 5
+          },
+          "ok": true,
+          "bytes": 2821,
+          "result": {
+            "groupHint": {
+              "message": "This group excludes the leading capability for the requested action. The filtered results below still use your group.",
+              "candidate": {
+                "name": "repo_model",
+                "group": "semantic"
+              },
+              "retry": {
+                "tool": "tool_search",
+                "arguments": {
+                  "query": "workspace push lifecycle finite model"
+                }
+              },
+              "next": {
+                "tool": "tool_describe",
+                "arguments": {
+                  "name": "repo_model"
+                }
+              }
+            },
+            "total": 26,
+            "tools": [
+              {
+                "name": "workspace_push",
+                "group": "code",
+                "description": "Commit workspace changes and push to a feature branch only when requested and push.enabled=true. Never force or target protected/default branches. Replays onto a moved branch; conflicts stop the push. Reports recorded test proof but does not run tests or enforce green. Success advances the workspace base to the pushed commit.",
+                "required": [
+                  "workspace",
+                  "branch",
+                  "message"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "args": {
+                    "name": "workspace_push"
+                  }
+                }
+              },
+              {
+                "name": "workspace_branch",
+                "group": "code",
+                "description": "Open/reuse a separate owned workspace at a branch/ref of this repository. Leaves all uncommitted files in the original workspace untouched. Does not push, reset or clean either checkout.",
+                "required": [
+                  "workspace",
+                  "ref"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "args": {
+                    "name": "workspace_branch"
+                  }
+                }
+              },
+              {
+                "name": "workspace_open",
+                "group": "code",
+                "description": "Open/reuse a writable repo/ref checkout in the current authenticated task. Reconnects and restarts preserve its files and build state; reuse never pulls or resets. fresh=true creates a separate checkout. Different principals/tasks remain isolated. Indexed for code_search, impact and test_context. Edit with workspace_write, run test_run, export workspace_patch; workspace_push publishes only when requested and enabled.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "args": {
+                    "name": "workspace_open"
+                  }
+                }
+              },
+              {
+                "name": "workspace_patch",
+                "group": "code",
+                "description": "Export workspace changes against its base commit as a downloadable Git patch, file counts and recorded test proof. Does not commit, push or run tests. Use workspace_push only when publishing is requested.",
+                "required": [
+                  "workspace"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "args": {
+                    "name": "workspace_patch"
+                  }
+                }
+              },
+              {
+                "name": "gradle_bump",
+                "group": "code",
+                "description": "Plan a dependency upgrade using exact parsed source owners, preserving comments and unrelated versions. Shared variables/catalog versions show every affected consumer. Plan never edits source. Explicit apply reads a saved task-private plan and checks workspace repository, HEAD SHA and every file revision before guarded saves; unresolved/dynamic versions block apply. No commit, push, or remote write.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "args": {
+                    "name": "gradle_bump"
+                  }
+                }
+              }
+            ],
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "workspace",
+                "push",
+                "lifecycle",
+                "model"
+              ],
+              "unmatchedTerms": [
+                "finite"
+              ],
+              "truncated": false
+            }
+          }
+        },
+        {
+          "tool": "tool_describe",
+          "args": {
+            "name": "repo_model"
+          },
+          "ok": true,
+          "bytes": 2034,
+          "result": {
+            "name": "repo_model",
+            "description": "Show repository lifecycle/Joern diagrams with TLA+ checks and sampled OpenTelemetry. To actually check dev-tool’s workspace push, call action=check,machine=SM37.push (no id needed); returns actual check and hierarchy links. For a diagram only, action=derive uses our sources. Another repo needs analysis=<retained Joern id> and optional from; observe its returned job. Then check/export with id + exact machine. Guards/data are annotations, not proved predicates. Compact output is default; full evidence lives in inline views.",
+            "group": "semantic",
+            "origin": "built-in",
+            "execution": {
+              "protocol": "dt.tool/v1",
+              "transport": "in-process"
+            },
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "type": "string",
+                  "enum": [
+                    "derive",
+                    "get",
+                    "observe",
+                    "check",
+                    "export"
+                  ],
+                  "default": "derive"
+                },
+                "id": {
+                  "type": "string",
+                  "description": "Owned repository projection id returned by derive"
+                },
+                "analysis": {
+                  "type": "string",
+                  "description": "Exact retained Joern analysis id from semantic_index"
+                },
+                "job": {
+                  "type": "string",
+                  "description": "Observe the existing Joern flow-map job"
+                },
+                "from": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "signature": {
+                      "type": "string"
+                    },
+                    "file": {
+                      "type": "string"
+                    },
+                    "line": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "receiver": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "waitMs": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 30000,
+                  "default": 0
+                },
+                "machine": {
+                  "type": "string",
+                  "description": "Exact machine id from hierarchy, e.g. SM37.push"
+                },
+                "forbidden": {
+                  "type": "array",
+                  "maxItems": 40,
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Optional existing states to test as forbidden; retained model is not changed"
+                },
+                "engine": {
+                  "type": "string",
+                  "enum": [
+                    "finite-graph",
+                    "tlc"
+                  ],
+                  "default": "finite-graph"
+                },
+                "mode": {
+                  "type": "string",
+                  "enum": [
+                    "check",
+                    "simulate"
+                  ],
+                  "default": "check"
+                },
+                "trace": {
+                  "type": "string",
+                  "description": "Optional trace id for observation filter"
+                },
+                "format": {
+                  "type": "string",
+                  "enum": [
+                    "compact",
+                    "full"
+                  ],
+                  "default": "compact"
+                },
+                "view": {
+                  "type": "boolean",
+                  "default": true
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          }
+        },
+        {
+          "tool": "repo_model",
+          "args": {
+            "action": "check",
+            "format": "compact",
+            "machine": "SM37.push"
+          },
+          "ok": true,
+          "bytes": 770,
+          "result": {
+            "id": "rbadb439eaecab1cffd44c892249625ea",
+            "hierarchy": "http://127.0.0.1:4000/show/mwlux7kedbdf45940556542c6b",
+            "observations": {
+              "enabled": false,
+              "observations": 0,
+              "unmatched": 0,
+              "meaning": "Sampled, chat-scoped observations. Only accepted declared edges from the same source digest count as hits. Unversioned/stale/rejected events remain visible. A span duration belongs to the whole operation, not an individual transition."
+            },
+            "sourceDigest": "b1249397c80663b9ad8fa0653ea42736237b0e3572276962331e1edec6e2a877",
+            "machine": "SM37.push",
+            "status": "checked",
+            "complete": true,
+            "meaning": "Check applies only to the finite selected declaration/CFG abstraction. Static guards and data changes are annotations.",
+            "violations": [],
+            "view": "http://127.0.0.1:4000/show/mwlux7kvfb07c058308fa48863"
+          }
+        }
+      ],
+      "final": "**Status:** `checked` (complete)  \n**Visualization links:**  \n- Hierarchy: http://127.0.0.1:4000/show/mwlux7kedbdf45940556542c6b  \n- View: http://127.0.0.1:4000/show/mwlux7kvfb07c058308fa48863  \n\n**Summary:** The finite model check for `dev-tool`'s workspace push lifecycle completed with no violations. Observations were sampled and scoped to the chat context, with only declared edges from the same source digest counted as hits. Static guards and data changes are treated as annotations rather than proved predicates.",
+      "passed": true
+    },
+    {
+      "id": "joern",
+      "events": [
+        {
+          "tool": "tool_search",
+          "args": {
+            "query": "Joern analysis 09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d",
+            "group": "consul"
+          },
+          "ok": true,
+          "bytes": 852,
+          "result": {
+            "groupHint": {
+              "message": "This group excludes the leading capability for the requested action. The filtered results below still use your group.",
+              "candidate": {
+                "name": "repo_model",
+                "group": "semantic"
+              },
+              "retry": {
+                "tool": "tool_search",
+                "arguments": {
+                  "query": "Joern analysis 09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d"
+                }
+              },
+              "next": {
+                "tool": "tool_describe",
+                "arguments": {
+                  "name": "repo_model"
+                }
+              }
+            },
+            "total": 0,
+            "tools": [],
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [],
+              "unmatchedTerms": [
+                "joern",
+                "analysi",
+                "09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184",
+                "6d8cfa154db787f5671cee55e33b015d"
+              ],
+              "truncated": false
+            },
+            "hint": "No matching capability. Search for the action (impact, text search, change path), not just an object name. Try tool_profiles; do not repeat the same query."
+          }
+        },
+        {
+          "tool": "tool_search",
+          "args": {
+            "query": "Joern analysis 09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d",
+            "group": "semantic"
+          },
+          "ok": true,
+          "bytes": 1682,
+          "result": {
+            "total": 3,
+            "tools": [
+              {
+                "name": "repo_model",
+                "group": "semantic",
+                "description": "Show repository lifecycle/Joern diagrams with TLA+ checks and sampled OpenTelemetry. To actually check dev-tool’s workspace push, call action=check,machine=SM37.push (no id needed); returns actual check and hierarchy links. For a diagram only, action=derive uses our sources. Another repo needs analysis=<retained Joern id> and optional from; observe its returned job. Then check/export with id + exact machine. Guards/data are annotations, not prove",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "args": {
+                    "name": "repo_model"
+                  }
+                }
+              },
+              {
+                "name": "semantic_search",
+                "group": "semantic",
+                "description": "Search retained symbols or typed ports, with source locations and exact revisions. Missing analysis reports a build suggestion; it never starts an implicit parse.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "args": {
+                    "name": "semantic_search"
+                  }
+                }
+              },
+              {
+                "name": "semantic_trace",
+                "group": "semantic",
+                "description": "Explain a change path: analysis=<id> or analyses=[beforeId,afterId], from and to required. Method input: from.name + parameter; sink: to.name + argument. Collects conditions, loops, stream filters/maps and inherited-library logic; from.receiver selects a concrete subclass. Graph/readable evidence, not runtime proof. List missing analyses: semantic_index; whole-entry map: semantic_query flowmap.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "args": {
+                    "name": "semantic_trace"
+                  }
+                }
+              }
+            ],
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "joern",
+                "analysi"
+              ],
+              "unmatchedTerms": [
+                "09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184",
+                "6d8cfa154db787f5671cee55e33b015d"
+              ],
+              "truncated": false
+            }
+          }
+        },
+        {
+          "tool": "tool_describe",
+          "args": {
+            "name": "repo_model"
+          },
+          "ok": true,
+          "bytes": 2034,
+          "result": {
+            "name": "repo_model",
+            "description": "Show repository lifecycle/Joern diagrams with TLA+ checks and sampled OpenTelemetry. To actually check dev-tool’s workspace push, call action=check,machine=SM37.push (no id needed); returns actual check and hierarchy links. For a diagram only, action=derive uses our sources. Another repo needs analysis=<retained Joern id> and optional from; observe its returned job. Then check/export with id + exact machine. Guards/data are annotations, not proved predicates. Compact output is default; full evidence lives in inline views.",
+            "group": "semantic",
+            "origin": "built-in",
+            "execution": {
+              "protocol": "dt.tool/v1",
+              "transport": "in-process"
+            },
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "type": "string",
+                  "enum": [
+                    "derive",
+                    "get",
+                    "observe",
+                    "check",
+                    "export"
+                  ],
+                  "default": "derive"
+                },
+                "id": {
+                  "type": "string",
+                  "description": "Owned repository projection id returned by derive"
+                },
+                "analysis": {
+                  "type": "string",
+                  "description": "Exact retained Joern analysis id from semantic_index"
+                },
+                "job": {
+                  "type": "string",
+                  "description": "Observe the existing Joern flow-map job"
+                },
+                "from": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "signature": {
+                      "type": "string"
+                    },
+                    "file": {
+                      "type": "string"
+                    },
+                    "line": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "receiver": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "waitMs": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 30000,
+                  "default": 0
+                },
+                "machine": {
+                  "type": "string",
+                  "description": "Exact machine id from hierarchy, e.g. SM37.push"
+                },
+                "forbidden": {
+                  "type": "array",
+                  "maxItems": 40,
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Optional existing states to test as forbidden; retained model is not changed"
+                },
+                "engine": {
+                  "type": "string",
+                  "enum": [
+                    "finite-graph",
+                    "tlc"
+                  ],
+                  "default": "finite-graph"
+                },
+                "mode": {
+                  "type": "string",
+                  "enum": [
+                    "check",
+                    "simulate"
+                  ],
+                  "default": "check"
+                },
+                "trace": {
+                  "type": "string",
+                  "description": "Optional trace id for observation filter"
+                },
+                "format": {
+                  "type": "string",
+                  "enum": [
+                    "compact",
+                    "full"
+                  ],
+                  "default": "compact"
+                },
+                "view": {
+                  "type": "boolean",
+                  "default": true
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          }
+        },
+        {
+          "tool": "repo_model",
+          "args": {
+            "action": "derive",
+            "analysis": "09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d"
+          },
+          "ok": true,
+          "bytes": 3251,
+          "result": {
+            "protocol": "dt.repo-model/v1",
+            "id": "rc7e6ba93d0584a6d92c3a8af788d032b",
+            "repo": "DEMO/payments",
+            "counts": {
+              "machines": 3,
+              "states": 28,
+              "transitions": 30,
+              "observations": 0
+            },
+            "verification": {
+              "status": "not-checked",
+              "next": "Derivation does not run a check. If asked to check, execute the returned next check call."
+            },
+            "hierarchy": {
+              "meaning": "Containment only. No call/dependency relationships are inferred between components or machines.",
+              "components": 3
+            },
+            "machines": [
+              {
+                "id": "m5b147f1e2569",
+                "label": "submit",
+                "component": "src/main/java/example/PaymentService.java",
+                "origin": "joern-cfg"
+              },
+              {
+                "id": "mf4b802c005bd",
+                "label": "save",
+                "component": "src/main/java/example/Ledger.java",
+                "origin": "joern-cfg"
+              },
+              {
+                "id": "mc5017f69ad4f",
+                "label": "publish",
+                "component": "src/main/java/example/Events.java",
+                "origin": "joern-cfg"
+              }
+            ],
+            "omittedMachines": 0,
+            "gaps": [
+              {
+                "kind": "unresolved-call",
+                "analysisId": "09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d",
+                "repo": "DEMO/payments",
+                "sha": "23999f81229633930d54d4a51d3e1a90e8a96e97",
+                "file": "src/main/java/example/PaymentService.java",
+                "line": 13,
+                "name": "isBlank",
+                "methodFullName": "<unresolvedNamespace>.String.isBlank:<unresolvedSignature>(0)"
+              },
+              {
+                "kind": "unresolved-call",
+                "analysisId": "09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d",
+                "repo": "DEMO/payments",
+                "sha": "23999f81229633930d54d4a51d3e1a90e8a96e97",
+                "file": "src/main/java/example/PaymentService.java",
+                "line": 14,
+                "name": "<init>",
+                "methodFullName": "ANY.<init>:<unresolvedSignature>(1)"
+              },
+              {
+                "kind": "unresolved-call",
+                "analysisId": "09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d",
+                "repo": "DEMO/payments",
+                "sha": "23999f81229633930d54d4a51d3e1a90e8a96e97",
+                "file": "src/main/java/example/PaymentService.java",
+                "line": 17,
+                "name": "<init>",
+                "methodFullName": "ANY.<init>:<unresolvedSignature>(1)"
+              },
+              {
+                "kind": "flowmap-coverage",
+                "analysisId": "09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d",
+                "detail": "Explicit throw at src/main/java/example/PaymentService.java:14 has a CPG continuation. It is retained as unresolved-exception, excluded from normal control flow; handler/exception routing is unverified."
+              }
+            ],
+            "telemetry": {
+              "enabled": false,
+              "observations": 0,
+              "unmatched": 0,
+              "meaning": "Sampled, chat-scoped observations. Only accepted declared edges from the same source digest count as hits. Unversioned/stale/rejected events remain visible. A span duration belongs to the whole operation, not an individual transition."
+            },
+            "meaning": "Derived source hierarchy only. Return the retained view link; do not invent dependency edges from the preview. Execute next check/export calls when requested. Checks apply only to the finite selected abstraction.",
+            "admin": "/self-reflection?id=rc7e6ba93d0584a6d92c3a8af788d032b&story=default",
+            "view": "http://127.0.0.1:4000/show/mwluxbc74e5b4ea0d847511f47",
+            "next": [
+              {
+                "tool": "repo_model",
+                "arguments": {
+                  "action": "check",
+                  "id": "rc7e6ba93d0584a6d92c3a8af788d032b",
+                  "machine": "m5b147f1e2569"
+                }
+              },
+              {
+                "tool": "repo_model",
+                "arguments": {
+                  "action": "export",
+                  "id": "rc7e6ba93d0584a6d92c3a8af788d032b",
+                  "machine": "m5b147f1e2569"
+                }
+              },
+              {
+                "tool": "repo_model",
+                "arguments": {
+                  "action": "observe",
+                  "id": "rc7e6ba93d0584a6d92c3a8af788d032b"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "tool": "repo_model",
+          "args": {
+            "action": "check",
+            "id": "rc7e6ba93d0584a6d92c3a8af788d032b",
+            "machine": "m5b147f1e2569"
+          },
+          "ok": true,
+          "bytes": 313,
+          "result": {
+            "id": "rc7e6ba93d0584a6d92c3a8af788d032b",
+            "machine": "m5b147f1e2569",
+            "status": "checked",
+            "complete": true,
+            "meaning": "Check applies only to the finite selected declaration/CFG abstraction. Static guards and data changes are annotations.",
+            "violations": [],
+            "view": "http://127.0.0.1:4000/show/mwluxc0l7fc588f1e795d1e86f"
+          }
+        },
+        {
+          "tool": "repo_model",
+          "args": {
+            "action": "export",
+            "format": "full",
+            "id": "rc7e6ba93d0584a6d92c3a8af788d032b",
+            "machine": "m5b147f1e2569",
+            "view": true
+          },
+          "ok": true,
+          "bytes": 9278,
+          "result": {
+            "id": "rc7e6ba93d0584a6d92c3a8af788d032b",
+            "machine": "m5b147f1e2569",
+            "module": "---- MODULE LogicModel ----\nEXTENDS Naturals\nVARIABLES pc, last\nvars == <<pc, last>>\nNodes == {\"s0\", \"s1\", \"s2\", \"s3\", \"s4\", \"s5\", \"s6\", \"s7\", \"s8\", \"s9\", \"s10\", \"s11\", \"s12\", \"s13\", \"s14\", \"s15\", \"s16\", \"s17\"}\nActions == {\"e0\", \"e1\", \"e2\", \"e3\", \"e4\", \"e5\", \"e6\", \"e7\", \"e8\", \"e9\", \"e10\", \"e11\", \"e12\", \"e13\", \"e14\", \"e15\", \"e16\", \"e17\", \"e18\", \"e19\", \"e20\", \"e21\"}\nInitial == /\\ pc = \"s0\"\n           /\\ last = \"\"\nStep0 == /\\ pc = \"s0\"\n           /\\ pc' = \"s4\"\n           /\\ last' = \"e0\"\nStep1 == /\\ pc = \"s2\"\n           /\\ pc' = \"s7\"\n           /\\ last' = \"e1\"\nStep2 == /\\ pc = \"s2\"\n           /\\ pc' = \"s10\"\n           /\\ last' = \"e2\"\nStep3 == /\\ pc = \"s3\"\n           /\\ pc' = \"s2\"\n           /\\ last' = \"e3\"\nStep4 == /\\ pc = \"s3\"\n           /\\ pc' = \"s2\"\n           /\\ last' = \"e4\"\nStep5 == /\\ pc = \"s4\"\n           /\\ pc' = \"s5\"\n           /\\ last' = \"e5\"\nStep6 == /\\ pc = \"s4\"\n           /\\ pc' = \"s3\"\n           /\\ last' = \"e6\"\nStep7 == /\\ pc = \"s5\"\n           /\\ pc' = \"s3\"\n           /\\ last' = \"e7\"\nStep8 == /\\ pc = \"s6\"\n           /\\ pc' = \"s10\"\n           /\\ last' = \"e8\"\nStep9 == /\\ pc = \"s7\"\n           /\\ pc' = \"s8\"\n           /\\ last' = \"e9\"\nStep10 == /\\ pc = \"s8\"\n           /\\ pc' = \"s6\"\n           /\\ last' = \"e10\"\nStep11 == /\\ pc = \"s9\"\n           /\\ pc' = \"s12\"\n           /\\ last' = \"e11\"\nStep12 == /\\ pc = \"s9\"\n           /\\ pc' = \"s14\"\n           /\\ last' = \"e12\"\nStep13 == /\\ pc = \"s10\"\n           /\\ pc' = \"s9\"\n           /\\ last' = \"e13\"\nStep14 == /\\ pc = \"s10\"\n           /\\ pc' = \"s9\"\n           /\\ last' = \"e14\"\nStep15 == /\\ pc = \"s11\"\n           /\\ pc' = \"s14\"\n           /\\ last' = \"e15\"\nStep16 == /\\ pc = \"s12\"\n           /\\ pc' = \"s13\"\n           /\\ last' = \"e16\"\nStep17 == /\\ pc = \"s13\"\n           /\\ pc' = \"s11\"\n           /\\ last' = \"e17\"\nStep18 == /\\ pc = \"s14\"\n           /\\ pc' = \"s15\"\n           /\\ last' = \"e18\"\nStep19 == /\\ pc = \"s15\"\n           /\\ pc' = \"s16\"\n           /\\ last' = \"e19\"\nStep20 == /\\ pc = \"s16\"\n           /\\ pc' = \"s17\"\n           /\\ last' = \"e20\"\nStep21 == /\\ pc = \"s17\"\n           /\\ pc' = \"s1\"\n           /\\ last' = \"e21\"\nFinish == /\\ pc \\in {\"s1\"}\n          /\\ UNCHANGED vars\nNext == Step0 \\/ Step1 \\/ Step2 \\/ Step3 \\/ Step4 \\/ Step5 \\/ Step6 \\/ Step7 \\/ Step8 \\/ Step9 \\/ Step10 \\/ Step11 \\/ Step12 \\/ Step13 \\/ Step14 \\/ Step15 \\/ Step16 \\/ Step17 \\/ Step18 \\/ Step19 \\/ Step20 \\/ Step21 \\/ Finish\nTypeOK == /\\ pc \\in Nodes\n          /\\ last \\in (Actions \\cup {\"\"})\nSafe == pc \\notin {}\nSpec == Initial /\\ [][Next]_vars\n====\n",
+            "config": "SPECIFICATION Spec\nINVARIANT TypeOK\nINVARIANT Safe\nCHECK_DEADLOCK TRUE\n",
+            "mapping": [
+              {
+                "action": "Step0",
+                "transition": "e0",
+                "source": {
+                  "origin": "joern",
+                  "relation": "CFG",
+                  "analysisId": "09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d",
+                  "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+                }
+              },
+              {
+                "action": "Step1",
+                "transition": "e1",
+                "source": {
+                  "origin": "joern",
+                  "relation": "CFG",
+                  "analysisId": "09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d",
+                  "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+                }
+              },
+              {
+                "action": "Step2",
+                "transition": "e2",
+                "source": {
+                  "origin": "joern",
+                  "relation": "CFG",
+                  "analysisId": "09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d",
+                  "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+                }
+              },
+              {
+                "action": "Step3",
+                "transition": "e3",
+                "source": {
+                  "origin": "joern",
+                  "relation": "CFG",
+                  "analysisId": "09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d",
+                  "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+                }
+              },
+              {
+                "action": "Step4",
+                "transition": "e4",
+                "source": {
+                  "origin": "joern",
+                  "relation": "CFG",
+                  "analysisId": "09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d",
+                  "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+                }
+              },
+              {
+                "action": "Step5",
+                "transition": "e5",
+                "source": {
+                  "origin": "joern",
+                  "relation": "CFG",
+                  "analysisId": "09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d",
+                  "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+                }
+              },
+              {
+                "action": "Step6",
+                "transition": "e6",
+                "source": {
+                  "origin": "joern",
+                  "relation": "CFG",
+                  "analysisId": "09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d",
+                  "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+                }
+              },
+              {
+                "action": "Step7",
+                "transition": "e7",
+                "source": {
+                  "origin": "joern",
+                  "relation": "CFG",
+                  "analysisId": "09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d",
+                  "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+                }
+              },
+              {
+                "action": "Step8",
+                "transition": "e8",
+                "source": {
+                  "origin": "joern",
+                  "relation": "CFG",
+                  "analysisId": "09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d",
+                  "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+                }
+              },
+              {
+                "action": "Step9",
+                "transition": "e9",
+                "source": {
+                  "origin": "joern",
+                  "relation": "CFG",
+                  "analysisId": "09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d",
+                  "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+                }
+              },
+              {
+                "action": "Step10",
+                "transition": "e10",
+                "source": {
+                  "origin": "joern",
+                  "relation": "CFG",
+                  "analysisId": "09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d",
+                  "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+                }
+              },
+              {
+                "action": "Step11",
+                "transition": "e11",
+                "source": {
+                  "origin": "joern",
+                  "relation": "CFG",
+                  "analysisId": "09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d",
+                  "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+                }
+              },
+              {
+                "action": "Step12",
+                "transition": "e12",
+                "source": {
+                  "origin": "joern",
+                  "relation": "CFG",
+                  "analysisId": "09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d",
+                  "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+                }
+              },
+              {
+                "action": "Step13",
+                "transition": "e13",
+                "source": {
+                  "origin": "joern",
+                  "relation": "CFG",
+                  "analysisId": "09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d",
+                  "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+                }
+              },
+              {
+                "action": "Step14",
+                "transition": "e14",
+                "source": {
+                  "origin": "joern",
+                  "relation": "CFG",
+                  "analysisId": "09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d",
+                  "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+                }
+              },
+              {
+                "action": "Step15",
+                "transition": "e15",
+                "source": {
+                  "origin": "joern",
+                  "relation": "CFG",
+                  "analysisId": "09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d",
+                  "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+                }
+              },
+              {
+                "action": "Step16",
+                "transition": "e16",
+                "source": {
+                  "origin": "joern",
+                  "relation": "CFG",
+                  "analysisId": "09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d",
+                  "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+                }
+              },
+              {
+                "action": "Step17",
+                "transition": "e17",
+                "source": {
+                  "origin": "joern",
+                  "relation": "CFG",
+                  "analysisId": "09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d",
+                  "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+                }
+              },
+              {
+                "action": "Step18",
+                "transition": "e18",
+                "source": {
+                  "origin": "joern",
+                  "relation": "CFG",
+                  "analysisId": "09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d",
+                  "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+                }
+              },
+              {
+                "action": "Step19",
+                "transition": "e19",
+                "source": {
+                  "origin": "joern",
+                  "relation": "CFG",
+                  "analysisId": "09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d",
+                  "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+                }
+              },
+              {
+                "action": "Step20",
+                "transition": "e20",
+                "source": {
+                  "origin": "joern",
+                  "relation": "CFG",
+                  "analysisId": "09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d",
+                  "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+                }
+              },
+              {
+                "action": "Step21",
+                "transition": "e21",
+                "source": {
+                  "origin": "joern",
+                  "relation": "CFG",
+                  "analysisId": "09abed31d2475371e7f4f3231536db336dda8a2d03876d10fdb7d499780d8184-6d8cfa154db787f5671cee55e33b015d",
+                  "queryBundle": "cc6e2ba42a8b68c541b3ec473fb99ca07d13efad9380e78c545a6ab8c0a9c29d"
+                }
+              }
+            ],
+            "meaning": "Finite declared graph safety and deadlocks; not a proof of source-code equivalence or liveness."
+          }
+        }
+      ],
+      "final": "## Hierarchical Control Model for `submit` (PaymentService)\n\n### TLA+ Specification Export\n\n```tlaplus\n---- MODULE LogicModel ----\nEXTENDS Naturals\nVARIABLES pc, last\nvars == <<pc, last>>\nNodes == {\"s0\", \"s1\", \"s2\", \"s3\", \"s4\", \"s5\", \"s6\", \"s7\", \"s8\", \"s9\", \"s10\", \"s11\", \"s12\", \"s13\", \"s14\", \"s15\", \"s16\", \"s17\"}\nActions == {\"e0\", \"e1\", \"e2\", \"e3\", \"e4\", \"e5\", \"e6\", \"e7\", \"e8\", \"e9\", \"e10\", \"e11\", \"e12\", \"e13\", \"e14\", \"e15\", \"e16\", \"e17\", \"e18\", \"e19\", \"e20\", \"e21\"}\nInitial == /\\ pc = \"s0\"\n         /\\ last = \"\"\nStep0 == /\\ pc = \"s0\"\n         /\\ pc' = \"s4\"\n         /\\ last' = \"e0\"\nStep1 == /\\ pc = \"s2\"\n         /\\ pc' = \"s7\"\n         /\\ last' = \"e1\"\n... (Steps 2-21 follow) ...\nFinish == /\\ pc \\in {\"s1\"}\n          /\\ UNCHANGED vars\nNext == Step0 \\/ Step1 \\/ ... \\/ Step21 \\/ Finish\nTypeOK == /\\ pc \\in Nodes\n          /\\ last \\in (Actions \\cup {\"\"})\nSafe == pc \\notin {}\nSpec == Initial /\\ [][Next]_vars\n====\n```\n\n### Control Flow Graph Structure\n\nThe `submit` method's control model consists of:\n- **18 states** (s0-s17) representing execution points\n- **22 transitions** (e0-e21) representing actions/events\n- **Linear progression** from s0 → s4 → s2 → ... → s17 → s1\n\n### Analysis Results\n\n| Metric | Value |\n|--------|-------|\n| States | 18 |\n| Transitions | 22 |\n| Machines | 3 (submit, save, publish) |\n| Verification Status | ✅ Checked |\n| Violations | None |\n\n### Proof Validity Assessment\n\n**Crucial Finding**: The TLA+ model **does NOT prove** the source code's conditions and data assignments. Here's why:\n\n1. **Guards are annotations, not proved predicates** - As explicitly stated in the tool description: *\"Static guards and data changes are annotations, not proved predicates.\"*\n\n2. **Model limitations**:\n   - The TLA+ specification captures the **control flow structure** (CFG) but does not encode actual runtime conditions\n   - No verification of preconditions/postconditions from Java code\n   - No proof of data invariants or business logic correctness\n   - Only proves that the finite graph is deadlock-free and type-safe\n\n3. **What IS proved**:\n   - The model itself is well-formed (TypeOK invariant holds)\n   - No deadlocks exist within this abstraction\n   - State transitions follow declared edges\n\n4. **What is NOT proved**:\n   - Whether `isBlank()` checks actually prevent null/empty strings\n   - Whether payment validation logic is correct\n   - Whether data assignments maintain business invariants\n   - Runtime behavior under all possible inputs\n\n### Visualization Link\n\nFull graph visualization: http://127.0.0.1:4000/show/mwluxc0l7fc588f1e795d1e86f\n\n**Bottom line**: The TLA+ model provides a **structural abstraction** of the control flow, but it does not constitute a formal proof of the source code's correctness. It validates the graph structure itself, not the semantic properties encoded in the Java implementation.",
+      "passed": true
+    }
+  ],
+  "passed": true
+}
