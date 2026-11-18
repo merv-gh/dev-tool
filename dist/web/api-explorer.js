@@ -5,6 +5,10 @@
   const dirty = new SM.Dirty(), edits = new SM.Revision(), navigation = new SM.Revision(), selection = new SM.Revision(), authVersion = new SM.Revision(), sending = new SM.Activity(), changingEnvironment = new SM.Activity();
   const query = new URLSearchParams(location.search), scope = { story: query.get('story') || 'default', principal: query.get('principal') || '' };
   const state = { mode: 'services', env: query.get('env') || '', services: [], group: null, route: null, exchange: null, response: null, session: null, params: {}, authChoice: null, script: null, scripts: [], raw: false, controller: null };
+  const targetsRead=new SM.Revision();let consulConfigured=false,autoBase=null,targetId=null,requestClock,requestStarted=0;
+  const expiredTarget=g=>g?.stale||!g?.observedAt||!Number.isFinite(Date.parse(g.observedAt))||Date.now()-Date.parse(g.observedAt)>15000;
+  addEventListener('dt:tool-connection',e=>{$('live-status').textContent=({connected:'Live connection',connecting:'Connecting…',disconnected:'Connection lost', 'http-fallback':'HTTP fallback'})[e.detail.state]||e.detail.state;});
+  addEventListener('dt:tool-progress',e=>{if(e.detail.tool==='api_request_replay'&&sending.value){const phase=e.detail.phase||'accepted',labels={accepted:'Accepted by backend',preparing:'Preparing request',admission:'Waiting for target admission',connecting:'Connecting to service',headers:'Response headers received',received:'Response body received',saving:'Saving exchange'};notice((labels[phase]||phase)+(e.detail.status?' · HTTP '+e.detail.status:'')+' · '+((Date.now()-requestStarted)/1000).toFixed(1)+' s');$('response-meta').textContent=labels[phase]||phase;}});
   if (query.get('embed') === 'true') document.body.classList.add('embed');
   const node = (tag, text, cls) => { const n = document.createElement(tag); if (text !== undefined) n.textContent = String(text); if (cls) n.className = cls; return n; };
   function notice(text, error = false) { $('notice').textContent = text; $('notice').classList.toggle('error', error); $('notice').classList.toggle('running', sending.value); }
@@ -59,15 +63,15 @@
   async function services(epoch) {
     const result = await tool('api_client_catalog', { ...(state.env ? { env: state.env } : {}), q: $('apiRouteSearch').value });
     if (!navigation.current(epoch)) return;
-    state.env = result.env; state.services = result.services;
+    state.env = result.env; state.services = result.services;consulConfigured=result.consul.configured;
     $('apiEnvironment').replaceChildren(...result.environments.map(env => new Option(env, env))); $('apiEnvironment').value = result.env;
-    const root = $('apiRoutes'); root.replaceChildren();
+    const root = $('apiRoutes'),expanded=new Set([...root.querySelectorAll('details[open]')].map(d=>d.dataset.group)); root.replaceChildren();
     for (const group of result.services) {
       const details = node('details', undefined, 'service-group'), summary = node('summary'), routes = node('div', undefined, 'service-routes');
       summary.append(node('span', group.name, 'group-name'), node('span', group.routeCount, 'group-count')); summary.title = `${group.totalRoutes} indexed routes · ${group.targets.length} targets${group.stale ? ' · stale Consul evidence' : ''}`;
-      details.append(summary, routes); root.append(details); let loaded = false;
+      details.dataset.group=group.key;details.append(summary, routes); root.append(details); let loaded = false;
       details.addEventListener('toggle', () => { if (details.open && !loaded) { loaded = true; serviceRoutes(group, routes, epoch); } });
-      if (query.get('service') === group.service || $('apiRouteSearch').value.trim()) details.open = true;
+      if (expanded.has(group.key)||query.get('service') === group.service || ($('apiRouteSearch').value.trim()&&result.services.length===1)) details.open = true;
     }
     if (!root.children.length) root.append(empty('No matching services. Refresh passports or Consul in Admin, or create a request manually.'));
     const count = result.services.reduce((n, s) => n + s.routeCount, 0);
@@ -103,12 +107,13 @@
     libraryStatus(`${result.exchanges.length} exchanges · newest 500 retained per task`);
   }
   async function refreshLibrary() {
+    $('refresh').title=state.mode==='services'?'Refresh live Consul service names and selected instances':'Reload saved library';
     const epoch = navigation.advance(); libraryStatus('Loading…');
     try { await ({ services, collections, history })[state.mode](epoch); }
     catch (e) { if (navigation.current(epoch)) libraryStatus(e.message + ' Use Refresh to retry.', true); }
   }
   let searchTimer; $('apiRouteSearch').oninput = () => { navigation.advance(); clearTimeout(searchTimer); searchTimer = setTimeout(refreshLibrary, 160); };
-  $('refresh').onclick = refreshLibrary;
+  action($('refresh'),async()=>{if(state.mode!=='services'||!consulConfigured)return refreshLibrary();await refreshTargets(true);await refreshLibrary();});
   function template(value) { return String(value || '/').replace(/\{(?!\{)([a-z_]\w*)\}(?!\})|<([a-z_]\w*)>|:([a-z_]\w*)(?=\/|$|\?)/gi, (_, a, b, c) => '{{' + (a || b || c) + '}}'); }
   const unescapeTemplate = text => text.replace(/%7B%7B([^%]+)%7D%7D/gi, '{{$1}}');
   function urlParts(value) { try { const u = new URL(value); return { base: u.origin, path: unescapeTemplate(u.pathname + u.search) }; } catch { return { base: '', path: value || '/' }; } }
@@ -118,7 +123,7 @@
     for (const [i, t] of (group?.targets || []).entries()) $('apiTarget').add(new Option(`${t.source === 'consul' ? t.status : 'Observed'} · ${t.url}${t.id ? ' · ' + t.id : ''}`, String(i)));
     const index = group?.targets?.findIndex(t => t.url === base) ?? -1; $('apiTarget').value = index < 0 ? '' : String(index);
     $('apiBaseUrl').value = base;
-    $('target-status').textContent = index >= 0 ? `${group.targets[index].source === 'consul' ? 'Cached Consul address' : 'Observed origin'}${group.observedAt ? ' · ' + group.observedAt : ''}${group.stale ? ' · stale; review before sending' : ''}. Editable; no live health check.` : 'Custom target. Edit the base URL or the full request URL.';
+    $('target-status').textContent = index >= 0 ? `${group.targets[index].source === 'consul' ? 'Consul observed' : 'Observed origin'}${group.observedAt ? ' · ' + group.observedAt : ''}${group.stale ? ' · stale; refresh required' : ''}. Discovered addresses refresh after 15 s when selected or sent.` : 'Custom target. Manual URL edits stay pinned.';
   }
   function pairs(root, entries, kind) {
     root.replaceChildren(); for (const [key, value] of entries) addPair(root, key, value, kind);
@@ -164,6 +169,7 @@
     } catch (e) { if (authVersion.current(epoch)) { $('apiAuthProfile').replaceChildren(new Option('No authentication', '')); $('apiAuthStatus').textContent = e.message; } }
   }
   function setRequest(request, specs = {}, values = {}) {
+    targetsRead.advance();autoBase=null;targetId=null;$('send').disabled=false;$('instances-status').textContent='';
     hideOtherEditors();
     idleResult('http');
     $('http-editor').hidden = false; $('workflow-editor').hidden = true;
@@ -179,8 +185,10 @@
     const path = template(route.path || '/'), base = baseOverride ?? group?.targets?.[0]?.url ?? route.origin ?? '';
     setRequest({ method: ['GET','POST','PUT','PATCH','DELETE','HEAD','OPTIONS'].includes(route.method) ? route.method : 'GET', url: route.url || base.replace(/\/$/, '') + path });
     setTargets(group, urlParts($('url').value).base || base);
+    autoBase=group?.service&&baseOverride===undefined&&!route.url?urlParts($('url').value).base:null;targetId=group?.targets?.find(t=>t.url===autoBase)?.id||null;
     $('request-title').textContent = group?.name || route.service || 'Request'; $('route').textContent = [route.method, route.path, route.handler, route.where].filter(Boolean).join(' · ') || 'Custom request'; $('description').value = `${$('method').value} ${path}`;
     notice(base || route.url ? 'Draft ready. Review variables and authentication, then Send.' : 'Add a base URL before sending this route.');
+    if(consulConfigured&&group?.service&&expiredTarget(group))refreshTargets(false).catch(e=>notice(e.message,true));
   }
   async function openExchange(id, initial = false) {
     if (!initial && !canReplace()) return; const epoch = selection.advance(), revision = edits.value;
@@ -224,9 +232,10 @@
   $('send').onclick = async () => {
     if (sending.value) return;
     try {
-      const snapshot = request(), values = parse('params'); sending.value = true; state.controller = new AbortController(); lock(true); notice(`Sending ${snapshot.method} through the backend…`);
-      const prepared = await prepare(snapshot, state.controller.signal), profile = $('apiAuthProfile').value;
-      const exchange = await tool('api_request_replay', { prepared, params: values, ...(profile ? { auth_profile: profile } : {}) }, state.controller.signal);
+      const snapshot = request(), values = parse('params'),bindings=parse('bindings'); sending.value = true; state.controller = new AbortController();lock(true);$('request-failure').hidden=true;requestStarted=Date.now();notice(`Sending ${snapshot.method} through the backend…`);requestClock=setInterval(()=>{$('live-status').textContent='Request · '+((Date.now()-requestStarted)/1000).toFixed(1)+' s';},250);
+      const profile = $('apiAuthProfile').value;
+      const exchange = await tool('api_request_replay', { request:snapshot,bindings,parameter_schema:state.params,params: values,...(consulConfigured&&autoBase!==null&&state.group?.service?{service_target:{env:state.env,service:state.group.service,instance_id:targetId}}:{}), ...(profile ? { auth_profile: profile } : {}) }, state.controller.signal);
+      if(exchange.resolvedTarget&&autoBase!==null){const t=exchange.resolvedTarget,{path}=urlParts($('url').value);autoBase=t.url;targetId=t.id;$('url').value=t.url+path;state.group={...state.group,targets:t.instances,observedAt:t.observedAt,stale:false};setTargets(state.group,t.url);}
       show(exchange); notice(`${exchange.response.status || 'No response'} · ${exchange.timing.durationMs ?? '—'} ms · exchange saved.`);
       if (state.mode === 'history') refreshLibrary();
     } catch (e) {
@@ -236,7 +245,7 @@
       failure(message,e.exchange?.failure?.executionId);notice(message,true);console.warn('API explorer request failed',{code:e.code||e.name,exchange:e.exchange?.id||null});
       if(state.mode==='history')refreshLibrary();
     }
-    finally { sending.value = false; state.controller = null; lock(false); $('notice').classList.remove('running'); }
+    finally { clearInterval(requestClock);$('live-status').textContent='Ready';sending.value = false; state.controller = null; lock(false); $('notice').classList.remove('running'); }
   };
   $('cancel').onclick = () => state.controller?.abort();
   action($('save'), async () => {
@@ -250,9 +259,9 @@
   $('new-request').onclick = () => { if (!canReplace()) return; state.route = state.group = state.exchange = null; setRequest({ method: 'GET', url: '' }); setTargets(null, ''); $('request-title').textContent = 'New request'; $('route').textContent = 'Enter a URL or choose a service route.'; notice('Ready. Requests run through the backend.'); $('url').focus(); };
   $('method').onchange = () => { $('send').textContent = 'Send ' + $('method').value; changed(); };
   let authTimer;
-  $('url').oninput = () => { state.route = null; const base = urlParts($('url').value).base; setTargets(state.group, base); queryRows(); renderVariables(); changed(); clearTimeout(authTimer); authVersion.advance(); authTimer = setTimeout(authProfiles, 180); };
-  $('apiBaseUrl').oninput = () => { const { path } = urlParts($('url').value); $('url').value = $('apiBaseUrl').value.replace(/\/$/, '') + (path.startsWith('/') ? path : '/' + path); $('apiTarget').value = ''; $('target-status').textContent = 'Custom base URL override.'; queryRows(); renderVariables(); changed(); authProfiles(); };
-  $('apiTarget').onchange = () => { const target = state.group?.targets?.[Number($('apiTarget').value)]; if ($('apiTarget').value && target) { const { path } = urlParts($('url').value); $('url').value = target.url + (path.startsWith('/') ? path : '/' + path); setTargets(state.group, target.url); queryRows(); renderVariables(); changed(); authProfiles(); } };
+  $('url').oninput = () => { targetsRead.advance();autoBase=null;$('send').disabled=false;state.route = null; const base = urlParts($('url').value).base; setTargets(state.group, base); queryRows(); renderVariables(); changed(); clearTimeout(authTimer); authVersion.advance(); authTimer = setTimeout(authProfiles, 180); };
+  $('apiBaseUrl').oninput = () => { targetsRead.advance();autoBase=null;$('send').disabled=false;const { path } = urlParts($('url').value); $('url').value = $('apiBaseUrl').value.replace(/\/$/, '') + (path.startsWith('/') ? path : '/' + path); $('apiTarget').value = ''; $('target-status').textContent = 'Custom base URL override.'; queryRows(); renderVariables(); changed(); authProfiles(); };
+  $('apiTarget').onchange = () => { const target = state.group?.targets?.[Number($('apiTarget').value)]; if ($('apiTarget').value && target) { const { path } = urlParts($('url').value); $('url').value = target.url + (path.startsWith('/') ? path : '/' + path);autoBase=target.url;targetId=target.id; setTargets(state.group, target.url);$('instances-status').textContent='Following discovered instance. Manual URL edits pin the address.';queryRows(); renderVariables(); changed(); authProfiles();if(consulConfigured&&(expiredTarget(state.group)))refreshTargets(false).catch(e=>notice(e.message,true)); } };
   $('apiEnvironment').onchange = async () => {
     if (!canReplace()) { $('apiEnvironment').value = state.env; return; }
     const previous = state.route, service = state.group?.service, old = state.env; state.env = $('apiEnvironment').value; const requested = state.env, epoch = selection.advance(); navigation.advance(); changingEnvironment.value = true; lock(true); $('cancel').hidden = true; notice('Loading environment targets…');
@@ -368,7 +377,7 @@
   }
   async function wfResources(env, step) {
     const epoch=wfTargetReads.advance();
-    try { if(!wfTargets.has(env))wfTargets.set(env,await tool('api_client_catalog',{env,resources:true})); if(!wfTargetReads.current(epoch)||wf?.steps[wfIndex]!==step)return; const r=wfTargets.get(env).resources||{};for(const dl of $('wf-fields').querySelectorAll('datalist[data-resource]'))dl.replaceChildren(...(r[dl.dataset.resource]||[]).map(name=>new Option(name,name))); }
+    try { if(!wfTargets.has(env))wfTargets.set(env,await tool('api_client_catalog',{env,resources_only:true})); if(!wfTargetReads.current(epoch)||wf?.steps[wfIndex]!==step)return; const r=wfTargets.get(env).resources||{};for(const dl of $('wf-fields').querySelectorAll('datalist[data-resource]'))dl.replaceChildren(...(r[dl.dataset.resource]||[]).map(name=>new Option(name,name))); }
     catch(e){if(wfTargetReads.current(epoch))wfNotice('Target suggestions unavailable: '+e.message+'. Enter a configured name manually.',true);}
   }
   function renderWorkflowStep(fromCache=false) {
@@ -477,19 +486,23 @@
     $('result-title').textContent=kind==='workflow'?'Run results':'Response';$('response-empty').querySelector('h3').textContent=kind==='workflow'?'Workflow results appear here':'Your response appears here';
     $('response-empty').querySelector('p').textContent=kind==='workflow'?'Review targets and runtime values, then press Run workflow. Database previews appear here after Run query.':'Choose a route, review the request and press Send. Open History to inspect a previous exchange.';
   }
-  action($('refresh-instances'),async()=>{
-    const service=state.group?.service,env=state.env;if(!service)throw Error('Choose a service route first.');
-    $('instances-status').textContent='Contacting Consul…';
+  async function refreshTargets(refreshCatalog=false){
+    const service=state.group?.service,env=state.env,epoch=targetsRead.advance();if(!service&&!refreshCatalog)throw Error('Choose a service route first.');
+    const oldBase=autoBase;if(autoBase!==null)$('send').disabled=true;$('instances-status').textContent='Contacting Consul…';
     try{
-      const r=await tool('api_instances_refresh',{env,service}),catalog=await tool('api_client_catalog',{env});
-      if(env!==state.env||service!==state.group?.service)return notice('Refreshed '+service+' in '+env+'.');
-      state.services=catalog.services;state.group=catalog.services.find(s=>s.service===service);
-      setTargets(state.group,urlParts($('url').value).base);
-      $('instances-status').textContent=`${r.instances.length} live instances · ${r.observedAt}. URL kept; choose a target to apply.`;
-      notice('Live instances refreshed. Current URL kept. Select a refreshed service target before sending.');
-      if(state.mode==='services')await refreshLibrary();
-    }catch(e){$('instances-status').textContent='Refresh failed. Previous cached targets kept: '+e.message;throw e;}
-  });
+      const r=await tool('api_instances_refresh',{env,...(service?{service}:{}),catalog:refreshCatalog});
+      if(!targetsRead.current(epoch)||env!==state.env)return r;
+      if(service&&service===state.group?.service&&r.instances){
+        state.group={...state.group,targets:r.instances,observedAt:r.observedAt,stale:false,expired:false};state.services=state.services.map(g=>g.service===service?state.group:g);
+        const target=r.instances.find(t=>t.id===targetId&&t.status==='passing')||r.instances.find(t=>t.status==='passing');
+        if(autoBase!==null&&autoBase===oldBase&&urlParts($('url').value).base===oldBase&&target){const {path}=urlParts($('url').value);$('url').value=target.url+path;autoBase=target.url;targetId=target.id;await authProfiles();}
+        setTargets(state.group,urlParts($('url').value).base);$('instances-status').textContent=`${r.instances.length} live instances · ${r.observedAt}. ${autoBase===null?'Manual URL kept.':'Discovered target refreshed.'}`;
+      }else $('instances-status').textContent=`${r.services} service names refreshed. Instance addresses refresh when selected.`;
+      notice('Live instances refreshed. '+(autoBase===null?'Manual URL kept.':'Discovered target updated.')+' No API request replayed.');return r;
+    }catch(e){if(targetsRead.current(epoch))$('instances-status').textContent='Refresh failed: '+e.message;throw e;}
+    finally{if(targetsRead.current(epoch)&&!sending.value)$('send').disabled=false;}
+  }
+  action($('refresh-instances'),()=>refreshTargets(false));
   let colRevision=null,colSavedId=null;
   async function openCollection(id){
     if(!canReplace())return;
@@ -552,7 +565,7 @@
   let dbNext=null;const dbReads=new SM.Revision();
   async function databaseNames(){
     const env=$('db-env').value,epoch=dbReads.advance();$('db-name').disabled=true;
-    try{const r=await tool('api_client_catalog',{env,resources:true});if(!dbReads.current(epoch))return;$('db-name').replaceChildren(...r.resources.databases.map(n=>new Option(n,n)));$('db-status').textContent=r.resources.databases.length?'Choose Browse schema. No live query has run.':'No databases configured in this environment.';$('db-objects').replaceChildren();dbNext=null;$('db-more').hidden=true;}
+    try{const r=await tool('api_client_catalog',{env,resources_only:true});if(!dbReads.current(epoch))return;$('db-name').replaceChildren(...r.resources.databases.map(n=>new Option(n,n)));$('db-status').textContent=r.resources.databases.length?'Choose Browse schema. No live query has run.':'No databases configured in this environment.';$('db-objects').replaceChildren();dbNext=null;$('db-more').hidden=true;}
     finally{if(dbReads.current(epoch))$('db-name').disabled=false;}
   }
   $('inspect-database').onclick=()=>{$('db-inspector').open=true;$('db-env').focus();};
@@ -575,7 +588,7 @@
   action($('db-add'),async()=>{if(sending.value)throw Error('Wait for the active request or run.');const step={tool:'pg_query',args:dbArgs(),as:'queryResult'};if(!$('workflow-editor').hidden){wfPending();delete step.as;wf.steps.push(step);wfIndex=wf.steps.length-1;wfChange();renderWorkflowStep();}else{if(!canReplace())return;await openWorkflow({description:'Inspect database state',steps:[step]});changed();}notice('Query added. Save the workflow to keep this reproducible step.');});
   async function initialize() {
     await services(navigation.advance());
-    $('db-env').replaceChildren(...[...$('apiEnvironment').options].map(o=>new Option(o.text,o.value)));$('db-env').value=state.env;await databaseNames();
+    $('db-env').replaceChildren(...[...$('apiEnvironment').options].map(o=>new Option(o.text,o.value)));$('db-env').value=state.env;databaseNames().catch(e=>notice(e.message,true));
     if(query.has('shared')){await openShared(query.get('shared'),query.get('revision'));$('source-collections').click();}
     else if(query.has('workflow')){await openWorkflow(await tool('script_get',{id:query.get('workflow')}));if(query.has('run')||query.has('job')){wfRun=query.get('run');wfJob=query.get('job');wfLife.to('running');wfLock(true);observeWorkflow();}}
     else if (query.has('exchange')) await openExchange(query.get('exchange'), true);

@@ -7,7 +7,7 @@
 <script src="/static/state-machine.js" defer></script><script src="/static/api-workflow-model.js" defer></script><script src="/static/api-explorer.js" defer></script>
 </head>
 <body>
-<header class="app-header"><h1>API explorer</h1><span class="header-note">Choose. Send. Inspect.</span><span class="spacer"></span><label class="environment">Environment <select id="apiEnvironment" aria-label="Environment"><option value="">Loading…</option></select></label><a id="admin-link" href="/admin#api">Admin</a></header>
+<header class="app-header"><h1>API explorer</h1><span class="header-note">Choose. Send. Inspect.</span><span id="live-status" class="field-note" role="status">Connecting…</span><span class="spacer"></span><label class="environment">Environment <select id="apiEnvironment" aria-label="Environment"><option value="">Loading…</option></select></label><a id="admin-link" href="/admin#api">Admin</a></header>
 <main class="workspace">
 <aside class="navigator" aria-label="Request library">
   <div class="tabs source-tabs" role="tablist" aria-label="Request sources">
@@ -15,7 +15,7 @@
     <button role="tab" id="source-collections" aria-controls="sources-collections" aria-selected="false" data-source="collections" tabindex="-1">Collections</button>
     <button role="tab" id="source-history" aria-controls="sources-history" aria-selected="false" data-source="history" tabindex="-1">History</button>
   </div>
-  <div class="library-search"><input type="search" id="apiRouteSearch" aria-label="Search request library" placeholder="Service, method or path"><button id="refresh" title="Reload cached library" aria-label="Refresh library"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.4 8a7 7 0 0 1 11.7-2L20 9M4 15l2.9 3A7 7 0 0 0 18.6 16"/></svg></button></div>
+  <div class="library-search"><input type="search" id="apiRouteSearch" aria-label="Search request library" placeholder="Service, method or path"><button id="refresh" title="Refresh service catalog and selected instances" aria-label="Refresh library"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.4 8a7 7 0 0 1 11.7-2L20 9M4 15l2.9 3A7 7 0 0 0 18.6 16"/></svg></button></div>
   <p class="library-meta" id="library-status" role="status">Loading indexed services…</p>
   <div class="library-content">
     <section id="sources-services" role="tabpanel" aria-labelledby="source-services"><div id="apiRoutes"></div></section>

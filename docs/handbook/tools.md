@@ -3391,7 +3391,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
 
 ### api_instances_refresh
 
-Refresh live Consul replicas for one exact service in an authorized environment. Updates cached instance addresses, health and observation time; retains previous cache if lookup fails. Does not send or replay an API request.
+Refresh live Consul addresses/health with one bounded request for a selected service. catalog=true refreshes names and invalidates other cached IPs with one additional request; replicas load lazily when selected. No version probes, passport rebuilds or API replays. Failed lookup retains prior evidence.
 
 Workflow: [From a browser action to an API check](README.md#api-browser) · Origin: built-in
 
@@ -3407,12 +3407,14 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     },
     "service": {
       "type": "string",
-      "description": "Exact service name"
+      "description": "Exact service name; optional with catalog=true"
+    },
+    "catalog": {
+      "type": "boolean",
+      "default": false
     }
   },
-  "required": [
-    "service"
-  ]
+  "required": []
 }
 ```
 
@@ -3467,7 +3469,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
 
 ### api_client_catalog
 
-Browse all indexed service/API groups and cached Consul replica URLs without network calls. Pass group to page its routes; q searches service, method, path and handler. Select a replica or override the URL before explicitly sending. resources=true adds bounded cached database/index/topic names for workflow pickers. Collections use script_list and script_get.
+Browse indexed service/API groups and cached Consul URLs offline. Pass group for only that service and its paged routes; q searches names and handlers. resources_only=true skips route catalogs for fast database/index/topic pickers. Refresh live addresses with api_instances_refresh.
 
 Workflow: [From a browser action to an API check](README.md#api-browser) · Origin: built-in
 
@@ -3480,6 +3482,11 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     "resources": {
       "type": "boolean",
       "description": "Include configured database names and cached indices/topics, at most 500 each; no connection credentials"
+    },
+    "resources_only": {
+      "type": "boolean",
+      "default": false,
+      "description": "Only configured resource pickers; no passports or routes read"
     },
     "env": {
       "type": "string",
@@ -3697,6 +3704,21 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
       "type": "object",
       "additionalProperties": true,
       "description": "Or reviewed explicit request"
+    },
+    "bindings": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Optional explicit parameter bindings, applied before sending"
+    },
+    "parameter_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Optional typed parameter specifications from a saved request"
+    },
+    "service_target": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Optional discovered {env,service,instance_id}; resolve fresh Consul address before sending, preserving request path and query"
     },
     "params": {
       "type": "object",

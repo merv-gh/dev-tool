@@ -1,6 +1,18 @@
 const test = require('node:test'), assert = require('node:assert/strict');
 const E = require('../web/ui-events');
 
+test('browser events prefer the shared WebSocket, preserve cursors and reject cross-origin channels',()=>{
+ const previous={socket:globalThis.DTToolSocket,location:globalThis.location};let options,closed=0;globalThis.location={origin:'http://local.test'};globalThis.DTToolSocket={subscribe:value=>{options=value;return{close:()=>closed++};}};
+ try{const bus=E.create(),events=[];bus.on('*',e=>events.push(e));const connection=E.connect('/api/ui-events?channel=scope:events',{bus,headers:{'x-dt-story':'task'},after:'old.1'});assert.equal(options.channel,'scope:events');assert.equal(options.headers['x-dt-story'],'task');options.onReady({cursor:'epoch.1',reset:true});assert.equal(events[0].type,'ui.reset');options.onEvent({id:'epoch.2',type:'changed',data:{value:42}});assert.equal(connection.cursor,'epoch.2');assert.equal(events[1].data.value,42);connection.close();assert.equal(closed,1);assert.throws(()=>E.connect('http://other.test/api/ui-events?channel=scope:events'),/this server/);
+ }finally{globalThis.DTToolSocket=previous.socket;globalThis.location=previous.location;}
+});
+
+test('an unavailable WebSocket event channel falls back to one bounded authenticated SSE stream',async()=>{
+ const previous={socket:globalThis.DTToolSocket,location:globalThis.location};let options,closed=0,fetches=0,connection;globalThis.location={origin:'http://local.test'};globalThis.DTToolSocket={subscribe:value=>{options=value;return{close:()=>closed++};}};
+ try{const bus=E.create();let received;const done=new Promise(r=>bus.on('recovered',e=>{received=e;connection.close();r();}));connection=E.connect('/api/ui-events?channel=scope:events',{bus,headers:{'x-dt-story':'task'},fetch:async(url,init)=>{fetches++;assert.equal(init.headers['x-dt-story'],'task');return {ok:true,body:new ReadableStream({start(c){c.enqueue(new TextEncoder().encode('event: ui\nid: epoch.2\ndata: {"id":"epoch.2","type":"recovered","data":{"value":42}}\n\n'));},cancel(){}})};}});options.onState('unavailable');await done;assert.equal(received.data.value,42);assert.equal(fetches,1);assert.equal(closed,1);
+ }finally{connection?.close();globalThis.DTToolSocket=previous.socket;globalThis.location=previous.location;}
+});
+
 for (const malformed of ['data: {broken}\n\n', 'x'.repeat(262145)]) {
   test('malformed event stream closes its old reader before reconnecting: ' + (malformed.startsWith('data:') ? 'JSON' : 'budget'), async () => {
     let cancelled = false, attempts = 0, connection;

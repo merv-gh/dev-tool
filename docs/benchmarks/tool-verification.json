@@ -1,6 +1,6 @@
 {
   "protocol": "dt.release-inventory/v1",
-  "sourceDigest": "6746576a15f394e3277b496c0091c16b3cb238f07e4b6e049cc04b9b64a6efb0",
+  "sourceDigest": "4bcb3451f4ed4e757b4e32695541669ce6f6fe8c072ae64af2368a4fae1d47da",
   "tools": [
     {
       "name": "find",
@@ -602,7 +602,10 @@
         "test/api-workflows.test.js",
         "test/automation.test.js",
         "test/collection-persistence.test.js",
-        "test/scripts.test.js"
+        "test/dist.test.js",
+        "test/scripts.test.js",
+        "test/tool-client.test.js",
+        "test/tool-socket.test.js"
       ],
       "integrationReferences": []
     },
@@ -644,6 +647,7 @@
         "test/collections.test.js",
         "test/scripts.test.js",
         "test/tool-contracts.test.js",
+        "test/tool-socket.test.js",
         "test/workbench-explorer.test.js"
       ],
       "integrationReferences": []
@@ -3443,7 +3447,8 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
-        "test/api-collection-workbench.test.js"
+        "test/api-collection-workbench.test.js",
+        "test/tool-socket.test.js"
       ],
       "integrationReferences": []
     },
@@ -3465,7 +3470,8 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
-        "test/api-workflows.test.js"
+        "test/api-workflows.test.js",
+        "test/tool-socket.test.js"
       ],
       "integrationReferences": []
     },
@@ -3537,6 +3543,7 @@
         "test/api-client.test.js",
         "test/api-collection-workbench.test.js",
         "test/call-outcome.test.js",
+        "test/tool-socket.test.js",
         "test/workbench-explorer-ui.test.js",
         "test/workbench-explorer.test.js"
       ],

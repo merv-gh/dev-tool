@@ -4,11 +4,13 @@ async function run() {
   const page = await browser.newPage({ viewport: { width:1440,height:1000 } }), errors = [], calls = [], checks = [];
   page.setDefaultTimeout(10000);
   page.on('pageerror', e => errors.push(e.message)); page.on('request', req => { if(req.url().includes('/api/tool/'))calls.push(req.url().split('/').pop()); });
+  page.on('websocket',ws=>ws.on('framesent',event=>{try{const f=JSON.parse(event.payload);if(f.type==='call')calls.push(f.tool);}catch{}}));
   page.on('dialog', d => d.accept());
   const shots = process.env.DT_API_SCREENSHOTS || path.join(__dirname,'../docs/screenshots'); fs.mkdirSync(shots,{recursive:true});
   const wait = text => page.waitForFunction(text => document.querySelector('#notice').textContent.includes(text), text);
   const route = async (name,path) => { const group=page.locator('.service-group').filter({has:page.locator('summary .group-name').filter({hasText:new RegExp('^'+name+'$')})}).first();if((await group.getAttribute('open'))===null)await group.locator('summary').click();await group.locator('.route-item').filter({has:page.getByText(path,{exact:true})}).first().click(); };
-  const send = async () => { const response=page.waitForResponse(r=>r.url().endsWith('/api/tool/api_request_replay'));await page.locator('#send').click();const json=await (await response).json();await page.locator('#send:not([disabled])').waitFor();assert.ok(json.result,JSON.stringify(json));return json.result; };
+  const call=async(name,args)=>{const r=await fetch(fixture.base+'/api/tool/'+name,{method:'POST',headers:{'content-type':'application/json','x-dt-story':'api-demo'},body:JSON.stringify(args)}).then(r=>r.json());if(r.error)throw Error(r.error);return r.result;};
+  const send = async () => {await page.locator('#send').click();await page.waitForFunction(()=>document.getElementById('notice').textContent.includes('exchange saved'));await page.locator('#send:not([disabled])').waitFor();const id=await page.locator('#exchange-link').getAttribute('href');const exchange=new URL(id,fixture.base).searchParams.get('exchange');return call('api_exchange_get',{exchange}); };
   try {
     await page.goto(fixture.url); await page.getByText('shop-orders',{exact:true}).waitFor();
     assert.equal(fixture.requests.length,0); checks.push('Opening services and cached Consul targets sends no service requests');

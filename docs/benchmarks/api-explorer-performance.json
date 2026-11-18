@@ -1,0 +1,113 @@
+{
+  "schema": "dt.api-explorer-performance/v1",
+  "fixture": {
+    "services": 200,
+    "routes": 4000,
+    "passportGraphBytes": 20000000,
+    "network": "Local HTTP and Consul fixtures, no production traffic",
+    "rateLimiter": "Disabled in fixtures; production admission budgets unchanged"
+  },
+  "baselineCommit": "568b564",
+  "before": [
+    {
+      "name": "catalog cold",
+      "ms": 941.8,
+      "passportReads": 600,
+      "passportBytes": 61316400
+    },
+    {
+      "name": "catalog warm",
+      "ms": 600.5,
+      "passportReads": 600,
+      "passportBytes": 61316400
+    },
+    {
+      "name": "selected service routes",
+      "ms": 471.1,
+      "passportReads": 600,
+      "passportBytes": 61316400
+    },
+    {
+      "name": "direct GET",
+      "ms": 109.8,
+      "passportReads": 0,
+      "passportBytes": 0
+    },
+    {
+      "name": "first explorer GET",
+      "ms": 1821,
+      "passportReads": 1200,
+      "passportBytes": 122632800
+    },
+    {
+      "name": "repeat explorer GET",
+      "ms": 369.6,
+      "passportReads": 400,
+      "passportBytes": 40877600
+    }
+  ],
+  "after": [
+    {
+      "name": "catalog cold",
+      "ms": 490.3,
+      "passportReads": 200,
+      "passportBytes": 20438800
+    },
+    {
+      "name": "catalog warm",
+      "ms": 56.1,
+      "passportReads": 0,
+      "passportBytes": 0
+    },
+    {
+      "name": "selected service routes",
+      "ms": 48.5,
+      "passportReads": 0,
+      "passportBytes": 0
+    },
+    {
+      "name": "direct GET",
+      "ms": 110.8,
+      "passportReads": 0,
+      "passportBytes": 0
+    },
+    {
+      "name": "first explorer GET",
+      "ms": 135.4,
+      "passportReads": 0,
+      "passportBytes": 0
+    },
+    {
+      "name": "repeat explorer GET",
+      "ms": 43.4,
+      "passportReads": 0,
+      "passportBytes": 0
+    }
+  ],
+  "browser": {
+    "ok": true,
+    "services": 200,
+    "loadMs": 829,
+    "sendMs": 248,
+    "httpToolCalls": 0,
+    "websocketCommands": 16,
+    "checks": [
+      "Collapsed search prevents 200-service fan-out",
+      "One command per Send",
+      "Main refresh: catalog + selected health only",
+      "Discovered IP updates, manual overrides remain pinned",
+      "Actual 200 response from new replica",
+      "No unresolved UI commands or page errors"
+    ],
+    "fixture": "Local Consul and HTTP, synthetic passports; no production traffic"
+  },
+  "commands": [
+    "node dev/bench-api-explorer.js",
+    "node dev/check-api-performance.js"
+  ],
+  "limitations": [
+    "Single local synthetic run; timings vary with host and network.",
+    "Cold migration reads each passport once; later reads use compact stamp-validated projections.",
+    "No production latency or real Consul cluster performance claim."
+  ]
+}

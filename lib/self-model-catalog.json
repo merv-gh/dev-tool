@@ -1,7 +1,7 @@
 {
   "protocol": "dt.repo-source/v1",
   "repo": "dev-tool",
-  "sourceDigest": "6746576a15f394e3277b496c0091c16b3cb238f07e4b6e049cc04b9b64a6efb0",
+  "sourceDigest": "4bcb3451f4ed4e757b4e32695541669ce6f6fe8c072ae64af2368a4fae1d47da",
   "machines": [
     {
       "id": "IO.atomic-file",
@@ -4165,7 +4165,7 @@
       "consumers": [
         {
           "file": "lib/api-client.js",
-          "line": 174,
+          "line": 178,
           "snippet": "const lifecycle=require('./state-machine').create(require('./lifecycles').apiReplay); lifecycle.to('sending');"
         }
       ],
@@ -4217,7 +4217,7 @@
       "consumers": [
         {
           "file": "lib/api-client.js",
-          "line": 293,
+          "line": 299,
           "snippet": "const browser = require('./browser-mcp').session({ timeout: timeoutMs || 30000 }), key = id(),lifecycle=require('./state-machine').create(require('./lifecycles').browserLease);"
         }
       ],

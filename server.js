@@ -98,9 +98,10 @@ async function mcp(req, res) {
   send(res, 200, batch ? replies : replies[0], { 'mcp-session-id': req.headers['mcp-session-id'] || crypto.randomUUID() });
 }
 
+const pageHtml = file => fs.readFileSync(path.join(__dirname,'web',file),'utf8').replace(/<head>/i,'<head><script src="/static/tool-client.js"></script>');
 const page = (file) => (req, res) => {
   res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
-  res.end(fs.readFileSync(path.join(__dirname, 'web', file)));
+  res.end(pageHtml(file));
 };
 const viewPage = page('view.html');
 
@@ -163,7 +164,7 @@ const routes = [
   ['GET','/api/ui-events',true,async(req,res,url)=>{const B=require('./lib/ui-events'),channel=url.searchParams.get('channel');await B.access(channel);return B.sse(req,res,{channel,after:url.searchParams.get('after')||undefined});}],
   ['GET','/pages',false,(req,res,url)=>{
     if(!trusted(req)){const next='/pages'+url.search,escape=value=>value.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));res.writeHead(401,{'content-type':'text/html; charset=utf-8','cache-control':'no-store','referrer-policy':'no-referrer','content-security-policy':"default-src 'none'; style-src 'self'; form-action 'self'; frame-ancestors 'none'"});return res.end('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in to Pages</title><link rel="stylesheet" href="/static/ui.css"><main class="wrap"><h1>Sign in to Pages</h1><p>Shared definitions run with your own access. Your token stays out of the URL.</p><form action="/api/session" method="post"><input type="hidden" name="next" value="'+escape(next)+'"><label for="token">Access token</label> <input id="token" name="token" type="password" required autocomplete="current-password"> <button>Sign in</button></form></main></html>');}
-    res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store','referrer-policy':'no-referrer','content-security-policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self'; connect-src 'self'; img-src data:; object-src 'none'; base-uri 'none'; frame-ancestors 'self'"});res.end(fs.readFileSync(path.join(__dirname,'web/pages.html')));
+    res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store','referrer-policy':'no-referrer','content-security-policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self'; connect-src 'self'; img-src data:; object-src 'none'; base-uri 'none'; frame-ancestors 'self'"});res.end(pageHtml('pages.html'));
   }],
   ['GET','/api/pages/catalog',true,async(req,res)=>{await pageAccess();send(res,200,await require('./lib/ui-pages').catalog());}],
   ['POST','/api/pages/detail',true,async(req,res)=>{await pageAccess();send(res,200,await require('./lib/ui-pages').detail(await readJsonBody(req)));}],
@@ -426,6 +427,7 @@ function start({ port = 4000, host = '127.0.0.1' } = {}) {
       if (!res.headersSent) send(res, e.statusCode || (['DT_NOT_FOUND','NOT_FOUND'].includes(e.code)?404:['STATE_CONFLICT','STALE_REVISION'].includes(e.code)?409:e.code === 'DT_PROFILE_UNKNOWN' || e.code === 'DT_ARGUMENT_INVALID' ? 400 : 500), errorPayload(e)); else res.end();
     }
   });
+  require('./lib/tool-socket').attach(server,{errorPayload});
   server.once('close',()=>{require('./lib/automation-flow').close().catch(()=>{});require('./lib/operational-metrics').stop().catch(()=>{});});
   // the browser container starts after dt is healthy and reads these secrets once
   try { require('./lib/browser').writeSecrets(); } catch (e) { console.error(`browser secrets: ${e.message}`); }
