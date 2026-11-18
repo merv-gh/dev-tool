@@ -1,6 +1,6 @@
 {
   "protocol": "dt.release-inventory/v1",
-  "sourceDigest": "f5cfc520253816a9ab3bc080aab9151f34ffc5f8b5733665c9119fc0347b7455",
+  "sourceDigest": "9a1bb09b8119648bafc8b8f4ab8b98d4d7b2f5772beb9468f229a954ab013cef",
   "tools": [
     {
       "name": "find",
@@ -3356,6 +3356,15 @@
       "integrationReferences": []
     },
     {
+      "name": "api_client_catalog",
+      "group": "api",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
       "name": "api_auth_profiles",
       "group": "api",
       "origin": "built-in",
@@ -3419,6 +3428,7 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
+        "test/api-catalog.test.js",
         "test/api-client.test.js",
         "test/call-outcome.test.js",
         "test/workbench-explorer-ui.test.js",

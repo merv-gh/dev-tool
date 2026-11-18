@@ -259,6 +259,7 @@ async function runtimeChangeScope(event) {
   await loadRuntime(); await refresh(); await runtimeLoadMetadata();
   if (tab === 'context') await loadContexts(); if (tab === 'history') await loadHistory();
   if(tab==='pages')$('adminPages').src='/pages?'+new URLSearchParams({embed:'true',story:runtimeStory,...(runtimePrincipal?{principal:runtimePrincipal}:{})});
+  if(tab==='api')await loadRoutes();
   if(tab==='handbook')await loadHandbook();
   if(tab==='capabilities')await loadCapabilities();
   if(tab==='workbench'&&typeof loadWorkbench==='function') {

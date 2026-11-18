@@ -231,11 +231,15 @@
   </section>
 
   <section id="tab-api" hidden>
+    <p class="row"><strong>API client</strong><span class="spacer"></span><a id="apiClientOpen" href="/api-client" target="_blank" rel="noopener">Open full page</a></p>
+    <iframe id="adminApiClient" title="API explorer: services, request editor and response" style="width:100%;height:calc(100vh - 190px);min-height:650px;border:1px solid var(--line);border-radius:8px"></iframe>
+    <details><summary>Route evidence table</summary>
     <h2>API routes <span class="muted" id="rtCount"></span></h2>
     <p><a href="/ui-trace" onclick="this.href='/ui-trace?story='+encodeURIComponent(typeof runtimeStory==='string'?runtimeStory:'default')" target="_blank" rel="noopener">Trace a UI state to database fields</a></p>
     <p class="hint">Endpoints from code (passports) merged with routes seen in the browser (saved scripts, routes_discover, or routes_learn from the chat). Ids show as <code>&lt;id&gt;</code>.</p>
     <div class="row" style="margin-bottom:8px"><input id="rtQ" class="filter" placeholder="path, service, handler, host…" style="width:360px"></div>
     <div class="card scroll"><table><thead><tr><th>Service</th><th>Method</th><th>Path</th><th>Host / site</th><th class="num">Seen</th><th>Status</th><th>Handler</th><th>Source</th><th>Request</th></tr></thead><tbody id="routes"></tbody></table></div>
+    </details>
   </section>
 
   <section id="tab-views" hidden>
@@ -671,6 +675,10 @@ function bindNote() {
 // ── API routes ──
 let rtTimer;
 async function loadRoutes() {
+  await loadRuntime();
+  const clientQuery=new URLSearchParams({story:runtimeStory||'default',env:env(),...(runtimePrincipal?{principal:runtimePrincipal}:{})}),frame=$('adminApiClient'),src='/api-client?'+clientQuery+'&embed=true';
+  $('apiClientOpen').href='/api-client?'+clientQuery;
+  if(frame.getAttribute('src')!==src)frame.src=src;
   const r = await api(`/api/admin/routes?q=${encodeURIComponent($('rtQ').value.trim())}`);
   $('rtCount').textContent = `${r.routes.length}`;
   $('routes').innerHTML = r.routes.length ? r.routes.slice(0, 500).map(x => `<tr><td>${esc(x.service || '')}</td><td class="mono">${esc(x.method)}</td><td class="mono">${esc(x.path)}${x.query ? `<span class="muted">?${esc(x.query)}</span>` : ''}</td><td class="mono">${esc(x.site || x.host || '')}</td><td class="num">${x.seen || ''}</td><td class="mono">${esc(x.statuses)}</td><td class="where">${esc(x.handler)}${x.where ? `<br>${esc(x.where)}` : ''}</td><td class="det">${esc(x.source)}</td><td><a target="_blank" rel="noopener" href="/api-client?${esc(new URLSearchParams({method:x.method||'GET',path:x.path||'/',host:x.host||'',service:x.service||'',story:runtimeStory||'default'}).toString())}">Open request</a></td></tr>`).join('')
@@ -718,7 +726,7 @@ document.addEventListener('click', (ev) => {
   }
 });
 $('q').addEventListener('input', () => { clearTimeout(qTimer); qTimer = setTimeout(search, 250); });
-$('env').addEventListener('change', () => { try { localStorage.setItem('dt-admin-env', env()); } catch {} renderSources(); if ($('q').value) search(); });
+$('env').addEventListener('change', () => { try { localStorage.setItem('dt-admin-env', env()); } catch {} renderSources(); if ($('q').value) search(); if(tab==='api')loadRoutes().catch(e=>toast(e.message)); });
 $('ppBuild').onclick = async () => {
   const service = $('ppService').value.trim(), repo = $('ppRepo').value.trim();
   if (!service) return toast('Service name first');

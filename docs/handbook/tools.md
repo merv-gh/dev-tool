@@ -3092,6 +3092,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
 - [`api_routes`](#tool-api_routes)
 - [`routes_learn`](#tool-routes_learn)
 - [`routes_discover`](#tool-routes_discover)
+- [`api_client_catalog`](#tool-api_client_catalog)
 - [`api_auth_profiles`](#tool-api_auth_profiles)
 - [`api_exchange_import`](#tool-api_exchange_import)
 - [`api_exchange_list`](#tool-api_exchange_list)
@@ -3204,6 +3205,49 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
   "required": [
     "site"
   ]
+}
+```
+
+</details>
+
+<a id="tool-api_client_catalog"></a>
+
+### api_client_catalog
+
+Browse all indexed service/API groups and cached Consul replica URLs without network calls. Pass group to page its routes; q searches service, method, path and handler. Select a replica or override the URL before explicitly sending. Collections use script_list and script_get.
+
+Workflow: [From a browser action to an API check](README.md#api-browser) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "env": {
+      "type": "string",
+      "description": "Environment for Consul and reviewed service ports"
+    },
+    "q": {
+      "type": "string",
+      "description": "Service, method, path or handler"
+    },
+    "group": {
+      "type": "string",
+      "description": "Exact group key returned in services"
+    },
+    "offset": {
+      "type": "integer",
+      "description": "Route page offset",
+      "default": 0
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Routes per page, maximum 250",
+      "default": 100
+    }
+  },
+  "required": []
 }
 ```
 

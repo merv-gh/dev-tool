@@ -59995,10 +59995,10 @@ var require_routes = __commonJS({
       }
       return { requests: entries.length, api: seen, added, total: Object.keys(db.routes).length };
     }
-    function codeEndpoints(passports, { manual = true } = {}) {
+    function codeEndpoints(passports, { manual = true, env } = {}) {
       const P = require_passport();
       const out2 = [];
-      for (const p of passports || P.list({ manual: false }).map((s) => manual ? P.load(s.service) : P.loadDetected(s.service))) {
+      for (const p of passports || P.list({ manual: false }).map((s) => manual ? P.load(s.service, { env }) : P.loadDetected(s.service))) {
         if (!p?.service || !p.effective || typeof p.effective !== "object" || Array.isArray(p.effective)) throw Object.assign(new Error("Cached passport endpoint attribution is unavailable"), { code: "DT_PASSPORT_INVALID" });
         for (const e of p?.effective?.endpoints || []) {
           const segs = String(e.path || "").split("/").filter(Boolean);
@@ -60028,8 +60028,8 @@ var require_routes = __commonJS({
         return { ...route, method: String(method).toUpperCase(), site: siteOf(route.host), status: candidates.length === 1 ? "matched" : candidates.length ? "ambiguous" : "observed", candidates };
       };
     }
-    function list({ q, service, host, manual = true } = {}) {
-      const code = codeEndpoints(void 0, { manual });
+    function list({ q, service, host, manual = true, env, includeDeclared = false } = {}) {
+      const code = codeEndpoints(void 0, { manual, env });
       const rows = [];
       const seenFor = /* @__PURE__ */ new Map();
       for (const r of Object.values(load().routes)) {
@@ -60042,7 +60042,8 @@ var require_routes = __commonJS({
         rows.push(row);
       }
       for (const c of code) {
-        if (seenFor.has(`${c.service} ${c.method} ${c.path}`)) continue;
+        const observed = seenFor.get(`${c.service} ${c.method} ${c.path}`);
+        if (observed && (!includeDeclared || observed.some((r) => r.path === c.path))) continue;
         rows.push({ service: c.service, method: c.method, path: c.path, host: "", site: "", seen: 0, statuses: "", query: "", handler: c.handler, where: c.where, source: c.source ? `code (${c.source})` : "code", last: "" });
       }
       const words = String(q || "").toLowerCase().split(/\s+/).filter(Boolean);
@@ -71184,7 +71185,7 @@ var require_api_client = __commonJS({
       const lifecycle = require_state_machine2().create(require_lifecycles().apiReplay);
       lifecycle.to("sending");
       try {
-        const result = await S().httpRequest(authenticated, { timeoutMs, allowErrors: true, maxResponseBytes: MAX_BODY });
+        const result = await S().httpRequest(authenticated, { timeoutMs, allowErrors: true, maxResponseBytes: MAX_BODY, signal: require_execution().signal() });
         lifecycle.to("received");
         const out2 = persist(normalize({ request: authenticated, response: result, time: result.ms }, { kind: "explicit-replay", note: p.exchange ? `replayed exchange ${p.exchange}` : "API client" }));
         if (result.truncated) out2.gaps.push({ kind: "response-truncated", limit: MAX_BODY });
@@ -75441,6 +75442,7 @@ var require_tool_profiles = __commonJS({
       "api_browser_action",
       "api_browser_capture",
       "api_browser_close",
+      "api_client_catalog",
       "api_exchange_list",
       "api_exchange_get",
       "api_request_prepare",
@@ -80164,7 +80166,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "f5cfc520253816a9ab3bc080aab9151f34ffc5f8b5733665c9119fc0347b7455";
+      if (true) return "9a1bb09b8119648bafc8b8f4ab8b98d4d7b2f5772beb9468f229a954ab013cef";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -82802,6 +82804,95 @@ var require_tools_scenario_runtime = __commonJS({
   }
 });
 
+// lib/api-catalog.js
+var require_api_catalog = __commonJS({
+  "lib/api-catalog.js"(exports2, module2) {
+    var path3 = require("node:path");
+    var C = require_config();
+    var { readJson } = require_util2();
+    function target(instance) {
+      const address = String(instance.address || ""), port = Number(instance.port);
+      if (!address || !Number.isInteger(port) || port < 1 || port > 65535 || /[\s/@?#]/.test(address)) return null;
+      const scheme = instance.meta?.scheme === "https" || instance.meta?.protocol === "https" ? "https" : "http";
+      try {
+        const url = new URL(`${scheme}://${address.includes(":") && !address.startsWith("[") ? "[" + address + "]" : address}:${port}`);
+        return { url: url.origin, id: String(instance.id || ""), status: instance.status || "unknown", node: instance.node || "", source: "consul" };
+      } catch {
+        return null;
+      }
+    }
+    function catalog({ env, q = "", group, offset = 0, limit = 100 } = {}) {
+      env ||= C.envNames()[0];
+      C.getEnv(env);
+      const snapshot = readJson(path3.join(C.PATHS.cache, env, "consul.json"));
+      const groups = /* @__PURE__ */ new Map(), warnings = [];
+      const ensure = (key, name, service = "") => {
+        if (!groups.has(key)) groups.set(key, { key, name, service, routes: [], targets: [], observedAt: null, stale: false });
+        return groups.get(key);
+      };
+      for (const p of require_passport().list({ manual: false })) ensure("service:" + p.service, p.service, p.service);
+      for (const [name, service] of Object.entries(snapshot?.services || {})) {
+        const g = ensure("service:" + name, name, name);
+        g.targets = (service.instances || []).map(target).filter(Boolean).sort((a, b) => (a.status !== "passing") - (b.status !== "passing") || a.id.localeCompare(b.id) || a.url.localeCompare(b.url));
+        g.observedAt = service.observedAt || snapshot.syncedAt || null;
+        g.stale = !!service.stale || !!service.error;
+      }
+      let routes;
+      try {
+        routes = require_routes().list({ env, includeDeclared: true });
+      } catch (e) {
+        routes = [];
+        warnings.push({ source: "routes", message: e.message });
+      }
+      const observed = require_routes().load().routes || {}, byRoute = /* @__PURE__ */ new Map();
+      for (const route of routes) {
+        const key = route.service ? "service:" + route.service : route.host ? "host:" + route.host : "unattributed";
+        const g = ensure(key, route.service || route.host || "Unattributed routes", route.service);
+        const saved = observed[`${route.host} ${route.method} ${route.path}`];
+        let origin;
+        try {
+          const url = new URL(saved?.example);
+          if (/^https?:$/.test(url.protocol)) origin = url.origin;
+        } catch {
+        }
+        if (origin && !g.targets.some((t) => t.url === origin)) g.targets.push({ url: origin, source: "observed", status: "observed" });
+        const identity = JSON.stringify([key, route.method, route.path]), prior = byRoute.get(identity);
+        if (prior) {
+          if (route.host && !prior.hosts.includes(route.host)) prior.hosts.push(route.host);
+          if (origin && !prior.origins.includes(origin)) prior.origins.push(origin);
+          prior.seen += route.seen || 0;
+        } else {
+          const item = { ...route, hosts: route.host ? [route.host] : [], origins: origin ? [origin] : [], ...origin ? { origin } : {} };
+          byRoute.set(identity, item);
+          g.routes.push(item);
+        }
+      }
+      const words = String(q).toLowerCase().split(/\s+/).filter(Boolean);
+      const matches = (text) => words.every((w) => text.toLowerCase().includes(w));
+      const all = [...groups.values()].sort((a, b) => a.name.localeCompare(b.name));
+      for (const g of all) {
+        g.totalRoutes = g.routes.length;
+        g.routes = g.routes.filter((r) => matches(`${g.name} ${r.method} ${r.path} ${r.handler} ${r.hosts.join(" ")}`));
+      }
+      const selected = all.find((g) => g.key === group), rows = selected?.routes || [];
+      offset = Math.max(0, Math.floor(Number(offset) || 0));
+      limit = Math.max(1, Math.min(250, Math.floor(Number(limit) || 100)));
+      return {
+        env,
+        environments: C.envNames(),
+        consul: { indexed: !!snapshot, observedAt: snapshot?.syncedAt || null },
+        warnings,
+        services: all.filter((g) => !words.length || g.routes.length || matches(g.name)).map(({ routes: routes2, ...g }) => ({ ...g, routeCount: routes2.length })),
+        routes: rows.slice(offset, offset + limit),
+        total: rows.length,
+        offset,
+        nextOffset: offset + limit < rows.length ? offset + limit : null
+      };
+    }
+    module2.exports = { catalog, target };
+  }
+});
+
 // lib/tools-api-client.js
 var require_tools_api_client = __commonJS({
   "lib/tools-api-client.js"(exports2, module2) {
@@ -82810,6 +82901,7 @@ var require_tools_api_client = __commonJS({
       const C = () => require_api_client();
       const decorated = (e) => C().show(e);
       return [
+        { name: "api_client_catalog", logArgs: ["env", "group", "offset"], group: "api", description: "Browse all indexed service/API groups and cached Consul replica URLs without network calls. Pass group to page its routes; q searches service, method, path and handler. Select a replica or override the URL before explicitly sending. Collections use script_list and script_get.", input: { env: str("Environment for Consul and reviewed service ports"), q: str("Service, method, path or handler"), group: str("Exact group key returned in services"), offset: int("Route page offset", 0), limit: int("Routes per page, maximum 250", 100) }, run: (a) => require_api_catalog().catalog(a) },
         { name: "api_auth_profiles", logArgs: [], group: "api", description: "List named bearer profiles and matching URL scopes without exposing token values. Selection is optional; references resolve on the server only when explicitly sending a request.", input: { url: str("Request URL to match configured scopes") }, run: (a) => require_api_auth().list(a) },
         { name: "api_exchange_import", logArgs: [], group: "api", description: "Import a HAR, structured request/response exchanges, or browser_network_requests text. Stores bounded sanitized v1 exchanges, removes cookies/credentials, and learns API routes with passport handler candidates. Network text has metadata-only gaps; no requests are replayed. Returns an interactive exchange view by default.", input: { data: { description: "HAR log.entries, exchange object/list, or network text; max 4 MiB and 100 entries" }, source: str("Provenance note, without credentials") }, required: ["data"], run: (a) => {
           const r = C().importExchanges(a.data, { kind: "agent-import", note: a.source });

@@ -68,11 +68,49 @@ Verification: `node --test test/api-client.test.js test/scripts.test.js test/col
 
 ## Routes, parameters and optional authentication
 
-Open **API explorer** in Admin, choose a service route and select **Open request**.
-The same action is available on HTTP passport ports, passport endpoints and
-captured exchanges. The explorer provides route search, a service base URL,
-editable path parameters, body/headers and a response inspector. **Send** executes
-the request; selecting or preparing a route only edits the draft.
+Open **API explorer** in Admin or visit `/api-client`. The same three-panel client
+runs in both places: a service/collection library on the left, an editable request
+in the middle and retained response evidence on the right. On narrow screens the
+panels stack. Admin forwards the selected environment and task/principal scope.
+
+**Services** groups all cached services, including services without endpoints.
+Expand a service to load its routes; **Load more** exposes routes beyond the first
+100. Search matches service, method, path and handler. Declared paths keep their
+parameter names even after traffic is observed. `api_client_catalog` exposes the
+same offline inventory and paginated routes to agents.
+
+Selecting a route fills the base URL from the environment's cached Consul
+instances, preferring passing replicas. Choose another replica or edit either
+the base URL or the full request URL. The source timestamp and stale status stay
+visible. Addresses default to HTTP unless instance metadata explicitly declares
+HTTPS. Cached health is not a live probe, and opening the client never sends an
+API request. HTTP passport ports and captured exchanges also link to this client.
+
+Edit repeated query parameters, headers, JSON/text/form bodies and runtime
+variables, then press **Send METHOD**. Requests execute once on the backend using
+the normal URL allowlist, authentication profiles and tool permissions. **Cancel**
+aborts the backend fetch; an already delivered mutation can still have effects.
+No automatic retries are performed. HTTP 4xx/5xx results remain inspectable.
+The response panel includes status/timing, collapsible JSON, raw text, headers,
+the actual sanitized request, redactions/capture gaps, copy, download and an
+exchange link. HTML is displayed as text.
+
+**Collections** navigates nested saved scripts in the current task. Single HTTP
+requests reopen for editing. Saving to `collection/request` creates folders as
+needed; replacing an existing request requires the explicit replacement checkbox.
+Multi-step scripts or scripts with hooks direct you to **Scripts & collections**
+instead of flattening them. **Send** runs the HTTP request only; collection
+variables/hooks, assertions and captures execute through the script/collection
+runner. **History** reopens up to 500 retained sanitized exchanges without replay.
+Runtime values are kept in memory and are not put in browser storage.
+
+Reproduce the local showcase with `node demo/api-client.js`. Its service catalog
+is synthetic; sends execute against two real local HTTP servers. Run
+`node dev/check-api-client-browser.js` for the mouse/keyboard flows and screenshots.
+
+![Three-panel API client using a synthetic service catalog](screenshots/api-client-desktop.png)
+
+The screenshot uses synthetic service metadata and an actual local HTTP response.
 
 Optional named bearer profiles resolve `.env` references on the server:
 
