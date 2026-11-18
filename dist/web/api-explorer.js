@@ -15,9 +15,10 @@
     return value;
   }
   async function tool(name, args, signal) {
-    const response = await fetch('/api/tool/' + name, { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json', 'x-dt-story': scope.story, ...(scope.principal ? { 'x-dt-principal': scope.principal } : {}) }, body: JSON.stringify(args), signal });
+    let response;
+    try{response = await fetch('/api/tool/' + name, { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json', 'x-dt-story': scope.story, ...(scope.principal ? { 'x-dt-principal': scope.principal } : {}) }, body: JSON.stringify(args), signal });}catch(e){e.transport=true;throw e;}
     let payload; try { payload = await response.json(); } catch { throw Error(`HTTP ${response.status}: the backend returned a non-JSON response.`); }
-    if (!response.ok || payload.error) throw Error(payload.error?.message || payload.error || `HTTP ${response.status}`);
+    if (!response.ok || payload.error) throw Object.assign(Error(payload.error?.message || payload.error || `HTTP ${response.status}`), {exchange:payload.exchange,code:payload.code});
     return payload.result;
   }
   function action(button, fn) { button.addEventListener('click', async () => { button.disabled = true; try { await fn(); } catch (e) { notice(e.message, true); } finally { button.disabled = false; } }); }
@@ -78,9 +79,9 @@
     const folder = path => path.split('/').filter(Boolean).reduce((at, name) => { if (!at.folders.has(name)) at.folders.set(name, { folders: new Map(), scripts: [] }); return at.folders.get(name); }, root);
     for (const c of collections) folder(c.collection);
     for (const s of scripts) folder(s.id.split('/').slice(0, -1).join('/')).scripts.push(s);
-    const build = (at, parent) => {
-      for (const [name, child] of at.folders) { const details = node('details', undefined, 'service-group'), summary = node('summary'), rows = node('div', undefined, 'service-routes'); summary.append(node('span', name, 'group-name')); details.append(summary, rows); parent.append(details); details.open = true; build(child, rows); }
-      for (const script of at.scripts) { const b = node('button', undefined, 'route-item'); b.append(node('span', script.id.split('/').at(-1))); b.title = script.description || script.id; b.onclick = () => openScript(script.id).catch(e => notice(e.message, true)); parent.append(b); }
+    const build = (at, parent, prefix='') => {
+      for (const [name, child] of at.folders) { const path=prefix?prefix+'/'+name:name, details = node('details', undefined, 'service-group'), summary = node('summary'), rows = node('div', undefined, 'service-routes'), manage=node('button','Collection settings','text-button'); summary.append(node('span', name, 'group-name'));manage.onclick=()=>openCollection(path).catch(e=>notice(e.message,true));rows.append(manage); details.append(summary, rows); parent.append(details); details.open = true; build(child, rows, path); }
+      for (const script of at.scripts) { const b = node('button', undefined, 'route-item'); b.dataset.scriptId=script.id;b.setAttribute('aria-current',String((!$('workflow-editor').hidden?wfSavedId:state.script?.id)===script.id));b.append(node('span', script.id.split('/').at(-1))); b.title = script.description || script.id; b.onclick = () => openScript(script.id).catch(e => notice(e.message, true)); parent.append(b); }
     };
     const parent = $('apiCollections'); parent.replaceChildren(); build(root, parent);
     if (!parent.children.length) parent.append(empty('No saved requests here. Use Save to collection after preparing a request.'));
@@ -92,6 +93,7 @@
     const folders = words.length ? result.collections.filter(c => scripts.some(s => s.id.startsWith(c.collection + '/'))) : result.collections;
     collectionTree(scripts, folders); $('saved-request-names').replaceChildren(...result.scripts.map(s => new Option(s.id, s.id)));
     libraryStatus(`${scripts.length} saved requests & scripts · current task`);
+    await sharedLibrary();
   }
   async function history(epoch) {
     const result = await tool('api_exchange_list', { q: $('apiRouteSearch').value, limit: 500 }); if (!navigation.current(epoch)) return;
@@ -111,6 +113,7 @@
   const unescapeTemplate = text => text.replace(/%7B%7B([^%]+)%7D%7D/gi, '{{$1}}');
   function urlParts(value) { try { const u = new URL(value); return { base: u.origin, path: unescapeTemplate(u.pathname + u.search) }; } catch { return { base: '', path: value || '/' }; } }
   function setTargets(group, base) {
+    $('refresh-instances').disabled=!group?.service;
     $('apiTarget').replaceChildren(new Option('Custom URL', ''));
     for (const [i, t] of (group?.targets || []).entries()) $('apiTarget').add(new Option(`${t.source === 'consul' ? t.status : 'Observed'} · ${t.url}${t.id ? ' · ' + t.id : ''}`, String(i)));
     const index = group?.targets?.findIndex(t => t.url === base) ?? -1; $('apiTarget').value = index < 0 ? '' : String(index);
@@ -161,6 +164,8 @@
     } catch (e) { if (authVersion.current(epoch)) { $('apiAuthProfile').replaceChildren(new Option('No authentication', '')); $('apiAuthStatus').textContent = e.message; } }
   }
   function setRequest(request, specs = {}, values = {}) {
+    hideOtherEditors();
+    idleResult('http');
     $('http-editor').hidden = false; $('workflow-editor').hidden = true;
     selection.advance(); state.params = specs; state.authChoice = null; state.script = null;
     $('method').value = request.method || 'GET'; $('send').textContent = 'Send ' + $('method').value; $('url').value = request.url || '';
@@ -194,7 +199,7 @@
     const body = step.body === undefined ? { kind: 'none' } : typeof step.body === 'object' ? { kind: 'json', value: step.body } : { kind: /x-www-form-urlencoded/i.test(contentType) ? 'form' : 'text', value: step.body };
     state.route = null; state.group = null; state.exchange = null;
     const values = { ...(script.vars || {}), ...Object.fromEntries(Object.entries(script.params || {}).filter(([,s]) => s.default !== undefined && !s.secret).map(([key,s]) => [key,s.default])) };
-    setRequest({ method: match[1].toUpperCase(), url: match[2], headers: step.headers, body }, script.params, values); state.script = script;
+    setRequest({ method: match[1].toUpperCase(), url: match[2], headers: step.headers, body }, script.params, values); state.script = script;markCollections(id);
     setTargets(null, urlParts(match[2]).base); $('request-title').textContent = id.split('/').at(-1); $('route').textContent = 'Saved request · ' + id; $('script-id').value = id; $('description').value = script.description || '';
     $('assertions').value = JSON.stringify(step.assertions || [], null, 2); $('capture').value = JSON.stringify(step.capture || {}, null, 2);
     notice('Saved request loaded. Send runs HTTP only; assertions, collection variables and hooks run in Scripts & collections.');
@@ -224,7 +229,13 @@
       const exchange = await tool('api_request_replay', { prepared, params: values, ...(profile ? { auth_profile: profile } : {}) }, state.controller.signal);
       show(exchange); notice(`${exchange.response.status || 'No response'} · ${exchange.timing.durationMs ?? '—'} ms · exchange saved.`);
       if (state.mode === 'history') refreshLibrary();
-    } catch (e) { notice(e.name === 'AbortError' ? 'Stopped waiting. The request may already have reached the service; check History before retrying a mutation.' : e.message, true); }
+    } catch (e) {
+      if(e.exchange)show(e.exchange);
+      else {state.response=null;wfResultVisible(false);$('response-content').hidden=true;$('response-empty').hidden=true;$('response-meta').replaceChildren(node('span','No complete response','response-status bad'));$('response-url').hidden=true;$('copy-response').disabled=$('download-response').disabled=true;}
+      const message=e.name === 'AbortError' ? 'Stopped waiting. The request may already have reached the service; check History before retrying a mutation.' : e.exchange?.failure?.reason || (e.transport?'Backend request failed: '+e.message+'. Check connectivity and History before retrying; no action is replayed automatically.':e.message);
+      failure(message,e.exchange?.failure?.executionId);notice(message,true);console.warn('API explorer request failed',{code:e.code||e.name,exchange:e.exchange?.id||null});
+      if(state.mode==='history')refreshLibrary();
+    }
     finally { sending.value = false; state.controller = null; lock(false); $('notice').classList.remove('running'); }
   };
   $('cancel').onclick = () => state.controller?.abort();
@@ -281,8 +292,10 @@
   }
   function show(exchange) {
     wfResultVisible(false);
+    $('db-query-result').hidden=true;
+    $('request-failure').hidden=true;
     state.response = exchange; $('response-empty').hidden = true; $('response-content').hidden = false; $('response').hidden = true; $('response').removeAttribute('src');
-    const { response, timing, request } = exchange, status = response.status, meta = $('response-meta'); meta.replaceChildren(node('span', `${status || 'No status'} ${response.statusText || ''}`.trim(), 'response-status' + (status >= 400 ? ' bad' : status >= 300 ? ' warn' : '')), node('span', `${timing.durationMs ?? '—'} ms`, 'muted'), node('span', `${new TextEncoder().encode(responseText()).length.toLocaleString()} B retained`, 'muted'));
+    const { response, timing, request } = exchange, status = response.status, meta = $('response-meta'); meta.replaceChildren(node('span', `${status || 'No HTTP response'} ${response.statusText || ''}`.trim(), 'response-status' + (exchange.failure || status >= 400 ? ' bad' : !status || status >= 300 ? ' warn' : '')), node('span', `${timing.durationMs ?? '—'} ms`, 'muted'), node('span', `${new TextEncoder().encode(responseText()).length.toLocaleString()} B retained`, 'muted'));
     $('response-url').hidden = false; $('response-url').textContent = `${request.method} ${request.url}`; $('response-kind').textContent = response.body.kind.toUpperCase(); renderBody();
     const table = node('table'), tbody = node('tbody'); for (const [key,value] of Object.entries(response.headers || {})) { const tr = node('tr'); tr.append(node('td', key), node('td', value)); tbody.append(tr); } table.append(tbody); $('response-headers').replaceChildren(Object.keys(response.headers || {}).length ? table : empty('No retained response headers.'));
     $('response-request').textContent = JSON.stringify(request, null, 2);
@@ -291,7 +304,9 @@
     if (exchange.gaps.length) { const list = node('ul'); for (const gap of exchange.gaps) list.append(node('li', `${gap.kind}: ${gap.reason || gap.location || JSON.stringify(gap)}`)); evidence.append(list); }
     $('exchange-link').href = '/api-client?' + new URLSearchParams({ exchange: exchange.id, story: scope.story, ...(scope.principal ? { principal: scope.principal } : {}) }); $('copy-response').disabled = false; $('download-response').disabled = false;
     const pane = document.querySelector('.response-pane'); pane.classList.remove('updated'); requestAnimationFrame(() => pane.classList.add('updated'));
+    if(exchange.failure)failure(exchange.failure.reason,exchange.failure.executionId);
   }
+  function failure(message,executionId){$('request-failure').hidden=false;$('failure-detail').textContent=message;$('failure-trace').hidden=!executionId;if(executionId)$('failure-trace').href='/admin#runtime?'+new URLSearchParams({execution:executionId,story:scope.story});}
   $('pretty-response').onclick = () => { state.raw = false; renderBody(); }; $('raw-response').onclick = () => { state.raw = true; renderBody(); };
   action($('copy-response'), async () => { await navigator.clipboard.writeText(responseText()); notice('Response body copied.'); });
   $('download-response').onclick = () => { if (!state.response) return; const blob = new Blob([JSON.stringify(state.response, null, 2)], { type: 'application/json' }), url = URL.createObjectURL(blob), a = node('a'); a.href = url; a.download = 'exchange-' + state.response.id + '.json'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); };
@@ -313,12 +328,13 @@
   function wfChange() { changed(); wf.description = $('wf-description').value; wfSync(); renderWorkflowSteps(); }
   function wfPending(checkFields=true) { if (wfJsonDirty || wfStepDirty) throw Error('Apply the edited definition or step JSON before saving, running or changing steps.'); if(checkFields){const invalid=[...$('wf-fields').querySelectorAll('input,textarea,select')].find(n=>!n.validity.valid);if(invalid){invalid.reportValidity();throw Error('Fix the selected step field before changing steps, saving or running.');}} }
   function wfUrl() {
-    const q = new URLSearchParams(location.search); for (const k of ['exchange','workflow','run','job']) q.delete(k);
+    const q = new URLSearchParams(location.search); for (const k of ['exchange','workflow','run','job','shared','revision']) q.delete(k);
     if (wfSavedId) q.set('workflow',wfSavedId); if (wfRun) q.set('run',wfRun); if (wfJob) q.set('job',wfJob);
     window.history.replaceState(null,'',location.pathname+'?'+q);
   }
   function wfLock(on) { sending.value=on; if(on!==wfLocked){lock(on);wfLocked=on;} $('cancel').hidden=true; $('wf-cancel').hidden=!on; $('wf-cancel').disabled=!wfRun; $('wf-observe').hidden=!wfLife.is('unknown'); }
   function wfResultVisible(on) {
+    $('db-query-result').hidden=true;
     $('workflow-result').hidden=!on;$('result-title').textContent=on?'Run results':'Response';
     for(const id of ['copy-response','download-response','response-meta','response-url'])$(id).hidden=on;
     $('response-empty').hidden=on||!!state.response;$('response-content').hidden=on||!state.response;
@@ -327,6 +343,8 @@
     clearTimeout(wfTimer);wfRun=wfJob=null;if(wfLife.is('complete'))wfLife.to('idle');wfResultVisible(false);
     selection.advance(); wf=W.definition(script); wfIndex=0; wfRevision=script.revision||null; wfSavedId=script.id||null; wfJsonDirty=wfStepDirty=false;
     $('http-editor').hidden=true; $('workflow-editor').hidden=false; $('request-title').textContent=wfSavedId?.split('/').at(-1)||'New workflow';
+    hideOtherEditors();$('wf-share-link').hidden=true;$('wf-share-status').textContent='';
+    idleResult('workflow');markCollections(wfSavedId);
     $('route').textContent='Collection workflow · HTTP, UI, databases and events'; $('wf-id').value=wfSavedId||''; $('wf-description').value=wf.description||'';
     $('wf-params').value=wfPretty(Object.fromEntries(Object.entries(wf.params||{}).filter(([,p])=>p.default!==undefined&&!p.secret).map(([k,p])=>[k,p.default])));
     dirty.value=false; edits.advance(); wfSync(); renderWorkflowSteps(); renderWorkflowStep(); wfUrl();
@@ -402,7 +420,7 @@
     wfPending();
     const id=$('wf-id').value.trim();W.selection(id);wf.description=$('wf-description').value;const rev=edits.value;
     const r=await tool('script_save',{id,description:wf.description,steps:wf.steps,definition:wf,expected_revision:id===wfSavedId?wfRevision:null});
-    wfSavedId=id;wfRevision=r.revision;if(edits.current(rev))dirty.value=false;wfUrl();if(state.mode==='collections')refreshLibrary();return r;
+    wfSavedId=id;wfRevision=r.revision;if(edits.current(rev))dirty.value=false;wfUrl();markCollections(id);if(state.mode==='collections')refreshLibrary();return r;
   }
   const wfArgs=()=>({...W.selection(wfSavedId),params:parse('wf-params')});
   for(const [key,label] of Object.entries(W.types))$('wf-add-kind').add(new Option(label,key));
@@ -452,9 +470,114 @@
   $('wf-observe').onclick=async()=>{if(!wfRun&&!wfJob){try{const rows=await tool('collection_history',{collection:W.selection(wfSavedId).collection,limit:10});$('wf-run-errors').hidden=false;$('wf-run-errors').textContent=wfPretty(rows);wfNotice('Review the retained runs. Reload a run URL to inspect it; no run was started.');}catch(e){wfNotice(e.message,true);}return;}observeWorkflow();};
   $('wf-cancel').onclick=async()=>{if(!wfRun)return;try{const r=await tool('collection_cancel',{run:wfRun,reason:'Cancelled in API explorer'});if(r.cancelled)wfLife.to('cancelling');wfNotice('Cancellation requested. Waiting for cleanup.');observeWorkflow();}catch(e){wfNotice(e.message,true);}};
   window.addEventListener('beforeunload', event => { if (dirty.value || sending.value) { event.preventDefault(); event.returnValue = ''; } });
+  function hideOtherEditors(){for(const id of ['collection-editor','shared-preview'])$(id).hidden=true;}
+  function markCollections(id){for(const b of $('apiCollections').querySelectorAll('[data-script-id]'))b.setAttribute('aria-current',String(b.dataset.scriptId===id));}
+  function idleResult(kind){
+    state.response=null;wfResultVisible(false);$('request-failure').hidden=true;$('response-content').hidden=true;$('response-empty').hidden=false;$('response-url').hidden=true;$('copy-response').disabled=$('download-response').disabled=true;$('response-meta').replaceChildren(node('span','No execution yet','muted'));
+    $('result-title').textContent=kind==='workflow'?'Run results':'Response';$('response-empty').querySelector('h3').textContent=kind==='workflow'?'Workflow results appear here':'Your response appears here';
+    $('response-empty').querySelector('p').textContent=kind==='workflow'?'Review targets and runtime values, then press Run workflow. Database previews appear here after Run query.':'Choose a route, review the request and press Send. Open History to inspect a previous exchange.';
+  }
+  action($('refresh-instances'),async()=>{
+    const service=state.group?.service,env=state.env;if(!service)throw Error('Choose a service route first.');
+    $('instances-status').textContent='Contacting Consul…';
+    try{
+      const r=await tool('api_instances_refresh',{env,service}),catalog=await tool('api_client_catalog',{env});
+      if(env!==state.env||service!==state.group?.service)return notice('Refreshed '+service+' in '+env+'.');
+      state.services=catalog.services;state.group=catalog.services.find(s=>s.service===service);
+      setTargets(state.group,urlParts($('url').value).base);
+      $('instances-status').textContent=`${r.instances.length} live instances · ${r.observedAt}. URL kept; choose a target to apply.`;
+      notice('Live instances refreshed. Current URL kept. Select a refreshed service target before sending.');
+      if(state.mode==='services')await refreshLibrary();
+    }catch(e){$('instances-status').textContent='Refresh failed. Previous cached targets kept: '+e.message;throw e;}
+  });
+  let colRevision=null,colSavedId=null;
+  async function openCollection(id){
+    if(!canReplace())return;
+    const epoch=selection.advance(),edit=edits.value;
+    const r=id?await tool('collection_get',{collection:id}):{collection:'',description:'',vars:{}};
+    if(!selection.current(epoch)||!edits.current(edit))return notice('Draft changed while loading collection settings. Open them again when ready.');
+    hideOtherEditors();$('http-editor').hidden=$('workflow-editor').hidden=true;$('collection-editor').hidden=false;
+    $('request-title').textContent=id?'Collection settings':'New collection';$('route').textContent='Persistent collection · variables, hooks and suite';
+    $('col-id').value=r.collection;$('col-description').value=r.description||'';
+    $('col-settings').value=JSON.stringify(Object.fromEntries(['vars','before','after','finally','suite'].filter(k=>r[k]!==undefined).map(k=>[k,r[k]])),null,2);
+    colRevision=r.revision||null;colSavedId=id||null;$('col-delete').disabled=!id;dirty.value=false;
+  }
+  $('new-collection').onclick=()=>openCollection().catch(e=>notice(e.message,true));
+  for(const id of ['col-id','col-description','col-settings'])$(id).oninput=changed;
+  action($('col-save'),async()=>{
+    const id=$('col-id').value.trim(),revision=edits.value,settings=parse('col-settings');
+    for(const k of Object.keys(settings))if(!['vars','before','after','finally','suite'].includes(k))throw Error('Collection metadata supports vars, before, after, finally and suite.');
+    const r=await tool('collection_save',{...settings,collection:id,description:$('col-description').value,expected_revision:id===colSavedId?colRevision:null});colSavedId=id;colRevision=r.revision;$('col-delete').disabled=false;if(edits.current(revision))dirty.value=false;await refreshLibrary();notice('Collection saved. No actions executed.');
+  });
+  action($('col-delete'),async()=>{
+    if(!colSavedId)throw Error('Save the collection first.');
+    if(!confirm('Delete '+colSavedId+' and all nested workflow definitions? Retained run reports stay available.'))return;
+    await tool('collection_delete',{collection:colSavedId,expected_revision:colRevision,recursive:true});dirty.value=false;hideOtherEditors();$('http-editor').hidden=false;colSavedId=null;await refreshLibrary();notice('Collection deleted. Retained reports preserved.');
+  });
+  async function transferWorkflow(move){
+    if(dirty.value)throw Error('Save your workflow before copying or moving it.');if(!wfSavedId)throw Error('Save the workflow first.');
+    const r=await tool('script_transfer',{id:wfSavedId,to:$('wf-destination').value.trim(),expected_revision:wfRevision,move});
+    const id=r.id||r.to;await openWorkflow(await tool('script_get',{id}));await refreshLibrary();notice(move?'Workflow moved. Review inherited collection settings.':'Workflow copied. Review inherited collection settings.');
+  }
+  action($('wf-duplicate'),()=>transferWorkflow(false));action($('wf-rename'),()=>transferWorkflow(true));
+  action($('wf-delete'),async()=>{
+    if(!wfSavedId)throw Error('Save the workflow first.');if(!confirm('Delete saved workflow '+wfSavedId+'? Retained reports are preserved.'))return;
+    await tool('script_delete',{id:wfSavedId,expected_revision:wfRevision});dirty.value=false;await openWorkflow({description:'',steps:[W.create('http',state.env)]});await refreshLibrary();notice('Workflow deleted. Retained reports preserved.');
+  });
+  let sharedRecord=null;const sharedHeads=new Map();
+  async function sharedLibrary(){
+    const r=await tool('workflow_share',{action:'list'});sharedHeads.clear();$('shared-workflows').replaceChildren();
+    $('wf-publish').disabled=!r.canPublish;$('wf-share-status').textContent=r.canPublish?'':'Administrator access is required to publish.';
+    for(const row of r.workflows){sharedHeads.set(row.name,row.revision);const b=node('button',row.name,'route-item');b.title=row.description;b.onclick=()=>openShared(row.name,row.revision).catch(e=>notice(e.message,true));$('shared-workflows').append(b);}
+    if(!r.workflows.length)$('shared-workflows').append(empty('Publish a workflow with a memorable name to share a reproducible definition.'));
+  }
+  async function openShared(name,revision){
+    if(!canReplace())return;
+    const epoch=selection.advance(),edit=edits.value,record=await tool('workflow_share',{action:'get',name,revision,include_definitions:true});if(!selection.current(epoch)||!edits.current(edit))return notice('Draft changed while loading the shared definition. Open it again when ready.');sharedRecord=record;hideOtherEditors();$('http-editor').hidden=$('workflow-editor').hidden=true;$('shared-preview').hidden=false;
+    $('shared-title').textContent=name;$('shared-description').textContent=sharedRecord.definitions[sharedRecord.entry].description;
+    $('shared-definition').textContent=JSON.stringify(sharedRecord,null,2);$('shared-prefix').value='shared/'+name;
+    $('request-title').textContent='Shared workflow';$('route').textContent='Published '+sharedRecord.at+' · '+sharedRecord.revision.slice(0,12);dirty.value=false;
+    const q=new URLSearchParams({shared:name,revision:sharedRecord.revision,story:scope.story});window.history.replaceState(null,'',location.pathname+'?'+q);notice('Shared definition loaded. Copy into your task to edit or run.');
+  }
+  action($('wf-publish'),async()=>{
+    if(dirty.value)throw Error('Save the workflow before publishing its definition.');if(!wfSavedId)throw Error('Save the workflow first.');
+    const name=$('wf-share-name').value.trim(),expected=sharedHeads.get(name)||null;
+    if(!confirm('Publish '+name+' for everyone to read? Review scripts and hooks for embedded credentials.'))return;
+    const r=await tool('workflow_share',{action:'publish',name,id:wfSavedId,expected_revision:expected});sharedHeads.set(name,r.revision);$('wf-share-link').href=r.url;$('wf-share-link').hidden=false;$('wf-share-status').textContent='Published revision '+r.revision.slice(0,12)+'. Link previews definitions; results stay private.';notice('Named workflow published. Share its link.');
+  });
+  action($('shared-copy-link'),async()=>{await navigator.clipboard.writeText(sharedRecord.url);notice('Named definition link copied. It contains no task or execution results.');});
+  action($('shared-import'),async()=>{
+    const r=await tool('workflow_share',{action:'import',name:sharedRecord.name,revision:sharedRecord.revision,prefix:$('shared-prefix').value.trim()});await openWorkflow(await tool('script_get',{id:r.id}));await refreshLibrary();notice('Workflow copied into your task. Review targets and parameters before running.');
+  });
+  let dbNext=null;const dbReads=new SM.Revision();
+  async function databaseNames(){
+    const env=$('db-env').value,epoch=dbReads.advance();$('db-name').disabled=true;
+    try{const r=await tool('api_client_catalog',{env,resources:true});if(!dbReads.current(epoch))return;$('db-name').replaceChildren(...r.resources.databases.map(n=>new Option(n,n)));$('db-status').textContent=r.resources.databases.length?'Choose Browse schema. No live query has run.':'No databases configured in this environment.';$('db-objects').replaceChildren();dbNext=null;$('db-more').hidden=true;}
+    finally{if(dbReads.current(epoch))$('db-name').disabled=false;}
+  }
+  $('inspect-database').onclick=()=>{$('db-inspector').open=true;$('db-env').focus();};
+  $('db-env').onchange=()=>databaseNames().catch(e=>notice(e.message,true));
+  $('db-name').onchange=()=>{dbReads.advance();$('db-objects').replaceChildren();$('db-more').hidden=true;$('db-status').textContent='Database changed. Browse schema to inspect it.';};
+  $('db-search').oninput=()=>{dbReads.advance();dbNext=null;$('db-more').hidden=true;$('db-status').textContent='Search changed. Browse schema to update the list.';};
+  async function browseDatabase(more=false){
+    const epoch=dbReads.advance(),env=$('db-env').value,db=$('db-name').value;$('db-status').textContent='Reading cached schema…';
+    try{const r=await tool('api_database_inspect',{env,db,q:$('db-search').value,offset:more?dbNext:0});if(!dbReads.current(epoch))return;
+      const root=$('db-objects');if(!more)root.replaceChildren();
+      for(const o of r.objects){const d=node('details'),summary=node('summary',o.name+' · '+o.kind);d.append(summary);
+        if(o.columns){const table=node('table'),head=node('tr');head.append(node('th','Column'),node('th','Type'));table.append(head);for(const c of o.columns){const tr=node('tr');tr.append(node('td',c.name),node('td',c.type||c.data_type||''));table.append(tr);}d.append(table);}else d.append(node('pre',JSON.stringify({arguments:o.arguments,body:o.body},null,2)));
+        if(o.sql){const b=node('button','Use SELECT query');b.onclick=()=>{$('db-sql').value=o.sql;$('db-params').value='[]';$('db-result').hidden=true;};d.append(b);}root.append(d);}
+      dbNext=r.nextOffset;$('db-more').hidden=dbNext===null;$('db-status').textContent=r.gap||`${root.children.length} cached objects${dbNext!==null?' · more available':''}. SELECT drafts never execute automatically.`;
+    }catch(e){if(dbReads.current(epoch))$('db-status').textContent='Inspection failed: '+e.message;throw e;}
+  }
+  action($('db-browse'),()=>browseDatabase());action($('db-more'),()=>browseDatabase(true));
+  const dbArgs=()=>({env:$('db-env').value,db:$('db-name').value,sql:$('db-sql').value,params:W.value($('db-params').value,'array')});
+  action($('db-run'),async()=>{const args=dbArgs();idleResult('workflow');$('response-content').hidden=$('response-empty').hidden=true;$('request-failure').hidden=true;$('db-query-result').hidden=false;$('result-title').textContent='Query results';$('db-target').textContent=args.env+' / '+args.db;$('db-view').hidden=true;$('db-output').textContent='Running read-only query…';$('db-result').hidden=false;$('db-result').textContent=args.env+' / '+args.db+' · Query running. Results appear in the right pane.';try{const r=await tool('pg_query',args);$('db-output').textContent=JSON.stringify(r,null,2);$('db-result').textContent=args.env+' / '+args.db+' · Query complete. Results in the right pane.';$('response-meta').textContent='Query complete';if(r.view){$('db-view').href=r.view;$('db-view').hidden=false;}notice('Query complete. Add it to a workflow to reproduce it.');}catch(e){$('db-output').textContent='Query failed: '+e.message;$('db-result').textContent='Query failed · '+args.env+' / '+args.db;$('response-meta').textContent='Query failed';throw e;}});
+  action($('db-add'),async()=>{if(sending.value)throw Error('Wait for the active request or run.');const step={tool:'pg_query',args:dbArgs(),as:'queryResult'};if(!$('workflow-editor').hidden){wfPending();delete step.as;wf.steps.push(step);wfIndex=wf.steps.length-1;wfChange();renderWorkflowStep();}else{if(!canReplace())return;await openWorkflow({description:'Inspect database state',steps:[step]});changed();}notice('Query added. Save the workflow to keep this reproducible step.');});
   async function initialize() {
     await services(navigation.advance());
-    if(query.has('workflow')){await openWorkflow(await tool('script_get',{id:query.get('workflow')}));if(query.has('run')||query.has('job')){wfRun=query.get('run');wfJob=query.get('job');wfLife.to('running');wfLock(true);observeWorkflow();}}
+    $('db-env').replaceChildren(...[...$('apiEnvironment').options].map(o=>new Option(o.text,o.value)));$('db-env').value=state.env;await databaseNames();
+    if(query.has('shared')){await openShared(query.get('shared'),query.get('revision'));$('source-collections').click();}
+    else if(query.has('workflow')){await openWorkflow(await tool('script_get',{id:query.get('workflow')}));if(query.has('run')||query.has('job')){wfRun=query.get('run');wfJob=query.get('job');wfLife.to('running');wfLock(true);observeWorkflow();}}
     else if (query.has('exchange')) await openExchange(query.get('exchange'), true);
     else if (query.has('path') || query.has('url')) { const route = { method: query.get('method') || 'GET', path: query.get('path') || urlParts(query.get('url')).path, service: query.get('service') || '', ...(query.has('url') ? { url: query.get('url') } : {}) }; const group = state.services.find(s => s.service && s.service === route.service || s.key === 'host:' + query.get('host')); choose(route, group, query.get('base') || undefined); }
     else { bodyVisibility(); await authProfiles(); }

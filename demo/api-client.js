@@ -18,7 +18,10 @@ async function start() {
   const apis = [serve('orders-a'), serve('orders-b')];
   for (const api of apis) await new Promise(r => api.listen(0, '127.0.0.1', r));
   const origins = apis.map(api => 'http://127.0.0.1:' + api.address().port);
-  const config = { envs: { dev: {}, uat: {} }, scripts: { starters: false }, api: { authProfiles: { demo: { label: 'Demo API', url: origins[0], bearerToken: '${DT_API_DEMO_BEARER}', autoPrefill: true } } } };
+  let liveReplica=1;
+  const consul=http.createServer((req,res)=>{res.setHeader('content-type','application/json');res.end(JSON.stringify([{Node:{Address:'127.0.0.1',Node:'demo'},Service:{ID:'live-orders',Address:'127.0.0.1',Port:apis[liveReplica].address().port,Tags:[]},Checks:[{Status:'passing'}]}]));});
+  await new Promise(r=>consul.listen(0,'127.0.0.1',r));
+  const config = { envs: { dev: {consul:'http://127.0.0.1:'+consul.address().port}, uat: {consul:'http://127.0.0.1:'+consul.address().port} }, scripts: { starters: false }, api: { authProfiles: { demo: { label: 'Demo API', url: origins[0], bearerToken: '${DT_API_DEMO_BEARER}', autoPrefill: true } } } };
   fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify(config));
   const C = require('../lib/config'), write = (file, value) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, JSON.stringify(value)); };
   const passport = (name, endpoints) => write(path.join(C.PATHS.passports,name,'passport.json'), { service: name, effective: { endpoints }, summary: { endpoints: endpoints.length } });
@@ -30,7 +33,7 @@ async function start() {
   require('../lib/access').run({ storyId:'api-demo' }, () => { const S = require('../lib/scripts'); S.save('orders/lookups/get-order',{description:'Retrieve an order',params:{orderId:{type:'string',required:true}},steps:[{http:'GET '+origins[0]+'/orders/{{orderId}}',urlEncodeParams:['orderId']}]}); S.save('orders/create',{description:'Create an order',steps:[{http:'POST '+origins[0]+'/orders',body:{sku:'KEYBOARD',quantity:2}}]}); S.save('maintenance/two-steps',{description:'Example multi-step workflow',steps:[{http:'GET '+origins[0]+'/orders/42'},{http:'GET '+origins[0]+'/orders/43'}]}); });
   const server = require('../server').start({port:0}); await new Promise(r => server.once('listening',r));
   const base = 'http://127.0.0.1:' + server.address().port; config.server = {publicUrl:base}; write(path.join(home,'config.json'),config); C.reload();
-  return {base,origins,requests,url:base+'/api-client?story=api-demo',admin:base+'/admin#api',async close(){server.closeAllConnections();await new Promise(r=>server.close(r));for(const api of apis){api.closeAllConnections();await new Promise(r=>api.close(r));}await require('../lib/automation-flow').close();await require('../lib/isolate').stop();await require('../lib/state-store').close();fs.rmSync(home,{recursive:true,force:true});}};
+  return {base,origins,requests,setLiveReplica:i=>liveReplica=i,url:base+'/api-client?story=api-demo',admin:base+'/admin#api',async close(){server.closeAllConnections();await new Promise(r=>server.close(r));for(const api of [...apis,consul]){api.closeAllConnections();await new Promise(r=>api.close(r));}await require('../lib/automation-flow').close();await require('../lib/isolate').stop();await require('../lib/state-store').close();fs.rmSync(home,{recursive:true,force:true});}};
 }
 module.exports={start};
 if(require.main===module)start().then(f=>{console.log(JSON.stringify({client:f.url,admin:f.admin,fixture:'Synthetic service catalog; requests execute against local HTTP only'}));for(const signal of ['SIGINT','SIGTERM'])process.once(signal,()=>f.close().then(()=>process.exit()));}).catch(e=>{console.error(e);process.exitCode=1;});

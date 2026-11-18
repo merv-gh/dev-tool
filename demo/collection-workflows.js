@@ -38,7 +38,7 @@ async function start(){
  const file=path.join(C.HOME,'config.json'),config=JSON.parse(fs.readFileSync(file));
  for(const env of ['dev','uat'])config.envs[env]={...config.envs[env],postgres:{orders:'postgres://synthetic/unused',warehouse:'postgres://synthetic/unused'},kafkaUi:origin,elasticsearch:{hosts:[origin+'/es']}};
  config.browser={mcp:origin+'/mcp',sites:{checkout:{url:origin+'/checkout'}}};config.tools={backends:{pg_query:{url:origin+'/worker',scopeAware:true,token:'synthetic-collection-worker'}}};fs.writeFileSync(file,JSON.stringify(config));C.reload();
- const write=(name,value)=>{const file=path.join(C.PATHS.cache,'dev',name);fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,JSON.stringify(value));};write('es/orders.json',{});write('kafka/_index.json',{cluster:'demo',topics:[{topic:'orders'},{topic:'audit'}]});
+ const write=(name,value)=>{const file=path.join(C.PATHS.cache,'dev',name);fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,JSON.stringify(value));};write('es/orders.json',{});write('kafka/_index.json',{cluster:'demo',topics:[{topic:'orders'},{topic:'audit'}]});write('pg/orders.json',{tables:[{schema:'sales',name:'orders',kind:'table',columns:[{name:'id',type:'text'},{name:'status',type:'text'}]}],functions:[{schema:'sales',name:'total',kind:'function',arguments:'order_id text',body:'select count(*) from sales.orders'}]});
  require('../lib/access').run({storyId:'api-demo'},()=>{
   const S=require('../lib/scripts');S.save('journeys/checkout',{description:'Local showcase: UI → Postgres in two environments → Elasticsearch → Kafka → HTTP',params:{orderId:{type:'string',default:'DEMO-42'}},steps:[
    {tool:'kafka_checkpoint',args:{env:'dev',topic:'orders'},as:'checkpoint'},

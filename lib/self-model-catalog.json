@@ -1,7 +1,7 @@
 {
   "protocol": "dt.repo-source/v1",
   "repo": "dev-tool",
-  "sourceDigest": "109f1b4715a0f34bac467f966591d56bf8bb650b2920e5ff48b1e4a2df945fa5",
+  "sourceDigest": "6746576a15f394e3277b496c0091c16b3cb238f07e4b6e049cc04b9b64a6efb0",
   "machines": [
     {
       "id": "IO.atomic-file",
@@ -4217,7 +4217,7 @@
       "consumers": [
         {
           "file": "lib/api-client.js",
-          "line": 280,
+          "line": 293,
           "snippet": "const browser = require('./browser-mcp').session({ timeout: timeoutMs || 30000 }), key = id(),lifecycle=require('./state-machine').create(require('./lifecycles').browserLease);"
         }
       ],

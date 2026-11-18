@@ -26,7 +26,7 @@ const readJsonBody = (req, form = false) => new Promise((resolve, reject) => {
     try { resolve(chunks.length ? (form?Object.fromEntries(new URLSearchParams(Buffer.concat(chunks).toString('utf8'))):JSON.parse(Buffer.concat(chunks))) : {}); } catch (e) { reject(e); }
   });
 });
-const errorPayload = e => require('./lib/redact').clean({ error: e.message, ...(e.code ? { code: e.code } : {}), ...(e.issues ? { issues: e.issues } : {}), ...(e.retryAfter?{retryAfter:e.retryAfter}:{}) });
+const errorPayload = e => require('./lib/redact').clean({ error: e.message, ...(e.code ? { code: e.code } : {}), ...(e.code === 'DT_API_NETWORK' && e.exchange ? {exchange:e.exchange} : {}), ...(e.issues ? { issues: e.issues } : {}), ...(e.retryAfter?{retryAfter:e.retryAfter}:{}) });
 
 // Tools reach the infrastructure with your credentials. Allowed: this machine; a request with
 // DT_API_KEY (Authorization: Bearer, or the dt_key cookie set by /admin?key=...); or anyone on the

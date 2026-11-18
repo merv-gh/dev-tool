@@ -3267,6 +3267,8 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
 - [`api_routes`](#tool-api_routes)
 - [`routes_learn`](#tool-routes_learn)
 - [`routes_discover`](#tool-routes_discover)
+- [`api_instances_refresh`](#tool-api_instances_refresh)
+- [`api_database_inspect`](#tool-api_database_inspect)
 - [`api_client_catalog`](#tool-api_client_catalog)
 - [`api_auth_profiles`](#tool-api_auth_profiles)
 - [`api_exchange_import`](#tool-api_exchange_import)
@@ -3379,6 +3381,82 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
   },
   "required": [
     "site"
+  ]
+}
+```
+
+</details>
+
+<a id="tool-api_instances_refresh"></a>
+
+### api_instances_refresh
+
+Refresh live Consul replicas for one exact service in an authorized environment. Updates cached instance addresses, health and observation time; retains previous cache if lookup fails. Does not send or replay an API request.
+
+Workflow: [From a browser action to an API check](README.md#api-browser) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "env": {
+      "type": "string",
+      "description": "Environment"
+    },
+    "service": {
+      "type": "string",
+      "description": "Exact service name"
+    }
+  },
+  "required": [
+    "service"
+  ]
+}
+```
+
+</details>
+
+<a id="tool-api_database_inspect"></a>
+
+### api_database_inspect
+
+Browse a bounded page of cached Postgres tables, columns and function bodies in one configured database. Offline; use nextOffset to continue. Returns read-only SQL drafts for tables; pg_query explicitly executes them.
+
+Workflow: [From a browser action to an API check](README.md#api-browser) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "env": {
+      "type": "string",
+      "description": "Environment"
+    },
+    "db": {
+      "type": "string",
+      "description": "Configured database name"
+    },
+    "q": {
+      "type": "string",
+      "description": "Object name filter"
+    },
+    "offset": {
+      "type": "integer",
+      "description": "Continuation offset",
+      "default": 0
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Objects per page, max 50",
+      "default": 30
+    }
+  },
+  "required": [
+    "db"
   ]
 }
 ```
@@ -3596,7 +3674,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
 
 ### api_request_replay
 
-EXPLICITLY SEND an HTTP request, including mutations. Call only when the user/workflow intends the action. Trusts any HTTP(S) destination without per-service configuration; uses rate limits and timeout; never follows redirects or transfers browser cookies. No retry. Params supplied only for this run; result is sanitized, persisted and visualized with status/headers/JSON/timing. Prepare alone never sends traffic.
+EXPLICITLY SEND an HTTP request, including mutations. Trusts HTTP(S) destinations; rate limited, bounded timeout, no redirects or retries. Params are runtime-only. Status, headers, body and timing are sanitized and retained. Network failures retain a failed exchange with diagnostics and execution correlation; outcome may be unknown. Prepare alone never sends traffic.
 
 Workflow: [From a browser action to an API check](README.md#api-browser) · Origin: built-in
 
@@ -3735,6 +3813,8 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
 - [`script_run`](#tool-script_run)
 - [`code`](#tool-code)
 - [`js_run`](#tool-js_run)
+- [`workflow_share`](#tool-workflow_share)
+- [`script_transfer`](#tool-script_transfer)
 - [`collection_get`](#tool-collection_get)
 - [`collection_save`](#tool-collection_save)
 - [`collection_delete`](#tool-collection_delete)
@@ -4086,6 +4166,106 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
   },
   "required": [
     "code"
+  ]
+}
+```
+
+</details>
+
+<a id="tool-workflow_share"></a>
+
+### workflow_share
+
+Named shared workflow definitions: list/get preview immutable revisions; admins publish an exact saved script with referenced scripts and inherited hooks. import copies into a new private collection without executing. Named links contain no task or results. Review embedded code; resolve dynamic script references. Returns compact metadata unless get include_definitions=true.
+
+Workflow: [Scripts, collections and long calculations](README.md#automation) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": {
+      "type": "string",
+      "enum": [
+        "list",
+        "get",
+        "publish",
+        "import"
+      ]
+    },
+    "name": {
+      "type": "string",
+      "description": "Shared name, lowercase slug up to 64 characters"
+    },
+    "id": {
+      "type": "string",
+      "description": "Exact local script id to publish"
+    },
+    "revision": {
+      "type": "string",
+      "description": "Pinned shared revision to read/import"
+    },
+    "include_definitions": {
+      "type": "boolean",
+      "default": false
+    },
+    "expected_revision": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Current shared revision, or null to create"
+    },
+    "prefix": {
+      "type": "string",
+      "description": "New private collection for import"
+    }
+  },
+  "required": [
+    "action"
+  ]
+}
+```
+
+</details>
+
+<a id="tool-script_transfer"></a>
+
+### script_transfer
+
+Copy or rename/move an exact persistent workflow into a new id. Requires source revision; never overwrites an existing destination or executes. Inherited collection settings follow the destination; review them before running.
+
+Workflow: [Scripts, collections and long calculations](README.md#automation) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Exact source script id"
+    },
+    "to": {
+      "type": "string",
+      "description": "New collection/name"
+    },
+    "expected_revision": {
+      "type": "string",
+      "description": "Source revision from script_get"
+    },
+    "move": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "id",
+    "to",
+    "expected_revision"
   ]
 }
 ```

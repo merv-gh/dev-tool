@@ -1,6 +1,6 @@
 {
   "protocol": "dt.release-inventory/v1",
-  "sourceDigest": "109f1b4715a0f34bac467f966591d56bf8bb650b2920e5ff48b1e4a2df945fa5",
+  "sourceDigest": "6746576a15f394e3277b496c0091c16b3cb238f07e4b6e049cc04b9b64a6efb0",
   "tools": [
     {
       "name": "find",
@@ -2956,6 +2956,26 @@
       "integrationReferences": []
     },
     {
+      "name": "workflow_share",
+      "group": "scripts",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/api-collection-workbench.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "script_transfer",
+      "group": "scripts",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
       "name": "collection_get",
       "group": "scripts",
       "origin": "built-in",
@@ -3417,6 +3437,28 @@
       "integrationReferences": []
     },
     {
+      "name": "api_instances_refresh",
+      "group": "api",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/api-collection-workbench.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "api_database_inspect",
+      "group": "api",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/api-collection-workbench.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
       "name": "api_client_catalog",
       "group": "api",
       "origin": "built-in",
@@ -3493,6 +3535,7 @@
       "referenceTests": [
         "test/api-catalog.test.js",
         "test/api-client.test.js",
+        "test/api-collection-workbench.test.js",
         "test/call-outcome.test.js",
         "test/workbench-explorer-ui.test.js",
         "test/workbench-explorer.test.js"

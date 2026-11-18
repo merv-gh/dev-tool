@@ -18243,7 +18243,7 @@ var require_self_model_catalog = __commonJS({
     module2.exports = {
       protocol: "dt.repo-source/v1",
       repo: "dev-tool",
-      sourceDigest: "109f1b4715a0f34bac467f966591d56bf8bb650b2920e5ff48b1e4a2df945fa5",
+      sourceDigest: "6746576a15f394e3277b496c0091c16b3cb238f07e4b6e049cc04b9b64a6efb0",
       machines: [
         {
           id: "IO.atomic-file",
@@ -22459,7 +22459,7 @@ var require_self_model_catalog = __commonJS({
           consumers: [
             {
               file: "lib/api-client.js",
-              line: 280,
+              line: 293,
               snippet: "const browser = require('./browser-mcp').session({ timeout: timeoutMs || 30000 }), key = id(),lifecycle=require('./state-machine').create(require('./lifecycles').browserLease);"
             }
           ],
@@ -29379,8 +29379,8 @@ var require_consul = __commonJS({
       if (!url) throw new Error(`Consul URL not set for ${envName}`);
       return url.replace(/\/$/, "");
     }
-    async function instances(envName, service2) {
-      const nodes = await http2(`${base(envName)}/v1/health/service/${encodeURIComponent(service2)}`);
+    async function instances(envName, service2, { timeout = 3e4 } = {}) {
+      const nodes = await http2(`${base(envName)}/v1/health/service/${encodeURIComponent(service2)}`, { timeout });
       return nodes.map((n) => {
         const checks = n.Checks || [];
         const status = checks.some((c) => c.Status === "critical") ? "critical" : checks.some((c) => c.Status === "warning") ? "warning" : "passing";
@@ -76345,6 +76345,7 @@ var require_api_client = __commonJS({
       const authenticated = require_api_auth().apply(auth_profile, sent);
       const lifecycle = require_state_machine2().create(require_lifecycles().apiReplay);
       lifecycle.to("sending");
+      const started = Date.now();
       try {
         const result = await S().httpRequest(authenticated, { timeoutMs, allowErrors: true, maxResponseBytes: MAX_BODY, signal: require_execution().signal() });
         lifecycle.to("received");
@@ -76355,8 +76356,20 @@ var require_api_client = __commonJS({
         lifecycle.to("saved");
         return out2;
       } catch (error) {
-        if (!lifecycle.terminal) lifecycle.to(lifecycle.is("sending") ? "unknown" : "save-failed");
-        throw error;
+        if (!lifecycle.is("sending")) {
+          if (!lifecycle.terminal) lifecycle.to("save-failed");
+          throw error;
+        }
+        lifecycle.to("unknown");
+        const causes = [error, error.cause, ...error.cause?.errors || []];
+        const code = causes.map((e) => e?.code).find((c) => /^(?:E[A-Z0-9_]+|UND_ERR_[A-Z_]+|DT_CANCELLED)$/.test(c || "")) || (error.name === "TimeoutError" ? "TIMEOUT" : error.name === "AbortError" ? "CANCELLED" : "NETWORK_ERROR");
+        const reason = `${code}: no complete HTTP response received. The request may have reached the service; inspect its state before retrying. Refresh Consul instances if the address changed.`;
+        const out2 = normalize({ request: authenticated, response: { body: { kind: "unavailable", reason } }, time: Date.now() - started }, { kind: "explicit-replay" });
+        const executionId = require_execution().current()?.id || null;
+        out2.failure = { code, reason, outcome: "unknown", executionId };
+        out2.gaps.push({ kind: "network-error", reason });
+        persist(out2);
+        throw Object.assign(new Error(`${reason} Exchange ${out2.id} saved.`), { code: "DT_API_NETWORK", statusCode: 502, exchange: out2 });
       }
     }
     function save({ id: scriptId, prepared, exchange, request, bindings, description, overwrite = false, tool = false, assertions, capture, before, after, finally: finalHook } = {}) {
@@ -80008,7 +80021,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "109f1b4715a0f34bac467f966591d56bf8bb650b2920e5ff48b1e4a2df945fa5";
+      if (true) return "6746576a15f394e3277b496c0091c16b3cb238f07e4b6e049cc04b9b64a6efb0";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -80804,7 +80817,7 @@ var require_tool_profiles = __commonJS({
       testing: { description: "Build reproducible fixtures, scenario contracts, collections and isolated test runs.", prefixes: ["fixture_", "scenario_", "collection_", "testdb_", "test_"], names: [...CORE, "workspace_coverage_plan", "workspace_coverage", "workspace_open", "workspace_read", "workspace_write", "workspace_patch", "script_list", "script_get", "script_save", "script_delete", "script_run"] },
       develop: { description: "Inspect code, make a workspace change, compile and verify its behavior.", prefixes: ["workspace_", "code_", "test_", "semantic_", "passport_adjust", "jenkins_", "bitbucket_pr_"], names: [...CORE, "passport", "repo_fetch", "impact", "experiment_save", "experiment_run", "experiment_compare"] },
       knowledge: { description: "Inspect source-neutral documentation, contracts, architecture and provenance.", prefixes: ["knowledge_", "docs_", "architecture_", "project_context_"], names: [...CORE, "feature", "passport", "who_uses"] },
-      api: { description: "Explore API/UI traffic and run mixed collections across HTTP, UI, Postgres, Elasticsearch and Kafka.", groups: ["api", "browser"], prefixes: ["api_", "collection_"], names: [...CORE, "pg_query", "es_search", "kafka_checkpoint", "kafka_wait", "kafka_produce", "script_list", "script_get", "script_run", "script_save", "script_delete", "script_collection", "routes_discover", "routes_learn"] },
+      api: { description: "Explore API/UI traffic and run mixed collections across HTTP, UI, Postgres, Elasticsearch and Kafka.", groups: ["api", "browser"], prefixes: ["api_", "collection_"], names: [...CORE, "pg_query", "es_search", "kafka_checkpoint", "kafka_wait", "kafka_produce", "script_list", "script_get", "script_run", "script_save", "script_delete", "script_transfer", "workflow_share", "pg_table", "pg_function", "script_collection", "routes_discover", "routes_learn"] },
       all: { description: "Every enabled tool; compatible with existing installations." }
     };
     function definitions() {
@@ -87905,6 +87918,185 @@ ${cases.map((c) => `<testcase classname="${xml(c.script)}" name="${xml(c.id)}" t
   }
 });
 
+// lib/workflow-library.js
+var require_workflow_library = __commonJS({
+  "lib/workflow-library.js"(exports2, module2) {
+    var fs3 = require("node:fs");
+    var path3 = require("node:path");
+    var crypto = require("node:crypto");
+    var A = require_access();
+    var S = require_scripts();
+    var C = require_config();
+    var digest = (v) => crypto.createHash("sha256").update(JSON.stringify(v)).digest("hex");
+    var valid = (id) => typeof id === "string" && /^[a-z0-9][a-z0-9_-]{0,63}$/.test(id);
+    var fail = (message) => {
+      throw Object.assign(Error(message), { code: "DT_WORKFLOW_CONFLICT", statusCode: 409 });
+    };
+    var read = (file) => {
+      try {
+        return JSON.parse(fs3.readFileSync(file, "utf8"));
+      } catch (e) {
+        if (e.code === "ENOENT") return null;
+        throw e;
+      }
+    };
+    function folder(name) {
+      if (!valid(name)) throw Error("Shared name: use up to 64 lowercase letters, digits, underscores or hyphens");
+      return path3.join(C.HOME, "shared-workflows", name);
+    }
+    function get(name, revision) {
+      const dir = folder(name), head = read(path3.join(dir, "head.json"));
+      revision ||= head?.revision;
+      if (!/^[a-f0-9]{64}$/.test(revision || "")) throw Error("Shared workflow not found");
+      const record = read(path3.join(dir, "revisions", revision + ".json"));
+      if (!record) throw Error("Shared workflow revision not found");
+      const { revision: hash, ...body } = record;
+      if (hash !== digest(body)) fail("Shared workflow revision is damaged");
+      return { ...record, url: require_results().publicUrl() + "/api-client?" + new URLSearchParams({ shared: name, revision }), canPublish: A.current().role === "admin" };
+    }
+    function list() {
+      const root = path3.join(C.HOME, "shared-workflows");
+      let names = [];
+      try {
+        names = fs3.readdirSync(root);
+      } catch (e) {
+        if (e.code !== "ENOENT") throw e;
+      }
+      return { canPublish: A.current().role === "admin", workflows: names.filter(valid).slice(0, 500).flatMap((n) => {
+        const h = read(path3.join(folder(n), "head.json"));
+        return h ? [h] : [];
+      }) };
+    }
+    function snapshot(id) {
+      if (S.get(id).id !== id) throw Error("Use the exact saved script id for sharing");
+      const definitions = {}, collections = {};
+      const visit = (id2) => {
+        const def = S.get(id2);
+        if (definitions[def.id]) return;
+        if (Object.keys(definitions).length >= 100) throw Error("Share at most 100 referenced scripts");
+        const { id: _, revision, savedAt, ...body } = def;
+        S.validate(body);
+        definitions[def.id] = body;
+        for (const meta of S.chain(def.id)) {
+          const { collection, ...fields } = meta;
+          collections[collection] = fields;
+        }
+        for (const step of def.steps) if (step.script) {
+          if (typeof step.script !== "string" || step.script.includes("{{")) throw Error("Resolve dynamic script references before sharing");
+          visit(step.script);
+          step.script = S.get(step.script).id;
+        }
+      };
+      visit(id);
+      const bundle = { entry: S.get(id).id, definitions, collections };
+      const text = JSON.stringify(bundle);
+      if (Buffer.byteLength(text) > 2 * 1048576) throw Error("Shared definition exceeds 2 MiB");
+      const inspect = (v) => {
+        if (!v || typeof v !== "object") return;
+        if (v.secret && v.default !== void 0) throw Error("Remove secret parameter defaults before sharing");
+        for (const [k, x] of Object.entries(v)) {
+          if (typeof x === "string" && /password|secret|authorization|api.?key|token|cookie/i.test(k) && x && !x.includes("{{")) throw Error("Replace literal credentials with runtime {{parameters}} before sharing");
+          inspect(x);
+        }
+      };
+      inspect(bundle);
+      if (/Bearer\s+(?!\{\{)[a-z\d._~-]{8,}|https?:\/\/[^\s/]+:[^\s/]+@/i.test(text)) throw Error("Remove embedded credentials before sharing");
+      for (const secret of require_collection_evidence().configuredSecrets()) if (secret.length >= 8 && text.includes(secret)) throw Error("Remove configured credentials before sharing");
+      return bundle;
+    }
+    function publish({ name, id, expected_revision }) {
+      A.requireAdmin();
+      const bundle = snapshot(id), dir = folder(name);
+      fs3.mkdirSync(dir, { recursive: true });
+      const lock = path3.join(dir, ".lock");
+      let fd;
+      try {
+        fd = fs3.openSync(lock, "wx");
+      } catch (e) {
+        if (e.code !== "EEXIST") throw e;
+        let pid;
+        try {
+          pid = Number(fs3.readFileSync(lock, "utf8"));
+        } catch {
+        }
+        let alive = Date.now() - fs3.statSync(lock).mtimeMs < 3e4;
+        if (pid > 0) try {
+          process.kill(pid, 0);
+          alive = true;
+        } catch (error) {
+          alive = error.code !== "ESRCH";
+        }
+        if (alive) fail("Shared workflow is being published; retry after it finishes");
+        fs3.unlinkSync(lock);
+        try {
+          fd = fs3.openSync(lock, "wx");
+        } catch {
+          fail("Shared workflow is being published; retry after it finishes");
+        }
+      }
+      fs3.writeSync(fd, String(process.pid));
+      try {
+        const head = read(path3.join(dir, "head.json"));
+        if ((head?.revision || null) !== expected_revision) fail("Shared workflow changed; open its current revision before publishing");
+        const body = { name, parent: head?.revision || null, at: (/* @__PURE__ */ new Date()).toISOString(), author: A.current().principalId, ...bundle }, record = { ...body, revision: digest(body) };
+        require_atomic_file().atomicFile(path3.join(dir, "revisions", record.revision + ".json"), JSON.stringify(record) + "\n", { mode: 384 });
+        require_atomic_file().atomicFile(path3.join(dir, "head.json"), JSON.stringify({ name, revision: record.revision, description: bundle.definitions[bundle.entry].description, at: record.at }) + "\n", { mode: 384 });
+        return get(name, record.revision);
+      } finally {
+        fs3.closeSync(fd);
+        fs3.unlinkSync(lock);
+      }
+    }
+    function importWorkflow({ name, revision, prefix }) {
+      const record = get(name, revision);
+      if (typeof prefix !== "string" || !/^([a-z0-9][\w.-]*\/)*[a-z0-9][\w.-]*$/i.test(prefix) || prefix.split("/").some((p) => p.startsWith("."))) throw Error("Use a new collection path for the private copy");
+      const dir = path3.join(S.DIR, prefix);
+      fs3.mkdirSync(path3.dirname(dir), { recursive: true });
+      try {
+        fs3.mkdirSync(dir);
+      } catch (e) {
+        if (e.code === "EEXIST") fail("Destination collection already exists; choose a new path");
+        throw e;
+      }
+      try {
+        for (const [id, body] of Object.entries(record.definitions)) {
+          const def = structuredClone(body);
+          def.tool = false;
+          for (const step of def.steps) if (step.script) step.script = prefix + "/" + step.script;
+          S.save(prefix + "/" + id, def, { expected_revision: null });
+        }
+        for (const [id, meta] of Object.entries(record.collections)) {
+          S.mkdir(prefix + "/" + id);
+          S.setCollection(prefix + "/" + id, { ...meta, tool: false });
+        }
+        return { id: prefix + "/" + record.entry, name, revision: record.revision, imported: true, next: "Review the private copy and supply runtime values before explicitly running it" };
+      } catch (e) {
+        fs3.rmSync(dir, { recursive: true, force: true });
+        throw e;
+      }
+    }
+    function transfer({ id, to, expected_revision, move = false }) {
+      const def = S.get(id);
+      if (def.id !== id) throw Error("Use the exact script id");
+      if (def.revision !== expected_revision) fail("Script changed; reload before copying or moving");
+      if (move) return S.move(id, to);
+      return S.copy(id, to);
+    }
+    function tool(a) {
+      const summary = (r) => ({ name: r.name, revision: r.revision, at: r.at, url: r.url, canPublish: r.canPublish, description: r.definitions[r.entry].description, entry: r.entry, scripts: Object.keys(r.definitions), collections: Object.keys(r.collections), notice: "Definitions only. Dynamic JavaScript references and local integrations require review. Import creates a private copy without execution." });
+      if (a.action === "list") return list();
+      if (a.action === "get") {
+        const r = get(a.name, a.revision);
+        return a.include_definitions ? r : summary(r);
+      }
+      if (a.action === "publish") return summary(publish(a));
+      if (a.action === "import") return importWorkflow(a);
+      throw Error("Choose list, get, publish or import");
+    }
+    module2.exports = { get, list, publish, importWorkflow, transfer, tool, snapshot };
+  }
+});
+
 // lib/tools-collections.js
 var require_tools_collections = __commonJS({
   "lib/tools-collections.js"(exports2, module2) {
@@ -87915,6 +88107,8 @@ var require_tools_collections = __commonJS({
       const selection = { params: obj("Shared typed parameter values"), tags: strings("Include cases with any of these tags"), exclude_tags: strings("Exclude cases with any of these tags"), select: strings("Exact script ids or basenames"), seed: str("Recorded deterministic seed, exposed as vars.seed"), datasets: { type: "array", items: obj("One parameter row"), description: "Independent parameter rows" }, matrix: obj("Cartesian product: parameter name \u2192 array of typed values") };
       const options = (a) => ({ ...a, excludeTags: a.exclude_tags, timeoutMs: a.timeout_ms, cleanupTimeoutMs: a.cleanup_timeout_ms, failFast: a.fail_fast });
       return [
+        { name: "workflow_share", group: "scripts", description: "Named shared workflow definitions: list/get preview immutable revisions; admins publish an exact saved script with referenced scripts and inherited hooks. import copies into a new private collection without executing. Named links contain no task or results. Review embedded code; resolve dynamic script references. Returns compact metadata unless get include_definitions=true.", input: { action: { type: "string", enum: ["list", "get", "publish", "import"] }, name: str("Shared name, lowercase slug up to 64 characters"), id: str("Exact local script id to publish"), revision: str("Pinned shared revision to read/import"), include_definitions: { type: "boolean", default: false }, expected_revision: { type: ["string", "null"], description: "Current shared revision, or null to create" }, prefix: str("New private collection for import") }, required: ["action"], run: (a) => require_workflow_library().tool(a) },
+        { name: "script_transfer", group: "scripts", description: "Copy or rename/move an exact persistent workflow into a new id. Requires source revision; never overwrites an existing destination or executes. Inherited collection settings follow the destination; review them before running.", input: { id: str("Exact source script id"), to: str("New collection/name"), expected_revision: str("Source revision from script_get"), move: { type: "boolean", default: false } }, required: ["id", "to", "expected_revision"], run: (a) => require_workflow_library().transfer(a) },
         { name: "collection_get", group: "scripts", description: "Inspect a script collection independently: stored suite configuration, nested script definitions and the next lifecycle stages. Does not run hooks or actions.", input: { collection: str("Collection path") }, required: ["collection"], run: (a) => C().inspect(a.collection) },
         { name: "collection_save", group: "scripts", description: "Persist collection metadata without clearing omitted fields. Optional expected_revision from collection_get rejects concurrent edits; null requires a new collection. Suite uses existing scripts, datasets, matrix, params and hooks. Collection hooks run per-script; suite hooks once per scope.", input: { collection: str("Collection path; created if missing"), expected_revision: { type: ["string", "null"], description: "Revision from collection_get; null requires a new collection" }, description: str("What it tests and when to use it"), vars: obj("Per-script inherited vars"), before: str("Per-script setup JavaScript"), after: str("Per-script success hook"), finally: str("Per-script cleanup, including failures"), suite: obj("Suite configuration: order, tags, params, datasets, matrix, before, after, finally") }, required: ["collection"], run: (a) => C().save(a.collection, Object.fromEntries(["description", "vars", "before", "after", "finally", "suite"].filter((k) => a[k] !== void 0).map((k) => [k, a[k]])), { expected_revision: a.expected_revision }) },
         { name: "collection_delete", group: "scripts", description: "Delete a saved collection by exact path and content revision from collection_get. Includes nested scripts only with recursive=true. Changes anywhere in the subtree reject stale deletion. Retained execution reports are preserved.", input: { collection: str("Exact collection path"), expected_revision: { type: "string", pattern: "^[a-f0-9]{64}$", description: "Content revision from collection_get" }, recursive: { type: "boolean", default: false, description: "Explicitly include nested workflow definitions" } }, required: ["collection", "expected_revision"], run: (a) => require_scripts().removeFolder(a.collection, { expected_revision: a.expected_revision, recursive: a.recursive }) },
@@ -88278,7 +88472,38 @@ var require_api_catalog = __commonJS({
       const names = { databases: Object.keys(e.pg).filter((db) => e.pg[db]), indices: files("es"), topics: (kafka?.topics || []).map((t) => t.topic) };
       return { ...Object.fromEntries(Object.entries(names).map(([k, v]) => [k, v.slice(0, 500)])), truncated: Object.fromEntries(Object.entries(names).filter(([, v]) => v.length > 500).map(([k, v]) => [k, v.length])), cluster: kafka?.cluster || null, kafka: !!e.kafkaUi, elasticsearch: !!e.es.hosts.length, browser: !!C.getBrowser().mcp, sites: C.getBrowser().sites.map((s) => ({ site: s.site, links: Object.keys(s.links || {}) })) };
     }
-    module2.exports = { catalog, target, resources };
+    async function refresh({ env, service } = {}) {
+      env ||= C.envNames()[0];
+      C.getEnv(env);
+      if (typeof service !== "string" || !service.trim() || service.length > 256) throw Error("Select an exact service to refresh its instances");
+      await require_limit().take("consul:" + env, { signal: require_execution().signal() });
+      const instances = await require_consul().instances(env, service, { timeout: 15e3 });
+      require_execution().check();
+      const file = path3.join(C.PATHS.cache, env, "consul.json"), snapshot = readJson(file) || { services: {} };
+      const at = (/* @__PURE__ */ new Date()).toISOString();
+      snapshot.services ||= {};
+      snapshot.services[service] = { tags: snapshot.services[service]?.tags || [], instances, observedAt: at };
+      require_atomic_file().atomicFile(file, JSON.stringify(snapshot) + "\n");
+      return { env, service, observedAt: at, instances: instances.map(target).filter(Boolean), next: "Select a refreshed target to apply it. No API request was replayed." };
+    }
+    function database({ env, db, q = "", offset = 0, limit = 30 } = {}) {
+      env ||= C.envNames()[0];
+      const configured = C.getEnv(env).pg;
+      if (!Object.hasOwn(configured, db || "") || !configured[db] || !/^[\w.-]+$/.test(db) || db.startsWith(".")) throw Error("Choose a configured database");
+      const file = path3.join(C.PATHS.cache, env, "pg", db + ".json"), cat = require_pgstore().load(file);
+      if (!cat) return { env, db, objects: [], nextOffset: null, gap: "Database has no cached schema. Refresh the Postgres catalog in Admin." };
+      const tables = cat.tables || [], functions = cat.functions || [], total = tables.length + functions.length, objects = [];
+      let cursor = Math.max(0, Math.floor(offset)), scanned = 0;
+      limit = Math.max(1, Math.min(50, limit));
+      const quote = (s) => '"' + String(s).replace(/"/g, '""') + '"';
+      for (; cursor < total && scanned < 1e4 && objects.length < limit; cursor++, scanned++) {
+        const fn = cursor >= tables.length, row = fn ? functions[cursor - tables.length] : tables[cursor], name = row.schema + "." + row.name;
+        if (!name.toLowerCase().includes(String(q).toLowerCase())) continue;
+        objects.push({ name, kind: row.kind || (fn ? "function" : "table"), columns: !fn ? (row.columns || []).slice(0, 100) : void 0, arguments: fn ? row.arguments : void 0, body: fn ? String(row.body || "").slice(0, 8e3) : void 0, sql: fn ? null : `select * from ${quote(row.schema)}.${quote(row.name)} limit 20` });
+      }
+      return { env, db, objects, nextOffset: cursor < total ? cursor : null, scanned, indexed: true, revision: cat._revision, notice: "Cached schema; queries run only when you press Run query." };
+    }
+    module2.exports = { catalog, target, resources, refresh, database };
   }
 });
 
@@ -88290,6 +88515,8 @@ var require_tools_api_client = __commonJS({
       const C = () => require_api_client();
       const decorated = (e) => C().show(e);
       return [
+        { name: "api_instances_refresh", group: "api", description: "Refresh live Consul replicas for one exact service in an authorized environment. Updates cached instance addresses, health and observation time; retains previous cache if lookup fails. Does not send or replay an API request.", input: { env: str("Environment"), service: str("Exact service name") }, required: ["service"], run: (a) => require_api_catalog().refresh(a) },
+        { name: "api_database_inspect", group: "api", description: "Browse a bounded page of cached Postgres tables, columns and function bodies in one configured database. Offline; use nextOffset to continue. Returns read-only SQL drafts for tables; pg_query explicitly executes them.", input: { env: str("Environment"), db: str("Configured database name"), q: str("Object name filter"), offset: int("Continuation offset", 0), limit: int("Objects per page, max 50", 30) }, required: ["db"], run: (a) => require_api_catalog().database(a) },
         { name: "api_client_catalog", logArgs: ["env", "group", "offset"], group: "api", description: "Browse all indexed service/API groups and cached Consul replica URLs without network calls. Pass group to page its routes; q searches service, method, path and handler. Select a replica or override the URL before explicitly sending. resources=true adds bounded cached database/index/topic names for workflow pickers. Collections use script_list and script_get.", input: { resources: { type: "boolean", description: "Include configured database names and cached indices/topics, at most 500 each; no connection credentials" }, env: str("Environment for Consul and reviewed service ports"), q: str("Service, method, path or handler"), group: str("Exact group key returned in services"), offset: int("Route page offset", 0), limit: int("Routes per page, maximum 250", 100) }, run: (a) => require_api_catalog().catalog(a) },
         { name: "api_auth_profiles", logArgs: [], group: "api", description: "List named bearer profiles and matching URL scopes without exposing token values. Selection is optional; references resolve on the server only when explicitly sending a request.", input: { url: str("Request URL to match configured scopes") }, run: (a) => require_api_auth().list(a) },
         { name: "api_exchange_import", logArgs: [], group: "api", description: "Import a HAR, structured request/response exchanges, or browser_network_requests text. Stores bounded sanitized v1 exchanges, removes cookies/credentials, and learns API routes with passport handler candidates. Network text has metadata-only gaps; no requests are replayed. Returns an interactive exchange view by default.", input: { data: { description: "HAR log.entries, exchange object/list, or network text; max 4 MiB and 100 entries" }, source: str("Provenance note, without credentials") }, required: ["data"], run: (a) => {
@@ -88302,7 +88529,14 @@ var require_tools_api_client = __commonJS({
         { name: "api_exchange_list", logArgs: [], group: "api", description: "Search previously captured sanitized HTTP exchanges by method, URL, status or attributed service. Offline; returns exchange ids for inspection, preparation and reuse.", input: { q: str("Substring to match"), limit: int("Max records, at most 500", 50) }, run: (a) => ({ exchanges: C().list(a) }) },
         { name: "api_exchange_get", logArgs: ["exchange"], group: "api", description: "Inspect an exchange independently: request/response headers, pretty JSON body, status, timing, redactions, capture gaps and all best matching passport handlers. Includes sandboxed interactive visualization and link to the trusted API client.", input: { exchange: str("Exchange id") }, required: ["exchange"], run: (a) => decorated(a.exchange) },
         { name: "api_request_prepare", logArgs: ["exchange"], group: "api", description: 'Prepare an editable parameterized API request without sending it. Use an exchange id or explicit request {method,url,headers,body:{kind:"json|text|form|none",value}}. Bind named parameters to path segment index (initial slash is index 0), query key, header key, or dotted JSON body path. Secret params have no captured defaults. Returns a versioned contract and a normal saved-script definition.', input: { exchange: str("Optional captured exchange id"), request: obj("Explicit request overrides the captured request"), bindings: obj('Example {orderId:{in:"path",index:3},page:{in:"query",key:"page"},quantity:{in:"body",path:"items.0.quantity"}}'), description: str("Reusable request purpose"), assertions: { type: "array", items: obj("Named script assertion"), description: "Assertions retained when saving" } }, run: (a) => C().prepare(a) },
-        { name: "api_request_replay", logArgs: ["exchange"], group: "api", description: "EXPLICITLY SEND an HTTP request, including mutations. Call only when the user/workflow intends the action. Trusts any HTTP(S) destination without per-service configuration; uses rate limits and timeout; never follows redirects or transfers browser cookies. No retry. Params supplied only for this run; result is sanitized, persisted and visualized with status/headers/JSON/timing. Prepare alone never sends traffic.", input: { prepared: obj("api_request_prepare versioned result"), exchange: str("Or exchange id"), request: obj("Or reviewed explicit request"), params: obj("Runtime parameter values (including credentials)"), auth_profile: str("Optional configured bearer profile id; token stays server-side and URL-scoped"), timeoutMs: int("Request time limit, max 120000", 3e4) }, run: async (a) => decorated(await C().replay(a)) },
+        { name: "api_request_replay", logArgs: ["exchange"], group: "api", description: "EXPLICITLY SEND an HTTP request, including mutations. Trusts HTTP(S) destinations; rate limited, bounded timeout, no redirects or retries. Params are runtime-only. Status, headers, body and timing are sanitized and retained. Network failures retain a failed exchange with diagnostics and execution correlation; outcome may be unknown. Prepare alone never sends traffic.", input: { prepared: obj("api_request_prepare versioned result"), exchange: str("Or exchange id"), request: obj("Or reviewed explicit request"), params: obj("Runtime parameter values (including credentials)"), auth_profile: str("Optional configured bearer profile id; token stays server-side and URL-scoped"), timeoutMs: int("Request time limit, max 120000", 3e4) }, run: async (a) => {
+          try {
+            return decorated(await C().replay(a));
+          } catch (e) {
+            if (e.exchange) e.exchange = decorated(e.exchange);
+            throw e;
+          }
+        } },
         { name: "api_request_save", logArgs: ["id", "exchange"], group: "api", description: "Save a prepared/captured request as a reusable normal script in collection/name. Preserves route/source provenance, typed params, assertions, captures and supplied hooks. Collection vars/before/after/finally work through the existing script engine. Does not execute. Cookies are omitted and secrets become required runtime placeholders. Existing script requires overwrite=true.", input: { id: str("collection/request id"), prepared: obj("Prepared contract"), exchange: str("Or exchange id"), request: obj("Or explicit reviewed request"), bindings: obj("Explicit parameter locations"), description: str("What it does and when to use it"), tool: { type: "boolean", default: false, description: "Expose the saved request as an individual tool" }, overwrite: { type: "boolean", default: false }, assertions: { type: "array", items: obj("Script assertion") }, capture: obj('Capture names to response paths, e.g. {orderId:"json.id"}'), before: str("Existing script step before hook"), after: str("Existing script step after hook"), finally: str("Existing script step finally hook") }, required: ["id"], run: (a) => C().save(a) },
         { name: "api_browser_open", logArgs: ["site", "link"], group: "browser", description: "Open an isolated Playwright MCP session with bounded network exchange capture enabled BEFORE navigation. Use browser site/link or URL. Cookies remain only in the browser. Uses native per-request network inspection when available, then a fixed browser_run_code adapter on older endpoints; missing both reports metadata-only mode. Returns session id; inspect UI with api_browser_action, then api_browser_capture. Idle sessions expire in 15 minutes.", input: { site: str("Configured browser site"), link: str("Site link"), params: obj("Link params"), url: str("Or explicit http(s) URL") }, run: (a) => C().browserOpen(a) },
         { name: "api_browser_action", logArgs: ["session", "action"], group: "browser", description: "Inspect or interact with the UI in an existing capture session. Supports snapshot, navigate, click, type, fill_form, press_key, select_option, hover, wait_for, take_screenshot, navigate_back and network_requests with endpoint Playwright MCP args. describe=true returns the action schema without acting; legacy ref maps to target when the discovered schema requires it. UI actions may mutate application state; use intentionally. No browser credentials are exported.", input: { session: str("api_browser_open session"), action: str("Playwright action without browser_ prefix"), args: obj("Standard action args"), describe: { type: "boolean", default: false, description: "Inspect this action schema without executing" } }, required: ["session"], run: (a) => C().browserAction(a) },
@@ -93547,7 +93781,7 @@ var require_server2 = __commonJS({
         }
       });
     });
-    var errorPayload = (e) => require_redact().clean({ error: e.message, ...e.code ? { code: e.code } : {}, ...e.issues ? { issues: e.issues } : {}, ...e.retryAfter ? { retryAfter: e.retryAfter } : {} });
+    var errorPayload = (e) => require_redact().clean({ error: e.message, ...e.code ? { code: e.code } : {}, ...e.code === "DT_API_NETWORK" && e.exchange ? { exchange: e.exchange } : {}, ...e.issues ? { issues: e.issues } : {}, ...e.retryAfter ? { retryAfter: e.retryAfter } : {} });
     var cookie = (req, name) => (String(req.headers.cookie || "").match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`)) || [])[1];
     function trusted(req) {
       return !!require_access().identity(req);

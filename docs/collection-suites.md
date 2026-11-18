@@ -15,8 +15,12 @@ In Open WebUI, use the independently callable stages:
 | `collection_check` | Independently decide whether every selected case and cleanup succeeded. |
 | `collection_history` | List runs, or inspect one retained run and its source snapshots. |
 | `collection_report` | Open the default interactive view, or obtain JSON/JUnit XML. |
+| `script_transfer` | Copy or move an exact workflow with its source revision; never overwrite. |
+| `workflow_share` | Publish/read named immutable definitions, or copy one into a new private collection without execution. |
 
 `script_save` now exposes `vars`, `before`, `after`, `finally` and selection `tags`, and preserves omitted settings when updating an exact existing id. `script_collection` also preserves omitted metadata and supports vars/hooks. The existing admin editor and HTTP routes use the same library.
+
+The [API Explorer Collections workbench](browser-api-workbench.md#collections-inspect-compose-share) exposes collection metadata CRUD, workflow copy/move/delete, database inspection, query previews and named sharing in one page. Shared definitions include referenced scripts and inherited collection metadata; admins publish, everyone reads, and each viewer imports a new private copy before execution. `workflow_share get` returns compact metadata by default; use `include_definitions:true` to review the full snapshot. Keep the returned revision for a pinned share link or import.
 
 ## A working suite
 

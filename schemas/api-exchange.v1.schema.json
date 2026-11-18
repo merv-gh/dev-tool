@@ -13,6 +13,7 @@
     "request": {"$ref": "#/$defs/request"},
     "response": {"type": "object", "required": ["status", "headers", "body"], "properties": {"status": {"type": ["integer", "null"], "minimum": 100, "maximum": 599}, "statusText": {"type": "string"}, "headers": {"$ref": "#/$defs/headers"}, "body": {"$ref": "#/$defs/body"}}},
     "timing": {"type": "object", "properties": {"durationMs": {"type": ["number", "null"], "minimum": 0}}},
+    "failure": {"type":"object","required":["code","reason","outcome"],"properties":{"code":{"type":"string"},"reason":{"type":"string"},"outcome":{"const":"unknown"},"executionId":{"type":["string","null"]}}},
     "route": {"type": "object", "required": ["status", "candidates"], "properties": {"status": {"enum": ["unknown", "observed", "matched", "ambiguous"]}, "candidates": {"type": "array", "items": {"type": "object", "required": ["service", "method", "path", "handler", "where"], "properties": {"service": {"type": "string"}, "method": {"type": "string"}, "path": {"type": "string"}, "handler": {"type": "string"}, "where": {"type": "string"}, "source": {"type": "string"}}}}}},
     "params": {"type": "object", "additionalProperties": {"type": "object", "properties": {"type": {"type": "string"}, "required": {"type": "boolean"}, "secret": {"type": "boolean"}, "description": {"type": "string"}}}},
     "redactions": {"type": "array", "items": {"type": "object", "required": ["location", "reason"], "properties": {"location": {"type": "string"}, "reason": {"type": "string"}, "param": {"type": "string"}}}},

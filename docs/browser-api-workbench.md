@@ -6,6 +6,27 @@ Open WebUI receives a sandboxed response explorer by default. It includes status
 
 For a reproducible screenshot-to-service-to-field diagram, open the [UI trace workbench](ui-trace.md). It joins captured exchanges to exact retained Joern paths and catalog fields, with editable replay steps and explicit SQL.
 
+## Failed requests and changed instances
+
+A network failure retains a sanitized exchange with no HTTP status, elapsed time, a bounded diagnostic code (for example `ECONNREFUSED`, `ENOTFOUND`, `TIMEOUT`), and an execution id. The response panel shows the failure and a link to Admin execution logs; **History** and `api_exchange_get` reopen it after reload. The API/MCP error includes this exchange. Raw exception messages and credentials are omitted. A failed connection or interrupted response does not prove that a mutation had no effect; nothing is automatically replayed. A browser-to-backend transport failure also replaces stale response content with visible feedback; if the backend could not be reached, no server-side log can be guaranteed.
+
+Choose a service route and press **Refresh live instances** to fetch that service's current Consul addresses and health. This is separate from the library's cached refresh. The current request URL stays in place, including manual overrides; choose a refreshed **Service target** to apply an address. Failed refreshes keep previous cached evidence. Models use `api_instances_refresh {env,service}`. This refresh does not probe `/version`, rebuild passports, or replay HTTP requests.
+
+## Collections: inspect, compose, share
+
+1. Open **Collections → Inspect database**. Choose the query environment and database independently of the API library environment. **Browse schema** reads bounded cached tables, columns and function definitions; search and **Next page** continue through large catalogs. Missing caches are explicit.
+2. **Use SELECT query** drafts quoted SQL for a table. Edit it and its bound parameter array, then explicitly **Run query** for a read-only preview. **Add query to workflow** appends the exact environment/database/SQL/parameters; save it under `collection/workflow`. Cached inspection is `api_database_inspect`; live execution remains `pg_query`.
+3. **New collection** and each folder's **Collection settings** create/edit descriptions, vars, hooks and suite metadata. Workflow **Manage & share** copies, renames/moves or deletes definitions. Revision checks reject stale edits and deletes. Moving changes inherited destination collection settings; review them before execution. Collection deletion asks explicitly about nested definitions; retained reports remain available.
+4. Admins can **Publish named workflow**, for example `checkout-smoke`. The named `/api-client?shared=checkout-smoke&revision=…` link previews an immutable definition, referenced scripts and inherited collection metadata. It contains no task id, runtime inputs or run results. Readers choose **Copy into my task**, into a new collection, then review targets and supply runtime values before running. Publication rejects obvious literal credentials and secret defaults; review code/hooks for embedded values too. Dynamic script references must be resolved before publication. Dynamic JavaScript tool/script references still require manual review and locally configured integrations.
+
+`workflow_share` provides `list`, `get`, `publish` and `import`; `script_transfer` copies/moves an exact script with its source revision. Shared revisions persist under `shared-workflows/<name>/revisions/` in the configuration folder. Imported definitions remain under the viewer's scoped scripts storage. Opening, publishing and copying execute nothing. Shared names track a current revision; pinned older links continue to read their original snapshot.
+
+Run `node dev/check-api-collection-workbench.js` for the reproducible browser exercise. It uses local HTTP/Consul fixtures and the showcase's synthetic PG adapter, without production or model calls. Node regression tests cover HTTP failure retention, live refresh failure preservation, schema paging, revision conflicts, publication integrity, inherited hooks and cross-task isolation.
+
+![Database inspection in Collections](screenshots/api-collections-database.png)
+
+![Retained failed request with execution logs](screenshots/api-client-failure.png)
+
 ## Workflow
 
 1. `api_browser_open` opens an isolated browser session, detects the available capture adapter before navigation, then visits `site`/`link` with `params`, or a `url`. The configured Playwright MCP endpoint is `browser.mcp` / `DT_BROWSER_MCP`. Cookies stay in the browser; this session is distinct from an agent's own browser.

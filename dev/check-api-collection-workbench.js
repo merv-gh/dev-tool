@@ -1,0 +1,34 @@
+// Real browser and HTTP/Consul protocol fixtures; PG execution uses the synthetic showcase adapter.
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+async function run(){
+ const f=await require('../demo/collection-workflows').start(),browser=await require('playwright').chromium.launch({headless:true}),page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
+ page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
+ const wait=text=>page.waitForFunction(text=>document.getElementById('notice').textContent.includes(text),text);
+ const call=async(name,args)=>{const r=await fetch(f.base+'/api/tool/'+name,{method:'POST',headers:{'content-type':'application/json','x-dt-story':'api-demo'},body:JSON.stringify(args)}).then(r=>r.json());if(r.error)throw Error(r.error);return r.result;};
+ const shots=path.join(__dirname,'../.impeccable/review/api-collections');fs.mkdirSync(shots,{recursive:true});
+ try{
+  await page.goto(f.base+'/api-client?story=api-demo&service=shop-orders&path=/orders/42');await wait('Draft ready');
+  await page.locator('#url').fill('http://127.0.0.1:1/orders/42');await page.locator('#tab-auth').click();await page.locator('#apiAuthProfile').selectOption('');await page.locator('#send').click();await page.locator('#request-failure').waitFor();assert.match(await page.locator('#failure-detail').innerText(),/response|reached/);await page.locator('#failure-trace').waitFor();assert.match(await page.locator('#response-meta').innerText(),/No HTTP response/);
+  await page.screenshot({path:path.join(shots,'failure-desktop.png'),fullPage:true});
+  await page.locator('#source-history').click();await page.locator('.history-item').first().waitFor();assert.match(await page.locator('#history').innerText(),/No response/);
+  // Transport failure to dt must also replace an old successful/stale response visibly.
+  await page.route('**/api/tool/api_request_replay',r=>r.abort('failed'));await page.locator('#send').click();await page.waitForFunction(()=>document.getElementById('failure-detail').textContent.includes('Backend request failed'));await page.unroute('**/api/tool/api_request_replay');
+  await page.locator('#source-services').click();await page.goto(f.base+'/api-client?story=api-demo&service=shop-orders&path=/orders/42');await wait('Draft ready');
+  const old=await page.locator('#url').inputValue(),before=f.requests.length;await page.locator('#refresh-instances').click();await wait('Live instances refreshed');assert.equal(await page.locator('#url').inputValue(),old);assert.equal(f.requests.length,before);await page.locator('#apiTarget').selectOption('0');assert.ok((await page.locator('#url').inputValue()).startsWith(f.origins[1]));
+  await page.locator('#source-collections').click();await page.locator('#new-collection').click();await page.locator('#col-id').fill('investigation');await page.locator('#col-description').fill('Reproducible order check');await page.locator('#col-save').click();await wait('Collection saved');
+  await page.locator('#inspect-database').click();await page.locator('#db-name').selectOption('orders');await page.locator('#db-browse').click();await page.getByText('sales.orders · table',{exact:true}).click();assert.match(await page.locator('#db-objects').innerText(),/bigint|text/);await page.getByRole('button',{name:'Use SELECT query'}).click();assert.match(await page.locator('#db-sql').inputValue(),/"sales"\."orders"/);
+  await page.locator('#db-sql').fill('select id, status from sales.orders where id = $1 limit 1');await page.locator('#db-params').fill('["BROWSER-42"]');await page.locator('#db-run').click();await wait('Query complete');assert.match(await page.locator('#db-result').innerText(),/dev \/ orders/);
+  await page.locator('#db-add').click();await wait('Query added');await page.locator('#wf-id').fill('investigation/db-check');await page.locator('#wf-save').click();await wait('Saved investigation/db-check');assert.equal((await call('script_get',{id:'investigation/db-check'})).steps[0].args.db,'orders');
+  await page.locator('#db-inspector>summary').click();await page.getByText('Manage & share workflow',{exact:true}).click();await page.locator('#wf-destination').fill('investigation/db-copy');await page.locator('#wf-duplicate').click();await wait('Workflow copied');await page.locator('#wf-destination').fill('investigation/db-renamed');await page.locator('#wf-rename').click();await wait('Workflow moved');assert.equal(await page.locator('[data-script-id="investigation/db-renamed"]').getAttribute('aria-current'),'true');
+  await page.locator('#wf-share-name').fill('order-investigation');await page.locator('#wf-publish').click();await wait('Named workflow published');const link=await page.locator('#wf-share-link').getAttribute('href');assert.ok(!link.includes('story='));
+  await page.screenshot({path:path.join(shots,'workflow-desktop.png'),fullPage:true});
+  await page.getByRole('button',{name:'Collection settings',exact:true}).first().click();await page.locator('#col-delete').click();await wait('Collection deleted');
+  await page.goto(link+'&story=reader-task');await wait('Shared definition loaded');assert.match(await page.locator('#shared-title').innerText(),/order-investigation/);assert.equal(f.topics.audit.length,0);await page.locator('#shared-import').click();await wait('Workflow copied into your task');assert.match(await page.locator('#wf-id').inputValue(),/shared\/order-investigation/);
+  await page.locator('#inspect-database').click();await page.locator('#db-browse').click();await page.getByText('sales.orders · table',{exact:true}).click();
+  await page.screenshot({path:path.join(shots,'database-desktop.png'),fullPage:true});await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(shots,'mobile.png'),fullPage:true});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  await page.emulateMedia({colorScheme:'dark'});await page.setViewportSize({width:1440,height:1000});await page.waitForTimeout(250);await page.screenshot({path:path.join(shots,'dark.png'),fullPage:true});
+  await page.getByText('Manage & share workflow',{exact:true}).click();await page.locator('#wf-delete').click();await wait('Workflow deleted');assert.deepEqual(errors,[]);
+  console.log(JSON.stringify({ok:true,checks:['Failed exchange and log correlation','Browser transport failure feedback','Live Consul retarget without request replay','Collection CRUD','Cached DB inspection and explicit query','Append SQL, copy and move workflow','Named shared definition, private copy','Workflow deletion','Desktop/mobile/dark, no page errors'],screenshots:shots,fixtures:'Local HTTP/Consul and synthetic PG adapter; no production traffic'},null,2));
+ }finally{await browser.close();await f.close();}
+}
+run().catch(e=>{console.error(e);process.exitCode=1;});
