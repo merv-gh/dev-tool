@@ -1,0 +1,102 @@
+{
+  "protocol": "dt.http-destinations-verification/v1",
+  "sourceDigest": "2cf6a04d59cce003a0fae3478658484e78dbd5cb88fbbc878a75a4d12cc7e39f",
+  "scope": "Actual local HTTP and Chromium; production services not exercised",
+  "policy": {
+    "destinations": "Any HTTP(S) URL; no per-service destination configuration",
+    "legacySetting": "scripts.http.allow is ignored",
+    "paths": [
+      "API client and explicit API replay",
+      "Saved script HTTP steps",
+      "Collection validation and execution",
+      "HTTP GET/HEAD scenario capture"
+    ]
+  },
+  "regression": {
+    "file": "test/http-destinations.test.js",
+    "cases": 6,
+    "checks": [
+      "Multiple services and URL paths with no HTTP configuration",
+      "Obsolete empty and restrictive settings ignored",
+      "Actual upstream HTTP failure without automatic retries",
+      "Collection preflight and execution without configuration",
+      "Live HTTP scenario GET/HEAD capture",
+      "URL shape, read-only capture and redirect semantics"
+    ]
+  },
+  "suite": {
+    "tests": 1202,
+    "failed": 0,
+    "passed": 1145,
+    "cancelled": 0,
+    "skipped": 57,
+    "todo": 0,
+    "topLevel": 1202,
+    "suites": 0
+  },
+  "coverage": {
+    "transitions": {
+      "hit": 384,
+      "total": 699,
+      "percent": 54.9
+    },
+    "lines": {
+      "hit": 30195,
+      "total": 32233,
+      "percent": 93.7
+    },
+    "functions": {
+      "hit": 7244,
+      "total": 8184,
+      "percent": 88.5
+    },
+    "branches": {
+      "hit": 25550,
+      "total": 31038,
+      "percent": 82.3
+    },
+    "testedFiles": 173,
+    "sourceFiles": {
+      "measured": 234,
+      "unmeasured": 28,
+      "total": 262
+    },
+    "gate": "Passed against retained preceding complete full-suite baseline; no floors lowered"
+  },
+  "browser": {
+    "checks": [
+      "Opening services and cached Consul targets sends no service requests",
+      "Route → Consul URL → runtime path variable → query/headers → backend send → retained pretty JSON",
+      "Replica changes update URL and clear a bearer profile that no longer matches",
+      "Manual base URL overrides are honored by backend execution",
+      "Save to nested collections and reopen an editable request without executing it",
+      "Multi-step workflows are explicitly directed to Scripts instead of silently flattening them",
+      "JSON request bodies are edited and sent, with actual 201 results",
+      "HTTP failures stay inspectable responses",
+      "Cancel releases the client and forwards cancellation to backend HTTP",
+      "Text/HTML responses render safely as text",
+      "Environment changes replace the service target with the selected environment’s Consul evidence",
+      "Scoped history reopens retained responses without replay",
+      "Route pagination exposes every endpoint beyond the first 100",
+      "Tab sets support keyboard selection and labelled panels",
+      "Desktop, mobile and dark-theme layouts are captured without page overflow",
+      "Admin mounts the same client with its selected environment and task scope"
+    ],
+    "errors": [],
+    "layouts": [
+      {
+        "width": 1440,
+        "scroll": 1440,
+        "columns": "260px 590px 590px"
+      },
+      {
+        "width": 390,
+        "scroll": 390,
+        "columns": "260px minmax(390px, 1fr) minmax(360px, 1fr)"
+      }
+    ],
+    "serviceRequests": 9,
+    "productionCalls": 0,
+    "modelCalls": 0
+  }
+}

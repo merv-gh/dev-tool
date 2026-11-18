@@ -29,7 +29,7 @@ test('real Playwright UI → network exchange → handler → replay → saved c
   const hostOrigin=`http://127.0.0.1:${server.address().port}`;
   // Docker Desktop resolves host.docker.internal to this test process. Override for another host.
   const browserOrigin=`http://${process.env.DT_TEST_BROWSER_HOST||'host.docker.internal'}:${server.address().port}`;
-  fs.writeFileSync(path.join(home,'config.json'),JSON.stringify({envs:{dev:{}},browser:{mcp:endpoint,sites:{shop:{url:browserOrigin+'/orders'}}},scripts:{http:{allow:[hostOrigin+'/api']}}}));
+  fs.writeFileSync(path.join(home,'config.json'),JSON.stringify({envs:{dev:{}},browser:{mcp:endpoint,sites:{shop:{url:browserOrigin+'/orders'}}},scripts:{}}));
   fs.mkdirSync(path.join(home,'passports','orders'),{recursive:true});
   fs.writeFileSync(path.join(home,'passports','orders','passport.json'),JSON.stringify({service:'orders',repo:{project:'TEST',repo:'orders'},summary:{endpoints:1,consumes:[],produces:[],tables:{},calls:[],libraries:[]},effective:{endpoints:[{method:'GET',path:'/orders/{id}',handler:'OrderController.get',file:'OrderController.java',line:42}]}}));
   const C=require('../lib/api-client');

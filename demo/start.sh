@@ -55,7 +55,6 @@ cat > "$H/config.json" <<JSON
     "templates": { "type": "local", "path": "files/templates" },
     "partner": { "type": "sftp", "host": "127.0.0.1", "port": $SFTP, "user": "demo", "password": "\${DEMO_SFTP_PASSWORD}", "root": "/upload", "write": true }
   },
-  "scripts": { "http": { "allow": ["http://127.0.0.1:$MOCK/partner/api/"] } },
   "tests": { "maven": "\${DEMO_MAVEN:-}", "gradle": "\${DEMO_GRADLE:-}" },
   "server": { "publicUrl": "http://127.0.0.1:$DT", "ratePerSec": 0 }
 }

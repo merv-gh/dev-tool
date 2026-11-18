@@ -96,7 +96,7 @@ test('safe HTTP retries, exact polling and no automatic POST duplication', async
   const server=http.createServer((req,res)=>{calls++; if(calls===1){res.writeHead(503);res.end('busy');}else{res.setHeader('content-type','application/json');res.end(JSON.stringify({ready:calls>=3}));}});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const url=`http://127.0.0.1:${server.address().port}`;
-  fs.writeFileSync(path.join(home,'config.json'),JSON.stringify({envs:{dev:{}},scripts:{http:{allow:[url]}}})); require('../lib/config').reload();
+  fs.writeFileSync(path.join(home,'config.json'),JSON.stringify({envs:{dev:{}},scripts:{}})); require('../lib/config').reload();
   try {
     script('retry/a',{steps:[{http:`GET ${url}`,retry:{attempts:4,delayMs:1},poll:{path:'json.ready',equals:true,attempts:4,intervalMs:1}}]}); const r=await S.run('retry/a'); assert.equal(r.ok,true,JSON.stringify(r)); assert.equal(calls,3); assert.equal(r.steps[0].attempts.length,3);
     assert.throws(()=>script('retry/post',{steps:[{http:`POST ${url}`,retry:{attempts:2,idempotent:true}}]}),/GET\/HEAD/); assert.equal(calls,3);

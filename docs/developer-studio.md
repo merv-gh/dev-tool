@@ -83,7 +83,7 @@ Opening a definition does not refresh its sources.
 
 Collection widgets, nested collapsible panels and explicit API action buttons
 compose from declarative primitives. API requests go through the backend and its
-existing request allowlist/authentication/grants. The event transport uses HTTP
+existing authentication and tool grants; HTTP destinations need no per-service configuration. The event transport uses HTTP
 publication and SSE replay with principal/story/channel isolation. Events update
 status and notices; they never execute actions. Click a button to run a request
 and inspect its job, progress, error or response.

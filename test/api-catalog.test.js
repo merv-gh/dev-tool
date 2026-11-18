@@ -59,7 +59,6 @@ test('cancelled replay aborts the actual backend fetch instead of leaving a slow
   const api = http.createServer((req, res) => { began(); req.on('close', closed); });
   await new Promise(r => api.listen(0, '127.0.0.1', r));
   const origin = 'http://127.0.0.1:' + api.address().port;
-  const config = JSON.parse(fs.readFileSync(path.join(home, 'config.json'))); config.scripts.http = { allow: [origin] }; write(path.join(home, 'config.json'), config); C.reload();
   const controller = new AbortController(), E = require('../lib/execution');
   try {
     const promise = E.run({ kind: 'tool', tool: 'api_request_replay', signal: controller.signal }, () => require('../lib/api-client').replay({ request: { method: 'GET', url: origin + '/slow', body: { kind: 'none' } } }));

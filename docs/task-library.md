@@ -49,7 +49,7 @@ deployment host or chooses a service from an ambiguous path match.
 **Prepare editable request** prepares `api_request_prepare` below the selection.
 Run that action to produce a request contract; it sends nothing. Then choose
 **Prepare send request**, review parameters/auth/body, and explicitly **Run action**.
-The normal HTTP allowlist, authentication profiles, rate limits, cancellation and
+Authentication profiles, rate limits, cancellation and
 timeouts apply. The result shows HTTP status/timing and is retained in the selected
 evidence context. Check the saved-file receipt separately from the HTTP outcome.
 **Save request as script** creates a reusable collection entry without sending it.

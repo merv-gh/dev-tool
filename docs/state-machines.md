@@ -1334,7 +1334,7 @@ Related tests (located, not a coverage claim): [test/views.test.js](../test/view
 
 **Transitions:** import/capture → sanitized retained exchange → editable prepared draft → explicit replay → persisted response OR saved script.
 
-**Guard:** Credentials become references; HTTP allowlist, named auth scope and required bindings gate send; preparation never sends.
+**Guard:** Credentials become references; HTTP(S) URL shape, named auth scope and required bindings gate send; preparation never sends.
 
 **Recovery/limit:** Successful request and failed route/capture persistence are different outcomes; redirect/body gaps remain explicit.
 

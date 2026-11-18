@@ -59,7 +59,7 @@ Add `actions` to the existing version-1 definition. Each action declares `api_re
 }
 ```
 
-The endpoint above is illustrative; configure a real endpoint in `scripts.http.allow`. `arguments` also accepts existing `prepared` contracts or an `exchange` ID, optional `params`, `auth_profile` and `timeoutMs`, as supported by `api_request_replay`. Captured exchanges remain principal/chat scoped. An optional action `confirm` string adds an explicit confirmation before the button sends.
+The endpoint above is illustrative; replace it with the intended HTTP(S) endpoint; no destination configuration is required. `arguments` also accepts existing `prepared` contracts or an `exchange` ID, optional `params`, `auth_profile` and `timeoutMs`, as supported by `api_request_replay`. Captured exchanges remain principal/chat scoped. An optional action `confirm` string adds an explicit confirmation before the button sends.
 
 The equivalent explicit backend call is `ui_page {action:"action",id:"orders",actionId:"check",params:{order_id:42}}`. It returns a job ID. Poll with `ui_page {action:"action",job:"..."}` or use `waitMs` up to 30000. `job_cancel` uses the existing execution cancellation. In-flight identical actions deduplicate within one principal/chat; completed actions never retry automatically. A cancelled or interrupted mutation may already have reached its remote server; inspect its outcome before sending again. HTTP error responses remain inspectable results. Custom `emits` fire only for 2xx responses.
 

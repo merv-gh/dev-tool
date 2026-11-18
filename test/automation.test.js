@@ -48,7 +48,6 @@ test.before(async () => {
       pinned_wrong: { type: 'sftp', host: '127.0.0.1', port: sftp.port, user: 'dt', password: 'pw', hostKey: 'SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' },
       bad_key: { type: 'sftp', host: '127.0.0.1', port: sftp.port, user: 'dt', privateKeyFile: 'keys/missing' },
     },
-    scripts: { http: { allow: [`${apiUrl}/imports`] } },
   }));
   fs.writeFileSync(path.join(home, '.env'), 'PARTNER_PW=pw\n');
 });
@@ -146,11 +145,12 @@ test('the example: copy a template, new ids, upload to a new SFTP folder, POST t
   assert.equal(r.results.res.truncated, false);
   assert.equal(r.steps[3].result.replaced, 6);
 
-  // http only to allowed prefixes
-  await T.call('script_save', { id: 'partner/bad', description: 'x', steps: [{ http: `POST ${apiUrl}/admin`, body: {} }] });
-  const bad = await T.call('script_run', { id: 'partner/bad' });
-  assert.equal(bad.ok, false);
-  assert.match(bad.error, /not allowed: add its URL prefix to scripts.http.allow/);
+  // Any HTTP path is reachable without destination configuration; its HTTP outcome is retained.
+  await T.call('script_save', { id: 'partner/missing', description: 'x', steps: [{ http: `POST ${apiUrl}/admin`, body: {}, allowErrors: true, as: 'response' }] });
+  const missing = await T.call('script_run', { id: 'partner/missing' });
+  assert.equal(missing.ok, true);
+  assert.equal(missing.results.response.status, 404);
+  assert.equal(posts.at(-1).url, '/admin');
 });
 
 test('names: exact, by name, fuzzy, ambiguous', () => {
@@ -176,7 +176,7 @@ test('scripts and collections as tools; rebuilt when scripts change', async () =
   const col = sch.find(t => t.name === 'partner');
   assert.match(col.description, /^Partner test uploads\. Run one by name/);
   assert.match(col.description, /- send-order: Send a test order.*\(params: customerId, template\)/);
-  assert.deepEqual(col.inputSchema.properties.script.examples.sort(), ['bad', 'send-invoice', 'send-order']);
+  assert.deepEqual(col.inputSchema.properties.script.examples.sort(), ['missing', 'send-invoice', 'send-order']);
   const inv = sch.find(t => t.name === 'send_invoice');
   assert.deepEqual(inv.inputSchema.required, ['amount']);
   assert.equal(inv.inputSchema.properties.amount.type, 'number');

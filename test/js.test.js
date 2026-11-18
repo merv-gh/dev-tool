@@ -24,7 +24,7 @@ const api = http.createServer((req, res) => {
 });
 let base;
 const writeConfig = (scripts) => {
-  fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ envs: { dev: { consul: 'http://127.0.0.1:9' } }, scripts: { http: { allow: [base] }, jsTimeoutMs: 6000, ...scripts } }));
+  fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ envs: { dev: { consul: 'http://127.0.0.1:9' } }, scripts: { jsTimeoutMs: 6000, ...scripts } }));
   const t = new Date(Date.now() + Math.random() * 1e6); fs.utimesSync(path.join(home, 'config.json'), t, t);
   require('../lib/config').reload();
 };

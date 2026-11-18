@@ -354,7 +354,7 @@ A step is one of:
 | `{"wait": 2}` | seconds, or a text to wait for |
 | `{"set": {"folder": "in/{{date:YYYYMMDD}}-{{hex:8}}"}}` | compute values once, use them as `{{folder}}` |
 | `{"transform": "{{doc.text}}", "replace": [{"find": "ORD-\\d+", "regex": true, "with": "ORD-{{rand:6}}"}], "json": {"items.*.id": "{{uuid}}"}}` | rewrite a document; each distinct match gets one new value, so an id that appears five times is replaced the same way five times |
-| `{"http": "POST https://…/imports", "body": {…}}` | call an API, only under a prefix in `scripts.http.allow` |
+| `{"http": "POST https://…/imports", "body": {…}}` | call any HTTP(S) API in the trusted environment |
 
 `{{name}}` inserts a param or an earlier result (`{{order.rows.0.status}}`), `{{link:crm.order}}` a link URL. Generators: `{{uuid}}`, `{{now}}`, `{{date:YYYYMMDD-HHmmss}}`, `{{rand:6}}` (digits), `{{hex:8}}`. Add `"as": "name"` to keep a result and `"optional": true` to go on after a failure. Browser steps run in dt's own browser session, separate from the chat's.
 
@@ -399,7 +399,7 @@ Local folders and SFTP servers, under `files` in `config.json`:
 
 Tools: `files_stores`, `files_list` (glob, recursive), `files_search` (by name glob and/or text inside, with the matching line), `files_read`, `files_write`, `files_copy` (between stores). Paths are relative to the store root and cannot leave it. Local paths are relative to the config folder (in Docker, `/dt`). SFTP logs in with a `password`, or a key: `privateKeyFile` (a path in the config folder, e.g. `keys/id_ed25519`) or `privateKey` (the key text; `\n` for line breaks), with an optional `passphrase`. `hostKey` (`SHA256:…`, as `ssh-keygen -lf` prints it) pins the server key. [config.example.json](config.example.json) has both kinds.
 
-**Writes are opt-in.** A store is read-only unless it has `"write": true`, and a write never replaces a file unless `overwrite` is set. Script `http` steps only reach URL prefixes listed in `scripts.http.allow`. Everything else in dt stays read-only.
+**Writes are opt-in.** A store is read-only unless it has `"write": true`, and a write never replaces a file unless `overwrite` is set. Script `http` steps and the API client can call any HTTP(S) destination without per-service configuration. Everything else in dt stays read-only.
 
 ## Code mode
 
@@ -881,7 +881,7 @@ The bundled demo uses invented service data and real Postgres ([capture instruct
 - Script JavaScript has explicit engine/time/memory and scoped file/tool capabilities; `scripts.js: false` turns it off. Trusted workspace builds and in-process plugins are not an OS sandbox for hostile tenants; see the operator guide.
 - Writing is limited to:
   - file stores marked `"write": true` (never overwriting unless asked);
-  - script `http` steps to the prefixes in `scripts.http.allow`;
+  - explicit HTTP(S) requests from the API client and script steps;
   - workspaces (`work/<id>`, separate checkouts; patches are explicit, and `workspace_push` is available only when configured, with protected-branch checks);
   - the `dt_test_*` databases of the test Postgres (`tests.pgUrl`, refused when it is an environment's database).
 - Postgres statements run in read-only transactions with their own `statement_timeout` (`SET LOCAL`, so it also holds behind PgBouncer): 60 s for queries, 2 min for indexing (`timeouts`); the other sources are only read.

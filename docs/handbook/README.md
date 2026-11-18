@@ -1591,13 +1591,13 @@ Inspect requests, edit arguments/authentication and save reusable checks.
 
 **Outcome:** Capture or prepare one request, explicitly send it and inspect the sanitized response.
 
-**Before you start:** Configured HTTP allowlist; optional Playwright MCP and a reviewed browser interaction.
+**Before you start:** An intended API request; optional Playwright MCP and a reviewed browser interaction.
 
 ### Prepare a request without sending it
 
 Open API explorer from Admin routes, an HTTP passport port or an API exchange. Select a route, fill the service base URL and typed path/query parameters, then inspect body/headers. A route without a known host needs an explicit base URL; the UI does not invent a live destination.
 
-Optional named bearer profiles reference .env values and are bound to an exact origin/path scope plus the existing HTTP allowlist. The browser/model sees labels and readiness, not the token. autoPrefill=true explicitly enables automatic profile selection. No authentication remains selectable. A conflicting manually supplied Authorization header must be reconciled before using a profile.
+Optional named bearer profiles reference .env values and are bound to an exact origin/path scope. HTTP destinations need no per-service configuration in this trusted environment. The browser/model sees labels and readiness, not the token. autoPrefill=true explicitly enables automatic profile selection. No authentication remains selectable. A conflicting manually supplied Authorization header must be reconciled before using a profile.
 
 Send executes the request, including mutations for non-read methods. Preparation and route selection do not send. Redirects are not followed, browser cookies are not transferred and saved exchanges are sanitized. Review status, timing, headers, body, route candidates, redactions and capture gaps.
 
@@ -2389,7 +2389,7 @@ These terms have operational consequences; record exact identities when handing 
 
 Empty find → check environment/cache presence, then refresh the missing source. Missing Joern → inspect capabilities and retained analyses; use native code search while preserving the gap. Stale edit → reread revision and reconcile the draft. Wrong import → inspect internal class ownership and resolved artifact/version.
 
-API cannot send → check base URL, placeholders, optional bearer selection and HTTP allowlist; do not paste secrets into notes. Job appears stuck → inspect the same handle, step and prerequisites before cancelling. Test looks green → verify executed assertions, target, skips, cleanup and independent effects.
+API cannot send → check base URL, placeholders, optional bearer selection and connectivity; do not paste secrets into notes. Job appears stuck → inspect the same handle, step and prerequisites before cancelling. Test looks green → verify executed assertions, target, skips, cleanup and independent effects.
 
 Huge output → narrow the query, use summaries/search/views and save bounded evidence in context. A beautiful graph with missing sources → inspect certainty/gaps and add only evidence-backed declarations. “Latest” source with an old deployment → resolve and pin the actual version first.
 

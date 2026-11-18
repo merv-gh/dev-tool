@@ -18,7 +18,7 @@ async function start() {
   const apis = [serve('orders-a'), serve('orders-b')];
   for (const api of apis) await new Promise(r => api.listen(0, '127.0.0.1', r));
   const origins = apis.map(api => 'http://127.0.0.1:' + api.address().port);
-  const config = { envs: { dev: {}, uat: {} }, scripts: { starters: false, http: { allow: origins } }, api: { authProfiles: { demo: { label: 'Demo API', url: origins[0], bearerToken: '${DT_API_DEMO_BEARER}', autoPrefill: true } } } };
+  const config = { envs: { dev: {}, uat: {} }, scripts: { starters: false }, api: { authProfiles: { demo: { label: 'Demo API', url: origins[0], bearerToken: '${DT_API_DEMO_BEARER}', autoPrefill: true } } } };
   fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify(config));
   const C = require('../lib/config'), write = (file, value) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, JSON.stringify(value)); };
   const passport = (name, endpoints) => write(path.join(C.PATHS.passports,name,'passport.json'), { service: name, effective: { endpoints }, summary: { endpoints: endpoints.length } });

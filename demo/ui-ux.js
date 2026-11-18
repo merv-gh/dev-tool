@@ -14,7 +14,7 @@ async function main() {
   delete config.server.accessTokens;
   config.server.host = '127.0.0.1';
   config.files = { notes: { type: 'local', path: 'notes', write: true } };
-  config.scripts = { starters: false, http: { allow: [apiBase + '/api'] } };
+  config.scripts = { starters: false, };
   config.api = { authProfiles: { demo: { label: 'Demo API · server bearer', url: apiBase + '/api', bearerToken: '${UX_DEMO_TOKEN}', autoPrefill: true } } };
   if (process.env.DT_DEMO_WORKBENCH === '1') {
     config.envs.dev.postgres={orders:'postgres://127.0.0.1:1/synthetic_unavailable'};

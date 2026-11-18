@@ -559,7 +559,7 @@
         },
         {
           "id": "reuse",
-          "goal": "Replay only allowlisted intended requests and save a parameterized script/collection",
+          "goal": "Replay intended HTTP(S) requests and save a parameterized script/collection",
           "tools": [
             "api_request_replay",
             "api_request_save",

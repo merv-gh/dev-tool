@@ -41,8 +41,8 @@ including scheme and port, with no path or trailing slash. Add `"null"` explicit
 if a restricted installation needs sandboxed opaque origins. Use `"*"` or an
 empty list to restore unrestricted browser origins.
 
-This setting controls browser access to dt. Backend HTTP replay uses its separate
-`scripts.http.allow` destination configuration.
+This setting controls browser access to dt. Backend HTTP requests trust all
+HTTP(S) destinations and require no per-service URL configuration.
 
 ## Reproduce and verify
 

@@ -83,7 +83,7 @@ Retries and polling are opt-in and bounded to 20 attempts. HTTP GET/HEAD may rep
 {"http":"GET https://example.invalid/jobs/42", "retry":{"attempts":5,"delayMs":200}, "poll":{"path":"json.state","equals":"done","attempts":5,"intervalMs":200}}
 ```
 
-Every attempt remains in the step evidence, including failures before an eventual success. Redirects are refused so HTTP allowlists cannot be bypassed by a redirect.
+Every attempt remains in the step evidence, including failures before an eventual success. Redirects are refused; another destination is a separate explicit request.
 
 ## Evidence, reporting and CI
 

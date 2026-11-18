@@ -1019,7 +1019,7 @@ var require_config = __commonJS({
     }
     function getScripts() {
       const c = resolved("scripts");
-      return { httpAllow: [].concat((c.http || {}).allow || []).filter(Boolean).map(String), js: c.js !== false, starters: c.starters !== false, jsTimeoutMs: Number(c.jsTimeoutMs) || 5e3, codeTimeoutMs: Number(c.codeTimeoutMs) || 6e4 };
+      return { js: c.js !== false, starters: c.starters !== false, jsTimeoutMs: Number(c.jsTimeoutMs) || 5e3, codeTimeoutMs: Number(c.codeTimeoutMs) || 6e4 };
     }
     function getFiles() {
       const c = resolved("files");
@@ -53378,6 +53378,1070 @@ async function handle(input) {
   }
 });
 
+// lib/browser-mcp.js
+var require_browser_mcp = __commonJS({
+  "lib/browser-mcp.js"(exports2, module2) {
+    var PROTOCOL = "2025-06-18";
+    var BrowserSession = class {
+      constructor(url, { timeout = 6e4 } = {}) {
+        if (!url) throw new Error("no browser MCP endpoint: set browser.mcp in config.json or DT_BROWSER_MCP (compose sets it when the browser profile is on)");
+        this.url = url;
+        this.timeout = timeout;
+        this.id = null;
+        this.seq = 0;
+        this.lifecycle = require_state_machine2().create(require_lifecycles().handshake);
+        this.opening = null;
+        this.closing = null;
+      }
+      async post(body, { timeout = this.timeout } = {}) {
+        const headers = { "content-type": "application/json", accept: "application/json, text/event-stream", "mcp-protocol-version": PROTOCOL };
+        if (this.id) headers["mcp-session-id"] = this.id;
+        let res;
+        try {
+          res = await fetch(this.url, { method: "POST", headers, body: JSON.stringify(body), signal: AbortSignal.timeout(timeout) });
+        } catch (e) {
+          throw new Error(`browser MCP ${this.url}: ${e.cause?.code || e.message}`);
+        }
+        if (res.headers.get("mcp-session-id")) this.id = res.headers.get("mcp-session-id");
+        if (!res.ok) throw new Error(`browser MCP ${body.method}: HTTP ${res.status} ${(await res.text()).slice(0, 300)}`);
+        if (body.id === void 0) return null;
+        if (!(res.headers.get("content-type") || "").includes("text/event-stream")) return answer(await res.json(), body.method);
+        const reader = res.body.getReader();
+        const frames = new (require_state_machine2()).Framer({ separator: /\r?\n\r?\n/ });
+        try {
+          for (; ; ) {
+            const { value, done } = await reader.read();
+            for (const event of value ? frames.push(value) : []) {
+              const data = event.split(/\r?\n/).filter((l) => l.startsWith("data:")).map((l) => l.slice(5).trimStart()).join("\n");
+              if (!data) continue;
+              const msg = JSON.parse(data);
+              if (msg.id === body.id) return answer(msg, body.method);
+            }
+            if (done) {
+              frames.finish();
+              throw new Error(`browser MCP ${body.method}: stream ended without an answer`);
+            }
+          }
+        } finally {
+          if (!frames.lifecycle.terminal) frames.discard();
+          reader.cancel().catch(() => {
+          });
+          reader.releaseLock();
+        }
+      }
+      async open() {
+        if (this.closing) {
+          await this.closing;
+          return this.open();
+        }
+        if (this.lifecycle.is("ready")) return this;
+        if (this.opening) return this.opening;
+        this.lifecycle.to("initializing");
+        this.opening = (async () => {
+          try {
+            await this.post({ jsonrpc: "2.0", id: ++this.seq, method: "initialize", params: { protocolVersion: PROTOCOL, capabilities: {}, clientInfo: { name: "dt", version: "1" } } });
+            if (!this.lifecycle.is("initializing")) throw new Error("browser MCP session closed during initialization");
+            await this.post({ jsonrpc: "2.0", method: "notifications/initialized" });
+            if (!this.lifecycle.is("initializing")) throw new Error("browser MCP session closed during initialization");
+            this.lifecycle.to("ready");
+            return this;
+          } catch (error) {
+            if (!this.lifecycle.is("closing")) {
+              if (this.id) try {
+                await fetch(this.url, { method: "DELETE", headers: { "mcp-session-id": this.id }, signal: AbortSignal.timeout(5e3) });
+              } catch {
+              }
+              this.id = null;
+              this.definitions = null;
+              this.lifecycle.to("disconnected");
+            }
+            throw error;
+          } finally {
+            this.opening = null;
+          }
+        })();
+        return this.opening;
+      }
+      async tools() {
+        await this.open();
+        this.definitions = (await this.post({ jsonrpc: "2.0", id: ++this.seq, method: "tools/list", params: {} })).tools || [];
+        return this.definitions;
+      }
+      // -> { text, images: n }; throws when the tool reports an error
+      async call(name, args = {}, options = {}) {
+        await this.open();
+        if (args.ref !== void 0) {
+          const definition = (this.definitions || await this.tools()).find((t) => t.name === name);
+          if (definition?.inputSchema?.properties?.target && !definition.inputSchema.properties.ref) {
+            args = { ...args, target: args.target ?? args.ref };
+            delete args.ref;
+          }
+        }
+        const r = await this.post({ jsonrpc: "2.0", id: ++this.seq, method: "tools/call", params: { name, arguments: args } }, options);
+        const text = (r.content || []).filter((c) => c.type === "text").map((c) => c.text).join("\n");
+        if (r.isError) throw new Error(`${name}: ${text.slice(0, 1e3)}`);
+        const images = (r.content || []).filter((c) => c.type === "image");
+        const imageData = options?.includeImages ? images.filter((c) => /^image\/(png|jpeg|webp)$/.test(c.mimeType) && typeof c.data === "string" && c.data.length <= 4 * 1024 * 1024 && /^[A-Za-z0-9+/]+={0,2}$/.test(c.data)).slice(0, 1).map((c) => ({ mimeType: c.mimeType, data: c.data })) : [];
+        return { text, images: images.length, ...imageData.length ? { imageData } : {} };
+      }
+      async close() {
+        if (this.closing) return this.closing;
+        if (this.lifecycle.is("disconnected") && !this.id) return;
+        this.lifecycle.to("closing");
+        this.closing = (async () => {
+          try {
+            await this.opening?.catch(() => {
+            });
+            if (this.id) try {
+              await fetch(this.url, { method: "DELETE", headers: { "mcp-session-id": this.id }, signal: AbortSignal.timeout(5e3) });
+            } catch {
+            }
+          } finally {
+            this.id = null;
+            this.definitions = null;
+            this.lifecycle.to("disconnected");
+            this.closing = null;
+          }
+        })();
+        return this.closing;
+      }
+    };
+    function answer(msg, method) {
+      if (msg.error) throw new Error(`browser MCP ${method}: ${msg.error.message || JSON.stringify(msg.error)}`);
+      return msg.result || {};
+    }
+    var session = (opts) => new BrowserSession(require_config().getBrowser().mcp, opts);
+    module2.exports = { BrowserSession, session };
+  }
+});
+
+// lib/routes.js
+var require_routes = __commonJS({
+  "lib/routes.js"(exports2, module2) {
+    var path3 = require("path");
+    var { CACHE: CACHE2, readJson, writeJson } = require_util2();
+    var FILE = path3.join(CACHE2, "routes.json");
+    var METHODS = "GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS";
+    var STATIC = /\.(js|mjs|css|map|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|otf|eot|mp4|webm|html?)$/i;
+    function idLike(seg) {
+      if (/^\d+$/.test(seg)) return true;
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(seg)) return true;
+      if (/^[0-9a-f]{12,}$/i.test(seg) && /\d/.test(seg)) return true;
+      if (seg.length >= 16 && /\d/.test(seg) && /[a-z]/i.test(seg) && !/[-_.]/.test(seg)) return true;
+      if (/^[A-Z]{2,5}-?\d{3,}$/.test(seg)) return true;
+      return false;
+    }
+    function normalize(url) {
+      let u;
+      try {
+        u = new URL(url);
+      } catch {
+        return null;
+      }
+      if (!/^https?:$/.test(u.protocol) || STATIC.test(u.pathname)) return null;
+      const segs = u.pathname.split("/").map((s) => {
+        try {
+          return decodeURIComponent(s);
+        } catch {
+          return s;
+        }
+      });
+      return { host: u.host, path: segs.map((s) => s && idLike(s) ? "<id>" : s).join("/") || "/", query: [...new Set(u.searchParams.keys())].sort() };
+    }
+    function parseNetwork(text) {
+      const out2 = [];
+      const re2 = new RegExp(`\\b(${METHODS})\\b\\]?\\s+(https?://\\S+?)(?=[\\s\\]]|$)([^\\n]*)`, "g");
+      for (const m of String(text).matchAll(re2)) {
+        const status = (m[3].match(/\b([1-5]\d\d)\b/) || [])[1];
+        out2.push({ method: m[1], url: m[2].replace(/[),;]+$/, ""), status: status ? Number(status) : null });
+      }
+      return out2;
+    }
+    var load = () => readJson(FILE, { routes: {} });
+    function learn(entries, source) {
+      const db = load();
+      const now = (/* @__PURE__ */ new Date()).toISOString();
+      let added = 0, seen = 0;
+      for (const e of entries) {
+        const n = normalize(e.url);
+        if (!n) continue;
+        const method = String(e.method || "GET").toUpperCase();
+        const key = `${n.host} ${method} ${n.path}`;
+        let r = db.routes[key];
+        if (!r) {
+          r = db.routes[key] = { host: n.host, method, path: n.path, query: [], statuses: {}, count: 0, first: now, sources: [], example: e.url.slice(0, 300) };
+          added++;
+        }
+        r.query = [.../* @__PURE__ */ new Set([...r.query, ...n.query])].sort();
+        if (e.status) r.statuses[e.status] = (r.statuses[e.status] || 0) + 1;
+        r.count++;
+        r.last = now;
+        seen++;
+        if (source && !r.sources.includes(source)) r.sources = [...r.sources, source].slice(-5);
+      }
+      writeJson(FILE, db);
+      if (added) try {
+        for (const env of require_config().envNames()) require_catalog().build(env);
+      } catch {
+      }
+      return { requests: entries.length, api: seen, added, total: Object.keys(db.routes).length };
+    }
+    function codeEndpoints(passports, { manual = true, env } = {}) {
+      const P = require_passport();
+      const out2 = [];
+      for (const p of passports || P.list({ manual: false }).map((s) => manual ? P.load(s.service, { env }) : P.loadDetected(s.service))) {
+        if (!p?.service || !p.effective || typeof p.effective !== "object" || Array.isArray(p.effective)) throw Object.assign(new Error("Cached passport endpoint attribution is unavailable"), { code: "DT_PASSPORT_INVALID" });
+        for (const e of p?.effective?.endpoints || []) {
+          const segs = String(e.path || "").split("/").filter(Boolean);
+          const re2 = new RegExp(`(^|/)${segs.map((x) => /^\{.*\}$/.test(x) ? "[^/]+" : x.replace(/[.*+?^$()|[\]\\]/g, "\\$&")).join("/")}/?$`, "i");
+          out2.push({ service: p.service, method: String(e.method || "").toUpperCase(), path: e.path, handler: e.handler || "", where: e.file ? `${e.file}:${e.line}` : "", source: e.source || "", re: re2, weight: segs.length });
+        }
+      }
+      return out2;
+    }
+    var siteOf = (host) => require_config().getBrowser().sites.find((s) => {
+      try {
+        return new URL(s.url).host === host;
+      } catch {
+        return false;
+      }
+    })?.site || "";
+    function resolve2(url, method = "GET") {
+      return resolver()(url, method);
+    }
+    function resolver(passports) {
+      const code = codeEndpoints(passports);
+      return (url, method = "GET") => {
+        const route = normalize(url);
+        if (!route) return { status: "unknown", candidates: [] };
+        const matches = code.filter((c) => (!c.method || c.method === "ANY" || c.method === String(method).toUpperCase()) && c.re.test(route.path)).sort((a, b) => b.weight - a.weight);
+        const candidates = matches.filter((c) => c.weight === matches[0]?.weight).map(({ re: re2, weight, ...c }) => c);
+        return { ...route, method: String(method).toUpperCase(), site: siteOf(route.host), status: candidates.length === 1 ? "matched" : candidates.length ? "ambiguous" : "observed", candidates };
+      };
+    }
+    function list({ q, service, host, manual = true, env, includeDeclared = false } = {}) {
+      const code = codeEndpoints(void 0, { manual, env });
+      const rows = [];
+      const seenFor = /* @__PURE__ */ new Map();
+      for (const r of Object.values(load().routes)) {
+        const m = code.filter((c) => (!c.method || c.method === r.method || c.method === "ANY") && c.re.test(r.path)).sort((a, b) => b.weight - a.weight)[0];
+        const row = { service: m?.service || "", method: r.method, path: r.path, host: r.host, site: siteOf(r.host), seen: r.count, statuses: Object.entries(r.statuses).map(([k, n]) => `${k}\xD7${n}`).join(" "), query: r.query.join(","), handler: m?.handler || "", where: m?.where || "", source: r.sources.join(", "), last: r.last };
+        if (m) {
+          const k = `${m.service} ${m.method} ${m.path}`;
+          seenFor.set(k, [...seenFor.get(k) || [], row]);
+        }
+        rows.push(row);
+      }
+      for (const c of code) {
+        const observed = seenFor.get(`${c.service} ${c.method} ${c.path}`);
+        if (observed && (!includeDeclared || observed.some((r) => r.path === c.path))) continue;
+        rows.push({ service: c.service, method: c.method, path: c.path, host: "", site: "", seen: 0, statuses: "", query: "", handler: c.handler, where: c.where, source: c.source ? `code (${c.source})` : "code", last: "" });
+      }
+      const words = String(q || "").toLowerCase().split(/\s+/).filter(Boolean);
+      return rows.filter((r) => (!service || r.service === service) && (!host || r.host === host || r.site === host)).filter((r) => words.every((w) => `${r.service} ${r.method} ${r.path} ${r.host} ${r.site} ${r.handler}`.toLowerCase().includes(w))).sort((a, b) => a.service.localeCompare(b.service) || a.path.localeCompare(b.path) || a.method.localeCompare(b.method));
+    }
+    function catalogLines({ manual = true } = {}) {
+      return list({ manual }).map((r) => `api ${r.service || r.site || r.host} ${r.method} ${r.path}${r.query ? `?${r.query}` : ""} [${r.seen ? `seen ${r.seen}${r.statuses ? ` ${r.statuses}` : ""}` : "code"}]${r.host ? ` ${r.host}` : ""}${r.handler ? ` -> ${r.handler}` : ""}`);
+    }
+    module2.exports = { normalize, parseNetwork, learn, list, load, catalogLines, idLike, resolve: resolve2, resolver, FILE };
+  }
+});
+
+// lib/scripts.js
+var require_scripts = __commonJS({
+  "lib/scripts.js"(exports2, module2) {
+    var fs3 = require("fs");
+    var path3 = require("path");
+    var crypto = require("crypto");
+    var { PATHS } = require_config();
+    var DIR = PATHS.scripts;
+    var scopeDirectory = () => require_access().scopedDirectory(DIR);
+    var MAX_DEPTH = 5;
+    var ID = /^[a-z0-9][\w.-]*(\/[a-z0-9][\w.-]*)*$/i;
+    function file(id) {
+      if (!ID.test(id || "") || id.split("/").some((s) => s === ".." || s.startsWith("."))) throw new Error(`bad script id "${id}": use collection/name, letters, digits, . _ -`);
+      return path3.join(scopeDirectory(), `${id}.json`);
+    }
+    var norm = (x) => String(x).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    var subseq = (w, h) => {
+      let i = 0;
+      for (const c of h) if (c === w[i]) i++;
+      return i === w.length;
+    };
+    function resolve2(q, within = "") {
+      q = String(q || "").trim().replace(/\.json$/, "");
+      if (!q) throw new Error("script id or name required");
+      const pre = within ? `${within}/` : "";
+      const ids = walk(scopeDirectory()).filter((id) => id.startsWith(pre));
+      if (ids.includes(q) || ids.includes(pre + q)) return ids.includes(q) ? q : pre + q;
+      const nq = norm(q);
+      const named = ids.filter((id) => norm(id.split("/").pop()) === nq || id.endsWith(`/${q}`));
+      if (named.length === 1) return named[0];
+      const words = nq.split(" ").filter(Boolean);
+      const scored = (named.length ? named : ids).map((id) => {
+        let desc = "";
+        try {
+          desc = JSON.parse(fs3.readFileSync(path3.join(scopeDirectory(), `${id}.json`), "utf8")).description || "";
+        } catch {
+        }
+        const idn = norm(id), all = `${idn} ${norm(desc)}`;
+        const score = words.reduce((n, w) => n + (idn.includes(w) ? 2 : all.includes(w) ? 1 : subseq(w, idn.replace(/ /g, "")) ? 1 : 0), 0) / (2 * words.length);
+        return { id, score };
+      }).filter((x) => x.score >= 0.5).sort((a, b) => b.score - a.score || a.id.length - b.id.length);
+      if (!scored.length) throw new Error(`no script matches "${q}"${within ? ` in ${within}` : ""} (script_list shows them)`);
+      if (scored.length === 1 || scored[0].score > scored[1].score) return scored[0].id;
+      throw new Error(`"${q}" matches several scripts: ${scored.slice(0, 6).map((x) => x.id).join(", ")}; use the id`);
+    }
+    function get(id) {
+      let exact = false;
+      try {
+        exact = fs3.existsSync(file(id));
+      } catch {
+      }
+      if (!exact) id = resolve2(id);
+      let text;
+      try {
+        text = fs3.readFileSync(file(id), "utf8");
+      } catch {
+        throw new Error(`no script "${id}" (script_list shows them)`);
+      }
+      try {
+        return { id, ...JSON.parse(text) };
+      } catch (e) {
+        throw new Error(`script ${id}: ${e.message}`);
+      }
+    }
+    function walk(dir, prefix = "", folders = []) {
+      let ents;
+      try {
+        ents = fs3.readdirSync(dir, { withFileTypes: true });
+      } catch {
+        return [];
+      }
+      return ents.sort((a, b) => a.name.localeCompare(b.name)).flatMap((e) => {
+        if (e.name.startsWith(".") || e.name.startsWith("_")) return [];
+        if (e.isDirectory()) {
+          folders.push(`${prefix}${e.name}`);
+          return walk(path3.join(dir, e.name), `${prefix}${e.name}/`, folders);
+        }
+        return e.name.endsWith(".json") ? [`${prefix}${e.name.slice(0, -5)}`] : [];
+      });
+    }
+    function list(collection = "") {
+      const pre = collection ? collection.replace(/\/+$/, "") + "/" : "";
+      const folders = [];
+      const ids = walk(scopeDirectory(), "", folders).filter((id) => !pre || id.startsWith(pre));
+      const scripts = ids.map((id) => {
+        try {
+          const s = get(id);
+          return { id, description: s.description || "", params: Object.keys(s.params || {}), steps: (s.steps || []).length, browser: (s.steps || []).some((x) => x.browser || x.open), js: !!(s.before || s.after || (s.steps || []).some((x) => x.js !== void 0 || x.before || x.after)), tool: s.tool ? toolName(s.tool, id) : null };
+        } catch (e) {
+          return { id, error: e.message };
+        }
+      });
+      const collections = folders.filter((c) => !pre || `${c}/`.startsWith(pre)).map((c) => ({ collection: c, scripts: ids.filter((id) => id.startsWith(`${c}/`)).length }));
+      return { collection: collection || "", collections, scripts };
+    }
+    function folder(p) {
+      const id = String(p || "").replace(/^\/+|\/+$/g, "");
+      file(id || "x");
+      return { id, dir: path3.join(scopeDirectory(), id) };
+    }
+    function mkdir(p) {
+      const f = folder(p);
+      if (!f.id) throw new Error("collection name required");
+      fs3.mkdirSync(f.dir, { recursive: true });
+      return { collection: f.id, created: true };
+    }
+    function move(from, to) {
+      const src = String(from || "").replace(/\/+$/, ""), dst = String(to || "").replace(/\/+$/, "");
+      if (!src || !dst) throw new Error("from and to required");
+      if (src === dst) return { from: src, to: dst, moved: false };
+      const isScript = fs3.existsSync(file(src));
+      const a = isScript ? file(src) : folder(src).dir;
+      const b = isScript ? file(dst) : folder(dst).dir;
+      if (!isScript && !fs3.existsSync(a)) throw new Error(`no script or collection "${src}"`);
+      if (!isScript && (dst + "/").startsWith(src + "/")) throw new Error("cannot move a collection into itself");
+      if (fs3.existsSync(b)) throw new Error(`"${dst}" already exists`);
+      fs3.mkdirSync(path3.dirname(b), { recursive: true });
+      fs3.renameSync(a, b);
+      return { from: src, to: dst, kind: isScript ? "script" : "collection", moved: true };
+    }
+    function removeFolder(p) {
+      const f = folder(p);
+      if (!f.id || !fs3.existsSync(f.dir)) throw new Error(`no collection "${p}"`);
+      const n = walk(f.dir).length;
+      fs3.rmSync(f.dir, { recursive: true });
+      return { collection: f.id, deleted: true, scripts: n };
+    }
+    var META = "_collection.json";
+    var toolName = (t, id) => typeof t === "string" && t ? t : String(id).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").replace(/^(\d)/, "s_$1");
+    function getCollection(p) {
+      const f = folder(p);
+      if (!f.id || !fs3.existsSync(f.dir)) throw new Error(`no collection "${p}"`);
+      let meta = {};
+      try {
+        meta = JSON.parse(fs3.readFileSync(path3.join(f.dir, META), "utf8"));
+      } catch {
+      }
+      return { ...meta, collection: f.id, description: meta.description || "", tool: meta.tool || false, toolName: meta.tool ? toolName(meta.tool, f.id) : null, vars: meta.vars || {}, before: meta.before || "", after: meta.after || "", finally: meta.finally || "", scripts: walk(f.dir).map((x) => `${f.id}/${x}`) };
+    }
+    function setCollection(p, changes = {}) {
+      const f = folder(p);
+      if (!f.id || !fs3.existsSync(f.dir)) throw new Error(`no collection "${p}"`);
+      let prior = {};
+      try {
+        prior = JSON.parse(fs3.readFileSync(path3.join(f.dir, META), "utf8"));
+      } catch {
+      }
+      const meta = { ...prior, ...Object.fromEntries(Object.entries(changes).filter(([, v]) => v !== void 0)) };
+      if (meta.tool && !/^[a-z][a-z0-9_]{1,63}$/.test(toolName(meta.tool, f.id))) throw new Error(`tool name "${toolName(meta.tool, f.id)}": lowercase letters, digits and _`);
+      if (meta.vars && (typeof meta.vars !== "object" || Array.isArray(meta.vars))) throw new Error('vars must be { "name": value }');
+      for (const h of ["before", "after", "finally"]) if (meta[h] && ![].concat(meta[h]).every((x) => typeof x === "string")) throw new Error(`${h} must be JavaScript`);
+      if (meta.description !== void 0) meta.description = String(meta.description || "").trim();
+      fs3.writeFileSync(path3.join(f.dir, META), JSON.stringify(meta, null, 2) + "\n");
+      return getCollection(f.id);
+    }
+    var PARAM_TYPES = /* @__PURE__ */ new Set(["string", "integer", "number", "boolean", "object", "array"]);
+    function exposed() {
+      const folders = [];
+      const ids = walk(scopeDirectory(), "", folders);
+      const out2 = [], errors = [];
+      for (const id of ids) {
+        let def;
+        try {
+          def = get(id);
+        } catch {
+          continue;
+        }
+        if (!def.tool) continue;
+        const name = toolName(def.tool, id);
+        if (!/^[a-z][a-z0-9_]{1,63}$/.test(name)) {
+          errors.push({ source: `script ${id}`, error: `tool name "${name}": lowercase letters, digits and _` });
+          continue;
+        }
+        const input = {}, required = [];
+        for (const [k, p] of Object.entries(def.params || {})) {
+          input[k] = { type: PARAM_TYPES.has(p && p.type) ? p.type : "string", description: p && p.description || k, ...p && p.default !== void 0 ? { default: p.default } : {} };
+          if (p && p.required) required.push(k);
+        }
+        out2.push({ name, group: "scripts", origin: `script ${id}`, description: `${def.description || id} (saved script ${id}; returns each step and the named results)`, input, required, run: (a) => run(id, a, { source: "tool" }) });
+      }
+      for (const c of folders) {
+        const meta = getCollection(c);
+        if (!meta.tool) continue;
+        const name = toolName(meta.tool, c);
+        if (!/^[a-z][a-z0-9_]{1,63}$/.test(name)) {
+          errors.push({ source: `collection ${c}`, error: `tool name "${name}": lowercase letters, digits and _` });
+          continue;
+        }
+        const items = meta.scripts.map((id) => {
+          try {
+            const d = get(id);
+            return { rel: id.slice(c.length + 1), d };
+          } catch {
+            return null;
+          }
+        }).filter(Boolean);
+        const lines = items.map(({ rel, d }) => `- ${rel}: ${d.description || ""}${Object.keys(d.params || {}).length ? ` (params: ${Object.entries(d.params).map(([k, p]) => `${k}${p && p.required ? "*" : ""}`).join(", ")})` : ""}`);
+        out2.push({
+          name,
+          group: "scripts",
+          origin: `collection ${c}`,
+          description: `${meta.description || `Saved scripts of the ${c} collection`}. Run one by name (a close name is enough):
+${lines.join("\n") || "(empty)"}`,
+          input: { script: { type: "string", description: "Script name in this collection (exact name or unambiguous close match)", ...items.length ? { examples: items.map((x) => x.rel) } : {} }, params: { type: "object", description: "Its params", additionalProperties: true } },
+          required: ["script"],
+          run: (a) => run(resolve2(a.script, c), a.params || {}, { source: "tool" })
+        });
+      }
+      return { tools: out2, errors };
+    }
+    var STARTERS = path3.join(__dirname, "starter-scripts");
+    var SEEDED = () => path3.join(scopeDirectory(), ".starters.json");
+    function seedStarters() {
+      if (require_config().getScripts().starters === false) return [];
+      let names = [];
+      try {
+        names = fs3.readdirSync(STARTERS, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name);
+      } catch {
+        return [];
+      }
+      let seeded = {};
+      try {
+        seeded = JSON.parse(fs3.readFileSync(SEEDED(), "utf8"));
+      } catch {
+      }
+      const added = [];
+      for (const name of names) {
+        const lifecycle = require_state_machine2().create(require_lifecycles().starter);
+        if (seeded[name] || fs3.existsSync(path3.join(scopeDirectory(), name))) {
+          seeded[name] ||= "present";
+          lifecycle.to("retained");
+          continue;
+        }
+        lifecycle.to("copying");
+        fs3.mkdirSync(path3.join(scopeDirectory(), name), { recursive: true });
+        for (const f of fs3.readdirSync(path3.join(STARTERS, name)).filter((f2) => f2.endsWith(".json"))) fs3.copyFileSync(path3.join(STARTERS, name, f), path3.join(scopeDirectory(), name, f));
+        seeded[name] = (/* @__PURE__ */ new Date()).toISOString();
+        added.push(name);
+        lifecycle.to("copied");
+      }
+      if (added.length || !fs3.existsSync(SEEDED())) {
+        fs3.mkdirSync(scopeDirectory(), { recursive: true });
+        require_atomic_file().atomicFile(SEEDED(), JSON.stringify(seeded, null, 2) + "\n");
+      }
+      return added;
+    }
+    function signature() {
+      const parts = [];
+      const visit = (d) => {
+        let ents;
+        try {
+          ents = fs3.readdirSync(d, { withFileTypes: true });
+        } catch {
+          return;
+        }
+        for (const e of ents) {
+          if (e.name.toLowerCase() === "_stories" || e.isSymbolicLink()) continue;
+          const f = path3.join(d, e.name);
+          try {
+            parts.push(`${f}:${require_util2().fileStamp(f)}`);
+          } catch {
+          }
+          if (e.isDirectory()) visit(f);
+        }
+      };
+      visit(scopeDirectory());
+      return crypto.createHash("sha1").update(parts.sort().join("|")).digest("hex");
+    }
+    function copy(from, to) {
+      const s = get(from);
+      const { id, savedAt, ...def } = s;
+      if (fs3.existsSync(file(to))) throw new Error(`"${to}" already exists`);
+      return save(to, def);
+    }
+    var KINDS = ["tool", "script", "browser", "open", "wait", "set", "transform", "http", "js"];
+    function validate(def) {
+      if (!def || typeof def !== "object") throw new Error("script must be an object");
+      if (!def.description) throw new Error("description required (say what it does and when to use it)");
+      if (!Array.isArray(def.steps) || !def.steps.length) throw new Error("steps required: a non-empty list");
+      def.steps.forEach((s, i) => {
+        const kinds = KINDS.filter((k) => s && s[k] !== void 0);
+        if (kinds.length !== 1) throw new Error(`step ${i + 1}: needs exactly one of ${KINDS.join(", ")}`);
+        if (s.args !== void 0 && (typeof s.args !== "object" || Array.isArray(s.args))) throw new Error(`step ${i + 1}: args must be an object`);
+        if (s.as !== void 0 && !/^[a-z_]\w*$/i.test(s.as)) throw new Error(`step ${i + 1}: "as" must be a name`);
+        if (s.set !== void 0 && (!s.set || typeof s.set !== "object" || Array.isArray(s.set))) throw new Error(`step ${i + 1}: set must be { "name": value }`);
+        if (s.transform !== void 0 && s.replace !== void 0 && !Array.isArray(s.replace)) throw new Error(`step ${i + 1}: replace must be a list of { find, with }`);
+        if (s.http !== void 0 && !/^(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)\s+\S+$/i.test(String(s.http))) throw new Error(`step ${i + 1}: http must be "METHOD url"`);
+        for (const h of ["before", "after", "finally", "js"]) if (s[h] !== void 0 && ![].concat(s[h]).every((x) => typeof x === "string")) throw new Error(`step ${i + 1}: ${h} must be JavaScript (a string, or a list of lines)`);
+        if (s.urlEncodeParams !== void 0 && (!Array.isArray(s.urlEncodeParams) || s.urlEncodeParams.some((p) => !/^[a-z_]\w*$/i.test(p)))) throw new Error(`step ${i + 1}: urlEncodeParams must be parameter names`);
+        for (const key of ["timeoutMs"]) if (s[key] !== void 0 && (!Number.isInteger(s[key]) || s[key] < 1 || s[key] > 12e4)) throw new Error(`step ${i + 1}: ${key} must be 1..120000`);
+        if (s.assertions !== void 0 && (!Array.isArray(s.assertions) || s.assertions.some((a) => !a || typeof a.name !== "string" || !a.name || (a.code === void 0 ? !["equal", "exists", "contains", "count"].includes(a.op) || typeof a.path !== "string" : ![].concat(a.code).every((x) => typeof x === "string"))))) throw new Error(`step ${i + 1}: assertions need name and code, or name/path/op (equal, exists, contains, count)`);
+        if (s.retry || s.poll) {
+          const attempts = s.poll?.attempts || s.retry?.attempts || 1;
+          if (!Number.isInteger(attempts) || attempts < 1 || attempts > 20) throw new Error(`step ${i + 1}: retry/poll attempts must be 1..20`);
+          if (!safeRepeat(s)) throw new Error(`step ${i + 1}: retry/poll requires GET/HEAD or an explicitly idempotent tool`);
+        }
+        if (s.capture !== void 0 && (typeof s.capture !== "object" || Array.isArray(s.capture) || !Object.entries(s.capture).every(([k, v]) => /^[a-z_]\w*$/i.test(k) && typeof v === "string"))) throw new Error(`step ${i + 1}: capture must be { "name": "path.in.result" }`);
+      });
+      for (const [k, p] of Object.entries(def.params || {})) if (!/^\w+$/.test(k) || p && typeof p !== "object") throw new Error(`param ${k}: use { "description", "default", "required" }`);
+      for (const h of ["before", "after", "finally"]) if (def[h] !== void 0 && ![].concat(def[h]).every((x) => typeof x === "string")) throw new Error(`${h} must be JavaScript (a string, or a list of lines)`);
+      if (def.vars !== void 0 && (typeof def.vars !== "object" || Array.isArray(def.vars))) throw new Error('vars must be { "name": value }');
+      if (def.tool && typeof def.tool === "string" && !/^[a-z][a-z0-9_]{1,63}$/.test(def.tool)) throw new Error(`tool name "${def.tool}": lowercase letters, digits and _`);
+    }
+    function save(id, def, { merge = false, expected_revision } = {}) {
+      const f = file(id);
+      if (expected_revision !== void 0) {
+        const revision = fs3.existsSync(f) ? crypto.createHash("sha256").update(fs3.readFileSync(f)).digest("hex") : null;
+        if (revision !== expected_revision) throw Object.assign(Error("Script changed; reload before saving"), { code: "DT_SCRIPT_CONFLICT", statusCode: 409 });
+      }
+      const { id: _, ...changes } = def;
+      let prior = {};
+      if (merge && fs3.existsSync(f)) prior = JSON.parse(fs3.readFileSync(f, "utf8"));
+      const body = { ...prior, ...changes };
+      validate(body);
+      fs3.mkdirSync(path3.dirname(f), { recursive: true });
+      const existed = fs3.existsSync(f);
+      fs3.writeFileSync(f, JSON.stringify({ ...body, savedAt: (/* @__PURE__ */ new Date()).toISOString() }, null, 2) + "\n");
+      return { id, saved: true, replaced: existed, file: path3.relative(require_config().HOME, f) };
+    }
+    function remove(id) {
+      const f = file(id);
+      if (!fs3.existsSync(f)) throw new Error(`no script "${id}"`);
+      fs3.unlinkSync(f);
+      return { id, deleted: true };
+    }
+    var dig = (o, keys) => keys.reduce((v, k) => v == null ? void 0 : v[k], o);
+    var pad = (n, w = 2) => String(n).padStart(w, "0");
+    function fmtDate(d, f) {
+      return f.replace(/YYYY|MM|DD|HH|mm|ss|SSS/g, (t) => ({ YYYY: d.getFullYear(), MM: pad(d.getMonth() + 1), DD: pad(d.getDate()), HH: pad(d.getHours()), mm: pad(d.getMinutes()), ss: pad(d.getSeconds()), SSS: pad(d.getMilliseconds(), 3) })[t]);
+    }
+    function generate(expr) {
+      let m;
+      if (expr === "uuid") return crypto.randomUUID();
+      if (expr === "now") return (/* @__PURE__ */ new Date()).toISOString();
+      if (expr === "timestamp") return Date.now();
+      if (m = expr.match(/^date(?::(.+))?$/)) return fmtDate(/* @__PURE__ */ new Date(), m[1] || "YYYY-MM-DD");
+      if (m = expr.match(/^rand:(\d{1,3})$/)) return Array.from(crypto.randomBytes(Number(m[1])), (b) => b % 10).join("").replace(/^0/, "1");
+      if (m = expr.match(/^hex:(\d{1,3})$/)) return crypto.randomBytes(Math.ceil(Number(m[1]) / 2)).toString("hex").slice(0, Number(m[1]));
+      return void 0;
+    }
+    function lookup(expr, scope) {
+      expr = expr.trim();
+      if (expr.startsWith("link:")) return require_config().siteUrl(expr.slice(5).trim(), scope);
+      const keys = expr.split(".");
+      let v = dig(scope, keys);
+      if (v === void 0) v = generate(expr);
+      if (v === void 0) throw new Error(`{{${expr}}} is not set (params: ${Object.keys(scope).join(", ") || "none"})`);
+      return v;
+    }
+    function fill(value, scope) {
+      if (Array.isArray(value)) return value.map((v) => fill(v, scope));
+      if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, fill(v, scope)]));
+      if (typeof value !== "string" || !value.includes("{{")) return value;
+      const whole = value.match(/^\{\{([^}]+)\}\}$/);
+      if (whole) return lookup(whole[1], scope);
+      return value.replace(/\{\{([^}]+)\}\}/g, (m, e) => {
+        const v = lookup(e, scope);
+        return typeof v === "object" ? JSON.stringify(v) : String(v);
+      });
+    }
+    function params(def, given = {}) {
+      const out2 = { ...given };
+      for (const [k, p] of Object.entries(def.params || {})) {
+        if ((out2[k] === void 0 || out2[k] === "") && p && p.default !== void 0) out2[k] = p.default;
+        if ((out2[k] === void 0 || out2[k] === "") && p && p.required) throw new Error(`script ${def.id}: missing param ${k}${p.description ? ` (${p.description})` : ""}`);
+      }
+      for (const [k, p] of Object.entries(def.params || {})) if (out2[k] !== void 0 && p && p.type) {
+        const v = out2[k], type = p.type;
+        const ok = type === "integer" ? Number.isInteger(v) : type === "array" ? Array.isArray(v) : type === "object" ? v !== null && typeof v === "object" && !Array.isArray(v) : typeof v === type;
+        if (!ok) throw new Error(`script ${def.id}: param ${k} must be ${type}`);
+        if (p.enum && !p.enum.some((x) => JSON.stringify(x) === JSON.stringify(v))) throw new Error(`script ${def.id}: param ${k} is not an allowed value`);
+      }
+      return out2;
+    }
+    var brief = (v, n = 3e3) => {
+      const s = typeof v === "string" ? v : JSON.stringify(v);
+      return s && s.length > n ? `${s.slice(0, n)} ... [${s.length - n} more chars]` : v;
+    };
+    var browserTool = (name) => name.startsWith("browser_") ? name : `browser_${name}`;
+    function stepInput(step, scope) {
+      if (step.tool) return fill(step.args || {}, scope);
+      if (step.browser) return fill(step.args || {}, scope);
+      if (step.script) return fill(step.params || step.args || {}, scope);
+      if (step.open) return { url: /^https?:\/\//.test(step.open) ? fill(step.open, scope) : require_config().siteUrl(fill(step.open, scope), scope) };
+      if (step.http) {
+        const [, method, url] = String(step.http).match(/^(\w+)\s+(\S+)$/);
+        const encoded = { ...scope };
+        for (const p of step.urlEncodeParams || []) {
+          if (scope[p] !== void 0) encoded[p] = encodeURIComponent(String(scope[p]));
+        }
+        return { method: method.toUpperCase(), url: fill(url, encoded), headers: fill(step.headers || {}, scope), ...step.body !== void 0 ? { body: fill(step.body, scope) } : {} };
+      }
+      if (step.set) return fill(step.set, scope);
+      if (step.transform !== void 0) return { text: fill(step.transform, scope) };
+      if (step.wait !== void 0) return { wait: fill(step.wait, scope) };
+      return {};
+    }
+    var kindOf = (step) => KINDS.find((k) => step[k] !== void 0);
+    var label = (step) => step.tool ? `tool ${step.tool}` : step.script ? `script ${step.script}` : step.browser ? `browser ${browserTool(step.browser)}` : step.open ? `open ${step.open}` : step.set ? `set ${Object.keys(step.set).join(", ")}` : step.transform !== void 0 ? "transform" : step.http ? `http ${String(step.http).split(/\s+/)[0].toUpperCase()}` : step.js !== void 0 ? "js" : `wait ${step.wait}`;
+    var capturePath = (v, p) => !p || p === "." || p === "$" ? v : dig(v, String(p).replace(/^\$\.?/, "").replace(/\[(\d+)\]/g, ".$1").split(".").filter(Boolean));
+    function check(st) {
+      if (st.cleaning) {
+        if (Date.now() >= st.cleanupDeadline) throw new Error("cleanup deadline exceeded");
+        return;
+      }
+      if (st.signal?.aborted) throw new Error(`cancelled: ${st.signal.reason?.message || st.signal.reason || "requested"}`);
+      if (st.cancelled?.()) throw new Error("cancelled");
+      if (Date.now() >= st.deadline) throw new Error("run deadline exceeded");
+    }
+    async function bounded(fn, st, maxMs) {
+      check(st);
+      const remaining = (st.cleaning ? st.cleanupDeadline : st.deadline) - Date.now();
+      const ms = Math.max(1, Math.min(maxMs || 12e4, remaining));
+      let timer, listener;
+      try {
+        const result = await Promise.race([Promise.resolve().then(fn), new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error("step deadline exceeded; outcome may be unknown")), ms);
+          if (!st.cleaning && st.signal) {
+            listener = () => reject(new Error("cancelled; in-flight tool outcome may be unknown"));
+            st.signal.addEventListener("abort", listener, { once: true });
+          }
+        })]);
+        check(st);
+        return result;
+      } finally {
+        clearTimeout(timer);
+        if (listener) st.signal.removeEventListener("abort", listener);
+      }
+    }
+    async function delay(ms, st) {
+      return bounded(() => new Promise((resolve3) => setTimeout(resolve3, ms)), st, ms + 100);
+    }
+    async function hook(code, st, where, { scope, args, result }) {
+      check(st);
+      if (!st.js) st.js = new (require_js()).Session();
+      const onTool = (name, a) => {
+        check(st);
+        if (name === "__list") return require_tools().schemas().then((ts) => ts.map((t) => ({ name: t.name, description: t.description.split(". ")[0] })));
+        return bounded(() => (st.call || require_tools().call)(name, a, { source: `script:${where.script}` }), st);
+      };
+      const codeText = [].concat(code).join("\n"), config = require_config().getScripts();
+      const ms = Math.max(1, Math.min(codeText.includes("tools.") ? config.codeTimeoutMs : config.jsTimeoutMs, (st.cleaning ? st.cleanupDeadline : st.deadline) - Date.now()));
+      const abort = () => st.js?.kill("cancelled");
+      if (!st.cleaning) st.signal?.addEventListener("abort", abort, { once: true });
+      let r;
+      try {
+        r = await st.js.run([].concat(code).join("\n"), { vars: scope, args, result }, { onTool, timeoutMs: ms });
+      } finally {
+        st.signal?.removeEventListener("abort", abort);
+      }
+      if (r.vars && typeof r.vars === "object") {
+        for (const k of Object.keys(scope)) if (!(k in r.vars)) delete scope[k];
+        Object.assign(scope, r.vars);
+      }
+      for (const msg of r.logs || []) st.logs.push({ ...where, msg });
+      for (const t of r.tests || []) st.tests.push({ ...where, ...t });
+      if (r.error) throw new Error(`${where.hook}: ${r.error}`);
+      check(st);
+      return r;
+    }
+    async function cleanup(code, st, where, scope, result) {
+      if (!code) return;
+      const prior = st.cleaning;
+      if (!prior) st.cleanupDeadline = Date.now() + st.cleanupTimeoutMs;
+      st.cleaning = true;
+      try {
+        await require_execution().run({ kind: "cleanup", title: `Script cleanup ${where.script}`, detached: true, codeActive: require_execution().current()?.codeActive === true }, () => hook(code, st, { ...where, hook: "finally" }, { scope, result }));
+      } catch (e) {
+        st.cleanupErrors.push({ ...where, error: e.message });
+      } finally {
+        st.cleaning = prior;
+      }
+    }
+    var safeRepeat = (step) => step.http ? /^(GET|HEAD)\s/i.test(step.http) : !!step.tool && step.retry?.idempotent === true;
+    async function repeatStep(step, st, rec, fn) {
+      const retry = step.retry || {}, poll = step.poll;
+      const attempts = poll?.attempts || retry.attempts || 1;
+      if (!Number.isInteger(attempts) || attempts < 1 || attempts > 20) throw new Error("retry/poll attempts must be 1..20");
+      if ((attempts > 1 || poll) && !safeRepeat(step)) throw new Error("retry/poll requires GET/HEAD, or an explicitly idempotent tool");
+      const lifecycle = require_state_machine2().create(require_lifecycles().retry);
+      rec.attempts = [];
+      for (let n = 1; n <= attempts; n++) {
+        lifecycle.to("attempting");
+        try {
+          check(st);
+        } catch (error) {
+          lifecycle.to("stopped");
+          throw error;
+        }
+        const started = Date.now();
+        try {
+          const value = await bounded(fn, st, step.timeoutMs);
+          const matched = !poll || JSON.stringify(capturePath(value, poll.path)) === JSON.stringify(poll.equals);
+          rec.attempts.push({ attempt: n, ok: true, matched, ms: Date.now() - started });
+          if (matched) {
+            lifecycle.to("matched");
+            return value;
+          }
+          if (n === attempts) throw Object.assign(new Error(`poll condition not met after ${attempts} attempts`), { final: true });
+        } catch (e) {
+          if (!rec.attempts.some((x) => x.attempt === n)) rec.attempts.push({ attempt: n, ok: false, error: e.message, ms: Date.now() - started });
+          if (e.final || n === attempts || /deadline|cancelled|outcome may be unknown/.test(e.message)) {
+            lifecycle.to("stopped");
+            throw e;
+          }
+        }
+        lifecycle.to("waiting");
+        try {
+          await delay(Math.max(0, Math.min(1e4, Number(poll?.intervalMs ?? retry.delayMs ?? 100))), st);
+        } catch (error) {
+          lifecycle.to("stopped");
+          throw error;
+        }
+      }
+    }
+    async function runSteps(def, scope, st) {
+      for (const [i, step] of def.steps.entries()) {
+        check(st);
+        const started = Date.now();
+        const rec = { script: def.id, step: i + 1, do: label(step) };
+        const where = { script: def.id, step: i + 1 };
+        st.log.push(rec);
+        try {
+          let input = stepInput(step, scope);
+          if (step.before) {
+            const r = await hook(step.before, st, { ...where, hook: "before" }, { scope, args: input });
+            input = r.hasReturn && r.returned && typeof r.returned === "object" ? r.returned : r.args;
+            input = fill(input, scope);
+          }
+          let result;
+          const k = kindOf(step);
+          if (k === "tool") {
+            if (step.tool.startsWith("script_") || step.tool.startsWith("collection_")) throw new Error('use a "script" step to run another script');
+            result = await repeatStep(step, st, rec, () => (st.call || require_tools().call)(step.tool, input, { source: `script:${def.id}` }));
+          } else if (k === "set") {
+            result = input;
+            Object.assign(scope, result);
+          } else if (k === "transform") {
+            const t = transform(input.text, step, scope);
+            result = t.text;
+            rec.detail = { replaced: t.replaced, map: t.map };
+          } else if (k === "http") {
+            result = await repeatStep(step, st, rec, () => httpStep(input, step, st));
+          } else if (k === "js") {
+            const r = await hook(step.js, st, { ...where, hook: "js" }, { scope, result: st.last });
+            result = r.hasReturn ? r.returned : null;
+          } else if (k === "script") {
+            if (st.depth >= MAX_DEPTH) throw new Error(`scripts nest deeper than ${MAX_DEPTH}`);
+            const sub = st.definitions?.[step.script] || get(step.script);
+            st.depth++;
+            try {
+              result = await runScript(sub, params(sub, input), st);
+            } finally {
+              st.depth--;
+            }
+          } else if (k === "wait") {
+            const w = input.wait;
+            result = (await bounded(() => browser(st).call("browser_wait_for", typeof w === "number" ? { time: w } : { text: String(w) }), st, step.timeoutMs)).text;
+          } else {
+            const [name, args] = k === "open" ? ["browser_navigate", input] : [browserTool(step.browser), input];
+            if (name === "browser_navigate") st.pages.add(args.url);
+            result = (await bounded(() => browser(st).call(name, args), st, step.timeoutMs)).text;
+          }
+          check(st);
+          for (const [name, p] of Object.entries(step.capture || {})) {
+            const v = capturePath(result, p);
+            if (v === void 0) throw new Error(`capture ${name}: no "${p}" in the result`);
+            scope[name] = v;
+          }
+          if (step.after) {
+            const r = await hook(step.after, st, { ...where, hook: "after" }, { scope, result });
+            if (r.hasReturn) result = r.returned;
+          }
+          for (const assertion of step.assertions || []) {
+            const before = st.tests.length;
+            if (assertion.code !== void 0) await hook(`test(${JSON.stringify(assertion.name)}, async () => { ${[].concat(assertion.code).join("\n")} });`, st, { ...where, hook: "assertion" }, { scope, result });
+            else {
+              const actual = capturePath(result, assertion.path), expected = fill(assertion.value, scope);
+              const equal = (a, b) => require("util").isDeepStrictEqual(a, b);
+              const ok = assertion.op === "exists" ? actual !== void 0 === (expected !== false) : assertion.op === "count" ? actual != null && actual.length === expected : assertion.op === "contains" ? Array.isArray(actual) ? actual.some((v) => equal(v, expected)) : typeof actual === "string" && actual.includes(String(expected)) : equal(actual, expected);
+              st.tests.push({ ...where, name: assertion.name, ok, ...ok ? {} : { error: `expected ${assertion.path} ${assertion.op} ${JSON.stringify(expected)}; actual ${JSON.stringify(actual)}`, expected, actual } });
+            }
+            if (assertion.hard && st.tests.slice(before).some((t) => !t.ok)) throw new Error(`assertion ${assertion.name} failed`);
+          }
+          if (step.as) scope[step.as] = result;
+          st.last = result;
+          if (result && typeof result === "object" && typeof result.view === "string" && /^https?:/.test(result.view)) st.lastView = result.view;
+          Object.assign(rec, { ok: true, ms: Date.now() - started, result: rec.detail ? { ...rec.detail, text: brief(result, 1500) } : brief(result) });
+          delete rec.detail;
+        } catch (e) {
+          Object.assign(rec, { ok: false, ms: Date.now() - started, error: e.message });
+          delete rec.detail;
+          if (!step.optional || /cancelled|deadline/.test(e.message)) throw Object.assign(e, { scriptStep: rec });
+        } finally {
+          await cleanup(step.finally, st, where, scope, st.last);
+        }
+      }
+      return scope;
+    }
+    function chain(id) {
+      const parts = String(id || "").split("/").slice(0, -1);
+      const out2 = [];
+      for (let n = 1; n <= parts.length; n++) {
+        try {
+          const m = JSON.parse(fs3.readFileSync(path3.join(scopeDirectory(), ...parts.slice(0, n), META), "utf8"));
+          out2.push({ collection: parts.slice(0, n).join("/"), ...m });
+        } catch {
+        }
+      }
+      return out2;
+    }
+    async function runScript(def, scope, st) {
+      const lifecycle = require_state_machine2().create(require_lifecycles().script);
+      const cols = st.collectionChains?.[def.id] || chain(def.id), entered = [];
+      const where = { script: def.id, step: 0 };
+      let scriptEntered = true;
+      try {
+        for (const c of cols) {
+          entered.push(c);
+          for (const [k, v] of Object.entries(c.vars || {})) if (scope[k] === void 0) scope[k] = fill(v, scope);
+        }
+        for (const [k, v] of Object.entries(def.vars || {})) if (scope[k] === void 0) scope[k] = fill(v, scope);
+        for (const c of cols) if (c.before) await hook(c.before, st, { ...where, hook: `before (${c.collection})` }, { scope });
+        scriptEntered = true;
+        if (def.before) await hook(def.before, st, { ...where, hook: "before" }, { scope });
+        lifecycle.to("steps");
+        await runSteps(def, scope, st);
+        lifecycle.to("after");
+        if (def.after) await hook(def.after, st, { ...where, step: def.steps.length + 1, hook: "after" }, { scope, result: st.last });
+        for (const c of [...cols].reverse()) if (c.after) await hook(c.after, st, { ...where, step: def.steps.length + 1, hook: `after (${c.collection})` }, { scope, result: st.last });
+        return scope;
+      } finally {
+        lifecycle.to("cleaning");
+        if (scriptEntered) await cleanup(def.finally, st, where, scope, st.last);
+        for (const c of entered.reverse()) await cleanup(c.finally, st, { ...where, collection: c.collection }, scope, st.last);
+        lifecycle.to("settled");
+      }
+    }
+    function transform(input, step, scope) {
+      let text = typeof input === "string" ? input : JSON.stringify(input, null, 2);
+      const map = {};
+      let replaced = 0;
+      for (const r of [].concat(step.replace || [])) {
+        if (!r || r.find === void 0) throw new Error('replace entries need "find" and "with"');
+        const re2 = r.regex ? new RegExp(r.find, (r.flags || "").includes("g") ? r.flags : `${r.flags || ""}g`) : new RegExp(String(r.find).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g");
+        const seen = {};
+        text = text.replace(re2, (...m) => {
+          const match = m[0];
+          replaced++;
+          if (r.consistent !== false && match in seen) return seen[match];
+          const groups = m.slice(1, -2);
+          const v = String(fill(r.with ?? "", { ...scope, match, group: groups }));
+          seen[match] = v;
+          map[match] = v;
+          return v;
+        });
+      }
+      if (step.json) {
+        let doc;
+        try {
+          doc = JSON.parse(text);
+        } catch (e) {
+          throw new Error(`transform json: the text is not JSON (${e.message})`);
+        }
+        for (const [p, val] of Object.entries(step.json)) {
+          const n = setPath(doc, p.split("."), (old) => {
+            const v = fill(val, { ...scope, value: old });
+            if (typeof old !== "object") map[String(old)] = v;
+            return v;
+          });
+          if (!n) throw new Error(`transform json: no "${p}" in the document`);
+          replaced += n;
+        }
+        text = JSON.stringify(doc, null, /\n/.test(typeof input === "string" ? input : "\n") ? 2 : 0);
+      }
+      return { text, replaced, map };
+    }
+    function setPath(o, keys, f) {
+      if (o == null || typeof o !== "object") return 0;
+      const [k, ...rest] = keys;
+      const targets = k === "*" ? Object.keys(o) : k in o ? [k] : [];
+      let n = 0;
+      for (const t of targets) {
+        if (!rest.length) {
+          o[t] = f(o[t]);
+          n++;
+        } else n += setPath(o[t], rest, f);
+      }
+      return n;
+    }
+    function httpTarget(value) {
+      const target = new URL(value);
+      if (!/^https?:$/.test(target.protocol) || target.username || target.password) throw new Error("HTTP URL must use http(s) without inline credentials");
+      return target;
+    }
+    async function httpStep(input, step, st) {
+      const { method, url, headers = {} } = input;
+      const target = httpTarget(url);
+      await require_limit().take(`http:${target.host}`);
+      let body = input.body;
+      if (body !== void 0 && typeof body !== "string") {
+        body = JSON.stringify(body);
+        if (!Object.keys(headers).some((h) => h.toLowerCase() === "content-type")) headers["content-type"] = "application/json";
+      }
+      const started = Date.now();
+      const res = await fetch(url, { method, headers, body, redirect: "error", signal: AbortSignal.any([AbortSignal.timeout(Math.max(1, Math.min(step.timeoutMs || 3e4, (st.cleaning ? st.cleanupDeadline : st.deadline) - Date.now()))), ...!st.cleaning && st.signal ? [st.signal] : []]) });
+      const cap = Math.max(1, Math.min(step.maxResponseBytes || 1048576, 2097152)), chunks = [];
+      let bytes = 0, truncated = false;
+      if (res.body) {
+        const reader = res.body.getReader();
+        try {
+          for (; ; ) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            const room = cap - bytes;
+            if (value.length > room) {
+              chunks.push(value.subarray(0, room));
+              bytes += room;
+              truncated = true;
+              await reader.cancel();
+              break;
+            }
+            chunks.push(value);
+            bytes += value.length;
+          }
+        } finally {
+          reader.releaseLock();
+        }
+      }
+      const text = Buffer.concat(chunks).toString("utf8");
+      let json;
+      try {
+        json = JSON.parse(text);
+      } catch {
+      }
+      const out2 = { status: res.status, statusText: res.statusText, headers: Object.fromEntries([...res.headers].filter(([k]) => !/^(set-cookie|authorization|proxy-authenticate)$/i.test(k))), ms: Date.now() - started, bytes, truncated, ...json !== void 0 ? { json } : { text } };
+      if (!res.ok && !step.allowErrors) throw new Error(`HTTP ${res.status} from ${method} ${url}: ${text.slice(0, 300)}`);
+      return out2;
+    }
+    function browser(st) {
+      if (!st.browser) st.browser = require_browser_mcp().session();
+      return st.browser;
+    }
+    async function run(idOrDef, given = {}, options = {}) {
+      const def = typeof idOrDef === "string" ? get(idOrDef) : { id: "(inline)", ...idOrDef };
+      const { source, signal, timeoutMs = 12e4, cleanupTimeoutMs = 1e4, call, cancelled, fullScope = false, definitions, collectionChains } = options;
+      const st = { log: [], logs: [], tests: [], cleanupErrors: [], depth: 0, browser: null, pages: /* @__PURE__ */ new Set(), last: void 0, signal, deadline: Date.now() + timeoutMs, cleanupTimeoutMs, call, cancelled, definitions, collectionChains };
+      const scope = params(def, given);
+      const keys = new Set(Object.keys(scope));
+      let error = null;
+      try {
+        await runScript(def, scope, st);
+      } catch (e) {
+        error = e.message;
+      }
+      if (st.js) st.js.close();
+      if (!error && st.cleanupErrors.length) error = "cleanup failed";
+      let routes;
+      if (st.browser) {
+        try {
+          const seen = require_routes().parseNetwork((await st.browser.call("browser_network_requests", {})).text).filter((r) => !st.pages.has(r.url));
+          routes = require_routes().learn(seen, source || `script:${def.id}`);
+        } catch (e) {
+          routes = { error: e.message };
+        }
+        await st.browser.close();
+      }
+      const failed = st.tests.filter((t) => !t.ok);
+      if (!error && failed.length) error = `${failed.length} of ${st.tests.length} tests failed: ${failed.map((t) => t.name).join(", ")}`;
+      const results = Object.fromEntries(Object.entries(scope).filter(([k]) => !keys.has(k)).map(([k, v]) => [k, brief(v, 6e3)]));
+      return {
+        script: def.id,
+        ok: !error,
+        ...error ? { error } : {},
+        ...st.cleanupErrors.length ? { cleanupErrors: st.cleanupErrors } : {},
+        ...fullScope ? { scope } : {},
+        ...st.lastView ? { view: st.lastView } : {},
+        // the last view a step made, embedded in the chat
+        steps: st.log,
+        results,
+        ...st.tests.length ? { tests: { passed: st.tests.length - failed.length, failed: failed.length, list: st.tests } } : {},
+        ...st.logs.length ? { logs: st.logs } : {},
+        ...routes ? { routes } : {}
+      };
+    }
+    async function httpRequest(input, options = {}) {
+      const timeoutMs = Math.max(1, Math.min(options.timeoutMs || 3e4, 12e4));
+      return httpStep(input, { ...options, timeoutMs }, { deadline: Date.now() + timeoutMs, signal: options.signal });
+    }
+    module2.exports = { seedStarters, STARTERS, list, get, save, remove, run, fill, validate, mkdir, move, copy, removeFolder, resolve: resolve2, getCollection, setCollection, exposed, signature, transform, generate, params, chain, get DIR() {
+      return scopeDirectory();
+    }, httpRequest, httpTarget };
+  }
+});
+
 // lib/offline-js.js
 var require_offline_js = __commonJS({
   "lib/offline-js.js"(exports2, module2) {
@@ -53624,15 +54688,10 @@ var require_scenario_state = __commonJS({
       http: async (dep, binding, plan) => {
         const q = binding.query || {}, method = String(q.method || dep.target.method || "GET").toUpperCase();
         if (!["GET", "HEAD"].includes(method)) throw new Error("Live HTTP state capture supports GET/HEAD; provide response fixtures for other methods");
-        const url = new URL(q.url), allow = require_config().getScripts().http.allow || [];
-        const allowed = (u) => allow.some((prefix) => {
-          const p = String(prefix).replace(/\/$/, "");
-          return u === p || u.startsWith(p + "/") || u.startsWith(p + "?");
-        });
-        if (!allowed(url.href) || url.username || url.password) throw new Error("HTTP state URL must be in scripts.http.allow and contain no credentials");
+        const url = require_scripts().httpTarget(q.url);
         await require_limit().take(`http:${url.host}:${plan.env}`);
         const r = await fetch(url, { method, headers: q.headers || {}, redirect: "manual", signal: AbortSignal.timeout(3e4) });
-        if (r.status >= 300 && r.status < 400) throw new Error("HTTP state redirects must be captured explicitly as another allowed URL");
+        if (r.status >= 300 && r.status < 400) throw new Error("HTTP state redirects must be captured explicitly as another URL");
         let size = 0, chunks = [];
         for await (const chunk of r.body || []) {
           size += chunk.length;
@@ -59924,138 +60983,6 @@ var require_docs_cache = __commonJS({
   }
 });
 
-// lib/routes.js
-var require_routes = __commonJS({
-  "lib/routes.js"(exports2, module2) {
-    var path3 = require("path");
-    var { CACHE: CACHE2, readJson, writeJson } = require_util2();
-    var FILE = path3.join(CACHE2, "routes.json");
-    var METHODS = "GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS";
-    var STATIC = /\.(js|mjs|css|map|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|otf|eot|mp4|webm|html?)$/i;
-    function idLike(seg) {
-      if (/^\d+$/.test(seg)) return true;
-      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(seg)) return true;
-      if (/^[0-9a-f]{12,}$/i.test(seg) && /\d/.test(seg)) return true;
-      if (seg.length >= 16 && /\d/.test(seg) && /[a-z]/i.test(seg) && !/[-_.]/.test(seg)) return true;
-      if (/^[A-Z]{2,5}-?\d{3,}$/.test(seg)) return true;
-      return false;
-    }
-    function normalize(url) {
-      let u;
-      try {
-        u = new URL(url);
-      } catch {
-        return null;
-      }
-      if (!/^https?:$/.test(u.protocol) || STATIC.test(u.pathname)) return null;
-      const segs = u.pathname.split("/").map((s) => {
-        try {
-          return decodeURIComponent(s);
-        } catch {
-          return s;
-        }
-      });
-      return { host: u.host, path: segs.map((s) => s && idLike(s) ? "<id>" : s).join("/") || "/", query: [...new Set(u.searchParams.keys())].sort() };
-    }
-    function parseNetwork(text) {
-      const out2 = [];
-      const re2 = new RegExp(`\\b(${METHODS})\\b\\]?\\s+(https?://\\S+?)(?=[\\s\\]]|$)([^\\n]*)`, "g");
-      for (const m of String(text).matchAll(re2)) {
-        const status = (m[3].match(/\b([1-5]\d\d)\b/) || [])[1];
-        out2.push({ method: m[1], url: m[2].replace(/[),;]+$/, ""), status: status ? Number(status) : null });
-      }
-      return out2;
-    }
-    var load = () => readJson(FILE, { routes: {} });
-    function learn(entries, source) {
-      const db = load();
-      const now = (/* @__PURE__ */ new Date()).toISOString();
-      let added = 0, seen = 0;
-      for (const e of entries) {
-        const n = normalize(e.url);
-        if (!n) continue;
-        const method = String(e.method || "GET").toUpperCase();
-        const key = `${n.host} ${method} ${n.path}`;
-        let r = db.routes[key];
-        if (!r) {
-          r = db.routes[key] = { host: n.host, method, path: n.path, query: [], statuses: {}, count: 0, first: now, sources: [], example: e.url.slice(0, 300) };
-          added++;
-        }
-        r.query = [.../* @__PURE__ */ new Set([...r.query, ...n.query])].sort();
-        if (e.status) r.statuses[e.status] = (r.statuses[e.status] || 0) + 1;
-        r.count++;
-        r.last = now;
-        seen++;
-        if (source && !r.sources.includes(source)) r.sources = [...r.sources, source].slice(-5);
-      }
-      writeJson(FILE, db);
-      if (added) try {
-        for (const env of require_config().envNames()) require_catalog().build(env);
-      } catch {
-      }
-      return { requests: entries.length, api: seen, added, total: Object.keys(db.routes).length };
-    }
-    function codeEndpoints(passports, { manual = true, env } = {}) {
-      const P = require_passport();
-      const out2 = [];
-      for (const p of passports || P.list({ manual: false }).map((s) => manual ? P.load(s.service, { env }) : P.loadDetected(s.service))) {
-        if (!p?.service || !p.effective || typeof p.effective !== "object" || Array.isArray(p.effective)) throw Object.assign(new Error("Cached passport endpoint attribution is unavailable"), { code: "DT_PASSPORT_INVALID" });
-        for (const e of p?.effective?.endpoints || []) {
-          const segs = String(e.path || "").split("/").filter(Boolean);
-          const re2 = new RegExp(`(^|/)${segs.map((x) => /^\{.*\}$/.test(x) ? "[^/]+" : x.replace(/[.*+?^$()|[\]\\]/g, "\\$&")).join("/")}/?$`, "i");
-          out2.push({ service: p.service, method: String(e.method || "").toUpperCase(), path: e.path, handler: e.handler || "", where: e.file ? `${e.file}:${e.line}` : "", source: e.source || "", re: re2, weight: segs.length });
-        }
-      }
-      return out2;
-    }
-    var siteOf = (host) => require_config().getBrowser().sites.find((s) => {
-      try {
-        return new URL(s.url).host === host;
-      } catch {
-        return false;
-      }
-    })?.site || "";
-    function resolve2(url, method = "GET") {
-      return resolver()(url, method);
-    }
-    function resolver(passports) {
-      const code = codeEndpoints(passports);
-      return (url, method = "GET") => {
-        const route = normalize(url);
-        if (!route) return { status: "unknown", candidates: [] };
-        const matches = code.filter((c) => (!c.method || c.method === "ANY" || c.method === String(method).toUpperCase()) && c.re.test(route.path)).sort((a, b) => b.weight - a.weight);
-        const candidates = matches.filter((c) => c.weight === matches[0]?.weight).map(({ re: re2, weight, ...c }) => c);
-        return { ...route, method: String(method).toUpperCase(), site: siteOf(route.host), status: candidates.length === 1 ? "matched" : candidates.length ? "ambiguous" : "observed", candidates };
-      };
-    }
-    function list({ q, service, host, manual = true, env, includeDeclared = false } = {}) {
-      const code = codeEndpoints(void 0, { manual, env });
-      const rows = [];
-      const seenFor = /* @__PURE__ */ new Map();
-      for (const r of Object.values(load().routes)) {
-        const m = code.filter((c) => (!c.method || c.method === r.method || c.method === "ANY") && c.re.test(r.path)).sort((a, b) => b.weight - a.weight)[0];
-        const row = { service: m?.service || "", method: r.method, path: r.path, host: r.host, site: siteOf(r.host), seen: r.count, statuses: Object.entries(r.statuses).map(([k, n]) => `${k}\xD7${n}`).join(" "), query: r.query.join(","), handler: m?.handler || "", where: m?.where || "", source: r.sources.join(", "), last: r.last };
-        if (m) {
-          const k = `${m.service} ${m.method} ${m.path}`;
-          seenFor.set(k, [...seenFor.get(k) || [], row]);
-        }
-        rows.push(row);
-      }
-      for (const c of code) {
-        const observed = seenFor.get(`${c.service} ${c.method} ${c.path}`);
-        if (observed && (!includeDeclared || observed.some((r) => r.path === c.path))) continue;
-        rows.push({ service: c.service, method: c.method, path: c.path, host: "", site: "", seen: 0, statuses: "", query: "", handler: c.handler, where: c.where, source: c.source ? `code (${c.source})` : "code", last: "" });
-      }
-      const words = String(q || "").toLowerCase().split(/\s+/).filter(Boolean);
-      return rows.filter((r) => (!service || r.service === service) && (!host || r.host === host || r.site === host)).filter((r) => words.every((w) => `${r.service} ${r.method} ${r.path} ${r.host} ${r.site} ${r.handler}`.toLowerCase().includes(w))).sort((a, b) => a.service.localeCompare(b.service) || a.path.localeCompare(b.path) || a.method.localeCompare(b.method));
-    }
-    function catalogLines({ manual = true } = {}) {
-      return list({ manual }).map((r) => `api ${r.service || r.site || r.host} ${r.method} ${r.path}${r.query ? `?${r.query}` : ""} [${r.seen ? `seen ${r.seen}${r.statuses ? ` ${r.statuses}` : ""}` : "code"}]${r.host ? ` ${r.host}` : ""}${r.handler ? ` -> ${r.handler}` : ""}`);
-    }
-    module2.exports = { normalize, parseNetwork, learn, list, load, catalogLines, idLike, resolve: resolve2, resolver, FILE };
-  }
-});
-
 // lib/catalog.js
 var require_catalog = __commonJS({
   "lib/catalog.js"(exports2, module2) {
@@ -61434,942 +62361,6 @@ var require_present = __commonJS({
         view: `${R.publicUrl()}/passport/${encodeURIComponent(p.service)}?t=${R.sign(`passport:${p.service}`)}&snapshot=${snapshot}&story=${encodeURIComponent(require_access().owner().storyId)}`
       };
     };
-  }
-});
-
-// lib/browser-mcp.js
-var require_browser_mcp = __commonJS({
-  "lib/browser-mcp.js"(exports2, module2) {
-    var PROTOCOL = "2025-06-18";
-    var BrowserSession = class {
-      constructor(url, { timeout = 6e4 } = {}) {
-        if (!url) throw new Error("no browser MCP endpoint: set browser.mcp in config.json or DT_BROWSER_MCP (compose sets it when the browser profile is on)");
-        this.url = url;
-        this.timeout = timeout;
-        this.id = null;
-        this.seq = 0;
-        this.lifecycle = require_state_machine2().create(require_lifecycles().handshake);
-        this.opening = null;
-        this.closing = null;
-      }
-      async post(body, { timeout = this.timeout } = {}) {
-        const headers = { "content-type": "application/json", accept: "application/json, text/event-stream", "mcp-protocol-version": PROTOCOL };
-        if (this.id) headers["mcp-session-id"] = this.id;
-        let res;
-        try {
-          res = await fetch(this.url, { method: "POST", headers, body: JSON.stringify(body), signal: AbortSignal.timeout(timeout) });
-        } catch (e) {
-          throw new Error(`browser MCP ${this.url}: ${e.cause?.code || e.message}`);
-        }
-        if (res.headers.get("mcp-session-id")) this.id = res.headers.get("mcp-session-id");
-        if (!res.ok) throw new Error(`browser MCP ${body.method}: HTTP ${res.status} ${(await res.text()).slice(0, 300)}`);
-        if (body.id === void 0) return null;
-        if (!(res.headers.get("content-type") || "").includes("text/event-stream")) return answer(await res.json(), body.method);
-        const reader = res.body.getReader();
-        const frames = new (require_state_machine2()).Framer({ separator: /\r?\n\r?\n/ });
-        try {
-          for (; ; ) {
-            const { value, done } = await reader.read();
-            for (const event of value ? frames.push(value) : []) {
-              const data = event.split(/\r?\n/).filter((l) => l.startsWith("data:")).map((l) => l.slice(5).trimStart()).join("\n");
-              if (!data) continue;
-              const msg = JSON.parse(data);
-              if (msg.id === body.id) return answer(msg, body.method);
-            }
-            if (done) {
-              frames.finish();
-              throw new Error(`browser MCP ${body.method}: stream ended without an answer`);
-            }
-          }
-        } finally {
-          if (!frames.lifecycle.terminal) frames.discard();
-          reader.cancel().catch(() => {
-          });
-          reader.releaseLock();
-        }
-      }
-      async open() {
-        if (this.closing) {
-          await this.closing;
-          return this.open();
-        }
-        if (this.lifecycle.is("ready")) return this;
-        if (this.opening) return this.opening;
-        this.lifecycle.to("initializing");
-        this.opening = (async () => {
-          try {
-            await this.post({ jsonrpc: "2.0", id: ++this.seq, method: "initialize", params: { protocolVersion: PROTOCOL, capabilities: {}, clientInfo: { name: "dt", version: "1" } } });
-            if (!this.lifecycle.is("initializing")) throw new Error("browser MCP session closed during initialization");
-            await this.post({ jsonrpc: "2.0", method: "notifications/initialized" });
-            if (!this.lifecycle.is("initializing")) throw new Error("browser MCP session closed during initialization");
-            this.lifecycle.to("ready");
-            return this;
-          } catch (error) {
-            if (!this.lifecycle.is("closing")) {
-              if (this.id) try {
-                await fetch(this.url, { method: "DELETE", headers: { "mcp-session-id": this.id }, signal: AbortSignal.timeout(5e3) });
-              } catch {
-              }
-              this.id = null;
-              this.definitions = null;
-              this.lifecycle.to("disconnected");
-            }
-            throw error;
-          } finally {
-            this.opening = null;
-          }
-        })();
-        return this.opening;
-      }
-      async tools() {
-        await this.open();
-        this.definitions = (await this.post({ jsonrpc: "2.0", id: ++this.seq, method: "tools/list", params: {} })).tools || [];
-        return this.definitions;
-      }
-      // -> { text, images: n }; throws when the tool reports an error
-      async call(name, args = {}, options = {}) {
-        await this.open();
-        if (args.ref !== void 0) {
-          const definition = (this.definitions || await this.tools()).find((t) => t.name === name);
-          if (definition?.inputSchema?.properties?.target && !definition.inputSchema.properties.ref) {
-            args = { ...args, target: args.target ?? args.ref };
-            delete args.ref;
-          }
-        }
-        const r = await this.post({ jsonrpc: "2.0", id: ++this.seq, method: "tools/call", params: { name, arguments: args } }, options);
-        const text = (r.content || []).filter((c) => c.type === "text").map((c) => c.text).join("\n");
-        if (r.isError) throw new Error(`${name}: ${text.slice(0, 1e3)}`);
-        const images = (r.content || []).filter((c) => c.type === "image");
-        const imageData = options?.includeImages ? images.filter((c) => /^image\/(png|jpeg|webp)$/.test(c.mimeType) && typeof c.data === "string" && c.data.length <= 4 * 1024 * 1024 && /^[A-Za-z0-9+/]+={0,2}$/.test(c.data)).slice(0, 1).map((c) => ({ mimeType: c.mimeType, data: c.data })) : [];
-        return { text, images: images.length, ...imageData.length ? { imageData } : {} };
-      }
-      async close() {
-        if (this.closing) return this.closing;
-        if (this.lifecycle.is("disconnected") && !this.id) return;
-        this.lifecycle.to("closing");
-        this.closing = (async () => {
-          try {
-            await this.opening?.catch(() => {
-            });
-            if (this.id) try {
-              await fetch(this.url, { method: "DELETE", headers: { "mcp-session-id": this.id }, signal: AbortSignal.timeout(5e3) });
-            } catch {
-            }
-          } finally {
-            this.id = null;
-            this.definitions = null;
-            this.lifecycle.to("disconnected");
-            this.closing = null;
-          }
-        })();
-        return this.closing;
-      }
-    };
-    function answer(msg, method) {
-      if (msg.error) throw new Error(`browser MCP ${method}: ${msg.error.message || JSON.stringify(msg.error)}`);
-      return msg.result || {};
-    }
-    var session = (opts) => new BrowserSession(require_config().getBrowser().mcp, opts);
-    module2.exports = { BrowserSession, session };
-  }
-});
-
-// lib/scripts.js
-var require_scripts = __commonJS({
-  "lib/scripts.js"(exports2, module2) {
-    var fs3 = require("fs");
-    var path3 = require("path");
-    var crypto = require("crypto");
-    var { PATHS } = require_config();
-    var DIR = PATHS.scripts;
-    var scopeDirectory = () => require_access().scopedDirectory(DIR);
-    var MAX_DEPTH = 5;
-    var ID = /^[a-z0-9][\w.-]*(\/[a-z0-9][\w.-]*)*$/i;
-    function file(id) {
-      if (!ID.test(id || "") || id.split("/").some((s) => s === ".." || s.startsWith("."))) throw new Error(`bad script id "${id}": use collection/name, letters, digits, . _ -`);
-      return path3.join(scopeDirectory(), `${id}.json`);
-    }
-    var norm = (x) => String(x).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-    var subseq = (w, h) => {
-      let i = 0;
-      for (const c of h) if (c === w[i]) i++;
-      return i === w.length;
-    };
-    function resolve2(q, within = "") {
-      q = String(q || "").trim().replace(/\.json$/, "");
-      if (!q) throw new Error("script id or name required");
-      const pre = within ? `${within}/` : "";
-      const ids = walk(scopeDirectory()).filter((id) => id.startsWith(pre));
-      if (ids.includes(q) || ids.includes(pre + q)) return ids.includes(q) ? q : pre + q;
-      const nq = norm(q);
-      const named = ids.filter((id) => norm(id.split("/").pop()) === nq || id.endsWith(`/${q}`));
-      if (named.length === 1) return named[0];
-      const words = nq.split(" ").filter(Boolean);
-      const scored = (named.length ? named : ids).map((id) => {
-        let desc = "";
-        try {
-          desc = JSON.parse(fs3.readFileSync(path3.join(scopeDirectory(), `${id}.json`), "utf8")).description || "";
-        } catch {
-        }
-        const idn = norm(id), all = `${idn} ${norm(desc)}`;
-        const score = words.reduce((n, w) => n + (idn.includes(w) ? 2 : all.includes(w) ? 1 : subseq(w, idn.replace(/ /g, "")) ? 1 : 0), 0) / (2 * words.length);
-        return { id, score };
-      }).filter((x) => x.score >= 0.5).sort((a, b) => b.score - a.score || a.id.length - b.id.length);
-      if (!scored.length) throw new Error(`no script matches "${q}"${within ? ` in ${within}` : ""} (script_list shows them)`);
-      if (scored.length === 1 || scored[0].score > scored[1].score) return scored[0].id;
-      throw new Error(`"${q}" matches several scripts: ${scored.slice(0, 6).map((x) => x.id).join(", ")}; use the id`);
-    }
-    function get(id) {
-      let exact = false;
-      try {
-        exact = fs3.existsSync(file(id));
-      } catch {
-      }
-      if (!exact) id = resolve2(id);
-      let text;
-      try {
-        text = fs3.readFileSync(file(id), "utf8");
-      } catch {
-        throw new Error(`no script "${id}" (script_list shows them)`);
-      }
-      try {
-        return { id, ...JSON.parse(text) };
-      } catch (e) {
-        throw new Error(`script ${id}: ${e.message}`);
-      }
-    }
-    function walk(dir, prefix = "", folders = []) {
-      let ents;
-      try {
-        ents = fs3.readdirSync(dir, { withFileTypes: true });
-      } catch {
-        return [];
-      }
-      return ents.sort((a, b) => a.name.localeCompare(b.name)).flatMap((e) => {
-        if (e.name.startsWith(".") || e.name.startsWith("_")) return [];
-        if (e.isDirectory()) {
-          folders.push(`${prefix}${e.name}`);
-          return walk(path3.join(dir, e.name), `${prefix}${e.name}/`, folders);
-        }
-        return e.name.endsWith(".json") ? [`${prefix}${e.name.slice(0, -5)}`] : [];
-      });
-    }
-    function list(collection = "") {
-      const pre = collection ? collection.replace(/\/+$/, "") + "/" : "";
-      const folders = [];
-      const ids = walk(scopeDirectory(), "", folders).filter((id) => !pre || id.startsWith(pre));
-      const scripts = ids.map((id) => {
-        try {
-          const s = get(id);
-          return { id, description: s.description || "", params: Object.keys(s.params || {}), steps: (s.steps || []).length, browser: (s.steps || []).some((x) => x.browser || x.open), js: !!(s.before || s.after || (s.steps || []).some((x) => x.js !== void 0 || x.before || x.after)), tool: s.tool ? toolName(s.tool, id) : null };
-        } catch (e) {
-          return { id, error: e.message };
-        }
-      });
-      const collections = folders.filter((c) => !pre || `${c}/`.startsWith(pre)).map((c) => ({ collection: c, scripts: ids.filter((id) => id.startsWith(`${c}/`)).length }));
-      return { collection: collection || "", collections, scripts };
-    }
-    function folder(p) {
-      const id = String(p || "").replace(/^\/+|\/+$/g, "");
-      file(id || "x");
-      return { id, dir: path3.join(scopeDirectory(), id) };
-    }
-    function mkdir(p) {
-      const f = folder(p);
-      if (!f.id) throw new Error("collection name required");
-      fs3.mkdirSync(f.dir, { recursive: true });
-      return { collection: f.id, created: true };
-    }
-    function move(from, to) {
-      const src = String(from || "").replace(/\/+$/, ""), dst = String(to || "").replace(/\/+$/, "");
-      if (!src || !dst) throw new Error("from and to required");
-      if (src === dst) return { from: src, to: dst, moved: false };
-      const isScript = fs3.existsSync(file(src));
-      const a = isScript ? file(src) : folder(src).dir;
-      const b = isScript ? file(dst) : folder(dst).dir;
-      if (!isScript && !fs3.existsSync(a)) throw new Error(`no script or collection "${src}"`);
-      if (!isScript && (dst + "/").startsWith(src + "/")) throw new Error("cannot move a collection into itself");
-      if (fs3.existsSync(b)) throw new Error(`"${dst}" already exists`);
-      fs3.mkdirSync(path3.dirname(b), { recursive: true });
-      fs3.renameSync(a, b);
-      return { from: src, to: dst, kind: isScript ? "script" : "collection", moved: true };
-    }
-    function removeFolder(p) {
-      const f = folder(p);
-      if (!f.id || !fs3.existsSync(f.dir)) throw new Error(`no collection "${p}"`);
-      const n = walk(f.dir).length;
-      fs3.rmSync(f.dir, { recursive: true });
-      return { collection: f.id, deleted: true, scripts: n };
-    }
-    var META = "_collection.json";
-    var toolName = (t, id) => typeof t === "string" && t ? t : String(id).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").replace(/^(\d)/, "s_$1");
-    function getCollection(p) {
-      const f = folder(p);
-      if (!f.id || !fs3.existsSync(f.dir)) throw new Error(`no collection "${p}"`);
-      let meta = {};
-      try {
-        meta = JSON.parse(fs3.readFileSync(path3.join(f.dir, META), "utf8"));
-      } catch {
-      }
-      return { ...meta, collection: f.id, description: meta.description || "", tool: meta.tool || false, toolName: meta.tool ? toolName(meta.tool, f.id) : null, vars: meta.vars || {}, before: meta.before || "", after: meta.after || "", finally: meta.finally || "", scripts: walk(f.dir).map((x) => `${f.id}/${x}`) };
-    }
-    function setCollection(p, changes = {}) {
-      const f = folder(p);
-      if (!f.id || !fs3.existsSync(f.dir)) throw new Error(`no collection "${p}"`);
-      let prior = {};
-      try {
-        prior = JSON.parse(fs3.readFileSync(path3.join(f.dir, META), "utf8"));
-      } catch {
-      }
-      const meta = { ...prior, ...Object.fromEntries(Object.entries(changes).filter(([, v]) => v !== void 0)) };
-      if (meta.tool && !/^[a-z][a-z0-9_]{1,63}$/.test(toolName(meta.tool, f.id))) throw new Error(`tool name "${toolName(meta.tool, f.id)}": lowercase letters, digits and _`);
-      if (meta.vars && (typeof meta.vars !== "object" || Array.isArray(meta.vars))) throw new Error('vars must be { "name": value }');
-      for (const h of ["before", "after", "finally"]) if (meta[h] && ![].concat(meta[h]).every((x) => typeof x === "string")) throw new Error(`${h} must be JavaScript`);
-      if (meta.description !== void 0) meta.description = String(meta.description || "").trim();
-      fs3.writeFileSync(path3.join(f.dir, META), JSON.stringify(meta, null, 2) + "\n");
-      return getCollection(f.id);
-    }
-    var PARAM_TYPES = /* @__PURE__ */ new Set(["string", "integer", "number", "boolean", "object", "array"]);
-    function exposed() {
-      const folders = [];
-      const ids = walk(scopeDirectory(), "", folders);
-      const out2 = [], errors = [];
-      for (const id of ids) {
-        let def;
-        try {
-          def = get(id);
-        } catch {
-          continue;
-        }
-        if (!def.tool) continue;
-        const name = toolName(def.tool, id);
-        if (!/^[a-z][a-z0-9_]{1,63}$/.test(name)) {
-          errors.push({ source: `script ${id}`, error: `tool name "${name}": lowercase letters, digits and _` });
-          continue;
-        }
-        const input = {}, required = [];
-        for (const [k, p] of Object.entries(def.params || {})) {
-          input[k] = { type: PARAM_TYPES.has(p && p.type) ? p.type : "string", description: p && p.description || k, ...p && p.default !== void 0 ? { default: p.default } : {} };
-          if (p && p.required) required.push(k);
-        }
-        out2.push({ name, group: "scripts", origin: `script ${id}`, description: `${def.description || id} (saved script ${id}; returns each step and the named results)`, input, required, run: (a) => run(id, a, { source: "tool" }) });
-      }
-      for (const c of folders) {
-        const meta = getCollection(c);
-        if (!meta.tool) continue;
-        const name = toolName(meta.tool, c);
-        if (!/^[a-z][a-z0-9_]{1,63}$/.test(name)) {
-          errors.push({ source: `collection ${c}`, error: `tool name "${name}": lowercase letters, digits and _` });
-          continue;
-        }
-        const items = meta.scripts.map((id) => {
-          try {
-            const d = get(id);
-            return { rel: id.slice(c.length + 1), d };
-          } catch {
-            return null;
-          }
-        }).filter(Boolean);
-        const lines = items.map(({ rel, d }) => `- ${rel}: ${d.description || ""}${Object.keys(d.params || {}).length ? ` (params: ${Object.entries(d.params).map(([k, p]) => `${k}${p && p.required ? "*" : ""}`).join(", ")})` : ""}`);
-        out2.push({
-          name,
-          group: "scripts",
-          origin: `collection ${c}`,
-          description: `${meta.description || `Saved scripts of the ${c} collection`}. Run one by name (a close name is enough):
-${lines.join("\n") || "(empty)"}`,
-          input: { script: { type: "string", description: "Script name in this collection (exact name or unambiguous close match)", ...items.length ? { examples: items.map((x) => x.rel) } : {} }, params: { type: "object", description: "Its params", additionalProperties: true } },
-          required: ["script"],
-          run: (a) => run(resolve2(a.script, c), a.params || {}, { source: "tool" })
-        });
-      }
-      return { tools: out2, errors };
-    }
-    var STARTERS = path3.join(__dirname, "starter-scripts");
-    var SEEDED = () => path3.join(scopeDirectory(), ".starters.json");
-    function seedStarters() {
-      if (require_config().getScripts().starters === false) return [];
-      let names = [];
-      try {
-        names = fs3.readdirSync(STARTERS, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name);
-      } catch {
-        return [];
-      }
-      let seeded = {};
-      try {
-        seeded = JSON.parse(fs3.readFileSync(SEEDED(), "utf8"));
-      } catch {
-      }
-      const added = [];
-      for (const name of names) {
-        const lifecycle = require_state_machine2().create(require_lifecycles().starter);
-        if (seeded[name] || fs3.existsSync(path3.join(scopeDirectory(), name))) {
-          seeded[name] ||= "present";
-          lifecycle.to("retained");
-          continue;
-        }
-        lifecycle.to("copying");
-        fs3.mkdirSync(path3.join(scopeDirectory(), name), { recursive: true });
-        for (const f of fs3.readdirSync(path3.join(STARTERS, name)).filter((f2) => f2.endsWith(".json"))) fs3.copyFileSync(path3.join(STARTERS, name, f), path3.join(scopeDirectory(), name, f));
-        seeded[name] = (/* @__PURE__ */ new Date()).toISOString();
-        added.push(name);
-        lifecycle.to("copied");
-      }
-      if (added.length || !fs3.existsSync(SEEDED())) {
-        fs3.mkdirSync(scopeDirectory(), { recursive: true });
-        require_atomic_file().atomicFile(SEEDED(), JSON.stringify(seeded, null, 2) + "\n");
-      }
-      return added;
-    }
-    function signature() {
-      const parts = [];
-      const visit = (d) => {
-        let ents;
-        try {
-          ents = fs3.readdirSync(d, { withFileTypes: true });
-        } catch {
-          return;
-        }
-        for (const e of ents) {
-          if (e.name.toLowerCase() === "_stories" || e.isSymbolicLink()) continue;
-          const f = path3.join(d, e.name);
-          try {
-            parts.push(`${f}:${require_util2().fileStamp(f)}`);
-          } catch {
-          }
-          if (e.isDirectory()) visit(f);
-        }
-      };
-      visit(scopeDirectory());
-      return crypto.createHash("sha1").update(parts.sort().join("|")).digest("hex");
-    }
-    function copy(from, to) {
-      const s = get(from);
-      const { id, savedAt, ...def } = s;
-      if (fs3.existsSync(file(to))) throw new Error(`"${to}" already exists`);
-      return save(to, def);
-    }
-    var KINDS = ["tool", "script", "browser", "open", "wait", "set", "transform", "http", "js"];
-    function validate(def) {
-      if (!def || typeof def !== "object") throw new Error("script must be an object");
-      if (!def.description) throw new Error("description required (say what it does and when to use it)");
-      if (!Array.isArray(def.steps) || !def.steps.length) throw new Error("steps required: a non-empty list");
-      def.steps.forEach((s, i) => {
-        const kinds = KINDS.filter((k) => s && s[k] !== void 0);
-        if (kinds.length !== 1) throw new Error(`step ${i + 1}: needs exactly one of ${KINDS.join(", ")}`);
-        if (s.args !== void 0 && (typeof s.args !== "object" || Array.isArray(s.args))) throw new Error(`step ${i + 1}: args must be an object`);
-        if (s.as !== void 0 && !/^[a-z_]\w*$/i.test(s.as)) throw new Error(`step ${i + 1}: "as" must be a name`);
-        if (s.set !== void 0 && (!s.set || typeof s.set !== "object" || Array.isArray(s.set))) throw new Error(`step ${i + 1}: set must be { "name": value }`);
-        if (s.transform !== void 0 && s.replace !== void 0 && !Array.isArray(s.replace)) throw new Error(`step ${i + 1}: replace must be a list of { find, with }`);
-        if (s.http !== void 0 && !/^(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)\s+\S+$/i.test(String(s.http))) throw new Error(`step ${i + 1}: http must be "METHOD url"`);
-        for (const h of ["before", "after", "finally", "js"]) if (s[h] !== void 0 && ![].concat(s[h]).every((x) => typeof x === "string")) throw new Error(`step ${i + 1}: ${h} must be JavaScript (a string, or a list of lines)`);
-        if (s.urlEncodeParams !== void 0 && (!Array.isArray(s.urlEncodeParams) || s.urlEncodeParams.some((p) => !/^[a-z_]\w*$/i.test(p)))) throw new Error(`step ${i + 1}: urlEncodeParams must be parameter names`);
-        for (const key of ["timeoutMs"]) if (s[key] !== void 0 && (!Number.isInteger(s[key]) || s[key] < 1 || s[key] > 12e4)) throw new Error(`step ${i + 1}: ${key} must be 1..120000`);
-        if (s.assertions !== void 0 && (!Array.isArray(s.assertions) || s.assertions.some((a) => !a || typeof a.name !== "string" || !a.name || (a.code === void 0 ? !["equal", "exists", "contains", "count"].includes(a.op) || typeof a.path !== "string" : ![].concat(a.code).every((x) => typeof x === "string"))))) throw new Error(`step ${i + 1}: assertions need name and code, or name/path/op (equal, exists, contains, count)`);
-        if (s.retry || s.poll) {
-          const attempts = s.poll?.attempts || s.retry?.attempts || 1;
-          if (!Number.isInteger(attempts) || attempts < 1 || attempts > 20) throw new Error(`step ${i + 1}: retry/poll attempts must be 1..20`);
-          if (!safeRepeat(s)) throw new Error(`step ${i + 1}: retry/poll requires GET/HEAD or an explicitly idempotent tool`);
-        }
-        if (s.capture !== void 0 && (typeof s.capture !== "object" || Array.isArray(s.capture) || !Object.entries(s.capture).every(([k, v]) => /^[a-z_]\w*$/i.test(k) && typeof v === "string"))) throw new Error(`step ${i + 1}: capture must be { "name": "path.in.result" }`);
-      });
-      for (const [k, p] of Object.entries(def.params || {})) if (!/^\w+$/.test(k) || p && typeof p !== "object") throw new Error(`param ${k}: use { "description", "default", "required" }`);
-      for (const h of ["before", "after", "finally"]) if (def[h] !== void 0 && ![].concat(def[h]).every((x) => typeof x === "string")) throw new Error(`${h} must be JavaScript (a string, or a list of lines)`);
-      if (def.vars !== void 0 && (typeof def.vars !== "object" || Array.isArray(def.vars))) throw new Error('vars must be { "name": value }');
-      if (def.tool && typeof def.tool === "string" && !/^[a-z][a-z0-9_]{1,63}$/.test(def.tool)) throw new Error(`tool name "${def.tool}": lowercase letters, digits and _`);
-    }
-    function save(id, def, { merge = false, expected_revision } = {}) {
-      const f = file(id);
-      if (expected_revision !== void 0) {
-        const revision = fs3.existsSync(f) ? crypto.createHash("sha256").update(fs3.readFileSync(f)).digest("hex") : null;
-        if (revision !== expected_revision) throw Object.assign(Error("Script changed; reload before saving"), { code: "DT_SCRIPT_CONFLICT", statusCode: 409 });
-      }
-      const { id: _, ...changes } = def;
-      let prior = {};
-      if (merge && fs3.existsSync(f)) prior = JSON.parse(fs3.readFileSync(f, "utf8"));
-      const body = { ...prior, ...changes };
-      validate(body);
-      fs3.mkdirSync(path3.dirname(f), { recursive: true });
-      const existed = fs3.existsSync(f);
-      fs3.writeFileSync(f, JSON.stringify({ ...body, savedAt: (/* @__PURE__ */ new Date()).toISOString() }, null, 2) + "\n");
-      return { id, saved: true, replaced: existed, file: path3.relative(require_config().HOME, f) };
-    }
-    function remove(id) {
-      const f = file(id);
-      if (!fs3.existsSync(f)) throw new Error(`no script "${id}"`);
-      fs3.unlinkSync(f);
-      return { id, deleted: true };
-    }
-    var dig = (o, keys) => keys.reduce((v, k) => v == null ? void 0 : v[k], o);
-    var pad = (n, w = 2) => String(n).padStart(w, "0");
-    function fmtDate(d, f) {
-      return f.replace(/YYYY|MM|DD|HH|mm|ss|SSS/g, (t) => ({ YYYY: d.getFullYear(), MM: pad(d.getMonth() + 1), DD: pad(d.getDate()), HH: pad(d.getHours()), mm: pad(d.getMinutes()), ss: pad(d.getSeconds()), SSS: pad(d.getMilliseconds(), 3) })[t]);
-    }
-    function generate(expr) {
-      let m;
-      if (expr === "uuid") return crypto.randomUUID();
-      if (expr === "now") return (/* @__PURE__ */ new Date()).toISOString();
-      if (expr === "timestamp") return Date.now();
-      if (m = expr.match(/^date(?::(.+))?$/)) return fmtDate(/* @__PURE__ */ new Date(), m[1] || "YYYY-MM-DD");
-      if (m = expr.match(/^rand:(\d{1,3})$/)) return Array.from(crypto.randomBytes(Number(m[1])), (b) => b % 10).join("").replace(/^0/, "1");
-      if (m = expr.match(/^hex:(\d{1,3})$/)) return crypto.randomBytes(Math.ceil(Number(m[1]) / 2)).toString("hex").slice(0, Number(m[1]));
-      return void 0;
-    }
-    function lookup(expr, scope) {
-      expr = expr.trim();
-      if (expr.startsWith("link:")) return require_config().siteUrl(expr.slice(5).trim(), scope);
-      const keys = expr.split(".");
-      let v = dig(scope, keys);
-      if (v === void 0) v = generate(expr);
-      if (v === void 0) throw new Error(`{{${expr}}} is not set (params: ${Object.keys(scope).join(", ") || "none"})`);
-      return v;
-    }
-    function fill(value, scope) {
-      if (Array.isArray(value)) return value.map((v) => fill(v, scope));
-      if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, fill(v, scope)]));
-      if (typeof value !== "string" || !value.includes("{{")) return value;
-      const whole = value.match(/^\{\{([^}]+)\}\}$/);
-      if (whole) return lookup(whole[1], scope);
-      return value.replace(/\{\{([^}]+)\}\}/g, (m, e) => {
-        const v = lookup(e, scope);
-        return typeof v === "object" ? JSON.stringify(v) : String(v);
-      });
-    }
-    function params(def, given = {}) {
-      const out2 = { ...given };
-      for (const [k, p] of Object.entries(def.params || {})) {
-        if ((out2[k] === void 0 || out2[k] === "") && p && p.default !== void 0) out2[k] = p.default;
-        if ((out2[k] === void 0 || out2[k] === "") && p && p.required) throw new Error(`script ${def.id}: missing param ${k}${p.description ? ` (${p.description})` : ""}`);
-      }
-      for (const [k, p] of Object.entries(def.params || {})) if (out2[k] !== void 0 && p && p.type) {
-        const v = out2[k], type = p.type;
-        const ok = type === "integer" ? Number.isInteger(v) : type === "array" ? Array.isArray(v) : type === "object" ? v !== null && typeof v === "object" && !Array.isArray(v) : typeof v === type;
-        if (!ok) throw new Error(`script ${def.id}: param ${k} must be ${type}`);
-        if (p.enum && !p.enum.some((x) => JSON.stringify(x) === JSON.stringify(v))) throw new Error(`script ${def.id}: param ${k} is not an allowed value`);
-      }
-      return out2;
-    }
-    var brief = (v, n = 3e3) => {
-      const s = typeof v === "string" ? v : JSON.stringify(v);
-      return s && s.length > n ? `${s.slice(0, n)} ... [${s.length - n} more chars]` : v;
-    };
-    var browserTool = (name) => name.startsWith("browser_") ? name : `browser_${name}`;
-    function stepInput(step, scope) {
-      if (step.tool) return fill(step.args || {}, scope);
-      if (step.browser) return fill(step.args || {}, scope);
-      if (step.script) return fill(step.params || step.args || {}, scope);
-      if (step.open) return { url: /^https?:\/\//.test(step.open) ? fill(step.open, scope) : require_config().siteUrl(fill(step.open, scope), scope) };
-      if (step.http) {
-        const [, method, url] = String(step.http).match(/^(\w+)\s+(\S+)$/);
-        const encoded = { ...scope };
-        for (const p of step.urlEncodeParams || []) {
-          if (scope[p] !== void 0) encoded[p] = encodeURIComponent(String(scope[p]));
-        }
-        return { method: method.toUpperCase(), url: fill(url, encoded), headers: fill(step.headers || {}, scope), ...step.body !== void 0 ? { body: fill(step.body, scope) } : {} };
-      }
-      if (step.set) return fill(step.set, scope);
-      if (step.transform !== void 0) return { text: fill(step.transform, scope) };
-      if (step.wait !== void 0) return { wait: fill(step.wait, scope) };
-      return {};
-    }
-    var kindOf = (step) => KINDS.find((k) => step[k] !== void 0);
-    var label = (step) => step.tool ? `tool ${step.tool}` : step.script ? `script ${step.script}` : step.browser ? `browser ${browserTool(step.browser)}` : step.open ? `open ${step.open}` : step.set ? `set ${Object.keys(step.set).join(", ")}` : step.transform !== void 0 ? "transform" : step.http ? `http ${String(step.http).split(/\s+/)[0].toUpperCase()}` : step.js !== void 0 ? "js" : `wait ${step.wait}`;
-    var capturePath = (v, p) => !p || p === "." || p === "$" ? v : dig(v, String(p).replace(/^\$\.?/, "").replace(/\[(\d+)\]/g, ".$1").split(".").filter(Boolean));
-    function check(st) {
-      if (st.cleaning) {
-        if (Date.now() >= st.cleanupDeadline) throw new Error("cleanup deadline exceeded");
-        return;
-      }
-      if (st.signal?.aborted) throw new Error(`cancelled: ${st.signal.reason?.message || st.signal.reason || "requested"}`);
-      if (st.cancelled?.()) throw new Error("cancelled");
-      if (Date.now() >= st.deadline) throw new Error("run deadline exceeded");
-    }
-    async function bounded(fn, st, maxMs) {
-      check(st);
-      const remaining = (st.cleaning ? st.cleanupDeadline : st.deadline) - Date.now();
-      const ms = Math.max(1, Math.min(maxMs || 12e4, remaining));
-      let timer, listener;
-      try {
-        const result = await Promise.race([Promise.resolve().then(fn), new Promise((_, reject) => {
-          timer = setTimeout(() => reject(new Error("step deadline exceeded; outcome may be unknown")), ms);
-          if (!st.cleaning && st.signal) {
-            listener = () => reject(new Error("cancelled; in-flight tool outcome may be unknown"));
-            st.signal.addEventListener("abort", listener, { once: true });
-          }
-        })]);
-        check(st);
-        return result;
-      } finally {
-        clearTimeout(timer);
-        if (listener) st.signal.removeEventListener("abort", listener);
-      }
-    }
-    async function delay(ms, st) {
-      return bounded(() => new Promise((resolve3) => setTimeout(resolve3, ms)), st, ms + 100);
-    }
-    async function hook(code, st, where, { scope, args, result }) {
-      check(st);
-      if (!st.js) st.js = new (require_js()).Session();
-      const onTool = (name, a) => {
-        check(st);
-        if (name === "__list") return require_tools().schemas().then((ts) => ts.map((t) => ({ name: t.name, description: t.description.split(". ")[0] })));
-        return bounded(() => (st.call || require_tools().call)(name, a, { source: `script:${where.script}` }), st);
-      };
-      const codeText = [].concat(code).join("\n"), config = require_config().getScripts();
-      const ms = Math.max(1, Math.min(codeText.includes("tools.") ? config.codeTimeoutMs : config.jsTimeoutMs, (st.cleaning ? st.cleanupDeadline : st.deadline) - Date.now()));
-      const abort = () => st.js?.kill("cancelled");
-      if (!st.cleaning) st.signal?.addEventListener("abort", abort, { once: true });
-      let r;
-      try {
-        r = await st.js.run([].concat(code).join("\n"), { vars: scope, args, result }, { onTool, timeoutMs: ms });
-      } finally {
-        st.signal?.removeEventListener("abort", abort);
-      }
-      if (r.vars && typeof r.vars === "object") {
-        for (const k of Object.keys(scope)) if (!(k in r.vars)) delete scope[k];
-        Object.assign(scope, r.vars);
-      }
-      for (const msg of r.logs || []) st.logs.push({ ...where, msg });
-      for (const t of r.tests || []) st.tests.push({ ...where, ...t });
-      if (r.error) throw new Error(`${where.hook}: ${r.error}`);
-      check(st);
-      return r;
-    }
-    async function cleanup(code, st, where, scope, result) {
-      if (!code) return;
-      const prior = st.cleaning;
-      if (!prior) st.cleanupDeadline = Date.now() + st.cleanupTimeoutMs;
-      st.cleaning = true;
-      try {
-        await require_execution().run({ kind: "cleanup", title: `Script cleanup ${where.script}`, detached: true, codeActive: require_execution().current()?.codeActive === true }, () => hook(code, st, { ...where, hook: "finally" }, { scope, result }));
-      } catch (e) {
-        st.cleanupErrors.push({ ...where, error: e.message });
-      } finally {
-        st.cleaning = prior;
-      }
-    }
-    var safeRepeat = (step) => step.http ? /^(GET|HEAD)\s/i.test(step.http) : !!step.tool && step.retry?.idempotent === true;
-    async function repeatStep(step, st, rec, fn) {
-      const retry = step.retry || {}, poll = step.poll;
-      const attempts = poll?.attempts || retry.attempts || 1;
-      if (!Number.isInteger(attempts) || attempts < 1 || attempts > 20) throw new Error("retry/poll attempts must be 1..20");
-      if ((attempts > 1 || poll) && !safeRepeat(step)) throw new Error("retry/poll requires GET/HEAD, or an explicitly idempotent tool");
-      const lifecycle = require_state_machine2().create(require_lifecycles().retry);
-      rec.attempts = [];
-      for (let n = 1; n <= attempts; n++) {
-        lifecycle.to("attempting");
-        try {
-          check(st);
-        } catch (error) {
-          lifecycle.to("stopped");
-          throw error;
-        }
-        const started = Date.now();
-        try {
-          const value = await bounded(fn, st, step.timeoutMs);
-          const matched = !poll || JSON.stringify(capturePath(value, poll.path)) === JSON.stringify(poll.equals);
-          rec.attempts.push({ attempt: n, ok: true, matched, ms: Date.now() - started });
-          if (matched) {
-            lifecycle.to("matched");
-            return value;
-          }
-          if (n === attempts) throw Object.assign(new Error(`poll condition not met after ${attempts} attempts`), { final: true });
-        } catch (e) {
-          if (!rec.attempts.some((x) => x.attempt === n)) rec.attempts.push({ attempt: n, ok: false, error: e.message, ms: Date.now() - started });
-          if (e.final || n === attempts || /deadline|cancelled|outcome may be unknown/.test(e.message)) {
-            lifecycle.to("stopped");
-            throw e;
-          }
-        }
-        lifecycle.to("waiting");
-        try {
-          await delay(Math.max(0, Math.min(1e4, Number(poll?.intervalMs ?? retry.delayMs ?? 100))), st);
-        } catch (error) {
-          lifecycle.to("stopped");
-          throw error;
-        }
-      }
-    }
-    async function runSteps(def, scope, st) {
-      for (const [i, step] of def.steps.entries()) {
-        check(st);
-        const started = Date.now();
-        const rec = { script: def.id, step: i + 1, do: label(step) };
-        const where = { script: def.id, step: i + 1 };
-        st.log.push(rec);
-        try {
-          let input = stepInput(step, scope);
-          if (step.before) {
-            const r = await hook(step.before, st, { ...where, hook: "before" }, { scope, args: input });
-            input = r.hasReturn && r.returned && typeof r.returned === "object" ? r.returned : r.args;
-            input = fill(input, scope);
-          }
-          let result;
-          const k = kindOf(step);
-          if (k === "tool") {
-            if (step.tool.startsWith("script_") || step.tool.startsWith("collection_")) throw new Error('use a "script" step to run another script');
-            result = await repeatStep(step, st, rec, () => (st.call || require_tools().call)(step.tool, input, { source: `script:${def.id}` }));
-          } else if (k === "set") {
-            result = input;
-            Object.assign(scope, result);
-          } else if (k === "transform") {
-            const t = transform(input.text, step, scope);
-            result = t.text;
-            rec.detail = { replaced: t.replaced, map: t.map };
-          } else if (k === "http") {
-            result = await repeatStep(step, st, rec, () => httpStep(input, step, st));
-          } else if (k === "js") {
-            const r = await hook(step.js, st, { ...where, hook: "js" }, { scope, result: st.last });
-            result = r.hasReturn ? r.returned : null;
-          } else if (k === "script") {
-            if (st.depth >= MAX_DEPTH) throw new Error(`scripts nest deeper than ${MAX_DEPTH}`);
-            const sub = st.definitions?.[step.script] || get(step.script);
-            st.depth++;
-            try {
-              result = await runScript(sub, params(sub, input), st);
-            } finally {
-              st.depth--;
-            }
-          } else if (k === "wait") {
-            const w = input.wait;
-            result = (await bounded(() => browser(st).call("browser_wait_for", typeof w === "number" ? { time: w } : { text: String(w) }), st, step.timeoutMs)).text;
-          } else {
-            const [name, args] = k === "open" ? ["browser_navigate", input] : [browserTool(step.browser), input];
-            if (name === "browser_navigate") st.pages.add(args.url);
-            result = (await bounded(() => browser(st).call(name, args), st, step.timeoutMs)).text;
-          }
-          check(st);
-          for (const [name, p] of Object.entries(step.capture || {})) {
-            const v = capturePath(result, p);
-            if (v === void 0) throw new Error(`capture ${name}: no "${p}" in the result`);
-            scope[name] = v;
-          }
-          if (step.after) {
-            const r = await hook(step.after, st, { ...where, hook: "after" }, { scope, result });
-            if (r.hasReturn) result = r.returned;
-          }
-          for (const assertion of step.assertions || []) {
-            const before = st.tests.length;
-            if (assertion.code !== void 0) await hook(`test(${JSON.stringify(assertion.name)}, async () => { ${[].concat(assertion.code).join("\n")} });`, st, { ...where, hook: "assertion" }, { scope, result });
-            else {
-              const actual = capturePath(result, assertion.path), expected = fill(assertion.value, scope);
-              const equal = (a, b) => require("util").isDeepStrictEqual(a, b);
-              const ok = assertion.op === "exists" ? actual !== void 0 === (expected !== false) : assertion.op === "count" ? actual != null && actual.length === expected : assertion.op === "contains" ? Array.isArray(actual) ? actual.some((v) => equal(v, expected)) : typeof actual === "string" && actual.includes(String(expected)) : equal(actual, expected);
-              st.tests.push({ ...where, name: assertion.name, ok, ...ok ? {} : { error: `expected ${assertion.path} ${assertion.op} ${JSON.stringify(expected)}; actual ${JSON.stringify(actual)}`, expected, actual } });
-            }
-            if (assertion.hard && st.tests.slice(before).some((t) => !t.ok)) throw new Error(`assertion ${assertion.name} failed`);
-          }
-          if (step.as) scope[step.as] = result;
-          st.last = result;
-          if (result && typeof result === "object" && typeof result.view === "string" && /^https?:/.test(result.view)) st.lastView = result.view;
-          Object.assign(rec, { ok: true, ms: Date.now() - started, result: rec.detail ? { ...rec.detail, text: brief(result, 1500) } : brief(result) });
-          delete rec.detail;
-        } catch (e) {
-          Object.assign(rec, { ok: false, ms: Date.now() - started, error: e.message });
-          delete rec.detail;
-          if (!step.optional || /cancelled|deadline/.test(e.message)) throw Object.assign(e, { scriptStep: rec });
-        } finally {
-          await cleanup(step.finally, st, where, scope, st.last);
-        }
-      }
-      return scope;
-    }
-    function chain(id) {
-      const parts = String(id || "").split("/").slice(0, -1);
-      const out2 = [];
-      for (let n = 1; n <= parts.length; n++) {
-        try {
-          const m = JSON.parse(fs3.readFileSync(path3.join(scopeDirectory(), ...parts.slice(0, n), META), "utf8"));
-          out2.push({ collection: parts.slice(0, n).join("/"), ...m });
-        } catch {
-        }
-      }
-      return out2;
-    }
-    async function runScript(def, scope, st) {
-      const lifecycle = require_state_machine2().create(require_lifecycles().script);
-      const cols = st.collectionChains?.[def.id] || chain(def.id), entered = [];
-      const where = { script: def.id, step: 0 };
-      let scriptEntered = true;
-      try {
-        for (const c of cols) {
-          entered.push(c);
-          for (const [k, v] of Object.entries(c.vars || {})) if (scope[k] === void 0) scope[k] = fill(v, scope);
-        }
-        for (const [k, v] of Object.entries(def.vars || {})) if (scope[k] === void 0) scope[k] = fill(v, scope);
-        for (const c of cols) if (c.before) await hook(c.before, st, { ...where, hook: `before (${c.collection})` }, { scope });
-        scriptEntered = true;
-        if (def.before) await hook(def.before, st, { ...where, hook: "before" }, { scope });
-        lifecycle.to("steps");
-        await runSteps(def, scope, st);
-        lifecycle.to("after");
-        if (def.after) await hook(def.after, st, { ...where, step: def.steps.length + 1, hook: "after" }, { scope, result: st.last });
-        for (const c of [...cols].reverse()) if (c.after) await hook(c.after, st, { ...where, step: def.steps.length + 1, hook: `after (${c.collection})` }, { scope, result: st.last });
-        return scope;
-      } finally {
-        lifecycle.to("cleaning");
-        if (scriptEntered) await cleanup(def.finally, st, where, scope, st.last);
-        for (const c of entered.reverse()) await cleanup(c.finally, st, { ...where, collection: c.collection }, scope, st.last);
-        lifecycle.to("settled");
-      }
-    }
-    function transform(input, step, scope) {
-      let text = typeof input === "string" ? input : JSON.stringify(input, null, 2);
-      const map = {};
-      let replaced = 0;
-      for (const r of [].concat(step.replace || [])) {
-        if (!r || r.find === void 0) throw new Error('replace entries need "find" and "with"');
-        const re2 = r.regex ? new RegExp(r.find, (r.flags || "").includes("g") ? r.flags : `${r.flags || ""}g`) : new RegExp(String(r.find).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g");
-        const seen = {};
-        text = text.replace(re2, (...m) => {
-          const match = m[0];
-          replaced++;
-          if (r.consistent !== false && match in seen) return seen[match];
-          const groups = m.slice(1, -2);
-          const v = String(fill(r.with ?? "", { ...scope, match, group: groups }));
-          seen[match] = v;
-          map[match] = v;
-          return v;
-        });
-      }
-      if (step.json) {
-        let doc;
-        try {
-          doc = JSON.parse(text);
-        } catch (e) {
-          throw new Error(`transform json: the text is not JSON (${e.message})`);
-        }
-        for (const [p, val] of Object.entries(step.json)) {
-          const n = setPath(doc, p.split("."), (old) => {
-            const v = fill(val, { ...scope, value: old });
-            if (typeof old !== "object") map[String(old)] = v;
-            return v;
-          });
-          if (!n) throw new Error(`transform json: no "${p}" in the document`);
-          replaced += n;
-        }
-        text = JSON.stringify(doc, null, /\n/.test(typeof input === "string" ? input : "\n") ? 2 : 0);
-      }
-      return { text, replaced, map };
-    }
-    function setPath(o, keys, f) {
-      if (o == null || typeof o !== "object") return 0;
-      const [k, ...rest] = keys;
-      const targets = k === "*" ? Object.keys(o) : k in o ? [k] : [];
-      let n = 0;
-      for (const t of targets) {
-        if (!rest.length) {
-          o[t] = f(o[t]);
-          n++;
-        } else n += setPath(o[t], rest, f);
-      }
-      return n;
-    }
-    async function httpStep(input, step, st) {
-      const { method, url, headers = {} } = input;
-      const allow = require_config().getScripts().httpAllow;
-      const target = new URL(url);
-      if (!/^https?:$/.test(target.protocol) || target.username || target.password || !allow.some((a) => {
-        try {
-          const prefix = new URL(a);
-          return target.origin === prefix.origin && (target.pathname === prefix.pathname || target.pathname.startsWith(prefix.pathname.endsWith("/") ? prefix.pathname : prefix.pathname + "/")) && (!prefix.search || target.search === prefix.search);
-        } catch {
-          return false;
-        }
-      })) throw new Error(`http to ${target.origin}${target.pathname} is not allowed: add its URL prefix to scripts.http.allow in config.json`);
-      await require_limit().take(`http:${new URL(url).host}`);
-      let body = input.body;
-      if (body !== void 0 && typeof body !== "string") {
-        body = JSON.stringify(body);
-        if (!Object.keys(headers).some((h) => h.toLowerCase() === "content-type")) headers["content-type"] = "application/json";
-      }
-      const started = Date.now();
-      const res = await fetch(url, { method, headers, body, redirect: "error", signal: AbortSignal.any([AbortSignal.timeout(Math.max(1, Math.min(step.timeoutMs || 3e4, (st.cleaning ? st.cleanupDeadline : st.deadline) - Date.now()))), ...!st.cleaning && st.signal ? [st.signal] : []]) });
-      const cap = Math.max(1, Math.min(step.maxResponseBytes || 1048576, 2097152)), chunks = [];
-      let bytes = 0, truncated = false;
-      if (res.body) {
-        const reader = res.body.getReader();
-        try {
-          for (; ; ) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            const room = cap - bytes;
-            if (value.length > room) {
-              chunks.push(value.subarray(0, room));
-              bytes += room;
-              truncated = true;
-              await reader.cancel();
-              break;
-            }
-            chunks.push(value);
-            bytes += value.length;
-          }
-        } finally {
-          reader.releaseLock();
-        }
-      }
-      const text = Buffer.concat(chunks).toString("utf8");
-      let json;
-      try {
-        json = JSON.parse(text);
-      } catch {
-      }
-      const out2 = { status: res.status, statusText: res.statusText, headers: Object.fromEntries([...res.headers].filter(([k]) => !/^(set-cookie|authorization|proxy-authenticate)$/i.test(k))), ms: Date.now() - started, bytes, truncated, ...json !== void 0 ? { json } : { text } };
-      if (!res.ok && !step.allowErrors) throw new Error(`HTTP ${res.status} from ${method} ${url}: ${text.slice(0, 300)}`);
-      return out2;
-    }
-    function browser(st) {
-      if (!st.browser) st.browser = require_browser_mcp().session();
-      return st.browser;
-    }
-    async function run(idOrDef, given = {}, options = {}) {
-      const def = typeof idOrDef === "string" ? get(idOrDef) : { id: "(inline)", ...idOrDef };
-      const { source, signal, timeoutMs = 12e4, cleanupTimeoutMs = 1e4, call, cancelled, fullScope = false, definitions, collectionChains } = options;
-      const st = { log: [], logs: [], tests: [], cleanupErrors: [], depth: 0, browser: null, pages: /* @__PURE__ */ new Set(), last: void 0, signal, deadline: Date.now() + timeoutMs, cleanupTimeoutMs, call, cancelled, definitions, collectionChains };
-      const scope = params(def, given);
-      const keys = new Set(Object.keys(scope));
-      let error = null;
-      try {
-        await runScript(def, scope, st);
-      } catch (e) {
-        error = e.message;
-      }
-      if (st.js) st.js.close();
-      if (!error && st.cleanupErrors.length) error = "cleanup failed";
-      let routes;
-      if (st.browser) {
-        try {
-          const seen = require_routes().parseNetwork((await st.browser.call("browser_network_requests", {})).text).filter((r) => !st.pages.has(r.url));
-          routes = require_routes().learn(seen, source || `script:${def.id}`);
-        } catch (e) {
-          routes = { error: e.message };
-        }
-        await st.browser.close();
-      }
-      const failed = st.tests.filter((t) => !t.ok);
-      if (!error && failed.length) error = `${failed.length} of ${st.tests.length} tests failed: ${failed.map((t) => t.name).join(", ")}`;
-      const results = Object.fromEntries(Object.entries(scope).filter(([k]) => !keys.has(k)).map(([k, v]) => [k, brief(v, 6e3)]));
-      return {
-        script: def.id,
-        ok: !error,
-        ...error ? { error } : {},
-        ...st.cleanupErrors.length ? { cleanupErrors: st.cleanupErrors } : {},
-        ...fullScope ? { scope } : {},
-        ...st.lastView ? { view: st.lastView } : {},
-        // the last view a step made, embedded in the chat
-        steps: st.log,
-        results,
-        ...st.tests.length ? { tests: { passed: st.tests.length - failed.length, failed: failed.length, list: st.tests } } : {},
-        ...st.logs.length ? { logs: st.logs } : {},
-        ...routes ? { routes } : {}
-      };
-    }
-    async function httpRequest(input, options = {}) {
-      const timeoutMs = Math.max(1, Math.min(options.timeoutMs || 3e4, 12e4));
-      return httpStep(input, { ...options, timeoutMs }, { deadline: Date.now() + timeoutMs, signal: options.signal });
-    }
-    module2.exports = { seedStarters, STARTERS, list, get, save, remove, run, fill, validate, mkdir, move, copy, removeFolder, resolve: resolve2, getCollection, setCollection, exposed, signature, transform, generate, params, chain, get DIR() {
-      return scopeDirectory();
-    }, httpRequest };
   }
 });
 
@@ -75093,10 +75084,10 @@ var require_handbook_content = __commonJS({
           "A clean commit does not establish deployment success. Report what changed, which tests actually ran, the target and material gaps. Retain the final patch/result links instead of pasting all changed files into chat."
         ], { figure: figure("sample-patch.png", "Patch renderer sample: folder hierarchy and one selected diff keep chat readable.") })
       ], ["task-memory", "reproduce", "case-library", "automation"]),
-      chapter("api-browser", "From a browser action to an API check", "Automate", "Inspect requests, edit arguments/authentication and save reusable checks.", "Capture or prepare one request, explicitly send it and inspect the sanitized response.", ["Configured HTTP allowlist; optional Playwright MCP and a reviewed browser interaction."], [
+      chapter("api-browser", "From a browser action to an API check", "Automate", "Inspect requests, edit arguments/authentication and save reusable checks.", "Capture or prepare one request, explicitly send it and inspect the sanitized response.", ["An intended API request; optional Playwright MCP and a reviewed browser interaction."], [
         section("explorer", "Prepare a request without sending it", [
           "Open API explorer from Admin routes, an HTTP passport port or an API exchange. Select a route, fill the service base URL and typed path/query parameters, then inspect body/headers. A route without a known host needs an explicit base URL; the UI does not invent a live destination.",
-          "Optional named bearer profiles reference .env values and are bound to an exact origin/path scope plus the existing HTTP allowlist. The browser/model sees labels and readiness, not the token. autoPrefill=true explicitly enables automatic profile selection. No authentication remains selectable. A conflicting manually supplied Authorization header must be reconciled before using a profile.",
+          "Optional named bearer profiles reference .env values and are bound to an exact origin/path scope. HTTP destinations need no per-service configuration in this trusted environment. The browser/model sees labels and readiness, not the token. autoPrefill=true explicitly enables automatic profile selection. No authentication remains selectable. A conflicting manually supplied Authorization header must be reconciled before using a profile.",
           "Send executes the request, including mutations for non-read methods. Preparation and route selection do not send. Redirects are not followed, browser cookies are not transferred and saved exchanges are sanitized. Review status, timing, headers, body, route candidates, redactions and capture gaps."
         ], { examples: [example("api_routes", { service: "{{service}}" }, "Find endpoints to prepare", "A route inventory with Open request links."), example("api_auth_profiles", {}, "Inspect optional bearer references", "Labels/scopes/readiness only; no secret values.")], figure: figure("ux-api-explorer.png", "Interactive API explorer with a populated route inventory; request selection does not execute it.") }),
         section("ui-field", "Trace a reproducible UI state to a database field", [
@@ -75165,7 +75156,7 @@ var require_handbook_content = __commonJS({
         section("terms", "Working vocabulary", "These terms have operational consequences; record exact identities when handing work to another person or model.", { table: { headers: ["Term", "Meaning"], rows: [["Context / memory", "Durable indexed task folder, independent of Git checkouts"], ["Workspace", "Writable source/task working directory with its own change/test history"], ["Story / chat/task scope", "Private investigation boundary within an authenticated principal"], ["Passport / port", "Static service description / typed boundary; manual overlays stay declared"], ["Revision / SHA / revisionKey", "Document/file compare-and-swap (CAS) identity, Git source identity, and exact retained source index key"], ["Analysis / generation / revisionSet", "Retained semantic projection and exact selected source/dependency identities"], ["Cache / live observation", "Prior metadata/result versus a query made at a recorded time"], ["Declaration / static / observed / proved", "Different evidence strengths; never silently convert one into another"], ["Job / execution / code cell", "Background handle / owned invocation lifecycle / resumable computation"], ["Fixture / template / lease", "Captured inputs / immutable scratch base / owned temporary runtime allocation"], ["Red-green / green-only", "The same behavior failed before and passed after / only a passing candidate run is known"], ["Unknown outcome", "The system cannot establish completion/effects/cleanup, even if a request ended"]] } }),
         section("mistakes", "Short recovery paths", [
           "Empty find \u2192 check environment/cache presence, then refresh the missing source. Missing Joern \u2192 inspect capabilities and retained analyses; use native code search while preserving the gap. Stale edit \u2192 reread revision and reconcile the draft. Wrong import \u2192 inspect internal class ownership and resolved artifact/version.",
-          "API cannot send \u2192 check base URL, placeholders, optional bearer selection and HTTP allowlist; do not paste secrets into notes. Job appears stuck \u2192 inspect the same handle, step and prerequisites before cancelling. Test looks green \u2192 verify executed assertions, target, skips, cleanup and independent effects.",
+          "API cannot send \u2192 check base URL, placeholders, optional bearer selection and connectivity; do not paste secrets into notes. Job appears stuck \u2192 inspect the same handle, step and prerequisites before cancelling. Test looks green \u2192 verify executed assertions, target, skips, cleanup and independent effects.",
           "Huge output \u2192 narrow the query, use summaries/search/views and save bounded evidence in context. A beautiful graph with missing sources \u2192 inspect certainty/gaps and add only evidence-backed declarations. \u201CLatest\u201D source with an old deployment \u2192 resolve and pin the actual version first."
         ])
       ], ["start", "indices", "operations"])
@@ -80166,7 +80157,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "9a1bb09b8119648bafc8b8f4ab8b98d4d7b2f5772beb9468f229a954ab013cef";
+      if (true) return "2cf6a04d59cce003a0fae3478658484e78dbd5cb88fbbc878a75a4d12cc7e39f";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -80572,7 +80563,7 @@ var require_tools_scenario = __commonJS({
         },
         {
           name: "scenario_state_capture",
-          description: "Materialize the independently inspectable state plan. Provided fixtures and PG/Kafka captures are local; explicit capture readers support parameterized PG, bounded Kafka/ES, and allowlisted GET/HEAD HTTP. Missing, failed or truncated dependencies keep complete=false. Mask personal/secret fields by default. Returns saved state id and a view.",
+          description: "Materialize the independently inspectable state plan. Provided fixtures and PG/Kafka captures are local; explicit capture readers support parameterized PG, bounded Kafka/ES, and GET/HEAD HTTP. Missing, failed or truncated dependencies keep complete=false. Mask personal/secret fields by default. Returns saved state id and a view.",
           input: { plan: obj("scenario_state_plan result"), mask: bool("Mask sensitive fields across all dependencies", true) },
           required: ["plan"],
           run: async (a) => {
@@ -81538,7 +81529,7 @@ var require_workflow_guides = __commonJS({
             },
             {
               id: "reuse",
-              goal: "Replay only allowlisted intended requests and save a parameterized script/collection",
+              goal: "Replay intended HTTP(S) requests and save a parameterized script/collection",
               tools: [
                 "api_request_replay",
                 "api_request_save",
@@ -82354,8 +82345,12 @@ var require_collections = __commonJS({
           }
           if (step.http) {
             capabilities.add(`http:${String(step.http).split(" ")[0].toUpperCase()}`);
-            const url = String(step.http).split(/\s+/)[1];
-            if (!url.includes("{{") && !require_config().getScripts().httpAllow.some((prefix) => url.startsWith(prefix))) errors.push({ location: loc, kind: "capability", error: "HTTP URL is not configured in scripts.http.allow" });
+            const url = String(step.http).split(/\s+/)[1] || "";
+            if (!url.includes("{{")) try {
+              S.httpTarget(url);
+            } catch (e) {
+              errors.push({ location: loc, kind: "argument", error: e.message });
+            }
           }
           if (step.browser || step.open || step.wait !== void 0) {
             capabilities.add("browser");
@@ -82913,7 +82908,7 @@ var require_tools_api_client = __commonJS({
         { name: "api_exchange_list", logArgs: [], group: "api", description: "Search previously captured sanitized HTTP exchanges by method, URL, status or attributed service. Offline; returns exchange ids for inspection, preparation and reuse.", input: { q: str("Substring to match"), limit: int("Max records, at most 500", 50) }, run: (a) => ({ exchanges: C().list(a) }) },
         { name: "api_exchange_get", logArgs: ["exchange"], group: "api", description: "Inspect an exchange independently: request/response headers, pretty JSON body, status, timing, redactions, capture gaps and all best matching passport handlers. Includes sandboxed interactive visualization and link to the trusted API client.", input: { exchange: str("Exchange id") }, required: ["exchange"], run: (a) => decorated(a.exchange) },
         { name: "api_request_prepare", logArgs: ["exchange"], group: "api", description: 'Prepare an editable parameterized API request without sending it. Use an exchange id or explicit request {method,url,headers,body:{kind:"json|text|form|none",value}}. Bind named parameters to path segment index (initial slash is index 0), query key, header key, or dotted JSON body path. Secret params have no captured defaults. Returns a versioned contract and a normal saved-script definition.', input: { exchange: str("Optional captured exchange id"), request: obj("Explicit request overrides the captured request"), bindings: obj('Example {orderId:{in:"path",index:3},page:{in:"query",key:"page"},quantity:{in:"body",path:"items.0.quantity"}}'), description: str("Reusable request purpose"), assertions: { type: "array", items: obj("Named script assertion"), description: "Assertions retained when saving" } }, run: (a) => C().prepare(a) },
-        { name: "api_request_replay", logArgs: ["exchange"], group: "api", description: "EXPLICITLY SEND an HTTP request, including mutations. Call only when the user/workflow intends the action. Uses the existing scripts.http.allow URL boundaries, rate limits and timeout; never follows redirects or transfers browser cookies. No retry. Params supplied only for this run; result is sanitized, persisted and visualized with status/headers/JSON/timing. Prepare alone never sends traffic.", input: { prepared: obj("api_request_prepare versioned result"), exchange: str("Or exchange id"), request: obj("Or reviewed explicit request"), params: obj("Runtime parameter values (including credentials)"), auth_profile: str("Optional configured bearer profile id; token stays server-side and URL-scoped"), timeoutMs: int("Request time limit, max 120000", 3e4) }, run: async (a) => decorated(await C().replay(a)) },
+        { name: "api_request_replay", logArgs: ["exchange"], group: "api", description: "EXPLICITLY SEND an HTTP request, including mutations. Call only when the user/workflow intends the action. Trusts any HTTP(S) destination without per-service configuration; uses rate limits and timeout; never follows redirects or transfers browser cookies. No retry. Params supplied only for this run; result is sanitized, persisted and visualized with status/headers/JSON/timing. Prepare alone never sends traffic.", input: { prepared: obj("api_request_prepare versioned result"), exchange: str("Or exchange id"), request: obj("Or reviewed explicit request"), params: obj("Runtime parameter values (including credentials)"), auth_profile: str("Optional configured bearer profile id; token stays server-side and URL-scoped"), timeoutMs: int("Request time limit, max 120000", 3e4) }, run: async (a) => decorated(await C().replay(a)) },
         { name: "api_request_save", logArgs: ["id", "exchange"], group: "api", description: "Save a prepared/captured request as a reusable normal script in collection/name. Preserves route/source provenance, typed params, assertions, captures and supplied hooks. Collection vars/before/after/finally work through the existing script engine. Does not execute. Cookies are omitted and secrets become required runtime placeholders. Existing script requires overwrite=true.", input: { id: str("collection/request id"), prepared: obj("Prepared contract"), exchange: str("Or exchange id"), request: obj("Or explicit reviewed request"), bindings: obj("Explicit parameter locations"), description: str("What it does and when to use it"), tool: { type: "boolean", default: false, description: "Expose the saved request as an individual tool" }, overwrite: { type: "boolean", default: false }, assertions: { type: "array", items: obj("Script assertion") }, capture: obj('Capture names to response paths, e.g. {orderId:"json.id"}'), before: str("Existing script step before hook"), after: str("Existing script step after hook"), finally: str("Existing script step finally hook") }, required: ["id"], run: (a) => C().save(a) },
         { name: "api_browser_open", logArgs: ["site", "link"], group: "browser", description: "Open an isolated Playwright MCP session with bounded network exchange capture enabled BEFORE navigation. Use browser site/link or URL. Cookies remain only in the browser. Uses native per-request network inspection when available, then a fixed browser_run_code adapter on older endpoints; missing both reports metadata-only mode. Returns session id; inspect UI with api_browser_action, then api_browser_capture. Idle sessions expire in 15 minutes.", input: { site: str("Configured browser site"), link: str("Site link"), params: obj("Link params"), url: str("Or explicit http(s) URL") }, run: (a) => C().browserOpen(a) },
         { name: "api_browser_action", logArgs: ["session", "action"], group: "browser", description: "Inspect or interact with the UI in an existing capture session. Supports snapshot, navigate, click, type, fill_form, press_key, select_option, hover, wait_for, take_screenshot, navigate_back and network_requests with endpoint Playwright MCP args. describe=true returns the action schema without acting; legacy ref maps to target when the discovered schema requires it. UI actions may mutate application state; use intentionally. No browser credentials are exported.", input: { session: str("api_browser_open session"), action: str("Playwright action without browser_ prefix"), args: obj("Standard action args"), describe: { type: "boolean", default: false, description: "Inspect this action schema without executing" } }, required: ["session"], run: (a) => C().browserAction(a) },
@@ -84006,7 +84001,7 @@ var require_tools = __commonJS({
       {
         name: "script_save",
         group: "scripts",
-        description: `Save (or replace) a script so a repeatable action runs in one call next time. id is "collection/sub/name". steps run in order; each is one of: {"tool": "<dt tool>", "args": {...}}, {"script": "<other script id>", "params": {...}}, {"open": "site.link"} (a site map link; its <params> come from the script params), {"browser": "<browser tool, e.g. click, type, snapshot>", "args": {...}}, {"wait": seconds or "text"}. Add "as": "name" to keep a result, "optional": true to continue on failure. "{{name}}" in args inserts a param or an earlier result ({{order.rows.0.id}}); "{{link:site.link}}" a site link URL. More step kinds: {"set": {"folder": "out/{{date:YYYYMMDD}}/{{uuid}}"}} computes values; {"transform": "{{doc.text}}", "replace": [{"find": "ORD-\\\\d+", "regex": true, "with": "ORD-{{rand:6}}"}], "json": {"order.id": "{{uuid}}"}, "as": "copy"} rewrites a document (each distinct match gets one new value); {"http": "POST https://\u2026", "body": {...}} calls an API allowed in config (scripts.http.allow). Generators: {{uuid}}, {{now}}, {{date:YYYYMMDD}}, {{rand:6}}, {{hex:8}}. JavaScript (sandboxed, like Postman/Bruno): {"js": "return vars.doc.items.length"} is a step; on any step "before": "args.body.ts = now()" changes its args, "capture": {"jobId": "json.id"} copies from the result into vars, "after": "test('201', () => expect(result.status).toBe(201)); vars.n = result.json.items.length" checks and post-processes (return a value to replace the result). The script itself can have "vars", "before" and "after"; failing tests fail the run. Try code with js_run first. "tool": true (or a name) makes the script a tool of its own. Save only after the steps worked by hand.`,
+        description: `Save (or replace) a script so a repeatable action runs in one call next time. id is "collection/sub/name". steps run in order; each is one of: {"tool": "<dt tool>", "args": {...}}, {"script": "<other script id>", "params": {...}}, {"open": "site.link"} (a site map link; its <params> come from the script params), {"browser": "<browser tool, e.g. click, type, snapshot>", "args": {...}}, {"wait": seconds or "text"}. Add "as": "name" to keep a result, "optional": true to continue on failure. "{{name}}" in args inserts a param or an earlier result ({{order.rows.0.id}}); "{{link:site.link}}" a site link URL. More step kinds: {"set": {"folder": "out/{{date:YYYYMMDD}}/{{uuid}}"}} computes values; {"transform": "{{doc.text}}", "replace": [{"find": "ORD-\\\\d+", "regex": true, "with": "ORD-{{rand:6}}"}], "json": {"order.id": "{{uuid}}"}, "as": "copy"} rewrites a document (each distinct match gets one new value); {"http": "POST https://\u2026", "body": {...}} calls any HTTP(S) API in the trusted environment. Generators: {{uuid}}, {{now}}, {{date:YYYYMMDD}}, {{rand:6}}, {{hex:8}}. JavaScript (sandboxed, like Postman/Bruno): {"js": "return vars.doc.items.length"} is a step; on any step "before": "args.body.ts = now()" changes its args, "capture": {"jobId": "json.id"} copies from the result into vars, "after": "test('201', () => expect(result.status).toBe(201)); vars.n = result.json.items.length" checks and post-processes (return a value to replace the result). The script itself can have "vars", "before" and "after"; failing tests fail the run. Try code with js_run first. "tool": true (or a name) makes the script a tool of its own. Save only after the steps worked by hand.`,
         input: {
           expected_revision: { type: ["string", "null"], description: "Optional editor revision; null requires a new script" },
           id: str('collection/name, e.g. "orders/support/refund-check"'),

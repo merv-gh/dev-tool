@@ -9,7 +9,7 @@ async function start({ port = 0 } = {}) {
   const server = require('../../server').start({ host: '127.0.0.1', port });
   await new Promise(resolve => server.listening ? resolve() : server.once('listening', resolve));
   const base = 'http://127.0.0.1:' + server.address().port, file = path.join(home, 'config.json'), config = JSON.parse(fs.readFileSync(file));
-  config.server.publicUrl = base; config.scripts.http = { allow: [fixture.base + '/dev/'] };
+  config.server.publicUrl = base;
   fs.writeFileSync(file, JSON.stringify(config)); require('../../lib/config').reload();
   const scope = { principalId: 'admin', storyId: 'showcase', role: 'admin', multiUser: true };
   let links;
