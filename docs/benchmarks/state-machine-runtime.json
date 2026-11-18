@@ -2339,22 +2339,26 @@
         "running",
         "passed",
         "failed",
-        "cancelled"
+        "cancelled",
+        "interrupted"
       ],
       "terminal": [
         "passed",
         "failed",
-        "cancelled"
+        "cancelled",
+        "interrupted"
       ],
       "transitions": {
         "running": [
           "passed",
           "failed",
-          "cancelled"
+          "cancelled",
+          "interrupted"
         ],
         "passed": [],
         "failed": [],
-        "cancelled": []
+        "cancelled": [],
+        "interrupted": []
       }
     },
     {

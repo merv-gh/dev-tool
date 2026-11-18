@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>API explorer · dt</title>
 <link rel="stylesheet" href="/static/ui.css"><link rel="stylesheet" href="/static/api-explorer.css">
-<script src="/static/state-machine.js" defer></script><script src="/static/api-explorer.js" defer></script>
+<script src="/static/state-machine.js" defer></script><script src="/static/api-workflow-model.js" defer></script><script src="/static/api-explorer.js" defer></script>
 </head>
 <body>
 <header class="app-header"><h1>API explorer</h1><span class="header-note">Choose. Send. Inspect.</span><span class="spacer"></span><label class="environment">Environment <select id="apiEnvironment" aria-label="Environment"><option value="">Loading…</option></select></label><a id="admin-link" href="/admin#api">Admin</a></header>
@@ -28,8 +28,9 @@
   </details>
 </aside>
 <section class="request-pane" aria-label="Request">
-  <div class="pane-heading"><h2 id="request-title">New request</h2><button id="new-request">New request</button></div>
+  <div class="pane-heading"><h2 id="request-title">New request</h2><div class="row"><button id="new-workflow">New workflow</button><button id="new-request">New request</button></div></div>
   <p class="request-context" id="route">Select a route on the left, or enter an HTTP URL.</p>
+  <div id="http-editor">
   <div class="request-line"><select id="method" aria-label="HTTP method"><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option><option>HEAD</option><option>OPTIONS</option></select><input id="url" type="text" aria-label="Request URL" placeholder="https://api.dev/orders/{{orderId}}" spellcheck="false"><button id="send" class="primary">Send GET</button><button id="cancel" hidden>Cancel</button></div>
   <div class="target-fields"><label>Service target<select id="apiTarget"><option value="">Custom URL</option></select></label><label>Base URL<input id="apiBaseUrl" type="url" placeholder="http://host:port" spellcheck="false"></label></div>
   <p id="target-status" class="field-note">Consul addresses are loaded from the selected environment's cache.</p>
@@ -48,10 +49,30 @@
     <section id="panel-auth" role="tabpanel" aria-labelledby="tab-auth" data-panel="auth" hidden><label for="apiAuthProfile">Authentication</label><select id="apiAuthProfile"><option value="">No authentication</option></select><p id="apiAuthStatus" class="field-note" role="status">Named bearer profiles keep token values on the server.</p><p class="field-note">For an ad hoc token, add an Authorization header with <code>Bearer {{token}}</code>, then fill its runtime variable.</p></section>
     <section id="panel-params" role="tabpanel" aria-labelledby="tab-params" data-panel="params" hidden><label for="params">Runtime values (JSON object)</label><textarea id="params" rows="9" spellcheck="false">{}</textarea><p class="field-note">Values stay in this page's memory. Saved requests keep names and types.</p><details><summary>Bindings & response assertions</summary><label for="bindings">Bindings (JSON object)</label><textarea id="bindings" rows="3">{}</textarea><button id="prepare">Apply bindings</button><label for="assertions">Assertions (JSON array)</label><textarea id="assertions" rows="3">[]</textarea><label for="capture">Capture values (JSON object)</label><textarea id="capture" rows="3">{}</textarea><p class="field-note">Assertions and captures run through Scripts & collections. Send executes only this HTTP request.</p></details></section>
   </div>
-  <div class="request-footer"><div id="notice" class="notice" role="status" aria-live="polite">Ready. Requests run through the backend.</div><details id="save-panel"><summary>Save to collection</summary><label for="script-id">Collection / request name</label><input id="script-id" placeholder="orders/get-order" list="saved-request-names"><datalist id="saved-request-names"></datalist><label for="description">Description</label><input id="description" placeholder="Look up an order"><label class="check-label"><input id="overwrite" type="checkbox">Replace an existing request</label><button id="save">Save request</button><a href="/admin#scripts" target="_blank" rel="noopener">Collection hooks & suites</a></details></div>
+  <div class="request-footer"><details id="save-panel"><summary>Save to collection</summary><label for="script-id">Collection / request name</label><input id="script-id" placeholder="orders/get-order" list="saved-request-names"><datalist id="saved-request-names"></datalist><label for="description">Description</label><input id="description" placeholder="Look up an order"><label class="check-label"><input id="overwrite" type="checkbox">Replace an existing request</label><button id="save">Save request</button><button id="request-to-workflow">Continue as workflow</button><a href="/admin#scripts" target="_blank" rel="noopener">Collection hooks & suites</a></details></div>
+  </div>
+  <section id="workflow-editor" aria-label="Collection workflow" hidden>
+    <label for="wf-id">Collection / workflow name</label><input id="wf-id" placeholder="orders/checkout" list="saved-request-names">
+    <label for="wf-description">Purpose</label><input id="wf-description" placeholder="Check an order from UI to its database and events">
+    <div class="workflow-toolbar"><button id="wf-save">Save workflow</button><button id="wf-validate">Validate</button><button id="wf-run" class="primary">Run workflow</button><button id="wf-cancel" hidden>Cancel run</button></div>
+    <p class="field-note">Steps run in order. Name a result, then reuse it as <code>{{result.rows.0.id}}</code>. Each query can target a different environment or database.</p>
+    <details class="workflow-settings"><summary>Variables, hooks & full definition</summary>
+      <label for="wf-params">Runtime values (JSON object, kept in this page)</label><textarea id="wf-params" rows="3" spellcheck="false">{}</textarea>
+      <label for="wf-definition">Complete script JSON</label><textarea id="wf-definition" rows="12" spellcheck="false"></textarea><button id="wf-apply-definition">Apply definition</button><p class="field-note">Parameter types, assertions, captures, retries and collection hooks use the existing script language. Apply JSON before saving or running.</p>
+    </details>
+    <div class="workflow-section-heading"><h3>Steps</h3><span id="wf-step-count" class="muted"></span></div>
+    <ol id="wf-steps" class="workflow-steps" aria-label="Workflow steps"></ol>
+    <div class="row workflow-add"><label class="sr-only" for="wf-add-kind">New step type</label><select id="wf-add-kind"></select><button id="wf-add">Add step</button></div>
+    <section id="wf-step-editor" aria-label="Selected step"><div class="workflow-section-heading"><h3 id="wf-step-title">Step</h3><div class="row"><button id="wf-up" aria-label="Move step up">Up</button><button id="wf-down" aria-label="Move step down">Down</button><button id="wf-copy">Duplicate</button><button id="wf-remove">Remove</button></div></div>
+      <div id="wf-fields"></div><label for="wf-as">Result name</label><input id="wf-as" placeholder="order"><p class="field-note">Use this name in later steps. Whole-value templates preserve JSON types.</p>
+      <details><summary>Assertions & advanced step JSON</summary><label for="wf-step-json">Selected step definition</label><textarea id="wf-step-json" rows="10" spellcheck="false"></textarea><button id="wf-apply-step">Apply step JSON</button></details>
+    </section>
+  </section>
+  <div id="notice" class="notice" role="status" aria-live="polite">Ready. Requests run through the backend.</div>
 </section>
 <section class="response-pane" aria-label="Response">
-  <div class="pane-heading"><h2>Response</h2><div class="row"><button id="copy-response" disabled>Copy body</button><button id="download-response" disabled>Download</button></div></div>
+  <div class="pane-heading"><h2 id="result-title">Response</h2><div class="row"><button id="copy-response" disabled>Copy body</button><button id="download-response" disabled>Download</button></div></div>
+  <section id="workflow-result" aria-label="Workflow run" hidden><div class="workflow-section-heading"><h3 id="wf-run-status">Workflow run</h3><a id="wf-report-link" target="_blank" rel="noopener" hidden>Open report</a></div><p id="wf-progress" role="status" aria-live="polite"></p><button id="wf-observe" hidden>Refresh run status</button><pre id="wf-run-errors" hidden></pre><div id="wf-run-steps"></div><iframe id="wf-report" title="Collection workflow results" sandbox="allow-scripts allow-downloads allow-popups" hidden></iframe></section>
   <div id="response-meta" class="response-meta" role="status"><span class="muted">No response yet</span></div>
   <p id="response-url" class="response-url" hidden></p>
   <div id="response-empty" class="response-empty"><svg viewBox="0 0 48 48" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M6 15h30m-7-7 7 7-7 7M42 33H12m7-7-7 7 7 7"/></svg><h3>Your response appears here</h3><p>Choose a route, review the request and press Send. Open History to inspect a previous exchange.</p></div>

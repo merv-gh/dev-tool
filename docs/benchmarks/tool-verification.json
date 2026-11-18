@@ -1,6 +1,6 @@
 {
   "protocol": "dt.release-inventory/v1",
-  "sourceDigest": "b1249397c80663b9ad8fa0653ea42736237b0e3572276962331e1edec6e2a877",
+  "sourceDigest": "109f1b4715a0f34bac467f966591d56bf8bb650b2920e5ff48b1e4a2df945fa5",
   "tools": [
     {
       "name": "find",
@@ -167,6 +167,8 @@
       "referenceTests": [
         "test/admin-map.test.js",
         "test/admin-runtime.test.js",
+        "test/api-workflow-model.test.js",
+        "test/api-workflows.test.js",
         "test/capability-map.test.js",
         "test/code.test.js",
         "test/context-ui.test.js",
@@ -196,6 +198,7 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
+        "test/api-workflows.test.js",
         "test/tool-contracts.test.js"
       ],
       "integrationReferences": []
@@ -596,7 +599,9 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
+        "test/api-workflows.test.js",
         "test/automation.test.js",
+        "test/collection-persistence.test.js",
         "test/scripts.test.js"
       ],
       "integrationReferences": []
@@ -620,6 +625,8 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
+        "test/api-workflows.test.js",
+        "test/collection-persistence.test.js",
         "test/scripts.test.js"
       ],
       "integrationReferences": []
@@ -631,11 +638,25 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
+        "test/api-workflows.test.js",
         "test/automation.test.js",
+        "test/collection-persistence.test.js",
         "test/collections.test.js",
         "test/scripts.test.js",
         "test/tool-contracts.test.js",
         "test/workbench-explorer.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "script_delete",
+      "group": "scripts",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/api-workflows.test.js",
+        "test/collection-persistence.test.js"
       ],
       "integrationReferences": []
     },
@@ -646,8 +667,10 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
+        "test/api-workflows.test.js",
         "test/automation.test.js",
         "test/call-outcome.test.js",
+        "test/collection-persistence.test.js",
         "test/collections.test.js",
         "test/scripts.test.js",
         "test/workbench-explorer.test.js"
@@ -1943,6 +1966,7 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
+        "test/dist.test.js",
         "test/repo-model-ui.test.js",
         "test/repo-model.test.js"
       ],
@@ -2938,6 +2962,8 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
+        "test/api-workflows.test.js",
+        "test/collection-persistence.test.js",
         "test/collections.test.js"
       ],
       "integrationReferences": []
@@ -2949,7 +2975,21 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
+        "test/api-workflows.test.js",
+        "test/collection-persistence.test.js",
         "test/collections.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "collection_delete",
+      "group": "scripts",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/api-workflows.test.js",
+        "test/collection-persistence.test.js"
       ],
       "integrationReferences": []
     },
@@ -2982,6 +3022,8 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
+        "test/api-workflows.test.js",
+        "test/collection-persistence.test.js",
         "test/collections.test.js",
         "test/tool-contracts.test.js"
       ],
@@ -2993,7 +3035,9 @@
       "origin": "built-in",
       "inputSchema": true,
       "resultContract": false,
-      "referenceTests": [],
+      "referenceTests": [
+        "test/collection-persistence.test.js"
+      ],
       "integrationReferences": []
     },
     {
@@ -3003,6 +3047,7 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
+        "test/collection-persistence.test.js",
         "test/collections.test.js"
       ],
       "integrationReferences": []
@@ -3014,6 +3059,7 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
+        "test/collection-persistence.test.js",
         "test/collections.test.js"
       ],
       "integrationReferences": []
@@ -3025,6 +3071,7 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
+        "test/collection-persistence.test.js",
         "test/collections.test.js"
       ],
       "integrationReferences": []
@@ -3375,7 +3422,9 @@
       "origin": "built-in",
       "inputSchema": true,
       "resultContract": false,
-      "referenceTests": [],
+      "referenceTests": [
+        "test/api-workflows.test.js"
+      ],
       "integrationReferences": []
     },
     {
@@ -3506,6 +3555,42 @@
       "referenceTests": [
         "test/api-client.test.js",
         "test/service-map.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "kafka_checkpoint",
+      "group": "kafka",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/api-workflows.test.js",
+        "test/kafka-actions.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "kafka_wait",
+      "group": "kafka",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/api-workflows.test.js",
+        "test/kafka-actions.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "kafka_produce",
+      "group": "kafka",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/api-workflows.test.js",
+        "test/kafka-actions.test.js"
       ],
       "integrationReferences": []
     },

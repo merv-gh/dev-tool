@@ -870,6 +870,9 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
 - [`kafka_topic`](#tool-kafka_topic)
 - [`kafka_last`](#tool-kafka_last)
 - [`kafka_lag`](#tool-kafka_lag)
+- [`kafka_checkpoint`](#tool-kafka_checkpoint)
+- [`kafka_wait`](#tool-kafka_wait)
+- [`kafka_produce`](#tool-kafka_produce)
 
 <a id="tool-kafka_topic"></a>
 
@@ -975,6 +978,178 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
     }
   },
   "required": []
+}
+```
+
+</details>
+
+<a id="tool-kafka_checkpoint"></a>
+
+### kafka_checkpoint
+
+Record exact end offsets of every topic partition before triggering a workflow. No consumer group or commits. Pass the result to kafka_wait to exclude old events.
+
+Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "env": {
+      "type": "string",
+      "enum": [
+        "dev"
+      ],
+      "default": "dev",
+      "description": "Environment"
+    },
+    "cluster": {
+      "type": "string",
+      "description": "Optional cluster name; otherwise first online"
+    },
+    "topic": {
+      "type": "string",
+      "description": "Topic name"
+    }
+  },
+  "required": [
+    "topic"
+  ]
+}
+```
+
+</details>
+
+<a id="tool-kafka_wait"></a>
+
+### kafka_wait
+
+Wait for a NEW matching Kafka event across all partitions. Pass checkpoint from before the triggering UI/API/produce step; otherwise starts at the current end. match maps message paths (value.orderId, key, headers.name) to exact typed values. Bounded scan, cancellation and timeout; no group/commits. Timeout, expired offsets and scan limit fail the step.
+
+Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "env": {
+      "type": "string",
+      "enum": [
+        "dev"
+      ],
+      "default": "dev",
+      "description": "Environment"
+    },
+    "cluster": {
+      "type": "string",
+      "description": "Optional cluster name; otherwise first online"
+    },
+    "topic": {
+      "type": "string",
+      "description": "Topic name"
+    },
+    "checkpoint": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "kafka_checkpoint result for this same environment/cluster/topic"
+    },
+    "match": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Exact path/value conditions, e.g. {\"value.orderId\":\"{{orderId}}\"}"
+    },
+    "timeout_ms": {
+      "type": "integer",
+      "description": "Deadline 1..120000",
+      "default": 30000
+    },
+    "poll_ms": {
+      "type": "integer",
+      "description": "Poll spacing 100..30000",
+      "default": 1000
+    },
+    "max_messages": {
+      "type": "integer",
+      "description": "Scan budget 1..10000",
+      "default": 2000
+    },
+    "batch_size": {
+      "type": "integer",
+      "description": "Per-partition page, 1..500",
+      "default": 100
+    }
+  },
+  "required": [
+    "topic"
+  ]
+}
+```
+
+</details>
+
+<a id="tool-kafka_produce"></a>
+
+### kafka_produce
+
+EXPLICITLY PRODUCE one message through configured Kafka UI. Sends once with no retry. Select a real partition; objects become JSON strings, null value is a tombstone. Take kafka_checkpoint first when waiting for resulting events. A failed acknowledgement may have an unknown delivery outcome.
+
+Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "env": {
+      "type": "string",
+      "enum": [
+        "dev"
+      ],
+      "default": "dev",
+      "description": "Environment"
+    },
+    "cluster": {
+      "type": "string",
+      "description": "Optional cluster name; otherwise first online"
+    },
+    "topic": {
+      "type": "string",
+      "description": "Topic name"
+    },
+    "partition": {
+      "type": "integer",
+      "description": "Explicit partition, 0 or greater"
+    },
+    "key": {
+      "description": "String/JSON key; omitted or null means unkeyed"
+    },
+    "value": {
+      "description": "String/JSON value; explicit null creates a tombstone"
+    },
+    "headers": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "String header values"
+    },
+    "key_serde": {
+      "type": "string",
+      "description": "Kafka UI key serializer, default String"
+    },
+    "value_serde": {
+      "type": "string",
+      "description": "Kafka UI value serializer, default String"
+    }
+  },
+  "required": [
+    "topic",
+    "partition",
+    "value"
+  ]
 }
 ```
 
@@ -3214,7 +3389,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
 
 ### api_client_catalog
 
-Browse all indexed service/API groups and cached Consul replica URLs without network calls. Pass group to page its routes; q searches service, method, path and handler. Select a replica or override the URL before explicitly sending. Collections use script_list and script_get.
+Browse all indexed service/API groups and cached Consul replica URLs without network calls. Pass group to page its routes; q searches service, method, path and handler. Select a replica or override the URL before explicitly sending. resources=true adds bounded cached database/index/topic names for workflow pickers. Collections use script_list and script_get.
 
 Workflow: [From a browser action to an API check](README.md#api-browser) · Origin: built-in
 
@@ -3224,6 +3399,10 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
 {
   "type": "object",
   "properties": {
+    "resources": {
+      "type": "boolean",
+      "description": "Include configured database names and cached indices/topics, at most 500 each; no connection credentials"
+    },
     "env": {
       "type": "string",
       "description": "Environment for Consul and reviewed service ports"
@@ -3552,11 +3731,13 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
 - [`script_collection`](#tool-script_collection)
 - [`script_get`](#tool-script_get)
 - [`script_save`](#tool-script_save)
+- [`script_delete`](#tool-script_delete)
 - [`script_run`](#tool-script_run)
 - [`code`](#tool-code)
 - [`js_run`](#tool-js_run)
 - [`collection_get`](#tool-collection_get)
 - [`collection_save`](#tool-collection_save)
+- [`collection_delete`](#tool-collection_delete)
 - [`collection_plan`](#tool-collection_plan)
 - [`collection_validate`](#tool-collection_validate)
 - [`collection_run`](#tool-collection_run)
@@ -3569,7 +3750,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
 
 ### script_list
 
-Saved scripts (repeatable actions), nested in collections like "orders/support". Lists the collections (with their description and whether they are a tool) and the scripts with their params. Check here before doing a multi-step task by hand: someone may have saved it.
+List persistent workflows and nested collections in the current principal/task scope. Reuse before doing a multi-step task by hand. CRUD: script_get, script_save, script_delete; execute with script_run or collection_run. Data stays under the configured scripts folder across server restarts.
 
 Workflow: [Scripts, collections and long calculations](README.md#automation) · Origin: built-in
 
@@ -3650,7 +3831,7 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
 
 ### script_get
 
-A saved script's full definition: description, params and steps. Accepts the id, the name, or a close name ("refund check").
+Persistent workflow definition, typed params, steps and revision. Accepts an id, name or close name. Use revision as expected_revision for script_save or script_delete. Stored under the configured scripts folder, scoped to the current principal/task.
 
 Workflow: [Scripts, collections and long calculations](README.md#automation) · Origin: built-in
 
@@ -3716,8 +3897,16 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
       }
     },
     "tool": {
-      "type": "string",
-      "description": "Optional: a tool name to expose this script as its own tool (lowercase, _)"
+      "type": [
+        "string",
+        "boolean"
+      ],
+      "description": "Optional exposed tool name, true for a generated name, false to disable"
+    },
+    "definition": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Optional complete script JSON from an editor; preserves advanced step and script metadata. Explicit fields override it."
     },
     "vars": {
       "type": "object",
@@ -3748,6 +3937,39 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     "id",
     "description",
     "steps"
+  ]
+}
+```
+
+</details>
+
+<a id="tool-script_delete"></a>
+
+### script_delete
+
+Delete one saved workflow by exact id, using the revision from script_get. A stale revision fails without deletion. Removes its definition and exposed tool; retained collection reports remain. No fuzzy deletion.
+
+Workflow: [Scripts, collections and long calculations](README.md#automation) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Exact collection/workflow id"
+    },
+    "expected_revision": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "Revision returned by script_get"
+    }
+  },
+  "required": [
+    "id",
+    "expected_revision"
   ]
 }
 ```
@@ -3901,7 +4123,7 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
 
 ### collection_save
 
-Update collection metadata without clearing omitted fields. Suite uses the existing script language: ordered script/collection references, tags, datasets, matrix, shared params and before/after/finally JavaScript hooks. Collection hooks remain per-script; suite hooks execute once per selected scope.
+Persist collection metadata without clearing omitted fields. Optional expected_revision from collection_get rejects concurrent edits; null requires a new collection. Suite uses existing scripts, datasets, matrix, params and hooks. Collection hooks run per-script; suite hooks once per scope.
 
 Workflow: [Scripts, collections and long calculations](README.md#automation) · Origin: built-in
 
@@ -3914,6 +4136,13 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     "collection": {
       "type": "string",
       "description": "Collection path; created if missing"
+    },
+    "expected_revision": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Revision from collection_get; null requires a new collection"
     },
     "description": {
       "type": "string",
@@ -3944,6 +4173,44 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
   },
   "required": [
     "collection"
+  ]
+}
+```
+
+</details>
+
+<a id="tool-collection_delete"></a>
+
+### collection_delete
+
+Delete a saved collection by exact path and content revision from collection_get. Includes nested scripts only with recursive=true. Changes anywhere in the subtree reject stale deletion. Retained execution reports are preserved.
+
+Workflow: [Scripts, collections and long calculations](README.md#automation) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "collection": {
+      "type": "string",
+      "description": "Exact collection path"
+    },
+    "expected_revision": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "Content revision from collection_get"
+    },
+    "recursive": {
+      "type": "boolean",
+      "default": false,
+      "description": "Explicitly include nested workflow definitions"
+    }
+  },
+  "required": [
+    "collection",
+    "expected_revision"
   ]
 }
 ```

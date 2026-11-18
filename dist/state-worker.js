@@ -383,7 +383,7 @@ var require_lifecycles = __commonJS({
     });
     var fixture = define("SM26.fixture", "starting", { starting: ["ready", "cleanup-failed", "stopped"], ready: ["cleanup-failed", "stopped"], "cleanup-failed": ["stopped"], stopped: [] }, ["stopped"]);
     var scenario = define("SM28.scenario", "starting", { starting: ["ready", "failed", "stopped"], ready: ["failed", "stopped"], failed: ["stopped"], stopped: [] }, ["stopped"]);
-    var collection = define("SM35.collection", "running", { running: ["passed", "failed", "cancelled"], passed: [], failed: [], cancelled: [] }, ["passed", "failed", "cancelled"]);
+    var collection = define("SM35.collection", "running", { running: ["passed", "failed", "cancelled", "interrupted"], passed: [], failed: [], cancelled: [], interrupted: [] }, ["passed", "failed", "cancelled", "interrupted"]);
     var semantic = define("SM45.semantic", "uploading", {
       uploading: ["queued", "failed", "interrupted"],
       queued: ["parsing", "querying", "cancelling", "failed", "cancelled", "interrupted"],

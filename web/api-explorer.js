@@ -17,7 +17,7 @@
   async function tool(name, args, signal) {
     const response = await fetch('/api/tool/' + name, { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json', 'x-dt-story': scope.story, ...(scope.principal ? { 'x-dt-principal': scope.principal } : {}) }, body: JSON.stringify(args), signal });
     let payload; try { payload = await response.json(); } catch { throw Error(`HTTP ${response.status}: the backend returned a non-JSON response.`); }
-    if (!response.ok || payload.error) throw Error(payload.error || `HTTP ${response.status}`);
+    if (!response.ok || payload.error) throw Error(payload.error?.message || payload.error || `HTTP ${response.status}`);
     return payload.result;
   }
   function action(button, fn) { button.addEventListener('click', async () => { button.disabled = true; try { await fn(); } catch (e) { notice(e.message, true); } finally { button.disabled = false; } }); }
@@ -161,6 +161,7 @@
     } catch (e) { if (authVersion.current(epoch)) { $('apiAuthProfile').replaceChildren(new Option('No authentication', '')); $('apiAuthStatus').textContent = e.message; } }
   }
   function setRequest(request, specs = {}, values = {}) {
+    $('http-editor').hidden = false; $('workflow-editor').hidden = true;
     selection.advance(); state.params = specs; state.authChoice = null; state.script = null;
     $('method').value = request.method || 'GET'; $('send').textContent = 'Send ' + $('method').value; $('url').value = request.url || '';
     pairs($('header-rows'), Object.entries(request.headers || {}), 'header');
@@ -187,8 +188,8 @@
     if (!canReplace()) return; const epoch = selection.advance(), revision = edits.value;
     const script = await tool('script_get', { id }); if (!selection.current(epoch) || !edits.current(revision)) return;
     const step = script.steps?.[0];
-    if (script.steps?.length !== 1 || !step?.http || ['before','after','finally','js'].some(k => script[k] || step[k])) throw Error('This is a workflow with hooks or multiple steps. Open Scripts & collections to edit and run it.');
-    const match = step.http.match(/^([A-Z]+)\s+(https?:\/\/\S+)$/i); if (!match) throw Error('The saved HTTP URL is dynamic. Edit it in Scripts & collections.');
+    if (script.steps?.length !== 1 || !step?.http || ['before','after','finally','js'].some(k => script[k] || step[k])) return openWorkflow(script);
+    const match = step.http.match(/^([A-Z]+)\s+(https?:\/\/\S+)$/i); if (!match) return openWorkflow(script);
     const contentType = Object.entries(step.headers || {}).find(([key]) => key.toLowerCase() === 'content-type')?.[1] || '';
     const body = step.body === undefined ? { kind: 'none' } : typeof step.body === 'object' ? { kind: 'json', value: step.body } : { kind: /x-www-form-urlencoded/i.test(contentType) ? 'form' : 'text', value: step.body };
     state.route = null; state.group = null; state.exchange = null;
@@ -279,6 +280,7 @@
     $('pretty-response').setAttribute('aria-pressed', String(!state.raw)); $('raw-response').setAttribute('aria-pressed', String(state.raw));
   }
   function show(exchange) {
+    wfResultVisible(false);
     state.response = exchange; $('response-empty').hidden = true; $('response-content').hidden = false; $('response').hidden = true; $('response').removeAttribute('src');
     const { response, timing, request } = exchange, status = response.status, meta = $('response-meta'); meta.replaceChildren(node('span', `${status || 'No status'} ${response.statusText || ''}`.trim(), 'response-status' + (status >= 400 ? ' bad' : status >= 300 ? ' warn' : '')), node('span', `${timing.durationMs ?? '—'} ms`, 'muted'), node('span', `${new TextEncoder().encode(responseText()).length.toLocaleString()} B retained`, 'muted'));
     $('response-url').hidden = false; $('response-url').textContent = `${request.method} ${request.url}`; $('response-kind').textContent = response.body.kind.toUpperCase(); renderBody();
@@ -300,10 +302,160 @@
   action($('act-browser'), async () => { const r = await tool('api_browser_action', { session: state.session, action: $('browser-action').value, args: parse('browser-args') }); $('snapshot').hidden = false; $('snapshot').textContent = r.text; });
   action($('drain-browser'), async () => { if (!canReplace()) return; const r = await tool('api_browser_capture', { session: state.session, source: 'API client UI capture' }); await refreshLibrary(); if (r.exchanges[0]) await openExchange(r.exchanges[0].id, true); notice(`Collected ${r.count} exchanges · ${r.gaps.length} capture gaps.`); });
   $('close-browser').onclick = async () => { try { await tool('api_browser_close', { session: state.session }); state.session = null; captureButtons(false); $('capture-status').textContent = 'Browser closed. Captured exchanges remain available.'; } catch (e) { notice(e.message, true); } };
+  // Workflows are ordinary scripts. HTTP-only drafts keep their existing lightweight editor.
+  const W = window.DTWorkflow, wfTargets = new Map(), wfTargetReads = new SM.Revision();
+  const wfLife = SM.create(SM.define('UI.apiWorkflowRun', 'idle', { idle:['starting','running'], starting:['running','complete','unknown'], running:['cancelling','complete','unknown'], cancelling:['running','complete','unknown'], complete:['starting','running','idle'], unknown:['running','complete','idle'] }));
+  let wf = null, wfIndex = 0, wfRevision = null, wfSavedId = null, wfRun = null, wfJob = null, wfTimer, wfJsonDirty = false, wfStepDirty = false, wfLocked = false;
+  const wfBusy = () => wfLife.is('starting','running','cancelling','unknown');
+  const wfPretty = value => JSON.stringify(value, null, 2);
+  function wfNotice(text, error = false) { notice(text,error); }
+  function wfSync() { if (!wfJsonDirty) $('wf-definition').value = wfPretty(wf); if (!wfStepDirty) $('wf-step-json').value = wfPretty(wf.steps[wfIndex]); }
+  function wfChange() { changed(); wf.description = $('wf-description').value; wfSync(); renderWorkflowSteps(); }
+  function wfPending(checkFields=true) { if (wfJsonDirty || wfStepDirty) throw Error('Apply the edited definition or step JSON before saving, running or changing steps.'); if(checkFields){const invalid=[...$('wf-fields').querySelectorAll('input,textarea,select')].find(n=>!n.validity.valid);if(invalid){invalid.reportValidity();throw Error('Fix the selected step field before changing steps, saving or running.');}} }
+  function wfUrl() {
+    const q = new URLSearchParams(location.search); for (const k of ['exchange','workflow','run','job']) q.delete(k);
+    if (wfSavedId) q.set('workflow',wfSavedId); if (wfRun) q.set('run',wfRun); if (wfJob) q.set('job',wfJob);
+    window.history.replaceState(null,'',location.pathname+'?'+q);
+  }
+  function wfLock(on) { sending.value=on; if(on!==wfLocked){lock(on);wfLocked=on;} $('cancel').hidden=true; $('wf-cancel').hidden=!on; $('wf-cancel').disabled=!wfRun; $('wf-observe').hidden=!wfLife.is('unknown'); }
+  function wfResultVisible(on) {
+    $('workflow-result').hidden=!on;$('result-title').textContent=on?'Run results':'Response';
+    for(const id of ['copy-response','download-response','response-meta','response-url'])$(id).hidden=on;
+    $('response-empty').hidden=on||!!state.response;$('response-content').hidden=on||!state.response;
+  }
+  async function openWorkflow(script) {
+    clearTimeout(wfTimer);wfRun=wfJob=null;if(wfLife.is('complete'))wfLife.to('idle');wfResultVisible(false);
+    selection.advance(); wf=W.definition(script); wfIndex=0; wfRevision=script.revision||null; wfSavedId=script.id||null; wfJsonDirty=wfStepDirty=false;
+    $('http-editor').hidden=true; $('workflow-editor').hidden=false; $('request-title').textContent=wfSavedId?.split('/').at(-1)||'New workflow';
+    $('route').textContent='Collection workflow · HTTP, UI, databases and events'; $('wf-id').value=wfSavedId||''; $('wf-description').value=wf.description||'';
+    $('wf-params').value=wfPretty(Object.fromEntries(Object.entries(wf.params||{}).filter(([,p])=>p.default!==undefined&&!p.secret).map(([k,p])=>[k,p.default])));
+    dirty.value=false; edits.advance(); wfSync(); renderWorkflowSteps(); renderWorkflowStep(); wfUrl();
+    if(state.mode!=='collections')$('source-collections').click();
+    wfNotice('Workflow loaded. Review targets and runtime values, then Validate or Run.');
+  }
+  function renderWorkflowSteps() {
+    const root=$('wf-steps'); root.replaceChildren(); $('wf-step-count').textContent=`${wf.steps.length} steps`;
+    wf.steps.forEach((step,i)=>{ const li=node('li'),b=node('button',undefined,'workflow-step'); b.setAttribute('aria-current',String(i===wfIndex));
+      b.append(node('span',W.title(step),'workflow-step-title')); const detail=[W.target(step),step.as?'→ '+step.as:''].filter(Boolean).join(' · '); if(detail)b.append(node('small',detail));
+      b.disabled=wfBusy(); b.onclick=()=>{try{wfPending();wfIndex=i;wfStepDirty=false;wfSync();renderWorkflowSteps();renderWorkflowStep();}catch(e){wfNotice(e.message,true);}};li.append(b);root.append(li); });
+  }
+  function wfField(label, value, update, { json, list, resource, options, rows, type = 'text', hint } = {}) {
+    const id='wf-field-'+$('wf-fields').children.length, wrap=node('div',undefined,'workflow-field'), caption=node('label',label), input=node(options?'select':rows||json?'textarea':'input'); input.id=id;caption.htmlFor=id;wrap.append(caption);
+    if(options)for(const option of options)input.add(new Option(typeof option==='string'?option:option.label,typeof option==='string'?option:option.value));
+    if(input.tagName==='INPUT')input.type=type; if(rows||json){input.rows=rows||3;input.spellcheck=false;}
+    if(list){const dl=node('datalist');dl.id=id+'-choices';if(resource)dl.dataset.resource=resource;for(const name of list)dl.append(new Option(name,name));input.setAttribute('list',dl.id);wrap.append(dl);}
+    input.value=json?wfPretty(value):value??'';input.autocomplete='off';input.disabled=wfBusy();
+    input[options?'onchange':'oninput']=()=>{try{wfPending(false);const next=json?W.value(input.value,json):input.value;update(next);input.setCustomValidity('');wfChange();}catch(e){changed();input.setCustomValidity(e.message);wfNotice(label+': '+e.message,true);}};
+    wrap.append(input);if(hint){const note=node('p',hint,'field-note');note.id=id+'-hint';input.setAttribute('aria-describedby',note.id);wrap.append(note);}$('wf-fields').append(wrap);return input;
+  }
+  async function wfResources(env, step) {
+    const epoch=wfTargetReads.advance();
+    try { if(!wfTargets.has(env))wfTargets.set(env,await tool('api_client_catalog',{env,resources:true})); if(!wfTargetReads.current(epoch)||wf?.steps[wfIndex]!==step)return; const r=wfTargets.get(env).resources||{};for(const dl of $('wf-fields').querySelectorAll('datalist[data-resource]'))dl.replaceChildren(...(r[dl.dataset.resource]||[]).map(name=>new Option(name,name))); }
+    catch(e){if(wfTargetReads.current(epoch))wfNotice('Target suggestions unavailable: '+e.message+'. Enter a configured name manually.',true);}
+  }
+  function renderWorkflowStep(fromCache=false) {
+    const step=wf.steps[wfIndex], root=$('wf-fields');root.replaceChildren();$('wf-step-title').textContent=`Step ${wfIndex+1} · ${W.types[W.kind(step)]||'Advanced'}`;
+    $('wf-up').disabled=wfBusy()||wfIndex===0;$('wf-down').disabled=wfBusy()||wfIndex===wf.steps.length-1;$('wf-remove').disabled=wfBusy()||wf.steps.length===1;
+    $('wf-as').value=step.as||'';$('wf-step-json').value=wfPretty(step);
+    const defaultEnv=$('apiEnvironment').options[0]?.value||state.env, env=step.args?.env||defaultEnv, catalog=wfTargets.get(env), resources=catalog?.resources||{}, type=W.kind(step);
+    const arg=(key,value)=>{step.args||={};step.args[key]=value;};
+    if(step.tool){
+      wfField('Environment',step.args?.env||'',v=>{if(v)arg('env',v);else delete step.args.env;wfChange();wfResources(v||defaultEnv,step);},{options:[{label:`Default (${defaultEnv})`,value:''},...[...new Set([...$('apiEnvironment').options].map(o=>o.value).concat(env).filter(Boolean))].map(value=>({label:value,value}))],hint:'Independent of the library environment above. Default uses the first configured environment.'});
+      if(!catalog&&!fromCache&&!String(env).includes('{{'))wfResources(env,step);
+    }
+    if(type==='http'){
+      const match=step.http.match(/^(\S+)\s+([\s\S]*)$/)||['','GET',''];
+      wfField('Method',match[1],v=>{step.http=v+' '+(step.http.split(/\s+/).slice(1).join(' '));},{options:['GET','POST','PUT','PATCH','DELETE','HEAD','OPTIONS']});
+      wfField('URL',match[2],v=>{step.http=step.http.split(/\s+/)[0]+' '+v;});
+      const targets=(wfTargets.get(state.env)?.services||state.services).flatMap(s=>s.targets.map(t=>({label:s.name+' · '+t.url,value:t.url})));
+      wfField('Use service base URL','',v=>{if(!v)return;step.http=step.http.split(/\s+/)[0]+' '+v+(urlParts(step.http.split(/\s+/).slice(1).join(' ')).path||'/');wfSync();renderWorkflowStep();},{options:[{label:'Keep current URL',value:''},...targets]});
+      wfField('Headers',step.headers||{},v=>step.headers=v,{json:'object'});wfField('Body (JSON value)',step.body??null,v=>{if(v===null)delete step.body;else step.body=v;},{json:'any',hint:'Use null for no body, a quoted string for text, or a JSON object.'});
+    } else if(type==='pg_query'){
+      wfField('Database',step.args.db||'',v=>arg('db',v),{list:resources.databases||[],resource:'databases',hint:'Configured database name; SQL stays read-only.'});
+      wfField('SQL',step.args.sql||'',v=>arg('sql',v),{rows:6});wfField('Bound parameters ($1, $2, …)',step.args.params||[],v=>arg('params',v),{json:'array'});
+    } else if(type==='es_search'){
+      wfField('Index or alias',step.args.index||'',v=>arg('index',v),{list:resources.indices||[],resource:'indices'});wfField('Query or JSON DSL',step.args.query||'',v=>arg('query',v),{rows:5});
+    } else if(type.startsWith('kafka_')){
+      wfField('Cluster',step.args.cluster||'',v=>{if(v)arg('cluster',v);else delete step.args.cluster;},{list:resources.cluster?[resources.cluster]:[],hint:'Blank selects the first online cluster.'});
+      wfField('Topic',step.args.topic||'',v=>arg('topic',v),{list:resources.topics||[],resource:'topics'});
+      if(type==='kafka_wait'){
+        wfField('Checkpoint (JSON or quoted template)',step.args.checkpoint??'{{checkpoint}}',v=>arg('checkpoint',v),{json:'any',hint:'Checkpoint before the action that emits the event. Without one, waiting starts at the current end.'});
+        wfField('Match message paths',step.args.match||{},v=>arg('match',v),{json:'object'});wfField('Timeout in milliseconds',step.args.timeout_ms??30000,v=>arg('timeout_ms',Number(v)),{type:'number'});
+      }
+      if(type==='kafka_produce'){
+        wfField('Partition',step.args.partition??0,v=>arg('partition',Number(v)),{type:'number'});wfField('Message key (JSON value)',step.args.key??null,v=>arg('key',v),{json:'any'});
+        wfField('Message value (JSON value)',step.args.value??{},v=>arg('value',v),{json:'any',hint:'Produce sends once. An explicit null value creates a tombstone.'});wfField('Headers',step.args.headers||{},v=>arg('headers',v),{json:'object'});
+      }
+    } else if(type==='open')wfField('UI URL or configured site.link',step.open,v=>step.open=v,{list:(resources.sites||[]).flatMap(s=>[s.site,...s.links.map(l=>s.site+'.'+l)])});
+    else if(type==='browser'){
+      wfField('UI action',step.browser,v=>step.browser=v,{options:['snapshot','click','type','fill_form','press_key','select_option','hover','wait_for','take_screenshot','navigate','navigate_back','run_code']});
+      wfField('Playwright arguments',step.args||{},v=>step.args=v,{json:'object',hint:'Use refs from a snapshot, or run_code with durable Playwright locators for repeatable UI tests.'});
+    } else if(type==='tool'){
+      wfField('Tool name',step.tool,v=>step.tool=v);wfField('Tool arguments',step.args||{},v=>step.args=v,{json:'object'});
+    } else if(type==='script'){
+      wfField('Saved script',step.script,v=>step.script=v,{list:state.scripts.map(s=>s.id)});wfField('Script parameters',step.params||{},v=>step.params=v,{json:'object'});
+    } else if(type==='set')wfField('Values',step.set,v=>step.set=v,{json:'object'});
+    else if(type==='js')wfField('JavaScript',step.js,v=>step.js=v,{rows:8});
+    else root.append(node('p','This step uses the full script language. Edit its JSON below.','field-note'));
+  }
+  async function saveWorkflow() {
+    wfPending();
+    const id=$('wf-id').value.trim();W.selection(id);wf.description=$('wf-description').value;const rev=edits.value;
+    const r=await tool('script_save',{id,description:wf.description,steps:wf.steps,definition:wf,expected_revision:id===wfSavedId?wfRevision:null});
+    wfSavedId=id;wfRevision=r.revision;if(edits.current(rev))dirty.value=false;wfUrl();if(state.mode==='collections')refreshLibrary();return r;
+  }
+  const wfArgs=()=>({...W.selection(wfSavedId),params:parse('wf-params')});
+  for(const [key,label] of Object.entries(W.types))$('wf-add-kind').add(new Option(label,key));
+  $('new-workflow').onclick=()=>{if(!canReplace())return;openWorkflow({description:'',steps:[W.create('http',state.env)]});changed();};
+  action($('request-to-workflow'),async()=>{if(sending.value)return;const revision=edits.value,p=await prepare();if(!edits.current(revision))throw Error('Draft changed. Try again.');await openWorkflow({...p.script,steps:[{...p.script.steps[0],assertions:parse('assertions',true),capture:parse('capture')} ]});$('wf-params').value=$('params').value;changed();});
+  $('wf-add').onclick=()=>{try{wfPending();const step=W.create($('wf-add-kind').value,state.env);if(step.as){const names=new Set(wf.steps.map(s=>s.as));let name=step.as,i=2;while(names.has(name))name=step.as+i++;step.as=name;}wf.steps.push(step);wfIndex=wf.steps.length-1;wfChange();renderWorkflowStep();}catch(e){wfNotice(e.message,true);}};
+  function wfMove(delta){try{wfPending();const next=wfIndex+delta;if(next<0||next>=wf.steps.length)return;[wf.steps[wfIndex],wf.steps[next]]=[wf.steps[next],wf.steps[wfIndex]];wfIndex=next;wfChange();renderWorkflowStep();}catch(e){wfNotice(e.message,true);}}
+  $('wf-up').onclick=()=>wfMove(-1);$('wf-down').onclick=()=>wfMove(1);
+  $('wf-copy').onclick=()=>{try{wfPending();const step=structuredClone(wf.steps[wfIndex]);if(step.as)delete step.as;wf.steps.splice(wfIndex+1,0,step);wfIndex++;wfChange();renderWorkflowStep();}catch(e){wfNotice(e.message,true);}};
+  $('wf-remove').onclick=()=>{try{wfPending();if(wf.steps.length===1)return;wf.steps.splice(wfIndex,1);wfIndex=Math.min(wfIndex,wf.steps.length-1);wfChange();renderWorkflowStep();}catch(e){wfNotice(e.message,true);}};
+  $('wf-as').oninput=()=>{try{wfPending(false);if($('wf-as').value)wf.steps[wfIndex].as=$('wf-as').value;else delete wf.steps[wfIndex].as;wfChange();}catch(e){wfNotice(e.message,true);}};
+  $('wf-description').oninput=wfChange;$('wf-id').oninput=changed;$('wf-params').oninput=changed;
+  $('wf-definition').oninput=()=>{wfJsonDirty=true;changed();};$('wf-step-json').oninput=()=>{wfStepDirty=true;changed();};
+  $('wf-apply-definition').onclick=()=>{try{const def=W.value($('wf-definition').value);if(!Array.isArray(def.steps)||!def.steps.length)throw Error('A workflow needs at least one step.');wf=W.definition(def);wfIndex=Math.min(wfIndex,wf.steps.length-1);wfJsonDirty=wfStepDirty=false;$('wf-description').value=wf.description||'';wfChange();renderWorkflowStep();wfNotice('Definition applied. Validate before running.');}catch(e){wfNotice(e.message,true);}};
+  $('wf-apply-step').onclick=()=>{try{if(wfJsonDirty)throw Error('Apply the full definition first.');wf.steps[wfIndex]=W.value($('wf-step-json').value);wfStepDirty=false;wfChange();renderWorkflowStep();wfNotice('Step applied.');}catch(e){wfNotice(e.message,true);}};
+  action($('wf-save'),async()=>{const r=await saveWorkflow();wfNotice('Saved '+r.id+'. No steps executed.');});
+  action($('wf-validate'),async()=>{await saveWorkflow();const r=await tool('collection_validate',wfArgs());wfResultVisible(true);$('wf-run-errors').hidden=r.ok;$('wf-run-errors').textContent=wfPretty(r.errors||[]);$('wf-run-status').textContent=r.ok?'Validation passed':'Validation failed';$('wf-progress').textContent='No steps executed.';$('wf-run-steps').replaceChildren();$('wf-report-link').hidden=true;wfNotice(r.ok?'Validation passed. No steps executed.':'Fix the reported validation errors before running.',!r.ok);});
+  function wfPaint(report){
+    wfResultVisible(true);$('wf-run-status').textContent='Workflow · '+report.status;
+    const p=report.progress;$('wf-progress').textContent=[`${report.counts.passed}/${report.counts.cases} cases passed`,p?`Step ${p.step}: ${p.do} · ${p.status}`:'Starting…',report.run].join(' · ');
+    const errors=[report.error,...(report.cleanupErrors||[]).map(e=>e.error),...(report.cases||[]).map(c=>c.result?.error||c.error)].filter(Boolean);$('wf-run-errors').hidden=!errors.length;$('wf-run-errors').textContent=errors.join('\n');
+    const root=$('wf-run-steps');root.replaceChildren();for(const c of report.cases||[])for(const s of c.result?.steps||[]){const target=s.target?Object.values(s.target).filter(Boolean).join(' / '):'',d=node('details'),summary=node('summary',[`Step ${s.step}`,s.ok?'Passed':'Failed',s.do,target,s.name?'→ '+s.name:'',`${s.ms} ms`].filter(Boolean).join(' · '));d.append(summary,node('pre',s.error||wfPretty(s.result)));if(!s.ok)d.open=true;root.append(d);}
+    if(p&&report.status==='running'){const d=node('details'),summary=node('summary',`Current · ${p.do} · ${p.status}`);d.append(summary,node('pre',p.error||wfPretty(p.result)));root.append(d);}
+    if(report.view){$('wf-report-link').href=report.view;$('wf-report-link').hidden=false;}
+  }
+  async function observeWorkflow(){
+    clearTimeout(wfTimer);
+    try{
+      if(!wfRun&&wfJob){const r=await tool('collection_run',{job:wfJob,wait_ms:0});if(r.run)wfRun=r.run;else if(r.error)throw Error(r.error);else if(r.status!=='running')throw Error('Job ended without a run. Check collection history.');}
+      if(!wfRun){wfTimer=setTimeout(observeWorkflow,1000);return;}
+      const report=await tool('collection_history',{run:wfRun});wfUrl();wfPaint(report);
+      if(report.status==='running') {if(!wfLife.is('cancelling'))wfLife.to('running');wfLock(true);wfTimer=setTimeout(observeWorkflow,1000);}
+      else {wfLife.to('complete');wfLock(false);$('wf-observe').hidden=true;wfNotice('Workflow '+report.status+'. Results are retained for this task.',!report.ok);renderWorkflowSteps();renderWorkflowStep();}
+    }catch(e){wfLife.to('unknown');wfLock(true);$('wf-cancel').disabled=!wfRun;$('wf-progress').textContent='Status unavailable: '+e.message;wfNotice('Run status unavailable. Refresh status to reconnect; no actions will be replayed.',true);}
+  }
+  $('wf-run').onclick=async()=>{
+    if(wfBusy())return;
+    let dispatched=false;
+    try{
+      wfPending();wfLife.to('starting');wfLock(true);await saveWorkflow();wfRun=wfJob=null;wfUrl();wfResultVisible(true);$('wf-run-status').textContent='Validating workflow…';$('wf-progress').textContent='Starting one background run…';$('wf-run-errors').hidden=true;$('wf-report-link').hidden=true;$('wf-run-steps').replaceChildren();
+      dispatched=true;
+      const r=await tool('collection_run',{...wfArgs(),wait_ms:0});
+      if(r.status==='invalid'){wfLife.to('complete');wfLock(false);$('wf-run-errors').hidden=false;$('wf-run-errors').textContent=wfPretty(r.validation.errors);$('wf-run-status').textContent='Validation failed';return wfNotice('No steps executed. Fix validation errors.',true);}
+      wfRun=r.run||null;wfJob=r.job||null;wfUrl();await observeWorkflow();
+    }catch(e){if(wfLife.is('starting')){wfLife.to(dispatched?'unknown':'complete');wfLock(dispatched);wfNotice(dispatched?'Start acknowledgement failed. Check collection history before retrying: '+e.message:e.message,true);$('wf-observe').hidden=!dispatched;}else wfNotice(e.message,true);}
+  };
+  $('wf-observe').onclick=async()=>{if(!wfRun&&!wfJob){try{const rows=await tool('collection_history',{collection:W.selection(wfSavedId).collection,limit:10});$('wf-run-errors').hidden=false;$('wf-run-errors').textContent=wfPretty(rows);wfNotice('Review the retained runs. Reload a run URL to inspect it; no run was started.');}catch(e){wfNotice(e.message,true);}return;}observeWorkflow();};
+  $('wf-cancel').onclick=async()=>{if(!wfRun)return;try{const r=await tool('collection_cancel',{run:wfRun,reason:'Cancelled in API explorer'});if(r.cancelled)wfLife.to('cancelling');wfNotice('Cancellation requested. Waiting for cleanup.');observeWorkflow();}catch(e){wfNotice(e.message,true);}};
   window.addEventListener('beforeunload', event => { if (dirty.value || sending.value) { event.preventDefault(); event.returnValue = ''; } });
   async function initialize() {
     await services(navigation.advance());
-    if (query.has('exchange')) await openExchange(query.get('exchange'), true);
+    if(query.has('workflow')){await openWorkflow(await tool('script_get',{id:query.get('workflow')}));if(query.has('run')||query.has('job')){wfRun=query.get('run');wfJob=query.get('job');wfLife.to('running');wfLock(true);observeWorkflow();}}
+    else if (query.has('exchange')) await openExchange(query.get('exchange'), true);
     else if (query.has('path') || query.has('url')) { const route = { method: query.get('method') || 'GET', path: query.get('path') || urlParts(query.get('url')).path, service: query.get('service') || '', ...(query.has('url') ? { url: query.get('url') } : {}) }; const group = state.services.find(s => s.service && s.service === route.service || s.key === 'host:' + query.get('host')); choose(route, group, query.get('base') || undefined); }
     else { bodyVisibility(); await authProfiles(); }
   }

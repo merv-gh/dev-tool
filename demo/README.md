@@ -116,6 +116,17 @@ staleness. `npm run build` ships the guide and allowlisted demo images in
 `dist/`, so the existing `./run.sh up -d` workflow includes it. Screenshots and
 review evidence are linked from the handbook and main README.
 
+## Mixed API collections
+
+`node demo/collection-workflows.js` starts a disposable workflow showcase: a real
+local Playwright form, HTTP, two synthetic Postgres targets in different
+environments, an Elasticsearch protocol fixture and Kafka checkpoint/wait/produce
+through a Kafka UI protocol fixture. No live database or broker is required.
+Open the printed API Explorer link; edit the step targets or runtime `orderId`,
+validate and run. `node dev/check-collection-workflows.js` verifies the journey,
+revision conflicts, cancellation/reattachment, isolation and screenshots. See the
+[mixed collection guide](../docs/browser-api-workbench.md#mixed-collections-ui-queries-and-events).
+
 ## UI-to-database diagram
 
 Run `node demo/ui-trace.js work/ui-trace-demo` and open its printed URL. Select the saved order-status recipe, enter runtime parameters and choose **Replay UI & capture**. The login/form/screenshot/network capture is real Playwright; Joern responses and PostgreSQL catalogs are explicitly synthetic fixtures. No production database is queried.

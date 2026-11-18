@@ -99,8 +99,8 @@ exchange link. HTML is displayed as text.
 **Collections** navigates nested saved scripts in the current task. Single HTTP
 requests reopen for editing. Saving to `collection/request` creates folders as
 needed; replacing an existing request requires the explicit replacement checkbox.
-Multi-step scripts or scripts with hooks direct you to **Scripts & collections**
-instead of flattening them. **Send** runs the HTTP request only; collection
+Multi-step scripts and scripts with hooks open in the workflow editor below.
+**Send** runs the HTTP request only; collection
 variables/hooks, assertions and captures execute through the script/collection
 runner. **History** reopens up to 500 retained sanitized exchanges without replay.
 Runtime values are kept in memory and are not put in browser storage.
@@ -138,3 +138,123 @@ origin and path prefix. Redirects are not
 followed. Captured headers and echoed values are sanitized. Profiles apply to
 explicit explorer replays; saved scripts retain their existing parameter-based
 authentication contract.
+
+## Mixed collections: UI, queries and events
+
+Choose **New workflow**, open a multi-step script in **Collections**, or use
+**Continue as workflow** under **Save to collection** on an HTTP draft. Add,
+select, duplicate, reorder or remove steps in the numbered list. The selected
+step has an editable form; advanced step JSON keeps assertions, captures,
+timeouts, optional steps and hooks available without flattening their behavior.
+**Variables, hooks & full definition** exposes the complete ordinary script JSON.
+Apply JSON edits before changing steps, saving or running.
+
+Each Postgres, Elasticsearch or Kafka step selects its own **Environment**.
+Postgres also selects its own **Database**; two steps can query different
+databases in the same environment or different environments. Suggestions use
+configured database names and cached index/topic names, with no connection
+credentials. Up to 500 suggestions per resource kind are returned; a configured
+name can also be typed directly. Library environment changes do not retarget
+already saved workflow steps. Postgres remains read-only and uses bound values:
+
+```json
+{
+  "description": "Compare an order in the source and reporting databases",
+  "params": {"orderId": {"type": "integer", "required": true}},
+  "steps": [
+    {"tool": "pg_query", "args": {"env": "dev", "db": "orders", "sql": "select id, status from sales.orders where id = $1 limit 1", "params": ["{{orderId}}"]}, "as": "order"},
+    {"tool": "pg_query", "args": {"env": "uat", "db": "reporting", "sql": "select id, status from reporting.orders where id = $1 limit 1", "params": ["{{order.rows.0.id}}"]}, "as": "report"}
+  ]
+}
+```
+
+**Open UI page** and **UI action** use the configured isolated Playwright MCP.
+Snapshot refs describe the current page; use a `run_code` action with stable
+Playwright locators for repeatable UI journeys. Browser sessions close after the
+script, including failed runs. HTTP steps execute on the backend and keep their
+own editable URLs, headers and bodies. Other enabled tools and saved scripts can
+also be steps. Named results and captures are shared between steps in one script;
+separate suite cases keep independent values.
+
+For asynchronous events, place **Kafka checkpoint** before the UI/API/produce
+action, name its result `checkpoint`, then pass `"{{checkpoint}}"` to **Kafka wait**.
+Match paths such as `value.orderId` to typed values. Without a checkpoint, the
+wait starts at the topic's current end. It scans every partition without joining
+a consumer group or committing offsets. Timeouts, scan limits, incomplete streams,
+expired offsets and changed partitions fail explicitly. Offsets retain exact
+64-bit precision. **Kafka produce** sends once through configured Kafka UI and
+requires a partition; objects become JSON strings and an explicit `null` value
+creates a tombstone. An uncertain acknowledgement needs inspection before retrying;
+automatic script retry/poll is rejected for produce.
+
+**Save workflow** writes with a revision check; conflicting edits require reload.
+**Validate** saves and checks templates, parameters and available tools without
+executing actions. **Run workflow** saves and starts a validated background
+collection run for that script only, including inherited collection hooks.
+Results show live step progress, assertions, failures and cleanup, with a link
+to the existing inline collection report. Successful results start collapsed.
+**Cancel run** stops new actions and requests cancellation, then waits for cleanup.
+A run link contains its workflow/run/job ids; reopening it observes the same run
+without executing again. Definitions and retained reports use the existing
+principal/task access boundary; runtime input values are omitted from reports by
+default, while sanitized outputs remain available.
+
+### Persistent storage and model tools
+
+The normal app saves workflow definitions as JSON under `DT_HOME/scripts/`, with
+collection metadata in `_collection.json`. Named tasks use private subfolders
+under `_stories/`; the authenticated principal and stable task id select the
+folder. The default Docker setup bind-mounts the data folder at `/dt`, so
+`./run.sh up -d`, container recreation and server restarts retain definitions.
+Run reports live separately under `DT_HOME/cache/collection-runs/`. If overriding
+`DT_SCRIPTS_DIR` or `DT_CACHE_DIR`, mount and back up those locations too. These
+are local runtime data, excluded from Git. The disposable showcase uses a
+temporary data folder; it is not the normal app's library.
+
+Models use the same saved definitions and runner as API Explorer through MCP,
+OpenAPI, `/api/tool` or the CLI:
+
+| Operation | Workflow | Collection |
+| --- | --- | --- |
+| List / discover | `script_list` | `script_list` includes collection folders |
+| Read | `script_get` | `collection_get` |
+| Create / update | `script_save` | `collection_save` |
+| Delete | `script_delete` | `collection_delete` |
+| Execute | `script_run` | `collection_run` |
+| Validate / inspect results | `collection_validate` with `select` | `collection_history`, `collection_report`, `collection_check` |
+
+Read the current revision before updating or deleting. `expected_revision: null`
+requires a new definition; a revision from `script_get` / `collection_get` guards
+updates. Delete tools require the exact id/path and revision; deleting a
+nonempty collection also requires `recursive: true`. Collection revisions cover
+nested scripts and metadata, so a newly added child invalidates a stale delete.
+Deleting definitions preserves retained execution reports. The API/testing tool
+profiles expose workflow management; compact profiles can discover it through
+`tool_search` and execute through `tool_execute`.
+
+Reuse the same authenticated principal and `X-DT-Story` task header when continuing
+from another chat or connection. A new task keeps a separate library; persistence
+does not make private definitions visible to other users or tasks.
+
+Completed reports survive restart. A run whose coordinator stopped is reported
+as `interrupted`, with unknown in-flight effects and incomplete cleanup stated
+explicitly. Job polling, history, checks and JUnit report that interruption; reads
+never resume or replay actions. Inspect the retained evidence before explicitly
+starting another run.
+
+`node --test test/collection-persistence.test.js` verifies model HTTP/MCP CRUD,
+typed execution, a real coordinator restart, an interrupted background job,
+retained reports, stale deletion guards and principal/task isolation.
+
+Run `node demo/collection-workflows.js` for a disposable nine-step checkout.
+It drives a **real local browser**, HTTP and Elasticsearch/Kafka UI protocol
+fixtures. Postgres results come from an explicitly synthetic scope-aware adapter;
+it does not test a live database or broker. `node dev/check-collection-workflows.js`
+checks the full journey, typed handoffs, cross-environment/database targeting,
+revision conflicts, cancellation, reload/reattachment, task isolation and responsive
+screenshots. Backend regression tests are in `test/api-workflows.test.js` and
+`test/kafka-actions.test.js`.
+
+![Mixed collection workflow with a database target and retained results](screenshots/collection-workflow-desktop.png)
+
+The fixture is synthetic; the browser interaction and local requests execute.
