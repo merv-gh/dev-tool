@@ -17,6 +17,7 @@ conformance and reproducible automated evidence. Consult
 | New semantic stacks | A language-neutral adapter that declares capabilities and source identity, passes conformance, and has a real positive/negative runtime fixture; Python/Go text search is already distinct from semantic support |
 | Broader database engines | Connector/schema/capture/replay contracts plus fidelity and read-only enforcement tests for each engine |
 | Production UX handoffs | Review the separate UX storybook before implementing intent suggestions, adjacent exact-source inspection and complete investigation handoffs |
+| Model-operated service environments | Durable worker-owned Spring processes, audience-correct network bindings, warm dependency leases, runtime query targets and real branch/debug/isolation evidence; see [research and implementation sequence](ephemeral-service-environments.md) |
 
 No row above is a shipped capability. Existing specialist documents retain their
 dated verification records; current test/coverage/inventory artifacts supersede

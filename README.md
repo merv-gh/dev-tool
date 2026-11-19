@@ -61,6 +61,11 @@ search and language-neutral HTTP adapters already exist; they do not imply
 semantic support for every stack. See [known limitations](docs/known-limitations.md)
 and the [roadmap](docs/roadmap.md).
 
+Research for model-operated Spring services with fast disposable dependencies,
+branch comparisons and debugging is in
+[ephemeral service environments](docs/ephemeral-service-environments.md).
+It separates existing fixture/template tools from the proposed runtime work.
+
 ## Release verification
 
 The [implementation verification record](docs/benchmarks/team-readiness.json)
