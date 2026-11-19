@@ -1051,7 +1051,11 @@ Repository/workspace links identify related work and can point to several folder
 reasons; `context_get` lists the folder and files, and `context_read` retrieves the
 selected evidence. `context_update` changes metadata (supplied link lists replace
 existing lists). `context_write` supports text, append and base64 files;
-`context_delete_file` removes a selected file. Ticket/task/chat identifiers also find candidates indexed under another identity
+`context_delete_file` removes a selected note; `files.remove(path)` does the same
+inside `code(context=id)`. Use `workspace_delete` for workspace files and
+`files_delete` for writable context/local/SFTP stores, passing the revision from
+the last read/write. Tracked deletions appear in `workspace_patch`.
+Ticket/task/chat identifiers also find candidates indexed under another identity
 category; select the returned folder id explicitly to attach links without merging
 unrelated work. Read/write revisions allow editors
 to reject stale updates. A null `expected_revision` on a write requires a new file.

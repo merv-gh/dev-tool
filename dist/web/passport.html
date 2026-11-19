@@ -24,6 +24,8 @@
   details.acc-sec > summary h2::before { content: '▸'; color: var(--muted); font-size: 12px; }
   details.acc-sec[open] > summary h2::before { content: '▾'; }
   .add { color: var(--good); } .rem { color: var(--lv-error); }
+  #deployment-controls label { display:inline-flex; align-items:center; gap:6px; }
+  #deployment-controls input[type=checkbox] { width:18px; min-height:18px; height:18px; margin:0; }
 </style>
 <link rel="stylesheet" href="/static/inline.css"><link rel="stylesheet" href="/static/port-editor.css">
 <script src="/static/state-machine.js"></script><script src="/static/inline.js"></script>
@@ -42,6 +44,19 @@
   </div>
   <div class="row" id="chips"></div>
   <div class="card flow" id="flow"></div>
+  <section id="passportDeployment" hidden><details class="acc-sec" id="deployment-details">
+    <summary><h2>Live deployment <span class="muted">on demand</span></h2></summary>
+    <p class="hint">This passport describes its source commit. Fetch current replicas from Consul separately; deployment observations are never saved in the passport.</p>
+    <p id="deployment-link" hidden><a id="deployment-open" target="_blank" rel="noopener">Open live deployment lookup</a></p>
+    <div id="deployment-controls" class="row" hidden>
+      <label>Environment <select id="deployment-env" disabled aria-label="Deployment environment"></select></label>
+      <label><input type="checkbox" id="deployment-version"> Include reported /version</label>
+      <button id="deployment-load" disabled>Load live deployment</button>
+      <button id="deployment-cancel" hidden>Cancel lookup</button>
+    </div>
+    <p id="deployment-status" role="status" aria-live="polite"></p>
+    <div id="deployment-result" class="scroll"></div>
+  </details></section>
   <section id="passportPortWorkspace" hidden><div id="passportPorts"></div></section>
   <div id="sections"></div>
 </div>
@@ -128,7 +143,7 @@ function render() {
   dtInline.mount(document.querySelector('.wrap'), { title: p.service, summary: 'Service passport' });
   const bbRepo = p.bitbucketUrl ? `${p.bitbucketUrl}/projects/${p.repo.project}/repos/${p.repo.repo}/browse?at=${p.repo.sha}` : null;
   $('meta').innerHTML = [bbRepo ? `<a href="${esc(bbRepo)}" target="_blank" rel="noopener">${esc(p.repo.project)}/${esc(p.repo.repo)}</a>` : esc(`${p.repo.project}/${p.repo.repo}`),
-    `<span class="mono">${esc(p.repo.ref)} ${esc(p.repo.sha.slice(0, 12))}</span>`, p.deployed ? `deployed in ${esc(p.env)} (${esc(p.deployed.instance)})` : '', `built ${fmtDate(p.builtAt)}`].filter(Boolean).join(' · ');
+    `<span class="mono">${esc(p.repo.ref)} ${esc(p.repo.sha.slice(0, 12))}</span>`, `built ${fmtDate(p.builtAt)}`].filter(Boolean).join(' · ');
   $('openfull').href = location.pathname + location.search.replace(/[?&]embed=1/, '');
   $('chips').innerHTML = [
     `<span class="chip">endpoints <b>${p.summary.endpoints}</b></span>`, `<span class="chip">consumes <b>${p.summary.consumes.length}</b></span>`,
@@ -202,11 +217,41 @@ async function passportEditing(){
  }catch{}
 }
 
+function deploymentLookup(){
+ $('passportDeployment').hidden=false;
+ const liveUrl=new URL(location.href);for(const key of ['snapshot','embed'])liveUrl.searchParams.delete(key);
+ if(embed){$('deployment-link').hidden=false;$('deployment-open').href=liveUrl.href;return;}
+ const details=$('deployment-details'),select=$('deployment-env'),load=$('deployment-load'),versions=$('deployment-version'),status=$('deployment-status'),result=$('deployment-result'),cancel=$('deployment-cancel');
+ $('deployment-controls').hidden=false;
+ let controller,ready=false;const SM=window.DTState,pending=new SM.Activity(),generation=new SM.Revision();
+ const call=async(name,args,signal)=>{const response=await fetch('/api/tool/'+name,{method:'POST',headers:{'content-type':'application/json',...(qs.get('story')?{'x-dt-story':qs.get('story')}:{})},body:JSON.stringify(args),signal}),data=await response.json();if(!response.ok||data.error)throw Error(data.error||'Lookup failed');return data.result;};
+ const lock=on=>{pending.value=on;select.disabled=on||!ready;versions.disabled=on;load.disabled=on;cancel.hidden=!on;details.setAttribute('aria-busy',String(on));};
+ async function environments(){
+  const epoch=generation.advance();controller=new AbortController();lock(true);status.textContent='Loading available environments…';
+  try{const data=await call('api_client_catalog',{resources_only:true},AbortSignal.any([controller.signal,AbortSignal.timeout(10000)]));if(!generation.current(epoch))return;
+   select.innerHTML=data.environments.map(env=>`<option value="${esc(env)}">${esc(env)}</option>`).join('');ready=!!data.environments.length;select.value=data.environments.includes(qs.get('env')||p.env)?qs.get('env')||p.env:data.environments[0]||'';
+   status.textContent=ready?'No deployment fetched. Load when needed.':'No authorized environments are available.';
+  }catch(e){if(generation.current(epoch))status.textContent=controller.signal.aborted?'Lookup cancelled.':`Could not load environments: ${e.message}. Open Admin to sign in, then retry.`;}
+  finally{if(generation.current(epoch)){lock(false);postHeight();}}
+ }
+ details.addEventListener('toggle',()=>{postHeight();if(details.open&&!ready&&!pending.value)environments();});
+ load.onclick=async()=>{
+  if(pending.value)return;if(!ready)return environments();const epoch=generation.advance(),withVersions=versions.checked;controller=new AbortController();lock(true);result.innerHTML='';status.textContent=`Fetching ${p.service} in ${select.value} from Consul…`;
+  try{const observation=await call('consul_service',{name:p.service,env:select.value,exact:true,version:withVersions},AbortSignal.any([controller.signal,AbortSignal.timeout(15000)]));if(!generation.current(epoch))return;
+   const rows=observation.instances||[];status.textContent=`${observation.env} · observed ${fmtDate(observation.observedAt)} · ${rows.length} ${rows.length===1?'replica':'replicas'}. This is a separate observation; refresh after redeployment.`;load.textContent='Refresh live deployment';
+   result.innerHTML=rows.length?`<table><thead><tr><th>Instance</th><th>Address</th><th>Health</th><th>Reported version</th></tr></thead><tbody>${rows.map(i=>`<tr><td>${esc(i.id||i.node||'unknown')}</td><td class="mono">${esc(i.address)}:${esc(i.port)}</td><td>${esc(i.status)}</td><td style="overflow-wrap:anywhere">${esc(i.version||i.meta?.version||(withVersions?'not reported':'not requested'))}</td></tr>`).join('')}</tbody></table>`:'<p class="empty">No replicas registered for this exact service. The source passport is still available.</p>';
+  }catch(e){if(generation.current(epoch))status.textContent=controller.signal.aborted?'Lookup cancelled. Source passport unchanged.':`Live deployment unavailable: ${e.message}. Retry the lookup; source details remain available.`;}
+  finally{if(generation.current(epoch)){lock(false);postHeight();}}
+ };
+ cancel.onclick=()=>controller?.abort();select.onchange=()=>{generation.advance();result.innerHTML='';status.textContent='Environment changed. Load its current deployment when needed.';load.textContent='Load live deployment';};
+ window.addEventListener('pagehide',()=>{generation.advance();controller?.abort();});
+}
+
 const snapshot=qs.get('snapshot');
 if(snapshot&&/^[a-z0-9]+$/.test(snapshot))window.META={id:snapshot,story:qs.get('story')||'default'};
 fetch(snapshot?`/api/result/${encodeURIComponent(snapshot)}`:`/api/passport/${encodeURIComponent(service)}?t=${encodeURIComponent(qs.get('t') || '')}${qs.get('env')?'&env='+encodeURIComponent(qs.get('env')):''}`,{headers:!snapshot&&qs.get('story')?{'x-dt-story':qs.get('story')}:{}})
   .then(r => r.ok ? r.json() : r.json().then(j => Promise.reject(new Error(j.error))))
-  .then(d => { p = snapshot?d.data:d; render(); passportEditing(); }).catch(fail);
+  .then(d => { p = snapshot?d.data:d; render(); passportEditing(); deploymentLookup(); }).catch(fail);
 </script>
 </body>
 </html>

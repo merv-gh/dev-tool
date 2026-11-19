@@ -1,6 +1,6 @@
 {
   "protocol": "dt.release-inventory/v1",
-  "sourceDigest": "4bcb3451f4ed4e757b4e32695541669ce6f6fe8c072ae64af2368a4fae1d47da",
+  "sourceDigest": "e02b31be92fbc76cd55b3bb04ca038cbf5d6952f4751c3e5ebed80c5e0b88f7a",
   "tools": [
     {
       "name": "find",
@@ -277,6 +277,7 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
+        "test/passport-deployment.test.js",
         "test/showcase.test.js",
         "test/workbench-discovery.test.js",
         "test/workbench-explorer-ui.test.js",
@@ -480,6 +481,7 @@
       "referenceTests": [
         "test/adapter-conformance.test.js",
         "test/admin-map.test.js",
+        "test/passport-deployment.test.js",
         "test/passport-modules.test.js",
         "test/passport-resolution.test.js",
         "test/scenario-runtime.test.js",
@@ -696,6 +698,7 @@
         "test/diagrams.live.test.js",
         "test/diagrams.test.js",
         "test/dist.test.js",
+        "test/files-delete.test.js",
         "test/impact-readiness.test.js",
         "test/inline-views.test.js",
         "test/project-context.test.js",
@@ -741,6 +744,7 @@
       "resultContract": false,
       "referenceTests": [
         "test/admin-map.test.js",
+        "test/files-delete.test.js",
         "test/memory.test.js",
         "test/passport-modules.test.js",
         "test/passport-resolution.test.js",
@@ -949,6 +953,17 @@
       "integrationReferences": []
     },
     {
+      "name": "files_delete",
+      "group": "files",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/files-delete.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
       "name": "files_archive",
       "group": "files",
       "origin": "built-in",
@@ -1109,6 +1124,7 @@
       "referenceTests": [
         "test/code-search-fallback.test.js",
         "test/evaluation-evidence.test.js",
+        "test/files-delete.test.js",
         "test/flows.live.test.js",
         "test/javacheck.live.test.js",
         "test/task-model-evaluation.test.js",
@@ -1123,6 +1139,17 @@
         "test/testdata.live.test.js",
         "test/workspace.live.test.js"
       ]
+    },
+    {
+      "name": "workspace_delete",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/files-delete.test.js"
+      ],
+      "integrationReferences": []
     },
     {
       "name": "workspace_patch",
@@ -1420,7 +1447,9 @@
       "origin": "built-in",
       "inputSchema": true,
       "resultContract": false,
-      "referenceTests": [],
+      "referenceTests": [
+        "test/files-delete.test.js"
+      ],
       "integrationReferences": []
     },
     {
@@ -2852,6 +2881,7 @@
       "resultContract": false,
       "referenceTests": [
         "test/ci-iteration.test.js",
+        "test/files-delete.test.js",
         "test/model-discovery-eval.test.js",
         "test/tool-contracts.test.js",
         "test/trace-discovery.test.js",

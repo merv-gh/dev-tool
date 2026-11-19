@@ -45,7 +45,23 @@ Within the same context, a rename preserves bytes without temporarily consuming 
 
 Inspect archived, sourceRemoved and any sourceRecovery path. If source removal fails, the archive remains available and the result identifies the retained source/recovery copy. Do not retry deletion blindly. Local rollback never overwrites a newly created replacement source. This is a file move, not an atomic transaction across an SFTP server and local disk; active writers should be stopped before archival. Files remain retrievable with context_read or the context file store. Restoring them is an explicit copy/write using the existing overwrite/revision controls.
 
-The Context editor's Archive file action uses this tool. context_delete_file remains available for intentional permanent deletion, and its description directs ordinary cleanup to archival. The tool is available by name in direct/tester profiles and through discovery elsewhere. A saved archive with failed source removal is classified as cleanup-failed in history rather than a completed move.
+The Context editor's Archive file action uses this tool. Archival retains evidence; explicit deletion handles disposable notes. Both are available by name in direct/tester profiles and through discovery elsewhere. A saved archive with failed source removal is classified as cleanup-failed in history rather than a completed move.
+
+## Delete temporary notes and files
+
+| Location | Tool | Revision source |
+| --- | --- | --- |
+| Task context | `context_delete_file {id,path,expected_revision}` | `context_read` or `context_write` |
+| Writable workspace | `workspace_delete {workspace,path,expected_revision}` | `workspace_read` or `workspace_write` |
+| Context/local/SFTP file store | `files_delete {store,path,expected_revision}` | `files_read` or `files_write`; context receipts work for `store: "context:<id>"` |
+
+`workspace_delete` and `files_delete` require the observed SHA256 revision and delete one regular file per call. They reject newer content, directories, symlink paths and paths outside the selected scope; configured stores must allow writing. Context deletion removes the file's searchable inventory entry. Workspace deletion marks its code index dirty and appears as a deletion in `workspace_patch`; it does not commit or push. `files_archive` remains the option for keeping a copy.
+
+In `code(context=id)`, `await files.remove('notes/progress-notes.md')` uses the revision from the helper's latest read/write, reading first if needed. A successful removal clears that cached revision so the same name can be created again. Stale revisions fail rather than deleting newer notes. File helpers still use the enabled tool registry and the current context scope.
+
+For new delete tools, inspect `deleted: true`. A partial file-store cleanup can instead return `deleted: false` with a recovery path; its call history is classified as failed cleanup. Local/SFTP removal stages and verifies the source, and restoration never overwrites a replacement file.
+
+Verification: `node --test test/files-delete.test.js test/files-archive.test.js test/context.test.js`. Fixtures use local Git and an in-process SFTP server; checks cover model-tool discovery, nearby helper cleanup, stale revisions, task isolation, recovery and deletion patches.
 
 ## Admin map URL repair
 

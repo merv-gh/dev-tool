@@ -432,14 +432,14 @@ Expected: A saved calls/...json record plus the original native visualization wh
 
 Structured arguments and native previews in a task context; actual local show call in the synthetic playground.
 
-### Edit, import and archive safely
+### Edit, archive or delete task files
 
-Use context_read to obtain the current revision before context_edit or a guarded context_write. Configured local/SFTP stores can be browsed and copied with files_* tools. files_archive moves a source from a context or configured writable store into archived/ in a destination context. Supply the observed source revision and inspect sourceRemoved plus destination details; a retained source after partial failure is not a completed move.
+Read a file and retain its revision before changing it. Delete disposable notes with context_delete_file (context id), workspace_delete (workspace id) or files_delete (context/local/SFTP store). New delete tools require expected_revision from the last read/write and remove one file only. code(context=id) also provides files.remove(path). Workspace deletions invalidate its index and appear in workspace_patch. Use files_archive to keep evidence under archived/ instead; inspect sourceRemoved and any recovery path.
 
-1. Read the source and preserve its revision.
-2. Archive with an explicit destination context and a useful summary.
-3. Inspect both destination and sourceRemoved; resolve partial outcomes without deleting the only good copy.
-4. Prefer archival to context_delete_file when the evidence may be useful later.
+1. Read the source and preserve its revision, or use the receipt from creating it.
+2. Delete a temporary file explicitly; use archival when retaining evidence is intended.
+3. Inspect deleted=true for completion. On a recovery result, inspect its retained path before further cleanup.
+4. Context removal updates its searchable inventory; workspace deletion does not commit or push.
 
 ### Continue long investigations
 
@@ -894,18 +894,20 @@ Typed port CRUD beside the graph; actual Java fixture analysis with unresolved b
 
 ### Check what is deployed
 
-Use consul_service for actual replicas/version metadata and health for the environment-wide view. Correlate an unhealthy instance with logs before assigning cause. A source branch or passport does not establish the deployed commit unless metadata resolves it. A dossier can combine C4, source paths, requirements and observations, with optional Joern jobs.
+Passports pin source and do not save deployment observations. Expand Live deployment on the full passport page to fetch replicas on demand, or call consul_service exact=true,version=false for one Consul health lookup. Enable /version only when needed. Each observation has its own timestamp; refresh after redeployment. Correlate unhealthy instances with logs before assigning cause. A dossier can combine C4, source paths, requirements and observations, with optional Joern jobs.
 
-**Inspect replicas and deployment identity** · `consul_service`
+**Inspect live replicas without version probes** · `consul_service`
 
 ```json
 {
   "env": "{{env}}",
-  "name": "{{service}}"
+  "name": "{{service}}",
+  "exact": true,
+  "version": false
 }
 ```
 
-Expected: Reported addresses, health, versions and commit metadata; missing values stay unknown.
+Expected: Current addresses, health and observation time, separate from source evidence. Use version=true for reported build identity.
 
 **Collect a fast service architecture dossier** · `architecture_service`
 
@@ -2421,7 +2423,7 @@ Search a task term, tool name or group. Select a tool to read its contract, requ
 
 The portable repository reference records built-in tools at generation time. The running registry remains authoritative for extensions and permissions. A required field can still need a real returned ID; blank values or an invented analysis/lease/workspace ID are not useful arguments.
 
-The [complete built-in reference](tools.md) contains 296 tools with exact schemas. In the app, the reference uses the current authorized registry and includes configured extensions.
+The [complete built-in reference](tools.md) contains 298 tools with exact schemas. In the app, the reference uses the current authorized registry and includes configured extensions.
 
 ### When a tool is missing
 

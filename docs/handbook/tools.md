@@ -1228,7 +1228,7 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
 
 ### consul_service
 
-Live instances of one deployed service in an environment: Consul registration, health and /version payload (version or commit when reported by the service). Fuzzy name match. For all services use health.
+Fetch current replicas and health from Consul on demand; deployment observations are separate from static passports. exact=true skips catalog discovery (one health request); version=false skips /version probes. Includes observation time. Defaults to fuzzy matching and reported versions; for all services use health.
 
 Workflow: [Explore a service and its surroundings](README.md#services) · Origin: built-in
 
@@ -1249,6 +1249,16 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
       ],
       "default": "dev",
       "description": "Environment"
+    },
+    "exact": {
+      "type": "boolean",
+      "default": false,
+      "description": "Exact service registration; skip catalog listing"
+    },
+    "version": {
+      "type": "boolean",
+      "default": true,
+      "description": "Also probe /version on passing replicas; false reads Consul health only"
     }
   },
   "required": [
@@ -2170,7 +2180,7 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
 
 ### passport
 
-Static passport of a service from its code: flows (each entry point, also one a library serves, with the chain through service and libraries and what leaves the service: topics, HTTP, tables), HTTP endpoints (incl. controllers from internal libraries), Feign/HTTP calls, Kafka topics consumed/produced, datasources and tables read/written/owned, ES indices, internal libraries (fetched at their versions) and external dependencies, each with file:line. Cached results return immediately; cold builds/refreshes return a cancellable job. Poll with service and job; refresh=true reports changes. With env, analyzes the commit deployed there (from /version). Shown to the user as a passport page.
+Static source passport: entry-to-exit flows, HTTP endpoints/calls, Kafka, tables, ES and versioned libraries, with file:line. Cached reads return immediately; cold/refresh builds return a cancellable job (poll service+job). env resolves the source commit once from /version. Passports never store current deployments; use consul_service with exact=true,version=false for live replicas/health, adding version=true when needed. Includes a passport view.
 
 Workflow: [Explore a service and its surroundings](README.md#services) · Origin: built-in
 
@@ -4114,7 +4124,7 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
 
 ### code
 
-Code mode: compute/join multiple tool results with JavaScript. For large exports, call source tools inside code and return only aggregates; save reusable intermediate JSON via context_write, not raw rows in chat. `await tools.pg_query({ env, sql, all: true })` (any tool by name; tools.call(name, args); await tools.list()), then work with the results in plain JS and print with text(...) (objects as pretty JSON); return a value too. Helpers: uuid now date rand hex diffLists diffLines log. console.log/info/warn/error are safely captured in logs. Pass context=id for nearby files via files.list/search/read/readFile/readJson/write/writeJson/edit (async). Read before overwriting; conflicts reject stale edits. Sandboxed (files only through enabled dt tools, no direct filesystem; direct fetch is available, 60 s). The user sees the code and its output (embedded). Example: const r = await tools.pg_query({ env: "dev", sql: "select status, total from sales.orders", all: true }); const by = {}; for (const o of r.rows) (by[o.status] ||= []).push(Number(o.total)); for (const [s, xs] of Object.entries(by)) text(s, xs.length, (xs.reduce((a, b) => a + b, 0) / xs.length).toFixed(2));
+Code mode: compute/join multiple tool results with JavaScript. For large exports, call source tools inside code and return only aggregates; save reusable intermediate JSON via context_write, not raw rows in chat. `await tools.pg_query({ env, sql, all: true })` (any tool by name; tools.call(name, args); await tools.list()), then work with the results in plain JS and print with text(...) (objects as pretty JSON); return a value too. Helpers: uuid now date rand hex diffLists diffLines log. console.log/info/warn/error are safely captured in logs. Pass context=id for nearby files via files.list/search/read/readFile/readJson/write/writeJson/edit/remove (async). Read before overwriting; conflicts reject stale edits. Sandboxed (files only through enabled dt tools, no direct filesystem; direct fetch is available, 60 s). The user sees the code and its output (embedded). Example: const r = await tools.pg_query({ env: "dev", sql: "select status, total from sales.orders", all: true }); const by = {}; for (const o of r.rows) (by[o.status] ||= []).push(Number(o.total)); for (const [s, xs] of Object.entries(by)) text(s, xs.length, (xs.reduce((a, b) => a + b, 0) / xs.length).toFixed(2));
 
 Workflow: [Scripts, collections and long calculations](README.md#automation) · Origin: built-in
 
@@ -4130,7 +4140,7 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     },
     "context": {
       "type": "string",
-      "description": "Context id from context_open: binds nearby files.list/search/read/readFile/readJson/write/writeJson/edit helpers. Paths are relative to that folder. Read before overwriting; writes use saved revisions."
+      "description": "Context id from context_open: binds nearby files.list/search/read/readFile/readJson/write/writeJson/edit/remove helpers. Paths are relative to that folder. Read before overwriting; writes use saved revisions."
     },
     "title": {
       "type": "string",
@@ -5293,6 +5303,7 @@ Workflow: [Every visualization: what to read and do](README.md#visualizations) �
 - [`files_read`](#tool-files_read)
 - [`files_write`](#tool-files_write)
 - [`files_copy`](#tool-files_copy)
+- [`files_delete`](#tool-files_delete)
 - [`files_archive`](#tool-files_archive)
 
 <a id="tool-files_browse"></a>
@@ -5601,6 +5612,44 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     "to_store",
     "to"
   ]
+}
+```
+
+</details>
+
+<a id="tool-files_delete"></a>
+
+### files_delete
+
+Delete one file, including disposable progress notes, from a writable context/local/SFTP store. Pass expected_revision from files_read/files_write or context_read/context_write. No recursive directory deletion. Returns deleted=true on success; a recovery path means cleanup needs attention. files_archive keeps a copy instead.
+
+Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "store": {
+      "type": "string",
+      "description": "Store name or context:<id>"
+    },
+    "path": {
+      "type": "string",
+      "description": "Relative file path"
+    },
+    "expected_revision": {
+      "type": "string",
+      "description": "SHA256 revision from the last read/write"
+    }
+  },
+  "required": [
+    "store",
+    "path",
+    "expected_revision"
+  ],
+  "additionalProperties": false
 }
 ```
 
@@ -5946,6 +5995,7 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
 - [`workspace_list`](#tool-workspace_list)
 - [`workspace_read`](#tool-workspace_read)
 - [`workspace_write`](#tool-workspace_write)
+- [`workspace_delete`](#tool-workspace_delete)
 - [`workspace_patch`](#tool-workspace_patch)
 - [`workspace_drop`](#tool-workspace_drop)
 - [`test_context`](#tool-test_context)
@@ -6535,6 +6585,44 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     "workspace",
     "path"
   ]
+}
+```
+
+</details>
+
+<a id="tool-workspace_delete"></a>
+
+### workspace_delete
+
+Delete one workspace file, including temporary progress notes or obsolete source. Pass expected_revision from workspace_read/workspace_write. Marks the code index dirty; tracked deletions appear in workspace_patch. No directories, symlinks, .git changes, commits or pushes.
+
+Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "workspace": {
+      "type": "string",
+      "description": "Workspace id"
+    },
+    "path": {
+      "type": "string",
+      "description": "Relative file path"
+    },
+    "expected_revision": {
+      "type": "string",
+      "description": "SHA256 revision from workspace_read or workspace_write"
+    }
+  },
+  "required": [
+    "workspace",
+    "path",
+    "expected_revision"
+  ],
+  "additionalProperties": false
 }
 ```
 
@@ -10249,7 +10337,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
 
 ### context_delete_file
 
-Permanently delete one context file. Prefer files_archive to retain it under archived/. Use deletion only when permanent removal is intended.
+Delete one saved context file, including temporary progress notes. expected_revision from context_read/context_write rejects stale deletion. files_archive retains a copy when needed.
 
 Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
 

@@ -233,7 +233,10 @@
             "context_read",
             "files_stores",
             "files_list",
-            "files_archive"
+            "files_archive",
+            "files_delete",
+            "context_delete_file",
+            "workspace_delete"
           ],
           "goal": "Find prior work, consult its progress and preserve useful evidence."
         }

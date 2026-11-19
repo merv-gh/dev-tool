@@ -131,6 +131,14 @@ test('simultaneous processes cannot overwrite one exact adjustment head', async 
   assert.equal(O.adjustments({service:'concurrent'}).history.length, 1);
 });
 
+test('a competing lock disappearing during inspection reports a revision conflict', t => {
+  save(passport('completed-lock'));
+  const mkdir=fs.mkdirSync,stat=fs.statSync;
+  t.mock.method(fs,'mkdirSync',function(file,options){if(path.basename(file)==='.lock'&&!options){mkdir.call(fs,file);throw Object.assign(Error('A competing writer acquired the lock'),{code:'EEXIST'});}return mkdir.call(fs,file,options);});
+  t.mock.method(fs,'statSync',function(file,...args){if(path.basename(file)==='.lock'){fs.rmSync(file,{recursive:true,force:true});throw Object.assign(Error('A competing writer completed'),{code:'ENOENT'});}return stat.call(fs,file,...args);});
+  assert.throws(()=>O.adjust(input('completed-lock',{operations:[{action:'add',port:port()}]})),{code:'STATE_CONFLICT'});
+});
+
 test('registered tool schemas enforce typed edits and persist a visible manual result', async () => {
   save(passport('registered')); const T = require('../lib/tools');
   const names = (await T.schemas()).map(x => x.name); for (const name of ['semantic_ports','passport_adjustments','passport_adjust']) assert.ok(names.includes(name));

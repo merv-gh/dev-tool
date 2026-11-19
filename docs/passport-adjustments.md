@@ -4,6 +4,16 @@
 
 Automatic detections remain in the refreshed passport. Manual statements live in a separate private `passport-adjustments/` directory, scoped to the authenticated principal and chat/story. They do not modify `passport.json`, its generated Markdown, or automatic history. User-authored corrections remain `declared`; source detections remain distinguishable from them.
 
+## Source and live deployment
+
+Passports describe a pinned source commit, not a current deployment. New passports do not save a `deployed` block, instance IP or reported runtime version; legacy blocks are ignored when loading passports and building tool/graph projections. Existing cache/history files are left intact. Building with `env` still resolves the source commit once from the deployment's `/version`; `repo.sha` remains that analyzed revision after later redeployments.
+
+Expand **Live deployment** on the full passport page, choose an environment and press **Load live deployment**. This sends one exact Consul health lookup through the shared WebSocket tool transport. **Refresh live deployment** fetches again; observations show their own timestamp and never update the passport. **Include reported /version** explicitly adds probes to passing replicas. Lookups support cancellation and bounded timeouts; failed or empty lookups leave source details available. Inline chat snapshots remain read-only and link to the full page for live lookup.
+
+Models receive a `deploymentLookup` hint alongside the static passport. Call `consul_service` with `{"name":"order-service","env":"dev","exact":true,"version":false}` for current replicas and health; use `version:true` only when reported build identity is needed. Exact lookup skips the whole service catalog, has no deployment-result cache and returns `observedAt`. Source passports and saved snapshot bodies contain no live deployment observation.
+
+Verify with `node --test test/passport-deployment.test.js` and `node dev/check-passport-deployment.js`. The latter uses a disposable local Consul/HTTP fixture and Chromium to check redeployment, refresh request counts, failure/empty/cancel recovery, environment selection, optional version probes and read-only embedded snapshots. It contacts neither production systems nor a model.
+
 ## Read, then edit
 
 Read `passport_adjustments` with a service name to obtain the current identity, revision, original detections, effective ports, disabled ports and edit history. Optional `env`, `repo` and full `revision` selectors choose one exact source identity. An omitted selector uses the cached passport's value; an explicit null records unknown provenance. No detection from a different commit is substituted when the requested snapshot is missing.

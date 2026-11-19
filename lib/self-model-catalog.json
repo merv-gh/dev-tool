@@ -1,7 +1,7 @@
 {
   "protocol": "dt.repo-source/v1",
   "repo": "dev-tool",
-  "sourceDigest": "4bcb3451f4ed4e757b4e32695541669ce6f6fe8c072ae64af2368a4fae1d47da",
+  "sourceDigest": "e02b31be92fbc76cd55b3bb04ca038cbf5d6952f4751c3e5ebed80c5e0b88f7a",
   "machines": [
     {
       "id": "IO.atomic-file",
@@ -925,7 +925,7 @@
       "consumers": [
         {
           "file": "lib/js.js",
-          "line": 167,
+          "line": 172,
           "snippet": "this.sandbox = require('./state-machine').create(require('./lifecycles').sandbox);"
         }
       ],
@@ -961,7 +961,7 @@
       "consumers": [
         {
           "file": "lib/js.js",
-          "line": 166,
+          "line": 171,
           "snippet": "this.lifecycle = require('./state-machine').create(require('./lifecycles').session);"
         }
       ],
@@ -997,7 +997,7 @@
       "consumers": [
         {
           "file": "lib/js.js",
-          "line": 284,
+          "line": 289,
           "snippet": "require('./state-machine').bind(cell, require('./lifecycles').cell);"
         }
       ],
@@ -1376,7 +1376,7 @@
       "consumers": [
         {
           "file": "lib/tools.js",
-          "line": 998,
+          "line": 1004,
           "snippet": "const activation=require('./state-machine').create(require('./lifecycles').registry,prior?'active':'missing');"
         }
       ],
@@ -2576,7 +2576,7 @@
       "consumers": [
         {
           "file": "lib/workspace.js",
-          "line": 214,
+          "line": 225,
           "snippet": "const lifecycle = require('./state-machine').create(require('./lifecycles').workspacePush);"
         }
       ],
@@ -2866,7 +2866,7 @@
         },
         {
           "file": "lib/workspace.js",
-          "line": 352,
+          "line": 363,
           "snippet": "function preparations(){return opening ||= new(require('./keyed-work').KeyedWork)(require('./lifecycles').preparation,{retainTick:false});}"
         }
       ],
@@ -3675,7 +3675,7 @@
       "consumers": [
         {
           "file": "lib/files.js",
-          "line": 341,
+          "line": 355,
           "snippet": "const lifecycle = require('./state-machine').create(require('./lifecycles').archive);"
         }
       ],
