@@ -46,6 +46,8 @@ async function run(
     report.checks.push({ name, ok: true });
     console.log("PASS " + name);
   };
+  const open = async selector => { const details=p.locator(selector); if(!(await details.evaluate(e=>e.open)))await details.locator(":scope > summary").click(); };
+  const intent = async id => { await open("#wbBrowseGoals"); const button=p.locator("[data-wb-intent="+id+"]"),group=button.locator("xpath=ancestor::details[1]"); if(!(await group.evaluate(e=>e.open)))await group.locator(":scope > summary").click(); await button.click(); };
   const pick = async (label, text) => {
     const toggle = p.getByRole("button", {
       name: "Browse " + label,
@@ -96,6 +98,7 @@ async function run(
     await p.locator("#wbRun:not([disabled])").waitFor();
   };
   const choose = async (name) => {
+    await open("#wbToolPickerDetails");
     await p.locator("#wbToolGroup").selectOption("");
     await pick("enabled tools", name);
     assert.equal(await p.locator("#wbTool").inputValue(), name);
@@ -115,7 +118,7 @@ async function run(
     p.on("pageerror", (e) => report.pageErrors.push(e.message));
     p.on("dialog", (d) => d.accept());
     await p.goto(base + "/admin");
-    await p.locator("#wbFields [data-arg=service]").waitFor();
+    await p.waitForFunction(() => typeof wbLife === "object" && wbLife.state === "ready");
     await check(
       "default entry and empty catalog recovery are clickable",
       async () => {
@@ -130,7 +133,8 @@ async function run(
             .click();
           await runAction("catalog_sync");
         }
-        await p.locator("[data-wb-intent=service-boundaries]").click();
+        await intent("service-boundaries");
+        await p.locator("#wbFields [data-arg=service]").waitFor();
       },
     );
     await check(
@@ -152,6 +156,7 @@ async function run(
           .locator("#title")
           .filter({ hasText: "checkout" })
           .waitFor({ state: "attached" });
+        await open("#wbValues");
         assert.match(await p.locator("#wbFacts").innerText(), /sales.refunds/);
         assert.match(await p.locator("#wbResultMeta").innerText(), /Saved to/);
         await p
@@ -160,6 +165,7 @@ async function run(
           .click();
         await pick("name", "sales.refunds");
         await runAction("pg_table");
+        await open("#wbValues");
         await p
           .locator("#wbFollowups")
           .getByRole("button", {
@@ -168,6 +174,7 @@ async function run(
           })
           .click();
         await runAction("pg_usage");
+        await open("#wbValues");
         await p
           .locator("#wbFollowups")
           .getByRole("button", { name: "Prepare a SQL query", exact: true })
@@ -202,6 +209,7 @@ async function run(
     await check(
       "syntax and tool-call insertion use the real enabled registry",
       async () => {
+        await open("#wbToolPickerDetails");
         await p.locator("#wbToolGroup").selectOption("");
         await p.locator("#wbTool").focus();
         await p.locator("#wbTool").press("Tab");
@@ -234,6 +242,7 @@ async function run(
     await check(
       "structured arrays, objects and nullable values need no JSON",
       async () => {
+        await open("#wbToolPickerDetails");
         await p.locator("#wbToolGroup").selectOption("demo");
         await pick("enabled tools", "demo_workbench");
         await p
@@ -293,6 +302,7 @@ async function run(
     await check(
       "model help returns editable suggestions and interprets the selected evidence",
       async () => {
+        await open(".wb-assistance");
         let submissions = 0;
         const listener = (req) => {
           if (
@@ -408,6 +418,7 @@ async function run(
       "new task scope clears earlier evidence and ignores delayed choice responses",
       async () => {
         await p.goto(base + "/admin#workbench");
+        await intent("service-boundaries");
         await p.locator("#wbFields [data-arg=service]").waitFor();
         await p.route("**/api/admin/workbench/choices", async (route) => {
           await new Promise((r) => setTimeout(r, 400));
@@ -430,6 +441,7 @@ async function run(
     );
     if (capture) {
       await p.goto(base + "/admin#workbench?story=default");
+      await intent("service-boundaries");
       await p.locator("#wbFields [data-arg=service]").waitFor();
       await pick("service", "checkout");
       await runAction("passport");

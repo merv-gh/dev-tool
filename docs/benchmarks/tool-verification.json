@@ -1,6 +1,6 @@
 {
   "protocol": "dt.release-inventory/v1",
-  "sourceDigest": "f13c31d7df56147b6aaf0319aa34a1c0bab48e6069579fe4556779fe72865d47",
+  "sourceDigest": "2e58f5687caa667056058e4ff47776896c6f26bb9c3060a071c0bc7738d59522",
   "tools": [
     {
       "name": "find",
@@ -26,6 +26,7 @@
         "test/request-events.test.js",
         "test/scripts.test.js",
         "test/server.test.js",
+        "test/task-harness.test.js",
         "test/team-security.test.js",
         "test/tool-contracts.test.js",
         "test/ui-trace-ui.test.js",
@@ -113,6 +114,7 @@
       "referenceTests": [
         "test/memory.test.js",
         "test/pgindex.test.js",
+        "test/task-harness.test.js",
         "test/tool-contracts.test.js",
         "test/ui-trace-ui.test.js",
         "test/workbench.test.js"
@@ -403,7 +405,8 @@
       "resultContract": false,
       "referenceTests": [
         "test/config.test.js",
-        "test/confluence.test.js"
+        "test/confluence.test.js",
+        "test/task-harness.test.js"
       ],
       "integrationReferences": []
     },
@@ -414,7 +417,9 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
-        "test/confluence.test.js"
+        "test/confluence.test.js",
+        "test/task-harness-ui.test.js",
+        "test/task-harness.test.js"
       ],
       "integrationReferences": []
     },
@@ -681,6 +686,7 @@
         "test/collection-persistence.test.js",
         "test/collections.test.js",
         "test/scripts.test.js",
+        "test/task-harness.test.js",
         "test/workbench-explorer.test.js"
       ],
       "integrationReferences": []
@@ -707,6 +713,7 @@
         "test/reproduction.test.js",
         "test/run-sh.test.js",
         "test/scenario.test.js",
+        "test/task-harness.test.js",
         "test/testdata.test.js",
         "test/tool-discovery.test.js",
         "test/views.test.js",
@@ -752,7 +759,8 @@
         "test/passport-modules.test.js",
         "test/passport-resolution.test.js",
         "test/push.test.js",
-        "test/workbench.test.js"
+        "test/workbench.test.js",
+        "test/workspace-publication.test.js"
       ],
       "integrationReferences": [
         "test/gradle.live.test.js",
@@ -771,7 +779,8 @@
         "test/code.test.js",
         "test/page-primitives.test.js",
         "test/ui-page-model.test.js",
-        "test/views.test.js"
+        "test/views.test.js",
+        "test/workspace-publication.test.js"
       ],
       "integrationReferences": [
         "test/reproduction.live.test.js",
@@ -1130,6 +1139,7 @@
         "test/files-delete.test.js",
         "test/flows.live.test.js",
         "test/javacheck.live.test.js",
+        "test/task-harness.test.js",
         "test/task-model-evaluation.test.js",
         "test/testdata.live.test.js",
         "test/workbench-explorer-ui.test.js",
@@ -1215,8 +1225,10 @@
         "test/ci-iteration.test.js",
         "test/experiments.test.js",
         "test/push.test.js",
+        "test/task-harness.test.js",
         "test/ui-page-model.test.js",
-        "test/workbench-model-eval.test.js"
+        "test/workbench-model-eval.test.js",
+        "test/workspace-publication.test.js"
       ],
       "integrationReferences": []
     },
@@ -1498,7 +1510,8 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
-        "test/ci-iteration.test.js"
+        "test/ci-iteration.test.js",
+        "test/task-harness.test.js"
       ],
       "integrationReferences": []
     },
@@ -1549,7 +1562,8 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
-        "test/ci-iteration.test.js"
+        "test/ci-iteration.test.js",
+        "test/task-harness.test.js"
       ],
       "integrationReferences": []
     },
@@ -1571,7 +1585,8 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
-        "test/ci-iteration.test.js"
+        "test/ci-iteration.test.js",
+        "test/task-harness.test.js"
       ],
       "integrationReferences": []
     },
@@ -1666,6 +1681,7 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
+        "test/task-harness.test.js",
         "test/workbench-discovery.test.js",
         "test/workbench-explorer-ui.test.js",
         "test/workbench-explorer.test.js",
@@ -1732,7 +1748,8 @@
       "resultContract": false,
       "referenceTests": [
         "test/editor-ui.test.js",
-        "test/studio-tools.test.js"
+        "test/studio-tools.test.js",
+        "test/task-harness.test.js"
       ],
       "integrationReferences": []
     },
@@ -1982,6 +1999,71 @@
       "integrationReferences": []
     },
     {
+      "name": "task_run_action",
+      "group": "automation",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/task-harness.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "task_run_catalog",
+      "group": "automation",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "task_run_start",
+      "group": "automation",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "task_run_list",
+      "group": "automation",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "task_run_status",
+      "group": "automation",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "task_run_control",
+      "group": "automation",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "task_run_memory",
+      "group": "automation",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
       "name": "logic_model",
       "group": "runtime",
       "origin": "built-in",
@@ -2038,7 +2120,8 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
-        "test/project-context.test.js"
+        "test/project-context.test.js",
+        "test/task-harness.test.js"
       ],
       "integrationReferences": []
     },
@@ -3873,6 +3956,7 @@
     "semantic-path-trace",
     "service-environment",
     "table",
+    "task-run",
     "test-coverage",
     "tests",
     "text-diff",

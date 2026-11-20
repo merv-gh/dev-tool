@@ -18246,7 +18246,7 @@ var require_self_model_catalog = __commonJS({
     module2.exports = {
       protocol: "dt.repo-source/v1",
       repo: "dev-tool",
-      sourceDigest: "2d601ceb6a135fccf01c7c260bdc204e8f5a1383fcbe9f58d049fa6818b04a80",
+      sourceDigest: "2e58f5687caa667056058e4ff47776896c6f26bb9c3060a071c0bc7738d59522",
       machines: [
         {
           id: "IO.atomic-file",
@@ -82594,7 +82594,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md|java)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "2d601ceb6a135fccf01c7c260bdc204e8f5a1383fcbe9f58d049fa6818b04a80";
+      if (true) return "2e58f5687caa667056058e4ff47776896c6f26bb9c3060a071c0bc7738d59522";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
