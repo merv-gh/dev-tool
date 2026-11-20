@@ -135,7 +135,13 @@ test('two fresh processes racing to resume one checkpoint cannot both execute it
   const code = `const F=require('./lib/automation-flow');process.stdout.write('READY\\n');process.stdin.once('data',async()=>{try{const r=await F.resume({run:${JSON.stringify(run)},await_completion:true});process.stdout.write('RESULT:'+JSON.stringify({state:r.state})+'\\n');}catch(e){process.stdout.write('RESULT:'+JSON.stringify({code:e.code})+'\\n');}finally{await F.close();await require('./lib/isolate').stop();await require('./lib/state-store').close();}});`;
   const children = [0, 1].map(i => { const child = spawn(process.execPath, ['-e', code], { cwd: root, env: { ...process.env }, stdio: ['pipe', 'pipe', 'pipe'] }); child.stdout.on('data', b => { outputs[i] += b; }); child.stderr.on('data', b => { errors[i] += b; }); return child; });
   const exits = children.map(c => new Promise(resolve => c.once('exit', (code, signal) => resolve({ code, signal }))));
-  try { await until(() => outputs.every(o => o.includes('READY'))); for (const child of children) child.stdin.end('go'); const ended = await Promise.all(exits); for (let i = 0; i < ended.length; i++) assert.equal(ended[i].code, 0, errors[i]); const results = outputs.map(o => JSON.parse(o.match(/RESULT:(.*)/)[1])); assert.equal(results.filter(r => r.state === 'done').length, 1); assert.equal(results.filter(r => r.code === 'STATE_CONFLICT').length, 1); assert.equal(events().filter(e => e.type === 'effect' && e.tag === 'dual-resume').length, 1); }
+  try { await until(() => outputs.every(o => o.includes('READY'))); for (const child of children) child.stdin.end('go'); const ended = await Promise.all(exits); for (let i = 0; i < ended.length; i++) assert.equal(ended[i].code, 0, errors[i]); const results = outputs.map(o => JSON.parse(o.match(/RESULT:(.*)/)[1])); // The nonblocking writer lock may reject both contenders. A caller can also
+    // observe the winner's completed receipt after it finishes. Neither outcome
+    // implies another execution; assert the external journal, then explicit progress.
+    assert.ok(results.every(r => r.state === 'done' || r.code === 'STATE_CONFLICT'), JSON.stringify(results));
+    assert.ok(events().filter(e => e.type === 'effect' && e.tag === 'dual-resume').length <= 1);
+    if (F.status({ run }).state !== 'done') assert.equal((await F.resume({ run, await_completion: true })).state, 'done');
+    assert.equal(events().filter(e => e.type === 'effect' && e.tag === 'dual-resume').length, 1); }
   finally { for (const child of children) if (child.exitCode === null) child.kill('SIGKILL'); }
 });
 

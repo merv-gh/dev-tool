@@ -1,6 +1,6 @@
 {
   "protocol": "dt.release-inventory/v1",
-  "sourceDigest": "e02b31be92fbc76cd55b3bb04ca038cbf5d6952f4751c3e5ebed80c5e0b88f7a",
+  "sourceDigest": "f13c31d7df56147b6aaf0319aa34a1c0bab48e6069579fe4556779fe72865d47",
   "tools": [
     {
       "name": "find",
@@ -234,6 +234,7 @@
         "test/showcase.test.js"
       ],
       "integrationReferences": [
+        "test/service-environments.live.test.js",
         "test/showcase.live.test.js"
       ]
     },
@@ -374,7 +375,8 @@
         "test/diagrams.live.test.js",
         "test/semantic-branches.live.test.js",
         "test/semantic-flow-map.live.test.js",
-        "test/semantic-path-trace.live.test.js"
+        "test/semantic-path-trace.live.test.js",
+        "test/service-environments.live.test.js"
       ]
     },
     {
@@ -723,6 +725,7 @@
         "test/semantic-path-trace.live.test.js",
         "test/semantic.live.test.js",
         "test/service-architecture.live.test.js",
+        "test/service-environments.live.test.js",
         "test/template.live.test.js",
         "test/testdata.live.test.js"
       ]
@@ -2089,6 +2092,7 @@
         "test/semantic-flow-map.live.test.js",
         "test/semantic.live.test.js",
         "test/service-architecture.live.test.js",
+        "test/service-environments.live.test.js",
         "test/showcase.live.test.js",
         "test/template.live.test.js",
         "test/testdata.live.test.js",
@@ -2381,6 +2385,114 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "service_env_plan",
+      "group": "runtime",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/admin-environments.test.js",
+        "test/service-environments.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "service_env_save",
+      "group": "runtime",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/admin-environments.test.js",
+        "test/service-environments.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "service_env_start",
+      "group": "runtime",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/admin-environments.test.js",
+        "test/service-environments.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "service_env_status",
+      "group": "runtime",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/admin-environments.test.js",
+        "test/service-environments.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "service_env_bindings",
+      "group": "runtime",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/admin-environments.test.js",
+        "test/service-environments.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "service_env_logs",
+      "group": "runtime",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/admin-environments.test.js",
+        "test/service-environments.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "service_env_control",
+      "group": "runtime",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/admin-environments.test.js",
+        "test/service-environments.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "service_env_request",
+      "group": "runtime",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/admin-environments.test.js",
+        "test/service-environments.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "service_debug",
+      "group": "runtime",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/admin-environments.test.js",
+        "test/service-environments.test.js"
+      ],
       "integrationReferences": []
     },
     {
@@ -3639,6 +3751,18 @@
       "integrationReferences": []
     },
     {
+      "name": "mapping_debug",
+      "group": "api",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/mapping-debugger-ui.test.js",
+        "test/mapping-debugger.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
       "name": "kafka_checkpoint",
       "group": "kafka",
       "origin": "built-in",
@@ -3736,6 +3860,7 @@
     "knowledge-map",
     "list-diff",
     "logic-model",
+    "mapping-debugger",
     "observability",
     "passport-ports",
     "patch",
@@ -3746,6 +3871,7 @@
     "semantic-analysis",
     "semantic-flow-map",
     "semantic-path-trace",
+    "service-environment",
     "table",
     "test-coverage",
     "tests",

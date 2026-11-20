@@ -1,5 +1,7 @@
 # dev-tool (`dt`)
 
+[Mapping debugger](docs/mapping-debugger.md): inspect service responses beside raw Postgres, Kafka and Elasticsearch results, compare mapped fields, and retain named reproducible notebooks and inline snapshots. Open it from Admin → API client.
+
 Read-only tools that let an AI agent (or you) investigate a microservice environment without guessing:
 
 - **An index of your databases.** Postgres tables, columns, views, functions and procedures with their arguments, and **who uses what**: which services read or write a table (from their code, with file:line), which functions, triggers and views touch it, and what calls a function. Also Elasticsearch mappings, Kafka topics (schemas and sample messages), and Consul services.
@@ -64,7 +66,10 @@ and the [roadmap](docs/roadmap.md).
 Research for model-operated Spring services with fast disposable dependencies,
 branch comparisons and debugging is in
 [ephemeral service environments](docs/ephemeral-service-environments.md).
-It separates existing fixture/template tools from the proposed runtime work.
+The [implemented supervisor and tool guide](docs/service-environments.md) covers
+persistent leases, application.properties/env exports, API/data inspection and
+Java breakpoints in **Admin → Service environments**. Native-stack validation
+requires the deployment's reachable Docker daemon and compatible images.
 
 ## Release verification
 

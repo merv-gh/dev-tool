@@ -133,6 +133,22 @@
       "description": "Use exact source revisions and explicit execution targets.",
       "intents": [
         {
+          "id": "run-service-locally",
+          "title": "Run a branch with fresh databases, topics and indices",
+          "tools": [
+            "service_env_plan",
+            "service_env_save",
+            "service_env_start",
+            "service_env_status",
+            "service_env_bindings",
+            "service_env_request",
+            "service_env_logs",
+            "service_debug",
+            "service_env_control"
+          ],
+          "goal": "Start an owned persistent service lease, copy application.properties/env bindings, reproduce an entry-to-exit bug, inspect logs and private data, then reset or stop."
+        },
+        {
           "id": "regression",
           "title": "Prepare an integration regression",
           "guide": "write-tests",

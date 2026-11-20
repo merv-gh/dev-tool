@@ -74,3 +74,7 @@ test('an oversized function is rejected before client JSON parsing and keeps the
     await admin.end(); await pg.closeAll();
   }
 });
+
+test('bounded read cursor works against real Postgres and preserves read-only transactions', {skip: !URL_ && 'set DT_TEST_PG_URL'}, async()=>{
+ const pg=require('../lib/pg');try{const r=await pg.query('live',"select n, current_setting('transaction_read_only') as ro from generate_series(1,1000) as n",{db:'shop',maxRows:3});assert.equal(r.rows.length,3);assert.equal(r.truncated,true);assert.ok(r.rows.every(r=>r.ro==='on'));const exact=await pg.query('live','select n from generate_series(1,3) as n',{db:'shop',maxRows:3});assert.equal(exact.truncated,false);}finally{await pg.closeAll();}
+});

@@ -1,0 +1,129 @@
+{
+  "protocol": "dt.service-environments-verification/v1",
+  "sourceDigest": "c565593e29ce19074cb4bcd001234882e920a55857dc7e521eeae1b18ae281a9",
+  "checks": {
+    "fullSuite": {
+      "tests": 1302,
+      "failed": 0,
+      "passed": 1243,
+      "cancelled": 0,
+      "skipped": 59,
+      "todo": 0,
+      "topLevel": 1302,
+      "suites": 0
+    },
+    "coverage": {
+      "summary": {
+        "transitions": {
+          "hit": 397,
+          "total": 711,
+          "percent": 55.8
+        },
+        "lines": {
+          "hit": 31334,
+          "total": 33370,
+          "percent": 93.9
+        },
+        "functions": {
+          "hit": 7896,
+          "total": 8902,
+          "percent": 88.7
+        },
+        "branches": {
+          "hit": 27756,
+          "total": 33627,
+          "percent": 82.5
+        },
+        "testedFiles": 190,
+        "sourceFiles": {
+          "measured": 252,
+          "unmeasured": 28,
+          "total": 280
+        }
+      },
+      "baseline": {
+        "transitions": {
+          "hit": 387,
+          "total": 700,
+          "percent": 55.3
+        },
+        "lines": {
+          "hit": 30927,
+          "total": 32966,
+          "percent": 93.8
+        },
+        "functions": {
+          "hit": 7532,
+          "total": 8496,
+          "percent": 88.7
+        },
+        "branches": {
+          "hit": 26585,
+          "total": 32215,
+          "percent": 82.5
+        },
+        "testedFiles": 185,
+        "sourceFiles": {
+          "measured": 246,
+          "unmeasured": 28,
+          "total": 274
+        }
+      },
+      "ratchet": "passed on the same Node major/platform; no lower thresholds"
+    },
+    "browser": {
+      "passed": true,
+      "flows": [
+        "bindings",
+        "backend-request",
+        "retained-response",
+        "logs",
+        "save-definition",
+        "start",
+        "reload-resume",
+        "stop",
+        "websocket",
+        "mobile",
+        "unsaved-start-guard",
+        "version-history",
+        "polling-disclosures",
+        "handbook-pinned-run-example"
+      ],
+      "desktop": [
+        1440,
+        1100
+      ],
+      "mobile": [
+        390,
+        844
+      ],
+      "transport": "WebSocket command channel verified"
+    },
+    "realJdi": "Javac/JVM breakpoint, locals, stack, resume and detach passed",
+    "nativeDocker": {
+      "status": "not-run",
+      "reason": "Local Docker daemon probe timed out; protocol fixture results do not certify native Docker/PG/Kafka/ES topology",
+      "optIn": "test/service-environments.live.test.js"
+    }
+  },
+  "review": {
+    "fixes": [
+      "Unsaved launch guard",
+      "Polling disclosure preservation",
+      "Pinned definition and immutable history"
+    ],
+    "verdict": "Fresh reviewer scored all three resolved; scoped ship verdict",
+    "documentation": "Incumbent Admin extension preserved; functional handbook and advanced-definition round trips checked"
+  },
+  "reproduce": [
+    "node dev/check-service-environments.js",
+    "npm run test:coverage",
+    "node dev/coverage-gate.js <new-report> <pre-change-report>",
+    "node --test test/service-environments.live.test.js (explicit DT_TEST_SERVICE_ENV_* opt-ins; see guide)"
+  ],
+  "limits": [
+    "Protocol fixture runs real local Node applications and exercises Docker request contracts, not a real broker or container network.",
+    "Coverage describes measured JS sources and observed lifecycle transitions; it does not prove assertion quality or all integrations.",
+    "Real native-stack validation requires a reachable worker, compatible preloaded images and a dedicated scratch PostgreSQL cluster."
+  ]
+}

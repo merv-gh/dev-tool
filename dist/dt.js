@@ -455,7 +455,8 @@ var require_lifecycles = __commonJS({
     var projectContextPublication = define2("SM80.project-context-publication", "draft", { draft: ["locked"], locked: ["checked", "failed"], checked: ["files-written", "failed"], "files-written": ["revision-written", "failed"], "revision-written": ["published", "failed"], published: [], failed: [] }, ["published", "failed"]);
     var ciWait = define2("SM81.ci-wait", "checking", { checking: ["sleeping", "complete", "pending", "cancelled", "failed"], sleeping: ["checking", "pending", "cancelled", "failed"], complete: [], pending: [], cancelled: [], failed: [] }, ["complete", "pending", "cancelled", "failed"]);
     var uiPageRun = define2("UI-page.run", "ready", { ready: ["reading"], reading: ["composing", "cancelled", "failed"], composing: ["retaining", "cancelled", "failed"], retaining: ["done", "cancelled", "failed"], done: [], cancelled: [], failed: [] }, ["done", "cancelled", "failed"]);
-    module2.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process: process2, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context: context2, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http: http2, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };
+    var mappingRead = define2("Mapping-debugger.read", "running", { running: ["done", "error", "cancelled"], done: [], error: [], cancelled: [] }, ["done", "error", "cancelled"]);
+    module2.exports = { mappingRead, uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process: process2, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context: context2, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http: http2, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };
   }
 });
 
@@ -18244,7 +18245,7 @@ var require_self_model_catalog = __commonJS({
     module2.exports = {
       protocol: "dt.repo-source/v1",
       repo: "dev-tool",
-      sourceDigest: "e02b31be92fbc76cd55b3bb04ca038cbf5d6952f4751c3e5ebed80c5e0b88f7a",
+      sourceDigest: "f13c31d7df56147b6aaf0319aa34a1c0bab48e6069579fe4556779fe72865d47",
       machines: [
         {
           id: "IO.atomic-file",
@@ -18286,6 +18287,50 @@ var require_self_model_catalog = __commonJS({
           }
         },
         {
+          id: "Mapping-debugger.read",
+          component: "lib/lifecycles.js",
+          label: "Mapping-debugger.read",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/lifecycles.js",
+            line: 116,
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
+            snippet: "const uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nconst mappingRead = define('Mapping-debugger.read', 'running', { running: ['done','error','cancelled'], done: [], error: [], cancelled: [] }, ['done','error','cancelled']);\nmodule.exports = { mappingRead, uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
+          },
+          consumers: [
+            {
+              file: "lib/mapping-debugger.js",
+              line: 117,
+              snippet: "r.receipts[step] = require('./state-machine').bind({ state: 'running', at, env, executionId: require('./execution').current()?.id || null, request: p || d.definition.request }, require('./lifecycles').mappingRead);"
+            }
+          ],
+          chart: {
+            name: "Mapping-debugger.read",
+            initial: "running",
+            states: [
+              "running",
+              "done",
+              "error",
+              "cancelled"
+            ],
+            terminal: [
+              "done",
+              "error",
+              "cancelled"
+            ],
+            transitions: {
+              running: [
+                "done",
+                "error",
+                "cancelled"
+              ],
+              done: [],
+              error: [],
+              cancelled: []
+            }
+          }
+        },
+        {
           id: "P01.descriptor",
           component: "lib/pgstore.js",
           label: "P01.descriptor",
@@ -18293,7 +18338,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 46,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {\n  disconnected: ['initializing', 'closing'], initializing: ['ready', 'disconnected', 'closing'], ready: ['closing'], closing: ['disconnected'],\n});\nconst fixture = define('SM26.fixture', 'starting', { starting: ['ready', 'cleanup-failed', 'stopped'], ready: ['cleanup-failed', 'stopped'], 'cleanup-failed': ['stopped'], stopped: [] }, ['stopped']);\nconst scenario = define('SM28.scenario', 'starting', { starting: ['ready', 'failed', 'stopped'], ready: ['failed', 'stopped'], failed: ['stopped'], stopped: [] }, ['stopped']);\nconst collection = define('SM35.collection', 'running', { running: ['passed', 'failed', 'cancelled','interrupted'], passed: [], failed: [], cancelled: [], interrupted:[] }, ['passed', 'failed', 'cancelled','interrupted']);\nconst semantic = define('SM45.semantic', 'uploading', {\n  uploading: ['queued', 'failed', 'interrupted'], queued: ['parsing', 'querying', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  parsing: ['enriching', 'cancelling', 'failed', 'cancelled', 'interrupted'], enriching: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  querying: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'], cancelling: ['cancelled', 'failed', 'interrupted'],\n  draining: ['ready', 'cancelled', 'failed', 'interrupted'],\n  ready: [], failed: [], cancelled: [], interrupted: [],\n}, ['ready', 'failed', 'cancelled', 'interrupted']);\nconst sftp = define('SM19.sftp', 'connecting', { connecting: ['opening', 'closing', 'failed', 'closed'], opening: ['ready', 'closing', 'failed', 'closed'], ready: ['closing', 'failed', 'closed'], closing: ['failed', 'closed'], failed: ['closing', 'closed'], closed: [] }, ['closed']);"
           },
           consumers: [],
@@ -18362,8 +18407,8 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 102,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
-            snippet: "const result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nmodule.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery"
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
+            snippet: "const result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nconst mappingRead = define('Mapping-debugger.read', 'running', { running: ['done','error','cancelled'], done: [], error: [], cancelled: [] }, ['done','error','cancelled']);"
           },
           consumers: [
             {
@@ -18454,8 +18499,8 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 103,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
-            snippet: "const sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nmodule.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBack"
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
+            snippet: "const sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nconst mappingRead = define('Mapping-debugger.read', 'running', { running: ['done','error','cancelled'], done: [], error: [], cancelled: [] }, ['done','error','cancelled']);\nmodule.exports = { mappingRead, uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepar"
           },
           consumers: [
             {
@@ -18490,8 +18535,8 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 104,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
-            snippet: "const reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nmodule.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
+            snippet: "const reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nconst mappingRead = define('Mapping-debugger.read', 'running', { running: ['done','error','cancelled'], done: [], error: [], cancelled: [] }, ['done','error','cancelled']);\nmodule.exports = { mappingRead, uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, ap"
           },
           consumers: [
             {
@@ -18526,8 +18571,8 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 105,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
-            snippet: "const markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nmodule.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
+            snippet: "const markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nconst mappingRead = define('Mapping-debugger.read', 'running', { running: ['done','error','cancelled'], done: [], error: [], cancelled: [] }, ['done','error','cancelled']);\nmodule.exports = { mappingRead, uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
           },
           consumers: [
             {
@@ -18570,8 +18615,8 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 106,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
-            snippet: "const traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nmodule.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
+            snippet: "const traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nconst mappingRead = define('Mapping-debugger.read', 'running', { running: ['done','error','cancelled'], done: [], error: [], cancelled: [] }, ['done','error','cancelled']);\nmodule.exports = { mappingRead, uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
           },
           consumers: [
             {
@@ -18780,6 +18825,61 @@ var require_self_model_catalog = __commonJS({
           }
         },
         {
+          id: "SM.service-environment",
+          component: "lib/service-env-worker.js",
+          label: "SM.service-environment",
+          origin: "executable-declaration",
+          source: {
+            file: "lib/service-env-worker.js",
+            line: 4,
+            sha256: "34595b20409541b44d8d80653b397b87a5be3a35da8c18e4bf03f24cfd68e6d0",
+            snippet: "const D=require('./durable-private-store'),S=require('./service-env-spec'),{define,bind}=require('./state-machine');\nconst lifecycle=define('SM.service-environment','queued',{queued:['preparing','stopping'],preparing:['starting','stopping'],starting:['ready','stopping'],ready:['preparing','stopping'],stopping:['stopped','cleanup-failed'],'cleanup-failed':['stopping'],stopped:[]},['stopped']);\nconst wait=ms=>new Promise(r=>setTimeout(r,ms));\nconst CODE=String.raw`const n=require('net');n.createServer(c=>{const u=n.connect(Number(process.env.UPSTREAM_PORT),process.env.UPSTREAM_HOST);c.on('error',()=>u.destroy());u.on('error',()=>c.destroy());c.pipe(u);u.pipe(c);}).listen(5432,'0.0.0.0');`;\nfunction create(engine=require('./service-env-engine')){\n  const C=require('./config'),store=D.create(path.join(C.HOME,'service-runtime'),3*1048576),active=new Map(),proxies=new Map(),proxyPending=new Map(),debugPending=new Set();let selfPromise,timer;\n  const token=()=>crypto.randomBytes(24).toString('hex');\n  const memory=r=>r.definition.services.reduce((n,s)=>n+(r.warm?0:s.memory_mb+(s.debug?384:0)),256)+(r.definition.dependencies.kafka?768:0)+(r.definition.dependencies.elasticsearch?1536:0);\n  function track(r){store.update('index',old=>{const index=old||{records:{}};index.records[r.id]={id:r.id,state:r.state,memory:memory(r),expiresAt:r.expiresAt};store.write('index',index);});}\n  function headers(){let index=store.read('index');if(!index){for(const r of store.list('run-'))track(r);index=store.read('index')||{records:{}};}return Object.values(index.records);}\n  function load(id,capability){D.key(id);const r=store.read(id);if(!r||!require('./access').sameSecret(r.capability,capability))throw D.invalid('Environment lease not found','DT_NOT_FOUND',404);bind(r,lifecycle,'state');return r;}\n  function change(id,fn){return store.update(id,r=>{if(!r)throw Error('Missing environment lease');bind(r,lifecycle,'state');fn(r);r.updatedAt=new Date().toISOString();store.write(id,r);track(r);return r;});}\n  function note(id,text){change(id,r=>{r.events.push({sequence:++r.sequence,at:new Date().toISOString(),message:String(text).slice(0,1000),state:r.state});r.events=r.events.slice(-150);});}\n  function state(id,value){change(id,r=>{r.state=value;});}\n  function check(id){const r=store.read(id);if(!r||r.stopRequested||Date.now()>=r.expiresAt)throw Error(r?.stopRequested?'Environment stop requested':'Environment lease expired');}\n  const request=(...a)=>engine.request(...a);"
+          },
+          consumers: [],
+          chart: {
+            name: "SM.service-environment",
+            initial: "queued",
+            states: [
+              "queued",
+              "preparing",
+              "starting",
+              "ready",
+              "stopping",
+              "cleanup-failed",
+              "stopped"
+            ],
+            terminal: [
+              "stopped"
+            ],
+            transitions: {
+              queued: [
+                "preparing",
+                "stopping"
+              ],
+              preparing: [
+                "starting",
+                "stopping"
+              ],
+              starting: [
+                "ready",
+                "stopping"
+              ],
+              ready: [
+                "preparing",
+                "stopping"
+              ],
+              stopping: [
+                "stopped",
+                "cleanup-failed"
+              ],
+              "cleanup-failed": [
+                "stopping"
+              ],
+              stopped: []
+            }
+          }
+        },
+        {
           id: "SM01.execution",
           component: "lib/execution.js",
           label: "SM01.execution",
@@ -18787,7 +18887,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 6,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const { define } = require('./state-machine');\nconst execution = define('SM01.execution', 'queued', {\n  queued: ['running', 'cancelling', 'draining', 'failed', 'cancelled', 'interrupted'],\n  running: ['cancelling', 'draining', 'done', 'failed', 'interrupted'],\n  cancelling: ['draining', 'cancelled', 'interrupted'],\n  draining: ['cancelling', 'done', 'failed', 'cancelled', 'interrupted'],\n  done: [], failed: [], cancelled: [], interrupted: [],\n}, ['done', 'failed', 'cancelled', 'interrupted']);\nconst job = define('SM02.job', 'running', {\n  queued: ['running', 'cancelled', 'interrupted'], running: ['done', 'failed', 'cancelled', 'interrupted'],\n  cancelling: ['cancelled', 'interrupted'], draining: ['done', 'failed', 'cancelled', 'interrupted'],\n  done: [], failed: [], cancelled: [], interrupted: [],\n}, ['done', 'failed', 'cancelled', 'interrupted']);\nconst admission = define('SM04.admission', 'queued', {\n  queued: ['running', 'cancelled'], running: ['fulfilled', 'rejected'], fulfilled: [], rejected: [], cancelled: [],\n}, ['fulfilled', 'rejected', 'cancelled']);"
           },
           consumers: [
@@ -18859,7 +18959,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 13,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "}, ['done', 'failed', 'cancelled', 'interrupted']);\nconst job = define('SM02.job', 'running', {\n  queued: ['running', 'cancelled', 'interrupted'], running: ['done', 'failed', 'cancelled', 'interrupted'],\n  cancelling: ['cancelled', 'interrupted'], draining: ['done', 'failed', 'cancelled', 'interrupted'],\n  done: [], failed: [], cancelled: [], interrupted: [],\n}, ['done', 'failed', 'cancelled', 'interrupted']);\nconst admission = define('SM04.admission', 'queued', {\n  queued: ['running', 'cancelled'], running: ['fulfilled', 'rejected'], fulfilled: [], rejected: [], cancelled: [],\n}, ['fulfilled', 'rejected', 'cancelled']);\nconst worker = define('SM06.worker', 'idle', {\n  idle: ['busy', 'stopping', 'stopped'], busy: ['idle', 'stopping', 'stopped'], stopping: ['stopped'], stopped: [],\n}, ['stopped']);\nconst session = define('SM07.session', 'idle', { idle: ['running'], running: ['idle'] });\nconst sandbox = define('SM07.sandbox', 'absent', { absent: ['alive'], alive: ['absent'] });\nconst cell = define('SM08.cell', 'queued', { queued: ['done', 'failed', 'cancelled'], done: [], failed: [], cancelled: [] }, ['done', 'failed', 'cancelled']);\nconst settlement = define('SM09.settlement', 'pending', { pending: ['settled'], settled: [] }, ['settled']);"
           },
           consumers: [
@@ -18930,7 +19030,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 28,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const settlement = define('SM09.settlement', 'pending', { pending: ['settled'], settled: [] }, ['settled']);\nconst process = define('SM03.process', 'running', { running: ['terminating', 'exited'], terminating: ['killing', 'exited'], killing: ['exited'], exited: [] }, ['exited']);\nconst span = define('SM03.span', 'running', { running: ['succeeded', 'failed'], succeeded: [], failed: [] }, ['succeeded', 'failed']);\nconst networkAdmission = define('SM05.network-admission', 'eligible', { eligible: ['reserved'], reserved: ['waiting', 'admitted', 'cancelled'], waiting: ['admitted', 'cancelled'], admitted: [], cancelled: [] }, ['admitted', 'cancelled']);\nconst runnerRequest = define('SM10.request', 'requesting', { requesting: ['streaming', 'failed'], streaming: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst circuit = define('SM10.endpoint', 'available', { available: ['cooldown'], cooldown: ['available'] });\nconst store = define('SM11.store', 'cold', { cold: ['starting', 'ready', 'closed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['starting', 'closed'], closed: [] }, ['closed']);\nconst storeClose = define('SM11.close', 'open', { open: ['flushing'], flushing: ['closing', 'closed', 'open'], closing: ['closed', 'open'], closed: [] }, ['closed']);\nconst writer = define('SM12.writer', 'idle', { idle: ['writing'], writing: ['idle', 'failed'], failed: ['writing'] });\nconst config = define('SM14.config', 'cold', { cold: ['stale', 'validating'], stale: ['validating'], validating: ['ready', 'rejected'], ready: ['stale'], rejected: ['stale', 'validating'] });\nconst registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);"
           },
           consumers: [
@@ -18976,7 +19076,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 29,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const process = define('SM03.process', 'running', { running: ['terminating', 'exited'], terminating: ['killing', 'exited'], killing: ['exited'], exited: [] }, ['exited']);\nconst span = define('SM03.span', 'running', { running: ['succeeded', 'failed'], succeeded: [], failed: [] }, ['succeeded', 'failed']);\nconst networkAdmission = define('SM05.network-admission', 'eligible', { eligible: ['reserved'], reserved: ['waiting', 'admitted', 'cancelled'], waiting: ['admitted', 'cancelled'], admitted: [], cancelled: [] }, ['admitted', 'cancelled']);\nconst runnerRequest = define('SM10.request', 'requesting', { requesting: ['streaming', 'failed'], streaming: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst circuit = define('SM10.endpoint', 'available', { available: ['cooldown'], cooldown: ['available'] });\nconst store = define('SM11.store', 'cold', { cold: ['starting', 'ready', 'closed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['starting', 'closed'], closed: [] }, ['closed']);\nconst storeClose = define('SM11.close', 'open', { open: ['flushing'], flushing: ['closing', 'closed', 'open'], closing: ['closed', 'open'], closed: [] }, ['closed']);\nconst writer = define('SM12.writer', 'idle', { idle: ['writing'], writing: ['idle', 'failed'], failed: ['writing'] });\nconst config = define('SM14.config', 'cold', { cold: ['stale', 'validating'], stale: ['validating'], validating: ['ready', 'rejected'], ready: ['stale'], rejected: ['stale', 'validating'] });\nconst registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);"
           },
           consumers: [
@@ -19016,7 +19116,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 18,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "}, ['done', 'failed', 'cancelled', 'interrupted']);\nconst admission = define('SM04.admission', 'queued', {\n  queued: ['running', 'cancelled'], running: ['fulfilled', 'rejected'], fulfilled: [], rejected: [], cancelled: [],\n}, ['fulfilled', 'rejected', 'cancelled']);\nconst worker = define('SM06.worker', 'idle', {\n  idle: ['busy', 'stopping', 'stopped'], busy: ['idle', 'stopping', 'stopped'], stopping: ['stopped'], stopped: [],\n}, ['stopped']);\nconst session = define('SM07.session', 'idle', { idle: ['running'], running: ['idle'] });\nconst sandbox = define('SM07.sandbox', 'absent', { absent: ['alive'], alive: ['absent'] });\nconst cell = define('SM08.cell', 'queued', { queued: ['done', 'failed', 'cancelled'], done: [], failed: [], cancelled: [] }, ['done', 'failed', 'cancelled']);\nconst settlement = define('SM09.settlement', 'pending', { pending: ['settled'], settled: [] }, ['settled']);\nconst process = define('SM03.process', 'running', { running: ['terminating', 'exited'], terminating: ['killing', 'exited'], killing: ['exited'], exited: [] }, ['exited']);\nconst span = define('SM03.span', 'running', { running: ['succeeded', 'failed'], succeeded: [], failed: [] }, ['succeeded', 'failed']);\nconst networkAdmission = define('SM05.network-admission', 'eligible', { eligible: ['reserved'], reserved: ['waiting', 'admitted', 'cancelled'], waiting: ['admitted', 'cancelled'], admitted: [], cancelled: [] }, ['admitted', 'cancelled']);\nconst runnerRequest = define('SM10.request', 'requesting', { requesting: ['streaming', 'failed'], streaming: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst circuit = define('SM10.endpoint', 'available', { available: ['cooldown'], cooldown: ['available'] });"
           },
           consumers: [
@@ -19064,7 +19164,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 30,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const span = define('SM03.span', 'running', { running: ['succeeded', 'failed'], succeeded: [], failed: [] }, ['succeeded', 'failed']);\nconst networkAdmission = define('SM05.network-admission', 'eligible', { eligible: ['reserved'], reserved: ['waiting', 'admitted', 'cancelled'], waiting: ['admitted', 'cancelled'], admitted: [], cancelled: [] }, ['admitted', 'cancelled']);\nconst runnerRequest = define('SM10.request', 'requesting', { requesting: ['streaming', 'failed'], streaming: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst circuit = define('SM10.endpoint', 'available', { available: ['cooldown'], cooldown: ['available'] });\nconst store = define('SM11.store', 'cold', { cold: ['starting', 'ready', 'closed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['starting', 'closed'], closed: [] }, ['closed']);\nconst storeClose = define('SM11.close', 'open', { open: ['flushing'], flushing: ['closing', 'closed', 'open'], closing: ['closed', 'open'], closed: [] }, ['closed']);\nconst writer = define('SM12.writer', 'idle', { idle: ['writing'], writing: ['idle', 'failed'], failed: ['writing'] });\nconst config = define('SM14.config', 'cold', { cold: ['stale', 'validating'], stale: ['validating'], validating: ['ready', 'rejected'], ready: ['stale'], rejected: ['stale', 'validating'] });\nconst registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);"
           },
           consumers: [
@@ -19114,7 +19214,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 21,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "}, ['fulfilled', 'rejected', 'cancelled']);\nconst worker = define('SM06.worker', 'idle', {\n  idle: ['busy', 'stopping', 'stopped'], busy: ['idle', 'stopping', 'stopped'], stopping: ['stopped'], stopped: [],\n}, ['stopped']);\nconst session = define('SM07.session', 'idle', { idle: ['running'], running: ['idle'] });\nconst sandbox = define('SM07.sandbox', 'absent', { absent: ['alive'], alive: ['absent'] });\nconst cell = define('SM08.cell', 'queued', { queued: ['done', 'failed', 'cancelled'], done: [], failed: [], cancelled: [] }, ['done', 'failed', 'cancelled']);\nconst settlement = define('SM09.settlement', 'pending', { pending: ['settled'], settled: [] }, ['settled']);\nconst process = define('SM03.process', 'running', { running: ['terminating', 'exited'], terminating: ['killing', 'exited'], killing: ['exited'], exited: [] }, ['exited']);\nconst span = define('SM03.span', 'running', { running: ['succeeded', 'failed'], succeeded: [], failed: [] }, ['succeeded', 'failed']);\nconst networkAdmission = define('SM05.network-admission', 'eligible', { eligible: ['reserved'], reserved: ['waiting', 'admitted', 'cancelled'], waiting: ['admitted', 'cancelled'], admitted: [], cancelled: [] }, ['admitted', 'cancelled']);\nconst runnerRequest = define('SM10.request', 'requesting', { requesting: ['streaming', 'failed'], streaming: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst circuit = define('SM10.endpoint', 'available', { available: ['cooldown'], cooldown: ['available'] });\nconst store = define('SM11.store', 'cold', { cold: ['starting', 'ready', 'closed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['starting', 'closed'], closed: [] }, ['closed']);\nconst storeClose = define('SM11.close', 'open', { open: ['flushing'], flushing: ['closing', 'closed', 'open'], closing: ['closed', 'open'], closed: [] }, ['closed']);\nconst writer = define('SM12.writer', 'idle', { idle: ['writing'], writing: ['idle', 'failed'], failed: ['writing'] });"
           },
           consumers: [
@@ -19162,7 +19262,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 25,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const session = define('SM07.session', 'idle', { idle: ['running'], running: ['idle'] });\nconst sandbox = define('SM07.sandbox', 'absent', { absent: ['alive'], alive: ['absent'] });\nconst cell = define('SM08.cell', 'queued', { queued: ['done', 'failed', 'cancelled'], done: [], failed: [], cancelled: [] }, ['done', 'failed', 'cancelled']);\nconst settlement = define('SM09.settlement', 'pending', { pending: ['settled'], settled: [] }, ['settled']);\nconst process = define('SM03.process', 'running', { running: ['terminating', 'exited'], terminating: ['killing', 'exited'], killing: ['exited'], exited: [] }, ['exited']);\nconst span = define('SM03.span', 'running', { running: ['succeeded', 'failed'], succeeded: [], failed: [] }, ['succeeded', 'failed']);\nconst networkAdmission = define('SM05.network-admission', 'eligible', { eligible: ['reserved'], reserved: ['waiting', 'admitted', 'cancelled'], waiting: ['admitted', 'cancelled'], admitted: [], cancelled: [] }, ['admitted', 'cancelled']);\nconst runnerRequest = define('SM10.request', 'requesting', { requesting: ['streaming', 'failed'], streaming: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst circuit = define('SM10.endpoint', 'available', { available: ['cooldown'], cooldown: ['available'] });\nconst store = define('SM11.store', 'cold', { cold: ['starting', 'ready', 'closed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['starting', 'closed'], closed: [] }, ['closed']);\nconst storeClose = define('SM11.close', 'open', { open: ['flushing'], flushing: ['closing', 'closed', 'open'], closing: ['closed', 'open'], closed: [] }, ['closed']);\nconst writer = define('SM12.writer', 'idle', { idle: ['writing'], writing: ['idle', 'failed'], failed: ['writing'] });\nconst config = define('SM14.config', 'cold', { cold: ['stale', 'validating'], stale: ['validating'], validating: ['ready', 'rejected'], ready: ['stale'], rejected: ['stale', 'validating'] });\nconst registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);"
           },
           consumers: [
@@ -19198,7 +19298,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 24,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "}, ['stopped']);\nconst session = define('SM07.session', 'idle', { idle: ['running'], running: ['idle'] });\nconst sandbox = define('SM07.sandbox', 'absent', { absent: ['alive'], alive: ['absent'] });\nconst cell = define('SM08.cell', 'queued', { queued: ['done', 'failed', 'cancelled'], done: [], failed: [], cancelled: [] }, ['done', 'failed', 'cancelled']);\nconst settlement = define('SM09.settlement', 'pending', { pending: ['settled'], settled: [] }, ['settled']);\nconst process = define('SM03.process', 'running', { running: ['terminating', 'exited'], terminating: ['killing', 'exited'], killing: ['exited'], exited: [] }, ['exited']);\nconst span = define('SM03.span', 'running', { running: ['succeeded', 'failed'], succeeded: [], failed: [] }, ['succeeded', 'failed']);\nconst networkAdmission = define('SM05.network-admission', 'eligible', { eligible: ['reserved'], reserved: ['waiting', 'admitted', 'cancelled'], waiting: ['admitted', 'cancelled'], admitted: [], cancelled: [] }, ['admitted', 'cancelled']);\nconst runnerRequest = define('SM10.request', 'requesting', { requesting: ['streaming', 'failed'], streaming: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst circuit = define('SM10.endpoint', 'available', { available: ['cooldown'], cooldown: ['available'] });\nconst store = define('SM11.store', 'cold', { cold: ['starting', 'ready', 'closed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['starting', 'closed'], closed: [] }, ['closed']);\nconst storeClose = define('SM11.close', 'open', { open: ['flushing'], flushing: ['closing', 'closed', 'open'], closing: ['closed', 'open'], closed: [] }, ['closed']);\nconst writer = define('SM12.writer', 'idle', { idle: ['writing'], writing: ['idle', 'failed'], failed: ['writing'] });\nconst config = define('SM14.config', 'cold', { cold: ['stale', 'validating'], stale: ['validating'], validating: ['ready', 'rejected'], ready: ['stale'], rejected: ['stale', 'validating'] });\nconst registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);"
           },
           consumers: [
@@ -19234,7 +19334,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 26,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const sandbox = define('SM07.sandbox', 'absent', { absent: ['alive'], alive: ['absent'] });\nconst cell = define('SM08.cell', 'queued', { queued: ['done', 'failed', 'cancelled'], done: [], failed: [], cancelled: [] }, ['done', 'failed', 'cancelled']);\nconst settlement = define('SM09.settlement', 'pending', { pending: ['settled'], settled: [] }, ['settled']);\nconst process = define('SM03.process', 'running', { running: ['terminating', 'exited'], terminating: ['killing', 'exited'], killing: ['exited'], exited: [] }, ['exited']);\nconst span = define('SM03.span', 'running', { running: ['succeeded', 'failed'], succeeded: [], failed: [] }, ['succeeded', 'failed']);\nconst networkAdmission = define('SM05.network-admission', 'eligible', { eligible: ['reserved'], reserved: ['waiting', 'admitted', 'cancelled'], waiting: ['admitted', 'cancelled'], admitted: [], cancelled: [] }, ['admitted', 'cancelled']);\nconst runnerRequest = define('SM10.request', 'requesting', { requesting: ['streaming', 'failed'], streaming: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst circuit = define('SM10.endpoint', 'available', { available: ['cooldown'], cooldown: ['available'] });\nconst store = define('SM11.store', 'cold', { cold: ['starting', 'ready', 'closed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['starting', 'closed'], closed: [] }, ['closed']);\nconst storeClose = define('SM11.close', 'open', { open: ['flushing'], flushing: ['closing', 'closed', 'open'], closing: ['closed', 'open'], closed: [] }, ['closed']);\nconst writer = define('SM12.writer', 'idle', { idle: ['writing'], writing: ['idle', 'failed'], failed: ['writing'] });\nconst config = define('SM14.config', 'cold', { cold: ['stale', 'validating'], stale: ['validating'], validating: ['ready', 'rejected'], ready: ['stale'], rejected: ['stale', 'validating'] });\nconst registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);"
           },
           consumers: [
@@ -19278,7 +19378,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 27,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const cell = define('SM08.cell', 'queued', { queued: ['done', 'failed', 'cancelled'], done: [], failed: [], cancelled: [] }, ['done', 'failed', 'cancelled']);\nconst settlement = define('SM09.settlement', 'pending', { pending: ['settled'], settled: [] }, ['settled']);\nconst process = define('SM03.process', 'running', { running: ['terminating', 'exited'], terminating: ['killing', 'exited'], killing: ['exited'], exited: [] }, ['exited']);\nconst span = define('SM03.span', 'running', { running: ['succeeded', 'failed'], succeeded: [], failed: [] }, ['succeeded', 'failed']);\nconst networkAdmission = define('SM05.network-admission', 'eligible', { eligible: ['reserved'], reserved: ['waiting', 'admitted', 'cancelled'], waiting: ['admitted', 'cancelled'], admitted: [], cancelled: [] }, ['admitted', 'cancelled']);\nconst runnerRequest = define('SM10.request', 'requesting', { requesting: ['streaming', 'failed'], streaming: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst circuit = define('SM10.endpoint', 'available', { available: ['cooldown'], cooldown: ['available'] });\nconst store = define('SM11.store', 'cold', { cold: ['starting', 'ready', 'closed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['starting', 'closed'], closed: [] }, ['closed']);\nconst storeClose = define('SM11.close', 'open', { open: ['flushing'], flushing: ['closing', 'closed', 'open'], closing: ['closed', 'open'], closed: [] }, ['closed']);\nconst writer = define('SM12.writer', 'idle', { idle: ['writing'], writing: ['idle', 'failed'], failed: ['writing'] });\nconst config = define('SM14.config', 'cold', { cold: ['stale', 'validating'], stale: ['validating'], validating: ['ready', 'rejected'], ready: ['stale'], rejected: ['stale', 'validating'] });\nconst registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);"
           },
           consumers: [
@@ -19294,7 +19394,7 @@ var require_self_model_catalog = __commonJS({
             },
             {
               file: "lib/runner.js",
-              line: 90,
+              line: 94,
               snippet: "const reply = require('./state-machine').create(require('./lifecycles').settlement);"
             }
           ],
@@ -19324,7 +19424,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 32,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const runnerRequest = define('SM10.request', 'requesting', { requesting: ['streaming', 'failed'], streaming: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst circuit = define('SM10.endpoint', 'available', { available: ['cooldown'], cooldown: ['available'] });\nconst store = define('SM11.store', 'cold', { cold: ['starting', 'ready', 'closed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['starting', 'closed'], closed: [] }, ['closed']);\nconst storeClose = define('SM11.close', 'open', { open: ['flushing'], flushing: ['closing', 'closed', 'open'], closing: ['closed', 'open'], closed: [] }, ['closed']);\nconst writer = define('SM12.writer', 'idle', { idle: ['writing'], writing: ['idle', 'failed'], failed: ['writing'] });\nconst config = define('SM14.config', 'cold', { cold: ['stale', 'validating'], stale: ['validating'], validating: ['ready', 'rejected'], ready: ['stale'], rejected: ['stale', 'validating'] });\nconst registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);"
           },
           consumers: [],
@@ -19354,7 +19454,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 31,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const networkAdmission = define('SM05.network-admission', 'eligible', { eligible: ['reserved'], reserved: ['waiting', 'admitted', 'cancelled'], waiting: ['admitted', 'cancelled'], admitted: [], cancelled: [] }, ['admitted', 'cancelled']);\nconst runnerRequest = define('SM10.request', 'requesting', { requesting: ['streaming', 'failed'], streaming: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst circuit = define('SM10.endpoint', 'available', { available: ['cooldown'], cooldown: ['available'] });\nconst store = define('SM11.store', 'cold', { cold: ['starting', 'ready', 'closed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['starting', 'closed'], closed: [] }, ['closed']);\nconst storeClose = define('SM11.close', 'open', { open: ['flushing'], flushing: ['closing', 'closed', 'open'], closing: ['closed', 'open'], closed: [] }, ['closed']);\nconst writer = define('SM12.writer', 'idle', { idle: ['writing'], writing: ['idle', 'failed'], failed: ['writing'] });\nconst config = define('SM14.config', 'cold', { cold: ['stale', 'validating'], stale: ['validating'], validating: ['ready', 'rejected'], ready: ['stale'], rejected: ['stale', 'validating'] });\nconst registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);"
           },
           consumers: [],
@@ -19393,7 +19493,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 34,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const store = define('SM11.store', 'cold', { cold: ['starting', 'ready', 'closed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['starting', 'closed'], closed: [] }, ['closed']);\nconst storeClose = define('SM11.close', 'open', { open: ['flushing'], flushing: ['closing', 'closed', 'open'], closing: ['closed', 'open'], closed: [] }, ['closed']);\nconst writer = define('SM12.writer', 'idle', { idle: ['writing'], writing: ['idle', 'failed'], failed: ['writing'] });\nconst config = define('SM14.config', 'cold', { cold: ['stale', 'validating'], stale: ['validating'], validating: ['ready', 'rejected'], ready: ['stale'], rejected: ['stale', 'validating'] });\nconst registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {\n  disconnected: ['initializing', 'closing'], initializing: ['ready', 'disconnected', 'closing'], ready: ['closing'], closing: ['disconnected'],"
           },
           consumers: [],
@@ -19434,7 +19534,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 33,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const circuit = define('SM10.endpoint', 'available', { available: ['cooldown'], cooldown: ['available'] });\nconst store = define('SM11.store', 'cold', { cold: ['starting', 'ready', 'closed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['starting', 'closed'], closed: [] }, ['closed']);\nconst storeClose = define('SM11.close', 'open', { open: ['flushing'], flushing: ['closing', 'closed', 'open'], closing: ['closed', 'open'], closed: [] }, ['closed']);\nconst writer = define('SM12.writer', 'idle', { idle: ['writing'], writing: ['idle', 'failed'], failed: ['writing'] });\nconst config = define('SM14.config', 'cold', { cold: ['stale', 'validating'], stale: ['validating'], validating: ['ready', 'rejected'], ready: ['stale'], rejected: ['stale', 'validating'] });\nconst registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {"
           },
           consumers: [],
@@ -19482,7 +19582,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 35,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const storeClose = define('SM11.close', 'open', { open: ['flushing'], flushing: ['closing', 'closed', 'open'], closing: ['closed', 'open'], closed: [] }, ['closed']);\nconst writer = define('SM12.writer', 'idle', { idle: ['writing'], writing: ['idle', 'failed'], failed: ['writing'] });\nconst config = define('SM14.config', 'cold', { cold: ['stale', 'validating'], stale: ['validating'], validating: ['ready', 'rejected'], ready: ['stale'], rejected: ['stale', 'validating'] });\nconst registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {\n  disconnected: ['initializing', 'closing'], initializing: ['ready', 'disconnected', 'closing'], ready: ['closing'], closing: ['disconnected'],\n});"
           },
           consumers: [],
@@ -19517,7 +19617,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 91,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);\nconst revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);"
           },
           consumers: [
@@ -19562,7 +19662,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 36,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const writer = define('SM12.writer', 'idle', { idle: ['writing'], writing: ['idle', 'failed'], failed: ['writing'] });\nconst config = define('SM14.config', 'cold', { cold: ['stale', 'validating'], stale: ['validating'], validating: ['ready', 'rejected'], ready: ['stale'], rejected: ['stale', 'validating'] });\nconst registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {\n  disconnected: ['initializing', 'closing'], initializing: ['ready', 'disconnected', 'closing'], ready: ['closing'], closing: ['disconnected'],\n});\nconst fixture = define('SM26.fixture', 'starting', { starting: ['ready', 'cleanup-failed', 'stopped'], ready: ['cleanup-failed', 'stopped'], 'cleanup-failed': ['stopped'], stopped: [] }, ['stopped']);"
           },
           consumers: [
@@ -19613,13 +19713,13 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 37,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const config = define('SM14.config', 'cold', { cold: ['stale', 'validating'], stale: ['validating'], validating: ['ready', 'rejected'], ready: ['stale'], rejected: ['stale', 'validating'] });\nconst registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {\n  disconnected: ['initializing', 'closing'], initializing: ['ready', 'disconnected', 'closing'], ready: ['closing'], closing: ['disconnected'],\n});\nconst fixture = define('SM26.fixture', 'starting', { starting: ['ready', 'cleanup-failed', 'stopped'], ready: ['cleanup-failed', 'stopped'], 'cleanup-failed': ['stopped'], stopped: [] }, ['stopped']);\nconst scenario = define('SM28.scenario', 'starting', { starting: ['ready', 'failed', 'stopped'], ready: ['failed', 'stopped'], failed: ['stopped'], stopped: [] }, ['stopped']);"
           },
           consumers: [
             {
               file: "lib/tools.js",
-              line: 1004,
+              line: 1006,
               snippet: "const activation=require('./state-machine').create(require('./lifecycles').registry,prior?'active':'missing');"
             }
           ],
@@ -19664,7 +19764,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 69,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const pit = define('SM75.pit', 'opening', { opening: ['open'], open: ['reading', 'closing'], reading: ['closing'], closing: ['closed', 'close-failed'], closed: [], 'close-failed': [] }, ['closed', 'close-failed']);\nconst identity = define('SM16.identity', 'unverified', { unverified: ['authenticated', 'rejected'], authenticated: ['scoped', 'rejected'], scoped: [], rejected: [] }, ['scoped', 'rejected']);\nconst mcp = define('SM17.request', 'running', { running: ['cancelling', 'replied', 'closed'], cancelling: ['replied', 'closed'], replied: ['closed'], closed: [] }, ['closed']);\nconst effects = define('SM27.effects', 'unarmed', { unarmed: ['arming'], arming: ['armed', 'rejected'], armed: ['observing'], observing: ['checked', 'failed'], checked: [], rejected: [], failed: [] }, ['checked', 'rejected', 'failed']);\nconst action = define('SM29.action', 'reserved', { reserved: ['executing'], executing: ['completed', 'unknown'], completed: [], unknown: [] }, ['completed', 'unknown']);\nconst quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['c"
           },
           consumers: [
@@ -19709,7 +19809,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 70,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const identity = define('SM16.identity', 'unverified', { unverified: ['authenticated', 'rejected'], authenticated: ['scoped', 'rejected'], scoped: [], rejected: [] }, ['scoped', 'rejected']);\nconst mcp = define('SM17.request', 'running', { running: ['cancelling', 'replied', 'closed'], cancelling: ['replied', 'closed'], replied: ['closed'], closed: [] }, ['closed']);\nconst effects = define('SM27.effects', 'unarmed', { unarmed: ['arming'], arming: ['armed', 'rejected'], armed: ['observing'], observing: ['checked', 'failed'], checked: [], rejected: [], failed: [] }, ['checked', 'rejected', 'failed']);\nconst action = define('SM29.action', 'reserved', { reserved: ['executing'], executing: ['completed', 'unknown'], completed: [], unknown: [] }, ['completed', 'unknown']);\nconst quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], "
           },
           consumers: [],
@@ -19750,7 +19850,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 47,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {\n  disconnected: ['initializing', 'closing'], initializing: ['ready', 'disconnected', 'closing'], ready: ['closing'], closing: ['disconnected'],\n});\nconst fixture = define('SM26.fixture', 'starting', { starting: ['ready', 'cleanup-failed', 'stopped'], ready: ['cleanup-failed', 'stopped'], 'cleanup-failed': ['stopped'], stopped: [] }, ['stopped']);\nconst scenario = define('SM28.scenario', 'starting', { starting: ['ready', 'failed', 'stopped'], ready: ['failed', 'stopped'], failed: ['stopped'], stopped: [] }, ['stopped']);\nconst collection = define('SM35.collection', 'running', { running: ['passed', 'failed', 'cancelled','interrupted'], passed: [], failed: [], cancelled: [], interrupted:[] }, ['passed', 'failed', 'cancelled','interrupted']);\nconst semantic = define('SM45.semantic', 'uploading', {\n  uploading: ['queued', 'failed', 'interrupted'], queued: ['parsing', 'querying', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  parsing: ['enriching', 'cancelling', 'failed', 'cancelled', 'interrupted'], enriching: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  querying: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'], cancelling: ['cancelled', 'failed', 'interrupted'],\n  draining: ['ready', 'cancelled', 'failed', 'interrupted'],\n  ready: [], failed: [], cancelled: [], interrupted: [],\n}, ['ready', 'failed', 'cancelled', 'interrupted']);\nconst sftp = define('SM19.sftp', 'connecting', { connecting: ['opening', 'closing', 'failed', 'closed'], opening: ['ready', 'closing', 'failed', 'closed'], ready: ['closing', 'failed', 'closed'], closing: ['failed', 'closed'], failed: ['closing', 'closed'], closed: [] }, ['closed']);\nconst sftpOperation = define('SM19.operation', 'pending', { pending: ['settled'], settled: [] }, ['settled']);"
           },
           consumers: [
@@ -19797,7 +19897,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 61,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const sftp = define('SM19.sftp', 'connecting', { connecting: ['opening', 'closing', 'failed', 'closed'], opening: ['ready', 'closing', 'failed', 'closed'], ready: ['closing', 'failed', 'closed'], closing: ['failed', 'closed'], failed: ['closing', 'closed'], closed: [] }, ['closed']);\nconst sftpOperation = define('SM19.operation', 'pending', { pending: ['settled'], settled: [] }, ['settled']);\nconst control = define('SM21.control', 'opening', { opening: ['locked', 'failed'], locked: ['initializing', 'verifying', 'failed'], initializing: ['verifying', 'failed'], verifying: ['ready', 'failed'], ready: ['releasing', 'failed'], failed: ['releasing'], releasing: ['closed', 'cleanup-failed'], closed: [], 'cleanup-failed': [] }, ['closed', 'cleanup-failed']);\nconst archive = define('SM54.archive', 'checking', { checking: ['copied', 'archived', 'failed'], copied: ['verified', 'failed'], verified: ['removing'], removing: ['archived', 'source-retained', 'recovery-needed'], archived: [], failed: [], 'source-retained': [], 'recovery-needed': [] }, ['archived', 'failed', 'source-retained', 'recovery-needed']);\nconst archiveRemoval = define('SM54.source-removal', 'source', { source: ['holding', 'removed'], holding: ['verified', 'restoring'], verified: ['removed', 'restoring'], restoring: ['restored', 'recovery-needed'], removed: [], restored: [], 'recovery-needed': [] }, ['removed', 'restored', 'recovery-needed']);\nconst contextArchive = define('SM54.context-archive', 'checking', { checking: ['renamed'], renamed: ['published', 'restoring'], restoring: ['restored', 'recovery-needed'], published: [], restored: [], 'recovery-needed': [] }, ['published', 'restored', 'recovery-needed']);\nconst context = define('SM53.context', 'active', { active: ['paused', 'done'], paused: ['active', 'done'], done: ['active', 'paused'] });\nconst captureCall = define('SM51.capture-call', 'invoking', { invoking: ['succeeded', 'failed'], succeeded: ['saving'], failed: ['saving'], saving: ['saved', 'save-failed'], saved: [], 'save-failed': [] }, ['saved', 'save-failed']);\nconst pit = define('SM75.pit', 'opening', { opening: ['open'], open: ['reading', 'closing'], reading: ['closing'], closing: ['closed', 'close-failed'], closed: [], 'close-failed': [] }, ['closed', 'close-failed']);\nconst identity = define('SM16.identity', 'unverified', { unverified: ['authenticated', 'rejected'], authenticated: ['scoped', 'rejected'], scoped: [], rejected: [] }, ['scoped', 'rejected']);\nconst mcp = define('SM17.request', 'running', { running: ['cancelling', 'replied', 'closed'], cancelling: ['replied', 'closed'], replied: ['closed'], closed: [] }, ['closed']);\nconst effects = define('SM27.effects', 'unarmed', { unarmed: ['arming'], arming: ['armed', 'rejected'], armed: ['observing'], observing: ['checked', 'failed'], checked: [], rejected: [], failed: [] }, ['checked', 'rejected', 'failed']);\nconst action = define('SM29.action', 'reserved', { reserved: ['executing'], executing: ['completed', 'unknown'], completed: [], unknown: [] }, ['completed', 'unknown']);\nconst quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading"
           },
           consumers: [
@@ -19833,7 +19933,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 60,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "}, ['ready', 'failed', 'cancelled', 'interrupted']);\nconst sftp = define('SM19.sftp', 'connecting', { connecting: ['opening', 'closing', 'failed', 'closed'], opening: ['ready', 'closing', 'failed', 'closed'], ready: ['closing', 'failed', 'closed'], closing: ['failed', 'closed'], failed: ['closing', 'closed'], closed: [] }, ['closed']);\nconst sftpOperation = define('SM19.operation', 'pending', { pending: ['settled'], settled: [] }, ['settled']);\nconst control = define('SM21.control', 'opening', { opening: ['locked', 'failed'], locked: ['initializing', 'verifying', 'failed'], initializing: ['verifying', 'failed'], verifying: ['ready', 'failed'], ready: ['releasing', 'failed'], failed: ['releasing'], releasing: ['closed', 'cleanup-failed'], closed: [], 'cleanup-failed': [] }, ['closed', 'cleanup-failed']);\nconst archive = define('SM54.archive', 'checking', { checking: ['copied', 'archived', 'failed'], copied: ['verified', 'failed'], verified: ['removing'], removing: ['archived', 'source-retained', 'recovery-needed'], archived: [], failed: [], 'source-retained': [], 'recovery-needed': [] }, ['archived', 'failed', 'source-retained', 'recovery-needed']);\nconst archiveRemoval = define('SM54.source-removal', 'source', { source: ['holding', 'removed'], holding: ['verified', 'restoring'], verified: ['removed', 'restoring'], restoring: ['restored', 'recovery-needed'], removed: [], restored: [], 'recovery-needed': [] }, ['removed', 'restored', 'recovery-needed']);\nconst contextArchive = define('SM54.context-archive', 'checking', { checking: ['renamed'], renamed: ['published', 'restoring'], restoring: ['restored', 'recovery-needed'], published: [], restored: [], 'recovery-needed': [] }, ['published', 'restored', 'recovery-needed']);\nconst context = define('SM53.context', 'active', { active: ['paused', 'done'], paused: ['active', 'done'], done: ['active', 'paused'] });\nconst captureCall = define('SM51.capture-call', 'invoking', { invoking: ['succeeded', 'failed'], succeeded: ['saving'], failed: ['saving'], saving: ['saved', 'save-failed'], saved: [], 'save-failed': [] }, ['saved', 'save-failed']);\nconst pit = define('SM75.pit', 'opening', { opening: ['open'], open: ['reading', 'closing'], reading: ['closing'], closing: ['closed', 'close-failed'], closed: [], 'close-failed': [] }, ['closed', 'close-failed']);\nconst identity = define('SM16.identity', 'unverified', { unverified: ['authenticated', 'rejected'], authenticated: ['scoped', 'rejected'], scoped: [], rejected: [] }, ['scoped', 'rejected']);\nconst mcp = define('SM17.request', 'running', { running: ['cancelling', 'replied', 'closed'], cancelling: ['replied', 'closed'], replied: ['closed'], closed: [] }, ['closed']);\nconst effects = define('SM27.effects', 'unarmed', { unarmed: ['arming'], arming: ['armed', 'rejected'], armed: ['observing'], observing: ['checked', 'failed'], checked: [], rejected: [], failed: [] }, ['checked', 'rejected', 'failed']);\nconst action = define('SM29.action', 'reserved', { reserved: ['executing'], executing: ['completed', 'unknown'], completed: [], unknown: [] }, ['completed', 'unknown']);\nconst quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);"
           },
           consumers: [
@@ -19895,7 +19995,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 38,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const registry = define('SM15.registry', 'missing', { missing: ['building'], active: ['building'], building: ['active', 'superseded', 'rejected'], superseded: ['building', 'rejected'], rejected: [] }, ['rejected']);\nconst transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {\n  disconnected: ['initializing', 'closing'], initializing: ['ready', 'disconnected', 'closing'], ready: ['closing'], closing: ['disconnected'],\n});\nconst fixture = define('SM26.fixture', 'starting', { starting: ['ready', 'cleanup-failed', 'stopped'], ready: ['cleanup-failed', 'stopped'], 'cleanup-failed': ['stopped'], stopped: [] }, ['stopped']);\nconst scenario = define('SM28.scenario', 'starting', { starting: ['ready', 'failed', 'stopped'], ready: ['failed', 'stopped'], failed: ['stopped'], stopped: [] }, ['stopped']);\nconst collection = define('SM35.collection', 'running', { running: ['passed', 'failed', 'cancelled','interrupted'], passed: [], failed: [], cancelled: [], interrupted:[] }, ['passed', 'failed', 'cancelled','interrupted']);"
           },
           consumers: [
@@ -19945,7 +20045,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 62,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const sftpOperation = define('SM19.operation', 'pending', { pending: ['settled'], settled: [] }, ['settled']);\nconst control = define('SM21.control', 'opening', { opening: ['locked', 'failed'], locked: ['initializing', 'verifying', 'failed'], initializing: ['verifying', 'failed'], verifying: ['ready', 'failed'], ready: ['releasing', 'failed'], failed: ['releasing'], releasing: ['closed', 'cleanup-failed'], closed: [], 'cleanup-failed': [] }, ['closed', 'cleanup-failed']);\nconst archive = define('SM54.archive', 'checking', { checking: ['copied', 'archived', 'failed'], copied: ['verified', 'failed'], verified: ['removing'], removing: ['archived', 'source-retained', 'recovery-needed'], archived: [], failed: [], 'source-retained': [], 'recovery-needed': [] }, ['archived', 'failed', 'source-retained', 'recovery-needed']);\nconst archiveRemoval = define('SM54.source-removal', 'source', { source: ['holding', 'removed'], holding: ['verified', 'restoring'], verified: ['removed', 'restoring'], restoring: ['restored', 'recovery-needed'], removed: [], restored: [], 'recovery-needed': [] }, ['removed', 'restored', 'recovery-needed']);\nconst contextArchive = define('SM54.context-archive', 'checking', { checking: ['renamed'], renamed: ['published', 'restoring'], restoring: ['restored', 'recovery-needed'], published: [], restored: [], 'recovery-needed': [] }, ['published', 'restored', 'recovery-needed']);\nconst context = define('SM53.context', 'active', { active: ['paused', 'done'], paused: ['active', 'done'], done: ['active', 'paused'] });\nconst captureCall = define('SM51.capture-call', 'invoking', { invoking: ['succeeded', 'failed'], succeeded: ['saving'], failed: ['saving'], saving: ['saved', 'save-failed'], saved: [], 'save-failed': [] }, ['saved', 'save-failed']);\nconst pit = define('SM75.pit', 'opening', { opening: ['open'], open: ['reading', 'closing'], reading: ['closing'], closing: ['closed', 'close-failed'], closed: [], 'close-failed': [] }, ['closed', 'close-failed']);\nconst identity = define('SM16.identity', 'unverified', { unverified: ['authenticated', 'rejected'], authenticated: ['scoped', 'rejected'], scoped: [], rejected: [] }, ['scoped', 'rejected']);\nconst mcp = define('SM17.request', 'running', { running: ['cancelling', 'replied', 'closed'], cancelling: ['replied', 'closed'], replied: ['closed'], closed: [] }, ['closed']);\nconst effects = define('SM27.effects', 'unarmed', { unarmed: ['arming'], arming: ['armed', 'rejected'], armed: ['observing'], observing: ['checked', 'failed'], checked: [], rejected: [], failed: [] }, ['checked', 'rejected', 'failed']);\nconst action = define('SM29.action', 'reserved', { reserved: ['executing'], executing: ['completed', 'unknown'], completed: [], unknown: [] }, ['completed', 'unknown']);\nconst quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: "
           },
           consumers: [
@@ -20015,7 +20115,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 39,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const transaction = define('SM20.transaction', 'opening', { opening: ['reading', 'rolled-back', 'cancelled'], reading: ['committed', 'rolled-back', 'cancelled'], committed: [], 'rolled-back': [], cancelled: [] }, ['committed', 'rolled-back', 'cancelled']);\nconst scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {\n  disconnected: ['initializing', 'closing'], initializing: ['ready', 'disconnected', 'closing'], ready: ['closing'], closing: ['disconnected'],\n});\nconst fixture = define('SM26.fixture', 'starting', { starting: ['ready', 'cleanup-failed', 'stopped'], ready: ['cleanup-failed', 'stopped'], 'cleanup-failed': ['stopped'], stopped: [] }, ['stopped']);\nconst scenario = define('SM28.scenario', 'starting', { starting: ['ready', 'failed', 'stopped'], ready: ['failed', 'stopped'], failed: ['stopped'], stopped: [] }, ['stopped']);\nconst collection = define('SM35.collection', 'running', { running: ['passed', 'failed', 'cancelled','interrupted'], passed: [], failed: [], cancelled: [], interrupted:[] }, ['passed', 'failed', 'cancelled','interrupted']);\nconst semantic = define('SM45.semantic', 'uploading', {"
           },
           consumers: [
@@ -20074,7 +20174,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 40,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const scratch = define('SM22.scratch-resource', 'creating', { creating: ['ready', 'failed', 'cleanup-failed', 'deleted'], ready: ['frozen', 'cleanup-failed', 'deleted'], frozen: ['cleanup-failed', 'deleted'], failed: ['cleanup-failed', 'deleted'], 'cleanup-failed': ['deleted'], deleted: [] }, ['deleted']);\nconst template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {\n  disconnected: ['initializing', 'closing'], initializing: ['ready', 'disconnected', 'closing'], ready: ['closing'], closing: ['disconnected'],\n});\nconst fixture = define('SM26.fixture', 'starting', { starting: ['ready', 'cleanup-failed', 'stopped'], ready: ['cleanup-failed', 'stopped'], 'cleanup-failed': ['stopped'], stopped: [] }, ['stopped']);\nconst scenario = define('SM28.scenario', 'starting', { starting: ['ready', 'failed', 'stopped'], ready: ['failed', 'stopped'], failed: ['stopped'], stopped: [] }, ['stopped']);\nconst collection = define('SM35.collection', 'running', { running: ['passed', 'failed', 'cancelled','interrupted'], passed: [], failed: [], cancelled: [], interrupted:[] }, ['passed', 'failed', 'cancelled','interrupted']);\nconst semantic = define('SM45.semantic', 'uploading', {\n  uploading: ['queued', 'failed', 'interrupted'], queued: ['parsing', 'querying', 'cancelling', 'failed', 'cancelled', 'interrupted'],"
           },
           consumers: [
@@ -20127,7 +20227,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 41,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const template = define('SM23.template', 'building', { building: ['ready', 'failed', 'invalid', 'deleted'], ready: ['invalid', 'deleted'], failed: ['invalid', 'deleted'], invalid: ['deleted'], deleted: [] }, ['deleted']);\nconst lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {\n  disconnected: ['initializing', 'closing'], initializing: ['ready', 'disconnected', 'closing'], ready: ['closing'], closing: ['disconnected'],\n});\nconst fixture = define('SM26.fixture', 'starting', { starting: ['ready', 'cleanup-failed', 'stopped'], ready: ['cleanup-failed', 'stopped'], 'cleanup-failed': ['stopped'], stopped: [] }, ['stopped']);\nconst scenario = define('SM28.scenario', 'starting', { starting: ['ready', 'failed', 'stopped'], ready: ['failed', 'stopped'], failed: ['stopped'], stopped: [] }, ['stopped']);\nconst collection = define('SM35.collection', 'running', { running: ['passed', 'failed', 'cancelled','interrupted'], passed: [], failed: [], cancelled: [], interrupted:[] }, ['passed', 'failed', 'cancelled','interrupted']);\nconst semantic = define('SM45.semantic', 'uploading', {\n  uploading: ['queued', 'failed', 'interrupted'], queued: ['parsing', 'querying', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  parsing: ['enriching', 'cancelling', 'failed', 'cancelled', 'interrupted'], enriching: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'],"
           },
           consumers: [],
@@ -20168,7 +20268,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 42,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const lease = define('SM24.lease', 'creating', { creating: ['active', 'released', 'cleanup-failed'], active: ['released', 'cleanup-failed'], 'cleanup-failed': ['released'], released: [] }, ['released']);\nconst leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {\n  disconnected: ['initializing', 'closing'], initializing: ['ready', 'disconnected', 'closing'], ready: ['closing'], closing: ['disconnected'],\n});\nconst fixture = define('SM26.fixture', 'starting', { starting: ['ready', 'cleanup-failed', 'stopped'], ready: ['cleanup-failed', 'stopped'], 'cleanup-failed': ['stopped'], stopped: [] }, ['stopped']);\nconst scenario = define('SM28.scenario', 'starting', { starting: ['ready', 'failed', 'stopped'], ready: ['failed', 'stopped'], failed: ['stopped'], stopped: [] }, ['stopped']);\nconst collection = define('SM35.collection', 'running', { running: ['passed', 'failed', 'cancelled','interrupted'], passed: [], failed: [], cancelled: [], interrupted:[] }, ['passed', 'failed', 'cancelled','interrupted']);\nconst semantic = define('SM45.semantic', 'uploading', {\n  uploading: ['queued', 'failed', 'interrupted'], queued: ['parsing', 'querying', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  parsing: ['enriching', 'cancelling', 'failed', 'cancelled', 'interrupted'], enriching: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  querying: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'], cancelling: ['cancelled', 'failed', 'interrupted'],"
           },
           consumers: [
@@ -20226,7 +20326,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 50,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "});\nconst fixture = define('SM26.fixture', 'starting', { starting: ['ready', 'cleanup-failed', 'stopped'], ready: ['cleanup-failed', 'stopped'], 'cleanup-failed': ['stopped'], stopped: [] }, ['stopped']);\nconst scenario = define('SM28.scenario', 'starting', { starting: ['ready', 'failed', 'stopped'], ready: ['failed', 'stopped'], failed: ['stopped'], stopped: [] }, ['stopped']);\nconst collection = define('SM35.collection', 'running', { running: ['passed', 'failed', 'cancelled','interrupted'], passed: [], failed: [], cancelled: [], interrupted:[] }, ['passed', 'failed', 'cancelled','interrupted']);\nconst semantic = define('SM45.semantic', 'uploading', {\n  uploading: ['queued', 'failed', 'interrupted'], queued: ['parsing', 'querying', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  parsing: ['enriching', 'cancelling', 'failed', 'cancelled', 'interrupted'], enriching: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  querying: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'], cancelling: ['cancelled', 'failed', 'interrupted'],\n  draining: ['ready', 'cancelled', 'failed', 'interrupted'],\n  ready: [], failed: [], cancelled: [], interrupted: [],\n}, ['ready', 'failed', 'cancelled', 'interrupted']);\nconst sftp = define('SM19.sftp', 'connecting', { connecting: ['opening', 'closing', 'failed', 'closed'], opening: ['ready', 'closing', 'failed', 'closed'], ready: ['closing', 'failed', 'closed'], closing: ['failed', 'closed'], failed: ['closing', 'closed'], closed: [] }, ['closed']);\nconst sftpOperation = define('SM19.operation', 'pending', { pending: ['settled'], settled: [] }, ['settled']);\nconst control = define('SM21.control', 'opening', { opening: ['locked', 'failed'], locked: ['initializing', 'verifying', 'failed'], initializing: ['verifying', 'failed'], verifying: ['ready', 'failed'], ready: ['releasing', 'failed'], failed: ['releasing'], releasing: ['closed', 'cleanup-failed'], closed: [], 'cleanup-failed': [] }, ['closed', 'cleanup-failed']);\nconst archive = define('SM54.archive', 'checking', { checking: ['copied', 'archived', 'failed'], copied: ['verified', 'failed'], verified: ['removing'], removing: ['archived', 'source-retained', 'recovery-needed'], archived: [], failed: [], 'source-retained': [], 'recovery-needed': [] }, ['archived', 'failed', 'source-retained', 'recovery-needed']);\nconst archiveRemoval = define('SM54.source-removal', 'source', { source: ['holding', 'removed'], holding: ['verified', 'restoring'], verified: ['removed', 'restoring'], restoring: ['restored', 'recovery-needed'], removed: [], restored: [], 'recovery-needed': [] }, ['removed', 'restored', 'recovery-needed']);"
           },
           consumers: [
@@ -20273,7 +20373,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 71,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const mcp = define('SM17.request', 'running', { running: ['cancelling', 'replied', 'closed'], cancelling: ['replied', 'closed'], replied: ['closed'], closed: [] }, ['closed']);\nconst effects = define('SM27.effects', 'unarmed', { unarmed: ['arming'], arming: ['armed', 'rejected'], armed: ['observing'], observing: ['checked', 'failed'], checked: [], rejected: [], failed: [] }, ['checked', 'rejected', 'failed']);\nconst action = define('SM29.action', 'reserved', { reserved: ['executing'], executing: ['completed', 'unknown'], completed: [], unknown: [] }, ['completed', 'unknown']);\nconst quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fall"
           },
           consumers: [
@@ -20334,7 +20434,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 51,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const fixture = define('SM26.fixture', 'starting', { starting: ['ready', 'cleanup-failed', 'stopped'], ready: ['cleanup-failed', 'stopped'], 'cleanup-failed': ['stopped'], stopped: [] }, ['stopped']);\nconst scenario = define('SM28.scenario', 'starting', { starting: ['ready', 'failed', 'stopped'], ready: ['failed', 'stopped'], failed: ['stopped'], stopped: [] }, ['stopped']);\nconst collection = define('SM35.collection', 'running', { running: ['passed', 'failed', 'cancelled','interrupted'], passed: [], failed: [], cancelled: [], interrupted:[] }, ['passed', 'failed', 'cancelled','interrupted']);\nconst semantic = define('SM45.semantic', 'uploading', {\n  uploading: ['queued', 'failed', 'interrupted'], queued: ['parsing', 'querying', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  parsing: ['enriching', 'cancelling', 'failed', 'cancelled', 'interrupted'], enriching: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  querying: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'], cancelling: ['cancelled', 'failed', 'interrupted'],\n  draining: ['ready', 'cancelled', 'failed', 'interrupted'],\n  ready: [], failed: [], cancelled: [], interrupted: [],\n}, ['ready', 'failed', 'cancelled', 'interrupted']);\nconst sftp = define('SM19.sftp', 'connecting', { connecting: ['opening', 'closing', 'failed', 'closed'], opening: ['ready', 'closing', 'failed', 'closed'], ready: ['closing', 'failed', 'closed'], closing: ['failed', 'closed'], failed: ['closing', 'closed'], closed: [] }, ['closed']);\nconst sftpOperation = define('SM19.operation', 'pending', { pending: ['settled'], settled: [] }, ['settled']);\nconst control = define('SM21.control', 'opening', { opening: ['locked', 'failed'], locked: ['initializing', 'verifying', 'failed'], initializing: ['verifying', 'failed'], verifying: ['ready', 'failed'], ready: ['releasing', 'failed'], failed: ['releasing'], releasing: ['closed', 'cleanup-failed'], closed: [], 'cleanup-failed': [] }, ['closed', 'cleanup-failed']);\nconst archive = define('SM54.archive', 'checking', { checking: ['copied', 'archived', 'failed'], copied: ['verified', 'failed'], verified: ['removing'], removing: ['archived', 'source-retained', 'recovery-needed'], archived: [], failed: [], 'source-retained': [], 'recovery-needed': [] }, ['archived', 'failed', 'source-retained', 'recovery-needed']);\nconst archiveRemoval = define('SM54.source-removal', 'source', { source: ['holding', 'removed'], holding: ['verified', 'restoring'], verified: ['removed', 'restoring'], restoring: ['restored', 'recovery-needed'], removed: [], restored: [], 'recovery-needed': [] }, ['removed', 'restored', 'recovery-needed']);\nconst contextArchive = define('SM54.context-archive', 'checking', { checking: ['renamed'], renamed: ['published', 'restoring'], restoring: ['restored', 'recovery-needed'], published: [], restored: [], 'recovery-needed': [] }, ['published', 'restored', 'recovery-needed']);"
           },
           consumers: [
@@ -20381,7 +20481,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 72,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const effects = define('SM27.effects', 'unarmed', { unarmed: ['arming'], arming: ['armed', 'rejected'], armed: ['observing'], observing: ['checked', 'failed'], checked: [], rejected: [], failed: [] }, ['checked', 'rejected', 'failed']);\nconst action = define('SM29.action', 'reserved', { reserved: ['executing'], executing: ['completed', 'unknown'], completed: [], unknown: [] }, ['completed', 'unknown']);\nconst quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', "
           },
           consumers: [
@@ -20430,7 +20530,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 73,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const action = define('SM29.action', 'reserved', { reserved: ['executing'], executing: ['completed', 'unknown'], completed: [], unknown: [] }, ['completed', 'unknown']);\nconst quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['repla"
           },
           consumers: [
@@ -20486,7 +20586,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 81,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['replaying', 'pushing', 'failed'], replaying: ['replayed', 'conflict', 'failed'], replayed: ['pushing', 'failed'], pushing: ['pushed', 'unknown'], pushed: ['recording', 'metadata-failed'], recording: ['completed', 'metadata-failed'], completed: [], failed: [], conflict: [], unknown: [], 'metadata-failed': [] }, ['completed', 'failed', 'conflict', 'unknown', 'metadata-failed']);\nconst refresh = define('SM43.refresh', 'sources', { sources: ['indexing', 'failed'], indexing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst passport = define('SM44.passport', 'resolving', { resolving: ['fetching', 'failed'], fetching: ['extracting', 'failed'], extracting: ['libraries', 'failed'], libraries: ['analyzing', 'failed'], analyzing: ['publishing', 'failed'], publishing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nconst http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);"
           },
           consumers: [
@@ -20539,7 +20639,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 82,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['replaying', 'pushing', 'failed'], replaying: ['replayed', 'conflict', 'failed'], replayed: ['pushing', 'failed'], pushing: ['pushed', 'unknown'], pushed: ['recording', 'metadata-failed'], recording: ['completed', 'metadata-failed'], completed: [], failed: [], conflict: [], unknown: [], 'metadata-failed': [] }, ['completed', 'failed', 'conflict', 'unknown', 'metadata-failed']);\nconst refresh = define('SM43.refresh', 'sources', { sources: ['indexing', 'failed'], indexing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst passport = define('SM44.passport', 'resolving', { resolving: ['fetching', 'failed'], fetching: ['extracting', 'failed'], extracting: ['libraries', 'failed'], libraries: ['analyzing', 'failed'], analyzing: ['publishing', 'failed'], publishing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nconst http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);\nconst revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);"
           },
           consumers: [
@@ -20591,7 +20691,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 83,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['replaying', 'pushing', 'failed'], replaying: ['replayed', 'conflict', 'failed'], replayed: ['pushing', 'failed'], pushing: ['pushed', 'unknown'], pushed: ['recording', 'metadata-failed'], recording: ['completed', 'metadata-failed'], completed: [], failed: [], conflict: [], unknown: [], 'metadata-failed': [] }, ['completed', 'failed', 'conflict', 'unknown', 'metadata-failed']);\nconst refresh = define('SM43.refresh', 'sources', { sources: ['indexing', 'failed'], indexing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst passport = define('SM44.passport', 'resolving', { resolving: ['fetching', 'failed'], fetching: ['extracting', 'failed'], extracting: ['libraries', 'failed'], libraries: ['analyzing', 'failed'], analyzing: ['publishing', 'failed'], publishing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nconst http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);\nconst revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');"
           },
           consumers: [
@@ -20641,7 +20741,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 84,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['replaying', 'pushing', 'failed'], replaying: ['replayed', 'conflict', 'failed'], replayed: ['pushing', 'failed'], pushing: ['pushed', 'unknown'], pushed: ['recording', 'metadata-failed'], recording: ['completed', 'metadata-failed'], completed: [], failed: [], conflict: [], unknown: [], 'metadata-failed': [] }, ['completed', 'failed', 'conflict', 'unknown', 'metadata-failed']);\nconst refresh = define('SM43.refresh', 'sources', { sources: ['indexing', 'failed'], indexing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst passport = define('SM44.passport', 'resolving', { resolving: ['fetching', 'failed'], fetching: ['extracting', 'failed'], extracting: ['libraries', 'failed'], libraries: ['analyzing', 'failed'], analyzing: ['publishing', 'failed'], publishing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nconst http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);\nconst revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);"
           },
           consumers: [
@@ -20691,7 +20791,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 52,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const scenario = define('SM28.scenario', 'starting', { starting: ['ready', 'failed', 'stopped'], ready: ['failed', 'stopped'], failed: ['stopped'], stopped: [] }, ['stopped']);\nconst collection = define('SM35.collection', 'running', { running: ['passed', 'failed', 'cancelled','interrupted'], passed: [], failed: [], cancelled: [], interrupted:[] }, ['passed', 'failed', 'cancelled','interrupted']);\nconst semantic = define('SM45.semantic', 'uploading', {\n  uploading: ['queued', 'failed', 'interrupted'], queued: ['parsing', 'querying', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  parsing: ['enriching', 'cancelling', 'failed', 'cancelled', 'interrupted'], enriching: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  querying: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'], cancelling: ['cancelled', 'failed', 'interrupted'],\n  draining: ['ready', 'cancelled', 'failed', 'interrupted'],\n  ready: [], failed: [], cancelled: [], interrupted: [],\n}, ['ready', 'failed', 'cancelled', 'interrupted']);\nconst sftp = define('SM19.sftp', 'connecting', { connecting: ['opening', 'closing', 'failed', 'closed'], opening: ['ready', 'closing', 'failed', 'closed'], ready: ['closing', 'failed', 'closed'], closing: ['failed', 'closed'], failed: ['closing', 'closed'], closed: [] }, ['closed']);\nconst sftpOperation = define('SM19.operation', 'pending', { pending: ['settled'], settled: [] }, ['settled']);\nconst control = define('SM21.control', 'opening', { opening: ['locked', 'failed'], locked: ['initializing', 'verifying', 'failed'], initializing: ['verifying', 'failed'], verifying: ['ready', 'failed'], ready: ['releasing', 'failed'], failed: ['releasing'], releasing: ['closed', 'cleanup-failed'], closed: [], 'cleanup-failed': [] }, ['closed', 'cleanup-failed']);\nconst archive = define('SM54.archive', 'checking', { checking: ['copied', 'archived', 'failed'], copied: ['verified', 'failed'], verified: ['removing'], removing: ['archived', 'source-retained', 'recovery-needed'], archived: [], failed: [], 'source-retained': [], 'recovery-needed': [] }, ['archived', 'failed', 'source-retained', 'recovery-needed']);\nconst archiveRemoval = define('SM54.source-removal', 'source', { source: ['holding', 'removed'], holding: ['verified', 'restoring'], verified: ['removed', 'restoring'], restoring: ['restored', 'recovery-needed'], removed: [], restored: [], 'recovery-needed': [] }, ['removed', 'restored', 'recovery-needed']);\nconst contextArchive = define('SM54.context-archive', 'checking', { checking: ['renamed'], renamed: ['published', 'restoring'], restoring: ['restored', 'recovery-needed'], published: [], restored: [], 'recovery-needed': [] }, ['published', 'restored', 'recovery-needed']);\nconst context = define('SM53.context', 'active', { active: ['paused', 'done'], paused: ['active', 'done'], done: ['active', 'paused'] });"
           },
           consumers: [
@@ -20744,7 +20844,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 85,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['replaying', 'pushing', 'failed'], replaying: ['replayed', 'conflict', 'failed'], replayed: ['pushing', 'failed'], pushing: ['pushed', 'unknown'], pushed: ['recording', 'metadata-failed'], recording: ['completed', 'metadata-failed'], completed: [], failed: [], conflict: [], unknown: [], 'metadata-failed': [] }, ['completed', 'failed', 'conflict', 'unknown', 'metadata-failed']);\nconst refresh = define('SM43.refresh', 'sources', { sources: ['indexing', 'failed'], indexing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst passport = define('SM44.passport', 'resolving', { resolving: ['fetching', 'failed'], fetching: ['extracting', 'failed'], extracting: ['libraries', 'failed'], libraries: ['analyzing', 'failed'], analyzing: ['publishing', 'failed'], publishing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nconst http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);\nconst revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);"
           },
           consumers: [
@@ -20813,7 +20913,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 86,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['replaying', 'pushing', 'failed'], replaying: ['replayed', 'conflict', 'failed'], replayed: ['pushing', 'failed'], pushing: ['pushed', 'unknown'], pushed: ['recording', 'metadata-failed'], recording: ['completed', 'metadata-failed'], completed: [], failed: [], conflict: [], unknown: [], 'metadata-failed': [] }, ['completed', 'failed', 'conflict', 'unknown', 'metadata-failed']);\nconst refresh = define('SM43.refresh', 'sources', { sources: ['indexing', 'failed'], indexing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst passport = define('SM44.passport', 'resolving', { resolving: ['fetching', 'failed'], fetching: ['extracting', 'failed'], extracting: ['libraries', 'failed'], libraries: ['analyzing', 'failed'], analyzing: ['publishing', 'failed'], publishing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nconst http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);\nconst revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);"
           },
           consumers: [
@@ -20904,7 +21004,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 92,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);\nconst revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);"
           },
           consumers: [
@@ -20944,7 +21044,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 93,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);\nconst revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);"
           },
           consumers: [
@@ -20984,7 +21084,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 78,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['replaying', 'pushing', 'failed'], replaying: ['replayed', 'conflict', 'failed'], replayed: ['pushing', 'failed'], pushing: ['pushed', 'unknown'], pushed: ['recording', 'metadata-failed'], recording: ['completed', 'metadata-failed'], completed: [], failed: [], conflict: [], unknown: [], 'metadata-failed': [] }, ['completed', 'failed', 'conflict', 'unknown', 'metadata-failed']);\nconst refresh = define('SM43.refresh', 'sources', { sources: ['indexing', 'failed'], indexing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst passport = define('SM44.passport', 'resolving', { resolving: ['fetching', 'failed'], fetching: ['extracting', 'failed'], extracting: ['libraries', 'failed'], libraries: ['analyzing', 'failed'], analyzing: ['publishing', 'failed'], publishing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nconst http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['set"
           },
           consumers: [
@@ -21047,8 +21147,8 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 107,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
-            snippet: "const enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nmodule.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
+            snippet: "const enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nconst mappingRead = define('Mapping-debugger.read', 'running', { running: ['done','error','cancelled'], done: [], error: [], cancelled: [] }, ['done','error','cancelled']);\nmodule.exports = { mappingRead, uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
           },
           consumers: [
             {
@@ -21093,7 +21193,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 77,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['replaying', 'pushing', 'failed'], replaying: ['replayed', 'conflict', 'failed'], replayed: ['pushing', 'failed'], pushing: ['pushed', 'unknown'], pushed: ['recording', 'metadata-failed'], recording: ['completed', 'metadata-failed'], completed: [], failed: [], conflict: [], unknown: [], 'metadata-failed': [] }, ['completed', 'failed', 'conflict', 'unknown', 'metadata-failed']);\nconst refresh = define('SM43.refresh', 'sources', { sources: ['indexing', 'failed'], indexing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst passport = define('SM44.passport', 'resolving', { resolving: ['fetching', 'failed'], fetching: ['extracting', 'failed'], extracting: ['libraries', 'failed'], libraries: ['analyzing', 'failed'], analyzing: ['publishing', 'failed'], publishing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nconst http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', {"
           },
           consumers: [
@@ -21147,7 +21247,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 43,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const leaseReset = define('SM25.reset', 'allocating', { allocating: ['replacement-ready', 'failed'], 'replacement-ready': ['releasing-old', 'compensating'], 'releasing-old': ['completed', 'compensating'], compensating: ['failed', 'cleanup-failed'], completed: [], failed: [], 'cleanup-failed': [] }, ['completed', 'failed', 'cleanup-failed']);\nconst publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {\n  disconnected: ['initializing', 'closing'], initializing: ['ready', 'disconnected', 'closing'], ready: ['closing'], closing: ['disconnected'],\n});\nconst fixture = define('SM26.fixture', 'starting', { starting: ['ready', 'cleanup-failed', 'stopped'], ready: ['cleanup-failed', 'stopped'], 'cleanup-failed': ['stopped'], stopped: [] }, ['stopped']);\nconst scenario = define('SM28.scenario', 'starting', { starting: ['ready', 'failed', 'stopped'], ready: ['failed', 'stopped'], failed: ['stopped'], stopped: [] }, ['stopped']);\nconst collection = define('SM35.collection', 'running', { running: ['passed', 'failed', 'cancelled','interrupted'], passed: [], failed: [], cancelled: [], interrupted:[] }, ['passed', 'failed', 'cancelled','interrupted']);\nconst semantic = define('SM45.semantic', 'uploading', {\n  uploading: ['queued', 'failed', 'interrupted'], queued: ['parsing', 'querying', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  parsing: ['enriching', 'cancelling', 'failed', 'cancelled', 'interrupted'], enriching: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  querying: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'], cancelling: ['cancelled', 'failed', 'interrupted'],\n  draining: ['ready', 'cancelled', 'failed', 'interrupted'],"
           },
           consumers: [
@@ -21211,7 +21311,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 45,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {\n  disconnected: ['initializing', 'closing'], initializing: ['ready', 'disconnected', 'closing'], ready: ['closing'], closing: ['disconnected'],\n});\nconst fixture = define('SM26.fixture', 'starting', { starting: ['ready', 'cleanup-failed', 'stopped'], ready: ['cleanup-failed', 'stopped'], 'cleanup-failed': ['stopped'], stopped: [] }, ['stopped']);\nconst scenario = define('SM28.scenario', 'starting', { starting: ['ready', 'failed', 'stopped'], ready: ['failed', 'stopped'], failed: ['stopped'], stopped: [] }, ['stopped']);\nconst collection = define('SM35.collection', 'running', { running: ['passed', 'failed', 'cancelled','interrupted'], passed: [], failed: [], cancelled: [], interrupted:[] }, ['passed', 'failed', 'cancelled','interrupted']);\nconst semantic = define('SM45.semantic', 'uploading', {\n  uploading: ['queued', 'failed', 'interrupted'], queued: ['parsing', 'querying', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  parsing: ['enriching', 'cancelling', 'failed', 'cancelled', 'interrupted'], enriching: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  querying: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'], cancelling: ['cancelled', 'failed', 'interrupted'],\n  draining: ['ready', 'cancelled', 'failed', 'interrupted'],\n  ready: [], failed: [], cancelled: [], interrupted: [],\n}, ['ready', 'failed', 'cancelled', 'interrupted']);"
           },
           consumers: [
@@ -21261,7 +21361,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 87,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['replaying', 'pushing', 'failed'], replaying: ['replayed', 'conflict', 'failed'], replayed: ['pushing', 'failed'], pushing: ['pushed', 'unknown'], pushed: ['recording', 'metadata-failed'], recording: ['completed', 'metadata-failed'], completed: [], failed: [], conflict: [], unknown: [], 'metadata-failed': [] }, ['completed', 'failed', 'conflict', 'unknown', 'metadata-failed']);\nconst refresh = define('SM43.refresh', 'sources', { sources: ['indexing', 'failed'], indexing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst passport = define('SM44.passport', 'resolving', { resolving: ['fetching', 'failed'], fetching: ['extracting', 'failed'], extracting: ['libraries', 'failed'], libraries: ['analyzing', 'failed'], analyzing: ['publishing', 'failed'], publishing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nconst http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);\nconst revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);"
           },
           consumers: [
@@ -21306,7 +21406,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 88,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const refresh = define('SM43.refresh', 'sources', { sources: ['indexing', 'failed'], indexing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst passport = define('SM44.passport', 'resolving', { resolving: ['fetching', 'failed'], fetching: ['extracting', 'failed'], extracting: ['libraries', 'failed'], libraries: ['analyzing', 'failed'], analyzing: ['publishing', 'failed'], publishing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nconst http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);\nconst revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);"
           },
           consumers: [],
@@ -21365,7 +21465,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 53,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const collection = define('SM35.collection', 'running', { running: ['passed', 'failed', 'cancelled','interrupted'], passed: [], failed: [], cancelled: [], interrupted:[] }, ['passed', 'failed', 'cancelled','interrupted']);\nconst semantic = define('SM45.semantic', 'uploading', {\n  uploading: ['queued', 'failed', 'interrupted'], queued: ['parsing', 'querying', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  parsing: ['enriching', 'cancelling', 'failed', 'cancelled', 'interrupted'], enriching: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  querying: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'], cancelling: ['cancelled', 'failed', 'interrupted'],\n  draining: ['ready', 'cancelled', 'failed', 'interrupted'],\n  ready: [], failed: [], cancelled: [], interrupted: [],\n}, ['ready', 'failed', 'cancelled', 'interrupted']);\nconst sftp = define('SM19.sftp', 'connecting', { connecting: ['opening', 'closing', 'failed', 'closed'], opening: ['ready', 'closing', 'failed', 'closed'], ready: ['closing', 'failed', 'closed'], closing: ['failed', 'closed'], failed: ['closing', 'closed'], closed: [] }, ['closed']);\nconst sftpOperation = define('SM19.operation', 'pending', { pending: ['settled'], settled: [] }, ['settled']);\nconst control = define('SM21.control', 'opening', { opening: ['locked', 'failed'], locked: ['initializing', 'verifying', 'failed'], initializing: ['verifying', 'failed'], verifying: ['ready', 'failed'], ready: ['releasing', 'failed'], failed: ['releasing'], releasing: ['closed', 'cleanup-failed'], closed: [], 'cleanup-failed': [] }, ['closed', 'cleanup-failed']);\nconst archive = define('SM54.archive', 'checking', { checking: ['copied', 'archived', 'failed'], copied: ['verified', 'failed'], verified: ['removing'], removing: ['archived', 'source-retained', 'recovery-needed'], archived: [], failed: [], 'source-retained': [], 'recovery-needed': [] }, ['archived', 'failed', 'source-retained', 'recovery-needed']);\nconst archiveRemoval = define('SM54.source-removal', 'source', { source: ['holding', 'removed'], holding: ['verified', 'restoring'], verified: ['removed', 'restoring'], restoring: ['restored', 'recovery-needed'], removed: [], restored: [], 'recovery-needed': [] }, ['removed', 'restored', 'recovery-needed']);\nconst contextArchive = define('SM54.context-archive', 'checking', { checking: ['renamed'], renamed: ['published', 'restoring'], restoring: ['restored', 'recovery-needed'], published: [], restored: [], 'recovery-needed': [] }, ['published', 'restored', 'recovery-needed']);\nconst context = define('SM53.context', 'active', { active: ['paused', 'done'], paused: ['active', 'done'], done: ['active', 'paused'] });\nconst captureCall = define('SM51.capture-call', 'invoking', { invoking: ['succeeded', 'failed'], succeeded: ['saving'], failed: ['saving'], saving: ['saved', 'save-failed'], saved: [], 'save-failed': [] }, ['saved', 'save-failed']);"
           },
           consumers: [],
@@ -21452,7 +21552,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 74,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['replaying', 'pushing', 'failed'], replaying: ['replayed', 'conflict', 'failed'], replayed: ['pushing', 'failed'], pushing: ['pushed', 'unknown'], pushed: ['recording', 'metada"
           },
           consumers: [
@@ -21540,7 +21640,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 79,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['replaying', 'pushing', 'failed'], replaying: ['replayed', 'conflict', 'failed'], replayed: ['pushing', 'failed'], pushing: ['pushed', 'unknown'], pushed: ['recording', 'metadata-failed'], recording: ['completed', 'metadata-failed'], completed: [], failed: [], conflict: [], unknown: [], 'metadata-failed': [] }, ['completed', 'failed', 'conflict', 'unknown', 'metadata-failed']);\nconst refresh = define('SM43.refresh', 'sources', { sources: ['indexing', 'failed'], indexing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst passport = define('SM44.passport', 'resolving', { resolving: ['fetching', 'failed'], fetching: ['extracting', 'failed'], extracting: ['libraries', 'failed'], libraries: ['analyzing', 'failed'], analyzing: ['publishing', 'failed'], publishing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nconst http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red"
           },
           consumers: [
@@ -21612,8 +21712,8 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 108,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
-            snippet: "const compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nmodule.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
+            snippet: "const compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nconst mappingRead = define('Mapping-debugger.read', 'running', { running: ['done','error','cancelled'], done: [], error: [], cancelled: [] }, ['done','error','cancelled']);\nmodule.exports = { mappingRead, uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
           },
           consumers: [
             {
@@ -21671,7 +21771,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 75,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['replaying', 'pushing', 'failed'], replaying: ['replayed', 'conflict', 'failed'], replayed: ['pushing', 'failed'], pushing: ['pushed', 'unknown'], pushed: ['recording', 'metadata-failed'], recording: ['completed', 'metadata-failed'], completed: [], failed: [], conflict: [], unknown: [], 'metadata-failed': [] }, ['completed', 'failed', 'conflict', 'unknown', 'metadata-failed']);\nconst refresh = define('SM43.refresh', 'sources', { sources: ['indexing', 'failed'], ind"
           },
           consumers: [
@@ -21720,7 +21820,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 76,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['replaying', 'pushing', 'failed'], replaying: ['replayed', 'conflict', 'failed'], replayed: ['pushing', 'failed'], pushing: ['pushed', 'unknown'], pushed: ['recording', 'metadata-failed'], recording: ['completed', 'metadata-failed'], completed: [], failed: [], conflict: [], unknown: [], 'metadata-failed': [] }, ['completed', 'failed', 'conflict', 'unknown', 'metadata-failed']);\nconst refresh = define('SM43.refresh', 'sources', { sources: ['indexing', 'failed'], indexing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst passport = define('SM44.passport', 'resolving', { resolving: ['fetching', 'failed'], fetching: ['extracting', 'failed'], extracting: ['libraries', 'failed'], libraries: ['analyzing', 'failed'], analyzing: ['publishing', 'failed'], publishing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nc"
           },
           consumers: [
@@ -21764,7 +21864,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 67,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const context = define('SM53.context', 'active', { active: ['paused', 'done'], paused: ['active', 'done'], done: ['active', 'paused'] });\nconst captureCall = define('SM51.capture-call', 'invoking', { invoking: ['succeeded', 'failed'], succeeded: ['saving'], failed: ['saving'], saving: ['saved', 'save-failed'], saved: [], 'save-failed': [] }, ['saved', 'save-failed']);\nconst pit = define('SM75.pit', 'opening', { opening: ['open'], open: ['reading', 'closing'], reading: ['closing'], closing: ['closed', 'close-failed'], closed: [], 'close-failed': [] }, ['closed', 'close-failed']);\nconst identity = define('SM16.identity', 'unverified', { unverified: ['authenticated', 'rejected'], authenticated: ['scoped', 'rejected'], scoped: [], rejected: [] }, ['scoped', 'rejected']);\nconst mcp = define('SM17.request', 'running', { running: ['cancelling', 'replied', 'closed'], cancelling: ['replied', 'closed'], replied: ['closed'], closed: [] }, ['closed']);\nconst effects = define('SM27.effects', 'unarmed', { unarmed: ['arming'], arming: ['armed', 'rejected'], armed: ['observing'], observing: ['checked', 'failed'], checked: [], rejected: [], failed: [] }, ['checked', 'rejected', 'failed']);\nconst action = define('SM29.action', 'reserved', { reserved: ['executing'], executing: ['completed', 'unknown'], completed: [], unknown: [] }, ['completed', 'unknown']);\nconst quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete"
           },
           consumers: [
@@ -21817,7 +21917,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 94,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);\nconst revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);"
           },
           consumers: [
@@ -21869,7 +21969,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 66,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const contextArchive = define('SM54.context-archive', 'checking', { checking: ['renamed'], renamed: ['published', 'restoring'], restoring: ['restored', 'recovery-needed'], published: [], restored: [], 'recovery-needed': [] }, ['published', 'restored', 'recovery-needed']);\nconst context = define('SM53.context', 'active', { active: ['paused', 'done'], paused: ['active', 'done'], done: ['active', 'paused'] });\nconst captureCall = define('SM51.capture-call', 'invoking', { invoking: ['succeeded', 'failed'], succeeded: ['saving'], failed: ['saving'], saving: ['saved', 'save-failed'], saved: [], 'save-failed': [] }, ['saved', 'save-failed']);\nconst pit = define('SM75.pit', 'opening', { opening: ['open'], open: ['reading', 'closing'], reading: ['closing'], closing: ['closed', 'close-failed'], closed: [], 'close-failed': [] }, ['closed', 'close-failed']);\nconst identity = define('SM16.identity', 'unverified', { unverified: ['authenticated', 'rejected'], authenticated: ['scoped', 'rejected'], scoped: [], rejected: [] }, ['scoped', 'rejected']);\nconst mcp = define('SM17.request', 'running', { running: ['cancelling', 'replied', 'closed'], cancelling: ['replied', 'closed'], replied: ['closed'], closed: [] }, ['closed']);\nconst effects = define('SM27.effects', 'unarmed', { unarmed: ['arming'], arming: ['armed', 'rejected'], armed: ['observing'], observing: ['checked', 'failed'], checked: [], rejected: [], failed: [] }, ['checked', 'rejected', 'failed']);\nconst action = define('SM29.action', 'reserved', { reserved: ['executing'], executing: ['completed', 'unknown'], completed: [], unknown: [] }, ['completed', 'unknown']);\nconst quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown:"
           },
           consumers: [
@@ -21912,7 +22012,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 63,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const control = define('SM21.control', 'opening', { opening: ['locked', 'failed'], locked: ['initializing', 'verifying', 'failed'], initializing: ['verifying', 'failed'], verifying: ['ready', 'failed'], ready: ['releasing', 'failed'], failed: ['releasing'], releasing: ['closed', 'cleanup-failed'], closed: [], 'cleanup-failed': [] }, ['closed', 'cleanup-failed']);\nconst archive = define('SM54.archive', 'checking', { checking: ['copied', 'archived', 'failed'], copied: ['verified', 'failed'], verified: ['removing'], removing: ['archived', 'source-retained', 'recovery-needed'], archived: [], failed: [], 'source-retained': [], 'recovery-needed': [] }, ['archived', 'failed', 'source-retained', 'recovery-needed']);\nconst archiveRemoval = define('SM54.source-removal', 'source', { source: ['holding', 'removed'], holding: ['verified', 'restoring'], verified: ['removed', 'restoring'], restoring: ['restored', 'recovery-needed'], removed: [], restored: [], 'recovery-needed': [] }, ['removed', 'restored', 'recovery-needed']);\nconst contextArchive = define('SM54.context-archive', 'checking', { checking: ['renamed'], renamed: ['published', 'restoring'], restoring: ['restored', 'recovery-needed'], published: [], restored: [], 'recovery-needed': [] }, ['published', 'restored', 'recovery-needed']);\nconst context = define('SM53.context', 'active', { active: ['paused', 'done'], paused: ['active', 'done'], done: ['active', 'paused'] });\nconst captureCall = define('SM51.capture-call', 'invoking', { invoking: ['succeeded', 'failed'], succeeded: ['saving'], failed: ['saving'], saving: ['saved', 'save-failed'], saved: [], 'save-failed': [] }, ['saved', 'save-failed']);\nconst pit = define('SM75.pit', 'opening', { opening: ['open'], open: ['reading', 'closing'], reading: ['closing'], closing: ['closed', 'close-failed'], closed: [], 'close-failed': [] }, ['closed', 'close-failed']);\nconst identity = define('SM16.identity', 'unverified', { unverified: ['authenticated', 'rejected'], authenticated: ['scoped', 'rejected'], scoped: [], rejected: [] }, ['scoped', 'rejected']);\nconst mcp = define('SM17.request', 'running', { running: ['cancelling', 'replied', 'closed'], cancelling: ['replied', 'closed'], replied: ['closed'], closed: [] }, ['closed']);\nconst effects = define('SM27.effects', 'unarmed', { unarmed: ['arming'], arming: ['armed', 'rejected'], armed: ['observing'], observing: ['checked', 'failed'], checked: [], rejected: [], failed: [] }, ['checked', 'rejected', 'failed']);\nconst action = define('SM29.action', 'reserved', { reserved: ['executing'], executing: ['completed', 'unknown'], completed: [], unknown: [] }, ['completed', 'unknown']);\nconst quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { q"
           },
           consumers: [
@@ -21974,7 +22074,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 65,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const archiveRemoval = define('SM54.source-removal', 'source', { source: ['holding', 'removed'], holding: ['verified', 'restoring'], verified: ['removed', 'restoring'], restoring: ['restored', 'recovery-needed'], removed: [], restored: [], 'recovery-needed': [] }, ['removed', 'restored', 'recovery-needed']);\nconst contextArchive = define('SM54.context-archive', 'checking', { checking: ['renamed'], renamed: ['published', 'restoring'], restoring: ['restored', 'recovery-needed'], published: [], restored: [], 'recovery-needed': [] }, ['published', 'restored', 'recovery-needed']);\nconst context = define('SM53.context', 'active', { active: ['paused', 'done'], paused: ['active', 'done'], done: ['active', 'paused'] });\nconst captureCall = define('SM51.capture-call', 'invoking', { invoking: ['succeeded', 'failed'], succeeded: ['saving'], failed: ['saving'], saving: ['saved', 'save-failed'], saved: [], 'save-failed': [] }, ['saved', 'save-failed']);\nconst pit = define('SM75.pit', 'opening', { opening: ['open'], open: ['reading', 'closing'], reading: ['closing'], closing: ['closed', 'close-failed'], closed: [], 'close-failed': [] }, ['closed', 'close-failed']);\nconst identity = define('SM16.identity', 'unverified', { unverified: ['authenticated', 'rejected'], authenticated: ['scoped', 'rejected'], scoped: [], rejected: [] }, ['scoped', 'rejected']);\nconst mcp = define('SM17.request', 'running', { running: ['cancelling', 'replied', 'closed'], cancelling: ['replied', 'closed'], replied: ['closed'], closed: [] }, ['closed']);\nconst effects = define('SM27.effects', 'unarmed', { unarmed: ['arming'], arming: ['armed', 'rejected'], armed: ['observing'], observing: ['checked', 'failed'], checked: [], rejected: [], failed: [] }, ['checked', 'rejected', 'failed']);\nconst action = define('SM29.action', 'reserved', { reserved: ['executing'], executing: ['completed', 'unknown'], completed: [], unknown: [] }, ['completed', 'unknown']);\nconst quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', "
           },
           consumers: [
@@ -22026,7 +22126,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 64,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const archive = define('SM54.archive', 'checking', { checking: ['copied', 'archived', 'failed'], copied: ['verified', 'failed'], verified: ['removing'], removing: ['archived', 'source-retained', 'recovery-needed'], archived: [], failed: [], 'source-retained': [], 'recovery-needed': [] }, ['archived', 'failed', 'source-retained', 'recovery-needed']);\nconst archiveRemoval = define('SM54.source-removal', 'source', { source: ['holding', 'removed'], holding: ['verified', 'restoring'], verified: ['removed', 'restoring'], restoring: ['restored', 'recovery-needed'], removed: [], restored: [], 'recovery-needed': [] }, ['removed', 'restored', 'recovery-needed']);\nconst contextArchive = define('SM54.context-archive', 'checking', { checking: ['renamed'], renamed: ['published', 'restoring'], restoring: ['restored', 'recovery-needed'], published: [], restored: [], 'recovery-needed': [] }, ['published', 'restored', 'recovery-needed']);\nconst context = define('SM53.context', 'active', { active: ['paused', 'done'], paused: ['active', 'done'], done: ['active', 'paused'] });\nconst captureCall = define('SM51.capture-call', 'invoking', { invoking: ['succeeded', 'failed'], succeeded: ['saving'], failed: ['saving'], saving: ['saved', 'save-failed'], saved: [], 'save-failed': [] }, ['saved', 'save-failed']);\nconst pit = define('SM75.pit', 'opening', { opening: ['open'], open: ['reading', 'closing'], reading: ['closing'], closing: ['closed', 'close-failed'], closed: [], 'close-failed': [] }, ['closed', 'close-failed']);\nconst identity = define('SM16.identity', 'unverified', { unverified: ['authenticated', 'rejected'], authenticated: ['scoped', 'rejected'], scoped: [], rejected: [] }, ['scoped', 'rejected']);\nconst mcp = define('SM17.request', 'running', { running: ['cancelling', 'replied', 'closed'], cancelling: ['replied', 'closed'], replied: ['closed'], closed: [] }, ['closed']);\nconst effects = define('SM27.effects', 'unarmed', { unarmed: ['arming'], arming: ['armed', 'rejected'], armed: ['observing'], observing: ['checked', 'failed'], checked: [], rejected: [], failed: [] }, ['checked', 'rejected', 'failed']);\nconst action = define('SM29.action', 'reserved', { reserved: ['executing'], executing: ['completed', 'unknown'], completed: [], unknown: [] }, ['completed', 'unknown']);\nconst quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: ["
           },
           consumers: [
@@ -22084,7 +22184,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 44,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const publication = define('SM41.publication', 'checking', { checking: ['reused', 'staging', 'aborted'], staging: ['verified', 'aborted'], verified: ['committed', 'aborted'], committed: ['published', 'alias-failed'], reused: ['published', 'alias-failed'], published: [], aborted: [], 'alias-failed': [] }, ['published', 'aborted', 'alias-failed']);\nconst edgeSnapshot = define('SM55.edge-snapshot', 'missing', { missing: ['valid', 'invalid', 'removed'], valid: ['valid', 'stale', 'removed'], stale: ['valid', 'stale', 'removed'], invalid: ['valid', 'invalid', 'removed'], removed: [] }, ['removed']);\nconst catalogWriter = define('SM42.catalog-writer', 'open', { open: ['flushing', 'aborted'], flushing: ['synced', 'aborted'], synced: ['published', 'aborted'], published: [], aborted: [] }, ['published', 'aborted']);\nconst descriptor = define('P01.descriptor', 'open', { open: ['closed'], closed: [] }, ['closed']);\nconst handshake = define('SM18.handshake', 'disconnected', {\n  disconnected: ['initializing', 'closing'], initializing: ['ready', 'disconnected', 'closing'], ready: ['closing'], closing: ['disconnected'],\n});\nconst fixture = define('SM26.fixture', 'starting', { starting: ['ready', 'cleanup-failed', 'stopped'], ready: ['cleanup-failed', 'stopped'], 'cleanup-failed': ['stopped'], stopped: [] }, ['stopped']);\nconst scenario = define('SM28.scenario', 'starting', { starting: ['ready', 'failed', 'stopped'], ready: ['failed', 'stopped'], failed: ['stopped'], stopped: [] }, ['stopped']);\nconst collection = define('SM35.collection', 'running', { running: ['passed', 'failed', 'cancelled','interrupted'], passed: [], failed: [], cancelled: [], interrupted:[] }, ['passed', 'failed', 'cancelled','interrupted']);\nconst semantic = define('SM45.semantic', 'uploading', {\n  uploading: ['queued', 'failed', 'interrupted'], queued: ['parsing', 'querying', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  parsing: ['enriching', 'cancelling', 'failed', 'cancelled', 'interrupted'], enriching: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'],\n  querying: ['ready', 'cancelling', 'failed', 'cancelled', 'interrupted'], cancelling: ['cancelled', 'failed', 'interrupted'],\n  draining: ['ready', 'cancelled', 'failed', 'interrupted'],\n  ready: [], failed: [], cancelled: [], interrupted: [],"
           },
           consumers: [],
@@ -22134,7 +22234,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 97,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);"
           },
           consumers: [],
@@ -22190,7 +22290,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 97,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);"
           },
           consumers: [
@@ -22252,7 +22352,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 97,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);"
           },
           consumers: [
@@ -22314,7 +22414,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 98,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);"
           },
           consumers: [
@@ -22358,8 +22458,8 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 109,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
-            snippet: "const docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nmodule.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
+            snippet: "const docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nconst mappingRead = define('Mapping-debugger.read', 'running', { running: ['done','error','cancelled'], done: [], error: [], cancelled: [] }, ['done','error','cancelled']);\nmodule.exports = { mappingRead, uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
           },
           consumers: [
             {
@@ -22402,7 +22502,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 99,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);"
           },
           consumers: [
@@ -22454,7 +22554,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 100,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);"
           },
           consumers: [
@@ -22515,7 +22615,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 101,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);"
           },
           consumers: [
@@ -22560,8 +22660,8 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 110,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
-            snippet: "const starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nmodule.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
+            snippet: "const starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);\nconst bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nconst mappingRead = define('Mapping-debugger.read', 'running', { running: ['done','error','cancelled'], done: [], error: [], cancelled: [] }, ['done','error','cancelled']);\nmodule.exports = { mappingRead, uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
           },
           consumers: [],
           chart: {
@@ -22610,8 +22710,8 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 111,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
-            snippet: "const bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nmodule.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
+            snippet: "const bundle = define('SM74.bundle', 'bundling', { bundling: ['collecting'], collecting: ['comparing'], comparing: ['verified', 'stale', 'writing'], writing: ['written'], verified: [], stale: [], written: [] }, ['verified', 'stale', 'written']);\nconst configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nconst mappingRead = define('Mapping-debugger.read', 'running', { running: ['done','error','cancelled'], done: [], error: [], cancelled: [] }, ['done','error','cancelled']);\nmodule.exports = { mappingRead, uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
           },
           consumers: [
             {
@@ -22676,7 +22776,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 68,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const captureCall = define('SM51.capture-call', 'invoking', { invoking: ['succeeded', 'failed'], succeeded: ['saving'], failed: ['saving'], saving: ['saved', 'save-failed'], saved: [], 'save-failed': [] }, ['saved', 'save-failed']);\nconst pit = define('SM75.pit', 'opening', { opening: ['open'], open: ['reading', 'closing'], reading: ['closing'], closing: ['closed', 'close-failed'], closed: [], 'close-failed': [] }, ['closed', 'close-failed']);\nconst identity = define('SM16.identity', 'unverified', { unverified: ['authenticated', 'rejected'], authenticated: ['scoped', 'rejected'], scoped: [], rejected: [] }, ['scoped', 'rejected']);\nconst mcp = define('SM17.request', 'running', { running: ['cancelling', 'replied', 'closed'], cancelling: ['replied', 'closed'], replied: ['closed'], closed: [] }, ['closed']);\nconst effects = define('SM27.effects', 'unarmed', { unarmed: ['arming'], arming: ['armed', 'rejected'], armed: ['observing'], observing: ['checked', 'failed'], checked: [], rejected: [], failed: [] }, ['checked', 'rejected', 'failed']);\nconst action = define('SM29.action', 'reserved', { reserved: ['executing'], executing: ['completed', 'unknown'], completed: [], unknown: [] }, ['completed', 'unknown']);\nconst quietWindow = define('SM30.quiet-window', 'sampling', { sampling: ['quiet', 'timed-out', 'cancelled', 'failed'], quiet: ['sampling', 'stable', 'timed-out', 'cancelled', 'failed'], stable: [], 'timed-out': [], cancelled: [], failed: [] }, ['stable', 'timed-out', 'cancelled', 'failed']);\nconst semanticPublication = define('SM46.publication', 'checking', { checking: ['reused', 'staging'], staging: ['accepted', 'compensating'], accepted: ['waiting', 'compensating'], waiting: ['downloading', 'compensating'], downloading: ['verified', 'compensating'], verified: ['committed', 'compensating'], committed: ['published', 'superseded', 'alias-failed'], reused: [], published: [], superseded: [], 'alias-failed': [], compensating: ['aborted', 'cleanup-failed'], aborted: [], 'cleanup-failed': [] }, ['reused', 'published', 'superseded', 'alias-failed', 'aborted', 'cleanup-failed']);\nconst knowledgeRefresh = define('SM49.refresh', 'reading', { reading: ['unchanged', 'writing', 'failed'], writing: ['updated', 'failed'], unchanged: [], updated: [], failed: [] }, ['unchanged', 'updated', 'failed']);\nconst observation = define('SM50.observation', 'refreshing', { refreshing: ['fresh', 'stale', 'missing'], fresh: [], stale: [], missing: [] }, ['fresh', 'stale', 'missing']);\nconst preparation = define('SM40.preparation', 'queued', { queued: ['running'], running: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst mavenPrepare = define('SM39.maven-prepare', 'checking', { checking: ['reused', 'building'], building: ['classpath', 'failed'], classpath: ['launcher', 'failed'], launcher: ['publishing', 'failed'], publishing: ['ready', 'failed'], reused: [], ready: [], failed: [] }, ['reused', 'ready', 'failed']);\nconst deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial',"
           },
           consumers: [
@@ -22729,7 +22829,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 80,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const deepQuery = define('SM47.deep-query', 'checking', { checking: ['reused', 'submitting', 'failed'], submitting: ['waiting', 'compensating'], waiting: ['reading', 'compensating'], reading: ['saving', 'compensating'], saving: ['ready', 'compensating'], ready: [], reused: [], failed: [], compensating: ['failed', 'cleanup-failed'], 'cleanup-failed': [] }, ['reused', 'ready', 'failed', 'cleanup-failed']);\nconst adapter = define('SM76.adapter', 'prepared', { prepared: ['sending'], sending: ['reading', 'unknown'], reading: ['verified', 'unknown'], verified: ['succeeded', 'rejected'], succeeded: [], rejected: [], unknown: [] }, ['succeeded', 'rejected', 'unknown']);\nconst capture = define('SM31.capture', 'planned', { planned: ['reading'], reading: ['validating', 'failed'], validating: ['complete', 'incomplete', 'failed'], complete: [], incomplete: [], failed: [] }, ['complete', 'incomplete', 'failed']);\nconst scenarioState = define('SM32.binding', 'planned', { planned: ['missing', 'reading'], reading: ['captured', 'partial', 'failed'], missing: [], captured: [], partial: [], failed: [] }, ['missing', 'captured', 'partial', 'failed']);\nconst script = define('SM33.script', 'before', { before: ['steps', 'cleaning'], steps: ['after', 'cleaning'], after: ['cleaning'], cleaning: ['settled'], settled: [] }, ['settled']);\nconst retry = define('SM34.retry', 'ready', { ready: ['attempting'], attempting: ['matched', 'waiting', 'stopped'], waiting: ['attempting', 'stopped'], matched: [], stopped: [] }, ['matched', 'stopped']);\nconst gitFetch = define('SM36.fetch', 'initializing', { initializing: ['fetching', 'failed'], fetching: ['checking-out', 'repairing', 'fallback', 'failed'], repairing: ['fetching', 'fallback', 'failed'], fallback: ['checking-out', 'failed'], 'checking-out': ['recording', 'fallback', 'failed'], recording: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst workspacePush = define('SM37.push', 'checking', { checking: ['staging', 'failed'], staging: ['committing', 'failed'], committing: ['committed', 'failed'], committed: ['replaying', 'pushing', 'failed'], replaying: ['replayed', 'conflict', 'failed'], replayed: ['pushing', 'failed'], pushing: ['pushed', 'unknown'], pushed: ['recording', 'metadata-failed'], recording: ['completed', 'metadata-failed'], completed: [], failed: [], conflict: [], unknown: [], 'metadata-failed': [] }, ['completed', 'failed', 'conflict', 'unknown', 'metadata-failed']);\nconst refresh = define('SM43.refresh', 'sources', { sources: ['indexing', 'failed'], indexing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst passport = define('SM44.passport', 'resolving', { resolving: ['fetching', 'failed'], fetching: ['extracting', 'failed'], extracting: ['libraries', 'failed'], libraries: ['analyzing', 'failed'], analyzing: ['publishing', 'failed'], publishing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nconst http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'p"
           },
           consumers: [
@@ -22786,7 +22886,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 90,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nconst http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);\nconst revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });"
           },
           consumers: [
@@ -22831,7 +22931,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 95,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);\nconst revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);\nconst markup = define('P07.markup-stack', 'root', { root: ['nested'], nested: ['root'] });\nconst traversal = define('P08.traversal', 'searching', { searching: ['found', 'exhausted', 'truncated'], found: [], exhausted: [], truncated: [] }, ['found', 'exhausted', 'truncated']);\nconst enumeration = define('P09.enumeration', 'available', { available: ['exhausted'], exhausted: [] }, ['exhausted']);\nconst compiler = define('SM40.compiler', 'starting', { starting: ['ready', 'stopped'], ready: ['stopping', 'stopped'], stopping: ['stopped'], stopped: [] }, ['stopped']);\nconst docsRefresh = define('SM48.refresh', 'listing', { listing: ['pages', 'failed'], pages: ['reconciling', 'failed'], reconciling: ['watermark', 'partial', 'failed'], watermark: ['current', 'failed'], current: [], partial: [], failed: [] }, ['current', 'partial', 'failed']);\nconst starter = define('SM58.starter', 'checking', { checking: ['retained', 'copying'], copying: ['copied'], retained: [], copied: [] }, ['retained', 'copied']);"
           },
           consumers: [
@@ -22872,7 +22972,7 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 89,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
             snippet: "const passport = define('SM44.passport', 'resolving', { resolving: ['fetching', 'failed'], fetching: ['extracting', 'failed'], extracting: ['libraries', 'failed'], libraries: ['analyzing', 'failed'], analyzing: ['publishing', 'failed'], publishing: ['ready', 'failed'], ready: [], failed: [] }, ['ready', 'failed']);\nconst realm = define('SM78.program', 'prepared', { prepared: ['executing', 'rejected'], executing: ['settled', 'failed'], settled: [], rejected: [], failed: [] }, ['settled', 'rejected', 'failed']);\nconst http = define('SM76.http', 'sending', { sending: ['reading', 'failed'], reading: ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst migration = define('SM13.migration', 'new', { new: ['reading'], reading: ['paused', 'complete'], paused: ['reading'], complete: ['reading'] });\nconst testInvocation = define('SM38.invocation', 'running', { running: ['settled', 'failed'], settled: [], failed: [] }, ['settled', 'failed']);\nconst testProof = define('SM38.proof-evidence', 'no-red', { 'no-red': ['red-seen'], 'red-seen': ['changed-green-seen'], 'changed-green-seen': [] }, ['changed-green-seen']);\nconst generatedResource = define('SM52.generated-resource', 'checking', { checking: ['retained', 'preview', 'writing'], writing: ['written', 'failed'], retained: [], preview: [], written: [], failed: [] }, ['retained', 'preview', 'written', 'failed']);\nconst searchBackend = define('SM77.backend', 'unknown', { unknown: ['available', 'unavailable'], available: ['unavailable'], unavailable: [] }, ['unavailable']);\nconst revisionModel = name => define(name, 'checking', { checking: ['locked', 'checked', 'failed'], locked: ['checked', 'failed'], checked: ['revision-written', 'head-written', 'failed'], 'revision-written': ['head-written', 'failed'], 'head-written': ['completed', 'failed'], completed: [], failed: [] }, ['completed', 'failed']);\nconst passportEdit = revisionModel('SM55.passport-edit'), mapEdit = revisionModel('SM56.map-edit'), architectureEdit = revisionModel('SM57.architecture-edit');\nconst definition = define('SM58.definition', 'checking', { checking: ['custom', 'builtin', 'missing'], custom: [], builtin: [], missing: [] }, ['custom', 'builtin', 'missing']);\nconst apiReplay = define('SM59.replay', 'prepared', { prepared: ['sending'], sending: ['received', 'unknown'], received: ['saved', 'save-failed'], saved: [], unknown: [], 'save-failed': [] }, ['saved', 'unknown', 'save-failed']);\nconst browserLease = define('SM60.browser-lease', 'opening', { opening: ['ready', 'failed'], ready: ['capturing', 'expired', 'closing'], capturing: ['ready', 'expired', 'closing'], expired: ['closing'], failed: ['closing'], closing: ['closed'], closed: [] }, ['closed']);\nconst result = define('SM61.result', 'allocating', { allocating: ['serialized', 'failed'], serialized: ['stored', 'failed'], stored: [], failed: [] }, ['stored', 'failed']);\nconst sourceSpan = define('P03.source-span', 'code', { code: ['quoted', 'text-block', 'line-comment', 'block-comment', 'done'], quoted: ['code'], 'text-block': ['code'], 'line-comment': ['code'], 'block-comment': ['code'], done: [] }, ['done']);\nconst reportFile = define('P06.report-file', 'clean', { clean: ['failed'], failed: [] }, ['failed']);"
           },
           consumers: [
@@ -22920,8 +23020,8 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 112,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
-            snippet: "const configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nmodule.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
+            snippet: "const configMigration = define('SM74.config-migration', 'planning', { planning: ['preview', 'staging'], staging: ['secrets-published', 'compensating'], 'secrets-published': ['config-published', 'compensating'], 'config-published': ['ready', 'compensating'], compensating: ['rolled-back', 'cleanup-failed'], preview: [], ready: [], 'rolled-back': [], 'cleanup-failed': [] }, ['preview', 'ready', 'rolled-back', 'cleanup-failed']);\nconst diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nconst mappingRead = define('Mapping-debugger.read', 'running', { running: ['done','error','cancelled'], done: [], error: [], cancelled: [] }, ['done','error','cancelled']);\nmodule.exports = { mappingRead, uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
           },
           consumers: [
             {
@@ -22973,8 +23073,8 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 113,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
-            snippet: "const diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nmodule.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
+            snippet: "const diagnosticStore = define('SM79.diagnostic-store', 'cold', { cold: ['starting', 'closed', 'failed'], starting: ['ready', 'failed', 'closed'], ready: ['failed', 'closed'], failed: ['closed'], closed: [] }, ['closed']);\nconst projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nconst mappingRead = define('Mapping-debugger.read', 'running', { running: ['done','error','cancelled'], done: [], error: [], cancelled: [] }, ['done','error','cancelled']);\nmodule.exports = { mappingRead, uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
           },
           consumers: [
             {
@@ -23032,8 +23132,8 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 114,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
-            snippet: "const projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nmodule.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
+            snippet: "const projectContextPublication = define('SM80.project-context-publication', 'draft', { draft: ['locked'], locked: ['checked','failed'], checked: ['files-written','failed'], 'files-written': ['revision-written','failed'], 'revision-written': ['published','failed'], published: [], failed: [] }, ['published','failed']);\nconst ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nconst mappingRead = define('Mapping-debugger.read', 'running', { running: ['done','error','cancelled'], done: [], error: [], cancelled: [] }, ['done','error','cancelled']);\nmodule.exports = { mappingRead, uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
           },
           consumers: [
             {
@@ -23088,8 +23188,8 @@ var require_self_model_catalog = __commonJS({
           source: {
             file: "lib/lifecycles.js",
             line: 115,
-            sha256: "50c31a05486752110f5fba42728fe92fbb830ebeccb6137d8464eab7b21730aa",
-            snippet: "const ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nmodule.exports = { uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
+            sha256: "51ef7361752064bd5346ae029002e5146cd57cb6017bab11dba30665295e25f5",
+            snippet: "const ciWait = define('SM81.ci-wait', 'checking', { checking: ['sleeping','complete','pending','cancelled','failed'], sleeping: ['checking','pending','cancelled','failed'], complete: [], pending: [], cancelled: [], failed: [] }, ['complete','pending','cancelled','failed']);\nconst uiPageRun = define('UI-page.run', 'ready', { ready: ['reading'], reading: ['composing','cancelled','failed'], composing: ['retaining','cancelled','failed'], retaining: ['done','cancelled','failed'], done: [], cancelled: [], failed: [] }, ['done','cancelled','failed']);\nconst mappingRead = define('Mapping-debugger.read', 'running', { running: ['done','error','cancelled'], done: [], error: [], cancelled: [] }, ['done','error','cancelled']);\nmodule.exports = { mappingRead, uiPageRun, ciWait, projectContextPublication, diagnosticStore, bundle, configMigration, starter, docsRefresh, compiler, execution, job, admission, worker, session, sandbox, cell, settlement, process, span, networkAdmission, runnerRequest, circuit, store, storeClose, writer, config, registry, transaction, scratch, template, lease, leaseReset, publication, edgeSnapshot, catalogWriter, descriptor, handshake, fixture, scenario, collection, semantic, sftp, sftpOperation, control, archive, archiveRemoval, contextArchive, context, captureCall, pit, identity, mcp, effects, action, quietWindow, semanticPublication, knowledgeRefresh, observation, preparation, mavenPrepare, deepQuery, adapter, capture, scenarioState, script, retry, gitFetch, workspacePush, refresh, passport, realm, http, migration, testInvocation, testProof, generatedResource, searchBackend, passportEdit, mapEdit, architectureEdit, definition, apiReplay, browserLease, result, sourceSpan, reportFile, markup, traversal, enumeration };\n"
           },
           consumers: [
             {
@@ -24402,7 +24502,7 @@ var require_results = __commonJS({
         owner: require_access().owner(),
         at: (/* @__PURE__ */ new Date()).toISOString(),
         total: rows.length,
-        truncated: rows.length > MAX_ROWS || void 0,
+        truncated: meta?.truncated || rows.length > MAX_ROWS || void 0,
         rows: rows.slice(0, MAX_ROWS)
       }));
       try {
@@ -27360,14 +27460,32 @@ var require_pg = __commonJS({
       }
       return { db: env.defaultDb, reason: "default" };
     }
-    async function query(envName, sql, { db, params } = {}) {
+    async function query(envName, sql, { db, params, maxRows } = {}) {
       const env = getEnv2(envName);
       const target = resolveDb(envName, sql, db);
       const url = env.pg[target.db];
       if (!url) throw new Error(`No URL for db "${target.db}" (${env.envFile} missing or incomplete)`);
       const started = Date.now();
-      const rows = await guarded(connect(url), getTimeouts().pgQueryMs, "query", (t) => t.unsafe(sql, params || []));
-      return { env: envName, db: target.db, route: target.reason, ms: Date.now() - started, rowCount: rows.count ?? rows.length, rows: [...rows] };
+      let truncated = false;
+      const rows = await guarded(connect(url), getTimeouts().pgQueryMs, "query", async (t) => {
+        if (maxRows === void 0) return t.unsafe(sql, params || []);
+        if (!Number.isInteger(maxRows) || maxRows < 1 || maxRows > 1e4) throw Error("maxRows must be 1..10000");
+        const result = [];
+        let bytes = 0;
+        for await (const batch of t.unsafe(sql, params || []).cursor(Math.min(100, maxRows + 1))) {
+          for (const row of batch) {
+            bytes += Buffer.byteLength(JSON.stringify(row));
+            if (result.length >= maxRows || bytes > 1048576) {
+              truncated = true;
+              break;
+            }
+            result.push(row);
+          }
+          if (truncated) break;
+        }
+        return result;
+      });
+      return { env: envName, db: target.db, route: target.reason, ms: Date.now() - started, rowCount: rows.count ?? rows.length, ...maxRows !== void 0 ? { truncated, maxRows } : {}, rows: [...rows] };
     }
     var CATALOG_SQL = `
 select n.nspname as schema, c.relname as name,
@@ -55439,6 +55557,1175 @@ var require_docs_parse = __commonJS({
   }
 });
 
+// lib/durable-private-store.js
+var require_durable_private_store = __commonJS({
+  "lib/durable-private-store.js"(exports2, module2) {
+    var fs3 = require("node:fs");
+    var path3 = require("node:path");
+    var crypto = require("node:crypto");
+    var invalid = (message, code = "DT_ARGUMENT_INVALID", statusCode = 400) => Object.assign(Error(message), { code, statusCode });
+    var hash = (value) => crypto.createHash("sha256").update(value).digest("hex");
+    var key = (value) => {
+      if (typeof value !== "string" || !/^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,99}$/.test(value) || value === "..") throw invalid("Invalid durable record id");
+      return value;
+    };
+    function create(root, maxBytes = 8 * 1048576) {
+      function safe(...parts) {
+        const home = require_config().HOME;
+        const relative = path3.relative(home, root);
+        if (relative.startsWith("..") || path3.isAbsolute(relative)) throw invalid("Durable store must be inside the configured home");
+        let ancestor = home;
+        for (const part of relative.split(path3.sep).filter(Boolean)) {
+          ancestor = path3.join(ancestor, part);
+          try {
+            if (fs3.lstatSync(ancestor).isSymbolicLink()) throw invalid("Durable state paths cannot be symbolic links");
+          } catch (e) {
+            if (e.code !== "ENOENT") throw e;
+          }
+        }
+        let file = root;
+        for (const part of [null, ...parts]) {
+          if (part !== null) file = path3.join(file, key(part));
+          try {
+            if (fs3.lstatSync(file).isSymbolicLink()) throw invalid("Durable state paths cannot be symbolic links");
+          } catch (e) {
+            if (e.code !== "ENOENT") throw e;
+          }
+        }
+        return file;
+      }
+      function read(name) {
+        const file = safe(name + ".json");
+        try {
+          if (fs3.statSync(file).size > maxBytes) throw invalid("Durable record exceeds storage budget");
+          return JSON.parse(fs3.readFileSync(file, "utf8"));
+        } catch (e) {
+          if (e.code === "ENOENT") return null;
+          throw e;
+        }
+      }
+      function write(name, value) {
+        const data = JSON.stringify(value), file = safe(name + ".json");
+        if (Buffer.byteLength(data) > maxBytes) throw invalid("Durable record exceeds storage budget");
+        fs3.mkdirSync(safe(), { recursive: true, mode: 448 });
+        const temporary = safe("tmp-" + crypto.randomUUID()), fd = fs3.openSync(temporary, "wx", 384);
+        try {
+          fs3.writeFileSync(fd, data);
+          fs3.fsyncSync(fd);
+        } finally {
+          fs3.closeSync(fd);
+        }
+        try {
+          fs3.renameSync(temporary, file);
+          const dir = fs3.openSync(safe(), "r");
+          try {
+            fs3.fsyncSync(dir);
+          } finally {
+            fs3.closeSync(dir);
+          }
+        } finally {
+          fs3.rmSync(temporary, { force: true });
+        }
+        return value;
+      }
+      function list(prefix = "") {
+        let names;
+        try {
+          names = fs3.readdirSync(safe());
+        } catch (e) {
+          if (e.code === "ENOENT") return [];
+          throw e;
+        }
+        return names.filter((n) => n.endsWith(".json") && n.startsWith(prefix)).sort().map((n) => read(n.slice(0, -5))).filter(Boolean);
+      }
+      function lock(name) {
+        fs3.mkdirSync(safe(), { recursive: true, mode: 448 });
+        const prefix = key(name) + ".lock-", own = prefix + process.pid + "-" + crypto.randomUUID(), dir = path3.join(safe(), own);
+        fs3.mkdirSync(dir, { mode: 448 });
+        const release = () => fs3.rmSync(dir, { recursive: true, force: true });
+        function contenders() {
+          return fs3.readdirSync(safe()).filter((n) => n.startsWith(prefix)).map((n) => {
+            const suffix = n.slice(prefix.length), match = suffix.match(/^(\d+)-[a-f0-9-]{36}$/);
+            if (!match) throw invalid("Damaged durable writer lock", "STATE_CONFLICT", 409);
+            const candidate = path3.join(safe(), n);
+            let stat;
+            try {
+              stat = fs3.lstatSync(candidate);
+            } catch (e) {
+              if (e.code === "ENOENT") return null;
+              throw e;
+            }
+            if (!stat.isDirectory() || stat.isSymbolicLink()) throw invalid("Invalid durable writer lock");
+            try {
+              process.kill(Number(match[1]), 0);
+            } catch (e) {
+              if (e.code === "ESRCH") {
+                fs3.rmSync(candidate, { recursive: true, force: true });
+                return null;
+              }
+            }
+            let ticket;
+            try {
+              const f = path3.join(candidate, "ticket.json");
+              if (fs3.lstatSync(f).isSymbolicLink()) throw invalid("Invalid durable writer ticket");
+              ticket = JSON.parse(fs3.readFileSync(f, "utf8")).ticket;
+            } catch (e) {
+              if (e.code !== "ENOENT" && !(e instanceof SyntaxError)) throw e;
+            }
+            return { name: n, ticket: Number.isSafeInteger(ticket) && ticket > 0 ? ticket : null };
+          }).filter(Boolean);
+        }
+        try {
+          const ticket = Math.max(0, ...contenders().map((c) => c.ticket || 0)) + 1;
+          fs3.writeFileSync(path3.join(dir, "ticket.json"), JSON.stringify({ ticket }), { mode: 384, flag: "wx" });
+          const blocked = contenders().some((c) => c.name !== own && (c.ticket === null || c.ticket < ticket || c.ticket === ticket && c.name < own));
+          if (blocked) throw invalid("Durable record is owned by a running writer; retry after it finishes", "STATE_CONFLICT", 409);
+          return release;
+        } catch (error) {
+          release();
+          throw error;
+        }
+      }
+      function update(name, fn) {
+        const release = lock(name);
+        try {
+          return fn(read(name));
+        } finally {
+          release();
+        }
+      }
+      return { read, write, list, lock, update, root, safe };
+    }
+    module2.exports = { create, key, hash, invalid };
+  }
+});
+
+// lib/service-env-spec.js
+var require_service_env_spec = __commonJS({
+  "lib/service-env-spec.js"(exports2, module2) {
+    var { invalid, hash } = require_durable_private_store();
+    var fail = (message) => {
+      throw invalid(message);
+    };
+    function object(v, keys, name2) {
+      if (!v || typeof v !== "object" || Array.isArray(v)) fail(`${name2} must be an object`);
+      for (const k of Object.keys(v)) if (!keys.includes(k)) fail(`Unsupported ${name2} field: ${k}`);
+    }
+    function name(v) {
+      if (typeof v !== "string" || !/^[a-z][a-z0-9-]{0,39}$/.test(v)) fail("Names use lowercase letters, numbers and hyphens (1..40 characters)");
+      return v;
+    }
+    function relative(v, fallback) {
+      v ??= fallback;
+      if (typeof v !== "string" || !v || v.length > 240 || v.includes("\\") || v.startsWith("/") || /[\x00-\x1f]/.test(v) || v.split("/").some((p) => p === ".." || !p || p === ".git")) fail("Use a relative workspace path without traversal");
+      return v;
+    }
+    function integer(v, fallback, low, high, label) {
+      v ??= fallback;
+      if (!Number.isSafeInteger(v) || v < low || v > high) fail(`${label} must be ${low}..${high}`);
+      return v;
+    }
+    function image(v) {
+      if (typeof v !== "string" || !/^[a-zA-Z0-9][\w./:@-]{0,240}$/.test(v)) fail("Invalid Docker image reference");
+      return v;
+    }
+    function entries(v, label, pattern) {
+      if (!v || typeof v !== "object" || Array.isArray(v) || Object.keys(v).length > 100) fail(`${label} must be an object with at most 100 keys`);
+      for (const [k, x] of Object.entries(v)) if (!pattern.test(k) || !["string", "number", "boolean"].includes(typeof x) || String(x).length > 8e3 || /[\0]/.test(String(x))) fail(`Invalid ${label} entry ${k}`);
+      return v;
+    }
+    function spec(input) {
+      object(input, ["version", "name", "context", "continuation", "ttl_ms", "services", "dependencies", "assumptions"], "definition");
+      if (input.version !== 1) fail("Service definition version must be 1");
+      if (!Array.isArray(input.services) || !input.services.length || input.services.length > 8) fail("Select 1..8 services");
+      const names = /* @__PURE__ */ new Set();
+      const services = input.services.map((raw) => {
+        object(raw, ["name", "workspace", "module", "adapter", "artifact", "entry", "build", "image", "port", "health_path", "ready_timeout_ms", "memory_mb", "properties", "env", "datasources", "debug"], "service");
+        const id = name(raw.name);
+        if (names.has(id)) fail("Service names must be unique");
+        names.add(id);
+        if (!/^[\w.-]{1,100}$/.test(raw.workspace || "")) fail("A workspace id is required for each service");
+        const adapter = raw.adapter || "spring-boot";
+        if (!["spring-boot", "node"].includes(adapter)) fail("Adapter must be spring-boot or node");
+        if (raw.debug && adapter !== "spring-boot") fail("Debug attachment is supported for Spring JVM services");
+        const build = raw.build || (adapter === "node" ? "none" : "auto");
+        if (!["auto", "maven", "gradle", "none"].includes(build)) fail("Build must be auto, maven, gradle or none");
+        const health = raw.health_path || "/actuator/health";
+        if (typeof health !== "string" || !health.startsWith("/") || health.startsWith("//") || /[\r\n\0#]/.test(health) || health.length > 500) fail("health_path must be an HTTP path");
+        const datasources = entries(raw.datasources || {}, "datasources", /^[a-z][a-z0-9-]{0,39}$/);
+        for (const prefix of Object.values(datasources)) if (!/^[a-z][a-z0-9_.-]{0,150}$/.test(prefix)) fail("Datasource values must be property prefixes, such as spring.datasource");
+        const env = entries(raw.env || {}, "environment", /^[A-Z][A-Z0-9_]{0,119}$/);
+        if (Object.keys(env).some((k) => /^(DT_ENV_|SPRING_APPLICATION_JSON$|JAVA_TOOL_OPTIONS$|JAVA_OPTIONS$|JDK_JAVA_OPTIONS$|NODE_OPTIONS$|LD_|DOCKER_|DT_RUNNER_)/.test(k))) fail("Runtime-owned environment variables cannot be overridden");
+        return { name: id, workspace: raw.workspace, adapter, module: relative(raw.module, "."), build, ...raw.artifact ? { artifact: relative(raw.artifact) } : {}, ...adapter === "node" ? { entry: relative(raw.entry, "server.js") } : {}, ...raw.image ? { image: image(raw.image) } : {}, port: integer(raw.port, 8080, 1024, 65535, "port"), health_path: health, ready_timeout_ms: integer(raw.ready_timeout_ms, 9e4, 1e3, 3e5, "ready_timeout_ms"), memory_mb: integer(raw.memory_mb, 768, 128, 8192, "memory_mb"), properties: entries(raw.properties || {}, "properties", /^[a-zA-Z][\w.-]{0,180}$/), env, datasources, debug: raw.debug === true };
+      });
+      const d = input.dependencies || {};
+      object(d, ["postgres", "kafka", "elasticsearch"], "dependencies");
+      const dependencies = {};
+      if (d.postgres) {
+        object(d.postgres, ["template"], "postgres");
+        if (!/^[a-f0-9]{64}$/.test(d.postgres.template || "")) fail("postgres.template must be an immutable testdb template key");
+        dependencies.postgres = { template: d.postgres.template };
+      }
+      if (d.kafka) {
+        object(d.kafka, ["image", "topics"], "kafka");
+        if (!Array.isArray(d.kafka.topics) || d.kafka.topics.length > 100) fail("kafka.topics must be an array of at most 100 topics");
+        const seen = /* @__PURE__ */ new Set();
+        dependencies.kafka = { ...d.kafka.image ? { image: image(d.kafka.image) } : {}, topics: d.kafka.topics.map((t) => {
+          object(t, ["name", "partitions"], "topic");
+          if (!/^[a-zA-Z0-9][\w.-]{0,199}$/.test(t.name || "") || seen.has(t.name)) fail("Topic names must be valid and unique");
+          seen.add(t.name);
+          return { name: t.name, partitions: integer(t.partitions, 1, 1, 32, "partitions") };
+        }) };
+      }
+      if (d.elasticsearch) {
+        object(d.elasticsearch, ["image", "indices"], "elasticsearch");
+        if (!Array.isArray(d.elasticsearch.indices) || d.elasticsearch.indices.length > 50) fail("elasticsearch.indices must contain at most 50 indices");
+        const seen = /* @__PURE__ */ new Set();
+        dependencies.elasticsearch = { ...d.elasticsearch.image ? { image: image(d.elasticsearch.image) } : {}, indices: d.elasticsearch.indices.map((i) => {
+          object(i, ["name", "mappings", "documents"], "index");
+          if (!/^[a-z0-9][a-z0-9_.-]{0,199}$/.test(i.name || "") || seen.has(i.name)) fail("Index names must be valid and unique");
+          seen.add(i.name);
+          if (i.mappings && (!i.mappings.properties || typeof i.mappings.properties !== "object")) fail("Mappings need properties");
+          if (i.documents && (!Array.isArray(i.documents) || i.documents.length > 2e3)) fail("At most 2000 seed documents per index");
+          return { name: i.name, mappings: i.mappings || { properties: {} }, documents: i.documents || [] };
+        }) };
+      }
+      for (const service of services) if (Object.keys(service.datasources).length && !dependencies.postgres) fail("Datasource bindings require dependencies.postgres.template");
+      for (const k of ["context", "continuation"]) if (input[k] !== void 0 && (typeof input[k] !== "string" || input[k].length > 100)) fail(`Invalid ${k}`);
+      if (input.assumptions && (!Array.isArray(input.assumptions) || input.assumptions.length > 50 || input.assumptions.some((x) => typeof x !== "string" || x.length > 1e3))) fail("assumptions must contain at most 50 short strings");
+      const out2 = { version: 1, name: name(input.name), services, dependencies, ttl_ms: integer(input.ttl_ms, 18e5, 6e4, 864e5, "ttl_ms"), assumptions: input.assumptions || [], ...input.context ? { context: input.context } : {}, ...input.continuation ? { continuation: input.continuation } : {} };
+      if (Buffer.byteLength(JSON.stringify(out2)) > 2 * 1048576) fail("Definition exceeds 2 MiB");
+      return out2;
+    }
+    var fingerprint = (v) => hash(JSON.stringify(v));
+    var variable = (v) => v.toUpperCase().replace(/[^A-Z0-9]/g, "_");
+    function bindings(service, databases, endpoints, peers) {
+      const properties = { ...service.properties, "server.port": String(service.port), "spring.cloud.consul.enabled": "false", "spring.cloud.consul.discovery.enabled": "false", "spring.cloud.consul.config.enabled": "false", "spring.flyway.enabled": "false", "spring.liquibase.enabled": "false", "spring.jpa.hibernate.ddl-auto": "none", "spring.sql.init.mode": "never" }, env = { ...service.env }, live = {};
+      const put = (property, key, value) => {
+        properties[property] = "${" + key + "}";
+        env[key] = String(value);
+        live[property] = String(value);
+      };
+      for (const [logical, prefix] of Object.entries(service.datasources)) {
+        const db = databases?.[logical];
+        if (!db) fail(`Datasource ${logical} was not supplied by the template`);
+        const base = "DT_ENV_PG_" + variable(logical);
+        put(prefix + ".url", base + "_JDBC_URL", db.jdbcUrl);
+        put(prefix + ".username", base + "_USERNAME", db.user);
+        put(prefix + ".password", base + "_PASSWORD", db.password);
+      }
+      if (endpoints.kafka) put("spring.kafka.bootstrap-servers", "DT_ENV_KAFKA_BOOTSTRAP_SERVERS", endpoints.kafka);
+      if (endpoints.es) put("spring.elasticsearch.uris", "DT_ENV_ELASTICSEARCH_URIS", endpoints.es);
+      for (const [name2, url] of Object.entries(peers || {})) env["DT_ENV_SERVICE_" + variable(name2) + "_URL"] = url;
+      return { properties, env, applicationProperties: { ...properties, ...live } };
+    }
+    function propertiesText(properties) {
+      const escape = (v) => String(v).replace(/\\/g, "\\\\").replace(/\r/g, "\\r").replace(/\n/g, "\\n");
+      return Object.entries(properties).sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => escape(k) + "=" + escape(v)).join("\n") + "\n";
+    }
+    module2.exports = { spec, name, relative, integer, object, bindings, propertiesText, fingerprint, variable };
+  }
+});
+
+// lib/service-env-engine.js
+var require_service_env_engine = __commonJS({
+  "lib/service-env-engine.js"(exports2, module2) {
+    var http2 = require("node:http");
+    var https = require("node:https");
+    var fs3 = require("node:fs");
+    var { Readable: Readable2 } = require("node:stream");
+    var { StringDecoder } = require("node:string_decoder");
+    function endpoint() {
+      const value = process.env.DOCKER_HOST || "unix:///var/run/docker.sock";
+      if (value.startsWith("unix://")) return { socketPath: value.slice(7) };
+      const u = new URL(value.replace(/^tcp:/, "http:"));
+      if (!["http:", "https:"].includes(u.protocol)) throw Error("Unsupported Docker transport");
+      return { hostname: u.hostname, port: u.port, protocol: u.protocol };
+    }
+    function request(method, route, body, { timeout = 15e3, limit = 4 * 1048576, raw = false } = {}) {
+      return new Promise((resolve2, reject) => {
+        const target = endpoint(), client = target.protocol === "https:" ? https : http2, stream = body && typeof body.pipe === "function";
+        let payload = body === void 0 ? null : stream ? body : Buffer.isBuffer(body) ? body : Buffer.from(JSON.stringify(body));
+        const req = client.request({ ...target, path: "/v1.41" + route, method, headers: payload ? { "content-type": stream || Buffer.isBuffer(body) ? "application/x-tar" : "application/json", ...!stream ? { "content-length": payload.length } : {} } : {} }, (res) => {
+          let bytes = 0, chunks = [];
+          res.on("data", (chunk) => {
+            bytes += chunk.length;
+            if (bytes > limit) {
+              const error = Error("Docker response exceeds budget");
+              reject(error);
+              req.destroy(error);
+              res.destroy(error);
+              return;
+            }
+            chunks.push(chunk);
+          });
+          res.on("error", reject);
+          res.on("end", () => {
+            const data = Buffer.concat(chunks);
+            let value;
+            try {
+              value = JSON.parse(data);
+            } catch {
+              value = data.toString("utf8");
+            }
+            if (res.statusCode >= 400) return reject(Object.assign(Error(`Docker ${res.statusCode}: ${value?.message || String(value).slice(0, 500)}`), { statusCode: res.statusCode }));
+            resolve2(raw ? data : value);
+          });
+        });
+        const timer = setTimeout(() => req.destroy(Error("Docker request deadline exceeded")), timeout);
+        req.on("close", () => clearTimeout(timer));
+        req.on("error", reject);
+        if (stream) {
+          payload.on("error", (e) => req.destroy(e));
+          payload.pipe(req);
+        } else req.end(payload);
+      });
+    }
+    function tarHeader(name, size, mode = 420, type = "0") {
+      if (Buffer.byteLength(name) > 100) throw Error("Artifact path exceeds tar name budget");
+      const h = Buffer.alloc(512);
+      h.write(name);
+      const oct = (offset, length, value) => h.write(value.toString(8).padStart(length - 1, "0") + "\0", offset, length, "ascii");
+      oct(100, 8, mode);
+      oct(108, 8, 0);
+      oct(116, 8, 0);
+      oct(124, 12, size);
+      oct(136, 12, 0);
+      h.fill(32, 148, 156);
+      h[156] = type.charCodeAt(0);
+      h.write("ustar\0", 257);
+      h.write("00", 263);
+      oct(148, 8, h.reduce((n, b) => n + b, 0));
+      return h;
+    }
+    function archive(files) {
+      return Readable2.from((async function* () {
+        const directories = /* @__PURE__ */ new Set();
+        for (const file of files) {
+          const parts = file.name.split("/");
+          for (let i = 1; i < parts.length; i++) {
+            const directory = parts.slice(0, i).join("/") + "/";
+            if (!directories.has(directory)) {
+              directories.add(directory);
+              yield tarHeader(directory, 0, 493, "5");
+            }
+          }
+          const size = file.bytes ? file.bytes.length : fs3.statSync(file.path).size;
+          yield tarHeader(file.name, size);
+          if (file.bytes) yield file.bytes;
+          else for await (const chunk of fs3.createReadStream(file.path)) yield chunk;
+          const padding = (512 - size % 512) % 512;
+          if (padding) yield Buffer.alloc(padding);
+        }
+        yield Buffer.alloc(1024);
+      })());
+    }
+    function logs(buffer) {
+      if (!Buffer.isBuffer(buffer)) return String(buffer || "");
+      let out2 = "", i = 0;
+      const decoders = [new StringDecoder("utf8"), new StringDecoder("utf8"), new StringDecoder("utf8")];
+      while (i + 8 <= buffer.length && buffer[i] <= 2 && buffer[i + 1] === 0 && buffer[i + 2] === 0 && buffer[i + 3] === 0) {
+        const size = buffer.readUInt32BE(i + 4);
+        if (i + 8 + size > buffer.length) break;
+        out2 += decoders[buffer[i]].write(buffer.subarray(i + 8, i + 8 + size));
+        i += 8 + size;
+      }
+      return i ? out2 + decoders.map((d) => d.end()).join("") : buffer.toString("utf8");
+    }
+    async function exec(container, cmd, { input } = {}) {
+      if (input !== void 0) throw Error("Interactive Docker exec is not supported");
+      const made = await request("POST", "/containers/" + encodeURIComponent(container) + "/exec", { AttachStdout: true, AttachStderr: true, Cmd: cmd });
+      const out2 = await request("POST", "/exec/" + made.Id + "/start", { Detach: false, Tty: false }, { raw: true, timeout: 3e4 });
+      const state = await request("GET", "/exec/" + made.Id + "/json");
+      if (state.ExitCode) throw Error(logs(out2).slice(-2e3) || `Container command exited ${state.ExitCode}`);
+      return logs(out2);
+    }
+    module2.exports = { request, archive, logs, exec, tarHeader };
+  }
+});
+
+// lib/service-env-worker.js
+var require_service_env_worker = __commonJS({
+  "lib/service-env-worker.js"(exports2, module2) {
+    var net = require("node:net");
+    var fs3 = require("node:fs");
+    var path3 = require("node:path");
+    var crypto = require("node:crypto");
+    var D = require_durable_private_store();
+    var S = require_service_env_spec();
+    var { define: define2, bind } = require_state_machine2();
+    var lifecycle = define2("SM.service-environment", "queued", { queued: ["preparing", "stopping"], preparing: ["starting", "stopping"], starting: ["ready", "stopping"], ready: ["preparing", "stopping"], stopping: ["stopped", "cleanup-failed"], "cleanup-failed": ["stopping"], stopped: [] }, ["stopped"]);
+    var wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    var CODE = String.raw`const n=require('net');n.createServer(c=>{const u=n.connect(Number(process.env.UPSTREAM_PORT),process.env.UPSTREAM_HOST);c.on('error',()=>u.destroy());u.on('error',()=>c.destroy());c.pipe(u);u.pipe(c);}).listen(5432,'0.0.0.0');`;
+    function create(engine = require_service_env_engine()) {
+      const C = require_config(), store = D.create(path3.join(C.HOME, "service-runtime"), 3 * 1048576), active = /* @__PURE__ */ new Map(), proxies = /* @__PURE__ */ new Map(), proxyPending = /* @__PURE__ */ new Map(), debugPending = /* @__PURE__ */ new Set();
+      let selfPromise, timer;
+      const token = () => crypto.randomBytes(24).toString("hex");
+      const memory = (r) => r.definition.services.reduce((n, s) => n + (r.warm ? 0 : s.memory_mb + (s.debug ? 384 : 0)), 256) + (r.definition.dependencies.kafka ? 768 : 0) + (r.definition.dependencies.elasticsearch ? 1536 : 0);
+      function track(r) {
+        store.update("index", (old) => {
+          const index = old || { records: {} };
+          index.records[r.id] = { id: r.id, state: r.state, memory: memory(r), expiresAt: r.expiresAt };
+          store.write("index", index);
+        });
+      }
+      function headers() {
+        let index = store.read("index");
+        if (!index) {
+          for (const r of store.list("run-")) track(r);
+          index = store.read("index") || { records: {} };
+        }
+        return Object.values(index.records);
+      }
+      function load(id, capability) {
+        D.key(id);
+        const r = store.read(id);
+        if (!r || !require_access().sameSecret(r.capability, capability)) throw D.invalid("Environment lease not found", "DT_NOT_FOUND", 404);
+        bind(r, lifecycle, "state");
+        return r;
+      }
+      function change(id, fn) {
+        return store.update(id, (r) => {
+          if (!r) throw Error("Missing environment lease");
+          bind(r, lifecycle, "state");
+          fn(r);
+          r.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+          store.write(id, r);
+          track(r);
+          return r;
+        });
+      }
+      function note(id, text) {
+        change(id, (r) => {
+          r.events.push({ sequence: ++r.sequence, at: (/* @__PURE__ */ new Date()).toISOString(), message: String(text).slice(0, 1e3), state: r.state });
+          r.events = r.events.slice(-150);
+        });
+      }
+      function state(id, value) {
+        change(id, (r) => {
+          r.state = value;
+        });
+      }
+      function check(id) {
+        const r = store.read(id);
+        if (!r || r.stopRequested || Date.now() >= r.expiresAt) throw Error(r?.stopRequested ? "Environment stop requested" : "Environment lease expired");
+      }
+      const request = (...a) => engine.request(...a);
+      async function inspect(name) {
+        try {
+          return await request("GET", "/containers/" + encodeURIComponent(name) + "/json");
+        } catch (e) {
+          if (e.statusCode === 404) return null;
+          throw e;
+        }
+      }
+      async function self2() {
+        return selfPromise ||= (async () => {
+          if (!process.env.HOSTNAME) return null;
+          const r = await inspect(process.env.HOSTNAME);
+          if (!r) return null;
+          if (r.Config.Hostname !== process.env.HOSTNAME && !r.Id.startsWith(process.env.HOSTNAME)) return null;
+          return { id: r.Id, networks: Object.keys(r.NetworkSettings.Networks || {}).filter((name) => !name.startsWith("dt-env-")) };
+        })().catch((e) => {
+          selfPromise = null;
+          throw e;
+        });
+      }
+      const labels = (r) => ({ "dt.service-env.id": r.id, "dt.service-env.owner": r.marker });
+      function owned(r, resource) {
+        return resource?.Config?.Labels?.["dt.service-env.id"] === r.id && resource.Config.Labels["dt.service-env.owner"] === r.marker;
+      }
+      function publicRecord(r) {
+        return { protocol: "dt.service-runtime/v1", id: r.id, state: r.state, generation: r.generation, warm: r.warm, createdAt: r.createdAt, updatedAt: r.updatedAt, expiresAt: new Date(r.expiresAt).toISOString(), outcome: r.outcome || null, error: r.error || null, cleanupErrors: r.cleanupErrors || [], services: Object.fromEntries(Object.entries(r.services || {}).map(([name, v]) => [name, { name, state: v.state, revision: v.revision, artifactDigest: v.artifactDigest, url: "/api/tool/service_env_request", debug: v.debug, exitCode: v.exitCode, health: v.health }])), dependencies: r.dependencyStatus || {}, events: r.events.slice(-20), lastSequence: r.sequence, timings: r.timings || {}, imageIds: r.imageIds || {}, isolation: "owned Docker bridge; outbound traffic permitted; application containers have no Docker socket", workerTopology: r.topology || null };
+      }
+      function images(def) {
+        return { node: process.env.DT_SERVICE_ENV_NODE_IMAGE || "node:22-bookworm", java: process.env.DT_SERVICE_ENV_JAVA_IMAGE || "maven:3.9-eclipse-temurin-21", ...def.dependencies.kafka ? { kafka: def.dependencies.kafka.image || "docker.redpanda.com/redpandadata/redpanda:v24.3.6" } : {}, ...def.dependencies.elasticsearch ? { es: def.dependencies.elasticsearch.image || "docker.elastic.co/elasticsearch/elasticsearch:8.17.3" } : {}, ...Object.fromEntries(def.services.filter((s) => s.image).map((s) => ["service-" + s.name, s.image])) };
+      }
+      async function preflight(def) {
+        const required = images(def), needed = /* @__PURE__ */ new Set(["node", ...def.services.filter((s) => !s.image).map((s) => s.adapter === "node" ? "node" : "java"), ...def.services.filter((s) => s.debug).map((s) => "java"), ...def.services.filter((s) => s.image).map((s) => "service-" + s.name), ...def.dependencies.kafka ? ["kafka"] : [], ...def.dependencies.elasticsearch ? ["es"] : []]), found = {}, missing = [];
+        for (const key of needed) try {
+          found[key] = (await request("GET", "/images/" + encodeURIComponent(required[key]) + "/json")).Id;
+        } catch (e) {
+          if (e.statusCode !== 404) throw e;
+          missing.push(required[key]);
+        }
+        return { ok: !missing.length, images: found, missingImages: [...new Set(missing)], pullExplicit: true };
+      }
+      async function pull(def) {
+        const initial = await preflight(def);
+        for (const image of initial.missingImages) {
+          const result = await request("POST", "/images/create?fromImage=" + encodeURIComponent(image), void 0, { timeout: 3e5, limit: 8 * 1048576 });
+          if (result?.error) throw Error(result.error);
+          for (const line of String(result).split("\n")) {
+            let event;
+            try {
+              event = JSON.parse(line);
+            } catch {
+            }
+            if (event?.error) throw Error(event.error);
+          }
+        }
+        return preflight(def);
+      }
+      async function container(id, key, config, { aliases = [], network } = {}) {
+        check(id);
+        const r = store.read(id), name = `dt-env-${id}-${key}`;
+        change(id, (v) => {
+          if (!v.containers.includes(name)) v.containers.push(name);
+        });
+        const made = await request("POST", "/containers/create?name=" + encodeURIComponent(name), { ...config, Labels: labels(r), HostConfig: { Memory: 256 * 1048576, NanoCpus: 1e9, CapDrop: ["ALL"], SecurityOpt: ["no-new-privileges"], LogConfig: { Type: "local", Config: { "max-size": "5m", "max-file": "2" } }, ...config.HostConfig, NetworkMode: network || r.network }, NetworkingConfig: { EndpointsConfig: { [network || r.network]: { Aliases: [name, ...aliases] } } } });
+        check(id);
+        await request("POST", "/containers/" + made.Id + "/start");
+        check(id);
+        return name;
+      }
+      async function until(id, operation, timeout = 9e4) {
+        const deadline = Date.now() + timeout;
+        let error;
+        do {
+          check(id);
+          try {
+            return await operation();
+          } catch (e) {
+            if (e.fatal) throw e;
+            error = e;
+          }
+          await wait(200);
+        } while (Date.now() < deadline);
+        throw Error(`Readiness deadline: ${error?.message || "not ready"}`);
+      }
+      async function baseURL(r, name, port) {
+        if (r.topology === "container") return `http://dt-env-${r.id}-${name}:${port}`;
+        const info = await inspect(`dt-env-${r.id}-${name}`), mapping = info?.NetworkSettings.Ports?.[port + "/tcp"]?.[0];
+        if (!mapping) throw Error("Published service endpoint missing");
+        return `http://127.0.0.1:${mapping.HostPort}`;
+      }
+      function publish(port) {
+        return { ExposedPorts: { [port + "/tcp"]: {} }, HostConfig: { PortBindings: { [port + "/tcp"]: [{ HostIp: "127.0.0.1", HostPort: "" }] } } };
+      }
+      async function httpCall(url, { method = "GET", headers: headers2 = {}, body, timeout_ms = 1e4 } = {}) {
+        if (!["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"].includes(method)) throw Error("Unsupported HTTP method");
+        if (Object.keys(headers2).some((k) => /^(host|connection|transfer-encoding|content-length)$/i.test(k))) throw Error("Transport-owned HTTP header");
+        const started = Date.now(), res = await fetch(url, { method, headers: { ...body !== void 0 ? { "content-type": "application/json" } : {}, ...headers2 }, ...body !== void 0 ? { body: typeof body === "string" ? body : JSON.stringify(body) } : {}, signal: AbortSignal.timeout(S.integer(timeout_ms, 1e4, 100, 12e4, "timeout_ms")), redirect: "error" });
+        let size = 0, chunks = [];
+        for await (const c of res.body || []) {
+          size += c.length;
+          if (size > 2 * 1048576) {
+            await res.body?.cancel().catch(() => {
+            });
+            throw Error("HTTP body exceeds 2 MiB");
+          }
+          chunks.push(c);
+        }
+        const text = Buffer.concat(chunks).toString("utf8");
+        let json;
+        try {
+          json = JSON.parse(text);
+        } catch {
+        }
+        return { status: res.status, headers: Object.fromEntries([...res.headers].filter(([k]) => !["set-cookie", "authorization"].includes(k))), body: json === void 0 ? text : json, ms: Date.now() - started };
+      }
+      async function hostProxy(id, logical, db) {
+        const key = id + ":" + logical;
+        if (proxyPending.has(key)) return proxyPending.get(key);
+        const pending = hostProxyStart(id, logical, db);
+        proxyPending.set(key, pending);
+        try {
+          return await pending;
+        } finally {
+          proxyPending.delete(key);
+        }
+      }
+      async function hostProxyStart(id, logical, db) {
+        const key = id + ":" + logical;
+        if (proxies.has(key)) return proxies.get(key).port;
+        const r = store.read(id), saved = r.hostProxies?.[logical], url = new URL(db.url), sockets = /* @__PURE__ */ new Set(), server = net.createServer((client) => {
+          sockets.add(client);
+          const upstream = net.connect(Number(url.port || 5432), url.hostname.replace(/^\[|\]$/g, ""));
+          client.on("close", () => {
+            sockets.delete(client);
+            upstream.destroy();
+          });
+          client.on("error", () => upstream.destroy());
+          upstream.on("error", () => client.destroy());
+          client.pipe(upstream);
+          upstream.pipe(client);
+        });
+        await new Promise((resolve2, reject) => {
+          server.once("error", reject);
+          server.listen(saved?.port || 0, "0.0.0.0", resolve2);
+        });
+        const port = server.address().port;
+        server.unref();
+        proxies.set(key, { server, port, sockets });
+        change(id, (v) => {
+          v.hostProxies ||= {};
+          v.hostProxies[logical] = { port };
+        });
+        return port;
+      }
+      function closeProxies(id) {
+        for (const [key, value] of proxies) if (!id || key.startsWith(id + ":")) {
+          for (const socket of value.sockets) socket.destroy();
+          value.server.close();
+          proxies.delete(key);
+        }
+      }
+      async function dependencies(id, report) {
+        let r = store.read(id);
+        const d = r.definition.dependencies, endpoints = {}, databases = {};
+        const preparation = await Promise.allSettled([
+          (async () => {
+            if (!d.kafka) return;
+            if (r.dependencyStatus.kafka === "ready") {
+              endpoints.kafka = "kafka:9092";
+              return;
+            }
+            note(id, "Starting Kafka-compatible broker");
+            await container(id, "kafka", { Image: report.images.kafka, Cmd: ["redpanda", "start", "--overprovisioned", "--smp", "1", "--memory", "512M", "--reserve-memory", "0M", "--node-id", "0", "--check=false", "--kafka-addr", "internal://0.0.0.0:9092", "--advertise-kafka-addr", "internal://kafka:9092"], HostConfig: { Memory: 768 * 1048576 } }, { aliases: ["kafka"] });
+            await until(id, () => engine.exec(`dt-env-${id}-kafka`, ["rpk", "cluster", "info", "-X", "brokers=127.0.0.1:9092"]));
+            const singles = d.kafka.topics.filter((t) => t.partitions === 1);
+            if (singles.length) await engine.exec(`dt-env-${id}-kafka`, ["rpk", "topic", "create", ...singles.map((t) => t.name), "--replicas", "1", "-X", "brokers=127.0.0.1:9092"]);
+            for (const t of d.kafka.topics.filter((t2) => t2.partitions !== 1)) await engine.exec(`dt-env-${id}-kafka`, ["rpk", "topic", "create", t.name, "--partitions", String(t.partitions), "--replicas", "1", "-X", "brokers=127.0.0.1:9092"]);
+            for (const t of d.kafka.topics) await until(id, () => engine.exec(`dt-env-${id}-kafka`, ["rpk", "topic", "describe", t.name, "-X", "brokers=127.0.0.1:9092"]));
+            endpoints.kafka = "kafka:9092";
+            change(id, (v) => {
+              v.dependencyStatus.kafka = "ready";
+            });
+          })(),
+          (async () => {
+            if (!d.elasticsearch) return;
+            if (r.dependencyStatus.elasticsearch === "ready") {
+              endpoints.es = "http://search:9200";
+              return;
+            }
+            note(id, "Starting Elasticsearch");
+            const ports = publish(9200);
+            await container(id, "es", { Image: report.images.es, ...ports, Env: ["discovery.type=single-node", "xpack.security.enabled=false", "xpack.ml.enabled=false", "ingest.geoip.downloader.enabled=false", "ES_JAVA_OPTS=-Xms512m -Xmx512m"], HostConfig: { ...ports.HostConfig, Memory: 1536 * 1048576 } }, { aliases: ["search"] });
+            r = store.read(id);
+            const base = await baseURL(r, "es", 9200);
+            await until(id, async () => {
+              const v = await httpCall(base + "/_cluster/health?wait_for_status=yellow&timeout=1s");
+              if (v.status !== 200 || v.body?.timed_out) throw Error("ES not ready");
+            });
+            for (const index of d.elasticsearch.indices) {
+              let result = await httpCall(base + "/" + encodeURIComponent(index.name), { method: "PUT", body: { settings: { number_of_shards: 1, number_of_replicas: 0 }, mappings: index.mappings } });
+              if (result.status >= 300) throw Error("ES index creation: " + JSON.stringify(result.body));
+              if (index.documents.length) {
+                const body = index.documents.map((doc, i) => JSON.stringify({ index: { _index: index.name, _id: String(i + 1) } }) + "\n" + JSON.stringify(doc)).join("\n") + "\n";
+                result = await httpCall(base + "/_bulk?refresh=wait_for", { method: "POST", headers: { "content-type": "application/x-ndjson" }, body });
+                if (result.status !== 200 || result.body.errors) throw Error("ES bulk seed failed");
+              }
+            }
+            endpoints.es = "http://search:9200";
+            change(id, (v) => {
+              v.dependencyStatus.elasticsearch = "ready";
+            });
+          })(),
+          (async () => {
+            const bound = r.databaseBindings || {};
+            if (!Object.keys(bound).length) return;
+            const host = await self2();
+            for (const [logical, db] of Object.entries(bound)) {
+              const u = new URL(db.url), name = "pg-" + logical;
+              if (!/^[a-z][a-z0-9-]{0,39}$/.test(logical)) throw Error("Invalid logical datasource name");
+              let upstreamHost = u.hostname, upstreamPort = u.port || 5432;
+              if (!host && ["127.0.0.1", "localhost", "[::1]"].includes(u.hostname)) {
+                upstreamHost = "host.docker.internal";
+                upstreamPort = await hostProxy(id, logical, db);
+              }
+              if (host && !process.env.DT_SERVICE_ENV_UPSTREAM_NETWORK && host.networks.length !== 1) throw Error("Select DT_SERVICE_ENV_UPSTREAM_NETWORK for the scratch database");
+              const upstream = host ? process.env.DT_SERVICE_ENV_UPSTREAM_NETWORK || host.networks[0] : r.network;
+              if (!upstream) throw Error("No worker upstream network for scratch PG");
+              const gateway = await container(id, name, { Image: report.images.node, Entrypoint: ["node"], Cmd: ["-e", CODE], Env: [`UPSTREAM_HOST=${upstreamHost}`, `UPSTREAM_PORT=${upstreamPort}`], HostConfig: !host && process.platform === "linux" ? { ExtraHosts: ["host.docker.internal:host-gateway"] } : {} }, { network: upstream, aliases: host ? [] : [name] });
+              if (host) await request("POST", "/networks/" + r.network + "/connect", { Container: gateway, EndpointConfig: { Aliases: [name] } });
+              databases[logical] = { ...db, jdbcUrl: `jdbc:postgresql://${name}:5432/${db.database}${u.search}` };
+            }
+            for (const db of Object.values(bound)) {
+              const client = require_src10()(db.url, { username: db.user, password: db.password, max: 1, connect_timeout: 3, onnotice: () => {
+              } });
+              try {
+                await client`select 1`;
+              } finally {
+                await client.end({ timeout: 1 });
+              }
+            }
+            change(id, (v) => {
+              v.dependencyStatus.postgres = "ready";
+            });
+          })()
+        ]);
+        const failed = preparation.find((x) => x.status === "rejected");
+        if (failed) throw failed.reason;
+        change(id, (v) => {
+          v.endpoints = endpoints;
+          v.applicationDatabases = databases;
+        });
+      }
+      function artifactFiles(service) {
+        const roots = [C.PATHS.work, C.PATHS.build, ...String(process.env.DT_RUNNER_ROOTS || "").split(",").filter(Boolean)].map((p) => fs3.realpathSync(p));
+        const source = fs3.realpathSync(service.sourcePath);
+        if (!roots.some((root) => source.startsWith(root + path3.sep))) throw Error("Service source is outside worker roots");
+        let files = [], bytes = 0;
+        function add(full, relative) {
+          const stat = fs3.lstatSync(full);
+          if (stat.isSymbolicLink()) throw Error("Application artifacts cannot contain symlinks");
+          if (stat.isDirectory()) {
+            for (const child of fs3.readdirSync(full).sort()) if (![".git", ".dt", ".gradle", "target", "build"].includes(child)) add(path3.join(full, child), relative ? relative + "/" + child : child);
+            return;
+          }
+          if (!stat.isFile()) throw Error("Application artifacts must be regular files");
+          if (Buffer.byteLength(relative) > 99) throw Error("Artifact file path exceeds 99 UTF-8 bytes");
+          bytes += stat.size;
+          if (bytes > 256 * 1048576 || files.length >= 1e4) throw Error("Application artifact exceeds 256 MiB / 10000 files");
+          files.push({ path: full, name: relative });
+        }
+        if (service.adapter === "spring-boot") {
+          const jar = fs3.realpathSync(service.artifactPath);
+          if (!jar.startsWith(source + path3.sep) || !jar.endsWith(".jar") || fs3.lstatSync(service.artifactPath).isSymbolicLink()) throw Error("Spring artifact must be a workspace jar");
+          if (fs3.statSync(jar).size > 256 * 1048576) throw Error("Application jar exceeds 256 MiB");
+          files = [{ path: jar, name: "application.jar" }];
+        } else add(source, "");
+        const h = crypto.createHash("sha256");
+        for (const f of files) {
+          h.update(f.name + "\0");
+          const fd = fs3.openSync(f.path, "r"), buffer = Buffer.alloc(65536);
+          try {
+            for (let n; n = fs3.readSync(fd, buffer, 0, buffer.length, null); ) h.update(buffer.subarray(0, n));
+          } finally {
+            fs3.closeSync(fd);
+          }
+        }
+        return { files, digest: h.digest("hex") };
+      }
+      async function launch(id, service, report) {
+        check(id);
+        let r = store.read(id);
+        note(id, "Staging " + service.name);
+        const artifact = artifactFiles(service), staging = store.safe("artifact-" + id + "-" + service.name);
+        fs3.mkdirSync(staging, { recursive: true, mode: 448 });
+        for (let i = 0; i < artifact.files.length; i++) {
+          const target = path3.join(staging, String(i));
+          fs3.copyFileSync(artifact.files[i].path, target);
+          artifact.files[i] = { ...artifact.files[i], path: target };
+        }
+        const copied = crypto.createHash("sha256");
+        for (const file of artifact.files) {
+          copied.update(file.name + "\0");
+          for await (const chunk of fs3.createReadStream(file.path)) copied.update(chunk);
+        }
+        artifact.digest = copied.digest("hex");
+        const volume = `dt-env-${id}-${service.name}`;
+        change(id, (v) => {
+          v.volumes.push(volume);
+        });
+        await request("POST", "/volumes/create", { Name: volume, Labels: labels(r) });
+        const stage = await container(id, "stage-" + service.name, { Image: report.images.node, Entrypoint: ["node"], Cmd: ["-e", "setInterval(()=>{},60000)"], HostConfig: { Mounts: [{ Type: "volume", Source: volume, Target: "/app" }] } });
+        if (service.debug) artifact.files.push({ name: "dt-debugger.java", bytes: fs3.readFileSync(path3.join(__dirname, "service-debugger.java")) });
+        await request("PUT", "/containers/" + stage + "/archive?path=/app", engine.archive(artifact.files), { timeout: 12e4 });
+        fs3.rmSync(staging, { recursive: true, force: true });
+        await request("DELETE", "/containers/" + stage + "?force=1");
+        r = store.read(id);
+        const peers = Object.fromEntries(r.definition.services.map((s) => [s.name, `http://${s.name}:${s.port}`])), binding = S.bindings(service, r.applicationDatabases, r.endpoints, peers);
+        const ports = publish(service.port), env = { ...binding.env, LANG: "C.UTF-8", LC_ALL: "C.UTF-8", PORT: String(service.port) };
+        if (service.adapter === "spring-boot") env.SPRING_APPLICATION_JSON = JSON.stringify(binding.applicationProperties);
+        const cmd = service.adapter === "node" ? ["node", "/app/" + service.entry] : ["java", `-Xmx${Math.max(64, Math.floor(service.memory_mb * 0.65))}m`, "-Dfile.encoding=UTF-8", ...service.debug ? ["-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"] : [], "-jar", "/app/application.jar"];
+        const app = await container(id, service.name, { Image: report.images["service-" + service.name] || report.images[service.adapter === "node" ? "node" : "java"], Entrypoint: cmd.slice(0, 1), Cmd: cmd.slice(1), Env: Object.entries(env).map(([k, v]) => k + "=" + v), WorkingDir: "/app", User: "1000:1000", ...ports, HostConfig: { ...ports.HostConfig, Memory: service.memory_mb * 1048576, ReadonlyRootfs: true, Tmpfs: { "/tmp": "rw,nosuid,size=256m" }, Mounts: [{ Type: "volume", Source: volume, Target: "/app", ReadOnly: true }] } }, { aliases: [service.name] });
+        change(id, (v) => {
+          v.services[service.name] = { container: app, state: "starting", revision: service.revision, artifactDigest: artifact.digest, debug: service.debug, binding };
+        });
+      }
+      async function prepare(id) {
+        const started = Date.now();
+        try {
+          state(id, "preparing");
+          let r = store.read(id);
+          const report = await preflight(r.definition);
+          if (!report.ok) throw Error("Missing Docker images: " + report.missingImages.join(", ") + "; explicitly prepare images then start a new run");
+          check(id);
+          if (r.reusedWarm) {
+            for (const key of ["kafka", "es"]) if (r.imageIds?.[key]) report.images[key] = r.imageIds[key];
+          }
+          const own = await self2();
+          change(id, (v) => {
+            v.topology = own ? "container" : "host";
+            v.imageIds = report.images;
+          });
+          if (!r.reusedWarm) {
+            change(id, (v) => {
+              v.networkIntended = true;
+            });
+            await request("POST", "/networks/create", { Name: r.network, Labels: labels(r), Driver: "bridge" });
+          }
+          if (own && !r.reusedWarm) await request("POST", "/networks/" + r.network + "/connect", { Container: own.id });
+          await dependencies(id, report);
+          check(id);
+          r = store.read(id);
+          change(id, (v) => {
+            v.timings.dependenciesMs = Date.now() - started;
+          });
+          if (r.warm) {
+            state(id, "starting");
+            state(id, "ready");
+            note(id, "Dependencies warm; no application launched");
+            return;
+          }
+          state(id, "starting");
+          for (const service of r.launches) await launch(id, service, report);
+          await Promise.all(r.launches.map((service) => until(id, async () => {
+            const info = await inspect(`dt-env-${id}-${service.name}`);
+            if (!info?.State.Running) throw Object.assign(Error(`${service.name} exited (${info?.State.ExitCode})`), { fatal: true });
+            const result = await httpCall(await baseURL(store.read(id), service.name, service.port) + service.health_path);
+            if (result.status < 200 || result.status >= 300) throw Error(`${service.name} health HTTP ${result.status}`);
+            change(id, (v) => {
+              v.services[service.name].state = "ready";
+              v.services[service.name].health = { status: result.status, at: (/* @__PURE__ */ new Date()).toISOString() };
+            });
+          }, service.ready_timeout_ms)));
+          check(id);
+          state(id, "ready");
+          change(id, (v) => {
+            v.timings.readyMs = Date.now() - started;
+            v.outcome = "running";
+          });
+          note(id, "Application ready");
+        } catch (error) {
+          change(id, (r) => {
+            r.error = error.message;
+            r.outcome = r.stopRequested ? "stopped" : "failed";
+            if (r.state !== "stopping" && r.state !== "stopped") r.state = "stopping";
+          });
+          await cleanup(id);
+        }
+      }
+      async function cleanup(id) {
+        const r = store.read(id);
+        if (!r || r.state === "stopped") return;
+        const failures = [];
+        for (const service of r.launches) try {
+          fs3.rmSync(store.safe("artifact-" + id + "-" + service.name), { recursive: true, force: true });
+        } catch (error) {
+          failures.push(error.message);
+        }
+        for (const name of [...r.containers].reverse()) try {
+          const info = await inspect(name);
+          if (info) {
+            if (!owned(r, info)) throw Error("Container ownership mismatch: " + name);
+            let out2;
+            try {
+              out2 = engine.logs(await request("GET", "/containers/" + name + "/logs?stdout=1&stderr=1&tail=100", void 0, { raw: true }));
+            } catch (error) {
+              out2 = "Log capture failed: " + error.message;
+            }
+            change(id, (v) => {
+              v.retainedLogs[name] = out2.slice(-32768);
+            });
+            await request("DELETE", "/containers/" + name + "?force=1");
+          }
+        } catch (error) {
+          failures.push(error.message);
+        }
+        if (!failures.length) closeProxies(id);
+        if (!failures.length) for (const volume of r.volumes) try {
+          const info = await request("GET", "/volumes/" + volume);
+          if (info.Labels?.["dt.service-env.owner"] !== r.marker || info.Labels?.["dt.service-env.id"] !== r.id) throw Error("Volume ownership mismatch");
+          await request("DELETE", "/volumes/" + volume);
+        } catch (e) {
+          if (e.statusCode !== 404) failures.push(e.message);
+        }
+        if (!failures.length && r.networkIntended) try {
+          const net2 = await request("GET", "/networks/" + r.network);
+          if (net2.Labels?.["dt.service-env.owner"] !== r.marker || net2.Labels?.["dt.service-env.id"] !== r.id) throw Error("Network ownership mismatch");
+          const own = await self2();
+          if (own && net2.Containers?.[own.id]) await request("POST", "/networks/" + r.network + "/disconnect", { Container: own.id, Force: true });
+          await request("DELETE", "/networks/" + r.network);
+        } catch (e) {
+          if (e.statusCode !== 404) failures.push(e.message);
+        }
+        change(id, (v) => {
+          v.cleanupErrors = failures;
+          v.state = failures.length ? "cleanup-failed" : "stopped";
+          v.outcome ||= "stopped";
+          v.stoppedAt = (/* @__PURE__ */ new Date()).toISOString();
+          for (const service of Object.values(v.services)) service.state = "stopped";
+        });
+        note(id, failures.length ? "Cleanup failed; retry stop" : "Owned resources released");
+      }
+      async function start(a) {
+        D.key(a.id);
+        if (!/^[a-f0-9]{48}$/.test(a.capability || "")) throw Error("A private lease capability is required");
+        const definition = S.spec(a.definition), fingerprint = S.fingerprint({ definition, launches: a.launches, databases: a.databases }), release = store.lock(a.id);
+        let existing;
+        try {
+          existing = store.read(a.id);
+          if (existing) {
+            load(a.id, a.capability);
+            if (existing.requestHash !== fingerprint) throw D.invalid("Idempotent start inputs changed", "STATE_CONFLICT", 409);
+          } else {
+            const running = headers().filter((r2) => r2.state !== "stopped");
+            if (running.reduce((n, r2) => n + r2.memory, 0) + memory({ definition, warm: a.warm }) > Number(process.env.DT_SERVICE_ENV_MEMORY_MB || 6144)) throw Error("Worker memory admission budget reached");
+            if (headers().filter((r2) => r2.state !== "stopped").length >= Number(process.env.DT_SERVICE_ENV_CAPACITY || 4)) throw Error("Service environment worker capacity reached");
+            const r = { id: a.id, capability: a.capability, marker: token(), requestHash: fingerprint, definition, launches: a.launches || [], databaseBindings: a.databases || {}, state: "queued", generation: 1, createdAt: (/* @__PURE__ */ new Date()).toISOString(), expiresAt: Date.now() + definition.ttl_ms, containers: [], volumes: [], services: {}, debuggers: {}, events: [], sequence: 0, dependencyStatus: {}, timings: {}, network: "dt-env-" + a.id, retainedLogs: {}, warm: a.warm === true };
+            bind(r, lifecycle, "state");
+            store.write(a.id, r);
+            track(r);
+          }
+        } finally {
+          release();
+        }
+        if (!existing) {
+          const pending = prepare(a.id).finally(() => active.delete(a.id));
+          active.set(a.id, pending);
+        }
+        return publicRecord(load(a.id, a.capability));
+      }
+      async function status(a) {
+        let r = load(a.id, a.capability);
+        if (r.expiresAt <= Date.now() && r.state !== "stopped") await stop(a);
+        r = load(a.id, a.capability);
+        if (r.state === "ready" && !r.warm) {
+          if (r.topology === "host") {
+            for (const [logical, db] of Object.entries(r.databaseBindings || {})) if (r.hostProxies?.[logical]) await hostProxy(r.id, logical, db);
+          }
+          for (const [name, v] of Object.entries(r.services)) {
+            const info = await inspect(v.container);
+            if (!info || !owned(r, info) || !info.State.Running) {
+              change(r.id, (x) => {
+                x.error = `Service ${name} exited or ownership changed`;
+                x.outcome = "failed";
+                x.state = "stopping";
+              });
+              await cleanup(r.id);
+              break;
+            }
+          }
+        } else if (["queued", "preparing", "starting"].includes(r.state) && !active.has(r.id)) {
+          change(r.id, (x) => {
+            x.error = "Worker restarted during preparation; stop and start a new run";
+            x.outcome = "interrupted";
+            x.state = "stopping";
+          });
+          await cleanup(r.id);
+        }
+        return publicRecord(load(a.id, a.capability));
+      }
+      async function stop(a) {
+        let r = load(a.id, a.capability);
+        if (r.state === "stopped") return publicRecord(r);
+        change(r.id, (v) => {
+          v.stopRequested = true;
+          if (v.state !== "stopping") v.state = "stopping";
+        });
+        if (!active.has(r.id)) await cleanup(r.id);
+        return publicRecord(load(a.id, a.capability));
+      }
+      async function activate(a) {
+        const old = load(a.id, a.capability);
+        if (!old.warm || old.state !== "ready" || old.expiresAt <= Date.now() || active.has(old.id)) throw Error("Warm slot is unavailable");
+        const definition = S.spec(a.definition);
+        const running = headers().filter((v) => v.id !== old.id && v.state !== "stopped");
+        if (running.reduce((n, v) => n + v.memory, 0) + memory({ definition, warm: false }) > Number(process.env.DT_SERVICE_ENV_MEMORY_MB || 6144)) throw Error("Worker memory admission budget reached");
+        if (S.fingerprint(old.definition.dependencies) !== S.fingerprint(definition.dependencies)) throw Error("Warm slot dependency definition changed");
+        change(old.id, (r) => {
+          r.definition = definition;
+          r.launches = a.launches;
+          r.databaseBindings = a.databases || {};
+          r.warm = false;
+          r.reusedWarm = true;
+          r.generation++;
+          r.expiresAt = Date.now() + definition.ttl_ms;
+        });
+        const pending = prepare(old.id).finally(() => active.delete(old.id));
+        active.set(old.id, pending);
+        return publicRecord(load(a.id, a.capability));
+      }
+      async function renew(a) {
+        const r = load(a.id, a.capability);
+        if (r.state === "stopped" || r.expiresAt <= Date.now()) throw Error("Only an unexpired active environment can be renewed");
+        change(r.id, (v) => {
+          v.expiresAt = Date.now() + S.integer(a.ttl_ms, 18e5, 6e4, 864e5, "ttl_ms");
+        });
+        return publicRecord(load(a.id, a.capability));
+      }
+      async function bindings(a) {
+        const r = load(a.id, a.capability);
+        if (r.warm) throw Error("Select an application run rather than a warm slot");
+        const service = r.definition.services.find((s) => s.name === a.service);
+        if (!service) throw Error("Unknown environment service");
+        const binding = r.services[a.service]?.binding || (r.endpoints && r.applicationDatabases ? S.bindings(service, r.applicationDatabases, r.endpoints, Object.fromEntries(r.definition.services.map((s) => [s.name, `http://${s.name}:${s.port}`]))) : null);
+        if (!binding) throw Error("Dependency bindings are not allocated yet; service_env_plan includes source-file templates");
+        return { service: a.service, audience: "application-container", active: r.state === "ready" && r.expiresAt > Date.now(), ...binding };
+      }
+      async function logs(a) {
+        const r = load(a.id, a.capability), name = a.service ? `dt-env-${r.id}-${S.name(a.service)}` : null;
+        if (name && !r.containers.includes(name)) throw Error("Unknown service/container");
+        const names = name ? [name] : r.containers.filter((n) => !n.includes("-stage-"));
+        const out2 = [];
+        for (const name2 of names) {
+          let text = r.retainedLogs[name2] || "";
+          if (r.state !== "stopped") {
+            const info = await inspect(name2);
+            if (info) {
+              if (!owned(r, info)) throw Error("Container ownership mismatch");
+              text = engine.logs(await request("GET", "/containers/" + name2 + "/logs?stdout=1&stderr=1&tail=" + S.integer(a.lines, 100, 1, 500, "lines"), void 0, { raw: true }));
+            }
+          }
+          out2.push({ container: name2, text: text.slice(-32768) });
+        }
+        return { run: r.id, state: r.state, logs: out2 };
+      }
+      async function query(a) {
+        const r = load(a.id, a.capability);
+        if (r.state !== "ready" || r.warm || r.expiresAt <= Date.now()) throw Error("Query requires a ready unexpired application environment");
+        if (a.kind === "http") {
+          const service = r.definition.services.find((s) => s.name === a.service);
+          if (!service) throw Error("Unknown service");
+          if (typeof a.path !== "string" || !a.path.startsWith("/") || a.path.startsWith("//") || /[\r\n\0]/.test(a.path)) throw Error("Supply a service-relative HTTP path");
+          return httpCall(await baseURL(r, service.name, service.port) + a.path, { method: a.method || "GET", body: a.body, headers: a.headers || {}, timeout_ms: a.timeout_ms });
+        }
+        if (a.kind === "pg") {
+          if (typeof a.sql !== "string" || a.sql.length > 16e3) throw Error("Supply SQL of at most 16000 characters");
+          const db = r.databaseBindings[a.database];
+          if (!db) throw Error("Unknown owned database");
+          const sql = require_src10()(db.url, { username: db.user, password: db.password, max: 1, connect_timeout: 5, onnotice: () => {
+          } });
+          try {
+            return await sql.begin(async (tx) => {
+              await tx`set transaction read only`;
+              await tx`set local statement_timeout = '15s'`;
+              const rows = [];
+              let bytes = 0, truncated = false;
+              for await (const batch of tx.unsafe(a.sql, a.params || []).cursor(100)) {
+                for (const row of batch) {
+                  bytes += Buffer.byteLength(JSON.stringify(row));
+                  if (rows.length >= 1e3 || bytes > 1048576) {
+                    truncated = true;
+                    break;
+                  }
+                  rows.push(row);
+                }
+                if (truncated) break;
+              }
+              return { rows, limit: 1e3, truncated };
+            });
+          } finally {
+            await sql.end({ timeout: 1 });
+          }
+        }
+        if (a.kind === "es") {
+          if (!r.definition.dependencies.elasticsearch?.indices.some((i) => i.name === a.index)) throw Error("Unknown owned index");
+          return httpCall(await baseURL(r, "es", 9200) + "/" + encodeURIComponent(a.index) + "/_search", { method: "POST", body: a.body || { size: 20, query: { match_all: {} } } });
+        }
+        if (!r.definition.dependencies.kafka?.topics.some((t) => t.name === a.topic)) throw Error("Unknown owned topic");
+        if (a.kind === "kafka-produce") {
+          const text = JSON.stringify(a.body);
+          if (Buffer.byteLength(text || "") > 65536) throw Error("Kafka input exceeds 64 KiB");
+          const file = "dt-input-" + crypto.randomBytes(8).toString("hex") + ".jsonl", container2 = `dt-env-${r.id}-kafka`;
+          await request("PUT", "/containers/" + container2 + "/archive?path=/tmp", engine.archive([{ name: file, bytes: Buffer.from(text + "\n") }]));
+          try {
+            return { topic: a.topic, delivery: await engine.exec(container2, ["sh", "-c", `exec rpk topic produce "$1" --format '%v\\n' --delivery-timeout 5s -X brokers=127.0.0.1:9092 < "$2"`, "dt", a.topic, "/tmp/" + file]) };
+          } finally {
+            await engine.exec(container2, ["rm", "--", "/tmp/" + file]);
+          }
+        }
+        if (a.kind === "kafka-read") return { topic: a.topic, text: await engine.exec(`dt-env-${r.id}-kafka`, ["rpk", "topic", "consume", a.topic, "--num", String(S.integer(a.limit, 5, 1, 100, "limit")), "--offset", ":end", "--format", "json", "--pretty-print=false", "-X", "brokers=127.0.0.1:9092"]) };
+        throw Error("Unsupported environment query kind");
+      }
+      async function debug(a) {
+        const key = a.id + ":" + a.service;
+        if (debugPending.has(key)) throw D.invalid("Debugger command already in progress; observe/retry after it settles", "STATE_CONFLICT", 409);
+        debugPending.add(key);
+        try {
+          return await debugCommand(a);
+        } finally {
+          debugPending.delete(key);
+        }
+      }
+      async function debugCommand(a) {
+        const r = load(a.id, a.capability);
+        if (r.state !== "ready" || r.expiresAt <= Date.now()) throw Error("Debugger needs a ready unexpired environment");
+        const service = r.definition.services.find((s) => s.name === a.service);
+        if (!service || service.adapter !== "spring-boot" || !service.debug) throw Error("Enable debug on a Spring service before starting it");
+        const debuggerName = "debug-" + service.name;
+        let session = r.debuggers?.[service.name];
+        if (session) {
+          const info = await inspect(session.container);
+          if (info && !owned(r, info)) throw Error("Debugger ownership mismatch");
+          if (!info?.State.Running) {
+            if (info) await request("DELETE", "/containers/" + session.container + "?force=1");
+            change(r.id, (v) => {
+              delete v.debuggers[service.name];
+            });
+            session = null;
+          } else if (a.action === "attach") return { attached: true, service: a.service, pauseLimitMs: 6e4 };
+        }
+        if (!session) {
+          const image = (await request("GET", "/images/" + encodeURIComponent(images(r.definition).java) + "/json")).Id, secret = token(), ports = publish(4199);
+          const containerName = await container(r.id, debuggerName, { Image: image, Entrypoint: ["java"], Cmd: ["--add-modules", "jdk.jdi,jdk.httpserver", "/app/dt-debugger.java", service.name, "5005", "4199"], Env: ["DT_DEBUG_TOKEN=" + secret, "LANG=C.UTF-8", "LC_ALL=C.UTF-8"], ...ports, HostConfig: { ...ports.HostConfig, Memory: 384 * 1048576, ReadonlyRootfs: true, Tmpfs: { "/tmp": "rw,nosuid,size=128m" }, Mounts: [{ Type: "volume", Source: `dt-env-${r.id}-${service.name}`, Target: "/app", ReadOnly: true }] } });
+          session = { container: containerName, secret };
+          change(r.id, (v) => {
+            v.debuggers ||= {};
+            v.debuggers[service.name] = session;
+          });
+          await until(r.id, async () => {
+            const res = await httpCall(await baseURL(store.read(r.id), debuggerName, 4199) + "/?action=events", { headers: { "x-dt-debug-token": secret } });
+            if (res.status !== 200) throw Error("Debugger not attached");
+          }, 3e4);
+          if (a.action === "attach") return { attached: true, service: a.service, pauseLimitMs: 6e4 };
+        }
+        const params = new URLSearchParams({ action: a.action || "events" });
+        for (const [key, source] of Object.entries({ class: "class_name", line: "line", method: "method", id: "breakpoint", thread: "thread", after: "cursor" })) if (a[source] !== void 0) params.set(key, String(a[source]));
+        const result = await httpCall(await baseURL(store.read(r.id), debuggerName, 4199) + "/?" + params, { headers: { "x-dt-debug-token": session.secret } });
+        if (result.status !== 200) throw Error(result.body?.error || "Debugger command failed");
+        if (a.action === "detach") {
+          const info = await inspect(session.container);
+          if (info && !owned(r, info)) throw Error("Debugger ownership mismatch");
+          if (info) await request("DELETE", "/containers/" + session.container + "?force=1");
+          change(r.id, (v) => {
+            delete v.debuggers[service.name];
+          });
+        }
+        return { run: r.id, service: a.service, ...result.body };
+      }
+      async function recover() {
+        for (const h of headers().filter((v) => v.state !== "stopped")) {
+          const r = store.read(h.id);
+          try {
+            if (r.state !== "stopped") await status({ id: r.id, capability: r.capability });
+          } catch (error) {
+            try {
+              note(r.id, "Reconcile: " + error.message);
+            } catch {
+            }
+          }
+        }
+      }
+      function serve() {
+        if (timer) return;
+        timer = setInterval(() => recover().catch(() => {
+        }), 15e3);
+        timer.unref();
+        recover().catch(() => {
+        });
+      }
+      function close() {
+        clearInterval(timer);
+        timer = null;
+        closeProxies();
+      }
+      async function handle(action, a) {
+        if (!["start", "status", "stop", "renew", "bindings", "logs", "query", "preflight", "pull", "activate", "debug"].includes(action)) throw Error("Unknown service supervisor operation");
+        if (a.expected_generation !== void 0 && load(a.id, a.capability).generation !== a.expected_generation) throw D.invalid("Lease generation changed; reload status", "STATE_CONFLICT", 409);
+        return { start, status, stop, renew, activate, debug, bindings, logs, query, preflight: () => preflight(S.spec(a.definition)), pull: () => pull(S.spec(a.definition)) }[action](a);
+      }
+      return { handle, serve, close, recover, lifecycle, store, active, preflight };
+    }
+    var instance;
+    var runtime = () => instance ||= create();
+    module2.exports = { create, runtime, lifecycle };
+  }
+});
+
 // lib/buildenv.js
 var require_buildenv = __commonJS({
   "lib/buildenv.js"(exports2, module2) {
@@ -65209,6 +66496,13 @@ var require_runner = __commonJS({
           });
         });
         if (req.method === "GET" && req.url === "/info") return send(res, 200, await info());
+        if (req.method === "POST" && req.url.startsWith("/service-environment/")) {
+          try {
+            return send(res, 200, await require_service_env_worker().runtime().handle(req.url.slice("/service-environment/".length), body));
+          } catch (error) {
+            return send(res, error.statusCode || 400, { error: error.message, code: error.code });
+          }
+        }
         if (req.method === "POST" && req.url === "/kill") {
           const p = procs.get(body.id);
           if (p) {
@@ -65270,6 +66564,8 @@ var require_runner = __commonJS({
         });
       });
       server.listen(port, host, () => console.error(`dt runner: ${host}:${port}${token ? "" : " (DT_RUNNER_TOKEN not set: refusing commands)"}; folders ${roots().join(", ")}`));
+      if (token) require_service_env_worker().runtime().serve();
+      server.once("close", () => require_service_env_worker().runtime().close());
       return server;
     }
     var url = () => require_config().getTests().runnerUrl;
@@ -67807,7 +69103,7 @@ var require_views = __commonJS({
       "frame-ancestors *"
     ].join("; ");
     function policy(view) {
-      return ["ui-page", "ui-trace", "capabilities", "ci", "workspace-coverage", "workbench"].includes(view.name) && view.builtin ? CSP.replace("allow-popups ", "allow-popups allow-popups-to-escape-sandbox ") : CSP;
+      return ["mapping-debugger", "service-environment", "ui-page", "ui-trace", "capabilities", "ci", "workspace-coverage", "workbench"].includes(view.name) && view.builtin ? CSP.replace("allow-popups ", "allow-popups allow-popups-to-escape-sandbox ") : CSP;
     }
     function parse(text) {
       const m = text.match(/^\s*<!--\s*(\{[\s\S]*?\})\s*-->\s*/);
@@ -67929,6 +69225,8 @@ var require_call_evidence = __commonJS({
         if (typeof payload.ok === "boolean") out2.execution = { kind: "assertions", status: payload.ok ? "passed" : "failed" };
         else if (typeof payload.status === "string") out2.execution = { kind: "assertions", status: payload.status };
       }
+      if (tool.startsWith("service_env_") && payload.state) out2.execution = { kind: "service-environment", status: payload.outcome === "failed" ? "failed" : payload.state };
+      if (tool === "service_env_request") out2.execution = { kind: "runtime-observation", status: payload.ok === false ? "failed" : "observed" };
       if (!out2.execution && out2.job) out2.execution = { kind: "job", status: out2.job.state };
       out2.failed = invocation === "failed" || FAILED.has(out2.execution?.status) || FAILED.has(out2.job?.state);
       return out2;
@@ -78478,149 +79776,6 @@ var require_tools_ui_pages = __commonJS({
   }
 });
 
-// lib/durable-private-store.js
-var require_durable_private_store = __commonJS({
-  "lib/durable-private-store.js"(exports2, module2) {
-    var fs3 = require("node:fs");
-    var path3 = require("node:path");
-    var crypto = require("node:crypto");
-    var invalid = (message, code = "DT_ARGUMENT_INVALID", statusCode = 400) => Object.assign(Error(message), { code, statusCode });
-    var hash = (value) => crypto.createHash("sha256").update(value).digest("hex");
-    var key = (value) => {
-      if (typeof value !== "string" || !/^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,99}$/.test(value) || value === "..") throw invalid("Invalid durable record id");
-      return value;
-    };
-    function create(root, maxBytes = 8 * 1048576) {
-      function safe(...parts) {
-        const home = require_config().HOME;
-        const relative = path3.relative(home, root);
-        if (relative.startsWith("..") || path3.isAbsolute(relative)) throw invalid("Durable store must be inside the configured home");
-        let ancestor = home;
-        for (const part of relative.split(path3.sep).filter(Boolean)) {
-          ancestor = path3.join(ancestor, part);
-          try {
-            if (fs3.lstatSync(ancestor).isSymbolicLink()) throw invalid("Durable state paths cannot be symbolic links");
-          } catch (e) {
-            if (e.code !== "ENOENT") throw e;
-          }
-        }
-        let file = root;
-        for (const part of [null, ...parts]) {
-          if (part !== null) file = path3.join(file, key(part));
-          try {
-            if (fs3.lstatSync(file).isSymbolicLink()) throw invalid("Durable state paths cannot be symbolic links");
-          } catch (e) {
-            if (e.code !== "ENOENT") throw e;
-          }
-        }
-        return file;
-      }
-      function read(name) {
-        const file = safe(name + ".json");
-        try {
-          if (fs3.statSync(file).size > maxBytes) throw invalid("Durable record exceeds storage budget");
-          return JSON.parse(fs3.readFileSync(file, "utf8"));
-        } catch (e) {
-          if (e.code === "ENOENT") return null;
-          throw e;
-        }
-      }
-      function write(name, value) {
-        const data = JSON.stringify(value), file = safe(name + ".json");
-        if (Buffer.byteLength(data) > maxBytes) throw invalid("Durable record exceeds storage budget");
-        fs3.mkdirSync(safe(), { recursive: true, mode: 448 });
-        const temporary = safe("tmp-" + crypto.randomUUID()), fd = fs3.openSync(temporary, "wx", 384);
-        try {
-          fs3.writeFileSync(fd, data);
-          fs3.fsyncSync(fd);
-        } finally {
-          fs3.closeSync(fd);
-        }
-        try {
-          fs3.renameSync(temporary, file);
-          const dir = fs3.openSync(safe(), "r");
-          try {
-            fs3.fsyncSync(dir);
-          } finally {
-            fs3.closeSync(dir);
-          }
-        } finally {
-          fs3.rmSync(temporary, { force: true });
-        }
-        return value;
-      }
-      function list(prefix = "") {
-        let names;
-        try {
-          names = fs3.readdirSync(safe());
-        } catch (e) {
-          if (e.code === "ENOENT") return [];
-          throw e;
-        }
-        return names.filter((n) => n.endsWith(".json") && n.startsWith(prefix)).sort().map((n) => read(n.slice(0, -5))).filter(Boolean);
-      }
-      function lock(name) {
-        fs3.mkdirSync(safe(), { recursive: true, mode: 448 });
-        const prefix = key(name) + ".lock-", own = prefix + process.pid + "-" + crypto.randomUUID(), dir = path3.join(safe(), own);
-        fs3.mkdirSync(dir, { mode: 448 });
-        const release = () => fs3.rmSync(dir, { recursive: true, force: true });
-        function contenders() {
-          return fs3.readdirSync(safe()).filter((n) => n.startsWith(prefix)).map((n) => {
-            const suffix = n.slice(prefix.length), match = suffix.match(/^(\d+)-[a-f0-9-]{36}$/);
-            if (!match) throw invalid("Damaged durable writer lock", "STATE_CONFLICT", 409);
-            const candidate = path3.join(safe(), n);
-            let stat;
-            try {
-              stat = fs3.lstatSync(candidate);
-            } catch (e) {
-              if (e.code === "ENOENT") return null;
-              throw e;
-            }
-            if (!stat.isDirectory() || stat.isSymbolicLink()) throw invalid("Invalid durable writer lock");
-            try {
-              process.kill(Number(match[1]), 0);
-            } catch (e) {
-              if (e.code === "ESRCH") {
-                fs3.rmSync(candidate, { recursive: true, force: true });
-                return null;
-              }
-            }
-            let ticket;
-            try {
-              const f = path3.join(candidate, "ticket.json");
-              if (fs3.lstatSync(f).isSymbolicLink()) throw invalid("Invalid durable writer ticket");
-              ticket = JSON.parse(fs3.readFileSync(f, "utf8")).ticket;
-            } catch (e) {
-              if (e.code !== "ENOENT" && !(e instanceof SyntaxError)) throw e;
-            }
-            return { name: n, ticket: Number.isSafeInteger(ticket) && ticket > 0 ? ticket : null };
-          }).filter(Boolean);
-        }
-        try {
-          const ticket = Math.max(0, ...contenders().map((c) => c.ticket || 0)) + 1;
-          fs3.writeFileSync(path3.join(dir, "ticket.json"), JSON.stringify({ ticket }), { mode: 384, flag: "wx" });
-          const blocked = contenders().some((c) => c.name !== own && (c.ticket === null || c.ticket < ticket || c.ticket === ticket && c.name < own));
-          if (blocked) throw invalid("Durable record is owned by a running writer; retry after it finishes", "STATE_CONFLICT", 409);
-          return release;
-        } catch (error) {
-          release();
-          throw error;
-        }
-      }
-      function update(name, fn) {
-        const release = lock(name);
-        try {
-          return fn(read(name));
-        } finally {
-          release();
-        }
-      }
-      return { read, write, list, lock, update, root, safe };
-    }
-    module2.exports = { create, key, hash, invalid };
-  }
-});
-
 // lib/named-views.js
 var require_named_views = __commonJS({
   "lib/named-views.js"(exports2, module2) {
@@ -80464,10 +81619,10 @@ var require_source_version = __commonJS({
     var path3 = require("node:path");
     var crypto = require("node:crypto");
     function files(root) {
-      return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
+      return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md|java)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "e02b31be92fbc76cd55b3bb04ca038cbf5d6952f4751c3e5ebed80c5e0b88f7a";
+      if (true) return "f13c31d7df56147b6aaf0319aa34a1c0bab48e6069579fe4556779fe72865d47";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -80696,6 +81851,23 @@ var require_handbook_content = __commonJS({
           "If another editor changes a generated file during refresh, revision checks reject the stale write. Read the current file and refresh intentionally; do not erase operator notes to resolve a conflict. This persistent memory complements the live briefing rather than silently replacing it."
         ], { examples: [example("self_context", { env: "{{env}}", save: true }, "Save a scoped self-context", "The context ID, written file paths, snapshot time and a link to Task memory."), example("context_get", { id: "dev-tool-self" }, "Inspect persistent self-context", "A file inventory. Read operator-notes.md for local operating knowledge.")] })
       ], ["task-memory", "operations", "tool-reference"]),
+      chapter("service-environments", "Run a branch in a persistent service environment", "Build confidence", "Build workspace services against disposable PostgreSQL, Kafka and Elasticsearch dependencies, then inspect real outcomes.", "Resume a lease across chats, export application configuration and retain independent entry-to-exit observations.", ["An owned workspace; reachable Docker worker with preloaded images; a prepared immutable scratch template when using PostgreSQL."], [
+        section("supervise", "Save, start and resume", [
+          "Open Admin \u2192 Service environments. Create a named definition, choose each workspace/module, HTTP port and readiness path, then declare required databases, topics and indices. Save before starting. Unsaved edits cannot launch the older definition. The left library separates definitions from runs and warm dependency slots.",
+          "Start services returns an owned run and background job. Observe progress, the first readiness failure and bounded logs. Refresh observes the same lease. Copy resume link and keep the run ID in task memory; the same authenticated user can explicitly resume it from another chat. Closing a chat or browser does not stop application containers. Stop and expiry release only owned resources.",
+          "Each run pins its definition version, source fingerprint, commit when available, image IDs and staged artifact digest. Version history lets you inspect immutable definitions; editing the current definition leaves existing runs unchanged. Restart with fresh state stops the old run and creates a new one. Warm dependencies explicitly prepares an exclusive clean Kafka/Elasticsearch slot for one matching start."
+        ], { examples: [example("service_env_plan", {}, "Discover saved definitions and runs", "Principal-owned library, limits and next steps. No build or allocation."), example("service_env_status", { id: "{{run}}" }, "Observe a saved run", "Lease, pinned definition version, progress, errors and source identity. Select an actual returned run ID.")], figure: figure("service-environment-supervisor.png", "Service environment supervisor: real Node application and backend request, simulated Docker protocol; no native container-stack proof.") }),
+        section("configure", "Give the application its configuration", [
+          "service_env_plan returns application.properties templates before launch. service_env_bindings returns allocated DT_ENV_* variables and properties once dependencies are prepared. The worker injects Spring JSON configuration and environment variables; map logical databases to custom datasource property prefixes and reference peer services through DT_ENV_SERVICE_<NAME>_URL.",
+          "Container DNS is for application containers. Browser/backend HTTP, read-only SQL, ES searches and Kafka operations use service_env_request on the backend worker. Private passwords are masked unless reveal_secrets is explicit. Read properties with read_path, then supply write_path and expected_revision to save a managed block without replacing unrelated settings. Nothing is written by merely reading bindings.",
+          "Snapshot replay disables schema initialization/migrations and Consul discovery/config. Prepare an upgraded template to test a schema change. Review custom providers and background jobs; outbound network access is allowed. A default local profile does not automatically discover every dependency."
+        ], { examples: [example("service_env_bindings", { id: "{{run}}", service: "{{service}}" }, "Read application configuration", "Properties with environment placeholders and audience-specific variables; masked secrets. No workspace write.")] }),
+        section("observe", "Collect behavioral evidence and inspect a paused JVM", [
+          "Send a specific request, then independently query the affected database, index or topic. Results and failures are retained privately with run identity and timestamps. Reopen an evidence ID with service_env_status instead of repeating an operation that changes state. Save reusable request/query steps in a named script/collection with a run parameter.",
+          "For a debug-enabled Spring service, service_debug can attach, set a class-line or method breakpoint, inspect bounded threads/stack/locals and resume/detach. Java debug sessions use a private bridge and paused threads auto-resume after 60 seconds. Joern assumptions remain static hypotheses until the behavior is observed.",
+          "node demo/service-environments.js starts the labeled protocol-fixture showcase. node dev/check-service-environments.js exercises mouse flows, WebSocket requests, cross-reload resume and mobile layout. Native Docker/PG/Kafka/ES checks require the opt-in tests documented in docs/service-environments.md; fixture passes do not certify that topology."
+        ], { examples: [example("service_env_request", { id: "{{run}}", kind: "http", service: "{{service}}", path: "/actuator/health" }, "Observe application readiness", "An actual backend HTTP response or retained failure; request receipt includes private evidence ID."), example("service_env_control", { id: "{{run}}", action: "stop", expected_generation: 1 }, "Stop a selected generation", "Inspect status until owned cleanup completes; stale generation is rejected.")] })
+      ], ["reproduce", "verify-changes", "task-memory", "operations"]),
       chapter("task-memory", "Contexts, nearby files and handoffs", "Start here", "Keep notes and results outside disposable Git checkouts.", "Resume work without re-fetching everything or trusting stale conclusions.", ["Choose a ticket/task identity and current story."], [
         section("start-memory", "Search before creating", [
           "A context is a durable folder with a discovery index. It is useful even when the task has no repository: log investigations, data comparisons, requirement research and scripts can all live there. Contexts and writable code workspaces solve different problems.",
@@ -80976,6 +82148,7 @@ node cli.js tool label_stats '{"label":"refund approved"}'` }
       example("view_save", { name: "handbook-label", description: "Local practice label card; DATA is {label:string}.", html: '<article class="card"><h2 id="practice-label"></h2><p class="muted">Synthetic handbook practice</p></article><script>document.getElementById("practice-label").textContent = String(DATA.label ?? "No label supplied");</script>', sample: { label: "Refund approved" } }, "Save a practice renderer in this story", "Creates handbook-label in the current story. It renders supplied data and makes no API requests."),
       example("show", { view: "handbook-label", data: { label: "Refund approved" }, title: "Local renderer practice" }, "Render the saved practice view", "Run Save a practice renderer first. Inspect the native card; remove the practice view from Admin \u2192 Views when finished.")
     );
+    for (const section2 of chapters.find((c) => c.id === "service-environments").sections) for (const item of section2.examples || []) if (item.args.id === "{{run}}") item.requires = ["run"];
     var groupChapters = { automation: "developer-studio", jenkins: "ci-review", catalog: "indices", pg: "live-evidence", es: "live-evidence", kafka: "live-evidence", consul: "services", bitbucket: "case-library", confluence: "requirements", logs: "live-evidence", passport: "services", browser: "api-browser", api: "api-browser", scripts: "automation", views: "visualizations", files: "task-memory", history: "operations", showcase: "services", code: "verify-changes", context: "task-memory", map: "services", architecture: "requirements", runtime: "operations", semantic: "joern", knowledge: "requirements" };
     chapters.push(chapter("observability", "Trace work and inspect test coverage", "Operate", "Follow owned work across tools, workers and runners, then inspect exact coverage gaps.", "A content-free trace and source-matched coverage evidence with explicit limits.", ["Choose the intended chat/task in Admin Runtime."], [
       section("requests", "Find model traffic and failed responses", ["Open Admin \u2192 Runtime \u2192 Requests & models. Filter the retained journal by time, task, tool/model or outcome, then inspect a row for purpose, latency, HTTP status, reported usage and execution/result links. Counts and p95 cover the matching window, independently of paging. An application/test failure is distinct from an invocation failure. Missing usage is unknown.", "Model helpers include context hints, Admin suggestions/interpretations and documentation processing. Direct Open WebUI \u2192 GPUStack traffic is invisible unless that connection uses the explicitly enabled /model/v1 gateway; see docs/observability.md for setup. The journal stores metadata without prompts, SQL or response text. Diagnostic traces remain a separate opt-in. Inline event views are snapshots whose filters apply only to displayed rows."], { examples: [example("observability", { mode: "events", kind: "model", outcome: "capacity" }, "Inspect model capacity responses", "Retained observed HTTP 429/503/529 responses, not a diagnosis of provider overload.")] }),
@@ -80997,7 +82170,26 @@ node cli.js tool label_stats '{"label":"refund approved"}'` }
       section("coordinate", "Coordinate repositories and bounded programs", ["Open the offline workspace editor for revision-checked files and a bounded terminal. Index all selected repositories\u2019 Gradle files at exact immutable SHAs, inspect unresolved/shared owners, prepare a dependency upgrade plan, then explicitly apply it to a matching owned workspace.", "Save a loop/parallel/wait workflow before starting it. Model nodes require explicit permission; completed leaves never replay. Interrupted effects require explicit verified resolution before resume. Waits retain deadlines across restart."], { examples: [example("workspace_editor", { action: "list" }, "Find an owned editable workspace", "Lists supported terminal commands and policy without executing them."), example("gradle_inventory", { action: "list" }, "Browse exact Gradle indices", "Reads retained generations; no repository is fetched."), example("automation_flow_list", {}, "Find saved workflow checkpoints", "Opening status does not resume or invoke a model.")] }),
       section("logic", "Simulate logic and publish readable evidence", ["Name a shared page or an explicitly shared retained result with named_view. The human path is a locator; private data requires owner access or explicit result capability. Page actions send requests through the backend with ordinary grants; scoped SSE events only update observations.", "logic_model exports actual TLA+ and TLC configuration for finite declared logic graphs. Check safety/deadlocks, simulate seeded paths, and inspect transition coverage or hide it. Source observations are separate from model exploration. Neither establishes arbitrary source-code equivalence or liveness."], { examples: [example("named_view", { action: "list" }, "Browse readable view names", "Private aliases remain task scoped; sharing result data is explicit."), example("logic_model", { action: "run", template: "workflow-continuation", mode: "simulate", seed: 42, steps: 30, traces: 10, coverage: true }, "Simulate workflow continuation", "A finite abstraction with explicit assumptions and retained paths."), example("logic_model", { action: "run", template: "diff-lines", coverage: false }, "Explore concrete diff decision paths", "Fifty real diff runs inform this graph; general algorithm correctness is not established.")] })
     ]));
+    chapters.push(chapter("mapping-debugger", "Debug service response mappings", "Investigate", "Inspect API responses beside raw Postgres, Kafka and Elasticsearch evidence.", "A reproducible named notebook with independent raw reads, field comparisons, source references and retained failures.", ["Indexed service routes and configured data sources; choose an exact environment and database."], [
+      section("mapping-start", "Start with the wrong response field", [
+        "Open Mapping debugger from Admin \u2192 API client or the full API Explorer. Choose a service/environment and Discover routes & source references. Select a route, review its URL, replace path parameters and explicitly Send request. Consul targets resolve at send time when following a service; Refresh instances never replays an API request.",
+        "Add Postgres, Elasticsearch or Kafka reads on the right. Each read has its own environment, exact database/index/topic, editable query, parameters and source note. Browse cached tables & function bodies without querying the database. Static SQL drafts need a reviewed database and parameter values. Find field & mapper lineage reads indexed function expressions and code references; it is not a runtime trace.",
+        "Save a lowercase notebook name. Run individual reads or Run all source reads; this button never sends the API request. An API method can mutate, and HTTP errors keep their actual status. Cancellation/failure preserves receipts; a running receipt after process interruption has an unknown outcome. Inspect before retrying."
+      ], { examples: [example("mapping_debug", { action: "discover", service: "{{service}}", env: "{{env}}" }, "Discover mapping candidates offline", "Indexed SQL/source references, route candidates and explicit gaps; no network request.")] }),
+      section("mapping-compare", "Compare raw and mapped values", [
+        "Add field comparisons with JSON pointers such as /name and /0/display_name. Suggestions come from captured data. Equality is strict: null, missing values, strings and numbers differ. Retained values may be redacted; raw database reads and API capture are not an atomic snapshot and do not prove the SQL ran in that request.",
+        "Record assumptions about business keys, mapper fallbacks, query functions, cache lag and environment differences. Changing a saved definition starts a new recording; old recordings keep their exact definition. Repeating a read retains earlier receipts in history. Private notebooks and recordings persist for the same user across chats; retained /show snapshots follow normal chat access.",
+        "Open inline snapshot retains both sides and editable local pointer comparisons. Fresh network actions run in the authenticated debugger. Name snapshot /show creates a private readable alias; explicit admin publication via named_view can share a retained snapshot. Export reproducible notebook downloads the definition and model tool calls without runtime credentials. Export evidence in the inline view includes private captured data: review before sharing."
+      ], { figure: figure("mapping-debugger.png", "Synthetic empty-string fallback bug: local HTTP response versus synthetic PG/ES/Kafka adapters. Not a production or database integration claim.") }),
+      section("mapping-demo", "Reproduce the empty-string fallback bug", [
+        "Run node demo/mapping-debugger.js and open the printed URL. The mapper returns an empty localized label although display_name is United Kingdom. The business key comparison passes while the display name comparison differs. Change the request URL to ?fixed=1, Send request and Run the registry read to see the correct fallback compare equal. The original recording remains inspectable.",
+        "Tool flow: mapping_debug save with expected_revision=null and a version:1 definition; run with explicit steps [api, registry]; get with include_data=true for bounded raw evidence; open for an inline view; list/get/save/delete manage durable records with revision checks. PG uses existing read-only pg_query, ES uses es_search and Kafka uses kafka_last with normal grants, rate limits, tracing and cancellation. No background model calls or implicit retries.",
+        "Limits: 30 probes, 100 comparisons, 100 records per probe, 1 MiB per result and 6 MiB per recording; 200 notebooks and 200 recordings per user with a 256 MiB retained budget. Discovery reports bounded source candidates; missing dynamic SQL, generated mappers or internal-library analysis remain gaps. Delete old recordings explicitly when the budget is full."
+      ])
+    ], []));
     var visualHelp = {
+      "mapping-debugger": ["Why does the response differ from raw data?", "Inspect the saved response beside PG/ES/Kafka receipts, compare exact JSON pointers locally, expand raw queries and assumptions, export evidence or open the authenticated debugger for explicit sends. No network actions run inside the snapshot."],
+      "service-environment": ["Which service revision is running, and how do I inspect it?", "Read lease state, expiry, pinned definition/source identity and progress. Open the authenticated supervisor to read application properties, inspect logs, send backend requests/queries or control the lease. The inline snapshot does not start or stop services."],
       workbench: ["Which contexts, services and tickets relate to this work?", "Switch retained navigator lenses, inspect selected identity and related items, then open the authenticated live workbench to edit files or explicitly run actions. The chat snapshot cannot query infrastructure or grant execution."],
       "workspace-coverage": ["Which changed lines and branches need a regression?", "Select a production file, inspect missed/unknown lines and source freshness, prepare an editable source read or coverage run, copy a regression briefing or export JSON. Covered lines prove execution, not assertions."],
       ci: ["What happened to this exact build or PR commit?", "Inspect revision proof, checks, review comments, JUnit failures and gaps; resume the pinned wait or prepare an editable follow-up in Workbench."],
@@ -81043,6 +82235,9 @@ var require_tool_profiles = __commonJS({
     var CORE = ["find", "tool_search", "tool_describe", "tool_execute", "tool_profiles", "tool_contracts", "knowledge_graph", "knowledge_search", "job_cancel", "call_history", "doctor"];
     var DISCOVERY = ["tool_search", "tool_describe", "tool_execute", "tool_profiles"];
     var DIRECT = [
+      "mapping_debug",
+      "service_env_plan",
+      "service_env_status",
       "continuation_find",
       "continuation_get",
       "continuation_briefing",
@@ -81149,6 +82344,16 @@ var require_tool_profiles = __commonJS({
       "tool_execute"
     ];
     var TESTER = [
+      "mapping_debug",
+      "service_debug",
+      "service_env_plan",
+      "service_env_save",
+      "service_env_start",
+      "service_env_status",
+      "service_env_bindings",
+      "service_env_request",
+      "service_env_control",
+      "service_env_logs",
       "continuation_find",
       "continuation_get",
       "continuation_briefing",
@@ -81265,11 +82470,11 @@ var require_tool_profiles = __commonJS({
       compact: { description: "Small starting set; discover an exact tool then execute it with validated arguments.", names: CORE },
       lean: { description: "Four discovery tools. Search the catalog capability, describe it, then execute; expand profiles on request.", includeCore: false, names: DISCOVERY },
       "lean-find": { description: "Five tools: cached catalog search plus discovery; expand capabilities on request.", includeCore: false, names: [...DISCOVERY, "find"] },
-      investigate: { description: "Find services and data, inspect evidence, follow logs and visualize dependencies.", names: [...CORE, "passport", "passports", "pg_query", "pg_usage", "es_search", "kafka_last", "logs_search", "logs_trace", "health", "overview", "impact", "code_search", "feature", "experiment_list", "experiment_run"] },
-      testing: { description: "Build reproducible fixtures, scenario contracts, collections and isolated test runs.", prefixes: ["fixture_", "scenario_", "collection_", "testdb_", "test_"], names: [...CORE, "workspace_coverage_plan", "workspace_coverage", "workspace_open", "workspace_read", "workspace_write", "workspace_delete", "workspace_patch", "script_list", "script_get", "script_save", "script_delete", "script_run"] },
-      develop: { description: "Inspect code, make a workspace change, compile and verify its behavior.", prefixes: ["workspace_", "code_", "test_", "semantic_", "passport_adjust", "jenkins_", "bitbucket_pr_"], names: [...CORE, "passport", "repo_fetch", "impact", "experiment_save", "experiment_run", "experiment_compare"] },
+      investigate: { description: "Find services and data, inspect evidence, follow logs and visualize dependencies.", names: [...CORE, "mapping_debug", "passport", "passports", "pg_query", "pg_usage", "es_search", "kafka_last", "logs_search", "logs_trace", "health", "overview", "impact", "code_search", "feature", "experiment_list", "experiment_run"] },
+      testing: { description: "Build reproducible fixtures, scenario contracts, collections and isolated test runs.", prefixes: ["service_env_", "fixture_", "scenario_", "collection_", "testdb_", "test_"], names: [...CORE, "workspace_coverage_plan", "workspace_coverage", "workspace_open", "workspace_read", "workspace_write", "workspace_delete", "workspace_patch", "script_list", "script_get", "script_save", "script_delete", "script_run"] },
+      develop: { description: "Inspect code, make a workspace change, compile and verify its behavior.", prefixes: ["service_env_", "workspace_", "code_", "test_", "semantic_", "passport_adjust", "jenkins_", "bitbucket_pr_"], names: [...CORE, "service_debug", "passport", "repo_fetch", "impact", "experiment_save", "experiment_run", "experiment_compare"] },
       knowledge: { description: "Inspect source-neutral documentation, contracts, architecture and provenance.", prefixes: ["knowledge_", "docs_", "architecture_", "project_context_"], names: [...CORE, "feature", "passport", "who_uses"] },
-      api: { description: "Explore API/UI traffic and run mixed collections across HTTP, UI, Postgres, Elasticsearch and Kafka.", groups: ["api", "browser"], prefixes: ["api_", "collection_"], names: [...CORE, "pg_query", "es_search", "kafka_checkpoint", "kafka_wait", "kafka_produce", "script_list", "script_get", "script_run", "script_save", "script_delete", "script_transfer", "workflow_share", "pg_table", "pg_function", "script_collection", "routes_discover", "routes_learn"] },
+      api: { description: "Explore API/UI traffic and run mixed collections across HTTP, UI, Postgres, Elasticsearch and Kafka.", groups: ["api", "browser"], prefixes: ["api_", "collection_"], names: [...CORE, "mapping_debug", "pg_query", "es_search", "kafka_checkpoint", "kafka_wait", "kafka_produce", "script_list", "script_get", "script_run", "script_save", "script_delete", "script_transfer", "workflow_share", "pg_table", "pg_function", "script_collection", "routes_discover", "routes_learn"] },
       all: { description: "Every enabled tool; compatible with existing installations." }
     };
     function definitions() {
@@ -81347,6 +82552,8 @@ var require_handbook = __commonJS({
       return snapshot;
     }
     function chapterFor(tool) {
+      if (tool.name === "mapping_debug") return "mapping-debugger";
+      if (/^service_env_|^service_debug$/.test(tool.name)) return "service-environments";
       if (tool.name === "repo_model") return "self-reflection";
       if (tool.name === "workbench_open") return "start";
       if (/^(fixture_|scenario_)/.test(tool.name)) return "reproduce";
@@ -81406,8 +82613,13 @@ var require_capability_map = __commonJS({
       ["tools", "Tool catalog", "Discover exact capabilities and extension contracts."]
     ].map(([key, label, description]) => ({ id: "object:" + key, key, label, description, kind: "object" }));
     var groupObject = { jenkins: "execution", catalog: "tools", pg: "table", es: "search-index", kafka: "topic", consul: "environment", logs: "environment", bitbucket: "repository", confluence: "documentation", passport: "service", showcase: "service", browser: "api", api: "api", scripts: "automation", views: "evidence", files: "files", history: "execution", context: "context", map: "service", architecture: "memory", runtime: "execution", semantic: "component", knowledge: "memory" };
-    var exact = { repo_model: "repository", logic_model: "evidence", workspace_editor: "workspace", workspace_terminal: "workspace", gradle_inventory: "repository", gradle_bump: "repository", named_view: "evidence", ui_event: "execution", continuation_create: "task", continuation_find: "task", continuation_attach: "task", continuation_get: "task", continuation_briefing: "task", automation_flow_save: "automation", automation_flow_start: "automation", automation_flow_resume: "automation", ui_page: "evidence", ui_page_data: "environment", workbench_search: "context", workbench_inspect: "context", workbench_open: "task", workbench_save: "context", find: "database", catalog_search: "database", catalog_usage: "table", pg_query: "database", ddl_snapshot: "database", feature: "documentation", result_read: "evidence", self_context: "task", workflow_plan: "task", handbook: "task", checks: "task", test_coverage: "workspace", differential_check: "workspace", impact: "component", job_cancel: "execution", call_patterns: "automation", evaluation_evidence: "evidence" };
+    var exact = { mapping_debug: "service", repo_model: "repository", logic_model: "evidence", workspace_editor: "workspace", workspace_terminal: "workspace", gradle_inventory: "repository", gradle_bump: "repository", named_view: "evidence", ui_event: "execution", continuation_create: "task", continuation_find: "task", continuation_attach: "task", continuation_get: "task", continuation_briefing: "task", automation_flow_save: "automation", automation_flow_start: "automation", automation_flow_resume: "automation", ui_page: "evidence", ui_page_data: "environment", workbench_search: "context", workbench_inspect: "context", workbench_open: "task", workbench_save: "context", find: "database", catalog_search: "database", catalog_usage: "table", pg_query: "database", ddl_snapshot: "database", feature: "documentation", result_read: "evidence", self_context: "task", workflow_plan: "task", handbook: "task", checks: "task", test_coverage: "workspace", differential_check: "workspace", impact: "component", job_cancel: "execution", call_patterns: "automation", evaluation_evidence: "evidence" };
     var questions = {
+      mapping_debug: "Why does the service response differ from raw Postgres, Kafka or Elasticsearch data?",
+      service_env_plan: "How can I run a branch in a disposable environment and resume it from another chat?",
+      service_env_bindings: "Which environment variables and application.properties should this service use?",
+      service_env_control: "How can I stop, renew or reset my running service and fresh dependencies?",
+      service_env_request: "Can I hit this branch\u2019s API and inspect its own database, topics or indices?",
       repo_model: "How do source lifecycle and Joern graphs relate to TLA+ checks and observed runtime transitions?",
       logic_model: "Which logic paths and assumptions can I simulate or check with TLA+?",
       workspace_editor: "Where can I edit this workspace and inspect commands interactively?",
@@ -81528,7 +82740,7 @@ var require_capability_map = __commonJS({
     };
     function objectFor(tool) {
       if (exact[tool.name]) return exact[tool.name];
-      for (const [prefix, key] of [["workspace_", "workspace"], ["testdb_", "test-database"], ["test_", "workspace"], ["fixture_", "reproduction"], ["scenario_", "reproduction"], ["experiment_", "reproduction"], ["project_context_", "memory"], ["code_", "component"]]) if (tool.name.startsWith(prefix)) return key;
+      for (const [prefix, key] of [["service_env_", "environment"], ["service_debug", "environment"], ["workspace_", "workspace"], ["testdb_", "test-database"], ["test_", "workspace"], ["fixture_", "reproduction"], ["scenario_", "reproduction"], ["experiment_", "reproduction"], ["project_context_", "memory"], ["code_", "component"]]) if (tool.name.startsWith(prefix)) return key;
       return groupObject[tool.group] || "tools";
     }
     function question(tool) {
@@ -81539,6 +82751,9 @@ var require_capability_map = __commonJS({
       return verbs[action] ? "How can I " + verbs[action] + "?" : "What can " + tool.name + " do with this?";
     }
     var connections = [
+      ["task", "environment", "Where can I keep a running branch and resume it later?"],
+      ["workspace", "environment", "How can I run this exact code with fresh dependencies?"],
+      ["environment", "test-database", "Which private template clones belong to this run?"],
       ["task", "workspace", "Where do I change and verify code?"],
       ["task", "context", "Where do I keep progress and evidence?"],
       ["task", "memory", "What understanding can I reuse?"],
@@ -81559,7 +82774,7 @@ var require_capability_map = __commonJS({
       const tools = await require_tools().schemas({ metadata: true }), owner = require_access().owner();
       const nodes = tools.map((t) => ({ id: "tool:" + t.name, kind: "tool", name: t.name, label: t.name, description: t.description.slice(0, 1800), group: t.group || "other", origin: t.origin || "extension", object: objectFor(t), parameters: Object.entries(t.inputSchema.properties || {}).map(([name, s]) => ({ name, type: s.type, required: (t.inputSchema.required || []).includes(name) })), chapter: require_handbook().chapterFor(t) }));
       const edges = nodes.map((n) => ({ id: "question:" + n.name, from: "object:" + n.object, to: n.id, kind: "question", question: question(tools.find((t) => t.name === n.name)) }));
-      for (const [object, names] of [["service", ["workbench_open", "impact", "logs_search", "consul_service", "test_context", "architecture_service"]], ["task", ["context_open", "workspace_open", "project_context_find", "workflow_plan"]], ["component", ["test_context", "differential_check"]], ["table", ["pg_query"]], ["evidence", ["context_run"]]]) for (const name of names) {
+      for (const [object, names] of [["service", ["service_env_plan", "service_env_bindings", "service_env_request", "workbench_open", "impact", "logs_search", "consul_service", "test_context", "architecture_service"]], ["task", ["service_env_plan", "service_env_status", "context_open", "workspace_open", "project_context_find", "workflow_plan"]], ["component", ["test_context", "differential_check"]], ["table", ["pg_query"]], ["evidence", ["context_run"]]]) for (const name of names) {
         const tool = nodes.find((n) => n.name === name);
         if (tool && !edges.some((e) => e.from === "object:" + object && e.to === tool.id)) edges.push({ id: "question:" + object + ":" + name, from: "object:" + object, to: tool.id, kind: "question", question: question(tools.find((t) => t.name === name)) });
       }
@@ -82679,6 +83894,31 @@ var require_state_machine_runtime = __commonJS({
           }
         },
         {
+          name: "Mapping-debugger.read",
+          initial: "running",
+          states: [
+            "running",
+            "done",
+            "error",
+            "cancelled"
+          ],
+          terminal: [
+            "done",
+            "error",
+            "cancelled"
+          ],
+          transitions: {
+            running: [
+              "done",
+              "error",
+              "cancelled"
+            ],
+            done: [],
+            error: [],
+            cancelled: []
+          }
+        },
+        {
           name: "P01.descriptor",
           initial: "open",
           states: [
@@ -82984,6 +84224,48 @@ var require_state_machine_runtime = __commonJS({
               "active",
               "paused"
             ]
+          }
+        },
+        {
+          name: "SM.service-environment",
+          initial: "queued",
+          states: [
+            "queued",
+            "preparing",
+            "starting",
+            "ready",
+            "stopping",
+            "cleanup-failed",
+            "stopped"
+          ],
+          terminal: [
+            "stopped"
+          ],
+          transitions: {
+            queued: [
+              "preparing",
+              "stopping"
+            ],
+            preparing: [
+              "starting",
+              "stopping"
+            ],
+            starting: [
+              "ready",
+              "stopping"
+            ],
+            ready: [
+              "preparing",
+              "stopping"
+            ],
+            stopping: [
+              "stopped",
+              "cleanup-failed"
+            ],
+            "cleanup-failed": [
+              "stopping"
+            ],
+            stopped: []
           }
         },
         {
@@ -86083,6 +87365,590 @@ var require_tools_runtime = __commonJS({
   }
 });
 
+// lib/service-environments.js
+var require_service_environments = __commonJS({
+  "lib/service-environments.js"(exports2, module2) {
+    var fs3 = require("node:fs");
+    var path3 = require("node:path");
+    var crypto = require("node:crypto");
+    var C = require_config();
+    var A = require_access();
+    var D = require_durable_private_store();
+    var S = require_service_env_spec();
+    var principal = () => ({ principalId: A.current().principalId, multiUser: A.current().multiUser });
+    var store = () => D.create(path3.join(C.HOME, "service-environments", "_principals", D.hash(JSON.stringify(principal())).slice(0, 32)), 4 * 1048576);
+    var evidenceStore = () => D.create(path3.join(store().root, "evidence"), 16 * 1048576);
+    var canonical = (record, fn) => A.run({ ...A.owner(), storyId: record.owner.storyId, principalId: record.owner.principalId, multiUser: record.owner.multiUser }, fn);
+    function inWorkspace(record, workspace, fn) {
+      const owner = record.workspaceOwners?.[workspace] || record.owner;
+      return A.run({ ...A.owner(), principalId: owner.principalId, storyId: owner.storyId, multiUser: owner.multiUser }, fn);
+    }
+    function load(id) {
+      D.key(id);
+      const r = id.startsWith("evidence-") ? evidenceStore().read(id) || store().read(id) : store().read(id);
+      if (!r || JSON.stringify(r.principal) !== JSON.stringify(principal())) throw D.invalid("Service environment record not found", "DT_NOT_FOUND", 404);
+      return r;
+    }
+    function header(r) {
+      if (r.kind === "definition") return { id: r.id, kind: r.kind, name: r.definition.name, serviceCount: r.definition.services.length, revision: r.revision, context: r.definition.context, continuation: r.definition.continuation, createdAt: r.createdAt, updatedAt: r.updatedAt };
+      if (r.kind === "run") {
+        const v = runView(r);
+        return { ...v, kind: "run", idempotencyKey: r.idempotencyKey, requestHash: r.requestHash, services: [], events: [], error: v.error?.slice(0, 500), cleanupErrors: v.cleanupErrors.slice(0, 3), assumptions: [] };
+      }
+      if (r.kind === "evidence") return { id: r.id, kind: r.kind, run: r.run, operation: r.operation, at: r.at, state: r.state || "retained", bytes: r.bytes || 0 };
+      if (r.kind === "definition-version") return { id: r.id, kind: r.kind, definitionId: r.definitionId, revision: r.revision, at: r.updatedAt };
+      return null;
+    }
+    function catalog() {
+      const s = store();
+      let index = s.read("index");
+      if (!index) {
+        index = { records: {} };
+        for (const r of [...s.list("definition-"), ...s.list("run-"), ...s.list("version-")]) {
+          const h = header(r);
+          if (h) index.records[r.id] = h;
+        }
+        s.write("index", index);
+      }
+      return Object.values(index.records);
+    }
+    function track(r) {
+      const h = header(r);
+      if (!h) return;
+      const s = store();
+      s.update("index", (old) => {
+        const index = old || { records: {} };
+        index.records[r.id] = h;
+        s.write("index", index);
+      });
+    }
+    function change(id, fn) {
+      const s = store();
+      return s.update(id, (r) => {
+        if (!r) throw Error("Environment record not found");
+        fn(r);
+        r.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+        s.write(id, r);
+        track(r);
+        return r;
+      });
+    }
+    var publicDefinition = (r) => ({ id: r.id, name: r.definition.name, definition: r.definition, revision: r.revision, context: r.definition.context, continuation: r.definition.continuation, createdAt: r.createdAt, updatedAt: r.updatedAt, exports: r.exports || [] });
+    function runView(r) {
+      return { protocol: "dt.service-environment/v1", id: r.id, name: r.definition.name, definition: r.definitionId, definitionRevision: r.definitionRevision, imageIds: r.runtime?.imageIds || {}, state: r.runtime?.state || r.state, phase: r.state, generation: r.runtime?.generation || 1, warm: r.warm, context: r.definition.context, continuation: r.definition.continuation, createdAt: r.createdAt, updatedAt: r.updatedAt, expiresAt: r.runtime?.expiresAt || r.expiresAt, job: r.job, error: r.error || r.runtime?.error || null, outcome: r.runtime?.outcome || null, cleanupErrors: [...r.runtime?.cleanupErrors || [], ...r.cleanupErrors || []], services: r.runtime?.services || r.sources?.map(({ name, workspace, revision }) => ({ name, workspace, revision })) || [], dependencies: r.runtime?.dependencies || {}, timings: r.runtime?.timings || {}, events: r.runtime?.events || [], lastSequence: r.runtime?.lastSequence || 0, assumptions: r.definition.assumptions, ui: "/admin#environments?run=" + r.id, next: r.state === "queued" ? { tool: "service_env_status", arguments: { id: r.id } } : { tool: "service_env_bindings", arguments: { id: r.id, service: r.definition.services[0].name } }, ...r.previous ? { previous: r.previous } : {} };
+    }
+    function save({ id, definition, expected_revision } = {}) {
+      const value = S.spec(definition), s = store(), key = id || "definition-" + value.name, release = s.lock(key);
+      try {
+        const old = s.read(key);
+        if (old && expected_revision !== old.revision || !old && expected_revision !== null) throw D.invalid("Supply expected_revision from service_env_plan; null creates a new definition", "STATE_CONFLICT", 409);
+        if (!key.startsWith("definition-") || key.length > 60) throw Error("Definition id must start definition- and fit 60 characters");
+        if (old?.kind && old.kind !== "definition") throw Error("Select a definition id");
+        const contextOwner = old && old.definition.context === value.context ? old.contextOwner || old.owner : A.owner();
+        const inContext = (fn) => A.run({ ...A.owner(), principalId: contextOwner.principalId, storyId: contextOwner.storyId, multiUser: contextOwner.multiUser }, fn);
+        if (value.context) inContext(() => require_context().get(value.context));
+        if (value.continuation) require_continuation().get({ id: value.continuation });
+        const workspaceOwners = {};
+        for (const service of value.services) {
+          try {
+            require_workspace().checkId(service.workspace);
+            workspaceOwners[service.workspace] = A.owner();
+          } catch (error) {
+            const owner = old?.workspaceOwners?.[service.workspace] || old?.owner;
+            if (!owner) throw error;
+            A.run({ ...A.owner(), principalId: owner.principalId, storyId: owner.storyId, multiUser: owner.multiUser }, () => require_workspace().checkId(service.workspace));
+            workspaceOwners[service.workspace] = owner;
+          }
+        }
+        if (catalog().filter((r) => r.kind === "definition").length >= 40 && !old) throw Error("Definition budget reached");
+        const now = (/* @__PURE__ */ new Date()).toISOString(), record = { id: key, kind: "definition", definition: value, workspaceOwners, contextOwner, owner: old?.owner || A.owner(), principal: principal(), createdAt: old?.createdAt || now, updatedAt: now, revision: S.fingerprint(value), exports: [] };
+        const version = { ...record, id: "version-" + S.fingerprint({ definitionId: key, revision: record.revision }), kind: "definition-version", definitionId: key };
+        s.write(version.id, version);
+        track(version);
+        s.write(key, record);
+        track(record);
+        const file = "environments/" + value.name + ".json", content = JSON.stringify(value, null, 2);
+        for (const kind of ["context", "continuation"]) if (value[kind]) try {
+          const previous = old?.definition[kind] === value[kind] ? old.exports?.find((e) => e.kind === kind && e.path === file)?.revision : null;
+          const receipt = kind === "context" ? inContext(() => require_context().write({ id: value.context, path: file, content, summary: "Reproducible service environment definition", expected_revision: previous || null })) : require_continuation().write({ id: value.continuation, path: file, content, summary: "Reproducible service environment definition", expected_revision: previous || null });
+          record.exports.push({ kind, path: file, revision: receipt.revision, saved: true });
+        } catch (error) {
+          record.exports.push({ kind, path: file, saved: false, error: error.message });
+        }
+        s.write(key, record);
+        return publicDefinition(record);
+      } finally {
+        release();
+      }
+    }
+    function list() {
+      const values = catalog();
+      return { protocol: "dt.service-environments/v1", scope: "principal; select a record explicitly to resume across chats", definitions: values.filter((r) => r.kind === "definition"), runs: values.filter((r) => r.kind === "run").sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 100), evidence: values.filter((r) => r.kind === "evidence").sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, 100), limits: { services: 8, definitionBytes: 2 * 1048576 }, guidance: "Plan/save a named definition, start once, inspect status and bindings. Active environments survive chat disconnects until stopped or expired. A running artifact is independent of workspace cleanup." };
+    }
+    async function rpc(record, action, args = {}, timeout = 2e4) {
+      const tests = C.getTests(), url = record?.workerUrl || tests.runnerUrl, token = tests.runnerToken;
+      if (!url) {
+        const local = require_service_env_worker().runtime();
+        local.serve();
+        return local.handle(action, args);
+      }
+      const target = new URL("/service-environment/" + action, url);
+      const res = await fetch(target, { method: "POST", headers: { authorization: "Bearer " + (token || ""), "content-type": "application/json" }, body: JSON.stringify(args), signal: AbortSignal.timeout(timeout) });
+      const data = await res.json();
+      if (!res.ok) throw Object.assign(Error(data.error || `Runtime worker HTTP ${res.status}`), { code: data.code, statusCode: res.status });
+      return data;
+    }
+    var credentials = (r) => ({ id: r.id, capability: r.capability });
+    function sourceIdentity(root) {
+      const h = crypto.createHash("sha256");
+      let count = 0, bytes = 0;
+      function walk(dir) {
+        for (const f of fs3.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+          if ([".git", ".dt", ".gradle", "node_modules", "target", "build", ".idea"].includes(f.name)) continue;
+          const full = path3.join(dir, f.name);
+          if (f.isSymbolicLink()) throw Error("Source snapshot cannot contain symlinks");
+          if (f.isDirectory()) {
+            walk(full);
+            continue;
+          }
+          if (!f.isFile()) continue;
+          const stat = fs3.statSync(full);
+          bytes += stat.size;
+          if (++count > 3e4 || bytes > 256 * 1048576) throw Error("Source fingerprint exceeds 30000 files / 256 MiB");
+          h.update(path3.relative(root, full) + "\0");
+          const fd = fs3.openSync(full, "r"), buffer = Buffer.alloc(65536);
+          try {
+            for (let n; n = fs3.readSync(fd, buffer, 0, buffer.length, null); ) h.update(buffer.subarray(0, n));
+          } finally {
+            fs3.closeSync(fd);
+          }
+        }
+      }
+      walk(root);
+      return h.digest("hex");
+    }
+    function work(record, service) {
+      return inWorkspace(record, service.workspace, () => {
+        const W = require_workspace(), m = W.checkId(service.workspace), root = W.resolvePath(m, service.module, { allowRoot: true }).full;
+        return { m, root, revision: { commit: m.base || m.sha || m.repo?.sha || null, ref: m.ref || null, sourceDigest: sourceIdentity(m.path) } };
+      });
+    }
+    async function plan({ id, definition, worker = false } = {}) {
+      if (!id && !definition) return list();
+      const record = id ? load(id) : { definition: S.spec(definition), owner: A.owner() }, d = record.definition;
+      if (record.kind === "evidence") return status({ id });
+      if (record.kind === "run") return { ...runView(record), savedDefinition: record.definition };
+      if (record.kind === "definition-version") return { ...publicDefinition(record), definitionId: record.definitionId, immutable: true };
+      const sources = d.services.map((service) => ({ name: service.name, workspace: service.workspace, ...work(record, service).revision, adapter: service.adapter, build: service.build, dependencies: Object.keys(service.datasources) }));
+      let preflight;
+      if (worker) try {
+        preflight = await rpc(record, "preflight", { definition: d });
+      } catch (error) {
+        preflight = { ok: false, error: error.message };
+      }
+      return { ...record.id ? publicDefinition(record) : { definition: d }, sources, preflight, ...record.id ? { versions: catalog().filter((v) => v.kind === "definition-version" && v.definitionId === record.id).map((v) => ({ id: v.id, revision: v.revision, at: v.at })) } : {}, application_templates: Object.fromEntries(d.services.map((service) => {
+        const databases = Object.fromEntries(Object.keys(service.datasources).map((name) => [name, { jdbcUrl: "<allocated at start>", user: "<private role>", password: "<private password>" }])), binding = S.bindings(service, databases, { ...d.dependencies.kafka ? { kafka: "kafka:9092" } : {}, ...d.dependencies.elasticsearch ? { es: "http://search:9200" } : {} }, Object.fromEntries(d.services.map((s) => [s.name, "http://" + s.name + ":" + s.port])));
+        return [service.name, { application_properties: S.propertiesText(binding.properties), env: binding.env, audience: "application-container; values allocated by start" }];
+      })), configuration: { application: "Generated Spring properties use DT_ENV_* placeholders; service_env_bindings supplies properties and env separately after startup.", precedence: "Owned datasource/Kafka/ES bindings override matching custom properties at launch.", network: "Container DNS is for applications; backend requests use the worker. Never copy container DNS into a browser URL." }, assumptions: d.assumptions, next: { tool: "service_env_start", arguments: { definition: record.id || "<save definition first>", idempotency_key: "<unique task iteration>" } } };
+    }
+    async function build(record, service, log) {
+      const { root, m, revision } = work(record, service), cfg = C.getTests(), T = require_testrun();
+      let p = { tool: service.build === "auto" ? T.plan(root, []).tool : service.build, module: path3.relative(m.path, root).split(path3.sep).join("/") || ".", modDir: root };
+      if (service.adapter === "spring-boot" && service.build !== "none") {
+        if (!["maven", "gradle"].includes(p.tool)) throw Error("No supported Maven/Gradle build; set module or build explicitly");
+        const [cmd, args] = p.tool === "maven" ? T.mavenCmd(m.path, cfg) : T.gradleCmd(m.path, cfg), B = require_buildenv().forBuild(cfg, p.tool);
+        const buildArgs = p.tool === "maven" ? ["-B", ...p.module !== "." ? ["-pl", p.module, "-am"] : [], "-DskipTests", ...cfg.mavenRepo ? ["-Dmaven.repo.local=" + cfg.mavenRepo] : [], ...cfg.mavenSettings ? ["-s", cfg.mavenSettings] : [], ...cfg.offline ? ["-o"] : [], "package"] : ["--console=plain", ...cfg.offline ? ["--offline"] : [], p.module === "." ? "bootJar" : ":" + p.module.split("/").join(":") + ":bootJar", "-x", "test"];
+        const result = await T.exec(cmd, [...args, ...B.args, ...buildArgs], { cwd: m.path, requireRunner: !!cfg.runnerUrl, env: (await T.envFor(p, cfg)).env, timeoutMs: cfg.timeoutMs || 3e5, log: (line) => log(require_buildenv().mask(line, B.secrets)) });
+        if (result.code !== 0) throw Error(`Build failed for ${service.name}: ${require_buildenv().mask(result.out, B.secrets).slice(-3e3)}`);
+      }
+      if (sourceIdentity(m.path) !== revision.sourceDigest) throw Error("Workspace changed during build; inspect changes and start a new iteration");
+      let artifactPath;
+      if (service.adapter === "spring-boot") {
+        if (service.artifact) {
+          artifactPath = path3.join(root, S.relative(service.artifact));
+        } else {
+          const dirs = ["target", "build/libs"], candidates = dirs.flatMap((dir) => {
+            try {
+              return fs3.readdirSync(path3.join(root, dir)).filter((n) => n.endsWith(".jar") && !/(-plain|-sources|-javadoc|\.original)\.jar$/.test(n)).map((n) => path3.join(root, dir, n));
+            } catch {
+              return [];
+            }
+          });
+          if (candidates.length !== 1) throw Error(`Select artifact for ${service.name}; found ${candidates.length} candidate jars`);
+          artifactPath = candidates[0];
+        }
+        if (!fs3.existsSync(artifactPath)) throw Error("Application jar not found: " + service.artifact);
+      }
+      return { ...service, sourcePath: root, ...artifactPath ? { artifactPath } : {}, revision };
+    }
+    async function start({ definition, idempotency_key, warm = false } = {}) {
+      const d = load(definition);
+      if (d.kind !== "definition") throw Error("Select a saved environment definition");
+      if (warm && !d.definition.dependencies.kafka && !d.definition.dependencies.elasticsearch) throw Error("Warm prepares Kafka/Elasticsearch capacity; PostgreSQL uses prepared templates at start");
+      if (typeof idempotency_key !== "string" || !idempotency_key.trim() || idempotency_key.length > 160) throw Error("Supply an idempotency_key for this task iteration");
+      const s = store(), release = s.lock("allocation");
+      let r, existing;
+      try {
+        const requestHash = S.fingerprint({ definition: d.revision, idempotency_key, warm });
+        existing = catalog().find((r2) => r2.kind === "run" && r2.idempotencyKey === idempotency_key);
+        if (existing) {
+          existing = s.read(existing.id);
+          if (existing.requestHash !== requestHash) throw D.invalid("Idempotency key reused for different inputs", "STATE_CONFLICT", 409);
+          r = existing;
+        } else {
+          if (catalog().filter((r2) => r2.kind === "run").length >= 300) throw Error("Environment record budget reached; archive old records before allocating more");
+          r = { id: "run-" + crypto.randomBytes(12).toString("hex"), kind: "run", principal: principal(), owner: d.owner, workspaceOwners: d.workspaceOwners, definition: d.definition, definitionId: d.id, definitionRevision: d.revision, requestHash, idempotencyKey: idempotency_key, capability: crypto.randomBytes(24).toString("hex"), state: "queued", createdAt: (/* @__PURE__ */ new Date()).toISOString(), updatedAt: (/* @__PURE__ */ new Date()).toISOString(), workerUrl: C.getTests().runnerUrl || null, warm, expiresAt: new Date(Date.now() + d.definition.ttl_ms).toISOString() };
+          s.write(r.id, r);
+          track(r);
+        }
+      } finally {
+        release();
+      }
+      if (existing) return runView(r);
+      const J = require_jobs(), job = J.start("service-env:" + r.id, (warm ? "Warm dependencies: " : "Run service: ") + d.definition.name, async (log) => {
+        const releaseWork = [];
+        try {
+          const launches = [];
+          if (!warm) for (const service of d.definition.services) {
+            releaseWork.push(inWorkspace(d, service.workspace, () => require_workspace().hold(service.workspace)));
+            log("Building " + service.name);
+            launches.push(await build(d, service, log));
+          }
+          change(r.id, (v) => {
+            v.sources = launches.map(({ name, workspace, revision }) => ({ name, workspace, revision }));
+            v.state = "allocating";
+          });
+          if (!warm && d.definition.dependencies.postgres) {
+            const clone = await canonical(d, () => require_testdb_templates().clone({ template: d.definition.dependencies.postgres.template, runId: r.id, ttlMs: d.definition.ttl_ms, idempotencyKey: r.id }));
+            change(r.id, (v) => {
+              v.pgLease = clone.lease;
+              v.databases = Object.fromEntries(Object.entries(clone.databases).map(([name, db]) => {
+                const u = new URL("postgresql://localhost");
+                u.hostname = db.endpoint.host.includes(":") && !db.endpoint.host.startsWith("[") ? "[" + db.endpoint.host + "]" : db.endpoint.host;
+                u.port = String(db.endpoint.port);
+                u.pathname = "/" + db.database;
+                u.username = db.user;
+                u.password = db.password;
+                for (const [key, value] of Object.entries(db.endpoint.parameters || {})) u.searchParams.set(key, value);
+                return [name, { ...db, url: u.toString() }];
+              }));
+            });
+          }
+          let current = load(r.id);
+          if (current.stopRequested) throw Error("Environment stopped before launch");
+          log(warm ? "Preparing clean dependency slot" : "Starting supervised applications");
+          const spare = !warm ? catalog().filter((v) => v.kind === "run" && v.warm && v.state === "ready").map((v) => s.read(v.id)).find((v) => !v.claimedBy && v.workerUrl === current.workerUrl && Date.parse(v.runtime?.expiresAt || v.expiresAt) > Date.now() && S.fingerprint(v.definition.dependencies) === S.fingerprint(d.definition.dependencies)) : null;
+          if (spare) {
+            change(r.id, (v) => {
+              v.workerRequested = true;
+            });
+            const claimed = change(spare.id, (v) => {
+              if (v.claimedBy) throw D.invalid("Warm slot already claimed", "STATE_CONFLICT", 409);
+              v.claimedBy = r.id;
+            });
+            change(r.id, (v) => {
+              v.workerId = claimed.id;
+              v.workerCapability = claimed.capability;
+              v.warmSource = claimed.id;
+            });
+            current = load(r.id);
+            const runtime = await rpc(current, "activate", { id: claimed.id, capability: claimed.capability, expected_generation: claimed.runtime.generation, definition: d.definition, launches, databases: current.databases || {} });
+            change(r.id, (v) => {
+              v.runtime = { ...runtime, id: r.id };
+              v.state = runtime.state;
+            });
+          } else {
+            change(r.id, (v) => {
+              v.workerRequested = true;
+            });
+            const runtime = await rpc(current, "start", { ...credentials(current), definition: d.definition, launches, databases: current.databases || {}, warm });
+            change(r.id, (v) => {
+              v.runtime = runtime;
+              v.state = runtime.state;
+            });
+          }
+          if (load(r.id).stopRequested) await control({ id: r.id, action: "stop" });
+          return runView(load(r.id));
+        } catch (error) {
+          const failed = load(r.id);
+          if (failed.workerRequested) {
+            try {
+              const runtime = await rpc(failed, failed.stopRequested ? "stop" : "status", workerCredentials(failed));
+              if (!failed.warm && runtime.warm) {
+                if (failed.warmSource) change(failed.warmSource, (v) => {
+                  delete v.claimedBy;
+                });
+                change(r.id, (v) => {
+                  v.workerRequested = false;
+                  delete v.workerId;
+                  delete v.workerCapability;
+                });
+                throw Object.assign(Error("Warm slot promotion was not accepted"), { statusCode: 404 });
+              }
+              change(r.id, (v) => {
+                v.runtime = { ...runtime, id: r.id };
+                v.state = runtime.state;
+                v.error = runtime.error || null;
+              });
+              if (runtime.state === "stopped") await releaseDatabase(r.id);
+              return runView(load(r.id));
+            } catch (observationError) {
+              if (observationError.statusCode !== 404) {
+                change(r.id, (v) => {
+                  v.state = "unknown";
+                  v.error = error.message + "; worker outcome unknown, inspect before retry";
+                });
+                throw error;
+              }
+            }
+          }
+          change(r.id, (v) => {
+            v.state = v.stopRequested ? "cancelled" : "failed";
+            v.error = error.message;
+          });
+          await releaseDatabase(r.id);
+          throw error;
+        } finally {
+          for (const release2 of releaseWork) release2();
+        }
+      });
+      change(r.id, (v) => {
+        v.job = job.id;
+      });
+      return runView(load(r.id));
+    }
+    function workerCredentials(r) {
+      return { id: r.workerId || r.id, capability: r.workerCapability || r.capability };
+    }
+    async function releaseDatabase(id) {
+      const r = load(id);
+      if (!r.pgLease || r.pgReleased) return;
+      try {
+        await canonical(r, () => require_testdb_templates().release(r.pgLease));
+        change(id, (v) => {
+          v.pgReleased = true;
+          v.cleanupErrors = [];
+        });
+      } catch (error) {
+        change(id, (v) => {
+          v.cleanupErrors = [error.message];
+        });
+      }
+    }
+    async function status({ id, job } = {}) {
+      if (job) {
+        const record = require_jobs().get(job);
+        if (!record) throw Error("Preparation job not found in this chat");
+        return { job: record.id, state: record.state, error: record.error, log: record.log.slice(-5), result: record.result };
+      }
+      if (!id) return list();
+      let r = load(id);
+      if (r.kind === "evidence") {
+        const { owner, principal: principal2, ...visible } = r;
+        return visible;
+      }
+      if (r.kind === "definition") return plan({ id });
+      if (r.claimedBy) return { ...runView(r), state: "claimed", claimedBy: r.claimedBy, guidance: "This clean slot was promoted into the linked application lease; control that run." };
+      if (["queued", "allocating", "failed"].includes(r.state) && !r.runtime && !r.workerRequested) {
+        const job2 = r.job && require_jobs().find(r.job);
+        if (!job2 && Date.now() - Date.parse(r.createdAt) > 3e4 || job2 && ["interrupted", "cancelled", "failed"].includes(job2.state)) {
+          change(id, (v) => {
+            v.state = job2?.state || "interrupted";
+            v.error = job2?.error || "Preparation interrupted; no automatic replay";
+          });
+          await releaseDatabase(id);
+        }
+        return runView(load(id));
+      }
+      try {
+        const runtime = await rpc(r, "status", workerCredentials(r));
+        change(id, (v) => {
+          v.runtime = { ...runtime, id };
+          v.state = runtime.state;
+          v.error = runtime.error || null;
+        });
+        if (runtime.state === "stopped") await releaseDatabase(id);
+      } catch (error) {
+        change(id, (v) => {
+          v.observationError = error.message;
+        });
+        return { ...runView(load(id)), observationError: error.message, guidance: "Worker state is unknown; reconnect and inspect before retrying start. The existing lease is retained." };
+      }
+      return runView(load(id));
+    }
+    async function control({ id, action, expected_generation, ttl_ms } = {}) {
+      let r = load(id);
+      if (action === "pull-images") {
+        A.requireAdmin();
+        const job = require_jobs().start("service-images:" + r.id, "Prepare service environment images", () => rpc(r, "pull", { definition: r.definition }, 31e4));
+        return { job: job.id, state: job.state, next: "Poll service_env_status for runs or inspect the job" };
+      }
+      if (r.kind !== "run") throw Error("Select a run for lease control");
+      if (r.claimedBy) throw Error("Warm slot was claimed; control run " + r.claimedBy);
+      const gen = r.runtime?.generation || 1;
+      if (expected_generation !== void 0 && gen !== expected_generation) throw D.invalid("Lease generation changed; reload status", "STATE_CONFLICT", 409);
+      if (action === "restart" || action === "reset") {
+        await control({ id, action: "stop", expected_generation: gen });
+        const stopped = await status({ id });
+        if (stopped.state !== "stopped" && stopped.phase !== "stopped") return { ...stopped, next: "Wait for cleanup, then restart/reset again" };
+        if (load(r.definitionId).revision !== r.definitionRevision) throw Error("Definition changed since this run; review and start the selected revision explicitly");
+        const out2 = await start({ definition: r.definitionId, idempotency_key: "restart-" + id + "-" + crypto.randomBytes(5).toString("hex") });
+        change(out2.id, (v) => {
+          v.previous = id;
+        });
+        return runView(load(out2.id));
+      }
+      if (action === "stop") {
+        change(id, (v) => {
+          v.stopRequested = true;
+        });
+        if (!r.runtime && !r.workerRequested) {
+          const job = r.job && require_jobs().find(r.job);
+          if (job?.state === "running") {
+            require_jobs().cancel(job.id);
+            return { ...runView(load(id)), state: "stopping", guidance: "Preparation cancellation requested; inspect status until cleanup settles" };
+          }
+          await releaseDatabase(id);
+          change(id, (v) => {
+            v.state = "stopped";
+          });
+          return runView(load(id));
+        }
+      }
+      if (!["stop", "renew"].includes(action)) throw Error("Control action must be stop, renew, restart, reset or pull-images");
+      if (action === "renew" && r.pgLease) await canonical(r, () => require_testdb_templates().renew(r.pgLease, ttl_ms || 18e5));
+      const runtime = await rpc(r, action, { ...workerCredentials(r), expected_generation: gen, ttl_ms });
+      change(id, (v) => {
+        v.runtime = { ...runtime, id };
+        v.state = runtime.state;
+      });
+      if (runtime.state === "stopped") await releaseDatabase(id);
+      return runView(load(id));
+    }
+    var mask = (value, r) => {
+      let text = JSON.stringify(value);
+      for (const db of Object.values(r.databases || {})) if (db.password) text = text.split(db.password).join("***");
+      return JSON.parse(text);
+    };
+    async function bindings({ id, service, reveal_secrets = false, read_path, write_path, expected_revision } = {}) {
+      const r = load(id);
+      if (r.claimedBy) throw Error("Select the promoted application run");
+      const name = service || r.definition.services[0].name, value = await rpc(r, "bindings", { ...workerCredentials(r), service: name });
+      const env = reveal_secrets ? value.env : Object.fromEntries(Object.entries(value.env).map(([k, v]) => [k, /PASSWORD|SECRET|TOKEN/.test(k) ? "<private; injected by supervisor>" : v]));
+      const result = { run: id, service: name, audience: value.audience, properties: value.properties, application_properties: S.propertiesText(value.properties), env, environment_lines: Object.entries(env).map(([k, v]) => k + "=" + JSON.stringify(v)).join("\n"), secrets: reveal_secrets ? "private scratch credentials included" : "injected by supervisor; source snippets contain placeholders", browser: { tool: "service_env_request", arguments: { id, kind: "http", service: name, path: r.definition.services.find((s) => s.name === name).health_path } }, guidance: "Use application_properties in application-dt-local.properties; the supervisor injects DT_ENV_* values. Container addresses are not browser URLs. Restarted/reset runs have new bindings; request them again." };
+      if (read_path) {
+        result.existing_file = inWorkspace(r, r.definition.services.find((s) => s.name === name).workspace, () => {
+          const W = require_workspace(), m = W.checkId(r.definition.services.find((s) => s.name === name).workspace), file = W.resolvePath(m, read_path).full;
+          if (!fs3.existsSync(file)) return { path: read_path, revision: null };
+          if (fs3.statSync(file).size > 2 * 1048576) throw Error("Properties file exceeds 2 MiB");
+          const text = fs3.readFileSync(file, "utf8");
+          return { path: read_path, revision: D.hash(text), preview: text.slice(0, 2e3) };
+        });
+      }
+      if (write_path) {
+        const svc = r.definition.services.find((s) => s.name === name);
+        if (expected_revision === void 0) throw Error("Writing a workspace file requires expected_revision (null creates)");
+        const saved = inWorkspace(r, r.definition.services.find((s) => s.name === name).workspace, () => {
+          const W = require_workspace();
+          const meta = W.checkId(svc.workspace), file = W.resolvePath(meta, write_path).full;
+          let original = "", revision = null;
+          if (fs3.existsSync(file)) {
+            if (fs3.statSync(file).size > 2 * 1048576) throw Error("Properties file exceeds 2 MiB");
+            original = fs3.readFileSync(file, "utf8");
+            revision = D.hash(original);
+          }
+          if (revision !== expected_revision) throw D.invalid("Properties file changed; read it before writing", "STATE_CONFLICT", 409);
+          const begin = "# BEGIN dt service environment", end = "# END dt service environment", block = begin + "\n" + result.application_properties + end;
+          if (original.split(begin).length - 1 > 1 || original.split(end).length - 1 > 1) throw Error("Multiple managed configuration blocks; reconcile them manually");
+          let content;
+          if (original.includes(begin)) {
+            const from = original.indexOf(begin), to = original.indexOf(end, from);
+            if (to < from) throw Error("Incomplete managed configuration block");
+            content = original.slice(0, from) + block + original.slice(to + end.length);
+          } else content = original + (original && !original.endsWith("\n") ? "\n" : "") + "\n" + block + "\n";
+          return W.write(svc.workspace, write_path, { content, expected_revision });
+        });
+        result.saved = saved;
+      }
+      return result;
+    }
+    async function logs({ id, service, lines } = {}) {
+      const r = load(id);
+      return mask(await rpc(r, "logs", { ...workerCredentials(r), service, lines }), r);
+    }
+    async function query(a) {
+      const r = load(a.id);
+      if (r.kind !== "run" || r.claimedBy) throw Error("Select an application run");
+      const s = store(), key = "evidence-" + crypto.randomBytes(12).toString("hex"), release = s.lock("evidence-allocation");
+      let pending;
+      try {
+        const evidence = catalog().filter((v) => v.kind === "evidence");
+        if (evidence.length >= 1e3 || evidence.reduce((n, v) => n + v.bytes, 0) + 16 * 1048576 > 512 * 1048576) throw Error("Private runtime evidence storage budget reached; request was not sent");
+        pending = { id: key, kind: "evidence", operation: a.kind, run: a.id, at: (/* @__PURE__ */ new Date()).toISOString(), state: "pending", bytes: 16 * 1048576, principal: principal(), owner: A.owner() };
+        evidenceStore().write(key, pending);
+        track(pending);
+      } finally {
+        release();
+      }
+      let result;
+      try {
+        result = await rpc(r, "query", { ...a, ...workerCredentials(r) }, Math.min(125e3, (a.timeout_ms || 15e3) + 1e4));
+      } catch (error) {
+        result = { ok: false, error: error.message, outcome: a.kind === "http" || a.kind === "kafka-produce" ? "unknown" : "failed" };
+      }
+      const saved = mask({ ...pending, request: require_redact().clean(a), state: result.error ? "failed" : "retained", service: a.service, database: a.database, index: a.index, topic: a.topic, result }, r);
+      saved.bytes = Buffer.byteLength(JSON.stringify(saved));
+      evidenceStore().write(key, saved);
+      track(saved);
+      const { principal: _, owner: __, ...visible } = saved;
+      return { ...visible, ...result.error ? { error: result.error, ok: false } : {}, evidence: key, view: require_results().saveView("work-record", { tool: "service_env_request", result: visible }, { title: r.definition.name + " \xB7 " + a.kind }) };
+    }
+    async function debug(a) {
+      const r = load(a.id);
+      return rpc(r, "debug", { ...a, ...workerCredentials(r) }, 45e3);
+    }
+    async function maintenance() {
+      const root = path3.join(C.HOME, "service-environments", "_principals");
+      for (const dir of fs3.existsSync(root) ? fs3.readdirSync(root) : []) {
+        if (!/^[a-f0-9]{32}$/.test(dir)) continue;
+        const ds = D.create(path3.join(root, dir), 4 * 1048576), index = ds.read("index"), values = index ? Object.values(index.records).filter((r) => r.kind === "run" && !["stopped", "claimed"].includes(r.state)).map((r) => ds.read(r.id)) : ds.list("run-");
+        for (const r of values) if (!r.claimedBy && r.state !== "stopped") await A.run(r.owner, async () => {
+          try {
+            if (Date.parse(r.runtime?.expiresAt || r.expiresAt) <= Date.now()) await control({ id: r.id, action: "stop" });
+            else await status({ id: r.id });
+          } catch {
+          }
+        });
+      }
+    }
+    module2.exports = { save, list, plan, start, status, control, bindings, logs, query, debug, maintenance, rpc, sourceIdentity };
+  }
+});
+
+// lib/tools-service-environments.js
+var require_tools_service_environments = __commonJS({
+  "lib/tools-service-environments.js"(exports2, module2) {
+    module2.exports = ({ str, int }) => {
+      const E = () => require_service_environments(), object = (description) => ({ type: "object", additionalProperties: true, description }), id = str("Owned environment run id; select explicitly to resume it from another chat");
+      const present = async (promise) => {
+        const result = await promise;
+        return { ...result, view: require_results().saveView(result.kind === "evidence" ? "work-record" : "service-environment", result, { title: result.name || "Service environments" }) };
+      };
+      return [
+        { name: "service_env_plan", description: "Plan or discover disposable service environments. Lists this user\u2019s persistent definitions/runs across chats; selecting an id is explicit resume. definition accepts version 1 JSON; worker=true checks Docker/images without starting. For a branch, workspace_open first. Returned bindings are for application configuration, not production deployment.", input: { id: str("Optional saved definition/run id"), definition: object('Version 1 {name,services:[{name,workspace,adapter:"spring-boot|node",module,artifact?,port,health_path,properties?,env?,datasources?:{logicalDb:"spring.datasource"}}],dependencies?:{postgres:{template},kafka:{topics:[{name,partitions}]},elasticsearch:{indices:[{name,mappings?,documents?}]}},context?,continuation?,ttl_ms?,assumptions?}'), worker: { type: "boolean", default: false } }, run: (a) => present(E().plan(a)) },
+        { name: "service_env_save", description: "Persist a named versioned service environment definition, optionally linked to context/continuation. No service starts. Workspaces must be owned and already open. expected_revision=null creates; the previous revision updates. Definitions contain configuration, not shell commands. Builds use Maven/Gradle and their annotation processors.", input: { id: str("Definition id; default definition-<name>"), definition: object("Version 1 definition from service_env_plan description"), expected_revision: { type: ["string", "null"] } }, required: ["definition", "expected_revision"], run: (a) => present(E().save(a)) },
+        { name: "service_env_start", description: "Start a saved definition once with a unique idempotency_key. Build pinned workspace sources, clone optional PG template and launch worker-supervised services plus owned Kafka/ES. Returns immediately with run/job; poll service_env_status. warm=true prestarts clean dependency capacity for a matching later start. Disconnects never stop services; TTL/explicit stop does.", input: { definition: str("Saved definition id"), idempotency_key: str("Unique task/iteration key; retries return the same lease"), warm: { type: "boolean", default: false } }, required: ["definition", "idempotency_key"], run: (a) => present(E().start(a)) },
+        { name: "service_env_status", description: "Inspect a run or read a retained evidence id; persistent state, exact source/artifact identities, services, progress, events, expiry and cleanup. id omitted lists only this user\u2019s definitions/runs. Reconciles worker state; unknown outcomes remain explicit rather than starting duplicates.", input: { id, job: str("Optional preparation job id from pull-images") }, run: (a) => present(E().status(a)) },
+        { name: "service_env_bindings", description: "Get application-container bindings as Spring application.properties placeholders and separate environment values. Supervisor injects private scratch credentials. reveal_secrets explicitly includes them for manual use. write_path explicitly writes the properties snippet to the service workspace with required file revision; no edit otherwise. Reset/restart requires reading new bindings.", input: { id, service: str("Service name; defaults to first"), reveal_secrets: { type: "boolean", default: false }, read_path: str("Optional owned service workspace file path to inspect its revision across chats"), write_path: str("Optional relative application-dt-local.properties path"), expected_revision: { type: ["string", "null"], description: "Required only for write_path: existing file SHA-256 or null for new file" } }, required: ["id"], run: (a) => E().bindings(a) },
+        { name: "service_env_logs", description: "Read bounded supervised application/dependency logs, including retained logs after stop. Does not restart anything or stream unbounded output into model context.", input: { id, service: str("Optional service/container key"), lines: int("Tail lines 1..500", 100) }, required: ["id"], run: (a) => E().logs(a) },
+        { name: "service_env_control", description: "Control a selected owned lease: stop (also cancel preparation), renew, restart or reset (stop then start with fresh dependencies). expected_generation rejects stale control. pull-images is an explicit administrator preparation job for configured images. Evidence survives cleanup; failures remain retryable.", input: { id, action: { type: "string", enum: ["stop", "renew", "restart", "reset", "pull-images"] }, expected_generation: int("Generation from status"), ttl_ms: int("Renewal duration 60000..86400000", 18e5) }, required: ["id", "action"], run: (a) => present(E().control(a)) },
+        { name: "service_env_request", description: "Act on or inspect only an owned disposable runtime through its backend worker. HTTP uses a service-relative path and may mutate; PG SQL is read-only; ES searches only declared indices; Kafka produces/reads only declared topics. Results persist as private evidence and work in saved collection tool steps. Never uses source-environment endpoints as fallback.", input: { id, kind: { type: "string", enum: ["http", "pg", "es", "kafka-produce", "kafka-read"] }, service: str("HTTP service name"), path: str("HTTP relative path, e.g. /orders/42"), method: { type: "string", enum: ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"] }, headers: object("HTTP headers"), body: { description: "HTTP body, Elasticsearch search JSON or Kafka message JSON" }, database: str("PG logical database"), sql: str("Read-only PostgreSQL SQL"), params: { type: "array", items: {} }, index: str("Declared ES index"), topic: str("Declared Kafka topic"), limit: int("Kafka maximum records", 5), timeout_ms: int("HTTP deadline 100..120000", 15e3) }, required: ["id", "kind"], run: (a) => E().query(a) },
+        { name: "service_debug", description: "JDWP/JDI debug an owned Spring JVM launched with debug=true. Attach, set/clear class-line or method breakpoints, read bounded events/threads/stack locals, resume or detach. No expression evaluation. Breakpoints suspend only the event thread, auto-resume after 60 seconds and may perturb timeouts/rebalances. Static Joern paths are suggestions; breakpoint-hit events are execution evidence.", input: { id, service: str("Debug-enabled Spring service"), action: { type: "string", enum: ["attach", "breakpoint", "clear", "events", "threads", "stack", "resume", "detach"] }, class_name: str("Exact loaded Java class including package"), line: int("Executable source line"), method: str("Or exact method name"), breakpoint: str("Breakpoint id for clear"), thread: str("Thread id from events/threads"), cursor: int("Event sequence cursor", 0) }, required: ["id", "service", "action"], run: (a) => E().debug(a) }
+      ].map((t) => ({ ...t, group: "runtime", origin: "built-in", strictInput: true }));
+    };
+  }
+});
+
 // lib/tools-semantic.js
 var require_tools_semantic = __commonJS({
   "lib/tools-semantic.js"(exports2, module2) {
@@ -88873,6 +90739,254 @@ var require_tools_api_client = __commonJS({
   }
 });
 
+// lib/mapping-debugger.js
+var require_mapping_debugger = __commonJS({
+  "lib/mapping-debugger.js"(exports2, module2) {
+    var path3 = require("node:path");
+    var crypto = require("node:crypto");
+    var C = require_config();
+    var A = require_access();
+    var D = require_durable_private_store();
+    var clone = (x) => JSON.parse(JSON.stringify(x));
+    var store = () => D.create(path3.join(C.HOME, "mapping-debugger", crypto.createHash("sha256").update(A.current().principalId).digest("hex")), 8 * 1048576);
+    var index = () => D.create(path3.join(store().root, "index"), 8192);
+    function write(s, r) {
+      s.write(r.id, r);
+      index().write(r.id, { id: r.id, kind: r.kind, notebook: r.notebook, title: r.definition.title, service: r.definition.service, env: r.definition.env, envs: [.../* @__PURE__ */ new Set([r.definition.env, ...r.definition.probes.map((p) => p.env || r.definition.env)])], at: r.at, revision: r.revision, bytes: Buffer.byteLength(JSON.stringify(r)) });
+      return r;
+    }
+    var key = (id) => {
+      if (!/^[a-z][a-z0-9-]{0,79}$/.test(id || "") || ["constructor", "prototype"].includes(id)) throw D.invalid("Choose a lowercase name separated by hyphens (up to 80 characters)");
+      return id;
+    };
+    var text = (v, max = 2e4) => typeof v === "string" && v.length <= max;
+    function pointer(value, pointer2) {
+      if (pointer2 === "") return { found: true, value };
+      if (!text(pointer2, 1e3) || !pointer2.startsWith("/") || /~[^01]|~$/.test(pointer2)) throw D.invalid("Use a JSON pointer such as /items/0/name; empty selects the whole result");
+      for (const part of pointer2.slice(1).split("/").map((x) => x.replace(/~1/g, "/").replace(/~0/g, "~"))) {
+        if (!value || typeof value !== "object" || !Object.hasOwn(value, part)) return { found: false };
+        value = value[part];
+      }
+      return { found: true, value };
+    }
+    function definition(input) {
+      if (!input || input.version !== 1 || !text(input.title, 160) || !input.title.trim() || (!text(input.service, 256) || !input.service.trim())) throw D.invalid("Definition needs version:1, title and service");
+      if (Buffer.byteLength(JSON.stringify(input)) > 512 * 1024) throw D.invalid("Definition exceeds 512 KiB");
+      if (!text(input.env, 100) || !input.env.trim() || input.follow_service !== void 0 && typeof input.follow_service !== "boolean") throw D.invalid("Choose an environment and a boolean follow_service");
+      C.getEnv(input.env);
+      const d = clone(input);
+      d.probes ||= [];
+      d.comparisons ||= [];
+      d.assumptions ||= [];
+      if (!Array.isArray(d.probes) || d.probes.length > 30 || !Array.isArray(d.comparisons) || d.comparisons.length > 100 || !Array.isArray(d.assumptions) || d.assumptions.length > 100 || d.assumptions.some((s) => !text(s, 2e3))) throw D.invalid("Limit to 30 probes, 100 comparisons and 100 short assumptions");
+      const ids = /* @__PURE__ */ new Set();
+      for (const p of d.probes) {
+        key(p.id);
+        if (ids.has(p.id) || p.id === "api") throw D.invalid("Probe names must be unique; api is reserved for explicitly sending the request");
+        ids.add(p.id);
+        if (!text(p.label, 160) || !["pg", "es", "kafka"].includes(p.kind)) throw D.invalid("Each probe needs label and kind: pg, es or kafka");
+        C.getEnv(p.env || d.env);
+        if (p.kind === "pg" && (!text(p.sql) || !p.sql.trim() || !text(p.db, 100) || !Object.hasOwn(C.getEnv(p.env || d.env).pg, p.db) || p.params !== void 0 && !Array.isArray(p.params))) throw D.invalid("PG probes need a configured db, SQL and optional params array");
+        if (p.kind === "es" && (!text(p.index, 300) || !p.index || p.query !== void 0 && !text(p.query))) throw D.invalid("ES probes need an index and optional query string");
+        if (p.kind === "kafka" && (!text(p.topic, 300) || !p.topic)) throw D.invalid("Kafka probes need a topic");
+        if (p.limit !== void 0 && (!Number.isInteger(p.limit) || p.limit < 1 || p.limit > 100)) throw D.invalid("Probe limit must be 1..100");
+      }
+      if (d.request) {
+        d.request = require_api_client().prepare({ request: d.request }).request;
+        if (Object.keys(d.request.headers).some((h) => /authorization|cookie|token|key|secret/i.test(h))) throw D.invalid("Use a runtime auth_profile rather than credentials in a saved definition");
+        if (require_redact().values(d.request).some((v) => !/^\{\{[a-z_]\w*\}\}$/i.test(v))) throw D.invalid("Keep request secrets in runtime params, using {{parameter}} placeholders");
+      }
+      for (const c of d.comparisons) {
+        if (!ids.has(c.probe) || !text(c.label, 160)) throw D.invalid("Comparisons need a label and an existing probe name");
+        pointer({}, c.response_path);
+        pointer({}, c.source_path);
+      }
+      return d;
+    }
+    function allowed(r) {
+      return [r.definition.env, ...r.definition.probes.map((p) => p.env || r.definition.env)].every(A.allowsEnv);
+    }
+    function load(id) {
+      const r = store().read(key(id));
+      if (!r || !allowed(r)) throw Object.assign(Error("Debug notebook or recording not found for this user"), { statusCode: 404 });
+      return r;
+    }
+    function url(id) {
+      return C.getServer().publicUrl + "/mapping-debugger?" + new URLSearchParams({ id, story: A.current().storyId });
+    }
+    function save({ id, definition: input, expected_revision }) {
+      key(id);
+      const d = definition(input), s = store();
+      return s.update(id, (old) => {
+        if (old && old.kind !== "definition") throw D.invalid("This name belongs to a recording");
+        if ((old?.revision || null) !== expected_revision) throw D.invalid("Notebook changed; reload its revision before saving", "STATE_CONFLICT", 409);
+        if (!old && index().list().filter((r2) => r2.kind === "definition").length >= 200) throw D.invalid("Notebook budget reached (200)");
+        const r = { id, kind: "definition", definition: d, revision: D.hash(JSON.stringify(d)), previous: old?.revision || null, at: (/* @__PURE__ */ new Date()).toISOString() };
+        write(s, r);
+        return { ...r, url: url(id) };
+      });
+    }
+    function discover({ service, env = C.envNames()[0] }) {
+      if (!text(service, 256) || !service) throw D.invalid("Select an exact service");
+      C.getEnv(env);
+      const p = require_passport().load(service), e = p?.effective || {}, probes = [], references = [];
+      const dbReferences = [...e.tables || [], ...e.dbCalls || []];
+      for (const r of dbReferences.slice(0, 500)) {
+        if (!r.sql && !r.table && !r.name) continue;
+        references.push({ kind: "pg", object: r.table || r.name, sql: r.sql, file: r.file, line: r.line, via: r.via });
+      }
+      for (const r of (p?.es || []).slice(0, 100)) if (r.index && probes.length < 30) probes.push({ id: "index-" + probes.length, label: r.index, kind: "es", index: r.index, limit: 20, evidence: [r.file, r.line, r.via].filter(Boolean).join(":") });
+      for (const r of [...e.consumes || [], ...e.produces || []].slice(0, 100)) {
+        const topic = typeof r === "string" ? r : r.topic;
+        if (topic && !probes.some((p2) => p2.topic === topic) && probes.length < 30) probes.push({ id: "topic-" + probes.length, label: topic, kind: "kafka", topic, limit: 5 });
+      }
+      return {
+        service,
+        env,
+        source: p?.repo || null,
+        references,
+        probes,
+        referenceCount: dbReferences.length,
+        referencesTruncated: dbReferences.length > 500,
+        routes: require_api_catalog().catalog({ env, group: "service:" + service, limit: 100 }),
+        next: "Review source SQL and choose its exact database before adding a PG probe. Use api_database_inspect for function bodies; field_trace for mapper/model references. Save a notebook, then explicitly run selected probes.",
+        gaps: ["Indexed source candidates, not observed SQL executions. Dynamic SQL, generated mappers and internal libraries may be incomplete.", "Independent reads are not a transactional snapshot of the service request."]
+      };
+    }
+    function comparisons(r) {
+      return r.definition.comparisons.map((c) => {
+        const left = r.receipts.api, right = r.receipts[c.probe];
+        const a = pointer(left?.data, c.response_path), b = pointer(right?.data, c.source_path);
+        const status = !left || !right ? "not-run" : left.state !== "done" || right.state !== "done" ? "error" : !a.found || !b.found ? "missing" : require("node:util").isDeepStrictEqual(a.value, b.value) ? "equal" : "different";
+        return { ...c, status, response: a.found ? a.value : void 0, source: b.found ? b.value : void 0, responseAt: left?.at, sourceAt: right?.at, notice: "Equality is an observation, not proof that this query produced the response." };
+      });
+    }
+    function exposed(r, full = false) {
+      const base = { ...r, url: url(r.id) };
+      if (r.kind === "recording") {
+        base.comparisons = comparisons(r);
+        if (!full) {
+          delete base.definition;
+          delete base.history;
+          base.receipts = Object.fromEntries(Object.entries(r.receipts).map(([k, v]) => [k, { state: v.state, at: v.at, ms: v.ms, error: v.error, total: v.total, truncated: v.truncated, exchange: v.exchange, executionId: v.executionId }]));
+          base.comparisons = compactComparisons(base.comparisons);
+        }
+      }
+      return base;
+    }
+    function compactComparisons(rows) {
+      return rows.map((c) => Object.fromEntries(Object.entries(c).map(([k, v]) => ["response", "source"].includes(k) && JSON.stringify(v)?.length > 500 ? [k, { preview: JSON.stringify(v).slice(0, 500), truncated: true }] : [k, v])));
+    }
+    async function run({ id, recording, steps, params = {}, auth_profile }) {
+      const d = load(id);
+      if (d.kind !== "definition") throw D.invalid("Select a saved notebook definition");
+      if (!Array.isArray(steps) || !steps.length || steps.length > 31 || new Set(steps).size !== steps.length || steps.some((s2) => s2 !== "api" && !d.definition.probes.some((p) => p.id === s2)) || steps.includes("api") && !d.definition.request) throw D.invalid("Select unique probe ids or api (which explicitly sends the saved request)");
+      const s = store(), rid = recording ? key(recording) : "run-" + crypto.randomBytes(12).toString("hex"), release = s.lock(rid);
+      let r;
+      try {
+        r = recording ? load(rid) : { id: rid, kind: "recording", notebook: id, revision: d.revision, definition: d.definition, at: (/* @__PURE__ */ new Date()).toISOString(), receipts: {} };
+        if (r.kind !== "recording" || r.notebook !== id || r.revision !== d.revision) throw D.invalid("Recording belongs to a different definition revision; start a new recording");
+        {
+          const all = index().list();
+          if (!recording && all.filter((r2) => r2.kind === "recording").length >= 200 || all.reduce((n, r2) => n + r2.bytes, 0) > 256 * 1048576) throw D.invalid("Recording budget reached; delete old recordings before running");
+        }
+        r.history ||= [];
+        if (r.history.length + steps.length > 100 || Buffer.byteLength(JSON.stringify(r)) > 5 * 1048576) throw D.invalid("This recording is full; start a new recording");
+        for (const step of steps) {
+          require_execution().check();
+          const p = step === "api" ? null : d.definition.probes.find((p2) => p2.id === step), env = p?.env || d.definition.env;
+          C.getEnv(env);
+          const at = (/* @__PURE__ */ new Date()).toISOString(), started = Date.now();
+          if (r.receipts[step]) r.history.push({ step, ...r.receipts[step] });
+          r.receipts[step] = require_state_machine2().bind({ state: "running", at, env, executionId: require_execution().current()?.id || null, request: p || d.definition.request }, require_lifecycles().mappingRead);
+          write(s, r);
+          require_tool_events().progress("debug-probe", { step, recording: rid, state: "running" });
+          try {
+            const T = require_tools();
+            let value, data, total, truncated = false, exchange;
+            if (step === "api") {
+              value = await T.call("api_request_replay", { request: d.definition.request, params, auth_profile, ...d.definition.follow_service ? { service_target: { env, service: d.definition.service } } : {} }, { source: "mapping-debugger" });
+              data = value.response.body.value;
+              exchange = value.id;
+              r.receipts[step].httpStatus = value.response.status;
+              r.receipts[step].resolvedTarget = value.resolvedTarget;
+              r.receipts[step].gaps = value.gaps;
+            } else {
+              const args = p.kind === "pg" ? { sql: p.sql, db: p.db, params: p.params || [], max_rows: p.limit || 50, limit: p.limit || 50 } : p.kind === "es" ? { index: p.index, query: p.query || "", size: p.limit || 20 } : { topic: p.topic, n: p.limit || 5 };
+              value = await T.call({ pg: "pg_query", es: "es_search", kafka: "kafka_last" }[p.kind], { ...args, env }, { source: "mapping-debugger" });
+              const retained = value.view && require_results().load(new URL(value.view).pathname.split("/").pop());
+              data = (retained?.rows || value.rows || []).slice(0, p.limit || 50);
+              total = value.totalHits ?? value.total;
+              truncated = value.truncated === true || total > data.length;
+            }
+            if (Buffer.byteLength(JSON.stringify(data) || "") > 1048576 || Buffer.byteLength(JSON.stringify(r)) + Buffer.byteLength(JSON.stringify(data) || "") > 6 * 1048576) throw Error("Probe exceeds the 1 MiB result or 6 MiB recording evidence limit; narrow the query or start a new recording");
+            Object.assign(r.receipts[step], { state: "done", data: require_redact().clean(data), total, truncated, exchange });
+          } catch (error) {
+            Object.assign(r.receipts[step], { state: require_execution().signal()?.aborted ? "cancelled" : "error", error: require_redact().clean(error.message), ...error.exchange ? { exchange: error.exchange.id, failure: error.exchange.failure } : {} });
+          } finally {
+            r.receipts[step].ms = Date.now() - started;
+            write(s, r);
+          }
+          require_tool_events().progress("debug-probe", { step, recording: rid, state: r.receipts[step].state });
+        }
+        return exposed(r);
+      } finally {
+        release();
+      }
+    }
+    function open(r) {
+      const data = exposed(r, true), view = require_results().saveView("mapping-debugger", data, { title: r.definition.title });
+      return { id: r.id, revision: r.revision, url: url(r.id), view, ...r.kind === "recording" ? { comparisons: compactComparisons(comparisons(r)), receipts: exposed(r).receipts } : {} };
+    }
+    function tool(a) {
+      switch (a.action) {
+        case "discover":
+          return discover(a);
+        case "save":
+          return save(a);
+        case "list":
+          return { notebooks: index().list().filter((r) => r.envs.every(A.allowsEnv)).filter((r) => !a.q || (r.id + " " + r.title + " " + r.service).toLowerCase().includes(a.q.toLowerCase())).map(({ bytes, envs, ...r }) => ({ ...r, url: url(r.id) })).sort((a2, b) => b.at.localeCompare(a2.at)) };
+        case "get":
+          return exposed(load(a.id), a.include_data === true);
+        case "open":
+          return open(load(a.id));
+        case "run":
+          return run(a).then((r) => ({ ...r, ...open(load(r.id)) }));
+        case "delete": {
+          const s = store();
+          load(a.id);
+          return s.update(key(a.id), (r) => {
+            if (!r || r.revision !== a.expected_revision) throw D.invalid("Reload the current revision before deleting", "STATE_CONFLICT", 409);
+            require("node:fs").unlinkSync(s.safe(key(a.id) + ".json"));
+            require("node:fs").rmSync(index().safe(key(a.id) + ".json"), { force: true });
+            return { id: a.id, deleted: true };
+          });
+        }
+        default:
+          throw D.invalid("Choose discover, save, list, get, open, run or delete");
+      }
+    }
+    module2.exports = { tool, definition, pointer, comparisons };
+  }
+});
+
+// lib/tools-mapping-debugger.js
+var require_tools_mapping_debugger = __commonJS({
+  "lib/tools-mapping-debugger.js"(exports2, module2) {
+    module2.exports = ({ str }) => [{
+      name: "mapping_debug",
+      group: "api",
+      origin: "built-in",
+      strictInput: true,
+      logArgs: ["action", "id", "recording", "steps"],
+      description: "Debug raw-to-response mappings side by side. Discover cached service SQL/source/topic references; save/edit a named notebook with HTTP request, PG/ES/Kafka read probes and JSON-pointer comparisons. Save/open never execute. run explicitly sends only selected steps (api may mutate); no model calls or retries. Private durable recordings freeze the definition, retain errors/timing and compare fields without claiming runtime lineage. open gives inline visualization and interactive workbench. Same user can resume across chats.",
+      input: { action: { type: "string", enum: ["discover", "save", "list", "get", "open", "run", "delete"] }, id: str("Lowercase notebook/recording name"), service: str("Exact service for discover"), env: str("Environment for discover"), q: str("Notebook search"), expected_revision: { type: ["string", "null"], description: "Required for save/delete; null creates" }, definition: { type: "object", additionalProperties: true, description: 'version:1,title,service,env,follow_service,request:{method,url,headers,body:{kind,value}},probes:[{id,label,kind:pg|es|kafka,env,db,sql,params,index,query,topic,limit}],comparisons:[{label,probe,response_path:"/name",source_path:"/0/name"}],assumptions:[]' }, recording: str("Existing recording to append/replace selected receipts; same definition revision required"), steps: { type: "array", maxItems: 31, items: { type: "string" }, description: "Explicit probe ids and/or api; omitted never runs anything" }, params: { type: "object", additionalProperties: true, description: "Runtime HTTP template values; not stored in definition" }, auth_profile: str("Runtime server-side bearer profile"), include_data: { type: "boolean", default: false, description: "get: include bounded raw evidence; default compact receipts" } },
+      required: ["action"],
+      run: (a) => require_mapping_debugger().tool(a)
+    }];
+  }
+});
+
 // lib/kafka-actions.js
 var require_kafka_actions = __commonJS({
   "lib/kafka-actions.js"(exports2, module2) {
@@ -89667,7 +91781,7 @@ var require_tools = __commonJS({
       {
         name: "pg_query",
         description: "Run read-only SQL. The database is chosen from the schema in the query (or pass db). Always use WHERE and LIMIT." + VIEW_NOTE,
-        input: { sql: str("SQL"), env, db: str("Database name from envs.json (optional)"), params: { type: "array", items: {}, description: "Bound values for $1, $2, ... placeholders (recommended for repeatable experiments)" }, limit: int("Rows in the preview", PREVIEW), all: { type: "boolean", default: false, description: "Return every row (up to 10000) instead of a preview: for scripts that compare or process them" } },
+        input: { sql: str("SQL"), env, db: str("Database name from envs.json (optional)"), params: { type: "array", items: {}, description: "Bound values for $1, $2, ... placeholders (recommended for repeatable experiments)" }, max_rows: { type: "integer", minimum: 1, maximum: 1e4, description: "Optional database cursor cap, also bounded to 1 MiB. Returns truncated=true if more rows/bytes exist; total is only the retained row count." }, limit: int("Rows in the preview", PREVIEW), all: { type: "boolean", default: false, description: "Return every row (up to 10000) instead of a preview: for scripts that compare or process them" } },
         required: ["sql"],
         limit: (a) => `pg:${a.env}`,
         run: async (a) => {
@@ -89677,8 +91791,8 @@ var require_tools = __commonJS({
             const missing = [...new Set(used)].filter((x) => !known[x] && !["pg_catalog", "information_schema"].includes(x));
             if (missing.length) throw new Error(`schema ${missing.join(", ")} is not in the ${a.env} catalog. Use find to get the exact schema.table (or catalog_sync if it is new).`);
           }
-          const r = await require_pg().query(a.env, a.sql, { db: a.db, params: a.params });
-          return { db: r.db, route: r.route, ms: r.ms, ...tabular("pg", r.rows, { env: a.env, db: r.db, query: a.sql, ms: r.ms }, { preview: a.all ? 1e4 : Math.min(a.limit || PREVIEW, 200) }) };
+          const r = await require_pg().query(a.env, a.sql, { db: a.db, params: a.params, maxRows: a.max_rows });
+          return { db: r.db, route: r.route, ms: r.ms, ...a.max_rows !== void 0 ? { truncated: r.truncated, maxRows: r.maxRows } : {}, ...tabular("pg", r.rows, { env: a.env, db: r.db, query: a.sql, ms: r.ms, ...a.max_rows !== void 0 ? { truncated: r.truncated, maxRows: r.maxRows } : {} }, { preview: a.all ? 1e4 : Math.min(a.limit || PREVIEW, 200) }) };
         }
       },
       {
@@ -90460,6 +92574,7 @@ var require_tools = __commonJS({
     TOOLS.push(...require_tools_map()({ str, int, env }));
     TOOLS.push(...require_tools_architecture()({ str, int, env }));
     TOOLS.push(...require_tools_runtime()({ str, int }));
+    TOOLS.push(...require_tools_service_environments()({ str, int }));
     TOOLS.push(...require_tools_semantic()({ str, int, env }));
     TOOLS.push(...require_tools_passport_edit()({ str, int, env }).map((tool) => ({ ...tool, run: async (args) => require_tools_semantic().present(await tool.run(args), { view: "passport-ports", title: tool.name === "passport_adjust" ? "Saved passport adjustment" : "Passport ports" }) })));
     TOOLS.push(...require_tools_dev()({ str, int, env }).map((t) => ({ ...t, origin: "built-in" })));
@@ -90469,6 +92584,7 @@ var require_tools = __commonJS({
     TOOLS.push(...require_tools_testdb()({ str, int, env }).map((t) => ({ ...t, origin: "built-in" })));
     TOOLS.push(...require_tools_scenario_runtime()().map((t) => ({ ...t, origin: "built-in" })));
     TOOLS.push(...require_tools_api_client()({ str, int, env }).map((t) => ({ ...t, origin: "built-in" })));
+    TOOLS.push(...require_tools_mapping_debugger()({ str }));
     TOOLS.push(...require_tools_kafka_actions()({ str, int, env }).map((t) => ({ ...t, origin: "built-in" })));
     TOOLS.push(...require_tools_ui_trace()({ str, int, env }));
     var ctx = { tabular, clip, getEnv: (e) => require_config().getEnv(e), pg: () => require_pg(), http: require_util2().http, limit };
@@ -92833,6 +94949,22 @@ var require_workbench_intents = __commonJS({
           title: "Change and verify code",
           description: "Use exact source revisions and explicit execution targets.",
           intents: [
+            {
+              id: "run-service-locally",
+              title: "Run a branch with fresh databases, topics and indices",
+              tools: [
+                "service_env_plan",
+                "service_env_save",
+                "service_env_start",
+                "service_env_status",
+                "service_env_bindings",
+                "service_env_request",
+                "service_env_logs",
+                "service_debug",
+                "service_env_control"
+              ],
+              goal: "Start an owned persistent service lease, copy application.properties/env bindings, reproduce an entry-to-exit bug, inspect logs and private data, then reset or stop."
+            },
             {
               id: "regression",
               title: "Prepare an integration regression",
@@ -98157,6 +100289,7 @@ var require_server2 = __commonJS({
       }],
       ["GET", "/self-reflection", true, page("self-reflection.html")],
       ["GET", "/api-client", true, page("api-client.html")],
+      ["GET", "/mapping-debugger", true, page("mapping-debugger.html")],
       ["GET", "/editor", true, page("editor.html")],
       ["GET", "/studio", true, page("studio.html")],
       ["GET", "/api/ui-events", true, async (req, res, url) => {
@@ -98646,6 +100779,12 @@ var require_server2 = __commonJS({
       };
       setTimeout(sweep, 5e3).unref();
       setInterval(sweep, 6 * 36e5).unref();
+      const serviceEnvironmentSweep = setInterval(() => require_service_environments().maintenance().catch((error) => console.error("service environments: " + error.message)), 3e4);
+      serviceEnvironmentSweep.unref();
+      server.once("close", () => {
+        clearInterval(serviceEnvironmentSweep);
+        require_service_env_worker().runtime().close();
+      });
       server.listen(port, host, () => console.error(`dt serve: http://${host}:${port}  (mcp: /mcp, admin: /admin)`));
       return server;
     }

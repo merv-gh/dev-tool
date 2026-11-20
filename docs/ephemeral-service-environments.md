@@ -1,9 +1,12 @@
 # Fast, model-operated service environments
 
-Research/design, 19 November 2026. Audited against `63b2454`. The proposed
-`service_env_*` and `service_debug` operations below are **not implemented**.
-Existing tools are identified separately. This design keeps the supported
-single coordinator and adds capacity through authenticated runtime workers.
+Historical research/design, 19 November 2026, audited against `63b2454`.
+The subsequent [service environment implementation](service-environments.md)
+provides persistent definitions/leases, worker supervision, application bindings,
+exclusive explicit prewarming, API/query evidence, Admin/inline surfaces and JDI
+debugging. The baseline inventory and broader proposals below remain dated
+research; automatic pool replenishment, shared namespaces, broader migration
+adapters and performance targets are not established by that implementation.
 
 ## Recommendation
 

@@ -5,7 +5,7 @@ const root = path.join(__dirname, '..');
 function generate({check = false} = {}) {
   const families = require('../docs/benchmarks/state-machine-runtime.json').families;
   const S = require('../lib/state-machine'), L = require('../lib/lifecycles');
-  const charts = [...Object.entries(L), ...Object.entries(S.models), ['automation', require('../lib/automation-flow').lifecycle], ['checkpoint', require('../lib/automation-flow').checkpointLifecycle], ['continuation', require('../lib/continuation').lifecycle], ['selection', require('../lib/continuation').selection], ['decoding', require('../web/map-format').decoding], ['atomic', require('../lib/atomic-file').model]];
+  const charts = [['serviceEnvironment',require('../lib/service-env-worker').lifecycle],...Object.entries(L), ...Object.entries(S.models), ['automation', require('../lib/automation-flow').lifecycle], ['checkpoint', require('../lib/automation-flow').checkpointLifecycle], ['continuation', require('../lib/continuation').lifecycle], ['selection', require('../lib/continuation').selection], ['decoding', require('../web/map-format').decoding], ['atomic', require('../lib/atomic-file').model]];
   const files = require('../lib/source-version').files(root), texts = new Map(files.map(f => [f, fs.readFileSync(path.join(root,f),'utf8')]));
   const hash = text => crypto.createHash('sha256').update(text).digest('hex');
   const machines = charts.map(([key, chart]) => {

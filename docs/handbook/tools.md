@@ -768,6 +768,12 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
       "items": {},
       "description": "Bound values for $1, $2, ... placeholders (recommended for repeatable experiments)"
     },
+    "max_rows": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10000,
+      "description": "Optional database cursor cap, also bounded to 1 MiB. Returns truncated=true if more rows/bytes exist; total is only the retained row count."
+    },
     "limit": {
       "type": "integer",
       "description": "Rows in the preview",
@@ -3287,6 +3293,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
 - [`api_request_prepare`](#tool-api_request_prepare)
 - [`api_request_replay`](#tool-api_request_replay)
 - [`api_request_save`](#tool-api_request_save)
+- [`mapping_debug`](#tool-mapping_debug)
 
 <a id="tool-api_routes"></a>
 
@@ -3830,6 +3837,96 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
   "required": [
     "id"
   ]
+}
+```
+
+</details>
+
+<a id="tool-mapping_debug"></a>
+
+### mapping_debug
+
+Debug raw-to-response mappings side by side. Discover cached service SQL/source/topic references; save/edit a named notebook with HTTP request, PG/ES/Kafka read probes and JSON-pointer comparisons. Save/open never execute. run explicitly sends only selected steps (api may mutate); no model calls or retries. Private durable recordings freeze the definition, retain errors/timing and compare fields without claiming runtime lineage. open gives inline visualization and interactive workbench. Same user can resume across chats.
+
+Workflow: [Debug service response mappings](README.md#mapping-debugger) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": {
+      "type": "string",
+      "enum": [
+        "discover",
+        "save",
+        "list",
+        "get",
+        "open",
+        "run",
+        "delete"
+      ]
+    },
+    "id": {
+      "type": "string",
+      "description": "Lowercase notebook/recording name"
+    },
+    "service": {
+      "type": "string",
+      "description": "Exact service for discover"
+    },
+    "env": {
+      "type": "string",
+      "description": "Environment for discover"
+    },
+    "q": {
+      "type": "string",
+      "description": "Notebook search"
+    },
+    "expected_revision": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Required for save/delete; null creates"
+    },
+    "definition": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "version:1,title,service,env,follow_service,request:{method,url,headers,body:{kind,value}},probes:[{id,label,kind:pg|es|kafka,env,db,sql,params,index,query,topic,limit}],comparisons:[{label,probe,response_path:\"/name\",source_path:\"/0/name\"}],assumptions:[]"
+    },
+    "recording": {
+      "type": "string",
+      "description": "Existing recording to append/replace selected receipts; same definition revision required"
+    },
+    "steps": {
+      "type": "array",
+      "maxItems": 31,
+      "items": {
+        "type": "string"
+      },
+      "description": "Explicit probe ids and/or api; omitted never runs anything"
+    },
+    "params": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Runtime HTTP template values; not stored in definition"
+    },
+    "auth_profile": {
+      "type": "string",
+      "description": "Runtime server-side bearer profile"
+    },
+    "include_data": {
+      "type": "boolean",
+      "default": false,
+      "description": "get: include bounded raw evidence; default compact receipts"
+    }
+  },
+  "required": [
+    "action"
+  ],
+  "additionalProperties": false
 }
 ```
 
@@ -12158,6 +12255,15 @@ Workflow: [Developer studio: continue, coordinate and verify](README.md#develope
 - [`metadata_list`](#tool-metadata_list)
 - [`metadata_get`](#tool-metadata_get)
 - [`metadata_edit`](#tool-metadata_edit)
+- [`service_env_plan`](#tool-service_env_plan)
+- [`service_env_save`](#tool-service_env_save)
+- [`service_env_start`](#tool-service_env_start)
+- [`service_env_status`](#tool-service_env_status)
+- [`service_env_bindings`](#tool-service_env_bindings)
+- [`service_env_logs`](#tool-service_env_logs)
+- [`service_env_control`](#tool-service_env_control)
+- [`service_env_request`](#tool-service_env_request)
+- [`service_debug`](#tool-service_debug)
 
 <a id="tool-logic_model"></a>
 
@@ -12701,6 +12807,453 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
     "id",
     "expected_revision",
     "patch"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-service_env_plan"></a>
+
+### service_env_plan
+
+Plan or discover disposable service environments. Lists this user’s persistent definitions/runs across chats; selecting an id is explicit resume. definition accepts version 1 JSON; worker=true checks Docker/images without starting. For a branch, workspace_open first. Returned bindings are for application configuration, not production deployment.
+
+Workflow: [Run a branch in a persistent service environment](README.md#service-environments) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Optional saved definition/run id"
+    },
+    "definition": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Version 1 {name,services:[{name,workspace,adapter:\"spring-boot|node\",module,artifact?,port,health_path,properties?,env?,datasources?:{logicalDb:\"spring.datasource\"}}],dependencies?:{postgres:{template},kafka:{topics:[{name,partitions}]},elasticsearch:{indices:[{name,mappings?,documents?}]}},context?,continuation?,ttl_ms?,assumptions?}"
+    },
+    "worker": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-service_env_save"></a>
+
+### service_env_save
+
+Persist a named versioned service environment definition, optionally linked to context/continuation. No service starts. Workspaces must be owned and already open. expected_revision=null creates; the previous revision updates. Definitions contain configuration, not shell commands. Builds use Maven/Gradle and their annotation processors.
+
+Workflow: [Run a branch in a persistent service environment](README.md#service-environments) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Definition id; default definition-<name>"
+    },
+    "definition": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Version 1 definition from service_env_plan description"
+    },
+    "expected_revision": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "definition",
+    "expected_revision"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-service_env_start"></a>
+
+### service_env_start
+
+Start a saved definition once with a unique idempotency_key. Build pinned workspace sources, clone optional PG template and launch worker-supervised services plus owned Kafka/ES. Returns immediately with run/job; poll service_env_status. warm=true prestarts clean dependency capacity for a matching later start. Disconnects never stop services; TTL/explicit stop does.
+
+Workflow: [Run a branch in a persistent service environment](README.md#service-environments) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "definition": {
+      "type": "string",
+      "description": "Saved definition id"
+    },
+    "idempotency_key": {
+      "type": "string",
+      "description": "Unique task/iteration key; retries return the same lease"
+    },
+    "warm": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "definition",
+    "idempotency_key"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-service_env_status"></a>
+
+### service_env_status
+
+Inspect a run or read a retained evidence id; persistent state, exact source/artifact identities, services, progress, events, expiry and cleanup. id omitted lists only this user’s definitions/runs. Reconciles worker state; unknown outcomes remain explicit rather than starting duplicates.
+
+Workflow: [Run a branch in a persistent service environment](README.md#service-environments) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Owned environment run id; select explicitly to resume it from another chat"
+    },
+    "job": {
+      "type": "string",
+      "description": "Optional preparation job id from pull-images"
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-service_env_bindings"></a>
+
+### service_env_bindings
+
+Get application-container bindings as Spring application.properties placeholders and separate environment values. Supervisor injects private scratch credentials. reveal_secrets explicitly includes them for manual use. write_path explicitly writes the properties snippet to the service workspace with required file revision; no edit otherwise. Reset/restart requires reading new bindings.
+
+Workflow: [Run a branch in a persistent service environment](README.md#service-environments) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Owned environment run id; select explicitly to resume it from another chat"
+    },
+    "service": {
+      "type": "string",
+      "description": "Service name; defaults to first"
+    },
+    "reveal_secrets": {
+      "type": "boolean",
+      "default": false
+    },
+    "read_path": {
+      "type": "string",
+      "description": "Optional owned service workspace file path to inspect its revision across chats"
+    },
+    "write_path": {
+      "type": "string",
+      "description": "Optional relative application-dt-local.properties path"
+    },
+    "expected_revision": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Required only for write_path: existing file SHA-256 or null for new file"
+    }
+  },
+  "required": [
+    "id"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-service_env_logs"></a>
+
+### service_env_logs
+
+Read bounded supervised application/dependency logs, including retained logs after stop. Does not restart anything or stream unbounded output into model context.
+
+Workflow: [Run a branch in a persistent service environment](README.md#service-environments) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Owned environment run id; select explicitly to resume it from another chat"
+    },
+    "service": {
+      "type": "string",
+      "description": "Optional service/container key"
+    },
+    "lines": {
+      "type": "integer",
+      "description": "Tail lines 1..500",
+      "default": 100
+    }
+  },
+  "required": [
+    "id"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-service_env_control"></a>
+
+### service_env_control
+
+Control a selected owned lease: stop (also cancel preparation), renew, restart or reset (stop then start with fresh dependencies). expected_generation rejects stale control. pull-images is an explicit administrator preparation job for configured images. Evidence survives cleanup; failures remain retryable.
+
+Workflow: [Run a branch in a persistent service environment](README.md#service-environments) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Owned environment run id; select explicitly to resume it from another chat"
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "stop",
+        "renew",
+        "restart",
+        "reset",
+        "pull-images"
+      ]
+    },
+    "expected_generation": {
+      "type": "integer",
+      "description": "Generation from status"
+    },
+    "ttl_ms": {
+      "type": "integer",
+      "description": "Renewal duration 60000..86400000",
+      "default": 1800000
+    }
+  },
+  "required": [
+    "id",
+    "action"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-service_env_request"></a>
+
+### service_env_request
+
+Act on or inspect only an owned disposable runtime through its backend worker. HTTP uses a service-relative path and may mutate; PG SQL is read-only; ES searches only declared indices; Kafka produces/reads only declared topics. Results persist as private evidence and work in saved collection tool steps. Never uses source-environment endpoints as fallback.
+
+Workflow: [Run a branch in a persistent service environment](README.md#service-environments) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Owned environment run id; select explicitly to resume it from another chat"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "http",
+        "pg",
+        "es",
+        "kafka-produce",
+        "kafka-read"
+      ]
+    },
+    "service": {
+      "type": "string",
+      "description": "HTTP service name"
+    },
+    "path": {
+      "type": "string",
+      "description": "HTTP relative path, e.g. /orders/42"
+    },
+    "method": {
+      "type": "string",
+      "enum": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    "headers": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "HTTP headers"
+    },
+    "body": {
+      "description": "HTTP body, Elasticsearch search JSON or Kafka message JSON"
+    },
+    "database": {
+      "type": "string",
+      "description": "PG logical database"
+    },
+    "sql": {
+      "type": "string",
+      "description": "Read-only PostgreSQL SQL"
+    },
+    "params": {
+      "type": "array",
+      "items": {}
+    },
+    "index": {
+      "type": "string",
+      "description": "Declared ES index"
+    },
+    "topic": {
+      "type": "string",
+      "description": "Declared Kafka topic"
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Kafka maximum records",
+      "default": 5
+    },
+    "timeout_ms": {
+      "type": "integer",
+      "description": "HTTP deadline 100..120000",
+      "default": 15000
+    }
+  },
+  "required": [
+    "id",
+    "kind"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-service_debug"></a>
+
+### service_debug
+
+JDWP/JDI debug an owned Spring JVM launched with debug=true. Attach, set/clear class-line or method breakpoints, read bounded events/threads/stack locals, resume or detach. No expression evaluation. Breakpoints suspend only the event thread, auto-resume after 60 seconds and may perturb timeouts/rebalances. Static Joern paths are suggestions; breakpoint-hit events are execution evidence.
+
+Workflow: [Run a branch in a persistent service environment](README.md#service-environments) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Owned environment run id; select explicitly to resume it from another chat"
+    },
+    "service": {
+      "type": "string",
+      "description": "Debug-enabled Spring service"
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "attach",
+        "breakpoint",
+        "clear",
+        "events",
+        "threads",
+        "stack",
+        "resume",
+        "detach"
+      ]
+    },
+    "class_name": {
+      "type": "string",
+      "description": "Exact loaded Java class including package"
+    },
+    "line": {
+      "type": "integer",
+      "description": "Executable source line"
+    },
+    "method": {
+      "type": "string",
+      "description": "Or exact method name"
+    },
+    "breakpoint": {
+      "type": "string",
+      "description": "Breakpoint id for clear"
+    },
+    "thread": {
+      "type": "string",
+      "description": "Thread id from events/threads"
+    },
+    "cursor": {
+      "type": "integer",
+      "description": "Event sequence cursor",
+      "default": 0
+    }
+  },
+  "required": [
+    "id",
+    "service",
+    "action"
   ],
   "additionalProperties": false
 }

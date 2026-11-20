@@ -13,7 +13,7 @@ test('live handbook covers the exact enabled registry, native views and every ch
  for(const view of catalog.views)assert.ok(content.visualHelp[view.name]||!view.builtin);
 });
 test('all prepared handbook examples conform to actual input schemas',async()=>{
- const tools=await T.schemas({metadata:true}),values={env:'dev',service:'checkout',repo:'DEMO/checkout',db:'orders',context:'handbook-task',ticket:'HANDBOOK-101',revisionKey:'returned-revision-key',analysis:'returned-analysis-id'},fill=a=>JSON.parse(JSON.stringify(a).replace(/\{\{(\w+)\}\}/g,(_,name)=>values[name]));
+ const tools=await T.schemas({metadata:true}),values={env:'dev',service:'checkout',repo:'DEMO/checkout',db:'orders',context:'handbook-task',ticket:'HANDBOOK-101',revisionKey:'returned-revision-key',analysis:'returned-analysis-id',run:'run-returned-id'},fill=a=>JSON.parse(JSON.stringify(a).replace(/\{\{(\w+)\}\}/g,(_,name)=>values[name]));
  const examples=content.chapters.flatMap(c=>c.sections.flatMap(s=>s.examples||[])).concat(content.indexes.map(i=>i.refresh).filter(Boolean));
  for(const example of examples){const schema=tools.find(t=>t.name===example.tool)?.inputSchema;assert.ok(schema,example.tool);assert.deepEqual(require('../lib/schema').validate(fill(example.args),schema),[],example.tool);}
 });

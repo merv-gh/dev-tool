@@ -172,10 +172,14 @@ services:
     environment:
       HOME: /tmp
       <<: *utf8-environment
-      DT_HOME: /tmp/dt-runner
+      DT_HOME: /var/dt-build/runner-home   # durable service supervisor journal across runner restarts
       DT_RUNNER_TOKEN: ${DT_RUNNER_TOKEN:-}
       DT_WORK_DIR: ${DT_WORK_DIR:-/var/dt-work}
       DT_BUILD_DIR: /var/dt-build
+      DT_SERVICE_ENV_CAPACITY: ${DT_SERVICE_ENV_CAPACITY:-4}
+      DT_SERVICE_ENV_MEMORY_MB: ${DT_SERVICE_ENV_MEMORY_MB:-6144}
+      DT_SERVICE_ENV_NODE_IMAGE: ${DT_NODE_IMAGE:-node:22-bookworm}
+      DT_SERVICE_ENV_JAVA_IMAGE: maven:${MAVEN_IMAGE_TAG:-3.9-eclipse-temurin-21}
       DT_JAVA_HOME: ${DT_JAVA_HOME:-/opt/jdk/java}
       DT_MAVEN: ${DT_MAVEN:-/opt/jdk/maven/bin/mvn}
       DOCKER_HOST: unix:///var/run/docker.sock

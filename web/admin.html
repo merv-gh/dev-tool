@@ -6,6 +6,7 @@
 <title>Developer workspace · dt</title>
 <link rel="stylesheet" href="/static/ui.css">
 <link rel="stylesheet" href="/static/admin-runtime.css">
+<link rel="stylesheet" href="/static/admin-environments.css">
 <link rel="stylesheet" href="/static/diagnostics.css"><link rel="stylesheet" href="/static/request-events.css"><link rel="stylesheet" href="/static/project-context.css">
 <link rel="stylesheet" href="/static/admin-semantic.css"><link rel="stylesheet" href="/static/admin-architecture.css">
 <style>
@@ -159,6 +160,7 @@
     <button data-tab="api">API routes</button>
     <button data-tab="views">Views<span class="n" id="nViews"></span></button>
     <button data-tab="history">History</button>
+    <button data-tab="environments">Service environments</button>
     <button data-tab="runtime">Runtime<span class="n" id="nExecutions"></span></button>
     <button data-tab="reflection">Self-reflection</button>
     <button data-tab="architecture">Architecture</button>
@@ -232,7 +234,7 @@
   </section>
 
   <section id="tab-api" hidden>
-    <p class="row"><strong>API client</strong><span class="spacer"></span><a id="apiClientOpen" href="/api-client" target="_blank" rel="noopener">Open full page</a></p>
+    <p class="row"><strong>API client</strong><span class="spacer"></span><a href="/mapping-debugger" target="_blank" rel="noopener">Mapping debugger</a><a id="apiClientOpen" href="/api-client" target="_blank" rel="noopener">Open full page</a></p>
     <iframe id="adminApiClient" title="API explorer: services, request editor and response" style="width:100%;height:calc(100vh - 190px);min-height:650px;border:1px solid var(--line);border-radius:8px"></iframe>
     <details><summary>Route evidence table</summary>
     <h2>API routes <span class="muted" id="rtCount"></span></h2>
@@ -351,6 +353,22 @@
     </div>
   </section>
 
+  <section id="tab-environments" hidden>
+    <div class="se-heading"><div><h2>Service environments</h2><p class="hint">Run a branch against disposable dependencies. Keep the lease, application bindings and investigation evidence together across chats.</p></div><div class="row"><button id="seRefresh">Refresh</button><button id="seNew" class="primary">New definition</button></div></div>
+    <p id="seMessage" class="hint" role="status" aria-live="polite">Select a saved definition or create one from an open workspace.</p>
+    <datalist id="seWorkspaces"></datalist><datalist id="seContexts"></datalist><datalist id="seContinuations"></datalist><datalist id="seTemplates"></datalist>
+    <div class="se-layout"><aside class="se-library" id="seLibrary"><label for="seSearch">Search environments</label><input id="seSearch" type="search" placeholder="Name, task or state"><h3>Saved definitions</h3><div id="seDefinitions"></div><h3>Runs & warm capacity</h3><div id="seRuns"></div></aside>
+    <div class="se-content"><div id="seEmpty" class="se-empty"><h3>Run the service you are changing</h3><p>Open a workspace at the branch or commit you need, then create a named environment definition. Choose its dependencies and start a persistent lease.</p><p class="hint">Use the left panel to resume a run. Starting and refreshing are separate actions; closing the page leaves the service running until its lease expires.</p><a href="#studio">Open Developer studio to select a workspace</a></div><div id="seEditor" hidden><h3 id="seEditorTitle">New definition</h3><details id="seVersionsPanel" hidden><summary>Saved definition versions</summary><div id="seVersions" class="se-toolbar"></div><pre id="seVersionPreview"></pre></details><form id="seDefinitionForm"><div class="se-form-grid"><label>Name<input id="seName" required pattern="[a-z][a-z0-9-]{0,39}" placeholder="orders-investigation"></label><label>Lease duration (minutes)<input id="seTTL" type="number" min="1" max="1440" value="30" required></label><label>Context (optional)<input id="seContext" list="seContexts" placeholder="Choose a task context"></label><label>Persistent task (optional)<input id="seContinuation" list="seContinuations" placeholder="Choose a continuation"></label></div><div id="seServices"></div><button type="button" id="seAddService">Add service</button><h3>Disposable dependencies</h3><p class="hint">Use a prepared PostgreSQL template, topic names with optional partition counts, and index names. Leave unused systems empty.</p><div class="se-form-grid"><label>PostgreSQL template<input id="sePgTemplate" list="seTemplates" placeholder="Immutable template key"></label><label>Kafka topics<input id="seKafkaTopics" placeholder="orders.paid:1, orders.failed:1"></label><label>Elasticsearch indices<input id="seESIndices" placeholder="order-read"></label></div><label>Assumptions / background work disabled (one per line)<textarea id="seAssumptions" rows="2"></textarea></label><div class="se-toolbar"><button type="submit" id="seSave" class="primary">Save definition</button><button type="button" id="sePreflight">Check worker & images</button><button type="button" id="seImages" disabled>Prepare images</button></div><div class="se-toolbar"><button type="button" id="seStart" disabled>Start services</button><button type="button" id="seWarm" disabled>Warm dependencies</button><span class="hint">Save changes before starting. Existing runs retain their original definition.</span></div><details id="sePlanPanel"><summary>Preparation plan</summary><pre id="sePlan">Check the worker to inspect images, source identities and configuration rules.</pre></details><details><summary>Advanced definition JSON</summary><textarea id="seAdvanced" rows="14" spellcheck="false">{}</textarea><button type="button" id="seApplyAdvanced">Load JSON into form</button></details></form></div>
+    <div id="seDetails" hidden><h3 id="seTitle"></h3><p id="seSubtitle" class="hint"></p><div class="se-toolbar"><button data-se-control="stop">Stop / cancel</button><button data-se-control="restart">Restart with fresh state</button><label>Renew for (minutes)<input id="seRenewMinutes" type="number" min="1" max="1440" value="30"></label><button data-se-control="renew">Renew lease</button><button id="seCopyLink">Copy resume link</button><a id="seDetailLink" href="#environments">Resume link</a></div><div id="seOverview"></div><div class="se-toolbar"><label>Selected service<select id="seService"></select></label></div>
+    <details><summary>Application bindings & properties</summary><p class="hint">Properties reference variables injected by the supervisor. Container addresses are for applications; use the request panel for backend access.</p><div class="se-toolbar"><button id="seLoadBindings">Load bindings</button><label><input id="seReveal" type="checkbox"> Include private scratch credentials</label><button data-se-copy="seBindingsText">Copy properties</button><button data-se-copy="seEnvironmentText">Copy environment</button></div><pre id="seBindingsText">Load bindings to prepare application configuration.</pre><pre id="seEnvironmentText"></pre><div class="se-form-grid"><label>Workspace properties path<input id="seWritePath" value="src/main/resources/application-dt-local.properties"></label></div><button id="seWriteBindings">Save configuration block to workspace</button></details>
+    <details><summary>Application & dependency logs</summary><button id="seLoadLogs">Load log tail</button><pre id="seLogsText">Load a bounded log tail from the supervisor.</pre></details>
+    <details open><summary>Inspect with a request or query</summary><p class="hint" id="seRequestHint"></p><form id="seRequestForm"><div class="se-form-grid"><label>Operation<select id="seRequestKind"><option value="http">Service HTTP request</option><option value="pg">PostgreSQL query · read-only</option><option value="es">Elasticsearch search</option><option value="kafka-produce">Produce Kafka message</option><option value="kafka-read">Read Kafka messages</option></select></label><label data-se-http>Method<select id="seMethod"><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option></select></label><label data-se-http>Service-relative path<input id="sePath" value="/actuator/health"></label><label id="seTargetLabel" hidden><span id="seTargetText">Logical database</span><input id="seTarget" placeholder="Declared resource name"></label></div><label><span id="seBodyLabel">Request / message JSON</span><textarea id="seRequestBody" rows="4" spellcheck="false"></textarea></label><div class="se-toolbar"><button id="seSend" type="submit" class="primary">Send to environment</button><button type="button" data-se-copy="seResponse">Copy result</button></div></form><p id="seResponseSummary" class="hint" role="status"></p><pre id="seResponse">Send a request to inspect its result.</pre><details><summary>Complete request, response headers & evidence receipt</summary><pre id="seReceipt"></pre></details></details>
+<details><summary>Retained request & query evidence</summary><div id="seEvidence"></div></details>
+    <details><summary>Java debugger · execution evidence</summary><p class="hint">Enable debug in the service definition before launch. Breakpoints suspend only the event thread and auto-resume after 60 seconds. Startup, broker timing and locks may be affected.</p><div class="se-form-grid"><label>Action<select id="seDebugAction"><option value="attach">Attach</option><option value="breakpoint">Set breakpoint</option><option value="events">Read events</option><option value="clear">Remove breakpoint</option><option value="threads">List threads</option><option value="stack">Inspect paused stack & locals</option><option value="resume">Resume</option><option value="detach">Detach</option></select></label><label>Java class<input id="seDebugClass" placeholder="com.acme.orders.OrderHandler"></label><label>Line<input id="seDebugLine" type="number" min="1"></label><label>Or method<input id="seDebugMethod" placeholder="handle"></label><label>Thread id (from breakpoint event)<input id="seDebugThread"></label><label>Breakpoint id (to remove)<input id="seDebugBreakpoint"></label></div><button id="seDebugRun">Run debugger action</button><pre id="seDebugResult">Attach to a debug-enabled service, set a breakpoint, call the API, then inspect its events.</pre></details>
+    <details id="seSnapshotPanel"><summary>Saved definition & source metadata</summary><button id="seEditCurrent" type="button">Edit current definition</button><pre id="seDefinitionSnapshot"></pre></details></div>
+    </div></div>
+  </section>
+
   <section id="tab-runtime" hidden>
     <div class="rt-heading" id="rtActivityHeading"><div><h2>Execution activity</h2><p class="hint">Calls, code cells and background jobs in the selected chat / task. Cancellation stays visible until work and cleanup settle.</p></div><div class="row"><label><input id="rtLive" type="checkbox" checked> Live</label><button id="rtRefresh">Refresh runtime</button><span id="rtUpdated" class="muted"></span></div></div>
     <div id="rtMessage" class="hint" role="status" aria-live="polite"></div>
@@ -432,6 +450,7 @@
 <script src="/static/admin-context.js"></script><script src="/static/project-context-ui.js"></script><script src="/static/admin-project-context.js"></script>
 <script src="/static/admin-map.js"></script>
 <script src="/static/admin-runtime.js"></script>
+<script src="/static/admin-environments.js"></script>
 <script src="/static/admin-workbench.js"></script><script src="/static/workbench-explorer.js"></script>
 <link rel="stylesheet" href="/static/capability-map.css"><script src="/static/capability-layout.js"></script><script src="/static/capability-map.js"></script><script src="/static/admin-capabilities.js"></script>
 <script src="/static/trace-format.js"></script><script src="/static/diagnostics.js"></script><script src="/static/request-events.js"></script><script src="/static/admin-observability.js"></script>
@@ -690,10 +709,12 @@ async function loadRoutes() {
 function show(t) {
   const requested = t; t = t.split('?')[0];
   if (tab === 'context' && t !== tab && !contextCanLeave()) return;
+  if (tab === 'environments' && t !== tab && !serviceEnvironmentCanLeave()) return;
   tab = t;
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   document.querySelectorAll('section[id^=tab-]').forEach(s => s.hidden = s.id !== `tab-${t}`);
-  history.replaceState(null, '', `#${['semantic','handbook','context','scripts','runtime','workbench','capabilities'].includes(t) ? requested : t}`);
+  history.replaceState(null, '', `#${['semantic','handbook','context','scripts','runtime','workbench','capabilities','environments'].includes(t) ? requested : t}`);
+  if (t === 'environments') loadServiceEnvironments().catch(e => toast(e.message));
   if (t === 'capabilities') loadCapabilities().catch(e => toast(e.message));
   if (t === 'workbench') loadWorkbench().catch(e => wbMessage(e.message, true));
   if(t==='reflection')loadRuntime().then(()=>{if(tab!=='reflection')return;const frame=$('adminReflection'),src='/self-reflection?'+new URLSearchParams({embed:'true',story:runtimeStory||'default',...(runtimePrincipal?{principal:runtimePrincipal}:{})});if(frame.getAttribute('src')!==src)frame.src=src;}).catch(e=>toast(e.message));

@@ -159,6 +159,7 @@ const routes = [
   ['GET', '/handbook-images/*', false, (req,res,url) => { const file=require('./lib/handbook').imageFile(url.pathname.slice('/handbook-images/'.length));if(!file)return send(res,404,{error:'Unknown handbook image'});res.writeHead(200,{'content-type':'image/png','cache-control':'public, max-age=3600','x-content-type-options':'nosniff'});res.end(fs.readFileSync(file)); }],
   ['GET', '/self-reflection', true, page('self-reflection.html')],
   ['GET', '/api-client', true, page('api-client.html')],
+  ['GET', '/mapping-debugger', true, page('mapping-debugger.html')],
   ['GET', '/editor', true, page('editor.html')],
   ['GET', '/studio', true, page('studio.html')],
   ['GET','/api/ui-events',true,async(req,res,url)=>{const B=require('./lib/ui-events'),channel=url.searchParams.get('channel');await B.access(channel);return B.sse(req,res,{channel,after:url.searchParams.get('after')||undefined});}],
@@ -442,6 +443,9 @@ function start({ port = 4000, host = '127.0.0.1' } = {}) {
   const sweep = () => { try { require('./lib/workspace').sweep().then(r => { if (r.length) console.error(`workspaces removed (unused ${require('./lib/config').getTests().workspaceDays} days): ${r.join(', ')}`); }); } catch {} };
   setTimeout(sweep, 5000).unref();
   setInterval(sweep, 6 * 3600e3).unref();
+  const serviceEnvironmentSweep = setInterval(() => require('./lib/service-environments').maintenance().catch(error => console.error('service environments: ' + error.message)), 30000);
+  serviceEnvironmentSweep.unref();
+  server.once('close', () => { clearInterval(serviceEnvironmentSweep); require('./lib/service-env-worker').runtime().close(); });
   server.listen(port, host, () => console.error(`dt serve: http://${host}:${port}  (mcp: /mcp, admin: /admin)`));
   return server;
 }

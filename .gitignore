@@ -44,3 +44,8 @@ node_modules/
 
 # Local Impeccable screenshot/review artifacts; published examples live in docs/screenshots.
 .impeccable/review/
+
+# Private debugging notebooks, runtime leases and worker journals.
+/mapping-debugger/
+/service-environments/
+/service-runtime/

@@ -7,7 +7,7 @@
 <script src="/static/state-machine.js" defer></script><script src="/static/api-workflow-model.js" defer></script><script src="/static/api-explorer.js" defer></script>
 </head>
 <body>
-<header class="app-header"><h1>API explorer</h1><span class="header-note">Choose. Send. Inspect.</span><span id="live-status" class="field-note" role="status">Connecting…</span><span class="spacer"></span><label class="environment">Environment <select id="apiEnvironment" aria-label="Environment"><option value="">Loading…</option></select></label><a id="admin-link" href="/admin#api">Admin</a></header>
+<header class="app-header"><h1>API explorer</h1><span class="header-note">Choose. Send. Inspect.</span><span id="live-status" class="field-note" role="status">Connecting…</span><span class="spacer"></span><label class="environment">Environment <select id="apiEnvironment" aria-label="Environment"><option value="">Loading…</option></select></label><a id="mapping-link" href="/mapping-debugger">Mapping debugger</a><a id="admin-link" href="/admin#api">Admin</a></header>
 <main class="workspace">
 <aside class="navigator" aria-label="Request library">
   <div class="tabs source-tabs" role="tablist" aria-label="Request sources">
@@ -91,4 +91,4 @@
   </div>
 </section>
 </main>
-</body></html>
+<script>document.getElementById("mapping-link").href="/mapping-debugger"+location.search;</script></body></html>

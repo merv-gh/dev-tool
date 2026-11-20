@@ -212,6 +212,7 @@ function rtNativeView(view) {
 }
 async function runtimeRunCode() {
   if ($('adminReflection')?.contentWindow?.reflectionCanLeave?.()===false) { $('rtScopeStatus').textContent='Wait for the Self-reflection tool response before changing scope.'; return; }
+  if(typeof serviceEnvironmentCanLeave==='function'&&!serviceEnvironmentCanLeave())return;
   if (runtimeCodePending.value) return;
   let args; try { args = JSON.parse($('rtCodeArgs').value); if (!args || typeof args !== 'object' || Array.isArray(args)) throw Error('Arguments must be a JSON object'); } catch (error) { $('rtCodeStatus').textContent = error.message; return; }
   const name = $('rtCodeTool').value, scope = runtimeScopeVersion.value; runtimeCodePending.value = true; $('rtCodeRun').disabled = true; $('rtCodeStatus').textContent = 'Running ' + name + '…';
@@ -246,6 +247,7 @@ async function runtimeChangeScope(event) {
   runtimeScopeVersion.value++; if(typeof diagnosticsScopeChanged==='function')diagnosticsScopeChanged(); runtimeMetadataVersion.value++; runtimeSelected = null; runtimeMetadataSelected = null; runtimeMetadataDirty.value = false; runtimeMetadata = []; runtimeMetadataCursor = null;
   if(typeof clearHandbook==='function')clearHandbook();
   if(typeof clearCapabilities==='function')clearCapabilities();
+  if(typeof clearServiceEnvironments==='function')clearServiceEnvironments();
   if (runtimeState) runtimeState = { ...runtimeState, executions: [], jobs: [] };
   $('rtExecutions').replaceChildren(); $('rtMetadataList').replaceChildren();
   $('rtExecution').innerHTML = '<div class="empty">Select an execution in this chat / task.</div>'; $('rtMetadataEditor').innerHTML = '<div class="empty">Select a record in this chat / task.</div>';
@@ -259,6 +261,7 @@ async function runtimeChangeScope(event) {
   $('calls').replaceChildren(); $('job').innerHTML = '<div class="empty">Select a job in this chat / task.</div>';
   if (typeof selectedJob !== 'undefined') selectedJob = null;
   await loadRuntime(); await refresh(); await runtimeLoadMetadata();
+  if(tab==='environments')await loadServiceEnvironments();
   if (tab === 'context') await loadContexts(); if (tab === 'history') await loadHistory();
   if(tab==='reflection')$('adminReflection').src='/self-reflection?'+new URLSearchParams({embed:'true',story:runtimeStory,...(runtimePrincipal?{principal:runtimePrincipal}:{})});
   if(tab==='pages')$('adminPages').src='/pages?'+new URLSearchParams({embed:'true',story:runtimeStory,...(runtimePrincipal?{principal:runtimePrincipal}:{})});

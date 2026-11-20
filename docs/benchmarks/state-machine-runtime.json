@@ -845,6 +845,31 @@
       }
     },
     {
+      "name": "Mapping-debugger.read",
+      "initial": "running",
+      "states": [
+        "running",
+        "done",
+        "error",
+        "cancelled"
+      ],
+      "terminal": [
+        "done",
+        "error",
+        "cancelled"
+      ],
+      "transitions": {
+        "running": [
+          "done",
+          "error",
+          "cancelled"
+        ],
+        "done": [],
+        "error": [],
+        "cancelled": []
+      }
+    },
+    {
       "name": "P01.descriptor",
       "initial": "open",
       "states": [
@@ -1150,6 +1175,48 @@
           "active",
           "paused"
         ]
+      }
+    },
+    {
+      "name": "SM.service-environment",
+      "initial": "queued",
+      "states": [
+        "queued",
+        "preparing",
+        "starting",
+        "ready",
+        "stopping",
+        "cleanup-failed",
+        "stopped"
+      ],
+      "terminal": [
+        "stopped"
+      ],
+      "transitions": {
+        "queued": [
+          "preparing",
+          "stopping"
+        ],
+        "preparing": [
+          "starting",
+          "stopping"
+        ],
+        "starting": [
+          "ready",
+          "stopping"
+        ],
+        "ready": [
+          "preparing",
+          "stopping"
+        ],
+        "stopping": [
+          "stopped",
+          "cleanup-failed"
+        ],
+        "cleanup-failed": [
+          "stopping"
+        ],
+        "stopped": []
       }
     },
     {

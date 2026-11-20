@@ -2,13 +2,14 @@
 
 Generated from `lib/handbook-content.js` and the clean built-in registry by `node dev/build-handbook.js`. The interactive version lives at **Admin → Field guide** or `/handbook`. It adds current authorized tool schemas, editable examples, local index metadata and persistent self-context.
 
-Examples use illustrative `checkout`, `DEMO/checkout`, `orders`, `HANDBOOK-101` and `handbook-task` identities. Replace `{{env}}`, `{{service}}`, `{{repo}}`, `{{db}}`, `{{context}}`, `{{ticket}}`, `{{revisionKey}}` and `{{analysis}}` with discovered/returned values. Returned IDs/revisions must come from an actual preceding read. Examples do not execute automatically. Screenshots are demo/sample evidence, with captions describing their limits.
+Examples use illustrative `checkout`, `DEMO/checkout`, `orders`, `HANDBOOK-101` and `handbook-task` identities. Replace `{{env}}`, `{{service}}`, `{{repo}}`, `{{db}}`, `{{context}}`, `{{ticket}}`, `{{revisionKey}}` `{{analysis}}` and `{{run}}` with discovered/returned values. Returned IDs/revisions must come from an actual preceding read. Examples do not execute automatically. Screenshots are demo/sample evidence, with captions describing their limits.
 
 ## Contents
 
 - [Explore dev-tool from its own sources](#self-reflection)
 - [Your first investigation](#start)
 - [Dev-tool’s own operating context](#self-context)
+- [Run a branch in a persistent service environment](#service-environments)
 - [Contexts, nearby files and handoffs](#task-memory)
 - [Indices, freshness and exact versions](#indices)
 - [Explore a service and its surroundings](#services)
@@ -32,6 +33,7 @@ Examples use illustrative `checkout`, `DEMO/checkout`, `orders`, `HANDBOOK-101` 
 - [Build shared project understanding](#project-knowledge)
 - [Build and review a draft change](#ci-review)
 - [Developer studio: continue, coordinate and verify](#developer-studio)
+- [Debug service response mappings](#mapping-debugger)
 
 [Complete built-in tool reference](tools.md) · [Source and verification](../benchmarks/handbook-verification.json) · [Task-based novice review](novice-task-review.md)
 
@@ -346,6 +348,100 @@ Expected: The context ID, written file paths, snapshot time and a link to Task m
 Expected: A file inventory. Read operator-notes.md for local operating knowledge.
 
 **Related chapters:** [Contexts, nearby files and handoffs](#task-memory) · [Monitor work and effectiveness](#operations) · [Complete live tool reference](#tool-reference)
+
+<a id="service-environments"></a>
+
+## Run a branch in a persistent service environment
+
+Build workspace services against disposable PostgreSQL, Kafka and Elasticsearch dependencies, then inspect real outcomes.
+
+**Outcome:** Resume a lease across chats, export application configuration and retain independent entry-to-exit observations.
+
+**Before you start:** An owned workspace; reachable Docker worker with preloaded images; a prepared immutable scratch template when using PostgreSQL.
+
+### Save, start and resume
+
+Open Admin → Service environments. Create a named definition, choose each workspace/module, HTTP port and readiness path, then declare required databases, topics and indices. Save before starting. Unsaved edits cannot launch the older definition. The left library separates definitions from runs and warm dependency slots.
+
+Start services returns an owned run and background job. Observe progress, the first readiness failure and bounded logs. Refresh observes the same lease. Copy resume link and keep the run ID in task memory; the same authenticated user can explicitly resume it from another chat. Closing a chat or browser does not stop application containers. Stop and expiry release only owned resources.
+
+Each run pins its definition version, source fingerprint, commit when available, image IDs and staged artifact digest. Version history lets you inspect immutable definitions; editing the current definition leaves existing runs unchanged. Restart with fresh state stops the old run and creates a new one. Warm dependencies explicitly prepares an exclusive clean Kafka/Elasticsearch slot for one matching start.
+
+**Discover saved definitions and runs** · `service_env_plan`
+
+```json
+{}
+```
+
+Expected: Principal-owned library, limits and next steps. No build or allocation.
+
+**Observe a saved run** · `service_env_status`
+
+```json
+{
+  "id": "{{run}}"
+}
+```
+
+Expected: Lease, pinned definition version, progress, errors and source identity. Select an actual returned run ID. Required returned variables: run.
+
+![Service environment supervisor: real Node application and backend request, simulated Docker protocol; no native container-stack proof.](../screenshots/service-environment-supervisor.png)
+
+Service environment supervisor: real Node application and backend request, simulated Docker protocol; no native container-stack proof.
+
+### Give the application its configuration
+
+service_env_plan returns application.properties templates before launch. service_env_bindings returns allocated DT_ENV_* variables and properties once dependencies are prepared. The worker injects Spring JSON configuration and environment variables; map logical databases to custom datasource property prefixes and reference peer services through DT_ENV_SERVICE_<NAME>_URL.
+
+Container DNS is for application containers. Browser/backend HTTP, read-only SQL, ES searches and Kafka operations use service_env_request on the backend worker. Private passwords are masked unless reveal_secrets is explicit. Read properties with read_path, then supply write_path and expected_revision to save a managed block without replacing unrelated settings. Nothing is written by merely reading bindings.
+
+Snapshot replay disables schema initialization/migrations and Consul discovery/config. Prepare an upgraded template to test a schema change. Review custom providers and background jobs; outbound network access is allowed. A default local profile does not automatically discover every dependency.
+
+**Read application configuration** · `service_env_bindings`
+
+```json
+{
+  "id": "{{run}}",
+  "service": "{{service}}"
+}
+```
+
+Expected: Properties with environment placeholders and audience-specific variables; masked secrets. No workspace write. Required returned variables: run.
+
+### Collect behavioral evidence and inspect a paused JVM
+
+Send a specific request, then independently query the affected database, index or topic. Results and failures are retained privately with run identity and timestamps. Reopen an evidence ID with service_env_status instead of repeating an operation that changes state. Save reusable request/query steps in a named script/collection with a run parameter.
+
+For a debug-enabled Spring service, service_debug can attach, set a class-line or method breakpoint, inspect bounded threads/stack/locals and resume/detach. Java debug sessions use a private bridge and paused threads auto-resume after 60 seconds. Joern assumptions remain static hypotheses until the behavior is observed.
+
+node demo/service-environments.js starts the labeled protocol-fixture showcase. node dev/check-service-environments.js exercises mouse flows, WebSocket requests, cross-reload resume and mobile layout. Native Docker/PG/Kafka/ES checks require the opt-in tests documented in docs/service-environments.md; fixture passes do not certify that topology.
+
+**Observe application readiness** · `service_env_request`
+
+```json
+{
+  "id": "{{run}}",
+  "kind": "http",
+  "service": "{{service}}",
+  "path": "/actuator/health"
+}
+```
+
+Expected: An actual backend HTTP response or retained failure; request receipt includes private evidence ID. Required returned variables: run.
+
+**Stop a selected generation** · `service_env_control`
+
+```json
+{
+  "id": "{{run}}",
+  "action": "stop",
+  "expected_generation": 1
+}
+```
+
+Expected: Inspect status until owned cleanup completes; stale generation is rejected. Required returned variables: run.
+
+**Related chapters:** [Capture and replay a minimal failing state](#reproduce) · [Workspaces, regressions, patches and push](#verify-changes) · [Contexts, nearby files and handoffs](#task-memory) · [Monitor work and effectiveness](#operations)
 
 <a id="task-memory"></a>
 
@@ -2049,6 +2145,26 @@ A visual index of native results and standalone workbenches.
 
 Successful transient chat results normally start collapsed. Open a result to inspect the relevant table, file, case or source path; failed tests/calls expose actionable detail. Editing and tool execution happen in authenticated workspaces, not saved snapshots. Use Open full view for more room, and More/Export for secondary formats.
 
+#### mapping-debugger
+
+Why does the response differ from raw data? Inspect the saved response beside PG/ES/Kafka receipts, compare exact JSON pointers locally, expand raw queries and assumptions, export evidence or open the authenticated debugger for explicit sends. No network actions run inside the snapshot.
+
+<details><summary>View labeled presentation example</summary>
+
+![Built-in mapping-debugger presentation sample](../screenshots/sample-mapping-debugger.png)
+
+</details>
+
+#### service-environment
+
+Which service revision is running, and how do I inspect it? Read lease state, expiry, pinned definition/source identity and progress. Open the authenticated supervisor to read application properties, inspect logs, send backend requests/queries or control the lease. The inline snapshot does not start or stop services.
+
+<details><summary>View labeled presentation example</summary>
+
+![Built-in service-environment presentation sample](../screenshots/sample-service-environment.png)
+
+</details>
+
 #### workbench
 
 Which contexts, services and tickets relate to this work? Switch retained navigator lenses, inspect selected identity and related items, then open the authenticated live workbench to edit files or explicitly run actions. The chat snapshot cannot query infrastructure or grant execution.
@@ -2423,7 +2539,7 @@ Search a task term, tool name or group. Select a tool to read its contract, requ
 
 The portable repository reference records built-in tools at generation time. The running registry remains authoritative for extensions and permissions. A required field can still need a real returned ID; blank values or an invented analysis/lease/workspace ID are not useful arguments.
 
-The [complete built-in reference](tools.md) contains 298 tools with exact schemas. In the app, the reference uses the current authorized registry and includes configured extensions.
+The [complete built-in reference](tools.md) contains 308 tools with exact schemas. In the app, the reference uses the current authorized registry and includes configured extensions.
 
 ### When a tool is missing
 
@@ -2769,3 +2885,53 @@ Expected: A finite abstraction with explicit assumptions and retained paths.
 ```
 
 Expected: Fifty real diff runs inform this graph; general algorithm correctness is not established.
+
+<a id="mapping-debugger"></a>
+
+## Debug service response mappings
+
+Inspect API responses beside raw Postgres, Kafka and Elasticsearch evidence.
+
+**Outcome:** A reproducible named notebook with independent raw reads, field comparisons, source references and retained failures.
+
+**Before you start:** Indexed service routes and configured data sources; choose an exact environment and database.
+
+### Start with the wrong response field
+
+Open Mapping debugger from Admin → API client or the full API Explorer. Choose a service/environment and Discover routes & source references. Select a route, review its URL, replace path parameters and explicitly Send request. Consul targets resolve at send time when following a service; Refresh instances never replays an API request.
+
+Add Postgres, Elasticsearch or Kafka reads on the right. Each read has its own environment, exact database/index/topic, editable query, parameters and source note. Browse cached tables & function bodies without querying the database. Static SQL drafts need a reviewed database and parameter values. Find field & mapper lineage reads indexed function expressions and code references; it is not a runtime trace.
+
+Save a lowercase notebook name. Run individual reads or Run all source reads; this button never sends the API request. An API method can mutate, and HTTP errors keep their actual status. Cancellation/failure preserves receipts; a running receipt after process interruption has an unknown outcome. Inspect before retrying.
+
+**Discover mapping candidates offline** · `mapping_debug`
+
+```json
+{
+  "action": "discover",
+  "service": "{{service}}",
+  "env": "{{env}}"
+}
+```
+
+Expected: Indexed SQL/source references, route candidates and explicit gaps; no network request.
+
+### Compare raw and mapped values
+
+Add field comparisons with JSON pointers such as /name and /0/display_name. Suggestions come from captured data. Equality is strict: null, missing values, strings and numbers differ. Retained values may be redacted; raw database reads and API capture are not an atomic snapshot and do not prove the SQL ran in that request.
+
+Record assumptions about business keys, mapper fallbacks, query functions, cache lag and environment differences. Changing a saved definition starts a new recording; old recordings keep their exact definition. Repeating a read retains earlier receipts in history. Private notebooks and recordings persist for the same user across chats; retained /show snapshots follow normal chat access.
+
+Open inline snapshot retains both sides and editable local pointer comparisons. Fresh network actions run in the authenticated debugger. Name snapshot /show creates a private readable alias; explicit admin publication via named_view can share a retained snapshot. Export reproducible notebook downloads the definition and model tool calls without runtime credentials. Export evidence in the inline view includes private captured data: review before sharing.
+
+![Synthetic empty-string fallback bug: local HTTP response versus synthetic PG/ES/Kafka adapters. Not a production or database integration claim.](../screenshots/mapping-debugger.png)
+
+Synthetic empty-string fallback bug: local HTTP response versus synthetic PG/ES/Kafka adapters. Not a production or database integration claim.
+
+### Reproduce the empty-string fallback bug
+
+Run node demo/mapping-debugger.js and open the printed URL. The mapper returns an empty localized label although display_name is United Kingdom. The business key comparison passes while the display name comparison differs. Change the request URL to ?fixed=1, Send request and Run the registry read to see the correct fallback compare equal. The original recording remains inspectable.
+
+Tool flow: mapping_debug save with expected_revision=null and a version:1 definition; run with explicit steps [api, registry]; get with include_data=true for bounded raw evidence; open for an inline view; list/get/save/delete manage durable records with revision checks. PG uses existing read-only pg_query, ES uses es_search and Kafka uses kafka_last with normal grants, rate limits, tracing and cancellation. No background model calls or implicit retries.
+
+Limits: 30 probes, 100 comparisons, 100 records per probe, 1 MiB per result and 6 MiB per recording; 200 notebooks and 200 recordings per user with a 256 MiB retained budget. Discovery reports bounded source candidates; missing dynamic SQL, generated mappers or internal-library analysis remain gaps. Delete old recordings explicitly when the budget is full.

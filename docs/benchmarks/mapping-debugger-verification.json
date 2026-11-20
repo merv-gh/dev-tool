@@ -1,0 +1,113 @@
+{
+  "version": 1,
+  "sourceDigest": "f13c31d7df56147b6aaf0319aa34a1c0bab48e6069579fe4556779fe72865d47",
+  "feature": "Response/raw-data mapping debugger plus persistent service environments",
+  "suite": {
+    "command": "npm run test:coverage",
+    "tests": 1320,
+    "failed": 0,
+    "passed": 1260,
+    "cancelled": 0,
+    "skipped": 60,
+    "todo": 0,
+    "topLevel": 1320,
+    "suites": 0,
+    "exitCode": 0
+  },
+  "coverage": {
+    "transitions": {
+      "hit": 401,
+      "total": 714,
+      "percent": 56.2
+    },
+    "lines": {
+      "hit": 31671,
+      "total": 33696,
+      "percent": 94
+    },
+    "functions": {
+      "hit": 8048,
+      "total": 9067,
+      "percent": 88.8
+    },
+    "branches": {
+      "hit": 28211,
+      "total": 34193,
+      "percent": 82.5
+    },
+    "testedFiles": 192,
+    "sourceFiles": {
+      "measured": 255,
+      "unmeasured": 28,
+      "total": 283
+    }
+  },
+  "coverageGate": {
+    "passed": true,
+    "baseline": {
+      "transitions": {
+        "hit": 397,
+        "total": 711,
+        "percent": 55.8
+      },
+      "lines": {
+        "hit": 31334,
+        "total": 33370,
+        "percent": 93.9
+      },
+      "functions": {
+        "hit": 7896,
+        "total": 8902,
+        "percent": 88.7
+      },
+      "branches": {
+        "hit": 27756,
+        "total": 33627,
+        "percent": 82.5
+      },
+      "testedFiles": 190,
+      "sourceFiles": {
+        "measured": 252,
+        "unmeasured": 28,
+        "total": 280
+      }
+    }
+  },
+  "browser": {
+    "command": "node dev/check-mapping-debugger.js",
+    "passed": true,
+    "flows": [
+      "offline-open",
+      "raw-comparison",
+      "inline-pointers",
+      "source-discovery",
+      "schema-function-browser",
+      "consul-refresh",
+      "mapping-fix",
+      "all-read-dispatch",
+      "websocket",
+      "parameter-edit-preservation",
+      "reload",
+      "retained-query-error",
+      "cancellation",
+      "observe-without-replay",
+      "mobile"
+    ],
+    "captures": [
+      "docs/screenshots/mapping-debugger.png",
+      "docs/screenshots/sample-mapping-debugger.png"
+    ]
+  },
+  "review": {
+    "disposition": "ship",
+    "scope": "Three independently identified material fixes scored resolved: parameter draft rendering, live comparison counts, dirty recording switch guard",
+    "documentation": "Incumbent Operate system preserved; ordinary extension, no design-system replacement"
+  },
+  "evidenceLimits": [
+    "Demo HTTP service executes locally; demo Postgres/Elasticsearch/Kafka adapters are synthetic.",
+    "The database cursor has deterministic driver-boundary tests; real Postgres cursor test is opt-in and was skipped without DT_TEST_PG_URL.",
+    "Native Docker/Spring/broker-stack checks remain opt-in; earlier service-environment protocol/JDI verification is recorded separately.",
+    "Independent reads and static SQL/mapper candidates do not prove transactional consistency or observed API-to-SQL lineage."
+  ],
+  "relatedVerification": "docs/benchmarks/service-environments-verification.json"
+}
