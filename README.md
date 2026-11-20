@@ -36,6 +36,13 @@ Explore this repository itself in **Admin → Self-reflection**: source-backed l
 
 ## Current capabilities and deployment
 
+**Task desk** (`/tasks`, linked from Admin) runs persistent autonomous research
+and change tasks through the web UI. Leave it gathering Confluence/repository
+evidence overnight, retain memory across chats/restarts, and authorize admins to
+publish checkpoints into global project context. Change mode adds checked-tree
+task-branch/draft-PR publication and durable CI/review waits.
+[Task harness guide, limits and verification](docs/task-harness.md).
+
 Start with the [operator guide](docs/operator-guide.md): deployment profiles,
 capacity, authentication, approved plugins, monitoring, backup and release checks.
 **Local mode** preserves existing installations. Explicit **team mode** requires

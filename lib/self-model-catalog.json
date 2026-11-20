@@ -1,7 +1,7 @@
 {
   "protocol": "dt.repo-source/v1",
   "repo": "dev-tool",
-  "sourceDigest": "f13c31d7df56147b6aaf0319aa34a1c0bab48e6069579fe4556779fe72865d47",
+  "sourceDigest": "2d601ceb6a135fccf01c7c260bdc204e8f5a1383fcbe9f58d049fa6818b04a80",
   "machines": [
     {
       "id": "IO.atomic-file",
@@ -1475,7 +1475,7 @@
       "consumers": [
         {
           "file": "lib/tools.js",
-          "line": 1006,
+          "line": 1007,
           "snippet": "const activation=require('./state-machine').create(require('./lifecycles').registry,prior?'active':'missing');"
         }
       ],
@@ -1526,7 +1526,7 @@
       "consumers": [
         {
           "file": "lib/access.js",
-          "line": 36,
+          "line": 37,
           "snippet": "const lifecycle = require('./state-machine').create(require('./lifecycles').identity);"
         }
       ],
@@ -2675,7 +2675,7 @@
       "consumers": [
         {
           "file": "lib/workspace.js",
-          "line": 225,
+          "line": 228,
           "snippet": "const lifecycle = require('./state-machine').create(require('./lifecycles').workspacePush);"
         }
       ],
@@ -2965,7 +2965,7 @@
         },
         {
           "file": "lib/workspace.js",
-          "line": 363,
+          "line": 367,
           "snippet": "function preparations(){return opening ||= new(require('./keyed-work').KeyedWork)(require('./lifecycles').preparation,{retainTick:false});}"
         }
       ],

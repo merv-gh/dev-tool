@@ -49,3 +49,8 @@ node_modules/
 /mapping-debugger/
 /service-environments/
 /service-runtime/
+/task-harness/
+/workspace-publications/
+/continuations/
+/continuation-attachments/
+/automation-flows/

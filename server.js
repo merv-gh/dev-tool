@@ -162,6 +162,7 @@ const routes = [
   ['GET', '/mapping-debugger', true, page('mapping-debugger.html')],
   ['GET', '/editor', true, page('editor.html')],
   ['GET', '/studio', true, page('studio.html')],
+  ['GET', '/tasks', true, page('tasks.html')],
   ['GET','/api/ui-events',true,async(req,res,url)=>{const B=require('./lib/ui-events'),channel=url.searchParams.get('channel');await B.access(channel);return B.sse(req,res,{channel,after:url.searchParams.get('after')||undefined});}],
   ['GET','/pages',false,(req,res,url)=>{
     if(!trusted(req)){const next='/pages'+url.search,escape=value=>value.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));res.writeHead(401,{'content-type':'text/html; charset=utf-8','cache-control':'no-store','referrer-policy':'no-referrer','content-security-policy':"default-src 'none'; style-src 'self'; form-action 'self'; frame-ancestors 'none'"});return res.end('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in to Pages</title><link rel="stylesheet" href="/static/ui.css"><main class="wrap"><h1>Sign in to Pages</h1><p>Shared definitions run with your own access. Your token stays out of the URL.</p><form action="/api/session" method="post"><input type="hidden" name="next" value="'+escape(next)+'"><label for="token">Access token</label> <input id="token" name="token" type="password" required autocomplete="current-password"> <button>Sign in</button></form></main></html>');}
@@ -433,6 +434,8 @@ function start({ port = 4000, host = '127.0.0.1' } = {}) {
   // the browser container starts after dt is healthy and reads these secrets once
   try { require('./lib/browser').writeSecrets(); } catch (e) { console.error(`browser secrets: ${e.message}`); }
   tools.ready().catch(e => console.error(`tools: ${e.message}`));
+  require('./lib/task-harness').startSupervisor().catch(e => console.error(`task harness: ${e.message}`));
+  server.once('close', () => { require('./lib/task-harness').close().catch(() => {}); });
   // what fetching and tests need, once at start: problems go to the log (dt doctor for the full list)
   if (!process.env.DT_NO_DOCTOR && !process.env.NODE_TEST_CONTEXT) setTimeout(() => require('./lib/doctor').check().then(d => {
     const bad = d.checks.filter(c => c.status !== 'ok');

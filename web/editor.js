@@ -26,7 +26,8 @@ else (() => {
   $('story').value = state.story;
   const status = (text, error = false) => { $('status').textContent = text; $('status').classList.toggle('error', error); };
   async function tool(name, args) {
-    const response = await fetch('/api/tool/' + name, { method: 'POST', headers: { 'content-type': 'application/json', 'x-dt-story': state.story }, credentials: 'same-origin', body: JSON.stringify(args) });
+    const task = params.get('task_run');
+    const response = await fetch('/api/tool/' + (task ? 'task_run_action' : name), { method: 'POST', headers: { 'content-type': 'application/json', ...(!task ? {'x-dt-story': state.story} : {}) }, credentials: 'same-origin', body: JSON.stringify(task ? {run:task,tool:name,arguments:args} : args) });
     const body = await response.json();
     if (!response.ok || body.error || body.result?.error) { const error = new Error(body.error || body.result?.error || `Request failed (${response.status})`); error.code = body.code || body.result?.code; throw error; }
     return body.result === undefined ? body : body.result;
