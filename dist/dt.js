@@ -18246,7 +18246,7 @@ var require_self_model_catalog = __commonJS({
     module2.exports = {
       protocol: "dt.repo-source/v1",
       repo: "dev-tool",
-      sourceDigest: "2e58f5687caa667056058e4ff47776896c6f26bb9c3060a071c0bc7738d59522",
+      sourceDigest: "1cf833bf56cec03beae38a815d10a7f655698303fe83fbf56e015c1631e09505",
       machines: [
         {
           id: "IO.atomic-file",
@@ -53991,6 +53991,74 @@ var require_workspace_publication = __commonJS({
   }
 });
 
+// lib/task-results.js
+var require_task_results = __commonJS({
+  "lib/task-results.js"(exports2, module2) {
+    var A = require_access();
+    var R = require_results();
+    var taskScope = (run) => ({ ...run.owner, multiUser: true, storyId: "task:" + run.task });
+    var source = (url) => {
+      try {
+        const u = new URL(url, "http://saved-result"), m = u.pathname.match(/^\/(show|view|map|map-preview|logs|pr|architecture)\/([a-z0-9]+)$/);
+        return m ? { id: m[2], view: u.searchParams.get("view") } : null;
+      } catch {
+        return null;
+      }
+    };
+    var load = (run, id) => A.run(taskScope(run), () => R.load(id)) || A.run(run.owner, () => R.load(id));
+    function complete(run, initial, value) {
+      if (value?.view || !initial?.view) return value;
+      try {
+        const ref = source(initial.view), record = ref && load(run, ref.id);
+        if (record?.kind === "view") return A.run(taskScope(run), () => ({ ...value, view: R.saveView(ref.view || record.view, value, { title: record.title }) }));
+      } catch (error) {
+        console.error("task completed result presentation: " + error.message);
+      }
+      return value;
+    }
+    function capture(run, tool, value) {
+      const views = [], seen = /* @__PURE__ */ new Set();
+      let missing = false;
+      const keep = (record, label) => A.run(run.owner, () => {
+        const { id, owner, kind, data, rows, view, ...meta } = record;
+        const url = kind === "view" ? R.saveView(view, data, { ...meta, sourceAt: record.at }) : R.save(kind, rows || [], meta);
+        const copied = source(url);
+        R.retain(copied.id, "task:" + run.id);
+        return { label, url: new URL(url, "http://saved-result").pathname, view: kind === "view" ? view : kind };
+      });
+      try {
+        for (const [key, url] of Object.entries(value && typeof value === "object" && !Array.isArray(value) ? value : {})) {
+          if (views.length >= 8) break;
+          if (!/^(view|diagram|dashboard|viewer|[a-zA-Z]+View)$/.test(key) || typeof url !== "string") continue;
+          const ref = source(url);
+          if (!ref || seen.has(ref.id)) continue;
+          seen.add(ref.id);
+          const record = load(run, ref.id);
+          if (!record) {
+            missing = true;
+            continue;
+          }
+          views.push(keep(ref.view && record.kind === "view" ? { ...record, view: ref.view } : record, key === "view" ? "Result" : key.replace(/([a-z])([A-Z])/g, "$1 $2")));
+        }
+        if (!views.length && value && typeof value === "object" && JSON.stringify(value).length <= 15e5) {
+          const rows = Array.isArray(value) ? value : Array.isArray(value.rows) ? value.rows : null;
+          const table2 = rows && rows.every((r) => r && typeof r === "object" && !Array.isArray(r));
+          views.push(A.run(run.owner, () => {
+            const url = R.saveView(table2 ? "table" : "json", table2 ? rows : value, { title: tool.replaceAll("_", " ") });
+            R.retain(source(url).id, "task:" + run.id);
+            return { label: table2 ? "Table" : "Structured result", url: new URL(url, "http://saved-result").pathname, view: table2 ? "table" : "json" };
+          }));
+        }
+        return { visualizations: views, ...missing ? { presentationError: "An original visualization was unavailable; retained data remains inspectable." } : {} };
+      } catch (error) {
+        console.error("task result presentation: " + error.message);
+        return { visualizations: views, presentationError: "Could not retain the visualization. Raw tool evidence remains available." };
+      }
+    }
+    module2.exports = { capture, complete };
+  }
+});
+
 // lib/task-harness.js
 var require_task_harness = __commonJS({
   "lib/task-harness.js"(exports2, module2) {
@@ -54141,6 +54209,7 @@ var require_task_harness = __commonJS({
         publication: r.publication,
         codePublications: r.codePublications.map((p) => ({ workspace: p.workspace, commit: p.commit, branch: p.branch, state: p.state, pr: p.pr, review: p.review ? { state: p.review.state, sha: p.review.sha, ready: p.review.ready, gaps: p.review.gaps } : null })),
         controlPending: command2?.sequence > r.controlSequence ? command2.action : null,
+        pendingControl: command2?.sequence > r.controlSequence ? { action: command2.action, message: command2.message, at: command2.at } : null,
         links: { task: "/tasks?run=" + r.id, memory: "/studio?area=continuations", project: r.spec.projectContext ? "/admin#project-context" : null },
         ...detail ? { messages: r.messages, queue: r.queue, inbox: r.inbox || [], context: r.context, report: r.report } : {}
       };
@@ -54309,6 +54378,7 @@ var require_task_harness = __commonJS({
         r.pending = null;
         r.context = null;
         r.report = null;
+        if (r.state === "needs_attention" && /context|compact/i.test(r.reason || "")) r.reason = "Checkpoint saved; resume explicitly";
       }
       if (c.action === "resolve") {
         if (!r.pending || r.pending.kind !== "tool") throw invalid("Only an uncertain tool effect needs reconciliation");
@@ -54383,7 +54453,7 @@ Search cached find and published project_context first. Gather relevant Confluen
       r.messages.push(message);
       r.queue = calls;
       r.pending = null;
-      emit(r, "model.completed", { usage, tools: calls.map((c) => c.function.name) });
+      emit(r, "model.completed", { usage, tools: calls.map((c) => c.function.name), ...message.content ? { content: message.content.slice(0, 16e3), contentTruncated: message.content.length > 16e3 } : {} });
       persist(r);
       if (!calls.length) {
         if (!message.content?.trim()) throw invalid("Provider returned an empty final report", "DT_MODEL_RESPONSE");
@@ -54470,7 +54540,7 @@ Search cached find and published project_context first. Gather relevant Confluen
         if (!job?.promise) throw invalid("Background job is interrupted; inspect its retained result", "DT_TASK_UNCERTAIN");
         const done = await job.promise;
         E.check();
-        result = done.error ? { error: done.error, state: done.state, job: done.id } : { ...done.result, job: done.id, state: done.state };
+        result = done.error ? { error: done.error, state: done.state, job: done.id } : require_task_results().complete(r, result, { ...done.result, job: done.id, state: done.state });
       }
       if (name === "workspace_open" && result.id && !r.workspaces.includes(result.id)) {
         r.workspaces.push(result.id);
@@ -54634,8 +54704,9 @@ Search cached find and published project_context first. Gather relevant Confluen
         r.pending = { kind: "tool", tool: name, call, at: now() };
         r.counts.toolCalls++;
         r.counts.steps++;
-        emit(r, "tool.started", { tool: name });
+        emit(r, "tool.started", { tool: name, callId: call.id });
         persist(r);
+        const toolStartedAt = Date.now();
         let value;
         try {
           value = await invoke(r, call);
@@ -54646,11 +54717,12 @@ Search cached find and published project_context first. Gather relevant Confluen
         }
         const file = "evidence/" + r.counts.toolCalls + "-" + name.replace(/[^a-z0-9_]/g, "") + ".json";
         const json = JSON.stringify(clean(value));
-        artifact(r, file, { tool: name, arguments: call.function.arguments, result: json.length > 15e5 ? { truncated: true, preview: json.slice(0, 14e5) } : value }, "Tool result: " + name);
+        const presentation = require_task_results().capture(r, name, clean(value));
+        artifact(r, file, { tool: name, arguments: call.function.arguments, result: json.length > 15e5 ? { truncated: true, preview: json.slice(0, 14e5) } : value, ...presentation }, "Tool result: " + name);
         r.messages.push({ role: "tool", tool_call_id: call.id, content: compactResult(value) });
         r.queue.shift();
         r.pending = null;
-        emit(r, "tool.completed", { tool: name, artifact: file, failed: !!value?.error, preview: compactResult(value).slice(0, 1200) });
+        emit(r, "tool.completed", { tool: name, callId: call.id, durationMs: Date.now() - toolStartedAt, artifact: file, failed: !!value?.error, preview: compactResult(value).slice(0, 1200), ...presentation });
         persist(r);
         if (r.spec.publish && name === "task_memory_save" && !value?.error) await publish(r);
       }
@@ -82594,7 +82666,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md|java)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "2e58f5687caa667056058e4ff47776896c6f26bb9c3060a071c0bc7738d59522";
+      if (true) return "1cf833bf56cec03beae38a815d10a7f655698303fe83fbf56e015c1631e09505";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");

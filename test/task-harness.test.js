@@ -37,6 +37,8 @@ test('persistent agent gathers real REST evidence, writes notes and publishes im
   const run=await H.start({title:'Checkout evidence',goal:'Gather cited checkout requirements',repositories:['SHOP/orders'],spaces:['SHOP'],allow_model:true,publish:true,project_context:'checkout'});
   const final=await until(run.id,r => ['completed','needs_attention'].includes(r.state));
   assert.equal(final.state,'completed',final.reason); assert.equal(docs,2); assert.equal(final.counts.modelCalls,4); assert.equal(final.counts.toolCalls,3);
+  assert.equal(final.events.filter(e=>e.type==='model.completed').at(-1).content,final.report);
+  assert.ok(final.events.filter(e=>e.type==='tool.completed').every(e=>e.callId&&e.durationMs>=0));
   assert.match(H.memory({run:run.id,path:'runs/' + run.id + '/notes/requirements.md'}).content,/version 3/);
   assert.ok(requests[1].messages.some(m => m.role==='tool' && m.tool_call_id==='search'));
   assert.ok(requests[0].tools.every(t => !['workspace_write','workspace_push','code','script_run','project_context_save'].includes(t.function.name)));
@@ -79,6 +81,16 @@ test('hard step budget checkpoints instead of letting a model loop forever', asy
   brain=()=>response([call('lookup','find',{q:'nothing'})]);
   const run=await H.start({title:'Bounded loop',goal:'Search',allow_model:true,max_steps:2}); const final=await until(run.id,r=>r.state==='needs_attention');
   assert.equal(final.counts.steps,2); assert.match(final.reason,/budget/); assert.ok(final.events.some(e=>e.type==='tool.completed'));
+}));
+test('context-full recovery keeps a bounded actual message and requires an explicit checkpoint before resume',async()=>alice(async()=>{
+ try{
+  config({llm:{baseUrl:endpoint+'/v1',model:'fixture-small',contextWindow:8192}});
+  brain=()=>({choices:[{finish_reason:'stop',message:{role:'assistant',content:'Verified evidence. '.repeat(2000),tool_calls:[call('note','task_memory_save',{path:'large.md',content:'Retained findings',summary:'Recovery evidence'})]}}],usage:{total_tokens:100}});
+  const run=await H.start({title:'Context recovery',goal:'Retain findings and stop at context limit',allow_model:true});
+  const blocked=await until(run.id,r=>r.state==='needs_attention');assert.match(blocked.reason,/context.*byte budget/i);const message=blocked.events.find(e=>e.type==='model.completed');assert.equal(message.content.length,16000);assert.equal(message.contentTruncated,true);assert.ok(blocked.messages.some(m=>m.content?.length>16000));
+  const before=requests.length;const command=H.control({run:run.id,action:'checkpoint',message:'Verified findings retained. Next: report the remaining gap.'});assert.equal(command.pendingControl.action,'checkpoint');await until(run.id,r=>!r.controlPending);assert.equal(requests.length,before,'checkpoint is not a model call');assert.equal(H.status({run:run.id}).reason,'Checkpoint saved; resume explicitly');
+  brain=()=>response('Retained findings recovered; remaining gap is verification.');H.control({run:run.id,action:'resume'});assert.equal((await until(run.id,r=>r.state==='completed')).counts.modelCalls,2);
+ }finally{config();}
 }));
 test('an overnight budget stop still leaves an authorized global checkpoint', async () => alice(async () => {
   brain=()=>response([call('note','task_memory_save',{path:'early.md',content:'Confluence page 42 v3: preserve zero. Code verification remains open.',summary:'Early cited finding'})]);

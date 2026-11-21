@@ -67,6 +67,10 @@ jobs:
         env:
           DT_TEST_PG_URL: postgres://postgres:disposable-test-password@127.0.0.1:55432/postgres
       - run: npx playwright install --with-deps chromium
+      - name: Verify autonomous task conversation
+        run: node dev/required-tests.js test/task-harness-ui.test.js
+        env:
+          DT_TEST_BROWSER: '1'
       - run: |
           DT_DEMO_WORKBENCH=1 node demo/ui-ux.js 4064 work/ci/fixture.json >work-fixture.log 2>&1 &
           for attempt in $(seq 1 60); do test -f work/ci/fixture.json && break; sleep 1; done
@@ -82,4 +86,5 @@ jobs:
             work/ci/browser
             work/ci/readiness-browser
             work/ci/workbench
+            .impeccable/review
             work-fixture.log

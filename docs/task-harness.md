@@ -4,12 +4,41 @@ Open **Admin → Task desk** (`/tasks`). All ordinary task operations are availa
 in the browser; CLI and MCP use the same `task_run_*` contracts. The supervisor
 runs on the server, not in a browser tab or an Open WebUI conversation.
 
+The main screen is a conversation: your goal, actual assistant updates, grouped
+tool work, acknowledged directions and the final response in chronological order.
+The status above it names the current tool, model request, wait or blocker.
+The message input stays below the work, including during inspection on a phone.
+**Details** opens scope, **Files**,
+**Checks** and **Context** alongside it. On a phone, **Tasks** opens the inbox and
+**Close** returns from inspection. Returning opens at the latest work; **Jump to
+latest** returns there after reading earlier messages. Live updates preserve
+deliberate scroll position, expanded tools and keyboard focus.
+
+Expand a tool group, then **Show result** to open the saved native visualization:
+test summaries, diffs, graphs and other tool-specific views keep their renderer.
+Tables and structured results use the table or JSON tree when a tool has no
+specialized view. Previews are collapsed until requested and retained with the
+task, including after the ordinary result cache is pruned. Background jobs use
+their completed evidence rather than a running snapshot. **Open full result**
+opens the same saved view without executing another tool or model request.
+
+Select the tool row to inspect its original inputs, visualization and raw result.
+Closing the inspector returns to that tool. Large
+receipts and the complete model request load only when requested. Assistant
+updates in the journal are bounded to 16,000 characters and explicitly marked
+when shortened; the full context remains inspectable. Older runs without these
+message fields still show retained tools and their saved final response.
+
+The [review, plan and separate interactive prototype](../demo/task-chat/README.md)
+record the redesign and its before/after evidence.
+
 ## Leave a research task overnight
 
 1. Configure the OpenAI-compatible model in Admin: `llm.baseUrl`, `llm.model`,
    optional key and the actual served `llm.contextWindow`. Connection secrets
    remain in configuration. No model request runs simply by opening the desk.
-2. Choose **New task**, enter a title, optional ticket and a concrete goal.
+2. Choose **New task** and enter a concrete goal. The title is derived from it;
+   expand **Sources, task details and lasting knowledge** to set a title or ticket.
    Include expected outputs, page references, services or unresolved questions.
 3. Choose **Research**, select/filter repositories or enter `PROJECT/repository`,
    add Confluence space keys and an environment when relevant. A repository is
@@ -21,7 +50,7 @@ runs on the server, not in a browser tab or an Open WebUI conversation.
 5. Review the deadline, total model/tool steps and token budget. Leave restart
    recovery enabled for unattended work, then **Start autonomous task**.
 6. Close the browser if desired. Reopen its task link, or find the ticket in the
-   inbox. **Memory & files** contains retained notes, scripts, query text, tool
+   inbox. **Details → Files** contains retained notes, scripts, query text, tool
    receipts, request manifests and the report. Scripts are stored, not executed.
 
 The worker starts with a small set of source tools. It can discover additional
@@ -33,12 +62,16 @@ published findings. Completion publishes the final report as another immutable
 revision. Existing shared prose, service graphs and files are preserved.
 
 Continuing a task explicitly reuses its stable continuation and task memory.
-**Continue task** prepares a new run and budget without executing immediately.
+After completion or stopping, type into **Follow up on this task** and choose
+**Prepare follow-up**. This opens a new run form with that goal, retained task
+memory, scope and permissions; review its budget and choose Start explicitly.
+Preparing the follow-up makes no model request. An exhausted budget also offers
+**Prepare next run** without requiring a message.
 The model receives a retained briefing and can search/read earlier files; source
 versions and assumptions must still be verified. This does not silently attach
 unrelated chats or another user's context.
 
-To edit a retained note, open **Memory & files**, select its file and pause an
+To edit a retained note, open **Details → Files**, select its file and pause an
 active worker before changing the text. **Save edited file** checks the revision
 you opened. If another editor has changed it, your unsaved draft stays in the
 editor and **Compare and reconcile the retained draft** opens:
@@ -93,21 +126,30 @@ complete coverage.
 
 ## Progress, steering and context
 
-- **Activity** records admitted model/tool work, retained result paths, failures,
-  publication and control acknowledgements. Existing telemetry and Admin
+- The **conversation** shows actual assistant messages, grouped tool work,
+  failures, publication and worker acknowledgements. A saved direction is shown
+  as pending until received by the worker; this does not claim the model has
+  already read it. **Context → Execution log** retains lifecycle events and
+  timings for debugging. Existing telemetry and Admin
   observability also record registry/model requests, durations and failures.
 - **Pause** applies at a safe boundary. **Stop** cancels owned work and drains
   background jobs. It stops local observation; it does not claim to cancel a
   remote Jenkins build. Browser disconnection does not stop the task.
-- **Steer** saves an attributed message and applies it at the next safe boundary.
+- **Message the worker → Send** saves an attributed message during active,
+  paused or waiting work and applies it at the next safe boundary. The input
+  remains editable while a direction is being acknowledged.
   Errors explain whether an operation is waiting for acknowledgement.
-- **Model context** shows the retained active messages and the exact last
+- **Details → Context** shows the retained active messages and the exact last
   outgoing request, without authentication headers. Token estimates are labelled.
   Provider usage is used when available.
 - **Save checkpoint** is explicit and requires a paused/blocked run. The old
   transcript is retained, and the supplied checkpoint becomes working context.
   There is no automatic transcript compaction. Uncertain effects must be
   reconciled first.
+- A context-limit stop offers **Review context** and requires a checkpoint before
+  Resume. An expired step/token/deadline budget offers **Prepare next run**;
+  retained memory and scope populate an editable form. Preparing it makes no
+  model call. Review the budget and permissions before starting it explicitly.
 - **Record verified outcome** resolves an uncertain call without repeating it.
   Inspect its original arguments and the external system before recording an
   outcome. Starting a fresh run does not establish what an interrupted write did.
@@ -189,7 +231,7 @@ enabling unattended publication there.
 
 These captures use the disposable synthetic demo described above.
 
-Task brief, retained report and global publication:
+Conversation, actual assistant updates and visible final response:
 
 ![Task desk with a completed research task](screenshots/task-desk.png)
 
@@ -197,5 +239,8 @@ Searchable memory and revision-protected editing:
 
 ![Persistent task memory editor](screenshots/task-memory.png)
 
-Also available: [mobile creation](screenshots/task-desk-mobile.png) and the
+Also available: [source evidence alongside the conversation](screenshots/task-evidence.png),
+[inline saved tool visualization](screenshots/task-native-result.png),
+[mobile conversation](screenshots/task-conversation-mobile.png),
+[mobile creation](screenshots/task-desk-mobile.png) and the
 [passive inline snapshot](screenshots/sample-task-run.png).

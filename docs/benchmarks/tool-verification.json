@@ -1,6 +1,6 @@
 {
   "protocol": "dt.release-inventory/v1",
-  "sourceDigest": "2e58f5687caa667056058e4ff47776896c6f26bb9c3060a071c0bc7738d59522",
+  "sourceDigest": "1cf833bf56cec03beae38a815d10a7f655698303fe83fbf56e015c1631e09505",
   "tools": [
     {
       "name": "find",
@@ -26,7 +26,9 @@
         "test/request-events.test.js",
         "test/scripts.test.js",
         "test/server.test.js",
+        "test/task-conversation.test.js",
         "test/task-harness.test.js",
+        "test/task-results.test.js",
         "test/team-security.test.js",
         "test/tool-contracts.test.js",
         "test/ui-trace-ui.test.js",
@@ -181,6 +183,8 @@
         "test/request-events.test.js",
         "test/server.test.js",
         "test/service-map.test.js",
+        "test/task-conversation.test.js",
+        "test/task-results.test.js",
         "test/team-security.test.js",
         "test/tool-contracts.test.js",
         "test/tool-discovery.test.js",
@@ -315,6 +319,8 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
+        "test/task-conversation.test.js",
+        "test/task-harness-ui.test.js",
         "test/tool-contracts.test.js"
       ],
       "integrationReferences": []
@@ -391,6 +397,7 @@
         "test/confluence.test.js",
         "test/diagrams.test.js",
         "test/inline-views.test.js",
+        "test/task-results.test.js",
         "test/views.test.js"
       ],
       "integrationReferences": [
@@ -406,6 +413,7 @@
       "referenceTests": [
         "test/config.test.js",
         "test/confluence.test.js",
+        "test/task-conversation.test.js",
         "test/task-harness.test.js"
       ],
       "integrationReferences": []
@@ -418,8 +426,10 @@
       "resultContract": false,
       "referenceTests": [
         "test/confluence.test.js",
+        "test/task-conversation.test.js",
         "test/task-harness-ui.test.js",
-        "test/task-harness.test.js"
+        "test/task-harness.test.js",
+        "test/task-results.test.js"
       ],
       "integrationReferences": []
     },
@@ -1307,6 +1317,7 @@
         "test/state-store.test.js",
         "test/target-secrets.test.js",
         "test/task-model-evaluation.test.js",
+        "test/task-results.test.js",
         "test/testdata.live.test.js",
         "test/tool-contracts.test.js",
         "test/workbench-explorer-ui.test.js",
@@ -1511,6 +1522,7 @@
       "resultContract": false,
       "referenceTests": [
         "test/ci-iteration.test.js",
+        "test/task-conversation.test.js",
         "test/task-harness.test.js"
       ],
       "integrationReferences": []
@@ -2656,6 +2668,7 @@
         "test/semantic-flow-map.live.test.js",
         "test/semantic-ui.test.js",
         "test/semantic.live.test.js",
+        "test/task-results.test.js",
         "test/trace-discovery.test.js",
         "test/workbench.test.js"
       ],
