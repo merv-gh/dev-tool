@@ -414,6 +414,7 @@
         "test/config.test.js",
         "test/confluence.test.js",
         "test/task-conversation.test.js",
+        "test/task-harness-ui.test.js",
         "test/task-harness.test.js"
       ],
       "integrationReferences": []
