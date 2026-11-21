@@ -1,0 +1,48 @@
+// Research adapter: public Gradle task events, compatible with configuration-cache reuse.
+// Stable output location deliberately avoids per-run IDs becoming configuration inputs.
+import groovy.json.JsonOutput
+import javax.inject.Inject
+import org.gradle.api.Plugin
+import org.gradle.api.invocation.Gradle
+import org.gradle.api.services.BuildService
+import org.gradle.api.services.BuildServiceParameters
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.build.event.BuildEventsListenerRegistry
+import org.gradle.tooling.events.FinishEvent
+import org.gradle.tooling.events.OperationCompletionListener
+import org.gradle.tooling.events.task.TaskSuccessResult
+import org.gradle.tooling.events.task.TaskSkippedResult
+
+abstract class DtWorkspaceMeasurement implements BuildService<DtWorkspaceMeasurement.Parameters>, OperationCompletionListener {
+    interface Parameters extends BuildServiceParameters { RegularFileProperty getOutputFile() }
+    synchronized void onFinish(FinishEvent event) {
+        def result = event.result
+        def row = [task: event.descriptor.taskPath, start: result.startTime, end: result.endTime,
+                   ms: result.endTime - result.startTime]
+        if (result instanceof TaskSuccessResult) {
+            row.outcome = result.fromCache ? 'FROM-CACHE' : result.upToDate ? 'UP-TO-DATE' : 'EXECUTED'
+            row.incremental = result.incremental
+            def reasons = result.executionReasons ?: []
+            row.reasonCount = reasons.size()
+            row.reasons = reasons.take(30).collect { it.take(2000) }
+            row.reasonsTruncated = reasons.size() > row.reasons.size()
+        } else if (result instanceof TaskSkippedResult) {
+            row.outcome = 'SKIPPED'
+            row.reason = result.skipMessage
+        } else row.outcome = 'FAILED'
+        def file = parameters.outputFile.get().asFile
+        file.parentFile.mkdirs()
+        file.append(JsonOutput.toJson(row) + '\n', 'UTF-8')
+    }
+}
+abstract class DtWorkspaceObserver implements Plugin<Gradle> {
+    @Inject abstract BuildEventsListenerRegistry getEvents()
+    void apply(Gradle gradle) {
+        def report = new File(gradle.startParameter.currentDir, '.dt/gradle-tasks.jsonl')
+        def service = gradle.sharedServices.registerIfAbsent('dtWorkspaceMeasurement', DtWorkspaceMeasurement) {
+            parameters.outputFile.set(report)
+        }
+        events.onTaskCompletion(service)
+    }
+}
+apply plugin: DtWorkspaceObserver

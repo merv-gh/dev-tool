@@ -1,0 +1,52 @@
+plugins { id 'java' }
+repositories { mavenCentral() }
+java { toolchain { languageVersion = JavaLanguageVersion.of(21) } }
+
+def bootVersion = providers.gradleProperty('bootVersion').getOrElse('2.7.18')
+def tcVersion = providers.gradleProperty('testcontainersVersion').getOrElse('1.20.4')
+def lombokVersion = providers.gradleProperty('lombokVersion').getOrElse('1.18.42')
+dependencies {
+    implementation platform("org.springframework.boot:spring-boot-dependencies:${bootVersion}")
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework:spring-jdbc'
+    implementation 'org.postgresql:postgresql'
+    implementation 'org.apache.kafka:kafka-clients'
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
+    annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation platform("org.testcontainers:testcontainers-bom:${tcVersion}")
+    testImplementation 'org.testcontainers:postgresql'
+    testImplementation 'org.testcontainers:kafka'
+}
+// Reuse the project's existing Lombok case; the benchmark copies both fixtures.
+sourceSets.main.java.srcDir '../lombok-service/src/main/java'
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    inputs.file('../lombok-service/lombok.config').withPathSensitivity(PathSensitivity.RELATIVE)
+}
+def configFile = layout.projectDirectory.file('.dt/multi-container.json')
+def eventsFile = layout.projectDirectory.file('.dt/dependencies.jsonl')
+tasks.withType(Test).configureEach {
+    maxParallelForks = providers.gradleProperty('testForks').getOrElse('1').toInteger()
+    forkEvery = 0
+    systemProperty 'file.encoding', 'UTF-8'
+    systemProperty 'dt.fixture.config', configFile.asFile.absolutePath
+    systemProperty 'dt.fixture.events', eventsFile.asFile.absolutePath
+    outputs.upToDateWhen { false }
+    outputs.cacheIf { false }
+    testLogging { events 'failed'; showStandardStreams = true }
+}
+test { useJUnitPlatform { includeTags 'multi-container' } }
+tasks.register('policyTest', Test) {
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform { excludeTags 'multi-container' }
+}
+// Resolve once, then launch the owned warm pool outside Gradle's workspace lock.
+tasks.register('runtimeClasspath') {
+    dependsOn testClasses
+    def cp = sourceSets.test.runtimeClasspath
+    def dest = layout.projectDirectory.file('.dt/classpath.txt').asFile
+    outputs.file(dest)
+    doLast { dest.parentFile.mkdirs(); dest.text = cp.asPath }
+}

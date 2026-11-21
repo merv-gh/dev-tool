@@ -1,0 +1,414 @@
+{
+  "protocol": "dt.test-lease-model-review/v1",
+  "date": "2026-11-21",
+  "conclusion": "No evaluated model candidate passed both functional and lifetime verification. This is a failed/inconclusive readiness check, not evidence of unattended migration reliability.",
+  "limits": [
+    "One synthetic Java/Spring service and locally advertised model identities; no claim about general model ranking or production deployment performance.",
+    "Exploratory trials used successive harness revisions, prompts and profiles. They are not a controlled A/B comparison and must not be summarized as a model pass rate.",
+    "These model trials used the ten-tool workspace profile or four-tool lean profile. The final eleven-tool profile adds code_search; that addition is schema/regression-checked, not a demonstrated successful migration.",
+    "Early protocol/preflight issues and the optional check=false rejection were harness defects and are excluded from capability conclusions.",
+    "Production test_run does not create the benchmark warm pool automatically."
+  ],
+  "runs": [
+    {
+      "id": "production-27b",
+      "originalReportSha256": "1ea9fe2c12a5ed13cb77a3a548cff6d13ddae6e3261cd0ed14f49e843959b340",
+      "model": "qwen3.8:27b",
+      "advertisedDigest": "22f605d9adb2f9a598749ffa8e1c9b35a78d388a448f0898ee057fc6a7ec1bd6",
+      "profile": "discovery",
+      "reasoning": false,
+      "offeredTools": [
+        "tool_search",
+        "tool_describe",
+        "tool_execute",
+        "tool_profiles"
+      ],
+      "schemaBytes": 1863,
+      "turns": 18,
+      "toolCalls": {
+        "tool_search": 5,
+        "tool_describe": 6,
+        "workflow_plan": 1,
+        "workspace_read": 15,
+        "test_targets": 1,
+        "test_context": 1
+      },
+      "usage": {
+        "input": 188498,
+        "output": 1517
+      },
+      "finish": "turn-budget",
+      "error": "The operation was aborted due to timeout",
+      "usedGuide": true,
+      "publicTests": [],
+      "passed": false,
+      "cleanup": {
+        "verified": true,
+        "remaining": 0
+      },
+      "sourceHashes": {
+        "lib/tool-search.js": "88b90240a496addb4da29f051e4a809a468809d647ac841adb20b188fe7a8225",
+        "lib/tools-discovery.js": "e5124948fccbaea8cf94b8d8b21154e21755e786a05c1a652ab1b4e157b6df4a",
+        "lib/workflows.js": "2548bc2d17a454709a501f72cc5e40c564da6ca24381e7bb9dc539901f698634",
+        "lib/workflow-guides.json": "f7ffc66084a89b583b804f76eec4e4921572491240e9a12ce0b4a5e8d9d8a588",
+        "lib/integration-plan.js": "fd46869ab0bf45364a7ae977c2817aed7bf38e8b4b157032dd376e9d2f9f110e",
+        "lib/tools-code.js": "3d7c3efb0166145601d59f810d4277bb3048b559948ea207aec5c3ea097ec4c8",
+        "dev/eval-test-leases-model.js": "31132f61c47d991ec3e371818f76d7b32aedda83c109079e683b25585460e7d0"
+      }
+    },
+    {
+      "id": "final-27b",
+      "originalReportSha256": "e4b72eed56481a4f3ebf9e54dddbdb056b7d596f36e0576f63624f7239815b9e",
+      "model": "qwen3.8:27b",
+      "advertisedDigest": "22f605d9adb2f9a598749ffa8e1c9b35a78d388a448f0898ee057fc6a7ec1bd6",
+      "profile": "workspace",
+      "reasoning": false,
+      "offeredTools": [
+        "tool_search",
+        "tool_describe",
+        "tool_execute",
+        "tool_profiles",
+        "workflow_plan",
+        "workspace_read",
+        "workspace_write",
+        "test_context",
+        "test_targets",
+        "test_run"
+      ],
+      "schemaBytes": 10851,
+      "turns": 14,
+      "toolCalls": {
+        "workspace_read": 17,
+        "workspace_write": 1,
+        "test_run": 1
+      },
+      "usage": {
+        "input": 150693,
+        "output": 2525
+      },
+      "finish": "assistant-finished",
+      "usedGuide": false,
+      "oracleUnchanged": true,
+      "publicTests": [
+        {
+          "outcome": "passed",
+          "counts": {
+            "tests": 3,
+            "passed": 3,
+            "failed": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "failures": []
+        }
+      ],
+      "independent": {
+        "state": "failed",
+        "assertions": 4,
+        "cleanup": {
+          "state": "verified",
+          "containers": 0
+        },
+        "runs": [
+          {
+            "mode": "suite-parallel",
+            "tests": {
+              "total": 3,
+              "failed": 0
+            },
+            "starts": 3,
+            "contexts": 3,
+            "clones": 0,
+            "drops": 0
+          }
+        ]
+      },
+      "passed": false,
+      "cleanup": {
+        "verified": true,
+        "remaining": 0
+      },
+      "adapter": "package demo;\nimport org.springframework.test.context.*;\nimport org.springframework.test.annotation.DirtiesContext;\n\n// Test-only adapter: one shared dependency lease per JVM, regardless of mode.\n// Workspace mode: MultiContainerSupport.acquire() clones private databases from\n// the runner-owned warm pool and creates a private topic on the owned broker;\n// no containers are started and the warm pool is never stopped by the tests.\n// CI modes (per-class-*, suite-parallel): acquire() starts the shared containers\n// once and the same code path binds them.\nfinal class LeaseAdapter {\n    static void before(TestContext context)throws Exception {\n        // Never rewrite the runner-supplied config: workspace mode must stay\n        // workspace mode (owned warm leases), CI modes must stay CI (fresh\n        // shared containers). acquire() is idempotent per JVM, so the first\n        // test class pays the one-time setup and later classes reuse the lease.\n        MultiContainerSupport.acquire(context.getTestClass().getSimpleName());\n    }\n    static void properties(DynamicPropertyRegistry registry) {\n        var b=MultiContainerSupport.current;\n        int n=b.pg.size();\n        registry.add(\"fixture.databases\",()->n);\n        for(int i=0;i<n;i++){int index=i;\n            registry.add(\"fixture.pg.\"+index+\".url\",()->b.pg.get(index).url());\n            registry.add(\"fixture.pg.\"+index+\".user\",()->b.pg.get(index).user());\n            registry.add(\"fixture.pg.\"+index+\".password\",()->b.pg.get(index).password());\n        }\n        registry.add(\"fixture.kafka\",()->b.bootstrap);\n        // The leased topic is unique per run (dt-<lease>); never a shared name.\n        registry.add(\"fixture.topic\",()->b.topic);\n    }\n    static void after(TestContext context)throws Exception {\n        // Mark the context dirty so Spring closes the producer and JDBC\n        // connections before the lease is released; otherwise the drop of the\n        // cloned databases can race live connections.\n        context.markApplicationContextDirty(DirtiesContext.HierarchyMode.EXHAUSTIVE);\n        // Release only when this JVM has finished every selected class (or in\n        // per-class mode, after each class). The JVM shutdown hook covers forks\n        // that exit early. The warm pool itself is owned by the runner and is\n        // never stopped from here.\n        if(MultiContainerSupport.config().perClass()||MultiContainerSupport.completed.incrementAndGet()>=MultiContainerSupport.config().classes()){\n            MultiContainerSupport.release();\n        }\n    }\n}\n",
+      "sourceHashes": {
+        "lib/tool-search.js": "88b90240a496addb4da29f051e4a809a468809d647ac841adb20b188fe7a8225",
+        "lib/tools-discovery.js": "e5124948fccbaea8cf94b8d8b21154e21755e786a05c1a652ab1b4e157b6df4a",
+        "lib/workflows.js": "2548bc2d17a454709a501f72cc5e40c564da6ca24381e7bb9dc539901f698634",
+        "lib/workflow-guides.json": "f7ffc66084a89b583b804f76eec4e4921572491240e9a12ce0b4a5e8d9d8a588",
+        "lib/integration-plan.js": "fd46869ab0bf45364a7ae977c2817aed7bf38e8b4b157032dd376e9d2f9f110e",
+        "lib/tools-code.js": "3d7c3efb0166145601d59f810d4277bb3048b559948ea207aec5c3ea097ec4c8",
+        "dev/eval-test-leases-model.js": "31132f61c47d991ec3e371818f76d7b32aedda83c109079e683b25585460e7d0"
+      }
+    },
+    {
+      "id": "repaired-27b-final",
+      "originalReportSha256": "b442afec74c5b78a3ef4cd7bc16ff1a2fc765db5aa3d1588cb26579e94a2b11e",
+      "model": "qwen3.8:27b",
+      "advertisedDigest": "22f605d9adb2f9a598749ffa8e1c9b35a78d388a448f0898ee057fc6a7ec1bd6",
+      "profile": "workspace",
+      "reasoning": false,
+      "offeredTools": [
+        "workspace_read",
+        "workspace_write",
+        "test_context",
+        "test_targets",
+        "test_run",
+        "workflow_plan",
+        "tool_profiles",
+        "tool_search",
+        "tool_describe",
+        "tool_execute"
+      ],
+      "schemaBytes": 10851,
+      "turns": 18,
+      "toolCalls": {
+        "workspace_read": 23
+      },
+      "usage": {
+        "input": 231007,
+        "output": 1405
+      },
+      "finish": "turn-budget",
+      "usedGuide": false,
+      "oracleUnchanged": true,
+      "publicTests": [],
+      "independent": {
+        "state": "not-run",
+        "reason": "No candidate edit or successful model test run"
+      },
+      "passed": false,
+      "cleanup": {
+        "verified": true,
+        "remaining": 0
+      },
+      "adapter": "package demo;\nimport org.springframework.test.context.*;\nimport org.springframework.test.annotation.DirtiesContext;\n\n// Test-only adapter: one shared dependency lease per JVM, regardless of mode.\n// Workspace mode: MultiContainerSupport.acquire() clones private databases from\n// the runner-owned warm pool and creates a private topic on the owned broker;\n// no containers are started and the warm pool is never stopped by the tests.\n// CI modes (per-class-*, suite-parallel): acquire() starts the shared containers\n// once and the same code path binds them.\nfinal class LeaseAdapter {\n    static void before(TestContext context)throws Exception {\n        // Never rewrite the runner-supplied config: workspace mode must stay\n        // workspace mode (owned warm leases), CI modes must stay CI (fresh\n        // shared containers). acquire() is idempotent per JVM, so the first\n        // test class pays the one-time setup and later classes reuse the lease.\n        MultiContainerSupport.acquire(context.getTestClass().getSimpleName());\n    }\n    static void properties(DynamicPropertyRegistry registry) {\n        var b=MultiContainerSupport.current;\n        int n=b.pg.size();\n        registry.add(\"fixture.databases\",()->n);\n        for(int i=0;i<n;i++){int index=i;\n            registry.add(\"fixture.pg.\"+index+\".url\",()->b.pg.get(index).url());\n            registry.add(\"fixture.pg.\"+index+\".user\",()->b.pg.get(index).user());\n            registry.add(\"fixture.pg.\"+index+\".password\",()->b.pg.get(index).password());\n        }\n        registry.add(\"fixture.kafka\",()->b.bootstrap);\n        // The leased topic is unique per run (dt-<lease>); never a shared name.\n        registry.add(\"fixture.topic\",()->b.topic);\n    }\n    static void after(TestContext context)throws Exception {\n        // Mark the context dirty so Spring closes the producer and JDBC\n        // connections before the lease is released; otherwise the drop of the\n        // cloned databases can race live connections.\n        context.markApplicationContextDirty(DirtiesContext.HierarchyMode.EXHAUSTIVE);\n        // Release only when this JVM has finished every selected class (or in\n        // per-class mode, after each class). The JVM shutdown hook covers forks\n        // that exit early. The warm pool itself is owned by the runner and is\n        // never stopped from here.\n        if(MultiContainerSupport.config().perClass()||MultiContainerSupport.completed.incrementAndGet()>=MultiContainerSupport.config().classes()){\n            MultiContainerSupport.release();\n        }\n    }\n}\n",
+      "sourceHashes": {
+        "lib/tool-search.js": "88b90240a496addb4da29f051e4a809a468809d647ac841adb20b188fe7a8225",
+        "lib/tools-discovery.js": "e5124948fccbaea8cf94b8d8b21154e21755e786a05c1a652ab1b4e157b6df4a",
+        "lib/workflows.js": "2548bc2d17a454709a501f72cc5e40c564da6ca24381e7bb9dc539901f698634",
+        "lib/workflow-guides.json": "f7ffc66084a89b583b804f76eec4e4921572491240e9a12ce0b4a5e8d9d8a588",
+        "lib/integration-plan.js": "fd46869ab0bf45364a7ae977c2817aed7bf38e8b4b157032dd376e9d2f9f110e",
+        "lib/tools-code.js": "3d7c3efb0166145601d59f810d4277bb3048b559948ea207aec5c3ea097ec4c8",
+        "lib/tool-profiles.js": "5b0a12a495e6d6c6677ec9df7dbadedbac84cfbe5993150aa1c92c7da0287208",
+        "lib/testgen.js": "9ecd78ebc998116655bd37a0b0157dbba8bde35684abb6446faaf79c109616e4",
+        "dev/eval-test-leases-model.js": "b237605e9fc20b6e294486ee242aca13efbba7ae90550491d1078e135650975e"
+      }
+    },
+    {
+      "id": "guided-final-4b",
+      "originalReportSha256": "7f364cb419c47ca16dbbd00f332239014d9d3f1f25b0f1a4636f6c91b76486ed",
+      "model": "qwen3.5:4b",
+      "advertisedDigest": "d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04",
+      "profile": "workspace",
+      "reasoning": false,
+      "offeredTools": [
+        "workspace_read",
+        "workspace_write",
+        "test_context",
+        "test_targets",
+        "test_run",
+        "workflow_plan",
+        "tool_profiles",
+        "tool_search",
+        "tool_describe",
+        "tool_execute"
+      ],
+      "schemaBytes": 10851,
+      "turns": 24,
+      "toolCalls": {
+        "workspace_read": 6,
+        "workspace_write": 4,
+        "test_run": 4,
+        "tool_search": 2,
+        "code_search": 8
+      },
+      "usage": {
+        "input": 306826,
+        "output": 5193
+      },
+      "finish": "turn-budget",
+      "usedGuide": false,
+      "oracleUnchanged": true,
+      "publicTests": [
+        {
+          "outcome": "compile-error",
+          "counts": {
+            "tests": 0,
+            "passed": 0,
+            "failed": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "compile": [
+            {
+              "file": "src/test/java/demo/LeaseAdapter.java",
+              "line": 33,
+              "message": "bad operand types for binary operator '>'"
+            }
+          ],
+          "failures": []
+        },
+        {
+          "outcome": "failed",
+          "counts": {
+            "tests": 6,
+            "passed": 1,
+            "failed": 5,
+            "errors": 0,
+            "skipped": 0
+          },
+          "failures": [
+            {
+              "test": "FirstFlowTest#httpToEveryDatabaseAndKafka",
+              "expected": "2",
+              "actual": "1"
+            },
+            {
+              "test": "LeaseLifecycleTest#beforePreservesTheProviderAndRegistersAForkShutdownCallback",
+              "expected": "1",
+              "actual": "0"
+            },
+            {
+              "test": "LeaseLifecycleTest#sharedProvidersKeepTheContextAndBindingUntilTheLastClass",
+              "expected": "1",
+              "actual": "0"
+            },
+            {
+              "test": "SecondFlowTest#httpToEveryDatabaseAndKafka",
+              "expected": "2",
+              "actual": "1"
+            },
+            {
+              "test": "ThirdFlowTest#httpToEveryDatabaseAndKafka",
+              "expected": "2",
+              "actual": "1"
+            }
+          ]
+        },
+        {
+          "outcome": "compile-error",
+          "counts": {
+            "tests": 0,
+            "passed": 0,
+            "failed": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "compile": [
+            {
+              "file": "src/test/java/demo/LeaseAdapter.java",
+              "line": 52,
+              "message": "cannot find symbol",
+              "details": [
+                "symbol:   class Config",
+                "location: class LeaseAdapter"
+              ]
+            }
+          ],
+          "failures": []
+        },
+        {
+          "outcome": "failed",
+          "counts": {
+            "tests": 6,
+            "passed": 0,
+            "failed": 6,
+            "errors": 0,
+            "skipped": 0
+          },
+          "failures": [
+            {
+              "test": "FirstFlowTest#httpToEveryDatabaseAndKafka",
+              "expected": "2",
+              "actual": "1"
+            },
+            {
+              "test": "LeaseLifecycleTest#perClassProvidersCloseClientsBeforeReleasingTheirLease",
+              "expected": "1",
+              "actual": "0"
+            },
+            {
+              "test": "LeaseLifecycleTest#beforePreservesTheProviderAndRegistersAForkShutdownCallback",
+              "expected": "1",
+              "actual": "0"
+            },
+            {
+              "test": "LeaseLifecycleTest#sharedProvidersKeepTheContextAndBindingUntilTheLastClass",
+              "expected": "1",
+              "actual": "0"
+            },
+            {
+              "test": "SecondFlowTest#httpToEveryDatabaseAndKafka",
+              "expected": "2",
+              "actual": "1"
+            },
+            {
+              "test": "ThirdFlowTest#httpToEveryDatabaseAndKafka",
+              "expected": "2",
+              "actual": "1"
+            }
+          ]
+        }
+      ],
+      "independent": {
+        "state": "not-run",
+        "reason": "No candidate edit or successful model test run"
+      },
+      "passed": false,
+      "cleanup": {
+        "verified": true,
+        "remaining": 0
+      },
+      "adapter": "package demo;\nimport org.springframework.test.context.*;\n\n// Workspace mode: use owned warm leases from fixture_runtime_start.\n// CI mode: start fresh containers via MultiContainerSupport.\nfinal class LeaseAdapter {\n    static void before(TestContext context) throws Exception {\n        var config = MultiContainerSupport.config();\n        // Detect workspace mode (owned lease supplied by runner).\n        if (config.mode().equals(\"workspace\")) {\n            // Reuse the warm dependency leases already allocated for this test class.\n            // No container startup, no credential exposure.\n            MultiContainerSupport.acquire(context.getTestClass().getSimpleName());\n        } else {\n            // CI mode: start fresh containers with full configuration.\n            MultiContainerSupport.config = new MultiContainerSupport.Config(\n                config.run(), \"per-class-sequential\",\n                config.databases(), config.classes(), config.parallelism(),\n                config.timeoutSeconds(), config.postgresImage(), config.kafkaImage(),\n                config.bindings()\n            );\n            MultiContainerSupport.acquire(context.getTestClass().getSimpleName());\n        }\n    }\n\n    static void properties(org.springframework.test.context.DynamicPropertyRegistry registry) {\n        var b = MultiContainerSupport.current;\n        // Workspace mode: bind fixture.databases and fixture.pg.N.* from the warm lease.\n        // CI mode: same bindings, but containers are freshly started.\n        if (b != null) {\n            registry.add(\"fixture.databases\", () -> 1);\n            for (var pg : b.pg) {\n                registry.add(\"fixture.pg.0.url\", () -> pg.url());\n                registry.add(\"fixture.pg.0.user\", () -> pg.user());\n                registry.add(\"fixture.pg.0.password\", () -> pg.password());\n            }\n            registry.add(\"fixture.kafka\", () -> b.bootstrap);\n            registry.add(\"fixture.topic\", () -> \"quotes\");\n        }\n    }\n\n    static void after(TestContext context) throws Exception {\n        // Close the context once after all classes in a test class run.\n        // This applies to both workspace and CI modes.\n        MultiContainerSupport.closeContext.run();\n        if (!MultiContainerSupport.config().mode().equals(\"workspace\")) {\n            // CI mode: release owned containers.\n            MultiContainerSupport.release();\n        }\n    }\n}\n",
+      "sourceHashes": {
+        "lib/tool-search.js": "88b90240a496addb4da29f051e4a809a468809d647ac841adb20b188fe7a8225",
+        "lib/tools-discovery.js": "e5124948fccbaea8cf94b8d8b21154e21755e786a05c1a652ab1b4e157b6df4a",
+        "lib/workflows.js": "2548bc2d17a454709a501f72cc5e40c564da6ca24381e7bb9dc539901f698634",
+        "lib/workflow-guides.json": "f7ffc66084a89b583b804f76eec4e4921572491240e9a12ce0b4a5e8d9d8a588",
+        "lib/integration-plan.js": "fd46869ab0bf45364a7ae977c2817aed7bf38e8b4b157032dd376e9d2f9f110e",
+        "lib/tools-code.js": "3d7c3efb0166145601d59f810d4277bb3048b559948ea207aec5c3ea097ec4c8",
+        "lib/tool-profiles.js": "5b0a12a495e6d6c6677ec9df7dbadedbac84cfbe5993150aa1c92c7da0287208",
+        "lib/testgen.js": "9ecd78ebc998116655bd37a0b0157dbba8bde35684abb6446faaf79c109616e4",
+        "dev/eval-test-leases-model.js": "4305bcf442e4dda99f7284136ad6f33bdc81dcfd24a55c582029d62b57c6d6c9"
+      }
+    }
+  ],
+  "independentFailureArtifact": "test-leases-model-lifetime-failure-2026-11-21.json",
+  "referenceCalibration": {
+    "kind": "Human-wired reference based on the existing FlowTest provider; not a model success",
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "policySha256": "08a914a68f111d8f515fe7712ec2c6f0f1a9581eaf362104452afcb867c41e27",
+    "adapterSha256": "f232a54bbf942235c080325db96fe3dc7a9bf4f05dd5d63eca22c252d650d73f"
+  },
+  "improvements": [
+    "Search keeps relevant workflow guides when group=code; warm dependency intents no longer lead with version-upgrade tools.",
+    "Focused workspace-tests profile, README/guide pointer, actual provider API notes and a clear production-versus-prototype distinction.",
+    "Existing test context avoids generating TestTest boilerplate; compiler feedback retains symbols, types and canonical relative source paths.",
+    "Protected lifecycle checks expose context reuse, explicit provider selection and fork-shutdown misses alongside unchanged HTTP/PG/Kafka assertions.",
+    "Evaluation preserves job workspace identity, optional compiler flags, resumable verdicts, explicit reasoning/budgets, bounded repeated tool errors and owned cleanup."
+  ],
+  "inconclusiveLocalTrial": {
+    "model": "qwen3.5:9b",
+    "profile": "workspace",
+    "reasoning": false,
+    "originalReportSha256": "6df494717894b47589cdc795f3f88a2d86ae08488978ea79691c8739d993b23f",
+    "state": "inconclusive-controller-stopped",
+    "reason": "CPU-only local endpoint was too slow for a useful interactive trial; no model-correctness conclusion",
+    "elapsedMs": 849472,
+    "turns": 5,
+    "usage": {
+      "input": 20307,
+      "output": 950
+    },
+    "observedPlacement": {
+      "contextWindow": 32768,
+      "reportedVramBytes": 0
+    },
+    "cleanup": {
+      "state": "verified",
+      "ownedContainers": 0
+    }
+  }
+}

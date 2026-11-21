@@ -164,6 +164,14 @@ test('workspace from a git remote: write, edit, patch that applies; test context
   const dao = T.context(ws.id, 'BalanceDao', { env: 'dev',flow:false });
   assert.deepEqual(dao.ddl.tables.sort(), ['pay.customers', 'pay.payments', 'pay.refunds'], 'the snapshot grows with each test that needs more');
   W.write(ws.id, svc.test.path, { content: svc.skeleton });
+  const existing=T.context(ws.id,'PaymentServiceTest');
+  assert.equal(existing.style,'existing-test');
+  assert.equal(existing.skeleton,null);
+  assert.equal(existing.test.path,svc.test.path);
+  assert.equal(existing.test.exists,true);
+  assert.equal(existing.next.arguments.id,'test-dependency-leases');
+  assert.ok(!JSON.stringify(existing.test).includes('TestTest'));
+  assert.throws(()=>T.context(ws.id,'PaymentServiceTest#noSuchTestMethod'),/no method/);
 
   const p = await W.patch(ws.id);
   assert.deepEqual(p.files.map(f => `${f.status} ${f.path}`).sort(), ['added src/test/java/com/acme/pay/PaymentServiceTest.java', 'added src/test/resources/dt-schema/pay.sql', 'modified src/main/java/com/acme/pay/FeeCalculator.java']);

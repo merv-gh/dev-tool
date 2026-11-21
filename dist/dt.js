@@ -18246,7 +18246,7 @@ var require_self_model_catalog = __commonJS({
     module2.exports = {
       protocol: "dt.repo-source/v1",
       repo: "dev-tool",
-      sourceDigest: "1cf833bf56cec03beae38a815d10a7f655698303fe83fbf56e015c1631e09505",
+      sourceDigest: "14b938006b7e40fa07824e7c99cdfc5e50eed63f7c5871e4703e78bc46066018",
       machines: [
         {
           id: "IO.atomic-file",
@@ -21011,7 +21011,7 @@ var require_self_model_catalog = __commonJS({
           consumers: [
             {
               file: "lib/testrun.js",
-              line: 516,
+              line: 522,
               snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').testInvocation);"
             }
           ],
@@ -21051,7 +21051,7 @@ var require_self_model_catalog = __commonJS({
           consumers: [
             {
               file: "lib/testrun.js",
-              line: 481,
+              line: 487,
               snippet: "const evidence = require('./state-machine').create(require('./lifecycles').testProof);"
             }
           ],
@@ -51685,6 +51685,7 @@ var require_tool_search = __commonJS({
       return [];
     }
     function studioIntent(q) {
+      if (/\b(testcontainers?|leases?)\b/.test(q) && /\b(tests?|workspace|integration|postgres|kafka|dependenc(?:y|ies))\b/.test(q) || /\b(warm|reuse|reusing|shared)\b/.test(q) && /\b(dependenc(?:y|ies)|containers?)\b/.test(q)) return ["workflow_plan", "test_context", "workspace_read", "test_targets", "test_run"];
       if (/\b(overnight|unattended|autonomous|task harness|task desk|background research)\b/.test(q)) return ["task_run_catalog", "task_run_start", "task_run_list", "task_run_status", "task_run_control"];
       if (/\b(self.reflection|repo.model|repository behavior|code.backed|source.backed|workspace push lifecycle)\b/.test(q) || /\b(tla|finite model|formal model)\b/.test(q) && /\b(joern|repository|repo|source|workspace|lifecycle)\b/.test(q)) return ["repo_model", "logic_model"];
       if (/\b(tla|tlc|model checking|finite model|formal verification)\b/.test(q)) return ["logic_model"];
@@ -66177,7 +66178,7 @@ var require_testout = __commonJS({
       /^\s*\.\.\. \d+ more$/,
       /^Starting a Gradle Daemon|^Daemon will be stopped/
     ];
-    var SIGNAL = /\b(ERROR|FAIL(ED|URE)?|Exception|error:|What went wrong|Execution failed|Could not|Tests run:|tests completed|No tests found|Unresolved reference|cannot find symbol|BUILD FAILURE)\b|^e: |^\* (What|Where)/;
+    var SIGNAL = /\b(ERROR|FAIL(ED|URE)?|Exception|error:|What went wrong|Execution failed|Could not|Tests run:|tests completed|No tests found|Unresolved reference|cannot find symbol|BUILD FAILURE)\b|^e: |^\* (What|Where)|^\s*(symbol|location|required|found|reason):/;
     function compactLog(out2, { max = 40 } = {}) {
       const lines = String(out2 || "").split("\n").map((l) => l.replace(/\s+$/, "")).filter((l) => l.trim());
       const kept = lines.filter((l) => !NOISE.some((re2) => re2.test(l)));
@@ -67358,13 +67359,28 @@ var require_testrun = __commonJS({
     var unxml = (s) => String(s || "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#(\d+);/g, (_, n) => String.fromCharCode(n)).replace(/&amp;/g, "&");
     function compileErrors(output, root) {
       const out2 = [];
+      const roots = [path3.resolve(root)];
+      try {
+        roots.push(fs3.realpathSync(root));
+      } catch {
+      }
       const rel = (f) => {
         const p = f.replace(/^file:\/\//, "");
-        return p.startsWith(root) ? path3.relative(root, p).split(path3.sep).join("/") : p;
+        for (const base of roots) if (p === base || p.startsWith(base + path3.sep)) return path3.relative(base, p).split(path3.sep).join("/");
+        return p;
       };
-      for (const m of output.matchAll(/\[ERROR\]\s+(\/[^\s:]+\.(?:java|kt)):\[(\d+),(\d+)\]\s*(.*)/g)) out2.push({ file: rel(m[1]), line: +m[2], col: +m[3], message: m[4].trim() });
-      for (const m of output.matchAll(/^(\/[^\s:]+\.java):(\d+): error: (.*)$/gm)) out2.push({ file: rel(m[1]), line: +m[2], message: m[3].trim() });
-      for (const m of output.matchAll(/^e: (?:file:\/\/)?(\/[^\s:]+\.kts?):(\d+):(\d+):? (.*)$/gm)) out2.push({ file: rel(m[1]), line: +m[2], col: +m[3], message: m[4].trim() });
+      const add = (m, error) => {
+        const following = output.slice(m.index + m[0].length).split("\n", 9), details = [];
+        for (const line of following) {
+          const text = line.replace(/^\s*\[ERROR\]\s*/, "").trim();
+          if (/\.(?:java|kt):(?:\[?\d+)|^e:|^\* |^FAILURE:/.test(text)) break;
+          if (/^(symbol|location|required|found|reason):\s*/.test(text)) details.push(text.slice(0, 500));
+        }
+        out2.push({ ...error, ...details.length ? { details: details.slice(0, 5) } : {} });
+      };
+      for (const m of output.matchAll(/^\[ERROR\]\s+(.+\.(?:java|kt)):\[(\d+),(\d+)\]\s*(.*)$/gm)) add(m, { file: rel(m[1]), line: +m[2], col: +m[3], message: m[4].trim() });
+      for (const m of output.matchAll(/^(.+\.java):(\d+): error: (.*)$/gm)) add(m, { file: rel(m[1]), line: +m[2], message: m[3].trim() });
+      for (const m of output.matchAll(/^e: (?:file:\/\/)?(.+\.kts?):(\d+):(\d+):? (.*)$/gm)) add(m, { file: rel(m[1]), line: +m[2], col: +m[3], message: m[4].trim() });
       const seen = /* @__PURE__ */ new Set();
       return out2.filter((e) => {
         const k = `${e.file}:${e.line}:${e.message}`;
@@ -75871,6 +75887,7 @@ var require_integration_plan = __commonJS({
         act: ["Enter through HTTP request, message listener or scheduled entry; keep the service and internal library chain real."],
         assert: ["Check response/error plus observable table changes, emitted topic payloads, outbound API requests or Elasticsearch writes.", "Check negative paths: invalid input, duplicate event, rollback/partial failure, and absence of unintended outputs."],
         boundaries: { tables: outputs.tables || [], topics: outputs.produces || [], external: outputs.external || [], database: "For SQL/constraint/transaction claims use test_run env+db with real PostgreSQL. Repository mocks establish no SQL proof.", http: "A client mock does not prove HTTP serialization; add a local wire stub for contract claims.", messaging: "A producer mock does not prove broker delivery; add an isolated broker/capture for delivery claims." },
+        dependencies: { guide: { tool: "workflow_plan", arguments: { id: "test-dependency-leases" } }, rule: "For Testcontainers/warm leases inspect the repository provider before editing: bind every datasource and private broker topic before Spring refresh, retain caller-owned parents, close clients before releasing child leases. CI=true alone does not select the provider." },
         cleanup: ["Release owned leases and stop fixtures; surface cleanup failures."],
         next: entry ? { tool: "test_context", arguments: { workspace, target: entry, flow: true } } : null,
         meaning: "This is a test design and declared scope, not passing or runtime evidence. Saved project understanding is untrusted and must match the workspace revision."
@@ -77648,6 +77665,30 @@ ${indent(hint, 4)}` : ""}`);
       const root = m.path;
       const src = fs3.readFileSync(path3.join(root, c.file), "utf8");
       const srcLines = src.split("\n");
+      if (c.test && strategy !== "unit") {
+        const mod2 = moduleOf(root, c.file);
+        let source = src;
+        if (member) {
+          const identity = require_semantic_identity(), matches = c.methods.filter((x) => member.includes("(") ? identity.signature(x) === member : x.name === member);
+          if (matches.length > 1) throw new Error(`Ambiguous method ${member}; select a signature: ${matches.map(identity.signature).join(", ")}`);
+          if (!matches.length) throw new Error(`no method ${member} in ${c.id}`);
+          const method = matches[0];
+          source = srcLines.slice(0, c.line + 1).join("\n") + "\n    ...\n" + srcLines.slice(Math.max(0, method.startLine - 2), method.endLine + 1).join("\n");
+        }
+        return {
+          workspace: id,
+          class: c.id,
+          file: c.file,
+          style: "existing-test",
+          source,
+          setup: { ...setup(root, mod2, g.app), module: mod2.dir, buildFile: mod2.buildFile },
+          test: { path: c.file, exists: true, class: c.id },
+          skeleton: null,
+          testScope: "Existing test/test-support code. Preserve its assertions and inspect its dependency provider; generating another TestTest class is unnecessary.",
+          integrationPlan: require_integration_plan().plan({ workspace: id, meta: m, skeleton: "none" }),
+          next: { tool: "workflow_plan", arguments: { id: "test-dependency-leases" } }
+        };
+      }
       const byName = new Map(g.classes.filter((x) => !x.test).map((x) => [x.name, x]));
       const deps = [];
       const seenDep = /* @__PURE__ */ new Set();
@@ -78497,7 +78538,7 @@ var require_tools_code = __commonJS({
         {
           name: "test_context",
           group: "code",
-          description: "Plan an outside-in test from an HTTP/listener/job entry through real service and internal-library code to observable exits. A class target resolves to public callers; multiple callers require choosing the behavior. Returns chain, boundary doubles, fixtures, source, skeleton and an explicit integrationPlan. Database/client mocks do not prove SQL, wire or broker behavior. Use flow=false or strategy=unit for intentional class isolation; env supplies real-schema DDL.",
+          description: "Plan outside-in entry-to-exit tests and Testcontainers/warm-lease setup through real service and internal-library code. Returns chain, fixtures, source, skeleton and integrationPlan with dependency-provider guidance. A class target resolves to public callers; choose among multiple entries. Database/client mocks do not prove SQL, wire or broker behavior. Use flow=false or strategy=unit for intentional class isolation; env supplies real-schema DDL.",
           input: { workspace: str("Workspace id"), target: str('Class, Class#method, file path, or an entry point: "POST /process/order", "kafka payments.settled"'), env: { ...env, description: "Environment whose synced database gives the DDL snapshot (for repository/DAO tests)" }, db: str("Database (default: the one that has the tables)"), flow: { type: "boolean", description: "true: a flow test from this method (real beans on the chain, the edge mocked); false: a unit test. Default: outside-in for evidenced entry callers" }, strategy: { type: "string", enum: ["outside-in", "unit"], default: "outside-in", description: "Prefer entry-to-exit behavior; unit explicitly requests class isolation" } },
           required: ["workspace", "target"],
           run: (a) => require_testgen().context(a.workspace, a.target, { env: a.env, db: a.db, flow: a.flow, strategy: a.strategy })
@@ -82666,7 +82707,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md|java)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "1cf833bf56cec03beae38a815d10a7f655698303fe83fbf56e015c1631e09505";
+      if (true) return "14b938006b7e40fa07824e7c99cdfc5e50eed63f7c5871e4703e78bc46066018";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -83525,6 +83566,7 @@ var require_tool_profiles = __commonJS({
       "tool_execute"
     ];
     var PROFILES = {
+      "workspace-tests": { description: "Compact Java/Spring test adaptation: search/inspect existing helpers, edit a workspace, bind owned dependency leases and run fresh tests. Discovery reaches additional fixture tools; profiles grant no permissions.", includeCore: false, names: [...DISCOVERY, "workflow_plan", "code_search", "workspace_read", "workspace_write", "test_context", "test_targets", "test_run"] },
       harness: { description: "Persistent autonomous research/change tasks, overnight Confluence/repository gathering, task memory, explicit checkpoints and admin-authorized global knowledge publication.", includeCore: false, prefixes: ["task_run_"], names: [...DISCOVERY, "continuation_find", "continuation_briefing", "project_context_find", "project_context_get", "workspace_editor", "workspace_terminal"] },
       studio: { description: "Durable task continuation, cross-repository Gradle upgrades, offline editing, bounded orchestration, named pages and finite TLA+ logic exploration.", includeCore: false, prefixes: ["task_run_", "continuation_", "automation_flow_"], names: [...DISCOVERY, "workspace_editor", "workspace_terminal", "gradle_inventory", "gradle_bump", "logic_model", "named_view", "ui_event", "ui_page"] },
       pages: { description: "Declarative widgets, monitoring dashboards and environment/database comparisons with retained results; no HTML or JS.", includeCore: false, names: [...DISCOVERY, "named_view", "ui_event", "ui_page", "ui_page_data", "job_cancel", "result_read"] },
@@ -89684,6 +89726,64 @@ var require_workflow_guides = __commonJS({
       version: 1,
       guides: [
         {
+          id: "test-dependency-leases",
+          title: "Adapt integration tests to owned warm dependency leases and container-backed CI",
+          terms: "testcontainers tests testing test adapter integration spring gradle lombok warm dependency dependencies reuse shared workspace lease leases database postgres kafka datasource profile fast startup cleanup ci mode profile adapter lifecycle",
+          required: [
+            "Owned workspace and the existing test helper/provider contract",
+            "Explicit provider configuration and runner-reachable owned bindings for every datasource and broker"
+          ],
+          stages: [
+            {
+              id: "inspect",
+              goal: "Read the existing adapter, provider helper, Gradle test task and real application property names. Preserve entry-to-exit assertions. Reuse the helper rather than inventing APIs or another allocator. test_context provides the current test setup.",
+              tools: [
+                "workspace_read",
+                "test_context",
+                "test_targets"
+              ]
+            },
+            {
+              id: "select",
+              goal: "Choose the provider before creating containers or Spring properties: default/CI uses owned container-backed dependencies; explicit workspace mode requires validated warm bindings. Do not infer mode from CI alone: test_run can set CI=true for local builds. Missing/mismatched workspace bindings must fail, never start fallback containers.",
+              tools: [
+                "workspace_read",
+                "workspace_write"
+              ]
+            },
+            {
+              id: "bind",
+              goal: "Acquire before Spring context refresh. DynamicPropertySource must bind EVERY logical database URL/user/password to its actual property prefix, plus the leased Kafka bootstrap and topic. Read the helper types first; do not hardcode localhost, credentials, database names or a shared topic. A Spring profile does not disable unconditional @Container/static startup.",
+              tools: [
+                "workspace_read",
+                "workspace_write"
+              ]
+            },
+            {
+              id: "lifetime",
+              goal: "Reuse compatible dependencies and Spring context within a test JVM. Keep bindings stable for that context. Close the context/clients before releasing owned child database/topic leases. Handle the last selected class AND JVM shutdown: extra forks may never reach a global class count. Keep the caller-owned warm pool alive. Surface cleanup errors.",
+              tools: [
+                "workspace_write"
+              ]
+            },
+            {
+              id: "verify",
+              goal: "Run unchanged tests through test_run mode=build; a mocked database/broker is not proof. Verify CI and workspace configurations, repeated clean leases and two forks, zero workspace container starts, every DB effect, actual Kafka delivery and cleanup. Retain compact reports; measure pool startup separately.",
+              tools: [
+                "test_run",
+                "workspace_patch"
+              ]
+            }
+          ],
+          boundaries: [
+            "This guide is a plan, not execution proof or a new test_run profile selector. The repository adapter must consume its actual supplied binding contract.",
+            "test_run fixture_runtime accepts an already-owned native lease with explicit fixture_bindings; the caller retains arm/check/stop ownership. testdb_clone/release are a separate template-lease contract. Do not interchange these IDs or release their parent from test code.",
+            "The benchmark helper allocates child database/topic leases from its owned pool; its internal API is fixture-specific, not a production API.",
+            "Inspect the actual helper and project datasource names before editing. All databases and private topics matter; one primary URL is insufficient.",
+            "Never commit or print ephemeral credentials/URLs. One fresh model/fixture run is exploratory evidence, not a model reliability guarantee."
+          ]
+        },
+        {
           id: "source-runtime-formal-model",
           title: "Reflect on a repository with source graphs, TLA+ and OpenTelemetry",
           terms: "repository self reflection sources state machine lifecycle hierarchy TLA formal model Joern CFG telemetry runtime observed transitions diagram",
@@ -90348,13 +90448,13 @@ var require_workflows = __commonJS({
       }
       return [...guides.values()];
     }
-    function suggest(query, tools, limit = 2) {
+    function suggest(query, tools, limit = 2, group) {
       const words = new Set(terms(query)), enabled = new Set(tools.map((t) => t.name));
       if (!enabled.has("workflow_plan")) return [];
       return definitions().map((g) => {
         const vocabulary = new Set(terms(g.terms));
         return { g, matched: [...words].filter((w) => vocabulary.has(w)) };
-      }).filter((x) => x.matched.length >= 2 || query.trim() === x.g.id).sort((a, b) => b.matched.length - a.matched.length || a.g.id.localeCompare(b.g.id)).slice(0, limit).map(({ g, matched }) => ({ id: g.id, title: g.title, matchedTerms: matched.slice(0, 8), first: g.stages[0].tools.filter((n) => enabled.has(n)), next: { tool: "tool_describe", args: { name: "workflow_plan" } }, planArguments: { id: g.id } }));
+      }).filter((x) => (x.matched.length >= 2 || query.trim() === x.g.id) && (!group || x.g.stages.some((s) => s.tools.some((name) => tools.some((t) => t.name === name && t.group === group))))).sort((a, b) => b.matched.length - a.matched.length || a.g.id.localeCompare(b.g.id)).slice(0, limit).map(({ g, matched }) => ({ id: g.id, title: g.title, matchedTerms: matched.slice(0, 8), first: g.stages[0].tools.filter((n) => enabled.has(n)), next: { tool: "tool_describe", args: { name: "workflow_plan" } }, planArguments: { id: g.id } }));
     }
     function plan(id, tools) {
       const all = definitions(), guide = all.find((g) => g.id === id);
@@ -90455,7 +90555,7 @@ var require_tools_discovery = __commonJS({
           if (a.group && !tools.some((t) => t.group === a.group)) return { error: { code: "DT_TOOL_GROUP_UNKNOWN", message: "Unknown tool category. Omit group; tickets and service names belong in task arguments." }, groups: [...new Set(tools.map((t) => t.group))].sort(), retry: { tool: "tool_search", arguments: { query: a.query } }, hint: "Retry once without group, then describe an exact capability and call tool_execute." };
           const S = require_tool_search(), ranker = require_config().getTools().discoveryRanker, { matches, lexical } = S.search(tools, a.query, a.group, ranker);
           const broader = a.group ? S.rank(tools, a.query, void 0, ranker)[0]?.t : null, groupHint = broader && broader.group !== a.group ? { message: "This group excludes the leading capability for the requested action. The filtered results below still use your group.", candidate: { name: broader.name, group: broader.group }, retry: { tool: "tool_search", arguments: { query: a.query } }, next: { tool: "tool_describe", arguments: { name: broader.name } } } : null;
-          return W.bounded({ ...groupHint ? { groupHint } : {}, total: matches.length, tools: matches.slice(0, a.limit).map(({ t }) => ({ name: t.name, group: t.group, description: t.description.slice(0, 450), required: t.inputSchema.required, next: { tool: "tool_describe", args: { name: t.name } } })), lexical, ...!matches.length ? { hint: "No matching capability. Search for the action (impact, text search, change path), not just an object name. Try tool_profiles; do not repeat the same query." } : {}, ...!a.group ? { workflows: W.suggest(a.query, tools), workflowKind: "planning-guides-not-diagnosis" } : {} }, a.max_bytes);
+          return W.bounded({ ...groupHint ? { groupHint } : {}, total: matches.length, tools: matches.slice(0, a.limit).map(({ t }) => ({ name: t.name, group: t.group, description: t.description.slice(0, 450), required: t.inputSchema.required, next: { tool: "tool_describe", args: { name: t.name } } })), lexical, ...!matches.length ? { hint: "No matching capability. Search for the action (impact, text search, change path), not just an object name. Try tool_profiles; do not repeat the same query." } : {}, workflows: W.suggest(a.query, tools, 2, a.group), workflowKind: "planning-guides-not-diagnosis" }, a.max_bytes);
         }
       },
       { name: "tool_describe", group: "catalog", description: "Read one enabled tool\u2019s exact schema, required fields and guidance before tool_execute. Grants stay unchanged.", input: { name: str("Exact tool name") }, required: ["name"], run: async (a) => {

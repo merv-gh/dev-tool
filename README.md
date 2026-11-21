@@ -953,6 +953,7 @@ dt runs it once at start and prints the problems to the log.
 - It runs as a job, so a big repo answers "running" instead of hitting the chat client's timeout.
 - Builds run with a clean environment: PATH, HOME, locale, proxies and JAVA_HOME, plus `tests.passEnv`, `tests.env` and the repository settings. Build scripts and tests can't read dt's API key or tokens.
 - Gradle uses its build cache (`--build-cache`), shared by all workspaces through the Gradle home.
+- Measured research prototypes cover [Java 21/Lombok incremental builds](docs/gradle-workspace-performance.md) and [multiple Testcontainers dependencies versus owned warm leases](docs/testcontainers-workspace-performance.md). Both accept explicit toolchain and resource overrides. Use the [test-adapter guide and compact model profile](docs/test-lease-adapters.md) to wire existing tests correctly. These experiments do not change the production runner's build strategy.
 
 ## Troubleshooting
 

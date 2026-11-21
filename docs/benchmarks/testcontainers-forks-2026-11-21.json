@@ -1,0 +1,1649 @@
+{
+  "protocol": "dt.testcontainers-benchmark/v1",
+  "effective": {
+    "databases": 2,
+    "parallelism": 3,
+    "workers": 2,
+    "testForks": 2,
+    "testClasses": [
+      "FirstFlowTest",
+      "SecondFlowTest",
+      "ThirdFlowTest"
+    ],
+    "iterations": 1,
+    "warmups": 0,
+    "timeoutSeconds": 180,
+    "commandTimeoutMs": 900000,
+    "postgresImage": "postgres:16-alpine",
+    "kafkaImage": "apache/kafka:3.8.0",
+    "testcontainersVersion": "1.20.4",
+    "bootVersion": "2.7.18",
+    "lombokVersion": "1.18.42",
+    "pull": "missing"
+  },
+  "scenarios": [
+    {
+      "mode": "suite-parallel",
+      "containersPerTestJvm": 3,
+      "lifetime": "test JVM",
+      "startup": "bounded parallel",
+      "tests": "fresh HTTP → every database → actual Kafka record"
+    },
+    {
+      "mode": "workspace",
+      "containersPerTestJvm": 0,
+      "lifetime": "owned warm pool with private database/topic leases",
+      "startup": "bounded parallel",
+      "tests": "fresh HTTP → every database → actual Kafka record"
+    }
+  ],
+  "limits": [
+    "Spring context and dependency sharing are per test JVM; extra forks can multiply startup.",
+    "Configured dependency image pulls, compilation, warmup runs and warm-pool startup are outside warm test samples; Testcontainers/Ryuk setup remains inside container-backed JVM time.",
+    "No cached test result counts as a fresh dependency check.",
+    "This prototype creates its own warm pool; it does not bind arbitrary environment databases."
+  ],
+  "at": "2026-11-21T17:40:17.141Z",
+  "owner": "benched06ad22b2eb796a",
+  "host": {
+    "platform": "darwin",
+    "arch": "x64",
+    "cpus": 16
+  },
+  "stages": [
+    {
+      "name": "docker-context",
+      "ms": 62,
+      "exit": 0,
+      "required": false
+    },
+    {
+      "name": "docker-preflight",
+      "ms": 63,
+      "exit": 0,
+      "required": true
+    },
+    {
+      "name": "image-0-inspect",
+      "ms": 150,
+      "exit": 0,
+      "required": false
+    },
+    {
+      "name": "image-1-inspect",
+      "ms": 123,
+      "exit": 0,
+      "required": false
+    },
+    {
+      "name": "java-version",
+      "ms": 189,
+      "exit": 0,
+      "required": true
+    },
+    {
+      "name": "gradle-version",
+      "ms": 959,
+      "exit": 0,
+      "required": true
+    },
+    {
+      "name": "compile-and-policy",
+      "ms": 3342,
+      "exit": 0,
+      "required": true
+    },
+    {
+      "name": "suite-parallel-0",
+      "ms": 32525,
+      "exit": 0,
+      "required": false
+    },
+    {
+      "name": "workspace-0",
+      "ms": 10443,
+      "exit": 0,
+      "required": false
+    },
+    {
+      "name": "owned-containers-check",
+      "ms": 70,
+      "exit": 0,
+      "required": true
+    }
+  ],
+  "runs": [
+    {
+      "name": "suite-parallel-0",
+      "mode": "suite-parallel",
+      "wallMs": 32525,
+      "exit": 0,
+      "tests": {
+        "total": 3,
+        "failed": 0
+      },
+      "operations": {
+        "container.start": {
+          "count": 6,
+          "sumMs": 87896,
+          "maxMs": 18498,
+          "failed": 0
+        },
+        "container.identity": {
+          "count": 6,
+          "sumMs": 0,
+          "maxMs": 0,
+          "failed": 0
+        },
+        "dependencies.start": {
+          "count": 2,
+          "sumMs": 36687,
+          "maxMs": 18504,
+          "failed": 0
+        },
+        "database.template": {
+          "count": 4,
+          "sumMs": 993,
+          "maxMs": 420,
+          "failed": 0
+        },
+        "kafka.topic.create": {
+          "count": 2,
+          "sumMs": 1662,
+          "maxMs": 858,
+          "failed": 0
+        },
+        "dependencies.bound": {
+          "count": 2,
+          "sumMs": 0,
+          "maxMs": 0,
+          "failed": 0
+        },
+        "spring.context.refresh": {
+          "count": 2,
+          "sumMs": 7094,
+          "maxMs": 3550,
+          "failed": 0
+        },
+        "flow.http": {
+          "count": 3,
+          "sumMs": 899,
+          "maxMs": 417,
+          "failed": 0
+        },
+        "flow.database.verify": {
+          "count": 3,
+          "sumMs": 510,
+          "maxMs": 342,
+          "failed": 0
+        },
+        "flow.kafka.verify": {
+          "count": 3,
+          "sumMs": 605,
+          "maxMs": 241,
+          "failed": 0
+        },
+        "kafka.topic.delete": {
+          "count": 2,
+          "sumMs": 903,
+          "maxMs": 588,
+          "failed": 0
+        },
+        "container.stop": {
+          "count": 6,
+          "sumMs": 6386,
+          "maxMs": 1201,
+          "failed": 0
+        }
+      },
+      "processes": [
+        52332,
+        52333
+      ],
+      "leases": [
+        {
+          "lease": "benched06ad22b2eb796a4c75ddce",
+          "databases": [],
+          "topic": "dt-benched06ad22b2eb796a4c75ddce"
+        },
+        {
+          "lease": "benched06ad22b2eb796a6db7cf33",
+          "databases": [],
+          "topic": "dt-benched06ad22b2eb796a6db7cf33"
+        }
+      ],
+      "failures": [],
+      "tasks": [
+        {
+          "task": ":processResources",
+          "start": 1795282823429,
+          "end": 1795282823430,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":processTestResources",
+          "start": 1795282823430,
+          "end": 1795282823431,
+          "ms": 1,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":compileJava",
+          "start": 1795282823429,
+          "end": 1795282823432,
+          "ms": 3,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":classes",
+          "start": 1795282823432,
+          "end": 1795282823432,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":compileTestJava",
+          "start": 1795282823433,
+          "end": 1795282823437,
+          "ms": 4,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":testClasses",
+          "start": 1795282823437,
+          "end": 1795282823437,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":test",
+          "start": 1795282823438,
+          "end": 1795282854544,
+          "ms": 31106,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Task.upToDateWhen is false."
+          ],
+          "reasonsTruncated": false
+        }
+      ],
+      "events": [
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52332,
+          "operation": "container.start",
+          "resource": "postgres-0",
+          "start": 1795282825368,
+          "ms": 12435,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52332,
+          "operation": "container.identity",
+          "resource": "postgres-0",
+          "start": 1795282837823,
+          "ms": 0,
+          "outcome": "ok",
+          "imageId": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+          "image": "postgres:16-alpine",
+          "containerId": "6e917492fdf776dbe62811073ec9beb767bb85e934c0c8651f4960dbdf3da00a"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52332,
+          "operation": "container.start",
+          "resource": "postgres-1",
+          "start": 1795282825368,
+          "ms": 12716,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52332,
+          "operation": "container.identity",
+          "resource": "postgres-1",
+          "start": 1795282838085,
+          "ms": 0,
+          "outcome": "ok",
+          "imageId": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+          "image": "postgres:16-alpine",
+          "containerId": "d08b6a0d522404632e8429812f8d1153e0082340618d28847f2a0f33d2dab049"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52333,
+          "operation": "container.start",
+          "resource": "postgres-0",
+          "start": 1795282825370,
+          "ms": 13032,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52333,
+          "operation": "container.start",
+          "resource": "postgres-1",
+          "start": 1795282825370,
+          "ms": 13038,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52333,
+          "operation": "container.identity",
+          "resource": "postgres-1",
+          "start": 1795282838425,
+          "ms": 0,
+          "outcome": "ok",
+          "image": "postgres:16-alpine",
+          "containerId": "d7398beda8dc7932a2da56c2aacef84d49692c3e5e289d9ce281a60ab584bb5a",
+          "imageId": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52333,
+          "operation": "container.identity",
+          "resource": "postgres-0",
+          "start": 1795282838424,
+          "ms": 0,
+          "outcome": "ok",
+          "image": "postgres:16-alpine",
+          "containerId": "9ae6944a6a2da9f24870ad82ed8db0573a000ca4e762a79b6ebd25b55d5a8d3b",
+          "imageId": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52332,
+          "operation": "container.start",
+          "resource": "kafka",
+          "start": 1795282825368,
+          "ms": 18177,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52332,
+          "operation": "container.identity",
+          "resource": "kafka",
+          "start": 1795282843546,
+          "ms": 0,
+          "outcome": "ok",
+          "imageId": "sha256:c89f315cff967322c5d2021434b32271393cb193aa7ec1d43e97341924e57069",
+          "image": "apache/kafka:3.8.0",
+          "containerId": "d3b6f8220e17d0711a5f0c8fc9964f257f04670c8e7fecfbf747e8947e69703f"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52332,
+          "operation": "dependencies.start",
+          "resource": "set",
+          "start": 1795282825364,
+          "ms": 18183,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52333,
+          "operation": "container.start",
+          "resource": "kafka",
+          "start": 1795282825371,
+          "ms": 18498,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52333,
+          "operation": "container.identity",
+          "resource": "kafka",
+          "start": 1795282843870,
+          "ms": 0,
+          "outcome": "ok",
+          "image": "apache/kafka:3.8.0",
+          "containerId": "1905cf7c4914ed51decb409b1b9db86d34430a352d63815dd6227144fd80f332",
+          "imageId": "sha256:c89f315cff967322c5d2021434b32271393cb193aa7ec1d43e97341924e57069"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52333,
+          "operation": "dependencies.start",
+          "resource": "set",
+          "start": 1795282825367,
+          "ms": 18504,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52332,
+          "operation": "database.template",
+          "resource": "postgres-0",
+          "start": 1795282843549,
+          "ms": 420,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52332,
+          "operation": "database.template",
+          "resource": "postgres-1",
+          "start": 1795282843970,
+          "ms": 107,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52333,
+          "operation": "database.template",
+          "resource": "postgres-0",
+          "start": 1795282843873,
+          "ms": 349,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52333,
+          "operation": "database.template",
+          "resource": "postgres-1",
+          "start": 1795282844223,
+          "ms": 117,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52332,
+          "operation": "kafka.topic.create",
+          "resource": "dt-benched06ad22b2eb796a4c75ddce",
+          "start": 1795282844079,
+          "ms": 804,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52332,
+          "operation": "dependencies.bound",
+          "resource": "FirstFlowTest",
+          "start": 1795282844986,
+          "ms": 0,
+          "outcome": "ok",
+          "lease": "benched06ad22b2eb796a4c75ddce",
+          "databases": 2,
+          "topic": "dt-benched06ad22b2eb796a4c75ddce",
+          "databaseNames": []
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52333,
+          "operation": "kafka.topic.create",
+          "resource": "dt-benched06ad22b2eb796a6db7cf33",
+          "start": 1795282844341,
+          "ms": 858,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52333,
+          "operation": "dependencies.bound",
+          "resource": "SecondFlowTest",
+          "start": 1795282845285,
+          "ms": 0,
+          "outcome": "ok",
+          "topic": "dt-benched06ad22b2eb796a6db7cf33",
+          "databaseNames": [],
+          "lease": "benched06ad22b2eb796a6db7cf33",
+          "databases": 2
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52332,
+          "operation": "spring.context.refresh",
+          "resource": "application",
+          "start": 1795282845470,
+          "ms": 3550,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52333,
+          "operation": "spring.context.refresh",
+          "resource": "application",
+          "start": 1795282845768,
+          "ms": 3544,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52332,
+          "operation": "flow.http",
+          "resource": "FirstFlowTest",
+          "start": 1795282849450,
+          "ms": 417,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52332,
+          "operation": "flow.database.verify",
+          "resource": "FirstFlowTest",
+          "start": 1795282849869,
+          "ms": 72,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52333,
+          "operation": "flow.http",
+          "resource": "SecondFlowTest",
+          "start": 1795282849679,
+          "ms": 384,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52332,
+          "operation": "flow.kafka.verify",
+          "resource": "FirstFlowTest",
+          "start": 1795282849942,
+          "ms": 201,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52333,
+          "operation": "flow.database.verify",
+          "resource": "SecondFlowTest",
+          "start": 1795282850065,
+          "ms": 96,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52332,
+          "operation": "flow.http",
+          "resource": "ThirdFlowTest",
+          "start": 1795282850195,
+          "ms": 98,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52333,
+          "operation": "flow.kafka.verify",
+          "resource": "SecondFlowTest",
+          "start": 1795282850182,
+          "ms": 241,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52332,
+          "operation": "flow.database.verify",
+          "resource": "ThirdFlowTest",
+          "start": 1795282850293,
+          "ms": 342,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52332,
+          "operation": "flow.kafka.verify",
+          "resource": "ThirdFlowTest",
+          "start": 1795282850636,
+          "ms": 163,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52333,
+          "operation": "kafka.topic.delete",
+          "resource": "dt-benched06ad22b2eb796a6db7cf33",
+          "start": 1795282850532,
+          "ms": 588,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52332,
+          "operation": "kafka.topic.delete",
+          "resource": "dt-benched06ad22b2eb796a4c75ddce",
+          "start": 1795282850917,
+          "ms": 315,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52333,
+          "operation": "container.stop",
+          "resource": "kafka",
+          "start": 1795282851121,
+          "ms": 959,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52332,
+          "operation": "container.stop",
+          "resource": "kafka",
+          "start": 1795282851233,
+          "ms": 1119,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52333,
+          "operation": "container.stop",
+          "resource": "postgres",
+          "start": 1795282852086,
+          "ms": 1094,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52332,
+          "operation": "container.stop",
+          "resource": "postgres",
+          "start": 1795282852353,
+          "ms": 1201,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52333,
+          "operation": "container.stop",
+          "resource": "postgres",
+          "start": 1795282853180,
+          "ms": 1091,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "suite-parallel",
+          "pid": 52332,
+          "operation": "container.stop",
+          "resource": "postgres",
+          "start": 1795282853555,
+          "ms": 922,
+          "outcome": "ok"
+        }
+      ]
+    },
+    {
+      "name": "workspace-0",
+      "mode": "workspace",
+      "wallMs": 10443,
+      "exit": 0,
+      "tests": {
+        "total": 3,
+        "failed": 0
+      },
+      "operations": {
+        "database.clone": {
+          "count": 4,
+          "sumMs": 1200,
+          "maxMs": 435,
+          "failed": 0
+        },
+        "kafka.topic.create": {
+          "count": 2,
+          "sumMs": 1445,
+          "maxMs": 741,
+          "failed": 0
+        },
+        "dependencies.bound": {
+          "count": 2,
+          "sumMs": 0,
+          "maxMs": 0,
+          "failed": 0
+        },
+        "spring.context.refresh": {
+          "count": 2,
+          "sumMs": 6495,
+          "maxMs": 3251,
+          "failed": 0
+        },
+        "flow.http": {
+          "count": 3,
+          "sumMs": 778,
+          "maxMs": 364,
+          "failed": 0
+        },
+        "flow.database.verify": {
+          "count": 3,
+          "sumMs": 186,
+          "maxMs": 67,
+          "failed": 0
+        },
+        "flow.kafka.verify": {
+          "count": 3,
+          "sumMs": 334,
+          "maxMs": 149,
+          "failed": 0
+        },
+        "kafka.topic.delete": {
+          "count": 2,
+          "sumMs": 161,
+          "maxMs": 82,
+          "failed": 0
+        },
+        "database.drop": {
+          "count": 4,
+          "sumMs": 213,
+          "maxMs": 70,
+          "failed": 0
+        }
+      },
+      "processes": [
+        54182,
+        54181
+      ],
+      "leases": [
+        {
+          "lease": "benched06ad22b2eb796a3386add4",
+          "databases": [
+            "dt_benched06ad22b2eb796a3386add4_0",
+            "dt_benched06ad22b2eb796a3386add4_1"
+          ],
+          "topic": "dt-benched06ad22b2eb796a3386add4"
+        },
+        {
+          "lease": "benched06ad22b2eb796a55665ddb",
+          "databases": [
+            "dt_benched06ad22b2eb796a55665ddb_0",
+            "dt_benched06ad22b2eb796a55665ddb_1"
+          ],
+          "topic": "dt-benched06ad22b2eb796a55665ddb"
+        }
+      ],
+      "failures": [],
+      "tasks": [
+        {
+          "task": ":processResources",
+          "start": 1795282874498,
+          "end": 1795282874499,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":processTestResources",
+          "start": 1795282874499,
+          "end": 1795282874500,
+          "ms": 1,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":compileJava",
+          "start": 1795282874498,
+          "end": 1795282874500,
+          "ms": 2,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":classes",
+          "start": 1795282874501,
+          "end": 1795282874501,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":compileTestJava",
+          "start": 1795282874501,
+          "end": 1795282874503,
+          "ms": 2,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":testClasses",
+          "start": 1795282874504,
+          "end": 1795282874504,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":test",
+          "start": 1795282874504,
+          "end": 1795282883400,
+          "ms": 8896,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Task.upToDateWhen is false."
+          ],
+          "reasonsTruncated": false
+        }
+      ],
+      "events": [
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "workspace",
+          "pid": 54182,
+          "operation": "database.clone",
+          "resource": "dt_benched06ad22b2eb796a3386add4_0",
+          "start": 1795282876756,
+          "ms": 419,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "workspace",
+          "pid": 54181,
+          "operation": "database.clone",
+          "resource": "dt_benched06ad22b2eb796a55665ddb_0",
+          "start": 1795282876739,
+          "ms": 435,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "workspace",
+          "pid": 54182,
+          "operation": "database.clone",
+          "resource": "dt_benched06ad22b2eb796a3386add4_1",
+          "start": 1795282877205,
+          "ms": 191,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "workspace",
+          "pid": 54181,
+          "operation": "database.clone",
+          "resource": "dt_benched06ad22b2eb796a55665ddb_1",
+          "start": 1795282877255,
+          "ms": 155,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "workspace",
+          "pid": 54182,
+          "operation": "kafka.topic.create",
+          "resource": "dt-benched06ad22b2eb796a3386add4",
+          "start": 1795282877397,
+          "ms": 704,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "workspace",
+          "pid": 54181,
+          "operation": "kafka.topic.create",
+          "resource": "dt-benched06ad22b2eb796a55665ddb",
+          "start": 1795282877411,
+          "ms": 741,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "workspace",
+          "pid": 54182,
+          "operation": "dependencies.bound",
+          "resource": "SecondFlowTest",
+          "start": 1795282878250,
+          "ms": 0,
+          "outcome": "ok",
+          "databaseNames": [
+            "dt_benched06ad22b2eb796a3386add4_0",
+            "dt_benched06ad22b2eb796a3386add4_1"
+          ],
+          "lease": "benched06ad22b2eb796a3386add4",
+          "databases": 2,
+          "topic": "dt-benched06ad22b2eb796a3386add4"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "workspace",
+          "pid": 54181,
+          "operation": "dependencies.bound",
+          "resource": "FirstFlowTest",
+          "start": 1795282878274,
+          "ms": 0,
+          "outcome": "ok",
+          "databaseNames": [
+            "dt_benched06ad22b2eb796a55665ddb_0",
+            "dt_benched06ad22b2eb796a55665ddb_1"
+          ],
+          "topic": "dt-benched06ad22b2eb796a55665ddb",
+          "databases": 2,
+          "lease": "benched06ad22b2eb796a55665ddb"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "workspace",
+          "pid": 54182,
+          "operation": "spring.context.refresh",
+          "resource": "application",
+          "start": 1795282878623,
+          "ms": 3244,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "workspace",
+          "pid": 54181,
+          "operation": "spring.context.refresh",
+          "resource": "application",
+          "start": 1795282878640,
+          "ms": 3251,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "workspace",
+          "pid": 54182,
+          "operation": "flow.http",
+          "resource": "SecondFlowTest",
+          "start": 1795282882377,
+          "ms": 364,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "workspace",
+          "pid": 54181,
+          "operation": "flow.http",
+          "resource": "FirstFlowTest",
+          "start": 1795282882400,
+          "ms": 343,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "workspace",
+          "pid": 54182,
+          "operation": "flow.database.verify",
+          "resource": "SecondFlowTest",
+          "start": 1795282882742,
+          "ms": 60,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "workspace",
+          "pid": 54181,
+          "operation": "flow.database.verify",
+          "resource": "FirstFlowTest",
+          "start": 1795282882744,
+          "ms": 59,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "workspace",
+          "pid": 54181,
+          "operation": "flow.kafka.verify",
+          "resource": "FirstFlowTest",
+          "start": 1795282882804,
+          "ms": 148,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "workspace",
+          "pid": 54182,
+          "operation": "flow.kafka.verify",
+          "resource": "SecondFlowTest",
+          "start": 1795282882804,
+          "ms": 149,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "workspace",
+          "pid": 54181,
+          "operation": "flow.http",
+          "resource": "ThirdFlowTest",
+          "start": 1795282882990,
+          "ms": 71,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "workspace",
+          "pid": 54182,
+          "operation": "kafka.topic.delete",
+          "resource": "dt-benched06ad22b2eb796a3386add4",
+          "start": 1795282883004,
+          "ms": 82,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "workspace",
+          "pid": 54181,
+          "operation": "flow.database.verify",
+          "resource": "ThirdFlowTest",
+          "start": 1795282883062,
+          "ms": 67,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "workspace",
+          "pid": 54182,
+          "operation": "database.drop",
+          "resource": "dt_benched06ad22b2eb796a3386add4_0",
+          "start": 1795282883088,
+          "ms": 70,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "workspace",
+          "pid": 54181,
+          "operation": "flow.kafka.verify",
+          "resource": "ThirdFlowTest",
+          "start": 1795282883130,
+          "ms": 37,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "workspace",
+          "pid": 54182,
+          "operation": "database.drop",
+          "resource": "dt_benched06ad22b2eb796a3386add4_1",
+          "start": 1795282883158,
+          "ms": 67,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "workspace",
+          "pid": 54181,
+          "operation": "kafka.topic.delete",
+          "resource": "dt-benched06ad22b2eb796a55665ddb",
+          "start": 1795282883199,
+          "ms": 79,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "workspace",
+          "pid": 54181,
+          "operation": "database.drop",
+          "resource": "dt_benched06ad22b2eb796a55665ddb_0",
+          "start": 1795282883280,
+          "ms": 40,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "benched06ad22b2eb796a",
+          "mode": "workspace",
+          "pid": 54181,
+          "operation": "database.drop",
+          "resource": "dt_benched06ad22b2eb796a55665ddb_1",
+          "start": 1795282883321,
+          "ms": 36,
+          "outcome": "ok"
+        }
+      ]
+    }
+  ],
+  "warmupRuns": [],
+  "assertions": [
+    "suite-parallel-0: test process completed successfully",
+    "suite-parallel-0: every selected HTTP/DB/Kafka test executed",
+    "suite-parallel-0: no hidden dependency or cleanup failure",
+    "suite-parallel-0: dependency startup count matches its explicit lifetime",
+    "suite-parallel-0: expected Spring context reuse",
+    "suite-parallel-0: owned topic cleanup completed",
+    "workspace-0: test process completed successfully",
+    "workspace-0: every selected HTTP/DB/Kafka test executed",
+    "workspace-0: no hidden dependency or cleanup failure",
+    "workspace-0: dependency startup count matches its explicit lifetime",
+    "workspace-0: expected Spring context reuse",
+    "workspace-0: private databases cloned",
+    "workspace-0: private databases released",
+    "workspace-0: owned topic cleanup completed",
+    "Repeated workspace JVMs receive distinct leases",
+    "Repeated workspace JVMs receive distinct topics"
+  ],
+  "state": "passed",
+  "fixture": {
+    "sha256": "d4b1838037c8dcf19b157f857eb46a7ef06607a40bb752089438ae950284b782",
+    "files": [
+      {
+        "file": "multi-containers/.gitignore",
+        "sha256": "b9eb121a7de86bbb3c5e10c5c64b2b7f8a9b8bcb3bc0cb8e4497a84caa155711"
+      },
+      {
+        "file": "multi-containers/README.md",
+        "sha256": "664fb8913154032bb03f32eb8c559cb0b170c02c737c872d3cea9d17d0954f77"
+      },
+      {
+        "file": "multi-containers/build.gradle",
+        "sha256": "ace19b65dd0d45711e3f705af35608aa7d4d143a3b4befad36fb7ba45315be3b"
+      },
+      {
+        "file": "multi-containers/settings.gradle",
+        "sha256": "8f35f968f7bab8e0af313ea83cb3eacd9a61ad19d896e93696fc846cb5806b68"
+      },
+      {
+        "file": "multi-containers/src/main/java/demo/FixtureApplication.java",
+        "sha256": "d94a97b0d6ea5158e622386b595ccd0032947911ef6d5c64e11b32b94e53a6fc"
+      },
+      {
+        "file": "multi-containers/src/test/java/demo/FlowTest.java",
+        "sha256": "874eee4ab44e5fcd4101b0b5cb3e4ba6ce97d03ccf77e1fc769c4b0b52f1f52b"
+      },
+      {
+        "file": "multi-containers/src/test/java/demo/MultiContainerSupport.java",
+        "sha256": "54fc3108a922e5d6d81e86f26b929e826aa01d1687a2a667797a2f785829c46f"
+      },
+      {
+        "file": "multi-containers/src/test/java/demo/SupportPolicyTest.java",
+        "sha256": "b9d19906c36280cde617485581eb6fdc8548b13349290c57779756ac98e910d8"
+      },
+      {
+        "file": "multi-containers/src/test/resources/logback-test.xml",
+        "sha256": "3f13ad85d09d07caaad53e284f42578a93876ecd91f3f6ae8e245b89d79d8427"
+      },
+      {
+        "file": "lombok-service/build.gradle",
+        "sha256": "d6bc63347ae93d473a1e48c50d8385d84c9a7553dc45acafd91c279b0a4c8918"
+      },
+      {
+        "file": "lombok-service/lombok.config",
+        "sha256": "798c663327f7c35a1e350379f84b1cf7fe90953121592d835f018ba578d5587e"
+      },
+      {
+        "file": "lombok-service/pom.xml",
+        "sha256": "e4fd4d817956453c7d9a070c37f83c31ca165f847de9199e6704abd66367d7ca"
+      },
+      {
+        "file": "lombok-service/settings.gradle",
+        "sha256": "d60db33fb20393cb4f378f3177353a9839cf8e3b805637c9291797cfd45ad713"
+      },
+      {
+        "file": "lombok-service/src/main/java/demo/Quote.java",
+        "sha256": "b2790391f4d6cdd52931c73d5d14314fb1d01598e2f74e6e89f1e49e5152010d"
+      },
+      {
+        "file": "lombok-service/src/test/java/demo/QuoteTest.java",
+        "sha256": "d8a2232e99fdad98444257cce6d4606a4c636fc5a6c530857b9f0d4ec9e98b02"
+      }
+    ]
+  },
+  "docker": {
+    "Platform": {
+      "Name": "Docker Desktop 4.47.0 (206054)"
+    },
+    "Components": [
+      {
+        "Name": "Engine",
+        "Version": "28.4.0",
+        "Details": {
+          "ApiVersion": "1.51",
+          "Arch": "amd64",
+          "BuildTime": "Wed Sep  3 20:57:37 2025",
+          "Experimental": "false",
+          "GitCommit": "249d679",
+          "GoVersion": "go1.24.7",
+          "KernelVersion": "6.10.14-linuxkit",
+          "MinAPIVersion": "1.24",
+          "Os": "linux"
+        }
+      },
+      {
+        "Name": "containerd",
+        "Version": "1.7.27",
+        "Details": {
+          "GitCommit": "05044ec0a9a75232cad458027ca83437aae3f4da"
+        }
+      },
+      {
+        "Name": "runc",
+        "Version": "1.2.5",
+        "Details": {
+          "GitCommit": "v1.2.5-0-g59923ef"
+        }
+      },
+      {
+        "Name": "docker-init",
+        "Version": "0.19.0",
+        "Details": {
+          "GitCommit": "de40ad0"
+        }
+      }
+    ],
+    "Version": "28.4.0",
+    "ApiVersion": "1.51",
+    "MinAPIVersion": "1.24",
+    "GitCommit": "249d679",
+    "GoVersion": "go1.24.7",
+    "Os": "linux",
+    "Arch": "amd64",
+    "KernelVersion": "6.10.14-linuxkit",
+    "BuildTime": "2025-09-03T20:57:37.000000000+00:00"
+  },
+  "images": [
+    {
+      "requested": "postgres:16-alpine",
+      "id": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+      "repoDigests": [
+        "postgres@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685"
+      ]
+    },
+    {
+      "requested": "apache/kafka:3.8.0",
+      "id": "sha256:c89f315cff967322c5d2021434b32271393cb193aa7ec1d43e97341924e57069",
+      "repoDigests": [
+        "apache/kafka@sha256:c89f315cff967322c5d2021434b32271393cb193aa7ec1d43e97341924e57069"
+      ]
+    }
+  ],
+  "runtime": {
+    "java": "Picked up JAVA_TOOL_OPTIONS: -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8\nopenjdk version \"21.0.11\" 2026-04-21 LTS\nOpenJDK Runtime Environment Temurin-21.0.11+10 (build 21.0.11+10-LTS)\nOpenJDK 64-Bit Server VM Temurin-21.0.11+10 (build 21.0.11+10-LTS, mixed mode)",
+    "gradle": "------------------------------------------------------------\nGradle 8.5\n------------------------------------------------------------\n\nBuild time:   2023-11-29 14:08:57 UTC\nRevision:     28aca86a7180baa17117e0e5ba01d8ea9feca598\n\nKotlin:       1.9.20\nGroovy:       3.0.17\nAnt:          Apache Ant(TM) version 1.10.13 compiled on January 4 2023\nJVM:          21.0.11 (Eclipse Adoptium 21.0.11+10-LTS)\nOS:           Mac OS X 15.0 x86_64"
+  },
+  "prepared": {
+    "tasks": [
+      {
+        "task": ":processResources",
+        "start": 1795282820318,
+        "end": 1795282820323,
+        "ms": 5,
+        "outcome": "SKIPPED",
+        "reason": "NO-SOURCE"
+      },
+      {
+        "task": ":processTestResources",
+        "start": 1795282820323,
+        "end": 1795282820328,
+        "ms": 5,
+        "outcome": "EXECUTED",
+        "incremental": false,
+        "reasonCount": 1,
+        "reasons": [
+          "No history is available."
+        ],
+        "reasonsTruncated": false
+      },
+      {
+        "task": ":compileJava",
+        "start": 1795282820318,
+        "end": 1795282820340,
+        "ms": 22,
+        "outcome": "FROM-CACHE",
+        "incremental": false,
+        "reasonCount": 0,
+        "reasons": [],
+        "reasonsTruncated": false
+      },
+      {
+        "task": ":classes",
+        "start": 1795282820341,
+        "end": 1795282820341,
+        "ms": 0,
+        "outcome": "UP-TO-DATE",
+        "incremental": false,
+        "reasonCount": 0,
+        "reasons": [],
+        "reasonsTruncated": false
+      },
+      {
+        "task": ":compileTestJava",
+        "start": 1795282820341,
+        "end": 1795282820371,
+        "ms": 30,
+        "outcome": "FROM-CACHE",
+        "incremental": false,
+        "reasonCount": 0,
+        "reasons": [],
+        "reasonsTruncated": false
+      },
+      {
+        "task": ":testClasses",
+        "start": 1795282820371,
+        "end": 1795282820371,
+        "ms": 0,
+        "outcome": "EXECUTED",
+        "incremental": false,
+        "reasonCount": 0,
+        "reasons": [],
+        "reasonsTruncated": false
+      },
+      {
+        "task": ":runtimeClasspath",
+        "start": 1795282820371,
+        "end": 1795282820375,
+        "ms": 4,
+        "outcome": "EXECUTED",
+        "incremental": false,
+        "reasonCount": 1,
+        "reasons": [
+          "No history is available."
+        ],
+        "reasonsTruncated": false
+      },
+      {
+        "task": ":policyTest",
+        "start": 1795282820372,
+        "end": 1795282822034,
+        "ms": 1662,
+        "outcome": "EXECUTED",
+        "incremental": false,
+        "reasonCount": 1,
+        "reasons": [
+          "Task.upToDateWhen is false."
+        ],
+        "reasonsTruncated": false
+      }
+    ]
+  },
+  "pool": {
+    "startupMs": 18376,
+    "events": [
+      {
+        "protocol": "dt.dependency-measurement/v1",
+        "run": "benched06ad22b2eb796a",
+        "mode": "suite-parallel",
+        "pid": 53474,
+        "operation": "container.start",
+        "resource": "postgres-0",
+        "start": 1795282856785,
+        "ms": 11080,
+        "outcome": "ok"
+      },
+      {
+        "protocol": "dt.dependency-measurement/v1",
+        "run": "benched06ad22b2eb796a",
+        "mode": "suite-parallel",
+        "pid": 53474,
+        "operation": "container.start",
+        "resource": "postgres-1",
+        "start": 1795282856785,
+        "ms": 11084,
+        "outcome": "ok"
+      },
+      {
+        "protocol": "dt.dependency-measurement/v1",
+        "run": "benched06ad22b2eb796a",
+        "mode": "suite-parallel",
+        "pid": 53474,
+        "operation": "container.identity",
+        "resource": "postgres-1",
+        "start": 1795282867888,
+        "ms": 0,
+        "outcome": "ok",
+        "containerId": "973f0426621a1a82a56ea4dcdf2644ba86b3c77f3cff5ec0cf43cef66e97c5cf",
+        "image": "postgres:16-alpine",
+        "imageId": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685"
+      },
+      {
+        "protocol": "dt.dependency-measurement/v1",
+        "run": "benched06ad22b2eb796a",
+        "mode": "suite-parallel",
+        "pid": 53474,
+        "operation": "container.identity",
+        "resource": "postgres-0",
+        "start": 1795282867887,
+        "ms": 0,
+        "outcome": "ok",
+        "containerId": "14ed6699d1be22a965d874c745028d38b1faefc3c11157f2b71ed8780d992ed3",
+        "image": "postgres:16-alpine",
+        "imageId": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685"
+      },
+      {
+        "protocol": "dt.dependency-measurement/v1",
+        "run": "benched06ad22b2eb796a",
+        "mode": "suite-parallel",
+        "pid": 53474,
+        "operation": "container.start",
+        "resource": "kafka",
+        "start": 1795282856786,
+        "ms": 15463,
+        "outcome": "ok"
+      },
+      {
+        "protocol": "dt.dependency-measurement/v1",
+        "run": "benched06ad22b2eb796a",
+        "mode": "suite-parallel",
+        "pid": 53474,
+        "operation": "container.identity",
+        "resource": "kafka",
+        "start": 1795282872251,
+        "ms": 0,
+        "outcome": "ok",
+        "containerId": "b4e302ee20cbcb290603b75dbe04ec19b74bce1c9a8badad6313e710c23ac18d",
+        "image": "apache/kafka:3.8.0",
+        "imageId": "sha256:c89f315cff967322c5d2021434b32271393cb193aa7ec1d43e97341924e57069"
+      },
+      {
+        "protocol": "dt.dependency-measurement/v1",
+        "run": "benched06ad22b2eb796a",
+        "mode": "suite-parallel",
+        "pid": 53474,
+        "operation": "dependencies.start",
+        "resource": "set",
+        "start": 1795282856782,
+        "ms": 15469,
+        "outcome": "ok"
+      },
+      {
+        "protocol": "dt.dependency-measurement/v1",
+        "run": "benched06ad22b2eb796a",
+        "mode": "suite-parallel",
+        "pid": 53474,
+        "operation": "database.template",
+        "resource": "postgres-0",
+        "start": 1795282872253,
+        "ms": 493,
+        "outcome": "ok"
+      },
+      {
+        "protocol": "dt.dependency-measurement/v1",
+        "run": "benched06ad22b2eb796a",
+        "mode": "suite-parallel",
+        "pid": 53474,
+        "operation": "database.template",
+        "resource": "postgres-1",
+        "start": 1795282872747,
+        "ms": 244,
+        "outcome": "ok"
+      },
+      {
+        "protocol": "dt.dependency-measurement/v1",
+        "run": "benched06ad22b2eb796a",
+        "mode": "suite-parallel",
+        "pid": 53474,
+        "operation": "container.stop",
+        "resource": "kafka",
+        "start": 1795282883457,
+        "ms": 463,
+        "outcome": "ok"
+      },
+      {
+        "protocol": "dt.dependency-measurement/v1",
+        "run": "benched06ad22b2eb796a",
+        "mode": "suite-parallel",
+        "pid": 53474,
+        "operation": "container.stop",
+        "resource": "postgres",
+        "start": 1795282883920,
+        "ms": 547,
+        "outcome": "ok"
+      },
+      {
+        "protocol": "dt.dependency-measurement/v1",
+        "run": "benched06ad22b2eb796a",
+        "mode": "suite-parallel",
+        "pid": 53474,
+        "operation": "container.stop",
+        "resource": "postgres",
+        "start": 1795282884468,
+        "ms": 561,
+        "outcome": "ok"
+      }
+    ]
+  },
+  "comparison": {
+    "suite-parallel": {
+      "samples": [
+        32525
+      ],
+      "medianMs": 32525
+    },
+    "workspace": {
+      "samples": [
+        10443
+      ],
+      "medianMs": 10443
+    }
+  },
+  "cleanup": {
+    "state": "verified",
+    "containers": 0
+  }
+}

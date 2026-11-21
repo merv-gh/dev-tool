@@ -1,0 +1,853 @@
+{
+  "protocol": "dt.testcontainers-benchmark/v1",
+  "effective": {
+    "databases": 2,
+    "parallelism": 3,
+    "workers": 2,
+    "testForks": 1,
+    "testClasses": [
+      "FirstFlowTest",
+      "SecondFlowTest",
+      "ThirdFlowTest"
+    ],
+    "iterations": 2,
+    "warmups": 0,
+    "timeoutSeconds": 180,
+    "commandTimeoutMs": 900000,
+    "postgresImage": "postgres:16-alpine",
+    "kafkaImage": "apache/kafka:3.8.0",
+    "testcontainersVersion": "1.20.4",
+    "bootVersion": "2.7.18",
+    "lombokVersion": "1.18.42",
+    "pull": "missing"
+  },
+  "scenarios": [
+    {
+      "mode": "suite-parallel",
+      "containersPerTestJvm": 3,
+      "lifetime": "test JVM",
+      "startup": "bounded parallel",
+      "tests": "fresh HTTP → every database → actual Kafka record"
+    },
+    {
+      "mode": "workspace",
+      "containersPerTestJvm": 0,
+      "lifetime": "owned warm pool with private database/topic leases",
+      "startup": "bounded parallel",
+      "tests": "fresh HTTP → every database → actual Kafka record"
+    }
+  ],
+  "limits": [
+    "Spring context and dependency sharing are per test JVM; extra forks can multiply startup.",
+    "Configured dependency image pulls, compilation, warmup runs and warm-pool startup are outside warm test samples; Testcontainers/Ryuk setup remains inside container-backed JVM time.",
+    "No cached test result counts as a fresh dependency check.",
+    "This prototype creates its own warm pool; it does not bind arbitrary environment databases."
+  ],
+  "at": "2026-11-21T19:37:34.341Z",
+  "owner": "bench201fa7d0d6e78f66",
+  "host": {
+    "platform": "darwin",
+    "arch": "x64",
+    "cpus": 16
+  },
+  "stages": [
+    {
+      "name": "docker-context",
+      "ms": 76,
+      "exit": 0,
+      "required": false
+    },
+    {
+      "name": "docker-preflight",
+      "ms": 101,
+      "exit": 0,
+      "required": true
+    },
+    {
+      "name": "image-0-inspect",
+      "ms": 564,
+      "exit": 0,
+      "required": false
+    },
+    {
+      "name": "image-1-inspect",
+      "ms": 184,
+      "exit": 0,
+      "required": false
+    },
+    {
+      "name": "java-version",
+      "ms": 228,
+      "exit": 0,
+      "required": true
+    },
+    {
+      "name": "gradle-version",
+      "ms": 1168,
+      "exit": 0,
+      "required": true
+    },
+    {
+      "name": "compile-and-policy",
+      "ms": 3132,
+      "exit": 0,
+      "required": true
+    },
+    {
+      "name": "suite-parallel-0",
+      "ms": 23083,
+      "exit": 0,
+      "required": false
+    },
+    {
+      "name": "owned-containers-check",
+      "ms": 64,
+      "exit": 0,
+      "required": true
+    }
+  ],
+  "runs": [
+    {
+      "name": "suite-parallel-0",
+      "mode": "suite-parallel",
+      "wallMs": 23083,
+      "exit": 0,
+      "tests": {
+        "total": 3,
+        "failed": 0
+      },
+      "operations": {
+        "container.start": {
+          "count": 3,
+          "sumMs": 28555,
+          "maxMs": 11459,
+          "failed": 0
+        },
+        "container.identity": {
+          "count": 3,
+          "sumMs": 0,
+          "maxMs": 0,
+          "failed": 0
+        },
+        "dependencies.start": {
+          "count": 1,
+          "sumMs": 11469,
+          "maxMs": 11469,
+          "failed": 0
+        },
+        "database.template": {
+          "count": 2,
+          "sumMs": 318,
+          "maxMs": 256,
+          "failed": 0
+        },
+        "kafka.topic.create": {
+          "count": 1,
+          "sumMs": 534,
+          "maxMs": 534,
+          "failed": 0
+        },
+        "dependencies.bound": {
+          "count": 1,
+          "sumMs": 0,
+          "maxMs": 0,
+          "failed": 0
+        },
+        "spring.context.refresh": {
+          "count": 3,
+          "sumMs": 3408,
+          "maxMs": 2096,
+          "failed": 0
+        },
+        "flow.http": {
+          "count": 3,
+          "sumMs": 628,
+          "maxMs": 485,
+          "failed": 0
+        },
+        "flow.database.verify": {
+          "count": 3,
+          "sumMs": 191,
+          "maxMs": 92,
+          "failed": 0
+        },
+        "flow.kafka.verify": {
+          "count": 3,
+          "sumMs": 264,
+          "maxMs": 208,
+          "failed": 0
+        },
+        "kafka.topic.delete": {
+          "count": 1,
+          "sumMs": 59,
+          "maxMs": 59,
+          "failed": 0
+        },
+        "container.stop": {
+          "count": 3,
+          "sumMs": 1479,
+          "maxMs": 513,
+          "failed": 0
+        }
+      },
+      "processes": [
+        65523
+      ],
+      "leases": [
+        {
+          "lease": "bench201fa7d0d6e78f6685d24d85",
+          "databases": [],
+          "topic": "dt-bench201fa7d0d6e78f6685d24d85"
+        }
+      ],
+      "failures": [],
+      "tasks": [
+        {
+          "task": ":processResources",
+          "start": 1795289861197,
+          "end": 1795289861198,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":processTestResources",
+          "start": 1795289861198,
+          "end": 1795289861199,
+          "ms": 1,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":compileJava",
+          "start": 1795289861197,
+          "end": 1795289861201,
+          "ms": 4,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":classes",
+          "start": 1795289861201,
+          "end": 1795289861201,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":compileTestJava",
+          "start": 1795289861201,
+          "end": 1795289861204,
+          "ms": 3,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":testClasses",
+          "start": 1795289861204,
+          "end": 1795289861204,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":test",
+          "start": 1795289861204,
+          "end": 1795289882909,
+          "ms": 21705,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Task.upToDateWhen is false."
+          ],
+          "reasonsTruncated": false
+        }
+      ],
+      "events": [
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "bench201fa7d0d6e78f66",
+          "mode": "suite-parallel",
+          "pid": 65523,
+          "operation": "container.start",
+          "resource": "postgres-0",
+          "start": 1795289863696,
+          "ms": 8548,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "bench201fa7d0d6e78f66",
+          "mode": "suite-parallel",
+          "pid": 65523,
+          "operation": "container.start",
+          "resource": "postgres-1",
+          "start": 1795289863696,
+          "ms": 8548,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "bench201fa7d0d6e78f66",
+          "mode": "suite-parallel",
+          "pid": 65523,
+          "operation": "container.identity",
+          "resource": "postgres-0",
+          "start": 1795289872264,
+          "ms": 0,
+          "outcome": "ok",
+          "containerId": "a2c73a4bc815e50be1250809c59a7964021e80fed3f7d37ad4cf3229aa5252b0",
+          "image": "postgres:16-alpine",
+          "imageId": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "bench201fa7d0d6e78f66",
+          "mode": "suite-parallel",
+          "pid": 65523,
+          "operation": "container.identity",
+          "resource": "postgres-1",
+          "start": 1795289872265,
+          "ms": 0,
+          "outcome": "ok",
+          "containerId": "7db35b53616057743b1dfd550b58dbea9aaad9a5c8207387dbb3736f6128f60e",
+          "image": "postgres:16-alpine",
+          "imageId": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "bench201fa7d0d6e78f66",
+          "mode": "suite-parallel",
+          "pid": 65523,
+          "operation": "container.start",
+          "resource": "kafka",
+          "start": 1795289863696,
+          "ms": 11459,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "bench201fa7d0d6e78f66",
+          "mode": "suite-parallel",
+          "pid": 65523,
+          "operation": "container.identity",
+          "resource": "kafka",
+          "start": 1795289875156,
+          "ms": 0,
+          "outcome": "ok",
+          "containerId": "aa009a471a2c213bf866eed95406d0e5521ca22f64c79120ab01faeb6c68b8b3",
+          "image": "apache/kafka:3.8.0",
+          "imageId": "sha256:c89f315cff967322c5d2021434b32271393cb193aa7ec1d43e97341924e57069"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "bench201fa7d0d6e78f66",
+          "mode": "suite-parallel",
+          "pid": 65523,
+          "operation": "dependencies.start",
+          "resource": "set",
+          "start": 1795289863688,
+          "ms": 11469,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "bench201fa7d0d6e78f66",
+          "mode": "suite-parallel",
+          "pid": 65523,
+          "operation": "database.template",
+          "resource": "postgres-0",
+          "start": 1795289875158,
+          "ms": 256,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "bench201fa7d0d6e78f66",
+          "mode": "suite-parallel",
+          "pid": 65523,
+          "operation": "database.template",
+          "resource": "postgres-1",
+          "start": 1795289875415,
+          "ms": 62,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "bench201fa7d0d6e78f66",
+          "mode": "suite-parallel",
+          "pid": 65523,
+          "operation": "kafka.topic.create",
+          "resource": "dt-bench201fa7d0d6e78f6685d24d85",
+          "start": 1795289875479,
+          "ms": 534,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "bench201fa7d0d6e78f66",
+          "mode": "suite-parallel",
+          "pid": 65523,
+          "operation": "dependencies.bound",
+          "resource": "FirstFlowTest",
+          "start": 1795289876064,
+          "ms": 0,
+          "outcome": "ok",
+          "databaseNames": [],
+          "topic": "dt-bench201fa7d0d6e78f6685d24d85",
+          "databases": 2,
+          "lease": "bench201fa7d0d6e78f6685d24d85"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "bench201fa7d0d6e78f66",
+          "mode": "suite-parallel",
+          "pid": 65523,
+          "operation": "spring.context.refresh",
+          "resource": "application",
+          "start": 1795289876321,
+          "ms": 2096,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "bench201fa7d0d6e78f66",
+          "mode": "suite-parallel",
+          "pid": 65523,
+          "operation": "flow.http",
+          "resource": "FirstFlowTest",
+          "start": 1795289878719,
+          "ms": 485,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "bench201fa7d0d6e78f66",
+          "mode": "suite-parallel",
+          "pid": 65523,
+          "operation": "flow.database.verify",
+          "resource": "FirstFlowTest",
+          "start": 1795289879204,
+          "ms": 92,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "bench201fa7d0d6e78f66",
+          "mode": "suite-parallel",
+          "pid": 65523,
+          "operation": "flow.kafka.verify",
+          "resource": "FirstFlowTest",
+          "start": 1795289879298,
+          "ms": 208,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "bench201fa7d0d6e78f66",
+          "mode": "suite-parallel",
+          "pid": 65523,
+          "operation": "spring.context.refresh",
+          "resource": "application",
+          "start": 1795289879593,
+          "ms": 740,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "bench201fa7d0d6e78f66",
+          "mode": "suite-parallel",
+          "pid": 65523,
+          "operation": "flow.http",
+          "resource": "SecondFlowTest",
+          "start": 1795289880346,
+          "ms": 82,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "bench201fa7d0d6e78f66",
+          "mode": "suite-parallel",
+          "pid": 65523,
+          "operation": "flow.database.verify",
+          "resource": "SecondFlowTest",
+          "start": 1795289880428,
+          "ms": 56,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "bench201fa7d0d6e78f66",
+          "mode": "suite-parallel",
+          "pid": 65523,
+          "operation": "flow.kafka.verify",
+          "resource": "SecondFlowTest",
+          "start": 1795289880485,
+          "ms": 31,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "bench201fa7d0d6e78f66",
+          "mode": "suite-parallel",
+          "pid": 65523,
+          "operation": "spring.context.refresh",
+          "resource": "application",
+          "start": 1795289880567,
+          "ms": 572,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "bench201fa7d0d6e78f66",
+          "mode": "suite-parallel",
+          "pid": 65523,
+          "operation": "flow.http",
+          "resource": "ThirdFlowTest",
+          "start": 1795289881146,
+          "ms": 61,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "bench201fa7d0d6e78f66",
+          "mode": "suite-parallel",
+          "pid": 65523,
+          "operation": "flow.database.verify",
+          "resource": "ThirdFlowTest",
+          "start": 1795289881207,
+          "ms": 43,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "bench201fa7d0d6e78f66",
+          "mode": "suite-parallel",
+          "pid": 65523,
+          "operation": "flow.kafka.verify",
+          "resource": "ThirdFlowTest",
+          "start": 1795289881251,
+          "ms": 25,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "bench201fa7d0d6e78f66",
+          "mode": "suite-parallel",
+          "pid": 65523,
+          "operation": "kafka.topic.delete",
+          "resource": "dt-bench201fa7d0d6e78f6685d24d85",
+          "start": 1795289881287,
+          "ms": 59,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "bench201fa7d0d6e78f66",
+          "mode": "suite-parallel",
+          "pid": 65523,
+          "operation": "container.stop",
+          "resource": "kafka",
+          "start": 1795289881347,
+          "ms": 469,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "bench201fa7d0d6e78f66",
+          "mode": "suite-parallel",
+          "pid": 65523,
+          "operation": "container.stop",
+          "resource": "postgres",
+          "start": 1795289881817,
+          "ms": 497,
+          "outcome": "ok"
+        },
+        {
+          "protocol": "dt.dependency-measurement/v1",
+          "run": "bench201fa7d0d6e78f66",
+          "mode": "suite-parallel",
+          "pid": 65523,
+          "operation": "container.stop",
+          "resource": "postgres",
+          "start": 1795289882314,
+          "ms": 513,
+          "outcome": "ok"
+        }
+      ]
+    }
+  ],
+  "warmupRuns": [],
+  "assertions": [
+    "suite-parallel-0: test process completed successfully",
+    "suite-parallel-0: every selected HTTP/DB/Kafka test executed",
+    "suite-parallel-0: no hidden dependency or cleanup failure",
+    "suite-parallel-0: dependency startup count matches its explicit lifetime"
+  ],
+  "state": "failed",
+  "fixture": {
+    "sha256": "81e4a5b26e957a72da199ad7df0ba781c1fcb29ff2f57b4e3e734c2a48ea5fc3",
+    "files": [
+      {
+        "file": "multi-containers/.gitignore",
+        "sha256": "b9eb121a7de86bbb3c5e10c5c64b2b7f8a9b8bcb3bc0cb8e4497a84caa155711"
+      },
+      {
+        "file": "multi-containers/README.md",
+        "sha256": "657a77d05bfe3f73eae1827c670d97eb4f444db09facff868c105adcb089fe46"
+      },
+      {
+        "file": "multi-containers/build.gradle",
+        "sha256": "2c1cd1658ae448d09d03a932bc113a9aa3ae4bdf9688c5a122dc34a8ceffb7ee"
+      },
+      {
+        "file": "multi-containers/lombok.config",
+        "sha256": "798c663327f7c35a1e350379f84b1cf7fe90953121592d835f018ba578d5587e"
+      },
+      {
+        "file": "multi-containers/settings.gradle",
+        "sha256": "8f35f968f7bab8e0af313ea83cb3eacd9a61ad19d896e93696fc846cb5806b68"
+      },
+      {
+        "file": "multi-containers/src/main/java/demo/FixtureApplication.java",
+        "sha256": "d94a97b0d6ea5158e622386b595ccd0032947911ef6d5c64e11b32b94e53a6fc"
+      },
+      {
+        "file": "multi-containers/src/main/java/demo/Quote.java",
+        "sha256": "b2790391f4d6cdd52931c73d5d14314fb1d01598e2f74e6e89f1e49e5152010d"
+      },
+      {
+        "file": "multi-containers/src/test/java/demo/FlowTest.java",
+        "sha256": "89ecd81353f9bd7a82519718dab5f77bb2a3f0b86cc814be43039d1398e8bec1"
+      },
+      {
+        "file": "multi-containers/src/test/java/demo/LeaseAdapter.java",
+        "sha256": "a2786712d02537dfeea58b3fd6908a3f3943607ec18511962b1a095d0a25a380"
+      },
+      {
+        "file": "multi-containers/src/test/java/demo/MultiContainerSupport.java",
+        "sha256": "9711c02e4d7ab00bb6775fa138a707aeec4f37ee33ae02413221b2d713d6607e"
+      },
+      {
+        "file": "multi-containers/src/test/java/demo/SupportPolicyTest.java",
+        "sha256": "b9d19906c36280cde617485581eb6fdc8548b13349290c57779756ac98e910d8"
+      },
+      {
+        "file": "multi-containers/src/test/resources/logback-test.xml",
+        "sha256": "3f13ad85d09d07caaad53e284f42578a93876ecd91f3f6ae8e245b89d79d8427"
+      },
+      {
+        "file": "lombok-service/build.gradle",
+        "sha256": "d6bc63347ae93d473a1e48c50d8385d84c9a7553dc45acafd91c279b0a4c8918"
+      },
+      {
+        "file": "lombok-service/lombok.config",
+        "sha256": "798c663327f7c35a1e350379f84b1cf7fe90953121592d835f018ba578d5587e"
+      },
+      {
+        "file": "lombok-service/pom.xml",
+        "sha256": "e4fd4d817956453c7d9a070c37f83c31ca165f847de9199e6704abd66367d7ca"
+      },
+      {
+        "file": "lombok-service/settings.gradle",
+        "sha256": "d60db33fb20393cb4f378f3177353a9839cf8e3b805637c9291797cfd45ad713"
+      },
+      {
+        "file": "lombok-service/src/main/java/demo/Quote.java",
+        "sha256": "b2790391f4d6cdd52931c73d5d14314fb1d01598e2f74e6e89f1e49e5152010d"
+      },
+      {
+        "file": "lombok-service/src/test/java/demo/QuoteTest.java",
+        "sha256": "d8a2232e99fdad98444257cce6d4606a4c636fc5a6c530857b9f0d4ec9e98b02"
+      }
+    ]
+  },
+  "docker": {
+    "Platform": {
+      "Name": "Docker Desktop 4.47.0 (206054)"
+    },
+    "Components": [
+      {
+        "Name": "Engine",
+        "Version": "28.4.0",
+        "Details": {
+          "ApiVersion": "1.51",
+          "Arch": "amd64",
+          "BuildTime": "Wed Sep  3 20:57:37 2025",
+          "Experimental": "false",
+          "GitCommit": "249d679",
+          "GoVersion": "go1.24.7",
+          "KernelVersion": "6.10.14-linuxkit",
+          "MinAPIVersion": "1.24",
+          "Os": "linux"
+        }
+      },
+      {
+        "Name": "containerd",
+        "Version": "1.7.27",
+        "Details": {
+          "GitCommit": "05044ec0a9a75232cad458027ca83437aae3f4da"
+        }
+      },
+      {
+        "Name": "runc",
+        "Version": "1.2.5",
+        "Details": {
+          "GitCommit": "v1.2.5-0-g59923ef"
+        }
+      },
+      {
+        "Name": "docker-init",
+        "Version": "0.19.0",
+        "Details": {
+          "GitCommit": "de40ad0"
+        }
+      }
+    ],
+    "Version": "28.4.0",
+    "ApiVersion": "1.51",
+    "MinAPIVersion": "1.24",
+    "GitCommit": "249d679",
+    "GoVersion": "go1.24.7",
+    "Os": "linux",
+    "Arch": "amd64",
+    "KernelVersion": "6.10.14-linuxkit",
+    "BuildTime": "2025-09-03T20:57:37.000000000+00:00"
+  },
+  "images": [
+    {
+      "requested": "postgres:16-alpine",
+      "id": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+      "repoDigests": [
+        "postgres@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685"
+      ]
+    },
+    {
+      "requested": "apache/kafka:3.8.0",
+      "id": "sha256:c89f315cff967322c5d2021434b32271393cb193aa7ec1d43e97341924e57069",
+      "repoDigests": [
+        "apache/kafka@sha256:c89f315cff967322c5d2021434b32271393cb193aa7ec1d43e97341924e57069"
+      ]
+    }
+  ],
+  "runtime": {
+    "java": "Picked up JAVA_TOOL_OPTIONS: -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8\nopenjdk version \"21.0.11\" 2026-04-21 LTS\nOpenJDK Runtime Environment Temurin-21.0.11+10 (build 21.0.11+10-LTS)\nOpenJDK 64-Bit Server VM Temurin-21.0.11+10 (build 21.0.11+10-LTS, mixed mode)",
+    "gradle": "------------------------------------------------------------\nGradle 8.5\n------------------------------------------------------------\n\nBuild time:   2023-11-29 14:08:57 UTC\nRevision:     28aca86a7180baa17117e0e5ba01d8ea9feca598\n\nKotlin:       1.9.20\nGroovy:       3.0.17\nAnt:          Apache Ant(TM) version 1.10.13 compiled on January 4 2023\nJVM:          21.0.11 (Eclipse Adoptium 21.0.11+10-LTS)\nOS:           Mac OS X 15.0 x86_64"
+  },
+  "prepared": {
+    "tasks": [
+      {
+        "task": ":processResources",
+        "start": 1795289858359,
+        "end": 1795289858363,
+        "ms": 4,
+        "outcome": "SKIPPED",
+        "reason": "NO-SOURCE"
+      },
+      {
+        "task": ":processTestResources",
+        "start": 1795289858364,
+        "end": 1795289858368,
+        "ms": 4,
+        "outcome": "EXECUTED",
+        "incremental": false,
+        "reasonCount": 1,
+        "reasons": [
+          "No history is available."
+        ],
+        "reasonsTruncated": false
+      },
+      {
+        "task": ":compileJava",
+        "start": 1795289858359,
+        "end": 1795289858382,
+        "ms": 23,
+        "outcome": "FROM-CACHE",
+        "incremental": false,
+        "reasonCount": 0,
+        "reasons": [],
+        "reasonsTruncated": false
+      },
+      {
+        "task": ":classes",
+        "start": 1795289858383,
+        "end": 1795289858383,
+        "ms": 0,
+        "outcome": "UP-TO-DATE",
+        "incremental": false,
+        "reasonCount": 0,
+        "reasons": [],
+        "reasonsTruncated": false
+      },
+      {
+        "task": ":compileTestJava",
+        "start": 1795289858383,
+        "end": 1795289858410,
+        "ms": 27,
+        "outcome": "FROM-CACHE",
+        "incremental": false,
+        "reasonCount": 0,
+        "reasons": [],
+        "reasonsTruncated": false
+      },
+      {
+        "task": ":testClasses",
+        "start": 1795289858411,
+        "end": 1795289858411,
+        "ms": 0,
+        "outcome": "EXECUTED",
+        "incremental": false,
+        "reasonCount": 0,
+        "reasons": [],
+        "reasonsTruncated": false
+      },
+      {
+        "task": ":runtimeClasspath",
+        "start": 1795289858411,
+        "end": 1795289858414,
+        "ms": 3,
+        "outcome": "EXECUTED",
+        "incremental": false,
+        "reasonCount": 1,
+        "reasons": [
+          "No history is available."
+        ],
+        "reasonsTruncated": false
+      },
+      {
+        "task": ":policyTest",
+        "start": 1795289858411,
+        "end": 1795289859814,
+        "ms": 1403,
+        "outcome": "EXECUTED",
+        "incremental": false,
+        "reasonCount": 1,
+        "reasons": [
+          "Task.upToDateWhen is false."
+        ],
+        "reasonsTruncated": false
+      }
+    ]
+  },
+  "error": "Verification failed: suite-parallel-0: expected Spring context reuse",
+  "cleanup": {
+    "state": "verified",
+    "containers": 0
+  }
+}

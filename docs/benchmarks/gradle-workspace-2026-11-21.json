@@ -1,0 +1,2795 @@
+{
+  "protocol": "dt.gradle-research/v1",
+  "at": "2026-11-21T16:35:14.655Z",
+  "fixture": {
+    "source": "existing lombok-service Quote/QuoteTest",
+    "sourceDigest": "f7e6ff12652867f9b4417a85c3bdb3e7fb2391c7b432dfa7c07979edb0b0acba",
+    "java": 21,
+    "springBoot": "2.7.18",
+    "lombok": "1.18.42",
+    "modules": 2,
+    "extraLombokClasses": 200,
+    "dependencyMode": "in-process Spring; external PostgreSQL/Kafka not benchmarked"
+  },
+  "host": {
+    "platform": "darwin",
+    "arch": "x64",
+    "cpus": 16
+  },
+  "effective": {
+    "workers": 2,
+    "timeoutMs": 600000,
+    "jvmArgs": "-Xmx1g -Dfile.encoding=UTF-8"
+  },
+  "iterations": 3,
+  "runs": [
+    {
+      "name": "cold-dependencies",
+      "sourceDigest": "1555bbdafa3b9278a835e3f11c612c4a271a1b9caecaf4e651e70c21197473a2",
+      "wallMs": 60250,
+      "exit": 0,
+      "arguments": "--console=plain --info --max-workers=2 --configuration-cache --build-cache --init-script <dt-dev>/gradle-workspace-observer.gradle :app:test",
+      "configurationCache": "stored",
+      "taskSpanMs": 24039,
+      "taskSumMs": 24073,
+      "tests": {
+        "total": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "tasks": [
+        {
+          "task": ":domain:processResources",
+          "start": 1795278953369,
+          "end": 1795278953415,
+          "ms": 46,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:processResources",
+          "start": 1795278953418,
+          "end": 1795278953420,
+          "ms": 2,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:processTestResources",
+          "start": 1795278953421,
+          "end": 1795278953422,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":domain:compileJava",
+          "start": 1795278953370,
+          "end": 1795278964056,
+          "ms": 10686,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "No history is available."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:classes",
+          "start": 1795278964059,
+          "end": 1795278964060,
+          "ms": 1,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:jar",
+          "start": 1795278964061,
+          "end": 1795278964300,
+          "ms": 239,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "No history is available."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileJava",
+          "start": 1795278964303,
+          "end": 1795278968000,
+          "ms": 3697,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "No history is available."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:classes",
+          "start": 1795278968001,
+          "end": 1795278968001,
+          "ms": 0,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileTestJava",
+          "start": 1795278968003,
+          "end": 1795278972907,
+          "ms": 4904,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "No history is available."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:testClasses",
+          "start": 1795278972908,
+          "end": 1795278972908,
+          "ms": 0,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:test",
+          "start": 1795278972911,
+          "end": 1795278977408,
+          "ms": 4497,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Task.upToDateWhen is false."
+          ],
+          "reasonsTruncated": false
+        }
+      ],
+      "compileNotes": [
+        "Task ':domain:compileJava' is not up-to-date because:",
+        "Full recompilation is required because no incremental change information is available. This is usually caused by clean builds or changing compiler arguments.",
+        "Task ':domain:jar' is not up-to-date because:",
+        "Task ':app:compileJava' is not up-to-date because:",
+        "Full recompilation is required because no incremental change information is available. This is usually caused by clean builds or changing compiler arguments.",
+        "Task ':app:compileTestJava' is not up-to-date because:",
+        "Full recompilation is required because no incremental change information is available. This is usually caused by clean builds or changing compiler arguments.",
+        "Task ':app:test' is not up-to-date because:"
+      ]
+    },
+    {
+      "name": "warm-unchanged",
+      "sourceDigest": "1555bbdafa3b9278a835e3f11c612c4a271a1b9caecaf4e651e70c21197473a2",
+      "wallMs": 4851,
+      "exit": 0,
+      "arguments": "--console=plain --info --max-workers=2 --configuration-cache --build-cache --init-script <dt-dev>/gradle-workspace-observer.gradle :app:test",
+      "configurationCache": "reused",
+      "taskSpanMs": 3336,
+      "taskSumMs": 3332,
+      "tests": {
+        "total": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "tasks": [
+        {
+          "task": ":domain:processResources",
+          "start": 1795278979393,
+          "end": 1795278979394,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:processResources",
+          "start": 1795278979395,
+          "end": 1795278979396,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:processTestResources",
+          "start": 1795278979396,
+          "end": 1795278979397,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":domain:compileJava",
+          "start": 1795278979393,
+          "end": 1795278979422,
+          "ms": 29,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:classes",
+          "start": 1795278979423,
+          "end": 1795278979423,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:jar",
+          "start": 1795278979424,
+          "end": 1795278979427,
+          "ms": 3,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileJava",
+          "start": 1795278979428,
+          "end": 1795278979432,
+          "ms": 4,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:classes",
+          "start": 1795278979433,
+          "end": 1795278979433,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileTestJava",
+          "start": 1795278979434,
+          "end": 1795278979439,
+          "ms": 5,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:testClasses",
+          "start": 1795278979440,
+          "end": 1795278979440,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:test",
+          "start": 1795278979441,
+          "end": 1795278982729,
+          "ms": 3288,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Task.upToDateWhen is false."
+          ],
+          "reasonsTruncated": false
+        }
+      ],
+      "compileNotes": [
+        "Task ':app:test' is not up-to-date because:"
+      ]
+    },
+    {
+      "name": "legacy-edit-compile-0",
+      "sourceDigest": "3232cc0aa7217bb79a3e46b61171eeb8ea67cea0a498b2b981e5905902697a4b",
+      "wallMs": 3697,
+      "exit": 0,
+      "arguments": "--console=plain --info --max-workers=2 --no-configuration-cache --no-build-cache --no-watch-fs --init-script <dt-dev>/gradle-workspace-observer.gradle :app:clean :app:testClasses",
+      "configurationCache": "disabled",
+      "taskSpanMs": 1984,
+      "taskSumMs": 1971,
+      "tests": null,
+      "tasks": [
+        {
+          "task": ":app:clean",
+          "start": 1795278984487,
+          "end": 1795278984510,
+          "ms": 23,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Task has not declared any outputs despite executing actions."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:compileJava",
+          "start": 1795278984513,
+          "end": 1795278985446,
+          "ms": 933,
+          "outcome": "EXECUTED",
+          "incremental": true,
+          "reasonCount": 1,
+          "reasons": [
+            "Input property 'stableSources' file <benchmark>/original/domain/src/main/java/bench/Quote.java has changed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:processResources",
+          "start": 1795278985447,
+          "end": 1795278985448,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":domain:classes",
+          "start": 1795278985449,
+          "end": 1795278985449,
+          "ms": 0,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:jar",
+          "start": 1795278985450,
+          "end": 1795278985719,
+          "ms": 269,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Input property 'rootSpec$1' file <benchmark>/original/domain/build/classes/java/main/bench/Quote.class has changed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileJava",
+          "start": 1795278985721,
+          "end": 1795278986072,
+          "ms": 351,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 4,
+          "reasons": [
+            "Output property 'destinationDirectory' file <benchmark>/original/app/build/classes/java/main has been removed.",
+            "Output property 'destinationDirectory' file <benchmark>/original/app/build/classes/java/main/bench has been removed.",
+            "Output property 'destinationDirectory' file <benchmark>/original/app/build/classes/java/main/bench/ProbeApplication.class has been removed.",
+            "Output property 'options.generatedSourceOutputDirectory' file <benchmark>/original/app/build/generated/sources/annotationProcessor/java/main has been removed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:processResources",
+          "start": 1795278986073,
+          "end": 1795278986074,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:classes",
+          "start": 1795278986075,
+          "end": 1795278986075,
+          "ms": 0,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileTestJava",
+          "start": 1795278986077,
+          "end": 1795278986469,
+          "ms": 392,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 6,
+          "reasons": [
+            "Output property 'destinationDirectory' file <benchmark>/original/app/build/classes/java/test has been removed.",
+            "Output property 'destinationDirectory' file <benchmark>/original/app/build/classes/java/test/bench has been removed.",
+            "Output property 'destinationDirectory' file <benchmark>/original/app/build/classes/java/test/bench/Context0Test.class has been removed.",
+            "Output property 'destinationDirectory' file <benchmark>/original/app/build/classes/java/test/bench/Context1Test.class has been removed.",
+            "Output property 'destinationDirectory' file <benchmark>/original/app/build/classes/java/test/bench/QuoteTest.class has been removed.",
+            "Output property 'options.generatedSourceOutputDirectory' file <benchmark>/original/app/build/generated/sources/annotationProcessor/java/test has been removed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:processTestResources",
+          "start": 1795278986470,
+          "end": 1795278986471,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:testClasses",
+          "start": 1795278986471,
+          "end": 1795278986471,
+          "ms": 0,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        }
+      ],
+      "compileNotes": [
+        "Task ':app:clean' is not up-to-date because:",
+        "Task ':domain:compileJava' is not up-to-date because:",
+        "Incremental compilation of 2 classes completed in 0.822 secs.",
+        "Task ':domain:jar' is not up-to-date because:",
+        "Task ':app:compileJava' is not up-to-date because:",
+        "Full recompilation is required because no incremental change information is available. This is usually caused by clean builds or changing compiler arguments.",
+        "Task ':app:compileTestJava' is not up-to-date because:",
+        "Full recompilation is required because no incremental change information is available. This is usually caused by clean builds or changing compiler arguments."
+      ]
+    },
+    {
+      "name": "legacy-edit-test-0",
+      "sourceDigest": "3232cc0aa7217bb79a3e46b61171eeb8ea67cea0a498b2b981e5905902697a4b",
+      "wallMs": 5684,
+      "exit": 0,
+      "arguments": "--console=plain --info --max-workers=2 --no-configuration-cache --build-cache --no-watch-fs --init-script <dt-dev>/gradle-workspace-observer.gradle :app:test",
+      "configurationCache": "disabled",
+      "taskSpanMs": 4131,
+      "taskSumMs": 4118,
+      "tests": {
+        "total": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "tasks": [
+        {
+          "task": ":domain:compileJava",
+          "start": 1795278988057,
+          "end": 1795278988087,
+          "ms": 30,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:processResources",
+          "start": 1795278988088,
+          "end": 1795278988089,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":domain:classes",
+          "start": 1795278988090,
+          "end": 1795278988090,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:jar",
+          "start": 1795278988091,
+          "end": 1795278988095,
+          "ms": 4,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileJava",
+          "start": 1795278988099,
+          "end": 1795278988154,
+          "ms": 55,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:processResources",
+          "start": 1795278988154,
+          "end": 1795278988155,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:classes",
+          "start": 1795278988156,
+          "end": 1795278988156,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileTestJava",
+          "start": 1795278988158,
+          "end": 1795278988206,
+          "ms": 48,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:processTestResources",
+          "start": 1795278988207,
+          "end": 1795278988208,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:testClasses",
+          "start": 1795278988209,
+          "end": 1795278988209,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:test",
+          "start": 1795278988210,
+          "end": 1795278992188,
+          "ms": 3978,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Task.upToDateWhen is false."
+          ],
+          "reasonsTruncated": false
+        }
+      ],
+      "compileNotes": [
+        "Task ':app:test' is not up-to-date because:"
+      ]
+    },
+    {
+      "name": "legacy-edit-compile-1",
+      "sourceDigest": "7dff90b8fe4cddc245b3a8ec3f1529d92ad8e6ff1479b1ec244f3f82b7352cd8",
+      "wallMs": 3505,
+      "exit": 0,
+      "arguments": "--console=plain --info --max-workers=2 --no-configuration-cache --no-build-cache --no-watch-fs --init-script <dt-dev>/gradle-workspace-observer.gradle :app:clean :app:testClasses",
+      "configurationCache": "disabled",
+      "taskSpanMs": 1588,
+      "taskSumMs": 1573,
+      "tests": null,
+      "tasks": [
+        {
+          "task": ":app:clean",
+          "start": 1795278994134,
+          "end": 1795278994150,
+          "ms": 16,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Task has not declared any outputs despite executing actions."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:compileJava",
+          "start": 1795278994153,
+          "end": 1795278994693,
+          "ms": 540,
+          "outcome": "EXECUTED",
+          "incremental": true,
+          "reasonCount": 1,
+          "reasons": [
+            "Input property 'stableSources' file <benchmark>/original/domain/src/main/java/bench/Quote.java has changed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:processResources",
+          "start": 1795278994695,
+          "end": 1795278994695,
+          "ms": 0,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":domain:classes",
+          "start": 1795278994696,
+          "end": 1795278994696,
+          "ms": 0,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:jar",
+          "start": 1795278994697,
+          "end": 1795278994913,
+          "ms": 216,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Input property 'rootSpec$1' file <benchmark>/original/domain/build/classes/java/main/bench/Quote.class has changed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileJava",
+          "start": 1795278994915,
+          "end": 1795278995317,
+          "ms": 402,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 4,
+          "reasons": [
+            "Output property 'destinationDirectory' file <benchmark>/original/app/build/classes/java/main has been removed.",
+            "Output property 'destinationDirectory' file <benchmark>/original/app/build/classes/java/main/bench has been removed.",
+            "Output property 'destinationDirectory' file <benchmark>/original/app/build/classes/java/main/bench/ProbeApplication.class has been removed.",
+            "Output property 'options.generatedSourceOutputDirectory' file <benchmark>/original/app/build/generated/sources/annotationProcessor/java/main has been removed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:processResources",
+          "start": 1795278995318,
+          "end": 1795278995319,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:classes",
+          "start": 1795278995320,
+          "end": 1795278995320,
+          "ms": 0,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileTestJava",
+          "start": 1795278995321,
+          "end": 1795278995705,
+          "ms": 384,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 6,
+          "reasons": [
+            "Output property 'destinationDirectory' file <benchmark>/original/app/build/classes/java/test has been removed.",
+            "Output property 'destinationDirectory' file <benchmark>/original/app/build/classes/java/test/bench has been removed.",
+            "Output property 'destinationDirectory' file <benchmark>/original/app/build/classes/java/test/bench/Context0Test.class has been removed.",
+            "Output property 'destinationDirectory' file <benchmark>/original/app/build/classes/java/test/bench/Context1Test.class has been removed.",
+            "Output property 'destinationDirectory' file <benchmark>/original/app/build/classes/java/test/bench/QuoteTest.class has been removed.",
+            "Output property 'options.generatedSourceOutputDirectory' file <benchmark>/original/app/build/generated/sources/annotationProcessor/java/test has been removed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:processTestResources",
+          "start": 1795278995706,
+          "end": 1795278995720,
+          "ms": 14,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:testClasses",
+          "start": 1795278995722,
+          "end": 1795278995722,
+          "ms": 0,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        }
+      ],
+      "compileNotes": [
+        "Task ':app:clean' is not up-to-date because:",
+        "Task ':domain:compileJava' is not up-to-date because:",
+        "Incremental compilation of 2 classes completed in 0.49 secs.",
+        "Task ':domain:jar' is not up-to-date because:",
+        "Task ':app:compileJava' is not up-to-date because:",
+        "Full recompilation is required because no incremental change information is available. This is usually caused by clean builds or changing compiler arguments.",
+        "Task ':app:compileTestJava' is not up-to-date because:",
+        "Full recompilation is required because no incremental change information is available. This is usually caused by clean builds or changing compiler arguments."
+      ]
+    },
+    {
+      "name": "legacy-edit-test-1",
+      "sourceDigest": "7dff90b8fe4cddc245b3a8ec3f1529d92ad8e6ff1479b1ec244f3f82b7352cd8",
+      "wallMs": 5857,
+      "exit": 0,
+      "arguments": "--console=plain --info --max-workers=2 --no-configuration-cache --build-cache --no-watch-fs --init-script <dt-dev>/gradle-workspace-observer.gradle :app:test",
+      "configurationCache": "disabled",
+      "taskSpanMs": 3746,
+      "taskSumMs": 3737,
+      "tests": {
+        "total": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "tasks": [
+        {
+          "task": ":domain:compileJava",
+          "start": 1795278997863,
+          "end": 1795278997885,
+          "ms": 22,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:processResources",
+          "start": 1795278997886,
+          "end": 1795278997887,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":domain:classes",
+          "start": 1795278997887,
+          "end": 1795278997888,
+          "ms": 1,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:jar",
+          "start": 1795278997888,
+          "end": 1795278997892,
+          "ms": 4,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileJava",
+          "start": 1795278997894,
+          "end": 1795278997924,
+          "ms": 30,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:processResources",
+          "start": 1795278997925,
+          "end": 1795278997926,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:classes",
+          "start": 1795278997927,
+          "end": 1795278997927,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileTestJava",
+          "start": 1795278997928,
+          "end": 1795278997964,
+          "ms": 36,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:processTestResources",
+          "start": 1795278997965,
+          "end": 1795278997966,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:testClasses",
+          "start": 1795278997967,
+          "end": 1795278997967,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:test",
+          "start": 1795278997968,
+          "end": 1795279001609,
+          "ms": 3641,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Task.upToDateWhen is false."
+          ],
+          "reasonsTruncated": false
+        }
+      ],
+      "compileNotes": [
+        "Task ':app:test' is not up-to-date because:"
+      ]
+    },
+    {
+      "name": "legacy-edit-compile-2",
+      "sourceDigest": "23c69d0211be3cf3b3855845572c108e5a821c773e35ea120624052d473e3c3b",
+      "wallMs": 2626,
+      "exit": 0,
+      "arguments": "--console=plain --info --max-workers=2 --no-configuration-cache --no-build-cache --no-watch-fs --init-script <dt-dev>/gradle-workspace-observer.gradle :app:clean :app:testClasses",
+      "configurationCache": "disabled",
+      "taskSpanMs": 1094,
+      "taskSumMs": 1083,
+      "tests": null,
+      "tasks": [
+        {
+          "task": ":app:clean",
+          "start": 1795279003152,
+          "end": 1795279003168,
+          "ms": 16,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Task has not declared any outputs despite executing actions."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:compileJava",
+          "start": 1795279003170,
+          "end": 1795279003708,
+          "ms": 538,
+          "outcome": "EXECUTED",
+          "incremental": true,
+          "reasonCount": 1,
+          "reasons": [
+            "Input property 'stableSources' file <benchmark>/original/domain/src/main/java/bench/Quote.java has changed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:processResources",
+          "start": 1795279003710,
+          "end": 1795279003711,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":domain:classes",
+          "start": 1795279003711,
+          "end": 1795279003711,
+          "ms": 0,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:jar",
+          "start": 1795279003712,
+          "end": 1795279003858,
+          "ms": 146,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Input property 'rootSpec$1' file <benchmark>/original/domain/build/classes/java/main/bench/Quote.class has changed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileJava",
+          "start": 1795279003860,
+          "end": 1795279004025,
+          "ms": 165,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 4,
+          "reasons": [
+            "Output property 'destinationDirectory' file <benchmark>/original/app/build/classes/java/main has been removed.",
+            "Output property 'destinationDirectory' file <benchmark>/original/app/build/classes/java/main/bench has been removed.",
+            "Output property 'destinationDirectory' file <benchmark>/original/app/build/classes/java/main/bench/ProbeApplication.class has been removed.",
+            "Output property 'options.generatedSourceOutputDirectory' file <benchmark>/original/app/build/generated/sources/annotationProcessor/java/main has been removed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:processResources",
+          "start": 1795279004026,
+          "end": 1795279004027,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:classes",
+          "start": 1795279004027,
+          "end": 1795279004027,
+          "ms": 0,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileTestJava",
+          "start": 1795279004028,
+          "end": 1795279004239,
+          "ms": 211,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 6,
+          "reasons": [
+            "Output property 'destinationDirectory' file <benchmark>/original/app/build/classes/java/test has been removed.",
+            "Output property 'destinationDirectory' file <benchmark>/original/app/build/classes/java/test/bench has been removed.",
+            "Output property 'destinationDirectory' file <benchmark>/original/app/build/classes/java/test/bench/Context0Test.class has been removed.",
+            "Output property 'destinationDirectory' file <benchmark>/original/app/build/classes/java/test/bench/Context1Test.class has been removed.",
+            "Output property 'destinationDirectory' file <benchmark>/original/app/build/classes/java/test/bench/QuoteTest.class has been removed.",
+            "Output property 'options.generatedSourceOutputDirectory' file <benchmark>/original/app/build/generated/sources/annotationProcessor/java/test has been removed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:processTestResources",
+          "start": 1795279004241,
+          "end": 1795279004245,
+          "ms": 4,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:testClasses",
+          "start": 1795279004245,
+          "end": 1795279004246,
+          "ms": 1,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        }
+      ],
+      "compileNotes": [
+        "Task ':app:clean' is not up-to-date because:",
+        "Task ':domain:compileJava' is not up-to-date because:",
+        "Incremental compilation of 2 classes completed in 0.487 secs.",
+        "Task ':domain:jar' is not up-to-date because:",
+        "Task ':app:compileJava' is not up-to-date because:",
+        "Full recompilation is required because no incremental change information is available. This is usually caused by clean builds or changing compiler arguments.",
+        "Task ':app:compileTestJava' is not up-to-date because:",
+        "Full recompilation is required because no incremental change information is available. This is usually caused by clean builds or changing compiler arguments."
+      ]
+    },
+    {
+      "name": "legacy-edit-test-2",
+      "sourceDigest": "23c69d0211be3cf3b3855845572c108e5a821c773e35ea120624052d473e3c3b",
+      "wallMs": 5077,
+      "exit": 0,
+      "arguments": "--console=plain --info --max-workers=2 --no-configuration-cache --build-cache --no-watch-fs --init-script <dt-dev>/gradle-workspace-observer.gradle :app:test",
+      "configurationCache": "disabled",
+      "taskSpanMs": 3474,
+      "taskSumMs": 3464,
+      "tests": {
+        "total": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "tasks": [
+        {
+          "task": ":domain:compileJava",
+          "start": 1795279005901,
+          "end": 1795279005922,
+          "ms": 21,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:processResources",
+          "start": 1795279005923,
+          "end": 1795279005924,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":domain:classes",
+          "start": 1795279005925,
+          "end": 1795279005925,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:jar",
+          "start": 1795279005926,
+          "end": 1795279005930,
+          "ms": 4,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileJava",
+          "start": 1795279005933,
+          "end": 1795279005959,
+          "ms": 26,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:processResources",
+          "start": 1795279005960,
+          "end": 1795279005961,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:classes",
+          "start": 1795279005961,
+          "end": 1795279005961,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileTestJava",
+          "start": 1795279005962,
+          "end": 1795279005994,
+          "ms": 32,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:processTestResources",
+          "start": 1795279005995,
+          "end": 1795279005996,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:testClasses",
+          "start": 1795279005996,
+          "end": 1795279005997,
+          "ms": 1,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:test",
+          "start": 1795279005998,
+          "end": 1795279009375,
+          "ms": 3377,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Task.upToDateWhen is false."
+          ],
+          "reasonsTruncated": false
+        }
+      ],
+      "compileNotes": [
+        "Task ':app:test' is not up-to-date because:"
+      ]
+    },
+    {
+      "name": "prime-configuration-cache",
+      "sourceDigest": "23c69d0211be3cf3b3855845572c108e5a821c773e35ea120624052d473e3c3b",
+      "wallMs": 4641,
+      "exit": 0,
+      "arguments": "--console=plain --info --max-workers=2 --configuration-cache --build-cache --init-script <dt-dev>/gradle-workspace-observer.gradle :app:test",
+      "configurationCache": "reused",
+      "taskSpanMs": 3171,
+      "taskSumMs": 3168,
+      "tests": {
+        "total": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "tasks": [
+        {
+          "task": ":domain:processResources",
+          "start": 1795279010845,
+          "end": 1795279010846,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:processResources",
+          "start": 1795279010848,
+          "end": 1795279010849,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:processTestResources",
+          "start": 1795279010850,
+          "end": 1795279010851,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":domain:compileJava",
+          "start": 1795279010845,
+          "end": 1795279010864,
+          "ms": 19,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:classes",
+          "start": 1795279010864,
+          "end": 1795279010865,
+          "ms": 1,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:jar",
+          "start": 1795279010866,
+          "end": 1795279010869,
+          "ms": 3,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileJava",
+          "start": 1795279010870,
+          "end": 1795279010875,
+          "ms": 5,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:classes",
+          "start": 1795279010876,
+          "end": 1795279010876,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileTestJava",
+          "start": 1795279010877,
+          "end": 1795279010884,
+          "ms": 7,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:testClasses",
+          "start": 1795279010885,
+          "end": 1795279010885,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:test",
+          "start": 1795279010886,
+          "end": 1795279014016,
+          "ms": 3130,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Task.upToDateWhen is false."
+          ],
+          "reasonsTruncated": false
+        }
+      ],
+      "compileNotes": [
+        "Task ':app:test' is not up-to-date because:"
+      ]
+    },
+    {
+      "name": "incremental-edit-0",
+      "sourceDigest": "d6db015f53911cc7b18986a6c76619a04a3f0c6047df6621a2fe2a2c8a017b77",
+      "wallMs": 5596,
+      "exit": 0,
+      "arguments": "--console=plain --info --max-workers=2 --configuration-cache --build-cache --init-script <dt-dev>/gradle-workspace-observer.gradle :app:test",
+      "configurationCache": "reused",
+      "taskSpanMs": 4169,
+      "taskSumMs": 4165,
+      "tests": {
+        "total": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "tasks": [
+        {
+          "task": ":domain:processResources",
+          "start": 1795279015471,
+          "end": 1795279015472,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:processResources",
+          "start": 1795279015473,
+          "end": 1795279015474,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:processTestResources",
+          "start": 1795279015474,
+          "end": 1795279015475,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":domain:compileJava",
+          "start": 1795279015471,
+          "end": 1795279016073,
+          "ms": 602,
+          "outcome": "EXECUTED",
+          "incremental": true,
+          "reasonCount": 1,
+          "reasons": [
+            "Input property 'stableSources' file <benchmark>/original/domain/src/main/java/bench/Quote.java has changed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:classes",
+          "start": 1795279016074,
+          "end": 1795279016074,
+          "ms": 0,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:jar",
+          "start": 1795279016075,
+          "end": 1795279016215,
+          "ms": 140,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Input property 'rootSpec$1' file <benchmark>/original/domain/build/classes/java/main/bench/Quote.class has changed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileJava",
+          "start": 1795279016216,
+          "end": 1795279016255,
+          "ms": 39,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:classes",
+          "start": 1795279016256,
+          "end": 1795279016256,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileTestJava",
+          "start": 1795279016257,
+          "end": 1795279016439,
+          "ms": 182,
+          "outcome": "EXECUTED",
+          "incremental": true,
+          "reasonCount": 1,
+          "reasons": [
+            "Input property 'stableSources' file <benchmark>/original/app/src/test/java/bench/QuoteTest.java has changed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:testClasses",
+          "start": 1795279016440,
+          "end": 1795279016440,
+          "ms": 0,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:test",
+          "start": 1795279016441,
+          "end": 1795279019640,
+          "ms": 3199,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Task.upToDateWhen is false."
+          ],
+          "reasonsTruncated": false
+        }
+      ],
+      "compileNotes": [
+        "Task ':domain:compileJava' is not up-to-date because:",
+        "Incremental compilation of 2 classes completed in 0.472 secs.",
+        "Task ':domain:jar' is not up-to-date because:",
+        "Task ':app:compileTestJava' is not up-to-date because:",
+        "Incremental compilation of 1 classes completed in 0.153 secs.",
+        "Task ':app:test' is not up-to-date because:"
+      ]
+    },
+    {
+      "name": "incremental-edit-1",
+      "sourceDigest": "13d78a65d3d22a25b1676782f6a83cb03e9e0777d865c42ef34e6a789576e8c3",
+      "wallMs": 5736,
+      "exit": 0,
+      "arguments": "--console=plain --info --max-workers=2 --configuration-cache --build-cache --init-script <dt-dev>/gradle-workspace-observer.gradle :app:test",
+      "configurationCache": "reused",
+      "taskSpanMs": 4215,
+      "taskSumMs": 4211,
+      "tests": {
+        "total": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "tasks": [
+        {
+          "task": ":domain:processResources",
+          "start": 1795279021231,
+          "end": 1795279021232,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:processResources",
+          "start": 1795279021233,
+          "end": 1795279021234,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:processTestResources",
+          "start": 1795279021234,
+          "end": 1795279021235,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":domain:compileJava",
+          "start": 1795279021232,
+          "end": 1795279021816,
+          "ms": 584,
+          "outcome": "EXECUTED",
+          "incremental": true,
+          "reasonCount": 1,
+          "reasons": [
+            "Input property 'stableSources' file <benchmark>/original/domain/src/main/java/bench/Quote.java has changed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:classes",
+          "start": 1795279021817,
+          "end": 1795279021817,
+          "ms": 0,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:jar",
+          "start": 1795279021818,
+          "end": 1795279022062,
+          "ms": 244,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Input property 'rootSpec$1' file <benchmark>/original/domain/build/classes/java/main/bench/Quote.class has changed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileJava",
+          "start": 1795279022063,
+          "end": 1795279022095,
+          "ms": 32,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:classes",
+          "start": 1795279022095,
+          "end": 1795279022095,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileTestJava",
+          "start": 1795279022096,
+          "end": 1795279022285,
+          "ms": 189,
+          "outcome": "EXECUTED",
+          "incremental": true,
+          "reasonCount": 1,
+          "reasons": [
+            "Input property 'stableSources' file <benchmark>/original/app/src/test/java/bench/QuoteTest.java has changed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:testClasses",
+          "start": 1795279022286,
+          "end": 1795279022286,
+          "ms": 0,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:test",
+          "start": 1795279022287,
+          "end": 1795279025446,
+          "ms": 3159,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Task.upToDateWhen is false."
+          ],
+          "reasonsTruncated": false
+        }
+      ],
+      "compileNotes": [
+        "Task ':domain:compileJava' is not up-to-date because:",
+        "Incremental compilation of 2 classes completed in 0.455 secs.",
+        "Task ':domain:jar' is not up-to-date because:",
+        "Task ':app:compileTestJava' is not up-to-date because:",
+        "Incremental compilation of 1 classes completed in 0.159 secs.",
+        "Task ':app:test' is not up-to-date because:"
+      ]
+    },
+    {
+      "name": "incremental-edit-2",
+      "sourceDigest": "1d51d4affc70c2569d45e7b992da47946edbaaf431710da21d5f7104e4e88f13",
+      "wallMs": 5681,
+      "exit": 0,
+      "arguments": "--console=plain --info --max-workers=2 --configuration-cache --build-cache --init-script <dt-dev>/gradle-workspace-observer.gradle :app:test",
+      "configurationCache": "reused",
+      "taskSpanMs": 4193,
+      "taskSumMs": 4187,
+      "tests": {
+        "total": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "tasks": [
+        {
+          "task": ":domain:processResources",
+          "start": 1795279026974,
+          "end": 1795279026975,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:processResources",
+          "start": 1795279026976,
+          "end": 1795279026976,
+          "ms": 0,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:processTestResources",
+          "start": 1795279026977,
+          "end": 1795279026977,
+          "ms": 0,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":domain:compileJava",
+          "start": 1795279026974,
+          "end": 1795279027484,
+          "ms": 510,
+          "outcome": "EXECUTED",
+          "incremental": true,
+          "reasonCount": 1,
+          "reasons": [
+            "Input property 'stableSources' file <benchmark>/original/domain/src/main/java/bench/Quote.java has changed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:classes",
+          "start": 1795279027485,
+          "end": 1795279027485,
+          "ms": 0,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:jar",
+          "start": 1795279027485,
+          "end": 1795279027624,
+          "ms": 139,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Input property 'rootSpec$1' file <benchmark>/original/domain/build/classes/java/main/bench/Quote.class has changed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileJava",
+          "start": 1795279027627,
+          "end": 1795279027665,
+          "ms": 38,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:classes",
+          "start": 1795279027666,
+          "end": 1795279027666,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileTestJava",
+          "start": 1795279027666,
+          "end": 1795279027874,
+          "ms": 208,
+          "outcome": "EXECUTED",
+          "incremental": true,
+          "reasonCount": 1,
+          "reasons": [
+            "Input property 'stableSources' file <benchmark>/original/app/src/test/java/bench/QuoteTest.java has changed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:testClasses",
+          "start": 1795279027875,
+          "end": 1795279027875,
+          "ms": 0,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:test",
+          "start": 1795279027876,
+          "end": 1795279031167,
+          "ms": 3291,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Task.upToDateWhen is false."
+          ],
+          "reasonsTruncated": false
+        }
+      ],
+      "compileNotes": [
+        "Task ':domain:compileJava' is not up-to-date because:",
+        "Incremental compilation of 2 classes completed in 0.401 secs.",
+        "Task ':domain:jar' is not up-to-date because:",
+        "Task ':app:compileTestJava' is not up-to-date because:",
+        "Incremental compilation of 1 classes completed in 0.174 secs.",
+        "Task ':app:test' is not up-to-date because:"
+      ]
+    },
+    {
+      "name": "lombok-builder-api-edit",
+      "sourceDigest": "18f91aec67dca574694a58ca3b285982fcda51ea0d0af720d98e645ce3800cb7",
+      "wallMs": 5656,
+      "exit": 0,
+      "arguments": "--console=plain --info --max-workers=2 --configuration-cache --build-cache --init-script <dt-dev>/gradle-workspace-observer.gradle :app:test",
+      "configurationCache": "reused",
+      "taskSpanMs": 4106,
+      "taskSumMs": 4104,
+      "tests": {
+        "total": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "tasks": [
+        {
+          "task": ":domain:processResources",
+          "start": 1795279032744,
+          "end": 1795279032745,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:processResources",
+          "start": 1795279032746,
+          "end": 1795279032746,
+          "ms": 0,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:processTestResources",
+          "start": 1795279032747,
+          "end": 1795279032747,
+          "ms": 0,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":domain:compileJava",
+          "start": 1795279032744,
+          "end": 1795279033312,
+          "ms": 568,
+          "outcome": "EXECUTED",
+          "incremental": true,
+          "reasonCount": 1,
+          "reasons": [
+            "Input property 'stableSources' file <benchmark>/original/domain/src/main/java/bench/Quote.java has changed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:classes",
+          "start": 1795279033312,
+          "end": 1795279033313,
+          "ms": 1,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:jar",
+          "start": 1795279033313,
+          "end": 1795279033437,
+          "ms": 124,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 2,
+          "reasons": [
+            "Input property 'rootSpec$1' file <benchmark>/original/domain/build/classes/java/main/bench/Quote$QuoteBuilder.class has changed.",
+            "Input property 'rootSpec$1' file <benchmark>/original/domain/build/classes/java/main/bench/Quote.class has changed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileJava",
+          "start": 1795279033438,
+          "end": 1795279033526,
+          "ms": 88,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:classes",
+          "start": 1795279033526,
+          "end": 1795279033526,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileTestJava",
+          "start": 1795279033527,
+          "end": 1795279033679,
+          "ms": 152,
+          "outcome": "EXECUTED",
+          "incremental": true,
+          "reasonCount": 2,
+          "reasons": [
+            "Input property 'classpath' file <benchmark>/original/domain/build/libs/domain.jar has changed.",
+            "Input property 'stableSources' file <benchmark>/original/app/src/test/java/bench/QuoteTest.java has changed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:testClasses",
+          "start": 1795279033679,
+          "end": 1795279033679,
+          "ms": 0,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:test",
+          "start": 1795279033680,
+          "end": 1795279036850,
+          "ms": 3170,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Task.upToDateWhen is false."
+          ],
+          "reasonsTruncated": false
+        }
+      ],
+      "compileNotes": [
+        "Task ':domain:compileJava' is not up-to-date because:",
+        "Incremental compilation of 2 classes completed in 0.43 secs.",
+        "Task ':domain:jar' is not up-to-date because:",
+        "Task ':app:compileJava' is not up-to-date because:",
+        "Task ':app:compileTestJava' is not up-to-date because:",
+        "Incremental compilation of 1 classes completed in 0.123 secs.",
+        "Task ':app:test' is not up-to-date because:"
+      ]
+    },
+    {
+      "name": "source-deletion",
+      "sourceDigest": "333c583df78620a00a4a9dd878614799955d4e2a815c1ac357389932de86520c",
+      "wallMs": 5478,
+      "exit": 0,
+      "arguments": "--console=plain --info --max-workers=2 --configuration-cache --build-cache --init-script <dt-dev>/gradle-workspace-observer.gradle :app:test",
+      "configurationCache": "reused",
+      "taskSpanMs": 4068,
+      "taskSumMs": 4066,
+      "tests": {
+        "total": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "tasks": [
+        {
+          "task": ":domain:processResources",
+          "start": 1795279038291,
+          "end": 1795279038291,
+          "ms": 0,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:processResources",
+          "start": 1795279038292,
+          "end": 1795279038293,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:processTestResources",
+          "start": 1795279038293,
+          "end": 1795279038294,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":domain:compileJava",
+          "start": 1795279038291,
+          "end": 1795279038399,
+          "ms": 108,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:classes",
+          "start": 1795279038399,
+          "end": 1795279038399,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:jar",
+          "start": 1795279038400,
+          "end": 1795279038545,
+          "ms": 145,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 2,
+          "reasons": [
+            "Input property 'rootSpec$1' file <benchmark>/original/domain/build/classes/java/main/bench/Value0$Value0Builder.class has been removed.",
+            "Input property 'rootSpec$1' file <benchmark>/original/domain/build/classes/java/main/bench/Value0.class has been removed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileJava",
+          "start": 1795279038546,
+          "end": 1795279038619,
+          "ms": 73,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:classes",
+          "start": 1795279038619,
+          "end": 1795279038619,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileTestJava",
+          "start": 1795279038620,
+          "end": 1795279038648,
+          "ms": 28,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:testClasses",
+          "start": 1795279038648,
+          "end": 1795279038648,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:test",
+          "start": 1795279038649,
+          "end": 1795279042359,
+          "ms": 3710,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Task.upToDateWhen is false."
+          ],
+          "reasonsTruncated": false
+        }
+      ],
+      "compileNotes": [
+        "Task ':domain:compileJava' is not up-to-date because:",
+        "Task ':domain:jar' is not up-to-date because:",
+        "Task ':app:compileJava' is not up-to-date because:",
+        "Task ':app:compileTestJava' is not up-to-date because:",
+        "Task ':app:test' is not up-to-date because:"
+      ]
+    },
+    {
+      "name": "missing-generated-output",
+      "sourceDigest": "333c583df78620a00a4a9dd878614799955d4e2a815c1ac357389932de86520c",
+      "wallMs": 5010,
+      "exit": 0,
+      "arguments": "--console=plain --info --max-workers=2 --configuration-cache --build-cache --init-script <dt-dev>/gradle-workspace-observer.gradle :app:test",
+      "configurationCache": "reused",
+      "taskSpanMs": 3533,
+      "taskSumMs": 3531,
+      "tests": {
+        "total": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "tasks": [
+        {
+          "task": ":domain:processResources",
+          "start": 1795279043834,
+          "end": 1795279043835,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:processResources",
+          "start": 1795279043836,
+          "end": 1795279043837,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:processTestResources",
+          "start": 1795279043837,
+          "end": 1795279043838,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":domain:compileJava",
+          "start": 1795279043834,
+          "end": 1795279044186,
+          "ms": 352,
+          "outcome": "FROM-CACHE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:classes",
+          "start": 1795279044187,
+          "end": 1795279044187,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:jar",
+          "start": 1795279044188,
+          "end": 1795279044190,
+          "ms": 2,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileJava",
+          "start": 1795279044190,
+          "end": 1795279044192,
+          "ms": 2,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:classes",
+          "start": 1795279044193,
+          "end": 1795279044193,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileTestJava",
+          "start": 1795279044194,
+          "end": 1795279044196,
+          "ms": 2,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:testClasses",
+          "start": 1795279044196,
+          "end": 1795279044196,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:test",
+          "start": 1795279044197,
+          "end": 1795279047367,
+          "ms": 3170,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Task.upToDateWhen is false."
+          ],
+          "reasonsTruncated": false
+        }
+      ],
+      "compileNotes": [
+        "Task ':domain:compileJava' is not up-to-date because:",
+        "Task ':app:test' is not up-to-date because:"
+      ]
+    },
+    {
+      "name": "lombok-config-edit",
+      "sourceDigest": "5e3d93d2e3b6566b7a882ca65a73982123d22443cb191c2d296967fc9c6d027b",
+      "wallMs": 9246,
+      "exit": 0,
+      "arguments": "--console=plain --info --max-workers=2 --configuration-cache --build-cache --init-script <dt-dev>/gradle-workspace-observer.gradle :app:test",
+      "configurationCache": "reused",
+      "taskSpanMs": 7752,
+      "taskSumMs": 7745,
+      "tests": {
+        "total": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "tasks": [
+        {
+          "task": ":domain:processResources",
+          "start": 1795279048939,
+          "end": 1795279048939,
+          "ms": 0,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:processResources",
+          "start": 1795279048941,
+          "end": 1795279048941,
+          "ms": 0,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:processTestResources",
+          "start": 1795279048942,
+          "end": 1795279048942,
+          "ms": 0,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":domain:compileJava",
+          "start": 1795279048939,
+          "end": 1795279053014,
+          "ms": 4075,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Input property '$1' file <benchmark>/original/lombok.config has changed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:classes",
+          "start": 1795279053015,
+          "end": 1795279053015,
+          "ms": 0,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:jar",
+          "start": 1795279053016,
+          "end": 1795279053141,
+          "ms": 125,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 3,
+          "reasons": [
+            "Input property 'rootSpec$1' file <benchmark>/original/domain/build/classes/java/main/bench/Quote$QuoteBuilder.class has changed.",
+            "Input property 'rootSpec$1' file <benchmark>/original/domain/build/classes/java/main/bench/Quote.class has changed.",
+            "Input property 'rootSpec$1' file <benchmark>/original/domain/build/classes/java/main/bench/Value1$Value1Builder.class has changed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileJava",
+          "start": 1795279053142,
+          "end": 1795279053201,
+          "ms": 59,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:classes",
+          "start": 1795279053202,
+          "end": 1795279053202,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileTestJava",
+          "start": 1795279053203,
+          "end": 1795279053352,
+          "ms": 149,
+          "outcome": "EXECUTED",
+          "incremental": true,
+          "reasonCount": 1,
+          "reasons": [
+            "Input property 'classpath' file <benchmark>/original/domain/build/libs/domain.jar has changed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:testClasses",
+          "start": 1795279053353,
+          "end": 1795279053353,
+          "ms": 0,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:test",
+          "start": 1795279053354,
+          "end": 1795279056691,
+          "ms": 3337,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Task.upToDateWhen is false."
+          ],
+          "reasonsTruncated": false
+        }
+      ],
+      "compileNotes": [
+        "Task ':domain:compileJava' is not up-to-date because:",
+        "Full recompilation is required because no incremental change information is available. This is usually caused by clean builds or changing compiler arguments.",
+        "Task ':domain:jar' is not up-to-date because:",
+        "Task ':app:compileJava' is not up-to-date because:",
+        "Task ':app:compileTestJava' is not up-to-date because:",
+        "Incremental compilation of 1 classes completed in 0.124 secs.",
+        "Task ':app:test' is not up-to-date because:"
+      ]
+    },
+    {
+      "name": "fresh-checkout-shared-cache",
+      "sourceDigest": "1555bbdafa3b9278a835e3f11c612c4a271a1b9caecaf4e651e70c21197473a2",
+      "wallMs": 5745,
+      "exit": 0,
+      "arguments": "--console=plain --info --max-workers=2 --configuration-cache --build-cache --init-script <dt-dev>/gradle-workspace-observer.gradle :app:test",
+      "configurationCache": "stored",
+      "taskSpanMs": 3800,
+      "taskSumMs": 3799,
+      "tests": {
+        "total": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "tasks": [
+        {
+          "task": ":domain:processResources",
+          "start": 1795279058787,
+          "end": 1795279058791,
+          "ms": 4,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:processResources",
+          "start": 1795279058793,
+          "end": 1795279058794,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:processTestResources",
+          "start": 1795279058794,
+          "end": 1795279058795,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":domain:compileJava",
+          "start": 1795279058787,
+          "end": 1795279059078,
+          "ms": 291,
+          "outcome": "FROM-CACHE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:classes",
+          "start": 1795279059079,
+          "end": 1795279059079,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:jar",
+          "start": 1795279059080,
+          "end": 1795279059204,
+          "ms": 124,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "No history is available."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileJava",
+          "start": 1795279059205,
+          "end": 1795279059296,
+          "ms": 91,
+          "outcome": "FROM-CACHE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:classes",
+          "start": 1795279059297,
+          "end": 1795279059297,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileTestJava",
+          "start": 1795279059298,
+          "end": 1795279059316,
+          "ms": 18,
+          "outcome": "FROM-CACHE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:testClasses",
+          "start": 1795279059317,
+          "end": 1795279059318,
+          "ms": 1,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:test",
+          "start": 1795279059319,
+          "end": 1795279062587,
+          "ms": 3268,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Task.upToDateWhen is false."
+          ],
+          "reasonsTruncated": false
+        }
+      ],
+      "compileNotes": [
+        "Task ':domain:compileJava' is not up-to-date because:",
+        "Task ':domain:jar' is not up-to-date because:",
+        "Task ':app:compileJava' is not up-to-date because:",
+        "Task ':app:compileTestJava' is not up-to-date because:",
+        "Task ':app:test' is not up-to-date because:"
+      ]
+    },
+    {
+      "name": "fresh-checkout-next-edit",
+      "sourceDigest": "297854b6d5db56ae39c1969a6a302429f74a71f2eee5aa69fc2e440be26fdcb2",
+      "wallMs": 5983,
+      "exit": 0,
+      "arguments": "--console=plain --info --max-workers=2 --configuration-cache --build-cache --init-script <dt-dev>/gradle-workspace-observer.gradle :app:test",
+      "configurationCache": "reused",
+      "taskSpanMs": 4429,
+      "taskSumMs": 4434,
+      "tests": {
+        "total": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "tasks": [
+        {
+          "task": ":domain:processResources",
+          "start": 1795279064176,
+          "end": 1795279064187,
+          "ms": 11,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:processResources",
+          "start": 1795279064188,
+          "end": 1795279064189,
+          "ms": 1,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:processTestResources",
+          "start": 1795279064189,
+          "end": 1795279064189,
+          "ms": 0,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":domain:compileJava",
+          "start": 1795279064176,
+          "end": 1795279064990,
+          "ms": 814,
+          "outcome": "EXECUTED",
+          "incremental": true,
+          "reasonCount": 1,
+          "reasons": [
+            "Input property 'stableSources' file <benchmark>/other-checkout/domain/src/main/java/bench/Quote.java has changed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:classes",
+          "start": 1795279064991,
+          "end": 1795279064991,
+          "ms": 0,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:jar",
+          "start": 1795279064992,
+          "end": 1795279065163,
+          "ms": 171,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Input property 'rootSpec$1' file <benchmark>/other-checkout/domain/build/classes/java/main/bench/Quote.class has changed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileJava",
+          "start": 1795279065164,
+          "end": 1795279065265,
+          "ms": 101,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:classes",
+          "start": 1795279065266,
+          "end": 1795279065266,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileTestJava",
+          "start": 1795279065267,
+          "end": 1795279065529,
+          "ms": 262,
+          "outcome": "EXECUTED",
+          "incremental": true,
+          "reasonCount": 1,
+          "reasons": [
+            "Input property 'stableSources' file <benchmark>/other-checkout/app/src/test/java/bench/QuoteTest.java has changed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:testClasses",
+          "start": 1795279065530,
+          "end": 1795279065530,
+          "ms": 0,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:test",
+          "start": 1795279065531,
+          "end": 1795279068605,
+          "ms": 3074,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Task.upToDateWhen is false."
+          ],
+          "reasonsTruncated": false
+        }
+      ],
+      "compileNotes": [
+        "Task ':domain:compileJava' is not up-to-date because:",
+        "Incremental compilation of 2 classes completed in 0.564 secs.",
+        "Task ':domain:jar' is not up-to-date because:",
+        "Task ':app:compileTestJava' is not up-to-date because:",
+        "Incremental compilation of 1 classes completed in 0.173 secs.",
+        "Task ':app:test' is not up-to-date because:"
+      ]
+    },
+    {
+      "name": "return-to-baseline",
+      "sourceDigest": "1555bbdafa3b9278a835e3f11c612c4a271a1b9caecaf4e651e70c21197473a2",
+      "wallMs": 5044,
+      "exit": 0,
+      "arguments": "--console=plain --info --max-workers=2 --configuration-cache --build-cache --init-script <dt-dev>/gradle-workspace-observer.gradle :app:test",
+      "configurationCache": "reused",
+      "taskSpanMs": 3615,
+      "taskSumMs": 3610,
+      "tests": {
+        "total": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "tasks": [
+        {
+          "task": ":domain:processResources",
+          "start": 1795279070069,
+          "end": 1795279070069,
+          "ms": 0,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:processResources",
+          "start": 1795279070070,
+          "end": 1795279070070,
+          "ms": 0,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":app:processTestResources",
+          "start": 1795279070071,
+          "end": 1795279070071,
+          "ms": 0,
+          "outcome": "SKIPPED",
+          "reason": "NO-SOURCE"
+        },
+        {
+          "task": ":domain:compileJava",
+          "start": 1795279070069,
+          "end": 1795279070442,
+          "ms": 373,
+          "outcome": "FROM-CACHE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:classes",
+          "start": 1795279070443,
+          "end": 1795279070443,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":domain:jar",
+          "start": 1795279070444,
+          "end": 1795279070556,
+          "ms": 112,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 3,
+          "reasons": [
+            "Input property 'rootSpec$1' file <benchmark>/original/domain/build/classes/java/main/bench/Quote$QuoteBuilder.class has changed.",
+            "Input property 'rootSpec$1' file <benchmark>/original/domain/build/classes/java/main/bench/Quote.class has changed.",
+            "Input property 'rootSpec$1' file <benchmark>/original/domain/build/classes/java/main/bench/Value1$Value1Builder.class has changed."
+          ],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileJava",
+          "start": 1795279070557,
+          "end": 1795279070588,
+          "ms": 31,
+          "outcome": "FROM-CACHE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:classes",
+          "start": 1795279070588,
+          "end": 1795279070588,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:compileTestJava",
+          "start": 1795279070589,
+          "end": 1795279070602,
+          "ms": 13,
+          "outcome": "FROM-CACHE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:testClasses",
+          "start": 1795279070602,
+          "end": 1795279070602,
+          "ms": 0,
+          "outcome": "UP-TO-DATE",
+          "incremental": false,
+          "reasonCount": 0,
+          "reasons": [],
+          "reasonsTruncated": false
+        },
+        {
+          "task": ":app:test",
+          "start": 1795279070603,
+          "end": 1795279073684,
+          "ms": 3081,
+          "outcome": "EXECUTED",
+          "incremental": false,
+          "reasonCount": 1,
+          "reasons": [
+            "Task.upToDateWhen is false."
+          ],
+          "reasonsTruncated": false
+        }
+      ],
+      "compileNotes": [
+        "Task ':domain:compileJava' is not up-to-date because:",
+        "Task ':domain:jar' is not up-to-date because:",
+        "Task ':app:compileJava' is not up-to-date because:",
+        "Task ':app:compileTestJava' is not up-to-date because:",
+        "Task ':app:test' is not up-to-date because:"
+      ]
+    }
+  ],
+  "assertions": [
+    "Observer survives configuration-cache reuse",
+    "Unchanged compilation is skipped while tests execute",
+    "Warm tests actually execute; passing results are not replayed from cache",
+    "Library body edit 0 avoids consumer production recompilation",
+    "Library body edit 1 avoids consumer production recompilation",
+    "Library body edit 2 avoids consumer production recompilation",
+    "Lombok generated builder exists after an API edit",
+    "Deleted source removes its stale class without clean",
+    "Deleted source removes its generated builder without clean",
+    "Missing generated class is restored without a manual clean",
+    "Declared lombok.config edit invalidates compilation",
+    "Fresh checkout reuses baseline compile outputs by content rather than branch name",
+    "Returning to baseline content restores a retained compile task result"
+  ],
+  "limits": [
+    "Existing Lombok source/test expanded into a synthetic two-module compile/context fixture, not a production service or a Testcontainers latency measurement.",
+    "Legacy comparison models module-clean compile-check followed by test; the current isolated annotation-aware check does not enable build cache explicitly.",
+    "No-configuration-cache and configuration-cache timings include the observer; no uninstrumented-overhead claim.",
+    "First run includes dependency downloads, daemon startup and Gradle script compilation.",
+    "Small sample counts are exploratory, not release performance thresholds."
+  ],
+  "jdk": "Picked up JAVA_TOOL_OPTIONS: -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8\nopenjdk version \"21.0.11\" 2026-04-21 LTS\nOpenJDK Runtime Environment Temurin-21.0.11+10 (build 21.0.11+10-LTS)\nOpenJDK 64-Bit Server VM Temurin-21.0.11+10 (build 21.0.11+10-LTS, mixed mode)",
+  "gradle": "8.5",
+  "comparison": {
+    "legacyEditMs": [
+      9381,
+      9362,
+      7703
+    ],
+    "incrementalEditMs": [
+      5596,
+      5736,
+      5681
+    ],
+    "legacyMedianMs": 9362,
+    "incrementalMedianMs": 5681,
+    "medianSpeedup": 1.65
+  },
+  "passed": true
+}

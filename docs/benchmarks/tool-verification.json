@@ -1,6 +1,6 @@
 {
   "protocol": "dt.release-inventory/v1",
-  "sourceDigest": "1cf833bf56cec03beae38a815d10a7f655698303fe83fbf56e015c1631e09505",
+  "sourceDigest": "14b938006b7e40fa07824e7c99cdfc5e50eed63f7c5871e4703e78bc46066018",
   "tools": [
     {
       "name": "find",
@@ -730,7 +730,8 @@
         "test/views.test.js",
         "test/webui-context.test.js",
         "test/workbench-explorer-ui.test.js",
-        "test/workbench-links.test.js"
+        "test/workbench-links.test.js",
+        "test/workflows.test.js"
       ],
       "integrationReferences": [
         "test/diagrams.live.test.js",
@@ -1037,8 +1038,10 @@
         "test/code.index.test.js",
         "test/flows.test.js",
         "test/semantic-ui.test.js",
+        "test/test-leases-model.test.js",
         "test/tool-contracts.test.js",
-        "test/trace-discovery-eval.test.js"
+        "test/trace-discovery-eval.test.js",
+        "test/workflows.test.js"
       ],
       "integrationReferences": []
     },
@@ -1133,7 +1136,9 @@
       "referenceTests": [
         "test/code-search-fallback.test.js",
         "test/task-model-evaluation.test.js",
+        "test/test-leases-model.test.js",
         "test/workbench.test.js",
+        "test/workflows.test.js",
         "test/workspace-retention.test.js"
       ],
       "integrationReferences": []
@@ -1152,8 +1157,10 @@
         "test/javacheck.live.test.js",
         "test/task-harness.test.js",
         "test/task-model-evaluation.test.js",
+        "test/test-leases-model.test.js",
         "test/testdata.live.test.js",
         "test/workbench-explorer-ui.test.js",
+        "test/workflows.test.js",
         "test/workspace-retention.test.js",
         "test/workspace.live.test.js"
       ],
@@ -1215,6 +1222,7 @@
         "test/flows.live.test.js",
         "test/gradle.live.test.js",
         "test/testdata.live.test.js",
+        "test/workflows.test.js",
         "test/workspace.live.test.js"
       ],
       "integrationReferences": [
@@ -1237,6 +1245,7 @@
         "test/experiments.test.js",
         "test/push.test.js",
         "test/task-harness.test.js",
+        "test/test-leases-model.test.js",
         "test/ui-page-model.test.js",
         "test/workbench-model-eval.test.js",
         "test/workspace-publication.test.js"
@@ -1319,6 +1328,7 @@
         "test/target-secrets.test.js",
         "test/task-model-evaluation.test.js",
         "test/task-results.test.js",
+        "test/test-leases-model.test.js",
         "test/testdata.live.test.js",
         "test/tool-contracts.test.js",
         "test/workbench-explorer-ui.test.js",

@@ -1,7 +1,7 @@
 {
   "protocol": "dt.repo-source/v1",
   "repo": "dev-tool",
-  "sourceDigest": "1cf833bf56cec03beae38a815d10a7f655698303fe83fbf56e015c1631e09505",
+  "sourceDigest": "14b938006b7e40fa07824e7c99cdfc5e50eed63f7c5871e4703e78bc46066018",
   "machines": [
     {
       "id": "IO.atomic-file",
@@ -2766,7 +2766,7 @@
       "consumers": [
         {
           "file": "lib/testrun.js",
-          "line": 516,
+          "line": 522,
           "snippet": "const lifecycle = require('./state-machine').create(require('./lifecycles').testInvocation);"
         }
       ],
@@ -2806,7 +2806,7 @@
       "consumers": [
         {
           "file": "lib/testrun.js",
-          "line": 481,
+          "line": 487,
           "snippet": "const evidence = require('./state-machine').create(require('./lifecycles').testProof);"
         }
       ],

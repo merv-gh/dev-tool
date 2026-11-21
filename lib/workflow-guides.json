@@ -2,6 +2,64 @@
   "version": 1,
   "guides": [
     {
+      "id": "test-dependency-leases",
+      "title": "Adapt integration tests to owned warm dependency leases and container-backed CI",
+      "terms": "testcontainers tests testing test adapter integration spring gradle lombok warm dependency dependencies reuse shared workspace lease leases database postgres kafka datasource profile fast startup cleanup ci mode profile adapter lifecycle",
+      "required": [
+        "Owned workspace and the existing test helper/provider contract",
+        "Explicit provider configuration and runner-reachable owned bindings for every datasource and broker"
+      ],
+      "stages": [
+        {
+          "id": "inspect",
+          "goal": "Read the existing adapter, provider helper, Gradle test task and real application property names. Preserve entry-to-exit assertions. Reuse the helper rather than inventing APIs or another allocator. test_context provides the current test setup.",
+          "tools": [
+            "workspace_read",
+            "test_context",
+            "test_targets"
+          ]
+        },
+        {
+          "id": "select",
+          "goal": "Choose the provider before creating containers or Spring properties: default/CI uses owned container-backed dependencies; explicit workspace mode requires validated warm bindings. Do not infer mode from CI alone: test_run can set CI=true for local builds. Missing/mismatched workspace bindings must fail, never start fallback containers.",
+          "tools": [
+            "workspace_read",
+            "workspace_write"
+          ]
+        },
+        {
+          "id": "bind",
+          "goal": "Acquire before Spring context refresh. DynamicPropertySource must bind EVERY logical database URL/user/password to its actual property prefix, plus the leased Kafka bootstrap and topic. Read the helper types first; do not hardcode localhost, credentials, database names or a shared topic. A Spring profile does not disable unconditional @Container/static startup.",
+          "tools": [
+            "workspace_read",
+            "workspace_write"
+          ]
+        },
+        {
+          "id": "lifetime",
+          "goal": "Reuse compatible dependencies and Spring context within a test JVM. Keep bindings stable for that context. Close the context/clients before releasing owned child database/topic leases. Handle the last selected class AND JVM shutdown: extra forks may never reach a global class count. Keep the caller-owned warm pool alive. Surface cleanup errors.",
+          "tools": [
+            "workspace_write"
+          ]
+        },
+        {
+          "id": "verify",
+          "goal": "Run unchanged tests through test_run mode=build; a mocked database/broker is not proof. Verify CI and workspace configurations, repeated clean leases and two forks, zero workspace container starts, every DB effect, actual Kafka delivery and cleanup. Retain compact reports; measure pool startup separately.",
+          "tools": [
+            "test_run",
+            "workspace_patch"
+          ]
+        }
+      ],
+      "boundaries": [
+        "This guide is a plan, not execution proof or a new test_run profile selector. The repository adapter must consume its actual supplied binding contract.",
+        "test_run fixture_runtime accepts an already-owned native lease with explicit fixture_bindings; the caller retains arm/check/stop ownership. testdb_clone/release are a separate template-lease contract. Do not interchange these IDs or release their parent from test code.",
+        "The benchmark helper allocates child database/topic leases from its owned pool; its internal API is fixture-specific, not a production API.",
+        "Inspect the actual helper and project datasource names before editing. All databases and private topics matter; one primary URL is insufficient.",
+        "Never commit or print ephemeral credentials/URLs. One fresh model/fixture run is exploratory evidence, not a model reliability guarantee."
+      ]
+    },
+    {
       "id": "source-runtime-formal-model",
       "title": "Reflect on a repository with source graphs, TLA+ and OpenTelemetry",
       "terms": "repository self reflection sources state machine lifecycle hierarchy TLA formal model Joern CFG telemetry runtime observed transitions diagram",

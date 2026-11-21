@@ -1,0 +1,107 @@
+{
+  "protocol": "dt.testcontainers-startup-failure/v1",
+  "at": "2026-11-21T17:21:05.746Z",
+  "host": {
+    "platform": "darwin",
+    "arch": "x64",
+    "cpus": 16
+  },
+  "docker": {
+    "Platform": {
+      "Name": "Docker Desktop 4.47.0 (206054)"
+    },
+    "Components": [
+      {
+        "Name": "Engine",
+        "Version": "28.4.0",
+        "Details": {
+          "ApiVersion": "1.51",
+          "Arch": "amd64",
+          "BuildTime": "Wed Sep  3 20:57:37 2025",
+          "Experimental": "false",
+          "GitCommit": "249d679",
+          "GoVersion": "go1.24.7",
+          "KernelVersion": "6.10.14-linuxkit",
+          "MinAPIVersion": "1.24",
+          "Os": "linux"
+        }
+      },
+      {
+        "Name": "containerd",
+        "Version": "1.7.27",
+        "Details": {
+          "GitCommit": "05044ec0a9a75232cad458027ca83437aae3f4da"
+        }
+      },
+      {
+        "Name": "runc",
+        "Version": "1.2.5",
+        "Details": {
+          "GitCommit": "v1.2.5-0-g59923ef"
+        }
+      },
+      {
+        "Name": "docker-init",
+        "Version": "0.19.0",
+        "Details": {
+          "GitCommit": "de40ad0"
+        }
+      }
+    ],
+    "Version": "28.4.0",
+    "ApiVersion": "1.51",
+    "MinAPIVersion": "1.24",
+    "GitCommit": "249d679",
+    "GoVersion": "go1.24.7",
+    "Os": "linux",
+    "Arch": "amd64",
+    "KernelVersion": "6.10.14-linuxkit",
+    "BuildTime": "2025-09-03T20:57:37.000000000+00:00"
+  },
+  "runtime": {
+    "java": "Picked up JAVA_TOOL_OPTIONS: -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8\nopenjdk version \"21.0.11\" 2026-04-21 LTS\nOpenJDK Runtime Environment Temurin-21.0.11+10 (build 21.0.11+10-LTS)\nOpenJDK 64-Bit Server VM Temurin-21.0.11+10 (build 21.0.11+10-LTS, mixed mode)",
+    "gradle": "------------------------------------------------------------\nGradle 8.5\n------------------------------------------------------------\n\nBuild time:   2023-11-29 14:08:57 UTC\nRevision:     28aca86a7180baa17117e0e5ba01d8ea9feca598\n\nKotlin:       1.9.20\nGroovy:       3.0.17\nAnt:          Apache Ant(TM) version 1.10.13 compiled on January 4 2023\nJVM:          21.0.11 (Eclipse Adoptium 21.0.11+10-LTS)\nOS:           Mac OS X 15.0 x86_64"
+  },
+  "image": {
+    "requested": "apache/kafka-native:3.8.0",
+    "id": "sha256:8c671522f7f84d0fd20b1482a1d41fa4544eff02b4027673116d4fa74a508106",
+    "repoDigests": [
+      "apache/kafka-native@sha256:8c671522f7f84d0fd20b1482a1d41fa4544eff02b4027673116d4fa74a508106"
+    ]
+  },
+  "benchmarkState": "failed",
+  "observedContainerState": {
+    "exitCode": 99,
+    "oomKilled": false
+  },
+  "failedRun": {
+    "name": "per-class-parallel-1",
+    "wallMs": 215822,
+    "tests": {
+      "total": 3,
+      "failed": 1
+    },
+    "failures": [
+      {
+        "operation": "container.start",
+        "resource": "kafka",
+        "errorType": "ContainerLaunchException"
+      },
+      {
+        "operation": "dependencies.start",
+        "resource": "set",
+        "errorType": "CompletionException"
+      }
+    ]
+  },
+  "cleanup": {
+    "state": "verified",
+    "containers": 0
+  },
+  "observations": [
+    "Native Kafka failed during process startup before broker readiness.",
+    "Container logs reported a GraalVM segmentation fault; its failing stack included Pwd.getpwuid and PosixSystemPropertiesSupport.userHomeValue.",
+    "Earlier successful native-image samples are excluded from the completed JVM-image comparison."
+  ],
+  "decision": "Use apache/kafka:3.8.0 by default; native image remains an explicit override. No automatic image fallback."
+}

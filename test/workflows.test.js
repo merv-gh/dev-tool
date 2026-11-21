@@ -11,6 +11,7 @@ test('compound requests route to explicit multi-stage guides without changing le
     ['recreate bug locally find related entities in databases es kafka messages state', 'reproduce-state', 'fixture_plan'],
     ['refactor method takes postgres function results fills fields compare locally and dev environment', 'differential-refactor', 'impact'],
     ['run this test on dev environment', 'test-target', 'test_run'],
+    ['speed up testcontainers with warm workspace dependency leases', 'test-dependency-leases', 'test_run'],
   ];
   for (const [query, id, capability] of cases) {
     const r = await T.call('tool_search', { query });
@@ -24,6 +25,21 @@ test('compound requests route to explicit multi-stage guides without changing le
   const r = await T.call('tool_search', { query: 'the unknown frobnicator' });
   assert.deepEqual(r.workflows, []);
   await assert.rejects(T.call('workflow_plan', { id: 'not-a-workflow' }), /Unknown workflow/);
+});
+test('a code category filter keeps relevant lease guidance while preserving tool filtering',async()=>{
+ const result=await T.call('tool_search',{query:'workspace warm dependency leases',group:'code',limit:5});
+ assert.equal(result.tools[0].name,'test_context');
+ assert.ok(result.tools.every(t=>t.group==='code'));
+ assert.ok(result.workflows.some(g=>g.id==='test-dependency-leases'));
+ assert.ok(Buffer.byteLength(JSON.stringify(result))<=4096);
+ const guide=await T.call('workflow_plan',{id:'test-dependency-leases'});
+ assert.match(JSON.stringify(guide),/CI=true|CI alone/);
+ assert.match(JSON.stringify(guide),/EVERY logical database/);
+ assert.match(JSON.stringify(guide),/caller-owned warm pool/);
+ const profile=await T.schemas({profile:'workspace-tests'});
+ assert.equal(profile.length,11);
+ assert.ok(profile.some(t=>t.name==='code_search'));
+ for(const name of ['workflow_plan','workspace_read','workspace_write','test_context','test_run'])assert.ok(profile.some(t=>t.name===name));
 });
 test('built-in guides reference actual registered capability names', async () => {
   const enabled = new Set((await T.schemas({ metadata: true })).map(t => t.name));
