@@ -1,0 +1,168 @@
+{
+  "protocol": "dt.person-practice-verification/v1",
+  "passed": true,
+  "model": {
+    "model": "qwen3.8:27b",
+    "cases": 23,
+    "repaired": 23,
+    "modelRequests": 23,
+    "modelMs": 624656,
+    "inputTokens": 128886,
+    "outputTokens": 3105
+  },
+  "independent": {
+    "cases": 23,
+    "httpChecks": 5934,
+    "dates": [
+      "2026-11-18",
+      "2026-11-20",
+      "2026-11-22"
+    ],
+    "seed": 137,
+    "people": 85,
+    "allPassed": true,
+    "newPeople": 68,
+    "publicRegressionPeople": 17
+  },
+  "joern": {
+    "version": "4.0.533",
+    "cases": [
+      {
+        "mutation": "annulled",
+        "contextChanges": 5,
+        "compactBytes": 4755
+      },
+      {
+        "mutation": "resultset-column",
+        "contextChanges": 2,
+        "compactBytes": 4782
+      }
+    ],
+    "runtimeProof": false
+  },
+  "browser": {
+    "passed": true,
+    "author": "qwen3.5:4b evaluated patch",
+    "checked": 52,
+    "flows": [
+      "real-PG-Spring-before",
+      "exclusion-and-winner",
+      "human-save-retains-contract",
+      "reload",
+      "immutable-before-inline",
+      "repaired-after-inline",
+      "collapsed-passing-checks",
+      "mobile-no-overflow"
+    ],
+    "screenshots": [
+      "person-joern-paths.png",
+      "person-mapping-after.png",
+      "person-mapping-before.png",
+      "person-mapping-mobile.png"
+    ],
+    "pathControls": {
+      "passed": true,
+      "evidence": "Actual saved Joern traces; no new/mock semantic analysis",
+      "checks": [
+        "actual-source-diff-annulled",
+        "value-graph",
+        "control-graph",
+        "no-browser-errors"
+      ]
+    }
+  },
+  "coverage": {
+    "scope": "selected-files; not full-repository coverage",
+    "sourceDigest": "c2583b4fc2bbc78eb6c8b87e348b501468631346a0a66f803a93de77d1710cb2",
+    "tests": {
+      "tests": 47,
+      "failed": 0,
+      "passed": 47,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "topLevel": 47,
+      "suites": 0
+    },
+    "files": [
+      {
+        "path": "lib/mapping-selection.js",
+        "lines": {
+          "hit": 104,
+          "total": 105,
+          "percent": 99
+        },
+        "functions": {
+          "hit": 12,
+          "total": 14,
+          "percent": 85.7
+        },
+        "branches": {
+          "hit": 123,
+          "total": 133,
+          "percent": 92.5
+        }
+      },
+      {
+        "path": "lib/mapping-source.js",
+        "lines": {
+          "hit": 38,
+          "total": 38,
+          "percent": 100
+        },
+        "functions": {
+          "hit": 11,
+          "total": 11,
+          "percent": 100
+        },
+        "branches": {
+          "hit": 35,
+          "total": 42,
+          "percent": 83.3
+        }
+      }
+    ]
+  },
+  "sourceHashes": {
+    "lib/mapping-debugger.js": "60c94c13c52b7f74e1ba7e180fda8c73659db2503243d3f927766539e11be839",
+    "lib/mapping-selection.js": "8823966235cdfcdc7d57c6b2ccb2af1e7840d65b9d205f06856f90c011785939",
+    "lib/mapping-source.js": "f718358a9b1032ab8cb9663fe122c9e428977234734ee7a2b450e284dacbe377",
+    "lib/tools-semantic.js": "0539b51fc521352aba734926d9b8eb3d886560170a80f7e650b0cf13cd330302",
+    "lib/semantic-code.js": "5e8479d9059c2aeadf6820c2c7b976bf2afd779e41eb8feae51f498d2aa32095",
+    "lib/workflow-guides.json": "7c38783b372674fd8a9667ec5fffc24445fb9aa3e1adf3ab624168a294e88cae",
+    "dev/eval-person-mutations.js": "e7889e6f6c20cfd1bc6f3b71a0333cf578a27c655d8f7e7d647f9a555a68b5b4",
+    "dev/verify-person-candidates.js": "60202c0375ede927f174e7786c066f62d99a28c05223710388803577ba11c763"
+  },
+  "checks": {
+    "changedTests": {
+      "passed": 1298,
+      "skipped": 15,
+      "failed": 0
+    },
+    "targeted": {
+      "passed": 55,
+      "failed": 0,
+      "command": "node --test test/person-mutations.test.js test/mapping-selection.test.js test/mapping-source.test.js test/mapping-debugger.test.js test/mapping-debugger-ui.test.js test/workflows.test.js test/semantic-runtime.test.js test/semantic-ui.test.js"
+    },
+    "liveMutationGate": {
+      "passed": true,
+      "cases": 23
+    },
+    "buildCheck": true,
+    "distTests": {
+      "passed": 7,
+      "failed": 0
+    }
+  },
+  "limits": [
+    "Finite corpus and small pilots, not production completeness or a controlled comparison.",
+    "Staged results include harness precollection and independent verification; they do not prove autonomous tool discovery.",
+    "Qwen 4B did not reliably repair the table-source case; stronger-model or human escalation remains necessary."
+  ],
+  "cleanup": {
+    "databaseContainers": 0,
+    "ownedSemanticWorkerRemoved": true,
+    "verified": true
+  },
+  "sourceDigest": "c2583b4fc2bbc78eb6c8b87e348b501468631346a0a66f803a93de77d1710cb2"
+}

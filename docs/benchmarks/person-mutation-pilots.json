@@ -1,0 +1,2390 @@
+{
+  "protocol": "dt.person-pilots/v1",
+  "limits": [
+    "Development runs changed model settings, fixtures, guidance and tool revisions. These are not controlled A/B comparisons.",
+    "The first model-initial run had invalid PG configuration and is excluded from scoring.",
+    "The cancelled broad 4B campaign is inconclusive as a campaign.",
+    "Negative cases and unsuccessful follow-up remain included; no human edits count as model success."
+  ],
+  "runs": [
+    {
+      "name": "model-existing-tools",
+      "protocol": "dt.person-mutations/v1",
+      "startedAt": "2026-11-22T14:17:53.354Z",
+      "completedAt": "2026-11-22T14:19:27.800Z",
+      "model": "qwen3.5:4b",
+      "think": false,
+      "seed": 42,
+      "copies": 3,
+      "advertised": {
+        "name": "qwen3.5:4b",
+        "digest": "d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04",
+        "details": {
+          "parent_model": "model.gguf",
+          "format": "gguf",
+          "family": "qwen35",
+          "families": [
+            "qwen35"
+          ],
+          "parameter_size": "4.2B",
+          "quantization_level": "Q4_K_M",
+          "context_length": 262144,
+          "embedding_length": 2560,
+          "runner": "llamacpp"
+        }
+      },
+      "fixtureDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+      "passed": false,
+      "cleanup": {
+        "verified": true
+      },
+      "limits": [
+        "Finite synthetic corpus, not proof of catching all production mapping bugs.",
+        "Joern provides static paths/conditions; runtime PostgreSQL and HTTP assertions grade behavior independently.",
+        "Private oracle, build configuration and tests are outside the model edit boundary.",
+        "These are inference-time practice runs, not model weight training."
+      ],
+      "originalReportSha256": "1713423d531bc7fe31f0ef253ce3d95a342f36777c36dc69df8ac24a9dd839c9",
+      "baseline": {
+        "passed": true,
+        "checked": 52,
+        "failures": [],
+        "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+      },
+      "cases": [
+        {
+          "id": "case-5008ef8c",
+          "mutation": "annulled",
+          "killed": true,
+          "passed": false,
+          "finish": "repeated-tool-error",
+          "turns": 4,
+          "modelMs": 2734,
+          "usage": {
+            "input": 39871,
+            "output": 278
+          },
+          "schemaBytes": 37313,
+          "peakRequestBytes": 42539,
+          "promptSha256": "083f506408ae54ff40da1d54966f334d087f6d385eef1bdd269cbc5751a4714f",
+          "transcriptSha256": "568e27b2963f1df89445ae316da1b16967e8c502f09f45270753cdc94d150a29",
+          "protectedUnchanged": true,
+          "before": {
+            "passed": false,
+            "checked": 52,
+            "failures": [
+              {
+                "id": 101,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Отменённая"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Отменённая Анна Петровна"
+                  },
+                  {
+                    "path": "/sourceDocumentId",
+                    "expected": 1011,
+                    "actual": 1012
+                  },
+                  {
+                    "path": "/effectiveFrom",
+                    "expected": "2026-10-21",
+                    "actual": "2026-11-19"
+                  }
+                ]
+              },
+              {
+                "id": 115,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Смирнов",
+                    "actual": "Иванова"
+                  },
+                  {
+                    "path": "/fio/firstName",
+                    "expected": "Иван",
+                    "actual": "Анна"
+                  },
+                  {
+                    "path": "/fio/patronymic",
+                    "expected": "Ильич",
+                    "actual": "Петровна"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Смирнов Иван Ильич",
+                    "actual": "Иванова Анна Петровна"
+                  },
+                  {
+                    "path": "/sourceDocumentId",
+                    "expected": null,
+                    "actual": 1152
+                  },
+                  {
+                    "path": "/effectiveFrom",
+                    "expected": null,
+                    "actual": "2026-10-21"
+                  }
+                ]
+              }
+            ],
+            "sourceDigest": "b2f79a4fcde13fcad7575ff186645d6ccfbecd86868068bf5fd554d313618ae0",
+            "failedCases": 6
+          },
+          "after": {
+            "passed": false,
+            "checked": 52,
+            "failures": [
+              {
+                "id": 101,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Отменённая"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Отменённая Анна Петровна"
+                  },
+                  {
+                    "path": "/sourceDocumentId",
+                    "expected": 1011,
+                    "actual": 1012
+                  },
+                  {
+                    "path": "/effectiveFrom",
+                    "expected": "2026-10-21",
+                    "actual": "2026-11-19"
+                  }
+                ]
+              },
+              {
+                "id": 115,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Смирнов",
+                    "actual": "Иванова"
+                  },
+                  {
+                    "path": "/fio/firstName",
+                    "expected": "Иван",
+                    "actual": "Анна"
+                  },
+                  {
+                    "path": "/fio/patronymic",
+                    "expected": "Ильич",
+                    "actual": "Петровна"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Смирнов Иван Ильич",
+                    "actual": "Иванова Анна Петровна"
+                  },
+                  {
+                    "path": "/sourceDocumentId",
+                    "expected": null,
+                    "actual": 1152
+                  },
+                  {
+                    "path": "/effectiveFrom",
+                    "expected": null,
+                    "actual": "2026-10-21"
+                  }
+                ]
+              }
+            ],
+            "sourceDigest": "b2f79a4fcde13fcad7575ff186645d6ccfbecd86868068bf5fd554d313618ae0",
+            "failedCases": 6
+          },
+          "patch": "",
+          "toolUse": {
+            "model:workspace_read": {
+              "calls": 1,
+              "errors": 0,
+              "ms": 85,
+              "responseBytes": 1778
+            },
+            "model:code_search": {
+              "calls": 3,
+              "errors": 3,
+              "ms": 10,
+              "responseBytes": 111
+            }
+          }
+        },
+        {
+          "id": "case-979e9307",
+          "mutation": "resultset-column",
+          "killed": true,
+          "passed": false,
+          "finish": "turn-budget",
+          "turns": 18,
+          "modelMs": 18091,
+          "usage": {
+            "input": 235664,
+            "output": 2134
+          },
+          "schemaBytes": 37313,
+          "peakRequestBytes": 66042,
+          "promptSha256": "cf30625854df9a509a2a5e76f02035620ec705f2ae211bc0bd2a024a91265123",
+          "transcriptSha256": "e7c82632e716a2e794ba6a0de24dd1efc746682eab09cf7b19567a6c34587b45",
+          "protectedUnchanged": true,
+          "before": {
+            "passed": false,
+            "checked": 52,
+            "failures": [
+              {
+                "id": 101,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Анна"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Анна Анна Петровна"
+                  }
+                ]
+              },
+              {
+                "id": 102,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Анна"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Анна Анна Петровна"
+                  }
+                ]
+              }
+            ],
+            "sourceDigest": "40af1f3f9ff65bc4f5ee3a6108bac0d4ec726cadf14cd9c216fb6815c68da02c",
+            "failedCases": 45
+          },
+          "after": {
+            "passed": false,
+            "checked": 52,
+            "failures": [
+              {
+                "id": 101,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Анна"
+                  },
+                  {
+                    "path": "/fio/firstName",
+                    "expected": "Анна",
+                    "actual": "Иванова"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Анна Иванова Петровна"
+                  }
+                ]
+              },
+              {
+                "id": 102,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Анна"
+                  },
+                  {
+                    "path": "/fio/firstName",
+                    "expected": "Анна",
+                    "actual": "Иванова"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Анна Иванова Петровна"
+                  }
+                ]
+              }
+            ],
+            "sourceDigest": "9b07740f00e76cf805fef1c3f4fb63c239fd3ae9c996359db2c9955869faf674",
+            "failedCases": 45
+          },
+          "patch": "diff --git a/src/main/java/person/PersonRepository.java b/src/main/java/person/PersonRepository.java\nindex 3087f75..ed97f91 100644\n--- a/src/main/java/person/PersonRepository.java\n+++ b/src/main/java/person/PersonRepository.java\n@@ -28,7 +28,7 @@ public class PersonRepository {\n             JOIN registry.document_state s ON s.document_id = d.id\n             WHERE d.person_id = ?\n             \"\"\", (rs, row) -> new Document(rs.getLong(\"id\"),\n-                new Name(rs.getString(\"first_name\"), rs.getString(\"first_name\"), rs.getString(\"middle_name\")),\n+                new Name(rs.getString(\"first_name\"), rs.getString(\"last_name\"), rs.getString(\"middle_name\")),\n                 rs.getObject(\"birth_date\", LocalDate.class), rs.getObject(\"issued_on\", LocalDate.class),\n                 rs.getObject(\"effective_from\", LocalDate.class), rs.getObject(\"expires_on\", LocalDate.class),\n                 rs.getBoolean(\"active\"), rs.getBoolean(\"annulled\")), personId);",
+          "toolUse": {
+            "model:workspace_read": {
+              "calls": 5,
+              "errors": 0,
+              "ms": 23,
+              "responseBytes": 8143
+            },
+            "model:code_search": {
+              "calls": 7,
+              "errors": 0,
+              "ms": 276,
+              "responseBytes": 3422
+            },
+            "model:test_run": {
+              "calls": 2,
+              "errors": 0,
+              "ms": 14035,
+              "responseBytes": 4720
+            },
+            "model:workspace_write": {
+              "calls": 1,
+              "errors": 0,
+              "ms": 9,
+              "responseBytes": 214
+            },
+            "model:pg_query": {
+              "calls": 3,
+              "errors": 1,
+              "ms": 103,
+              "responseBytes": 652
+            }
+          }
+        },
+        {
+          "id": "case-bcaf0220",
+          "mutation": "archived-table",
+          "killed": true,
+          "passed": false,
+          "finish": "repeated-tool-error",
+          "turns": 4,
+          "modelMs": 2434,
+          "usage": {
+            "input": 39541,
+            "output": 254
+          },
+          "schemaBytes": 37313,
+          "peakRequestBytes": 42398,
+          "promptSha256": "fdb8694c3373b81e721543fb1bc99643a24c4c7b776a864752ca374f45ec6a5e",
+          "transcriptSha256": "b4c36b67e8354463311c7ee88f7ff02434b370438231fb17636178b1f3cca56a",
+          "protectedUnchanged": true,
+          "before": {
+            "passed": false,
+            "checked": 52,
+            "failures": [
+              {
+                "id": 101,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Архив-Иванова"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Архив-Иванова Анна Петровна"
+                  }
+                ]
+              },
+              {
+                "id": 102,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Архив-Иванова"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Архив-Иванова Анна Петровна"
+                  }
+                ]
+              }
+            ],
+            "sourceDigest": "58e3b2b5e00366a4685bcb1dd6710c36e60f4a7e1a5d723d230af8c4c18da5e7",
+            "failedCases": 45
+          },
+          "after": {
+            "passed": false,
+            "checked": 52,
+            "failures": [
+              {
+                "id": 101,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Архив-Иванова"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Архив-Иванова Анна Петровна"
+                  }
+                ]
+              },
+              {
+                "id": 102,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Архив-Иванова"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Архив-Иванова Анна Петровна"
+                  }
+                ]
+              }
+            ],
+            "sourceDigest": "58e3b2b5e00366a4685bcb1dd6710c36e60f4a7e1a5d723d230af8c4c18da5e7",
+            "failedCases": 45
+          },
+          "patch": "",
+          "toolUse": {
+            "model:workspace_read": {
+              "calls": 1,
+              "errors": 0,
+              "ms": 5,
+              "responseBytes": 1778
+            },
+            "model:code_search": {
+              "calls": 3,
+              "errors": 3,
+              "ms": 10,
+              "responseBytes": 111
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "model-thinking",
+      "protocol": "dt.person-mutations/v1",
+      "startedAt": "2026-11-22T14:25:53.762Z",
+      "completedAt": "2026-11-22T14:28:41.469Z",
+      "model": "qwen3.5:4b",
+      "think": true,
+      "seed": 42,
+      "copies": 3,
+      "advertised": {
+        "name": "qwen3.5:4b",
+        "digest": "d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04",
+        "details": {
+          "parent_model": "model.gguf",
+          "format": "gguf",
+          "family": "qwen35",
+          "families": [
+            "qwen35"
+          ],
+          "parameter_size": "4.2B",
+          "quantization_level": "Q4_K_M",
+          "context_length": 262144,
+          "embedding_length": 2560,
+          "runner": "llamacpp"
+        }
+      },
+      "fixtureDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+      "passed": false,
+      "cleanup": {
+        "verified": true
+      },
+      "limits": [
+        "Finite synthetic corpus, not proof of catching all production mapping bugs.",
+        "Joern provides static paths/conditions; runtime PostgreSQL and HTTP assertions grade behavior independently.",
+        "Private oracle, build configuration and tests are outside the model edit boundary.",
+        "These are inference-time practice runs, not model weight training."
+      ],
+      "originalReportSha256": "bb49e750318cafc5cdb6968d1b55b691e9b800abf732f22b58ddc1840673c462",
+      "baseline": {
+        "passed": true,
+        "checked": 52,
+        "failures": [],
+        "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+      },
+      "cases": [
+        {
+          "id": "case-5008ef8c",
+          "mutation": "annulled",
+          "killed": true,
+          "passed": false,
+          "finish": "turn-budget",
+          "turns": 24,
+          "modelMs": 31507,
+          "usage": {
+            "input": 339515,
+            "output": 4048
+          },
+          "schemaBytes": 37313,
+          "peakRequestBytes": 73733,
+          "promptSha256": "b467758abd7a8fe83ec1e37fe1fdee9ea8eaead73e428a09f34485e2eff2ffcb",
+          "transcriptSha256": "bd9dfecca677c81e9c6d4ef5cffe96fd4c9f13b424987781f857deafd3a33c4b",
+          "protectedUnchanged": true,
+          "before": {
+            "passed": false,
+            "checked": 52,
+            "failures": [
+              {
+                "id": 101,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Отменённая"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Отменённая Анна Петровна"
+                  },
+                  {
+                    "path": "/sourceDocumentId",
+                    "expected": 1011,
+                    "actual": 1012
+                  },
+                  {
+                    "path": "/effectiveFrom",
+                    "expected": "2026-10-21",
+                    "actual": "2026-11-19"
+                  }
+                ]
+              },
+              {
+                "id": 115,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Смирнов",
+                    "actual": "Иванова"
+                  },
+                  {
+                    "path": "/fio/firstName",
+                    "expected": "Иван",
+                    "actual": "Анна"
+                  },
+                  {
+                    "path": "/fio/patronymic",
+                    "expected": "Ильич",
+                    "actual": "Петровна"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Смирнов Иван Ильич",
+                    "actual": "Иванова Анна Петровна"
+                  },
+                  {
+                    "path": "/sourceDocumentId",
+                    "expected": null,
+                    "actual": 1152
+                  },
+                  {
+                    "path": "/effectiveFrom",
+                    "expected": null,
+                    "actual": "2026-10-21"
+                  }
+                ]
+              }
+            ],
+            "sourceDigest": "b2f79a4fcde13fcad7575ff186645d6ccfbecd86868068bf5fd554d313618ae0",
+            "failedCases": 6
+          },
+          "after": {
+            "passed": false,
+            "checked": 52,
+            "failures": [
+              {
+                "id": 108,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "ПриоритетID",
+                    "actual": "Иванова"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "ПриоритетID Анна Петровна",
+                    "actual": "Иванова Анна Петровна"
+                  },
+                  {
+                    "path": "/sourceDocumentId",
+                    "expected": 1082,
+                    "actual": 1081
+                  }
+                ]
+              },
+              {
+                "id": 11108,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "ПриоритетID",
+                    "actual": "Иванова-42-1"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "ПриоритетID Анна Петровна",
+                    "actual": "Иванова-42-1 Анна Петровна"
+                  },
+                  {
+                    "path": "/sourceDocumentId",
+                    "expected": 111082,
+                    "actual": 111081
+                  }
+                ]
+              }
+            ],
+            "sourceDigest": "6ec555e7f456f7be06e90373da5d572377bc8fe23957948788c1bd809dd3d3f5",
+            "failedCases": 3
+          },
+          "patch": "diff --git a/src/main/java/person/DocumentPolicy.java b/src/main/java/person/DocumentPolicy.java\nindex d959ab2..99a4204 100644\n--- a/src/main/java/person/DocumentPolicy.java\n+++ b/src/main/java/person/DocumentPolicy.java\n@@ -9,7 +9,7 @@ public final class DocumentPolicy {\n     private DocumentPolicy() {}\n     public static boolean eligible(Document d, LocalDate asOf) {\n         return d.active()\n-            && true\n+            && !d.annulled()\n             && !d.effectiveFrom().isAfter(asOf)\n             && (d.expiresOn() == null || !d.expiresOn().isBefore(asOf))\n             && d.name().complete();\n@@ -17,7 +17,8 @@ public final class DocumentPolicy {\n     public static Document choose(List<Document> documents, LocalDate asOf) {\n         return documents.stream()\n             .filter(d -> eligible(d, asOf))\n-            .max(Comparator.comparing(Document::effectiveFrom).thenComparingLong(Document::id))\n+            .max(Comparator.comparing(Document::effectiveFrom).reversed()\n+                .thenComparingLong(Document::id).reversed())\n             .orElse(null);\n     }\n }",
+          "toolUse": {
+            "model:workspace_read": {
+              "calls": 7,
+              "errors": 0,
+              "ms": 168,
+              "responseBytes": 10216
+            },
+            "model:code_search": {
+              "calls": 11,
+              "errors": 2,
+              "ms": 332,
+              "responseBytes": 4608
+            },
+            "model:pg_query": {
+              "calls": 2,
+              "errors": 1,
+              "ms": 47,
+              "responseBytes": 558
+            },
+            "model:workspace_write": {
+              "calls": 1,
+              "errors": 0,
+              "ms": 26,
+              "responseBytes": 211
+            },
+            "model:test_run": {
+              "calls": 1,
+              "errors": 0,
+              "ms": 7636,
+              "responseBytes": 1082
+            },
+            "model:api_request_replay": {
+              "calls": 1,
+              "errors": 1,
+              "ms": 0,
+              "responseBytes": 48
+            },
+            "model:semantic_index": {
+              "calls": 2,
+              "errors": 0,
+              "ms": 30,
+              "responseBytes": 600
+            }
+          }
+        },
+        {
+          "id": "case-979e9307",
+          "mutation": "resultset-column",
+          "killed": true,
+          "passed": true,
+          "finish": "assistant-finished",
+          "turns": 20,
+          "modelMs": 32336,
+          "usage": {
+            "input": 275776,
+            "output": 4126
+          },
+          "schemaBytes": 37313,
+          "peakRequestBytes": 75488,
+          "promptSha256": "bdac0390494d707b2b60f0c9118889203065663f1874ae575ef6e156f573e87c",
+          "transcriptSha256": "71805741a31f345c6cedec3efee7f07ca52f1c9936044163239abb7725a8a6c0",
+          "protectedUnchanged": true,
+          "before": {
+            "passed": false,
+            "checked": 52,
+            "failures": [
+              {
+                "id": 101,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Анна"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Анна Анна Петровна"
+                  }
+                ]
+              },
+              {
+                "id": 102,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Анна"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Анна Анна Петровна"
+                  }
+                ]
+              }
+            ],
+            "sourceDigest": "40af1f3f9ff65bc4f5ee3a6108bac0d4ec726cadf14cd9c216fb6815c68da02c",
+            "failedCases": 45
+          },
+          "after": {
+            "passed": true,
+            "checked": 52,
+            "failures": [],
+            "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+            "failedCases": 0
+          },
+          "patch": "diff --git a/src/main/java/person/PersonRepository.java b/src/main/java/person/PersonRepository.java\nindex 3087f75..11f165e 100644\n--- a/src/main/java/person/PersonRepository.java\n+++ b/src/main/java/person/PersonRepository.java\n@@ -28,7 +28,7 @@ public class PersonRepository {\n             JOIN registry.document_state s ON s.document_id = d.id\n             WHERE d.person_id = ?\n             \"\"\", (rs, row) -> new Document(rs.getLong(\"id\"),\n-                new Name(rs.getString(\"first_name\"), rs.getString(\"first_name\"), rs.getString(\"middle_name\")),\n+                new Name(rs.getString(\"last_name\"), rs.getString(\"first_name\"), rs.getString(\"middle_name\")),\n                 rs.getObject(\"birth_date\", LocalDate.class), rs.getObject(\"issued_on\", LocalDate.class),\n                 rs.getObject(\"effective_from\", LocalDate.class), rs.getObject(\"expires_on\", LocalDate.class),\n                 rs.getBoolean(\"active\"), rs.getBoolean(\"annulled\")), personId);",
+          "toolUse": {
+            "model:workspace_read": {
+              "calls": 7,
+              "errors": 0,
+              "ms": 37,
+              "responseBytes": 10226
+            },
+            "model:code_search": {
+              "calls": 8,
+              "errors": 2,
+              "ms": 74,
+              "responseBytes": 5039
+            },
+            "model:pg_query": {
+              "calls": 1,
+              "errors": 0,
+              "ms": 52,
+              "responseBytes": 660
+            },
+            "model:workspace_write": {
+              "calls": 1,
+              "errors": 0,
+              "ms": 7,
+              "responseBytes": 214
+            },
+            "model:test_run": {
+              "calls": 1,
+              "errors": 0,
+              "ms": 5796,
+              "responseBytes": 1082
+            },
+            "model:api_request_replay": {
+              "calls": 1,
+              "errors": 0,
+              "ms": 5251,
+              "responseBytes": 1159
+            }
+          }
+        },
+        {
+          "id": "case-bcaf0220",
+          "mutation": "archived-table",
+          "killed": true,
+          "passed": false,
+          "finish": "turn-budget",
+          "turns": 24,
+          "modelMs": 26174,
+          "usage": {
+            "input": 331877,
+            "output": 3209
+          },
+          "schemaBytes": 37313,
+          "peakRequestBytes": 71800,
+          "promptSha256": "ed835a3c6b20f50109b45f5516104654138dfcb189cd95006670c6b16dbc5853",
+          "transcriptSha256": "b2c6c80b73f8b751540f0b35276de1fc2564d5182766c013e28b297c53910f44",
+          "protectedUnchanged": true,
+          "before": {
+            "passed": false,
+            "checked": 52,
+            "failures": [
+              {
+                "id": 101,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Архив-Иванова"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Архив-Иванова Анна Петровна"
+                  }
+                ]
+              },
+              {
+                "id": 102,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Архив-Иванова"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Архив-Иванова Анна Петровна"
+                  }
+                ]
+              }
+            ],
+            "sourceDigest": "58e3b2b5e00366a4685bcb1dd6710c36e60f4a7e1a5d723d230af8c4c18da5e7",
+            "failedCases": 45
+          },
+          "after": {
+            "passed": false,
+            "checked": 52,
+            "failures": [
+              {
+                "id": 101,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Архив-Иванова"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Архив-Иванова Анна Петровна"
+                  }
+                ]
+              },
+              {
+                "id": 102,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Архив-Иванова"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Архив-Иванова Анна Петровна"
+                  }
+                ]
+              }
+            ],
+            "sourceDigest": "58e3b2b5e00366a4685bcb1dd6710c36e60f4a7e1a5d723d230af8c4c18da5e7",
+            "failedCases": 45
+          },
+          "patch": "",
+          "toolUse": {
+            "model:workspace_read": {
+              "calls": 8,
+              "errors": 0,
+              "ms": 38,
+              "responseBytes": 11572
+            },
+            "model:code_search": {
+              "calls": 14,
+              "errors": 2,
+              "ms": 161,
+              "responseBytes": 6004
+            },
+            "model:pg_query": {
+              "calls": 3,
+              "errors": 2,
+              "ms": 41,
+              "responseBytes": 753
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "model-guided-pilot",
+      "protocol": "dt.person-mutations/v1",
+      "startedAt": "2026-11-22T14:40:09.466Z",
+      "completedAt": "2026-11-22T14:44:55.741Z",
+      "model": "qwen3.5:4b",
+      "think": true,
+      "guided": true,
+      "seed": 42,
+      "copies": 3,
+      "advertised": {
+        "name": "qwen3.5:4b",
+        "digest": "d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04",
+        "details": {
+          "parent_model": "model.gguf",
+          "format": "gguf",
+          "family": "qwen35",
+          "families": [
+            "qwen35"
+          ],
+          "parameter_size": "4.2B",
+          "quantization_level": "Q4_K_M",
+          "context_length": 262144,
+          "embedding_length": 2560,
+          "runner": "llamacpp"
+        }
+      },
+      "fixtureDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+      "passed": false,
+      "cleanup": {
+        "verified": true
+      },
+      "limits": [
+        "Finite synthetic corpus, not proof of catching all production mapping bugs.",
+        "Joern provides static paths/conditions; runtime PostgreSQL and HTTP assertions grade behavior independently.",
+        "Private oracle, build configuration and tests are outside the model edit boundary.",
+        "These are inference-time practice runs, not model weight training."
+      ],
+      "originalReportSha256": "a8bf9f591ddf0638a27e686bcc79a40479a965d222d8e55e23f0563a82599186",
+      "baseline": {
+        "passed": true,
+        "checked": 52,
+        "failures": [],
+        "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+      },
+      "cases": [
+        {
+          "id": "case-5008ef8c",
+          "mutation": "annulled",
+          "killed": true,
+          "passed": true,
+          "finish": "assistant-finished",
+          "turns": 9,
+          "modelMs": 23559,
+          "usage": {
+            "input": 145337,
+            "output": 2771
+          },
+          "schemaBytes": 37906,
+          "peakRequestBytes": 79643,
+          "promptSha256": "4f097edf891ee204b4a01b453b3d13c8d6f840a8b9f32496b682fc2e616f1d5b",
+          "transcriptSha256": "5c4e656bb590ede13cd5b2279a643b326faa5269164c9abf2acb9d6fcf2738a8",
+          "protectedUnchanged": true,
+          "before": {
+            "passed": false,
+            "checked": 52,
+            "failures": [
+              {
+                "id": 101,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Отменённая"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Отменённая Анна Петровна"
+                  },
+                  {
+                    "path": "/sourceDocumentId",
+                    "expected": 1011,
+                    "actual": 1012
+                  },
+                  {
+                    "path": "/effectiveFrom",
+                    "expected": "2026-10-21",
+                    "actual": "2026-11-19"
+                  }
+                ]
+              },
+              {
+                "id": 115,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Смирнов",
+                    "actual": "Иванова"
+                  },
+                  {
+                    "path": "/fio/firstName",
+                    "expected": "Иван",
+                    "actual": "Анна"
+                  },
+                  {
+                    "path": "/fio/patronymic",
+                    "expected": "Ильич",
+                    "actual": "Петровна"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Смирнов Иван Ильич",
+                    "actual": "Иванова Анна Петровна"
+                  },
+                  {
+                    "path": "/sourceDocumentId",
+                    "expected": null,
+                    "actual": 1152
+                  },
+                  {
+                    "path": "/effectiveFrom",
+                    "expected": null,
+                    "actual": "2026-10-21"
+                  }
+                ]
+              }
+            ],
+            "sourceDigest": "b2f79a4fcde13fcad7575ff186645d6ccfbecd86868068bf5fd554d313618ae0",
+            "failedCases": 6
+          },
+          "after": {
+            "passed": true,
+            "checked": 52,
+            "failures": [],
+            "sourceDigest": "d6cf7161fdc79715bb6be27a614a59f63f31009add246faca3907050193809fb",
+            "failedCases": 0
+          },
+          "patch": "diff --git a/src/main/java/person/DocumentPolicy.java b/src/main/java/person/DocumentPolicy.java\nindex d959ab2..980c0e7 100644\n--- a/src/main/java/person/DocumentPolicy.java\n+++ b/src/main/java/person/DocumentPolicy.java\n@@ -9,6 +9,7 @@ public final class DocumentPolicy {\n     private DocumentPolicy() {}\n     public static boolean eligible(Document d, LocalDate asOf) {\n         return d.active()\n+            && !d.annulled()\n             && true\n             && !d.effectiveFrom().isAfter(asOf)\n             && (d.expiresOn() == null || !d.expiresOn().isBefore(asOf))",
+          "toolUse": {
+            "model:mapping_debug": {
+              "calls": 3,
+              "errors": 0,
+              "ms": 13861,
+              "responseBytes": 24047
+            },
+            "model:pg_query": {
+              "calls": 2,
+              "errors": 1,
+              "ms": 16,
+              "responseBytes": 793
+            },
+            "model:workspace_write": {
+              "calls": 1,
+              "errors": 0,
+              "ms": 31,
+              "responseBytes": 211
+            },
+            "model:test_run": {
+              "calls": 1,
+              "errors": 0,
+              "ms": 12931,
+              "responseBytes": 1083
+            },
+            "model:workspace_read": {
+              "calls": 1,
+              "errors": 0,
+              "ms": 9,
+              "responseBytes": 1045
+            }
+          }
+        },
+        {
+          "id": "case-979e9307",
+          "mutation": "resultset-column",
+          "killed": true,
+          "passed": true,
+          "finish": "assistant-finished",
+          "turns": 8,
+          "modelMs": 25527,
+          "usage": {
+            "input": 129362,
+            "output": 2193
+          },
+          "schemaBytes": 37906,
+          "peakRequestBytes": 80330,
+          "promptSha256": "1eacbc56a919139d09a1c184fdfcf6214848118b2bb31642f2a5ce8adef812c5",
+          "transcriptSha256": "201b7e0180f6bb79fcff3c22dea49231b87e9ce7bc77d089f5653a47e035203b",
+          "protectedUnchanged": true,
+          "before": {
+            "passed": false,
+            "checked": 52,
+            "failures": [
+              {
+                "id": 101,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Анна"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Анна Анна Петровна"
+                  }
+                ]
+              },
+              {
+                "id": 102,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Анна"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Анна Анна Петровна"
+                  }
+                ]
+              }
+            ],
+            "sourceDigest": "40af1f3f9ff65bc4f5ee3a6108bac0d4ec726cadf14cd9c216fb6815c68da02c",
+            "failedCases": 45
+          },
+          "after": {
+            "passed": true,
+            "checked": 52,
+            "failures": [],
+            "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+            "failedCases": 0
+          },
+          "patch": "diff --git a/src/main/java/person/PersonRepository.java b/src/main/java/person/PersonRepository.java\nindex 3087f75..11f165e 100644\n--- a/src/main/java/person/PersonRepository.java\n+++ b/src/main/java/person/PersonRepository.java\n@@ -28,7 +28,7 @@ public class PersonRepository {\n             JOIN registry.document_state s ON s.document_id = d.id\n             WHERE d.person_id = ?\n             \"\"\", (rs, row) -> new Document(rs.getLong(\"id\"),\n-                new Name(rs.getString(\"first_name\"), rs.getString(\"first_name\"), rs.getString(\"middle_name\")),\n+                new Name(rs.getString(\"last_name\"), rs.getString(\"first_name\"), rs.getString(\"middle_name\")),\n                 rs.getObject(\"birth_date\", LocalDate.class), rs.getObject(\"issued_on\", LocalDate.class),\n                 rs.getObject(\"effective_from\", LocalDate.class), rs.getObject(\"expires_on\", LocalDate.class),\n                 rs.getBoolean(\"active\"), rs.getBoolean(\"annulled\")), personId);",
+          "toolUse": {
+            "model:mapping_debug": {
+              "calls": 3,
+              "errors": 0,
+              "ms": 7655,
+              "responseBytes": 24171
+            },
+            "model:workspace_write": {
+              "calls": 1,
+              "errors": 0,
+              "ms": 9,
+              "responseBytes": 214
+            },
+            "model:test_run": {
+              "calls": 1,
+              "errors": 0,
+              "ms": 6950,
+              "responseBytes": 1082
+            },
+            "model:semantic_index": {
+              "calls": 1,
+              "errors": 0,
+              "ms": 31142,
+              "responseBytes": 1010
+            },
+            "model:workspace_read": {
+              "calls": 1,
+              "errors": 0,
+              "ms": 6,
+              "responseBytes": 2380
+            }
+          }
+        },
+        {
+          "id": "case-bcaf0220",
+          "mutation": "archived-table",
+          "killed": true,
+          "passed": false,
+          "finish": "repeated-tool-error",
+          "turns": 10,
+          "modelMs": 99706,
+          "usage": {
+            "input": 163526,
+            "output": 3386
+          },
+          "schemaBytes": 37906,
+          "peakRequestBytes": 78417,
+          "promptSha256": "03e10cba8ff31b57cb90a4c22b3c72f86c7ac5f2aa4381c54b181fdc18c74c57",
+          "transcriptSha256": "85ea9daca96e4f7463df2e805caf86663c572ec324c34365c6ddb1a7d37290dd",
+          "protectedUnchanged": true,
+          "before": {
+            "passed": false,
+            "checked": 52,
+            "failures": [
+              {
+                "id": 101,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Архив-Иванова"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Архив-Иванова Анна Петровна"
+                  }
+                ]
+              },
+              {
+                "id": 102,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Архив-Иванова"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Архив-Иванова Анна Петровна"
+                  }
+                ]
+              }
+            ],
+            "sourceDigest": "58e3b2b5e00366a4685bcb1dd6710c36e60f4a7e1a5d723d230af8c4c18da5e7",
+            "failedCases": 45
+          },
+          "after": {
+            "passed": false,
+            "checked": 52,
+            "failures": [
+              {
+                "id": 101,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Архив-Иванова"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Архив-Иванова Анна Петровна"
+                  }
+                ]
+              },
+              {
+                "id": 102,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Архив-Иванова"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Архив-Иванова Анна Петровна"
+                  }
+                ]
+              }
+            ],
+            "sourceDigest": "58e3b2b5e00366a4685bcb1dd6710c36e60f4a7e1a5d723d230af8c4c18da5e7",
+            "failedCases": 45
+          },
+          "patch": "",
+          "toolUse": {
+            "model:mapping_debug": {
+              "calls": 2,
+              "errors": 0,
+              "ms": 644,
+              "responseBytes": 17599
+            },
+            "model:pg_query": {
+              "calls": 4,
+              "errors": 1,
+              "ms": 66,
+              "responseBytes": 1238
+            },
+            "model:workspace_read": {
+              "calls": 1,
+              "errors": 0,
+              "ms": 6,
+              "responseBytes": 2150
+            },
+            "model:code_search": {
+              "calls": 3,
+              "errors": 3,
+              "ms": 19,
+              "responseBytes": 111
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "model-27b-pilot",
+      "protocol": "dt.person-mutations/v1",
+      "startedAt": "2026-11-22T14:46:45.911Z",
+      "completedAt": "2026-11-22T14:57:35.410Z",
+      "model": "qwen3.8:27b",
+      "think": false,
+      "guided": true,
+      "seed": 42,
+      "copies": 3,
+      "options": {
+        "maxTurns": 16,
+        "maxCalls": 35,
+        "maxRounds": 2,
+        "maxTokens": 4000,
+        "contextWindow": 32768,
+        "timeoutMs": 120000
+      },
+      "advertised": {
+        "name": "qwen3.8:27b",
+        "digest": "22f605d9adb2f9a598749ffa8e1c9b35a78d388a448f0898ee057fc6a7ec1bd6",
+        "details": {
+          "parent_model": "qwen3.8:27b-dt-before-context-20261109",
+          "format": "gguf",
+          "family": "qwen35",
+          "families": [
+            "qwen35"
+          ],
+          "parameter_size": "27.3B",
+          "quantization_level": "Q4_K_M",
+          "context_length": 262144,
+          "embedding_length": 5120,
+          "runner": "llamacpp"
+        }
+      },
+      "sourceHashes": {
+        "dev/eval-person-mutations.js": "2186947fc92951cf16fbbd338ced02c858a1ef70e29a1e212a76ec4883146613",
+        "dev/person-mutations.js": "2080d20b8c0393dff5ad54bd684da76916019ef7e7ee33d4677258bc6d5ff6fb",
+        "dev/person-notebook.js": "6e6dbcf4da62a29a2bfbd706347074fb7dc4d4ffff77e81ab98b4b9e08de878f",
+        "lib/mapping-debugger.js": "b1280fb9c49f3958a91c7216c5eee7883597b159cbaadcbffa093dd84677b144",
+        "lib/mapping-source.js": "f746eff067da553e32be55b7331711a326421726c9dddb797205a9ff0b7cb19d",
+        "lib/mapping-selection.js": "24b3144c2abeb27d82d70b30468a079d657cbbafa7936ef440907021d1d12420",
+        "lib/tools-semantic.js": "0539b51fc521352aba734926d9b8eb3d886560170a80f7e650b0cf13cd330302"
+      },
+      "fixtureDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+      "passed": true,
+      "cleanup": {
+        "verified": true
+      },
+      "limits": [
+        "Finite synthetic corpus, not proof of catching all production mapping bugs.",
+        "Joern provides static paths/conditions; runtime PostgreSQL and HTTP assertions grade behavior independently.",
+        "Private oracle, build configuration and tests are outside the model edit boundary.",
+        "These are inference-time practice runs, not model weight training."
+      ],
+      "originalReportSha256": "153821814f0481ffba227e139e65ad8ed50f2ddbd04362902a4c1fbd28f0477c",
+      "baseline": {
+        "passed": true,
+        "checked": 52,
+        "failures": [],
+        "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+      },
+      "cases": [
+        {
+          "id": "case-bcaf0220",
+          "mutation": "archived-table",
+          "killed": true,
+          "passed": true,
+          "finish": "assistant-finished",
+          "turns": 8,
+          "modelMs": 195122,
+          "usage": {
+            "input": 119074,
+            "output": 734
+          },
+          "schemaBytes": 38001,
+          "peakRequestBytes": 72987,
+          "promptSha256": "117162147caab50bc96087070d579568f5d0735fd1f4d9af822d27b1b08b5c92",
+          "transcriptSha256": "60dcee53078b3f87f8baae3cc379c3bdfd5bb38d16df197845576f9fef10a5a7",
+          "protectedUnchanged": true,
+          "before": {
+            "passed": false,
+            "checked": 52,
+            "failures": [
+              {
+                "id": 101,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Архив-Иванова"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Архив-Иванова Анна Петровна"
+                  }
+                ]
+              },
+              {
+                "id": 102,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Архив-Иванова"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Архив-Иванова Анна Петровна"
+                  }
+                ]
+              }
+            ],
+            "sourceDigest": "58e3b2b5e00366a4685bcb1dd6710c36e60f4a7e1a5d723d230af8c4c18da5e7",
+            "failedCases": 45
+          },
+          "after": {
+            "passed": true,
+            "checked": 52,
+            "failures": [],
+            "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+            "failedCases": 0
+          },
+          "patch": "diff --git a/src/main/java/person/PersonRepository.java b/src/main/java/person/PersonRepository.java\nindex b934d77..11f165e 100644\n--- a/src/main/java/person/PersonRepository.java\n+++ b/src/main/java/person/PersonRepository.java\n@@ -24,7 +24,7 @@ public class PersonRepository {\n         return jdbc.query(\"\"\"\n             SELECT d.id, d.last_name, d.first_name, d.middle_name, d.birth_date, d.issued_on,\n                    d.effective_from, d.expires_on, s.active, s.annulled\n-            FROM registry.person_document_archive d\n+            FROM registry.person_document d\n             JOIN registry.document_state s ON s.document_id = d.id\n             WHERE d.person_id = ?\n             \"\"\", (rs, row) -> new Document(rs.getLong(\"id\"),",
+          "rounds": [
+            {
+              "round": 1,
+              "verdict": true,
+              "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+              "failures": []
+            }
+          ],
+          "toolUse": {
+            "model:mapping_debug": {
+              "calls": 3,
+              "errors": 0,
+              "ms": 9648,
+              "responseBytes": 24222
+            },
+            "model:pg_query": {
+              "calls": 2,
+              "errors": 0,
+              "ms": 299,
+              "responseBytes": 1185
+            },
+            "model:workspace_write": {
+              "calls": 1,
+              "errors": 0,
+              "ms": 87,
+              "responseBytes": 214
+            },
+            "model:test_run": {
+              "calls": 1,
+              "errors": 0,
+              "ms": 8838,
+              "responseBytes": 1082
+            }
+          }
+        },
+        {
+          "id": "case-f4db0c1a",
+          "mutation": "wrong-person-column",
+          "killed": true,
+          "passed": true,
+          "finish": "assistant-finished",
+          "turns": 6,
+          "modelMs": 136091,
+          "usage": {
+            "input": 86570,
+            "output": 585
+          },
+          "schemaBytes": 38001,
+          "peakRequestBytes": 71060,
+          "promptSha256": "0b0cfcb2225d495a0388dd7d54b6a78155b69aa8a28f2be9ddb063d36de52426",
+          "transcriptSha256": "65598cda4494ab38af3f72428e0cabbda70532403bc13a569830fb44d30a1a21",
+          "protectedUnchanged": true,
+          "before": {
+            "passed": false,
+            "checked": 52,
+            "failures": [
+              {
+                "id": 101,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Смирнов"
+                  },
+                  {
+                    "path": "/fio/firstName",
+                    "expected": "Анна",
+                    "actual": "Иван"
+                  },
+                  {
+                    "path": "/fio/patronymic",
+                    "expected": "Петровна",
+                    "actual": "Ильич"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Смирнов Иван Ильич"
+                  },
+                  {
+                    "path": "/sourceDocumentId",
+                    "expected": 1011,
+                    "actual": null
+                  },
+                  {
+                    "path": "/effectiveFrom",
+                    "expected": "2026-10-21",
+                    "actual": null
+                  }
+                ]
+              },
+              {
+                "id": 102,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Смирнов"
+                  },
+                  {
+                    "path": "/fio/firstName",
+                    "expected": "Анна",
+                    "actual": "Иван"
+                  },
+                  {
+                    "path": "/fio/patronymic",
+                    "expected": "Петровна",
+                    "actual": "Ильич"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Смирнов Иван Ильич"
+                  },
+                  {
+                    "path": "/sourceDocumentId",
+                    "expected": 1021,
+                    "actual": null
+                  },
+                  {
+                    "path": "/effectiveFrom",
+                    "expected": "2026-10-21",
+                    "actual": null
+                  }
+                ]
+              }
+            ],
+            "sourceDigest": "8ae0138a99760d6f743b19e0f88f07b5fafc6f857347e2557467cccf1c449ab9",
+            "failedCases": 45
+          },
+          "after": {
+            "passed": true,
+            "checked": 52,
+            "failures": [],
+            "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+            "failedCases": 0
+          },
+          "patch": "diff --git a/src/main/java/person/PersonRepository.java b/src/main/java/person/PersonRepository.java\nindex e48b4c4..11f165e 100644\n--- a/src/main/java/person/PersonRepository.java\n+++ b/src/main/java/person/PersonRepository.java\n@@ -26,7 +26,7 @@ public class PersonRepository {\n                    d.effective_from, d.expires_on, s.active, s.annulled\n             FROM registry.person_document d\n             JOIN registry.document_state s ON s.document_id = d.id\n-            WHERE d.id = ?\n+            WHERE d.person_id = ?\n             \"\"\", (rs, row) -> new Document(rs.getLong(\"id\"),\n                 new Name(rs.getString(\"last_name\"), rs.getString(\"first_name\"), rs.getString(\"middle_name\")),\n                 rs.getObject(\"birth_date\", LocalDate.class), rs.getObject(\"issued_on\", LocalDate.class),",
+          "rounds": [
+            {
+              "round": 1,
+              "verdict": true,
+              "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+              "failures": []
+            }
+          ],
+          "toolUse": {
+            "model:mapping_debug": {
+              "calls": 3,
+              "errors": 0,
+              "ms": 7901,
+              "responseBytes": 24181
+            },
+            "model:workspace_write": {
+              "calls": 1,
+              "errors": 0,
+              "ms": 7,
+              "responseBytes": 214
+            },
+            "model:test_run": {
+              "calls": 1,
+              "errors": 0,
+              "ms": 9974,
+              "responseBytes": 1082
+            }
+          }
+        },
+        {
+          "id": "case-5008ef8c",
+          "mutation": "annulled",
+          "killed": true,
+          "passed": true,
+          "finish": "assistant-finished",
+          "turns": 6,
+          "modelMs": 184895,
+          "usage": {
+            "input": 86479,
+            "output": 591
+          },
+          "schemaBytes": 38001,
+          "peakRequestBytes": 70931,
+          "promptSha256": "4478e4b65de61d44c41a7d997b3372742be2bb83ab9d41bf92d4654f3e09fedd",
+          "transcriptSha256": "fb3c58e03ae4aae2101d2dd20a5af12ef37820d732ed8b957bf66aa7781256d3",
+          "protectedUnchanged": true,
+          "before": {
+            "passed": false,
+            "checked": 52,
+            "failures": [
+              {
+                "id": 101,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Отменённая"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Отменённая Анна Петровна"
+                  },
+                  {
+                    "path": "/sourceDocumentId",
+                    "expected": 1011,
+                    "actual": 1012
+                  },
+                  {
+                    "path": "/effectiveFrom",
+                    "expected": "2026-10-21",
+                    "actual": "2026-11-19"
+                  }
+                ]
+              },
+              {
+                "id": 115,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Смирнов",
+                    "actual": "Иванова"
+                  },
+                  {
+                    "path": "/fio/firstName",
+                    "expected": "Иван",
+                    "actual": "Анна"
+                  },
+                  {
+                    "path": "/fio/patronymic",
+                    "expected": "Ильич",
+                    "actual": "Петровна"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Смирнов Иван Ильич",
+                    "actual": "Иванова Анна Петровна"
+                  },
+                  {
+                    "path": "/sourceDocumentId",
+                    "expected": null,
+                    "actual": 1152
+                  },
+                  {
+                    "path": "/effectiveFrom",
+                    "expected": null,
+                    "actual": "2026-10-21"
+                  }
+                ]
+              }
+            ],
+            "sourceDigest": "b2f79a4fcde13fcad7575ff186645d6ccfbecd86868068bf5fd554d313618ae0",
+            "failedCases": 6
+          },
+          "after": {
+            "passed": true,
+            "checked": 52,
+            "failures": [],
+            "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+            "failedCases": 0
+          },
+          "patch": "diff --git a/src/main/java/person/DocumentPolicy.java b/src/main/java/person/DocumentPolicy.java\nindex d959ab2..89be926 100644\n--- a/src/main/java/person/DocumentPolicy.java\n+++ b/src/main/java/person/DocumentPolicy.java\n@@ -9,7 +9,7 @@ public final class DocumentPolicy {\n     private DocumentPolicy() {}\n     public static boolean eligible(Document d, LocalDate asOf) {\n         return d.active()\n-            && true\n+            && !d.annulled()\n             && !d.effectiveFrom().isAfter(asOf)\n             && (d.expiresOn() == null || !d.expiresOn().isBefore(asOf))\n             && d.name().complete();",
+          "rounds": [
+            {
+              "round": 1,
+              "verdict": true,
+              "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+              "failures": []
+            }
+          ],
+          "toolUse": {
+            "model:mapping_debug": {
+              "calls": 3,
+              "errors": 0,
+              "ms": 25607,
+              "responseBytes": 24046
+            },
+            "model:workspace_write": {
+              "calls": 1,
+              "errors": 0,
+              "ms": 11,
+              "responseBytes": 211
+            },
+            "model:test_run": {
+              "calls": 1,
+              "errors": 0,
+              "ms": 9310,
+              "responseBytes": 1082
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "model-staged-4b",
+      "protocol": "dt.person-mutations/v1",
+      "startedAt": "2026-11-22T15:18:36.249Z",
+      "completedAt": "2026-11-22T15:21:55.138Z",
+      "model": "qwen3.5:4b",
+      "think": false,
+      "guided": true,
+      "staged": true,
+      "seed": 42,
+      "copies": 3,
+      "options": {
+        "maxTurns": 8,
+        "maxCalls": 35,
+        "maxRounds": 3,
+        "maxTokens": 2400,
+        "contextWindow": 32768,
+        "timeoutMs": 120000
+      },
+      "advertised": {
+        "name": "qwen3.5:4b",
+        "digest": "d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04",
+        "details": {
+          "parent_model": "model.gguf",
+          "format": "gguf",
+          "family": "qwen35",
+          "families": [
+            "qwen35"
+          ],
+          "parameter_size": "4.2B",
+          "quantization_level": "Q4_K_M",
+          "context_length": 262144,
+          "embedding_length": 2560,
+          "runner": "llamacpp"
+        }
+      },
+      "sourceHashes": {
+        "dev/eval-person-mutations.js": "9c097154102f4494e2a125f29e30cd402a4d5113778fa41e484e7fcd2977cdb4",
+        "dev/person-mutations.js": "8a94482d1ff440f1d5f2c28f2c15401a0775104a67a02004d83f02305dd7b1f6",
+        "dev/person-notebook.js": "6e6dbcf4da62a29a2bfbd706347074fb7dc4d4ffff77e81ab98b4b9e08de878f",
+        "lib/mapping-debugger.js": "60c94c13c52b7f74e1ba7e180fda8c73659db2503243d3f927766539e11be839",
+        "lib/mapping-source.js": "f746eff067da553e32be55b7331711a326421726c9dddb797205a9ff0b7cb19d",
+        "lib/mapping-selection.js": "8823966235cdfcdc7d57c6b2ccb2af1e7840d65b9d205f06856f90c011785939",
+        "lib/tools-semantic.js": "0539b51fc521352aba734926d9b8eb3d886560170a80f7e650b0cf13cd330302"
+      },
+      "fixtureDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+      "datasetSha256": "4e18ca902ab8248778ab4e9b0e4027139a4acb349165697c54f56c07108aea30",
+      "passed": false,
+      "cleanup": {
+        "verified": true
+      },
+      "limits": [
+        "Finite synthetic corpus, not proof of catching all production mapping bugs.",
+        "Joern provides static paths/conditions; runtime PostgreSQL and HTTP assertions grade behavior independently.",
+        "Private oracle, build configuration and tests are outside the model edit boundary.",
+        "Staged mode precollects tool evidence and runs verification in the harness; it is not autonomous tool discovery.",
+        "These are inference-time practice runs, not model weight training."
+      ],
+      "originalReportSha256": "1dc33dce08d361cdb12cc0937dc1b6f065623338359acdb553b82b186aaefdda",
+      "baseline": {
+        "passed": true,
+        "checked": 52,
+        "failures": [],
+        "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+      },
+      "cases": [
+        {
+          "id": "case-bcaf0220",
+          "mutation": "archived-table",
+          "killed": true,
+          "passed": false,
+          "mode": "staged-evidence-handoff",
+          "finish": "repair-round-budget",
+          "turns": 3,
+          "modelMs": 18795,
+          "usage": {
+            "input": 17799,
+            "output": 705
+          },
+          "schemaBytes": 1806,
+          "peakRequestBytes": 25617,
+          "promptSha256": "3579417cf90cf65b1702a33c89b342153270c407d997887aa1da81d283cc63ea",
+          "transcriptSha256": "b05fa3fc609577bc87007aee095d1448870ec5182b862a4ab943b9b71a8df29c",
+          "protectedUnchanged": true,
+          "before": {
+            "passed": false,
+            "checked": 52,
+            "failures": [
+              {
+                "id": 101,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Алексеева"
+                  },
+                  {
+                    "path": "/fio/firstName",
+                    "expected": "Анна",
+                    "actual": "Ольга"
+                  },
+                  {
+                    "path": "/fio/patronymic",
+                    "expected": "Петровна",
+                    "actual": "Сергеевна"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Алексеева Ольга Сергеевна"
+                  }
+                ]
+              },
+              {
+                "id": 102,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Соколова"
+                  },
+                  {
+                    "path": "/fio/firstName",
+                    "expected": "Анна",
+                    "actual": "Лидия"
+                  },
+                  {
+                    "path": "/fio/patronymic",
+                    "expected": "Петровна",
+                    "actual": null
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Соколова Лидия"
+                  }
+                ]
+              }
+            ],
+            "sourceDigest": "58e3b2b5e00366a4685bcb1dd6710c36e60f4a7e1a5d723d230af8c4c18da5e7",
+            "failedCases": 45
+          },
+          "after": {
+            "passed": false,
+            "checked": 52,
+            "failures": [
+              {
+                "id": 100,
+                "status": 500
+              },
+              {
+                "id": 101,
+                "status": 500
+              }
+            ],
+            "sourceDigest": "8a1c052684f444a7ac19d0097d2c4c3212d6133f590ff8ff878faf42ebd56878",
+            "failedCases": 51
+          },
+          "patch": "diff --git a/src/main/java/person/PersonRepository.java b/src/main/java/person/PersonRepository.java\nindex b934d77..b6eb729 100644\n--- a/src/main/java/person/PersonRepository.java\n+++ b/src/main/java/person/PersonRepository.java\n@@ -22,13 +22,13 @@ public class PersonRepository {\n     }\n     public List<Document> documents(long personId) {\n         return jdbc.query(\"\"\"\n-            SELECT d.id, d.last_name, d.first_name, d.middle_name, d.birth_date, d.issued_on,\n+            SELECT d.id, d.last_name, d.first_name, d.patronymic, d.birth_date, d.issued_on,\n                    d.effective_from, d.expires_on, s.active, s.annulled\n             FROM registry.person_document_archive d\n             JOIN registry.document_state s ON s.document_id = d.id\n             WHERE d.person_id = ?\n             \"\"\", (rs, row) -> new Document(rs.getLong(\"id\"),\n-                new Name(rs.getString(\"last_name\"), rs.getString(\"first_name\"), rs.getString(\"middle_name\")),\n+                new Name(rs.getString(\"last_name\"), rs.getString(\"first_name\"), rs.getString(\"patronymic\")),\n                 rs.getObject(\"birth_date\", LocalDate.class), rs.getObject(\"issued_on\", LocalDate.class),\n                 rs.getObject(\"effective_from\", LocalDate.class), rs.getObject(\"expires_on\", LocalDate.class),\n                 rs.getBoolean(\"active\"), rs.getBoolean(\"annulled\")), personId);\n",
+          "rounds": [
+            {
+              "round": 1,
+              "verdict": false,
+              "sourceDigest": "58e3b2b5e00366a4685bcb1dd6710c36e60f4a7e1a5d723d230af8c4c18da5e7",
+              "failures": [
+                {
+                  "id": 101,
+                  "differences": [
+                    {
+                      "path": "/fio/lastName",
+                      "expected": "Иванова",
+                      "actual": "Алексеева"
+                    },
+                    {
+                      "path": "/fio/firstName",
+                      "expected": "Анна",
+                      "actual": "Ольга"
+                    },
+                    {
+                      "path": "/fio/patronymic",
+                      "expected": "Петровна",
+                      "actual": "Сергеевна"
+                    },
+                    {
+                      "path": "/fullName",
+                      "expected": "Иванова Анна Петровна",
+                      "actual": "Алексеева Ольга Сергеевна"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "round": 2,
+              "verdict": false,
+              "sourceDigest": "58e3b2b5e00366a4685bcb1dd6710c36e60f4a7e1a5d723d230af8c4c18da5e7",
+              "failures": [
+                {
+                  "id": 101,
+                  "differences": [
+                    {
+                      "path": "/fio/lastName",
+                      "expected": "Иванова",
+                      "actual": "Алексеева"
+                    },
+                    {
+                      "path": "/fio/firstName",
+                      "expected": "Анна",
+                      "actual": "Ольга"
+                    },
+                    {
+                      "path": "/fio/patronymic",
+                      "expected": "Петровна",
+                      "actual": "Сергеевна"
+                    },
+                    {
+                      "path": "/fullName",
+                      "expected": "Иванова Анна Петровна",
+                      "actual": "Алексеева Ольга Сергеевна"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "round": 3,
+              "verdict": false,
+              "sourceDigest": "8a1c052684f444a7ac19d0097d2c4c3212d6133f590ff8ff878faf42ebd56878",
+              "failures": [
+                {
+                  "id": 100,
+                  "status": 500
+                }
+              ]
+            }
+          ],
+          "toolUse": {
+            "harness:mapping_debug": {
+              "calls": 3,
+              "errors": 0,
+              "ms": 929,
+              "responseBytes": 17119
+            },
+            "model:workspace_write": {
+              "calls": 3,
+              "errors": 2,
+              "ms": 45,
+              "responseBytes": 530
+            }
+          }
+        },
+        {
+          "id": "case-5008ef8c",
+          "mutation": "annulled",
+          "killed": true,
+          "passed": true,
+          "mode": "staged-evidence-handoff",
+          "finish": "public-http-passed",
+          "turns": 1,
+          "modelMs": 2339,
+          "usage": {
+            "input": 5415,
+            "output": 213
+          },
+          "schemaBytes": 1806,
+          "peakRequestBytes": 20942,
+          "promptSha256": "a2de0666b656d140e3548da14f0a7afef506d2db0609c479aba685a9e8fde75a",
+          "transcriptSha256": "f301a66da1986004ccc7909b79a67429a73610f784ffacf5fd05de2e1fd41c09",
+          "protectedUnchanged": true,
+          "before": {
+            "passed": false,
+            "checked": 52,
+            "failures": [
+              {
+                "id": 101,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Отменённая"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Отменённая Анна Петровна"
+                  },
+                  {
+                    "path": "/sourceDocumentId",
+                    "expected": 1011,
+                    "actual": 1012
+                  },
+                  {
+                    "path": "/effectiveFrom",
+                    "expected": "2026-10-21",
+                    "actual": "2026-11-19"
+                  }
+                ]
+              },
+              {
+                "id": 115,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Смирнов",
+                    "actual": "Иванова"
+                  },
+                  {
+                    "path": "/fio/firstName",
+                    "expected": "Иван",
+                    "actual": "Анна"
+                  },
+                  {
+                    "path": "/fio/patronymic",
+                    "expected": "Ильич",
+                    "actual": "Петровна"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Смирнов Иван Ильич",
+                    "actual": "Иванова Анна Петровна"
+                  },
+                  {
+                    "path": "/sourceDocumentId",
+                    "expected": null,
+                    "actual": 1152
+                  },
+                  {
+                    "path": "/effectiveFrom",
+                    "expected": null,
+                    "actual": "2026-10-21"
+                  }
+                ]
+              }
+            ],
+            "sourceDigest": "b2f79a4fcde13fcad7575ff186645d6ccfbecd86868068bf5fd554d313618ae0",
+            "failedCases": 6
+          },
+          "after": {
+            "passed": true,
+            "checked": 52,
+            "failures": [],
+            "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+            "failedCases": 0
+          },
+          "patch": "diff --git a/src/main/java/person/DocumentPolicy.java b/src/main/java/person/DocumentPolicy.java\nindex d959ab2..89be926 100644\n--- a/src/main/java/person/DocumentPolicy.java\n+++ b/src/main/java/person/DocumentPolicy.java\n@@ -9,7 +9,7 @@ public final class DocumentPolicy {\n     private DocumentPolicy() {}\n     public static boolean eligible(Document d, LocalDate asOf) {\n         return d.active()\n-            && true\n+            && !d.annulled()\n             && !d.effectiveFrom().isAfter(asOf)\n             && (d.expiresOn() == null || !d.expiresOn().isBefore(asOf))\n             && d.name().complete();\n",
+          "rounds": [
+            {
+              "round": 1,
+              "verdict": true,
+              "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+              "failures": []
+            }
+          ],
+          "toolUse": {
+            "harness:mapping_debug": {
+              "calls": 3,
+              "errors": 0,
+              "ms": 1232,
+              "responseBytes": 16936
+            },
+            "model:workspace_write": {
+              "calls": 1,
+              "errors": 0,
+              "ms": 14,
+              "responseBytes": 211
+            },
+            "harness:test_run": {
+              "calls": 1,
+              "errors": 0,
+              "ms": 18085,
+              "responseBytes": 1083
+            }
+          }
+        },
+        {
+          "id": "case-979e9307",
+          "mutation": "resultset-column",
+          "killed": true,
+          "passed": true,
+          "mode": "staged-evidence-handoff",
+          "finish": "public-http-passed",
+          "turns": 1,
+          "modelMs": 2754,
+          "usage": {
+            "input": 5487,
+            "output": 290
+          },
+          "schemaBytes": 1806,
+          "peakRequestBytes": 20927,
+          "promptSha256": "47c8e3f7d42fe68ec6346f484598bf6e343597b9534612660aebb0d84fe1c09e",
+          "transcriptSha256": "d5e8e3114cac25f0ca8a0dc728cff0360146f804cb8c75443c9f62ff427613a3",
+          "protectedUnchanged": true,
+          "before": {
+            "passed": false,
+            "checked": 52,
+            "failures": [
+              {
+                "id": 101,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Анна"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Анна Анна Петровна"
+                  }
+                ]
+              },
+              {
+                "id": 102,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Анна"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Анна Анна Петровна"
+                  }
+                ]
+              }
+            ],
+            "sourceDigest": "40af1f3f9ff65bc4f5ee3a6108bac0d4ec726cadf14cd9c216fb6815c68da02c",
+            "failedCases": 45
+          },
+          "after": {
+            "passed": true,
+            "checked": 52,
+            "failures": [],
+            "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+            "failedCases": 0
+          },
+          "patch": "diff --git a/src/main/java/person/PersonRepository.java b/src/main/java/person/PersonRepository.java\nindex 3087f75..11f165e 100644\n--- a/src/main/java/person/PersonRepository.java\n+++ b/src/main/java/person/PersonRepository.java\n@@ -28,7 +28,7 @@ public class PersonRepository {\n             JOIN registry.document_state s ON s.document_id = d.id\n             WHERE d.person_id = ?\n             \"\"\", (rs, row) -> new Document(rs.getLong(\"id\"),\n-                new Name(rs.getString(\"first_name\"), rs.getString(\"first_name\"), rs.getString(\"middle_name\")),\n+                new Name(rs.getString(\"last_name\"), rs.getString(\"first_name\"), rs.getString(\"middle_name\")),\n                 rs.getObject(\"birth_date\", LocalDate.class), rs.getObject(\"issued_on\", LocalDate.class),\n                 rs.getObject(\"effective_from\", LocalDate.class), rs.getObject(\"expires_on\", LocalDate.class),\n                 rs.getBoolean(\"active\"), rs.getBoolean(\"annulled\")), personId);\n",
+          "rounds": [
+            {
+              "round": 1,
+              "verdict": true,
+              "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+              "failures": []
+            }
+          ],
+          "toolUse": {
+            "harness:mapping_debug": {
+              "calls": 3,
+              "errors": 0,
+              "ms": 1653,
+              "responseBytes": 17082
+            },
+            "model:workspace_write": {
+              "calls": 1,
+              "errors": 0,
+              "ms": 189,
+              "responseBytes": 214
+            },
+            "harness:test_run": {
+              "calls": 1,
+              "errors": 0,
+              "ms": 10161,
+              "responseBytes": 1082
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "model-4b-table-followup",
+      "protocol": "dt.person-mutations/v1",
+      "startedAt": "2026-11-22T15:23:22.043Z",
+      "completedAt": "2026-11-22T15:24:38.983Z",
+      "model": "qwen3.5:4b",
+      "think": true,
+      "guided": true,
+      "staged": true,
+      "seed": 42,
+      "copies": 3,
+      "options": {
+        "maxTurns": 10,
+        "maxCalls": 35,
+        "maxRounds": 5,
+        "maxTokens": 6000,
+        "contextWindow": 32768,
+        "timeoutMs": 120000
+      },
+      "advertised": {
+        "name": "qwen3.5:4b",
+        "digest": "d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04",
+        "details": {
+          "parent_model": "model.gguf",
+          "format": "gguf",
+          "family": "qwen35",
+          "families": [
+            "qwen35"
+          ],
+          "parameter_size": "4.2B",
+          "quantization_level": "Q4_K_M",
+          "context_length": 262144,
+          "embedding_length": 2560,
+          "runner": "llamacpp"
+        }
+      },
+      "sourceHashes": {
+        "dev/eval-person-mutations.js": "e7889e6f6c20cfd1bc6f3b71a0333cf578a27c655d8f7e7d647f9a555a68b5b4",
+        "dev/person-mutations.js": "8a94482d1ff440f1d5f2c28f2c15401a0775104a67a02004d83f02305dd7b1f6",
+        "dev/person-notebook.js": "6e6dbcf4da62a29a2bfbd706347074fb7dc4d4ffff77e81ab98b4b9e08de878f",
+        "lib/mapping-debugger.js": "60c94c13c52b7f74e1ba7e180fda8c73659db2503243d3f927766539e11be839",
+        "lib/mapping-source.js": "f746eff067da553e32be55b7331711a326421726c9dddb797205a9ff0b7cb19d",
+        "lib/mapping-selection.js": "8823966235cdfcdc7d57c6b2ccb2af1e7840d65b9d205f06856f90c011785939",
+        "lib/tools-semantic.js": "0539b51fc521352aba734926d9b8eb3d886560170a80f7e650b0cf13cd330302"
+      },
+      "fixtureDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+      "datasetSha256": "4e18ca902ab8248778ab4e9b0e4027139a4acb349165697c54f56c07108aea30",
+      "passed": false,
+      "cleanup": {
+        "verified": true
+      },
+      "limits": [
+        "Finite synthetic corpus, not proof of catching all production mapping bugs.",
+        "Joern provides static paths/conditions; runtime PostgreSQL and HTTP assertions grade behavior independently.",
+        "Private oracle, build configuration and tests are outside the model edit boundary.",
+        "Staged mode precollects tool evidence and runs verification in the harness; it is not autonomous tool discovery.",
+        "These are inference-time practice runs, not model weight training."
+      ],
+      "originalReportSha256": "d5a7495c19bc0fda24729caf671cbfb6cf8f07e3fda7d971d976338a6a80f109",
+      "baseline": {
+        "passed": true,
+        "checked": 52,
+        "failures": [],
+        "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+      },
+      "cases": [
+        {
+          "id": "case-bcaf0220",
+          "mutation": "archived-table",
+          "killed": true,
+          "passed": false,
+          "mode": "staged-evidence-handoff",
+          "finish": "repair-round-budget",
+          "turns": 6,
+          "modelMs": 25317,
+          "usage": {
+            "input": 43775,
+            "output": 3612
+          },
+          "schemaBytes": 1806,
+          "peakRequestBytes": 41069,
+          "promptSha256": "767cfabfe372f30775b8b135594913a65a10ff7da544926122be0f87bb3c78b1",
+          "transcriptSha256": "7774a3b1ce2fcc04c2e4a8eaa053a7df19ece869e1141bf3f08b48b13d4b7f0d",
+          "protectedUnchanged": true,
+          "before": {
+            "passed": false,
+            "checked": 52,
+            "failures": [
+              {
+                "id": 101,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Алексеева"
+                  },
+                  {
+                    "path": "/fio/firstName",
+                    "expected": "Анна",
+                    "actual": "Ольга"
+                  },
+                  {
+                    "path": "/fio/patronymic",
+                    "expected": "Петровна",
+                    "actual": "Сергеевна"
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Алексеева Ольга Сергеевна"
+                  }
+                ]
+              },
+              {
+                "id": 102,
+                "differences": [
+                  {
+                    "path": "/fio/lastName",
+                    "expected": "Иванова",
+                    "actual": "Соколова"
+                  },
+                  {
+                    "path": "/fio/firstName",
+                    "expected": "Анна",
+                    "actual": "Лидия"
+                  },
+                  {
+                    "path": "/fio/patronymic",
+                    "expected": "Петровна",
+                    "actual": null
+                  },
+                  {
+                    "path": "/fullName",
+                    "expected": "Иванова Анна Петровна",
+                    "actual": "Соколова Лидия"
+                  }
+                ]
+              }
+            ],
+            "sourceDigest": "58e3b2b5e00366a4685bcb1dd6710c36e60f4a7e1a5d723d230af8c4c18da5e7",
+            "failedCases": 45
+          },
+          "after": {
+            "passed": false,
+            "buildOrRuntimeError": "Command failed (1): /tmp/dt-gradle-research-tools/gradle-8.5/bin/gradle\nPicked up JAVA_TOOL_OPTIONS: -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8\n\n> Task :compileJava FAILED\n/private<evaluation>/work/case-bcaf0220-main-803791eb717b0bf2/src/main/java/person/PersonData.java:18: error: reached end of file while parsing\n}\n ^\n1 error\n\nFAILURE: Build failed with an exception.\n\n* What went wrong:\nExecution failed for task ':compileJava'.\n> Compilation failed; see the compiler error output for details.\n\n* Try:\n> Run with --info option to get more log output.\n> Run with --scan to get full insights.\n\nBUILD FAILED in 2s\n1 actionable task: 1 executed\n"
+          },
+          "patch": "diff --git a/src/main/java/person/DocumentPolicy.java b/src/main/java/person/DocumentPolicy.java\nindex 89be926..ebfa92a 100644\n--- a/src/main/java/person/DocumentPolicy.java\n+++ b/src/main/java/person/DocumentPolicy.java\n@@ -17,7 +17,7 @@ public final class DocumentPolicy {\n     public static Document choose(List<Document> documents, LocalDate asOf) {\n         return documents.stream()\n             .filter(d -> eligible(d, asOf))\n-            .max(Comparator.comparing(Document::effectiveFrom).thenComparingLong(Document::id))\n+            .max(Comparator.comparing(Document::effectiveFrom).thenComparingLong(d -> -d.id))\n             .orElse(null);\n     }\n }\ndiff --git a/src/main/java/person/PersonData.java b/src/main/java/person/PersonData.java\nindex eafb3c7..3dd8faf 100644\n--- a/src/main/java/person/PersonData.java\n+++ b/src/main/java/person/PersonData.java\n@@ -10,7 +10,8 @@ public final class PersonData {\n     }\n     public record Registry(long id, Name name, LocalDate birthDate, String city, String street) {}\n     public record Document(long id, Name name, LocalDate birthDate, LocalDate issuedOn,\n-                           LocalDate effectiveFrom, LocalDate expiresOn, boolean active, boolean annulled) {}\n+                           LocalDate effectiveFrom, LocalDate expiresOn, boolean active, boolean annulled) {\n+    public long getId() { return id; }\n     public record Address(String city, String street) {}\n     public record Response(long id, Name fio, String fullName, LocalDate birthDate,\n                            Long sourceDocumentId, LocalDate effectiveFrom, Address address, LocalDate asOf) {}\n",
+          "rounds": [
+            {
+              "round": 1,
+              "verdict": false,
+              "error": "Command failed (1): /tmp/dt-gradle-research-tools/gradle-8.5/bin/gradle\nPicked up JAVA_TOOL_OPTIONS: -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8\n\n> Task :compileJava FAILED\n/private<evaluation>/work/case-bcaf0220-main-803791eb717b0bf2/src/main/java/person/DocumentPolicy.java:20: error: no suitable method found for comparing((d1,d2)->d[...]om()))\n            .max(Comparator.comparing((d1, d2) -> d1.effectiveFrom().compareTo(d2.effectiveFrom())).thenComparingLong((d1, d2) -> d2.id - d1.id))\n                           ^\n    method Comparator.<T#1,U#1>comparing(Function<? super T#1,? extends U#1>,Comparator<? super U#1>) is not applicable\n      (cannot infer type-variable(s) T#1,U#1\n        (actual and formal argument lists differ in length))\n    method Comparator.<T#2,U#2>comparing(Function<? super T#2,? extends U#2>) is not applicable\n      (cannot infer type-variable(s) T#2,U#2\n        (argument mismatch; incompatible parameter types in lambda expression))\n  where T#1,U#1,T#2,U#2 are type-variables:\n    T#1 extends Object declared in method <T#1,U#1>comparing(Function<? super T#1,? extends U#1>,Comparator<? super U#1>)\n    U#1 extends Object declared in method <T#1,U#1>comparing(Function<? super T#1,? extends U#1>,Comparator<? super U#1>)\n    T#2 extends Object declared in method <T#2,U#2>comparing(Function<? super T#2,? extends U#2>)\n    U#2 extends Comparable<? super U#2> declared in method <T#2,U#2>comparing(Function<? super T#2,? extends U#2>)\n1 error\n\nFAILURE: Build failed with an exception.\n\n* What went wrong:\nExecution failed for task ':compileJava'.\n> Compilation failed; see the compiler error output for details.\n\n* Try:\n> Run with --info option to get more log output.\n> Run with --scan to get full insights.\n\nBUILD FAILED in 2s\n1 actionable task: 1 executed\n"
+            },
+            {
+              "round": 2,
+              "verdict": false,
+              "error": "Command failed (1): /tmp/dt-gradle-research-tools/gradle-8.5/bin/gradle\nPicked up JAVA_TOOL_OPTIONS: -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8\n\n> Task :compileJava FAILED\n/private<evaluation>/work/case-bcaf0220-main-803791eb717b0bf2/src/main/java/person/DocumentPolicy.java:20: error: id has private access in Document\n            .max(Comparator.comparing(Document::effectiveFrom).thenComparingLong(d -> -d.id))\n                                                                                        ^\n1 error\n\nFAILURE: Build failed with an exception.\n\n* What went wrong:\nExecution failed for task ':compileJava'.\n> Compilation failed; see the compiler error output for details.\n\n* Try:\n> Run with --info option to get more log output.\n> Run with --scan to get full insights.\n\nBUILD FAILED in 1s\n1 actionable task: 1 executed\n"
+            },
+            {
+              "round": 3,
+              "verdict": false,
+              "error": "Command failed (1): /tmp/dt-gradle-research-tools/gradle-8.5/bin/gradle\nPicked up JAVA_TOOL_OPTIONS: -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8\n\n> Task :compileJava FAILED\n/private<evaluation>/work/case-bcaf0220-main-803791eb717b0bf2/src/main/java/person/DocumentPolicy.java:20: error: incompatible types: cannot infer type-variable(s) T\n            .max(Comparator.comparing(Document::effectiveFrom).thenComparingLong(Comparator.comparingLong(Long::valueOf).reversed()))\n                                                                                                         ^\n    (argument mismatch; invalid method reference\n      no suitable method found for valueOf(Object)\n          method Long.valueOf(String) is not applicable\n            (argument mismatch; Object cannot be converted to String)\n          method Long.valueOf(long) is not applicable\n            (argument mismatch; Object cannot be converted to long))\n  where T is a type-variable:\n    T extends Object declared in method <T>comparingLong(ToLongFunction<? super T>)\n1 error\n\nFAILURE: Build failed with an exception.\n\n* What went wrong:\nExecution failed for task ':compileJava'.\n> Compilation failed; see the compiler error output for details.\n\n* Try:\n> Run with --info option to get more log output.\n> Run with --scan to get full insights.\n\nBUILD FAILED in 2s\n1 actionable task: 1 executed\n"
+            },
+            {
+              "round": 4,
+              "verdict": false,
+              "error": "Command failed (1): /tmp/dt-gradle-research-tools/gradle-8.5/bin/gradle\nPicked up JAVA_TOOL_OPTIONS: -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8\n\n> Task :compileJava FAILED\n/private<evaluation>/work/case-bcaf0220-main-803791eb717b0bf2/src/main/java/person/PersonData.java:18: error: reached end of file while parsing\n}\n ^\n1 error\n\nFAILURE: Build failed with an exception.\n\n* What went wrong:\nExecution failed for task ':compileJava'.\n> Compilation failed; see the compiler error output for details.\n\n* Try:\n> Run with --info option to get more log output.\n> Run with --scan to get full insights.\n\nBUILD FAILED in 1s\n1 actionable task: 1 executed\n"
+            },
+            {
+              "round": 5,
+              "verdict": false,
+              "error": "Command failed (1): /tmp/dt-gradle-research-tools/gradle-8.5/bin/gradle\nPicked up JAVA_TOOL_OPTIONS: -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8\n\n> Task :compileJava FAILED\n/private<evaluation>/work/case-bcaf0220-main-803791eb717b0bf2/src/main/java/person/PersonData.java:18: error: reached end of file while parsing\n}\n ^\n1 error\n\nFAILURE: Build failed with an exception.\n\n* What went wrong:\nExecution failed for task ':compileJava'.\n> Compilation failed; see the compiler error output for details.\n\n* Try:\n> Run with --info option to get more log output.\n> Run with --scan to get full insights.\n\nBUILD FAILED in 1s\n1 actionable task: 1 executed\n"
+            }
+          ],
+          "toolUse": {
+            "harness:mapping_debug": {
+              "calls": 3,
+              "errors": 0,
+              "ms": 1051,
+              "responseBytes": 17119
+            },
+            "model:workspace_write": {
+              "calls": 6,
+              "errors": 1,
+              "ms": 93,
+              "responseBytes": 1208
+            },
+            "harness:workspace_read": {
+              "calls": 1,
+              "errors": 0,
+              "ms": 8,
+              "responseBytes": 1074
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

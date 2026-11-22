@@ -12,6 +12,7 @@ test('compound requests route to explicit multi-stage guides without changing le
     ['refactor method takes postgres function results fills fields compare locally and dev environment', 'differential-refactor', 'impact'],
     ['run this test on dev environment', 'test-target', 'test_run'],
     ['speed up testcontainers with warm workspace dependency leases', 'test-dependency-leases', 'test_run'],
+    ['wrong person API response name from postgres documents active annulled selection mapper column', 'api-mapping-investigation', 'mapping_debug'],
   ];
   for (const [query, id, capability] of cases) {
     const r = await T.call('tool_search', { query });

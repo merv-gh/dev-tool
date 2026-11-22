@@ -6,6 +6,9 @@ async function start() {
   Object.assign(process.env, { DT_HOME: home, DT_NO_DOCTOR: '1', DT_RATE_PER_SEC: '0', DT_WORKER_HEAP_MB: '0', DT_STATE_BACKEND: 'legacy' });
   const row = { id: 42, country_code: 'GB', display_name: 'United Kingdom', localized_name: '' }, calls = [];
   const api = http.createServer((req, res) => { calls.push({ kind: req.url.startsWith('/v1/') ? 'consul' : 'api', path: req.url }); if (req.url.startsWith('/v1/health/service/')) { res.setHeader('content-type','application/json'); return res.end(JSON.stringify([{Node:{Address:'127.0.0.1'},Service:{ID:'registry-a',Address:'127.0.0.1',Port:api.address().port},Checks:[{Status:'passing'}]}])); } if (req.url.startsWith('/disconnect')) return req.socket.destroy(); if (req.url.startsWith('/slow')) { const t = setTimeout(() => res.end('{}'), 30000); res.on('close', () => clearTimeout(t)); return; } res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ id: row.id, name: req.url.includes('fixed') ? row.localized_name || row.display_name : row.localized_name ?? row.display_name, countryCode: row.country_code })); });
+  // Coverage can pause longer than Node's five-second idle keep-alive default
+  // between probe steps. Socket-failure behavior is tested via /disconnect.
+  api.keepAliveTimeout=120000;
   await new Promise(r => api.listen(0, '127.0.0.1', r)); const origin = 'http://127.0.0.1:' + api.address().port;
   const write = (file, value) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, JSON.stringify(value)); };
   const cfg = { envs: { dev: { consul: origin, postgres: { reference: 'postgres://synthetic.invalid/reference' } }, uat: { postgres: { reference: 'postgres://synthetic.invalid/uat' } } }, scripts: { starters: false } }; write(path.join(home, 'config.json'), cfg);

@@ -1,0 +1,25 @@
+plugins { id 'java' }
+repositories { mavenCentral() }
+java { toolchain { languageVersion = JavaLanguageVersion.of(21) } }
+dependencies {
+    implementation platform('org.springframework.boot:spring-boot-dependencies:2.7.18')
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework:spring-jdbc'
+    runtimeOnly 'org.postgresql:postgresql'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+test {
+    useJUnitPlatform()
+    systemProperty 'file.encoding', 'UTF-8'
+    // Every invocation must execute the HTTP/database assertions after an edit.
+    outputs.upToDateWhen { false }
+    outputs.cacheIf { false }
+}
+tasks.register('runtimeClasspath') {
+    dependsOn classes
+    def cp = sourceSets.main.runtimeClasspath
+    def dest = layout.projectDirectory.file('.dt/classpath.txt').asFile
+    outputs.file(dest)
+    doLast { dest.parentFile.mkdirs(); dest.text = cp.asPath }
+}

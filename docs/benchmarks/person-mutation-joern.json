@@ -1,0 +1,557 @@
+{
+  "protocol": "dt.person-paths/v1",
+  "model": "qwen3.5:4b",
+  "passed": true,
+  "limits": [
+    "Actual Joern retained-CPG comparisons of independently graded model edits.",
+    "Static facts, CFG candidates and data paths are not runtime behavior proof; SQL/JDBC/dispatch gaps remain explicit."
+  ],
+  "cases": [
+    {
+      "mutation": "annulled",
+      "before": {
+        "protocol": "dt.semantic/v1",
+        "id": "e0fea44af50565add373e7f4d37fa4212dcbd8b9c60b39a7b14fb8124fe5e3bb-3b568efbf6ec310c919a707f2b0a97a1",
+        "key": "e0fea44af50565add373e7f4d37fa4212dcbd8b9c60b39a7b14fb8124fe5e3bb",
+        "state": "ready",
+        "repo": "DEMO/person-annulled",
+        "sha": "c7039e0824d6fb3c87646d1829aa1549bbe2f51f",
+        "ref": "main",
+        "sourceDigest": "13eed0fec278478191222f603514d5de70426c7a7d44e8408c7e0efeeb6ec195",
+        "revisionKey": "work/person-annulled-main-96718d57691c71f4",
+        "language": "java",
+        "workspace": "person-annulled-main-96718d57691c71f4",
+        "service": null,
+        "env": "fixture",
+        "dependencies": [],
+        "builtAt": "2026-11-22T14:56:31.319Z",
+        "engine": {
+          "version": "4.0.533",
+          "image": "sha256:17a8dad187a9",
+          "scriptsDigest": "ff3ab9f396ec04a63d1aa00e075e4c9e0ea8b7f59af113f8d6b85285099b1fed",
+          "enrichmentDigest": "f194a96138123791980a18d313f906097587ba9b4877a528c8e683c3a6801600",
+          "queryDigest": "85540fb901796cff39067b7b8a10e51fe48f8d1a6cb75c7ca5c2b87bf1546e8a"
+        },
+        "projection": {
+          "bytes": 107654,
+          "digest": "4aaebe56cbdc3bc5e1d6b1fc044445e0c395a8fc50aac1338afb01dfa0079b47"
+        },
+        "capabilities": {
+          "pathContext": true,
+          "inheritance": true,
+          "calls": true,
+          "controlFlow": true,
+          "dataFlow": true
+        },
+        "coverage": {
+          "truncated": false,
+          "gaps": [
+            "Dynamic dispatch, external methods and transport field mappings may remain unresolved"
+          ],
+          "counts": {
+            "call": 68,
+            "symbol": 52,
+            "fact": 85,
+            "port": 3,
+            "meta": 1,
+            "guard": 2,
+            "type": 14
+          }
+        }
+      },
+      "after": {
+        "protocol": "dt.semantic/v1",
+        "id": "8fc2e7cf5877d29ae009878e93f5e36fd941d2be706542532eca5b699480a7e8-501319c9a8fb07e3d12b8bf400621445",
+        "key": "8fc2e7cf5877d29ae009878e93f5e36fd941d2be706542532eca5b699480a7e8",
+        "state": "ready",
+        "repo": "DEMO/person-annulled",
+        "sha": "c7039e0824d6fb3c87646d1829aa1549bbe2f51f",
+        "ref": "main",
+        "sourceDigest": "e22339405726e50312a47befa44900359362d5e8af6641781fb6193b476f6e82",
+        "revisionKey": "work/person-annulled-main-96718d57691c71f4",
+        "language": "java",
+        "workspace": "person-annulled-main-96718d57691c71f4",
+        "service": null,
+        "env": "fixture",
+        "dependencies": [],
+        "builtAt": "2026-11-22T14:57:12.431Z",
+        "engine": {
+          "version": "4.0.533",
+          "image": "sha256:17a8dad187a9",
+          "scriptsDigest": "ff3ab9f396ec04a63d1aa00e075e4c9e0ea8b7f59af113f8d6b85285099b1fed",
+          "enrichmentDigest": "f194a96138123791980a18d313f906097587ba9b4877a528c8e683c3a6801600",
+          "queryDigest": "85540fb901796cff39067b7b8a10e51fe48f8d1a6cb75c7ca5c2b87bf1546e8a"
+        },
+        "projection": {
+          "bytes": 108069,
+          "digest": "56413671ee1980872ff8a31e5fa2de87313993ab25ffb2752342b793902187f7"
+        },
+        "capabilities": {
+          "pathContext": true,
+          "inheritance": true,
+          "calls": true,
+          "controlFlow": true,
+          "dataFlow": true
+        },
+        "coverage": {
+          "truncated": false,
+          "gaps": [
+            "Dynamic dispatch, external methods and transport field mappings may remain unresolved"
+          ],
+          "counts": {
+            "call": 69,
+            "symbol": 52,
+            "fact": 85,
+            "port": 3,
+            "meta": 1,
+            "guard": 2,
+            "type": 14
+          }
+        }
+      },
+      "behavior": {
+        "checked": 52,
+        "sourceDigest": "d6cf7161fdc79715bb6be27a614a59f63f31009add246faca3907050193809fb",
+        "passed": true
+      },
+      "contextChanges": 5,
+      "compactBytes": 4755,
+      "compact": {
+        "job": "mwryng1rae0276",
+        "state": "done",
+        "protocol": "dt.path-trace/v1",
+        "operation": "trace",
+        "analyses": [
+          {
+            "id": "e0fea44af50565add373e7f4d37fa4212dcbd8b9c60b39a7b14fb8124fe5e3bb-3b568efbf6ec310c919a707f2b0a97a1",
+            "repo": "DEMO/person-annulled",
+            "sha": "c7039e0824d6fb3c87646d1829aa1549bbe2f51f",
+            "revisionKey": "work/person-annulled-main-96718d57691c71f4",
+            "sourceDigest": "13eed0fec278478191222f603514d5de70426c7a7d44e8408c7e0efeeb6ec195",
+            "language": "java"
+          },
+          {
+            "id": "8fc2e7cf5877d29ae009878e93f5e36fd941d2be706542532eca5b699480a7e8-501319c9a8fb07e3d12b8bf400621445",
+            "repo": "DEMO/person-annulled",
+            "sha": "c7039e0824d6fb3c87646d1829aa1549bbe2f51f",
+            "revisionKey": "work/person-annulled-main-96718d57691c71f4",
+            "sourceDigest": "e22339405726e50312a47befa44900359362d5e8af6641781fb6193b476f6e82",
+            "language": "java"
+          }
+        ],
+        "request": {
+          "tool": "semantic_trace",
+          "arguments": {
+            "analyses": [
+              "e0fea44af50565add373e7f4d37fa4212dcbd8b9c60b39a7b14fb8124fe5e3bb-3b568efbf6ec310c919a707f2b0a97a1",
+              "8fc2e7cf5877d29ae009878e93f5e36fd941d2be706542532eca5b699480a7e8-501319c9a8fb07e3d12b8bf400621445"
+            ],
+            "from": {
+              "kind": "method",
+              "name": "person",
+              "file": "src/main/java/person/PersonController.java",
+              "parameter": "id"
+            },
+            "to": {
+              "kind": "call",
+              "name": "response",
+              "file": "src/main/java/person/PersonController.java",
+              "argument": 2
+            },
+            "assumptions": [],
+            "includeControl": true,
+            "includeContext": true,
+            "maxPaths": 3,
+            "maxHops": 60,
+            "budgetMs": 15000
+          }
+        },
+        "assessment": {
+          "status": "source-context-changed",
+          "exhaustive": false,
+          "contextChanges": 5,
+          "layers": {
+            "data": "no-observed-path-change",
+            "control": "no-observed-path-change"
+          },
+          "inconclusiveCandidates": 0,
+          "dataChanges": 0,
+          "controlChanges": 0,
+          "behaviorVerified": false,
+          "meaning": "A changed source expression or condition on a selected static path is evidence that this path differs. It does not prove that the changed line executes, the requested behavior is correct, or every affected path is covered."
+        },
+        "reading": [
+          "before: 1 value path(s) (static-candidates); 1 local control path(s) (static-candidates).",
+          "after: 1 value path(s) (static-candidates); 1 local control path(s) (static-candidates).",
+          "source-context-changed: 0 value and 0 control path differences; 0 inconclusive candidate(s). Match ignores shifted lines and CPG node IDs, and retains changed expressions.",
+          "5 reachable source-context change(s); before: 76 collected facts (collected); after: 78 collected facts (collected). Context facts include loops, callbacks and candidate inherited/library bodies; applicability to the selected paths remains unproven.",
+          "For a regression, exercise the entry with inputs that satisfy the recorded guards; assert values, identity and effect counts at each selected exit. Also test rejected inputs produce no effects."
+        ],
+        "assumptions": [],
+        "sides": [
+          {
+            "side": "before",
+            "truncated": false,
+            "context": {
+              "status": "collected",
+              "complete": true
+            },
+            "data": {
+              "status": "static-candidates",
+              "composed": 0
+            },
+            "control": {
+              "status": "static-candidates"
+            }
+          },
+          {
+            "side": "after",
+            "truncated": false,
+            "context": {
+              "status": "collected",
+              "complete": true
+            },
+            "data": {
+              "status": "static-candidates",
+              "composed": 0
+            },
+            "control": {
+              "status": "static-candidates"
+            }
+          }
+        ],
+        "truncated": false,
+        "gaps": [
+          {
+            "kind": "unresolved-call",
+            "analysisId": "e0fea44af50565add373e7f4d37fa4212dcbd8b9c60b39a7b14fb8124fe5e3bb-3b568efbf6ec310c919a707f2b0a97a1",
+            "repo": "DEMO/person-annulled",
+            "sha": "c7039e0824d6fb3c87646d1829aa1549bbe2f51f",
+            "file": "src/main/java/person/PersonController.java",
+            "line": 24,
+            "name": "now",
+            "methodFullName": "java.time.LocalDate.now:<unresolvedSignature>(1)",
+            "side": "before"
+          }
+        ],
+        "proof": {
+          "kind": "selected-path-comparison",
+          "status": "source-context-changed",
+          "feasibility": "unknown",
+          "runtime": "unknown",
+          "behaviorVerified": false,
+          "assumptions": "User declarations match exact displayed CFG predicates only. They do not constrain Joern value-flow queries or prove satisfiability. Data and control paths are independent evidence; no correlation is inferred.",
+          "scope": "Value flow is retained-CPG evidence; control paths are local CFG walks with explicit throws stopped. Aliasing, dispatch, loops, exceptions, and external effects can remain unresolved. No solver or runtime coverage is claimed."
+        },
+        "view": "http://127.0.0.1:4000/show/mwrypsom0ee950cb93821e0ce6",
+        "results": [],
+        "total": 4,
+        "summary": [
+          {
+            "side": "before",
+            "dataPaths": 1,
+            "controlPaths": 1,
+            "dataStatus": "static-candidates",
+            "controlStatus": "static-candidates",
+            "contextStatus": "collected",
+            "contextFacts": 76,
+            "contextMethods": 21
+          },
+          {
+            "side": "after",
+            "dataPaths": 1,
+            "controlPaths": 1,
+            "dataStatus": "static-candidates",
+            "controlStatus": "static-candidates",
+            "contextStatus": "collected",
+            "contextFacts": 78,
+            "contextMethods": 22
+          }
+        ],
+        "format": "compact",
+        "detail": "Full evidence is retained at view. Use format:\"full\" or narrow limit/maxPaths for original JSON.",
+        "omitted": {
+          "results": 4,
+          "nodes": 23,
+          "gaps": 55,
+          "contextChanges": 4
+        },
+        "previewTruncated": true
+      },
+      "viewLinks": "Ephemeral development URLs; rerun eval-person-paths or import the full private report into the demo to view."
+    },
+    {
+      "mutation": "resultset-column",
+      "before": {
+        "protocol": "dt.semantic/v1",
+        "id": "cc43dd91950d411651ba9635d92418307eab6154c851a1bce827e1254cc7de35-c9258584c0c0d02e0e091e24e9a6957b",
+        "key": "cc43dd91950d411651ba9635d92418307eab6154c851a1bce827e1254cc7de35",
+        "state": "ready",
+        "repo": "DEMO/person-resultset-column",
+        "sha": "1604cda4f973f1f6b05605144a1239822648148c",
+        "ref": "main",
+        "sourceDigest": "837c59907d7e32158c7fb0da1adedbb28047923472f8dfb43007474ba95da098",
+        "revisionKey": "work/person-resultset-column-main-99e2563cfd3730dd",
+        "language": "java",
+        "workspace": "person-resultset-column-main-99e2563cfd3730dd",
+        "service": null,
+        "env": "fixture",
+        "dependencies": [],
+        "builtAt": "2026-11-22T14:59:36.409Z",
+        "engine": {
+          "version": "4.0.533",
+          "image": "sha256:17a8dad187a9",
+          "scriptsDigest": "ff3ab9f396ec04a63d1aa00e075e4c9e0ea8b7f59af113f8d6b85285099b1fed",
+          "enrichmentDigest": "f194a96138123791980a18d313f906097587ba9b4877a528c8e683c3a6801600",
+          "queryDigest": "85540fb901796cff39067b7b8a10e51fe48f8d1a6cb75c7ca5c2b87bf1546e8a"
+        },
+        "projection": {
+          "bytes": 108070,
+          "digest": "f9057f716a846e5f66c4e3f341f6deee6d59c5dc806b0f86f8a33659d43cb0de"
+        },
+        "capabilities": {
+          "pathContext": true,
+          "inheritance": true,
+          "calls": true,
+          "controlFlow": true,
+          "dataFlow": true
+        },
+        "coverage": {
+          "truncated": false,
+          "gaps": [
+            "Dynamic dispatch, external methods and transport field mappings may remain unresolved"
+          ],
+          "counts": {
+            "call": 69,
+            "symbol": 52,
+            "fact": 85,
+            "port": 3,
+            "meta": 1,
+            "guard": 2,
+            "type": 14
+          }
+        }
+      },
+      "after": {
+        "protocol": "dt.semantic/v1",
+        "id": "e127aeace9f160bc10a2aff30a058fbb2ef7b228087209c95c33995c168b6c0f-ab3d02410bf8cd2d29ef99cad7aa67c9",
+        "key": "e127aeace9f160bc10a2aff30a058fbb2ef7b228087209c95c33995c168b6c0f",
+        "state": "ready",
+        "repo": "DEMO/person-resultset-column",
+        "sha": "1604cda4f973f1f6b05605144a1239822648148c",
+        "ref": "main",
+        "sourceDigest": "8b66edf85cbfe6511ab800ab2895ae1e4b6218847e50cced4bd11bb30f5c6168",
+        "revisionKey": "work/person-resultset-column-main-99e2563cfd3730dd",
+        "language": "java",
+        "workspace": "person-resultset-column-main-99e2563cfd3730dd",
+        "service": null,
+        "env": "fixture",
+        "dependencies": [],
+        "builtAt": "2026-11-22T15:00:09.069Z",
+        "engine": {
+          "version": "4.0.533",
+          "image": "sha256:17a8dad187a9",
+          "scriptsDigest": "ff3ab9f396ec04a63d1aa00e075e4c9e0ea8b7f59af113f8d6b85285099b1fed",
+          "enrichmentDigest": "f194a96138123791980a18d313f906097587ba9b4877a528c8e683c3a6801600",
+          "queryDigest": "85540fb901796cff39067b7b8a10e51fe48f8d1a6cb75c7ca5c2b87bf1546e8a"
+        },
+        "projection": {
+          "bytes": 108061,
+          "digest": "994e8c68298016d6dd05bd1f473435f9bf57eeb89e281fcf1c76ede46d355632"
+        },
+        "capabilities": {
+          "pathContext": true,
+          "inheritance": true,
+          "calls": true,
+          "controlFlow": true,
+          "dataFlow": true
+        },
+        "coverage": {
+          "truncated": false,
+          "gaps": [
+            "Dynamic dispatch, external methods and transport field mappings may remain unresolved"
+          ],
+          "counts": {
+            "call": 69,
+            "symbol": 52,
+            "fact": 85,
+            "port": 3,
+            "meta": 1,
+            "guard": 2,
+            "type": 14
+          }
+        }
+      },
+      "behavior": {
+        "checked": 52,
+        "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+        "passed": true
+      },
+      "contextChanges": 2,
+      "compactBytes": 4782,
+      "compact": {
+        "job": "mwryr8cw4188b6",
+        "state": "done",
+        "protocol": "dt.path-trace/v1",
+        "operation": "trace",
+        "analyses": [
+          {
+            "id": "cc43dd91950d411651ba9635d92418307eab6154c851a1bce827e1254cc7de35-c9258584c0c0d02e0e091e24e9a6957b",
+            "repo": "DEMO/person-resultset-column",
+            "sha": "1604cda4f973f1f6b05605144a1239822648148c",
+            "revisionKey": "work/person-resultset-column-main-99e2563cfd3730dd",
+            "sourceDigest": "837c59907d7e32158c7fb0da1adedbb28047923472f8dfb43007474ba95da098",
+            "language": "java"
+          },
+          {
+            "id": "e127aeace9f160bc10a2aff30a058fbb2ef7b228087209c95c33995c168b6c0f-ab3d02410bf8cd2d29ef99cad7aa67c9",
+            "repo": "DEMO/person-resultset-column",
+            "sha": "1604cda4f973f1f6b05605144a1239822648148c",
+            "revisionKey": "work/person-resultset-column-main-99e2563cfd3730dd",
+            "sourceDigest": "8b66edf85cbfe6511ab800ab2895ae1e4b6218847e50cced4bd11bb30f5c6168",
+            "language": "java"
+          }
+        ],
+        "request": {
+          "tool": "semantic_trace",
+          "arguments": {
+            "analyses": [
+              "cc43dd91950d411651ba9635d92418307eab6154c851a1bce827e1254cc7de35-c9258584c0c0d02e0e091e24e9a6957b",
+              "e127aeace9f160bc10a2aff30a058fbb2ef7b228087209c95c33995c168b6c0f-ab3d02410bf8cd2d29ef99cad7aa67c9"
+            ],
+            "from": {
+              "kind": "method",
+              "name": "person",
+              "file": "src/main/java/person/PersonController.java",
+              "parameter": "id"
+            },
+            "to": {
+              "kind": "call",
+              "name": "response",
+              "file": "src/main/java/person/PersonController.java",
+              "argument": 2
+            },
+            "assumptions": [],
+            "includeControl": true,
+            "includeContext": true,
+            "maxPaths": 3,
+            "maxHops": 60,
+            "budgetMs": 15000
+          }
+        },
+        "assessment": {
+          "status": "static-path-changed",
+          "exhaustive": false,
+          "contextChanges": 2,
+          "layers": {
+            "data": "static-path-changed",
+            "control": "no-observed-path-change"
+          },
+          "inconclusiveCandidates": 0,
+          "dataChanges": 1,
+          "controlChanges": 0,
+          "behaviorVerified": false,
+          "meaning": "A changed source expression or condition on a selected static path is evidence that this path differs. It does not prove that the changed line executes, the requested behavior is correct, or every affected path is covered."
+        },
+        "reading": [
+          "before: 1 value path(s) (static-candidates); 1 local control path(s) (static-candidates).",
+          "after: 1 value path(s) (static-candidates); 1 local control path(s) (static-candidates).",
+          "static-path-changed: 1 value and 0 control path differences; 0 inconclusive candidate(s). Match ignores shifted lines and CPG node IDs, and retains changed expressions.",
+          "2 reachable source-context change(s); before: 78 collected facts (collected); after: 78 collected facts (collected). Context facts include loops, callbacks and candidate inherited/library bodies; applicability to the selected paths remains unproven.",
+          "For a regression, exercise the entry with inputs that satisfy the recorded guards; assert values, identity and effect counts at each selected exit. Also test rejected inputs produce no effects."
+        ],
+        "assumptions": [],
+        "sides": [
+          {
+            "side": "before",
+            "truncated": false,
+            "context": {
+              "status": "collected",
+              "complete": true
+            },
+            "data": {
+              "status": "static-candidates",
+              "composed": 0
+            },
+            "control": {
+              "status": "static-candidates"
+            }
+          },
+          {
+            "side": "after",
+            "truncated": false,
+            "context": {
+              "status": "collected",
+              "complete": true
+            },
+            "data": {
+              "status": "static-candidates",
+              "composed": 0
+            },
+            "control": {
+              "status": "static-candidates"
+            }
+          }
+        ],
+        "truncated": false,
+        "gaps": [
+          {
+            "kind": "unresolved-call",
+            "analysisId": "cc43dd91950d411651ba9635d92418307eab6154c851a1bce827e1254cc7de35-c9258584c0c0d02e0e091e24e9a6957b",
+            "repo": "DEMO/person-resultset-column",
+            "sha": "1604cda4f973f1f6b05605144a1239822648148c",
+            "file": "src/main/java/person/PersonController.java",
+            "line": 24,
+            "name": "now",
+            "methodFullName": "java.time.LocalDate.now:<unresolvedSignature>(1)",
+            "side": "before"
+          }
+        ],
+        "proof": {
+          "kind": "selected-path-comparison",
+          "status": "static-path-changed",
+          "feasibility": "unknown",
+          "runtime": "unknown",
+          "behaviorVerified": false,
+          "assumptions": "User declarations match exact displayed CFG predicates only. They do not constrain Joern value-flow queries or prove satisfiability. Data and control paths are independent evidence; no correlation is inferred.",
+          "scope": "Value flow is retained-CPG evidence; control paths are local CFG walks with explicit throws stopped. Aliasing, dispatch, loops, exceptions, and external effects can remain unresolved. No solver or runtime coverage is claimed."
+        },
+        "view": "http://127.0.0.1:4000/show/mwrythm119335d90ccb6d0a8f3",
+        "results": [],
+        "total": 4,
+        "summary": [
+          {
+            "side": "before",
+            "dataPaths": 1,
+            "controlPaths": 1,
+            "dataStatus": "static-candidates",
+            "controlStatus": "static-candidates",
+            "contextStatus": "collected",
+            "contextFacts": 78,
+            "contextMethods": 22
+          },
+          {
+            "side": "after",
+            "dataPaths": 1,
+            "controlPaths": 1,
+            "dataStatus": "static-candidates",
+            "controlStatus": "static-candidates",
+            "contextStatus": "collected",
+            "contextFacts": 78,
+            "contextMethods": 22
+          }
+        ],
+        "format": "compact",
+        "detail": "Full evidence is retained at view. Use format:\"full\" or narrow limit/maxPaths for original JSON.",
+        "omitted": {
+          "results": 4,
+          "nodes": 23,
+          "gaps": 55,
+          "contextChanges": 2
+        },
+        "previewTruncated": true
+      },
+      "viewLinks": "Ephemeral development URLs; rerun eval-person-paths or import the full private report into the demo to view."
+    }
+  ]
+}

@@ -1022,6 +1022,10 @@ local trace inspection, OTLP export and the interactive source/lifecycle coverag
 report (`npm run test:coverage`). Both views are available in Admin Runtime and
 as Open WebUI tool results.
 
+[Person-service mutation practice](docs/person-mutation-practice.md) provides a
+real PostgreSQL → Spring HTTP fixture, 23 query/selection/mapping faults, local
+model repair runs, independent holdout checks and reproducible before/after views.
+
 ## License
 MIT
 

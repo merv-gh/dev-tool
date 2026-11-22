@@ -72,6 +72,9 @@ test('client publishes immutable revisions, reuses matching cache and retains ol
   const CI=require('../lib/codeindex'),S=require('../lib/semantic-code'),source=path.join(home,'source');fs.mkdirSync(source);fs.writeFileSync(path.join(source,'Orders.java'),'class Orders { String create(String id) { return id; } }');
   const one=CI.build(source,'P/orders',{project:'P',repo:'orders',sha:'1'.repeat(40)});
   const built=await S.index({revisionKey:one.revisionKey,waitMs:30000});assert.equal(built.ready,true,JSON.stringify(built));assert.equal(built.analyses.length,1);
+  const T=require('../lib/tools'),query=await T.call('semantic_query',{analysis:built.analyses[0].id,operation:'flowmap',from:{name:'create'},waitMs:30000,format:'full'});
+  assert.ok(query.job);const observed=await T.call('semantic_query',{job:query.job,waitMs:30000,format:'full'});assert.equal(observed.job,query.job);assert.equal(observed.state,'done');
+  await assert.rejects(T.call('semantic_query',{}),e=>e.code==='DT_ARGUMENT_INVALID'&&/operation/.test(e.message));
   const reused=await S.index({revisionKey:one.revisionKey,waitMs:30000});assert.equal(reused.reused,true);assert.equal(reused.analyses[0].id,built.analyses[0].id);
   fs.writeFileSync(path.join(source,'Orders.java'),'class Orders { String updated(String id) { return id; } }');const two=CI.build(source,'P/orders',{project:'P',repo:'orders',sha:'2'.repeat(40)});
   const next=await S.index({revisionKey:two.revisionKey,waitMs:30000});assert.equal(next.ready,true,JSON.stringify(next));assert.notEqual(next.analyses[0].id,built.analyses[0].id);assert.equal(S.list({versions:true}).total,2);
@@ -117,6 +120,7 @@ test('dirty workspace snapshots keep their logical repository but cannot replace
  require('../lib/util').writeJson(path.join(home,'cache/work',id+'.json'),{id,path:root,project:'P',repo:'branch-source',sha,owner:A.owner(),createdAt:new Date().toISOString(),dirty:true});
  W.write(id,'Orders.java',{content:'class Orders { int draft; }'});
  W.index(id);
+ await assert.rejects(S.inputs({repo:'work/'+id,ref:'f'.repeat(64)}),e=>e.code==='DT_SEMANTIC_WORKSPACE_REF'&&/Omit ref/.test(e.message));
  const one=await S.index({repo:'work/'+id,waitMs:30000});assert.equal(one.analyses[0].repo,'P/branch-source');assert.equal(one.analyses[0].workspace,id);
  const first=await S.query({analysis:one.analyses[0].id});
  W.write(id,'Orders.java',{content:'class Orders { int revisedDraft; }'});

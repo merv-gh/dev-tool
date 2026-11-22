@@ -18246,7 +18246,7 @@ var require_self_model_catalog = __commonJS({
     module2.exports = {
       protocol: "dt.repo-source/v1",
       repo: "dev-tool",
-      sourceDigest: "14b938006b7e40fa07824e7c99cdfc5e50eed63f7c5871e4703e78bc46066018",
+      sourceDigest: "c2583b4fc2bbc78eb6c8b87e348b501468631346a0a66f803a93de77d1710cb2",
       machines: [
         {
           id: "IO.atomic-file",
@@ -18301,7 +18301,7 @@ var require_self_model_catalog = __commonJS({
           consumers: [
             {
               file: "lib/mapping-debugger.js",
-              line: 117,
+              line: 134,
               snippet: "r.receipts[step] = require('./state-machine').bind({ state: 'running', at, env, executionId: require('./execution').current()?.id || null, request: p || d.definition.request }, require('./lifecycles').mappingRead);"
             }
           ],
@@ -21559,7 +21559,7 @@ var require_self_model_catalog = __commonJS({
           consumers: [
             {
               file: "lib/semantic-code.js",
-              line: 161,
+              line: 162,
               snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').semanticPublication);"
             }
           ],
@@ -21647,7 +21647,7 @@ var require_self_model_catalog = __commonJS({
           consumers: [
             {
               file: "lib/semantic-code.js",
-              line: 248,
+              line: 249,
               snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').deepQuery);"
             }
           ],
@@ -73236,6 +73236,7 @@ var require_semantic_code = __commonJS({
         keys = [passport.codeIndex, ...(passport.libraries || []).filter((l) => l.index).map((l) => l.index)];
       } else {
         const selector = args.revisionKey || args.repos || (args.project && args.repo && !args.repo.includes("/") ? `${args.project.toUpperCase()}/${args.repo}` : args.repo);
+        if (args.ref && typeof selector === "string" && selector.startsWith("work/")) throw P.error("Workspace indexing snapshots its current files. Omit ref; file revisions from workspace_read are not Git commits. To select a branch/commit, use a repository index instead.", "DT_SEMANTIC_WORKSPACE_REF", 400);
         if (selector) keys = CI.select(selector);
         if (args.ref && !/^[a-f0-9]{40}$/i.test(args.ref)) {
           const target = args.project && args.repo && !args.repo.includes("/") ? { project: args.project, repo: args.repo } : typeof selector === "string" && /^[^/@]+\/[^/@]+$/.test(selector) ? { project: selector.split("/")[0], repo: selector.split("/")[1] } : null;
@@ -82707,7 +82708,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md|java)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "14b938006b7e40fa07824e7c99cdfc5e50eed63f7c5871e4703e78bc46066018";
+      if (true) return "c2583b4fc2bbc78eb6c8b87e348b501468631346a0a66f803a93de77d1710cb2";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -89091,7 +89092,7 @@ var require_tools_semantic = __commonJS({
           const value = await S().query({ ...a, operation: "trace" });
           return present(value, { view: "semantic-path-trace", title: "Change path \xB7 entry to exit" });
         } },
-        { name: "semantic_query", description: "Query retained CPGs: symbols, calls, paths/slices, guards, branch comparisons or entry-to-exit state maps. Inspect proof/gaps; static reachability does not prove value flow.", input: { ...selection, job: str("Existing semantic query job id; observe without repeating it"), waitMs: { ...int("Observation wait", 0), minimum: 0, maximum: 3e4 }, operation: { type: "string", enum: ["symbols", "ports", "callers", "callees", "neighborhood", "neighbors", "paths", "slice", "assertions", "compare", "flowmap"] }, from: selector, to: selector, target: selector, mode: { type: "string", enum: ["reachability", "controlflow", "dataflow"], default: "reachability" }, query: str("Symbol/port query where supported"), kind: str("Optional result kind"), ...bounds, maxMethods: { ...int("flowmap reachable method budget", 20), minimum: 1, maximum: 40 }, maxStates: { ...int("flowmap state budget", 180), minimum: 20, maximum: 400 }, maxHops: { ...int("Bounded traversal depth", 8), minimum: 1, maximum: 30 }, maxPaths: { ...int("Maximum returned paths", 8), minimum: 1, maximum: 20 }, includeBypasses: { type: "boolean", default: false, description: "Include supported bypass/counterexample evidence" } }, required: ["operation"], run: async (a) => {
+        { name: "semantic_query", description: "Query retained CPGs: symbols, calls, paths/slices, guards, branch comparisons or entry-to-exit state maps. Inspect proof/gaps; static reachability does not prove value flow.", inputRules: { if: { required: ["job"] }, then: { properties: { job: { minLength: 1 } } }, else: { required: ["operation"] } }, input: { ...selection, job: str("Existing semantic query job id; observe without repeating it"), waitMs: { ...int("Observation wait", 0), minimum: 0, maximum: 3e4 }, operation: { type: "string", enum: ["symbols", "ports", "callers", "callees", "neighborhood", "neighbors", "paths", "slice", "assertions", "compare", "flowmap"] }, from: selector, to: selector, target: selector, mode: { type: "string", enum: ["reachability", "controlflow", "dataflow"], default: "reachability" }, query: str("Symbol/port query where supported"), kind: str("Optional result kind"), ...bounds, maxMethods: { ...int("flowmap reachable method budget", 20), minimum: 1, maximum: 40 }, maxStates: { ...int("flowmap state budget", 180), minimum: 20, maximum: 400 }, maxHops: { ...int("Bounded traversal depth", 8), minimum: 1, maximum: 30 }, maxPaths: { ...int("Maximum returned paths", 8), minimum: 1, maximum: 20 }, includeBypasses: { type: "boolean", default: false, description: "Include supported bypass/counterexample evidence" } }, run: async (a) => {
           const value = await S().query(a);
           return present(value, { view: value.flowMap || a.operation === "flowmap" ? "semantic-flow-map" : "semantic-analysis", title: a.operation === "flowmap" || value.flowMap ? "Entry-to-exit flow map" : "Semantic " + a.operation });
         } }
@@ -90424,6 +90425,67 @@ var require_workflow_guides = __commonJS({
           ],
           boundaries: [
             "Knowledge projections retain source identity; a successful mirror does not prove runtime dependencies."
+          ]
+        },
+        {
+          id: "api-mapping-investigation",
+          title: "Trace a wrong API response from PostgreSQL through selection and DTO mapping",
+          terms: "wrong incorrect api response database postgres postgresql sql mapping mapper fio name person documents active annulled revoked validity effective date newest select filters ranking constructor column table join record birthdate regression outside in integration bug",
+          required: [
+            "An owned workspace or retained service revision, the failing input and expected business rule",
+            "An explicit environment/database and reproducible API target; write only disposable test data"
+          ],
+          stages: [
+            {
+              id: "source",
+              goal: "Call mapping_debug action=discover with workspace to collect the entry chain, SQL boundaries and copyable DTO/selection source. Prefer this bounded bundle to repeated broad searches. Inspect its file revisions and gaps.",
+              tools: [
+                "mapping_debug",
+                "workspace_read",
+                "code_search"
+              ]
+            },
+            {
+              id: "observe",
+              goal: "Save a named mapping_debug notebook with explicit API request, parameterized PG probes and selections (filters, order, whole-row fields, fallback) from the stated business rule. Run only selected steps. Inspect rejected candidates, expected winner and mismatched response fields. For HTTP 500s inspect correlated application/owned-runtime logs for the actual SQL or mapper exception.",
+              tools: [
+                "mapping_debug",
+                "pg_query",
+                "field_trace",
+                "service_env_logs",
+                "logs_search"
+              ]
+            },
+            {
+              id: "paths",
+              goal: "For control/data evidence, semantic_index repo=work/<id> without ref, then semantic_trace entry input to response/exit or semantic_query flowmap. Poll returned jobs. Check source SQL/JDBC callbacks and constructor argument positions separately; static reachability does not identify the winning database row.",
+              tools: [
+                "semantic_index",
+                "semantic_trace",
+                "semantic_query"
+              ]
+            },
+            {
+              id: "repair",
+              goal: "Fix the first supported divergence: SQL relation/join/predicate, ResultSet binding, eligibility/ranking, whole-object selection or DTO field source. Use a minimal workspace_write edits replacement. Preserve unaffected rules; Java max(comparator) already selects the greatest key.",
+              tools: [
+                "workspace_write"
+              ]
+            },
+            {
+              id: "verify",
+              goal: "Rebuild and run real entry-to-database/API integration tests. Check inactive/annulled/future/expired cases, inclusive dates, ties, optional fields and registry fallback, plus unseen people and clock dates. A passing mock test or static path is insufficient. Recapture the notebook and retain before/after source identities.",
+              tools: [
+                "test_run",
+                "mapping_debug",
+                "workspace_coverage"
+              ]
+            }
+          ],
+          boundaries: [
+            "Selection contracts evaluate declared rules over captured rows, not observed runtime lineage or an atomic database/API snapshot.",
+            "Truncated/missing inputs, ambiguous dispatch, generated accessors, JDBC/SQL semantics and tied winners remain explicit gaps.",
+            "Never hardcode observed IDs/names, weaken assertions, or treat a model explanation as independently verified correctness."
           ]
         }
       ]
@@ -91911,6 +91973,215 @@ var require_tools_api_client = __commonJS({
   }
 });
 
+// lib/mapping-selection.js
+var require_mapping_selection = __commonJS({
+  "lib/mapping-selection.js"(exports2, module2) {
+    var { isDeepStrictEqual } = require("node:util");
+    var invalid = (message) => require_durable_private_store().invalid(message);
+    var own = (o, k) => Object.hasOwn(o, k);
+    function evidence(value) {
+      const text = typeof value === "string" ? value : JSON.stringify(value);
+      return text?.length > 1024 ? { preview: text.slice(0, 1024), truncated: true } : value;
+    }
+    function validate(rules, probes, pointer) {
+      if (!Array.isArray(rules) || rules.length > 10) throw invalid("Use at most 10 selection contracts");
+      const ids = /* @__PURE__ */ new Set();
+      for (const s of rules) {
+        if (!s || !/^[a-z][a-z0-9-]{0,79}$/.test(s.id || "") || ids.has(s.id) || !probes.has(s.probe)) throw invalid("Selections need unique ids and an existing probe");
+        ids.add(s.id);
+        if (typeof s.label !== "string" || s.label.length > 160) throw invalid("Selection needs a short label");
+        pointer({}, s.row_id);
+        if (!Array.isArray(s.filters) || s.filters.length > 20 || !Array.isArray(s.order) || !s.order.length || s.order.length > 5 || !Array.isArray(s.fields) || !s.fields.length || s.fields.length > 30) throw invalid("Selection needs filters (0..20), order (1..5) and fields (1..30)");
+        for (const f of s.filters) {
+          pointer({}, f.field);
+          if (!["eq", "ne", "lt", "lte", "gt", "gte", "nonblank"].includes(f.op) || f.allow_null !== void 0 && typeof f.allow_null !== "boolean") throw invalid("Unknown selection predicate");
+          if (f.op !== "nonblank") {
+            if (own(f, "value") === own(f, "value_from")) throw invalid("Predicate needs exactly one value or value_from response pointer");
+            if (own(f, "value_from")) pointer({}, f.value_from);
+            if (own(f, "value") && f.value !== null && !["string", "boolean", "number"].includes(typeof f.value)) throw invalid("Predicate values must be JSON scalars");
+          }
+        }
+        for (const o of s.order) {
+          pointer({}, o.field);
+          if (!["asc", "desc"].includes(o.direction) || o.type !== void 0 && !["text", "number", "integer", "date"].includes(o.type)) throw invalid("Order needs asc/desc and optional type text, number, integer or date");
+        }
+        for (const f of s.fields) {
+          pointer({}, f.source_path);
+          pointer({}, f.response_path);
+        }
+        if (s.fallback) {
+          if (!probes.has(s.fallback.probe) || !Array.isArray(s.fallback.fields) || !s.fallback.fields.length || s.fallback.fields.length > 30) throw invalid("Fallback needs a probe and fields");
+          pointer({}, s.fallback.source_path);
+          for (const f of s.fallback.fields) {
+            pointer({}, f.source_path);
+            pointer({}, f.response_path);
+          }
+        }
+      }
+    }
+    function comparable(a, b) {
+      return typeof a === typeof b && (typeof a === "string" || typeof a === "number" && Number.isFinite(a) && Number.isFinite(b));
+    }
+    function orderedValue(value, type) {
+      if (type === "integer") {
+        if (typeof value === "number" && !Number.isSafeInteger(value) || !["string", "number"].includes(typeof value) || !/^[-+]?\d+$/.test(String(value))) return void 0;
+        return BigInt(value);
+      }
+      if (type === "number") {
+        if (!["string", "number"].includes(typeof value) || String(value).trim() === "") return void 0;
+        const n = Number(value);
+        return Number.isFinite(n) ? n : void 0;
+      }
+      if (type === "date") {
+        if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(Date.parse(value)) || new Date(value).toISOString().slice(0, 10) !== value) return void 0;
+        return value;
+      }
+      return value;
+    }
+    function evaluate(s, receipts, pointer) {
+      const raw = receipts[s.probe], api = receipts.api, gaps = [];
+      const result = {
+        id: s.id,
+        label: s.label,
+        probe: s.probe,
+        status: "inconclusive",
+        selected: null,
+        rows: [],
+        comparisons: [],
+        gaps,
+        proof: { contractEvaluated: false, runtimeLineageVerified: false, candidateCompletenessVerified: false },
+        notice: "Declared selection over separate read receipts; not observed service execution or an atomic snapshot."
+      };
+      if (raw?.state !== "done" || api?.state !== "done" || !Array.isArray(raw.data)) {
+        gaps.push("Completed API and row-array probe receipts are required");
+        return result;
+      }
+      result.proof.contractEvaluated = true;
+      if (raw.truncated) gaps.push("Candidate rows are truncated; an unseen row could win");
+      if (api.truncated) gaps.push("API response is truncated");
+      if (api.httpStatus !== void 0 && (api.httpStatus < 200 || api.httpStatus >= 300)) gaps.push("API receipt is not a successful response");
+      const candidates = [], ids = /* @__PURE__ */ new Set();
+      for (const row of raw.data) {
+        const id = pointer(row, s.row_id), rejected = [], unknown = [];
+        if (!id.found || !["string", "number"].includes(typeof id.value) || ids.has(String(id.value))) gaps.push("Missing or duplicate row identity");
+        ids.add(String(id.value));
+        for (const f of s.filters) {
+          const a = pointer(row, f.field), b = own(f, "value_from") ? pointer(api.data, f.value_from) : { found: true, value: f.value };
+          let passed;
+          if (!a.found || f.op !== "nonblank" && !b.found) unknown.push(f.field + ": missing predicate input");
+          else if (a.value === null && f.allow_null === true) passed = true;
+          else if (f.op === "nonblank") passed = typeof a.value === "string" && a.value.trim().length > 0;
+          else if (f.op === "eq" || f.op === "ne") passed = isDeepStrictEqual(a.value, b.value) === (f.op === "eq");
+          else if (!comparable(a.value, b.value)) unknown.push(f.field + ": incomparable values");
+          else passed = { lt: () => a.value < b.value, lte: () => a.value <= b.value, gt: () => a.value > b.value, gte: () => a.value >= b.value }[f.op]();
+          if (passed === false) rejected.push({ field: f.field, op: f.op, actual: evidence(a.value), expected: evidence(b.value) });
+        }
+        const state = rejected.length ? "excluded" : unknown.length ? "unknown" : "eligible";
+        result.rows.push({ id: id.value, state, rejected, unknown });
+        if (unknown.length && !rejected.length) gaps.push("A potentially eligible row has unknown predicates");
+        if (state === "eligible") candidates.push(row);
+      }
+      const order = (a, b) => {
+        for (const o of s.order) {
+          const av = pointer(a, o.field), bv = pointer(b, o.field);
+          av.value = orderedValue(av.value, o.type);
+          bv.value = orderedValue(bv.value, o.type);
+          const sameInteger = typeof av.value === "bigint" && typeof bv.value === "bigint";
+          if (!av.found || !bv.found || !sameInteger && !comparable(av.value, bv.value)) {
+            gaps.push("Missing or incomparable ordering field " + o.field);
+            continue;
+          }
+          if (av.value !== bv.value) return (av.value < bv.value ? -1 : 1) * (o.direction === "desc" ? -1 : 1);
+        }
+        return 0;
+      };
+      for (const row of candidates) for (const o of s.order) {
+        const v = pointer(row, o.field), n = orderedValue(v.value, o.type);
+        if (!v.found || n === void 0 || !["string", "number", "bigint"].includes(typeof n)) gaps.push("Missing or incomparable ordering field " + o.field);
+      }
+      candidates.sort(order);
+      if (candidates.length > 1 && order(candidates[0], candidates[1]) === 0) gaps.push("Winning rows tie; declare a deterministic tie-break");
+      let selected = candidates[0], fields = s.fields;
+      if (selected) result.selected = { probe: s.probe, id: pointer(selected, s.row_id).value };
+      else if (s.fallback) {
+        const f = receipts[s.fallback.probe], v = pointer(f?.data, s.fallback.source_path);
+        if (f?.state !== "done" || f.truncated || !v.found) gaps.push("Fallback source is missing, failed or truncated");
+        else {
+          selected = v.value;
+          fields = s.fallback.fields;
+          result.selected = { probe: s.fallback.probe, fallback: true };
+        }
+      } else gaps.push("No eligible rows and no declared fallback");
+      if (selected !== void 0) for (const f of fields) {
+        const a = pointer(api.data, f.response_path), b = pointer(selected, f.source_path);
+        const status = !a.found || !b.found ? "missing" : isDeepStrictEqual(a.value, b.value) ? "equal" : "different";
+        result.comparisons.push({ label: s.label, probe: result.selected?.probe, response_path: f.response_path, source_path: f.source_path, status, response: evidence(a.value), source: evidence(b.value), notice: result.notice });
+        if (status === "missing") gaps.push("A mapped field is missing");
+      }
+      result.gaps = [...new Set(gaps)];
+      result.status = result.gaps.length ? "inconclusive" : result.comparisons.some((c) => c.status === "different") ? "different" : "equal";
+      if (result.gaps.length) result.comparisons = result.comparisons.map((c) => ({ ...c, observed_status: c.status, status: "inconclusive" }));
+      return result;
+    }
+    module2.exports = { validate, evaluate };
+  }
+});
+
+// lib/mapping-source.js
+var require_mapping_source = __commonJS({
+  "lib/mapping-source.js"(exports2, module2) {
+    var crypto = require("node:crypto");
+    module2.exports = function source({ workspace, entry, max_output_bytes = 16384 }) {
+      if (!Number.isInteger(max_output_bytes) || max_output_bytes < 4096 || max_output_bytes > 32768) throw Error("max_output_bytes must be 4096..32768");
+      const W = require_workspace(), CI = require_codeindex(), index = W.index(workspace), key = "work/" + workspace;
+      const all = require_flows().flows([key]);
+      const matched = entry ? all.filter((f) => f.entry === entry || f.method === entry) : all;
+      const flows = matched.slice(0, 5), chain = flows.flatMap((f) => f.chain), graph = index.graph_();
+      const files = [...new Set(chain.map((m) => m.at?.replace(/:\d+$/, "")).filter(Boolean))];
+      const ids = new Set(chain.map((m) => m.method.split("#")[0])), classes = new Map((graph.classes || []).map((c) => [c.id, c]));
+      for (const edge of graph.edges || []) if (ids.has(edge[0]?.split("#")[0]) && ["uses", "member"].includes(edge[2])) {
+        const c = classes.get(edge[1]);
+        if (c?.file && !c.test && !files.includes(c.file)) files.push(c.file);
+      }
+      const r = {
+        workspace,
+        source: { sha: index.sha, revisionKey: index.revisionKey },
+        entries: flows.map((f) => ({ entry: f.entry, method: f.method, chain: f.chain, boundaries: f.out })),
+        files: [],
+        omitted: [],
+        proof: { kind: "heuristic-source-context", runtimeLineageVerified: false },
+        gaps: ["Heuristic calls can miss overloads, dynamic dispatch, generated accessors, SQL semantics and library code. Use Joern for retained control/data evidence; use HTTP/PG tests for behavior."],
+        next: { semantic_index: { repo: key, language: "java" }, read: { workspace, path: files[0] || "src" } }
+      };
+      if (matched.length > flows.length) r.gaps.push("Entry list truncated; select an exact entry");
+      if (!matched.length) r.gaps.push(entry ? "No exact entry; omit entry to list indexed handlers" : "No indexed entry points; use code_search then workspace_read");
+      for (const file of files.slice(0, 20)) {
+        const read = W.read(workspace, file, { from: 1, to: 400, lineNumbers: false }), item = { path: file, from: read.from, to: read.to, lines: read.lines, revision: read.revision, text: read.text };
+        if (read.lines > 400) r.gaps.push(file + ": source preview ends at line 400");
+        r.files.push(item);
+        if (Buffer.byteLength(JSON.stringify(r)) > max_output_bytes - 1200) {
+          r.files.pop();
+          r.omitted.push(file);
+        }
+      }
+      r.omitted.push(...files.slice(20));
+      if (r.omitted.length) r.gaps.push("Source budget reached; read omitted files explicitly");
+      r.digest = crypto.createHash("sha256").update(JSON.stringify(r.files.map((f) => [f.path, f.revision]))).digest("hex");
+      while (Buffer.byteLength(JSON.stringify(r)) > max_output_bytes && r.entries.some((e) => e.chain.length > 1)) {
+        const e = r.entries.find((e2) => e2.chain.length > 1);
+        e.chain.pop();
+        r.gaps[0] = "Call chain preview bounded. " + r.gaps[0].replace(/^Call chain preview bounded\. /, "");
+      }
+      if (Buffer.byteLength(JSON.stringify(r)) > max_output_bytes) {
+        r.entries = r.entries.map((e) => ({ entry: e.entry, method: e.method }));
+        r.gaps.push("Boundary preview omitted to meet output budget");
+      }
+      if (Buffer.byteLength(JSON.stringify(r)) > max_output_bytes) return { workspace, source: r.source, entries: [], files: [], omittedCount: files.length, entryCount: matched.length, proof: r.proof, gaps: ["Entry/source metadata itself exceeds the preview budget. Read workspace folders/files or use code_search to narrow the handler."], next: { read: { workspace, path: "src" }, semantic_index: { repo: key, language: "java" } } };
+      return r;
+    };
+  }
+});
+
 // lib/mapping-debugger.js
 var require_mapping_debugger = __commonJS({
   "lib/mapping-debugger.js"(exports2, module2) {
@@ -91973,6 +92244,7 @@ var require_mapping_debugger = __commonJS({
         pointer({}, c.response_path);
         pointer({}, c.source_path);
       }
+      if (d.selections !== void 0) require_mapping_selection().validate(d.selections, ids, pointer);
       return d;
     }
     function allowed(r) {
@@ -92033,21 +92305,64 @@ var require_mapping_debugger = __commonJS({
         return { ...c, status, response: a.found ? a.value : void 0, source: b.found ? b.value : void 0, responseAt: left?.at, sourceAt: right?.at, notice: "Equality is an observation, not proof that this query produced the response." };
       });
     }
+    function selections(r) {
+      return (r.definition.selections || []).map((s) => require_mapping_selection().evaluate(s, r.receipts || {}, pointer));
+    }
     function exposed(r, full = false) {
       const base = { ...r, url: url(r.id) };
       if (r.kind === "recording") {
         base.comparisons = comparisons(r);
+        base.selections = selections(r);
         if (!full) {
           delete base.definition;
           delete base.history;
           base.receipts = Object.fromEntries(Object.entries(r.receipts).map(([k, v]) => [k, { state: v.state, at: v.at, ms: v.ms, error: v.error, total: v.total, truncated: v.truncated, exchange: v.exchange, executionId: v.executionId }]));
           base.comparisons = compactComparisons(base.comparisons);
+          base.selections = compactSelections(base.selections);
         }
       }
       return base;
     }
     function compactComparisons(rows) {
       return rows.map((c) => Object.fromEntries(Object.entries(c).map(([k, v]) => ["response", "source"].includes(k) && JSON.stringify(v)?.length > 500 ? [k, { preview: JSON.stringify(v).slice(0, 500), truncated: true }] : [k, v])));
+    }
+    function compactSelections(rows) {
+      const trim = (value2, bytes = 180) => {
+        let s = String(value2);
+        if (Buffer.byteLength(s) <= bytes) return s;
+        let out2 = "";
+        for (const c of s) {
+          if (Buffer.byteLength(out2 + c) > bytes - 3) break;
+          out2 += c;
+        }
+        return out2 + "\u2026";
+      };
+      const value = (v) => JSON.stringify(v)?.length > 180 ? { preview: trim(JSON.stringify(v)), truncated: true } : v;
+      const result = rows.map((s) => ({ id: s.id, label: trim(s.label, 100), probe: s.probe, status: s.status, selected: s.selected ? { ...s.selected, ...s.selected.id !== void 0 ? { id: value(s.selected.id) } : {} } : null, rows: [], rowCount: s.rows.length, rowsOmitted: s.rows.length, comparisons: [], comparisonCount: s.comparisons.length, comparisonsOmitted: s.comparisons.length, gaps: [], gapCount: s.gaps.length, gapsOmitted: s.gaps.length, proof: s.proof, notice: "Declared contract; runtime lineage and candidate completeness remain unverified." }));
+      for (const r of result) {
+        if (r.selected?.probe === r.probe) delete r.selected.probe;
+      }
+      if (Buffer.byteLength(JSON.stringify(result)) > 8192) for (const r of result) {
+        delete r.notice;
+        r.label = trim(r.label, 32);
+      }
+      if (Buffer.byteLength(JSON.stringify(result)) > 8192) for (const r of result) {
+        r.label = trim(r.label, 16);
+        if (r.selected?.id?.truncated) r.selected.id.preview = trim(r.selected.id.preview, 64);
+      }
+      const add = (i, key2, item, count, omitted) => {
+        const r = result[i];
+        r[key2].push(item);
+        r[omitted] = r[count] - r[key2].length;
+        if (Buffer.byteLength(JSON.stringify(result)) > 8192) {
+          r[key2].pop();
+          r[omitted] = r[count] - r[key2].length;
+        }
+      };
+      rows.forEach((s, i) => s.gaps.forEach((g) => add(i, "gaps", trim(g, 240), "gapCount", "gapsOmitted")));
+      rows.forEach((s, i) => [...s.comparisons].sort((a, b) => Number(a.status === "equal") - Number(b.status === "equal")).forEach((c) => add(i, "comparisons", { status: c.status, response_path: trim(c.response_path), source_path: trim(c.source_path), response: value(c.response), source: value(c.source) }, "comparisonCount", "comparisonsOmitted")));
+      rows.forEach((s, i) => s.rows.forEach((r) => add(i, "rows", { id: value(r.id), state: r.state, rejected: r.rejected.slice(0, 3).map((f) => ({ field: trim(f.field), op: f.op, actual: value(f.actual), expected: value(f.expected) })), rejectionsOmitted: Math.max(0, r.rejected.length - 3), unknown: r.unknown.slice(0, 3).map((x) => trim(x)) }, "rowCount", "rowsOmitted")));
+      return result;
     }
     async function run({ id, recording, steps, params = {}, auth_profile }) {
       const d = load(id);
@@ -92108,12 +92423,12 @@ var require_mapping_debugger = __commonJS({
     }
     function open(r) {
       const data = exposed(r, true), view = require_results().saveView("mapping-debugger", data, { title: r.definition.title });
-      return { id: r.id, revision: r.revision, url: url(r.id), view, ...r.kind === "recording" ? { comparisons: compactComparisons(comparisons(r)), receipts: exposed(r).receipts } : {} };
+      return { id: r.id, revision: r.revision, url: url(r.id), view, ...r.kind === "recording" ? { comparisons: compactComparisons(comparisons(r)), selections: compactSelections(selections(r)), receipts: exposed(r).receipts } : {} };
     }
     function tool(a) {
       switch (a.action) {
         case "discover":
-          return discover(a);
+          return a.workspace ? require_mapping_source()(a) : discover(a);
         case "save":
           return save(a);
         case "list":
@@ -92138,7 +92453,7 @@ var require_mapping_debugger = __commonJS({
           throw D.invalid("Choose discover, save, list, get, open, run or delete");
       }
     }
-    module2.exports = { tool, definition, pointer, comparisons };
+    module2.exports = { tool, definition, pointer, comparisons, selections, compactSelections };
   }
 });
 
@@ -92151,8 +92466,8 @@ var require_tools_mapping_debugger = __commonJS({
       origin: "built-in",
       strictInput: true,
       logArgs: ["action", "id", "recording", "steps"],
-      description: "Debug raw-to-response mappings side by side. Discover cached service SQL/source/topic references; save/edit a named notebook with HTTP request, PG/ES/Kafka read probes and JSON-pointer comparisons. Save/open never execute. run explicitly sends only selected steps (api may mutate); no model calls or retries. Private durable recordings freeze the definition, retain errors/timing and compare fields without claiming runtime lineage. open gives inline visualization and interactive workbench. Same user can resume across chats.",
-      input: { action: { type: "string", enum: ["discover", "save", "list", "get", "open", "run", "delete"] }, id: str("Lowercase notebook/recording name"), service: str("Exact service for discover"), env: str("Environment for discover"), q: str("Notebook search"), expected_revision: { type: ["string", "null"], description: "Required for save/delete; null creates" }, definition: { type: "object", additionalProperties: true, description: 'version:1,title,service,env,follow_service,request:{method,url,headers,body:{kind,value}},probes:[{id,label,kind:pg|es|kafka,env,db,sql,params,index,query,topic,limit}],comparisons:[{label,probe,response_path:"/name",source_path:"/0/name"}],assumptions:[]' }, recording: str("Existing recording to append/replace selected receipts; same definition revision required"), steps: { type: "array", maxItems: 31, items: { type: "string" }, description: "Explicit probe ids and/or api; omitted never runs anything" }, params: { type: "object", additionalProperties: true, description: "Runtime HTTP template values; not stored in definition" }, auth_profile: str("Runtime server-side bearer profile"), include_data: { type: "boolean", default: false, description: "get: include bounded raw evidence; default compact receipts" } },
+      description: "Debug raw-to-response mappings. discover+workspace bundles entry call chains and copyable source files; discover+service reads cached SQL/ports. Named notebook: HTTP request, PG/ES/Kafka probes, pointer comparisons and optional selections (filters, ordering, whole-row fields, fallback). Candidates explain exclusions/winner; incomplete evidence stays inconclusive. Save/open never execute; run sends selected steps. Private recordings, inline/live views; contract checks are not runtime lineage.",
+      input: { action: { type: "string", enum: ["discover", "save", "list", "get", "open", "run", "delete"] }, id: str("Lowercase notebook/recording name"), workspace: str("discover: owned workspace for bounded source context"), entry: str("discover+workspace: optional exact handler method or entry from returned list"), max_output_bytes: { type: "integer", minimum: 4096, maximum: 32768, default: 16384, description: "discover+workspace source preview budget" }, service: str("Exact service for discover"), env: str("Environment for discover"), q: str("Notebook search"), expected_revision: { type: ["string", "null"], description: "Required for save/delete; null creates" }, definition: { type: "object", additionalProperties: true, description: 'version:1,title,service,env,request,probes:[{id,label,kind:pg|es|kafka,env,db,sql,params,index,query,topic,limit}],comparisons:[{label,probe,response_path,source_path}],assumptions:[],selections?:[{id,label,probe,row_id:"/id",filters:[{field,op:eq|ne|lt|lte|gt|gte|nonblank,value OR value_from:responsePointer,allow_null?}],order:[{field,direction:asc|desc,type?:text|number|integer|date}],fields:[{source_path,response_path}],fallback?:{probe,source_path,fields}}]. JSON pointers; lexical/numeric ordering is explicit.' }, recording: str("Existing recording to append/replace selected receipts; same definition revision required"), steps: { type: "array", maxItems: 31, items: { type: "string" }, description: "Explicit probe ids and/or api; omitted never runs anything" }, params: { type: "object", additionalProperties: true, description: "Runtime HTTP template values; not stored in definition" }, auth_profile: str("Runtime server-side bearer profile"), include_data: { type: "boolean", default: false, description: "get: include bounded raw evidence; default compact receipts" } },
       required: ["action"],
       run: (a) => require_mapping_debugger().tool(a)
     }];

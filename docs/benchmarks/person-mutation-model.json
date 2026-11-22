@@ -1,0 +1,2561 @@
+{
+  "protocol": "dt.person-mutations/v1",
+  "startedAt": "2026-11-22T14:52:22.415Z",
+  "completedAt": "2026-11-22T15:17:16.662Z",
+  "model": "qwen3.8:27b",
+  "think": false,
+  "guided": true,
+  "staged": true,
+  "seed": 42,
+  "copies": 3,
+  "options": {
+    "maxTurns": 8,
+    "maxCalls": 35,
+    "maxRounds": 3,
+    "maxTokens": 2400,
+    "contextWindow": 32768,
+    "timeoutMs": 120000
+  },
+  "advertised": {
+    "name": "qwen3.8:27b",
+    "digest": "22f605d9adb2f9a598749ffa8e1c9b35a78d388a448f0898ee057fc6a7ec1bd6",
+    "details": {
+      "parent_model": "qwen3.8:27b-dt-before-context-20261109",
+      "format": "gguf",
+      "family": "qwen35",
+      "families": [
+        "qwen35"
+      ],
+      "parameter_size": "27.3B",
+      "quantization_level": "Q4_K_M",
+      "context_length": 262144,
+      "embedding_length": 5120,
+      "runner": "llamacpp"
+    }
+  },
+  "sourceHashes": {
+    "dev/eval-person-mutations.js": "bfd99610b118f5427afcc2c065a04e192ba237fa95ea1162634d0e673b023c4d",
+    "dev/person-mutations.js": "be62808762477027fc91c69708951bfd6594aca3e8bede0f97a7a682c9cd93b7",
+    "dev/person-notebook.js": "6e6dbcf4da62a29a2bfbd706347074fb7dc4d4ffff77e81ab98b4b9e08de878f",
+    "lib/mapping-debugger.js": "3d35f0dda1f9c1027fa00c3f2ccff51f8658e6627a94c7d7d0783261fa59114f",
+    "lib/mapping-source.js": "f746eff067da553e32be55b7331711a326421726c9dddb797205a9ff0b7cb19d",
+    "lib/mapping-selection.js": "275c4ee155e8cbcb8b69d3846b64e5327508f67ef6279a2d77e4f2e0302a41af",
+    "lib/tools-semantic.js": "0539b51fc521352aba734926d9b8eb3d886560170a80f7e650b0cf13cd330302"
+  },
+  "fixtureDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+  "datasetSha256": "4e18ca902ab8248778ab4e9b0e4027139a4acb349165697c54f56c07108aea30",
+  "passed": true,
+  "cleanup": {
+    "verified": true
+  },
+  "limits": [
+    "Finite synthetic corpus, not proof of catching all production mapping bugs.",
+    "Joern provides static paths/conditions; runtime PostgreSQL and HTTP assertions grade behavior independently.",
+    "Private oracle, build configuration and tests are outside the model edit boundary.",
+    "Staged mode precollects tool evidence and runs verification in the harness; it is not autonomous tool discovery.",
+    "These are inference-time practice runs, not model weight training."
+  ],
+  "originalReportSha256": "2a4793f0c47776a8654d4a2492820b8c2d4229b2844c1aef6ce69befefd24e8d",
+  "baseline": {
+    "passed": true,
+    "checked": 52,
+    "failures": [],
+    "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+  },
+  "cases": [
+    {
+      "id": "case-bcaf0220",
+      "mutation": "archived-table",
+      "killed": true,
+      "passed": true,
+      "mode": "staged-evidence-handoff",
+      "finish": "public-http-passed",
+      "turns": 1,
+      "modelMs": 57717,
+      "usage": {
+        "input": 5621,
+        "output": 102
+      },
+      "schemaBytes": 1806,
+      "peakRequestBytes": 22412,
+      "promptSha256": "e04cc4a4a982d41a338123250cb8255730cd747ce2f1e7e26e621a4bf96da54c",
+      "transcriptSha256": "cf4125e6c12d1c3ce8b5e2b3829df4e4b1b0e60a226a57ec82861206c8fd4573",
+      "protectedUnchanged": true,
+      "before": {
+        "passed": false,
+        "checked": 52,
+        "failures": [
+          {
+            "id": 101,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Иванова",
+                "actual": "Алексеева"
+              },
+              {
+                "path": "/fio/firstName",
+                "expected": "Анна",
+                "actual": "Ольга"
+              },
+              {
+                "path": "/fio/patronymic",
+                "expected": "Петровна",
+                "actual": "Сергеевна"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Иванова Анна Петровна",
+                "actual": "Алексеева Ольга Сергеевна"
+              }
+            ]
+          },
+          {
+            "id": 102,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Иванова",
+                "actual": "Соколова"
+              },
+              {
+                "path": "/fio/firstName",
+                "expected": "Анна",
+                "actual": "Лидия"
+              },
+              {
+                "path": "/fio/patronymic",
+                "expected": "Петровна",
+                "actual": null
+              },
+              {
+                "path": "/fullName",
+                "expected": "Иванова Анна Петровна",
+                "actual": "Соколова Лидия"
+              }
+            ]
+          }
+        ],
+        "sourceDigest": "58e3b2b5e00366a4685bcb1dd6710c36e60f4a7e1a5d723d230af8c4c18da5e7",
+        "failedCases": 45
+      },
+      "after": {
+        "passed": true,
+        "checked": 52,
+        "failures": [],
+        "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+        "failedCases": 0
+      },
+      "patch": "diff --git a/src/main/java/person/PersonRepository.java b/src/main/java/person/PersonRepository.java\nindex b934d77..11f165e 100644\n--- a/src/main/java/person/PersonRepository.java\n+++ b/src/main/java/person/PersonRepository.java\n@@ -24,7 +24,7 @@ public class PersonRepository {\n         return jdbc.query(\"\"\"\n             SELECT d.id, d.last_name, d.first_name, d.middle_name, d.birth_date, d.issued_on,\n                    d.effective_from, d.expires_on, s.active, s.annulled\n-            FROM registry.person_document_archive d\n+            FROM registry.person_document d\n             JOIN registry.document_state s ON s.document_id = d.id\n             WHERE d.person_id = ?\n             \"\"\", (rs, row) -> new Document(rs.getLong(\"id\"),",
+      "rounds": [
+        {
+          "round": 1,
+          "verdict": true,
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+          "failures": []
+        }
+      ],
+      "toolUse": {
+        "harness:mapping_debug": {
+          "calls": 3,
+          "errors": 0,
+          "ms": 1158,
+          "responseBytes": 18282
+        },
+        "model:workspace_write": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 21,
+          "responseBytes": 214
+        },
+        "harness:test_run": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 8748,
+          "responseBytes": 1082
+        }
+      }
+    },
+    {
+      "id": "case-f4db0c1a",
+      "mutation": "wrong-person-column",
+      "killed": true,
+      "passed": true,
+      "mode": "staged-evidence-handoff",
+      "finish": "public-http-passed",
+      "turns": 1,
+      "modelMs": 38001,
+      "usage": {
+        "input": 5656,
+        "output": 102
+      },
+      "schemaBytes": 1806,
+      "peakRequestBytes": 22486,
+      "promptSha256": "075591ad62fdef8e28a3c6a80cc0d809e796df393e30b6d3bc895212b46e4c75",
+      "transcriptSha256": "1e5704f44c0d95a4e4b9497870f8522efe9bc5943c5b92754836226c4699a9de",
+      "protectedUnchanged": true,
+      "before": {
+        "passed": false,
+        "checked": 52,
+        "failures": [
+          {
+            "id": 101,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Иванова",
+                "actual": "Смирнов"
+              },
+              {
+                "path": "/fio/firstName",
+                "expected": "Анна",
+                "actual": "Иван"
+              },
+              {
+                "path": "/fio/patronymic",
+                "expected": "Петровна",
+                "actual": "Ильич"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Иванова Анна Петровна",
+                "actual": "Смирнов Иван Ильич"
+              },
+              {
+                "path": "/sourceDocumentId",
+                "expected": 1011,
+                "actual": null
+              },
+              {
+                "path": "/effectiveFrom",
+                "expected": "2026-10-21",
+                "actual": null
+              }
+            ]
+          },
+          {
+            "id": 102,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Иванова",
+                "actual": "Смирнов"
+              },
+              {
+                "path": "/fio/firstName",
+                "expected": "Анна",
+                "actual": "Иван"
+              },
+              {
+                "path": "/fio/patronymic",
+                "expected": "Петровна",
+                "actual": "Ильич"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Иванова Анна Петровна",
+                "actual": "Смирнов Иван Ильич"
+              },
+              {
+                "path": "/sourceDocumentId",
+                "expected": 1021,
+                "actual": null
+              },
+              {
+                "path": "/effectiveFrom",
+                "expected": "2026-10-21",
+                "actual": null
+              }
+            ]
+          }
+        ],
+        "sourceDigest": "8ae0138a99760d6f743b19e0f88f07b5fafc6f857347e2557467cccf1c449ab9",
+        "failedCases": 45
+      },
+      "after": {
+        "passed": true,
+        "checked": 52,
+        "failures": [],
+        "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+        "failedCases": 0
+      },
+      "patch": "diff --git a/src/main/java/person/PersonRepository.java b/src/main/java/person/PersonRepository.java\nindex e48b4c4..11f165e 100644\n--- a/src/main/java/person/PersonRepository.java\n+++ b/src/main/java/person/PersonRepository.java\n@@ -26,7 +26,7 @@ public class PersonRepository {\n                    d.effective_from, d.expires_on, s.active, s.annulled\n             FROM registry.person_document d\n             JOIN registry.document_state s ON s.document_id = d.id\n-            WHERE d.id = ?\n+            WHERE d.person_id = ?\n             \"\"\", (rs, row) -> new Document(rs.getLong(\"id\"),\n                 new Name(rs.getString(\"last_name\"), rs.getString(\"first_name\"), rs.getString(\"middle_name\")),\n                 rs.getObject(\"birth_date\", LocalDate.class), rs.getObject(\"issued_on\", LocalDate.class),",
+      "rounds": [
+        {
+          "round": 1,
+          "verdict": true,
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+          "failures": []
+        }
+      ],
+      "toolUse": {
+        "harness:mapping_debug": {
+          "calls": 3,
+          "errors": 0,
+          "ms": 713,
+          "responseBytes": 18245
+        },
+        "model:workspace_write": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 10,
+          "responseBytes": 214
+        },
+        "harness:test_run": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 17595,
+          "responseBytes": 1083
+        }
+      }
+    },
+    {
+      "id": "case-e221ba94",
+      "mutation": "wrong-state-join",
+      "killed": true,
+      "passed": true,
+      "mode": "staged-evidence-handoff",
+      "finish": "public-http-passed",
+      "turns": 1,
+      "modelMs": 23091,
+      "usage": {
+        "input": 5664,
+        "output": 117
+      },
+      "schemaBytes": 1806,
+      "peakRequestBytes": 22500,
+      "promptSha256": "44bbd5aac33936d8c3a5b10528c8c2db2baff2e6c1b5e4d6b75bd10d35ee7c05",
+      "transcriptSha256": "f53c434f9bf2eddec3d57a341ab1c84ce782229bc6f8ccff1ab50890f53e4a0e",
+      "protectedUnchanged": true,
+      "before": {
+        "passed": false,
+        "checked": 52,
+        "failures": [
+          {
+            "id": 101,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Иванова",
+                "actual": "Смирнов"
+              },
+              {
+                "path": "/fio/firstName",
+                "expected": "Анна",
+                "actual": "Иван"
+              },
+              {
+                "path": "/fio/patronymic",
+                "expected": "Петровна",
+                "actual": "Ильич"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Иванова Анна Петровна",
+                "actual": "Смирнов Иван Ильич"
+              },
+              {
+                "path": "/sourceDocumentId",
+                "expected": 1011,
+                "actual": null
+              },
+              {
+                "path": "/effectiveFrom",
+                "expected": "2026-10-21",
+                "actual": null
+              }
+            ]
+          },
+          {
+            "id": 102,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Иванова",
+                "actual": "Смирнов"
+              },
+              {
+                "path": "/fio/firstName",
+                "expected": "Анна",
+                "actual": "Иван"
+              },
+              {
+                "path": "/fio/patronymic",
+                "expected": "Петровна",
+                "actual": "Ильич"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Иванова Анна Петровна",
+                "actual": "Смирнов Иван Ильич"
+              },
+              {
+                "path": "/sourceDocumentId",
+                "expected": 1021,
+                "actual": null
+              },
+              {
+                "path": "/effectiveFrom",
+                "expected": "2026-10-21",
+                "actual": null
+              }
+            ]
+          }
+        ],
+        "sourceDigest": "96b30ebd6427438b8230c28c3c8eb26a8de3a2abf3c5ffdb81e87ab19f24c471",
+        "failedCases": 45
+      },
+      "after": {
+        "passed": true,
+        "checked": 52,
+        "failures": [],
+        "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+        "failedCases": 0
+      },
+      "patch": "diff --git a/src/main/java/person/PersonRepository.java b/src/main/java/person/PersonRepository.java\nindex 6a24e1d..11f165e 100644\n--- a/src/main/java/person/PersonRepository.java\n+++ b/src/main/java/person/PersonRepository.java\n@@ -25,7 +25,7 @@ public class PersonRepository {\n             SELECT d.id, d.last_name, d.first_name, d.middle_name, d.birth_date, d.issued_on,\n                    d.effective_from, d.expires_on, s.active, s.annulled\n             FROM registry.person_document d\n-            JOIN registry.document_state s ON s.document_id = d.person_id\n+            JOIN registry.document_state s ON s.document_id = d.id\n             WHERE d.person_id = ?\n             \"\"\", (rs, row) -> new Document(rs.getLong(\"id\"),\n                 new Name(rs.getString(\"last_name\"), rs.getString(\"first_name\"), rs.getString(\"middle_name\")),",
+      "rounds": [
+        {
+          "round": 1,
+          "verdict": true,
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+          "failures": []
+        }
+      ],
+      "toolUse": {
+        "harness:mapping_debug": {
+          "calls": 3,
+          "errors": 0,
+          "ms": 843,
+          "responseBytes": 18260
+        },
+        "model:workspace_write": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 16,
+          "responseBytes": 214
+        },
+        "harness:test_run": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 12677,
+          "responseBytes": 1083
+        }
+      }
+    },
+    {
+      "id": "case-979e9307",
+      "mutation": "resultset-column",
+      "killed": true,
+      "passed": true,
+      "mode": "staged-evidence-handoff",
+      "finish": "public-http-passed",
+      "turns": 1,
+      "modelMs": 50372,
+      "usage": {
+        "input": 5597,
+        "output": 138
+      },
+      "schemaBytes": 1806,
+      "peakRequestBytes": 22170,
+      "promptSha256": "84d2fef2d602bff12af5b0e68452913fae9c5b0421c9808ead9a0d1c3166ceec",
+      "transcriptSha256": "96fb7758779944d52522d647eaf9282d7ec924c4af3a1528e6255258af5ed92b",
+      "protectedUnchanged": true,
+      "before": {
+        "passed": false,
+        "checked": 52,
+        "failures": [
+          {
+            "id": 101,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Иванова",
+                "actual": "Анна"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Иванова Анна Петровна",
+                "actual": "Анна Анна Петровна"
+              }
+            ]
+          },
+          {
+            "id": 102,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Иванова",
+                "actual": "Анна"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Иванова Анна Петровна",
+                "actual": "Анна Анна Петровна"
+              }
+            ]
+          }
+        ],
+        "sourceDigest": "40af1f3f9ff65bc4f5ee3a6108bac0d4ec726cadf14cd9c216fb6815c68da02c",
+        "failedCases": 45
+      },
+      "after": {
+        "passed": true,
+        "checked": 52,
+        "failures": [],
+        "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+        "failedCases": 0
+      },
+      "patch": "diff --git a/src/main/java/person/PersonRepository.java b/src/main/java/person/PersonRepository.java\nindex 3087f75..11f165e 100644\n--- a/src/main/java/person/PersonRepository.java\n+++ b/src/main/java/person/PersonRepository.java\n@@ -28,7 +28,7 @@ public class PersonRepository {\n             JOIN registry.document_state s ON s.document_id = d.id\n             WHERE d.person_id = ?\n             \"\"\", (rs, row) -> new Document(rs.getLong(\"id\"),\n-                new Name(rs.getString(\"first_name\"), rs.getString(\"first_name\"), rs.getString(\"middle_name\")),\n+                new Name(rs.getString(\"last_name\"), rs.getString(\"first_name\"), rs.getString(\"middle_name\")),\n                 rs.getObject(\"birth_date\", LocalDate.class), rs.getObject(\"issued_on\", LocalDate.class),\n                 rs.getObject(\"effective_from\", LocalDate.class), rs.getObject(\"expires_on\", LocalDate.class),\n                 rs.getBoolean(\"active\"), rs.getBoolean(\"annulled\")), personId);",
+      "rounds": [
+        {
+          "round": 1,
+          "verdict": true,
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+          "failures": []
+        }
+      ],
+      "toolUse": {
+        "harness:mapping_debug": {
+          "calls": 3,
+          "errors": 0,
+          "ms": 1015,
+          "responseBytes": 18246
+        },
+        "model:workspace_write": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 15,
+          "responseBytes": 214
+        },
+        "harness:test_run": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 12116,
+          "responseBytes": 1083
+        }
+      }
+    },
+    {
+      "id": "case-d67c7757",
+      "mutation": "registry-column",
+      "killed": true,
+      "passed": true,
+      "mode": "staged-evidence-handoff",
+      "finish": "public-http-passed",
+      "turns": 1,
+      "modelMs": 23981,
+      "usage": {
+        "input": 5454,
+        "output": 142
+      },
+      "schemaBytes": 1806,
+      "peakRequestBytes": 21292,
+      "promptSha256": "8fccce2ee03e409831ee8c8da53e9da51bb4728d7b13fe36aee5c712daa15806",
+      "transcriptSha256": "98b229d2079203204a3157bcbb4261a1dec4d18949547fc099d0c960d9613924",
+      "protectedUnchanged": true,
+      "before": {
+        "passed": false,
+        "checked": 52,
+        "failures": [
+          {
+            "id": 100,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Смирнов",
+                "actual": "Иван"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Смирнов Иван Ильич",
+                "actual": "Иван Иван Ильич"
+              }
+            ]
+          },
+          {
+            "id": 115,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Смирнов",
+                "actual": "Иван"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Смирнов Иван Ильич",
+                "actual": "Иван Иван Ильич"
+              }
+            ]
+          }
+        ],
+        "sourceDigest": "bdd6be40d7106382ef71f029542354d3a1090f3a1d3ae7b5dbb4e536ab2a7f47",
+        "failedCases": 6
+      },
+      "after": {
+        "passed": true,
+        "checked": 52,
+        "failures": [],
+        "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+        "failedCases": 0
+      },
+      "patch": "diff --git a/src/main/java/person/PersonRepository.java b/src/main/java/person/PersonRepository.java\nindex f7f53f9..11f165e 100644\n--- a/src/main/java/person/PersonRepository.java\n+++ b/src/main/java/person/PersonRepository.java\n@@ -17,7 +17,7 @@ public class PersonRepository {\n             LEFT JOIN registry.person_address a ON a.person_id = p.id\n             WHERE p.id = ?\n             \"\"\", (rs, row) -> new Registry(rs.getLong(\"id\"),\n-                new Name(rs.getString(\"given_name\"), rs.getString(\"given_name\"), rs.getString(\"patronymic\")),\n+                new Name(rs.getString(\"family_name\"), rs.getString(\"given_name\"), rs.getString(\"patronymic\")),\n                 rs.getObject(\"birth_date\", LocalDate.class), rs.getString(\"city\"), rs.getString(\"street\")), personId);\n     }\n     public List<Document> documents(long personId) {",
+      "rounds": [
+        {
+          "round": 1,
+          "verdict": true,
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+          "failures": []
+        }
+      ],
+      "toolUse": {
+        "harness:mapping_debug": {
+          "calls": 3,
+          "errors": 0,
+          "ms": 1003,
+          "responseBytes": 17472
+        },
+        "model:workspace_write": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 13,
+          "responseBytes": 214
+        },
+        "harness:test_run": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 9854,
+          "responseBytes": 1082
+        }
+      }
+    },
+    {
+      "id": "case-10a9bebb",
+      "mutation": "address-join",
+      "killed": true,
+      "passed": true,
+      "mode": "staged-evidence-handoff",
+      "finish": "public-http-passed",
+      "turns": 1,
+      "modelMs": 21436,
+      "usage": {
+        "input": 5420,
+        "output": 121
+      },
+      "schemaBytes": 1806,
+      "peakRequestBytes": 21285,
+      "promptSha256": "19eff527df159ef91a90728e70edf708e298833360ee7818873a216abd4c5630",
+      "transcriptSha256": "57c8a6949ad17d21e2f9b9c4745be51484813e912cd00037aff27314ef414559",
+      "protectedUnchanged": true,
+      "before": {
+        "passed": false,
+        "checked": 52,
+        "failures": [
+          {
+            "id": 100,
+            "differences": [
+              {
+                "path": "/address/city",
+                "expected": "Город-100",
+                "actual": "Город-101"
+              },
+              {
+                "path": "/address/street",
+                "expected": "Улица-100",
+                "actual": "Улица-101"
+              }
+            ]
+          },
+          {
+            "id": 101,
+            "differences": [
+              {
+                "path": "/address/city",
+                "expected": "Город-101",
+                "actual": "Город-102"
+              },
+              {
+                "path": "/address/street",
+                "expected": "Улица-101",
+                "actual": "Улица-102"
+              }
+            ]
+          }
+        ],
+        "sourceDigest": "a944a2a3c80fdfa64f08d79bc467e65541b934bbdaeee0c701888aa72a3b07e5",
+        "failedCases": 51
+      },
+      "after": {
+        "passed": true,
+        "checked": 52,
+        "failures": [],
+        "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+        "failedCases": 0
+      },
+      "patch": "diff --git a/src/main/java/person/PersonRepository.java b/src/main/java/person/PersonRepository.java\nindex b849516..11f165e 100644\n--- a/src/main/java/person/PersonRepository.java\n+++ b/src/main/java/person/PersonRepository.java\n@@ -14,7 +14,7 @@ public class PersonRepository {\n         return jdbc.queryForObject(\"\"\"\n             SELECT p.id, p.family_name, p.given_name, p.patronymic, p.birth_date, a.city, a.street\n             FROM registry.person p\n-            LEFT JOIN registry.person_address a ON a.person_id = p.id + 1\n+            LEFT JOIN registry.person_address a ON a.person_id = p.id\n             WHERE p.id = ?\n             \"\"\", (rs, row) -> new Registry(rs.getLong(\"id\"),\n                 new Name(rs.getString(\"family_name\"), rs.getString(\"given_name\"), rs.getString(\"patronymic\")),",
+      "rounds": [
+        {
+          "round": 1,
+          "verdict": true,
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+          "failures": []
+        }
+      ],
+      "toolUse": {
+        "harness:mapping_debug": {
+          "calls": 3,
+          "errors": 0,
+          "ms": 786,
+          "responseBytes": 17487
+        },
+        "model:workspace_write": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 28,
+          "responseBytes": 214
+        },
+        "harness:test_run": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 9571,
+          "responseBytes": 1082
+        }
+      }
+    },
+    {
+      "id": "case-d1022618",
+      "mutation": "inactive",
+      "killed": true,
+      "passed": true,
+      "mode": "staged-evidence-handoff",
+      "finish": "public-http-passed",
+      "turns": 1,
+      "modelMs": 21802,
+      "usage": {
+        "input": 5585,
+        "output": 117
+      },
+      "schemaBytes": 1806,
+      "peakRequestBytes": 22188,
+      "promptSha256": "471b73cc5097fe0ab1d2ba64c427c6b0f4e4cc3b5e5eb5d60c0975849caa8da5",
+      "transcriptSha256": "ac3db220cba8ba9079271d63d66d3bac609e56b06dab929abf23b92c2fc8a6f8",
+      "protectedUnchanged": true,
+      "before": {
+        "passed": false,
+        "checked": 52,
+        "failures": [
+          {
+            "id": 102,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Иванова",
+                "actual": "Неактивная"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Иванова Анна Петровна",
+                "actual": "Неактивная Анна Петровна"
+              },
+              {
+                "path": "/sourceDocumentId",
+                "expected": 1021,
+                "actual": 1022
+              },
+              {
+                "path": "/effectiveFrom",
+                "expected": "2026-10-21",
+                "actual": "2026-11-19"
+              }
+            ]
+          },
+          {
+            "id": 115,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Смирнов",
+                "actual": "Иванова"
+              },
+              {
+                "path": "/fio/firstName",
+                "expected": "Иван",
+                "actual": "Анна"
+              },
+              {
+                "path": "/fio/patronymic",
+                "expected": "Ильич",
+                "actual": "Петровна"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Смирнов Иван Ильич",
+                "actual": "Иванова Анна Петровна"
+              },
+              {
+                "path": "/sourceDocumentId",
+                "expected": null,
+                "actual": 1151
+              },
+              {
+                "path": "/effectiveFrom",
+                "expected": null,
+                "actual": "2026-10-21"
+              }
+            ]
+          }
+        ],
+        "sourceDigest": "9a076cde13a2cb5d138937ff60c42172c8b03ba782d3f5327219cabe53db1fc1",
+        "failedCases": 6
+      },
+      "after": {
+        "passed": true,
+        "checked": 52,
+        "failures": [],
+        "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+        "failedCases": 0
+      },
+      "patch": "diff --git a/src/main/java/person/DocumentPolicy.java b/src/main/java/person/DocumentPolicy.java\nindex cb9b44a..89be926 100644\n--- a/src/main/java/person/DocumentPolicy.java\n+++ b/src/main/java/person/DocumentPolicy.java\n@@ -8,7 +8,7 @@ import person.PersonData.Document;\n public final class DocumentPolicy {\n     private DocumentPolicy() {}\n     public static boolean eligible(Document d, LocalDate asOf) {\n-        return true\n+        return d.active()\n             && !d.annulled()\n             && !d.effectiveFrom().isAfter(asOf)\n             && (d.expiresOn() == null || !d.expiresOn().isBefore(asOf))",
+      "rounds": [
+        {
+          "round": 1,
+          "verdict": true,
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+          "failures": []
+        }
+      ],
+      "toolUse": {
+        "harness:mapping_debug": {
+          "calls": 3,
+          "errors": 0,
+          "ms": 854,
+          "responseBytes": 18103
+        },
+        "model:workspace_write": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 8,
+          "responseBytes": 211
+        },
+        "harness:test_run": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 12894,
+          "responseBytes": 1083
+        }
+      }
+    },
+    {
+      "id": "case-5008ef8c",
+      "mutation": "annulled",
+      "killed": true,
+      "passed": true,
+      "mode": "staged-evidence-handoff",
+      "finish": "public-http-passed",
+      "turns": 1,
+      "modelMs": 23667,
+      "usage": {
+        "input": 5582,
+        "output": 142
+      },
+      "schemaBytes": 1806,
+      "peakRequestBytes": 22185,
+      "promptSha256": "76f926a34073254c8e86fad47fbad46dd8ea282923089a1e5231040996939243",
+      "transcriptSha256": "60fc9df701c0e15ade40e06d33b55fe1ef2b524006551e4e32229341dfac54b3",
+      "protectedUnchanged": true,
+      "before": {
+        "passed": false,
+        "checked": 52,
+        "failures": [
+          {
+            "id": 101,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Иванова",
+                "actual": "Отменённая"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Иванова Анна Петровна",
+                "actual": "Отменённая Анна Петровна"
+              },
+              {
+                "path": "/sourceDocumentId",
+                "expected": 1011,
+                "actual": 1012
+              },
+              {
+                "path": "/effectiveFrom",
+                "expected": "2026-10-21",
+                "actual": "2026-11-19"
+              }
+            ]
+          },
+          {
+            "id": 115,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Смирнов",
+                "actual": "Иванова"
+              },
+              {
+                "path": "/fio/firstName",
+                "expected": "Иван",
+                "actual": "Анна"
+              },
+              {
+                "path": "/fio/patronymic",
+                "expected": "Ильич",
+                "actual": "Петровна"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Смирнов Иван Ильич",
+                "actual": "Иванова Анна Петровна"
+              },
+              {
+                "path": "/sourceDocumentId",
+                "expected": null,
+                "actual": 1152
+              },
+              {
+                "path": "/effectiveFrom",
+                "expected": null,
+                "actual": "2026-10-21"
+              }
+            ]
+          }
+        ],
+        "sourceDigest": "b2f79a4fcde13fcad7575ff186645d6ccfbecd86868068bf5fd554d313618ae0",
+        "failedCases": 6
+      },
+      "after": {
+        "passed": true,
+        "checked": 52,
+        "failures": [],
+        "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+        "failedCases": 0
+      },
+      "patch": "diff --git a/src/main/java/person/DocumentPolicy.java b/src/main/java/person/DocumentPolicy.java\nindex d959ab2..89be926 100644\n--- a/src/main/java/person/DocumentPolicy.java\n+++ b/src/main/java/person/DocumentPolicy.java\n@@ -9,7 +9,7 @@ public final class DocumentPolicy {\n     private DocumentPolicy() {}\n     public static boolean eligible(Document d, LocalDate asOf) {\n         return d.active()\n-            && true\n+            && !d.annulled()\n             && !d.effectiveFrom().isAfter(asOf)\n             && (d.expiresOn() == null || !d.expiresOn().isBefore(asOf))\n             && d.name().complete();",
+      "rounds": [
+        {
+          "round": 1,
+          "verdict": true,
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+          "failures": []
+        }
+      ],
+      "toolUse": {
+        "harness:mapping_debug": {
+          "calls": 3,
+          "errors": 0,
+          "ms": 943,
+          "responseBytes": 18100
+        },
+        "model:workspace_write": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 8,
+          "responseBytes": 211
+        },
+        "harness:test_run": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 6995,
+          "responseBytes": 1082
+        }
+      }
+    },
+    {
+      "id": "case-ebb3de8a",
+      "mutation": "future",
+      "killed": true,
+      "passed": true,
+      "mode": "staged-evidence-handoff",
+      "finish": "public-http-passed",
+      "turns": 1,
+      "modelMs": 21670,
+      "usage": {
+        "input": 5631,
+        "output": 109
+      },
+      "schemaBytes": 1806,
+      "peakRequestBytes": 22344,
+      "promptSha256": "54269df7886288bc797ccbe231977467a8842446e7d609001d66fbbaf8039135",
+      "transcriptSha256": "1312e0c51b8c162952d694a1d1bdb2c9e4592a9de3c1c7b5bb1f895d385de43a",
+      "protectedUnchanged": true,
+      "before": {
+        "passed": false,
+        "checked": 52,
+        "failures": [
+          {
+            "id": 103,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Иванова",
+                "actual": "Будущая"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Иванова Анна Петровна",
+                "actual": "Будущая Анна Петровна"
+              },
+              {
+                "path": "/sourceDocumentId",
+                "expected": 1031,
+                "actual": 1032
+              },
+              {
+                "path": "/effectiveFrom",
+                "expected": "2026-10-21",
+                "actual": "2026-11-21"
+              }
+            ]
+          },
+          {
+            "id": 11103,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Иванова-42-1",
+                "actual": "Будущая"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Иванова-42-1 Анна Петровна",
+                "actual": "Будущая Анна Петровна"
+              },
+              {
+                "path": "/sourceDocumentId",
+                "expected": 111031,
+                "actual": 111032
+              },
+              {
+                "path": "/effectiveFrom",
+                "expected": "2026-10-21",
+                "actual": "2026-11-21"
+              }
+            ]
+          }
+        ],
+        "sourceDigest": "ab1a70da08e636dc18ddd6a4dfc96355d3ec6873819de2c0caccfc67d126df8c",
+        "failedCases": 3
+      },
+      "after": {
+        "passed": true,
+        "checked": 52,
+        "failures": [],
+        "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+        "failedCases": 0
+      },
+      "patch": "diff --git a/src/main/java/person/DocumentPolicy.java b/src/main/java/person/DocumentPolicy.java\nindex d1bbd3f..89be926 100644\n--- a/src/main/java/person/DocumentPolicy.java\n+++ b/src/main/java/person/DocumentPolicy.java\n@@ -10,7 +10,7 @@ public final class DocumentPolicy {\n     public static boolean eligible(Document d, LocalDate asOf) {\n         return d.active()\n             && !d.annulled()\n-            && true\n+            && !d.effectiveFrom().isAfter(asOf)\n             && (d.expiresOn() == null || !d.expiresOn().isBefore(asOf))\n             && d.name().complete();\n     }",
+      "rounds": [
+        {
+          "round": 1,
+          "verdict": true,
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+          "failures": []
+        }
+      ],
+      "toolUse": {
+        "harness:mapping_debug": {
+          "calls": 3,
+          "errors": 0,
+          "ms": 823,
+          "responseBytes": 18252
+        },
+        "model:workspace_write": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 8,
+          "responseBytes": 211
+        },
+        "harness:test_run": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 7718,
+          "responseBytes": 1082
+        }
+      }
+    },
+    {
+      "id": "case-fa64ea1e",
+      "mutation": "expired",
+      "killed": true,
+      "passed": true,
+      "mode": "staged-evidence-handoff",
+      "finish": "public-http-passed",
+      "turns": 1,
+      "modelMs": 24810,
+      "usage": {
+        "input": 5561,
+        "output": 158
+      },
+      "schemaBytes": 1806,
+      "peakRequestBytes": 22151,
+      "promptSha256": "9b732925488b2798a89808f11bbc738681f3f729498786ca4f84e7ee37666c95",
+      "transcriptSha256": "4cf8ef6a2fabd907f938b1144ed789c8aa035477abcf6325268174079dc9e4f7",
+      "protectedUnchanged": true,
+      "before": {
+        "passed": false,
+        "checked": 52,
+        "failures": [
+          {
+            "id": 104,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Иванова",
+                "actual": "Истёкшая"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Иванова Анна Петровна",
+                "actual": "Истёкшая Анна Петровна"
+              },
+              {
+                "path": "/sourceDocumentId",
+                "expected": 1041,
+                "actual": 1042
+              },
+              {
+                "path": "/effectiveFrom",
+                "expected": "2026-10-21",
+                "actual": "2026-11-19"
+              }
+            ]
+          },
+          {
+            "id": 11104,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Иванова-42-1",
+                "actual": "Истёкшая"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Иванова-42-1 Анна Петровна",
+                "actual": "Истёкшая Анна Петровна"
+              },
+              {
+                "path": "/sourceDocumentId",
+                "expected": 111041,
+                "actual": 111042
+              },
+              {
+                "path": "/effectiveFrom",
+                "expected": "2026-10-21",
+                "actual": "2026-11-19"
+              }
+            ]
+          }
+        ],
+        "sourceDigest": "ea5a7463766c80757d87154d865ba7f5a6abc0190e580e83d2fbb106b4a2358f",
+        "failedCases": 3
+      },
+      "after": {
+        "passed": true,
+        "checked": 52,
+        "failures": [],
+        "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+        "failedCases": 0
+      },
+      "patch": "diff --git a/src/main/java/person/DocumentPolicy.java b/src/main/java/person/DocumentPolicy.java\nindex ba816cf..89be926 100644\n--- a/src/main/java/person/DocumentPolicy.java\n+++ b/src/main/java/person/DocumentPolicy.java\n@@ -11,7 +11,7 @@ public final class DocumentPolicy {\n         return d.active()\n             && !d.annulled()\n             && !d.effectiveFrom().isAfter(asOf)\n-            && true\n+            && (d.expiresOn() == null || !d.expiresOn().isBefore(asOf))\n             && d.name().complete();\n     }\n     public static Document choose(List<Document> documents, LocalDate asOf) {",
+      "rounds": [
+        {
+          "round": 1,
+          "verdict": true,
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+          "failures": []
+        }
+      ],
+      "toolUse": {
+        "harness:mapping_debug": {
+          "calls": 3,
+          "errors": 0,
+          "ms": 821,
+          "responseBytes": 18070
+        },
+        "model:workspace_write": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 11,
+          "responseBytes": 211
+        },
+        "harness:test_run": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 9658,
+          "responseBytes": 1082
+        }
+      }
+    },
+    {
+      "id": "case-76d2d39e",
+      "mutation": "expiry-boundary",
+      "killed": true,
+      "passed": true,
+      "mode": "staged-evidence-handoff",
+      "finish": "public-http-passed",
+      "turns": 1,
+      "modelMs": 23742,
+      "usage": {
+        "input": 5693,
+        "output": 132
+      },
+      "schemaBytes": 1806,
+      "peakRequestBytes": 22270,
+      "promptSha256": "518c9051e6071851ad0f55f8619765eb1a1983c30172c29e5e707cd7f9f4d19f",
+      "transcriptSha256": "f5cfa9edf9ad1135085477ba821778fb7f8debbde39758739a8f10d3e979cd9f",
+      "protectedUnchanged": true,
+      "before": {
+        "passed": false,
+        "checked": 52,
+        "failures": [
+          {
+            "id": 105,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Сегодня",
+                "actual": "Иванова"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Сегодня Анна Петровна",
+                "actual": "Иванова Анна Петровна"
+              },
+              {
+                "path": "/sourceDocumentId",
+                "expected": 1052,
+                "actual": 1051
+              },
+              {
+                "path": "/effectiveFrom",
+                "expected": "2026-11-19",
+                "actual": "2026-10-21"
+              }
+            ]
+          },
+          {
+            "id": 11105,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Сегодня",
+                "actual": "Иванова-42-1"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Сегодня Анна Петровна",
+                "actual": "Иванова-42-1 Анна Петровна"
+              },
+              {
+                "path": "/sourceDocumentId",
+                "expected": 111052,
+                "actual": 111051
+              },
+              {
+                "path": "/effectiveFrom",
+                "expected": "2026-11-19",
+                "actual": "2026-10-21"
+              }
+            ]
+          }
+        ],
+        "sourceDigest": "5a00e1ad6e088ada82d50f7e11c28152f1c2c1203dc3b58a61c8a211fbd6ccbd",
+        "failedCases": 3
+      },
+      "after": {
+        "passed": true,
+        "checked": 52,
+        "failures": [],
+        "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+        "failedCases": 0
+      },
+      "patch": "diff --git a/src/main/java/person/DocumentPolicy.java b/src/main/java/person/DocumentPolicy.java\nindex 028fad0..89be926 100644\n--- a/src/main/java/person/DocumentPolicy.java\n+++ b/src/main/java/person/DocumentPolicy.java\n@@ -11,7 +11,7 @@ public final class DocumentPolicy {\n         return d.active()\n             && !d.annulled()\n             && !d.effectiveFrom().isAfter(asOf)\n-            && (d.expiresOn() == null || d.expiresOn().isAfter(asOf))\n+            && (d.expiresOn() == null || !d.expiresOn().isBefore(asOf))\n             && d.name().complete();\n     }\n     public static Document choose(List<Document> documents, LocalDate asOf) {",
+      "rounds": [
+        {
+          "round": 1,
+          "verdict": true,
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+          "failures": []
+        }
+      ],
+      "toolUse": {
+        "harness:mapping_debug": {
+          "calls": 3,
+          "errors": 0,
+          "ms": 836,
+          "responseBytes": 18195
+        },
+        "model:workspace_write": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 9,
+          "responseBytes": 211
+        },
+        "harness:test_run": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 10214,
+          "responseBytes": 1083
+        }
+      }
+    },
+    {
+      "id": "case-474c38be",
+      "mutation": "effective-boundary",
+      "killed": true,
+      "passed": true,
+      "mode": "staged-evidence-handoff",
+      "finish": "public-http-passed",
+      "turns": 1,
+      "modelMs": 22513,
+      "usage": {
+        "input": 5701,
+        "output": 114
+      },
+      "schemaBytes": 1806,
+      "peakRequestBytes": 22278,
+      "promptSha256": "87106c9239617151bacf3f34d68aba9032ac08c1a283c17754f63d5dab846f6a",
+      "transcriptSha256": "7ece5a1a564d9d49289eeb57886f8a291ef5258b9e98269cbaa9fa7ca4280668",
+      "protectedUnchanged": true,
+      "before": {
+        "passed": false,
+        "checked": 52,
+        "failures": [
+          {
+            "id": 106,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Вступила",
+                "actual": "Иванова"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Вступила Анна Петровна",
+                "actual": "Иванова Анна Петровна"
+              },
+              {
+                "path": "/sourceDocumentId",
+                "expected": 1062,
+                "actual": 1061
+              },
+              {
+                "path": "/effectiveFrom",
+                "expected": "2026-11-20",
+                "actual": "2026-10-21"
+              }
+            ]
+          },
+          {
+            "id": 11106,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Вступила",
+                "actual": "Иванова-42-1"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Вступила Анна Петровна",
+                "actual": "Иванова-42-1 Анна Петровна"
+              },
+              {
+                "path": "/sourceDocumentId",
+                "expected": 111062,
+                "actual": 111061
+              },
+              {
+                "path": "/effectiveFrom",
+                "expected": "2026-11-20",
+                "actual": "2026-10-21"
+              }
+            ]
+          }
+        ],
+        "sourceDigest": "bb9b71c7697ea9b86281eb561f244ee8b87be012b90302b423cf646ed8d48dfe",
+        "failedCases": 3
+      },
+      "after": {
+        "passed": true,
+        "checked": 52,
+        "failures": [],
+        "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+        "failedCases": 0
+      },
+      "patch": "diff --git a/src/main/java/person/DocumentPolicy.java b/src/main/java/person/DocumentPolicy.java\nindex d2edb1c..89be926 100644\n--- a/src/main/java/person/DocumentPolicy.java\n+++ b/src/main/java/person/DocumentPolicy.java\n@@ -10,7 +10,7 @@ public final class DocumentPolicy {\n     public static boolean eligible(Document d, LocalDate asOf) {\n         return d.active()\n             && !d.annulled()\n-            && d.effectiveFrom().isBefore(asOf)\n+            && !d.effectiveFrom().isAfter(asOf)\n             && (d.expiresOn() == null || !d.expiresOn().isBefore(asOf))\n             && d.name().complete();\n     }",
+      "rounds": [
+        {
+          "round": 1,
+          "verdict": true,
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+          "failures": []
+        }
+      ],
+      "toolUse": {
+        "harness:mapping_debug": {
+          "calls": 3,
+          "errors": 0,
+          "ms": 791,
+          "responseBytes": 18198
+        },
+        "model:workspace_write": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 12,
+          "responseBytes": 211
+        },
+        "harness:test_run": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 10736,
+          "responseBytes": 1083
+        }
+      }
+    },
+    {
+      "id": "case-23a73fe0",
+      "mutation": "incomplete-name",
+      "killed": true,
+      "passed": true,
+      "mode": "staged-evidence-handoff",
+      "finish": "public-http-passed",
+      "turns": 1,
+      "modelMs": 25314,
+      "usage": {
+        "input": 5644,
+        "output": 146
+      },
+      "schemaBytes": 1806,
+      "peakRequestBytes": 22390,
+      "promptSha256": "b849dc88cbfb216c85c2e6f2672882032965fe100a1fa6f2f7cc66e83176048c",
+      "transcriptSha256": "afc12ca453ba1f0b7a1d3037d681b4f28b3c92978ced099d31cd4439c6373336",
+      "protectedUnchanged": true,
+      "before": {
+        "passed": false,
+        "checked": 52,
+        "failures": [
+          {
+            "id": 109,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Иванова",
+                "actual": "Неполная"
+              },
+              {
+                "path": "/fio/firstName",
+                "expected": "Анна",
+                "actual": " "
+              },
+              {
+                "path": "/fullName",
+                "expected": "Иванова Анна Петровна",
+                "actual": "Неполная   Петровна"
+              },
+              {
+                "path": "/sourceDocumentId",
+                "expected": 1091,
+                "actual": 1092
+              },
+              {
+                "path": "/effectiveFrom",
+                "expected": "2026-10-21",
+                "actual": "2026-11-19"
+              }
+            ]
+          },
+          {
+            "id": 114,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Иванова",
+                "actual": null
+              },
+              {
+                "path": "/fullName",
+                "expected": "Иванова Анна Петровна",
+                "actual": "null Анна Петровна"
+              },
+              {
+                "path": "/sourceDocumentId",
+                "expected": 1141,
+                "actual": 1142
+              },
+              {
+                "path": "/effectiveFrom",
+                "expected": "2026-10-21",
+                "actual": "2026-11-19"
+              }
+            ]
+          }
+        ],
+        "sourceDigest": "fd5ea6c71d6ac117154feb3c0d751e247a95f96f26731d5c3e6b2676b80d8951",
+        "failedCases": 6
+      },
+      "after": {
+        "passed": true,
+        "checked": 52,
+        "failures": [],
+        "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+        "failedCases": 0
+      },
+      "patch": "diff --git a/src/main/java/person/DocumentPolicy.java b/src/main/java/person/DocumentPolicy.java\nindex 5fe3ebf..89be926 100644\n--- a/src/main/java/person/DocumentPolicy.java\n+++ b/src/main/java/person/DocumentPolicy.java\n@@ -12,7 +12,7 @@ public final class DocumentPolicy {\n             && !d.annulled()\n             && !d.effectiveFrom().isAfter(asOf)\n             && (d.expiresOn() == null || !d.expiresOn().isBefore(asOf))\n-            && true;\n+            && d.name().complete();\n     }\n     public static Document choose(List<Document> documents, LocalDate asOf) {\n         return documents.stream()",
+      "rounds": [
+        {
+          "round": 1,
+          "verdict": true,
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+          "failures": []
+        }
+      ],
+      "toolUse": {
+        "harness:mapping_debug": {
+          "calls": 3,
+          "errors": 0,
+          "ms": 756,
+          "responseBytes": 18232
+        },
+        "model:workspace_write": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 14,
+          "responseBytes": 211
+        },
+        "harness:test_run": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 8969,
+          "responseBytes": 1082
+        }
+      }
+    },
+    {
+      "id": "case-80828036",
+      "mutation": "issue-date-rank",
+      "killed": true,
+      "passed": true,
+      "mode": "staged-evidence-handoff",
+      "finish": "public-http-passed",
+      "turns": 1,
+      "modelMs": 23335,
+      "usage": {
+        "input": 5745,
+        "output": 130
+      },
+      "schemaBytes": 1806,
+      "peakRequestBytes": 22461,
+      "promptSha256": "73d5e33fa295a71655e50a6da7e5d940990e84de12e186c27e1ae8a4749a4442",
+      "transcriptSha256": "3de438a91c0a8d3be57da63c93e6ab84bd1bf897bd6abab08611809d1b435b65",
+      "protectedUnchanged": true,
+      "before": {
+        "passed": false,
+        "checked": 52,
+        "failures": [
+          {
+            "id": 107,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Иванова",
+                "actual": "ВыданаПозже"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Иванова Анна Петровна",
+                "actual": "ВыданаПозже Анна Петровна"
+              },
+              {
+                "path": "/sourceDocumentId",
+                "expected": 1071,
+                "actual": 1072
+              },
+              {
+                "path": "/effectiveFrom",
+                "expected": "2026-10-21",
+                "actual": "2026-09-21"
+              }
+            ]
+          },
+          {
+            "id": 11107,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Иванова-42-1",
+                "actual": "ВыданаПозже"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Иванова-42-1 Анна Петровна",
+                "actual": "ВыданаПозже Анна Петровна"
+              },
+              {
+                "path": "/sourceDocumentId",
+                "expected": 111071,
+                "actual": 111072
+              },
+              {
+                "path": "/effectiveFrom",
+                "expected": "2026-10-21",
+                "actual": "2026-09-21"
+              }
+            ]
+          }
+        ],
+        "sourceDigest": "f699137af8d7b88d2fd65e5a24652a5bc223a703805c7263fa3c06db40577e00",
+        "failedCases": 3
+      },
+      "after": {
+        "passed": true,
+        "checked": 52,
+        "failures": [],
+        "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+        "failedCases": 0
+      },
+      "patch": "diff --git a/src/main/java/person/DocumentPolicy.java b/src/main/java/person/DocumentPolicy.java\nindex 82ea152..89be926 100644\n--- a/src/main/java/person/DocumentPolicy.java\n+++ b/src/main/java/person/DocumentPolicy.java\n@@ -17,7 +17,7 @@ public final class DocumentPolicy {\n     public static Document choose(List<Document> documents, LocalDate asOf) {\n         return documents.stream()\n             .filter(d -> eligible(d, asOf))\n-            .max(Comparator.comparing(Document::issuedOn).thenComparingLong(Document::id))\n+            .max(Comparator.comparing(Document::effectiveFrom).thenComparingLong(Document::id))\n             .orElse(null);\n     }\n }",
+      "rounds": [
+        {
+          "round": 1,
+          "verdict": true,
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+          "failures": []
+        }
+      ],
+      "toolUse": {
+        "harness:mapping_debug": {
+          "calls": 3,
+          "errors": 0,
+          "ms": 907,
+          "responseBytes": 18356
+        },
+        "model:workspace_write": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 26,
+          "responseBytes": 211
+        },
+        "harness:test_run": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 7845,
+          "responseBytes": 1082
+        }
+      }
+    },
+    {
+      "id": "case-e53ef1db",
+      "mutation": "oldest-rank",
+      "killed": true,
+      "passed": true,
+      "mode": "staged-evidence-handoff",
+      "finish": "public-http-passed",
+      "turns": 1,
+      "modelMs": 22047,
+      "usage": {
+        "input": 5592,
+        "output": 126
+      },
+      "schemaBytes": 1806,
+      "peakRequestBytes": 22272,
+      "promptSha256": "5b58b3149058f7d4af570c069f39c0af52a6442f10f22dabef25a9d815ab8f21",
+      "transcriptSha256": "3e3659641114c17c51b1a3469030d588f6dd96441303c4701bbac0be2a0ffbfd",
+      "protectedUnchanged": true,
+      "before": {
+        "passed": false,
+        "checked": 52,
+        "failures": [
+          {
+            "id": 105,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Сегодня",
+                "actual": "Иванова"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Сегодня Анна Петровна",
+                "actual": "Иванова Анна Петровна"
+              },
+              {
+                "path": "/sourceDocumentId",
+                "expected": 1052,
+                "actual": 1051
+              },
+              {
+                "path": "/effectiveFrom",
+                "expected": "2026-11-19",
+                "actual": "2026-10-21"
+              }
+            ]
+          },
+          {
+            "id": 106,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Вступила",
+                "actual": "Иванова"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Вступила Анна Петровна",
+                "actual": "Иванова Анна Петровна"
+              },
+              {
+                "path": "/sourceDocumentId",
+                "expected": 1062,
+                "actual": 1061
+              },
+              {
+                "path": "/effectiveFrom",
+                "expected": "2026-11-20",
+                "actual": "2026-10-21"
+              }
+            ]
+          }
+        ],
+        "sourceDigest": "7575f5dd4f5efacb5dea419a8ddc0d14ac0d5e088499d0363e5e20b4b0bd0480",
+        "failedCases": 18
+      },
+      "after": {
+        "passed": true,
+        "checked": 52,
+        "failures": [],
+        "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+        "failedCases": 0
+      },
+      "patch": "diff --git a/src/main/java/person/DocumentPolicy.java b/src/main/java/person/DocumentPolicy.java\nindex 215c4d8..89be926 100644\n--- a/src/main/java/person/DocumentPolicy.java\n+++ b/src/main/java/person/DocumentPolicy.java\n@@ -17,7 +17,7 @@ public final class DocumentPolicy {\n     public static Document choose(List<Document> documents, LocalDate asOf) {\n         return documents.stream()\n             .filter(d -> eligible(d, asOf))\n-            .min(Comparator.comparing(Document::effectiveFrom).thenComparingLong(Document::id))\n+            .max(Comparator.comparing(Document::effectiveFrom).thenComparingLong(Document::id))\n             .orElse(null);\n     }\n }",
+      "rounds": [
+        {
+          "round": 1,
+          "verdict": true,
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+          "failures": []
+        }
+      ],
+      "toolUse": {
+        "harness:mapping_debug": {
+          "calls": 3,
+          "errors": 0,
+          "ms": 758,
+          "responseBytes": 18196
+        },
+        "model:workspace_write": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 10,
+          "responseBytes": 211
+        },
+        "harness:test_run": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 12920,
+          "responseBytes": 1083
+        }
+      }
+    },
+    {
+      "id": "case-261de6d9",
+      "mutation": "tie-break",
+      "killed": true,
+      "passed": true,
+      "mode": "staged-evidence-handoff",
+      "finish": "public-http-passed",
+      "turns": 1,
+      "modelMs": 23687,
+      "usage": {
+        "input": 5644,
+        "output": 132
+      },
+      "schemaBytes": 1806,
+      "peakRequestBytes": 22202,
+      "promptSha256": "1786576de5c3b62ef7ac4286e33ea903c7ecb924bacf94af6771b53d7392426b",
+      "transcriptSha256": "b4aacbaad6ac8d1e881db6f0b67c84d5a3714c698910614d92f0821256b202e4",
+      "protectedUnchanged": true,
+      "before": {
+        "passed": false,
+        "checked": 52,
+        "failures": [
+          {
+            "id": 108,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "ПриоритетID",
+                "actual": "Иванова"
+              },
+              {
+                "path": "/fullName",
+                "expected": "ПриоритетID Анна Петровна",
+                "actual": "Иванова Анна Петровна"
+              },
+              {
+                "path": "/sourceDocumentId",
+                "expected": 1082,
+                "actual": 1081
+              }
+            ]
+          },
+          {
+            "id": 11108,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "ПриоритетID",
+                "actual": "Иванова-42-1"
+              },
+              {
+                "path": "/fullName",
+                "expected": "ПриоритетID Анна Петровна",
+                "actual": "Иванова-42-1 Анна Петровна"
+              },
+              {
+                "path": "/sourceDocumentId",
+                "expected": 111082,
+                "actual": 111081
+              }
+            ]
+          }
+        ],
+        "sourceDigest": "4174883a499d4d26bb6e061656c9a7460b1b5a7911a3f529016278a8f29290b2",
+        "failedCases": 3
+      },
+      "after": {
+        "passed": true,
+        "checked": 52,
+        "failures": [],
+        "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+        "failedCases": 0
+      },
+      "patch": "diff --git a/src/main/java/person/DocumentPolicy.java b/src/main/java/person/DocumentPolicy.java\nindex 3d092db..89be926 100644\n--- a/src/main/java/person/DocumentPolicy.java\n+++ b/src/main/java/person/DocumentPolicy.java\n@@ -17,7 +17,7 @@ public final class DocumentPolicy {\n     public static Document choose(List<Document> documents, LocalDate asOf) {\n         return documents.stream()\n             .filter(d -> eligible(d, asOf))\n-            .max(Comparator.comparing(Document::effectiveFrom).thenComparingLong(d -> -d.id()))\n+            .max(Comparator.comparing(Document::effectiveFrom).thenComparingLong(Document::id))\n             .orElse(null);\n     }\n }",
+      "rounds": [
+        {
+          "round": 1,
+          "verdict": true,
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+          "failures": []
+        }
+      ],
+      "toolUse": {
+        "harness:mapping_debug": {
+          "calls": 3,
+          "errors": 0,
+          "ms": 967,
+          "responseBytes": 18199
+        },
+        "model:workspace_write": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 7,
+          "responseBytes": 211
+        },
+        "harness:test_run": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 14115,
+          "responseBytes": 1083
+        }
+      }
+    },
+    {
+      "id": "case-3e02323e",
+      "mutation": "mixed-name",
+      "killed": true,
+      "passed": true,
+      "mode": "staged-evidence-handoff",
+      "finish": "public-http-passed",
+      "turns": 1,
+      "modelMs": 25875,
+      "usage": {
+        "input": 5659,
+        "output": 151
+      },
+      "schemaBytes": 1806,
+      "peakRequestBytes": 22132,
+      "promptSha256": "b4d8f88a51169fa542025e9d756b53f5d2ef8398f3f84e3ca190c46105278bc7",
+      "transcriptSha256": "5235aed3830ab6638f3947bedc52d94edc979e5a120d391159dade98c3279b6e",
+      "protectedUnchanged": true,
+      "before": {
+        "passed": false,
+        "checked": 52,
+        "failures": [
+          {
+            "id": 110,
+            "differences": [
+              {
+                "path": "/fio/patronymic",
+                "expected": null,
+                "actual": "Ильич"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Иванова Анна",
+                "actual": "Иванова Анна Ильич"
+              }
+            ]
+          },
+          {
+            "id": 11110,
+            "differences": [
+              {
+                "path": "/fio/patronymic",
+                "expected": null,
+                "actual": "Ильич"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Иванова-42-1 Анна",
+                "actual": "Иванова-42-1 Анна Ильич"
+              }
+            ]
+          }
+        ],
+        "sourceDigest": "dc76fbd9cce03e8820bf909befa54a0dfd7bea45c90895ed77f5907295ebf58a",
+        "failedCases": 3
+      },
+      "after": {
+        "passed": true,
+        "checked": 52,
+        "failures": [],
+        "sourceDigest": "8bfd072f8ff2e77cb3464116024534c7ea234f34f4465378a3b222a184eec8f3",
+        "failedCases": 0
+      },
+      "patch": "diff --git a/src/main/java/person/PersonMapper.java b/src/main/java/person/PersonMapper.java\nindex c533923..a8c4919 100644\n--- a/src/main/java/person/PersonMapper.java\n+++ b/src/main/java/person/PersonMapper.java\n@@ -7,7 +7,7 @@ import person.PersonData.*;\n @Component\n public class PersonMapper {\n     public Response response(Registry person, Document selected, LocalDate asOf) {\n-        Name fio = selected == null ? person.name() : new Name(selected.name().lastName(), selected.name().firstName(), selected.name().patronymic() == null ? person.name().patronymic() : selected.name().patronymic());\n+        Name fio = selected == null ? person.name() : new Name(selected.name().lastName(), selected.name().firstName(), selected.name().patronymic());\n         return new Response(person.id(), fio, fio.display(), person.birthDate(),\n             selected == null ? null : selected.id(), selected == null ? null : selected.effectiveFrom(),\n             new Address(person.city(), person.street()), asOf);",
+      "rounds": [
+        {
+          "round": 1,
+          "verdict": true,
+          "sourceDigest": "8bfd072f8ff2e77cb3464116024534c7ea234f34f4465378a3b222a184eec8f3",
+          "failures": []
+        }
+      ],
+      "toolUse": {
+        "harness:mapping_debug": {
+          "calls": 3,
+          "errors": 0,
+          "ms": 922,
+          "responseBytes": 18259
+        },
+        "model:workspace_write": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 9,
+          "responseBytes": 209
+        },
+        "harness:test_run": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 8556,
+          "responseBytes": 1082
+        }
+      }
+    },
+    {
+      "id": "case-a9f9741e",
+      "mutation": "birth-date-source",
+      "killed": true,
+      "passed": true,
+      "mode": "staged-evidence-handoff",
+      "finish": "public-http-passed",
+      "turns": 1,
+      "modelMs": 23395,
+      "usage": {
+        "input": 5639,
+        "output": 130
+      },
+      "schemaBytes": 1806,
+      "peakRequestBytes": 22250,
+      "promptSha256": "c3315accdef2edb7f29c9f89f7c5c474c7a0cd6ad4977cf6c28837f20e0cadf2",
+      "transcriptSha256": "20919ad0a2b799bf6aa3cb7670cb1fd519863efc4a3caeb887ee0df71d676207",
+      "protectedUnchanged": true,
+      "before": {
+        "passed": false,
+        "checked": 52,
+        "failures": [
+          {
+            "id": 101,
+            "differences": [
+              {
+                "path": "/birthDate",
+                "expected": "1990-04-05",
+                "actual": "1991-05-06"
+              }
+            ]
+          },
+          {
+            "id": 102,
+            "differences": [
+              {
+                "path": "/birthDate",
+                "expected": "1990-04-05",
+                "actual": "1991-05-06"
+              }
+            ]
+          }
+        ],
+        "sourceDigest": "652a531162caedd350f5b808021acb8cc8a926f2d9eefb21921ad76e7a9e878f",
+        "failedCases": 45
+      },
+      "after": {
+        "passed": true,
+        "checked": 52,
+        "failures": [],
+        "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+        "failedCases": 0
+      },
+      "patch": "diff --git a/src/main/java/person/PersonMapper.java b/src/main/java/person/PersonMapper.java\nindex 79eb5c6..cd81e12 100644\n--- a/src/main/java/person/PersonMapper.java\n+++ b/src/main/java/person/PersonMapper.java\n@@ -8,7 +8,7 @@ import person.PersonData.*;\n public class PersonMapper {\n     public Response response(Registry person, Document selected, LocalDate asOf) {\n         Name fio = selected == null ? person.name() : selected.name();\n-        return new Response(person.id(), fio, fio.display(), selected == null ? person.birthDate() : selected.birthDate(),\n+        return new Response(person.id(), fio, fio.display(), person.birthDate(),\n             selected == null ? null : selected.id(), selected == null ? null : selected.effectiveFrom(),\n             new Address(person.city(), person.street()), asOf);\n     }",
+      "rounds": [
+        {
+          "round": 1,
+          "verdict": true,
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+          "failures": []
+        }
+      ],
+      "toolUse": {
+        "harness:mapping_debug": {
+          "calls": 3,
+          "errors": 0,
+          "ms": 847,
+          "responseBytes": 18450
+        },
+        "model:workspace_write": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 8,
+          "responseBytes": 209
+        },
+        "harness:test_run": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 8353,
+          "responseBytes": 1082
+        }
+      }
+    },
+    {
+      "id": "case-31bc8d47",
+      "mutation": "address-mapping",
+      "killed": true,
+      "passed": true,
+      "mode": "staged-evidence-handoff",
+      "finish": "public-http-passed",
+      "turns": 1,
+      "modelMs": 20520,
+      "usage": {
+        "input": 5391,
+        "output": 107
+      },
+      "schemaBytes": 1806,
+      "peakRequestBytes": 21281,
+      "promptSha256": "d8c31819650ae9e11fd818f79a93577d0ac1454a956e25d8eca13748d7160054",
+      "transcriptSha256": "55f28c8c3c622672550736b96242c11e7a141518964c3d3c23c0165699b30b73",
+      "protectedUnchanged": true,
+      "before": {
+        "passed": false,
+        "checked": 52,
+        "failures": [
+          {
+            "id": 100,
+            "differences": [
+              {
+                "path": "/address/city",
+                "expected": "Город-100",
+                "actual": "Улица-100"
+              },
+              {
+                "path": "/address/street",
+                "expected": "Улица-100",
+                "actual": "Город-100"
+              }
+            ]
+          },
+          {
+            "id": 101,
+            "differences": [
+              {
+                "path": "/address/city",
+                "expected": "Город-101",
+                "actual": "Улица-101"
+              },
+              {
+                "path": "/address/street",
+                "expected": "Улица-101",
+                "actual": "Город-101"
+              }
+            ]
+          }
+        ],
+        "sourceDigest": "c113ae803c3f21971ed66f157d030a96f65d2b98dde1ccfaa072601bc9ae2883",
+        "failedCases": 51
+      },
+      "after": {
+        "passed": true,
+        "checked": 52,
+        "failures": [],
+        "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+        "failedCases": 0
+      },
+      "patch": "diff --git a/src/main/java/person/PersonMapper.java b/src/main/java/person/PersonMapper.java\nindex 4af3d35..cd81e12 100644\n--- a/src/main/java/person/PersonMapper.java\n+++ b/src/main/java/person/PersonMapper.java\n@@ -10,6 +10,6 @@ public class PersonMapper {\n         Name fio = selected == null ? person.name() : selected.name();\n         return new Response(person.id(), fio, fio.display(), person.birthDate(),\n             selected == null ? null : selected.id(), selected == null ? null : selected.effectiveFrom(),\n-            new Address(person.street(), person.city()), asOf);\n+            new Address(person.city(), person.street()), asOf);\n     }\n }",
+      "rounds": [
+        {
+          "round": 1,
+          "verdict": true,
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+          "failures": []
+        }
+      ],
+      "toolUse": {
+        "harness:mapping_debug": {
+          "calls": 3,
+          "errors": 0,
+          "ms": 948,
+          "responseBytes": 17483
+        },
+        "model:workspace_write": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 8,
+          "responseBytes": 209
+        },
+        "harness:test_run": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 9167,
+          "responseBytes": 1082
+        }
+      }
+    },
+    {
+      "id": "case-8bfa4de4",
+      "mutation": "dto-name-swap",
+      "killed": true,
+      "passed": true,
+      "mode": "staged-evidence-handoff",
+      "finish": "public-http-passed",
+      "turns": 1,
+      "modelMs": 21617,
+      "usage": {
+        "input": 5534,
+        "output": 118
+      },
+      "schemaBytes": 1806,
+      "peakRequestBytes": 21822,
+      "promptSha256": "49242ca5509d087ed4197e497b650ae118e0b9f48a16f965224e8642eb45c936",
+      "transcriptSha256": "98f15a2e4f196ce6e712520b4a16bd3545430f65bfab172aa116aaf42fcde399",
+      "protectedUnchanged": true,
+      "before": {
+        "passed": false,
+        "checked": 52,
+        "failures": [
+          {
+            "id": 100,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Смирнов",
+                "actual": "Иван"
+              },
+              {
+                "path": "/fio/firstName",
+                "expected": "Иван",
+                "actual": "Смирнов"
+              }
+            ]
+          },
+          {
+            "id": 101,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Иванова",
+                "actual": "Анна"
+              },
+              {
+                "path": "/fio/firstName",
+                "expected": "Анна",
+                "actual": "Иванова"
+              }
+            ]
+          }
+        ],
+        "sourceDigest": "6186de17faab1541c2f8fd904b7090cdf10c2223fe4db51f88d350c31c575aab",
+        "failedCases": 51
+      },
+      "after": {
+        "passed": true,
+        "checked": 52,
+        "failures": [],
+        "sourceDigest": "b4e7e09b1de8aa6c80ad032b2b90ef749d6dde4029a7cfb9db26c0d076fecd9c",
+        "failedCases": 0
+      },
+      "patch": "diff --git a/src/main/java/person/PersonMapper.java b/src/main/java/person/PersonMapper.java\nindex e5706f2..cd22b07 100644\n--- a/src/main/java/person/PersonMapper.java\n+++ b/src/main/java/person/PersonMapper.java\n@@ -8,7 +8,7 @@ import person.PersonData.*;\n public class PersonMapper {\n     public Response response(Registry person, Document selected, LocalDate asOf) {\n         Name fio = selected == null ? person.name() : selected.name();\n-        return new Response(person.id(), new Name(fio.firstName(), fio.lastName(), fio.patronymic()), fio.display(), person.birthDate(),\n+        return new Response(person.id(), new Name(fio.lastName(), fio.firstName(), fio.patronymic()), fio.display(), person.birthDate(),\n             selected == null ? null : selected.id(), selected == null ? null : selected.effectiveFrom(),\n             new Address(person.city(), person.street()), asOf);\n     }",
+      "rounds": [
+        {
+          "round": 1,
+          "verdict": true,
+          "sourceDigest": "b4e7e09b1de8aa6c80ad032b2b90ef749d6dde4029a7cfb9db26c0d076fecd9c",
+          "failures": []
+        }
+      ],
+      "toolUse": {
+        "harness:mapping_debug": {
+          "calls": 3,
+          "errors": 0,
+          "ms": 958,
+          "responseBytes": 17995
+        },
+        "model:workspace_write": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 8,
+          "responseBytes": 209
+        },
+        "harness:test_run": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 7369,
+          "responseBytes": 1082
+        }
+      }
+    },
+    {
+      "id": "case-3fafac2d",
+      "mutation": "inactive+annulled+future",
+      "killed": true,
+      "passed": true,
+      "mode": "staged-evidence-handoff",
+      "finish": "public-http-passed",
+      "turns": 1,
+      "modelMs": 26660,
+      "usage": {
+        "input": 5504,
+        "output": 172
+      },
+      "schemaBytes": 1806,
+      "peakRequestBytes": 21983,
+      "promptSha256": "d0a8e1954c3bcbe712451e67a07b6a55fb92ae5e1c0210f0ee239ab52f003c94",
+      "transcriptSha256": "159e4b3010772cbd72d50edd7dc103f4e17457a0ec30d6ab9698d9414b9fe879",
+      "protectedUnchanged": true,
+      "before": {
+        "passed": false,
+        "checked": 52,
+        "failures": [
+          {
+            "id": 101,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Иванова",
+                "actual": "Отменённая"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Иванова Анна Петровна",
+                "actual": "Отменённая Анна Петровна"
+              },
+              {
+                "path": "/sourceDocumentId",
+                "expected": 1011,
+                "actual": 1012
+              },
+              {
+                "path": "/effectiveFrom",
+                "expected": "2026-10-21",
+                "actual": "2026-11-19"
+              }
+            ]
+          },
+          {
+            "id": 102,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Иванова",
+                "actual": "Неактивная"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Иванова Анна Петровна",
+                "actual": "Неактивная Анна Петровна"
+              },
+              {
+                "path": "/sourceDocumentId",
+                "expected": 1021,
+                "actual": 1022
+              },
+              {
+                "path": "/effectiveFrom",
+                "expected": "2026-10-21",
+                "actual": "2026-11-19"
+              }
+            ]
+          }
+        ],
+        "sourceDigest": "8d1f1643b5b2b3fff086145071d128b630770d9473c3fa459df53c68b999dcf0",
+        "failedCases": 12
+      },
+      "after": {
+        "passed": true,
+        "checked": 52,
+        "failures": [],
+        "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+        "failedCases": 0
+      },
+      "patch": "diff --git a/src/main/java/person/DocumentPolicy.java b/src/main/java/person/DocumentPolicy.java\nindex 503a889..89be926 100644\n--- a/src/main/java/person/DocumentPolicy.java\n+++ b/src/main/java/person/DocumentPolicy.java\n@@ -8,9 +8,9 @@ import person.PersonData.Document;\n public final class DocumentPolicy {\n     private DocumentPolicy() {}\n     public static boolean eligible(Document d, LocalDate asOf) {\n-        return true\n-            && true\n-            && true\n+        return d.active()\n+            && !d.annulled()\n+            && !d.effectiveFrom().isAfter(asOf)\n             && (d.expiresOn() == null || !d.expiresOn().isBefore(asOf))\n             && d.name().complete();\n     }",
+      "rounds": [
+        {
+          "round": 1,
+          "verdict": true,
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+          "failures": []
+        }
+      ],
+      "toolUse": {
+        "harness:mapping_debug": {
+          "calls": 3,
+          "errors": 0,
+          "ms": 760,
+          "responseBytes": 17911
+        },
+        "model:workspace_write": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 10,
+          "responseBytes": 211
+        },
+        "harness:test_run": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 7942,
+          "responseBytes": 1082
+        }
+      }
+    },
+    {
+      "id": "case-aeb5fc97",
+      "mutation": "resultset-column+birth-date-source",
+      "killed": true,
+      "passed": true,
+      "mode": "staged-evidence-handoff",
+      "finish": "public-http-passed",
+      "turns": 1,
+      "modelMs": 35020,
+      "usage": {
+        "input": 5708,
+        "output": 270
+      },
+      "schemaBytes": 1806,
+      "peakRequestBytes": 22471,
+      "promptSha256": "7c08208a30e870518d3ffa45e0382d4719f978a55a34ced2293e2d7e50dc487c",
+      "transcriptSha256": "56ee410ed0aa0d1c2e1b33b72c833eb0ae3467fb7498a391e94e8633b3416999",
+      "protectedUnchanged": true,
+      "before": {
+        "passed": false,
+        "checked": 52,
+        "failures": [
+          {
+            "id": 101,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Иванова",
+                "actual": "Анна"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Иванова Анна Петровна",
+                "actual": "Анна Анна Петровна"
+              },
+              {
+                "path": "/birthDate",
+                "expected": "1990-04-05",
+                "actual": "1991-05-06"
+              }
+            ]
+          },
+          {
+            "id": 102,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Иванова",
+                "actual": "Анна"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Иванова Анна Петровна",
+                "actual": "Анна Анна Петровна"
+              },
+              {
+                "path": "/birthDate",
+                "expected": "1990-04-05",
+                "actual": "1991-05-06"
+              }
+            ]
+          }
+        ],
+        "sourceDigest": "18f4041246a7bbbda842d82c9a6d82a26e7261462132b36dc0ce978e5dd24edb",
+        "failedCases": 45
+      },
+      "after": {
+        "passed": true,
+        "checked": 52,
+        "failures": [],
+        "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+        "failedCases": 0
+      },
+      "patch": "diff --git a/src/main/java/person/PersonMapper.java b/src/main/java/person/PersonMapper.java\nindex 79eb5c6..cd81e12 100644\n--- a/src/main/java/person/PersonMapper.java\n+++ b/src/main/java/person/PersonMapper.java\n@@ -8,7 +8,7 @@ import person.PersonData.*;\n public class PersonMapper {\n     public Response response(Registry person, Document selected, LocalDate asOf) {\n         Name fio = selected == null ? person.name() : selected.name();\n-        return new Response(person.id(), fio, fio.display(), selected == null ? person.birthDate() : selected.birthDate(),\n+        return new Response(person.id(), fio, fio.display(), person.birthDate(),\n             selected == null ? null : selected.id(), selected == null ? null : selected.effectiveFrom(),\n             new Address(person.city(), person.street()), asOf);\n     }\ndiff --git a/src/main/java/person/PersonRepository.java b/src/main/java/person/PersonRepository.java\nindex 3087f75..11f165e 100644\n--- a/src/main/java/person/PersonRepository.java\n+++ b/src/main/java/person/PersonRepository.java\n@@ -28,7 +28,7 @@ public class PersonRepository {\n             JOIN registry.document_state s ON s.document_id = d.id\n             WHERE d.person_id = ?\n             \"\"\", (rs, row) -> new Document(rs.getLong(\"id\"),\n-                new Name(rs.getString(\"first_name\"), rs.getString(\"first_name\"), rs.getString(\"middle_name\")),\n+                new Name(rs.getString(\"last_name\"), rs.getString(\"first_name\"), rs.getString(\"middle_name\")),\n                 rs.getObject(\"birth_date\", LocalDate.class), rs.getObject(\"issued_on\", LocalDate.class),\n                 rs.getObject(\"effective_from\", LocalDate.class), rs.getObject(\"expires_on\", LocalDate.class),\n                 rs.getBoolean(\"active\"), rs.getBoolean(\"annulled\")), personId);",
+      "rounds": [
+        {
+          "round": 1,
+          "verdict": true,
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+          "failures": []
+        }
+      ],
+      "toolUse": {
+        "harness:mapping_debug": {
+          "calls": 3,
+          "errors": 0,
+          "ms": 814,
+          "responseBytes": 18453
+        },
+        "model:workspace_write": {
+          "calls": 2,
+          "errors": 0,
+          "ms": 14,
+          "responseBytes": 423
+        },
+        "harness:test_run": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 8538,
+          "responseBytes": 1082
+        }
+      }
+    },
+    {
+      "id": "case-7ff09e14",
+      "mutation": "issue-date-rank+tie-break",
+      "killed": true,
+      "passed": true,
+      "mode": "staged-evidence-handoff",
+      "finish": "public-http-passed",
+      "turns": 1,
+      "modelMs": 24384,
+      "usage": {
+        "input": 5661,
+        "output": 129
+      },
+      "schemaBytes": 1806,
+      "peakRequestBytes": 22437,
+      "promptSha256": "cbc35a3a476a8764d2151c7bc9bdf6a0c29ae07288ed3dcbfd57eb1eec9963c5",
+      "transcriptSha256": "789dd3bba6e9e82642d66a7a8161f3bdabb76b59d9caa097fe8adafd998da9d4",
+      "protectedUnchanged": true,
+      "before": {
+        "passed": false,
+        "checked": 52,
+        "failures": [
+          {
+            "id": 105,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Сегодня",
+                "actual": "Иванова"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Сегодня Анна Петровна",
+                "actual": "Иванова Анна Петровна"
+              },
+              {
+                "path": "/sourceDocumentId",
+                "expected": 1052,
+                "actual": 1051
+              },
+              {
+                "path": "/effectiveFrom",
+                "expected": "2026-11-19",
+                "actual": "2026-10-21"
+              }
+            ]
+          },
+          {
+            "id": 106,
+            "differences": [
+              {
+                "path": "/fio/lastName",
+                "expected": "Вступила",
+                "actual": "Иванова"
+              },
+              {
+                "path": "/fullName",
+                "expected": "Вступила Анна Петровна",
+                "actual": "Иванова Анна Петровна"
+              },
+              {
+                "path": "/sourceDocumentId",
+                "expected": 1062,
+                "actual": 1061
+              },
+              {
+                "path": "/effectiveFrom",
+                "expected": "2026-11-20",
+                "actual": "2026-10-21"
+              }
+            ]
+          }
+        ],
+        "sourceDigest": "df755b558d359d7cdb2457867061002634734b394ef7db3b4a8cf421d5175a2a",
+        "failedCases": 18
+      },
+      "after": {
+        "passed": true,
+        "checked": 52,
+        "failures": [],
+        "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+        "failedCases": 0
+      },
+      "patch": "diff --git a/src/main/java/person/DocumentPolicy.java b/src/main/java/person/DocumentPolicy.java\nindex 559b57c..89be926 100644\n--- a/src/main/java/person/DocumentPolicy.java\n+++ b/src/main/java/person/DocumentPolicy.java\n@@ -17,7 +17,7 @@ public final class DocumentPolicy {\n     public static Document choose(List<Document> documents, LocalDate asOf) {\n         return documents.stream()\n             .filter(d -> eligible(d, asOf))\n-            .max(Comparator.comparing(Document::issuedOn).thenComparingLong(d -> -d.id()))\n+            .max(Comparator.comparing(Document::effectiveFrom).thenComparingLong(Document::id))\n             .orElse(null);\n     }\n }",
+      "rounds": [
+        {
+          "round": 1,
+          "verdict": true,
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0",
+          "failures": []
+        }
+      ],
+      "toolUse": {
+        "harness:mapping_debug": {
+          "calls": 3,
+          "errors": 0,
+          "ms": 763,
+          "responseBytes": 18347
+        },
+        "model:workspace_write": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 9,
+          "responseBytes": 211
+        },
+        "harness:test_run": {
+          "calls": 1,
+          "errors": 0,
+          "ms": 7517,
+          "responseBytes": 1082
+        }
+      }
+    }
+  ]
+}

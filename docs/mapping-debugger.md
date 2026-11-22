@@ -35,6 +35,31 @@ Use `tool_describe` for `mapping_debug`. Its actions are `discover`, `save`, `li
 
 Then explicitly run `{"action":"run","id":"registry-name-mapping","steps":["api","registry"]}`. Keep the returned recording ID. `get` is compact by default; `include_data=true` reads raw evidence without replay. `open` returns a retained inline view and live workbench link. Append selected receipts with `recording` only while the definition revision matches.
 
+For a source investigation, `{"action":"discover","workspace":"<id>"}` bundles indexed entry chains, SQL boundaries and copyable source with file revisions in one bounded response. Add `entry` from that response to focus a handler. This is heuristic source context; the returned `semantic_index` arguments build exact Joern evidence separately. No parse or network fetch runs implicitly.
+
+For a row-selection bug, add `selections` to the saved definition (or edit **Selection contracts** in the workbench):
+
+```json
+{
+  "id":"current-document", "label":"Newest eligible document", "probe":"documents", "row_id":"/id",
+  "filters":[
+    {"field":"/active","op":"eq","value":true},
+    {"field":"/annulled","op":"eq","value":false},
+    {"field":"/effective_from","op":"lte","value_from":"/asOf"},
+    {"field":"/expires_on","op":"gte","value_from":"/asOf","allow_null":true}
+  ],
+  "order":[{"field":"/effective_from","direction":"desc","type":"date"},{"field":"/id","direction":"desc","type":"integer"}],
+  "fields":[{"source_path":"/last_name","response_path":"/fio/lastName"}],
+  "fallback":{"probe":"registry","source_path":"/0","fields":[{"source_path":"/family_name","response_path":"/fio/lastName"}]}
+}
+```
+
+Each selection needs an existing array-valued probe, unique row IDs, filters, at least one order key and mapped fields. Predicates support `eq`, `ne`, `lt`, `lte`, `gt`, `gte`, `nonblank`; use a literal `value` or a `value_from` pointer into the API body. Values are not silently coerced. Order type can be `text`, `number`, exact `integer` (including PG bigint strings), or ISO `date`. Explicit fallback chooses a whole object before evaluating its fields. Candidate decisions, the expected winner and differing fields appear in both the live workbench and inline snapshot. Passing selections collapse; mismatches and inconclusive results open. Candidate details remain collapsed until requested.
+
+Selection checks evaluate a **declared business rule**, not observed service execution. Missing/failed/truncated inputs or tied winners prevent a conclusive result. Independent read times and redaction can still affect comparisons. Recorded rules are immutable with their receipts. [Person-service mutation practice](person-mutation-practice.md) exercises this with real PostgreSQL, Spring HTTP, actual local-model edits and independent grading.
+
+An untruncated receipt does not prove the SQL retrieved every relevant row; an explicit SQL `LIMIT` or overly narrow `WHERE` can still omit a winner. Record the candidate-scope assumption. `value_from` reads the observed API body: use a literal or independently checked time if the response's date is itself suspect. `workflow_plan` with `id="api-mapping-investigation"` provides the outside-in source → raw rows → Joern → minimal edit → HTTP regression checklist.
+
 Definitions and bounded recordings live under `DT_HOME/mapping-debugger/<principal-hash>/`; back up this directory with other persistent task state. A small metadata index supports listing without parsing all raw recordings. Storage is private, not encrypted. Limits: 200 notebooks, 200 recordings, 256 MiB per user; 30 probes, 100 comparisons, 100 prior receipts, 1 MiB/result, 6 MiB/recording. Individual probes keep at most 100 rows/messages. Narrow queries and delete old recordings explicitly; no silent background pruning.
 
 Independent observations are **not** a transactional snapshot or runtime lineage proof. Dynamic SQL, generated mappers, unresolved library versions and unsynchronized projections remain explicit gaps. Sensitive captured fields may be redacted before comparison. A retained `running` receipt after interruption means the outcome is unknown, so inspect the service before retrying.

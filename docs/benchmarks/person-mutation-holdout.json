@@ -1,0 +1,711 @@
+{
+  "protocol": "dt.person-holdout/v1",
+  "model": "qwen3.8:27b",
+  "seed": 137,
+  "copies": 5,
+  "parentParts": [
+    {
+      "sha256": "ddeabbe08e31e9d7d75b7d26fa822d78704cb6783d0407d8527e0585434e5fc1",
+      "cases": [
+        "archived-table",
+        "wrong-person-column",
+        "wrong-state-join",
+        "resultset-column",
+        "registry-column",
+        "address-join",
+        "inactive",
+        "annulled",
+        "future"
+      ],
+      "cleanup": {
+        "verified": true
+      }
+    },
+    {
+      "sha256": "95cdd9ec3d86cf0da2bf3c8c4d6deeba81f2c2ed1dd0dc21599d23146e8eb0d7",
+      "cases": [
+        "expired",
+        "expiry-boundary",
+        "effective-boundary",
+        "incomplete-name",
+        "issue-date-rank",
+        "oldest-rank"
+      ],
+      "cleanup": {
+        "verified": true
+      }
+    },
+    {
+      "sha256": "c850573646539ee5e6de70ac99ab44483eb32f21b1300b542d65f68bb2a690cb",
+      "cases": [
+        "tie-break",
+        "mixed-name",
+        "birth-date-source",
+        "address-mapping",
+        "dto-name-swap",
+        "inactive+annulled+future",
+        "resultset-column+birth-date-source",
+        "issue-date-rank+tie-break"
+      ],
+      "cleanup": {
+        "verified": true
+      }
+    }
+  ],
+  "passed": true,
+  "noModelCalls": true,
+  "cases": [
+    {
+      "mutation": "archived-table",
+      "sweeps": [
+        {
+          "asOf": "2026-11-18",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-20",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-22",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        }
+      ],
+      "passed": true,
+      "checked": 258
+    },
+    {
+      "mutation": "wrong-person-column",
+      "sweeps": [
+        {
+          "asOf": "2026-11-18",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-20",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-22",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        }
+      ],
+      "passed": true,
+      "checked": 258
+    },
+    {
+      "mutation": "wrong-state-join",
+      "sweeps": [
+        {
+          "asOf": "2026-11-18",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-20",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-22",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        }
+      ],
+      "passed": true,
+      "checked": 258
+    },
+    {
+      "mutation": "resultset-column",
+      "sweeps": [
+        {
+          "asOf": "2026-11-18",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-20",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-22",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        }
+      ],
+      "passed": true,
+      "checked": 258
+    },
+    {
+      "mutation": "registry-column",
+      "sweeps": [
+        {
+          "asOf": "2026-11-18",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-20",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-22",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        }
+      ],
+      "passed": true,
+      "checked": 258
+    },
+    {
+      "mutation": "address-join",
+      "sweeps": [
+        {
+          "asOf": "2026-11-18",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-20",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-22",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        }
+      ],
+      "passed": true,
+      "checked": 258
+    },
+    {
+      "mutation": "inactive",
+      "sweeps": [
+        {
+          "asOf": "2026-11-18",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-20",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-22",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        }
+      ],
+      "passed": true,
+      "checked": 258
+    },
+    {
+      "mutation": "annulled",
+      "sweeps": [
+        {
+          "asOf": "2026-11-18",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-20",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-22",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        }
+      ],
+      "passed": true,
+      "checked": 258
+    },
+    {
+      "mutation": "future",
+      "sweeps": [
+        {
+          "asOf": "2026-11-18",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-20",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-22",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        }
+      ],
+      "passed": true,
+      "checked": 258
+    },
+    {
+      "mutation": "expired",
+      "sweeps": [
+        {
+          "asOf": "2026-11-18",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-20",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-22",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        }
+      ],
+      "passed": true,
+      "checked": 258
+    },
+    {
+      "mutation": "expiry-boundary",
+      "sweeps": [
+        {
+          "asOf": "2026-11-18",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-20",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-22",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        }
+      ],
+      "passed": true,
+      "checked": 258
+    },
+    {
+      "mutation": "effective-boundary",
+      "sweeps": [
+        {
+          "asOf": "2026-11-18",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-20",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-22",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        }
+      ],
+      "passed": true,
+      "checked": 258
+    },
+    {
+      "mutation": "incomplete-name",
+      "sweeps": [
+        {
+          "asOf": "2026-11-18",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-20",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-22",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        }
+      ],
+      "passed": true,
+      "checked": 258
+    },
+    {
+      "mutation": "issue-date-rank",
+      "sweeps": [
+        {
+          "asOf": "2026-11-18",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-20",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-22",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        }
+      ],
+      "passed": true,
+      "checked": 258
+    },
+    {
+      "mutation": "oldest-rank",
+      "sweeps": [
+        {
+          "asOf": "2026-11-18",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-20",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-22",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        }
+      ],
+      "passed": true,
+      "checked": 258
+    },
+    {
+      "mutation": "tie-break",
+      "sweeps": [
+        {
+          "asOf": "2026-11-18",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-20",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-22",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        }
+      ],
+      "passed": true,
+      "checked": 258
+    },
+    {
+      "mutation": "mixed-name",
+      "sweeps": [
+        {
+          "asOf": "2026-11-18",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8bfd072f8ff2e77cb3464116024534c7ea234f34f4465378a3b222a184eec8f3"
+        },
+        {
+          "asOf": "2026-11-20",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8bfd072f8ff2e77cb3464116024534c7ea234f34f4465378a3b222a184eec8f3"
+        },
+        {
+          "asOf": "2026-11-22",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8bfd072f8ff2e77cb3464116024534c7ea234f34f4465378a3b222a184eec8f3"
+        }
+      ],
+      "passed": true,
+      "checked": 258
+    },
+    {
+      "mutation": "birth-date-source",
+      "sweeps": [
+        {
+          "asOf": "2026-11-18",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-20",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-22",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        }
+      ],
+      "passed": true,
+      "checked": 258
+    },
+    {
+      "mutation": "address-mapping",
+      "sweeps": [
+        {
+          "asOf": "2026-11-18",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-20",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-22",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        }
+      ],
+      "passed": true,
+      "checked": 258
+    },
+    {
+      "mutation": "dto-name-swap",
+      "sweeps": [
+        {
+          "asOf": "2026-11-18",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "b4e7e09b1de8aa6c80ad032b2b90ef749d6dde4029a7cfb9db26c0d076fecd9c"
+        },
+        {
+          "asOf": "2026-11-20",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "b4e7e09b1de8aa6c80ad032b2b90ef749d6dde4029a7cfb9db26c0d076fecd9c"
+        },
+        {
+          "asOf": "2026-11-22",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "b4e7e09b1de8aa6c80ad032b2b90ef749d6dde4029a7cfb9db26c0d076fecd9c"
+        }
+      ],
+      "passed": true,
+      "checked": 258
+    },
+    {
+      "mutation": "inactive+annulled+future",
+      "sweeps": [
+        {
+          "asOf": "2026-11-18",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-20",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-22",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        }
+      ],
+      "passed": true,
+      "checked": 258
+    },
+    {
+      "mutation": "resultset-column+birth-date-source",
+      "sweeps": [
+        {
+          "asOf": "2026-11-18",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-20",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-22",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        }
+      ],
+      "passed": true,
+      "checked": 258
+    },
+    {
+      "mutation": "issue-date-rank+tie-break",
+      "sweeps": [
+        {
+          "asOf": "2026-11-18",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-20",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        },
+        {
+          "asOf": "2026-11-22",
+          "passed": true,
+          "checked": 86,
+          "failures": [],
+          "sourceDigest": "8cf8383bda58abaf20be852e3644bab7d99633bac9b15429ce3453eec484eff0"
+        }
+      ],
+      "passed": true,
+      "checked": 258
+    }
+  ],
+  "checks": 5934,
+  "cleanup": {
+    "verified": true
+  },
+  "limits": [
+    "Additional finite data/date checks, not exhaustive production correctness.",
+    "Replays exact model Java edits; no oracle, test or build edits and no further repair feedback."
+  ]
+}

@@ -701,6 +701,67 @@
       "boundaries": [
         "Knowledge projections retain source identity; a successful mirror does not prove runtime dependencies."
       ]
+    },
+    {
+      "id": "api-mapping-investigation",
+      "title": "Trace a wrong API response from PostgreSQL through selection and DTO mapping",
+      "terms": "wrong incorrect api response database postgres postgresql sql mapping mapper fio name person documents active annulled revoked validity effective date newest select filters ranking constructor column table join record birthdate regression outside in integration bug",
+      "required": [
+        "An owned workspace or retained service revision, the failing input and expected business rule",
+        "An explicit environment/database and reproducible API target; write only disposable test data"
+      ],
+      "stages": [
+        {
+          "id": "source",
+          "goal": "Call mapping_debug action=discover with workspace to collect the entry chain, SQL boundaries and copyable DTO/selection source. Prefer this bounded bundle to repeated broad searches. Inspect its file revisions and gaps.",
+          "tools": [
+            "mapping_debug",
+            "workspace_read",
+            "code_search"
+          ]
+        },
+        {
+          "id": "observe",
+          "goal": "Save a named mapping_debug notebook with explicit API request, parameterized PG probes and selections (filters, order, whole-row fields, fallback) from the stated business rule. Run only selected steps. Inspect rejected candidates, expected winner and mismatched response fields. For HTTP 500s inspect correlated application/owned-runtime logs for the actual SQL or mapper exception.",
+          "tools": [
+            "mapping_debug",
+            "pg_query",
+            "field_trace",
+            "service_env_logs",
+            "logs_search"
+          ]
+        },
+        {
+          "id": "paths",
+          "goal": "For control/data evidence, semantic_index repo=work/<id> without ref, then semantic_trace entry input to response/exit or semantic_query flowmap. Poll returned jobs. Check source SQL/JDBC callbacks and constructor argument positions separately; static reachability does not identify the winning database row.",
+          "tools": [
+            "semantic_index",
+            "semantic_trace",
+            "semantic_query"
+          ]
+        },
+        {
+          "id": "repair",
+          "goal": "Fix the first supported divergence: SQL relation/join/predicate, ResultSet binding, eligibility/ranking, whole-object selection or DTO field source. Use a minimal workspace_write edits replacement. Preserve unaffected rules; Java max(comparator) already selects the greatest key.",
+          "tools": [
+            "workspace_write"
+          ]
+        },
+        {
+          "id": "verify",
+          "goal": "Rebuild and run real entry-to-database/API integration tests. Check inactive/annulled/future/expired cases, inclusive dates, ties, optional fields and registry fallback, plus unseen people and clock dates. A passing mock test or static path is insufficient. Recapture the notebook and retain before/after source identities.",
+          "tools": [
+            "test_run",
+            "mapping_debug",
+            "workspace_coverage"
+          ]
+        }
+      ],
+      "boundaries": [
+        "Selection contracts evaluate declared rules over captured rows, not observed runtime lineage or an atomic database/API snapshot.",
+        "Truncated/missing inputs, ambiguous dispatch, generated accessors, JDBC/SQL semantics and tied winners remain explicit gaps.",
+        "Never hardcode observed IDs/names, weaken assertions, or treat a model explanation as independently verified correctness."
+      ]
     }
   ]
 }
