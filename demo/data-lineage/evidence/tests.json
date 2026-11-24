@@ -1,0 +1,59 @@
+{
+  "at": "2026-11-24T01:16:21.834Z",
+  "sourceDigest": "cc8bb70232832f9e4b8735a5c5d7cdf039dd769c07837e1cd772acba4c908714",
+  "node": "v24.22.0",
+  "command": [
+    "node",
+    "--test",
+    "--test-concurrency=4",
+    "test/data-lineage.test.js",
+    "test/impact-readiness.test.js",
+    "test/pgindex.test.js",
+    "test/fieldtrace.test.js",
+    "test/code.test.js",
+    "test/execution-worker.test.js",
+    "test/runtime-resource-isolation.test.js",
+    "test/views.test.js",
+    "test/inline-views.test.js",
+    "test/capability-map.test.js",
+    "test/server.test.js",
+    "test/dist.test.js",
+    "test/editor-ui.test.js",
+    "test/editor-gradle.test.js",
+    "test/workbench-scale.test.js",
+    "test/semantic-path-trace.test.js",
+    "test/semantic-path-trace-ui.test.js",
+    "test/passport.test.js",
+    "test/passport-modules.test.js",
+    "test/passport-resolution.test.js",
+    "test/passport-overrides.test.js",
+    "test/flows.test.js",
+    "test/tool-client.test.js",
+    "test/admin-runtime.test.js",
+    "test/studio-ui.test.js",
+    "test/handbook.test.js",
+    "test/handbook-http.test.js",
+    "test/workbench-links.test.js",
+    "test/workbench-explorer-ui.test.js",
+    "test/workbench.test.js",
+    "test/workbench-discovery.test.js"
+  ],
+  "result": {
+    "tests": 248,
+    "passed": 248,
+    "failed": 0,
+    "skipped": 0
+  },
+  "lineageSuite": {
+    "tests": 26,
+    "passed": 26
+  },
+  "scale": {
+    "syntheticServices": 200,
+    "servingHeapMiB": 64,
+    "sourceInventoryEntries": 1000000,
+    "legacyCatalog": "greater than 200 MiB"
+  },
+  "browser": "verification.json",
+  "scope": "Local source/catalog fixtures, HTTP tools, workers, SQLite, production renderer and standalone bundle. No live Java service, Joern, database, Kafka or model execution in this verification."
+}

@@ -304,8 +304,8 @@ const routes = [
   }],
   ['GET', '/static/*', false, (req, res, url) => {
     const name = url.pathname.slice('/static/'.length);
-    const type = { '.css': 'text/css', '.js': 'text/javascript' }[path.extname(name)];
-    if (!type || !/^(?:views\/|vendor\/(?:ecs-canvas|codemirror)\/)?[\w.-]+$/.test(name) || !fs.existsSync(path.join(__dirname, 'web', name))) return send(res, 404, { error: 'not found' });
+    const type = { '.css': 'text/css', '.js': 'text/javascript', '.ttf': 'font/ttf' }[path.extname(name)];
+    if (!type || !/^(?:views\/|vendor\/(?:ecs-canvas|codemirror|workbench)\/)?[\w.-]+$/.test(name) || !fs.existsSync(path.join(__dirname, 'web', name))) return send(res, 404, { error: 'not found' });
     res.writeHead(200, { 'content-type': `${type}; charset=utf-8`, 'cache-control': 'no-cache' });
     res.end(fs.readFileSync(path.join(__dirname, 'web', name)));
   }],

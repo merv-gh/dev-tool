@@ -17,6 +17,29 @@ test('the bundle runs on its own', () => {
   assert.match(r.stdout + r.stderr, /dt sync/);
 });
 
+test('standalone data access index builds cold cached sources and traces an API to a column without the checkout',()=>{
+ const fs=require('node:fs'),os=require('node:os'),root=fs.mkdtempSync(path.join(os.tmpdir(),'dt-bundle-data-access-')),bundle=path.join(root,'bundle'),home=path.join(root,'home');
+ const put=(name,value)=>{const file=path.join(home,name);fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,typeof value==='string'?value:JSON.stringify(value));};
+ try{
+  fs.mkdirSync(bundle);fs.copyFileSync(path.join(__dirname,'../dist/dt.js'),path.join(bundle,'dt.js'));
+  put('config.json',{envs:{dev:{postgres:{alpha:'postgres://fixture@127.0.0.1:1/alpha'}}},scripts:{starters:false}});
+  put('cache/dev/pg/alpha.json',{db:'alpha',database:'alpha',tables:[{schema:'public',name:'person',columns:[{name:'id',type:'bigint'},{name:'legal_name',type:'text'}]}],functions:[],triggers:[],viewDeps:[]});
+  put('repos/DEMO/person/application.properties','spring.application.name=person\nspring.datasource.url=jdbc:postgresql://database:5432/alpha\n');
+  put('repos/DEMO/person/PersonController.java',`package demo;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.jdbc.core.JdbcTemplate;
+@RestController public class PersonController {
+ private JdbcTemplate jdbc;
+ @GetMapping("/person/{id}")
+ public String get(Long id) { return jdbc.queryForObject("select legal_name from public.person where id=?",String.class,id); }
+}`);
+  const call=(name,args)=>{const r=spawnSync(process.execPath,[path.join(bundle,'dt.js'),'tool',name,JSON.stringify({...args,view:false})],{cwd:root,encoding:'utf8',timeout:30000,env:{PATH:process.env.PATH,DT_HOME:home,DT_LOG:'quiet',DT_NO_DOCTOR:'1',NODE_PATH:''}});assert.equal(r.status,0,r.stderr||r.stdout);return JSON.parse(r.stdout);};
+  const built=call('data_index',{env:'dev',waitMs:25000});assert.equal(built.state,'ready',JSON.stringify(built));assert.equal(built.stats.cold,1);
+  const readers=call('data_readers',{env:'dev',name:'alpha:public.person.legal_name'});assert.ok(readers.rows.some(r=>r.proof==='sql'&&r.user.name==='PersonController#get'),JSON.stringify(readers));
+  const trace=call('data_trace',{env:'dev',from:'GET /person/42',service:'person',to:'alpha:public.person.legal_name'});assert.ok(trace.paths.length,JSON.stringify(trace));
+ }finally{fs.rmSync(root,{recursive:true,force:true});}
+});
+
 test('bundled differential checks spawn their shipped worker without source-tree dependencies', () => {
   const fs = require('fs'), os = require('os');
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'dt-bundle-diff-'));

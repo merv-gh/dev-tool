@@ -56,7 +56,7 @@ function semanticAdminJobId(result) {
 function semanticAdminRender(result, name) {
   const view = rtNativeView(result?.view);
   $("smAdminOutput").innerHTML = (view ? '<iframe id="smAdminView" class="sm-admin-view" title="Semantic analysis result" sandbox="allow-scripts allow-popups allow-downloads"></iframe>' : "") + rtDisclosure("Complete tool result", result, !view);
-  if (view) $("smAdminView").src = view;
+  if (view) (globalThis.DTToolSocket?.resultFrame || ((f,u)=>{f.src=u;}))($("smAdminView"),view);
   const analyses = Array.isArray(result?.analyses) ? result.analyses : Array.isArray(result?.versions) ? result.versions : [];
   $("smRetained").innerHTML = analyses.length ? "<table><thead><tr><th>Repository</th><th>Exact source revision</th><th>Analysis / generation</th><th></th></tr></thead><tbody>" + analyses.slice(0,200).map((analysis, index) => "<tr><td>" + rtEsc(analysis.repo) + '</td><td class="mono">' + rtEsc(analysis.sha || analysis.revision) + "</td><td>" + rtEsc(analysis.id || analysis.analysisId) + '<br><span class="muted">' + rtEsc(analysis.generation || analysis.revisionKey) + '</span></td><td><button data-sm-analysis="' + index + '">Use analysis</button></td></tr>').join("") + "</tbody></table>" : "";
   $("smRetained").querySelectorAll("[data-sm-analysis]").forEach((button) => button.onclick = () => {
@@ -146,7 +146,7 @@ async function semanticAdminPollJob(id) {
       const view = rtNativeView(result.result?.view);
       if (view) {
         $("smAdminOutput").innerHTML = '<iframe id="smAdminView" class="sm-admin-view" title="Semantic job result" sandbox="allow-scripts allow-popups allow-downloads"></iframe>' + rtDisclosure("Job result", job.result);
-        $("smAdminView").src = view;
+        (globalThis.DTToolSocket?.resultFrame || ((f,u)=>{f.src=u;}))($("smAdminView"),view);
       }
     }
   } catch (error) {

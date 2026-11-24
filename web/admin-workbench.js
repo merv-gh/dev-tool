@@ -305,8 +305,8 @@ async function loadWorkbench(force = false) {
     selectedEnv = linkedEnv || env();
   if (wb.data && wb.scope === wbScope() && !force) {
     try {
-      await wbOpenLinked();
       await window.wbx?.load();
+      await wbOpenLinked();
     } catch (e) {
       wbMessage(e.message, true);
     }
@@ -345,8 +345,8 @@ async function loadWorkbench(force = false) {
       $("wbAutoHelp").disabled = !data.model.configured || !data.model.allowed;
       wbCatalog();
       await wbContexts();
-      await wbOpenLinked();
       await window.wbx?.load();
+      await wbOpenLinked();
       if (!wb.tool) {
         const first = data.groups[0]?.intents[0];
         if (first && !window.wbx) wbIntent(first.id);
@@ -1023,7 +1023,7 @@ function wbShowRun(run) {
   const view = rtNativeView(r?.result?.view || r?.recordView);
   $("wbNative").hidden = !view;
   $("wbPreviewStatus").hidden = !view;
-  if (view) {$("wbNative").style.height="90px";$("wbNative").src = view;}
+  if (view) {$("wbNative").style.height="90px";(globalThis.DTToolSocket?.resultFrame || ((f,u)=>{f.src=u;}))($("wbNative"),view);}
   else $("wbNative").removeAttribute("src");
   $("wbOpenResult").hidden = !view;
   if (view) $("wbOpenResult").href = view.replace(/[?&]embed=1/, "");

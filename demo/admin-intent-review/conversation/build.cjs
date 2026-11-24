@@ -1,0 +1,6 @@
+const path=require('node:path'),fs=require('node:fs');
+const{usecases}=require('../intent-model/catalog.cjs');
+const fixtures=new Set(['entry-exit','wrong-data','pg-query','edit-file','file-conflict','file-navigation','steer-turn','test-run','job-observe','job-cancel','resume-task','new-task','scope','reconnect','context-budget','named-result']);
+const intents=usecases.map(c=>({id:c.id,title:c.title,actor:c.actor,entry:fixtures.has(c.id)?'Contextual conversation action or side panel':'Find an action → prepared action',scope:'Inherited from task; editable before execution',support:fixtures.has(c.id)?'Interactive synthetic fixture':'Prepared action and executable expected-model receipt',tools:c.tools,diagram:'../intent-model/index.html?usecase='+c.id}));
+fs.writeFileSync(path.join(__dirname,'intent-bindings.json'),JSON.stringify({scope:'Composition mapping; not proof all production tools have been adapted',intents},null,2)+'\n');
+require('esbuild').build({entryPoints:[path.join(__dirname,'client.cjs')],outfile:path.join(__dirname,'app.js'),platform:'browser',target:'es2022',bundle:true,minify:true,legalComments:'eof'}).then(()=>console.log('Conversation demo bundled with shared production UI components.')).catch(e=>{console.error(e);process.exitCode=1;});

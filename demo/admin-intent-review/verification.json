@@ -1,0 +1,247 @@
+{
+  "protocol": "dt.admin-intent-review/v1",
+  "baseline": "5a8ba086dde01702b4351ff84be6df12d9339538",
+  "method": {
+    "design": "isolated Assessment A",
+    "evidence": "isolated Assessment B; combined after A finished",
+    "score": {
+      "value": 23,
+      "max": 40,
+      "kind": "qualitative heuristic assessment"
+    }
+  },
+  "currentCaptures": {
+    "total": 100,
+    "areas": 22,
+    "firstArrivalPhoneLayouts": 22,
+    "resultComponents": 37,
+    "additionalStates": 19,
+    "uniqueImages": 96,
+    "allStateCoverage": false
+  },
+  "proposalCaptures": {
+    "total": 36,
+    "scenes": 18,
+    "desktop": {
+      "width": 1440,
+      "height": 1000
+    },
+    "phone": {
+      "width": 390,
+      "height": 844
+    },
+    "allPageWidthsFit": true,
+    "finalConfirmation": "Three source phone layouts recaptured after long-code overflow fix"
+  },
+  "checks": {
+    "javascriptSyntax": {
+      "passed": true,
+      "files": 23
+    },
+    "retainedOfflineEngine": {
+      "passed": true,
+      "groups": 14,
+      "command": "node demo/admin-intent-review/replay.js --self-test"
+    },
+    "independentLogicReview": {
+      "renderHandlerGroups": 9,
+      "standaloneReplayCases": 6,
+      "scope": "Node logic; not browser interaction"
+    },
+    "staticResources": {
+      "passed": true,
+      "staticPaths": 301,
+      "captureLinks": 255,
+      "scope": "Published review resources only; dependency directories excluded"
+    },
+    "nativeBrowser": {
+      "screenshots": true,
+      "domInspection": true,
+      "inputJourneyVerified": false,
+      "reason": "Native browser input stalled; not attributed to product behavior"
+    },
+    "productionTestSuiteRun": false,
+    "productionBuildNeeded": false,
+    "optionalBatchCaptureScriptExecuted": false,
+    "authorizedPlaywrightProposal": {
+      "passed": true,
+      "assertionGroups": 27,
+      "pageErrors": 0,
+      "externalRequests": 0
+    },
+    "authorizedPlaywrightCurrent": {
+      "completed": true,
+      "steps": 45,
+      "verifiedSteps": 30,
+      "verifiedDefectSteps": 7,
+      "observedSteps": 2,
+      "captureProblemSteps": 6,
+      "captures": 76,
+      "areasWithCaptures": 22,
+      "verifiedProductDefects": 6,
+      "pageErrors": 0,
+      "externalRequests": 0,
+      "acceptanceNote": "Verified defects are failing product behavior; historical capture failures retain resolutions or reclassifications"
+    },
+    "finalGalleryAndLedger": {
+      "passed": true,
+      "widths": [
+        1440,
+        390
+      ],
+      "mappedStates": 42,
+      "pageErrors": 0,
+      "intentModelCaptures": 9
+    }
+  },
+  "stateLedger": {
+    "scope": "frozen independent 34-capture Admin corpus; later root/renderer/phone captures do not prove transitions",
+    "scenarios": 239,
+    "captured": 34,
+    "uncaptured": 139,
+    "needsBackendOrDeliberateFixture": 66,
+    "browserSupplement": "42 exact state IDs now have named browser observations; original frozen classifications are unchanged; composite entries are not blanket completion claims"
+  },
+  "detector": {
+    "available": false,
+    "exitCode": 127,
+    "reason": "Launcher refused an unverifiable download; no clean scan, overlay, archive helper or trend claim"
+  },
+  "cleanup": {
+    "temporaryCurrentAppStopped": true,
+    "temporaryConfigRemoved": true,
+    "reviewServerKeptForRequestedDemo": true,
+    "reviewUrl": "http://127.0.0.1:4100",
+    "stop": "Ctrl-C in its terminal",
+    "currentBrowserFixture": {
+      "browser": "closed",
+      "fixture": "stopped",
+      "wrapperPid": 81097,
+      "childPid": 81098,
+      "wrapperStopped": true,
+      "childStopped": true,
+      "temporaryHomeRemoved": true,
+      "adminPortClosed": true,
+      "echoPortClosed": true,
+      "manifest": "removed after shutdown; fixture.js regenerates it for reproduction"
+    }
+  },
+  "productionFilesChanged": false,
+  "sourceHashes": {
+    "README.md": "cdf1ae79072916204d54f91761deda6322e32502db3a0c3f49c7abd37d563f73",
+    "admin-browser-verification.json": "0ca1c1cbaefd4fad75bf36e4f45b2128e8352f60859891aaa336b1ff16505966",
+    "browser-findings.md": "328abf41696ff25f78b013858d8ef25bc07d1ceb3db71daed3e71500b9ba3e17",
+    "browser-review.md": "a3f09276a6285c503d5c3e2c3d1a57a3dd3c6bf2613abbedcc0acf3e9b1cc13e",
+    "capture.js": "ac4807f0ae0b87f155c568a7c361805174f4ed28444ce50535c713c03fd8e29b",
+    "captures.json": "927fde6219ef49c5b027177e783df758766abda25a45bad28097f5d91ebb5eee",
+    "check-admin.js": "6dbbda440a39de21e2b6039766816e36e961c295fe8e7bdc3a077396a52ef9dc",
+    "check-prototype.js": "071a7882a62bd93a63e7da5f6da00761b5c11506bca1a639cb559af86fe825eb",
+    "demo.css": "9bb50895463107269b182e89c90331cfc33cb49f916e71c25a4a1f9bc704ec4d",
+    "demo.html": "3ca71d50909c30acfd7d422ab9997d4a8e050096df26dd4fd46c8e7b6dea5ad7",
+    "demo.js": "99b7eed0930545469f0e8ea33dfadb9c20cd8b2da335bbae29b7e1e7979e3ded",
+    "design-review.md": "1bc70dcee160a396f32c5b08b12514ee1d9349e2728641e8ec8d0394a2fd97b9",
+    "engine.js": "8d2e357133e3f69a077a4ac06e7d0d01938eb62adda7c6c6c1f7293bf30768ba",
+    "evidence-review.md": "f7104e7cebf66fc7ed516a9f044df9ba7b2f2586b88e1d4a44a93b61047bc2b3",
+    "fixture.js": "06f1ccb26e30598227fef8ec0db0146e89cf50ae6ba70761b64ad601eb2baa71",
+    "gallery.js": "0c79e567e53d5dc26c6ecd14a3d379f7f33f79074ca11f1e2e53b5bdf9482370",
+    "index.html": "58a945dae3d24105fbf3a5d36fd7f9512f748ffc798938952bc2fbe5bd6031d9",
+    "minimal-plan.md": "c6eabb1f2f783084103fae38f1ca7df799ff1f58e9abbf492c6768f4a8304b30",
+    "plan.md": "c8bbf56b76953a96235b7773013923a7909be651ebca2964b9a835f89b749c13",
+    "proposed-captures.json": "c58b1d11d6c898cb42d17a58c6044bd9afd3973b36a02e81fe1f3b6631a68a86",
+    "prototype-browser-verification.json": "546bf9948df7c8eb2863b5820528f7ca2f9f48fd001f82ea0c1247b025b98f85",
+    "prototype-review.md": "b0500462a0de43138b55b7ee878799fc23bf4c304b8d91471dba8cbf8a42aad8",
+    "renderer-review.md": "a20746c96dbd15a190d8f55e49da45dbc1f3fb33493990081b9a59e6b34d8325",
+    "replay.js": "f4fab422e637d02a14f084f6b0b2f9756a730d55e11f4db4a3ed42696e643721",
+    "review-browser-smoke.json": "84a90de600046472ab65475caadce46910f1c0ac5ca1aa94ce30f5aa287e1091",
+    "review.css": "179a9f666918bf108db2017f8a3717f6eea8a179dccac252de855757c259468b",
+    "server.js": "088050158b6e64a54de445943c502dc60e1912fa46b36f82d32679e1dc2be639",
+    "state-inventory.json": "079e93472489d04fe1ef8dc128e8efdc111ea57245d36e87b5853e8dbe07427a",
+    "states.html": "4e5757075f83aa85ef2388e3444bc8b0ad23859f1d3b427620f7594618862203",
+    "states.js": "a8854ec01f1ac2802ded739c31bf58513f5a5fd25204bd5a64338c84956e2c6a"
+  },
+  "gallery": {
+    "captureEntries": 255,
+    "uniqueImageFiles": 255,
+    "distinctImageHashes": 244,
+    "scope": "Historical app appearance, real gestures and design-model simulation are separate evidence"
+  },
+  "currentBrowserCaptures": {
+    "total": 76,
+    "areas": 22,
+    "ledgerStatesReferenced": 42,
+    "executionReport": "admin-browser-verification.json"
+  },
+  "proposalBrowserCaptures": {
+    "total": 34,
+    "scenarioGroups": 5,
+    "assertionGroups": 27,
+    "allPageWidthsFit": true,
+    "executionReport": "prototype-browser-verification.json"
+  },
+  "currentDirection": {
+    "plan": "minimal-plan.md",
+    "interactiveModel": "intent-model/index.html",
+    "previousProposal": "retained for comparison; superseded"
+  },
+  "intentModel": {
+    "protocol": "dt.user-intent-model/v1",
+    "counts": {
+      "usecases": 135,
+      "tools": 316,
+      "existingWorkbenchIntents": 20,
+      "legacyStateObligations": 239,
+      "machines": 12,
+      "states": 290,
+      "transitions": 704,
+      "configurations": 1058,
+      "journeyExecutions": 897,
+      "journeyEvents": 14899
+    },
+    "modelPassed": true,
+    "unitTests": {
+      "passed": 18,
+      "failed": 0,
+      "navigationJobInterleavings": 495
+    },
+    "browserChecks": {
+      "passed": 15,
+      "allUsecasesClicked": 135,
+      "pageErrors": 0,
+      "backendOrExternalRequests": 0
+    },
+    "captures": 9,
+    "boundaries": [
+      "316 built-ins from an isolated config. Dynamic plugins/custom collections require a new inventory and explicit intent mapping.",
+      "Every declared atomic state and transition branch is exercised in each actor\u2019s finite graph, using owner/admin and reader profiles plus bounded event payloads.",
+      "Actor composition is tested with named interference/safety cases. The unbounded Cartesian product of every actor, job, file and arbitrary input is not exhaustively explored.",
+      "239 prior Admin states are assigned design obligations. Assignment is not evidence that their production behavior is tested or fixed.",
+      "No real model, tool, repository write, push, database, broker, container or API request is executed by the model simulator."
+    ],
+    "sourceHashes": {
+      "README.md": "743c721f5e93d99388cfe6b2234e04382d350623a0c80a48213808077bcad4f2",
+      "THIRD-PARTY.md": "3e83285d6a30cf308dad1275a2a296bf70970540637e41af8b4baaeb583e39b1",
+      "analysis.cjs": "1c99ba1bcafa92602eb31186e4530335f87a7cf2c38a2681a630b2449d994120",
+      "app.js": "7e79f21a17e08acec85f458a2b4c1a5d832f342d174a07d924286db3f5f75be5",
+      "browser-verification.json": "b98f8478d0feece33e38e2bf38f9aa273e12d5d5a9be8c87c9160a6cf742cc66",
+      "build.js": "ef7a25731e843777c36497f4462b4a559c1df68548c884952429dc18bafdb82b",
+      "catalog.cjs": "9a421e86d00fc691d843cca1dac81ce9f9dab1517bbf28b2ac80ffc3661a1b83",
+      "check-browser.cjs": "85d83c9c6042900a96857a8a59595b4dcc63fbc3194db583431621eda3817776",
+      "client.cjs": "90f12fdda6da7cc2374214aa86a5a41b31f3ef4479ff1630c1d8e915fd43305b",
+      "coverage.json": "b885e980ce9e4d0398f8ca9cac67a548269a797e2205251f13d310fea052209f",
+      "index.html": "b0bc1181309437413dd7c15b9795f45536dffa52134dbc6ecc8be5cc375f0648",
+      "inventory.cjs": "58baf49d96e97af39252568f630063d701fa796287ab7bb103b2b662a90e4bf7",
+      "journeys.cjs": "051c8df3c1d6682453d0eb0d609056951f5ec5d79a8daec30d8e1db387a4005a",
+      "large-fixture.cjs": "55ea9fa9ba66b3ae82d96e73d3a24f7ef78f85429b81180c1a1e03fad46ea534",
+      "machines-source.js": "3f667449ceb22f5a8b96ad5d8d83bdb5bb2b67bc5a781800d808c5b90e03bfbf",
+      "machines.cjs": "3f667449ceb22f5a8b96ad5d8d83bdb5bb2b67bc5a781800d808c5b90e03bfbf",
+      "model.css": "a4f24ea8d88b8db4e539e42a7892d6fe50348664878a81e61c6eb9e5fac94d0b",
+      "model.json": "77eeb75d59bd6a3f74dd772df076d3244f09fb7174c12fbd68397b0101fed3ad",
+      "model.test.cjs": "25ed4ccdecdedd55f96cde3d5445c4ed5bff87c2a4e465bf4febc908c3c53aff",
+      "package-lock.json": "8becd11c49a5a9e4db6444a5cae541c183f6c9a86dff4465ec69b0db697cc1fd",
+      "package.json": "66baae5f9bde485ee76a923286d6191e1daea972f6ca9a3ff9421895393060db",
+      "summary.json": "3485846ec4ff68778c77415fb98c3cf5e5d0a75f9a72692358ec4073111110ed",
+      "tool-inventory.json": "bd1ff67250eac81616435c2eb7905b08cf595631c29ac176b6bc6964d16fdac6",
+      "verify.cjs": "45004848416ecc76d34f69cbb7e0ad96328daf333445717b0b0b55cce13cd441"
+    }
+  }
+}

@@ -328,8 +328,12 @@ svc order-service SHOP/order-service@a1b2c3d4e5: consumes payment_results; produ
 | "Who writes this table?", "what calls this function?", "what does this service touch?" | `pg_usage` (`direction=uses` for the last one) |
 | Topics, tables, functions, paths across services and DB objects | `who_uses` |
 | A service's full picture | `passport` |
+| Column/table readers and writers across cached repos, libraries and SQL routines | `data_readers`, `data_writers` |
+| API-to-column paths through libraries, procedures, Kafka and ES | `data_trace` (static access topology with explicit gaps) |
 
 All of this is regex-level analysis of SQL text and code, with evidence for every finding. Dynamic SQL built at runtime is not seen.
+
+[Data access indexing](docs/data-lineage.md) covers custom aliases/reviewed links, substring candidates, background refresh and retained generations. The [runnable demo](demo/data-lineage/README.md) shows compact inline evidence and vertical paths; ORM inference and object mutation remain separate from persisted SQL access.
 
 ## Saved scripts
 

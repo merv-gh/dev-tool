@@ -1,0 +1,189 @@
+{
+  "at": "2026-11-23T10:36:22.220Z",
+  "checks": [
+    {
+      "name": "Keyboard Explorer loads unopened directories and opens UTF-8 source",
+      "detail": "Real Headless Tree, Monaco and workspace_editor HTTP read",
+      "passed": true
+    },
+    {
+      "name": "Duplicate file names show paths; Reveal focuses an unopened deep file and local-root ancestry is keyboard accessible",
+      "passed": true
+    },
+    {
+      "name": "Preview replacement and automatic dirty-tab pinning preserve independent buffers",
+      "passed": true
+    },
+    {
+      "name": "Keyboard Save preserves BOM/CRLF and writes the exact draft with CAS through the backend",
+      "passed": true
+    },
+    {
+      "name": "Concurrent save is reviewable and requires explicit rebase plus a separate save",
+      "passed": true
+    },
+    {
+      "name": "A file beyond the former 1,000-entry cutoff is searchable and editable",
+      "detail": "5,000 real files in one folder; only visible search rows mounted",
+      "passed": true
+    },
+    {
+      "name": "Existing task-owned inspection terminal still executes and reports output",
+      "passed": true
+    },
+    {
+      "name": "Resizable Explorer has a keyboard equivalent",
+      "passed": true
+    },
+    {
+      "name": "Inline/show semantic trace defaults to the same bounded focused path browser",
+      "passed": true
+    },
+    {
+      "name": "Exact source handoff preserves path and admitted revision; unresolved library identity is never replaced by the app source",
+      "passed": true
+    },
+    {
+      "name": "Fields are directly searchable and Back restores the query",
+      "detail": "1,500 synthetic fields; no paging through unrelated columns",
+      "passed": true
+    },
+    {
+      "name": "200-step navigation stays fixed-width; shared and cyclic targets remain reachable",
+      "passed": true
+    },
+    {
+      "name": "Repeated-target connections have searchable call-site identity, bounded pages and restored filters",
+      "passed": true
+    },
+    {
+      "name": "50,000-node synthetic graph uses bounded rendered detail",
+      "passed": true
+    },
+    {
+      "name": "Source-to-workspace navigation, edit/save and revision-pinned regression remain usable",
+      "detail": "Outside-in fixture is explicitly simulated",
+      "passed": true
+    },
+    {
+      "name": "Browser-local task draft survives closing the working area and reloading",
+      "passed": true
+    },
+    {
+      "name": "Phone preview remains readable and clearly read-only",
+      "passed": true
+    },
+    {
+      "name": "No browser runtime/worker/CSP errors in the exercised production and demo states",
+      "passed": true
+    }
+  ],
+  "captures": [
+    {
+      "file": "production-conflict.png",
+      "scope": "Actual concurrent save; read-only Monaco diff before explicit rebase",
+      "width": 1440,
+      "documentWidth": 1440,
+      "height": 1000,
+      "nodes": 336
+    },
+    {
+      "file": "production-editor.png",
+      "scope": "1440px; real owned workspace, source tabs and inspection command result",
+      "width": 1440,
+      "documentWidth": 1440,
+      "height": 1000,
+      "nodes": 212
+    },
+    {
+      "file": "production-editor-1024.png",
+      "scope": "1024px production editor",
+      "width": 1024,
+      "documentWidth": 1024,
+      "height": 900,
+      "nodes": 212
+    },
+    {
+      "file": "production-static-path.png",
+      "scope": "Real /show semantic renderer, 200-step retained path; direct target focus without expanding ancestors",
+      "width": 1440,
+      "documentWidth": 1440,
+      "height": 1000,
+      "nodes": 144
+    },
+    {
+      "file": "production-library-provenance.png",
+      "scope": "Node-local library repository/revision preserved; missing exact source index blocks handoff",
+      "width": 1440,
+      "documentWidth": 1440,
+      "height": 1000,
+      "nodes": 151
+    },
+    {
+      "file": "conversation-path.png",
+      "scope": "Conversation remains active beside focused synthetic path",
+      "width": 1440,
+      "documentWidth": 1440,
+      "height": 1000,
+      "nodes": 271
+    },
+    {
+      "file": "conversation-depth-200.png",
+      "scope": "200 selected steps, fixed-width navigation, cycle and shared-callee connections retained",
+      "width": 1440,
+      "documentWidth": 1440,
+      "height": 1000,
+      "nodes": 654
+    },
+    {
+      "file": "conversation-callsite-filter.png",
+      "scope": "Late repeated-target call site found directly; at most 25 neighbors per direction",
+      "width": 1440,
+      "documentWidth": 1440,
+      "height": 1000,
+      "nodes": 252
+    },
+    {
+      "file": "conversation-editor.png",
+      "scope": "Monaco source snapshot and writable workspace copy are distinct; dirty draft cannot masquerade as checked source",
+      "width": 1440,
+      "documentWidth": 1440,
+      "height": 1000,
+      "nodes": 444
+    },
+    {
+      "file": "conversation-wide.png",
+      "scope": "1920px conversation workbench",
+      "width": 1920,
+      "documentWidth": 1920,
+      "height": 1000,
+      "nodes": 340
+    },
+    {
+      "file": "conversation-1024.png",
+      "scope": "1024px conversation workbench",
+      "width": 1024,
+      "documentWidth": 1024,
+      "height": 1000,
+      "nodes": 340
+    },
+    {
+      "file": "conversation-zoom-proxy.png",
+      "scope": "720 CSS px, proxy for 200% zoom on a 1440px display",
+      "width": 720,
+      "documentWidth": 720,
+      "height": 1000,
+      "nodes": 340
+    },
+    {
+      "file": "conversation-mobile.png",
+      "scope": "390px; explicit read-only mobile preview; no unsupported Monaco editing claim",
+      "width": 390,
+      "documentWidth": 390,
+      "height": 844,
+      "nodes": 231
+    }
+  ],
+  "scope": "Real editor/backend and semantic renderer; synthetic conversation/model fixtures. No live Joern or Java service run.",
+  "errors": []
+}

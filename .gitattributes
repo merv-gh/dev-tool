@@ -1,3 +1,6 @@
 # Preserve the unmodified upstream editor assets recorded in PROVENANCE.json.
 web/vendor/codemirror/* -whitespace linguist-vendored
 dist/web/vendor/codemirror/* -whitespace linguist-vendored
+# Generated editor bundles contain significant whitespace in embedded strings.
+web/vendor/workbench/* -whitespace linguist-generated
+dist/web/vendor/workbench/* -whitespace linguist-generated

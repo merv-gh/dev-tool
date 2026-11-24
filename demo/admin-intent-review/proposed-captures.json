@@ -1,0 +1,362 @@
+[
+  {
+    "id": "start",
+    "route": "?task=PERS-218&scene=start",
+    "device": "desktop",
+    "file": "screenshots/proposed/start-desktop.jpg",
+    "height": 1000,
+    "scrollWidth": 1440,
+    "width": 1440,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "findings",
+    "route": "?task=PERS-218&scene=findings",
+    "device": "desktop",
+    "file": "screenshots/proposed/findings-desktop.jpg",
+    "height": 1000,
+    "scrollWidth": 1440,
+    "width": 1440,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "request",
+    "route": "?task=PERS-218&scene=request&state=ready",
+    "device": "desktop",
+    "file": "screenshots/proposed/request-desktop.jpg",
+    "height": 1000,
+    "scrollWidth": 1440,
+    "width": 1440,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "request-error",
+    "route": "?task=PERS-218&scene=request&state=error",
+    "device": "desktop",
+    "file": "screenshots/proposed/request-error-desktop.jpg",
+    "height": 1000,
+    "scrollWidth": 1440,
+    "width": 1440,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "request-partial",
+    "route": "?task=PERS-218&scene=request&state=partial",
+    "device": "desktop",
+    "file": "screenshots/proposed/request-partial-desktop.jpg",
+    "height": 1000,
+    "scrollWidth": 1440,
+    "width": 1440,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "request-empty",
+    "route": "?task=PERS-218&scene=request&state=empty",
+    "device": "desktop",
+    "file": "screenshots/proposed/request-empty-desktop.jpg",
+    "height": 1000,
+    "scrollWidth": 1440,
+    "width": 1440,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "source",
+    "route": "?task=PERS-218&scene=source",
+    "device": "desktop",
+    "file": "screenshots/proposed/source-desktop.jpg",
+    "height": 1000,
+    "scrollWidth": 1440,
+    "width": 1440,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "source-conflict",
+    "route": "?task=PERS-218&scene=source&state=conflict",
+    "device": "desktop",
+    "file": "screenshots/proposed/source-conflict-desktop.jpg",
+    "height": 1000,
+    "scrollWidth": 1440,
+    "width": 1440,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "source-readonly",
+    "route": "?task=PERS-218&scene=source&state=readonly",
+    "device": "desktop",
+    "file": "screenshots/proposed/source-readonly-desktop.jpg",
+    "height": 1000,
+    "scrollWidth": 1440,
+    "width": 1440,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "checks",
+    "route": "?task=PERS-218&scene=checks",
+    "device": "desktop",
+    "file": "screenshots/proposed/checks-desktop.jpg",
+    "height": 1000,
+    "scrollWidth": 1440,
+    "width": 1440,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "handoff",
+    "route": "?task=PERS-218&scene=handoff",
+    "device": "desktop",
+    "file": "screenshots/proposed/handoff-desktop.jpg",
+    "height": 1000,
+    "scrollWidth": 1440,
+    "width": 1440,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "overnight",
+    "route": "?task=SHOP-142&scene=overnight",
+    "device": "desktop",
+    "file": "screenshots/proposed/overnight-desktop.jpg",
+    "height": 1000,
+    "scrollWidth": 1440,
+    "width": 1440,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "overnight-paused",
+    "route": "?task=SHOP-142&scene=overnight&state=paused",
+    "device": "desktop",
+    "file": "screenshots/proposed/overnight-paused-desktop.jpg",
+    "height": 1000,
+    "scrollWidth": 1440,
+    "width": 1440,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "checkout-source",
+    "route": "?task=SHOP-142&scene=source",
+    "device": "desktop",
+    "file": "screenshots/proposed/checkout-source-desktop.jpg",
+    "height": 1000,
+    "scrollWidth": 1440,
+    "width": 1440,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "checkout-handoff",
+    "route": "?task=SHOP-142&scene=handoff",
+    "device": "desktop",
+    "file": "screenshots/proposed/checkout-handoff-desktop.jpg",
+    "height": 1000,
+    "scrollWidth": 1440,
+    "width": 1440,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "services",
+    "route": "?destination=services",
+    "device": "desktop",
+    "file": "screenshots/proposed/services-desktop.jpg",
+    "height": 1000,
+    "scrollWidth": 1440,
+    "width": 1440,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "library",
+    "route": "?destination=library",
+    "device": "desktop",
+    "file": "screenshots/proposed/library-desktop.jpg",
+    "height": 1000,
+    "scrollWidth": 1440,
+    "width": 1440,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "operations",
+    "route": "?destination=operations",
+    "device": "desktop",
+    "file": "screenshots/proposed/operations-desktop.jpg",
+    "height": 1000,
+    "scrollWidth": 1440,
+    "width": 1440,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "start",
+    "route": "?task=PERS-218&scene=start",
+    "device": "mobile",
+    "file": "screenshots/proposed/start-mobile.jpg",
+    "height": 844,
+    "scrollWidth": 390,
+    "width": 390,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "findings",
+    "route": "?task=PERS-218&scene=findings",
+    "device": "mobile",
+    "file": "screenshots/proposed/findings-mobile.jpg",
+    "height": 844,
+    "scrollWidth": 390,
+    "width": 390,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "request",
+    "route": "?task=PERS-218&scene=request&state=ready",
+    "device": "mobile",
+    "file": "screenshots/proposed/request-mobile.jpg",
+    "height": 844,
+    "scrollWidth": 390,
+    "width": 390,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "request-error",
+    "route": "?task=PERS-218&scene=request&state=error",
+    "device": "mobile",
+    "file": "screenshots/proposed/request-error-mobile.jpg",
+    "height": 844,
+    "scrollWidth": 390,
+    "width": 390,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "request-partial",
+    "route": "?task=PERS-218&scene=request&state=partial",
+    "device": "mobile",
+    "file": "screenshots/proposed/request-partial-mobile.jpg",
+    "height": 844,
+    "scrollWidth": 390,
+    "width": 390,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "request-empty",
+    "route": "?task=PERS-218&scene=request&state=empty",
+    "device": "mobile",
+    "file": "screenshots/proposed/request-empty-mobile.jpg",
+    "height": 844,
+    "scrollWidth": 390,
+    "width": 390,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "source",
+    "route": "?task=PERS-218&scene=source",
+    "device": "mobile",
+    "file": "screenshots/proposed/source-mobile.jpg",
+    "height": 844,
+    "scrollWidth": 390,
+    "width": 390,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "source-conflict",
+    "route": "?task=PERS-218&scene=source&state=conflict",
+    "device": "mobile",
+    "file": "screenshots/proposed/source-conflict-mobile.jpg",
+    "height": 844,
+    "scrollWidth": 390,
+    "width": 390,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "source-readonly",
+    "route": "?task=PERS-218&scene=source&state=readonly",
+    "device": "mobile",
+    "file": "screenshots/proposed/source-readonly-mobile.jpg",
+    "height": 844,
+    "scrollWidth": 390,
+    "width": 390,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "checks",
+    "route": "?task=PERS-218&scene=checks",
+    "device": "mobile",
+    "file": "screenshots/proposed/checks-mobile.jpg",
+    "height": 844,
+    "scrollWidth": 390,
+    "width": 390,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "handoff",
+    "route": "?task=PERS-218&scene=handoff",
+    "device": "mobile",
+    "file": "screenshots/proposed/handoff-mobile.jpg",
+    "height": 844,
+    "scrollWidth": 390,
+    "width": 390,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "overnight",
+    "route": "?task=SHOP-142&scene=overnight",
+    "device": "mobile",
+    "file": "screenshots/proposed/overnight-mobile.jpg",
+    "height": 844,
+    "scrollWidth": 390,
+    "width": 390,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "overnight-paused",
+    "route": "?task=SHOP-142&scene=overnight&state=paused",
+    "device": "mobile",
+    "file": "screenshots/proposed/overnight-paused-mobile.jpg",
+    "height": 844,
+    "scrollWidth": 390,
+    "width": 390,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "checkout-source",
+    "route": "?task=SHOP-142&scene=source",
+    "device": "mobile",
+    "file": "screenshots/proposed/checkout-source-mobile.jpg",
+    "height": 844,
+    "scrollWidth": 390,
+    "width": 390,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "checkout-handoff",
+    "route": "?task=SHOP-142&scene=handoff",
+    "device": "mobile",
+    "file": "screenshots/proposed/checkout-handoff-mobile.jpg",
+    "height": 844,
+    "scrollWidth": 390,
+    "width": 390,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "services",
+    "route": "?destination=services",
+    "device": "mobile",
+    "file": "screenshots/proposed/services-mobile.jpg",
+    "height": 844,
+    "scrollWidth": 390,
+    "width": 390,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "library",
+    "route": "?destination=library",
+    "device": "mobile",
+    "file": "screenshots/proposed/library-mobile.jpg",
+    "height": 844,
+    "scrollWidth": 390,
+    "width": 390,
+    "mode": "synthetic offline prototype"
+  },
+  {
+    "id": "operations",
+    "route": "?destination=operations",
+    "device": "mobile",
+    "file": "screenshots/proposed/operations-mobile.jpg",
+    "height": 844,
+    "scrollWidth": 390,
+    "width": 390,
+    "mode": "synthetic offline prototype"
+  }
+]

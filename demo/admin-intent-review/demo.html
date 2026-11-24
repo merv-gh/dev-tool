@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Task-first Admin proposal · dt</title><link rel="stylesheet" href="/tokens.css"><link rel="stylesheet" href="demo.css"></head>
+<body>
+<a class="skip" href="#main">Skip to investigation</a>
+<div class="prototype-bar"><a href="/">Review & current screenshots</a><span>Interactive proposal · synthetic, browser-local data · no tool or model calls</span><button id="reset">Reset demo</button></div>
+<header class="app-header"><a class="brand" href="demo.html">dt</a><nav aria-label="Primary"><button data-destination="tasks" aria-current="page">Tasks</button><button data-destination="services">Services</button><button data-destination="library">Library</button><button data-destination="operations">Operations</button></nav><button id="help">How this works</button></header>
+<div class="workspace">
+  <aside class="task-rail" aria-label="Task picker"><div class="rail-title"><h2>Your work</h2><button id="taskPicker" class="mobile-tasks" aria-expanded="false" aria-controls="taskList">Choose task</button><button id="newTask">New task</button></div><label class="sr-only" for="taskSearch">Find a task</label><input id="taskSearch" type="search" placeholder="Ticket, service, or topic"><div id="taskList"></div><div class="rail-bottom"><p><strong>Task memory stays here.</strong><br>Changing chat does not create another workspace.</p><button id="resume">Resume retained work</button></div></aside>
+  <main id="main" tabindex="-1"><div id="content"></div></main>
+</div>
+<div id="announcement" class="announcement" role="status" aria-live="polite"></div><script src="engine.js"></script><script src="demo.js"></script></body></html>

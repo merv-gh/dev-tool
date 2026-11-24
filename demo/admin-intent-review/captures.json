@@ -1,0 +1,994 @@
+[
+  {
+    "id": "api-initial",
+    "label": "API explorer · initial",
+    "file": "screenshots/current/api-initial.jpg",
+    "url": "/admin#api",
+    "width": 1440,
+    "height": 1163,
+    "capture": "full page",
+    "sha256": "c8115d5fdbf59cc990c1eca26a666a3d740ad9e7b9747f22c915f647f57d1690"
+  },
+  {
+    "id": "api-mobile",
+    "label": "api · 390px first arrival",
+    "file": "screenshots/current/api-mobile.jpg",
+    "width": 390,
+    "height": 844,
+    "capture": "viewport",
+    "sha256": "45451e48a7100988ad19c71be21254bc7fa4a6ad56ce6bcb73746041e120dd08",
+    "note": "First visible 390px viewport; embedded applications may still be loading. No interaction proof."
+  },
+  {
+    "id": "architecture-initial",
+    "label": "Architecture · initial",
+    "file": "screenshots/current/architecture-initial.jpg",
+    "url": "/admin#architecture",
+    "width": 1440,
+    "height": 1988,
+    "capture": "full page",
+    "sha256": "b63d8e9b444e382826c0eb2fd2731c7f9233de2d41cfd5c61ac0569041ba1952"
+  },
+  {
+    "id": "architecture-mobile",
+    "label": "architecture · 390px first arrival",
+    "file": "screenshots/current/architecture-mobile.jpg",
+    "width": 390,
+    "height": 844,
+    "capture": "viewport",
+    "sha256": "7d69541950bac1ca37c67840b2a0289fc8559f502aeac903a7a65be92cea58df",
+    "note": "First visible 390px viewport; embedded applications may still be loading. No interaction proof."
+  },
+  {
+    "id": "capabilities-initial",
+    "label": "Tool map · initial",
+    "file": "screenshots/current/capabilities-initial.jpg",
+    "url": "/admin#capabilities",
+    "width": 1440,
+    "height": 1184,
+    "capture": "full page",
+    "sha256": "ff141bb809a4e163b3734a126505330df0cec72b8ea66b29211bbc3604b92a31"
+  },
+  {
+    "id": "capabilities-mobile",
+    "label": "capabilities · 390px first arrival",
+    "file": "screenshots/current/capabilities-mobile.jpg",
+    "width": 390,
+    "height": 844,
+    "capture": "viewport",
+    "sha256": "8691e3cf8a189741d947c56f44904506d321f7336417033b5b71c82b8b9c7d7d",
+    "note": "First visible 390px viewport; embedded applications may still be loading. No interaction proof."
+  },
+  {
+    "id": "capabilities-task",
+    "label": "Tool map · requested task slice",
+    "file": "screenshots/current/capabilities-task.jpg",
+    "width": 1280,
+    "height": 720,
+    "capture": "viewport",
+    "sha256": "ce861479752ad0e9080b1e61213939c63fdf1af1c4f68771bc136b726da6ec48"
+  },
+  {
+    "id": "config-initial",
+    "label": "Config · initial",
+    "file": "screenshots/current/config-initial.jpg",
+    "url": "/admin#config",
+    "width": 1440,
+    "height": 3122,
+    "capture": "full page",
+    "sha256": "bf1792a5489f7b4a88e44510d33b8e7e3be16f0dc66d49dcf3b3d58868a3831a"
+  },
+  {
+    "id": "config-mobile",
+    "label": "config · 390px first arrival",
+    "file": "screenshots/current/config-mobile.jpg",
+    "width": 390,
+    "height": 844,
+    "capture": "viewport",
+    "sha256": "6ab1d48140768f468f84b3193551c7d2b466645c5b1253d6a25278a34a5e5ed3",
+    "note": "First visible 390px viewport; embedded applications may still be loading. No interaction proof."
+  },
+  {
+    "id": "context-dirty",
+    "label": "Context · unsaved file changes",
+    "file": "screenshots/current/context-dirty.jpg",
+    "url": "/admin#context",
+    "width": 1440,
+    "height": 1818,
+    "capture": "full page",
+    "sha256": "446da0013e577128b47c27ddb22e7b803db05a849a89684a34609be051767950"
+  },
+  {
+    "id": "context-file",
+    "label": "Context · file read and editor",
+    "file": "screenshots/current/context-file.jpg",
+    "url": "/admin#context",
+    "width": 1440,
+    "height": 1818,
+    "capture": "full page",
+    "sha256": "65d621e738f844b8b0ac735b43bf13cb8ec9585fb8b02106e77ed56371d50f37"
+  },
+  {
+    "id": "context-initial",
+    "label": "Context · initial",
+    "file": "screenshots/current/context-initial.jpg",
+    "url": "/admin#context",
+    "width": 1440,
+    "height": 1142,
+    "capture": "full page",
+    "sha256": "680b8e45cb4461744a8d5dec37c1c7c64cc5ce0481df79786cd47b262b6468a0"
+  },
+  {
+    "id": "context-linked-file",
+    "label": "Context · retained file deep link",
+    "file": "screenshots/current/context-linked-file.jpg",
+    "width": 1280,
+    "height": 720,
+    "capture": "viewport",
+    "sha256": "02e579076bfc691f3aab06a1450236c8f94c70b71e8b2e708036c8ebfc5fcd85"
+  },
+  {
+    "id": "context-mobile",
+    "label": "context · 390px first arrival",
+    "file": "screenshots/current/context-mobile.jpg",
+    "width": 390,
+    "height": 844,
+    "capture": "viewport",
+    "sha256": "6a1d4fc0dbaa5c09f2515c2101c7d0b4bad3dee74319d01741549229585ce111",
+    "note": "First visible 390px viewport; embedded applications may still be loading. No interaction proof."
+  },
+  {
+    "id": "context-project-edit",
+    "label": "Context · project publication editor",
+    "file": "screenshots/current/context-project-edit.jpg",
+    "url": "/admin#context",
+    "width": 1440,
+    "height": 3069,
+    "capture": "full page",
+    "sha256": "e1163a908c4ce7b7cb61e5b31c4161076eee05818dbcf716ca9443836445e2d3"
+  },
+  {
+    "id": "context-project",
+    "label": "Context · published project knowledge",
+    "file": "screenshots/current/context-project.jpg",
+    "url": "/admin#context",
+    "width": 1440,
+    "height": 1929,
+    "capture": "full page",
+    "sha256": "e1e6db0a228ab2076049975a14dc84ddac9fcbcee1fb7f169f234ad776f7b3b3"
+  },
+  {
+    "id": "context-saved-results",
+    "label": "Context · saved result library",
+    "file": "screenshots/current/context-saved-results.jpg",
+    "url": "/admin#context",
+    "width": 1440,
+    "height": 1142,
+    "capture": "full page",
+    "sha256": "27ab0f3e575bbae2c82131149a3c81d729c38ab44c890a3123c521837402194d"
+  },
+  {
+    "id": "context-selected",
+    "label": "Context · retained task files",
+    "file": "screenshots/current/context-selected.jpg",
+    "url": "/admin#context",
+    "width": 1440,
+    "height": 1818,
+    "capture": "full page",
+    "sha256": "08bf1ffbbfe6ecfc1a8a9a5f4ed193bece4e8fda9ce917d360d44e61764bb81f"
+  },
+  {
+    "id": "context-tool-prepared",
+    "label": "Context · typed tool arguments",
+    "file": "screenshots/current/context-tool-prepared.jpg",
+    "url": "/admin#context",
+    "width": 1440,
+    "height": 1479,
+    "capture": "full page",
+    "sha256": "d5122ddd07293c4147837e83d3116c1d21ffc089198b040bf38628753f1c19f6"
+  },
+  {
+    "id": "context-tool-result",
+    "label": "Context · retained catalog result",
+    "file": "screenshots/current/context-tool-result.jpg",
+    "url": "/admin#context",
+    "width": 1440,
+    "height": 1479,
+    "capture": "full page",
+    "sha256": "56a0b3e6e1a3e544c8aebc1428dc496ce7e75eea9416d52c6fa8c8403c76496a"
+  },
+  {
+    "id": "environments-initial",
+    "label": "Service environments · initial",
+    "file": "screenshots/current/environments-initial.jpg",
+    "url": "/admin#environments",
+    "width": 1440,
+    "height": 1142,
+    "capture": "full page",
+    "sha256": "1b19bb89e1f4f1f074627bd6b8646c77e5ccc62c17ee5843703d2ad9c227d450"
+  },
+  {
+    "id": "environments-mobile",
+    "label": "environments · 390px first arrival",
+    "file": "screenshots/current/environments-mobile.jpg",
+    "width": 390,
+    "height": 844,
+    "capture": "viewport",
+    "sha256": "85ead499af4ab60bd436424e5e0ea7178748dbd4ffab8305c7e056a63c98260c",
+    "note": "First visible 390px viewport; embedded applications may still be loading. No interaction proof."
+  },
+  {
+    "id": "explore-initial",
+    "label": "Explore · initial",
+    "file": "screenshots/current/explore-initial.jpg",
+    "url": "/admin#explore",
+    "width": 1440,
+    "height": 1142,
+    "capture": "full page",
+    "sha256": "248facb16f216f614843914b32627f5901415fca954648cad29e161cfaee9942"
+  },
+  {
+    "id": "explore-mobile",
+    "label": "explore · 390px first arrival",
+    "file": "screenshots/current/explore-mobile.jpg",
+    "width": 390,
+    "height": 844,
+    "capture": "viewport",
+    "sha256": "7ee34b8d752192d746702c1f58b8b89caed81823ad92bcb4ada37480126203ea",
+    "note": "First visible 390px viewport; embedded applications may still be loading. No interaction proof."
+  },
+  {
+    "id": "handbook-initial",
+    "label": "Field guide · initial",
+    "file": "screenshots/current/handbook-initial.jpg",
+    "url": "/admin#handbook",
+    "width": 1440,
+    "height": 5371,
+    "capture": "full page",
+    "sha256": "022bb263d35b7c7d7272a163fa432f2face61763888c98c0b9c7bf0f7e689934"
+  },
+  {
+    "id": "handbook-mobile",
+    "label": "handbook · 390px first arrival",
+    "file": "screenshots/current/handbook-mobile.jpg",
+    "width": 390,
+    "height": 844,
+    "capture": "viewport",
+    "sha256": "1b31f607e892845121691402e39f116f94d477419ab12ac15cfc5cd3d54f0cd1",
+    "note": "First visible 390px viewport; embedded applications may still be loading. No interaction proof."
+  },
+  {
+    "id": "handbook-start",
+    "label": "Field guide · first investigation",
+    "file": "screenshots/current/handbook-start.jpg",
+    "width": 1280,
+    "height": 720,
+    "capture": "viewport",
+    "sha256": "fc176bf19c708ed77703afc62b57218a700a641768ea64a4569acce5009f06ae"
+  },
+  {
+    "id": "history-initial",
+    "label": "History · initial",
+    "file": "screenshots/current/history-initial.jpg",
+    "url": "/admin#history",
+    "width": 1440,
+    "height": 5606,
+    "capture": "full page",
+    "sha256": "25c4f0eb1d7897bc3dcd3d969b396226983e30dd77990d4fb0bde799ead0fb69"
+  },
+  {
+    "id": "history-mobile",
+    "label": "history · 390px first arrival",
+    "file": "screenshots/current/history-mobile.jpg",
+    "width": 390,
+    "height": 844,
+    "capture": "viewport",
+    "sha256": "130c1900b812999e46bce983a203c92a38e990a6a5cc36bbc05978a560da089f",
+    "note": "First visible 390px viewport; embedded applications may still be loading. No interaction proof."
+  },
+  {
+    "id": "index-initial",
+    "label": "Index · initial",
+    "file": "screenshots/current/index-initial.jpg",
+    "url": "/admin#index",
+    "width": 1440,
+    "height": 1142,
+    "capture": "full page",
+    "sha256": "de8317095e46dba1c8d83dab0292201d9ab7c7bb5755faea426e0a6f8b2a7166"
+  },
+  {
+    "id": "index-mobile",
+    "label": "index · 390px first arrival",
+    "file": "screenshots/current/index-mobile.jpg",
+    "width": 390,
+    "height": 844,
+    "capture": "viewport",
+    "sha256": "81979083eb92eaf0a81513316294de8e1ae3b8b296f0508ab77c3594a4d33ab3",
+    "note": "First visible 390px viewport; embedded applications may still be loading. No interaction proof."
+  },
+  {
+    "id": "jobs-initial",
+    "label": "Jobs · initial",
+    "file": "screenshots/current/jobs-initial.jpg",
+    "url": "/admin#jobs",
+    "width": 1440,
+    "height": 1142,
+    "capture": "full page",
+    "sha256": "80384e0aded5fe3d563cb41b530decf0a9461744b6d9dfdb7b5d4de8709a4733"
+  },
+  {
+    "id": "jobs-mobile",
+    "label": "jobs · 390px first arrival",
+    "file": "screenshots/current/jobs-mobile.jpg",
+    "width": 390,
+    "height": 844,
+    "capture": "viewport",
+    "sha256": "da35d91f24c1acf8342de9dd85c4a9371be2fd62732618b3f954d44e2d0144fc",
+    "note": "First visible 390px viewport; embedded applications may still be loading. No interaction proof."
+  },
+  {
+    "id": "map-initial",
+    "label": "Services map · initial",
+    "file": "screenshots/current/map-initial.jpg",
+    "url": "/admin#map",
+    "width": 1440,
+    "height": 1202,
+    "capture": "full page",
+    "sha256": "177c56b95fa3bd8c914e58f57c41bb345f54d04fe570dd810e52facdc973b76c"
+  },
+  {
+    "id": "map-mobile",
+    "label": "map · 390px first arrival",
+    "file": "screenshots/current/map-mobile.jpg",
+    "width": 390,
+    "height": 844,
+    "capture": "viewport",
+    "sha256": "e7be793fcb05fd7af6d633b28afbf3c28293a57d2e5734bf691284f8bb222746",
+    "note": "First visible 390px viewport; embedded applications may still be loading. No interaction proof."
+  },
+  {
+    "id": "pages-initial",
+    "label": "Pages · initial",
+    "file": "screenshots/current/pages-initial.jpg",
+    "url": "/admin#pages",
+    "width": 1440,
+    "height": 1406,
+    "capture": "full page",
+    "sha256": "33c2c969fa28f4859c0b1674e9a50eecb7f759034a989360b3941b7b2d92cdf7"
+  },
+  {
+    "id": "pages-mobile",
+    "label": "pages · 390px first arrival",
+    "file": "screenshots/current/pages-mobile.jpg",
+    "width": 390,
+    "height": 844,
+    "capture": "viewport",
+    "sha256": "bc1bf5881b2ba2fa06db91bb07899ad303af29827be968854f010f32556f4aab",
+    "note": "First visible 390px viewport; embedded applications may still be loading. No interaction proof."
+  },
+  {
+    "id": "passports-initial",
+    "label": "Passports2 · initial",
+    "file": "screenshots/current/passports-initial.jpg",
+    "url": "/admin#passports",
+    "width": 1440,
+    "height": 1142,
+    "capture": "full page",
+    "sha256": "4a1e678232c246b5061240d0ff7e971623ff341f7e10c130fb3152ff85ae84a8"
+  },
+  {
+    "id": "passports-mobile",
+    "label": "passports · 390px first arrival",
+    "file": "screenshots/current/passports-mobile.jpg",
+    "width": 390,
+    "height": 844,
+    "capture": "viewport",
+    "sha256": "09fbcfde8fb3c83c6a6b6485a9472f2c834fec806c2e4fb418740cd01dfcede1",
+    "note": "First visible 390px viewport; embedded applications may still be loading. No interaction proof."
+  },
+  {
+    "id": "reflection-initial",
+    "label": "Self-reflection · initial",
+    "file": "screenshots/current/reflection-initial.jpg",
+    "url": "/admin#reflection",
+    "width": 1440,
+    "height": 1279,
+    "capture": "full page",
+    "sha256": "39288c8df956450365b2f6234124d9be3ed4ee341cf0328edc2d5e31c6209365"
+  },
+  {
+    "id": "reflection-mobile",
+    "label": "reflection · 390px first arrival",
+    "file": "screenshots/current/reflection-mobile.jpg",
+    "width": 390,
+    "height": 844,
+    "capture": "viewport",
+    "sha256": "2cc03dddf1b907d98c60bf9b467541be139a4522cbf500ed61d39c3eb9942507",
+    "note": "First visible 390px viewport; embedded applications may still be loading. No interaction proof."
+  },
+  {
+    "id": "runtime-initial",
+    "label": "Runtime · initial",
+    "file": "screenshots/current/runtime-initial.jpg",
+    "url": "/admin#runtime",
+    "width": 1440,
+    "height": 2056,
+    "capture": "full page",
+    "sha256": "547647fe20c9ff38e701c7a04839d10a5001c1dee099596c4d0747b074eee8e8"
+  },
+  {
+    "id": "runtime-mobile",
+    "label": "runtime · 390px first arrival",
+    "file": "screenshots/current/runtime-mobile.jpg",
+    "width": 390,
+    "height": 844,
+    "capture": "viewport",
+    "sha256": "64b5e65679aefc2974eae135a65fe2c41211775df26cb3215ba6f100667ee672",
+    "note": "First visible 390px viewport; embedded applications may still be loading. No interaction proof."
+  },
+  {
+    "id": "scripts-collection",
+    "label": "Scripts · selected collection",
+    "file": "screenshots/current/scripts-collection.jpg",
+    "width": 1280,
+    "height": 720,
+    "capture": "viewport",
+    "sha256": "144512957c7be6e18db2fd2b2b348d2d16d18282d9cc49237f03b52e480f1720"
+  },
+  {
+    "id": "scripts-editor",
+    "label": "Scripts · populated workflow editor",
+    "file": "screenshots/current/scripts-editor.jpg",
+    "url": "/admin#scripts?script=shop%2Fsupport%2Forder-check",
+    "width": 704,
+    "height": 1488,
+    "capture": "full page",
+    "sha256": "84a0c2665f925e91b59f0c19a1b1e72149bff12ef64cde67f767db32ba1b5e3e"
+  },
+  {
+    "id": "scripts-initial",
+    "label": "Scripts · initial",
+    "file": "screenshots/current/scripts-initial.jpg",
+    "url": "/admin#scripts",
+    "width": 1440,
+    "height": 1142,
+    "capture": "full page",
+    "sha256": "d20d06f8d0af4fc93df108bf85f5f1abc88b56e5cf11804845a70a8bd025ebc0"
+  },
+  {
+    "id": "scripts-mobile",
+    "label": "scripts · 390px first arrival",
+    "file": "screenshots/current/scripts-mobile.jpg",
+    "width": 390,
+    "height": 844,
+    "capture": "viewport",
+    "sha256": "3dd37ca9fbcd291a095f37381ade7a22ec23ceefc33a8b8ba051ea4fb1a63631",
+    "note": "First visible 390px viewport; embedded applications may still be loading. No interaction proof."
+  },
+  {
+    "id": "semantic-capabilities",
+    "label": "Joern · attempted capabilities action (same prepared form; response unverified)",
+    "file": "screenshots/current/semantic-capabilities.jpg",
+    "url": "/admin#semantic",
+    "width": 1280,
+    "height": 6147,
+    "capture": "full page",
+    "sha256": "6099a9b989c870c4bad9f3e8db1b1a2378ef27371da37d17a9549b94069d78e3"
+  },
+  {
+    "id": "semantic-initial",
+    "label": "Joern & ports · initial",
+    "file": "screenshots/current/semantic-initial.jpg",
+    "url": "/admin#semantic",
+    "width": 1440,
+    "height": 6147,
+    "capture": "full page",
+    "sha256": "411a436dd499f400744cea0639aed39347120d7bfa585f28019a3a1974068247"
+  },
+  {
+    "id": "semantic-mobile",
+    "label": "semantic · 390px first arrival",
+    "file": "screenshots/current/semantic-mobile.jpg",
+    "width": 390,
+    "height": 844,
+    "capture": "viewport",
+    "sha256": "9a1fd663925fa8e0e7b8780776a266a179c75508ba46fd7c8a46557af3efd7ba",
+    "note": "First visible 390px viewport; embedded applications may still be loading. No interaction proof."
+  },
+  {
+    "id": "semantic-retained",
+    "label": "Joern · attempted retained action (same prepared form; response unverified)",
+    "file": "screenshots/current/semantic-retained.jpg",
+    "url": "/admin#semantic",
+    "width": 1280,
+    "height": 6147,
+    "capture": "full page",
+    "sha256": "6099a9b989c870c4bad9f3e8db1b1a2378ef27371da37d17a9549b94069d78e3"
+  },
+  {
+    "id": "semantic-settled",
+    "label": "Joern · full path argument form",
+    "file": "screenshots/current/semantic-settled.jpg",
+    "url": "/admin#semantic",
+    "width": 1280,
+    "height": 6147,
+    "capture": "full page",
+    "sha256": "6099a9b989c870c4bad9f3e8db1b1a2378ef27371da37d17a9549b94069d78e3"
+  },
+  {
+    "id": "sites-initial",
+    "label": "Sites · initial",
+    "file": "screenshots/current/sites-initial.jpg",
+    "url": "/admin#sites",
+    "width": 1440,
+    "height": 1142,
+    "capture": "full page",
+    "sha256": "62e7b88245a1ab0c3664f40fbee1932edb3461f7d0c228cabc53038d8ee3eccc"
+  },
+  {
+    "id": "sites-mobile",
+    "label": "sites · 390px first arrival",
+    "file": "screenshots/current/sites-mobile.jpg",
+    "width": 390,
+    "height": 844,
+    "capture": "viewport",
+    "sha256": "2aa1721129f1c759ac92bef34eaa96b75d88c0255ad3d40df4584ffb96813303",
+    "note": "First visible 390px viewport; embedded applications may still be loading. No interaction proof."
+  },
+  {
+    "id": "studio-initial",
+    "label": "Developer studio · initial",
+    "file": "screenshots/current/studio-initial.jpg",
+    "url": "/admin#studio",
+    "width": 1440,
+    "height": 1485,
+    "capture": "full page",
+    "sha256": "eb485771527d984358a2d636d91894d579d7f3804c066680326aac8aebeb4425"
+  },
+  {
+    "id": "studio-mobile",
+    "label": "studio · 390px first arrival",
+    "file": "screenshots/current/studio-mobile.jpg",
+    "width": 390,
+    "height": 844,
+    "capture": "viewport",
+    "sha256": "0b677d408e11e525a34b9563df81f6810c5638e9dd44030be553bf4194e490b2",
+    "note": "First visible 390px viewport; embedded applications may still be loading. No interaction proof."
+  },
+  {
+    "id": "view-api-exchange",
+    "label": "Result renderer · api-exchange",
+    "file": "screenshots/current/view-api-exchange.jpg",
+    "url": "/show/mws4d00t11362a661556467f4b",
+    "width": 1280,
+    "height": 720,
+    "capture": "viewport",
+    "sha256": "d5a6cd9866ed6f5a19d3940c539bc4a092ecd6701915313b5f92168f60d1d4ae"
+  },
+  {
+    "id": "view-architecture",
+    "label": "Result renderer · architecture",
+    "file": "screenshots/current/view-architecture.jpg",
+    "url": "/show/mws4d0101ad4655124d3215f17",
+    "width": 1280,
+    "height": 720,
+    "capture": "viewport",
+    "sha256": "69febf36c42f85265396f7e89b7a42fec37f02ba8503c10175f05c0197f61a46"
+  },
+  {
+    "id": "view-capabilities",
+    "label": "Result renderer · capabilities (local registry)",
+    "file": "screenshots/current/view-capabilities.jpg",
+    "width": 1280,
+    "height": 720,
+    "capture": "viewport",
+    "sha256": "d0d1cf91f7982d5951a75e95a4a30834e6a544c1ee5aa64bf087be004072a6c2"
+  },
+  {
+    "id": "view-ci",
+    "label": "Result renderer · ci",
+    "file": "screenshots/current/view-ci.jpg",
+    "url": "/show/mws4d0176bad01500472f5b66c",
+    "width": 1280,
+    "height": 720,
+    "capture": "viewport",
+    "sha256": "4472a9f7169564a6f76c3011a7822d7d74ce9f9c88a5ec09660bf7085a10c4e3"
+  },
+  {
+    "id": "view-code-cell",
+    "label": "Result renderer · code-cell",
+    "file": "screenshots/current/view-code-cell.jpg",
+    "url": "/show/mws4d01i69063505f7b9c592f0",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "58c16c41226408f8bc6af20b0e338d2175c691ca285ed00b4be9e830a32389b5"
+  },
+  {
+    "id": "view-code",
+    "label": "Code renderer",
+    "file": "screenshots/current/view-code.jpg",
+    "url": "/show/mws4d01d01763bae781e3fbd24",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "5d688efbc60e7d94e8d3f9d2f4472fdb4b7ba9d3a0c9da86f2ef7fe96846a16d"
+  },
+  {
+    "id": "view-collection-report",
+    "label": "Result renderer · collection-report",
+    "file": "screenshots/current/view-collection-report.jpg",
+    "url": "/show/mws4d01nc6938e0a24c7c2c8a7",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "bcc48b7dd8e222f33927e7fd383433521e7dc7f065dd846a8877675ebbafb654"
+  },
+  {
+    "id": "view-diagram",
+    "label": "Result renderer · diagram",
+    "file": "screenshots/current/view-diagram.jpg",
+    "url": "/show/mws4d01tde0c107ee74580e969",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "817b147491a4f94badae9dcc92158ee76c0ec4c5d7e1bfd763023c3b95b8f080"
+  },
+  {
+    "id": "view-differential",
+    "label": "Result renderer · differential",
+    "file": "screenshots/current/view-differential.jpg",
+    "url": "/show/mws4d01y6487ecf8a337639899",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "366be952703a34d3ab0852a6e75f5564aa31b4f076e60df46628c85c3fdc294c"
+  },
+  {
+    "id": "view-impact",
+    "label": "Result renderer · impact",
+    "file": "screenshots/current/view-impact.jpg",
+    "url": "/show/mws4d024d97df99baa981049da",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "615bdc7bf7460400c578ff02cc8a41ae1e14c98a899e41a1fb5e2cd4caa83a62"
+  },
+  {
+    "id": "view-json",
+    "label": "Result renderer · json",
+    "file": "screenshots/current/view-json.jpg",
+    "url": "/show/mws4d029e244a178a2655687a4",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "c202fc7202d50240fd52eb5cc9b64410796feea124813c9bf3004ad087046866"
+  },
+  {
+    "id": "view-knowledge-map",
+    "label": "Result renderer · knowledge-map",
+    "file": "screenshots/current/view-knowledge-map.jpg",
+    "url": "/show/mws4d02fafed7090e7d0da10fd",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "199cb50b7845f71253431cea1489ecc1f785b08b95aff6287521b05c58c03461"
+  },
+  {
+    "id": "view-list-diff",
+    "label": "Result renderer · list-diff",
+    "file": "screenshots/current/view-list-diff.jpg",
+    "url": "/show/mws4d02kb9a2e1e458ec17193e",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "bf84698e80708cff4ae63d76d54fc5a73379c983ad2d45fbefc8f75a427d5ef5"
+  },
+  {
+    "id": "view-logic-model",
+    "label": "Result renderer · logic-model",
+    "file": "screenshots/current/view-logic-model.jpg",
+    "url": "/show/mws4d02p8e760fc29a1e7f4262",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "98312731b910b54d820dd233111f85ad5cc0cfdb2fed8d3d33918aae21e32473"
+  },
+  {
+    "id": "view-mapping-debugger",
+    "label": "Result renderer · mapping-debugger",
+    "file": "screenshots/current/view-mapping-debugger.jpg",
+    "url": "/show/mws4d02v61e99aa2265f6d33b8",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "26accb66d6943ddd0e84e94e8fc2f2c4dc6ea4ff43a2cfe2d58a549db093f6b1"
+  },
+  {
+    "id": "view-observability",
+    "label": "Result renderer · observability",
+    "file": "screenshots/current/view-observability.jpg",
+    "url": "/show/mws4d02z68633b22a4e1ba3737",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "9ea1d70bd5920b6ec6c6e2bd7a09f8242c1a1c931f1faf628c650e8691fbeac3"
+  },
+  {
+    "id": "view-passport-ports",
+    "label": "Result renderer · passport-ports",
+    "file": "screenshots/current/view-passport-ports.jpg",
+    "url": "/show/mws4d03480ebe4c7c4eb90ee2e",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "e8ff4c0d4ad42654844fcc270e0e4c70022fddade02aa0c1ffdca11004b9b0ab"
+  },
+  {
+    "id": "view-patch",
+    "label": "Result renderer · patch",
+    "file": "screenshots/current/view-patch.jpg",
+    "url": "/show/mws4d03974b589e2df3a7b61a4",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "808ac8973697060d58ba74f9345f957c027e29df71425095d59da53e6f3540a5"
+  },
+  {
+    "id": "view-project-context",
+    "label": "Result renderer · project-context",
+    "file": "screenshots/current/view-project-context.jpg",
+    "url": "/show/mws4d03ebb93b73e8ae6009de7",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "b48fabb2096754785bcec25342167958edb3298bbe0762abd73476275ae39f14"
+  },
+  {
+    "id": "view-repo-model",
+    "label": "Result renderer · repo-model",
+    "file": "screenshots/current/view-repo-model.jpg",
+    "url": "/show/mws4d03j3dcab852a7273ab328",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "c6b76e389975ac85ae12565b11f5aa6a16bbea8ba84c5cf8d5ffb334f160360e"
+  },
+  {
+    "id": "view-reproduction",
+    "label": "Result renderer · reproduction",
+    "file": "screenshots/current/view-reproduction.jpg",
+    "url": "/show/mws4d03pecbadb09bd77d24009",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "be2d94a9c909cdacacb75b662c282872bf0270695d3c7ed9bd074698a687c165"
+  },
+  {
+    "id": "view-scenario-run",
+    "label": "Result renderer · scenario-run",
+    "file": "screenshots/current/view-scenario-run.jpg",
+    "url": "/show/mws4d03v95f871a65514f7d19e",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "d24422e6a6c7872f39f74e4c2feaadad3c63e23da7dd25ecd9a39d2a4c07a68d"
+  },
+  {
+    "id": "view-semantic-analysis",
+    "label": "Result renderer · semantic-analysis",
+    "file": "screenshots/current/view-semantic-analysis.jpg",
+    "url": "/show/mws4d0405a113c3317e749b889",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "2e02a9c8f775fd1148aa6cfc30260c95e82da9e6609d7634045faa61a1bc2983"
+  },
+  {
+    "id": "view-semantic-flow-map",
+    "label": "Result renderer · semantic-flow-map",
+    "file": "screenshots/current/view-semantic-flow-map.jpg",
+    "url": "/show/mws4d047b9a926eba4dc1c00bd",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "dbbb6b03c83d6086e3050341077d6b0cd412fda1b85f6dae3421ce5b722b18c2"
+  },
+  {
+    "id": "view-semantic-path-trace",
+    "label": "Result renderer · semantic-path-trace",
+    "file": "screenshots/current/view-semantic-path-trace.jpg",
+    "url": "/show/mws4d04cab5b03d49726e9b59c",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "047898e3e30a264359b7abf6a7c88ab381583bdc259f52c87da74370826551df"
+  },
+  {
+    "id": "view-service-environment",
+    "label": "Result renderer · service-environment",
+    "file": "screenshots/current/view-service-environment.jpg",
+    "url": "/show/mws4d04g7a4b919e4557f1749c",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "aef231aeecbc251048ee26ffe55ebc5a8ed38e63aab354dabcf12579995f15ff"
+  },
+  {
+    "id": "view-table",
+    "label": "Result renderer · table",
+    "file": "screenshots/current/view-table.jpg",
+    "url": "/show/mws4d04m5e1f049bc2edd44e9f",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "382f36d48c11cb8d53158e8c1c3781838c8709c3cc85bde0274829ac16fb54a3"
+  },
+  {
+    "id": "view-task-run",
+    "label": "Result renderer · task-run",
+    "file": "screenshots/current/view-task-run.jpg",
+    "url": "/show/mws4d04sb2d5cb9acba8a72a3e",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "677072ecf3b442a8a2a63c47817ffa36422f85b49497e1f3f6678036b0ce3d1b"
+  },
+  {
+    "id": "view-test-coverage",
+    "label": "Result renderer · test-coverage",
+    "file": "screenshots/current/view-test-coverage.jpg",
+    "url": "/show/mws4d04zead7164adee6ab6966",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "aeeb8c916ad4a401b13fe47504c5412916a917797ce502f41dbc94fa28a62f64"
+  },
+  {
+    "id": "view-tests",
+    "label": "Result renderer · tests",
+    "file": "screenshots/current/view-tests.jpg",
+    "url": "/show/mws4d0550731d45b89343cbe5d",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "b2c9d0794e5c1a6f69efa354c33ec0b5225058f6741511fbf81f04778feb5953"
+  },
+  {
+    "id": "view-text-diff",
+    "label": "Result renderer · text-diff",
+    "file": "screenshots/current/view-text-diff.jpg",
+    "url": "/show/mws4d05b74eddb4ad8234b23df",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "6a56bc8198ac7dc5307572e0acfa5ad2d8bfbe01fd8be1f6709a49151092448b"
+  },
+  {
+    "id": "view-ui-page",
+    "label": "Result renderer · ui-page",
+    "file": "screenshots/current/view-ui-page.jpg",
+    "url": "/show/mws4d05hd3e6b024718db86780",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "f05ebdd00e374ac29e0a5241d25c221ec791d55da94fe1db2382116277032856"
+  },
+  {
+    "id": "view-ui-trace",
+    "label": "Result renderer · ui-trace",
+    "file": "screenshots/current/view-ui-trace.jpg",
+    "url": "/show/mws4d05q6874e78ee596014907",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "40cc368d9652f2717f8729bad735871d63056cc296e1d4c8f2e091371ccec923"
+  },
+  {
+    "id": "view-work-record",
+    "label": "Result renderer · work-record",
+    "file": "screenshots/current/view-work-record.jpg",
+    "url": "/show/mws4d05x5f3ac21004738ae065",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "ed28f11b330a7984c57fe99140e511887aa4d5bb1f2adbd369a90e07a6c98bd7"
+  },
+  {
+    "id": "view-workbench",
+    "label": "Result renderer · workbench",
+    "file": "screenshots/current/view-workbench.jpg",
+    "url": "/show/mws4d063401bd291d0e33eac5a",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "02793cd0d28ac7cdf3c1be09784d9d46d607e861e4bfbac0c09ecafebd96c643"
+  },
+  {
+    "id": "view-workspace-coverage",
+    "label": "Result renderer · workspace-coverage",
+    "file": "screenshots/current/view-workspace-coverage.jpg",
+    "url": "/show/mws4d069f6a3753cdb26ba67c2",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "0f106cc5449a79ec4668872a712985587a4649f1a29894c1c1459d54c8ceb559"
+  },
+  {
+    "id": "view-xml",
+    "label": "Result renderer · xml",
+    "file": "screenshots/current/view-xml.jpg",
+    "url": "/show/mws4d06d16026686f66de58070",
+    "capture": "viewport",
+    "width": 1280,
+    "height": 720,
+    "sha256": "d91264cf7173109cdfe92ba3f5139b332eff29bfab4484b2eeea00c523736515"
+  },
+  {
+    "id": "views-initial",
+    "label": "Views · initial",
+    "file": "screenshots/current/views-initial.jpg",
+    "url": "/admin#views",
+    "width": 1440,
+    "height": 1142,
+    "capture": "full page",
+    "sha256": "d0f024841992caa1f3ca253e5926377430789439920bc6a6f03190d14eb2a0d4"
+  },
+  {
+    "id": "views-mobile",
+    "label": "views · 390px first arrival",
+    "file": "screenshots/current/views-mobile.jpg",
+    "width": 390,
+    "height": 844,
+    "capture": "viewport",
+    "sha256": "61665491ab80b0bf5d4d408ae1d79079a4c6acc2a03fd683e4093e73d901d8db",
+    "note": "First visible 390px viewport; embedded applications may still be loading. No interaction proof."
+  },
+  {
+    "id": "workbench-context",
+    "label": "Workbench · deep-linked retained context",
+    "file": "screenshots/current/workbench-context.jpg",
+    "width": 1280,
+    "height": 720,
+    "capture": "viewport",
+    "sha256": "35698da287f554d271da79a9e41780c75a287cbeb63c0831af6850a3232fa114"
+  },
+  {
+    "id": "workbench-initial",
+    "label": "Workbench · first arrival · desktop",
+    "file": "screenshots/current/workbench-initial.jpg",
+    "url": "/admin#workbench",
+    "width": 1440,
+    "height": 1142,
+    "capture": "full page",
+    "sha256": "b085a72d3e6d03f6e4118e1f3f75cbc850e7d7e5c0974f4496a86e2af7b5a2ea"
+  },
+  {
+    "id": "workbench-mobile",
+    "label": "workbench · 390px first arrival",
+    "file": "screenshots/current/workbench-mobile.jpg",
+    "width": 390,
+    "height": 844,
+    "capture": "viewport",
+    "sha256": "30a0aa84dd1361a95b9dca111623e26384809bbb518f112f20c32b78d3d47d50",
+    "note": "First visible 390px viewport; embedded applications may still be loading. No interaction proof."
+  },
+  {
+    "id": "workbench-services",
+    "label": "Workbench · requested service mode (not verified)",
+    "file": "screenshots/current/workbench-services.jpg",
+    "width": 1280,
+    "height": 720,
+    "capture": "viewport",
+    "sha256": "35698da287f554d271da79a9e41780c75a287cbeb63c0831af6850a3232fa114"
+  },
+  {
+    "id": "workbench-tasks",
+    "label": "Workbench · requested task mode (not verified)",
+    "file": "screenshots/current/workbench-tasks.jpg",
+    "width": 1280,
+    "height": 720,
+    "capture": "viewport",
+    "sha256": "35698da287f554d271da79a9e41780c75a287cbeb63c0831af6850a3232fa114"
+  }
+]

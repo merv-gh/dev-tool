@@ -1,0 +1,2579 @@
+{
+  "schema": "dt.admin-ui-state-inventory/v1",
+  "assessment": "B independent detector and evidence review",
+  "baseline": "5a8ba086dde01702b4351ff84be6df12d9339538",
+  "target": "web/admin.html",
+  "fixture_manifest": "work/admin-intent-review/fixture.json",
+  "fixture_url": "http://127.0.0.1:4096/admin",
+  "inventory_scope": "Frozen independent corpus: 22 Admin navigation areas and the 34 exact capture names/hashes in captures[]. Fixed before the parent expanded the separate standalone gallery to 37 renderer captures. Counts do not describe the final screenshots/current directory. Finite significant scenario entries, not all permutations of the 318 generated tool contracts.",
+  "counts": {
+    "areas": 22,
+    "areas_with_initial_screenshot": 22,
+    "admin_capture_files": 34,
+    "admin_unique_image_hashes": 32,
+    "desktop_capture_files_1280_or_wider": 33,
+    "narrow_capture_files": 1,
+    "scenario_entries": 239,
+    "captured": 34,
+    "uncaptured": 139,
+    "needs_backend_integrations": 66,
+    "browser_interactions_verified_by_B": 0
+  },
+  "coverage_notes": [
+    "Frozen corpus membership is captures[].id plus captures[].sha256; all counts apply only to those 34 fixed Admin captures, before the parent standalone renderer-gallery expansion.",
+    "Captured means the described visual state is present in an inspected existing screenshot; it is not a passing interaction test.",
+    "Captured and DOM evidence were not synchronized; e.g. history-initial DOM is empty while its later screenshot is populated.",
+    "semantic-settled, semantic-retained and semantic-capabilities are byte-identical screenshots and DOM snapshots. Only the prepared form is evidenced; retained analysis and engine-capability results remain uncaptured.",
+    "context-selected and context-file show the same file-open scenario with different page/scroll capture positions.",
+    "All 34 Admin captures use the light theme. No 390px phone, 200% zoom, dark theme, real touch, screen reader, or full keyboard journey was verified.",
+    "needs_backend_integrations identifies behavior needing a live/configured backend or deliberate fixture fault/state injection for trustworthy observation; it does not claim every scenario requires an external vendor."
+  ],
+  "duplicate_images": [
+    [
+      "semantic-settled",
+      "semantic-retained",
+      "semantic-capabilities"
+    ]
+  ],
+  "shared_shell": {
+    "sources": [
+      "web/admin.html:133",
+      "web/admin-ux.js:37",
+      "web/admin-runtime.js:234"
+    ],
+    "components": [
+      "environment selector",
+      "principal/chat scope",
+      "top outbound links",
+      "22-area navigation",
+      "running job banner",
+      "toast"
+    ],
+    "captured": "local admin, dev environment, default task scope, inactive running-job banner",
+    "uncaptured": [
+      "principal-scoped non-admin access",
+      "task/environment scope switch pending/blocked/applied",
+      "active job banner",
+      "keyboard navigation and selected tab announcement",
+      "narrow viewport overflow beyond Scripts",
+      "dark theme and reduced motion"
+    ]
+  },
+  "areas": [
+    {
+      "id": "workbench",
+      "label": "Workbench",
+      "sources": [
+        "web/admin-workbench.js:106",
+        "web/admin-workbench.js:781",
+        "web/workbench-explorer.js"
+      ],
+      "component_families": [
+        "work scope selector",
+        "context/service/task browser",
+        "library search",
+        "goal and tool picker",
+        "schema form",
+        "run history",
+        "result and next actions"
+      ],
+      "states": [
+        {
+          "id": "loaded-context-browser-no-selected-work",
+          "label": "Loaded context browser; no selected work",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/workbench-initial.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "services-browse",
+          "label": "Services browse",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "tasks-browse",
+          "label": "Tasks browse",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "selected-tree-item-and-detail",
+          "label": "Selected tree item and detail",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "library-search-results-and-zero-results",
+          "label": "Library search results and zero results",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "prepared-tool-with-typed-arguments",
+          "label": "Prepared tool with typed arguments",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "file-editor-dirty-and-revision-conflict",
+          "label": "File editor dirty and revision conflict",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "saved-action-review",
+          "label": "Saved action review",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "running-action-and-cancel",
+          "label": "Running action and cancel",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "successful-action-with-retained-evidence",
+          "label": "Successful action with retained evidence",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "failed-action-with-recovery-and-follow-up",
+          "label": "Failed action with recovery and follow-up",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        }
+      ]
+    },
+    {
+      "id": "capabilities",
+      "label": "Tool map",
+      "sources": [
+        "web/admin-capabilities.js:4",
+        "web/capability-map.js"
+      ],
+      "component_families": [
+        "question/tool search",
+        "starting-object list",
+        "graph with zoom/fit",
+        "object detail",
+        "prepared action",
+        "share/export"
+      ],
+      "states": [
+        {
+          "id": "complete-graph-318-tools-and-21-starting-objects",
+          "label": "Complete graph; 318 tools and 21 starting objects",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/capabilities-initial.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "filtered-graph-and-zero-matches",
+          "label": "Filtered graph and zero matches",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "selected-object-and-questions",
+          "label": "Selected object and questions",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "selected-tool-and-prepared-draft",
+          "label": "Selected tool and prepared draft",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "zoomed-or-fitted-graph",
+          "label": "Zoomed or fitted graph",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "share-and-export-disclosure",
+          "label": "Share and export disclosure",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "tool-executed-after-handoff-to-workbench",
+          "label": "Tool executed after handoff to Workbench",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        }
+      ]
+    },
+    {
+      "id": "index",
+      "label": "Evidence index",
+      "sources": [
+        "web/admin.html:481",
+        "web/admin.html:490",
+        "web/admin.html:608"
+      ],
+      "component_families": [
+        "source freshness table",
+        "per-source refresh",
+        "refresh all",
+        "cached index rebuild",
+        "active-job bar"
+      ],
+      "states": [
+        {
+          "id": "cached-postgres-row-marked-ok",
+          "label": "Cached Postgres row marked ok",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/index-initial.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "unconfigured-source-rows",
+          "label": "Unconfigured source rows",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/index-initial.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "catalog-not-synced-zero-indexed-lines",
+          "label": "Catalog not synced; zero indexed lines",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/index-initial.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "stale-cache-row",
+          "label": "Stale cache row",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "configured-source-error-row",
+          "label": "Configured source error row",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "source-syncing-and-joined-existing-job",
+          "label": "Source syncing and joined existing job",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "live-refresh-completed",
+          "label": "Live refresh completed",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "live-refresh-failed-and-retained-older-cache",
+          "label": "Live refresh failed and retained older cache",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        }
+      ]
+    },
+    {
+      "id": "explore",
+      "label": "Explore evidence",
+      "sources": [
+        "web/admin.html:619",
+        "web/admin.html:652",
+        "web/admin.html:689"
+      ],
+      "component_families": [
+        "catalog search",
+        "result list",
+        "selected object detail",
+        "usage table",
+        "source code disclosure",
+        "notes editor"
+      ],
+      "states": [
+        {
+          "id": "initial-search-prompt-and-no-selection",
+          "label": "Initial search prompt and no selection",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/explore-initial.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "search-results-and-selected-line",
+          "label": "Search results and selected line",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "no-search-matches",
+          "label": "No search matches",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "table-detail-with-constraints-and-usage",
+          "label": "Table detail with constraints and usage",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "function-detail-with-arguments-and-body",
+          "label": "Function detail with arguments and body",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "non-postgres-object-fallback",
+          "label": "Non-Postgres object fallback",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "saved-note-and-note-validation-error",
+          "label": "Saved note and note validation/error",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "live-source-freshness-after-refresh",
+          "label": "Live source freshness after refresh",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        }
+      ]
+    },
+    {
+      "id": "passports",
+      "label": "Service passports",
+      "sources": [
+        "web/admin.html:518",
+        "web/admin.html:755",
+        "web/passport.html"
+      ],
+      "component_families": [
+        "service/repo build form",
+        "passport table",
+        "source identity",
+        "outgoing passport links",
+        "rebuild controls"
+      ],
+      "states": [
+        {
+          "id": "two-built-fixture-passports",
+          "label": "Two built fixture passports",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/passports-initial.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "no-passports-yet",
+          "label": "No passports yet",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "mapped-service-not-built",
+          "label": "Mapped service not built",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "changed-source-indicator",
+          "label": "Changed source indicator",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "blank-service-validation",
+          "label": "Blank service validation",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "build-running-and-disabled-rebuild",
+          "label": "Build running and disabled rebuild",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "build-completed-or-failed",
+          "label": "Build completed or failed",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "live-deployed-identity-selection",
+          "label": "Live deployed identity selection",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        }
+      ]
+    },
+    {
+      "id": "map",
+      "label": "Services map",
+      "sources": [
+        "web/admin-map.js:11",
+        "web/admin-map.js:17",
+        "web/map.html"
+      ],
+      "component_families": [
+        "embedded map",
+        "container/service inventory",
+        "zoom fit",
+        "node inspector",
+        "tool arguments and results",
+        "reviewed corrections"
+      ],
+      "states": [
+        {
+          "id": "map-overview-with-three-visible-containers-and-13-total-entities",
+          "label": "Map overview with three visible containers and 13 total entities",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/map-initial.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "expanded-service-container",
+          "label": "Expanded service container",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "selected-node-and-source-detail",
+          "label": "Selected node and source detail",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "neighbor-or-path-inspection",
+          "label": "Neighbor or path inspection",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "prepared-tool-arguments",
+          "label": "Prepared tool arguments",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "correction-draft-and-history",
+          "label": "Correction draft and history",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "search-with-no-matches",
+          "label": "Search with no matches",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "tool-result-inspection",
+          "label": "Tool result inspection",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "captured-service-ui-screenshot",
+          "label": "Captured service UI screenshot",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "saved-correction-revision-conflict",
+          "label": "Saved correction revision conflict",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        }
+      ]
+    },
+    {
+      "id": "context",
+      "label": "Context and project knowledge",
+      "sources": [
+        "web/admin.html:279",
+        "web/admin-context.js:12",
+        "web/admin-context.js:91",
+        "web/admin-project-context.js",
+        "web/admin-ux.js:9"
+      ],
+      "component_families": [
+        "task/project scope switch",
+        "context list and metadata",
+        "file tree and file editor",
+        "scratchpad typed form",
+        "saved run library",
+        "native result frames",
+        "project revision reader",
+        "project publication editor"
+      ],
+      "states": [
+        {
+          "id": "existing-context-list-no-selection",
+          "label": "Existing context list; no selection",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/context-initial.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "selected-context-with-progress-file-open",
+          "label": "Selected context with progress file open",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/context-selected.jpg",
+            "demo/admin-intent-review/screenshots/current/context-file.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "unsaved-progress-file-draft",
+          "label": "Unsaved progress-file draft",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/context-dirty.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "prepared-find-tool-with-completion-popup",
+          "label": "Prepared find tool with completion popup",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/context-tool-prepared.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "completed-find-call-with-saved-file-receipt",
+          "label": "Completed find call with saved-file receipt",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/context-tool-result.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "saved-result-list",
+          "label": "Saved result list",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/context-saved-results.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "published-project-with-graph-and-evidence-files",
+          "label": "Published project with graph and evidence files",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/context-project.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "expanded-project-and-selected-flow-editor",
+          "label": "Expanded project and selected-flow editor",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/context-project-edit.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "new-context-form",
+          "label": "New context form",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "discovery-links-and-status-disclosure",
+          "label": "Discovery links and status disclosure",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "metadata-only-dirty-state",
+          "label": "Metadata-only dirty state",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "new-text-file",
+          "label": "New text file",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "text-preview-and-binary-encoding",
+          "label": "Text preview and binary encoding",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "file-upload-size-validation",
+          "label": "File upload size validation",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "archive-confirmation-and-archived-file",
+          "label": "Archive confirmation and archived file",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "file-revision-conflict",
+          "label": "File revision conflict",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "scratchpad-empty-saved-results",
+          "label": "Scratchpad empty saved results",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "invalid-tool-json-or-schema-arguments",
+          "label": "Invalid tool JSON or schema arguments",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "tool-suggestion-with-configured-model-opt-in",
+          "label": "Tool suggestion with configured-model opt-in",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "native-retained-result-preview",
+          "label": "Native retained-result preview",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "project-search-with-no-results",
+          "label": "Project search with no results",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "new-project-context-and-staged-file",
+          "label": "New project context and staged file",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "old-publication-selected-and-restore-draft",
+          "label": "Old publication selected and restore draft",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "publication-validation-and-revision-conflict",
+          "label": "Publication validation and revision conflict",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "running-tool-and-disabled-controls",
+          "label": "Running tool and disabled controls",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "tool-failure-with-captured-error",
+          "label": "Tool failure with captured error",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "successful-tool-but-result-capture-failed",
+          "label": "Successful tool but result capture failed",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "project-publish-or-restore-success-against-retained-store",
+          "label": "Project publish or restore success against retained store",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        }
+      ]
+    },
+    {
+      "id": "scripts",
+      "label": "Scripts and collections",
+      "sources": [
+        "web/admin-scripts.js:80",
+        "web/admin-scripts.js:290",
+        "web/admin-scripts.js:457",
+        "web/admin-scripts.js:478"
+      ],
+      "component_families": [
+        "collection tree",
+        "step editor",
+        "params table",
+        "variables and hooks",
+        "raw JSON",
+        "run parameters",
+        "save/duplicate/delete",
+        "run report"
+      ],
+      "states": [
+        {
+          "id": "collapsed-collection-library-no-script-selected",
+          "label": "Collapsed collection library; no script selected",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/scripts-initial.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "order-check-step-editor-at-704px-width",
+          "label": "Order-check step editor at 704px width",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/scripts-editor.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "collection-metadata-and-expose-as-tool-form",
+          "label": "Collection metadata and expose-as-tool form",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "params-editor",
+          "label": "Params editor",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "vars-and-hooks-editor",
+          "label": "Vars and hooks editor",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "exact-json-editor-and-invalid-json",
+          "label": "Exact JSON editor and invalid JSON",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "dirty-draft-and-save-outcome",
+          "label": "Dirty draft and save outcome",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "duplicate-or-delete-confirmation",
+          "label": "Duplicate or delete confirmation",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "move-collection-or-script-with-keyboard-alternative",
+          "label": "Move collection or script with keyboard alternative",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "script-running",
+          "label": "Script running",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "script-complete-or-failed-with-step-report",
+          "label": "Script complete or failed with step report",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "browser-sftp-network-dependent-step-and-cleanup",
+          "label": "Browser/SFTP/network-dependent step and cleanup",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        }
+      ]
+    },
+    {
+      "id": "pages",
+      "label": "Executable pages",
+      "sources": [
+        "web/admin.html:176",
+        "web/pages.html",
+        "web/pages.html"
+      ],
+      "component_families": [
+        "saved/example page library",
+        "page definition editor",
+        "input controls",
+        "observations and comparisons",
+        "retained result",
+        "monitor controls"
+      ],
+      "states": [
+        {
+          "id": "empty-saved-page-library-and-three-examples",
+          "label": "Empty saved-page library and three examples",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/pages-initial.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "example-selected-and-editable-definition",
+          "label": "Example selected and editable definition",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "unsaved-page-draft-and-leave-guard",
+          "label": "Unsaved page draft and leave guard",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "saved-page-opened-without-executing",
+          "label": "Saved page opened without executing",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "invalid-definition-or-missing-required-inputs",
+          "label": "Invalid definition or missing required inputs",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "private-shared-page-identity-and-copy-link",
+          "label": "Private/shared page identity and copy link",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "explicit-refresh-running-or-failed",
+          "label": "Explicit refresh running or failed",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "completed-source-observations-and-parity-comparison",
+          "label": "Completed source observations and parity comparison",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "monitor-start-pause-and-stop",
+          "label": "Monitor start, pause and stop",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        }
+      ]
+    },
+    {
+      "id": "studio",
+      "label": "Developer studio",
+      "sources": [
+        "web/admin.html:175",
+        "web/studio.html:1",
+        "web/studio.js"
+      ],
+      "component_families": [
+        "five work-area choices",
+        "starter actions",
+        "typed action form",
+        "task scope",
+        "reproducible call",
+        "result frame"
+      ],
+      "states": [
+        {
+          "id": "resume-a-task-with-prepared-continuation-create-form",
+          "label": "Resume a task with prepared continuation_create form",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/studio-initial.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "upgrade-dependencies-work-area",
+          "label": "Upgrade dependencies work area",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "coordinate-work-work-area",
+          "label": "Coordinate work work area",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "check-logic-and-assumptions-work-area",
+          "label": "Check logic and assumptions work area",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "name-and-connect-pages-work-area",
+          "label": "Name and connect pages work area",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "more-arguments-and-exact-schema",
+          "label": "More arguments and exact schema",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "copied-reproducible-call",
+          "label": "Copied reproducible call",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "action-running-and-stop-waiting",
+          "label": "Action running and stop waiting",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "action-success-with-visualization",
+          "label": "Action success with visualization",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "action-failure-with-retained-request",
+          "label": "Action failure with retained request",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        }
+      ]
+    },
+    {
+      "id": "sites",
+      "label": "Browser destinations",
+      "sources": [
+        "web/admin-scripts.js:511",
+        "web/admin-scripts.js:526",
+        "web/admin-scripts.js:563"
+      ],
+      "component_families": [
+        "site library",
+        "name/url/description editor",
+        "secret names",
+        "direct links table",
+        "save/delete"
+      ],
+      "states": [
+        {
+          "id": "one-configured-site-none-selected",
+          "label": "One configured site; none selected",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/sites-initial.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "selected-site-editor",
+          "label": "Selected site editor",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "new-site-draft",
+          "label": "New site draft",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "secret-name-missing-present-state",
+          "label": "Secret-name missing/present state",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "add-or-remove-parameterized-link",
+          "label": "Add or remove parameterized link",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "dirty-draft-and-discard-dialog",
+          "label": "Dirty draft and discard dialog",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "legacy-layout-read-only-form",
+          "label": "Legacy layout read-only form",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "validation-error-and-save-outcome",
+          "label": "Validation error and save outcome",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "delete-confirmation",
+          "label": "Delete confirmation",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "browser-destination-login-and-navigation-integration",
+          "label": "Browser destination login and navigation integration",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        }
+      ]
+    },
+    {
+      "id": "api",
+      "label": "API explorer",
+      "sources": [
+        "web/admin.html:239",
+        "web/admin.html:699",
+        "web/api-client.html",
+        "web/api-explorer.js"
+      ],
+      "component_families": [
+        "embedded service/collection/history navigator",
+        "request line",
+        "target/base URL",
+        "query/header/body/auth/variables tabs",
+        "database inspector",
+        "workflow editor",
+        "response viewer",
+        "route evidence table"
+      ],
+      "states": [
+        {
+          "id": "services-library-and-blank-request-response",
+          "label": "Services library and blank request/response",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/api-initial.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "selected-cached-route-and-prepared-request",
+          "label": "Selected cached route and prepared request",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "query-parameters-editor",
+          "label": "Query parameters editor",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "headers-editor",
+          "label": "Headers editor",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "body-format-and-json-editor",
+          "label": "Body format and JSON editor",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "authentication-profiles",
+          "label": "Authentication profiles",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "runtime-variables-and-bindings",
+          "label": "Runtime variables and bindings",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "collection-and-history-source-tabs",
+          "label": "Collection and history source tabs",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "database-cached-schema-browser",
+          "label": "Database cached-schema browser",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "saved-request-and-collection-workflow-editor",
+          "label": "Saved request and collection workflow editor",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "import-capture-disclosure",
+          "label": "Import/capture disclosure",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "expanded-route-evidence-table",
+          "label": "Expanded route evidence table",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "refresh-live-service-instances",
+          "label": "Refresh live service instances",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "request-pending-and-cancel",
+          "label": "Request pending and cancel",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "successful-http-response-and-saved-exchange",
+          "label": "Successful HTTP response and saved exchange",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "http-or-transport-failure-and-recovery",
+          "label": "HTTP or transport failure and recovery",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "workflow-running-cancelled-completed-or-failed",
+          "label": "Workflow running, cancelled, completed or failed",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "live-database-query-and-browser-traffic-capture",
+          "label": "Live database query and browser traffic capture",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        }
+      ]
+    },
+    {
+      "id": "views",
+      "label": "Result renderers",
+      "sources": [
+        "web/admin-scripts.js:641",
+        "web/admin-scripts.js:658",
+        "web/admin-scripts.js:673"
+      ],
+      "component_families": [
+        "37-renderer library",
+        "read-only builtin editor",
+        "custom HTML and sample JSON",
+        "sandbox preview",
+        "copy/override/save/delete"
+      ],
+      "states": [
+        {
+          "id": "renderer-library-none-selected",
+          "label": "Renderer library; none selected",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/views-initial.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "selected-builtin-and-preview-inside-admin",
+          "label": "Selected builtin and preview inside Admin",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "copy-builtin-into-custom-draft",
+          "label": "Copy builtin into custom draft",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "override-builtin",
+          "label": "Override builtin",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "custom-dirty-html-sample-editor",
+          "label": "Custom dirty HTML/sample editor",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "invalid-sample-json-and-retained-prior-preview",
+          "label": "Invalid sample JSON and retained prior preview",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "preview-request-failure",
+          "label": "Preview request failure",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "save-outcome-and-delete-confirmation",
+          "label": "Save outcome and delete confirmation",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        }
+      ]
+    },
+    {
+      "id": "handbook",
+      "label": "Field guide",
+      "sources": [
+        "web/admin-handbook.js:2",
+        "web/handbook.js"
+      ],
+      "component_families": [
+        "chapter navigation",
+        "search",
+        "reading progress",
+        "self-context",
+        "tool catalog",
+        "visual index",
+        "prepared example forms"
+      ],
+      "states": [
+        {
+          "id": "first-investigation-chapter-loaded",
+          "label": "First-investigation chapter loaded",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/handbook-initial.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "chapter-search-and-zero-matches",
+          "label": "Chapter search and zero matches",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "alternate-chapter-and-read-progress",
+          "label": "Alternate chapter and read progress",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "self-context-installation-facts",
+          "label": "Self-context installation facts",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "all-tools-catalog",
+          "label": "All-tools catalog",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "visual-index-of-renderers",
+          "label": "Visual index of renderers",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "prepared-example-tool-draft",
+          "label": "Prepared example tool draft",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "example-tool-pending-and-completed-or-failed",
+          "label": "Example tool pending and completed or failed",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        }
+      ]
+    },
+    {
+      "id": "history",
+      "label": "Investigation history",
+      "sources": [
+        "web/admin-scripts.js:616",
+        "web/admin.html:261"
+      ],
+      "component_families": [
+        "repeated-work patterns",
+        "save-as-script",
+        "tool/argument filter",
+        "source selector",
+        "calls table"
+      ],
+      "states": [
+        {
+          "id": "repeated-work-pattern-with-save-action",
+          "label": "Repeated-work pattern with save action",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/history-initial.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "populated-call-history-with-success-and-failure-rows",
+          "label": "Populated call history with success and failure rows",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/history-initial.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "empty-history",
+          "label": "Empty history",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "filtered-calls-and-zero-matches",
+          "label": "Filtered calls and zero matches",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "source-filter-selection",
+          "label": "Source filter selection",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "save-repeated-work-as-editable-script",
+          "label": "Save repeated work as editable script",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        }
+      ]
+    },
+    {
+      "id": "environments",
+      "label": "Service environments",
+      "sources": [
+        "web/admin.html:356",
+        "web/admin-environments.js"
+      ],
+      "component_families": [
+        "definition/run library",
+        "service and dependency editor",
+        "lease/preflight/start",
+        "bindings and logs",
+        "request/query panel",
+        "dependency inspector",
+        "debugger",
+        "source metadata"
+      ],
+      "states": [
+        {
+          "id": "no-definitions-and-no-runs",
+          "label": "No definitions and no runs",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/environments-initial.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "new-definition-and-service-row",
+          "label": "New definition and service row",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "definition-dirty-invalid-and-advanced-json",
+          "label": "Definition dirty, invalid and advanced JSON",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "saved-definition-versions",
+          "label": "Saved definition versions",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "selected-run-overview",
+          "label": "Selected run overview",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "bindings-and-private-credential-disclosure",
+          "label": "Bindings and private-credential disclosure",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "http-pg-es-kafka-request-forms",
+          "label": "HTTP/PG/ES/Kafka request forms",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "java-debugger-form",
+          "label": "Java debugger form",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "worker-image-preflight-failure-and-recovery",
+          "label": "Worker/image preflight failure and recovery",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "prepare-images-and-warm-dependencies",
+          "label": "Prepare images and warm dependencies",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "starting-healthy-and-failed-service-run",
+          "label": "Starting, healthy and failed service run",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "stop-cancel-restart-and-renew-lease",
+          "label": "Stop/cancel, restart and renew lease",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "live-bindings-logs-request-receipt",
+          "label": "Live bindings/logs/request receipt",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "debugger-attached-breakpoint-paused-stack-and-resume",
+          "label": "Debugger attached, breakpoint, paused stack and resume",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        }
+      ]
+    },
+    {
+      "id": "runtime",
+      "label": "Runtime and observability",
+      "sources": [
+        "web/admin.html:373",
+        "web/admin-runtime.js:51",
+        "web/admin-runtime.js:65",
+        "web/admin-runtime.js:174",
+        "web/admin-observability.js"
+      ],
+      "component_families": [
+        "activity tree",
+        "state/search filters",
+        "execution detail and cancellation",
+        "requests/models",
+        "trace waterfall",
+        "coverage",
+        "runtime/config disclosures",
+        "stored metadata",
+        "code-cell scratchpad"
+      ],
+      "states": [
+        {
+          "id": "execution-list-with-done-and-failed-outcomes",
+          "label": "Execution list with done and failed outcomes",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/runtime-initial.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "stored-metadata-list-no-selected-record",
+          "label": "Stored metadata list; no selected record",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/runtime-initial.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "execution-search-or-state-filter-and-no-results",
+          "label": "Execution search or state filter and no results",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "selected-execution-ownership-result-detail",
+          "label": "Selected execution ownership/result/detail",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "stored-metadata-edit-and-dirty-conflict-state",
+          "label": "Stored metadata edit and dirty/conflict state",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "expanded-runtime-storage-and-configuration",
+          "label": "Expanded runtime storage and configuration",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "code-tool-form-and-exact-arguments",
+          "label": "Code tool form and exact arguments",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "queued-running-execution-and-child-calls",
+          "label": "Queued/running execution and child calls",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "cancelling-draining-and-cleanup-outcome",
+          "label": "Cancelling/draining and cleanup outcome",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "interrupted-cancelled-execution-detail",
+          "label": "Interrupted/cancelled execution detail",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "requests-and-models-evidence",
+          "label": "Requests and models evidence",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "trace-observability-evidence",
+          "label": "Trace/observability evidence",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "test-coverage-evidence",
+          "label": "Test coverage evidence",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "code-tool-running-completed-or-failed",
+          "label": "Code tool running, completed or failed",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        }
+      ]
+    },
+    {
+      "id": "reflection",
+      "label": "Self-reflection",
+      "sources": [
+        "web/admin.html:428",
+        "web/self-reflection.html:1",
+        "web/self-reflection.js"
+      ],
+      "component_families": [
+        "embedded source/runtime graph",
+        "machine list",
+        "state detail",
+        "observed overlay",
+        "trace selector",
+        "model checks",
+        "tool API explorer"
+      ],
+      "states": [
+        {
+          "id": "own-source-machine-graph-with-queued-state-and-no-observations",
+          "label": "Own-source machine graph with queued state and no observations",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/reflection-initial.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "alternate-machine-or-state-selected",
+          "label": "Alternate machine or state selected",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "tool-api-explorer-and-prepared-tool-form",
+          "label": "Tool API explorer and prepared tool form",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "another-repository-selector",
+          "label": "Another-repository selector",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "evidence-and-tracing-help",
+          "label": "Evidence and tracing help",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "share-or-export-selection",
+          "label": "Share or export selection",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "enable-tracing-and-record-sample",
+          "label": "Enable tracing and record sample",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "observed-transition-overlay",
+          "label": "Observed transition overlay",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "model-check-result-and-exported-tla",
+          "label": "Model check result and exported TLA+",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "tool-api-running-stopped-or-completed",
+          "label": "Tool API running, stopped or completed",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        }
+      ]
+    },
+    {
+      "id": "architecture",
+      "label": "Architecture knowledge",
+      "sources": [
+        "web/admin.html:411",
+        "web/admin-architecture.js:8",
+        "web/admin-architecture.js:10",
+        "web/admin-architecture.js:12"
+      ],
+      "component_families": [
+        "published-doc navigation",
+        "new-document form",
+        "entity/connection/mapping/view editor",
+        "publication reason/history",
+        "service dossier collector",
+        "operational refresh",
+        "preview iframe"
+      ],
+      "states": [
+        {
+          "id": "empty-published-list-and-new-document-form",
+          "label": "Empty published list and new-document form",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/architecture-initial.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "loaded-published-document",
+          "label": "Loaded published document",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "expanded-entity-connection-mapping-named-view-editor",
+          "label": "Expanded entity/connection/mapping/named-view editor",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "dirty-document-and-discard-guard",
+          "label": "Dirty document and discard guard",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "publication-history",
+          "label": "Publication history",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "validation-or-revision-conflict-error",
+          "label": "Validation or revision-conflict error",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "service-dossier-collection-arguments",
+          "label": "Service dossier collection arguments",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "service-dossier-collecting-and-observe-cancel",
+          "label": "Service dossier collecting and observe/cancel",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "dossier-collection-complete-with-retained-preview",
+          "label": "Dossier collection complete with retained preview",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "global-publication-success",
+          "label": "Global publication success",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "operational-observation-refresh-and-partial-source-failures",
+          "label": "Operational observation refresh and partial-source failures",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        }
+      ]
+    },
+    {
+      "id": "semantic",
+      "label": "Joern and service ports",
+      "sources": [
+        "web/admin.html:392",
+        "web/admin-semantic.js:20",
+        "web/admin-semantic.js:56",
+        "web/admin-semantic.js:104",
+        "web/admin-ux.js:22",
+        "web/tool-form.js:171"
+      ],
+      "component_families": [
+        "exact scope",
+        "retained-analysis table",
+        "seven task presets",
+        "tool selector",
+        "schema-generated nested form",
+        "symbol search pickers",
+        "port graph editor",
+        "job/result viewer"
+      ],
+      "states": [
+        {
+          "id": "prepared-semantic-query-paths-form-with-62-ax-field-roles",
+          "label": "Prepared semantic_query paths form with 62 AX field roles",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/semantic-initial.jpg",
+            "demo/admin-intent-review/screenshots/current/semantic-settled.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "engine-capabilities-result-not-proved-by-same-named-capture",
+          "label": "Engine capabilities result (not proved by same-named capture)",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "retained-analyses-table-not-proved-by-same-named-capture",
+          "label": "Retained analyses table (not proved by same-named capture)",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "selected-retained-exact-analysis",
+          "label": "Selected retained exact analysis",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "seven-task-specific-draft-presets",
+          "label": "Seven task-specific draft presets",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "source-target-symbol-search-picker-and-selected-result",
+          "label": "Source/target symbol search picker and selected result",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "expanded-argument-schema-and-exact-json",
+          "label": "Expanded argument schema and exact JSON",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "dirty-port-graph-and-publication-reason",
+          "label": "Dirty port graph and publication reason",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "passport-metadata-editor",
+          "label": "Passport metadata editor",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "analysis-missing-indexing-running-or-failed",
+          "label": "Analysis missing/indexing running or failed",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "semantic-call-control-value-path-result",
+          "label": "Semantic call/control/value-path result",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "saved-port-correction-and-revision-conflict",
+          "label": "Saved port correction and revision conflict",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "cancellation-and-retained-job-completion",
+          "label": "Cancellation and retained-job completion",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        }
+      ]
+    },
+    {
+      "id": "jobs",
+      "label": "Background jobs",
+      "sources": [
+        "web/admin.html:532",
+        "web/admin.html:544"
+      ],
+      "component_families": [
+        "job table",
+        "state badge",
+        "job log",
+        "result disclosure",
+        "cancel",
+        "copy log",
+        "execution cleanup link"
+      ],
+      "states": [
+        {
+          "id": "no-jobs-yet-and-no-selected-job",
+          "label": "No jobs yet and no selected job",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/jobs-initial.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "copied-log-feedback",
+          "label": "Copied log feedback",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "queued-running-job-row",
+          "label": "Queued/running job row",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "selected-job-log-and-owner-facts",
+          "label": "Selected job log and owner facts",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "cancel-requested-and-cleanup-settles",
+          "label": "Cancel requested and cleanup settles",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "done-job-with-result",
+          "label": "Done job with result",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "failed-or-interrupted-job-with-recovery",
+          "label": "Failed or interrupted job with recovery",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        }
+      ]
+    },
+    {
+      "id": "config",
+      "label": "Configuration",
+      "sources": [
+        "web/admin.html:430",
+        "web/admin.html:581",
+        "web/admin.html:761",
+        "web/admin-ux.js:48"
+      ],
+      "component_families": [
+        "config JSON editor",
+        "save/reload feedback",
+        "full example",
+        "integrations table",
+        "tool registry groups",
+        "plugin pins/errors",
+        "reload/update plugins"
+      ],
+      "states": [
+        {
+          "id": "loaded-configuration-integrations-318-tools-and-local-plugin",
+          "label": "Loaded configuration, integrations, 318 tools and local plugin",
+          "status": "captured",
+          "evidence": [
+            "demo/admin-intent-review/screenshots/current/config-initial.jpg"
+          ],
+          "verification": "screenshot inspected; existing capture"
+        },
+        {
+          "id": "dirty-configuration-and-discard-guard",
+          "label": "Dirty configuration and discard guard",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "invalid-configuration-error",
+          "label": "Invalid configuration error",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "revision-conflict-retains-draft",
+          "label": "Revision conflict retains draft",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "validated-save-with-active-generation",
+          "label": "Validated save with active generation",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "expanded-all-options-example",
+          "label": "Expanded all-options example",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "tool-reload-errors-and-disabled-tool-chips",
+          "label": "Tool reload errors and disabled tool chips",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "remote-plugin-pending-download-pin-mismatch",
+          "label": "Remote plugin pending/download/pin mismatch",
+          "status": "uncaptured",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        },
+        {
+          "id": "remote-plugin-refresh-with-reachable-source",
+          "label": "Remote plugin refresh with reachable source",
+          "status": "needs_backend_integrations",
+          "evidence": [],
+          "verification": "source review only; interaction untested"
+        }
+      ]
+    }
+  ],
+  "captures": [
+    {
+      "id": "workbench-initial",
+      "screenshot": "demo/admin-intent-review/screenshots/current/workbench-initial.jpg",
+      "dom": "work/admin-intent-review/workbench-initial.txt",
+      "width": 1440,
+      "height": 1142,
+      "sha256": "b085a72d3e6d03f6e4118e1f3f75cbc850e7d7e5c0974f4496a86e2af7b5a2ea",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "capabilities-initial",
+      "screenshot": "demo/admin-intent-review/screenshots/current/capabilities-initial.jpg",
+      "dom": "work/admin-intent-review/capabilities-initial.txt",
+      "width": 1440,
+      "height": 1184,
+      "sha256": "ff141bb809a4e163b3734a126505330df0cec72b8ea66b29211bbc3604b92a31",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "index-initial",
+      "screenshot": "demo/admin-intent-review/screenshots/current/index-initial.jpg",
+      "dom": "work/admin-intent-review/index-initial.txt",
+      "width": 1440,
+      "height": 1142,
+      "sha256": "de8317095e46dba1c8d83dab0292201d9ab7c7bb5755faea426e0a6f8b2a7166",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "explore-initial",
+      "screenshot": "demo/admin-intent-review/screenshots/current/explore-initial.jpg",
+      "dom": "work/admin-intent-review/explore-initial.txt",
+      "width": 1440,
+      "height": 1142,
+      "sha256": "248facb16f216f614843914b32627f5901415fca954648cad29e161cfaee9942",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "passports-initial",
+      "screenshot": "demo/admin-intent-review/screenshots/current/passports-initial.jpg",
+      "dom": "work/admin-intent-review/passports-initial.txt",
+      "width": 1440,
+      "height": 1142,
+      "sha256": "4a1e678232c246b5061240d0ff7e971623ff341f7e10c130fb3152ff85ae84a8",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "map-initial",
+      "screenshot": "demo/admin-intent-review/screenshots/current/map-initial.jpg",
+      "dom": "work/admin-intent-review/map-initial.txt",
+      "width": 1440,
+      "height": 1202,
+      "sha256": "177c56b95fa3bd8c914e58f57c41bb345f54d04fe570dd810e52facdc973b76c",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "context-initial",
+      "screenshot": "demo/admin-intent-review/screenshots/current/context-initial.jpg",
+      "dom": "work/admin-intent-review/context-initial.txt",
+      "width": 1440,
+      "height": 1142,
+      "sha256": "680b8e45cb4461744a8d5dec37c1c7c64cc5ce0481df79786cd47b262b6468a0",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "scripts-initial",
+      "screenshot": "demo/admin-intent-review/screenshots/current/scripts-initial.jpg",
+      "dom": "work/admin-intent-review/scripts-initial.txt",
+      "width": 1440,
+      "height": 1142,
+      "sha256": "d20d06f8d0af4fc93df108bf85f5f1abc88b56e5cf11804845a70a8bd025ebc0",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "pages-initial",
+      "screenshot": "demo/admin-intent-review/screenshots/current/pages-initial.jpg",
+      "dom": "work/admin-intent-review/pages-initial.txt",
+      "width": 1440,
+      "height": 1406,
+      "sha256": "33c2c969fa28f4859c0b1674e9a50eecb7f759034a989360b3941b7b2d92cdf7",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "studio-initial",
+      "screenshot": "demo/admin-intent-review/screenshots/current/studio-initial.jpg",
+      "dom": "work/admin-intent-review/studio-initial.txt",
+      "width": 1440,
+      "height": 1485,
+      "sha256": "eb485771527d984358a2d636d91894d579d7f3804c066680326aac8aebeb4425",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "sites-initial",
+      "screenshot": "demo/admin-intent-review/screenshots/current/sites-initial.jpg",
+      "dom": "work/admin-intent-review/sites-initial.txt",
+      "width": 1440,
+      "height": 1142,
+      "sha256": "62e7b88245a1ab0c3664f40fbee1932edb3461f7d0c228cabc53038d8ee3eccc",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "api-initial",
+      "screenshot": "demo/admin-intent-review/screenshots/current/api-initial.jpg",
+      "dom": "work/admin-intent-review/api-initial.txt",
+      "width": 1440,
+      "height": 1163,
+      "sha256": "c8115d5fdbf59cc990c1eca26a666a3d740ad9e7b9747f22c915f647f57d1690",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "views-initial",
+      "screenshot": "demo/admin-intent-review/screenshots/current/views-initial.jpg",
+      "dom": "work/admin-intent-review/views-initial.txt",
+      "width": 1440,
+      "height": 1142,
+      "sha256": "d0f024841992caa1f3ca253e5926377430789439920bc6a6f03190d14eb2a0d4",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "handbook-initial",
+      "screenshot": "demo/admin-intent-review/screenshots/current/handbook-initial.jpg",
+      "dom": "work/admin-intent-review/handbook-initial.txt",
+      "width": 1440,
+      "height": 5371,
+      "sha256": "022bb263d35b7c7d7272a163fa432f2face61763888c98c0b9c7bf0f7e689934",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "history-initial",
+      "screenshot": "demo/admin-intent-review/screenshots/current/history-initial.jpg",
+      "dom": "work/admin-intent-review/history-initial.txt",
+      "width": 1440,
+      "height": 5606,
+      "sha256": "25c4f0eb1d7897bc3dcd3d969b396226983e30dd77990d4fb0bde799ead0fb69",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "environments-initial",
+      "screenshot": "demo/admin-intent-review/screenshots/current/environments-initial.jpg",
+      "dom": "work/admin-intent-review/environments-initial.txt",
+      "width": 1440,
+      "height": 1142,
+      "sha256": "1b19bb89e1f4f1f074627bd6b8646c77e5ccc62c17ee5843703d2ad9c227d450",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "runtime-initial",
+      "screenshot": "demo/admin-intent-review/screenshots/current/runtime-initial.jpg",
+      "dom": "work/admin-intent-review/runtime-initial.txt",
+      "width": 1440,
+      "height": 2056,
+      "sha256": "547647fe20c9ff38e701c7a04839d10a5001c1dee099596c4d0747b074eee8e8",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "reflection-initial",
+      "screenshot": "demo/admin-intent-review/screenshots/current/reflection-initial.jpg",
+      "dom": "work/admin-intent-review/reflection-initial.txt",
+      "width": 1440,
+      "height": 1279,
+      "sha256": "39288c8df956450365b2f6234124d9be3ed4ee341cf0328edc2d5e31c6209365",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "architecture-initial",
+      "screenshot": "demo/admin-intent-review/screenshots/current/architecture-initial.jpg",
+      "dom": "work/admin-intent-review/architecture-initial.txt",
+      "width": 1440,
+      "height": 1988,
+      "sha256": "b63d8e9b444e382826c0eb2fd2731c7f9233de2d41cfd5c61ac0569041ba1952",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "semantic-initial",
+      "screenshot": "demo/admin-intent-review/screenshots/current/semantic-initial.jpg",
+      "dom": "work/admin-intent-review/semantic-initial.txt",
+      "width": 1440,
+      "height": 6147,
+      "sha256": "411a436dd499f400744cea0639aed39347120d7bfa585f28019a3a1974068247",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "jobs-initial",
+      "screenshot": "demo/admin-intent-review/screenshots/current/jobs-initial.jpg",
+      "dom": "work/admin-intent-review/jobs-initial.txt",
+      "width": 1440,
+      "height": 1142,
+      "sha256": "80384e0aded5fe3d563cb41b530decf0a9461744b6d9dfdb7b5d4de8709a4733",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "config-initial",
+      "screenshot": "demo/admin-intent-review/screenshots/current/config-initial.jpg",
+      "dom": "work/admin-intent-review/config-initial.txt",
+      "width": 1440,
+      "height": 3122,
+      "sha256": "bf1792a5489f7b4a88e44510d33b8e7e3be16f0dc66d49dcf3b3d58868a3831a",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "context-selected",
+      "screenshot": "demo/admin-intent-review/screenshots/current/context-selected.jpg",
+      "dom": "work/admin-intent-review/context-selected.txt",
+      "width": 1440,
+      "height": 1818,
+      "sha256": "08bf1ffbbfe6ecfc1a8a9a5f4ed193bece4e8fda9ce917d360d44e61764bb81f",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "context-file",
+      "screenshot": "demo/admin-intent-review/screenshots/current/context-file.jpg",
+      "dom": "work/admin-intent-review/context-file.txt",
+      "width": 1440,
+      "height": 1818,
+      "sha256": "65d621e738f844b8b0ac735b43bf13cb8ec9585fb8b02106e77ed56371d50f37",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "context-dirty",
+      "screenshot": "demo/admin-intent-review/screenshots/current/context-dirty.jpg",
+      "dom": "work/admin-intent-review/context-dirty.txt",
+      "width": 1440,
+      "height": 1818,
+      "sha256": "446da0013e577128b47c27ddb22e7b803db05a849a89684a34609be051767950",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "context-tool-prepared",
+      "screenshot": "demo/admin-intent-review/screenshots/current/context-tool-prepared.jpg",
+      "dom": "work/admin-intent-review/context-tool-prepared.txt",
+      "width": 1440,
+      "height": 1479,
+      "sha256": "d5122ddd07293c4147837e83d3116c1d21ffc089198b040bf38628753f1c19f6",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "context-tool-result",
+      "screenshot": "demo/admin-intent-review/screenshots/current/context-tool-result.jpg",
+      "dom": "work/admin-intent-review/context-tool-result.txt",
+      "width": 1440,
+      "height": 1479,
+      "sha256": "56a0b3e6e1a3e544c8aebc1428dc496ce7e75eea9416d52c6fa8c8403c76496a",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "context-saved-results",
+      "screenshot": "demo/admin-intent-review/screenshots/current/context-saved-results.jpg",
+      "dom": "work/admin-intent-review/context-saved-results.txt",
+      "width": 1440,
+      "height": 1142,
+      "sha256": "27ab0f3e575bbae2c82131149a3c81d729c38ab44c890a3123c521837402194d",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "context-project",
+      "screenshot": "demo/admin-intent-review/screenshots/current/context-project.jpg",
+      "dom": "work/admin-intent-review/context-project.txt",
+      "width": 1440,
+      "height": 1929,
+      "sha256": "e1e6db0a228ab2076049975a14dc84ddac9fcbcee1fb7f169f234ad776f7b3b3",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "context-project-edit",
+      "screenshot": "demo/admin-intent-review/screenshots/current/context-project-edit.jpg",
+      "dom": "work/admin-intent-review/context-project-edit.txt",
+      "width": 1440,
+      "height": 3069,
+      "sha256": "e1163a908c4ce7b7cb61e5b31c4161076eee05818dbcf716ca9443836445e2d3",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "scripts-editor",
+      "screenshot": "demo/admin-intent-review/screenshots/current/scripts-editor.jpg",
+      "dom": "work/admin-intent-review/scripts-editor.txt",
+      "width": 704,
+      "height": 1488,
+      "sha256": "84a0c2665f925e91b59f0c19a1b1e72149bff12ef64cde67f767db32ba1b5e3e",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "semantic-settled",
+      "screenshot": "demo/admin-intent-review/screenshots/current/semantic-settled.jpg",
+      "dom": "work/admin-intent-review/semantic-settled.txt",
+      "width": 1280,
+      "height": 6147,
+      "sha256": "6099a9b989c870c4bad9f3e8db1b1a2378ef27371da37d17a9549b94069d78e3",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "semantic-retained",
+      "screenshot": "demo/admin-intent-review/screenshots/current/semantic-retained.jpg",
+      "dom": "work/admin-intent-review/semantic-retained.txt",
+      "width": 1280,
+      "height": 6147,
+      "sha256": "6099a9b989c870c4bad9f3e8db1b1a2378ef27371da37d17a9549b94069d78e3",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    },
+    {
+      "id": "semantic-capabilities",
+      "screenshot": "demo/admin-intent-review/screenshots/current/semantic-capabilities.jpg",
+      "dom": "work/admin-intent-review/semantic-capabilities.txt",
+      "width": 1280,
+      "height": 6147,
+      "sha256": "6099a9b989c870c4bad9f3e8db1b1a2378ef27371da37d17a9549b94069d78e3",
+      "inspection": "existing screenshot visually inspected by Assessment B; no new B browser interaction"
+    }
+  ],
+  "detector": {
+    "command": "<skill-base>/scripts/impeccable detect --json web/admin.html",
+    "attempts": 1,
+    "exit_code": 127,
+    "status": "unavailable; refused unverified binary download",
+    "stdout": "",
+    "stderr": "impeccable: cannot verify https://github.com/pbakaus/impeccable/releases/download/engine-v0.1.5/impeccable-darwin-x64 against https://github.com/pbakaus/impeccable/releases/download/engine-v0.1.5/impeccable-darwin-x64.sha256 (sidecar unavailable or hashing failed); refusing the unverified download",
+    "findings_count": null,
+    "rule_names": [],
+    "locations": [],
+    "false_positives": null,
+    "private_invocation_record": "Exact private local invocation is retained only in the ignored assessment work record: work/admin-intent-review/build-b-inventory.py."
+  },
+  "browser": {
+    "fresh_tab_attempt": "cua.createBrowserTab(\"iab\", \"http://127.0.0.1:4096/admin\", { visible: false })",
+    "result": "Browser is not available: iab",
+    "inventory_result": {
+      "apps": [],
+      "browsers": []
+    },
+    "overlay_injection": "not attempted; no browser surface available for mutable injection preflight",
+    "console_findings": null,
+    "live_server": "not started",
+    "cleanup": "no Assessment B tab or live-server created",
+    "fallback": "Existing local screenshot and DOM corpus plus source review; no custom browser driver or detector verification bypass."
+  }
+}

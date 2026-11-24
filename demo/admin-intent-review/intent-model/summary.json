@@ -1,0 +1,12 @@
+{
+  "usecases": 135,
+  "tools": 320,
+  "existingWorkbenchIntents": 20,
+  "legacyStateObligations": 239,
+  "machines": 12,
+  "states": 290,
+  "transitions": 704,
+  "configurations": 1058,
+  "journeyExecutions": 897,
+  "journeyEvents": 14899
+}

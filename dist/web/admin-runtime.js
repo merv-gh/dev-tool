@@ -220,7 +220,7 @@ async function runtimeRunCode() {
     const response = await api('/api/tool/' + encodeURIComponent(name), args); if (scope !== runtimeScopeVersion.value) return;
     const result = response.result; const view = rtNativeView(result?.view), rows = Array.isArray(result) ? result : result?.rows || result?.calls || result?.pending;
     $('rtCodeOutput').innerHTML = (view ? '<iframe id="rtCodeView" class="rt-code-view" title="Code tool visualization" sandbox="allow-scripts allow-popups allow-downloads"></iframe>' : rtTable(rows)) + rtDisclosure('Code result', result, !view);
-    if (view) $('rtCodeView').src = view;
+    if (view) (globalThis.DTToolSocket?.resultFrame || ((f,u)=>{f.src=u;}))($('rtCodeView'),view);
     const state = result?.state || result?.status; $('rtCodeStatus').textContent = state ? 'Cell ' + state + (result?.id || result?.cellId ? ' · ' + (result.id || result.cellId) : '') : result?.error ? 'Tool returned an error; inspect the result.' : 'Completed.';
     if (result?.id || result?.cellId || result?.cell_id) {
       const cell = result.id || result.cellId || result.cell_id, controls = document.createElement('div'); controls.className = 'row';

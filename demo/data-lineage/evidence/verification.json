@@ -1,0 +1,197 @@
+{
+  "at": "2026-11-24T01:11:49.238Z",
+  "scope": "Synthetic multi-repository source/catalog; real code index, HTTP tools, background worker, SQLite and inline/show renderer. No live Java/Joern/database execution.",
+  "checks": [
+    {
+      "name": "Real HTTP tools, background index and retained traces use the multi-repository fixture",
+      "passed": true
+    },
+    {
+      "name": "Read evidence is searchable; getters/setters and name candidates are collapsed",
+      "passed": true
+    },
+    {
+      "name": "Source links prepare exact indexed source reads without executing them",
+      "passed": true
+    },
+    {
+      "name": "Library/API path keeps flat vertical steps, selected identity and source actions",
+      "passed": true
+    },
+    {
+      "name": "Cross-service Kafka/ES trace displays both boundaries without merging the second cluster",
+      "passed": true
+    },
+    {
+      "name": "Ambiguous and absent objects have recoverable, visible states",
+      "passed": true
+    },
+    {
+      "name": "Stale refresh fails visibly without losing retained evidence; explicit retry recovers",
+      "passed": true
+    },
+    {
+      "name": "Reader list and cross-service paths remain usable at phone width",
+      "passed": true
+    },
+    {
+      "name": "Long column, method and route labels wrap at desktop and phone widths",
+      "passed": true
+    },
+    {
+      "name": "Collapsed conversation summary labels name candidates correctly",
+      "passed": true
+    },
+    {
+      "name": "Actual Workbench embed opens an editable normal-origin source draft and executes guarded code_read through the authorized API",
+      "passed": true
+    },
+    {
+      "name": "Custom override response CSP keeps popups opaque even inside the trusted native host",
+      "passed": true
+    },
+    {
+      "name": "No browser runtime errors in exercised production renderer states",
+      "passed": true
+    }
+  ],
+  "captures": [
+    {
+      "file": "readers-desktop.png",
+      "scope": "Real retained read evidence, SQL/ORM distinction and collapsed object accesses",
+      "width": 1440,
+      "documentWidth": 1440,
+      "height": 1000,
+      "nodes": 164
+    },
+    {
+      "file": "writers-desktop.png",
+      "scope": "Procedure writes and explicitly non-persisted object setters",
+      "width": 1440,
+      "documentWidth": 1440,
+      "height": 1000,
+      "nodes": 140
+    },
+    {
+      "file": "library-path-desktop.png",
+      "scope": "Inherited API route through pinned library and generated repository to a column",
+      "width": 1440,
+      "documentWidth": 1440,
+      "height": 1000,
+      "nodes": 95
+    },
+    {
+      "file": "kafka-es-desktop.png",
+      "scope": "Kafka broker-a joins two services and ES; broker-b remains separate",
+      "width": 1440,
+      "documentWidth": 1440,
+      "height": 1000,
+      "nodes": 94
+    },
+    {
+      "file": "name-candidates-desktop.png",
+      "scope": "Substring results are unknown-access candidates with their own continuation",
+      "width": 1440,
+      "documentWidth": 1440,
+      "height": 1000,
+      "nodes": 135
+    },
+    {
+      "file": "ambiguous-desktop.png",
+      "scope": "Exact database selection required for identical table/column names",
+      "width": 1440,
+      "documentWidth": 1440,
+      "height": 1000,
+      "nodes": 80
+    },
+    {
+      "file": "missing-desktop.png",
+      "scope": "Missing data object has explicit state, coverage and discovery actions",
+      "width": 1440,
+      "documentWidth": 1440,
+      "height": 1000,
+      "nodes": 70
+    },
+    {
+      "file": "index-pending-desktop.png",
+      "scope": "Retained initial background-job receipt; observation is explicit",
+      "width": 1440,
+      "documentWidth": 1440,
+      "height": 1000,
+      "nodes": 72
+    },
+    {
+      "file": "refresh-failed-desktop.png",
+      "scope": "Failed refresh preserves last complete evidence and exposes the source mismatch",
+      "width": 1440,
+      "documentWidth": 1440,
+      "height": 1000,
+      "nodes": 165
+    },
+    {
+      "file": "readers-mobile.png",
+      "scope": "390px retained reader list with no document overflow",
+      "width": 390,
+      "documentWidth": 390,
+      "height": 844,
+      "nodes": 164
+    },
+    {
+      "file": "kafka-es-mobile.png",
+      "scope": "390px flat cross-service path; depth consumes height, not width",
+      "width": 390,
+      "documentWidth": 390,
+      "height": 844,
+      "nodes": 94
+    },
+    {
+      "file": "readers-long-desktop.png",
+      "scope": "Synthetic long column/method/route labels at 1440px; complete wrapping required",
+      "width": 1440,
+      "documentWidth": 1440,
+      "height": 1000,
+      "nodes": 78
+    },
+    {
+      "file": "trace-long-desktop.png",
+      "scope": "Synthetic long column/method/route labels at 1440px; complete wrapping required",
+      "width": 1440,
+      "documentWidth": 1440,
+      "height": 1000,
+      "nodes": 78
+    },
+    {
+      "file": "readers-long-mobile.png",
+      "scope": "Synthetic long column/method/route labels at 390px; complete wrapping required",
+      "width": 390,
+      "documentWidth": 390,
+      "height": 844,
+      "nodes": 78
+    },
+    {
+      "file": "trace-long-mobile.png",
+      "scope": "Synthetic long column/method/route labels at 390px; complete wrapping required",
+      "width": 390,
+      "documentWidth": 390,
+      "height": 844,
+      "nodes": 78
+    },
+    {
+      "file": "name-candidates-inline.png",
+      "scope": "Collapsed real name candidates remain distinct from access evidence",
+      "width": 1440,
+      "documentWidth": 1440,
+      "height": 1000,
+      "nodes": 142
+    },
+    {
+      "file": "workbench-inline-handoff.png",
+      "scope": "Actual Admin native result prepares a normal editable Workbench tab; guarded code_read executed there",
+      "width": 1440,
+      "documentWidth": 1440,
+      "height": 1000,
+      "nodes": 2862
+    }
+  ],
+  "errors": []
+}

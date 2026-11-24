@@ -6,6 +6,10 @@ const path = require('node:path');
 const context = vm.createContext({ DTState: require('../lib/state-machine'), TextEncoder, TextDecoder });
 vm.runInContext(fs.readFileSync(path.join(__dirname, '../web/inline.js'), 'utf8') + '\nthis.inline = dtInline;', context);
 const inline = context.inline;
+test('collapsed data name candidates never become access records',()=>{
+ const d=inline.describe('data-lineage',{operation:'readers',mode:'mentions',state:'ready',total:6});assert.equal(d.open,false);assert.match(d.summary,/6 name candidates/);assert.doesNotMatch(d.summary,/access records/);
+ assert.match(inline.describe('data-lineage',{operation:'readers',state:'ready',total:6}).summary,/6 access records/);
+});
 
 test('inline policy collapses routine output and opens actionable failures across result families', () => {
   for (const view of ['workspace-coverage', 'ci', 'code', 'code-cell', 'semantic-analysis', 'semantic-flow-map', 'passport-ports', 'json', 'table', 'patch', 'tests', 'collection-report', 'reproduction', 'scenario-run', 'list-diff', 'text-diff', 'api-exchange', 'differential']) {

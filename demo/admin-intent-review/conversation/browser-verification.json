@@ -1,0 +1,374 @@
+{
+  "sourceHashes": {
+    "index.html": "70ea94594c228103994789630be8447265f7bf8fad2159f5f214b660e969cc19",
+    "conversation.css": "ad105261312360861f1cdd994c938ff40e8ac7a45739748af64118f700c155eb",
+    "client.cjs": "e5c8f241afdf225a3af9fd3b0c96d63a1e73d95ef8bf7b41fd7650197908df39",
+    "store.cjs": "dfd87a6b616491f03d3172a83e9b55c9f21ea237f9c2b80f9ccf0901101f5cf8",
+    "app.js": "4826ef2100c3204b5ee7f47b9724e49f8fae26db90574c73e893df7a647199bb"
+  },
+  "scope": "Real UI gestures on a local, synthetic conversation prototype; no real model, network tool, runner or persistence service",
+  "checks": [
+    {
+      "name": "1440: the main investigation stays in one conversation",
+      "passed": true
+    },
+    {
+      "name": "1440: nested vertical paths load one branch and bound a wide field list",
+      "passed": true
+    },
+    {
+      "name": "1440: dirty file survives task switch, reload, reselect, conflict and panel close",
+      "passed": true
+    },
+    {
+      "name": "1440: composer stays active to steer; explicit compaction is discoverable",
+      "passed": true
+    },
+    {
+      "name": "1440: exact inputs, failures, unknown acknowledgement and cancellation stay visible",
+      "passed": true
+    },
+    {
+      "name": "All 135 intents are findable and prepare without executing; indexed options stay bounded",
+      "passed": true
+    },
+    {
+      "name": "1440: accepted check continues while another task is visible",
+      "passed": true
+    },
+    {
+      "name": "1440: inputs have accessible labels and keyboard actions work",
+      "passed": true
+    },
+    {
+      "name": "390: the main investigation stays in one conversation",
+      "passed": true
+    },
+    {
+      "name": "390: nested vertical paths load one branch and bound a wide field list",
+      "passed": true
+    },
+    {
+      "name": "390: dirty file survives task switch, reload, reselect, conflict and panel close",
+      "passed": true
+    },
+    {
+      "name": "390: composer stays active to steer; explicit compaction is discoverable",
+      "passed": true
+    },
+    {
+      "name": "390: exact inputs, failures, unknown acknowledgement and cancellation stay visible",
+      "passed": true
+    },
+    {
+      "name": "390: accepted check continues while another task is visible",
+      "passed": true
+    },
+    {
+      "name": "390: inputs have accessible labels and keyboard actions work",
+      "passed": true
+    },
+    {
+      "name": "Unavailable browser storage offers full draft recovery and import retains buffers without replacing the original",
+      "passed": true
+    },
+    {
+      "name": "Long retained conversations render at most 40 messages and recall earlier rows and paths",
+      "passed": true
+    },
+    {
+      "name": "Pinned receipt remains stale against newer source and exports its own admitted revision",
+      "passed": true
+    },
+    {
+      "name": "Phone keyboard can open, edit, save and run, then returns to the visible conversation",
+      "passed": true
+    }
+  ],
+  "captures": [
+    {
+      "id": "conversation",
+      "file": "screenshots/conversation-1440.jpg",
+      "width": 1440,
+      "label": "Conversation proposal · conversation · 1440",
+      "category": "conversation",
+      "capture": "viewport",
+      "metrics": {
+        "width": 1440,
+        "documentWidth": 1440,
+        "flowRows": 0,
+        "serviceRows": 0,
+        "actionRows": 0
+      }
+    },
+    {
+      "id": "edit-alongside-chat",
+      "file": "screenshots/edit-alongside-chat-1440.jpg",
+      "width": 1440,
+      "label": "Conversation proposal · edit alongside chat · 1440",
+      "category": "conversation",
+      "capture": "viewport",
+      "metrics": {
+        "width": 1440,
+        "documentWidth": 1440,
+        "flowRows": 7,
+        "serviceRows": 0,
+        "actionRows": 0
+      }
+    },
+    {
+      "id": "passing-check",
+      "file": "screenshots/passing-check-1440.jpg",
+      "width": 1440,
+      "label": "Conversation proposal · passing check · 1440",
+      "category": "conversation",
+      "capture": "viewport",
+      "metrics": {
+        "width": 1440,
+        "documentWidth": 1440,
+        "flowRows": 7,
+        "serviceRows": 0,
+        "actionRows": 0
+      }
+    },
+    {
+      "id": "nested-path",
+      "file": "screenshots/nested-path-1440.jpg",
+      "width": 1440,
+      "label": "Conversation proposal · nested path · 1440",
+      "category": "conversation",
+      "capture": "viewport",
+      "metrics": {
+        "width": 1440,
+        "documentWidth": 1440,
+        "flowRows": 41,
+        "serviceRows": 0,
+        "actionRows": 0
+      }
+    },
+    {
+      "id": "overnight-checkpoint",
+      "file": "screenshots/overnight-checkpoint-1440.jpg",
+      "width": 1440,
+      "label": "Conversation proposal · overnight checkpoint · 1440",
+      "category": "conversation",
+      "capture": "viewport",
+      "metrics": {
+        "width": 1440,
+        "documentWidth": 1440,
+        "flowRows": 0,
+        "serviceRows": 0,
+        "actionRows": 0
+      }
+    },
+    {
+      "id": "unknown-acknowledgement",
+      "file": "screenshots/unknown-acknowledgement-1440.jpg",
+      "width": 1440,
+      "label": "Conversation proposal · unknown acknowledgement · 1440",
+      "category": "conversation",
+      "capture": "viewport",
+      "metrics": {
+        "width": 1440,
+        "documentWidth": 1440,
+        "flowRows": 7,
+        "serviceRows": 0,
+        "actionRows": 2
+      }
+    },
+    {
+      "id": "action-finder",
+      "file": "screenshots/action-finder-1440.jpg",
+      "width": 1440,
+      "label": "Conversation proposal · action finder · 1440",
+      "category": "conversation",
+      "capture": "viewport",
+      "metrics": {
+        "width": 1440,
+        "documentWidth": 1440,
+        "flowRows": 7,
+        "serviceRows": 0,
+        "actionRows": 25
+      }
+    },
+    {
+      "id": "conversation",
+      "file": "screenshots/conversation-390.jpg",
+      "width": 390,
+      "label": "Conversation proposal · conversation · 390",
+      "category": "conversation",
+      "capture": "viewport",
+      "metrics": {
+        "width": 390,
+        "documentWidth": 390,
+        "flowRows": 0,
+        "serviceRows": 0,
+        "actionRows": 0
+      }
+    },
+    {
+      "id": "edit-alongside-chat",
+      "file": "screenshots/edit-alongside-chat-390.jpg",
+      "width": 390,
+      "label": "Conversation proposal · edit alongside chat · 390",
+      "category": "conversation",
+      "capture": "viewport",
+      "metrics": {
+        "width": 390,
+        "documentWidth": 390,
+        "flowRows": 7,
+        "serviceRows": 0,
+        "actionRows": 0
+      }
+    },
+    {
+      "id": "passing-check",
+      "file": "screenshots/passing-check-390.jpg",
+      "width": 390,
+      "label": "Conversation proposal · passing check · 390",
+      "category": "conversation",
+      "capture": "viewport",
+      "metrics": {
+        "width": 390,
+        "documentWidth": 390,
+        "flowRows": 7,
+        "serviceRows": 0,
+        "actionRows": 0
+      }
+    },
+    {
+      "id": "nested-path",
+      "file": "screenshots/nested-path-390.jpg",
+      "width": 390,
+      "label": "Conversation proposal · nested path · 390",
+      "category": "conversation",
+      "capture": "viewport",
+      "metrics": {
+        "width": 390,
+        "documentWidth": 390,
+        "flowRows": 41,
+        "serviceRows": 0,
+        "actionRows": 0
+      }
+    },
+    {
+      "id": "overnight-checkpoint",
+      "file": "screenshots/overnight-checkpoint-390.jpg",
+      "width": 390,
+      "label": "Conversation proposal · overnight checkpoint · 390",
+      "category": "conversation",
+      "capture": "viewport",
+      "metrics": {
+        "width": 390,
+        "documentWidth": 390,
+        "flowRows": 0,
+        "serviceRows": 0,
+        "actionRows": 0
+      }
+    },
+    {
+      "id": "unknown-acknowledgement",
+      "file": "screenshots/unknown-acknowledgement-390.jpg",
+      "width": 390,
+      "label": "Conversation proposal · unknown acknowledgement · 390",
+      "category": "conversation",
+      "capture": "viewport",
+      "metrics": {
+        "width": 390,
+        "documentWidth": 390,
+        "flowRows": 7,
+        "serviceRows": 0,
+        "actionRows": 2
+      }
+    },
+    {
+      "id": "task-drawer",
+      "file": "screenshots/task-drawer-390.jpg",
+      "width": 390,
+      "label": "Conversation proposal · task drawer · 390",
+      "category": "conversation",
+      "capture": "viewport",
+      "metrics": {
+        "width": 390,
+        "documentWidth": 390,
+        "flowRows": 7,
+        "serviceRows": 0,
+        "actionRows": 1
+      }
+    },
+    {
+      "id": "storage-unavailable",
+      "file": "screenshots/storage-unavailable-390.jpg",
+      "width": 390,
+      "label": "Conversation proposal · storage unavailable · 390",
+      "category": "conversation",
+      "capture": "viewport"
+    },
+    {
+      "id": "retained-evidence",
+      "file": "screenshots/retained-evidence-1280.jpg",
+      "width": 1280,
+      "label": "Conversation proposal · retained evidence · 1280",
+      "category": "conversation",
+      "capture": "viewport"
+    },
+    {
+      "id": "pinned-check",
+      "file": "screenshots/pinned-check-1440.jpg",
+      "width": 1440,
+      "label": "Conversation proposal · pinned check · 1440",
+      "category": "conversation",
+      "capture": "viewport"
+    },
+    {
+      "id": "keyboard-return",
+      "file": "screenshots/keyboard-return-390.jpg",
+      "width": 390,
+      "label": "Conversation proposal · keyboard return · 390",
+      "category": "conversation",
+      "capture": "viewport"
+    },
+    {
+      "id": "dark",
+      "file": "screenshots/dark-1440.jpg",
+      "width": 1440,
+      "label": "Conversation proposal · dark · 1440",
+      "category": "conversation",
+      "capture": "viewport"
+    }
+  ],
+  "errors": [],
+  "forbiddenRequests": [],
+  "journeys": [
+    {
+      "width": 1440,
+      "name": "Compare raw rows → trace → edit policy → insert guard → save → run saved regression → share → copy link",
+      "clicks": 8,
+      "topLevelNavigation": 0,
+      "scopeReselections": 0,
+      "note": "Prototype gestures; excludes optional deep source inspection. No comparative production click baseline was measured."
+    },
+    {
+      "width": 390,
+      "name": "Compare raw rows → trace → edit policy → insert guard → save → run saved regression → share → copy link",
+      "clicks": 8,
+      "topLevelNavigation": 0,
+      "scopeReselections": 0,
+      "note": "Prototype gestures; excludes optional deep source inspection. No comparative production click baseline was measured."
+    }
+  ],
+  "measurements": [
+    {
+      "width": 1440,
+      "localLoadMs": 161,
+      "note": "Local static load; not production benchmark"
+    },
+    {
+      "width": 390,
+      "localLoadMs": 129,
+      "note": "Local static load; not production benchmark"
+    }
+  ],
+  "findableIntents": 135,
+  "passed": true
+}

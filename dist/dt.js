@@ -3293,7 +3293,9 @@ var require_package = __commonJS({
         node: ">=22"
       },
       devDependencies: {
+        "@headless-tree/core": "1.8.0",
         esbuild: "^0.25.10",
+        "monaco-editor": "0.57.0",
         playwright: "1.64.1"
       }
     };
@@ -18246,7 +18248,7 @@ var require_self_model_catalog = __commonJS({
     module2.exports = {
       protocol: "dt.repo-source/v1",
       repo: "dev-tool",
-      sourceDigest: "c2583b4fc2bbc78eb6c8b87e348b501468631346a0a66f803a93de77d1710cb2",
+      sourceDigest: "cc8bb70232832f9e4b8735a5c5d7cdf039dd769c07837e1cd772acba4c908714",
       machines: [
         {
           id: "IO.atomic-file",
@@ -19720,7 +19722,7 @@ var require_self_model_catalog = __commonJS({
           consumers: [
             {
               file: "lib/tools.js",
-              line: 1007,
+              line: 1008,
               snippet: "const activation=require('./state-machine').create(require('./lifecycles').registry,prior?'active':'missing');"
             }
           ],
@@ -21256,6 +21258,11 @@ var require_self_model_catalog = __commonJS({
               file: "lib/codeindex.js",
               line: 161,
               snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').publication);"
+            },
+            {
+              file: "lib/data-lineage-build.js",
+              line: 446,
+              snippet: "const started=Date.now(),life=require('./state-machine').create(require('./lifecycles').publication);let input=await inputs(args,{materialize:true}),cold=0;"
             }
           ],
           chart: {
@@ -28118,7 +28125,7 @@ var require_extract = __commonJS({
       }
       return docs;
     }
-    function loadConfig(files) {
+    function loadConfig(files, { profile } = {}) {
       const sources = [];
       for (const f of files) {
         const base = path3.basename(f.path);
@@ -28126,14 +28133,15 @@ var require_extract = __commonJS({
         if (!m || !/src\/main\/resources|^[^/]*$|config\//.test(f.path)) continue;
         const docs = m[3] === "properties" ? [parseProperties(f.text)] : parseYaml(f.text);
         for (const props of docs) {
-          const profile = m[2] || props["spring.config.activate.on-profile"] || props["spring.profiles"] || null;
-          sources.push({ file: f.path, profile, props });
+          const profile2 = m[2] || props["spring.config.activate.on-profile"] || props["spring.profiles"] || null;
+          sources.push({ file: f.path, profile: profile2, props });
         }
       }
       sources.sort((a, b) => (a.profile ? 1 : 0) - (b.profile ? 1 : 0));
       const merged = {};
-      for (const s of sources) for (const [k, v] of Object.entries(s.props)) if (!(k in merged)) merged[k] = v;
-      return { sources, merged, profiles: [...new Set(sources.map((s) => s.profile).filter(Boolean))] };
+      const selected = profile === void 0 ? sources : sources.filter((s) => !s.profile || String(s.profile).split(/[ ,|]+/).includes(profile));
+      for (const s of selected) for (const [k, v] of Object.entries(s.props)) if (profile !== void 0 || !(k in merged)) merged[k] = v;
+      return { sources, merged, profiles: [...new Set(sources.map((s) => s.profile).filter(Boolean))], ...profile !== void 0 ? { selectedProfile: profile, profiled: selected.some((s) => s.profile) } : {} };
     }
     function resolver(merged, unresolved) {
       const relaxed = (k) => merged[k] ?? merged[k.replace(/-([a-z])/g, (_, c) => c.toUpperCase())] ?? merged[k.replace(/[A-Z]/g, (c) => "-" + c.toLowerCase())];
@@ -28455,12 +28463,12 @@ var require_extract = __commonJS({
       for (const d of deps) if (d.version && /\$/.test(d.version)) d.unresolvedVersion = true;
       return { deps, group: group && group[1], bootVersion: boot && boot[1], vars: all };
     }
-    function extract(root, { internalGroups = [] } = {}) {
+    function extract(root, { internalGroups = [], profile, files: providedFiles } = {}) {
       const started = Date.now();
-      const files = walk(root);
+      const files = providedFiles || walk(root);
       const code = files.filter((f) => /\.(java|kt|groovy)$/.test(f.path)).map((f) => ({ ...f, clean: stripComments(f.text) }));
       const unresolved = /* @__PURE__ */ new Set();
-      const cfg = loadConfig(files);
+      const cfg = loadConfig(files, { profile });
       const resolve2 = resolver(cfg.merged, unresolved);
       const at = (f, idx) => ({ file: f.path, line: lineAt(f.text, idx) });
       const constants = {};
@@ -55810,6 +55818,95 @@ var require_codeindex = __commonJS({
       if (scoped !== DIR) rec(path3.join(scoped, "work"), 1, scoped);
       return out2.sort((a, b) => a.key.localeCompare(b.key));
     }
+    var metadataMemo = /* @__PURE__ */ new Map();
+    var HEADER_END = Symbol("code index header");
+    function metadata(key, seen = /* @__PURE__ */ new Set()) {
+      if (seen.has(key)) throw new Error("Code index alias cycle");
+      seen.add(key);
+      if (key.startsWith("work/") && require_access().current().scopeKey !== "legacy") {
+        try {
+          require_workspace().checkId(key.slice(5).split("@")[0]);
+        } catch {
+          return null;
+        }
+      }
+      const dir = keyDir(key), file = path3.join(dir, "files.json"), stamp = fileStamp(file);
+      if (!stamp) return null;
+      let hit = metadataMemo.get(file);
+      if (hit?.stamp !== stamp) {
+        const reader = new (require_pgstore()).Reader(file), header = {};
+        try {
+          reader.object((name) => {
+            if (name === "list") throw HEADER_END;
+            header[name] = reader.value();
+          });
+        } catch (e) {
+          if (e !== HEADER_END) throw e;
+        } finally {
+          reader.close();
+        }
+        hit = { stamp, header };
+        metadataMemo.set(file, hit);
+        if (metadataMemo.size > 2048) metadataMemo.delete(metadataMemo.keys().next().value);
+      }
+      if (hit.header.alias) {
+        if (!hit.header.alias.startsWith(key + "@") || !/@[a-f0-9]{40}-[a-f0-9]{24}$/.test(hit.header.alias)) throw new Error("Invalid code index alias");
+        const target = metadata(hit.header.alias, seen);
+        return target ? { ...target, key, immutable: false, ref: hit.header.ref } : null;
+      }
+      return { ...hit.header, dir };
+    }
+    function inventory({ versions = false } = {}) {
+      const rows = [];
+      function visit(dir, depth, base = DIR) {
+        let entries;
+        try {
+          entries = fs3.readdirSync(dir, { withFileTypes: true });
+        } catch {
+          return;
+        }
+        if (entries.some((e) => e.name === "files.json")) {
+          const key = path3.relative(base, dir).split(path3.sep).join("/"), info = metadata(key);
+          if (info && (versions || !info.immutable)) rows.push(info);
+          return;
+        }
+        if (depth < 3) {
+          for (const e of entries) if (e.isDirectory() && e.name.toLowerCase() !== "_stories" && !(base === DIR && depth === 0 && e.name === "work" && require_access().current().scopeKey !== "legacy") && !e.name.includes(".tmp-") && (versions || !/@[a-f0-9]{40}-[a-f0-9]{24}$/.test(e.name))) visit(path3.join(dir, e.name), depth + 1, base);
+        }
+      }
+      visit(DIR, 0);
+      const scoped = require_access().scopedDirectory(DIR);
+      if (scoped !== DIR) visit(path3.join(scoped, "work"), 1, scoped);
+      return rows.sort((a, b) => a.key.localeCompare(b.key));
+    }
+    function selectMetadata(spec) {
+      const pats = [].concat(spec || []).flatMap((v) => String(v).split(",")).map((s) => s.trim()).filter(Boolean);
+      if (pats.length && pats.every((p) => /^[^*?]+@[a-f0-9]{40}-[a-f0-9]{24}$/.test(p))) return [...new Set(pats)].filter((p) => metadata(p));
+      const rows = inventory({ versions: pats.some((p) => p.includes("@")) });
+      if (!pats.length) return rows.filter((i) => !i.key.startsWith("work/")).map((i) => i.key);
+      const regex = (p) => new RegExp("^" + p.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".") + "$", "i");
+      return rows.filter((i) => pats.some((p) => regex(p).test(i.key) || regex(p).test(i.repo || "") || i.workspace && regex(p).test(i.workspace))).map((i) => i.key);
+    }
+    function withLibrariesMetadata(keys) {
+      const set = new Set(keys), pending = [...keys];
+      for (let i = 0; i < pending.length; i++) for (const lib of metadata(pending[i])?.libs || []) if (lib.index && !set.has(lib.index) && metadata(lib.index)) {
+        set.add(lib.index);
+        pending.push(lib.index);
+      }
+      return [...set].filter((k) => !set.has(metadata(k)?.revisionKey) || metadata(k)?.revisionKey === k);
+    }
+    function release(key) {
+      const dir = keyDir(key), m = memo.get(dir);
+      if (m) {
+        m.value.graph = null;
+        m.value.tri = null;
+        memo.delete(dir);
+      }
+      for (const [k, v] of heldLru) if (k.startsWith(dir + path3.sep)) {
+        v.v[v.field] = null;
+        heldLru.delete(k);
+      }
+    }
     function remove(key) {
       fs3.rmSync(keyDir(key), { recursive: true, force: true });
       memo.delete(keyDir(key));
@@ -56065,9 +56162,11 @@ var require_codeindex = __commonJS({
         }
       return { hits, files: filesWithHits, candidates: candidateCount, scanned, truncated, ms: Date.now() - started, plan: plan ? plan.map((p) => p.join(" & ")).join(" | ") : "all files" };
     }
-    function read(key, rel, { from = 1, to } = {}) {
+    function read(key, rel, { from = 1, to, expected_source_digest } = {}) {
       const idx = load(key);
       if (!idx) throw new Error(`no index ${key}`);
+      const changed = () => Object.assign(new Error("Indexed source changed since this evidence was retained; select the matching revision or rebuild the investigation."), { code: "DT_SOURCE_CHANGED", statusCode: 409 });
+      if (expected_source_digest && expected_source_digest !== idx.sourceDigest) throw changed();
       const full = key.startsWith("work/") ? require_workspace().resolvePath(require_workspace().checkId(key.slice(5).split("@")[0]), rel).full : path3.resolve(idx.root, rel);
       if (!full.startsWith(path3.resolve(idx.root) + path3.sep)) throw new Error("path outside the repo");
       let current = idx.root;
@@ -56075,11 +56174,15 @@ var require_codeindex = __commonJS({
         current = path3.join(current, part);
         if (fs3.lstatSync(current).isSymbolicLink()) throw new Error("Code paths cannot contain symlinks");
       }
+      if (expected_source_digest && !idx.immutable && !idx.revisionKey) {
+        const recorded = idx.list.find((f) => f.path === rel);
+        if (!recorded || recorded.stamp !== fileStamp(full)) throw changed();
+      }
       const lines = fs3.readFileSync(full, "utf8").split("\n");
       const end = Math.min(lines.length, to || from + 299);
       return { repo: key, path: rel, from, to: end, lines: lines.length, text: lines.slice(from - 1, end).map((l, i) => `${String(from + i).padStart(5)}  ${l}`).join("\n") };
     }
-    module2.exports = { build, load, list, select, revisions, withLibraries, remove, grep, read, walk, required, keyDir, DIR, SKIP_DIRS, TEXT, MAX_FILE, globRe };
+    module2.exports = { build, load, list, select, revisions, withLibraries, metadata, inventory, selectMetadata, withLibrariesMetadata, release, remove, grep, read, walk, required, keyDir, DIR, SKIP_DIRS, TEXT, MAX_FILE, globRe };
   }
 });
 
@@ -56216,7 +56319,7 @@ var require_column_lineage = __commonJS({
       sql = String(sql || "");
       const clipped = sql.length > 256 * 1024;
       if (clipped) sql = sql.slice(0, 256 * 1024);
-      const all = tokens(sql), hits = [], gaps = [];
+      const all = tokens(sql), hits = [], gaps = [], hitKeys = /* @__PURE__ */ new Set(), columnNames = /* @__PURE__ */ new Map();
       if (clipped || all.truncated) gaps.push({ kind: "sql-analysis-limit", line: 1, detail: "Column analysis is limited to 256 Ki characters and 20000 tokens; remaining SQL was not analyzed." });
       let tables = catalog2._revision ? tableIndexes.get(catalog2) : null;
       if (!tables) {
@@ -56279,10 +56382,16 @@ var require_column_lineage = __commonJS({
           if (w === "into") insert = { tables: found, at: j + 1 };
         }
         for (const table2 of triggerTables) for (const alias of ["old", "new"]) refs.push({ table: norm(table2), alias, word: "trigger", index: -1 });
-        const hasCol = (table2, col) => tables.get(table2)?.columns?.some((c) => norm(c.name) === col);
+        const hasCol = (table2, col) => {
+          if (!columnNames.has(table2)) columnNames.set(table2, new Set((tables.get(table2)?.columns || []).map((c) => norm(c.name))));
+          return columnNames.get(table2).has(col);
+        };
         const emit = (table2, column, access, t, extra = {}) => {
           const k = `${table2}|${column}|${access}|${t.line}|${t.at}`;
-          if (!hits.some((x) => x.key === k)) hits.push({ key: k, table: table2, column, access, line: t.line, offset: t.at, ...extra });
+          if (!hitKeys.has(k)) {
+            hitKeys.add(k);
+            hits.push({ key: k, table: table2, column, access, line: t.line, offset: t.at, ...extra });
+          }
         };
         const insertCols = /* @__PURE__ */ new Set(), setTargets = /* @__PURE__ */ new Set();
         const setStart = ts.findIndex((t) => t.word === "set");
@@ -56329,7 +56438,7 @@ var require_column_lineage = __commonJS({
             for (const r of rr2) for (const col of tables.get(r.table)?.columns || []) emit(r.table, norm(col.name), "read", t, { syntax: "star-expansion" });
             continue;
           }
-          if (t.literal || declarations.has(i) || insertCols.has(i) || RESERVED.has(w) || !t.quoted && !/^[A-Za-z_][\w$]*$/.test(t.text)) continue;
+          if (t.literal || ts[i - 1]?.word === ":" || declarations.has(i) || insertCols.has(i) || RESERVED.has(w) || !t.quoted && !/^[A-Za-z_][\w$]*$/.test(t.text)) continue;
           if (ts[i + 1]?.word === "." || ts[i + 1]?.word === "(" || ts[i - 1]?.word === "as" || ts[i - 1]?.word === "::") continue;
           const qual = ts[i - 1]?.word === "." ? ts[i - 2]?.word : null;
           let rr = refs.filter((r) => hasCol(r.table, w) && (qual ? r.alias === qual || r.table === qual : r.word !== "trigger"));
@@ -62557,7 +62666,7 @@ var require_tool_events = __commonJS({
       const notify = context2.getStore();
       if (notify) notify({ phase, ...data, executionId: require_execution().current()?.id || null });
     }
-    module2.exports = { run: (notify, fn) => context2.run(notify, fn), progress };
+    module2.exports = { run: (notify, fn) => context2.run(notify, fn), progress, capture: () => context2.getStore() };
   }
 });
 
@@ -71528,7 +71637,7 @@ var require_views = __commonJS({
       "frame-ancestors *"
     ].join("; ");
     function policy(view) {
-      return ["mapping-debugger", "service-environment", "ui-page", "ui-trace", "capabilities", "ci", "workspace-coverage", "workbench"].includes(view.name) && view.builtin ? CSP.replace("allow-popups ", "allow-popups allow-popups-to-escape-sandbox ") : CSP;
+      return ["data-lineage", "mapping-debugger", "service-environment", "ui-page", "ui-trace", "capabilities", "ci", "workspace-coverage", "workbench", "semantic-path-trace"].includes(view.name) && view.builtin ? CSP.replace("allow-popups ", "allow-popups allow-popups-to-escape-sandbox ") : CSP;
     }
     function parse(text) {
       const m = text.match(/^\s*<!--\s*(\{[\s\S]*?\})\s*-->\s*/);
@@ -71615,11 +71724,12 @@ dt.diffLines = ${diffLines.toString()};
       const uiTrace = name === "ui-trace" ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../ui-trace-inline.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../ui-trace-layout.js"), "utf8") + "\n" + fs3.readFileSync(path3.join(BUILTIN, "../ui-trace-inline.js"), "utf8") + "</script>" : "";
       const uiPage = name === "ui-page" ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../pages.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../page-primitives.js"), "utf8") + "</script>" : "";
       const repoModel = name === "repo-model" ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../repo-model.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../repo-model.js"), "utf8") + "</script>" : "";
+      const pathBrowser = name === "semantic-path-trace" ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "_path-browser.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "_path-browser.js"), "utf8") + "</script>" : "";
       const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
       return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(meta.title || name)}</title>${metaCsp ? `<meta http-equiv="Content-Security-Policy" content="${esc(CSP.split("; ").filter((d) => !/^(sandbox|frame-ancestors)/.test(d)).join("; "))}">` : ""}
 <style>${a.css}</style>
-<script>window.DATA = ${safeJson(data)}; window.META = ${safeJson({ view: name, ...meta })};</script>
-<script>${a.js}</script>${diagnostics}${projectContext}${capabilities}${uiTrace}${uiPage}${repoModel}</head>
+<script>window.DATA = ${safeJson(data)}; window.META = ${safeJson({ publicUrl: require_config().getServer().publicUrl, view: name, ...meta })};</script>
+<script>${a.js}</script>${diagnostics}${projectContext}${capabilities}${uiTrace}${uiPage}${repoModel}${pathBrowser}</head>
 <body class="${embed ? "embed" : ""}"><div class="wrap">${v.html}</div><script>dtInline.mount(document.querySelector('.wrap'), dtInline.describe(META.view, DATA, META));</script></body></html>`;
     }
     module2.exports = { list, get, save, remove, render, policy, CSP, BUILTIN, DIR };
@@ -75644,8 +75754,8 @@ var require_code_search = __commonJS({
       const re2 = new RegExp("^" + p.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".") + "$", "i");
       return re2.test(source.key) || re2.test(source.repo) || re2.test(source.workspace || "");
     });
-    async function sources(selector) {
-      const spec = selectors(selector), keys = CI.select(selector), indexed2 = [], raw = [];
+    async function sources(selector, { metadataOnly = false } = {}) {
+      const spec = selectors(selector), keys = metadataOnly ? CI.selectMetadata(selector) : CI.select(selector), indexed2 = [], raw = [];
       for (const key of keys) {
         if (key.startsWith("work/")) {
           const w = require_workspace().checkId(key.slice(5));
@@ -75849,7 +75959,7 @@ var require_code_search = __commonJS({
     function search(args) {
       return E.run({ kind: "code-search", signal: AbortSignal.timeout(1e4) }, () => searchImpl(args));
     }
-    module2.exports = { search, indexed, scanPaths };
+    module2.exports = { search, indexed, scanPaths, sources };
   }
 });
 
@@ -78403,12 +78513,12 @@ var require_tools_code = __commonJS({
           name: "code_read",
           group: "code",
           description: "Read a file of an indexed repo or workspace with line numbers (from..to, 400 lines at most).",
-          input: { repo: str("PROJECT/repo or work/<workspace id>"), path: str("File path in the repo"), from: int("First line", 1), to: int("Last line (default from+299)") },
+          input: { repo: str("PROJECT/repo or work/<workspace id>"), path: str("File path in the repo"), from: int("First line", 1), to: int("Last line (default from+299)"), expected_source_digest: str("Optional source digest from retained evidence; rejects changed index/live files") },
           required: ["repo", "path"],
           run: (a) => {
             const CI = require_codeindex();
             const key = CI.select(a.repo)[0] || a.repo;
-            return CI.read(key, a.path, { from: a.from || 1, to: a.to ? Math.min(a.to, (a.from || 1) + 399) : void 0 });
+            return CI.read(key, a.path, { from: a.from || 1, to: a.to ? Math.min(a.to, (a.from || 1) + 399) : void 0, expected_source_digest: a.expected_source_digest });
           }
         },
         {
@@ -81225,12 +81335,83 @@ var require_workspace_editor = __commonJS({
     function list() {
       return { workspaces: W.list(), policy: policy() };
     }
-    function tree(id, rel = ".") {
+    var excluded = [".git", ".dt", "node_modules", ".gradle", "target", "build"];
+    function page(items, scope, options = {}) {
+      const limit = Math.min(1e3, Math.max(1, Math.trunc(options.limit || 1e3)));
+      const generation = hash(JSON.stringify(items));
+      let offset = 0;
+      if (options.cursor) {
+        let value;
+        try {
+          value = JSON.parse(Buffer.from(options.cursor, "base64url").toString());
+        } catch {
+          throw fail("Invalid continuation cursor");
+        }
+        if (!Array.isArray(value) || value[0] !== scope || !Number.isSafeInteger(value[2]) || value[2] < 0) throw fail("Cursor belongs to another folder or search");
+        if (value[1] !== generation) throw fail("Files changed. Refresh the folder or search before continuing.", "DT_EDITOR_STALE_CURSOR", 409);
+        offset = value[2];
+      }
+      const entries = items.slice(offset, offset + limit), end = offset + entries.length;
+      return { entries, total: items.length, truncated: end < items.length, next_cursor: end < items.length ? Buffer.from(JSON.stringify([scope, generation, end])).toString("base64url") : null };
+    }
+    function tree(id, rel = ".", options = {}) {
       const { full, rel: name } = filePath(id, rel, { root: true });
       if (!fs3.statSync(full).isDirectory()) throw fail("Choose a folder to list");
-      const all = fs3.readdirSync(full, { withFileTypes: true }).filter((e) => ![".git", ".dt", "node_modules", ".gradle", "target", "build"].includes(e.name));
+      const all = fs3.readdirSync(full, { withFileTypes: true }).filter((e) => !excluded.includes(e.name));
       all.sort((a, b) => Number(b.isDirectory()) - Number(a.isDirectory()) || a.name.localeCompare(b.name));
-      return { workspace: id, path: name || ".", entries: all.slice(0, 1e3).map((e) => ({ name: e.name, path: [name, e.name].filter(Boolean).join("/"), kind: e.isSymbolicLink() ? "blocked" : e.isDirectory() ? "directory" : e.isFile() ? "file" : "blocked" })), truncated: all.length > 1e3 };
+      const entries = all.map((e) => ({ name: e.name, path: [name, e.name].filter(Boolean).join("/"), kind: e.isSymbolicLink() ? "blocked" : e.isDirectory() ? "directory" : e.isFile() ? "file" : "blocked" }));
+      return { workspace: id, path: name || ".", ...page(entries, name || ".", options) };
+    }
+    var searches = /* @__PURE__ */ new Map();
+    async function search(id, query = "", options = {}) {
+      const { full } = filePath(id, ".", { root: true });
+      if (typeof query !== "string" || query.length > 500) throw fail("Use a file name or relative path up to 500 characters");
+      let cached = searches.get(full);
+      if (!cached || options.refresh || !options.cursor && !cached.pending && Date.now() - cached.at > 1e4) {
+        const entry = { at: Date.now(), pending: true };
+        entry.promise = (async () => {
+          let names2;
+          try {
+            const { promisify } = require("node:util"), { execFile } = require("node:child_process");
+            const result = await promisify(execFile)("rg", ["--files", "--hidden", "--no-ignore", "-0", ...excluded.flatMap((n) => ["-g", `!${n}/**`])], { cwd: full, encoding: "utf8", maxBuffer: 16 * 1024 * 1024, timeout: 15e3 });
+            names2 = result.stdout.split("\0").filter(Boolean);
+          } catch (error) {
+            if (error.code === 1 && !error.stdout) names2 = [];
+            else if (error.code !== "ENOENT") throw fail("File index exceeded its 15s / 16MB budget. Narrow the workspace and retry.", "DT_EDITOR_SEARCH_LIMIT", 413);
+            else {
+              names2 = [];
+              const pending = [""], deadline = Date.now() + 15e3;
+              while (pending.length) {
+                if (Date.now() > deadline || names2.length > 25e4) throw fail("File index exceeded its budget. Narrow the workspace and retry.", "DT_EDITOR_SEARCH_LIMIT", 413);
+                const dir = pending.pop();
+                for (const e of await fs3.promises.readdir(path3.join(full, dir), { withFileTypes: true })) {
+                  if (excluded.includes(e.name) || e.isSymbolicLink()) continue;
+                  const name = [dir, e.name].filter(Boolean).join("/");
+                  if (e.isDirectory()) pending.push(name);
+                  else if (e.isFile()) names2.push(name);
+                }
+              }
+            }
+          }
+          if (names2.length > 25e4) throw fail("File index exceeds 250,000 paths. Narrow the workspace and retry.", "DT_EDITOR_SEARCH_LIMIT", 413);
+          return names2.filter((n) => !n.split("/").some((s) => excluded.includes(s))).sort();
+        })().finally(() => {
+          entry.pending = false;
+          entry.at = Date.now();
+        });
+        searches.set(full, entry);
+        cached = entry;
+        if (searches.size > 8) searches.delete(searches.keys().next().value);
+      }
+      let names;
+      try {
+        names = await cached.promise;
+      } catch (error) {
+        if (searches.get(full) === cached) searches.delete(full);
+        throw error;
+      }
+      const q = query.toLowerCase().trim(), matches = names.filter((n) => n.toLowerCase().includes(q));
+      return { workspace: id, query, indexed_at: new Date(cached.at).toISOString(), indexed_files: names.length, ...page(matches.map((n) => ({ name: path3.basename(n), path: n, kind: "file" })), `search:${q}`, options) };
     }
     function source(id, rel) {
       const { full, rel: name } = filePath(id, rel);
@@ -81318,7 +81499,7 @@ var require_workspace_editor = __commonJS({
       const cleared = require_util2().readJson(clearFile(id), {})?.clearedAt > Date.parse(found.startedAt);
       return { workspace: id, job: found.id, state: found.state, executionId: found.executionId, command: found.title, log: cleared ? [] : found.log.slice(-30), ...cleared ? { out: "", cleared: true } : found.result || {}, ...found.error ? { error: found.error } : {} };
     }
-    module2.exports = { list, tree, read: source, save, terminal, policy, filePath, MAX_FILE, MAX_OUTPUT };
+    module2.exports = { list, tree, search, read: source, save, terminal, policy, filePath, MAX_FILE, MAX_OUTPUT };
   }
 });
 
@@ -81332,12 +81513,13 @@ var require_tools_workspace_editor = __commonJS({
         origin: "built-in",
         strictInput: true,
         logArgs: ["action", "workspace", "path", "expected_revision"],
-        description: "Offline workspace editor: list owned workspaces, list a folder, read complete UTF-8 text with a revision, or save with required expected_revision CAS. Open the UI at /editor?workspace=<id>. No compile fixes or external writes are implicit.",
-        input: { action: { type: "string", enum: ["list", "tree", "read", "save"], default: "list" }, workspace: str("Owned workspace id"), path: str("Relative file or folder path"), content: str("Complete UTF-8 source for save"), expected_revision: { type: ["string", "null"], description: "SHA-256 from read; null only to create a new file" } },
+        description: "Offline workspace editor: list owned workspaces, page folders or search file paths (next_cursor), read UTF-8 text with a revision, save with expected_revision CAS. UI: /editor?workspace=<id>&path=<file>&line=<n>. No implicit compile fixes or external writes.",
+        input: { action: { type: "string", enum: ["list", "tree", "search", "read", "save"], default: "list" }, workspace: str("Owned workspace id"), path: str("Relative file or folder path"), query: str("File name or relative path substring for search"), cursor: str("Opaque next_cursor from tree/search; refresh if stale"), limit: { type: "integer", minimum: 1, maximum: 1e3 }, refresh: { type: "boolean", description: "Rebuild the cached file path index" }, content: str("Complete UTF-8 source for save"), expected_revision: { type: ["string", "null"], description: "SHA-256 from read; null only to create a new file" } },
         run: (a) => {
           const E = require_workspace_editor();
           if (!a.action || a.action === "list") return E.list();
-          if (a.action === "tree") return E.tree(a.workspace, a.path || ".");
+          if (a.action === "tree") return E.tree(a.workspace, a.path || ".", a);
+          if (a.action === "search") return E.search(a.workspace, a.query || "", a);
           if (a.action === "read") return E.read(a.workspace, a.path);
           if (a.action === "save") return E.save(a.workspace, a.path, a.content, a.expected_revision);
           throw new Error("Unknown editor action");
@@ -82708,7 +82890,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md|java)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "c2583b4fc2bbc78eb6c8b87e348b501468631346a0a66f803a93de77d1710cb2";
+      if (true) return "cc8bb70232832f9e4b8735a5c5d7cdf039dd769c07837e1cd772acba4c908714";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -82869,6 +83051,7 @@ var require_handbook_content = __commonJS({
       { id: "catalog", name: "Environment catalog", path: "cache/{env}/catalog.txt", source: "Cached PG, ES, Kafka, Consul, passports and API routes", purpose: "Cheap name discovery with find. A hit identifies an object; it does not execute a query.", refresh: { tool: "catalog_sync", args: { env: "{{env}}", what: "index" } }, version: "Environment + cached source generations. index rebuilds from cache; it does not contact the sources.", queries: ["find", "pg_table", "kafka_topic"], limit: "Catalog absence means unknown coverage, not that the object does not exist." },
       { id: "postgres", name: "Postgres catalog", path: "cache/{env}/pg/", source: "Read-only database metadata refresh", purpose: "Tables, columns, functions/bodies, constraints, views and triggers.", refresh: { tool: "catalog_sync", args: { env: "{{env}}", what: "pg", only: "{{db}}" } }, version: "Database snapshot timestamp; deployed code has a separate SHA.", queries: ["pg_table", "pg_function", "ddl_snapshot"], limit: "Catalog rows are metadata, not current business rows. Use bounded pg_query for actual values." },
       { id: "usage", name: "Postgres usage graph", path: "cache/{env}/pg/_usage.json", source: "Database dependencies plus passport code findings", purpose: "Readers/writers, functions, views, triggers and supported column lineage.", refresh: { tool: "catalog_sync", args: { env: "{{env}}", what: "index" } }, version: "Built from the available catalog/passport generations.", queries: ["pg_usage", "field_trace", "impact"], limit: "Missing passports, dynamic SQL and unqualified names can leave ambiguity or gaps." },
+      { id: "data-access", name: "Cross-repository data access", path: "cache/{env}/data-lineage.sqlite (principal-scoped in multi-user mode)", source: "Cached source revisions, pinned libraries, PostgreSQL catalog and private rules", purpose: "Column/table readers, writers and bounded API/library/Kafka/ES access paths.", refresh: { tool: "data_index", args: { env: "{{env}}", action: "refresh" } }, version: "Atomic retained generations; unchanged source segments reused.", queries: ["data_readers", "data_writers", "data_trace", "data_index"], limit: "Static topology, not runtime/value-flow proof. Object access, ORM candidates and substring matches stay separate. Missing/stale queries start owned background jobs; failed refreshes keep the last good generation." },
       { id: "search", name: "Elasticsearch metadata", path: "cache/{env}/es/_index.json", source: "Mappings, aliases and index metadata", purpose: "Resolve an index and its fields before es_search.", refresh: { tool: "catalog_sync", args: { env: "{{env}}", what: "es" } }, version: "Environment + metadata refresh time; documents change separately.", queries: ["find", "es_search", "es_health"], limit: "A mapping or alias says nothing about whether a particular document is current." },
       { id: "topics", name: "Kafka metadata", path: "cache/{env}/kafka/_index.json", source: "Topic/config/schema metadata", purpose: "Resolve topics and schemas before bounded message inspection.", refresh: { tool: "catalog_sync", args: { env: "{{env}}", what: "kafka" } }, version: "Cluster/environment + cached metadata time; retain partition/offset for observations.", queries: ["kafka_topic", "kafka_last", "kafka_lag"], limit: "Samples and lag cannot prove exactly-once delivery or global ordering." },
       { id: "consul", name: "Consul observations", path: "cache/{env}/consul.json", source: "Service registrations, health and instance metadata", purpose: "Relate services to replicas, deployed versions/SHAs and observed health.", refresh: { tool: "catalog_sync", args: { env: "{{env}}", what: "consul" } }, version: "Environment + observation time. A version is useful only if actually reported.", queries: ["consul_service", "health", "overview"], limit: "Registration is not proof of a dependency. Missing commit metadata remains unknown." },
@@ -83307,6 +83490,7 @@ node cli.js tool label_stats '{"label":"refund approved"}'` }
       xml: ["Which element matters?", "Read formatted hierarchy/source, wrap long lines and copy/download only what is needed."]
     };
     visualHelp["ui-trace"] = ["How does this UI action reach a database field?", "Inspect the captured UI state and observed API requests, expand exact retained service paths and their assumptions, then inspect catalog fields. Edit reproducible replay steps or source-pinned bindings; browser replay and read-only SQL require explicit actions."];
+    visualHelp["data-lineage"] = ["Who reads or writes this column, and which API can reach it?", "Search retained SQL and ORM evidence; keep object getters/setters and substring candidates separate. Inspect flat API/library/procedure/Kafka/ES paths, assumptions and exact source identities. Missing/stale indices build in owned background jobs; failed refreshes preserve the last good generation. Prepare source reads, job observation or refresh in Workbench. Static topology does not prove runtime/value flow."];
     visualHelp["ui-page"] = ["How can I keep this question as a reusable dashboard?", "Filter retained tables/comparisons, expand exact routine signatures and inspect saved inputs/revision. Open the live Pages host to choose targets and explicitly Refresh. Definitions are shared by default with admin publication; each viewer retains private results. Incomplete reads cannot establish absence."];
     visualHelp["work-record"] = ["What was retained for this task, workflow or dependency change?", "Filter dependencies by source hierarchy, inspect task briefing or leaf checkpoints, export the record and open the authenticated Studio for explicit actions. This inline snapshot cannot execute or resume work."];
     visualHelp["repo-model"] = ["How does the repository behave, and what was actually observed?", "Choose a component, machine and state; inspect source and guards, filter sampled source-matched OTel events and prepare finite TLA+ checks. The inline snapshot has no network access. Open Admin \u2192 Self-reflection for fresh observations and the tool API explorer."];
@@ -83398,6 +83582,10 @@ var require_tool_profiles = __commonJS({
       "pg_table",
       "pg_function",
       "pg_usage",
+      "data_readers",
+      "data_writers",
+      "data_trace",
+      "data_index",
       "field_trace",
       "pg_query",
       "es_search",
@@ -83498,6 +83686,10 @@ var require_tool_profiles = __commonJS({
       "pg_query",
       "pg_table",
       "pg_usage",
+      "data_readers",
+      "data_writers",
+      "data_trace",
+      "data_index",
       "es_search",
       "kafka_last",
       "kafka_topic",
@@ -83581,7 +83773,7 @@ var require_tool_profiles = __commonJS({
       compact: { description: "Small starting set; discover an exact tool then execute it with validated arguments.", names: CORE },
       lean: { description: "Four discovery tools. Search the catalog capability, describe it, then execute; expand profiles on request.", includeCore: false, names: DISCOVERY },
       "lean-find": { description: "Five tools: cached catalog search plus discovery; expand capabilities on request.", includeCore: false, names: [...DISCOVERY, "find"] },
-      investigate: { description: "Find services and data, inspect evidence, follow logs and visualize dependencies.", names: [...CORE, "mapping_debug", "passport", "passports", "pg_query", "pg_usage", "es_search", "kafka_last", "logs_search", "logs_trace", "health", "overview", "impact", "code_search", "feature", "experiment_list", "experiment_run"] },
+      investigate: { description: "Find services and data, inspect evidence, follow logs and visualize dependencies.", names: [...CORE, "mapping_debug", "passport", "passports", "pg_query", "pg_usage", "data_readers", "data_writers", "data_trace", "data_index", "es_search", "kafka_last", "logs_search", "logs_trace", "health", "overview", "impact", "code_search", "feature", "experiment_list", "experiment_run"] },
       testing: { description: "Build reproducible fixtures, scenario contracts, collections and isolated test runs.", prefixes: ["service_env_", "fixture_", "scenario_", "collection_", "testdb_", "test_"], names: [...CORE, "workspace_coverage_plan", "workspace_coverage", "workspace_open", "workspace_read", "workspace_write", "workspace_delete", "workspace_patch", "script_list", "script_get", "script_save", "script_delete", "script_run"] },
       develop: { description: "Inspect code, make a workspace change, compile and verify its behavior.", prefixes: ["service_env_", "workspace_", "code_", "test_", "semantic_", "passport_adjust", "jenkins_", "bitbucket_pr_"], names: [...CORE, "service_debug", "passport", "repo_fetch", "impact", "experiment_save", "experiment_run", "experiment_compare"] },
       knowledge: { description: "Inspect source-neutral documentation, contracts, architecture and provenance.", prefixes: ["knowledge_", "docs_", "architecture_", "project_context_"], names: [...CORE, "feature", "passport", "who_uses"] },
@@ -83725,8 +83917,12 @@ var require_capability_map = __commonJS({
       ["tools", "Tool catalog", "Discover exact capabilities and extension contracts."]
     ].map(([key, label, description]) => ({ id: "object:" + key, key, label, description, kind: "object" }));
     var groupObject = { jenkins: "execution", catalog: "tools", pg: "table", es: "search-index", kafka: "topic", consul: "environment", logs: "environment", bitbucket: "repository", confluence: "documentation", passport: "service", showcase: "service", browser: "api", api: "api", scripts: "automation", views: "evidence", files: "files", history: "execution", context: "context", map: "service", architecture: "memory", runtime: "execution", semantic: "component", knowledge: "memory" };
-    var exact = { mapping_debug: "service", repo_model: "repository", logic_model: "evidence", workspace_editor: "workspace", workspace_terminal: "workspace", gradle_inventory: "repository", gradle_bump: "repository", named_view: "evidence", ui_event: "execution", continuation_create: "task", continuation_find: "task", continuation_attach: "task", continuation_get: "task", continuation_briefing: "task", automation_flow_save: "automation", automation_flow_start: "automation", automation_flow_resume: "automation", ui_page: "evidence", ui_page_data: "environment", workbench_search: "context", workbench_inspect: "context", workbench_open: "task", workbench_save: "context", find: "database", catalog_search: "database", catalog_usage: "table", pg_query: "database", ddl_snapshot: "database", feature: "documentation", result_read: "evidence", self_context: "task", workflow_plan: "task", handbook: "task", checks: "task", test_coverage: "workspace", differential_check: "workspace", impact: "component", job_cancel: "execution", call_patterns: "automation", evaluation_evidence: "evidence" };
+    var exact = { data_trace: "component", data_readers: "table", data_writers: "table", data_index: "repository", mapping_debug: "service", repo_model: "repository", logic_model: "evidence", workspace_editor: "workspace", workspace_terminal: "workspace", gradle_inventory: "repository", gradle_bump: "repository", named_view: "evidence", ui_event: "execution", continuation_create: "task", continuation_find: "task", continuation_attach: "task", continuation_get: "task", continuation_briefing: "task", automation_flow_save: "automation", automation_flow_start: "automation", automation_flow_resume: "automation", ui_page: "evidence", ui_page_data: "environment", workbench_search: "context", workbench_inspect: "context", workbench_open: "task", workbench_save: "context", find: "database", catalog_search: "database", catalog_usage: "table", pg_query: "database", ddl_snapshot: "database", feature: "documentation", result_read: "evidence", self_context: "task", workflow_plan: "task", handbook: "task", checks: "task", test_coverage: "workspace", differential_check: "workspace", impact: "component", job_cancel: "execution", call_patterns: "automation", evaluation_evidence: "evidence" };
     var questions = {
+      data_readers: "Which services read this table or column, including libraries?",
+      data_writers: "Which services write this data, and which only mutate objects?",
+      data_trace: "How does this API reach a column through libraries and messaging?",
+      data_index: "How can I index cached repositories in the background and inspect freshness?",
       task_run_start: "How can I leave a persistent task gathering requirements and code overnight?",
       task_run_memory: "Where are this worker\u2019s saved findings and reproducible scripts?",
       task_run_control: "How can I steer, stop or explicitly checkpoint this autonomous worker?",
@@ -83889,7 +84085,7 @@ var require_capability_map = __commonJS({
       const tools = await require_tools().schemas({ metadata: true }), owner = require_access().owner();
       const nodes = tools.map((t) => ({ id: "tool:" + t.name, kind: "tool", name: t.name, label: t.name, description: t.description.slice(0, 1800), group: t.group || "other", origin: t.origin || "extension", object: objectFor(t), parameters: Object.entries(t.inputSchema.properties || {}).map(([name, s]) => ({ name, type: s.type, required: (t.inputSchema.required || []).includes(name) })), chapter: require_handbook().chapterFor(t) }));
       const edges = nodes.map((n) => ({ id: "question:" + n.name, from: "object:" + n.object, to: n.id, kind: "question", question: question(tools.find((t) => t.name === n.name)) }));
-      for (const [object, names] of [["service", ["service_env_plan", "service_env_bindings", "service_env_request", "workbench_open", "impact", "logs_search", "consul_service", "test_context", "architecture_service"]], ["task", ["service_env_plan", "service_env_status", "context_open", "workspace_open", "project_context_find", "workflow_plan"]], ["component", ["test_context", "differential_check"]], ["table", ["pg_query"]], ["evidence", ["context_run"]]]) for (const name of names) {
+      for (const [object, names] of [["service", ["service_env_plan", "service_env_bindings", "service_env_request", "workbench_open", "impact", "logs_search", "consul_service", "test_context", "architecture_service"]], ["task", ["service_env_plan", "service_env_status", "context_open", "workspace_open", "project_context_find", "workflow_plan"]], ["component", ["test_context", "differential_check"]], ["table", ["pg_query", "data_trace", "data_readers", "data_writers"]], ["topic", ["data_trace", "data_readers", "data_writers"]], ["search-index", ["data_trace", "data_readers", "data_writers"]], ["evidence", ["context_run"]]]) for (const name of names) {
         const tool = nodes.find((n) => n.name === name);
         if (tool && !edges.some((e) => e.from === "object:" + object && e.to === tool.id)) edges.push({ id: "question:" + object + ":" + name, from: "object:" + object, to: tool.id, kind: "question", question: question(tools.find((t) => t.name === name)) });
       }
@@ -89105,6 +89301,1221 @@ var require_tools_semantic = __commonJS({
   }
 });
 
+// lib/data-lineage-store.js
+var require_data_lineage_store = __commonJS({
+  "lib/data-lineage-store.js"(exports2, module2) {
+    var fs3 = require("node:fs");
+    var path3 = require("node:path");
+    var crypto = require("node:crypto");
+    var hash = (value) => crypto.createHash("sha256").update(typeof value === "string" ? value : JSON.stringify(value)).digest("hex");
+    var invalid = (message) => Object.assign(Error(message), { code: "DT_LINEAGE_INDEX", statusCode: 409 });
+    function filename(env) {
+      require_access().checkEnv(env);
+      if (!/^[\w-]+$/.test(env || "")) throw invalid("Invalid environment");
+      const owner = require_access().owner(), cache = require_util2().CACHE;
+      const root = owner.scopeKey === "legacy" ? cache : path3.join(cache, "_data-principals", hash(owner.principalId).slice(0, 32));
+      return path3.join(root, env, "data-lineage.sqlite");
+    }
+    function open(env, create = false) {
+      const file = filename(env);
+      if (!create && !fs3.existsSync(file)) return null;
+      let DatabaseSync;
+      try {
+        ({ DatabaseSync } = require("node:sqlite"));
+      } catch {
+        throw invalid("Data indexing requires a Node runtime with node:sqlite (Node 22.13+ or Node 24).");
+      }
+      if (create) fs3.mkdirSync(path3.dirname(file), { recursive: true });
+      const db = new DatabaseSync(file, { readOnly: !create, timeout: 2e3 });
+      try {
+        db.exec("PRAGMA cache_size=-4096; PRAGMA temp_store=FILE; PRAGMA busy_timeout=2000;");
+        const version = db.prepare("PRAGMA user_version").get().user_version;
+        if (version > 1) throw invalid("Data index schema is newer than this build");
+        if (!create && !version) {
+          db.close();
+          return null;
+        }
+        if (create) db.exec(`PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;
+      CREATE TABLE IF NOT EXISTS segments(id TEXT PRIMARY KEY, kind TEXT, source TEXT, at TEXT, stats TEXT);
+      CREATE TABLE IF NOT EXISTS nodes(segment TEXT, id TEXT, kind TEXT, name TEXT, object TEXT, db TEXT, repo TEXT, service TEXT, symbol TEXT, legacy TEXT, parent TEXT, leaf TEXT, payload TEXT, PRIMARY KEY(segment,id));
+      CREATE INDEX IF NOT EXISTS node_id ON nodes(id,segment);
+      CREATE INDEX IF NOT EXISTS node_symbol ON nodes(legacy,segment);
+      CREATE INDEX IF NOT EXISTS node_exact ON nodes(symbol,segment);
+      CREATE INDEX IF NOT EXISTS node_parent ON nodes(parent,segment);
+      CREATE INDEX IF NOT EXISTS node_leaf ON nodes(kind,leaf,db,segment);
+      CREATE INDEX IF NOT EXISTS node_object ON nodes(kind,object,db,segment);
+      CREATE TABLE IF NOT EXISTS edges(id INTEGER PRIMARY KEY, segment TEXT, key TEXT, src TEXT, dst TEXT, relation TEXT, access TEXT, proof TEXT, payload TEXT, UNIQUE(segment,key));
+      CREATE INDEX IF NOT EXISTS edge_src ON edges(src,segment);
+      CREATE INDEX IF NOT EXISTS edge_dst ON edges(dst,segment);
+      CREATE TABLE IF NOT EXISTS raw_edges(segment TEXT, payload TEXT);
+      CREATE INDEX IF NOT EXISTS raw_segment ON raw_edges(segment);
+      CREATE TABLE IF NOT EXISTS gaps(segment TEXT, payload TEXT);
+      CREATE INDEX IF NOT EXISTS gap_segment ON gaps(segment);
+      CREATE TABLE IF NOT EXISTS mentions(id INTEGER PRIMARY KEY,segment TEXT,node TEXT,file TEXT,line INTEGER,raw TEXT,folded TEXT);
+      CREATE VIRTUAL TABLE IF NOT EXISTS mention_search USING fts5(folded,content='mentions',content_rowid='id',tokenize='trigram');
+      CREATE TABLE IF NOT EXISTS generations(id TEXT PRIMARY KEY,selection TEXT,signature TEXT,at TEXT,stats TEXT);
+      CREATE INDEX IF NOT EXISTS generation_selection ON generations(selection,at);
+      CREATE TABLE IF NOT EXISTS generation_segments(generation TEXT,segment TEXT,PRIMARY KEY(generation,segment));
+      CREATE TABLE IF NOT EXISTS index_rules(id TEXT PRIMARY KEY,payload TEXT);
+      PRAGMA user_version=1;`);
+        return db;
+      } catch (e) {
+        db.close();
+        throw e;
+      }
+    }
+    function writer(db, segment) {
+      const node = db.prepare("INSERT OR REPLACE INTO nodes VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
+      const edge = db.prepare("INSERT OR IGNORE INTO edges(segment,key,src,dst,relation,access,proof,payload) VALUES (?,?,?,?,?,?,?,?)");
+      const raw = db.prepare("INSERT INTO raw_edges VALUES (?,?)"), gap = db.prepare("INSERT INTO gaps VALUES (?,?)");
+      const mention = db.prepare("INSERT INTO mentions(segment,node,file,line,raw,folded) VALUES (?,?,?,?,?,?)");
+      const fts = db.prepare("INSERT INTO mention_search(rowid,folded) VALUES (?,?)");
+      let nodes = 0, edges = 0, mentions = 0, gaps = 0;
+      return {
+        node(n) {
+          node.run(segment, n.id, n.kind, n.name || n.id, n.object || "", n.db || "", n.repo || "", n.service || "", n.symbol || "", n.legacy || n.symbol || "", n.table || n.classSymbol || "", String(n.object || n.name || "").split(".").at(-1), JSON.stringify(n));
+          nodes++;
+          return n.id;
+        },
+        edge(e) {
+          if (e.src === e.dst && e.relation !== "calls") return;
+          edges += Number(edge.run(segment, hash(e), e.src, e.dst, e.relation, e.access || "", e.proof || "static", JSON.stringify(e)).changes);
+        },
+        raw(e) {
+          raw.run(segment, JSON.stringify(e));
+        },
+        gap(g) {
+          if (gaps++ < 1e4) gap.run(segment, JSON.stringify(g));
+        },
+        mention(n, file, line, text) {
+          text = text.slice(0, 2048);
+          const folded = fold(text);
+          if (folded.length < 3) return;
+          const r = mention.run(segment, n, file, line, text, folded);
+          fts.run(r.lastInsertRowid, folded);
+          mentions++;
+        },
+        stats() {
+          return { nodes, edges, mentions, gaps };
+        }
+      };
+    }
+    function fold(s) {
+      return String(s || "").normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+    }
+    function activate(db, generation) {
+      db.exec("CREATE TEMP TABLE IF NOT EXISTS active_segments(id TEXT PRIMARY KEY) WITHOUT ROWID; DELETE FROM active_segments;");
+      db.prepare("INSERT INTO active_segments SELECT segment FROM generation_segments WHERE generation=?").run(generation);
+    }
+    function latest(db, selection, id) {
+      const row = id ? db.prepare("SELECT * FROM generations WHERE id=? AND selection=?").get(id, selection) : db.prepare("SELECT * FROM generations WHERE selection=? ORDER BY at DESC,rowid DESC LIMIT 1").get(selection);
+      if (id && !row) throw invalid("Retained data index generation is unavailable in this scope");
+      return row ? { ...row, stats: JSON.parse(row.stats) } : null;
+    }
+    function getNode(db, id) {
+      const row = db.prepare("SELECT n.payload FROM nodes n JOIN active_segments a ON a.id=n.segment WHERE n.id=? LIMIT 1").get(id);
+      return row ? JSON.parse(row.payload) : null;
+    }
+    function adjacent(db, id, reverse = false, limit = 200) {
+      return db.prepare(`SELECT e.id,e.payload FROM edges e JOIN active_segments a ON a.id=e.segment WHERE e.${reverse ? "dst" : "src"}=? ORDER BY e.id LIMIT ?`).all(id, limit + 1).map((r) => ({ ...JSON.parse(r.payload), edgeId: r.id }));
+    }
+    module2.exports = { open, filename, writer, hash, fold, invalid, activate, latest, getNode, adjacent };
+  }
+});
+
+// lib/data-lineage-build.js
+var require_data_lineage_build = __commonJS({
+  "lib/data-lineage-build.js"(exports2, module2) {
+    var fs3 = require("node:fs");
+    var path3 = require("node:path");
+    var CI = require_codeindex();
+    var ID = require_semantic_identity();
+    var X = require_extract();
+    var S = require_data_lineage_store();
+    var E = require_execution();
+    var { fileStamp } = require_util2();
+    var FORMAT = 2;
+    var columnLimit = () => Math.max(128, Math.min(5e4, Number(process.env.DT_DATA_INDEX_COLUMNS_PER_TABLE) || 4096));
+    var location = (file, line) => ({ file: file || null, line: line || 1 });
+    var evidenceSource = (r) => ({ repo: r.repo, indexKey: r.indexKey, revisionKey: r.revisionKey, revision: r.revision, sourceDigest: r.sourceDigest, ...location(r.file, r.line) });
+    var normRoute = (p) => String(p).replace(/\{[^}]*\}|:[\w]+/g, "{}").replace(/\/+$/, "") || "/";
+    var testPath = (rel) => /(^|\/)src\/(test|it|integrationTest)\/|(^|\/)tests?\//i.test(rel || "");
+    function settings(env) {
+      const db = S.open(env);
+      try {
+        const row = db?.prepare("SELECT payload FROM index_rules WHERE id=?").get(require_access().owner().scopeKey), value = row ? JSON.parse(row.payload) : { aliases: [], links: [] };
+        return { ...value, revision: S.hash(value) };
+      } finally {
+        db?.close();
+      }
+    }
+    async function inputs({ env, repos } = {}, { materialize = false } = {}) {
+      env = require_config().getEnv(env).name;
+      const selected = await require_code_search().sources(repos, { metadataOnly: true });
+      const keys = CI.withLibrariesMetadata(selected.indexed);
+      const sources = keys.map((key) => {
+        const idx = CI.metadata(key);
+        return { key, canonical: idx.revisionKey || key, sha: idx.sha, stamp: fileStamp(path3.join(idx.dir, "files.json")), graph: fileStamp(path3.join(idx.dir, "graph.json")) };
+      });
+      const raw = selected.raw.map((r) => ({ ...r, stamp: S.hash([fileStamp(r.root), fileStamp(path3.join(r.root, ".git", "HEAD")), fileStamp(path3.join(r.root, ".git", "index"))]) }));
+      const cats = materialize ? require_pg().loadAll(env) : [];
+      const catalog = require_pg().databases(env).map((d) => [d.name, fileStamp(path3.join(require_util2().CACHE, env, "pg", d.name + ".json"))]).filter((r) => r[1]);
+      const passportDir = require_passport().DIR;
+      let passportFiles = [];
+      try {
+        passportFiles = fs3.readdirSync(passportDir, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => [e.name, fileStamp(path3.join(passportDir, e.name, "passport.json"))]).sort((a, b) => a[0].localeCompare(b[0]));
+      } catch (e) {
+        if (e.code !== "ENOENT") throw e;
+      }
+      const passports = materialize ? require_edges().snapshot({ env, manual: false }) : null;
+      const rules = settings(env), selection = S.hash([require_access().owner().scopeKey, env, [].concat(repos || []).map(String).sort()]);
+      const signature = S.hash([FORMAT, sources, raw, catalog, passportFiles, rules.revision, { columnsPerTable: columnLimit() }]);
+      return { env, repos, selection, signature, sources, raw, cats, catalog, passports, rules };
+    }
+    function sourceContext(idx, key, library) {
+      const repo = idx.project && idx.repo ? `${idx.project}/${idx.repo}` : key.replace(/@[a-f0-9]{40}-.+$/, "");
+      return { indexKey: idx.revisionKey || key, repo, revision: ID.revision(idx), revisionKey: idx.revisionKey || key, sourceDigest: idx.sourceDigest, sha: idx.sha, service: library ? null : idx.service || idx.graph_().app?.name || null };
+    }
+    function repoSegment(db, segment, idx, key, library, env) {
+      const started = Date.now(), w = S.writer(db, segment), g = idx.graph_(), fileTexts = /* @__PURE__ */ new Map(), sourceHash = require("node:crypto").createHash("sha256"), root = fs3.realpathSync(idx.root);
+      for (const f of idx.list || []) {
+        E.check();
+        const full = path3.resolve(idx.root, f.path);
+        if (!full.startsWith(path3.resolve(idx.root) + path3.sep) || fs3.lstatSync(full).isSymbolicLink() || !fs3.realpathSync(full).startsWith(root + path3.sep)) throw S.invalid("Indexed source path changed or escaped its retained root: " + f.path);
+        const buf = fs3.readFileSync(full);
+        if (buf.length > 1024 * 1024) throw S.invalid("Indexed file changed beyond its byte budget: " + f.path);
+        sourceHash.update(f.path).update("\0").update(buf).update("\0");
+        if (!f.binary && !testPath(f.path)) fileTexts.set(f.path, buf.toString("utf8"));
+      }
+      if (idx.sourceDigest && sourceHash.digest("hex") !== idx.sourceDigest) throw S.invalid("Source differs from its code index: " + key + ". Rebuild the code index before publishing lineage.");
+      if (g.sourceDigest && idx.sourceDigest && g.sourceDigest !== idx.sourceDigest) throw S.invalid("Code graph differs from its source index: " + key);
+      const extracted = X.extract(idx.root, { profile: env, files: [...fileTexts].filter(([file]) => /\.(java|kt|kts|groovy|ya?ml|properties|xml|sql|gradle|toml)$/.test(file)).map(([path4, text]) => ({ path: path4, text })) }), ctx = { ...sourceContext(idx, key, library), service: idx.service || (library ? null : extracted.app?.name || null) };
+      if (!ctx.service && !library) w.gap({ kind: "source-service-unknown", repo: ctx.repo, note: "Code evidence is retained without asserting a deployed service identity." });
+      const meta = { ...ctx, kind: "method" }, nodes = /* @__PURE__ */ new Map(), classes = /* @__PURE__ */ new Map(), parsedFiles = /* @__PURE__ */ new Map();
+      const parsed = (file) => {
+        if (!parsedFiles.has(file)) parsedFiles.set(file, require_codegraph().parseFile(file, fileTexts.get(file) || ""));
+        return parsedFiles.get(file);
+      };
+      const put = (n) => {
+        nodes.set(n.symbol, n);
+        w.node(n);
+        return n.id;
+      };
+      const id = (symbol) => ID.code(ctx.indexKey, ctx.revision, symbol);
+      const sym = (n) => ({ ...meta, ...n, id: id(n.symbol) });
+      for (const sourceClass of g.classes || []) {
+        const c = { ...sourceClass };
+        if (c.test || testPath(c.file)) continue;
+        E.check();
+        classes.set(c.id, c);
+        const syntax = parsed(c.file), declaration = syntax.classes.find((x) => x.id === c.id);
+        const qualify = (type) => type.includes(".") ? type : syntax.imports[type] || (syntax.pkg ? syntax.pkg + "." : "") + type;
+        c.ext = [.../* @__PURE__ */ new Set([...c.ext || [], ...(declaration?.ext || []).map(qualify)])];
+        c.impl = [.../* @__PURE__ */ new Set([...c.impl || [], ...(declaration?.impl || []).map(qualify)])];
+        const unsupportedAccessors = /@Accessors\s*\(|AccessLevel\.NONE|lombok\.accessors\./.test(syntax.clean);
+        const typeHeader = syntax.clean.split("\n").slice(Math.max(0, c.line - 12), c.line).join("\n"), rootMapping = c.annos.includes("RequestMapping") ? [...typeHeader.matchAll(/@RequestMapping\s*\(([^)]*)\)/g)].at(-1) : null, rootArgs = X.annoArgs(rootMapping?.[1] || ""), routePrefixes = (rootArgs.path || rootArgs.value || [""]).filter((v) => typeof v === "string");
+        put(sym({ kind: "class", symbol: c.id, legacy: c.id, name: c.name, role: c.role, annos: c.annos, routePrefixes, lombok: c.lombok, unsupportedAccessors, table: c.table, ext: c.ext, impl: c.impl, ...location(c.file, c.line), test: !!c.test }));
+        if (unsupportedAccessors) w.gap({ kind: "custom-accessor-configuration", repo: ctx.repo, file: c.file, note: "Generated accessor inference is disabled for custom Accessors/AccessLevel.NONE configuration." });
+        for (const m of c.methods) {
+          const own = declaration?.methods.find((x) => ID.signature(x) === ID.signature(m));
+          if (unsupportedAccessors && own?.implicit) continue;
+          const methodId = put(sym({ symbol: m.symbol || `${c.id}#${ID.signature(m)}`, legacy: `${c.id}#${m.name}`, name: `${c.name}#${m.name}`, classSymbol: c.id, signature: ID.signature(m), params: m.params, ret: m.ret, annos: m.annos, mods: m.mods, abstract: m.abstract, role: c.role, generated: !!own?.implicit, startLine: m.startLine, endLine: m.endLine, ...location(c.file, m.line), test: !!c.test }));
+          if (own?.body && !c.test) {
+            const body = syntax.text.slice(own.body[0], own.body[1] + 1), shadow = new Set(m.params?.map((p) => p.name));
+            const originalBody = syntax.clean.slice(own.body[0], own.body[1] + 1);
+            for (const call of body.matchAll(/\b(this|super)\s*\.\s*([\w$]+)\s*\.\s*([\w$]+)\s*\(/g)) {
+              const args = X.balanced(originalBody, call.index + call[0].lastIndexOf("(")).inner;
+              w.raw({ type: "receiver-call", from: m.symbol || `${c.id}#${ID.signature(m)}`, owner: call[1] === "super" ? c.ext[0] : c.id, receiver: call[2], method: call[3], relation: "calls", arity: args.trim() ? X.splitTop(args).length : 0, ...ctx, ...location(c.file, syntax.text.slice(0, own.body[0] + call.index).split("\n").length) });
+            }
+            for (const call of body.matchAll(/(?<![\w$.])(?:(this|super)\s*\.\s*)?([a-z_$][\w$]*)\s*\(/g)) {
+              const name = call[2];
+              if (/^(if|for|while|switch|catch|try|synchronized|assert|new|return|throw|do|else|case|yield|getClass|toString|hashCode|equals)$/.test(name) || !call[1] && body.slice(0, call.index).trimEnd().endsWith(".") || call[1] !== "super" && c.methods.some((x) => x.name === name)) continue;
+              const args = X.balanced(originalBody, call.index + call[0].lastIndexOf("(")).inner;
+              const to = call[1] === "super" ? c.ext[0] : c.id;
+              if (!to) continue;
+              w.raw({ type: "edge", from: m.symbol || `${c.id}#${ID.signature(m)}`, to: `${to}#${name}`, relation: "calls", arity: args.trim() ? X.splitTop(args).length : 0, ...ctx, ...location(c.file, syntax.text.slice(0, own.body[0] + call.index).split("\n").length) });
+            }
+            for (const field of c.fields) for (const hit of body.matchAll(new RegExp(`\\b(this\\s*\\.\\s*)?${field.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "g"))) {
+              if (!hit[1] && shadow.has(field.name)) continue;
+              const suffix = body.slice(hit.index + hit[0].length), write = /^\s*(?:=(?!=)|[+*/%-]=|\+\+|--)/.test(suffix);
+              if (/^\s*\(/.test(suffix)) continue;
+              w.raw({ type: "field-access", node: methodId, field: `${c.id}.${field.name}`, access: write ? "object-write" : "object-read", ...ctx, ...location(c.file, syntax.text.slice(0, own.body[0] + hit.index).split("\n").length) });
+            }
+          }
+        }
+        for (const f of c.fields) put(sym({ kind: "field", symbol: `${c.id}.${f.name}`, legacy: `${c.id}.${f.name}`, name: `${c.name}.${f.name}`, field: f.name, type: f.type, resolvedType: f.typeId || qualify(require_codegraph().baseType(f.type)), annos: f.annos, final: f.final, column: f.column, classSymbol: c.id, ...location(c.file, f.line), test: !!c.test }));
+      }
+      const all = [...nodes.values()], at = (file, line) => all.filter((n) => n.kind === "method" && n.file === file && (n.startLine || n.line) <= line && line <= (n.endLine || n.line)).sort((a, b) => a.endLine - a.line - (b.endLine - b.line))[0] || all.filter((n) => n.kind === "method" && n.file === file && n.line >= line && n.line - line <= 8).sort((a, b) => a.line - b.line)[0] || all.find((n) => n.kind === "class" && n.file === file) || sym({ kind: "file", symbol: `file:${file}`, legacy: `file:${file}`, name: file, ...location(file, line) });
+      for (const [from, to, relation, where, arity, types, fromSymbol] of g.preciseEdges || g.edges || []) {
+        if (["member", "uses", "injects"].includes(relation)) continue;
+        const loc = String(where || "").match(/^(.*):(\d+)$/);
+        if (testPath(loc?.[1]) || nodes.get(fromSymbol || from)?.test) continue;
+        if (["reads", "writes"].includes(relation)) {
+          const field = to.split(".").at(-1), line = parsed(loc?.[1]).clean.split("\n")[Number(loc?.[2]) - 1] || "";
+          if (!new RegExp(`\\.\\s*${field}\\b(?!\\s*\\()`).test(line)) continue;
+        }
+        w.raw({ type: "edge", from: fromSymbol || from, to, relation, arity, types, ...ctx, ...location(loc?.[1], Number(loc?.[2])) });
+      }
+      const readFiles = [];
+      for (const f of idx.list || []) {
+        E.check();
+        if (!fileTexts.has(f.path)) continue;
+        const text = fileTexts.get(f.path);
+        if (/\.(java|kt|kts|groovy|sql|xml|properties|ya?ml|gradle|toml)$/.test(f.path)) readFiles.push({ path: f.path, text });
+        const clean = /\.(java|kt|groovy)$/.test(f.path) ? X.stripComments(text) : text.replace(/--[^\n]*|\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "));
+        let line = 0;
+        for (const text2 of clean.split("\n")) {
+          line++;
+          if (text2.trim()) {
+            const n = at(f.path, line);
+            if (!nodes.has(n.symbol)) put(n);
+            w.mention(n.id, f.path, line, text2);
+          }
+        }
+        if (!/\.(java|kt|groovy|sql|xml)$/.test(f.path)) continue;
+        const literals = /\.sql$/.test(f.path) ? [{ value: text, index: 0 }] : /\.xml$/.test(f.path) ? [...text.matchAll(/<(select|update|insert|delete)\b[^>]*>([\s\S]*?)<\/\1>/g)].map((m) => ({ value: m[2].replace(/<!\[CDATA\[|\]\]>/g, (s) => s.replace(/[^\n]/g, " ")).replace(/<\/?[A-Za-z][^>]*>/g, (s) => s.replace(/[^\n]/g, " ")).replace(/#\{[^}]+\}/g, (s) => "?" + s.slice(1).replace(/[^\n]/g, " ")), index: m.index, mybatis: true, namespace: text.match(/<mapper\b[^>]*\bnamespace=["']([^"']+)["']/)?.[1], method: m[0].match(/\bid=["']([^"']+)["']/)?.[1], dynamic: /<(if|foreach|choose|when|otherwise|include|bind)\b|\$\{/.test(m[2]) })) : X.stringLiterals(clean);
+        for (const lit of literals) {
+          const line2 = clean.slice(0, lit.index).split("\n").length, n = at(f.path, line2);
+          if (!nodes.has(n.symbol)) put(n);
+          const before = clean.slice(Math.max(0, lit.index - 180), lit.index);
+          if (/\b(select|insert|update|delete|merge|execute|call)\b/i.test(lit.value)) {
+            if (lit.value.length > 256 * 1024) w.gap({ kind: "sql-fragment-budget", repo: ctx.repo, file: f.path, line: line2, characters: lit.value.length, limit: 256 * 1024 });
+            if (lit.dynamic) w.gap({ kind: "mybatis-dynamic-sql", repo: ctx.repo, file: f.path, line: line2, note: "Dynamic branches/includes are candidates, not an executable query expansion." });
+            w.raw({ type: "sql", node: n.id, sql: lit.value.slice(0, 256 * 1024), ...ctx, ...location(f.path, line2), lineMapping: /\.(sql|xml)$/.test(f.path) || clean.startsWith('"""', lit.index) && clean.indexOf('"""', lit.index + 3) + 3 === lit.end ? "source-lines" : "literal-start", mybatis: lit.mybatis, namespace: lit.namespace, mapperMethod: lit.method, dynamic: lit.dynamic });
+          } else if (/\.get(?:String|Int|Long|Object|Date|Timestamp|Boolean|BigDecimal|Double|Float|Short|Bytes)\s*\(\s*$/.test(before) && /^[\w$]+$/.test(lit.value)) w.raw({ type: "rowmapper", node: n.id, column: lit.value, ...ctx, ...location(f.path, line2) });
+          else if (/(?:withProcedureName|withFunctionName)\s*\(\s*$|@(?:Procedure|NamedStoredProcedureQuery)\s*\([^)]*(?:procedureName|procedure|name)\s*=\s*$/.test(before)) w.raw({ type: "dbcall", node: n.id, name: lit.value, ...ctx, ...location(f.path, line2) });
+        }
+      }
+      const sourceConfig = X.loadConfig(readFiles, { profile: env }), config = sourceConfig.merged;
+      if (sourceConfig.profiled) w.gap({ kind: "spring-profile-unverified", repo: ctx.repo, profile: env, note: "The matching source profile was selected; actual runtime profile activation is not observed." });
+      const dbs = extracted.db?.datasources?.map((d) => d.db).filter(Boolean) || [];
+      w.raw({ type: "context", ...ctx, dbs, libs: idx.libs || [], app: extracted.app });
+      const broker = config["spring.kafka.bootstrap-servers"] || config["spring.kafka.producer.bootstrap-servers"] || config["spring.cloud.stream.kafka.binder.brokers"];
+      const cluster = broker && !/[${}]/.test(broker) ? String(broker).split(",").map((x) => x.trim().toLowerCase()).sort().join(",") : null;
+      const esUri = config["spring.elasticsearch.uris"] || config["spring.elasticsearch.rest.uris"] || config["spring.data.elasticsearch.cluster-nodes"];
+      const esCluster = esUri && !/[${}]/.test(esUri) ? String(esUri).split(",").map((x) => x.trim().toLowerCase()).sort().join(",") : null;
+      const httpSeen = /* @__PURE__ */ new Set();
+      const port = (kind, x) => {
+        const n = at(x.file, x.line);
+        if (!nodes.has(n.symbol)) put(n);
+        const node = x.node || n.id, key2 = JSON.stringify([kind, node, x.method, x.path]);
+        if (kind.startsWith("http")) {
+          if (httpSeen.has(key2)) return;
+          httpSeen.add(key2);
+        }
+        w.raw({ type: "port", kind, node, ...ctx, ...x, ...kind.startsWith("kafka") ? { cluster } : kind === "es" ? { cluster: esCluster } : {}, profiled: !!sourceConfig.profiled, file: x.file, line: x.line || 1 });
+      };
+      for (const p of extracted.endpoints || []) port("http-ingress", p);
+      for (const c of g.classes || []) for (const m of c.methods || []) if (nodes.has(c.id) && m.annos?.some((a) => /^(Get|Post|Put|Patch|Delete|Request)Mapping$/.test(a))) {
+        const text = readFiles.find((f) => f.path === c.file)?.text || "", head = text.split("\n").slice(Math.max(0, (m.startLine || m.line) - 2), m.line).join("\n");
+        const matches = [...head.matchAll(/@(Get|Post|Put|Patch|Delete|Request)Mapping\s*(?:\(([^)]*)\))?/g)], annotation = matches.at(-1);
+        if (!annotation) continue;
+        const args = X.annoArgs(annotation[2] || ""), paths = args.path || args.value || ["/"];
+        const type = nodes.get(c.id);
+        for (const prefix of type.routePrefixes || [""]) for (const route of paths) if (typeof route === "string") port("http-ingress", { method: annotation[1] === "Request" ? "ANY" : annotation[1].toUpperCase(), path: ("/" + prefix + "/" + route).replace(/\/+/g, "/"), methodPath: route, inheritedOnly: !c.annos.some((a) => ["RestController", "Controller"].includes(a)), node: nodes.get(m.symbol || `${c.id}#${ID.signature(m)}`)?.id, file: c.file, line: m.line });
+      }
+      for (const p of extracted.feign || []) port("http-egress", p);
+      for (const p of extracted.kafka?.consumes || []) port("kafka-consume", p);
+      for (const p of extracted.kafka?.produces || []) port("kafka-produce", p);
+      for (const p of extracted.es || []) {
+        const n = at(p.file, p.line), text = readFiles.find((f) => f.path === p.file)?.text || "";
+        const around = text.split("\n").slice(Math.max(0, (p.line || 1) - 3), (p.line || 1) + 3).join("\n");
+        const access = /\b(?:save|index|bulkIndex|delete|update)\s*\(/.test(around) ? "write" : /\b(?:search|get|count|exists)\s*\(/.test(around) ? "read" : "mapping";
+        port("es", { ...p, access, node: n.id });
+      }
+      for (const c of g.classes || []) if (c.table && nodes.has(c.id)) {
+        const persisted = c.annos.includes("Entity");
+        if (persisted) w.raw({ type: "entity", classSymbol: c.id, table: c.table, ...ctx, ...location(c.file, c.line) });
+        const overrides = /* @__PURE__ */ new Map(), source = readFiles.find((f) => f.path === c.file)?.text || "";
+        for (const m of c.methods || []) {
+          const name = m.name.match(/^(get|is)([A-Z][\w$]*)$/);
+          if (!name) continue;
+          const head = source.split("\n").slice(Math.max(0, (m.startLine || m.line) - 2), m.line).join("\n");
+          const a = [...head.matchAll(/@Column\s*\(([^)]*)\)/g)].at(-1), column = a && X.annoArgs(a[1]).name?.[0];
+          if (typeof column === "string") overrides.set(name[2][0].toLowerCase() + name[2].slice(1), column);
+        }
+        for (const f of c.fields.filter((f2) => f2.column)) {
+          if (f.annos?.some((a) => ["Embedded", "EmbeddedId"].includes(a))) {
+            w.gap({ kind: "embedded-column-mapping", repo: ctx.repo, file: c.file, line: f.line, note: "Embedded naming/attribute overrides need reviewed mappings." });
+            continue;
+          }
+          w.raw({ type: persisted ? "column-map" : "inherited-column-map", symbol: `${c.id}.${f.name}`, classSymbol: c.id, table: persisted ? c.table : null, column: overrides.get(f.name) || f.column, ...ctx, ...location(c.file, f.line) });
+        }
+      }
+      for (const c of g.classes || []) if (c.role === "repository" && nodes.has(c.id)) {
+        const source = readFiles.find((f) => f.path === c.file)?.text || "";
+        const head = X.stripComments(source).slice(0, Math.min(source.length, 24e3));
+        const entity = head.match(/(?:\bextends|:)\s*[\w.]*\w*Repository\s*<\s*([\w$.]+)/)?.[1];
+        if (entity || c.kind === "interface" && c.ext?.some((s) => /Repository$/.test(s))) w.raw({ type: "repository", classSymbol: c.id, entity, ...ctx, ...location(c.file, c.line) });
+      }
+      for (const error of g.errors || []) w.gap({ kind: "source-parse-error", repo: ctx.repo, ...error });
+      return { ...w.stats(), ms: Date.now() - started, files: idx.list.length, ...ctx };
+    }
+    function dbSegment(db, segment, cat, env) {
+      const w = S.writer(db, segment), started = Date.now(), revision = cat.syncedAt || cat._revision || null;
+      for (const t of cat.tables || []) {
+        E.check();
+        const object = ID.qualified(t.schema, t.name), tid = ID.pg("table", env, cat.db, object);
+        w.node({ id: tid, kind: "table", name: object, object, db: cat.db, env, revision });
+        for (const c of t.columns || []) {
+          const object2 = `${ID.qualified(t.schema, t.name)}.${ID.identifier(c.name)}`, cid = ID.pg("column", env, cat.db, object2);
+          w.node({ id: cid, kind: "column", name: object2, object: object2, table: tid, db: cat.db, env, revision });
+        }
+        if (t.definition) w.raw({ type: "sql", node: tid, sql: t.definition, db: cat.db, schema: t.schema, file: object, line: 1, source: "database" });
+      }
+      const counts = require_pg().functionCounts(cat);
+      for (const [ordinal, f] of (cat.functions || []).entries()) {
+        E.check();
+        const object = ID.qualified(f.schema, f.name), overloaded = counts.get(`${f.schema}\0${f.name}`) > 1;
+        const id = ID.pg("pgfn", env, cat.db, overloaded ? `${object}(${f.signature || f.args || ordinal})` : object);
+        w.node({ id, kind: "pgfn", name: object, object, signature: f.signature || f.args, db: cat.db, env, revision, language: f.lang, overloaded });
+        if (/^(sql|plpgsql)$/.test(f.lang || "")) {
+          const body = f.body || "";
+          if (body.length > 256 * 1024) w.gap({ kind: "sql-fragment-budget", db: cat.db, function: object, characters: body.length, limit: 256 * 1024 });
+          w.raw({ type: "sql", node: id, sql: body.slice(0, 256 * 1024), db: cat.db, schema: f.schema, file: object, line: 1, source: "database", triggerTables: (cat.triggers || []).filter((t) => ID.norm(t.function) === object).map((t) => t.table) });
+        } else w.gap({ kind: "unsupported-function-language", object, db: cat.db, language: f.lang });
+      }
+      for (const t of cat.triggers || []) if (t.enabled !== false) w.raw({ type: "trigger", db: cat.db, table: t.table, function: t.function, name: t.name, definition: t.def });
+      return { ...w.stats(), ms: Date.now() - started, db: cat.db };
+    }
+    function passportSegment(db, segment, p, env) {
+      const w = S.writer(db, segment), revision = p.repo?.sha || null, indexKey = `passport:${p.service}@${revision || "unknown"}`, id = `service:${encodeURIComponent(env)}:${encodeURIComponent(p.service)}@${encodeURIComponent(revision || "unknown")}`;
+      const repo = p.repo?.project && p.repo?.repo ? `${p.repo.project}/${p.repo.repo}` : null, ctx = { indexKey, repo, revision, service: p.service, source: "passport" };
+      w.node({ id, kind: "service", name: p.service, env, ...ctx });
+      w.raw({ type: "context", ...ctx, dbs: (p.db?.datasources || []).map((d) => d.db).filter(Boolean), libs: [] });
+      const e = p.effective || {};
+      for (const t of e.tables || []) if (t.table) w.raw({ type: "access-db", node: id, name: t.table, access: ["read", "write", "function"].includes(t.access) ? t.access : "mapping", ...ctx, ...location(t.file, t.line) });
+      for (const c of e.dbCalls || []) if (c.name) w.raw({ type: "dbcall", node: id, name: c.name, ...ctx, ...location(c.file, c.line) });
+      for (const [kind, items] of [["http-ingress", e.endpoints], ["http-egress", e.calls || e.feign], ["kafka-consume", e.consumes || e.kafka?.consumes], ["kafka-produce", e.produces || e.kafka?.produces], ["es", e.es]]) for (const port of items || []) {
+        const cluster = (e.ports || []).find((p2) => p2.env === env && p2.boundary?.topic === port.topic)?.boundary?.cluster;
+        w.raw({ type: "port", node: id, kind, ...ctx, ...port, ...cluster ? { cluster } : {}, candidate: true, access: "mapping" });
+      }
+      w.gap({ kind: "passport-only-coverage", service: p.service, repo, detail: "Only service-level passport evidence is cached. Fetch/index the pinned source for method/column paths." });
+      return { ...w.stats(), service: p.service, repo };
+    }
+    function bindSegment(db, segment, input, sourceSegments) {
+      const w = S.writer(db, segment), started = Date.now(), contexts = /* @__PURE__ */ new Map();
+      for (const gap of input.passports.gaps || []) w.gap(gap);
+      if (!input.sources.length) w.gap({ kind: "no-indexed-source", detail: "Fetch repositories or build service passports, then refresh data_index. Only cached database definitions are available." });
+      if (!input.cats.length) w.gap({ kind: "no-cached-database", detail: "catalog_sync pg is needed to resolve exact database tables and columns." });
+      const raw = (type) => db.prepare("SELECT r.payload FROM raw_edges r JOIN active_segments a ON a.id=r.segment").iterate();
+      for (const row of raw()) {
+        const r = JSON.parse(row.payload);
+        if (r.type === "context") contexts.set(r.indexKey, r);
+      }
+      for (let round = 0; round < 8; round++) for (const ctx of contexts.values()) if (!ctx.dbs?.length) {
+        const parents = [...contexts.values()].filter((p) => (p.libs || []).some((l) => l.index === ctx.indexKey || l.index === ctx.repo));
+        const dbs = [...new Set(parents.flatMap((p) => p.dbs || []))];
+        if (dbs.length) ctx.dbs = dbs;
+      }
+      const candidates = (legacy, origin, kind) => {
+        if (typeof legacy !== "string" || !legacy) return [];
+        let rows = db.prepare("SELECT n.payload FROM nodes n JOIN active_segments a ON a.id=n.segment WHERE n.symbol=? OR n.legacy=?").all(legacy, legacy).map((x) => JSON.parse(x.payload));
+        if (kind) rows = rows.filter((n) => n.kind === kind);
+        const local = rows.filter((n) => n.indexKey === origin);
+        if (local.length) return local;
+        const allowed = new Set((contexts.get(origin)?.libs || []).map((l) => l.index));
+        return rows.filter((n) => allowed.has(n.indexKey) || allowed.has(n.repo));
+      };
+      const node = (id) => S.getNode(db, id);
+      const data = (kind, name, r = {}) => {
+        const n = ID.norm(name), qualified = n.includes(".");
+        let rows = db.prepare(`SELECT n.payload FROM nodes n JOIN active_segments a ON a.id=n.segment WHERE n.kind=? AND ${qualified ? "n.object=?" : "n.leaf=?"}`).all(kind, n).map((x) => JSON.parse(x.payload));
+        if (!qualified) rows = rows.filter((n2) => n2.object.split(".").at(-1) === ID.norm(name));
+        const dbs = r.db ? [r.db] : contexts.get(r.indexKey)?.dbs || [];
+        if (dbs.length) rows = rows.filter((n2) => dbs.includes(n2.db) || dbs.includes(input.cats.find((c) => c.db === n2.db)?.database));
+        return rows;
+      };
+      const emitData = (src, kind, name, access, r, extra = {}) => {
+        const targets = data(kind, name, r), candidate = targets.length !== 1;
+        if (!targets.length) w.gap({ kind: "unresolved-database-object", name, repo: r.repo, db: r.db, file: r.file, line: r.line });
+        if (candidate && targets.length) w.gap({ kind: "ambiguous-database-object", name, repo: r.repo, candidates: targets.map((n) => n.id) });
+        for (const t of targets) w.edge({ src, dst: t.id, relation: extra.relation || "access", access, proof: extra.proof || "sql", ...location(r.file, r.line), repo: r.repo, revision: r.revision, evidenceSource: evidenceSource(r), source: r.source || "code", candidate, ...extra });
+        return targets;
+      };
+      function inherits(c, base, seen = /* @__PURE__ */ new Set()) {
+        if (c.symbol === base) return true;
+        if (seen.has(c.id) || seen.size >= 32) return false;
+        seen.add(c.id);
+        return [...c.ext || [], ...c.impl || []].some((s) => s === base || candidates(s, c.indexKey, "class").some((parent) => inherits(parent, base, seen)));
+      }
+      function receiverFields(cls, field, origin, seen = /* @__PURE__ */ new Set()) {
+        const own = candidates(`${cls}.${field}`, origin, "field");
+        if (own.length) return own;
+        if (seen.has(cls) || seen.size >= 32) return [];
+        seen.add(cls);
+        return candidates(cls, origin, "class").flatMap((c) => [...c.ext || [], ...c.impl || []].flatMap((parent) => receiverFields(parent, field, c.indexKey, seen)));
+      }
+      function method(legacy, r, arity, types, seen = /* @__PURE__ */ new Set()) {
+        let found = candidates(legacy, r.indexKey);
+        const [cls, name] = legacy.split("#");
+        if (!found.length && name && !seen.has(cls)) {
+          seen.add(cls);
+          for (const c of candidates(cls, r.indexKey, "class")) for (const base of [...c.ext || [], ...c.impl || []]) found.push(...method(`${base}#${name}`, { ...r, indexKey: c.indexKey }, arity, types, seen));
+        }
+        if (arity !== void 0) {
+          const exact = found.filter((n) => n.kind === "method" && n.params?.length === arity);
+          if (exact.length) found = exact;
+        }
+        if (types?.length && types.every(Boolean)) {
+          const exact = found.filter((n) => n.params?.every((p, i) => String(p.type).split(".").at(-1) === String(types[i]).split(".").at(-1)));
+          if (exact.length) found = exact;
+        }
+        if (found.length) return found;
+        if (name) for (const c of candidates(cls, r.indexKey, "class")) {
+          const accessor2 = name.match(/^(get|set|is)([A-Z][\w$]*)$/), field = accessor2 && candidates(`${cls}.${accessor2[2][0].toLowerCase() + accessor2[2].slice(1)}`, c.indexKey, "field")[0];
+          const generated = field && !c.unsupportedAccessors && (accessor2[1] === "set" ? !field.final && (c.lombok?.some((a) => ["Data", "Setter"].includes(a)) || field.annos?.includes("Setter")) : c.lombok?.some((a) => ["Data", "Getter", "Value"].includes(a)) || field.annos?.includes("Getter"));
+          if (c.role === "repository" || generated) {
+            const symbol = `${cls}#${name}(${Array.from({ length: arity || 0 }, () => "?").join(",")})`, id = ID.code(c.indexKey, c.revision, symbol);
+            const n = { ...c, id, kind: "method", symbol, legacy, signature: symbol.split("#")[1], classSymbol: cls, name: `${c.name}#${name}`, generated: true, params: Array.from({ length: arity || 0 }, () => ({ type: "?" })) };
+            w.node(n);
+            found.push(n);
+          }
+        }
+        return found;
+      }
+      const entities = /* @__PURE__ */ new Map(), repositories = [];
+      for (const row of raw()) {
+        E.check();
+        const r = JSON.parse(row.payload);
+        if (r.type === "entity") {
+          const cs = candidates(r.classSymbol, r.indexKey, "class");
+          for (const c of cs) {
+            const ts = emitData(c.id, "table", r.table, "mapping", r, { relation: "entity", proof: "orm-mapping" });
+            entities.set(c.id, ts);
+          }
+        }
+        if (r.type === "repository") repositories.push(r);
+        if (r.type === "column-map") for (const f of candidates(r.symbol, r.indexKey, "field")) emitData(f.id, "column", `${r.table}.${r.column}`, "mapping", r, { relation: "maps-column", proof: "orm-mapping" });
+      }
+      for (const row of raw()) {
+        const r = JSON.parse(row.payload);
+        if (r.type !== "inherited-column-map") continue;
+        for (const [entityId, tables] of entities) {
+          const entity = node(entityId);
+          if (!entity || !inherits(entity, r.classSymbol)) continue;
+          for (const f of candidates(r.symbol, entity.indexKey, "field")) for (const table2 of tables) emitData(f.id, "column", `${table2.object}.${r.column}`, "mapping", { ...r, db: table2.db }, { relation: "maps-column", proof: "inherited-orm-mapping", candidate: true });
+        }
+      }
+      const repoEntities = /* @__PURE__ */ new Map();
+      for (const r of repositories) {
+        const cs = candidates(r.classSymbol, r.indexKey, "class");
+        const es = r.entity ? db.prepare("SELECT n.payload FROM nodes n JOIN active_segments a ON a.id=n.segment WHERE n.kind='class' AND (n.legacy=? OR n.name=?)").all(r.entity, r.entity).map((x) => JSON.parse(x.payload)).filter((n) => n.indexKey === r.indexKey || (contexts.get(r.indexKey)?.libs || []).some((l) => l.index === n.indexKey || l.index === n.repo)) : [];
+        for (const c of cs) if (es.length === 1 && entities.has(es[0].id)) {
+          repoEntities.set(c.id, { entity: es[0], tables: entities.get(es[0].id) });
+          w.edge({ src: c.id, dst: es[0].id, relation: "repository-entity", proof: "orm-mapping" });
+        } else w.gap({ kind: "unresolved-repository-entity", repo: r.repo, class: r.classSymbol, entity: r.entity });
+      }
+      db.prepare("INSERT OR IGNORE INTO active_segments VALUES (?)").run(segment);
+      const accessor = (n, r) => {
+        const match = n.legacy?.match(/#(get|set|is)([A-Z][\w$]*)$/);
+        if (!match || !n.generated) return;
+        const field = match[2][0].toLowerCase() + match[2].slice(1);
+        for (const f of candidates(`${n.classSymbol}.${field}`, n.indexKey, "field")) w.edge({ src: n.id, dst: f.id, relation: match[1] === "set" ? "object-write" : "object-read", access: match[1] === "set" ? "object-write" : "object-read", proof: n.generated ? "generated-accessor" : "accessor", repo: r.repo || n.repo, evidenceSource: evidenceSource(r), ...location(r.file, r.line), persistenceVerified: false });
+      };
+      const operation = (n, r) => {
+        if (n.kind !== "method" || !n.classSymbol) return;
+        const c = candidates(n.classSymbol, n.indexKey, "class")[0], entity = c && repoEntities.get(c.id);
+        if (!entity) return;
+        const name = n.legacy.split("#")[1];
+        const access = /^(save|delete|remove|insert|update|flush)/.test(name) ? "write" : /^(find|read|get|query|search|stream|count|exists)/.test(name) ? "read" : null;
+        if (!access) return;
+        if (n.annos?.some((a) => ["Query", "Procedure", "Modifying"].includes(a))) return;
+        for (const t of entity.tables) {
+          w.edge({ src: n.id, dst: t.id, relation: "repository-operation", access, proof: "orm-operation", candidate: true, repo: r.repo || n.repo, evidenceSource: evidenceSource(r), ...location(r.file, r.line), note: "Generated persistence operation; exact selected/dirty columns require runtime verification." });
+          for (const row of db.prepare("SELECT n.payload FROM nodes n JOIN active_segments a ON a.id=n.segment WHERE n.kind='column' AND n.parent=?").iterate(t.id)) {
+            const column = JSON.parse(row.payload);
+            w.edge({ src: n.id, dst: column.id, relation: "repository-operation", access, proof: "orm-operation", candidate: true, repo: r.repo || n.repo, evidenceSource: evidenceSource(r), ...location(r.file, r.line), note: "Entity columns are candidates; projections, dirty checking, converters and callbacks are not evaluated." });
+          }
+          const criteria = name.split("By")[1]?.split("OrderBy")[0];
+          if (criteria) for (const property of criteria.split(/And|Or/).map((p) => p.replace(/(?:IsNotNull|IsNull|NotNull|Null|GreaterThanEqual|LessThanEqual|GreaterThan|LessThan|Between|StartingWith|EndingWith|Containing|IgnoreCase|Equals|Like|NotIn|In|True|False|Not|Is)$/, ""))) {
+            const field = property[0]?.toLowerCase() + property.slice(1), fs4 = candidates(`${entity.entity.symbol}.${field}`, entity.entity.indexKey, "field");
+            for (const f of fs4) for (const row of db.prepare("SELECT e.payload FROM edges e JOIN active_segments a ON a.id=e.segment WHERE e.src=? AND e.relation='maps-column'").iterate(f.id)) {
+              const mapping = JSON.parse(row.payload);
+              w.edge({ src: n.id, dst: mapping.dst, relation: "derived-query-predicate", access: "predicate", proof: "derived-property", candidate: true, repo: r.repo || n.repo, evidenceSource: evidenceSource(r), ...location(r.file, r.line), note: "Spring Data property-name derivation; custom implementations and query lookup configuration require verification." });
+            }
+          }
+        }
+      };
+      const ports = [];
+      function jpql(r) {
+        if (r.source === "database") return;
+        const replacements = [], properties = /* @__PURE__ */ new Map();
+        for (const m of r.sql.matchAll(/\b(from|join|update|into)\s+([\w.]+)(?:\s+(?:as\s+)?(\w+))?/gi)) {
+          if (!/[A-Z]/.test(m[2])) continue;
+          const rows = db.prepare("SELECT n.payload FROM nodes n JOIN active_segments a ON a.id=n.segment WHERE n.kind='class' AND (n.symbol=? OR n.name=?)").all(m[2], m[2]).map((x) => JSON.parse(x.payload)).filter((n) => entities.has(n.id) && (n.indexKey === r.indexKey || (contexts.get(r.indexKey)?.libs || []).some((l) => l.index === n.indexKey || l.index === n.repo)));
+          if (rows.length !== 1) continue;
+          const c = rows[0], tables = entities.get(c.id);
+          if (tables.length !== 1) continue;
+          const at = m.index + m[0].indexOf(m[2]);
+          replacements.push({ at, end: at + m[2].length, text: tables[0].object });
+          for (const row of db.prepare("SELECT n.payload FROM nodes n JOIN active_segments a ON a.id=n.segment WHERE n.kind='field' AND json_extract(n.payload,'$.classSymbol')=? AND n.repo=?").iterate(c.symbol, c.repo)) {
+            const f = JSON.parse(row.payload), mapping = db.prepare("SELECT e.dst FROM edges e JOIN active_segments a ON a.id=e.segment WHERE e.src=? AND e.relation='maps-column' LIMIT 2").all(f.id);
+            if (mapping.length === 1) {
+              const target = node(mapping[0].dst);
+              if (target) properties.set(f.field, target.object.slice(tables[0].object.length + 1));
+            }
+          }
+        }
+        if (!replacements.length) return;
+        for (const t of require_column_lineage().tokens(r.sql)) if (!t.literal && !t.quoted && properties.has(t.text)) replacements.push({ at: t.at, end: t.at + t.text.length, text: properties.get(t.text) });
+        for (const replacement of replacements.sort((a, b) => b.at - a.at)) r.sql = r.sql.slice(0, replacement.at) + replacement.text + r.sql.slice(replacement.end);
+        r.jpql = true;
+      }
+      for (const row of raw()) {
+        E.check();
+        const r = JSON.parse(row.payload);
+        if (r.type === "receiver-call") {
+          const fields = receiverFields(r.owner, r.receiver, r.indexKey);
+          if (fields.length !== 1 || !fields[0].resolvedType) {
+            w.gap({ kind: "unresolved-inherited-receiver", repo: r.repo, file: r.file, line: r.line, receiver: r.receiver });
+            continue;
+          }
+          r.type = "edge";
+          r.to = fields[0].resolvedType.replace(/^ext:/, "") + "#" + r.method;
+        }
+        if (r.type === "field-access") for (const f of candidates(r.field, r.indexKey, "field")) w.edge({ src: r.node, dst: f.id, relation: r.access, access: r.access, proof: "source-field", repo: r.repo, evidenceSource: evidenceSource(r), ...location(r.file, r.line), persistenceVerified: false });
+        else if (r.type === "edge") {
+          if (/^(endpoint|topic|es|table|column|pgfn):/.test(r.from) || /^(endpoint|topic|es|table|column|pgfn):/.test(r.to)) continue;
+          if (["entity", "column", "repository"].includes(r.relation)) continue;
+          const from = method(r.from, r), to = method(r.to.replace(/^ext:/, ""), r, r.arity, r.types);
+          if (!from.length || !to.length) {
+            if (r.relation === "calls" && !/^(java\.|javax\.|jakarta\.|org\.springframework\.|org\.apache\.kafka\.|org\.elasticsearch\.)/.test(r.to.replace(/^ext:/, ""))) w.gap({ kind: "unresolved-call", repo: r.repo, from: r.from, to: r.to, ...location(r.file, r.line) });
+            continue;
+          }
+          for (const a of from) for (const b of to) {
+            const object = ["reads", "writes"].includes(r.relation);
+            w.edge({ src: a.id, dst: b.id, relation: object ? r.relation === "writes" ? "object-write" : "object-read" : r.relation, access: object ? r.relation === "writes" ? "object-write" : "object-read" : void 0, proof: "source", candidate: from.length > 1 || to.length > 1, ...location(r.file, r.line), repo: r.repo, revision: r.revision, evidenceSource: evidenceSource(r), persistenceVerified: object ? false : void 0 });
+            accessor(b, r);
+            operation(b, r);
+          }
+        } else if (r.type === "sql") {
+          if (r.mybatis && r.namespace && r.mapperMethod) {
+            const bound = method(`${r.namespace}#${r.mapperMethod}`, r);
+            if (bound.length === 1) r.node = bound[0].id;
+            else w.gap({ kind: "mybatis-method-unresolved", repo: r.repo, file: r.file, line: r.line, namespace: r.namespace, method: r.mapperMethod });
+          }
+          jpql(r);
+          const wanted = r.db ? [r.db] : contexts.get(r.indexKey)?.dbs || [];
+          const relations = /* @__PURE__ */ new Map();
+          for (const ref of [...X.sqlRefs(r.sql).filter((x) => x.access !== "function").map((x) => x.table), ...r.triggerTables || []]) for (const table2 of data("table", ref, r)) relations.set(table2.id, table2);
+          const maxColumns = columnLimit();
+          const cats = [...new Set([...relations.values()].map((t) => t.db))].filter((db2) => !wanted.length || wanted.includes(db2) || wanted.includes(input.cats.find((c) => c.db === db2)?.database)).map((database) => ({ db: database, tables: [...relations.values()].filter((t) => t.db === database).map((t) => {
+            const columns = db.prepare("SELECT n.payload FROM nodes n JOIN active_segments a ON a.id=n.segment WHERE n.kind='column' AND n.parent=? LIMIT ?").all(t.id, maxColumns + 1).map((row2) => JSON.parse(row2.payload));
+            if (columns.length > maxColumns) w.gap({ kind: "sql-column-budget", table: t.id, limit: maxColumns, note: "Raise DT_DATA_INDEX_COLUMNS_PER_TABLE for this estate." });
+            const parts = t.object.split(".");
+            return { schema: parts[0], name: parts.slice(1).join("."), columns: columns.slice(0, maxColumns).map((c) => ({ name: c.object.slice(t.object.length + 1) })) };
+          }) }));
+          if (!cats.length && /\bexecute\b/i.test(r.sql)) w.gap({ kind: "dynamic-sql", repo: r.repo, file: r.file, line: r.line });
+          for (const ref of X.sqlRefs(r.sql)) if (ref.access !== "function") emitData(r.node, "table", ref.table, ref.access, r, r.jpql ? { proof: "jpql-mapping", candidate: true } : {});
+          for (const name of /* @__PURE__ */ new Set([...X.sqlCalls(r.sql), ...[...r.sql.matchAll(/\bcall\s+([\w.]+)/gi)].map((m) => m[1])])) emitData(r.node, "pgfn", name, "call", r, { relation: "calls-function" });
+          for (const cat of cats) {
+            const result = require_column_lineage().analyze(r.sql, cat, { schema: r.schema, triggerTables: r.triggerTables });
+            for (const h of result.hits) emitData(r.node, "column", `${h.table}.${h.column}`, h.access, { ...r, db: cat.db, line: r.line + (r.lineMapping === "literal-start" ? 0 : h.line - 1) }, { syntax: h.syntax, sqlLine: h.line, locationKind: r.lineMapping === "literal-start" ? "SQL literal start" : "SQL body line", candidate: !!r.dynamic || !!r.jpql || !!h.ambiguous || cats.length > 1 && data("table", h.table, r).length > 1, proof: r.jpql ? "jpql-mapping" : "sql" });
+            for (const gap of result.gaps) w.gap({ ...gap, repo: r.repo, db: cat.db, file: r.file, line: r.line + gap.line - 1 });
+          }
+        } else if (r.type === "rowmapper") {
+          const dbs = contexts.get(r.indexKey)?.dbs || [];
+          const columns = db.prepare("SELECT n.payload FROM nodes n JOIN active_segments a ON a.id=n.segment WHERE n.kind='column' AND n.leaf=? LIMIT 101").all(ID.norm(r.column)).map((row2) => JSON.parse(row2.payload)).filter((n) => !dbs.length || dbs.includes(n.db) || dbs.includes(input.cats.find((c) => c.db === n.db)?.database));
+          for (const c of columns.slice(0, 100)) w.edge({ src: r.node, dst: c.id, relation: "resultset-label", access: "object-read", proof: "row-mapper-label", candidate: true, repo: r.repo, evidenceSource: evidenceSource(r), ...location(r.file, r.line), note: "ResultSet column label; relation/projection/alias binding must be verified against the supplying query." });
+          if (columns.length > 100) w.gap({ kind: "resultset-label-budget", column: r.column, repo: r.repo });
+        } else if (r.type === "access-db") emitData(r.node, r.access === "function" ? "pgfn" : "table", r.name, r.access === "function" ? "call" : r.access, r, { proof: "passport", candidate: true, note: "Service-level passport finding; method-specific reachability requires indexed source." });
+        else if (r.type === "dbcall") emitData(r.node, "pgfn", r.name, "call", r, { relation: "calls-function" });
+        else if (r.type === "trigger") for (const table2 of data("table", r.table, r)) for (const fn of data("pgfn", r.function, r)) w.edge({ src: table2.id, dst: fn.id, relation: "trigger", proof: "database-trigger", candidate: true, access: "write-trigger", note: r.definition, condition: "Only the trigger event, timing and enabled state can activate this path." });
+        else if (r.type === "port") ports.push(r);
+      }
+      for (const row of db.prepare("SELECT n.payload FROM nodes n JOIN active_segments a ON a.id=n.segment WHERE n.kind='method'").iterate()) {
+        const n = JSON.parse(row.payload);
+        accessor(n, n);
+      }
+      const methods = (c) => db.prepare("SELECT n.payload FROM nodes n JOIN active_segments a ON a.id=n.segment WHERE n.kind='method' AND n.parent=? AND json_extract(n.payload,'$.indexKey')=?").all(c.symbol, c.indexKey).map((r) => JSON.parse(r.payload));
+      for (const row of db.prepare("SELECT n.payload FROM nodes n JOIN active_segments a ON a.id=n.segment WHERE n.kind='class'").iterate()) {
+        const c = JSON.parse(row.payload);
+        if (!(c.ext?.length || c.impl?.length)) continue;
+        const own = methods(c);
+        for (const parentName of [...c.ext || [], ...c.impl || []]) for (const parent of candidates(parentName, c.indexKey, "class")) for (const base of methods(parent)) {
+          if (base.mods?.some((m) => ["static", "private", "final"].includes(m))) continue;
+          const erased = (t) => String(t).replace(/<.*>/, "").split(".").at(-1);
+          for (const override of own.filter((m) => m.legacy.split("#")[1] === base.legacy.split("#")[1] && m.params?.length === base.params?.length && base.params.every((p, i) => /^[A-Z]$/.test(p.type) || erased(p.type) === erased(m.params[i].type)))) w.edge({ src: base.id, dst: override.id, relation: "dispatch", proof: "source-override", candidate: true, receiver: c.symbol, service: c.service, repo: c.repo, ...location(c.file, override.line), condition: `The concrete receiver must select ${c.symbol}; generic/bean dispatch requires verification.` });
+        }
+      }
+      const httpNodes = /* @__PURE__ */ new Map();
+      for (const p of ports) {
+        const owner = contexts.get(p.indexKey), service = p.service || owner?.service;
+        if (p.kind.startsWith("http")) {
+          if (!p.method || !p.path) continue;
+          if (/\$\{|#\{/.test(p.path)) {
+            w.gap({ kind: "dynamic-http-route", repo: p.repo, file: p.file, line: p.line });
+            continue;
+          }
+          const target = p.kind === "http-ingress" ? service : p.client;
+          if (target && !/^[?$]/.test(target) && !p.inheritedOnly) {
+            const id = `http:${encodeURIComponent(input.env)}:${encodeURIComponent(target)}:${p.method}:${normRoute(p.path)}`;
+            if (p.kind === "http-ingress" || !httpNodes.has(id)) {
+              w.node({ id, kind: "endpoint", name: `${p.method} ${p.path}`, service: target, env: input.env, route: p.path, method: p.method, repo: p.repo, revision: p.revision, revisionKey: p.revisionKey, sourceDigest: p.sourceDigest, sha: p.sha, ...location(p.file, p.line) });
+              httpNodes.set(id, p.kind);
+            }
+            w.edge({ src: p.kind === "http-ingress" ? id : p.node, dst: p.kind === "http-ingress" ? p.node : id, relation: p.kind, proof: p.source === "passport" ? "passport-route" : "source-route", candidate: !!p.candidate, ...location(p.file, p.line), repo: p.repo });
+          } else if (service && !p.inheritedOnly) w.gap({ kind: "http-service-unknown", repo: p.repo, file: p.file, line: p.line });
+          if (p.kind === "http-ingress" && (!service || p.inheritedOnly)) {
+            const methodNode = node(p.node), className = methodNode?.classSymbol;
+            for (const row of db.prepare("SELECT n.payload FROM nodes n JOIN active_segments a ON a.id=n.segment WHERE n.kind='class'").iterate()) {
+              const c = JSON.parse(row.payload);
+              if (!c.service || !c.annos?.some((a) => ["RestController", "Controller"].includes(a)) || !inherits(c, className)) continue;
+              const route = c.routePrefixes?.some(Boolean) ? ("/" + c.routePrefixes[0] + "/" + (p.methodPath || p.path)).replace(/\/+/g, "/") : p.path;
+              const inherited = `http:${encodeURIComponent(input.env)}:${encodeURIComponent(c.service)}:${p.method}:${normRoute(route)}`;
+              w.node({ id: inherited, kind: "endpoint", name: `${p.method} ${route}`, service: c.service, env: input.env, repo: p.repo, revision: p.revision, revisionKey: p.revisionKey, sourceDigest: p.sourceDigest, sha: p.sha, inheritedFrom: p.repo, registration: { repo: c.repo, file: c.file, line: c.line, revision: c.revision, revisionKey: c.revisionKey }, ...location(p.file, p.line) });
+              httpNodes.set(inherited, "http-ingress");
+              w.edge({ src: inherited, dst: p.node, relation: "inherited-http-ingress", proof: "source-inheritance", candidate: true, note: "Spring registration/bean selection requires runtime verification.", repo: c.repo, ...location(p.file, p.line) });
+            }
+          }
+        } else if (p.kind.startsWith("kafka")) {
+          if (!p.topic || /^[?(]|\$\{|#\{/.test(p.topic) || p.pattern) {
+            w.gap({ kind: "dynamic-kafka-topic", repo: p.repo, file: p.file, line: p.line });
+            continue;
+          }
+          const cluster = p.cluster || `unknown@${p.indexKey}`, id = `topic:${encodeURIComponent(input.env)}:${encodeURIComponent(cluster)}:${encodeURIComponent(p.topic)}`;
+          w.node({ id, kind: "topic", name: p.topic, topic: p.topic, cluster: p.cluster || null, env: input.env });
+          w.edge({ src: p.kind === "kafka-consume" ? id : p.node, dst: p.kind === "kafka-consume" ? p.node : id, relation: p.kind, access: p.kind === "kafka-consume" ? "read" : "write", proof: "source-topic", candidate: !p.cluster || p.profiled, repo: p.repo, ...location(p.file, p.line), note: "Topic routing does not prove payload field equivalence, runtime profile activation or delivery." });
+          if (!p.cluster) w.gap({ kind: "kafka-cluster-unknown", repo: p.repo, topic: p.topic, note: "Unknown clusters are kept separate; add a reviewed link to cross them." });
+        } else if (p.kind === "es" && p.index && !/^[?(]|\$\{|#\{/.test(p.index)) {
+          const id = `es:${encodeURIComponent(input.env)}:${encodeURIComponent(p.cluster || "unknown@" + p.indexKey)}:${encodeURIComponent(p.index)}`;
+          w.node({ id, kind: "es", name: p.index, index: p.index, cluster: p.cluster || null, env: input.env });
+          w.edge({ src: p.node, dst: id, relation: "elasticsearch", access: p.access, proof: "source-index", candidate: p.access === "mapping" || !p.cluster, repo: p.repo, ...location(p.file, p.line), note: "Index access; document/field mappings and delivery need verification." });
+          if (!p.cluster) w.gap({ kind: "elasticsearch-cluster-unknown", repo: p.repo, index: p.index, note: "Unknown ES clusters are scoped to the source repository." });
+        }
+      }
+      for (const l of input.rules.links || []) {
+        if (!node(l.from) || !node(l.to)) {
+          w.gap({ kind: "reviewed-link-unresolved", from: l.from, to: l.to, evidence: l.evidence });
+          continue;
+        }
+        w.edge({ src: l.from, dst: l.to, relation: l.relation || "reviewed-mapping", access: l.access || "mapping", proof: "declared", evidence: l.evidence, candidate: false, note: "Reviewed declaration, not observed execution." });
+      }
+      return { ...w.stats(), ms: Date.now() - started };
+    }
+    async function build(args = {}) {
+      const started = Date.now(), life = require_state_machine2().create(require_lifecycles().publication);
+      let input = await inputs(args, { materialize: true }), cold = 0;
+      require_tool_events().progress("discovered", { sources: input.sources.length, cold: input.raw.length, databases: input.cats.length });
+      for (const source of input.raw) {
+        E.check();
+        const sha = require("node:child_process").spawnSync("git", ["rev-parse", "HEAD"], { cwd: source.root, encoding: "utf8", timeout: 3e3 }).stdout?.trim();
+        CI.build(source.root, source.key, { repo: source.repo, sha: /^[a-f0-9]{40}$/.test(sha || "") ? sha : void 0, workspace: source.workspace });
+        cold++;
+      }
+      if (cold) input = await inputs(args, { materialize: true });
+      const db = S.open(input.env, true), segments = [], stats = { sources: [], databases: [], reused: 0, cold, aliases: input.rules.aliases, rulesRevision: input.rules.revision };
+      life.to("staging");
+      const ensure = (id, kind, source, run) => {
+        E.check();
+        segments.push(id);
+        const previous = db.prepare("SELECT stats FROM segments WHERE id=?").get(id);
+        if (previous) {
+          stats.reused++;
+          return { ...JSON.parse(previous.stats), reused: true };
+        }
+        db.exec("BEGIN IMMEDIATE");
+        try {
+          const result = run();
+          E.check();
+          db.prepare("INSERT INTO segments VALUES (?,?,?,?,?)").run(id, kind, source, (/* @__PURE__ */ new Date()).toISOString(), JSON.stringify(result));
+          db.exec("COMMIT");
+          return result;
+        } catch (error) {
+          db.exec("ROLLBACK");
+          throw error;
+        }
+      };
+      try {
+        const keys = input.sources.map((s) => s.canonical), libraryKeys = new Set(keys.flatMap((k) => (CI.metadata(k)?.libs || []).map((l) => l.index)));
+        for (const source of input.sources) {
+          const segment = S.hash([FORMAT, "source", source]);
+          stats.sources.push(ensure(segment, "source", source.canonical, () => {
+            const idx = CI.load(source.canonical);
+            if (!idx) throw S.invalid("Code index is invalid: " + source.canonical);
+            return repoSegment(db, segment, idx, source.key, libraryKeys.has(source.canonical) || libraryKeys.has(source.key), input.env);
+          }));
+          CI.release(source.canonical);
+          require_tool_events().progress("source", { source: source.key, current: stats.sources.length, total: input.sources.length, stats: stats.sources.at(-1) });
+        }
+        const services = new Set(stats.sources.map((s) => s.service));
+        for (const row of input.passports.rows) if ((!row.passport.env || row.passport.env === input.env) && !services.has(row.passport.service)) {
+          const segment = S.hash([FORMAT, "passport", row.digest]);
+          ensure(segment, "passport", row.passport.service, () => passportSegment(db, segment, row.passport, input.env));
+        }
+        for (const cat of input.cats) {
+          const segment = S.hash([FORMAT, "db", input.catalog.find((c) => c[0] === cat.db)]);
+          stats.databases.push(ensure(segment, "database", cat.db, () => dbSegment(db, segment, cat, input.env)));
+          require_tool_events().progress("database", { database: cat.db, current: stats.databases.length, total: input.cats.length });
+        }
+        db.exec("CREATE TEMP TABLE IF NOT EXISTS active_segments(id TEXT PRIMARY KEY) WITHOUT ROWID; DELETE FROM active_segments;");
+        const add = db.prepare("INSERT OR IGNORE INTO active_segments VALUES (?)");
+        for (const s of segments) add.run(s);
+        const links = S.hash([FORMAT, "links", input.signature]);
+        stats.links = ensure(links, "links", input.signature, () => bindSegment(db, links, input, segments));
+        const current = await inputs(args);
+        if (current.signature !== input.signature) throw S.invalid("Sources changed during indexing; previous generation retained. Retry after indexing/checkouts settle.");
+        E.check();
+        life.to("verified");
+        const generation = S.hash([FORMAT, input.selection, input.signature, segments]);
+        stats.ms = Date.now() - started;
+        db.exec("BEGIN IMMEDIATE");
+        try {
+          db.prepare("INSERT OR IGNORE INTO generations VALUES (?,?,?,?,?)").run(generation, input.selection, input.signature, (/* @__PURE__ */ new Date()).toISOString(), JSON.stringify(stats));
+          const put = db.prepare("INSERT OR IGNORE INTO generation_segments VALUES (?,?)");
+          for (const s of segments) put.run(generation, s);
+          db.exec("COMMIT");
+        } catch (error) {
+          db.exec("ROLLBACK");
+          throw error;
+        }
+        life.to("committed");
+        life.to("published");
+        require_tool_events().progress("published", { generation, ms: stats.ms });
+        return { protocol: "dt.data-index/v1", env: input.env, generation, signature: input.signature, state: "ready", stats };
+      } catch (error) {
+        if (!life.terminal) life.to("aborted");
+        throw error;
+      } finally {
+        db.close();
+      }
+    }
+    module2.exports = { inputs, build, settings, FORMAT };
+  }
+});
+
+// lib/data-lineage-engine.js
+var require_data_lineage_engine = __commonJS({
+  "lib/data-lineage-engine.js"(exports2, module2) {
+    var B = require_data_lineage_build();
+    var S = require_data_lineage_store();
+    var ID = require_semantic_identity();
+    var coverage = { exhaustive: false, source: "cached-source-and-catalog", proof: "static-access-and-call-reachability", runtime: "unknown", valueFlow: "not-proven", unknowns: ["dynamic SQL", "reflection/generated mappers", "ORM dirty checking and projections", "message payload field equivalence", "unfetched repositories"] };
+    async function status(args = {}) {
+      const input = await B.inputs(args), db = S.open(input.env);
+      try {
+        const g = db && S.latest(db, input.selection, args.generation);
+        return { protocol: "dt.data-index/v1", env: input.env, selection: input.selection, signature: input.signature, generation: g?.id || null, at: g?.at || null, state: !g ? "missing" : g.signature === input.signature ? "ready" : "stale", sources: input.sources.length, unindexed: input.raw.map((s) => s.key).slice(0, 50), stats: g?.stats || null, coverage };
+      } finally {
+        db?.close();
+      }
+    }
+    var brief = (n) => n && Object.fromEntries(["id", "kind", "name", "object", "db", "env", "service", "repo", "indexKey", "revisionKey", "revision", "sourceDigest", "sha", "symbol", "signature", "file", "line", "cluster", "topic", "index", "inheritedFrom", "generated", "test"].filter((k) => n[k] !== void 0).map((k) => [k, n[k]]));
+    function resolve2(db, target, { database, service, limit = 50 } = {}) {
+      target = String(target || "").trim();
+      if (!target || target.length > 2e3) throw S.invalid("Supply a bounded exact data object, entrypoint or symbol");
+      const exact = S.getNode(db, target);
+      if (exact) return { nodes: [exact] };
+      const prefix = target.match(/^(table|column|pgfn|function|fn|topic|kafka|es|endpoint|service|method|class):(.+)$/i);
+      let kind = prefix ? { function: "pgfn", fn: "pgfn", kafka: "topic" }[prefix[1].toLowerCase()] || prefix[1].toLowerCase() : null, name = prefix ? prefix[2].trim() : target;
+      if (kind === "service") {
+        const rows2 = db.prepare("SELECT DISTINCT n.payload FROM nodes n JOIN active_segments a ON a.id=n.segment WHERE n.service=? AND n.kind='endpoint' LIMIT ?").all(name, limit + 1).map((r) => JSON.parse(r.payload));
+        return { nodes: rows2.slice(0, limit), multipleRoots: true, truncated: rows2.length > limit };
+      }
+      let sql, args;
+      if (kind === "endpoint" || /^(GET|POST|PUT|DELETE|PATCH|ANY)\s+\//i.test(name)) {
+        const route = name.match(/^(\w+)\s+(.*)$/);
+        if (!route) return { nodes: [] };
+        const norm = (s) => (s.replace(/\{[^}]*\}|:[\w]+/g, "{}").replace(/\/+$/, "") || "/").split("/");
+        const rows2 = db.prepare("SELECT DISTINCT n.payload FROM nodes n JOIN active_segments a ON a.id=n.segment WHERE n.kind='endpoint'").iterate();
+        const result = [];
+        for (const row of rows2) {
+          const n = JSON.parse(row.payload), method = n.name.slice(0, n.name.indexOf(" ")), have = norm(n.name.slice(n.name.indexOf(" ") + 1)), want = norm(route[2]);
+          if ((!service || n.service === service) && (method === route[1].toUpperCase() || method === "ANY") && have.length === want.length && have.every((s, i) => s === "{}" || want[i] === "{}" || s === want[i])) result.push(n);
+          if (result.length > limit) break;
+        }
+        return { nodes: result.slice(0, limit), ambiguous: result.length > 1, truncated: result.length > limit };
+      }
+      if (!kind || ["table", "column", "pgfn"].includes(kind)) {
+        let dbName = database;
+        const colon = name.indexOf(":");
+        if (colon >= 0) {
+          dbName = name.slice(0, colon);
+          name = name.slice(colon + 1);
+        }
+        const object = ID.norm(name), kinds = kind ? [kind] : object.split(".").length >= 3 ? ["column"] : ["table", "pgfn"];
+        sql = `SELECT DISTINCT n.payload FROM nodes n JOIN active_segments a ON a.id=n.segment WHERE n.kind IN (${kinds.map(() => "?")}) AND ${object.includes(".") ? "n.object=?" : "n.leaf=?"} ${dbName ? "AND n.db=?" : ""} LIMIT ?`;
+        args = [...kinds, object, ...dbName ? [dbName] : [], limit + 1];
+        const rows2 = db.prepare(sql).all(...args).map((r) => JSON.parse(r.payload));
+        if (rows2.length) return { nodes: rows2.slice(0, limit), ambiguous: rows2.length > 1, truncated: rows2.length > limit };
+      }
+      if (["topic", "es"].includes(kind)) {
+        const field = kind === "topic" ? "topic" : "index";
+        const rows2 = db.prepare("SELECT DISTINCT n.payload FROM nodes n JOIN active_segments a ON a.id=n.segment WHERE n.kind=? AND n.name=? LIMIT ?").all(kind, name, limit + 1).map((r) => JSON.parse(r.payload));
+        return { nodes: rows2.slice(0, limit), ambiguous: rows2.length > 1, truncated: rows2.length > limit, identity: field };
+      }
+      const rows = db.prepare("SELECT DISTINCT n.payload FROM nodes n JOIN active_segments a ON a.id=n.segment WHERE (n.id=? OR n.symbol=? OR n.legacy=? OR n.name=?) LIMIT ?").all(target, name, name, name, limit + 1).map((r) => JSON.parse(r.payload));
+      return { nodes: rows.slice(0, limit), ambiguous: rows.length > 1, truncated: rows.length > limit };
+    }
+    var allowed = (edge, args) => args.includeCandidates !== false || !edge.candidate;
+    var traversable = (e) => !["entity", "repository-entity", "extends", "implements"].includes(e.relation);
+    function upstream(db, id, args, { maxNodes = args.maxNodes || 500, maxHops = args.maxHops || 20, deadline = Infinity } = {}) {
+      const queue = [{ id, path: [], requiredService: S.getNode(db, id)?.service || null }], seen = /* @__PURE__ */ new Set([id]), services = /* @__PURE__ */ new Map(), gaps2 = [];
+      let at = 0;
+      while (at < queue.length && seen.size <= maxNodes) {
+        if (performance.now() > deadline) {
+          gaps2.push({ kind: "upstream-time-limit" });
+          break;
+        }
+        require_execution().check();
+        const item = queue[at++], n = S.getNode(db, item.id);
+        if (item.requiredService && n?.service && item.requiredService !== n.service) continue;
+        if (n?.service && !services.has(n.service)) services.set(n.service, { service: n.service, repo: n.repo, revision: n.revision, entry: brief(n), via: item.path.slice(-8) });
+        const edges = S.adjacent(db, item.id, true, 100);
+        if (edges.length > 100) gaps2.push({ kind: "upstream-fanout-limit", at: item.id });
+        if (item.path.length >= maxHops) {
+          if (edges.length) gaps2.push({ kind: "upstream-depth-limit", at: item.id });
+          continue;
+        }
+        for (const e of edges.slice(0, 100)) {
+          if (!allowed(e, args) || !traversable(e) || seen.has(e.src) || ["read", "predicate", "mapping"].includes(e.access)) continue;
+          const requiredService = ["http-egress", "kafka-produce"].includes(e.relation) ? null : e.relation === "dispatch" ? e.service || item.requiredService : item.requiredService;
+          seen.add(e.src);
+          queue.push({ id: e.src, requiredService, path: [...item.path, { from: e.src, to: e.dst, relation: e.relation, proof: e.proof, candidate: !!e.candidate }] });
+          if (seen.size >= maxNodes) break;
+        }
+      }
+      if (at < queue.length) gaps2.push({ kind: "upstream-node-limit" });
+      if (services.size > 30) gaps2.push({ kind: "upstream-service-limit", total: services.size, limit: 30 });
+      return { services: [...services.values()].slice(0, 30), gaps: gaps2 };
+    }
+    function targetTable(db, ns) {
+      db.exec("CREATE TEMP TABLE target_nodes(id TEXT PRIMARY KEY) WITHOUT ROWID;");
+      const put = db.prepare("INSERT OR IGNORE INTO target_nodes VALUES (?)");
+      for (const n of ns) {
+        put.run(n.id);
+        if (n.kind === "table") db.prepare("INSERT OR IGNORE INTO target_nodes SELECT n.id FROM nodes n JOIN active_segments a ON a.id=n.segment WHERE n.kind='column' AND n.parent=?").run(n.id);
+      }
+    }
+    function gaps(db) {
+      const rows = db.prepare("SELECT g.payload FROM gaps g JOIN active_segments a ON a.id=g.segment LIMIT 31").all();
+      return { gaps: rows.slice(0, 30).map((r) => JSON.parse(r.payload)), gapTotal: db.prepare("SELECT count(*) n FROM gaps g JOIN active_segments a ON a.id=g.segment").get().n };
+    }
+    function decode(cursor, query2, generation) {
+      if (!cursor) return { phase: 0, id: 0, map: 0 };
+      try {
+        if (cursor.length > 3e3) throw Error();
+        const c = JSON.parse(Buffer.from(cursor, "base64url"));
+        if (c.query !== query2 || c.generation !== generation || ![0, 1, 2].includes(c.phase) || ![c.id, c.map].every((v) => Number.isSafeInteger(v) && v >= 0)) throw Error();
+        return c;
+      } catch {
+        throw S.invalid("Continuation does not match this retained data query");
+      }
+    }
+    function nameWords(target, args, generation) {
+      const object = target?.object || target?.name || String(args.name).replace(/^(?:table|column|pgfn|function|fn):/, ""), word = object.split(".").at(-1);
+      const aliases = (generation.stats?.aliases || []).filter((a) => a.target === target?.id || a.target === args.name || a.target === object).flatMap((a) => a.names || []);
+      return [...new Set([...aliases, word].map(S.fold))].filter((w) => w.length >= 3).slice(0, 20);
+    }
+    function mentionPage(db, g, args, r) {
+      const words = nameWords(r.nodes[0], args, g), query2 = S.hash([args.name, args.db, args.operation, "mentions"]), cursor = decode(args.cursor, query2, g.id), limit = Math.max(1, Math.min(200, args.limit || 30));
+      if (!words.length) return { operation: args.operation, mode: "mentions", target: args.name, state: "ready", rows: [], total: 0, coverage, ...gaps(db), note: "Name candidate indexing requires at least three normalized characters. Use code_search for shorter names." };
+      const match = words.map((w) => '"' + w.replaceAll('"', '""') + '"').join(" OR "), join = "FROM mention_search f JOIN mentions m ON m.id=f.rowid JOIN active_segments a ON a.id=m.segment WHERE mention_search MATCH ?";
+      const rows = db.prepare("SELECT m.* " + join + " AND m.id>? ORDER BY m.id LIMIT ?").all(match, cursor.id, limit + 1), total = db.prepare("SELECT count(*) n " + join).get(match).n;
+      const selected = rows.slice(0, limit), last = selected.at(-1);
+      return { operation: args.operation, mode: "mentions", target: args.name, state: "ready", resolved: r.nodes.map(brief), rows: selected.map((m) => ({ id: m.id, user: brief(S.getNode(db, m.node)), target: brief(r.nodes[0]) || { name: args.name }, access: "unknown", proof: "substring-candidate", candidate: true, scope: "mention", file: m.file, line: m.line, evidence: m.raw, services: [] })), total, nextCursor: rows.length > limit && last ? Buffer.from(JSON.stringify({ generation: g.id, query: query2, phase: 2, id: last.id, map: 0 })).toString("base64url") : null, coverage, ...gaps(db), note: "Substring/name candidates only. Spelling does not prove a read, write, invocation or value flow." };
+    }
+    function usage(db, g, args) {
+      const r = resolve2(db, args.name, { database: args.db }), base = { operation: args.operation, target: args.name, resolved: r.nodes.map(brief), ...gaps(db), coverage };
+      if (args.mode === "mentions") return mentionPage(db, g, args, r);
+      if (!r.nodes.length || r.ambiguous) return { ...base, state: r.ambiguous ? "ambiguous" : "not-found", candidates: r.nodes.map(brief), candidateTotalAtLeast: r.nodes.length + (r.truncated ? 1 : 0), candidateMore: !!r.truncated, rows: [], total: 0, hint: r.ambiguous ? "Select one canonical id, database, service or repository revision." : "No matching object in the retained index. Inspect data_index coverage or add a reviewed alias." };
+      targetTable(db, r.nodes);
+      const direction = args.operation === "writers" ? "write" : "read", access = direction === "read" ? ["read", "predicate", "selects", "call"] : ["write", "owner", "call"];
+      if (args.includeObjectAccess !== false) access.push(direction === "read" ? "object-read" : "object-write");
+      const query2 = S.hash([args.name, args.db, args.operation, args.includeCandidates !== false, args.includeObjectAccess !== false]);
+      const cursor = decode(args.cursor, query2, g.id), limit = Math.max(1, Math.min(200, args.limit || 30));
+      const candidate = args.includeCandidates === false ? "AND coalesce(json_extract(e.payload,'$.candidate'),0)=0" : "";
+      const topicRead = r.nodes[0].kind === "topic" && direction === "read";
+      const select = `FROM edges e JOIN active_segments a ON a.id=e.segment JOIN target_nodes t ON t.id=e.${topicRead ? "src" : "dst"} WHERE e.access IN (${access.map(() => "?")}) ${candidate}`;
+      const directTotal = db.prepare("SELECT count(*) n " + select).get(...access).n, directObjects = db.prepare("SELECT count(*) n " + select + " AND e.access IN ('object-read','object-write')").get(...access).n;
+      const objectAccess = direction === "read" ? "object-read" : "object-write";
+      const objectSql = `FROM edges e JOIN active_segments a ON a.id=e.segment JOIN edges m ON m.src=e.dst JOIN active_segments b ON b.id=m.segment JOIN target_nodes t ON t.id=m.dst WHERE m.relation='maps-column' AND e.access=? ${candidate} ${args.includeCandidates === false ? "AND coalesce(json_extract(m.payload,'$.candidate'),0)=0" : ""}`;
+      const objectTotal = args.includeObjectAccess === false ? 0 : db.prepare("SELECT count(*) n " + objectSql).get(objectAccess).n;
+      const rows = [], cache = /* @__PURE__ */ new Map(), extraGaps = [], deadline = performance.now() + Math.max(50, Math.min(5e3, args.budgetMs || 1e3));
+      let pageBytes = 0, pageFull = false;
+      const append = (e, target, phase, map = 0) => {
+        const n = S.getNode(db, e.src), t = S.getNode(db, target || e.dst);
+        if (n?.test) return true;
+        if (!cache.has(e.src)) cache.set(e.src, upstream(db, e.src, args, { deadline }));
+        const callers = cache.get(e.src);
+        extraGaps.push(...callers.gaps);
+        const row = { id: e.edgeId, user: brief(n) || { id: e.src, name: e.src }, target: brief(t) || { id: e.dst }, access: e.access, scope: phase || e.access.startsWith("object-") ? "object" : e.access === "call" ? "invocation" : "database-or-boundary", proof: e.proof, candidate: !!e.candidate, file: e.file, line: e.line, evidenceSource: e.evidenceSource, evidence: e.evidence || e.syntax || e.note || e.relation, services: callers.services, persistenceVerified: false, _cursor: { generation: g.id, query: query2, phase, id: e.edgeId, map } };
+        const bytes = () => Buffer.byteLength(JSON.stringify(row));
+        while (bytes() > 262144 && row.services.length > 1) {
+          row.services.pop();
+          row.attributionClipped = true;
+        }
+        if (bytes() > 1048576) throw Object.assign(Error("One evidence identity exceeds the page budget; narrow the source/attribution scope"), { code: "DT_RESULT_TOO_LARGE" });
+        if (pageBytes + bytes() > 1048576 && rows.length) {
+          pageFull = true;
+          return false;
+        }
+        pageBytes += bytes();
+        rows.push(row);
+        return true;
+      };
+      if (cursor.phase === 0) for (const row of db.prepare(`SELECT e.id,e.payload ${select} AND e.id>? ORDER BY e.id LIMIT ?`).iterate(...access, cursor.id, limit + 1)) {
+        const e = JSON.parse(row.payload);
+        if (!append({ ...e, ...topicRead ? { src: e.dst, dst: e.src } : {}, edgeId: row.id }, null, 0) || rows.length > limit) break;
+      }
+      if (!pageFull && rows.length <= limit && args.includeObjectAccess !== false) for (const row of db.prepare(`SELECT e.id,e.payload,m.id mid,m.dst target,m.payload mapping ${objectSql} AND (e.id>? OR (e.id=? AND m.id>?)) ORDER BY e.id,m.id LIMIT ?`).iterate(objectAccess, cursor.phase === 1 ? cursor.id : 0, cursor.phase === 1 ? cursor.id : 0, cursor.phase === 1 ? cursor.map : 0, limit + 1 - rows.length)) {
+        const e = JSON.parse(row.payload), mapping = JSON.parse(row.mapping);
+        if (!append({ ...e, candidate: !!e.candidate || !!mapping.candidate, edgeId: row.id }, row.target, 1, row.mid) || rows.length > limit) break;
+      }
+      const more = pageFull || rows.length > limit, selected = rows.slice(0, limit), last = selected.at(-1)?._cursor;
+      const nextCursor = more && last ? Buffer.from(JSON.stringify(last)).toString("base64url") : null;
+      for (const row of selected) delete row._cursor;
+      const words = nameWords(r.nodes[0], args, g), mentions = [];
+      for (const word of words.slice(0, 20)) {
+        const fts = '"' + word.replaceAll('"', '""') + '"';
+        for (const row of db.prepare("SELECT m.* FROM mention_search f JOIN mentions m ON m.id=f.rowid JOIN active_segments a ON a.id=m.segment WHERE mention_search MATCH ? AND instr(m.folded,?)>0 ORDER BY m.id LIMIT 20").iterate(fts, word)) {
+          const n = S.getNode(db, row.node);
+          mentions.push({ user: brief(n), file: row.file, line: row.line, text: row.raw, proof: "substring-candidate", access: "unknown" });
+        }
+      }
+      const summary = [...new Map(selected.flatMap((r2) => r2.services.map((s) => [s.service, { service: s.service, repo: s.repo, revision: s.revision }]))).values()];
+      return { ...base, state: "ready", direction, rows: selected, total: directTotal + objectTotal, directTotal: directTotal - directObjects, objectTotal: objectTotal + directObjects, nextCursor, pageByteLimit: 1048576, services: summary, servicesScope: "this-page-and-bounded-upstream-callers", mentions: mentions.slice(0, 20), mentionCoverage: "bounded candidates; spelling alone does not prove usage", gaps: [...base.gaps, ...extraGaps].slice(0, 30), traversalComplete: !extraGaps.length, ...!selected.length ? { note: "No detected access in this retained projection. This does not establish absence; inspect gaps and mode=mentions." } : {} };
+    }
+    function trace2(db, g, args) {
+      const from = resolve2(db, args.from, { database: args.db, service: args.service }), to = resolve2(db, args.to, { database: args.db });
+      const base = { operation: "trace", from: args.from, to: args.to, resolved: { from: from.nodes.map(brief), to: to.nodes.map(brief) }, coverage, ...gaps(db) };
+      if (!from.nodes.length || !to.nodes.length || from.ambiguous || to.ambiguous) return { ...base, state: from.ambiguous || to.ambiguous ? "ambiguous" : "not-found", paths: [], candidates: { from: from.nodes.map(brief), to: to.nodes.map(brief) } };
+      const maxHops = Math.max(1, Math.min(80, args.maxHops || 30)), maxNodes = Math.max(10, Math.min(2e4, args.maxNodes || 3e3)), maxPaths = Math.max(1, Math.min(20, args.maxPaths || 5)), timeMs = Math.max(50, Math.min(5e3, args.budgetMs || 1e3)), fanout = Math.max(10, Math.min(1e3, args.fanout || 200));
+      const targets = new Set(to.nodes.map((n) => n.id)), queue = from.nodes.map((n) => ({ id: n.id, nodes: [n.id], edges: [], service: args.service || n.service || null })), paths = [], cut = /* @__PURE__ */ new Set(), started = performance.now(), expanded = /* @__PURE__ */ new Map();
+      let at = 0, visits = 0;
+      while (at < queue.length && paths.length < maxPaths) {
+        require_execution().check();
+        if (performance.now() - started > timeMs) {
+          cut.add("time");
+          break;
+        }
+        const item = queue[at++];
+        if (targets.has(item.id)) {
+          paths.push(item);
+          continue;
+        }
+        if (++visits > maxNodes) {
+          cut.add("nodes");
+          break;
+        }
+        if (item.edges.length >= maxHops) {
+          cut.add("depth");
+          continue;
+        }
+        const seen = expanded.get(item.id) || 0;
+        if (seen >= maxPaths) continue;
+        expanded.set(item.id, seen + 1);
+        const edges = S.adjacent(db, item.id, false, fanout);
+        if (edges.length > fanout) cut.add("fanout");
+        for (const e of edges.slice(0, fanout)) {
+          if (!allowed(e, args) || !traversable(e) || item.nodes.includes(e.dst)) continue;
+          if (e.relation === "trigger" && item.edges.length && item.edges.at(-1).access !== "write") continue;
+          if (e.relation === "dispatch" && item.service && e.service && item.service !== e.service) continue;
+          const n = S.getNode(db, e.dst);
+          if (n?.test) continue;
+          const service = ["http-ingress", "inherited-http-ingress", "kafka-consume"].includes(e.relation) ? n?.service || item.service : item.service;
+          queue.push({ id: e.dst, nodes: [...item.nodes, e.dst], edges: [...item.edges, e], service });
+          if (queue.length >= maxNodes * 2) {
+            cut.add("queue");
+            break;
+          }
+        }
+        if (cut.has("queue")) break;
+      }
+      if (paths.length >= maxPaths && at < queue.length) cut.add("paths");
+      return { ...base, state: "ready", paths: paths.map((p) => ({ nodes: p.nodes.map((id) => brief(S.getNode(db, id)) || { id, name: id }), edges: p.edges.map(({ edgeId, ...e }) => e), proof: p.edges.some((e) => e.candidate) ? "candidate-static-path" : p.edges.some((e) => e.proof === "declared") ? "declared-static-path" : p.edges.some((e) => e.access?.startsWith("object-")) ? "object-mapping-path" : "static-access-path", assumptions: [...new Set(p.edges.flatMap((e) => [e.candidate ? e.note || "Candidate binding requires verification" : null, e.access?.startsWith("object-") ? "Object accessor/mapping does not establish a persisted database write." : null, e.condition].filter(Boolean)))] })), visited: visits, traversalComplete: !cut.size, cutReasons: [...cut], maxHops, maxNodes, maxPaths, ms: performance.now() - started, note: paths.length ? "Call/access topology. This does not prove a value survives every mapping, condition, transaction or message boundary." : "No path found within the selected sources and budgets; this is not proof of no runtime path." };
+    }
+    async function query(args = {}) {
+      const input = await B.inputs(args), db = S.open(input.env);
+      if (!db) {
+        if (args.generation || args.cursor) throw S.invalid("Retained data index generation is unavailable in this scope");
+        return { state: "missing", rows: [], paths: [], coverage };
+      }
+      try {
+        const g = S.latest(db, input.selection, args.generation || cursorGeneration(args.cursor));
+        if (!g) return { state: "missing", rows: [], paths: [], coverage };
+        S.activate(db, g.id);
+        const result = args.operation === "trace" ? trace2(db, g, args) : usage(db, g, { ...args, env: input.env });
+        return { protocol: "dt.data-lineage/v1", env: input.env, generation: g.id, at: g.at, stale: g.signature !== input.signature, ...result };
+      } finally {
+        db.close();
+      }
+    }
+    function cursorGeneration(value) {
+      if (!value) return void 0;
+      try {
+        return JSON.parse(Buffer.from(value, "base64url")).generation;
+      } catch {
+        throw S.invalid("Invalid data query continuation");
+      }
+    }
+    module2.exports = { status, build: B.build, query, resolve: resolve2, brief, coverage };
+  }
+});
+
+// lib/data-lineage.js
+var require_data_lineage = __commonJS({
+  "lib/data-lineage.js"(exports2, module2) {
+    var S = require_data_lineage_store();
+    var rpc = (fn, args, options) => require_isolate().exec("dataLineage", fn, [args], options);
+    function configure(args) {
+      const env = require_config().getEnv(args.env).name, old = require_data_lineage_build().settings(env);
+      if (args.expected_revision !== old.revision) throw Object.assign(Error("Index rules changed; reload data_index status and use its rulesRevision"), { code: "DT_REVISION_CONFLICT", statusCode: 409 });
+      const rules = args.rules;
+      if (!rules || typeof rules !== "object" || Array.isArray(rules) || Object.keys(rules).some((k) => !["aliases", "links"].includes(k))) throw S.invalid("Rules contain aliases and links arrays only");
+      const aliases = rules.aliases || [], links = rules.links || [];
+      if (!Array.isArray(aliases) || !Array.isArray(links) || aliases.length > 200 || links.length > 200) throw S.invalid("At most 200 aliases and 200 reviewed links");
+      const text = (v, n) => typeof v === "string" && v.trim() && v.length <= n && !/[\x00-\x08]/.test(v);
+      for (const a of aliases) if (!a || !text(a.target, 2e3) || !Array.isArray(a.names) || !a.names.length || a.names.length > 20 || a.names.some((n) => !text(n, 200))) throw S.invalid("Each alias needs an exact target and 1\u201320 names");
+      for (const l of links) if (!l || !text(l.from, 2e3) || !text(l.to, 2e3) || !text(l.evidence, 2e3) || l.access && !["read", "write", "mapping"].includes(l.access) || l.relation && !text(l.relation, 100)) throw S.invalid("Each reviewed link needs exact from/to ids and evidence; access is read, write or mapping");
+      const value = { aliases: aliases.map((a) => ({ target: a.target, names: a.names })), links: links.map((l) => ({ from: l.from, to: l.to, evidence: l.evidence, ...l.access ? { access: l.access } : {}, ...l.relation ? { relation: l.relation } : {} })) };
+      const db = S.open(env, true);
+      try {
+        db.exec("BEGIN IMMEDIATE");
+        const scope = require_access().owner().scopeKey, row = db.prepare("SELECT payload FROM index_rules WHERE id=?").get(scope), current = row ? JSON.parse(row.payload) : { aliases: [], links: [] };
+        if (S.hash(current) !== args.expected_revision) throw Object.assign(Error("Index rules changed; reload status"), { code: "DT_REVISION_CONFLICT", statusCode: 409 });
+        db.prepare("INSERT OR REPLACE INTO index_rules VALUES (?,?)").run(scope, JSON.stringify(value));
+        db.exec("COMMIT");
+      } catch (e) {
+        try {
+          db.exec("ROLLBACK");
+        } catch {
+        }
+        throw e;
+      } finally {
+        db.close();
+      }
+      return { state: "configured", env, rulesRevision: S.hash(value), rules: value, note: "Rules are private to this principal/task scope. The next query refreshes the derived index." };
+    }
+    function observe(id, waitMs = 0) {
+      const J = require_jobs(), job = J.find(id);
+      if (!job || !job.key.startsWith("data-index:")) throw Object.assign(Error("Data index job is unavailable in this task"), { code: "DT_ACCESS_DENIED" });
+      require_access().checkEnv(job.key.split(":")[1]);
+      const get = () => ({ protocol: "dt.data-index/v1", state: job.state, job: J.get(id), ...job.result || {}, ...job.error ? { error: job.error } : {} });
+      if (!job.promise || job.state !== "running" || !waitMs) return get();
+      return new Promise((resolve2) => {
+        const timer = setTimeout(() => resolve2(get()), Math.max(0, Math.min(3e4, waitMs)));
+        job.promise.finally(() => {
+          clearTimeout(timer);
+          resolve2(get());
+        });
+      });
+    }
+    function start(status, args, force = false) {
+      const J = require_jobs(), key = `data-index:${status.env}:${status.selection}:${status.signature}`;
+      const inFlight = J.list(100).find((j) => j.key.startsWith(`data-index:${status.env}:${status.selection}:`) && j.state === "running");
+      if (inFlight) return inFlight;
+      const prior = J.list(100).find((j) => j.key === key);
+      if (!force && prior && ["failed", "cancelled"].includes(prior.state)) return prior;
+      let job;
+      job = J.start(key, `Data access index \xB7 ${status.env}`, async (log) => {
+        log(`Indexing ${status.sources} cached source revisions; ${status.unindexed.length} cold repositories.`);
+        const result = await rpc("build", { env: status.env, repos: args.repos }, { onProgress: (p) => {
+          log(`${p.phase}: ${p.source || p.database || ""}${p.current ? ` ${p.current}/${p.total}` : ""}${p.stats?.reused ? " reused" : ""}`);
+          if (job) J.checkpoint(job);
+        } });
+        log(`Published ${result.generation.slice(0, 12)} in ${result.stats.ms} ms; ${result.stats.reused} source/database segments reused.`);
+        return result;
+      });
+      return J.get(job.id);
+    }
+    async function index(args = {}) {
+      if (args.job) return observe(args.job, args.waitMs);
+      if (args.action === "configure") return configure(args);
+      const status = await rpc("status", args), rules = require_data_lineage_build().settings(status.env);
+      if (args.action === "status") {
+        const recent = require_jobs().list(100).find((j) => j.key.startsWith(`data-index:${status.env}:${status.selection}:`)), job2 = recent && (recent.state === "running" || status.state !== "ready" && ["failed", "cancelled"].includes(recent.state)) ? recent : null;
+        return { ...status, indexState: status.state, ...job2 ? { job: job2, state: job2.state === "running" ? "running" : status.state } : {}, rules: { aliases: rules.aliases, links: rules.links }, rulesRevision: rules.revision };
+      }
+      if (status.state === "ready" && args.refresh !== true) return { ...status, rulesRevision: rules.revision };
+      const job = start(status, args, true);
+      return args.waitMs ? observe(job.id, args.waitMs) : { ...status, state: job.state, job, rulesRevision: rules.revision };
+    }
+    async function query(args = {}) {
+      const status = await rpc("status", args), refresh = !args.generation && !args.cursor && status.state !== "ready" ? start(status, args) : null;
+      if (!status.generation && !args.generation && !args.cursor) return { protocol: "dt.data-lineage/v1", env: status.env, operation: args.operation, target: args.name, from: args.from, to: args.to, request: { env: status.env, ...args.repos ? { repos: args.repos } : {} }, state: refresh?.state || "missing", index: status, job: refresh, rows: [], paths: [], coverage: require_data_lineage_engine().coverage, note: refresh?.state === "running" ? "Indexing cached sources in the background. Observe data_index with this job id, then repeat the same query." : `No complete index is available. Index build ${refresh?.state || "has not started"}; inspect the owned job and explicitly call data_index to retry.` };
+      const value = await rpc("query", args);
+      return { ...value, request: Object.fromEntries(["env", "repos", "db", "name", "mode", "from", "to", "service", "includeCandidates", "includeObjectAccess", "limit", "maxHops", "maxNodes", "maxPaths", "fanout", "budgetMs"].filter((k) => args[k] !== void 0).map((k) => [k, args[k]])), index: { state: status.state, generation: value.generation, at: value.at }, ...refresh ? { refreshJob: refresh, note: (refresh.state === "running" ? "Serving the last complete generation while refreshing in the background. " : `Serving the last complete generation. Index refresh ${refresh.state}; explicitly call data_index to retry. `) + (value.note || "") } : {} };
+    }
+    function compact(value, max = 16384) {
+      const budget = max - 512;
+      const out2 = JSON.parse(JSON.stringify(value));
+      if (out2.job) out2.job = { id: out2.job.id, state: out2.job.state, title: out2.job.title, error: out2.job.error, log: out2.job.log?.slice(-6) };
+      if (out2.refreshJob) out2.refreshJob = { id: out2.refreshJob.id, state: out2.refreshJob.state, error: out2.refreshJob.error };
+      out2.returnedRows = out2.rows?.length;
+      out2.returnedPaths = out2.paths?.length;
+      for (const row of out2.rows || []) row.services = (row.services || []).map((s) => ({ service: s.service, repo: s.repo, entry: s.entry?.name }));
+      const bytes = () => Buffer.byteLength(JSON.stringify(out2));
+      for (const key of ["candidates", "resolved"]) {
+        const arrays = Array.isArray(out2[key]) ? [out2[key]] : out2[key] && typeof out2[key] === "object" ? Object.values(out2[key]).filter(Array.isArray) : [];
+        for (const array of arrays) while (bytes() > budget && array.length > 1) {
+          array.pop();
+          out2.previewOmissions = true;
+        }
+      }
+      if (bytes() > budget && out2.mentions) {
+        out2.mentions = [];
+        out2.previewOmissions = true;
+      }
+      if (bytes() > budget && out2.gaps) {
+        out2.gaps = out2.gaps.slice(0, 5);
+        out2.previewOmissions = true;
+      }
+      if (out2.stats && bytes() > budget) {
+        out2.stats = { sources: out2.stats.sources?.length, databases: out2.stats.databases?.length, reused: out2.stats.reused, ms: out2.stats.ms };
+        out2.previewOmissions = true;
+      }
+      if (out2.index?.stats) delete out2.index.stats;
+      while (bytes() > budget && (out2.paths?.length > 1 || out2.rows?.length > 1)) {
+        if (out2.paths?.length > 1) out2.paths.pop();
+        else out2.rows.pop();
+        out2.previewOmissions = true;
+      }
+      if (bytes() > budget && out2.paths?.length) {
+        out2.pathSummary = out2.paths.map((p) => ({ proof: p.proof, steps: p.nodes.length, from: p.nodes[0], to: p.nodes.at(-1), assumptions: p.assumptions.slice(0, 5) }));
+        out2.paths = [];
+        out2.previewOmissions = true;
+      }
+      if (bytes() > budget && out2.rows?.length) {
+        out2.rows = [];
+        out2.previewOmissions = true;
+      }
+      if (bytes() > budget) {
+        out2.gaps = [];
+        out2.rules = void 0;
+        out2.stats = void 0;
+        out2.previewOmissions = true;
+      }
+      if (bytes() > budget) throw Object.assign(Error("Lineage identity exceeds the model result budget; narrow the query or raise max_output_bytes"), { code: "DT_RESULT_TOO_LARGE" });
+      if (out2.previewOmissions) out2.previewNote = "Preview omits evidence. Inspect the retained view or increase max_output_bytes. Pagination continues the retained page.";
+      if (bytes() > max) throw Object.assign(Error("Lineage preview exceeds max_output_bytes"), { code: "DT_RESULT_TOO_LARGE" });
+      return out2;
+    }
+    module2.exports = { index, query, compact };
+  }
+});
+
+// lib/tools-data-lineage.js
+var require_tools_data_lineage = __commonJS({
+  "lib/tools-data-lineage.js"(exports2, module2) {
+    module2.exports = ({ str, int, env }) => {
+      const bounds = { limit: { ...int("Evidence rows per retained page", 30), minimum: 1, maximum: 200 }, cursor: str("Continuation from this query"), generation: str("Retained data index generation"), includeCandidates: { type: "boolean", default: true, description: "Include labelled ORM/ambiguous candidates" }, includeObjectAccess: { type: "boolean", default: true, description: "Show getters/setters separately from persisted database reads/writes" }, max_output_bytes: { ...int("Model preview bytes; retained view keeps the page", 16384), minimum: 4096, maximum: 65536 }, view: { type: "boolean", default: true } };
+      const scope = { env, repos: str("Repository/index keys or globs; default all cached repositories and pinned libraries"), db: str("Exact configured database when names collide") };
+      const present = async (a, fn) => {
+        const r = await fn(a);
+        const value = a.view === false ? r : { ...r, view: require_results().saveView("data-lineage", r, { title: r.operation === "trace" ? "Data access path" : r.operation ? `Who ${r.operation === "writers" ? "writes" : "reads"} ${r.target || ""}` : "Data access index", env: r.env }) };
+        return require_data_lineage().compact(value, a.max_output_bytes || 16384);
+      };
+      return [
+        { name: "data_index", group: "pg", description: "Inspect/build the cached code+database access index in an owned background job. Missing/stale reader/writer/trace queries start it automatically. Reuses source revisions; keeps last good generations. job observes progress; job_cancel cancels. configure saves private aliases/reviewed links with revision protection.", input: { ...scope, action: { type: "string", enum: ["status", "refresh", "configure"], default: "refresh" }, refresh: { type: "boolean", default: false }, job: str("Returned owned data index job id"), waitMs: { ...int("Observation wait, max 30000 ms", 0), minimum: 0, maximum: 3e4 }, expected_revision: str("rulesRevision from status, required for configure"), rules: { type: "object", description: "Private rules: aliases [{target,names:[...]}], links [{from,to,relation,access,evidence}]; links use exact canonical ids" }, ...bounds }, run: (a) => present(a, require_data_lineage().index) },
+        ...["readers", "writers"].map((operation) => ({ name: `data_${operation}`, group: "pg", description: `Who ${operation === "readers" ? "reads" : "writes"} a table, column, procedure/function, topic or ES index across services and pinned libraries? Exact name (db:schema.table.column) or canonical id. Separates SQL, ORM candidates and getter/setter object access; mode=mentions pages substring candidates. Missing/stale indices refresh in background; returns job and inline evidence.`, input: { ...scope, name: str("Exact table/column/function, topic:name, es:index or canonical id"), mode: { type: "string", enum: ["access", "mentions"], default: "access" }, maxNodes: { ...int("Upstream attribution node budget per evidence source", 500), minimum: 10, maximum: 5e3 }, maxHops: { ...int("Upstream attribution depth", 20), minimum: 1, maximum: 80 }, budgetMs: { ...int("Total upstream attribution time budget", 1e3), minimum: 50, maximum: 5e3 }, ...bounds }, required: ["name"], run: (a) => present({ ...a, operation }, require_data_lineage().query) })),
+        { name: "data_trace", group: "code", description: "Trace API/service/method to a table/column or exit through indexed calls, inherited libraries, procedures, Kafka and ES. Call/access topology, not runtime or value-flow proof. Cross-cluster topics stay separate; payload gaps and candidate links are labelled. Missing/stale index builds in background.", input: { ...scope, from: str("Exact canonical id, GET /route, service:name or fully qualified method signature"), to: str("Exact column/table/function, topic:name, es:index or canonical symbol"), service: str("Source service when routes collide"), maxHops: { ...int("Path depth", 30), minimum: 1, maximum: 80 }, maxNodes: { ...int("Traversal node budget", 3e3), minimum: 10, maximum: 2e4 }, maxPaths: { ...int("Alternative paths", 5), minimum: 1, maximum: 20 }, fanout: { ...int("Outgoing edges per node", 200), minimum: 10, maximum: 1e3 }, budgetMs: { ...int("Traversal time budget", 1e3), minimum: 50, maximum: 5e3 }, ...bounds }, required: ["from", "to"], run: (a) => present({ ...a, operation: "trace" }, require_data_lineage().query) }
+      ].map((t) => ({ ...t, strictInput: true, origin: "built-in" }));
+    };
+  }
+});
+
 // lib/tools-passport-edit.js
 var require_tools_passport_edit = __commonJS({
   "lib/tools-passport-edit.js"(exports2, module2) {
@@ -94064,6 +95475,7 @@ var require_tools = __commonJS({
     TOOLS.push(...require_tools_runtime()({ str, int }));
     TOOLS.push(...require_tools_service_environments()({ str, int }));
     TOOLS.push(...require_tools_semantic()({ str, int, env }));
+    TOOLS.push(...require_tools_data_lineage()({ str, int, env }));
     TOOLS.push(...require_tools_passport_edit()({ str, int, env }).map((tool) => ({ ...tool, run: async (args) => require_tools_semantic().present(await tool.run(args), { view: "passport-ports", title: tool.name === "passport_adjust" ? "Saved passport adjustment" : "Passport ports" }) })));
     TOOLS.push(...require_tools_dev()({ str, int, env }).map((t) => ({ ...t, origin: "built-in" })));
     TOOLS.push(...require_tools_discovery()({ str, int, registry: () => schemas({ metadata: true }) }).map((t) => ({ ...t, origin: "built-in" })));
@@ -94542,21 +95954,21 @@ var require_isolate = __commonJS({
       parentPort.on("message", async ({ id, name, args, mod, fn, execution, trace: trace2 }) => {
         let steps, notes;
         try {
-          const value = await require_execution().runCarrier(execution, () => require_trace4().runCarrier(trace2, async () => {
+          const value = await require_tool_events().run((progress) => parentPort.postMessage({ id, progress }), () => require_execution().runCarrier(execution, () => require_trace4().runCarrier(trace2, async () => {
             try {
               return await (mod ? MODULES[mod]()[fn](...args) : T.callTool(name, args, { isolated: true, admitted: true }));
             } finally {
               steps = require_trace4().current()?.steps;
               notes = require_trace4().current()?.notes;
             }
-          }));
+          })));
           parentPort.postMessage({ id, ok: true, value, steps, notes, heap: process.memoryUsage().heapUsed });
         } catch (e) {
           parentPort.postMessage({ id, ok: false, steps, notes, error: { message: e.message, code: e.code, issues: e.issues, statusCode: e.statusCode, retryAfter: e.retryAfter }, heap: process.memoryUsage().heapUsed });
         }
       });
     }
-    var MODULES = { catalog: () => require_catalog(), catalogStore: () => require_catalog_store(), indexer: () => require_indexer(), codeSearch: () => require_code_search(), passport: () => require_passport(), serviceArchitecture: () => require_service_architecture() };
+    var MODULES = { dataLineage: () => require_data_lineage_engine(), catalog: () => require_catalog(), catalogStore: () => require_catalog_store(), indexer: () => require_indexer(), codeSearch: () => require_code_search(), passport: () => require_passport(), serviceArchitecture: () => require_service_architecture() };
     var bundled = !/[\\/]lib[\\/]isolate\.js$/.test(__filename);
     var ENTRY = __filename;
     if (!isMainThread && require("worker_threads").workerData?.dtIsolate && !bundled) serve();
@@ -94589,6 +96001,17 @@ var require_isolate = __commonJS({
         }
         const p = w.pending.get(m.id);
         if (!p) return;
+        if (m.progress) {
+          try {
+            require_access().run(p.owner, () => {
+              p.onProgress?.(m.progress);
+              p.notify?.(m.progress);
+            });
+          } catch {
+            if (p.trace?.notes) p.trace.notes.push({ text: "Progress notification failed; inspect the owned job result", at: 0 });
+          }
+          return;
+        }
         w.pending.delete(m.id);
         if (p.trace) {
           for (const step of m.steps || []) if (p.trace.steps.length < 200) p.trace.steps.push(step);
@@ -94624,12 +96047,14 @@ var require_isolate = __commonJS({
       workers.add(w);
       return w;
     }
-    function exec(mod, fn, args = []) {
-      return heapMb() > 0 && isMainThread ? run(null, null, { mod, fn, args }) : MODULES[mod]()[fn](...args);
+    function exec(mod, fn, args = [], { onProgress } = {}) {
+      if (heapMb() > 0 && isMainThread) return run(null, null, { mod, fn, args, onProgress });
+      return onProgress ? require_tool_events().run(onProgress, () => MODULES[mod]()[fn](...args)) : MODULES[mod]()[fn](...args);
     }
     function run(name, args, extra = {}) {
+      const { onProgress, ...wire } = extra;
       const E = require_execution();
-      const resource = name === "api_client_catalog" ? "api" : READERS.has(name) || extra.mod === "catalog" || extra.mod === "catalogStore" ? "catalog" : "cpu";
+      const resource = name === "api_client_catalog" ? "api" : READERS.has(name) || extra.mod === "catalog" || extra.mod === "catalogStore" || extra.mod === "dataLineage" && extra.fn !== "build" ? "catalog" : "cpu";
       return require_limit().schedule(resource, async () => {
         E.check();
         for (const idle of workers) if (!idle.busy && idle.resource === resource && idle.limitMb !== workerLimitMb(resource)) {
@@ -94646,9 +96071,9 @@ var require_isolate = __commonJS({
         let steps, notes;
         try {
           const value = await new Promise((resolve2, reject) => {
-            w.pending.set(id, { resolve: resolve2, reject, trace: require_trace4().current() });
+            w.pending.set(id, { resolve: resolve2, reject, onProgress, notify: require_tool_events().capture(), owner: require_access().owner(), trace: require_trace4().current() });
             w.ref();
-            w.postMessage({ id, name, args, ...extra, execution: E.carrier(), trace: require_trace4().carrier() });
+            w.postMessage({ id, name, args, ...wire, execution: E.carrier(), trace: require_trace4().carrier() });
           });
           E.check();
           if (w.heap > w.limitMb * 1e6 / 2) {
@@ -102063,8 +103488,8 @@ var require_server2 = __commonJS({
       }],
       ["GET", "/static/*", false, (req, res, url) => {
         const name = url.pathname.slice("/static/".length);
-        const type = { ".css": "text/css", ".js": "text/javascript" }[path3.extname(name)];
-        if (!type || !/^(?:views\/|vendor\/(?:ecs-canvas|codemirror)\/)?[\w.-]+$/.test(name) || !fs3.existsSync(path3.join(__dirname, "web", name))) return send(res, 404, { error: "not found" });
+        const type = { ".css": "text/css", ".js": "text/javascript", ".ttf": "font/ttf" }[path3.extname(name)];
+        if (!type || !/^(?:views\/|vendor\/(?:ecs-canvas|codemirror|workbench)\/)?[\w.-]+$/.test(name) || !fs3.existsSync(path3.join(__dirname, "web", name))) return send(res, 404, { error: "not found" });
         res.writeHead(200, { "content-type": `${type}; charset=utf-8`, "cache-control": "no-cache" });
         res.end(fs3.readFileSync(path3.join(__dirname, "web", name)));
       }],

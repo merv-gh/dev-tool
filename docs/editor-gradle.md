@@ -1,10 +1,10 @@
 # Workspace editor and Gradle upgrades
 
-Open **Workspace editor** from Studio or Admin, or visit `/editor?workspace=<id>&story=<task>` after `workspace_open`. The editor uses locally bundled CodeMirror 5.65.16 with line numbers, bracket matching, syntax modes, per-file undo history, find, keyboard save, and open-file tabs. It uses the shared light/dark `ui.css` tokens. No CDN or external editor service is needed.
+Open **Workspace editor** from Studio or Admin, or visit `/editor?workspace=<id>&story=<task>` after `workspace_open`. The editor uses locally bundled Monaco with a virtualized Headless Tree Explorer, preview/pinned tabs, per-file undo history, find and keyboard save. Files, fonts and workers are self-hosted. See [files and focused paths](code-workbench.md) for continuation, conflict comparison and mobile preview behavior.
 
 Choose an owned workspace and task. Expand folders, open source, edit and save. Ctrl+S/⌘S saves; Ctrl+F/⌘F searches. Full UTF-8 source is read without display line numbers. BOMs and CRLF are preserved. Binary, malformed UTF-8, oversized files, Git/runtime internals, symlinks and parent paths are rejected. A save must carry the SHA-256 revision returned by the last read; concurrent changes return `DT_WORKSPACE_CONFLICT` and preserve the browser draft. Closing/switching away from a dirty draft requires an explicit discard.
 
-`workspace_editor` supports `list`, `tree`, `read` and `save`. `expected_revision:null` creates a new file only. Tool arguments cannot select a principal: workspace, job and inventory ownership come from the authenticated task context. UI requests carry the selected `x-dt-story`; changing that header never grants another principal's access.
+`workspace_editor` supports `list`, `tree`, `search`, `read` and `save`. Folder/search responses return `next_cursor`; pass it as `cursor` to continue. `expected_revision:null` creates a new file only. Tool arguments cannot select a principal: workspace, job and inventory ownership come from the authenticated task context. UI requests carry the selected `x-dt-story`; changing that header never grants another principal's access.
 
 ## Terminal
 

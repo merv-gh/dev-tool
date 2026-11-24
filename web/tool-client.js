@@ -1,5 +1,13 @@
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else{root.DTToolSocket=api.create({WebSocket:root.WebSocket,fetch:root.fetch.bind(root),location:root.location,emit:(type,detail)=>root.dispatchEvent(new CustomEvent(type,{detail}))});root.fetch=root.DTToolSocket.fetch;}})(globalThis,function(){
  'use strict';
+ function resultFrame(frame,src,location){
+  const base='allow-scripts allow-popups allow-downloads';let trusted=false;
+  try{const url=new URL(src,location.origin);trusted=url.origin===location.origin&&!url.username&&!url.password&&/^\/show\/[a-z0-9-]+$/.test(url.pathname);}catch{}
+  // The /show response CSP decides whether a builtin may open a normal tab.
+  // Custom overrides keep their restrictive CSP. Never relax srcdoc/external previews.
+  frame.setAttribute('sandbox',base+(trusted?' allow-popups-to-escape-sandbox':''));
+  frame.removeAttribute('srcdoc');frame.src=src;
+ }
  function create({WebSocket:Socket,fetch:original,location,emit=()=>{}}){
   let socket,opening,sequence=0,reconnect;const pending=new Map(),subscriptions=new Map(),stats={sent:0,completed:0,failed:0,active:0};
   const notify=state=>emit('dt:tool-connection',{state});
@@ -43,7 +51,7 @@
    const id='sub_'+(++sequence),s={id,channel,headers,after,onEvent,onReady,onState};subscriptions.set(id,s);onState('connecting');
    const close=()=>{subscriptions.delete(id);if(s.socket?.readyState===1)s.socket.send(JSON.stringify({type:'unsubscribe',id,headers}));signal?.removeEventListener('abort',close);onState('closed');};signal?.addEventListener('abort',close,{once:true});if(signal?.aborted)close();else attachSubscription(s);return {close,get cursor(){return s.after;}};
   }
-  return {fetch:toolFetch,subscribe,stats,close:()=>{clearTimeout(reconnect);subscriptions.clear();socket?.close();}};
+  return {fetch:toolFetch,subscribe,stats,resultFrame:(frame,src)=>resultFrame(frame,src,location),close:()=>{clearTimeout(reconnect);subscriptions.clear();socket?.close();}};
  }
- return {create};
+ return {create,resultFrame};
 });

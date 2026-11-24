@@ -42,8 +42,9 @@ Full contracts and restart examples: [Durable workflows and continuations](workf
 ## Edit and coordinate repository changes
 
 Open **Workspace editor**, choose an owned workspace and expand its file tree.
-The vendored CodeMirror editor provides tabs, syntax highlighting, search, undo
-and UTF-8 source editing. Conflicting saves preserve the draft and report the
+The self-hosted Monaco editor and virtualized Explorer provide preview/pinned
+tabs, path search, per-file undo and UTF-8 source editing. See
+[files and focused paths](code-workbench.md). Conflicting saves preserve the draft and report the
 changed revision. The terminal runs approved inspection commands such as
 `git status` and `git diff`; builds require explicit configuration and an
 authenticated runner. This is a bounded command interface, not an arbitrary host shell.

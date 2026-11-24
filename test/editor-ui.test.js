@@ -165,6 +165,16 @@ test('responses from old workspaces and detached folders cannot repopulate the a
   await s.open('build.gradle'); s.mirror().type('// pending save'); const save = s.hold('workspace_editor', a => a.action === 'save'), saving = s.fire('save'); await s.settle(); s.answer(true); s.get('workspace').value = 'owned-a'; await s.fire('workspace', 'change'); const currentStatus = s.get('status').textContent; save.complete(); await saving; assert.equal(s.get('tabs').children.length, 0); assert.equal(s.get('status').textContent, currentStatus);
 });
 
+test('a late file read cannot replace a newer selection or overwrite edits made while reloading', async () => {
+  const s = mount(); await s.settle();
+  const old = s.hold('workspace_editor', a => a.action === 'read' && a.path === 'build.gradle');
+  const pending = s.open('build.gradle'); await s.settle(); await s.open('README.md'); old.complete(); await pending;
+  assert.equal(s.get('tabs').children.length, 1); assert.match(s.get('tabs').textContent, /README/);
+  const gate = s.hold('workspace_editor', a => a.action === 'read' && a.path === 'README.md');
+  const reloading = s.fire('reload'); await s.settle(); s.mirror().type('// typed during read'); gate.complete(); await reloading;
+  assert.match(s.mirror().getValue(), /typed during read/); assert.match(s.get('status').textContent, /draft is preserved/);
+});
+
 test('terminal polls bounded output, cancels owned jobs, clears and recovers usable controls after failures', async () => {
   const s = mount(); await s.settle(); s.nextTerminal([{ state: 'running', log: ['compiling Unicode source'] }, { state: 'done', out: 'результат', log: [], code: 0, truncated: true }]);
   s.get('command').value = ''; await s.fire('terminalForm', 'submit'); assert.equal(s.calls('workspace_terminal', 'run')[0].args.command, 'git status'); assert.match(s.get('output').textContent, /compiling Unicode source/); assert.equal(s.get('run').disabled, true); assert.equal(s.get('cancel').disabled, false);

@@ -1,0 +1,492 @@
+{
+  "protocol": "dt.admin-proposal-browser/v1",
+  "baseline": "5a8ba08",
+  "scope": "Real browser gestures against the synthetic proposal; no production integration claim",
+  "scenarios": [
+    {
+      "name": "person-and-overnight-journeys",
+      "device": "desktop",
+      "passed": true,
+      "durationMs": 12580
+    },
+    {
+      "name": "person-and-overnight-journeys",
+      "device": "phone",
+      "passed": true,
+      "durationMs": 36155
+    },
+    {
+      "name": "gallery-and-state-ledger",
+      "device": "desktop",
+      "passed": true,
+      "durationMs": 610
+    },
+    {
+      "name": "keyboard-dark-reduced-motion",
+      "device": "desktop",
+      "passed": true,
+      "durationMs": 487
+    },
+    {
+      "name": "keyboard-dark-reduced-motion",
+      "device": "phone",
+      "passed": true,
+      "durationMs": 487
+    }
+  ],
+  "captures": [
+    {
+      "id": "person-original-failure",
+      "label": "Verified proposal · person original failure · desktop",
+      "file": "screenshots/interactive/proposal/person-original-failure-desktop.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440
+    },
+    {
+      "id": "comparison-cancelled",
+      "label": "Verified proposal · comparison cancelled · desktop",
+      "file": "screenshots/interactive/proposal/comparison-cancelled-desktop.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440
+    },
+    {
+      "id": "comparison-interrupted-by-reload",
+      "label": "Verified proposal · comparison interrupted by reload · desktop",
+      "file": "screenshots/interactive/proposal/comparison-interrupted-by-reload-desktop.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440
+    },
+    {
+      "id": "comparison-error",
+      "label": "Verified proposal · comparison error · desktop",
+      "file": "screenshots/interactive/proposal/comparison-error-desktop.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440
+    },
+    {
+      "id": "comparison-partial",
+      "label": "Verified proposal · comparison partial · desktop",
+      "file": "screenshots/interactive/proposal/comparison-partial-desktop.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440
+    },
+    {
+      "id": "comparison-empty",
+      "label": "Verified proposal · comparison empty · desktop",
+      "file": "screenshots/interactive/proposal/comparison-empty-desktop.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440
+    },
+    {
+      "id": "correction-conflict-preserves-draft",
+      "label": "Verified proposal · correction conflict preserves draft · desktop",
+      "file": "screenshots/interactive/proposal/correction-conflict-preserves-draft-desktop.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440
+    },
+    {
+      "id": "correction-saved-not-applied",
+      "label": "Verified proposal · correction saved not applied · desktop",
+      "file": "screenshots/interactive/proposal/correction-saved-not-applied-desktop.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440
+    },
+    {
+      "id": "explicit-corrected-comparison",
+      "label": "Verified proposal · explicit corrected comparison · desktop",
+      "file": "screenshots/interactive/proposal/explicit-corrected-comparison-desktop.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440
+    },
+    {
+      "id": "offline-passed-real-integration-unrun",
+      "label": "Verified proposal · offline passed real integration unrun · desktop",
+      "file": "screenshots/interactive/proposal/offline-passed-real-integration-unrun-desktop.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440
+    },
+    {
+      "id": "share-snapshot-readonly",
+      "label": "Verified proposal · share snapshot readonly · desktop",
+      "file": "screenshots/interactive/proposal/share-snapshot-readonly-desktop.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440
+    },
+    {
+      "id": "overnight-retry-prepared",
+      "label": "Verified proposal · overnight retry prepared · desktop",
+      "file": "screenshots/interactive/proposal/overnight-retry-prepared-desktop.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440
+    },
+    {
+      "id": "overnight-paused-by-user",
+      "label": "Verified proposal · overnight paused by user · desktop",
+      "file": "screenshots/interactive/proposal/overnight-paused-by-user-desktop.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440
+    },
+    {
+      "id": "overnight-stopped-retains-results",
+      "label": "Verified proposal · overnight stopped retains results · desktop",
+      "file": "screenshots/interactive/proposal/overnight-stopped-retains-results-desktop.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440
+    },
+    {
+      "id": "checkout-handoff-isolated",
+      "label": "Verified proposal · checkout handoff isolated · desktop",
+      "file": "screenshots/interactive/proposal/checkout-handoff-isolated-desktop.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440
+    },
+    {
+      "id": "person-original-failure",
+      "label": "Verified proposal · person original failure · phone",
+      "file": "screenshots/interactive/proposal/person-original-failure-phone.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    },
+    {
+      "id": "comparison-cancelled",
+      "label": "Verified proposal · comparison cancelled · phone",
+      "file": "screenshots/interactive/proposal/comparison-cancelled-phone.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    },
+    {
+      "id": "comparison-interrupted-by-reload",
+      "label": "Verified proposal · comparison interrupted by reload · phone",
+      "file": "screenshots/interactive/proposal/comparison-interrupted-by-reload-phone.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    },
+    {
+      "id": "comparison-error",
+      "label": "Verified proposal · comparison error · phone",
+      "file": "screenshots/interactive/proposal/comparison-error-phone.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    },
+    {
+      "id": "comparison-partial",
+      "label": "Verified proposal · comparison partial · phone",
+      "file": "screenshots/interactive/proposal/comparison-partial-phone.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    },
+    {
+      "id": "comparison-empty",
+      "label": "Verified proposal · comparison empty · phone",
+      "file": "screenshots/interactive/proposal/comparison-empty-phone.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    },
+    {
+      "id": "correction-conflict-preserves-draft",
+      "label": "Verified proposal · correction conflict preserves draft · phone",
+      "file": "screenshots/interactive/proposal/correction-conflict-preserves-draft-phone.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    },
+    {
+      "id": "correction-saved-not-applied",
+      "label": "Verified proposal · correction saved not applied · phone",
+      "file": "screenshots/interactive/proposal/correction-saved-not-applied-phone.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    },
+    {
+      "id": "explicit-corrected-comparison",
+      "label": "Verified proposal · explicit corrected comparison · phone",
+      "file": "screenshots/interactive/proposal/explicit-corrected-comparison-phone.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    },
+    {
+      "id": "offline-passed-real-integration-unrun",
+      "label": "Verified proposal · offline passed real integration unrun · phone",
+      "file": "screenshots/interactive/proposal/offline-passed-real-integration-unrun-phone.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    },
+    {
+      "id": "share-snapshot-readonly",
+      "label": "Verified proposal · share snapshot readonly · phone",
+      "file": "screenshots/interactive/proposal/share-snapshot-readonly-phone.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    },
+    {
+      "id": "overnight-retry-prepared",
+      "label": "Verified proposal · overnight retry prepared · phone",
+      "file": "screenshots/interactive/proposal/overnight-retry-prepared-phone.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    },
+    {
+      "id": "overnight-paused-by-user",
+      "label": "Verified proposal · overnight paused by user · phone",
+      "file": "screenshots/interactive/proposal/overnight-paused-by-user-phone.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    },
+    {
+      "id": "overnight-stopped-retains-results",
+      "label": "Verified proposal · overnight stopped retains results · phone",
+      "file": "screenshots/interactive/proposal/overnight-stopped-retains-results-phone.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    },
+    {
+      "id": "checkout-handoff-isolated",
+      "label": "Verified proposal · checkout handoff isolated · phone",
+      "file": "screenshots/interactive/proposal/checkout-handoff-isolated-phone.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    },
+    {
+      "id": "state-ledger-filter",
+      "label": "Verified proposal · state ledger filter · desktop",
+      "file": "screenshots/interactive/proposal/state-ledger-filter-desktop.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440
+    },
+    {
+      "id": "dark-source-focus",
+      "label": "Verified proposal · dark source focus · desktop",
+      "file": "screenshots/interactive/proposal/dark-source-focus-desktop.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440
+    },
+    {
+      "id": "dark-source-focus",
+      "label": "Verified proposal · dark source focus · phone",
+      "file": "screenshots/interactive/proposal/dark-source-focus-phone.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    },
+    {
+      "id": "phone-task-picker-expanded",
+      "label": "Verified proposal · phone task picker expanded · phone",
+      "file": "screenshots/interactive/proposal/phone-task-picker-expanded-phone.jpg",
+      "category": "proposed-interactive",
+      "capture": "viewport",
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    }
+  ],
+  "errors": [],
+  "externalRequests": [],
+  "checks": [
+    {
+      "name": "desktop: initial transport success is separate from failed contract",
+      "passed": true
+    },
+    {
+      "name": "desktop: cancellation preserves retained observation",
+      "passed": true
+    },
+    {
+      "name": "desktop: reload interruption is distinct from user cancellation",
+      "passed": true
+    },
+    {
+      "name": "desktop: error observation and verdict",
+      "passed": true
+    },
+    {
+      "name": "desktop: partial observation and verdict",
+      "passed": true
+    },
+    {
+      "name": "desktop: empty observation and verdict",
+      "passed": true
+    },
+    {
+      "name": "desktop: every source node has its own evidence",
+      "passed": true
+    },
+    {
+      "name": "desktop: explicit revision recovery, guard validation and immutable original",
+      "passed": true
+    },
+    {
+      "name": "desktop: offline check success keeps actual integration unrun",
+      "passed": true
+    },
+    {
+      "name": "desktop: downloaded recipe replays and shared snapshot cannot execute",
+      "passed": true
+    },
+    {
+      "name": "desktop: overnight recovery and exports retain task isolation across reload",
+      "passed": true
+    },
+    {
+      "name": "desktop: proposed configuration draft survives same-section and reload",
+      "passed": true
+    },
+    {
+      "name": "phone: initial transport success is separate from failed contract",
+      "passed": true
+    },
+    {
+      "name": "phone: cancellation preserves retained observation",
+      "passed": true
+    },
+    {
+      "name": "phone: reload interruption is distinct from user cancellation",
+      "passed": true
+    },
+    {
+      "name": "phone: error observation and verdict",
+      "passed": true
+    },
+    {
+      "name": "phone: partial observation and verdict",
+      "passed": true
+    },
+    {
+      "name": "phone: empty observation and verdict",
+      "passed": true
+    },
+    {
+      "name": "phone: every source node has its own evidence",
+      "passed": true
+    },
+    {
+      "name": "phone: explicit revision recovery, guard validation and immutable original",
+      "passed": true
+    },
+    {
+      "name": "phone: offline check success keeps actual integration unrun",
+      "passed": true
+    },
+    {
+      "name": "phone: downloaded recipe replays and shared snapshot cannot execute",
+      "passed": true
+    },
+    {
+      "name": "phone: overnight recovery and exports retain task isolation across reload",
+      "passed": true
+    },
+    {
+      "name": "phone: proposed configuration draft survives same-section and reload",
+      "passed": true
+    },
+    {
+      "name": "gallery and ledger filter actual captures and missing evidence",
+      "passed": true
+    },
+    {
+      "name": "desktop: keyboard tabs, explicit field names and dark/reduced-motion layout",
+      "passed": true
+    },
+    {
+      "name": "phone: keyboard tabs, explicit field names and dark/reduced-motion layout",
+      "passed": true
+    }
+  ],
+  "passed": true
+}

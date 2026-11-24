@@ -1,0 +1,14 @@
+{
+  "name": "dt-user-intent-model",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Isolated XState user-intent model and review diagram; no production effects",
+  "scripts": {
+    "build": "node build.js",
+    "test": "node --test model.test.cjs",
+    "verify": "node verify.cjs"
+  },
+  "dependencies": {
+    "xstate": "5.33.4"
+  }
+}

@@ -12,6 +12,7 @@ const ROOT = __dirname;
 const DIST = path.join(ROOT, 'dist');
 const check = process.argv.includes('--check');
 require('./dev/repo-model-catalog').generate({check});
+require('./dev/build-workbench').generate({check});
 
 const bundle = esbuild.buildSync({
   entryPoints: [path.join(ROOT, 'cli.js')], bundle: true, platform: 'node', target: 'node22', format: 'cjs',

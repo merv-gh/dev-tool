@@ -1,0 +1,25 @@
+{
+  "scope": "Review index after conversation-first intent model integration",
+  "checks": [
+    {
+      "width": 1440,
+      "passed": true,
+      "galleryEntries": 255,
+      "intentModelCaptures": 9,
+      "ledgerEntries": 239,
+      "mappedBrowserStates": 42,
+      "documentFits": true
+    },
+    {
+      "width": 390,
+      "passed": true,
+      "galleryEntries": 255,
+      "intentModelCaptures": 9,
+      "ledgerEntries": 239,
+      "mappedBrowserStates": 42,
+      "documentFits": true
+    }
+  ],
+  "errors": [],
+  "passed": true
+}

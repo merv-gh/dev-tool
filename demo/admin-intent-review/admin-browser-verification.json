@@ -1,0 +1,2679 @@
+{
+  "schema": "dt.admin-browser-verification/v1",
+  "startedAt": "2026-11-22T19:03:26.679Z",
+  "target": "web/admin.html",
+  "fixture": {
+    "manifest": "work/admin-intent-review/playwright-fixture.json",
+    "base": "http://127.0.0.1:4112",
+    "scope": "Disposable local fixture only; source indexing real, retained semantic/infrastructure rows synthetic.",
+    "wrapperPid": 81097,
+    "childPid": 81098,
+    "temporaryHomeRemoved": true
+  },
+  "method": {
+    "engine": "installed Playwright Chromium",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "theme": "light",
+    "interaction": "DOM locators and real user input; no app-global state mutation",
+    "network": "Non-local browser requests blocked and recorded; no deliberate route response faults.",
+    "browserVersion": "156.0.8078.4"
+  },
+  "ledger": "state-inventory.json (frozen Assessment B ledger)",
+  "steps": [
+    {
+      "area": "config",
+      "name": "same-tab-unsaved-draft",
+      "startedAt": "2026-11-22T19:03:27.506Z",
+      "status": "verified-defect",
+      "assertions": [
+        {
+          "description": "Clicking the selected Config area replaced an unsaved draft without a discard dialog.",
+          "passed": false,
+          "classification": "product_defect"
+        },
+        {
+          "description": "No configuration was saved; editor contains original or draft",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:03:28.343Z",
+      "ledgerRefs": [],
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "sites",
+      "name": "keyboard-selection-and-editor",
+      "startedAt": "2026-11-22T19:03:28.771Z",
+      "status": "verified-defect",
+      "assertions": [
+        {
+          "description": "Existing site row is not keyboard focusable; ten Tab advances from New Site never select the site.",
+          "passed": false,
+          "classification": "product_defect"
+        }
+      ],
+      "finishedAt": "2026-11-22T19:03:29.254Z",
+      "ledgerRefs": [
+        {
+          "areaId": "sites",
+          "stateId": "selected-site-editor"
+        },
+        {
+          "areaId": "sites",
+          "stateId": "add-or-remove-parameterized-link"
+        }
+      ],
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "views",
+      "name": "keyboard-selection-and-preview",
+      "startedAt": "2026-11-22T19:03:29.669Z",
+      "status": "verified-defect",
+      "assertions": [
+        {
+          "description": "Existing renderer row is not focusable; it has no button/link role or tabindex.",
+          "passed": false,
+          "classification": "product_defect"
+        },
+        {
+          "description": "Builtin renderer is read only",
+          "passed": true
+        },
+        {
+          "description": "Admin renderer preview iframe lacks an accessible title.",
+          "passed": false,
+          "classification": "product_defect"
+        }
+      ],
+      "finishedAt": "2026-11-22T19:03:31.129Z",
+      "ledgerRefs": [
+        {
+          "areaId": "views",
+          "stateId": "selected-builtin-and-preview-inside-admin"
+        },
+        {
+          "areaId": "views",
+          "stateId": "override-builtin"
+        },
+        {
+          "areaId": "views",
+          "stateId": "invalid-sample-json-and-retained-prior-preview"
+        }
+      ],
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "explore",
+      "name": "table-selection-and-empty-search",
+      "startedAt": "2026-11-22T19:03:31.555Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "Catalog search, selection and empty result rendered",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:03:33.136Z",
+      "ledgerRefs": [
+        {
+          "areaId": "explore",
+          "stateId": "table-detail-with-constraints-and-usage"
+        },
+        {
+          "areaId": "explore",
+          "stateId": "no-search-matches"
+        }
+      ],
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "index",
+      "name": "cache-rebuild-job",
+      "startedAt": "2026-11-22T19:03:33.536Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "Cache-only rebuild started through UI",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:03:33.887Z",
+      "ledgerRefs": [],
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "passports",
+      "name": "passport-open-and-blank-validation",
+      "startedAt": "2026-11-22T19:03:34.302Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "Passport detail opens with actual fixture source",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:03:34.818Z",
+      "ledgerRefs": [
+        {
+          "areaId": "passports",
+          "stateId": "blank-service-validation"
+        }
+      ],
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "capabilities",
+      "name": "object-question-and-no-results",
+      "startedAt": "2026-11-22T19:03:35.332Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "Object, tool and empty filter reached",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:03:36.135Z",
+      "ledgerRefs": [
+        {
+          "areaId": "capabilities",
+          "stateId": "selected-object-and-questions"
+        },
+        {
+          "areaId": "capabilities",
+          "stateId": "filtered-graph-and-zero-matches"
+        }
+      ],
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "context",
+      "name": "file-dirty-save-and-validation",
+      "startedAt": "2026-11-22T19:03:36.580Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "File dirty marker clears after successful save",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:03:37.484Z",
+      "ledgerRefs": [
+        {
+          "areaId": "context",
+          "stateId": "unsaved-progress-file-draft"
+        }
+      ],
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "context",
+      "name": "scratchpad-success-and-failure",
+      "startedAt": "2026-11-22T19:03:37.484Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "Success and synthetic failure both retain receipts",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:03:38.334Z",
+      "ledgerRefs": [
+        {
+          "areaId": "context",
+          "stateId": "tool-failure-with-captured-error"
+        },
+        {
+          "areaId": "context",
+          "stateId": "saved-result-list"
+        }
+      ],
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "context",
+      "name": "project-read-edit-validation",
+      "startedAt": "2026-11-22T19:03:38.335Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "Missing publication reason prevents publishing and preserves draft",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:03:38.853Z",
+      "ledgerRefs": [
+        {
+          "areaId": "context",
+          "stateId": "published-project-with-graph-and-evidence-files"
+        }
+      ],
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "scripts",
+      "name": "editor-params-hooks-and-local-run",
+      "startedAt": "2026-11-22T19:03:39.306Z",
+      "status": "capture-failed",
+      "assertions": [],
+      "error": "locator.click: Timeout 7000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-folder=\"review\"]').first()\u001b[22m\n",
+      "finishedAt": "2026-11-22T19:03:46.419Z",
+      "ledgerRefs": [],
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "architecture",
+      "name": "new-document-invalid-structure",
+      "startedAt": "2026-11-22T19:03:46.831Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "Architecture draft preserved on invalid structure",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:03:47.274Z",
+      "ledgerRefs": [
+        {
+          "areaId": "architecture",
+          "stateId": "validation-or-revision-conflict-error"
+        }
+      ],
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "semantic",
+      "name": "retained-analyses-capabilities-and-ports",
+      "startedAt": "2026-11-22T19:03:47.762Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "Retained analyses and port result actually rendered",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:03:49.031Z",
+      "ledgerRefs": [
+        {
+          "areaId": "semantic",
+          "stateId": "retained-analyses-table-not-proved-by-same-named-capture"
+        },
+        {
+          "areaId": "semantic",
+          "stateId": "selected-retained-exact-analysis"
+        },
+        {
+          "areaId": "semantic",
+          "stateId": "engine-capabilities-result-not-proved-by-same-named-capture"
+        }
+      ],
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "semantic",
+      "name": "task-presets-and-field-count",
+      "startedAt": "2026-11-22T19:03:49.031Z",
+      "status": "observed",
+      "assertions": [
+        {
+          "description": "Visible semantic controls after default prepare",
+          "observedValue": 65
+        }
+      ],
+      "finishedAt": "2026-11-22T19:03:49.978Z",
+      "ledgerRefs": [],
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "workbench",
+      "name": "synthetic-success",
+      "startedAt": "2026-11-22T19:03:50.475Z",
+      "status": "capture-failed",
+      "assertions": [],
+      "error": "locator.waitFor: Timeout 7000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#wbRun') to be visible\u001b[22m\n\u001b[2m    18 × locator resolved to hidden <button id=\"wbRun\" type=\"button\" class=\"primary\">Run demo_workbench</button>\u001b[22m\n",
+      "finishedAt": "2026-11-22T19:03:57.580Z",
+      "ledgerRefs": [],
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "workbench",
+      "name": "synthetic-cancel",
+      "startedAt": "2026-11-22T19:03:58.024Z",
+      "status": "capture-failed",
+      "assertions": [],
+      "error": "locator.click: Timeout 7000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#wbRun')\u001b[22m\n\u001b[2m    - locator resolved to <button id=\"wbRun\" type=\"button\" class=\"primary\">Run demo_workbench</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not visible\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not visible\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    13 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is not visible\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n",
+      "finishedAt": "2026-11-22T19:04:05.132Z",
+      "ledgerRefs": [],
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "runtime",
+      "name": "execution-record-and-diagnostics",
+      "startedAt": "2026-11-22T19:04:05.609Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "Runtime details and diagnostic view selectors respond",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:04:07.837Z",
+      "ledgerRefs": [
+        {
+          "areaId": "runtime",
+          "stateId": "selected-execution-ownership-result-detail"
+        },
+        {
+          "areaId": "runtime",
+          "stateId": "requests-and-models-evidence"
+        },
+        {
+          "areaId": "runtime",
+          "stateId": "trace-observability-evidence"
+        },
+        {
+          "areaId": "runtime",
+          "stateId": "test-coverage-evidence"
+        }
+      ],
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "jobs",
+      "name": "selected-synthetic-job-log",
+      "startedAt": "2026-11-22T19:04:08.253Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "Background job log/result inspection rendered",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:04:08.483Z",
+      "ledgerRefs": [
+        {
+          "areaId": "jobs",
+          "stateId": "selected-job-log-and-owner-facts"
+        }
+      ],
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "history",
+      "name": "source-and-empty-filter",
+      "startedAt": "2026-11-22T19:04:08.954Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "History empty filter reduces rows",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:04:10.004Z",
+      "ledgerRefs": [
+        {
+          "areaId": "history",
+          "stateId": "source-filter-selection"
+        },
+        {
+          "areaId": "history",
+          "stateId": "filtered-calls-and-zero-matches"
+        }
+      ],
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "environments",
+      "name": "new-definition-form-only",
+      "startedAt": "2026-11-22T19:04:10.410Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "Form validation observed; no image/container/start action invoked",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:04:11.040Z",
+      "ledgerRefs": [
+        {
+          "areaId": "environments",
+          "stateId": "new-definition-and-service-row"
+        },
+        {
+          "areaId": "environments",
+          "stateId": "definition-dirty-invalid-and-advanced-json"
+        }
+      ],
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "map",
+      "name": "embedded-container-selection",
+      "startedAt": "2026-11-22T19:04:11.447Z",
+      "status": "capture-failed",
+      "assertions": [],
+      "error": "locator.waitFor: Timeout 7000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#cxMapFrame').contentFrame().locator('body') to be visible\u001b[22m\n\u001b[2m    18 × locator resolved to hidden <body></body>\u001b[22m\n",
+      "finishedAt": "2026-11-22T19:04:18.536Z",
+      "ledgerRefs": [],
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "handbook",
+      "name": "chapter-search",
+      "startedAt": "2026-11-22T19:04:19.024Z",
+      "status": "capture-failed",
+      "assertions": [],
+      "error": "locator.waitFor: Timeout 7000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#adminHandbook nav button').first() to be visible\u001b[22m\n",
+      "finishedAt": "2026-11-22T19:04:26.486Z",
+      "ledgerRefs": [],
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "studio",
+      "name": "embedded-app-selector",
+      "startedAt": "2026-11-22T19:04:26.908Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "Embedded application loaded and representative control changed state",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:04:27.242Z",
+      "ledgerRefs": [
+        {
+          "areaId": "studio",
+          "stateId": "upgrade-dependencies-work-area"
+        }
+      ],
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "pages",
+      "name": "embedded-app-selector",
+      "startedAt": "2026-11-22T19:04:27.652Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "Embedded application loaded and representative control changed state",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:04:28.033Z",
+      "ledgerRefs": [
+        {
+          "areaId": "pages",
+          "stateId": "example-selected-and-editable-definition"
+        }
+      ],
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "api",
+      "name": "embedded-app-selector",
+      "startedAt": "2026-11-22T19:04:28.472Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "Embedded application loaded and representative control changed state",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:04:28.841Z",
+      "ledgerRefs": [
+        {
+          "areaId": "api",
+          "stateId": "body-format-and-json-editor"
+        }
+      ],
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "reflection",
+      "name": "embedded-app-selector",
+      "startedAt": "2026-11-22T19:04:29.244Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "Embedded application loaded and representative control changed state",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:04:29.686Z",
+      "ledgerRefs": [],
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "context",
+      "name": "phone-width-selection",
+      "startedAt": "2026-11-22T19:04:30.123Z",
+      "status": "observed",
+      "assertions": [
+        {
+          "description": "Phone document horizontal extent",
+          "observedValue": {
+            "scroll": 390,
+            "inner": 390
+          }
+        }
+      ],
+      "finishedAt": "2026-11-22T19:04:30.478Z",
+      "ledgerRefs": [],
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "scripts",
+      "name": "corrected-seed-editor-and-run",
+      "ledgerRefs": [
+        {
+          "areaId": "scripts",
+          "stateId": "params-editor"
+        },
+        {
+          "areaId": "scripts",
+          "stateId": "vars-and-hooks-editor"
+        },
+        {
+          "areaId": "scripts",
+          "stateId": "script-complete-or-failed-with-step-report"
+        }
+      ],
+      "startedAt": "2026-11-22T19:07:59.968Z",
+      "status": "capture-failed",
+      "assertions": [],
+      "error": "locator.click: Timeout 7000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-script=\"review/local-check\"]').first()\u001b[22m\n",
+      "finishedAt": "2026-11-22T19:08:07.365Z",
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "workbench",
+      "name": "fresh-link-hidden-draft-and-recovery",
+      "ledgerRefs": [
+        {
+          "areaId": "workbench",
+          "stateId": "prepared-tool-with-typed-arguments"
+        },
+        {
+          "areaId": "workbench",
+          "stateId": "successful-action-with-retained-evidence"
+        }
+      ],
+      "startedAt": "2026-11-22T19:08:07.837Z",
+      "status": "verified-defect",
+      "assertions": [
+        {
+          "description": "A fresh Workbench tool URL prepares demo_workbench but its entire composer becomes hidden after navigator initialization.",
+          "passed": false,
+          "classification": "product_defect"
+        }
+      ],
+      "error": "locator.waitFor: Timeout 7000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#wbRun') to be visible\u001b[22m\n\u001b[2m    18 × locator resolved to hidden <button id=\"wbRun\" type=\"button\" class=\"primary\">Run demo_workbench</button>\u001b[22m\n",
+      "finishedAt": "2026-11-22T19:08:15.145Z",
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims.",
+      "captureRecoveryIncomplete": true
+    },
+    {
+      "area": "workbench",
+      "name": "synthetic-cancel-recovered",
+      "ledgerRefs": [
+        {
+          "areaId": "workbench",
+          "stateId": "running-action-and-cancel"
+        }
+      ],
+      "startedAt": "2026-11-22T19:08:15.613Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "Owned synthetic run cancellation settles visibly",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:08:16.151Z",
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "workbench",
+      "name": "synthetic-failure-recovered",
+      "ledgerRefs": [],
+      "startedAt": "2026-11-22T19:08:16.618Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "Synthetic tool error is visible with preserved evidence",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:08:17.065Z",
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "workbench",
+      "name": "browse-services-tasks-and-context",
+      "ledgerRefs": [
+        {
+          "areaId": "workbench",
+          "stateId": "services-browse"
+        },
+        {
+          "areaId": "workbench",
+          "stateId": "tasks-browse"
+        },
+        {
+          "areaId": "workbench",
+          "stateId": "selected-tree-item-and-detail"
+        }
+      ],
+      "startedAt": "2026-11-22T19:08:17.065Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "Three browse modes and selected context respond",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:08:17.949Z",
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "map",
+      "name": "fresh-link-empty-env-and-recovery",
+      "ledgerRefs": [
+        {
+          "areaId": "map",
+          "stateId": "selected-node-and-source-detail"
+        }
+      ],
+      "startedAt": "2026-11-22T19:08:18.360Z",
+      "status": "verified-defect",
+      "assertions": [
+        {
+          "description": "Fresh #map navigation submits empty env before the environment selector is populated; error is written in hidden Context and the Map area stays blank.",
+          "passed": false,
+          "classification": "product_defect"
+        }
+      ],
+      "error": "locator.click: Timeout 7000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#cxMapFrame').contentFrame().getByText('checkout', { exact: true }).first()\u001b[22m\n",
+      "finishedAt": "2026-11-22T19:08:26.266Z",
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims.",
+      "captureRecoveryIncomplete": true
+    },
+    {
+      "area": "handbook",
+      "name": "corrected-chapter-search-and-self-context",
+      "ledgerRefs": [
+        {
+          "areaId": "handbook",
+          "stateId": "self-context-installation-facts"
+        }
+      ],
+      "startedAt": "2026-11-22T19:08:26.727Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "Correct link-based chapter navigator and self-context loaded",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:08:27.701Z",
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "api",
+      "name": "local-echo-response",
+      "ledgerRefs": [
+        {
+          "areaId": "api",
+          "stateId": "successful-http-response-and-saved-exchange"
+        }
+      ],
+      "startedAt": "2026-11-22T19:08:28.097Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "Local fixture GET response rendered and evidence tab opened",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:08:28.661Z",
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "runtime",
+      "name": "metadata-record-opened",
+      "ledgerRefs": [],
+      "startedAt": "2026-11-22T19:08:29.138Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "Stored metadata record opened",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:08:29.564Z",
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "scripts",
+      "name": "corrected-seed-editor-and-run",
+      "ledgerRefs": [
+        {
+          "areaId": "scripts",
+          "stateId": "params-editor"
+        },
+        {
+          "areaId": "scripts",
+          "stateId": "vars-and-hooks-editor"
+        },
+        {
+          "areaId": "scripts",
+          "stateId": "script-complete-or-failed-with-step-report"
+        }
+      ],
+      "startedAt": "2026-11-22T19:10:21.754Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "Browser dialog: Discard unsaved changes?",
+          "observed": true
+        },
+        {
+          "description": "Synthetic local script succeeds through real UI",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:10:23.472Z",
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "workbench",
+      "name": "fresh-link-hidden-draft-and-recovery",
+      "ledgerRefs": [
+        {
+          "areaId": "workbench",
+          "stateId": "prepared-tool-with-typed-arguments"
+        },
+        {
+          "areaId": "workbench",
+          "stateId": "successful-action-with-retained-evidence"
+        }
+      ],
+      "startedAt": "2026-11-22T19:10:23.934Z",
+      "status": "verified-defect",
+      "assertions": [
+        {
+          "description": "A fresh Workbench tool URL prepares demo_workbench but its entire composer becomes hidden after navigator initialization.",
+          "passed": false,
+          "classification": "product_defect"
+        },
+        {
+          "description": "Same-document linked draft can run the synthetic tool and show evidence",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:10:24.516Z",
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "workbench",
+      "name": "synthetic-cancel-recovered",
+      "ledgerRefs": [
+        {
+          "areaId": "workbench",
+          "stateId": "running-action-and-cancel"
+        }
+      ],
+      "startedAt": "2026-11-22T19:10:24.977Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "Owned synthetic run cancellation settles visibly",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:10:25.584Z",
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "workbench",
+      "name": "synthetic-failure-recovered",
+      "ledgerRefs": [],
+      "startedAt": "2026-11-22T19:10:26.034Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "Synthetic tool error is visible with preserved evidence",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:10:26.419Z",
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "workbench",
+      "name": "browse-services-tasks-and-context",
+      "ledgerRefs": [
+        {
+          "areaId": "workbench",
+          "stateId": "services-browse"
+        },
+        {
+          "areaId": "workbench",
+          "stateId": "tasks-browse"
+        },
+        {
+          "areaId": "workbench",
+          "stateId": "selected-tree-item-and-detail"
+        }
+      ],
+      "startedAt": "2026-11-22T19:10:26.421Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "Three browse modes and selected context respond",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:10:27.296Z",
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "map",
+      "name": "fresh-link-empty-env-and-recovery",
+      "ledgerRefs": [
+        {
+          "areaId": "map",
+          "stateId": "selected-node-and-source-detail"
+        }
+      ],
+      "startedAt": "2026-11-22T19:10:27.692Z",
+      "status": "verified-defect",
+      "assertions": [
+        {
+          "description": "Fresh #map navigation submits empty env before the environment selector is populated; error is written in hidden Context and the Map area stays blank.",
+          "passed": false,
+          "classification": "product_defect"
+        },
+        {
+          "description": "Map node detail loads after explicit navigation with populated env",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:10:28.905Z",
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "handbook",
+      "name": "corrected-chapter-search-and-self-context",
+      "ledgerRefs": [
+        {
+          "areaId": "handbook",
+          "stateId": "self-context-installation-facts"
+        }
+      ],
+      "startedAt": "2026-11-22T19:10:29.344Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "Correct link-based chapter navigator and self-context loaded",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:10:30.263Z",
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "api",
+      "name": "local-echo-response",
+      "ledgerRefs": [
+        {
+          "areaId": "api",
+          "stateId": "successful-http-response-and-saved-exchange"
+        }
+      ],
+      "startedAt": "2026-11-22T19:10:30.663Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "Local fixture GET response rendered and evidence tab opened",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:10:31.225Z",
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    },
+    {
+      "area": "runtime",
+      "name": "metadata-record-opened",
+      "ledgerRefs": [],
+      "startedAt": "2026-11-22T19:10:31.689Z",
+      "status": "verified",
+      "assertions": [
+        {
+          "description": "Stored metadata record opened",
+          "passed": true
+        }
+      ],
+      "finishedAt": "2026-11-22T19:10:32.120Z",
+      "ledgerRefsScope": "Only exact state IDs linked to this step’s own capture records. Composite ledger entries are not blanket completion claims."
+    }
+  ],
+  "captures": [
+    {
+      "area": "config",
+      "state": "dirty-before-same-tab",
+      "file": "screenshots/interactive/current/config-dirty-before-same-tab.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 3123,
+        "activeElement": "cfg"
+      },
+      "ledgerRefs": [],
+      "evidenceKind": "verified_gesture",
+      "step": "same-tab-unsaved-draft"
+    },
+    {
+      "area": "config",
+      "state": "after-same-tab",
+      "file": "screenshots/interactive/current/config-after-same-tab.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 3123,
+        "activeElement": "nav-config"
+      },
+      "ledgerRefs": [],
+      "evidenceKind": "verified_gesture",
+      "step": "same-tab-unsaved-draft"
+    },
+    {
+      "area": "sites",
+      "state": "selected-site-editor",
+      "file": "screenshots/interactive/current/sites-selected-site-editor.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1142,
+        "activeElement": "BODY"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "sites",
+          "stateId": "selected-site-editor"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "step": "keyboard-selection-and-editor"
+    },
+    {
+      "area": "sites",
+      "state": "new-link-draft",
+      "file": "screenshots/interactive/current/sites-new-link-draft.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1142,
+        "activeElement": "INPUT"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "sites",
+          "stateId": "add-or-remove-parameterized-link"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "step": "keyboard-selection-and-editor"
+    },
+    {
+      "area": "views",
+      "state": "builtin-json-preview",
+      "file": "screenshots/interactive/current/views-builtin-json-preview.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1142,
+        "activeElement": "BODY"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "views",
+          "stateId": "selected-builtin-and-preview-inside-admin"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "step": "keyboard-selection-and-preview"
+    },
+    {
+      "area": "views",
+      "state": "override-draft",
+      "file": "screenshots/interactive/current/views-override-draft.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1142,
+        "activeElement": "BODY"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "views",
+          "stateId": "override-builtin"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "step": "keyboard-selection-and-preview"
+    },
+    {
+      "area": "views",
+      "state": "invalid-sample-json",
+      "file": "screenshots/interactive/current/views-invalid-sample-json.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1142,
+        "activeElement": "vwSample"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "views",
+          "stateId": "invalid-sample-json-and-retained-prior-preview"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "step": "keyboard-selection-and-preview"
+    },
+    {
+      "area": "explore",
+      "state": "search-results",
+      "file": "screenshots/interactive/current/explore-search-results.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1142,
+        "activeElement": "q"
+      },
+      "ledgerRefs": [],
+      "evidenceKind": "verified_gesture",
+      "step": "table-selection-and-empty-search"
+    },
+    {
+      "area": "explore",
+      "state": "selected-table",
+      "file": "screenshots/interactive/current/explore-selected-table.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1142,
+        "activeElement": "DIV"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "explore",
+          "stateId": "table-detail-with-constraints-and-usage"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "step": "table-selection-and-empty-search"
+    },
+    {
+      "area": "explore",
+      "state": "no-matches",
+      "file": "screenshots/interactive/current/explore-no-matches.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1142,
+        "activeElement": "q"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "explore",
+          "stateId": "no-search-matches"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "step": "table-selection-and-empty-search"
+    },
+    {
+      "area": "index",
+      "state": "cache-rebuild-started",
+      "file": "screenshots/interactive/current/index-cache-rebuild-started.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1185,
+        "activeElement": "BUTTON"
+      },
+      "ledgerRefs": [],
+      "evidenceKind": "verified_gesture",
+      "step": "cache-rebuild-job"
+    },
+    {
+      "area": "passports",
+      "state": "blank-service-validation",
+      "file": "screenshots/interactive/current/passports-blank-service-validation.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1142,
+        "activeElement": "ppBuild"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "passports",
+          "stateId": "blank-service-validation"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "step": "passport-open-and-blank-validation"
+    },
+    {
+      "area": "passports",
+      "state": "checkout-detail",
+      "file": "screenshots/interactive/current/passports-checkout-detail.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1000,
+        "activeElement": "BODY"
+      },
+      "ledgerRefs": [],
+      "evidenceKind": "verified_gesture",
+      "step": "passport-open-and-blank-validation"
+    },
+    {
+      "area": "capabilities",
+      "state": "service-questions",
+      "file": "screenshots/interactive/current/capabilities-service-questions.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1508,
+        "activeElement": "BUTTON"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "capabilities",
+          "stateId": "selected-object-and-questions"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "step": "object-question-and-no-results"
+    },
+    {
+      "area": "capabilities",
+      "state": "selected-tool",
+      "file": "screenshots/interactive/current/capabilities-selected-tool.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1390,
+        "activeElement": "ASIDE"
+      },
+      "ledgerRefs": [],
+      "evidenceKind": "verified_gesture",
+      "step": "object-question-and-no-results"
+    },
+    {
+      "area": "capabilities",
+      "state": "no-matches",
+      "file": "screenshots/interactive/current/capabilities-no-matches.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1164,
+        "activeElement": "INPUT"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "capabilities",
+          "stateId": "filtered-graph-and-zero-matches"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "step": "object-question-and-no-results"
+    },
+    {
+      "area": "context",
+      "state": "file-dirty",
+      "file": "screenshots/interactive/current/context-file-dirty.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1820,
+        "activeElement": "cxContent"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "context",
+          "stateId": "unsaved-progress-file-draft"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "step": "file-dirty-save-and-validation"
+    },
+    {
+      "area": "context",
+      "state": "file-saved",
+      "file": "screenshots/interactive/current/context-file-saved.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1820,
+        "activeElement": "BODY"
+      },
+      "ledgerRefs": [],
+      "evidenceKind": "verified_gesture",
+      "step": "file-dirty-save-and-validation"
+    },
+    {
+      "area": "context",
+      "state": "empty-file-validation",
+      "file": "screenshots/interactive/current/context-empty-file-validation.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1813,
+        "activeElement": "cxSaveFile"
+      },
+      "ledgerRefs": [],
+      "evidenceKind": "verified_gesture",
+      "step": "file-dirty-save-and-validation"
+    },
+    {
+      "area": "context",
+      "state": "scratchpad-success",
+      "file": "screenshots/interactive/current/context-scratchpad-success.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1828,
+        "activeElement": "BODY"
+      },
+      "ledgerRefs": [],
+      "evidenceKind": "verified_gesture",
+      "step": "scratchpad-success-and-failure"
+    },
+    {
+      "area": "context",
+      "state": "scratchpad-synthetic-failure",
+      "file": "screenshots/interactive/current/context-scratchpad-synthetic-failure.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1820,
+        "activeElement": "BODY"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "context",
+          "stateId": "tool-failure-with-captured-error"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "fixtureFailure": "Explicit demo_workbench fail=true; no route fault injection.",
+      "step": "scratchpad-success-and-failure"
+    },
+    {
+      "area": "context",
+      "state": "saved-runs",
+      "file": "screenshots/interactive/current/context-saved-runs.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1142,
+        "activeElement": "cxWorkspaceModes-tab-results"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "context",
+          "stateId": "saved-result-list"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "step": "scratchpad-success-and-failure"
+    },
+    {
+      "area": "context",
+      "state": "published-project",
+      "file": "screenshots/interactive/current/context-published-project.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1930,
+        "activeElement": "cxScopeProject"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "context",
+          "stateId": "published-project-with-graph-and-evidence-files"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "step": "project-read-edit-validation"
+    },
+    {
+      "area": "context",
+      "state": "project-publication-validation",
+      "file": "screenshots/interactive/current/context-project-publication-validation.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 3070,
+        "activeElement": "pcPublish"
+      },
+      "ledgerRefs": [],
+      "evidenceKind": "verified_gesture",
+      "step": "project-read-edit-validation"
+    },
+    {
+      "area": "scripts",
+      "state": "problem-editor-params-hooks-and-local-run",
+      "file": "screenshots/interactive/current/scripts-problem-editor-params-hooks-and-local-run.jpg",
+      "note": "Capture/script failure; not automatically a product defect.",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1142,
+        "activeElement": "BODY"
+      },
+      "ledgerRefs": [],
+      "evidenceKind": "capture_problem_image_only",
+      "step": "editor-params-hooks-and-local-run"
+    },
+    {
+      "area": "architecture",
+      "state": "invalid-structure-preserved",
+      "file": "screenshots/interactive/current/architecture-invalid-structure-preserved.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 2532,
+        "activeElement": "arAdminPublish"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "architecture",
+          "stateId": "validation-or-revision-conflict-error"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "step": "new-document-invalid-structure"
+    },
+    {
+      "area": "semantic",
+      "state": "retained-analyses",
+      "file": "screenshots/interactive/current/semantic-retained-analyses.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1298,
+        "activeElement": "smList"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "semantic",
+          "stateId": "retained-analyses-table-not-proved-by-same-named-capture"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "step": "retained-analyses-capabilities-and-ports"
+    },
+    {
+      "area": "semantic",
+      "state": "selected-analysis",
+      "file": "screenshots/interactive/current/semantic-selected-analysis.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 6363,
+        "activeElement": "BUTTON"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "semantic",
+          "stateId": "selected-retained-exact-analysis"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "step": "retained-analyses-capabilities-and-ports"
+    },
+    {
+      "area": "semantic",
+      "state": "engine-capabilities",
+      "file": "screenshots/interactive/current/semantic-engine-capabilities.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1142,
+        "activeElement": "smCapabilities"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "semantic",
+          "stateId": "engine-capabilities-result-not-proved-by-same-named-capture"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "step": "retained-analyses-capabilities-and-ports"
+    },
+    {
+      "area": "semantic",
+      "state": "passport-ports",
+      "file": "screenshots/interactive/current/semantic-passport-ports.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1584,
+        "activeElement": "smPorts"
+      },
+      "ledgerRefs": [],
+      "evidenceKind": "verified_gesture",
+      "step": "retained-analyses-capabilities-and-ports"
+    },
+    {
+      "area": "semantic",
+      "state": "trace-calls-preset",
+      "file": "screenshots/interactive/current/semantic-trace-calls-preset.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1854,
+        "activeElement": "BUTTON"
+      },
+      "ledgerRefs": [],
+      "evidenceKind": "verified_gesture",
+      "step": "task-presets-and-field-count"
+    },
+    {
+      "area": "semantic",
+      "state": "find-symbol-preset",
+      "file": "screenshots/interactive/current/semantic-find-symbol-preset.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1779,
+        "activeElement": "BUTTON"
+      },
+      "ledgerRefs": [],
+      "evidenceKind": "verified_gesture",
+      "step": "task-presets-and-field-count"
+    },
+    {
+      "area": "semantic",
+      "state": "default-query-fields",
+      "file": "screenshots/interactive/current/semantic-default-query-fields.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 6821,
+        "activeElement": "BUTTON"
+      },
+      "ledgerRefs": [],
+      "evidenceKind": "verified_gesture",
+      "step": "task-presets-and-field-count"
+    },
+    {
+      "area": "workbench",
+      "state": "problem-synthetic-success",
+      "file": "screenshots/interactive/current/workbench-problem-synthetic-success.jpg",
+      "note": "Capture/script failure; not automatically a product defect.",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1142,
+        "activeElement": "BODY"
+      },
+      "ledgerRefs": [],
+      "evidenceKind": "capture_problem_image_only",
+      "step": "synthetic-success"
+    },
+    {
+      "area": "workbench",
+      "state": "problem-synthetic-cancel",
+      "file": "screenshots/interactive/current/workbench-problem-synthetic-cancel.jpg",
+      "note": "Capture/script failure; not automatically a product defect.",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1142,
+        "activeElement": "BODY"
+      },
+      "ledgerRefs": [],
+      "evidenceKind": "capture_problem_image_only",
+      "step": "synthetic-cancel"
+    },
+    {
+      "area": "runtime",
+      "state": "execution-detail",
+      "file": "screenshots/interactive/current/runtime-execution-detail.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 2057,
+        "activeElement": "BUTTON"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "runtime",
+          "stateId": "selected-execution-ownership-result-detail"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "step": "execution-record-and-diagnostics"
+    },
+    {
+      "area": "runtime",
+      "state": "metadata-editor",
+      "file": "screenshots/interactive/current/runtime-metadata-editor.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 2392,
+        "activeElement": "BUTTON"
+      },
+      "ledgerRefs": [],
+      "evidenceKind": "verified_gesture",
+      "step": "execution-record-and-diagnostics"
+    },
+    {
+      "area": "runtime",
+      "state": "diagnostics-events",
+      "file": "screenshots/interactive/current/runtime-diagnostics-events.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 4898,
+        "activeElement": "BUTTON"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "runtime",
+          "stateId": "requests-and-models-evidence"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "step": "execution-record-and-diagnostics"
+    },
+    {
+      "area": "runtime",
+      "state": "diagnostics-traces",
+      "file": "screenshots/interactive/current/runtime-diagnostics-traces.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1142,
+        "activeElement": "BUTTON"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "runtime",
+          "stateId": "trace-observability-evidence"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "step": "execution-record-and-diagnostics"
+    },
+    {
+      "area": "runtime",
+      "state": "diagnostics-coverage",
+      "file": "screenshots/interactive/current/runtime-diagnostics-coverage.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1142,
+        "activeElement": "BUTTON"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "runtime",
+          "stateId": "test-coverage-evidence"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "step": "execution-record-and-diagnostics"
+    },
+    {
+      "area": "jobs",
+      "state": "selected-job-log-and-outcome",
+      "file": "screenshots/interactive/current/jobs-selected-job-log-and-outcome.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1142,
+        "activeElement": "TR"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "jobs",
+          "stateId": "selected-job-log-and-owner-facts"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "step": "selected-synthetic-job-log"
+    },
+    {
+      "area": "history",
+      "state": "api-source-filter",
+      "file": "screenshots/interactive/current/history-api-source-filter.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 5195,
+        "activeElement": "BODY"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "history",
+          "stateId": "source-filter-selection"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "step": "source-and-empty-filter"
+    },
+    {
+      "area": "history",
+      "state": "empty-filter",
+      "file": "screenshots/interactive/current/history-empty-filter.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1281,
+        "activeElement": "hsQ"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "history",
+          "stateId": "filtered-calls-and-zero-matches"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "step": "source-and-empty-filter"
+    },
+    {
+      "area": "environments",
+      "state": "definition-with-two-services",
+      "file": "screenshots/interactive/current/environments-definition-with-two-services.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1890,
+        "activeElement": "seAddService"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "environments",
+          "stateId": "new-definition-and-service-row"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "step": "new-definition-form-only"
+    },
+    {
+      "area": "environments",
+      "state": "invalid-definition-json",
+      "file": "screenshots/interactive/current/environments-invalid-definition-json.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 2195,
+        "activeElement": "seApplyAdvanced"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "environments",
+          "stateId": "definition-dirty-invalid-and-advanced-json"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "step": "new-definition-form-only"
+    },
+    {
+      "area": "map",
+      "state": "problem-embedded-container-selection",
+      "file": "screenshots/interactive/current/map-problem-embedded-container-selection.jpg",
+      "note": "Capture/script failure; not automatically a product defect.",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1142,
+        "activeElement": "BODY"
+      },
+      "ledgerRefs": [],
+      "evidenceKind": "capture_problem_image_only",
+      "step": "embedded-container-selection"
+    },
+    {
+      "area": "handbook",
+      "state": "problem-chapter-search",
+      "file": "screenshots/interactive/current/handbook-problem-chapter-search.jpg",
+      "note": "Capture/script failure; not automatically a product defect.",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 7590,
+        "activeElement": "BODY"
+      },
+      "ledgerRefs": [],
+      "evidenceKind": "capture_problem_image_only",
+      "step": "chapter-search"
+    },
+    {
+      "area": "studio",
+      "state": "embedded-selector-result",
+      "file": "screenshots/interactive/current/studio-embedded-selector-result.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1486,
+        "activeElement": "adminStudio"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "studio",
+          "stateId": "upgrade-dependencies-work-area"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "step": "embedded-app-selector"
+    },
+    {
+      "area": "pages",
+      "state": "embedded-selector-result",
+      "file": "screenshots/interactive/current/pages-embedded-selector-result.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1406,
+        "activeElement": "adminPages"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "pages",
+          "stateId": "example-selected-and-editable-definition"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "step": "embedded-app-selector"
+    },
+    {
+      "area": "api",
+      "state": "embedded-selector-result",
+      "file": "screenshots/interactive/current/api-embedded-selector-result.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1163,
+        "activeElement": "adminApiClient"
+      },
+      "ledgerRefs": [
+        {
+          "areaId": "api",
+          "stateId": "body-format-and-json-editor"
+        }
+      ],
+      "evidenceKind": "verified_gesture",
+      "step": "embedded-app-selector"
+    },
+    {
+      "area": "reflection",
+      "state": "embedded-selector-result",
+      "file": "screenshots/interactive/current/reflection-embedded-selector-result.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1279,
+        "activeElement": "adminReflection"
+      },
+      "ledgerRefs": [],
+      "evidenceKind": "verified_gesture",
+      "step": "embedded-app-selector"
+    },
+    {
+      "area": "context",
+      "state": "phone-selected-context",
+      "file": "screenshots/interactive/current/context-phone-selected-context.jpg",
+      "note": "Actual UI after recorded action",
+      "metrics": {
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "scrollHeight": 2697,
+        "activeElement": "BUTTON"
+      },
+      "ledgerRefs": [],
+      "evidenceKind": "verified_gesture",
+      "step": "phone-width-selection"
+    },
+    {
+      "area": "scripts",
+      "state": "problem-corrected-seed-editor-and-run",
+      "file": "screenshots/interactive/current/scripts-problem-corrected-seed-editor-and-run.jpg",
+      "note": "Capture/script failure; not automatically a product defect.",
+      "evidenceKind": "capture_problem_image_only",
+      "ledgerRefs": [],
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1142,
+        "activeElement": "pmName"
+      },
+      "step": "editor-params-hooks-and-local-run"
+    },
+    {
+      "area": "workbench",
+      "state": "fresh-link-hidden-draft",
+      "file": "screenshots/interactive/current/workbench-fresh-link-hidden-draft.jpg",
+      "note": "Actual UI after recorded action",
+      "step": "fresh-link-hidden-draft-and-recovery",
+      "evidenceKind": "verified_gesture",
+      "ledgerRefs": [],
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1142,
+        "activeElement": "BODY"
+      }
+    },
+    {
+      "area": "workbench",
+      "state": "problem-fresh-link-hidden-draft-and-recovery",
+      "file": "screenshots/interactive/current/workbench-problem-fresh-link-hidden-draft-and-recovery.jpg",
+      "note": "Capture/script failure; not automatically a product defect.",
+      "evidenceKind": "capture_problem_image_only",
+      "ledgerRefs": [],
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1142,
+        "activeElement": "BODY"
+      },
+      "step": "synthetic-success"
+    },
+    {
+      "area": "workbench",
+      "state": "synthetic-running",
+      "file": "screenshots/interactive/current/workbench-synthetic-running.jpg",
+      "note": "Actual UI after recorded action",
+      "step": "synthetic-cancel-recovered",
+      "evidenceKind": "verified_gesture",
+      "ledgerRefs": [
+        {
+          "areaId": "workbench",
+          "stateId": "running-action-and-cancel"
+        }
+      ],
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1164,
+        "activeElement": "BODY"
+      }
+    },
+    {
+      "area": "workbench",
+      "state": "synthetic-cancelled",
+      "file": "screenshots/interactive/current/workbench-synthetic-cancelled.jpg",
+      "note": "Actual UI after recorded action",
+      "step": "synthetic-cancel-recovered",
+      "evidenceKind": "verified_gesture",
+      "ledgerRefs": [
+        {
+          "areaId": "workbench",
+          "stateId": "running-action-and-cancel"
+        }
+      ],
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1350,
+        "activeElement": "BODY"
+      }
+    },
+    {
+      "area": "workbench",
+      "state": "synthetic-failure",
+      "file": "screenshots/interactive/current/workbench-synthetic-failure.jpg",
+      "note": "Actual UI after recorded action",
+      "step": "synthetic-failure-recovered",
+      "evidenceKind": "verified_gesture",
+      "ledgerRefs": [],
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1895,
+        "activeElement": "BODY"
+      },
+      "fixtureFailure": "Explicit demo_workbench fail=true; no route fault injection."
+    },
+    {
+      "area": "workbench",
+      "state": "browse-services",
+      "file": "screenshots/interactive/current/workbench-browse-services.jpg",
+      "note": "Actual UI after recorded action",
+      "step": "browse-services-tasks-and-context",
+      "evidenceKind": "verified_gesture",
+      "ledgerRefs": [
+        {
+          "areaId": "workbench",
+          "stateId": "services-browse"
+        }
+      ],
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1895,
+        "activeElement": "BUTTON"
+      }
+    },
+    {
+      "area": "workbench",
+      "state": "browse-tasks",
+      "file": "screenshots/interactive/current/workbench-browse-tasks.jpg",
+      "note": "Actual UI after recorded action",
+      "step": "browse-services-tasks-and-context",
+      "evidenceKind": "verified_gesture",
+      "ledgerRefs": [
+        {
+          "areaId": "workbench",
+          "stateId": "tasks-browse"
+        }
+      ],
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1895,
+        "activeElement": "BUTTON"
+      }
+    },
+    {
+      "area": "workbench",
+      "state": "browse-contexts",
+      "file": "screenshots/interactive/current/workbench-browse-contexts.jpg",
+      "note": "Actual UI after recorded action",
+      "step": "browse-services-tasks-and-context",
+      "evidenceKind": "verified_gesture",
+      "ledgerRefs": [],
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1895,
+        "activeElement": "BUTTON"
+      }
+    },
+    {
+      "area": "workbench",
+      "state": "selected-context-detail",
+      "file": "screenshots/interactive/current/workbench-selected-context-detail.jpg",
+      "note": "Actual UI after recorded action",
+      "step": "browse-services-tasks-and-context",
+      "evidenceKind": "verified_gesture",
+      "ledgerRefs": [
+        {
+          "areaId": "workbench",
+          "stateId": "selected-tree-item-and-detail"
+        }
+      ],
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 2422,
+        "activeElement": "SUMMARY"
+      }
+    },
+    {
+      "area": "map",
+      "state": "fresh-link-env-error-hidden",
+      "file": "screenshots/interactive/current/map-fresh-link-env-error-hidden.jpg",
+      "note": "Actual UI after recorded action",
+      "step": "fresh-link-empty-env-and-recovery",
+      "evidenceKind": "verified_gesture",
+      "ledgerRefs": [],
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1142,
+        "activeElement": "BODY"
+      }
+    },
+    {
+      "area": "map",
+      "state": "problem-fresh-link-empty-env-and-recovery",
+      "file": "screenshots/interactive/current/map-problem-fresh-link-empty-env-and-recovery.jpg",
+      "note": "Capture/script failure; not automatically a product defect.",
+      "evidenceKind": "capture_problem_image_only",
+      "ledgerRefs": [],
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1202,
+        "activeElement": "nav-map"
+      },
+      "step": "embedded-container-selection"
+    },
+    {
+      "area": "handbook",
+      "state": "no-matching-chapters",
+      "file": "screenshots/interactive/current/handbook-no-matching-chapters.jpg",
+      "note": "Actual UI after recorded action",
+      "step": "corrected-chapter-search-and-self-context",
+      "evidenceKind": "verified_gesture",
+      "ledgerRefs": [],
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1443,
+        "activeElement": "hbSearch"
+      }
+    },
+    {
+      "area": "handbook",
+      "state": "self-context",
+      "file": "screenshots/interactive/current/handbook-self-context.jpg",
+      "note": "Actual UI after recorded action",
+      "step": "corrected-chapter-search-and-self-context",
+      "evidenceKind": "verified_gesture",
+      "ledgerRefs": [
+        {
+          "areaId": "handbook",
+          "stateId": "self-context-installation-facts"
+        }
+      ],
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 3283,
+        "activeElement": "BUTTON"
+      }
+    },
+    {
+      "area": "api",
+      "state": "local-echo-response",
+      "file": "screenshots/interactive/current/api-local-echo-response.jpg",
+      "note": "Actual UI after recorded action",
+      "step": "local-echo-response",
+      "evidenceKind": "verified_gesture",
+      "ledgerRefs": [
+        {
+          "areaId": "api",
+          "stateId": "successful-http-response-and-saved-exchange"
+        }
+      ],
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1163,
+        "activeElement": "adminApiClient"
+      }
+    },
+    {
+      "area": "api",
+      "state": "retained-exchange-evidence",
+      "file": "screenshots/interactive/current/api-retained-exchange-evidence.jpg",
+      "note": "Actual UI after recorded action",
+      "step": "local-echo-response",
+      "evidenceKind": "verified_gesture",
+      "ledgerRefs": [],
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1163,
+        "activeElement": "adminApiClient"
+      }
+    },
+    {
+      "area": "runtime",
+      "state": "metadata-selected",
+      "file": "screenshots/interactive/current/runtime-metadata-selected.jpg",
+      "note": "Actual UI after recorded action",
+      "step": "metadata-record-opened",
+      "evidenceKind": "verified_gesture",
+      "ledgerRefs": [],
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 2392,
+        "activeElement": "BUTTON"
+      }
+    },
+    {
+      "area": "scripts",
+      "state": "local-script-steps",
+      "file": "screenshots/interactive/current/scripts-local-script-steps.jpg",
+      "note": "Actual UI after recorded action",
+      "step": "corrected-seed-editor-and-run",
+      "evidenceKind": "verified_gesture",
+      "ledgerRefs": [],
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1142,
+        "activeElement": "BODY"
+      }
+    },
+    {
+      "area": "scripts",
+      "state": "params",
+      "file": "screenshots/interactive/current/scripts-params.jpg",
+      "note": "Actual UI after recorded action",
+      "step": "corrected-seed-editor-and-run",
+      "evidenceKind": "verified_gesture",
+      "ledgerRefs": [
+        {
+          "areaId": "scripts",
+          "stateId": "params-editor"
+        }
+      ],
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1142,
+        "activeElement": "BUTTON"
+      }
+    },
+    {
+      "area": "scripts",
+      "state": "vars-and-hooks",
+      "file": "screenshots/interactive/current/scripts-vars-and-hooks.jpg",
+      "note": "Actual UI after recorded action",
+      "step": "corrected-seed-editor-and-run",
+      "evidenceKind": "verified_gesture",
+      "ledgerRefs": [
+        {
+          "areaId": "scripts",
+          "stateId": "vars-and-hooks-editor"
+        }
+      ],
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1142,
+        "activeElement": "BUTTON"
+      }
+    },
+    {
+      "area": "scripts",
+      "state": "local-run-result",
+      "file": "screenshots/interactive/current/scripts-local-run-result.jpg",
+      "note": "Actual UI after recorded action",
+      "step": "corrected-seed-editor-and-run",
+      "evidenceKind": "verified_gesture",
+      "ledgerRefs": [
+        {
+          "areaId": "scripts",
+          "stateId": "script-complete-or-failed-with-step-report"
+        }
+      ],
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1212,
+        "activeElement": "BODY"
+      }
+    },
+    {
+      "area": "workbench",
+      "state": "synthetic-prepared-draft",
+      "file": "screenshots/interactive/current/workbench-synthetic-prepared-draft.jpg",
+      "note": "Actual UI after recorded action",
+      "step": "fresh-link-hidden-draft-and-recovery",
+      "evidenceKind": "verified_gesture",
+      "ledgerRefs": [
+        {
+          "areaId": "workbench",
+          "stateId": "prepared-tool-with-typed-arguments"
+        }
+      ],
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1164,
+        "activeElement": "BODY"
+      }
+    },
+    {
+      "area": "workbench",
+      "state": "synthetic-success-evidence",
+      "file": "screenshots/interactive/current/workbench-synthetic-success-evidence.jpg",
+      "note": "Actual UI after recorded action",
+      "step": "fresh-link-hidden-draft-and-recovery",
+      "evidenceKind": "verified_gesture",
+      "ledgerRefs": [
+        {
+          "areaId": "workbench",
+          "stateId": "successful-action-with-retained-evidence"
+        }
+      ],
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1473,
+        "activeElement": "BODY"
+      }
+    },
+    {
+      "area": "map",
+      "state": "selected-checkout-node",
+      "file": "screenshots/interactive/current/map-selected-checkout-node.jpg",
+      "note": "Actual UI after recorded action",
+      "step": "fresh-link-empty-env-and-recovery",
+      "evidenceKind": "verified_gesture",
+      "ledgerRefs": [
+        {
+          "areaId": "map",
+          "stateId": "selected-node-and-source-detail"
+        }
+      ],
+      "metrics": {
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "scrollHeight": 1202,
+        "activeElement": "cxMapFrame"
+      }
+    }
+  ],
+  "productDefects": [
+    {
+      "id": "B3-confirmed",
+      "area": "config",
+      "description": "Clicking the selected Config area replaced an unsaved draft without a discard dialog.",
+      "evidence": [
+        "config-dirty-before-same-tab.jpg",
+        "config-after-same-tab.jpg"
+      ],
+      "verification": "Actual browser interaction and resulting DOM",
+      "evidenceKind": "verified_gesture"
+    },
+    {
+      "id": "B1-sites-confirmed",
+      "area": "sites",
+      "description": "Existing site row is not keyboard focusable; ten Tab advances from New Site never select the site.",
+      "evidence": {
+        "semantics": {
+          "tag": "DIV",
+          "tabindex": null,
+          "role": null,
+          "focusable": false
+        },
+        "visited": [
+          "<body data-dt-role=\"admin\">\n<div class=\"wrap\">\n  <div class=\"top\">\n    <h1>dt admin</h1>\n    <span class=\"badge\" id=\"version\">v0.2.0</span>\n    <select id=\"env\" title=\"Environment\"",
+          "<select id=\"env\" title=\"Environment\"><option selected=\"\">dev</option><option>uat</option></select>",
+          "<a href=\"/tasks\">Task desk</a>",
+          "<a href=\"/view\" target=\"_blank\" rel=\"noopener\">Results</a>",
+          "<a href=\"/openapi.json\" target=\"_blank\" rel=\"noopener\">OpenAPI</a>",
+          "<input id=\"rtStory\" maxlength=\"200\" placeholder=\"default\" autocomplete=\"off\">",
+          "<button type=\"submit\" id=\"rtScopeApply\">Apply scope</button>",
+          "<button data-tab=\"sites\" class=\"on\" role=\"tab\" id=\"nav-sites\" aria-controls=\"tab-sites\" aria-selected=\"true\" tabindex=\"0\">Sites<span class=\"n\" id=\"nSites\">1</span></button>",
+          "<button class=\"icon\" id=\"stNew\">+ Site</button>",
+          "<body data-dt-role=\"admin\">\n<div class=\"wrap\">\n  <div class=\"top\">\n    <h1>dt admin</h1>\n    <span class=\"badge\" id=\"version\">v0.2.0</span>\n    <select id=\"env\" title=\"Environment\""
+        ]
+      },
+      "verification": "Actual browser interaction and resulting DOM",
+      "evidenceKind": "verified_gesture"
+    },
+    {
+      "id": "B1-views-confirmed",
+      "area": "views",
+      "description": "Existing renderer row is not focusable; it has no button/link role or tabindex.",
+      "evidence": {
+        "tag": "DIV",
+        "tabindex": null,
+        "role": null,
+        "focusable": false
+      },
+      "verification": "Actual browser interaction and resulting DOM",
+      "evidenceKind": "rendered_dom_observation_after_gesture"
+    },
+    {
+      "id": "B4-frame-title-confirmed",
+      "area": "views",
+      "description": "Admin renderer preview iframe lacks an accessible title.",
+      "evidence": {
+        "id": "vwPrev",
+        "title": null
+      },
+      "verification": "Actual browser interaction and resulting DOM",
+      "evidenceKind": "rendered_dom_observation_after_gesture"
+    },
+    {
+      "id": "B8-workbench-fresh-link",
+      "area": "workbench",
+      "description": "A fresh Workbench tool URL prepares demo_workbench but its entire composer becomes hidden after navigator initialization.",
+      "evidence": {
+        "prepared": "Prepared only · review arguments and intended effects",
+        "runVisible": false
+      },
+      "verification": "Actual browser interaction and resulting DOM",
+      "evidenceKind": "verified_gesture"
+    },
+    {
+      "id": "B9-map-fresh-link",
+      "area": "map",
+      "description": "Fresh #map navigation submits empty env before the environment selector is populated; error is written in hidden Context and the Map area stays blank.",
+      "evidence": {
+        "hiddenContextMessage": "Invalid argument $.env: must be an allowed value",
+        "mapFrameVisible": false
+      },
+      "verification": "Actual browser interaction and resulting DOM",
+      "evidenceKind": "verified_gesture"
+    }
+  ],
+  "captureProblems": [
+    {
+      "area": "scripts",
+      "step": "safe seed",
+      "error": "/api/tool/script_save: {\"error\":\"Missing argument: description\",\"code\":\"DT_ARGUMENT_INVALID\",\"issues\":[{\"path\":\"$.description\",\"message\":\"required\"}]}",
+      "resolvedBy": "scripts/corrected-seed-editor-and-run"
+    },
+    {
+      "area": "scripts",
+      "step": "editor-params-hooks-and-local-run",
+      "error": "locator.click: Timeout 7000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-folder=\"review\"]').first()\u001b[22m\n",
+      "resolvedBy": "scripts/corrected-seed-editor-and-run"
+    },
+    {
+      "area": "workbench",
+      "step": "synthetic-success",
+      "error": "locator.waitFor: Timeout 7000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#wbRun') to be visible\u001b[22m\n\u001b[2m    18 × locator resolved to hidden <button id=\"wbRun\" type=\"button\" class=\"primary\">Run demo_workbench</button>\u001b[22m\n",
+      "reclassifiedBy": "B8-workbench-fresh-link; recovered same-document UI path"
+    },
+    {
+      "area": "workbench",
+      "step": "synthetic-cancel",
+      "error": "locator.click: Timeout 7000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#wbRun')\u001b[22m\n\u001b[2m    - locator resolved to <button id=\"wbRun\" type=\"button\" class=\"primary\">Run demo_workbench</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not visible\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not visible\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    13 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is not visible\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n",
+      "reclassifiedBy": "B8-workbench-fresh-link; recovered same-document UI path"
+    },
+    {
+      "area": "map",
+      "step": "embedded-container-selection",
+      "error": "locator.waitFor: Timeout 7000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#cxMapFrame').contentFrame().locator('body') to be visible\u001b[22m\n\u001b[2m    18 × locator resolved to hidden <body></body>\u001b[22m\n",
+      "reclassifiedBy": "B9-map-fresh-link; recovered populated-environment UI path"
+    },
+    {
+      "area": "handbook",
+      "step": "chapter-search",
+      "error": "locator.waitFor: Timeout 7000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#adminHandbook nav button').first() to be visible\u001b[22m\n",
+      "resolvedBy": "handbook/corrected-chapter-search-and-self-context"
+    },
+    {
+      "area": "scripts",
+      "step": "corrected-seed-editor-and-run",
+      "error": "locator.click: Timeout 7000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-script=\"review/local-check\"]').first()\u001b[22m\n",
+      "resolvedBy": "scripts/corrected-seed-editor-and-run"
+    },
+    {
+      "area": "workbench",
+      "step": "fresh-link-hidden-draft-and-recovery",
+      "error": "locator.waitFor: Timeout 7000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#wbRun') to be visible\u001b[22m\n\u001b[2m    18 × locator resolved to hidden <button id=\"wbRun\" type=\"button\" class=\"primary\">Run demo_workbench</button>\u001b[22m\n",
+      "reclassifiedBy": "B8-workbench-fresh-link; recovered same-document UI path"
+    },
+    {
+      "area": "map",
+      "step": "fresh-link-empty-env-and-recovery",
+      "error": "locator.click: Timeout 7000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#cxMapFrame').contentFrame().getByText('checkout', { exact: true }).first()\u001b[22m\n",
+      "reclassifiedBy": "B9-map-fresh-link; recovered populated-environment UI path"
+    }
+  ],
+  "consoleErrors": [],
+  "blockedRequests": [],
+  "seedOperations": [
+    {
+      "route": "/api/admin/refresh",
+      "data": {
+        "env": "dev",
+        "what": "index"
+      },
+      "purpose": "Safe disposable fixture seed",
+      "resultStatus": 202
+    },
+    {
+      "route": "/api/tool/script_save",
+      "data": {
+        "id": "review/local-check",
+        "description": "Synthetic local UI verification only",
+        "params": {
+          "label": {
+            "default": "fixture",
+            "required": true,
+            "description": "A local label"
+          }
+        },
+        "vars": {
+          "kind": "local"
+        },
+        "before": "vars.started = true;",
+        "after": "test('local fixture', () => expect(result.fixture).toBe(true));",
+        "steps": [
+          {
+            "tool": "demo_workbench",
+            "args": {
+              "items": [],
+              "options": {},
+              "nullable": null,
+              "slow": false,
+              "fail": false
+            },
+            "as": "sample"
+          }
+        ]
+      },
+      "purpose": "Safe disposable fixture seed",
+      "resultStatus": 200
+    },
+    {
+      "route": "/api/tool/script_save",
+      "data": {
+        "id": "review/local-check",
+        "description": "Synthetic local UI verification only",
+        "params": {
+          "label": {
+            "default": "fixture",
+            "required": true,
+            "description": "A local label"
+          }
+        },
+        "vars": {
+          "kind": "local"
+        },
+        "before": "vars.started = true;",
+        "after": "test('local fixture', () => expect(result.fixture).toBe(true));",
+        "steps": [
+          {
+            "tool": "demo_workbench",
+            "args": {
+              "items": [],
+              "options": {},
+              "nullable": null,
+              "slow": false,
+              "fail": false
+            },
+            "as": "sample"
+          }
+        ]
+      },
+      "purpose": "Safe disposable fixture seed",
+      "resultStatus": 200
+    }
+  ],
+  "uncapturedStates": [
+    {
+      "ledger": "state-inventory.json",
+      "status": "Many of the 239 ledger scenarios remain uncaptured; this run verifies named steps only.",
+      "excluded": [
+        "Real database/Kafka/ES/Consul operations",
+        "Build/container/environment supervisor runs",
+        "Fresh Joern parsing or real model provider calls",
+        "Every renderer interaction and every tool contract",
+        "Physical touch/screen reader/200% zoom",
+        "Context scratchpad cancellation: no cancel control; use Workbench for owned cancellable job"
+      ]
+    }
+  ],
+  "cleanup": {
+    "browser": "closed",
+    "fixture": "stopped",
+    "wrapperPid": 81097,
+    "childPid": 81098,
+    "wrapperStopped": true,
+    "childStopped": true,
+    "temporaryHomeRemoved": true,
+    "adminPortClosed": true,
+    "echoPortClosed": true,
+    "manifest": "removed after shutdown; fixture.js regenerates it for reproduction"
+  },
+  "counts": {
+    "steps": 45,
+    "verifiedSteps": 30,
+    "verifiedDefectSteps": 7,
+    "observedSteps": 2,
+    "captureProblemSteps": 6,
+    "captures": 76,
+    "areasWithCaptures": 22,
+    "verifiedProductDefects": 6
+  },
+  "followupStartedAt": "2026-11-22T19:10:20.975Z",
+  "evidenceTaxonomy": {
+    "verified": "Action and assertion completed",
+    "observed": "Rendered outcome captured without a full behavioral assertion",
+    "verified-defect": "A real product assertion failed and evidence was recorded",
+    "capture-failed": "Harness/locator attempt incomplete; see resolution or reclassification",
+    "deliberate_fault": "None injected by routes. Explicit synthetic demo tool failures are separately labeled."
+  },
+  "countsLedger": {
+    "uniqueReferencedStates": 42,
+    "ledgerTotal": 239,
+    "completionClaim": "Only named captures and assertions; no all-state coverage claim."
+  },
+  "preflight": {
+    "loopbackOrigin": true,
+    "existingTemporaryHome": true,
+    "temporaryHomePrefix": "dt-ux-review-",
+    "passed": true
+  },
+  "finishedAt": "2026-11-22T19:10:32.167Z",
+  "completedAt": "2026-11-22T19:11:47.114Z"
+}

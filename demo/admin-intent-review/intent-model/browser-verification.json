@@ -1,0 +1,210 @@
+{
+  "protocol": "dt.intent-browser/v1",
+  "scope": "Real browser gestures on finite XState design simulation; no production backend",
+  "checks": [
+    {
+      "name": "1440: selected intent highlights a bounded hierarchical diagram",
+      "passed": true
+    },
+    {
+      "name": "1440: next/reset and shareable restored simulation",
+      "passed": true
+    },
+    {
+      "name": "All 135 use cases can be found, selected and completed through UI controls",
+      "passed": true
+    },
+    {
+      "name": "1440: failures, partial, denial and cancel have distinct visible endpoints",
+      "passed": true
+    },
+    {
+      "name": "1440: inspection and collapse do not execute modeled steps",
+      "passed": true
+    },
+    {
+      "name": "1440: scale specimen keeps service and field pages bounded and references cycles",
+      "passed": true
+    },
+    {
+      "name": "1440: coverage labels finite model scope and all prior obligations",
+      "passed": true
+    },
+    {
+      "name": "1440: fields have accessible names and source downloads are real",
+      "passed": true
+    },
+    {
+      "name": "390: selected intent highlights a bounded hierarchical diagram",
+      "passed": true
+    },
+    {
+      "name": "390: next/reset and shareable restored simulation",
+      "passed": true
+    },
+    {
+      "name": "390: failures, partial, denial and cancel have distinct visible endpoints",
+      "passed": true
+    },
+    {
+      "name": "390: inspection and collapse do not execute modeled steps",
+      "passed": true
+    },
+    {
+      "name": "390: scale specimen keeps service and field pages bounded and references cycles",
+      "passed": true
+    },
+    {
+      "name": "390: coverage labels finite model scope and all prior obligations",
+      "passed": true
+    },
+    {
+      "name": "390: fields have accessible names and source downloads are real",
+      "passed": true
+    }
+  ],
+  "captures": [
+    {
+      "id": "selected-entry-exit",
+      "file": "screenshots/selected-entry-exit-1440.jpg",
+      "width": 1440,
+      "label": "Intent model · selected entry exit · 1440",
+      "category": "intent-model",
+      "capture": "viewport",
+      "metrics": {
+        "width": 1440,
+        "documentWidth": 1440,
+        "stateRows": 13,
+        "sourceRows": 0
+      }
+    },
+    {
+      "id": "file-conflict-path",
+      "file": "screenshots/file-conflict-path-1440.jpg",
+      "width": 1440,
+      "label": "Intent model · file conflict path · 1440",
+      "category": "intent-model",
+      "capture": "viewport",
+      "metrics": {
+        "width": 1440,
+        "documentWidth": 1440,
+        "stateRows": 12,
+        "sourceRows": 0
+      }
+    },
+    {
+      "id": "background-reconciliation",
+      "file": "screenshots/background-reconciliation-1440.jpg",
+      "width": 1440,
+      "label": "Intent model · background reconciliation · 1440",
+      "category": "intent-model",
+      "capture": "viewport",
+      "metrics": {
+        "width": 1440,
+        "documentWidth": 1440,
+        "stateRows": 15,
+        "sourceRows": 0
+      }
+    },
+    {
+      "id": "nested-source-list",
+      "file": "screenshots/nested-source-list-1440.jpg",
+      "width": 1440,
+      "label": "Intent model · nested source list · 1440",
+      "category": "intent-model",
+      "capture": "viewport",
+      "metrics": {
+        "width": 1440,
+        "documentWidth": 1440,
+        "stateRows": 13,
+        "sourceRows": 42
+      }
+    },
+    {
+      "id": "selected-entry-exit",
+      "file": "screenshots/selected-entry-exit-390.jpg",
+      "width": 390,
+      "label": "Intent model · selected entry exit · 390",
+      "category": "intent-model",
+      "capture": "viewport",
+      "metrics": {
+        "width": 390,
+        "documentWidth": 390,
+        "stateRows": 13,
+        "sourceRows": 0
+      }
+    },
+    {
+      "id": "file-conflict-path",
+      "file": "screenshots/file-conflict-path-390.jpg",
+      "width": 390,
+      "label": "Intent model · file conflict path · 390",
+      "category": "intent-model",
+      "capture": "viewport",
+      "metrics": {
+        "width": 390,
+        "documentWidth": 390,
+        "stateRows": 12,
+        "sourceRows": 0
+      }
+    },
+    {
+      "id": "background-reconciliation",
+      "file": "screenshots/background-reconciliation-390.jpg",
+      "width": 390,
+      "label": "Intent model · background reconciliation · 390",
+      "category": "intent-model",
+      "capture": "viewport",
+      "metrics": {
+        "width": 390,
+        "documentWidth": 390,
+        "stateRows": 15,
+        "sourceRows": 0
+      }
+    },
+    {
+      "id": "nested-source-list",
+      "file": "screenshots/nested-source-list-390.jpg",
+      "width": 390,
+      "label": "Intent model · nested source list · 390",
+      "category": "intent-model",
+      "capture": "viewport",
+      "metrics": {
+        "width": 390,
+        "documentWidth": 390,
+        "stateRows": 13,
+        "sourceRows": 42
+      }
+    },
+    {
+      "id": "dark-statechart",
+      "file": "screenshots/dark-statechart-1440.jpg",
+      "width": 1440,
+      "label": "Intent model · dark statechart · 1440",
+      "category": "intent-model",
+      "capture": "viewport",
+      "metrics": {
+        "width": 1440,
+        "documentWidth": 1440,
+        "stateRows": 13,
+        "sourceRows": 0
+      }
+    }
+  ],
+  "errors": [],
+  "forbiddenRequests": [],
+  "measurements": [
+    {
+      "width": 1440,
+      "localInitialLoadMs": 164,
+      "scope": "local static fixture; not a production benchmark"
+    },
+    {
+      "width": 390,
+      "localInitialLoadMs": 127,
+      "scope": "local static fixture; not a production benchmark"
+    }
+  ],
+  "browserUsecases": 135,
+  "passed": true
+}
