@@ -1,0 +1,8 @@
+{
+  "date": "2026-11-25",
+  "fullSuite": {"command": "node --test --test-concurrency=8 test/*.test.js", "tests": 1430, "pass": 1364, "fail": 0, "skipped": 66, "durationMs": 169975.062851},
+  "focused": {"tests": 26, "pass": 26, "fail": 0},
+  "bundleTests": {"tests": 8, "pass": 8, "fail": 0},
+  "buildCheck": "dist/ is up to date",
+  "qualification": "Deterministic soak results are separate from the ongoing real-model run. Live integration skips were not run. An earlier default-concurrency named-view recovery failure passed in isolation and both bounded-concurrency full-suite runs."
+}

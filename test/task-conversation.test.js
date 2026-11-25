@@ -19,3 +19,8 @@ test('current-state labels expose actual operations, safe control acknowledgemen
  assert.equal(C.status({state:'waiting',watch:{tool:'jenkins_build'}}).action,'checks');
  assert.match(C.status({state:'paused'}).detail,/No work is running/);assert.match(C.status({state:'completed'}).title,/saved/);assert.match(C.status({state:'cancelled'}).title,/Stopped/);
 });
+
+test('provider recovery and automatic checkpoints remain visible in the conversation',()=>{
+ const rows=C.rows([{cursor:1,type:'model.backoff',attempt:2,retryAt:'2026-11-25T20:00:00Z'},{cursor:2,type:'context.compaction.started'},{cursor:3,type:'context.compacted',beforeBytes:40000,afterBytes:12000},{cursor:4,type:'context.overflow'}]);
+ assert.equal(rows.length,4);assert.match(rows[0].text,/retry 2.*2026-11-25/);assert.match(rows[2].text,/40000 → 12000/);assert.match(C.status({state:'running',pending:{kind:'compaction'}}).title,/Compacting/);
+});

@@ -1,0 +1,13 @@
+{
+  "state": "running",
+  "qualification": "Not a completed real-model pass",
+  "models": [
+    {
+      "id": "spindle-chair",
+      "parts": 11
+    }
+  ],
+  "failedReviews": 1,
+  "interventions": 1,
+  "source": "work/conversation-stress/qwen38-native-1/"
+}

@@ -244,3 +244,10 @@ Also available: [source evidence alongside the conversation](screenshots/task-ev
 [mobile conversation](screenshots/task-conversation-mobile.png),
 [mobile creation](screenshots/task-desk-mobile.png) and the
 [passive inline snapshot](screenshots/sample-task-run.png).
+
+## Automatic context recovery
+
+Automatic compaction is opt-in through `llm.compactionMode: "auto"` in Admin.
+The worker retains full transcripts and tool receipts, summarizes only complete
+message groups, and uses bounded provider backoff without repeating completed
+tool effects. See [endurance testing and policy](conversation-endurance.md).

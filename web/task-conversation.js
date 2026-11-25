@@ -11,6 +11,7 @@
   if(r.state==='cancelled')return {title:'Stopped',detail:r.reason||'Retained findings are still available.',action:null};
   if(r.state==='waiting')return {title:r.watch?'Waiting for CI / review':'Waiting to retry',detail:r.reason||(r.watch?'Observing '+toolName(r.watch.tool)+'. Unchanged observations do not call the model.':'The server will retry within the retained budget.'),action:r.watch?'checks':null};
   if(r.pending?.kind==='tool')return {title:toolName(r.pending.tool),detail:'Tool call in progress. Inspect completed receipts in the conversation.',action:null};
+  if(r.pending?.kind==='compaction')return {title:'Compacting context',detail:'Saving a continuation summary; the full transcript stays retained.',action:null};
   if(r.pending?.kind==='model')return {title:'Waiting for model response',detail:'The next message appears when the provider responds. You can pause or stop.',action:null};
   return {title:r.state==='queued'?'Queued for worker':'Preparing the next step',detail:'Execution belongs to the server; you can close this browser.',action:null};
  }
@@ -24,8 +25,8 @@
     else{group||={key:'work-'+e.cursor,kind:'work',at:e.at,events:[]};group.events.push(e);}
    }else if(e.type==='control'){
     flush();out.push({key:'control-'+e.cursor,kind:e.action==='steer'?'user':'notice',at:e.at,text:e.action==='steer'?e.message:toolName(e.action)+(e.message?' · '+e.message:''),acknowledged:true});
-   }else if(['blocked','published','code.pushed','watch.changed','watch.started','model.backoff','recovered'].includes(e.type)){
-    flush();out.push({key:'notice-'+e.cursor,kind:e.type==='blocked'?'blocker':'notice',at:e.at,text:e.message||(e.type==='published'?'Global knowledge published · '+e.revision?.slice(0,12):e.type==='code.pushed'?'Pushed '+e.branch+' · '+e.commit?.slice(0,12):e.type==='watch.changed'?'CI / review changed · '+e.state:e.type==='model.backoff'?'Provider unavailable; bounded retry scheduled':e.type==='recovered'?'Recovered retained work after an interruption':'CI / review watch saved')});
+   }else if(['blocked','published','code.pushed','watch.changed','watch.started','model.backoff','context.compaction.started','context.compacted','context.overflow','recovered'].includes(e.type)){
+    flush();out.push({key:'notice-'+e.cursor,kind:e.type==='blocked'?'blocker':'notice',at:e.at,text:e.message||(e.type==='published'?'Global knowledge published · '+e.revision?.slice(0,12):e.type==='code.pushed'?'Pushed '+e.branch+' · '+e.commit?.slice(0,12):e.type==='watch.changed'?'CI / review changed · '+e.state:e.type==='context.overflow'?'Provider context limit; reducing active context':e.type==='context.compaction.started'?'Saving an automatic context checkpoint':e.type==='context.compacted'?'Context compacted; transcript retained · '+e.beforeBytes+' → '+e.afterBytes+' bytes':e.type==='model.backoff'?'Provider unavailable; retry '+(e.attempt||1)+' scheduled at '+e.retryAt:e.type==='recovered'?'Recovered retained work after an interruption':'CI / review watch saved')});
    }
   }
   flush();return out;

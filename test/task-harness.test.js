@@ -12,7 +12,7 @@ const call = (id,name,args) => ({id,type:'function',function:{name,arguments:JSO
 function config(extra={}) { fs.writeFileSync(path.join(home,'config.json'),JSON.stringify({envs:{dev:{}},llm:{baseUrl:endpoint + '/v1',model:'fixture-small',contextWindow:262144},confluence:{url:endpoint,token:'fixture-docs'},jenkins:{url:endpoint,user:'fixture',token:'fixture-ci'},...extra})); C.reload(); }
 const server = http.createServer(async (req,res) => {
   const url = new URL(req.url,'http://fixture'); res.setHeader('content-type','application/json');
-  if (url.pathname === '/v1/chat/completions') { let body=''; for await (const chunk of req) body+=chunk; const payload=JSON.parse(body); requests.push(payload); const value=await brain(payload,requests.length); res.end(JSON.stringify(value)); return; }
+  if (url.pathname === '/v1/chat/completions') { let body=''; for await (const chunk of req) body+=chunk; const payload=JSON.parse(body); requests.push(payload); const value=await brain(payload,requests.length); if(value.fixtureStatus){res.writeHead(value.fixtureStatus,value.headers||{});res.end(JSON.stringify({error:value.error||'temporarily unavailable'}));return;} res.end(JSON.stringify(value)); return; }
   if (url.pathname === '/rest/api/content/search') { docs++; res.end(JSON.stringify({results:[{id:'42',title:'Checkout requirements',_expandable:{space:'/rest/api/space/SHOP'},_links:{webui:'/pages/42'}}]})); return; }
   if (url.pathname === '/rest/api/content/42') { docs++; res.end(JSON.stringify({id:'42',title:'Checkout requirements',space:{key:'SHOP'},version:{number:3},body:{storage:{value:'<p>Reject a negative order total. Preserve zero.</p>'}}})); return; }
   if (url.pathname === '/job/service/1/api/json') { ciReads++; res.end(JSON.stringify({number:1,building,result:building?null:'SUCCESS',actions:[{lastBuiltRevision:{SHA1:'a'.repeat(40)}}]})); return; }
@@ -90,6 +90,57 @@ test('context-full recovery keeps a bounded actual message and requires an expli
   const blocked=await until(run.id,r=>r.state==='needs_attention');assert.match(blocked.reason,/context.*byte budget/i);const message=blocked.events.find(e=>e.type==='model.completed');assert.equal(message.content.length,16000);assert.equal(message.contentTruncated,true);assert.ok(blocked.messages.some(m=>m.content?.length>16000));
   const before=requests.length;const command=H.control({run:run.id,action:'checkpoint',message:'Verified findings retained. Next: report the remaining gap.'});assert.equal(command.pendingControl.action,'checkpoint');await until(run.id,r=>!r.controlPending);assert.equal(requests.length,before,'checkpoint is not a model call');assert.equal(H.status({run:run.id}).reason,'Checkpoint saved; resume explicitly');
   brain=()=>response('Retained findings recovered; remaining gap is verification.');H.control({run:run.id,action:'resume'});assert.equal((await until(run.id,r=>r.state==='completed')).counts.modelCalls,2);
+ }finally{config();}
+}));
+test('task memory can recover exact lines beyond the first transcript page',async()=>alice(async()=>{
+ let turn=0;
+ brain=payload=>{
+  if(++turn===1)return response([call('save-deep','task_memory_save',{path:'deep.txt',content:Array.from({length:420},(_,i)=>'Evidence line '+(i+1)).join('\n'),summary:'Deep retained evidence'})]);
+  if(turn===2){const saved=JSON.parse(payload.messages.at(-1).content);return response([call('read-deep','task_memory_read',{path:saved.path,from:350,to:355})]);}
+  const read=JSON.parse(payload.messages.at(-1).content);assert.match(read.content,/Evidence line 350/);assert.match(read.content,/Evidence line 355/);assert.doesNotMatch(read.content,/Evidence line 349/);return response('Exact later evidence recovered.');
+ };
+ const run=await H.start({title:'Deep memory',goal:'Read exact later lines',allow_model:true});assert.equal((await until(run.id,r=>['completed','needs_attention'].includes(r.state))).state,'completed');
+}));
+test('automatic compaction preserves goal, paired tool history and saved effects across repeated checkpoints',async()=>alice(async()=>{
+ try {
+  config({llm:{baseUrl:endpoint+'/v1',model:'fixture-small',contextWindow:20000,compactionMode:'auto',taskRetryBaseMs:1000}});
+  let saved=0,summaries=0,summaryAttempts=0,activeRun,steered=false;
+  brain=payload=>{
+   if(payload.messages[0].content.startsWith('Summarize the following')){if(++summaryAttempts===1)return {fixtureStatus:503};summaries++;return response('Preserve metric units, Y up, grounded catalog models. Saved notes are authoritative evidence of completed work. Continue after the latest saved round; never repeat it.');}
+   assert.match(payload.messages[0].content,/Y up/);
+   if(saved===3&&!steered){alice(()=>H.control({run:activeRun,action:'steer',message:'Use amber details only; never publish generated models.'}));steered=true;}
+   if(saved>4)assert.match(payload.messages[0].content,/Use amber details only; never publish generated models/);
+   for(let i=0;i<payload.messages.length;i++)if(payload.messages[i].role==='tool')assert.ok(payload.messages.slice(0,i).some(m=>m.tool_calls?.some(c=>c.id===payload.messages[i].tool_call_id)));
+   if(saved===16)return response('All 16 catalog model revisions saved and reviewed. Y up, metres, grounded.');
+   return {choices:[{finish_reason:'stop',message:{role:'assistant',content:'Model construction and grounded contact review. '.repeat(100),tool_calls:[call('round-'+(++saved),'task_memory_save',{path:'round-'+saved+'.js',content:'// metres, Y up, grounded; revision '+saved,summary:'Catalog model revision '+saved})]}}],usage:{total_tokens:100}};
+  };
+  const run=await H.start({title:'Catalog loop',goal:'Review 16 models: metres, Y up, grounded. Save each revision exactly once.',allow_model:true,max_steps:100});
+  activeRun=run.id;const final=await until(run.id,r=>['completed','needs_attention'].includes(r.state));
+  assert.equal(final.state,'completed',final.reason);assert.ok(summaries>=2);assert.equal(final.events.filter(e=>e.type==='model.backoff'&&e.kind==='compaction').length,1);assert.equal(final.counts.toolCalls,16);assert.equal(final.events.filter(e=>e.type==='context.compacted').length,summaries);
+  assert.ok(H.memory({run:run.id}).index.files.some(f=>f.path.includes('transcripts/auto-')));
+ }finally{config();}
+}));
+test('provider retry debounces maintenance, while permanent failures stop without retries',async()=>alice(async()=>{
+ try {
+  config({llm:{baseUrl:endpoint+'/v1',model:'fixture-small',taskRetryBaseMs:1000}});
+  let attempts=0;brain=()=>++attempts===1?{fixtureStatus:429,headers:{'retry-after':'1'}}:response('Recovered without tool replay.');
+  const run=await H.start({title:'Provider outage',goal:'Recover once',allow_model:true});const waiting=await until(run.id,r=>r.state==='waiting');assert.equal(attempts,1);
+  H.control({run:run.id,action:'steer',message:'Keep the original goal; do not bypass provider cooldown.'});await until(run.id,r=>!r.controlPending);
+  await Promise.all(Array.from({length:20},()=>H.maintenance()));assert.equal(attempts,1,'steering and concurrent polls must respect the durable retry deadline');
+  const done=await until(run.id,r=>r.state==='completed');assert.equal(attempts,2);assert.equal(done.events.filter(e=>e.type==='model.backoff').length,1);
+  brain=()=>({fixtureStatus:401,error:'invalid api key'});const denied=await H.start({title:'Permanent error',goal:'Stop on invalid credentials',allow_model:true});const blocked=await until(denied.id,r=>r.state==='needs_attention');assert.equal(blocked.counts.modelCalls,1);assert.equal(blocked.events.filter(e=>e.type==='model.backoff').length,0);
+ }finally{config();}
+}));
+test('provider context overflow reduces the durable budget instead of repeatedly sending the same request',async()=>alice(async()=>{
+ try {
+  config({llm:{baseUrl:endpoint+'/v1',model:'fixture-small',contextWindow:32000,compactionMode:'auto'}});
+  let turn=0;brain=payload=>{
+   if(payload.messages[0].content.startsWith('Summarize the following'))return response('Saved model revision exists; recover exact evidence with task_memory_read. Metres, Y up.');
+   if(++turn===1)return {choices:[{finish_reason:'stop',message:{role:'assistant',content:'Evidence. '.repeat(1800),tool_calls:[call('saved','task_memory_save',{path:'one.js',content:'retained',summary:'Only one effect'})]}}],usage:{total_tokens:100}};
+   if(turn===2)return {fixtureStatus:400,error:'maximum context length exceeded'};
+   return response('Recovered context.');
+  };
+  const run=await H.start({title:'Provider context',goal:'Preserve metric units and Y up',allow_model:true});const done=await until(run.id,r=>['completed','needs_attention'].includes(r.state));assert.equal(done.state,'completed',done.reason);assert.equal(done.counts.toolCalls,1);assert.equal(done.events.filter(e=>e.type==='context.overflow').length,1);
  }finally{config();}
 }));
 test('an overnight budget stop still leaves an authorized global checkpoint', async () => alice(async () => {

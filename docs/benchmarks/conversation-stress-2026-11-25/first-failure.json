@@ -1,0 +1,22 @@
+{
+  "mode": "deterministic protocol",
+  "seed": 731,
+  "rounds": 32,
+  "state": "needs_attention",
+  "reason": "Summary input exceeds the context byte budget; explicit checkpoint required",
+  "counts": {
+    "steps": 6,
+    "modelCalls": 3,
+    "toolCalls": 2,
+    "tokens": 16360
+  },
+  "passedReviews": 1,
+  "failedReviews": 0,
+  "compactions": 0,
+  "injectedFailures": 1,
+  "backoffs": 1,
+  "writes": 1,
+  "duplicateWriteCallIds": 0,
+  "catalogSha256": "347d2d053add0aba6156e539ec5f9ceec2135c612a3e55efed708ef885ceebb3",
+  "qualification": "Protocol/geometry continuity; no visual art-quality claim. Deterministic mode is not a real-model drift evaluation."
+}

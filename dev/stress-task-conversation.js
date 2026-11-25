@@ -1,0 +1,78 @@
+#!/usr/bin/env node
+// Real Admin UI/API and durable worker. Isolated seeded fault proxy, never alters
+// the user's provider. Deterministic protocol soak by default; --upstream uses a
+// real OpenAI-compatible provider. Generated JS is DATA, never evaluated.
+const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),http=require('node:http'),crypto=require('node:crypto');
+const {pathToFileURL}=require('node:url');
+const arg=name=>{const i=process.argv.indexOf('--'+name);return i<0?undefined:process.argv[i+1];};
+async function main(){
+ const source=path.resolve(arg('catalog')||'/Users/user/Documents/AI/__zcode/REA-ANIME/cozy-node-kit/catalog/library.js');
+ const {modelCatalog}=await import(pathToFileURL(source).href),rounds=Number(arg('rounds')||32),seed=Number(arg('seed')||731),upstream=arg('upstream');
+ if(!Number.isInteger(rounds)||rounds<1||rounds>50)throw Error('rounds must be 1..50');
+ const output=path.resolve(arg('out')||'work/conversation-stress/'+new Date().toISOString().replace(/[:.]/g,'-'));fs.mkdirSync(output,{recursive:true});
+ const home=path.join(output,'home');fs.mkdirSync(home,{recursive:true});
+ for(const k of ['DT_CONFIG_DIR','DT_CACHE_DIR','DT_TOOLS','DT_TOOL_PROFILE','DT_API_KEY','DT_PUBLIC_URL'])delete process.env[k];
+ Object.assign(process.env,{DT_HOME:home,DT_NO_DOCTOR:'1',DT_LOG:'quiet',DT_STATE_BACKEND:'legacy',DT_RATE_PER_SEC:'0'});
+ const entries=modelCatalog.filter(m=>['furniture','prop'].includes(m.family)).slice(0,rounds);
+ while(entries.length<rounds)entries.push(modelCatalog[entries.length]);
+ const catalog={source,sha256:crypto.createHash('sha256').update(fs.readFileSync(source)).digest('hex'),entries};fs.writeFileSync(path.join(output,'catalog.json'),JSON.stringify(catalog,null,2));
+ const journal=[],reviews=[],attempts=new Map(),faulted=new Set(),repairs=new Set();const burst=Math.max(1,Math.min(5,Number(arg('fault-burst')||1)));let state=seed>>>0,run,base,server,browser,stopped=false;
+ const rand=()=>{state=(Math.imul(1664525,state)+1013904223)>>>0;return state/4294967296;};
+ const record=e=>{journal.push({at:new Date().toISOString(),...e});fs.appendFileSync(path.join(output,'proxy.jsonl'),JSON.stringify(journal.at(-1))+'\n');};
+ async function tool(name,args={}){const response=await fetch(base+'/api/tool/'+name,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(args)});const v=await response.json();if(!response.ok||v.error)throw Error(JSON.stringify(v));return v.result;}
+ async function files(){if(!run)return [];return (await tool('task_run_memory',{run})).index.files;}
+ async function review(index){
+  const entry=entries[index],filename='models/'+entry.id+'.js',all=await files(),f=all.find(f=>f.path.endsWith('/notes/'+filename));let checks=[],model;
+  if(f){const {content}=await tool('task_run_memory',{run,path:f.path});try{model=JSON.parse(content.replace(/^\s*export\s+default\s+/, '').replace(/;\s*$/,''));}catch{checks.push('Use export default followed by a JSON object; this harness never executes source.');}}
+  else checks.push('Save '+filename+' before requesting review.');
+  if(model){if(model.id!==entry.id||model.units!=='m'||model.up!=='y')checks.push('Preserve exact catalog id, metric units and Y up.');if(!Array.isArray(model.parts)||model.parts.length<2||model.parts.length>64)checks.push('Use 2..64 named box parts.');else for(const p of model.parts){if(!p.name||p.shape!=='box'||![p.size,p.at].every(a=>Array.isArray(a)&&a.length===3&&a.every(Number.isFinite))||p.size.some(n=>n<=0||n>10)||p.at.some(n=>Math.abs(n)>10))checks.push('Invalid part dimensions or position.');else if(p.at[1]-p.size[1]/2 < -1e-6)checks.push(p.name+' penetrates the ground.');}if(Array.isArray(model.parts)&&model.parts.length&&!model.parts.some(p=>Array.isArray(p.at)&&Array.isArray(p.size)&&Math.abs(p.at[1]-p.size[1]/2)<1e-6))checks.push('At least one part must touch ground.');}
+  const result={round:index+1,id:entry.id,path:filename,passed:checks.length===0,checks,model};reviews.push(result);fs.writeFileSync(path.join(output,'reviews.json'),JSON.stringify(reviews,null,2));
+  return {...result,model:undefined,next:checks.length?{entry,reviewPage:String(1000+index),action:'Repair and save this current model, then review it again before advancing.'}:index+1<rounds?{entry:entries[index+1],reviewPage:String(1001+index)}:null,invariants:['metres','Y up','grounded','original catalog id','never execute generated source','no build or publish'],qualification:'Geometry/data checks only, not visual quality approval',reference:JSON.stringify(entry.contract).repeat(35)};
+ }
+ const fixture=http.createServer(async(req,res)=>{try{
+  const u=new URL(req.url,'http://fixture');res.setHeader('content-type','application/json');
+  if(u.pathname==='/v1/chat/completions'){
+   let raw='';for await(const b of req)raw+=b;const payload=JSON.parse(raw);if(upstream&&arg('no-thinking')==='1'){payload.reasoning_effort='none';raw=JSON.stringify(payload);}const key=crypto.createHash('sha256').update(raw).digest('hex'),attempt=attempts.get(key)||0;attempts.set(key,attempt+1);
+   const isSummary=payload.messages[0].content.startsWith('Summarize the following');
+   // Seeded failures only on first attempt of a request; exercise recovery without
+   // making a permanently poisoned request. Headers impose a real debounce.
+   if(attempt===0&&(journal.length===0||rand()<.23))faulted.add(key);
+   if(faulted.has(key)&&attempt<burst){const status=rand()<.5?429:503;record({kind:'fault',key,status,summary:isSummary,bytes:Buffer.byteLength(raw)});res.writeHead(status,{'retry-after':'1'});return res.end(JSON.stringify({error:{message:'Injected provider temporarily unavailable',type:'stress_fault'}}));}
+   const began=Date.now();let response;
+   if(upstream&&arg('rea-native')==='1'){const native=await require('./rea-model-adapter').generate(upstream,payload,{window:Number(arg('window')||24000),signal:AbortSignal.timeout(300000)});record({kind:'upstream',key,status:native.status,summary:isSummary,bytes:Buffer.byteLength(raw),nativeBytes:native.requestBytes,durationMs:Date.now()-began,...(native.status>=400?{error:native.body.slice(0,500)}:{})});res.writeHead(native.status);return res.end(native.body);}
+   if(upstream){const url=upstream.replace(/\/$/,'')+'/chat/completions';const remote=await fetch(url,{method:'POST',headers:{'content-type':'application/json',...(process.env.DT_STRESS_API_KEY?{authorization:'Bearer '+process.env.DT_STRESS_API_KEY}:{})},body:raw,signal:AbortSignal.timeout(300000)});const data=await remote.text();record({kind:'upstream',key,status:remote.status,summary:isSummary,bytes:Buffer.byteLength(raw),durationMs:Date.now()-began,...(remote.status>=400?{error:data.slice(0,500)}:{})});res.writeHead(remote.status,{'content-type':remote.headers.get('content-type')||'application/json',...(remote.headers.get('retry-after')?{'retry-after':remote.headers.get('retry-after')}:{})});return res.end(data);}
+   if(isSummary)response={role:'assistant',content:'Catalog blockout loop: metres, Y up, grounded, original catalog ids. Every completed model is saved in models/<id>.js; reviews are confluence pages 1000+index. Use latest review next field or task_memory_read after checkpoint; do not replay completed saves. No source execution, builds or publication. Completed review count: '+reviews.filter(r=>r.passed).length};
+   else{
+    const passed=new Set(reviews.filter(r=>r.passed).map(r=>r.id)),index=entries.findIndex(e=>!passed.has(e.id));
+    if(index<0)response={role:'assistant',content:'Completed '+rounds+' catalog blockouts and geometry reviews. Preserved metres, Y up, grounded parts and exact ids. Geometry checks are not visual approval. No build or publication.'};
+    else{const entry=entries[index],all=await files(),saved=all.some(f=>f.path.endsWith('/notes/models/'+entry.id+'.js')),model={id:entry.id,units:'m',up:'y',parts:[{name:'base',shape:'box',size:[1,.2,.8],at:[0,.1,0]},{name:'body',shape:'box',size:[.7,1,.6],at:[0,.7,0]}]};
+     const failedReview=reviews.some(r=>r.id===entry.id&&!r.passed),repair=failedReview&&!repairs.has(entry.id);if(repair)repairs.add(entry.id);if(arg('geometry-fault')==='1'&&index===0&&!failedReview)model.parts[0].at[1]=-.1;
+     const read=saved&&!repair;const name=read?'confluence_page':'task_memory_save',args=read?{id:String(1000+index)}:{path:'models/'+entry.id+'.js',content:'export default '+JSON.stringify(model,null,2)+';',summary:'Metric grounded catalog blockout: '+entry.name};
+     response={role:'assistant',content:(saved?'Reviewing saved geometry for ':'Writing a catalog blockout for ')+entry.name+'. '+JSON.stringify(entry.contract).repeat(14),tool_calls:[{id:'call-'+index+'-'+(read?'review':repair?'repair':'write'),type:'function',function:{name,arguments:JSON.stringify(args)}}]};
+    }
+   }
+   record({kind:'response',key,summary:isSummary,bytes:Buffer.byteLength(raw),durationMs:Date.now()-began});return res.end(JSON.stringify({choices:[{finish_reason:'stop',message:response}],usage:{total_tokens:Math.ceil((raw.length+JSON.stringify(response).length)/3)}}));
+  }
+  if(/^\/rest\/api\/content\/\d+$/.test(u.pathname)){const i=Number(u.pathname.split('/').pop())-1000;if(i<0||i>=entries.length){res.writeHead(404);return res.end(JSON.stringify({error:'Use review page ids 1000 through '+(999+entries.length)}));}const r=await review(i);return res.end(JSON.stringify({id:String(1000+i),title:'Geometry review '+r.id,space:{key:'CATALOG'},version:{number:1},body:{storage:{value:'<pre>'+JSON.stringify(r).replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</pre>'}}}));}
+  res.writeHead(404);res.end('{}');
+ }catch(e){res.writeHead(500);res.end(JSON.stringify({error:e.message}));}});
+ try{
+ await new Promise(r=>fixture.listen(0,'127.0.0.1',r));
+ fs.writeFileSync(path.join(home,'config.json'),JSON.stringify({envs:{dev:{}},scripts:{starters:false},llm:{baseUrl:'http://127.0.0.1:'+fixture.address().port+'/v1',model:arg('model')||'deterministic-catalog-stress',contextWindow:Number(arg('window')||24000),compactionMode:'auto',taskRetryBaseMs:1000,taskModelRetries:5,taskOutputTokens:2048},confluence:{url:'http://127.0.0.1:'+fixture.address().port,token:'isolated-fixture'}}));
+ server=require('../server').start({port:Number(arg('port')||0),host:'127.0.0.1'});await new Promise(r=>server.once('listening',r));base='http://127.0.0.1:'+server.address().port;
+ const goal='Create and review '+rounds+' catalog 3D blockout definitions in sequence. Preserve original ids, metres, Y up and grounded geometry. Each source must be export default followed by a JSON object {id,units:"m",up:"y",parts:[{name,shape:"box",size:[x,y,z],at:[x,y,z]}]}. 2..64 parts, finite positive sizes <=10m and positions within +/-10m, ground y=0. Save as models/<id>.js using task_memory_save. Then use confluence_page id "1000" for first review, "1001" for second etc. Fix failures; follow next.entry in reviews. After compaction use task_memory_read to find completed models; do not repeat completed writes. Finish only after every review passes. Do not execute source, build or publish. These are data/geometry tests, not visual approval. First catalog entry: '+JSON.stringify(entries[0]);
+ const {chromium}=require('playwright');browser=await chromium.launch({headless:true});const page=await browser.newPage({viewport:{width:1440,height:1000}});await page.goto(base+'/tasks');await page.locator('#start:not([disabled])').waitFor();await page.locator('#sourceSettings summary').click();await page.locator('#title').fill('Catalog conversation endurance · '+(upstream?'real model':'deterministic protocol'));await page.locator('#goal').fill(goal);await page.getByText('Budget and restart behavior',{exact:true}).click();await page.locator('#maxSteps').fill('500');await page.locator('#maxTokens').fill('2000000');await page.screenshot({path:path.join(output,'before.png'),fullPage:true});await page.locator('#start').click();await page.waitForFunction(()=>new URL(location.href).searchParams.has('run'));run=new URL(page.url()).searchParams.get('run');
+ fs.writeFileSync(path.join(output,'run.json'),JSON.stringify({base,run,home,mode:upstream?'real model':'deterministic protocol',seed,rounds,catalogSha256:catalog.sha256},null,2));console.log(JSON.stringify({url:page.url(),output,run}));
+ let lastCursor=-1,lastActivity=Date.now(),final;const deadline=Date.now()+Number(arg('minutes')||20)*60000;
+ while(Date.now()<deadline){
+  const r=await tool('task_run_status',{run,detail:true});if(r.cursor!==lastCursor){lastActivity=Date.now();lastCursor=r.cursor;fs.writeFileSync(path.join(output,'status.json'),JSON.stringify(r,null,2));console.log(JSON.stringify({state:r.state,steps:r.counts.steps,calls:r.counts.modelCalls,reviews:reviews.length,compactions:r.events.filter(e=>e.type==='context.compacted').length,reason:r.reason}));}
+  if(['completed','needs_attention','cancelled'].includes(r.state)){final=r;break;}if(Date.now()-lastActivity>360000)throw Error('No worker progress for six minutes');
+  await new Promise(r=>setTimeout(r,500));
+ }
+ if(!final){await tool('task_run_control',{run,action:'pause'});throw Error('Soak deadline reached; paused for inspection');}
+ await page.reload();await page.waitForTimeout(1000);await page.screenshot({path:path.join(output,'after.png'),fullPage:true});
+ const writes=final.events.filter(e=>e.type==='tool.completed'&&e.tool==='task_memory_save'),report={mode:upstream?'real model':'deterministic protocol',seed,rounds,faultBurst:burst,geometryFault:arg('geometry-fault')==='1',state:final.state,reason:final.reason,counts:final.counts,passedReviews:new Set(reviews.filter(r=>r.passed).map(r=>r.id)).size,failedReviews:reviews.filter(r=>!r.passed).length,compactions:final.events.filter(e=>e.type==='context.compacted').length,injectedFailures:journal.filter(e=>e.kind==='fault').length,backoffs:final.events.filter(e=>e.type==='model.backoff').length,writes:writes.length,duplicateWriteCallIds:writes.length-new Set(writes.map(e=>e.callId)).size,catalogSha256:catalog.sha256,qualification:'Protocol/geometry continuity; no visual art-quality claim. Deterministic mode is not a real-model drift evaluation.'};
+ fs.writeFileSync(path.join(output,'report.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));if(final.state!=='completed'||report.passedReviews!==rounds||report.duplicateWriteCallIds)process.exitCode=1;
+ }finally{await browser?.close();await require('../lib/task-harness').close();if(server){server.closeAllConnections();await new Promise(r=>server.close(r));}fixture.closeAllConnections();if(fixture.listening)await new Promise(r=>fixture.close(r));await require('../lib/isolate').stop();await require('../lib/observations').close();await require('../lib/state-store').close();await require('../lib/telemetry').shutdown();}
+}
+main().catch(e=>{console.error(e.stack);process.exitCode=1;});

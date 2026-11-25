@@ -1,0 +1,23 @@
+{
+  "mode": "deterministic protocol",
+  "seed": 19,
+  "rounds": 8,
+  "faultBurst": 2,
+  "state": "completed",
+  "reason": "Report and evidence saved",
+  "counts": {
+    "steps": 63,
+    "modelCalls": 43,
+    "toolCalls": 16,
+    "tokens": 194787
+  },
+  "passedReviews": 8,
+  "failedReviews": 0,
+  "compactions": 8,
+  "injectedFailures": 18,
+  "backoffs": 18,
+  "writes": 8,
+  "duplicateWriteCallIds": 0,
+  "catalogSha256": "347d2d053add0aba6156e539ec5f9ceec2135c612a3e55efed708ef885ceebb3",
+  "qualification": "Protocol/geometry continuity; no visual art-quality claim. Deterministic mode is not a real-model drift evaluation."
+}
