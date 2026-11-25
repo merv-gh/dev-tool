@@ -54,3 +54,6 @@ node_modules/
 /continuations/
 /continuation-attachments/
 /automation-flows/
+
+# Principal-owned cross-chat project execution and memory.
+/global-contexts/

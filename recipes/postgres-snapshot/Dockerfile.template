@@ -1,0 +1,19 @@
+# Source credentials are used only by pg_dump, never passed to this build.
+FROM __BASE_IMAGE__ AS seed
+USER root
+RUN mkdir -p /opt/dt-seed && chown postgres:postgres /opt/dt-seed
+COPY --chown=postgres:postgres database.dump /tmp/database.dump
+USER postgres
+RUN initdb -D /opt/dt-seed --username=postgres --auth-local=trust --auth-host=scram-sha-256 \
+ && pg_ctl -D /opt/dt-seed -o "-c listen_addresses='' -k /tmp" -w start \
+ && createdb -h /tmp -U postgres dt_snapshot \
+ && pg_restore -h /tmp -U postgres --no-owner --no-privileges --exit-on-error -d dt_snapshot /tmp/database.dump \
+ && pg_ctl -D /opt/dt-seed -m fast -w stop \
+ && echo "listen_addresses = '*'" >> /opt/dt-seed/postgresql.conf
+
+FROM __BASE_IMAGE__
+COPY --from=seed --chown=postgres:postgres /opt/dt-seed /opt/dt-seed
+COPY snapshot-entrypoint.sh /usr/local/bin/snapshot-entrypoint.sh
+RUN chmod 0755 /usr/local/bin/snapshot-entrypoint.sh
+ENTRYPOINT ["snapshot-entrypoint.sh"]
+CMD ["postgres"]
