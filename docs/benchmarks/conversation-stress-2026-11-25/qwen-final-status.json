@@ -1,0 +1,983 @@
+{
+  "protocol": "dt.task-run/v1",
+  "id": "run-3d22a1f7-052a-4404-8e68-07f33517ccd7",
+  "task": "task-a18c3362-963a-4042-ade1-72ca270ddf99",
+  "taskId": "Research-3abf2baf",
+  "title": "Catalog conversation endurance · real model",
+  "goal": "Create and review 8 catalog 3D blockout definitions in sequence. Preserve original ids, metres, Y up and grounded geometry. Each source must be export default followed by a JSON object {id,units:\"m\",up:\"y\",parts:[{name,shape:\"box\",size:[x,y,z],at:[x,y,z]}]}. 2..64 parts, finite positive sizes <=10m and positions within +/-10m, ground y=0. Save as models/<id>.js using task_memory_save. Then use confluence_page id \"1000\" for first review, \"1001\" for second etc. Fix failures; follow next.entry in reviews. After compaction use task_memory_read to find completed models; do not repeat completed writes. Finish only after every review passes. Do not execute source, build or publish. These are data/geometry tests, not visual approval. First catalog entry: {\"id\":\"spindle-chair\",\"name\":\"Spindle chair\",\"collection\":[\"Interiors\",\"Seating\"],\"family\":\"furniture\",\"contract\":{\"controls\":[\"width\",\"depth\",\"height\",\"seatHeight\",\"legThickness\",\"backHeight\"],\"parts\":[\"support\",\"surface\",\"back\",\"hardware\"],\"anchors\":[\"ground\",\"top\",\"seat\"],\"surfaces\":[\"wood\",\"cloth\",\"metal\"]},\"status\":\"planned\"}",
+  "state": "cancelled",
+  "reason": "Stopped by owner",
+  "mode": "research",
+  "spec": {
+    "title": "Catalog conversation endurance · real model",
+    "goal": "Create and review 8 catalog 3D blockout definitions in sequence. Preserve original ids, metres, Y up and grounded geometry. Each source must be export default followed by a JSON object {id,units:\"m\",up:\"y\",parts:[{name,shape:\"box\",size:[x,y,z],at:[x,y,z]}]}. 2..64 parts, finite positive sizes <=10m and positions within +/-10m, ground y=0. Save as models/<id>.js using task_memory_save. Then use confluence_page id \"1000\" for first review, \"1001\" for second etc. Fix failures; follow next.entry in reviews. After compaction use task_memory_read to find completed models; do not repeat completed writes. Finish only after every review passes. Do not execute source, build or publish. These are data/geometry tests, not visual approval. First catalog entry: {\"id\":\"spindle-chair\",\"name\":\"Spindle chair\",\"collection\":[\"Interiors\",\"Seating\"],\"family\":\"furniture\",\"contract\":{\"controls\":[\"width\",\"depth\",\"height\",\"seatHeight\",\"legThickness\",\"backHeight\"],\"parts\":[\"support\",\"surface\",\"back\",\"hardware\"],\"anchors\":[\"ground\",\"top\",\"seat\"],\"surfaces\":[\"wood\",\"cloth\",\"metal\"]},\"status\":\"planned\"}",
+    "mode": "research",
+    "repositories": [],
+    "spaces": [],
+    "env": "",
+    "projectContext": "",
+    "publish": false,
+    "publishCode": false,
+    "branch": "",
+    "targetBranch": "",
+    "maxSteps": 500,
+    "maxTokens": 2000000,
+    "hours": 12,
+    "autoResume": true
+  },
+  "createdAt": "2026-11-25T19:50:45.379Z",
+  "updatedAt": "2026-11-25T20:24:14.642Z",
+  "deadline": "2026-11-26T07:50:45.379Z",
+  "contextPolicy": "auto",
+  "cursor": 91,
+  "reset": false,
+  "events": [
+    {
+      "cursor": 1,
+      "type": "admitted",
+      "at": "2026-11-25T19:50:45.379Z",
+      "message": "Task saved; server will execute independently of this browser"
+    },
+    {
+      "cursor": 2,
+      "type": "model.started",
+      "at": "2026-11-25T19:50:45.707Z",
+      "model": "qwen3.8:27b",
+      "requestBytes": 18339
+    },
+    {
+      "cursor": 3,
+      "type": "model.backoff",
+      "at": "2026-11-25T19:50:45.863Z",
+      "retryAt": "2026-11-25T19:50:46.997Z",
+      "attempt": 1,
+      "delayMs": 1135,
+      "status": 503,
+      "kind": "model",
+      "error": "POST http://127.0.0.1:64850/v1/chat/completions -> 503 {\"error\":{\"message\":\"Injected provider temporarily unavailable\",\"type\":\"stress_fault\"}}"
+    },
+    {
+      "cursor": 4,
+      "type": "recovered",
+      "at": "2026-11-25T19:50:47.861Z",
+      "kind": "model",
+      "message": "Read/model interruption recovered; completed calls are retained"
+    },
+    {
+      "cursor": 5,
+      "type": "model.started",
+      "at": "2026-11-25T19:50:48.070Z",
+      "model": "qwen3.8:27b",
+      "requestBytes": 18339
+    },
+    {
+      "cursor": 6,
+      "type": "model.completed",
+      "at": "2026-11-25T19:52:40.075Z",
+      "usage": {
+        "prompt_tokens": 4227,
+        "completion_tokens": 46,
+        "total_tokens": 4273
+      },
+      "tools": [
+        "task_memory_read",
+        "confluence_page"
+      ]
+    },
+    {
+      "cursor": 7,
+      "type": "tool.started",
+      "at": "2026-11-25T19:52:40.116Z",
+      "tool": "task_memory_read",
+      "callId": "rea-fda985d4-28b1-4e3a-ab9d-c1b689520efb"
+    },
+    {
+      "cursor": 8,
+      "type": "tool.completed",
+      "at": "2026-11-25T19:52:40.266Z",
+      "tool": "task_memory_read",
+      "callId": "rea-fda985d4-28b1-4e3a-ab9d-c1b689520efb",
+      "durationMs": 110,
+      "artifact": "evidence/1-task_memory_read.json",
+      "failed": false,
+      "preview": "{\"task\":\"task-a18c3362-963a-4042-ade1-72ca270ddf99\",\"total\":0,\"files\":[],\"truncated\":false}",
+      "visualizations": [
+        {
+          "label": "Structured result",
+          "url": "/show/mwwjiyuaee84e4586847a4a842",
+          "view": "json"
+        }
+      ]
+    },
+    {
+      "cursor": 9,
+      "type": "tool.started",
+      "at": "2026-11-25T19:52:40.324Z",
+      "tool": "confluence_page",
+      "callId": "rea-c56fc05c-f30c-43b1-94c2-51e56099422a"
+    },
+    {
+      "cursor": 10,
+      "type": "tool.completed",
+      "at": "2026-11-25T19:52:40.538Z",
+      "tool": "confluence_page",
+      "callId": "rea-c56fc05c-f30c-43b1-94c2-51e56099422a",
+      "durationMs": 172,
+      "artifact": "evidence/2-confluence_page.json",
+      "failed": false,
+      "preview": "{\"truncated\":true,\"characters\":12054,\"preview\":\"{\\\"id\\\":\\\"1000\\\",\\\"title\\\":\\\"Geometry review spindle-chair\\\",\\\"space\\\":\\\"CATALOG\\\",\\\"version\\\":1,\\\"text\\\":\\\"{\\\\\\\"round\\\\\\\":1,\\\\\\\"id\\\\\\\":\\\\\\\"spindle-chair\\\\\\\",\\\\\\\"path\\\\\\\":\\\\\\\"models/spindle-chair.js\\\\\\\",\\\\\\\"passed\\\\\\\":false,\\\\\\\"checks\\\\\\\":[\\\\\\\"Save models/spindle-chair.js before requesting review.\\\\\\\"],\\\\\\\"next\\\\\\\":{\\\\\\\"entry\\\\\\\":{\\\\\\\"id\\\\\\\":\\\\\\\"linen-stool\\\\\\\",\\\\\\\"name\\\\\\\":\\\\\\\"Linen stool\\\\\\\",\\\\\\\"collection\\\\\\\":[\\\\\\\"Interiors\\\\\\\",\\\\\\\"Seating\\\\\\\"],\\\\\\\"family\\\\\\\":\\\\\\\"furniture\\\\\\\",\\\\\\\"contract\\\\\\\":{\\\\\\\"controls\\\\\\\":[\\\\\\\"width\\\\\\\",\\\\\\\"depth\\\\\\\",\\\\\\\"height\\\\\\\",\\\\\\\"seatHeight\\\\\\\",\\\\\\\"legThickness\\\\\\\",\\\\\\\"backHeight\\\\\\\"],\\\\\\\"parts\\\\\\\":[\\\\\\\"support\\\\\\\",\\\\\\\"surface\\\\\\\",\\\\\\\"back\\\\\\\",\\\\\\\"hardware\\\\\\\"],\\\\\\\"anchors\\\\\\\":[\\\\\\\"ground\\\\\\\",\\\\\\\"top\\\\\\\",\\\\\\\"seat\\\\\\\"],\\\\\\\"surfaces\\\\\\\":[\\\\\\\"wood\\\\\\\",\\\\\\\"cloth\\\\\\\",\\\\\\\"metal\\\\\\\"]},\\\\\\\"status\\\\\\\":\\\\\\\"planned\\\\\\\"},\\\\\\\"reviewPage\\\\\\\":\\\\\\\"1001\\\\\\\"},\\\\\\\"invariants\\\\\\\":[\\\\\\\"metres\\\\\\\",\\\\\\\"Y up\\\\\\\",\\\\\\\"grounded\\\\\\\",\\\\\\\"original catalog id\\\\\\\",\\\\\\\"never execute generated source\\\\\\\",\\\\\\\"no build or publish\\\\\\\"],\\\\\\\"qualification\\\\\\\":\\\\\\\"Geometry/data checks only, not visual quality approval\\\\\\\",\\\\\\\"reference\\\\\\\":\\\\",
+      "visualizations": [
+        {
+          "label": "Structured result",
+          "url": "/show/mwwjiz2ta378cc6a59c5ff5e0f",
+          "view": "json"
+        }
+      ]
+    },
+    {
+      "cursor": 11,
+      "type": "context.compaction.started",
+      "at": "2026-11-25T19:52:40.819Z",
+      "transcript": "transcripts/auto-10.json",
+      "requestBytes": 34676
+    },
+    {
+      "cursor": 12,
+      "type": "context.compacted",
+      "at": "2026-11-25T19:55:56.152Z",
+      "transcript": "transcripts/auto-10.json",
+      "beforeBytes": 46035,
+      "afterBytes": 16320,
+      "retainedMessages": 0,
+      "usage": {
+        "prompt_tokens": 6869,
+        "completion_tokens": 694,
+        "total_tokens": 7563
+      }
+    },
+    {
+      "cursor": 13,
+      "type": "control",
+      "at": "2026-11-25T19:55:56.230Z",
+      "action": "steer",
+      "message": "The first review failed because models/spindle-chair.js has not been saved. Repair the current catalog entry before advancing. Use task_memory_save with path models/spindle-chair.js, JSON-compatible export default source, a short summary; then confluence_page id 1000. Do not count a failed review as completion. This restates the original acceptance criteria."
+    },
+    {
+      "cursor": 14,
+      "type": "model.started",
+      "at": "2026-11-25T19:55:56.392Z",
+      "model": "qwen3.8:27b",
+      "requestBytes": 16725
+    },
+    {
+      "cursor": 15,
+      "type": "model.completed",
+      "at": "2026-11-25T19:58:09.563Z",
+      "usage": {
+        "prompt_tokens": 3810,
+        "completion_tokens": 739,
+        "total_tokens": 4549
+      },
+      "tools": [
+        "task_memory_save"
+      ]
+    },
+    {
+      "cursor": 16,
+      "type": "tool.started",
+      "at": "2026-11-25T19:58:09.630Z",
+      "tool": "task_memory_save",
+      "callId": "rea-3fb03426-4433-4079-8d03-f1dd0f521dee"
+    },
+    {
+      "cursor": 17,
+      "type": "tool.completed",
+      "at": "2026-11-25T19:58:09.987Z",
+      "tool": "task_memory_save",
+      "callId": "rea-3fb03426-4433-4079-8d03-f1dd0f521dee",
+      "durationMs": 275,
+      "artifact": "evidence/3-task_memory_save.json",
+      "failed": false,
+      "preview": "{\"saved\":true,\"path\":\"runs/run-3d22a1f7-052a-4404-8e68-07f33517ccd7/notes/models/spindle-chair.js\",\"revision\":\"7ff6d8e15a79b03cdb02114e82feea656b91904a0582db91fc955d8895f31756\"}",
+      "visualizations": [
+        {
+          "label": "Structured result",
+          "url": "/show/mwwjq18f0e2ef3a161d7222127",
+          "view": "json"
+        }
+      ]
+    },
+    {
+      "cursor": 18,
+      "type": "model.started",
+      "at": "2026-11-25T19:58:10.226Z",
+      "model": "qwen3.8:27b",
+      "requestBytes": 18978
+    },
+    {
+      "cursor": 19,
+      "type": "model.completed",
+      "at": "2026-11-25T19:58:21.466Z",
+      "usage": {
+        "prompt_tokens": 4690,
+        "completion_tokens": 29,
+        "total_tokens": 4719
+      },
+      "tools": [
+        "confluence_page"
+      ]
+    },
+    {
+      "cursor": 20,
+      "type": "tool.started",
+      "at": "2026-11-25T19:58:21.569Z",
+      "tool": "confluence_page",
+      "callId": "rea-a8e8b7c8-d57d-4217-a3d0-9b3519a4a5b5"
+    },
+    {
+      "cursor": 21,
+      "type": "tool.completed",
+      "at": "2026-11-25T19:58:22.123Z",
+      "tool": "confluence_page",
+      "callId": "rea-a8e8b7c8-d57d-4217-a3d0-9b3519a4a5b5",
+      "durationMs": 470,
+      "artifact": "evidence/4-confluence_page.json",
+      "failed": false,
+      "preview": "{\"id\":\"1000\",\"title\":\"Geometry review spindle-chair\",\"space\":\"CATALOG\",\"version\":1,\"text\":\"{\\\"round\\\":1,\\\"id\\\":\\\"spindle-chair\\\",\\\"path\\\":\\\"models/spindle-chair.js\\\",\\\"passed\\\":true,\\\"checks\\\":[],\\\"next\\\":{\\\"entry\\\":{\\\"id\\\":\\\"linen-stool\\\",\\\"name\\\":\\\"Linen stool\\\",\\\"collection\\\":[\\\"Interiors\\\",\\\"Seating\\\"],\\\"family\\\":\\\"furniture\\\",\\\"contract\\\":{\\\"controls\\\":[\\\"width\\\",\\\"depth\\\",\\\"height\\\",\\\"seatHeight\\\",\\\"legThickness\\\",\\\"backHeight\\\"],\\\"parts\\\":[\\\"support\\\",\\\"surface\\\",\\\"back\\\",\\\"hardware\\\"],\\\"anchors\\\":[\\\"ground\\\",\\\"top\\\",\\\"seat\\\"],\\\"surfaces\\\":[\\\"wood\\\",\\\"cloth\\\",\\\"metal\\\"]},\\\"status\\\":\\\"planned\\\"},\\\"reviewPage\\\":\\\"1001\\\"},\\\"invariants\\\":[\\\"metres\\\",\\\"Y up\\\",\\\"grounded\\\",\\\"original catalog id\\\",\\\"never execute generated source\\\",\\\"no build or publish\\\"],\\\"qualification\\\":\\\"Geometry/data checks only, not visual quality approval\\\",\\\"reference\\\":\\\"{\\\\\\\"controls\\\\\\\":[\\\\\\\"width\\\\\\\",\\\\\\\"depth\\\\\\\",\\\\\\\"height\\\\\\\",\\\\\\\"seatHeight\\\\\\\",\\\\\\\"legThickness\\\\\\\",\\\\\\\"backHeight\\\\\\\"],\\\\\\\"parts\\\\\\\":[\\\\\\\"support\\\\\\\",\\\\\\\"surface\\\\\\\",\\\\\\\"back\\\\\\\",\\\\\\\"hardware\\\\\\\"],\\\\\\\"anchors\\\\\\\":[\\\\\\\"ground\\\\\\\",\\\\\\\"top\\\\\\\",\\\\\\\"seat\\\\\\\"],\\\\\\\"surfaces\\\\\\\":[\\\\\\\"wood\\\\\\\",\\\\\\\"cloth\\\\\\\",\\\\\\\"metal\\\\\\\"]}{\\\\\\\"controls\\\\\\\":[\\\\\\",
+      "visualizations": [
+        {
+          "label": "Structured result",
+          "url": "/show/mwwjqaip4ffadaca930b97c0fb",
+          "view": "json"
+        }
+      ]
+    },
+    {
+      "cursor": 22,
+      "type": "context.compaction.started",
+      "at": "2026-11-25T19:58:22.630Z",
+      "transcript": "transcripts/auto-21.json",
+      "requestBytes": 25724
+    },
+    {
+      "cursor": 23,
+      "type": "context.compacted",
+      "at": "2026-11-25T20:00:36.309Z",
+      "transcript": "transcripts/auto-21.json",
+      "beforeBytes": 37083,
+      "afterBytes": 15258,
+      "retainedMessages": 0,
+      "usage": {
+        "prompt_tokens": 6150,
+        "completion_tokens": 546,
+        "total_tokens": 6696
+      }
+    },
+    {
+      "cursor": 24,
+      "type": "model.started",
+      "at": "2026-11-25T20:00:36.416Z",
+      "model": "qwen3.8:27b",
+      "requestBytes": 15258
+    },
+    {
+      "cursor": 25,
+      "type": "model.backoff",
+      "at": "2026-11-25T20:00:36.462Z",
+      "retryAt": "2026-11-25T20:00:37.547Z",
+      "attempt": 1,
+      "delayMs": 1086,
+      "status": 429,
+      "kind": "model",
+      "error": "POST http://127.0.0.1:64850/v1/chat/completions -> 429 {\"error\":{\"message\":\"Injected provider temporarily unavailable\",\"type\":\"stress_fault\"}}"
+    },
+    {
+      "cursor": 26,
+      "type": "recovered",
+      "at": "2026-11-25T20:00:37.944Z",
+      "kind": "model",
+      "message": "Read/model interruption recovered; completed calls are retained"
+    },
+    {
+      "cursor": 27,
+      "type": "model.started",
+      "at": "2026-11-25T20:00:38.038Z",
+      "model": "qwen3.8:27b",
+      "requestBytes": 15258
+    },
+    {
+      "cursor": 28,
+      "type": "model.backoff",
+      "at": "2026-11-25T20:01:02.025Z",
+      "retryAt": "2026-11-25T20:01:04.280Z",
+      "attempt": 2,
+      "delayMs": 2256,
+      "status": 500,
+      "kind": "model",
+      "error": "POST http://127.0.0.1:64850/v1/chat/completions -> 500 {\"error\":\"Unparsed native parameter text\"}"
+    },
+    {
+      "cursor": 29,
+      "type": "recovered",
+      "at": "2026-11-25T20:01:04.969Z",
+      "kind": "model",
+      "message": "Read/model interruption recovered; completed calls are retained"
+    },
+    {
+      "cursor": 30,
+      "type": "model.started",
+      "at": "2026-11-25T20:01:05.068Z",
+      "model": "qwen3.8:27b",
+      "requestBytes": 15258
+    },
+    {
+      "cursor": 31,
+      "type": "model.backoff",
+      "at": "2026-11-25T20:01:16.671Z",
+      "retryAt": "2026-11-25T20:01:21.012Z",
+      "attempt": 3,
+      "delayMs": 4343,
+      "status": 500,
+      "kind": "model",
+      "error": "POST http://127.0.0.1:64850/v1/chat/completions -> 500 {\"error\":\"Unparsed native parameter text\"}"
+    },
+    {
+      "cursor": 32,
+      "type": "recovered",
+      "at": "2026-11-25T20:01:21.978Z",
+      "kind": "model",
+      "message": "Read/model interruption recovered; completed calls are retained"
+    },
+    {
+      "cursor": 33,
+      "type": "model.started",
+      "at": "2026-11-25T20:01:22.074Z",
+      "model": "qwen3.8:27b",
+      "requestBytes": 15258
+    },
+    {
+      "cursor": 34,
+      "type": "model.backoff",
+      "at": "2026-11-25T20:01:33.672Z",
+      "retryAt": "2026-11-25T20:01:42.399Z",
+      "attempt": 4,
+      "delayMs": 8728,
+      "status": 500,
+      "kind": "model",
+      "error": "POST http://127.0.0.1:64850/v1/chat/completions -> 500 {\"error\":\"Unparsed native parameter text\"}"
+    },
+    {
+      "cursor": 35,
+      "type": "recovered",
+      "at": "2026-11-25T20:01:42.994Z",
+      "kind": "model",
+      "message": "Read/model interruption recovered; completed calls are retained"
+    },
+    {
+      "cursor": 36,
+      "type": "model.started",
+      "at": "2026-11-25T20:01:43.091Z",
+      "model": "qwen3.8:27b",
+      "requestBytes": 15258
+    },
+    {
+      "cursor": 37,
+      "type": "model.backoff",
+      "at": "2026-11-25T20:01:54.543Z",
+      "retryAt": "2026-11-25T20:02:12.161Z",
+      "attempt": 5,
+      "delayMs": 17619,
+      "status": 500,
+      "kind": "model",
+      "error": "POST http://127.0.0.1:64850/v1/chat/completions -> 500 {\"error\":\"Unparsed native parameter text\"}"
+    },
+    {
+      "cursor": 38,
+      "type": "recovered",
+      "at": "2026-11-25T20:02:13.007Z",
+      "kind": "model",
+      "message": "Read/model interruption recovered; completed calls are retained"
+    },
+    {
+      "cursor": 39,
+      "type": "model.started",
+      "at": "2026-11-25T20:02:13.105Z",
+      "model": "qwen3.8:27b",
+      "requestBytes": 15258
+    },
+    {
+      "cursor": 40,
+      "type": "blocked",
+      "at": "2026-11-25T20:02:24.498Z",
+      "code": "ERROR",
+      "message": "POST http://127.0.0.1:64850/v1/chat/completions -> 500 {\"error\":\"Unparsed native parameter text\"}"
+    },
+    {
+      "cursor": 41,
+      "type": "control",
+      "at": "2026-11-25T20:04:32.145Z",
+      "action": "steer",
+      "message": "The last assistant output after compaction had malformed tool syntax. No tool in that output executed. It used <query> and <id> as opening tags; the native protocol requires <parameter=query> and <parameter=id>, with </parameter> closing tags. Use this exact shape, one parameter per block:\n<tool_call>\n<function=task_memory_read>\n<parameter=query>\nmodels saved\n</parameter>\n</function>\n</tool_call>\nThe completed spindle-chair save and passing review remain retained. Do not repeat that save. Continue with the next catalog entry, save it before reviewing it. The review feedback lists next.entry; a failed review must be repaired before advancing. Preserve the original eight-model goal, metric units and Y up. This correction changes framing only; do not invent results or execute source.\n"
+    },
+    {
+      "cursor": 42,
+      "type": "control",
+      "at": "2026-11-25T20:04:32.387Z",
+      "action": "resume",
+      "message": ""
+    },
+    {
+      "cursor": 43,
+      "type": "recovered",
+      "at": "2026-11-25T20:04:32.471Z",
+      "kind": "model",
+      "message": "Read/model interruption recovered; completed calls are retained"
+    },
+    {
+      "cursor": 44,
+      "type": "model.started",
+      "at": "2026-11-25T20:04:32.653Z",
+      "model": "qwen3.8:27b",
+      "requestBytes": 17045
+    },
+    {
+      "cursor": 45,
+      "type": "model.completed",
+      "at": "2026-11-25T20:04:51.004Z",
+      "usage": {
+        "prompt_tokens": 3999,
+        "completion_tokens": 28,
+        "total_tokens": 4027
+      },
+      "tools": [
+        "task_memory_read"
+      ]
+    },
+    {
+      "cursor": 46,
+      "type": "tool.started",
+      "at": "2026-11-25T20:04:51.047Z",
+      "tool": "task_memory_read",
+      "callId": "rea-936d9605-71fa-4e56-b850-42b884c97e83"
+    },
+    {
+      "cursor": 47,
+      "type": "tool.completed",
+      "at": "2026-11-25T20:04:51.148Z",
+      "tool": "task_memory_read",
+      "callId": "rea-936d9605-71fa-4e56-b850-42b884c97e83",
+      "durationMs": 60,
+      "artifact": "evidence/5-task_memory_read.json",
+      "failed": false,
+      "preview": "{\"task\":\"task-a18c3362-963a-4042-ade1-72ca270ddf99\",\"total\":0,\"files\":[],\"truncated\":false}",
+      "visualizations": [
+        {
+          "label": "Structured result",
+          "url": "/show/mwwjymu0a5a8ec7be95e2ef245",
+          "view": "json"
+        }
+      ]
+    },
+    {
+      "cursor": 48,
+      "type": "model.started",
+      "at": "2026-11-25T20:04:51.246Z",
+      "model": "qwen3.8:27b",
+      "requestBytes": 17434
+    },
+    {
+      "cursor": 49,
+      "type": "model.completed",
+      "at": "2026-11-25T20:04:57.251Z",
+      "usage": {
+        "prompt_tokens": 4089,
+        "completion_tokens": 16,
+        "total_tokens": 4105
+      },
+      "tools": [
+        "task_memory_read"
+      ]
+    },
+    {
+      "cursor": 50,
+      "type": "tool.started",
+      "at": "2026-11-25T20:04:57.294Z",
+      "tool": "task_memory_read",
+      "callId": "rea-3d0c89dc-8623-494a-a182-58e7a19c4295"
+    },
+    {
+      "cursor": 51,
+      "type": "tool.completed",
+      "at": "2026-11-25T20:04:57.395Z",
+      "tool": "task_memory_read",
+      "callId": "rea-3d0c89dc-8623-494a-a182-58e7a19c4295",
+      "durationMs": 59,
+      "artifact": "evidence/6-task_memory_read.json",
+      "failed": false,
+      "preview": "{\"task\":\"task-a18c3362-963a-4042-ade1-72ca270ddf99\",\"total\":23,\"files\":[{\"path\":\"progress.md\",\"bytes\":1248,\"updatedAt\":\"2026-11-25T19:50:45.200Z\",\"summary\":\"Task goal, plan, progress, findings and next steps\"},{\"path\":\"runs/run-3d22a1f7-052a-4404-8e68-07f33517ccd7/evidence/1-task_memory_read.json\",\"bytes\":374,\"updatedAt\":\"2026-11-25T19:52:40.188Z\",\"summary\":\"Tool result: task_memory_read\"},{\"path\":\"runs/run-3d22a1f7-052a-4404-8e68-07f33517ccd7/evidence/2-confluence_page.json\",\"bytes\":12313,\"updatedAt\":\"2026-11-25T19:52:40.477Z\",\"summary\":\"Tool result: confluence_page\"},{\"path\":\"runs/run-3d22a1f7-052a-4404-8e68-07f33517ccd7/evidence/3-task_memory_save.json\",\"bytes\":2214,\"updatedAt\":\"2026-11-25T19:58:09.901Z\",\"summary\":\"Tool result: task_memory_save\"},{\"path\":\"runs/run-3d22a1f7-052a-4404-8e68-07f33517ccd7/evidence/4-confluence_page.json\",\"bytes\":12254,\"updatedAt\":\"2026-11-25T19:58:21.998Z\",\"summary\":\"Tool result: confluence_page\"},{\"path\":\"runs/run-3d22a1f7-052a-4404-8e68-07f33517ccd7/evidence/5-task_memory_read.json\",\"bytes\":356,\"updatedAt\":\"2026-11-25T20:04:51.106Z\",\"summary\":\"Tool result: task_memory_read\"},{\"path\":\"runs/run-3d22a1f7-052a-4404-8e68-07f33517ccd7/notes/models/spindl",
+      "visualizations": [
+        {
+          "label": "Structured result",
+          "url": "/show/mwwjyrni23e354fc552e6ae33c",
+          "view": "json"
+        }
+      ]
+    },
+    {
+      "cursor": 52,
+      "type": "model.started",
+      "at": "2026-11-25T20:04:57.494Z",
+      "model": "qwen3.8:27b",
+      "requestBytes": 22605
+    },
+    {
+      "cursor": 53,
+      "type": "model.completed",
+      "at": "2026-11-25T20:05:25.958Z",
+      "usage": {
+        "prompt_tokens": 6263,
+        "completion_tokens": 99,
+        "total_tokens": 6362
+      },
+      "tools": [
+        "task_memory_read",
+        "task_memory_read"
+      ]
+    },
+    {
+      "cursor": 54,
+      "type": "tool.started",
+      "at": "2026-11-25T20:05:26.001Z",
+      "tool": "task_memory_read",
+      "callId": "rea-f42a1185-f0b9-414f-a1dd-c0c054ecc590"
+    },
+    {
+      "cursor": 55,
+      "type": "tool.completed",
+      "at": "2026-11-25T20:05:26.095Z",
+      "tool": "task_memory_read",
+      "callId": "rea-f42a1185-f0b9-414f-a1dd-c0c054ecc590",
+      "durationMs": 52,
+      "artifact": "evidence/7-task_memory_read.json",
+      "failed": false,
+      "preview": "{\"task\":\"task-a18c3362-963a-4042-ade1-72ca270ddf99\",\"id\":\"task-a18c3362-963a-4042-ade1-72ca270ddf99\",\"path\":\"progress.md\",\"bytes\":1248,\"encoding\":\"utf8\",\"content\":\"# Catalog conversation endurance · real model\\n\\n## Goal\\nCreate and review 8 catalog 3D blockout definitions in sequence. Preserve original ids, metres, Y up and grounded geometry. Each source must be export default followed by a JSON object {id,units:\\\"m\\\",up:\\\"y\\\",parts:[{name,shape:\\\"box\\\",size:[x,y,z],at:[x,y,z]}]}. 2..64 parts, finite positive sizes <=10m and positions within +/-10m, ground y=0. Save as models/<id>.js using task_memory_save. Then use confluence_page id \\\"1000\\\" for first review, \\\"1001\\\" for second etc. Fix failures; follow next.entry in reviews. After compaction use task_memory_read to find completed models; do not repeat completed writes. Finish only after every review passes. Do not execute source, build or publish. These are data/geometry tests, not visual approval. First catalog entry: {\\\"id\\\":\\\"spindle-chair\\\",\\\"name\\\":\\\"Spindle chair\\\",\\\"collection\\\":[\\\"Interiors\\\",\\\"Seating\\\"],\\\"family\\\":\\\"furniture\\\",\\\"contract\\\":{\\\"controls\\\":[\\\"width\\\",\\\"depth\\\",\\\"height\\\",\\\"seatHeight\\\",\\\"legThickness\\\"",
+      "visualizations": [
+        {
+          "label": "Structured result",
+          "url": "/show/mwwjzdssf34d2671aed42dec03",
+          "view": "json"
+        }
+      ]
+    },
+    {
+      "cursor": 56,
+      "type": "tool.started",
+      "at": "2026-11-25T20:05:26.137Z",
+      "tool": "task_memory_read",
+      "callId": "rea-a50731c8-7e99-4887-94bd-0a4607daa71f"
+    },
+    {
+      "cursor": 57,
+      "type": "tool.completed",
+      "at": "2026-11-25T20:05:26.233Z",
+      "tool": "task_memory_read",
+      "callId": "rea-a50731c8-7e99-4887-94bd-0a4607daa71f",
+      "durationMs": 53,
+      "artifact": "evidence/8-task_memory_read.json",
+      "failed": false,
+      "preview": "{\"truncated\":true,\"characters\":18494,\"preview\":\"{\\\"task\\\":\\\"task-a18c3362-963a-4042-ade1-72ca270ddf99\\\",\\\"id\\\":\\\"task-a18c3362-963a-4042-ade1-72ca270ddf99\\\",\\\"path\\\":\\\"runs/run-3d22a1f7-052a-4404-8e68-07f33517ccd7/evidence/4-confluence_page.json\\\",\\\"bytes\\\":12254,\\\"encoding\\\":\\\"utf8\\\",\\\"content\\\":\\\"{\\\\n  \\\\\\\"tool\\\\\\\": \\\\\\\"confluence_page\\\\\\\",\\\\n  \\\\\\\"arguments\\\\\\\": \\\\\\\"{\\\\\\\\\\\\\\\"id\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"1000\\\\\\\\\\\\\\\"}\\\\\\\",\\\\n  \\\\\\\"result\\\\\\\": {\\\\n    \\\\\\\"id\\\\\\\": \\\\\\\"1000\\\\\\\",\\\\n    \\\\\\\"title\\\\\\\": \\\\\\\"Geometry review spindle-chair\\\\\\\",\\\\n    \\\\\\\"space\\\\\\\": \\\\\\\"CATALOG\\\\\\\",\\\\n    \\\\\\\"version\\\\\\\": 1,\\\\n    \\\\\\\"text\\\\\\\": \\\\\\\"{\\\\\\\\\\\\\\\"round\\\\\\\\\\\\\\\":1,\\\\\\\\\\\\\\\"id\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"spindle-chair\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"path\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"models/spindle-chair.js\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"passed\\\\\\\\\\\\\\\":true,\\\\\\\\\\\\\\\"checks\\\\\\\\\\\\\\\":[],\\\\\\\\\\\\\\\"next\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\"entry\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\"id\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"linen-stool\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"name\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"Linen stool\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"collection\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\"Interiors\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"Seating\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\"family\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"furniture\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"contract\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\"controls\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\"width\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"depth\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"height\\\\\\\\\\\\\\\",\\\\",
+      "visualizations": [
+        {
+          "label": "Structured result",
+          "url": "/show/mwwjzdwl503e63fb1794d4d903",
+          "view": "json"
+        }
+      ]
+    },
+    {
+      "cursor": 58,
+      "type": "context.compaction.started",
+      "at": "2026-11-25T20:05:26.382Z",
+      "transcript": "transcripts/auto-57.json",
+      "requestBytes": 10320
+    },
+    {
+      "cursor": 59,
+      "type": "context.compacted",
+      "at": "2026-11-25T20:06:58.111Z",
+      "transcript": "transcripts/auto-57.json",
+      "beforeBytes": 56918,
+      "afterBytes": 50512,
+      "retainedMessages": 3,
+      "usage": {
+        "prompt_tokens": 3447,
+        "completion_tokens": 546,
+        "total_tokens": 3993
+      }
+    },
+    {
+      "cursor": 60,
+      "type": "context.compaction.started",
+      "at": "2026-11-25T20:06:58.258Z",
+      "transcript": "transcripts/auto-59.json",
+      "requestBytes": 38227
+    },
+    {
+      "cursor": 61,
+      "type": "context.compacted",
+      "at": "2026-11-25T20:09:09.687Z",
+      "transcript": "transcripts/auto-59.json",
+      "beforeBytes": 50512,
+      "afterBytes": 16199,
+      "retainedMessages": 0,
+      "usage": {
+        "prompt_tokens": 6913,
+        "completion_tokens": 546,
+        "total_tokens": 7459
+      }
+    },
+    {
+      "cursor": 62,
+      "type": "model.started",
+      "at": "2026-11-25T20:09:09.782Z",
+      "model": "qwen3.8:27b",
+      "requestBytes": 16199
+    },
+    {
+      "cursor": 63,
+      "type": "model.backoff",
+      "at": "2026-11-25T20:09:09.828Z",
+      "retryAt": "2026-11-25T20:09:10.966Z",
+      "attempt": 1,
+      "delayMs": 1140,
+      "status": 429,
+      "kind": "model",
+      "error": "POST http://127.0.0.1:53125/v1/chat/completions -> 429 {\"error\":{\"message\":\"Injected provider temporarily unavailable\",\"type\":\"stress_fault\"}}"
+    },
+    {
+      "cursor": 64,
+      "type": "recovered",
+      "at": "2026-11-25T20:09:11.085Z",
+      "kind": "model",
+      "message": "Read/model interruption recovered; completed calls are retained"
+    },
+    {
+      "cursor": 65,
+      "type": "model.started",
+      "at": "2026-11-25T20:09:11.183Z",
+      "model": "qwen3.8:27b",
+      "requestBytes": 16199
+    },
+    {
+      "cursor": 66,
+      "type": "model.completed",
+      "at": "2026-11-25T20:09:29.425Z",
+      "usage": {
+        "prompt_tokens": 3826,
+        "completion_tokens": 28,
+        "total_tokens": 3854
+      },
+      "tools": [
+        "task_memory_read"
+      ]
+    },
+    {
+      "cursor": 67,
+      "type": "tool.started",
+      "at": "2026-11-25T20:09:29.470Z",
+      "tool": "task_memory_read",
+      "callId": "rea-5f55b44e-47de-43af-8415-b9d5ad162a16"
+    },
+    {
+      "cursor": 68,
+      "type": "tool.completed",
+      "at": "2026-11-25T20:09:29.574Z",
+      "tool": "task_memory_read",
+      "callId": "rea-5f55b44e-47de-43af-8415-b9d5ad162a16",
+      "durationMs": 60,
+      "artifact": "evidence/9-task_memory_read.json",
+      "failed": false,
+      "preview": "{\"task\":\"task-a18c3362-963a-4042-ade1-72ca270ddf99\",\"total\":0,\"files\":[],\"truncated\":false}",
+      "visualizations": [
+        {
+          "label": "Structured result",
+          "url": "/show/mwwk4lo1d66b7b3f4e8e8fba5c",
+          "view": "json"
+        }
+      ]
+    },
+    {
+      "cursor": 69,
+      "type": "model.started",
+      "at": "2026-11-25T20:09:29.668Z",
+      "model": "qwen3.8:27b",
+      "requestBytes": 16588
+    },
+    {
+      "cursor": 70,
+      "type": "model.completed",
+      "at": "2026-11-25T20:09:35.515Z",
+      "usage": {
+        "prompt_tokens": 3916,
+        "completion_tokens": 16,
+        "total_tokens": 3932
+      },
+      "tools": [
+        "task_memory_read"
+      ]
+    },
+    {
+      "cursor": 71,
+      "type": "tool.started",
+      "at": "2026-11-25T20:09:35.560Z",
+      "tool": "task_memory_read",
+      "callId": "rea-1e0c98d1-5e08-4870-a2a8-d53a6be355e2"
+    },
+    {
+      "cursor": 72,
+      "type": "tool.completed",
+      "at": "2026-11-25T20:09:35.663Z",
+      "tool": "task_memory_read",
+      "callId": "rea-1e0c98d1-5e08-4870-a2a8-d53a6be355e2",
+      "durationMs": 60,
+      "artifact": "evidence/10-task_memory_read.json",
+      "failed": false,
+      "preview": "{\"task\":\"task-a18c3362-963a-4042-ade1-72ca270ddf99\",\"total\":35,\"files\":[{\"path\":\"progress.md\",\"bytes\":1248,\"updatedAt\":\"2026-11-25T19:50:45.200Z\",\"summary\":\"Task goal, plan, progress, findings and next steps\"},{\"path\":\"runs/run-3d22a1f7-052a-4404-8e68-07f33517ccd7/evidence/1-task_memory_read.json\",\"bytes\":374,\"updatedAt\":\"2026-11-25T19:52:40.188Z\",\"summary\":\"Tool result: task_memory_read\"},{\"path\":\"runs/run-3d22a1f7-052a-4404-8e68-07f33517ccd7/evidence/2-confluence_page.json\",\"bytes\":12313,\"updatedAt\":\"2026-11-25T19:52:40.477Z\",\"summary\":\"Tool result: confluence_page\"},{\"path\":\"runs/run-3d22a1f7-052a-4404-8e68-07f33517ccd7/evidence/3-task_memory_save.json\",\"bytes\":2214,\"updatedAt\":\"2026-11-25T19:58:09.901Z\",\"summary\":\"Tool result: task_memory_save\"},{\"path\":\"runs/run-3d22a1f7-052a-4404-8e68-07f33517ccd7/evidence/4-confluence_page.json\",\"bytes\":12254,\"updatedAt\":\"2026-11-25T19:58:21.998Z\",\"summary\":\"Tool result: confluence_page\"},{\"path\":\"runs/run-3d22a1f7-052a-4404-8e68-07f33517ccd7/evidence/5-task_memory_read.json\",\"bytes\":356,\"updatedAt\":\"2026-11-25T20:04:51.106Z\",\"summary\":\"Tool result: task_memory_read\"},{\"path\":\"runs/run-3d22a1f7-052a-4404-8e68-07f33517ccd7/evidence/6-task_mem",
+      "visualizations": [
+        {
+          "label": "Structured result",
+          "url": "/show/mwwk4qd56990052bb348ce0789",
+          "view": "json"
+        }
+      ]
+    },
+    {
+      "cursor": 73,
+      "type": "model.started",
+      "at": "2026-11-25T20:09:35.759Z",
+      "model": "qwen3.8:27b",
+      "requestBytes": 24229
+    },
+    {
+      "cursor": 74,
+      "type": "model.completed",
+      "at": "2026-11-25T20:09:55.419Z",
+      "usage": {
+        "prompt_tokens": 7190,
+        "completion_tokens": 28,
+        "total_tokens": 7218
+      },
+      "tools": [
+        "task_memory_read"
+      ]
+    },
+    {
+      "cursor": 75,
+      "type": "tool.started",
+      "at": "2026-11-25T20:09:55.461Z",
+      "tool": "task_memory_read",
+      "callId": "rea-94ba8a13-1e76-4942-ba69-4d5243719106"
+    },
+    {
+      "cursor": 76,
+      "type": "tool.completed",
+      "at": "2026-11-25T20:09:55.556Z",
+      "tool": "task_memory_read",
+      "callId": "rea-94ba8a13-1e76-4942-ba69-4d5243719106",
+      "durationMs": 54,
+      "artifact": "evidence/11-task_memory_read.json",
+      "failed": false,
+      "preview": "{\"task\":\"task-a18c3362-963a-4042-ade1-72ca270ddf99\",\"id\":\"task-a18c3362-963a-4042-ade1-72ca270ddf99\",\"path\":\"progress.md\",\"bytes\":1248,\"encoding\":\"utf8\",\"content\":\"# Catalog conversation endurance · real model\\n\\n## Goal\\nCreate and review 8 catalog 3D blockout definitions in sequence. Preserve original ids, metres, Y up and grounded geometry. Each source must be export default followed by a JSON object {id,units:\\\"m\\\",up:\\\"y\\\",parts:[{name,shape:\\\"box\\\",size:[x,y,z],at:[x,y,z]}]}. 2..64 parts, finite positive sizes <=10m and positions within +/-10m, ground y=0. Save as models/<id>.js using task_memory_save. Then use confluence_page id \\\"1000\\\" for first review, \\\"1001\\\" for second etc. Fix failures; follow next.entry in reviews. After compaction use task_memory_read to find completed models; do not repeat completed writes. Finish only after every review passes. Do not execute source, build or publish. These are data/geometry tests, not visual approval. First catalog entry: {\\\"id\\\":\\\"spindle-chair\\\",\\\"name\\\":\\\"Spindle chair\\\",\\\"collection\\\":[\\\"Interiors\\\",\\\"Seating\\\"],\\\"family\\\":\\\"furniture\\\",\\\"contract\\\":{\\\"controls\\\":[\\\"width\\\",\\\"depth\\\",\\\"height\\\",\\\"seatHeight\\\",\\\"legThickness\\\"",
+      "visualizations": [
+        {
+          "label": "Structured result",
+          "url": "/show/mwwk55prc537229498f9c9fd33",
+          "view": "json"
+        }
+      ]
+    },
+    {
+      "cursor": 77,
+      "type": "model.started",
+      "at": "2026-11-25T20:09:55.652Z",
+      "model": "qwen3.8:27b",
+      "requestBytes": 26335
+    },
+    {
+      "cursor": 78,
+      "type": "model.completed",
+      "at": "2026-11-25T20:10:15.301Z",
+      "usage": {
+        "prompt_tokens": 7737,
+        "completion_tokens": 71,
+        "total_tokens": 7808
+      },
+      "tools": [
+        "task_memory_read"
+      ]
+    },
+    {
+      "cursor": 79,
+      "type": "tool.started",
+      "at": "2026-11-25T20:10:15.344Z",
+      "tool": "task_memory_read",
+      "callId": "rea-5cd7e09c-1013-483d-88c7-47518796e593"
+    },
+    {
+      "cursor": 80,
+      "type": "tool.completed",
+      "at": "2026-11-25T20:10:15.442Z",
+      "tool": "task_memory_read",
+      "callId": "rea-5cd7e09c-1013-483d-88c7-47518796e593",
+      "durationMs": 55,
+      "artifact": "evidence/12-task_memory_read.json",
+      "failed": false,
+      "preview": "{\"truncated\":true,\"characters\":18494,\"preview\":\"{\\\"task\\\":\\\"task-a18c3362-963a-4042-ade1-72ca270ddf99\\\",\\\"id\\\":\\\"task-a18c3362-963a-4042-ade1-72ca270ddf99\\\",\\\"path\\\":\\\"runs/run-3d22a1f7-052a-4404-8e68-07f33517ccd7/evidence/4-confluence_page.json\\\",\\\"bytes\\\":12254,\\\"encoding\\\":\\\"utf8\\\",\\\"content\\\":\\\"{\\\\n  \\\\\\\"tool\\\\\\\": \\\\\\\"confluence_page\\\\\\\",\\\\n  \\\\\\\"arguments\\\\\\\": \\\\\\\"{\\\\\\\\\\\\\\\"id\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"1000\\\\\\\\\\\\\\\"}\\\\\\\",\\\\n  \\\\\\\"result\\\\\\\": {\\\\n    \\\\\\\"id\\\\\\\": \\\\\\\"1000\\\\\\\",\\\\n    \\\\\\\"title\\\\\\\": \\\\\\\"Geometry review spindle-chair\\\\\\\",\\\\n    \\\\\\\"space\\\\\\\": \\\\\\\"CATALOG\\\\\\\",\\\\n    \\\\\\\"version\\\\\\\": 1,\\\\n    \\\\\\\"text\\\\\\\": \\\\\\\"{\\\\\\\\\\\\\\\"round\\\\\\\\\\\\\\\":1,\\\\\\\\\\\\\\\"id\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"spindle-chair\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"path\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"models/spindle-chair.js\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"passed\\\\\\\\\\\\\\\":true,\\\\\\\\\\\\\\\"checks\\\\\\\\\\\\\\\":[],\\\\\\\\\\\\\\\"next\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\"entry\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\"id\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"linen-stool\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"name\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"Linen stool\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"collection\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\"Interiors\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"Seating\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\"family\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"furniture\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"contract\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\"controls\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\"width\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"depth\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"height\\\\\\\\\\\\\\\",\\\\",
+      "visualizations": [
+        {
+          "label": "Structured result",
+          "url": "/show/mwwk5l24557ed95d7aa5ac3ec7",
+          "view": "json"
+        }
+      ]
+    },
+    {
+      "cursor": 81,
+      "type": "context.compaction.started",
+      "at": "2026-11-25T20:10:15.592Z",
+      "transcript": "transcripts/auto-80.json",
+      "requestBytes": 14050
+    },
+    {
+      "cursor": 82,
+      "type": "context.compacted",
+      "at": "2026-11-25T20:12:04.638Z",
+      "transcript": "transcripts/auto-80.json",
+      "beforeBytes": 58593,
+      "afterBytes": 48457,
+      "retainedMessages": 2,
+      "usage": {
+        "prompt_tokens": 4921,
+        "completion_tokens": 546,
+        "total_tokens": 5467
+      }
+    },
+    {
+      "cursor": 83,
+      "type": "context.compaction.started",
+      "at": "2026-11-25T20:12:04.801Z",
+      "transcript": "transcripts/auto-82.json",
+      "requestBytes": 36172
+    },
+    {
+      "cursor": 84,
+      "type": "control",
+      "at": "2026-11-25T20:16:48.496Z",
+      "action": "pause",
+      "message": ""
+    },
+    {
+      "cursor": 85,
+      "type": "control",
+      "at": "2026-11-25T20:16:49.730Z",
+      "action": "resume",
+      "message": ""
+    },
+    {
+      "cursor": 86,
+      "type": "recovered",
+      "at": "2026-11-25T20:16:49.784Z",
+      "kind": "compaction",
+      "message": "Read/model interruption recovered; completed calls are retained"
+    },
+    {
+      "cursor": 87,
+      "type": "context.compaction.started",
+      "at": "2026-11-25T20:16:49.932Z",
+      "transcript": "transcripts/auto-86.json",
+      "requestBytes": 36172
+    },
+    {
+      "cursor": 88,
+      "type": "model.backoff",
+      "at": "2026-11-25T20:21:49.987Z",
+      "retryAt": "2026-11-25T20:21:51.046Z",
+      "attempt": 1,
+      "delayMs": 1060,
+      "status": null,
+      "kind": "compaction",
+      "error": "POST http://127.0.0.1:57001/v1/chat/completions -> timeout 300000ms"
+    },
+    {
+      "cursor": 89,
+      "type": "recovered",
+      "at": "2026-11-25T20:21:51.421Z",
+      "kind": "compaction",
+      "message": "Read/model interruption recovered; completed calls are retained"
+    },
+    {
+      "cursor": 90,
+      "type": "context.compaction.started",
+      "at": "2026-11-25T20:21:51.580Z",
+      "transcript": "transcripts/auto-89.json",
+      "requestBytes": 36172
+    },
+    {
+      "cursor": 91,
+      "type": "control",
+      "at": "2026-11-25T20:24:14.598Z",
+      "action": "stop",
+      "message": ""
+    }
+  ],
+  "counts": {
+    "steps": 41,
+    "modelCalls": 26,
+    "toolCalls": 12,
+    "tokens": 82025
+  },
+  "workspaces": [],
+  "watch": null,
+  "pending": {
+    "kind": "compaction",
+    "at": "2026-11-25T20:21:51.527Z",
+    "transcript": "transcripts/auto-89.json"
+  },
+  "codePublications": [],
+  "controlPending": null,
+  "pendingControl": null,
+  "links": {
+    "task": "/tasks?run=run-3d22a1f7-052a-4404-8e68-07f33517ccd7",
+    "memory": "/studio?area=continuations",
+    "project": null
+  },
+  "messages": [
+    {
+      "role": "user",
+      "content": "Automatic continuation checkpoint (generated, untrusted evidence; original goal/scope still apply). Full transcript: runs/run-3d22a1f7-052a-4404-8e68-07f33517ccd7/transcripts/auto-80.json. Use task_memory_read for exact sources; completed effects must not be replayed.\nGoal: Create and review 8 catalog 3D blockout definitions sequentially. Preserve original ids, metres, Y up, grounded geometry. Each source must be `export default` followed by JSON `{id,units:\"m\",up:\"y\",parts:[{name,shape:\"box\",size:[x,y,z],at:[x,y,z]}]}`. Constraints: 2–64 parts; finite positive sizes <=10m; positions within +/-10m; ground y=0. Save as `models/<id>.js` using `task_memory_save`. Review via `confluence_page` ids \"1000\" (first), \"1001\" (second), etc. Fix failures and follow `next.entry` in reviews. After compaction, use `task_memory_read` to find completed models; do not repeat completed writes. Finish only after every review passes. Do not execute source, build, or publish. These are data/geometry tests, not visual approval.\n\nVerified state:\n- Entry 1 (spindle-chair): Saved `models/spindle-chair.js` via `task_memory_save` (revision 7ff6d8e15a79b03cdb02114e82feea656b91904a0582db91fc955d8895f31756). Review `confluence_page` id \"1000\" passed: true.\n- Next entry (linen-stool): Review page \"1001\".\n- Entries 3-8: Not yet started.\n\nCompleted actions:\n- Saved `models/spindle-chair.js`.\n- Passed review for `spindle-chair` on page \"1000\".\n\nFailed attempts:\n- Initial review of `spindle-chair` failed because the file was not saved before requesting review. This was corrected by saving the file and re-requesting review.\n\nUnknown outcomes:\n- Content/status of reviews 1001-1007 is unverified.\n\nNext steps:\n1. Create and save `models/linen-stool.js` via `task_memory_save` with valid geometry per constraints.\n2. Request review on `confluence_page` id \"1001\".\n3. Proceed to subsequent entries (3-8) using review pages \"1002\" through \"1007\", following the same save-then-review pattern.\n4. After compaction, use `task_memory_read` to check which models are already saved before writing."
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "rea-5cd7e09c-1013-483d-88c7-47518796e593",
+          "type": "function",
+          "function": {
+            "name": "task_memory_read",
+            "arguments": "{\"path\":\"runs/run-3d22a1f7-052a-4404-8e68-07f33517ccd7/evidence/4-confluence_page.json\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "rea-5cd7e09c-1013-483d-88c7-47518796e593",
+      "content": "{\"truncated\":true,\"characters\":18494,\"preview\":\"{\\\"task\\\":\\\"task-a18c3362-963a-4042-ade1-72ca270ddf99\\\",\\\"id\\\":\\\"task-a18c3362-963a-4042-ade1-72ca270ddf99\\\",\\\"path\\\":\\\"runs/run-3d22a1f7-052a-4404-8e68-07f33517ccd7/evidence/4-confluence_page.json\\\",\\\"bytes\\\":12254,\\\"encoding\\\":\\\"utf8\\\",\\\"content\\\":\\\"{\\\\n  \\\\\\\"tool\\\\\\\": \\\\\\\"confluence_page\\\\\\\",\\\\n  \\\\\\\"arguments\\\\\\\": \\\\\\\"{\\\\\\\\\\\\\\\"id\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"1000\\\\\\\\\\\\\\\"}\\\\\\\",\\\\n  \\\\\\\"result\\\\\\\": {\\\\n    \\\\\\\"id\\\\\\\": \\\\\\\"1000\\\\\\\",\\\\n    \\\\\\\"title\\\\\\\": \\\\\\\"Geometry review spindle-chair\\\\\\\",\\\\n    \\\\\\\"space\\\\\\\": \\\\\\\"CATALOG\\\\\\\",\\\\n    \\\\\\\"version\\\\\\\": 1,\\\\n    \\\\\\\"text\\\\\\\": \\\\\\\"{\\\\\\\\\\\\\\\"round\\\\\\\\\\\\\\\":1,\\\\\\\\\\\\\\\"id\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"spindle-chair\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"path\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"models/spindle-chair.js\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"passed\\\\\\\\\\\\\\\":true,\\\\\\\\\\\\\\\"checks\\\\\\\\\\\\\\\":[],\\\\\\\\\\\\\\\"next\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\"entry\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\"id\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"linen-stool\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"name\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"Linen stool\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"collection\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\"Interiors\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"Seating\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\"family\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"furniture\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"contract\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\"controls\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\"width\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"depth\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"height\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"seatHeight\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"legThickness\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"backHeight\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\"parts\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\"support\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"surface\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"back\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"hardware\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\"anchors\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\"ground\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"top\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"seat\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\"surfaces\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\"wood\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"cloth\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"metal\\\\\\\\\\\\\\\"]},\\\\\\\\\\\\\\\"status\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"planned\\\\\\\\\\\\\\\"},\\\\\\\\\\\\\\\"reviewPage\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"1001\\\\\\\\\\\\\\\"},\\\\\\\\\\\\\\\"invariants\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\"metres\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"Y up\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"grounded\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"original catalog id\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"never execute generated source\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"no build or publish\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\"qualification\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"Geometry/data checks only, not visual quality approval\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"reference\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"controls\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"width\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"depth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"height\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seatHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"legThickness\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"backHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"parts\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"support\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surface\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"back\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"hardware\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"anchors\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"ground\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"top\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seat\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surfaces\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"wood\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"cloth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"metal\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"]}{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"controls\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"width\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"depth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"height\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seatHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"legThickness\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"backHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"parts\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"support\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surface\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"back\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"hardware\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"anchors\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"ground\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"top\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seat\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surfaces\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"wood\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"cloth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"metal\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"]}{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"controls\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"width\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"depth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"height\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seatHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"legThickness\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"backHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"parts\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"support\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surface\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"back\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"hardware\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"anchors\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"ground\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"top\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seat\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surfaces\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"wood\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"cloth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"metal\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"]}{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"controls\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"width\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"depth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"height\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seatHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"legThickness\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"backHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"parts\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"support\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surface\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"back\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"hardware\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"anchors\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"ground\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"top\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seat\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surfaces\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"wood\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"cloth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"metal\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"]}{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"controls\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"width\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"depth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"height\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seatHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"legThickness\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"backHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"parts\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"support\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surface\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"back\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"hardware\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"anchors\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"ground\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"top\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seat\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surfaces\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"wood\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"cloth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"metal\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"]}{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"controls\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"width\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"depth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"height\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seatHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"legThickness\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"backHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"parts\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"support\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surface\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"back\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"hardware\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"anchors\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"ground\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"top\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seat\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surfaces\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"wood\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"cloth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"metal\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"]}{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"controls\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"width\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"depth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"height\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seatHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"legThickness\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"backHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"parts\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"support\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surface\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"back\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"hardware\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"anchors\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"ground\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"top\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seat\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surfaces\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"wood\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"cloth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"metal\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"]}{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"controls\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"width\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"depth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"height\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seatHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"legThickness\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"backHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"parts\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"support\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surface\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"back\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"hardware\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"anchors\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"ground\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"top\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seat\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surfaces\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"wood\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"cloth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"metal\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"]}{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"controls\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"width\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"depth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"height\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seatHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"legThickness\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"backHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"parts\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"support\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surface\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"back\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"hardware\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"anchors\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"ground\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"top\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seat\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surfaces\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"wood\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"cloth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"metal\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"]}{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"controls\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"width\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"depth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"height\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seatHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"legThickness\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"backHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"parts\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"support\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surface\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"back\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"hardware\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"anchors\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"ground\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"top\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seat\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surfaces\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"wood\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"cloth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"metal\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"]}{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"controls\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"width\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"depth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"height\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seatHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"legThickness\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"backHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"parts\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"support\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surface\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"back\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"hardware\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"anchors\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"ground\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"top\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seat\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surfaces\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"wood\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"cloth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"metal\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"]}{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"controls\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"width\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"depth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"height\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seatHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"legThickness\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"backHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"parts\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"support\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surface\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"back\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"hardware\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"anchors\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"ground\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"top\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seat\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surfaces\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"wood\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"cloth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"metal\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"]}{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"controls\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"width\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"depth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"height\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seatHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"legThickness\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"backHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"parts\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"support\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surface\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"back\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"hardware\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"anchors\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"ground\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"top\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seat\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surfaces\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"wood\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"cloth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"metal\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"]}{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"controls\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"width\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"depth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"height\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seatHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"legThickness\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"backHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"parts\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"support\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surface\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"back\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"hardware\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"anchors\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"ground\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"top\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seat\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surfaces\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"wood\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"cloth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"metal\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"]}{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"controls\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"width\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"depth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"height\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seatHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"legThickness\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"backHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"parts\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"support\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surface\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"back\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"hardware\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"anchors\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"ground\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"top\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seat\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surfaces\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"wood\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"cloth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"metal\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"]}{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"controls\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"width\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"depth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"height\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seatHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"legThickness\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"backHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"parts\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"support\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surface\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"back\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"hardware\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"anchors\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"ground\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"top\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seat\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surfaces\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"wood\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"cloth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"metal\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"]}{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"controls\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"width\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"depth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"height\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seatHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"legThickness\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"backHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"parts\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"support\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surface\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"back\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"hardware\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"anchors\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"ground\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"top\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seat\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surfaces\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"wood\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"cloth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"metal\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"]}{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"controls\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"width\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"depth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"height\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seatHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"legThickness\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"backHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"parts\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"support\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surface\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"back\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"hardware\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"anchors\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"ground\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"top\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seat\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surfaces\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"wood\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"cloth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"metal\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"]}{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"controls\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"width\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"depth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"height\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seatHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"legThickness\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"backHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"parts\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"support\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surface\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"back\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"hardware\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"anchors\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"ground\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"top\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seat\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surfaces\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"wood\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"cloth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"metal\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"]}{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"controls\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"width\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"depth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"height\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seatHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"legThickness\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"backHeight\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"parts\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"support\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surface\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"back\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"hardware\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"anchors\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"ground\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"top\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"seat\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"surfaces\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"wood\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"cloth\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\",\"guidance\":\"Full result is retained in task memory; use a narrower source read for details.\"}"
+    }
+  ],
+  "queue": [],
+  "inbox": [],
+  "context": null,
+  "report": null
+}

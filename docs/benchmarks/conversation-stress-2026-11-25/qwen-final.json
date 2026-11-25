@@ -1,0 +1,138 @@
+{
+  "mode": "real model",
+  "seed": 731,
+  "rounds": 8,
+  "faultBurst": 1,
+  "geometryFault": false,
+  "resumes": 2,
+  "interventions": 2,
+  "state": "cancelled",
+  "reason": "Stopped by owner",
+  "counts": {
+    "steps": 41,
+    "modelCalls": 26,
+    "toolCalls": 12,
+    "tokens": 82025
+  },
+  "passedReviews": 1,
+  "failedReviews": 1,
+  "compactions": 5,
+  "injectedFailures": 3,
+  "backoffs": 8,
+  "writes": 1,
+  "duplicateWriteCallIds": 0,
+  "catalogSha256": "347d2d053add0aba6156e539ec5f9ceec2135c612a3e55efed708ef885ceebb3",
+  "qualification": "Protocol/geometry continuity; no visual art-quality claim. Deterministic mode is not a real-model drift evaluation.",
+  "verdict": "Failed to demonstrate autonomous eight-model endurance; stopped by owner for review.",
+  "createdAt": "2026-11-25T19:50:45.379Z",
+  "stoppedAt": "2026-11-25T20:24:14.642Z",
+  "elapsedSeconds": 2009.263,
+  "successfulRequestTiming": {
+    "summary": {
+      "successfulRequests": 5,
+      "seconds": 660.828
+    },
+    "ordinary": {
+      "successfulRequests": 10,
+      "seconds": 371.772
+    }
+  },
+  "summaryShareOfSuccessfulRequestTime": 0.6399651365485184,
+  "tokensComplete": false,
+  "compactionRecords": [
+    {
+      "cursor": 12,
+      "type": "context.compacted",
+      "at": "2026-11-25T19:55:56.152Z",
+      "transcript": "transcripts/auto-10.json",
+      "beforeBytes": 46035,
+      "afterBytes": 16320,
+      "retainedMessages": 0,
+      "usage": {
+        "prompt_tokens": 6869,
+        "completion_tokens": 694,
+        "total_tokens": 7563
+      }
+    },
+    {
+      "cursor": 23,
+      "type": "context.compacted",
+      "at": "2026-11-25T20:00:36.309Z",
+      "transcript": "transcripts/auto-21.json",
+      "beforeBytes": 37083,
+      "afterBytes": 15258,
+      "retainedMessages": 0,
+      "usage": {
+        "prompt_tokens": 6150,
+        "completion_tokens": 546,
+        "total_tokens": 6696
+      }
+    },
+    {
+      "cursor": 59,
+      "type": "context.compacted",
+      "at": "2026-11-25T20:06:58.111Z",
+      "transcript": "transcripts/auto-57.json",
+      "beforeBytes": 56918,
+      "afterBytes": 50512,
+      "retainedMessages": 3,
+      "usage": {
+        "prompt_tokens": 3447,
+        "completion_tokens": 546,
+        "total_tokens": 3993
+      }
+    },
+    {
+      "cursor": 61,
+      "type": "context.compacted",
+      "at": "2026-11-25T20:09:09.687Z",
+      "transcript": "transcripts/auto-59.json",
+      "beforeBytes": 50512,
+      "afterBytes": 16199,
+      "retainedMessages": 0,
+      "usage": {
+        "prompt_tokens": 6913,
+        "completion_tokens": 546,
+        "total_tokens": 7459
+      }
+    },
+    {
+      "cursor": 82,
+      "type": "context.compacted",
+      "at": "2026-11-25T20:12:04.638Z",
+      "transcript": "transcripts/auto-80.json",
+      "beforeBytes": 58593,
+      "afterBytes": 48457,
+      "retainedMessages": 2,
+      "usage": {
+        "prompt_tokens": 4921,
+        "completion_tokens": 546,
+        "total_tokens": 5467
+      }
+    }
+  ],
+  "compactionStarts": 8,
+  "faults": [
+    {
+      "at": "2026-11-25T19:50:45.835Z",
+      "status": 503
+    },
+    {
+      "at": "2026-11-25T20:00:36.460Z",
+      "status": 429
+    },
+    {
+      "at": "2026-11-25T20:09:09.826Z",
+      "status": 429
+    }
+  ],
+  "limitations": [
+    "82,025 counted tokens omit malformed responses discarded by the older adapter and cancelled/timed-out work.",
+    "Successful request timings exclude failed, interrupted and timed-out attempts.",
+    "One model passing geometry checks does not establish visual quality or faithful reconstruction.",
+    "Zero duplicate write call ids is a limited observation from one completed write.",
+    "Memory-discovery fix was not validated by subsequent model progress.",
+    "Recovery is assisted and policy changed during the run; this is diagnostic evidence, not a controlled comparative benchmark."
+  ],
+  "monitorDeleted": true
+}

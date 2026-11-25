@@ -1,6 +1,6 @@
 {
-  "state": "running",
-  "qualification": "Not a completed real-model pass. Semantic reread loop under investigation; corrected compound search and retained progress references.",
+  "state": "cancelled",
+  "qualification": "Failed to demonstrate autonomous eight-model endurance; stopped by owner for review.",
   "models": [
     {
       "id": "spindle-chair",
@@ -11,11 +11,12 @@
   "interventions": 2,
   "resumes": 2,
   "counts": {
-    "steps": 39,
-    "modelCalls": 25,
+    "steps": 41,
+    "modelCalls": 26,
     "toolCalls": 12,
     "tokens": 82025
   },
   "tokensComplete": false,
-  "source": "work/conversation-stress/qwen38-native-1"
+  "source": "work/conversation-stress/qwen38-native-1",
+  "finalReport": "qwen-final.json"
 }

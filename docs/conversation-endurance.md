@@ -115,12 +115,11 @@ pass counts. Its first successful request took 111.9s including cold startup; it
 first summary took 195.3s. Initial tool use requested a review before saving a
 model; the reviewer rejected that and an explicit correction was sent. This is
 a recorded intervention, not an unassisted real-model pass. Full live artifacts:
-`work/conversation-stress/qwen38-native-1/`. A temporary heartbeat monitors this
-run and will save final model/intervention results separately.
+`work/conversation-stress/qwen38-native-1/`. The run was later stopped by the owner; the final review below records its outcome.
 
 After the correction, Qwen saved an 11-part spindle-chair definition and its
-second review passed. The eight-model real run remains in progress; its final
-report must distinguish this correction from unassisted continuity.
+second review passed. The eight-model real run was stopped with only this first model passed; it did
+not demonstrate unassisted continuity.
 
 Final local verification: 1,430 tests, 1,364 passed, 66 skipped, zero failures with
 `--test-concurrency=8`; 26 focused checks and 8 standalone-bundle checks also pass.
@@ -179,3 +178,93 @@ The existing run was operationally paused and its owned harness restarted to
 load the changes while a summary request was pending; no tool effect was pending.
 The task id, completed writes and source receipts were retained. This recovery
 changes discovery context, not catalog output or the shared model configuration.
+
+
+## Final experiment review: stopped by owner
+
+The owner stopped the real-model experiment on 2026-11-25 at 23:24 Moscow time
+(20:24 UTC). The task durably acknowledged `cancelled / Stopped by owner`.
+The monitor was deleted and the owned harness processes and SSH tunnel were
+terminated. No further model run was started. The final Admin screenshot and
+retained state are linked below.
+
+**Verdict: the real-model endurance objective failed to be demonstrated.** In
+33 minutes 29 seconds, only spindle-chair passed out of eight requested catalog
+models. Its 11-part definition passed data/geometry checks after an initial
+missing-save correction. There were two explicit steering corrections and two
+same-task harness restarts. This is assisted diagnostic evidence, not a clean
+benchmark or a visual-quality assessment.
+
+| Measurement | Observed result |
+| --- | --- |
+| Saved models / passing models | 1 / 1, of 8 requested |
+| Failed geometry-review attempts | 1 (file not yet saved) |
+| Worker steps / model attempts / tool calls | 41 / 26 / 12 |
+| Completed compactions / compaction starts | 5 / 8 (includes resumed/interrupted attempts) |
+| Injected provider faults | 3: one 503 and two 429 responses |
+| Recorded backoffs | 8, including misclassified protocol retries and a summary timeout |
+| Saved-model writes / duplicate write call ids | 1 / 0 |
+| Counted tokens | 82,025; incomplete compute accounting |
+
+Successful upstream summaries consumed 660.828 seconds across five calls, versus
+371.772 seconds across ten ordinary requests. Summaries therefore consumed 64%
+of successful upstream request time. Failed, cancelled and timed-out requests
+are excluded, so this is not a share of total experiment time or all compute.
+The final summary request timed out at 300 seconds and retried before the owner
+stopped it. We did not wait for retry exhaustion or prove a permanent provider
+outage.
+
+### What the experiment exposed
+
+1. **Compaction triggers too early and can repeat without useful work.** A
+   24,000-token setting maps to a 48,000-byte budget and 36,000-byte trigger.
+   This is not tokenizer-aware. Two summaries left requests at 50,512 and
+   48,457 bytes, still above the trigger, immediately requiring another summary.
+   Successful summary prompts reported 3,447–6,913 input tokens; these were
+   partial histories, not measurements of the whole ordinary request. Artificial
+   repeated catalog contracts and long memory results amplify the pressure.
+2. **Retained facts do not guarantee forward progress.** Summaries retained the
+   correct next entry (linen-stool), but Qwen repeated memory discovery and reads
+   rather than producing it. This shows workflow drift, not proven loss of goal.
+3. **Protocol errors must not look like outages.** Malformed native argument
+   tags were initially returned as HTTP 500 and retried identically. The adapter
+   now records raw responses and returns permanent 422. No rejected tool ran.
+4. **Recovery is promising but narrowly tested.** Same-task restart preserved
+   the one saved model and its passing receipt. No duplicate write call id was
+   observed; one write is insufficient evidence of general exactly-once effects.
+5. **Progress UX is inadequate for supervision.** The stopped screenshot makes
+   cancellation visible, but the timeline requires manual reconstruction of the
+   1/8 outcome, compaction cost and repeated-read loop. The UI should surface
+   completed milestones, last useful progress, repeated calls and summary cost.
+
+The memory-search/progress-anchor fix is implemented and regression-tested, but
+no subsequent model output demonstrated that it resolved the real-model loop.
+Do not count it as an experimentally verified recovery. Earlier deterministic
+runs validate orchestration paths; they do not override this real-model result.
+
+### Direction before the next experiment
+
+- Budget model input with calibrated token estimates and reserve output space;
+  expose estimated versus provider-observed usage. Compact to a lower target
+  with enough headroom for a useful tool cycle, and flag ineffective summaries.
+- Keep a structured milestone ledger (current catalog id, saved artifact hash,
+  review receipt and next action) outside generated summaries. Surface stalled
+  progress independently of healthy transport or frequent events.
+- Bound tool previews and return exact evidence references. Separate a realistic
+  payload profile from deliberate context-flooding tests; retain both results.
+- Use distinct protocol, provider-outage and no-progress failure classes. Keep
+  effect reconciliation explicit; do not blindly retry writes.
+- Next validation should compare fixed policies on the same catalog, model,
+  seed and payload profile, with no steering in the qualifying run. Require all
+  eight reviews, no repeated completed effects, measurable useful work between
+  compactions, and documented summary overhead. First validate the known failure
+  cases deterministically, then run the real model.
+
+These are recommendations, not additional changes implemented after the stop.
+This experiment provides no evidence about a Rust port or production memory
+consumption; its dominant observed cost is model/summarization latency.
+
+[Final metrics](benchmarks/conversation-stress-2026-11-25/qwen-final.json) ·
+[Final retained status](benchmarks/conversation-stress-2026-11-25/qwen-final-status.json)
+
+![Admin task stopped by owner](benchmarks/conversation-stress-2026-11-25/qwen-stopped.png)
