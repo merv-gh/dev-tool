@@ -18248,7 +18248,7 @@ var require_self_model_catalog = __commonJS({
     module2.exports = {
       protocol: "dt.repo-source/v1",
       repo: "dev-tool",
-      sourceDigest: "5e000dd17538d097606f121846dc585a01f9f77593dd2376f53a19d5854f8535",
+      sourceDigest: "4a0f3d3c90308716e3eb0f8302f8b69be9c4dfd7f255bc9492a05cb43581c7ad",
       machines: [
         {
           id: "IO.atomic-file",
@@ -54401,6 +54401,7 @@ var require_task_harness = __commonJS({
       }
       if (c.action === "resume") {
         if (r.pending?.kind === "tool" && !READ.has(r.pending.tool) && !["task_memory_save", "task_watch", "task_tool_discover", "task_memory_read"].includes(r.pending.tool)) throw invalid("Reconcile the uncertain tool before resuming");
+        if (r.state === "needs_attention") r.modelRetries = 0;
         r.state = r.retryAt && Date.now() < Date.parse(r.retryAt) ? "waiting" : "queued";
         r.admittedProcess = process.pid;
         r.admittedInstance = processInstance;
@@ -83093,7 +83094,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md|java)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "5e000dd17538d097606f121846dc585a01f9f77593dd2376f53a19d5854f8535";
+      if (true) return "4a0f3d3c90308716e3eb0f8302f8b69be9c4dfd7f255bc9492a05cb43581c7ad";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");

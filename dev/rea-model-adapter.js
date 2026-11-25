@@ -5,7 +5,7 @@ const crypto=require('node:crypto');
 function callText(name,args){return '<tool_call>\n<function='+name+'>\n'+Object.entries(args).map(([k,v])=>'<parameter='+k+'>\n'+(typeof v==='string'?v:JSON.stringify(v))+'\n</parameter>').join('\n')+'\n</function>\n</tool_call>';}
 function prompt(payload){
  let system=payload.messages[0]?.role==='system'?payload.messages[0].content:'';
- if(payload.tools?.length)system='# Tools\nUse these function schemas:\n<tools>\n'+payload.tools.map(t=>JSON.stringify(t)).join('\n')+'\n</tools>\nTo call a function, use <tool_call><function=NAME><parameter=ARGUMENT>VALUE</parameter></function></tool_call>. Write each parameter separately. Use JSON for arrays and objects; plain text for strings. Include all required arguments. Tool results arrive inside tool_response tags. Do not imitate a result. When calling tools, leave no text after the last closing tool_call tag.\n\n'+system;
+ if(payload.tools?.length)system='# Tools\nUse these function schemas:\n<tools>\n'+payload.tools.map(t=>JSON.stringify(t)).join('\n')+'\n</tools>\nTo call a function, use <tool_call><function=NAME><parameter=ARGUMENT>VALUE</parameter></function></tool_call>. Write each parameter separately. Use JSON for arrays and objects; plain text for strings. Include all required arguments. A parameter named query must start with <parameter=query>, never <query>. Example syntax:\n<tool_call>\n<function=FUNCTION_NAME>\n<parameter=PARAMETER_NAME>\nvalue\n</parameter>\n</function>\n</tool_call>\nTool results arrive inside tool_response tags. Do not imitate a result. When calling tools, leave no text after the last closing tool_call tag.\n\n'+system;
  let text='<|im_start|>system\n'+system+'<|im_end|>\n';
  for(let i=0;i<payload.messages.length;i++){
   const m=payload.messages[i];if(m.role==='system')continue;
@@ -31,10 +31,10 @@ function parse(text,payload){
  if(/<\/?(?:tool_call|function|parameter)[=>]/.test(content))throw Error('Incomplete native tool call; nothing executed');
  return {role:'assistant',content:content||null,...(calls.length?{tool_calls:calls}:{})};
 }
-async function generate(upstream,payload,{window=24000,signal}={}){
+async function generate(upstream,payload,{window=24000,signal,onResponse}={}){
  const request={model:payload.model,prompt:prompt(payload),raw:true,stream:false,keep_alive:'5m',options:{num_ctx:window,num_predict:payload.max_tokens,temperature:payload.temperature??0,repeat_penalty:1.05,stop:['<|im_end|>']}};
  const response=await fetch(upstream.replace(/\/v1\/?$/,'').replace(/\/$/,'')+'/api/generate',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(request),signal});
  const raw=await response.text();if(!response.ok)return {status:response.status,body:raw};
- const value=JSON.parse(raw);return {status:200,body:JSON.stringify({model:payload.model,choices:[{finish_reason:value.done_reason==='length'?'length':'stop',message:parse(value.response||'',payload)}],usage:{prompt_tokens:value.prompt_eval_count||0,completion_tokens:value.eval_count||0,total_tokens:(value.prompt_eval_count||0)+(value.eval_count||0)}}),requestBytes:Buffer.byteLength(JSON.stringify(request))};
+ const value=JSON.parse(raw);onResponse?.(value);let message;try{message=parse(value.response||'',payload);}catch(error){return {status:422,body:JSON.stringify({error:error.message,code:'REA_MODEL_PROTOCOL',response:value.response||''}),requestBytes:Buffer.byteLength(JSON.stringify(request))};}return {status:200,body:JSON.stringify({model:payload.model,choices:[{finish_reason:value.done_reason==='length'?'length':'stop',message}],usage:{prompt_tokens:value.prompt_eval_count||0,completion_tokens:value.eval_count||0,total_tokens:(value.prompt_eval_count||0)+(value.eval_count||0)}}),requestBytes:Buffer.byteLength(JSON.stringify(request))};
 }
 module.exports={prompt,parse,generate,callText};

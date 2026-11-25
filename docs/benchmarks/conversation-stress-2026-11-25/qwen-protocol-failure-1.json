@@ -1,0 +1,23 @@
+{
+  "mode": "real model",
+  "seed": 731,
+  "rounds": 8,
+  "faultBurst": 1,
+  "state": "needs_attention",
+  "reason": "POST http://127.0.0.1:64850/v1/chat/completions -> 500 {\"error\":\"Unparsed native parameter text\"}",
+  "counts": {
+    "steps": 16,
+    "modelCalls": 12,
+    "toolCalls": 4,
+    "tokens": 27800
+  },
+  "passedReviews": 1,
+  "failedReviews": 1,
+  "compactions": 2,
+  "injectedFailures": 2,
+  "backoffs": 6,
+  "writes": 1,
+  "duplicateWriteCallIds": 0,
+  "catalogSha256": "347d2d053add0aba6156e539ec5f9ceec2135c612a3e55efed708ef885ceebb3",
+  "qualification": "Protocol/geometry continuity; no visual art-quality claim. Deterministic mode is not a real-model drift evaluation."
+}

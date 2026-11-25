@@ -131,6 +131,14 @@ test('provider retry debounces maintenance, while permanent failures stop withou
   brain=()=>({fixtureStatus:401,error:'invalid api key'});const denied=await H.start({title:'Permanent error',goal:'Stop on invalid credentials',allow_model:true});const blocked=await until(denied.id,r=>r.state==='needs_attention');assert.equal(blocked.counts.modelCalls,1);assert.equal(blocked.events.filter(e=>e.type==='model.backoff').length,0);
  }finally{config();}
 }));
+test('explicit resume after an exhausted provider outage admits a fresh bounded retry allowance',async()=>alice(async()=>{
+ try {
+  config({llm:{baseUrl:endpoint+'/v1',model:'fixture-small',taskRetryBaseMs:1000,taskModelRetries:1}});
+  let attempts=0;brain=()=>++attempts<=3?{fixtureStatus:503}:response('Recovered after explicit resume.');
+  const run=await H.start({title:'Outage exhausted',goal:'Retain work and resume after repair',allow_model:true});const blocked=await until(run.id,r=>r.state==='needs_attention');assert.equal(blocked.counts.modelCalls,2);
+  H.control({run:run.id,action:'resume'});const done=await until(run.id,r=>r.state==='completed'||r.state==='needs_attention'&&!r.controlPending&&r.counts.modelCalls>2);assert.equal(done.state,'completed',done.reason);assert.equal(attempts,4);assert.equal(done.counts.toolCalls,0);
+ }finally{config();}
+}));
 test('provider context overflow reduces the durable budget instead of repeatedly sending the same request',async()=>alice(async()=>{
  try {
   config({llm:{baseUrl:endpoint+'/v1',model:'fixture-small',contextWindow:32000,compactionMode:'auto'}});

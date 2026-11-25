@@ -127,3 +127,30 @@ Final local verification: 1,430 tests, 1,364 passed, 66 skipped, zero failures w
 The generated bundle is current. An earlier default-concurrency named-view CAS
 recovery test failed once; it passed in isolation and both subsequent full-suite
 runs. [Validation record](benchmarks/conversation-stress-2026-11-25/validation.json).
+
+## Real-model failure and recovery: after checkpoint two
+
+After the second automatic compaction, Qwen emitted malformed tool tags:
+`<query>…</parameter>` and `<id>…</parameter>`, instead of opening each argument
+with `<parameter=query>` or `<parameter=id>`. No tool in these rejected responses
+executed. The test adapter incorrectly returned HTTP 500, so the worker treated
+the protocol failure as transient and repeated the same model request until its
+bounded retry allowance was exhausted. This is a reproduced real-model drift
+failure, not a passing continuation test. [Failure record](benchmarks/conversation-stress-2026-11-25/qwen-protocol-failure-1.json).
+
+The adapter now retains raw native responses and classifies invalid protocol as
+a permanent 422, with no argument repair. The prompt includes an explicit
+multiline syntax example. The harness can `--resume 1 --steer-file /path/to/note`
+using the same task id, transcript, saved models, review ledger and budgets; it
+archives the pre-resume report/screenshot. Resume requires the exact catalog hash
+and original round count. An explicit owner resume after exhausted model retries
+now admits a fresh bounded retry allowance; it still respects an existing
+provider cooldown. The run resumed with a framing correction and its first
+passing model retained. This is the second recorded intervention.
+
+A completed deterministic repair run was also reopened with `--resume 1`: its
+original task id, 36 steps, 24 model calls, 10 tool calls, 5 writes and 6 compactions
+were unchanged, confirming no completed effects were replayed. A focused test
+covers resuming after an exhausted provider outage. Successful-response token
+counts exclude the earlier malformed native responses whose usage the old
+adapter discarded; those counters are incomplete measures of model work.
