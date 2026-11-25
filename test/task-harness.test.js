@@ -109,7 +109,7 @@ test('automatic compaction preserves goal, paired tool history and saved effects
    if(payload.messages[0].content.startsWith('Summarize the following')){if(++summaryAttempts===1)return {fixtureStatus:503};summaries++;return response('Preserve metric units, Y up, grounded catalog models. Saved notes are authoritative evidence of completed work. Continue after the latest saved round; never repeat it.');}
    assert.match(payload.messages[0].content,/Y up/);
    if(saved===3&&!steered){alice(()=>H.control({run:activeRun,action:'steer',message:'Use amber details only; never publish generated models.'}));steered=true;}
-   if(saved>4)assert.match(payload.messages[0].content,/Use amber details only; never publish generated models/);
+   if(saved>4){assert.match(payload.messages[0].content,/Use amber details only; never publish generated models/);assert.match(payload.messages[0].content,/notes\/round-4\.js/);}
    for(let i=0;i<payload.messages.length;i++)if(payload.messages[i].role==='tool')assert.ok(payload.messages.slice(0,i).some(m=>m.tool_calls?.some(c=>c.id===payload.messages[i].tool_call_id)));
    if(saved===16)return response('All 16 catalog model revisions saved and reviewed. Y up, metres, grounded.');
    return {choices:[{finish_reason:'stop',message:{role:'assistant',content:'Model construction and grounded contact review. '.repeat(100),tool_calls:[call('round-'+(++saved),'task_memory_save',{path:'round-'+saved+'.js',content:'// metres, Y up, grounded; revision '+saved,summary:'Catalog model revision '+saved})]}}],usage:{total_tokens:100}};

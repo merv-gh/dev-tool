@@ -154,3 +154,28 @@ were unchanged, confirming no completed effects were replayed. A focused test
 covers resuming after an exhausted provider outage. Successful-response token
 counts exclude the earlier malformed native responses whose usage the old
 adapter discarded; those counters are incomplete measures of model work.
+
+## Real-model memory-discovery loop
+
+After protocol recovery, the model twice repeated the same memory-index query,
+initial `progress.md` and passing-review receipt reads without producing the
+next model. The generated summaries retained the correct next entry; this was
+workflow drift rather than loss of the stated next step. The query `models saved`
+matched no note because search required that whole phrase. The default index
+also mixed authored notes with numerous operational request records. The repeated
+reads refilled context and caused more compaction without advancing the output.
+[Observed read signatures](benchmarks/conversation-stress-2026-11-25/qwen-memory-loop.json).
+
+Memory discovery now ranks query words and puts authored notes before operational
+history. Historical requests/transcripts are listed with `include_internal=true`;
+all exact-path reads remain available. Every model request also includes bounded
+references to saved notes and recent source receipts, so a summary cannot erase
+where completed work is stored. These references contain paths and completion
+metadata, not instructions imported from source documents. Regression coverage
+checks compound queries, access to historical requests, note ordering and note
+references across repeated compactions.
+
+The existing run was operationally paused and its owned harness restarted to
+load the changes while a summary request was pending; no tool effect was pending.
+The task id, completed writes and source receipts were retained. This recovery
+changes discovery context, not catalog output or the shared model configuration.
