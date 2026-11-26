@@ -1,6 +1,6 @@
 # Joern navigation through code mode and question-shaped tools
 
-Code mode can call the existing semantic tools and return a small, useful projection of their evidence. The Qwen 3.5 2B pilot could not reliably assemble that workflow from a general code description. Three narrow native tools reached the evidence reliably in this fixture, but question-shaped names alone did not fix omitted assumptions or incorrect interpretation. Clearer assumption inputs and outputs made the combined task pass.
+Code mode can call the existing semantic tools and return a small, useful projection of their evidence. The Qwen 3.5 2B pilot could not reliably assemble that workflow from a general code description. Clearer assumption inputs and outputs made two synthetic scenarios pass. On fresh real graphs, the question tools retrieved the right evidence and preserved proof limits, but both final answers still failed endpoint-label and citation requirements. These prototypes are not ready to register for reliable 2B use.
 
 There are two phases. The initial small-model comparison uses **synthetic CPG worker records** with the production Node sandbox, registry, retained-projection navigation, map construction, trace evaluation and compact adapters. Docker was initially unresponsive, so the first live-test invocation skipped. After recovering Docker Desktop, fresh real Joern Java/JavaScript tests exercised actual CPGs and an independently compiled behavioral oracle. The cached image contains Joern **4.0.533**; this does not verify the newer pinned image. Historical evidence in [semantic-code-e2e.json](benchmarks/semantic-code-e2e.json) remains a separate run.
 
@@ -73,13 +73,50 @@ The clearer interface passed two scenarios on the same synthetic graph: the disp
 
 The grader requires actual map/trace receipts with the requested entry parameter, sink argument and predicate polarity, a correct final answer, retained links, and honest proof/coverage. Fetching evidence without answering correctly is not a pass. A call expression such as `save(payable)` is accepted as the exit call, avoiding a formatting-only failure.
 
+## Fresh Joern follow-up
+
+Docker Desktop's engine socket initially timed out despite the UI being open. Restarting the stuck backend recovered it. The isolated test worker used the existing local image `sha256:e02c5bbfb9f8ef92c448a7e8e266e65ec6e3652c1522301ad807d01a8cac6577`, with four CPUs, a 6 GiB container limit, a 3 GiB parse reservation and a 2 GiB query reservation. Its actual CLI banner reports Joern **4.0.533**. The inherited worker defaults initially claimed the newer version/image; those configuration values were explicitly corrected before the model runs, and the repaired source was reparsed for that worker identity.
+
+The first live map test passed its Java checks but failed JavaScript navigation with `UNIQUE constraint failed: records.type, records.id`. The same assignment/return fact appeared once for the module and once for its nested function. Filtering exported facts to `n.method.id == m.id` fixed the actual attribution error rather than discarding records during SQLite ingestion. The new live assertion checks fact-ID uniqueness and the assignment's owning function. Both full live tests then passed: [map verification](benchmarks/semantic-live-flow-map-verification.json), [trace verification](benchmarks/semantic-live-path-trace-verification.json). They cover Java, JavaScript, real loop cycles, field mutations, exception boundaries, sink bindings, shifted lines and the independent failing-before/passing-after behavioral oracle.
+
+The [live harness](../dev/eval-semantic-live-model.cjs) then reindexed the repaired Java workspace against the correctly identified worker. It uses the production registry, real CPG queries, Node sandbox and owned-job observations. The task supplies the exact repaired analysis id, so this is not directly comparable to the earlier revision-discovery task. The two live arms use the same task, source analysis, model settings and tool names; the second changes descriptions and selected-output structure.
+
+| Fresh real evidence | UTF-8 JSON bytes | Scope |
+|---|---:|---|
+| Saved full map payload | 139,090 | One entry, three reached methods, 28 states, 124 transitions |
+| Saved full trace payload | 197,745 | Selected value path and eight retained control paths; bounded coverage |
+| Both full saved payloads | 336,835 | Payloads exclude their outer saved-view envelopes |
+| Requested 4 KB map preview | 4,084 | Omits 26 states, 123 transitions and other metadata explicitly |
+| Requested 4 KB trace preview | 3,655 | Omits all nine detailed paths; retains summary/proof and raw bridge |
+| Hand-written code response | 3,120 | Selected facts plus links; includes code response/polling receipts |
+| Hand-written typed evidence proposal | 2,655 | Separates exit kinds and groups equal check summaries with retained path indexes |
+
+The code probe completed under the normal 60-second code timeout. The second cached run's envelope was 2,956 bytes because fewer job-observation receipts were needed. The small code responses are selected summaries, not a claim to inline all graph evidence.
+
+The [independent capture](benchmarks/semantic-real-joern-evidence.json) actually calls `result_read({id,all:true})` for both saved views and retains the full payloads. Its receipts show the distinction requested for tool outputs:
+
+```json
+{"complete":true,"completeScope":"retained-value","sourceCoverage":{"status":"partial","provenComplete":false}}
+```
+
+Thus all retained evidence can be read at once while the underlying static analysis remains bounded. Equal displayed assumption checks can be grouped with `retainedPaths:[0,1,...]`; this does not claim that their complete paths are equivalent or exhaustive.
+
+| Real-model arm | Calls | Selected response bytes | Final answer |
+|---|---:|---:|---|
+| Question tools + assumption clarity | 3 | Map 4,777; trace 5,326; list 829 | Correct value `payable`, statuses and proof limits; selected `isBlank()` as the requested sink/exit and cited only one view |
+| Separate method exits, call boundaries and selected sinks | 2 | Map 4,295; trace 1,271 | Correct statuses and proof limits; selected `Method exit`, put the whole call in the value-expression field, and cited only one view |
+
+Both arms submitted the exact requested parameter, sink argument **2**, and compound predicate polarity. Neither is counted as a final-answer success. Preserve the [first live transcript](benchmarks/semantic-real-joern-question-brief-2b.json) and [refined live transcript](benchmarks/semantic-real-joern-question-typed-2b.json) rather than extrapolating from the synthetic successes.
+
+The live task's own requested field `exitCall` also conflates an external graph boundary with the selected trace sink. That limits the interpretation of these failures: they establish correct retrieval with unreliable final field mapping/citations, not inability to query real dataflow. A better next protocol should request `traceSinkCall`, `argumentExpression`, `methodExits`, `externalCallBoundaries`, `mapView` and `traceView` explicitly. Returned sink fields should use `argumentExpression` and `callExpression` instead of generic `value` and `call`. This refinement is a recommendation, not a verified model improvement.
+
 ## Recommendation
 
 Use one intent per tool, with names that make sense as questions: `who_uses`, `what_happens_from`, `where_value_flows`. Keep Joern as implementation/coverage metadata. Retain compatibility aliases without advertising duplicate names. Question-shaped naming should accompany narrow, forgiving inputs and a short explanation of how to read the result.
 
 For semantic results, prefer explicit `declaredAssumptions` and separate data/control `assumptionChecks`. Keep source locations, proof limits, selected-output scope and a raw-evidence bridge. Avoid asking small models to infer which of several nested `status` fields is the requested answer.
 
-Keep `all` consistent across listing, map, trace and raw reads. Distinguish selected output (`part`), omitted preview content (`truncated`) and a full retained response (`all`) from source/analysis completeness. A production adapter should annotate all three cases explicitly and support owned-job continuation. These evaluation adapters only cover immediate fixture responses; they are not ready to register unchanged.
+Keep `all` consistent across listing, map, trace and raw reads. Distinguish selected output (`part`), omitted preview content (`truncated`) and a full retained response (`all`) from source/analysis completeness. A production adapter should annotate all three cases explicitly and support owned-job continuation. The live evaluation harness supplies server-side job observation, but the candidate adapters are not ready to register unchanged.
 
 Code mode remains useful for larger models or supplied recipes that join/filter full graph data. For this 2B model, even a correct internal tool call can lose its result when it omits `text(...)` or `return`. A separate experiment should test a visible receipt for that situation rather than silently encouraging repeated discovery.
 
@@ -96,6 +133,6 @@ node --test test/semantic-code-model-eval.test.js test/semantic-flow-map.test.js
 
 The harness requires local Ollama at `127.0.0.1:11434`. All data lives in a disposable `DT_HOME`. Raw fixture views are removed afterward; their URLs in transcripts no longer resolve. Captured full responses, delivered outputs and transcripts remain in [benchmark reports](benchmarks/semantic-question-brief-2b.json), with the [code projection](benchmarks/semantic-code-projection.json), [plain-name control](benchmarks/semantic-plain-focused-2b.json), [question-name control](benchmarks/semantic-question-focused-2b.json), and [original code trial](benchmarks/semantic-code-mode-2b.json). Failed exploratory runs are retained alongside them.
 
-The [contradictory-assumption transcript](benchmarks/semantic-question-brief-contradiction-2b.json) preserves the second successful scenario. Local validation passed 39 focused tests, `npm run build:check`, and the documentation link checks. The full suite was not rerun locally. The exporter fix and its generated bundle are the production changes; candidate tool registrations remain unchanged.
+The [contradictory-assumption transcript](benchmarks/semantic-question-brief-contradiction-2b.json) preserves the second successful synthetic scenario. The exporter fix and its generated bundle are the production changes; candidate tool registrations remain unchanged. Validation passed **47 focused tests**, **both real Joern tests**, build/handbook/state-machine/inventory checks, and documentation links. [CI on implementation head `3179125`](https://github.com/merv-gh/dev-tool/actions/runs/45840941192) passed the Node 22/24 full suites, Node 24 coverage gate and integration. The full suite was run remotely because this host has little free disk. Final evidence-capture refinements were also executed against the actual retained views.
 
 For actual Joern verification, configure `DT_SEMANTIC_LIVE_URL` and `DT_SEMANTIC_LIVE_TOKEN`, then run `test/semantic-flow-map.live.test.js` and `test/semantic-path-trace.live.test.js`. Those tests use real retained CPGs and an independently compiled behavioral oracle; they do not replace the model-navigation test.

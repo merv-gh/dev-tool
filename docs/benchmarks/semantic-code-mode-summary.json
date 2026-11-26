@@ -350,14 +350,108 @@
   ],
   "validation": {
     "focusedTests": {
-      "passed": 39,
+      "passed": 47,
       "failed": 0
     },
     "liveTests": {
-      "skipped": 2
+      "passed": 2,
+      "failed": 0,
+      "earlierSkipped": 2,
+      "initialMapFailure": "Duplicate nested-JS facts; fixed and rerun successfully"
     },
     "buildCheck": "passed",
-    "docsCheck": "passed"
+    "docsCheck": "passed",
+    "ci": {
+      "run": 45840941192,
+      "head": "3179125d82c501a012d01ddc4069bcab6da49f57",
+      "url": "https://github.com/merv-gh/dev-tool/actions/runs/45840941192",
+      "status": "completed",
+      "conclusion": "success",
+      "jobs": [
+        "Node 22 tests",
+        "Node 24 tests + coverage gate",
+        "integration"
+      ]
+    }
   },
-  "productionToolsChanged": false
+  "productionToolsChanged": false,
+  "live": {
+    "scope": "Fresh Joern 4.0.533 after Docker recovery; exact repaired analysis supplied. Same real user task and settings for both shapes. Final-answer field names include an ambiguous exitCall requirement; results demonstrate correct retrieval but unreliable final field mapping/citations.",
+    "actualJoernVersion": "4.0.533",
+    "containerImage": "sha256:e02c5bbfb9f8ef92c448a7e8e266e65ec6e3652c1522301ad807d01a8cac6577",
+    "tests": {
+      "passed": 2,
+      "failed": 0
+    },
+    "samples": [
+      {
+        "file": "semantic-real-joern-question-brief-2b.json",
+        "shape": "brief",
+        "passed": false,
+        "checks": {
+          "mapRead": true,
+          "traceRead": true,
+          "entry": true,
+          "exit": false,
+          "sink": true,
+          "control": true,
+          "data": true,
+          "proof": true,
+          "coverage": true,
+          "views": false
+        },
+        "calls": 3,
+        "deliveredBytes": 10932,
+        "schemaBytes": 2466,
+        "usage": {
+          "input": 10979,
+          "output": 489
+        },
+        "codeProbe": {
+          "ok": true,
+          "bytes": 3120
+        }
+      },
+      {
+        "file": "semantic-real-joern-question-typed-2b.json",
+        "shape": "typed",
+        "passed": false,
+        "checks": {
+          "mapRead": true,
+          "traceRead": true,
+          "entry": true,
+          "exit": false,
+          "sink": false,
+          "control": true,
+          "data": true,
+          "proof": true,
+          "coverage": true,
+          "views": false
+        },
+        "calls": 2,
+        "deliveredBytes": 5566,
+        "schemaBytes": 2851,
+        "usage": {
+          "input": 5900,
+          "output": 450
+        },
+        "codeProbe": {
+          "ok": true,
+          "bytes": 2956
+        }
+      }
+    ],
+    "bytes": {
+      "fullMap": 139090,
+      "fullTrace": 197745,
+      "fullTotal": 336835,
+      "codeResponse": 3120,
+      "proposal": 2655,
+      "mapPreview": 4084,
+      "tracePreview": 3655
+    }
+  },
+  "productionChanges": [
+    "Joern exporter facts scoped to actual owning method; generated bundle updated"
+  ]
 }
