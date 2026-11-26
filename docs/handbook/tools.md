@@ -11286,7 +11286,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
       "type": "object",
       "maxProperties": 32,
       "additionalProperties": true,
-      "description": "Exact top-level equality filters combined with AND, e.g. {status:\"open\"}. Primitive values only, without coercion. JSON-encoded objects are accepted."
+      "description": "Exact top-level equality filters combined with AND, e.g. {status:\"open\"}. Primitive literal values only, without coercion: for status === \"open\", pass {status:\"open\"}; omit the equality operator from the value. JSON-encoded objects are accepted."
     },
     "cursor": {
       "type": "string",

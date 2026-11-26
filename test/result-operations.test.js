@@ -92,3 +92,17 @@ test('filtered summaries process every retained row and preserve source scope, p
  const primitive=retain({rows:[1,2,3]});
  assert.equal((await T.call('result_read',{id:primitive,aggregate:'count',where:{}})).value,3);
 });
+
+
+test('operator-shaped equality strings stay literal and zero-match mistakes offer an explicit retained retry',async()=>{
+ const id=retain({truncated:true,rows:[{kind:'wanted',n:5},{kind:'other',n:9}]});
+ const where={kind:'=== "wanted"'},r=await T.call('result_read',{id,where,aggregate:'summary',field:'n'});
+ assert.deepEqual(r.value,{count:0,sum:0,avg:null,min:null,max:null});assert.equal(r.ready,false);assert.match(r.error,/literal equality/);
+ assert.deepEqual(where,{kind:'=== "wanted"'});assert.deepEqual(r.where,where);assert.equal(r.retainedRows,2);
+ assert.equal(r.filterMismatch.suggestedMatchedRows,1);assert.deepEqual(r.retry.arguments.where,{kind:'wanted'});
+ const corrected=await T.call(r.retry.tool,r.retry.arguments);assert.equal(corrected.value.sum,5);assert.equal(corrected.value.count,1);assert.equal(corrected.sourceComplete,false);
+ const literal=retain({rows:[{kind:'=== "wanted"',n:7},{kind:'wanted',n:5}]});
+ const exact=await T.call('result_read',{id:literal,where,aggregate:'sum',field:'n'});assert.equal(exact.value,7);assert.equal(exact.retry,undefined);
+ const absent=await T.call('result_read',{id,where:{kind:'absent'},aggregate:'count'});assert.equal(absent.value,0);assert.equal(absent.retry,undefined);
+ const noCandidate=await T.call('result_read',{id,where:{kind:'=== "absent"'},aggregate:'count'});assert.equal(noCandidate.value,0);assert.equal(noCandidate.retry,undefined);
+});

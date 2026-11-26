@@ -78,6 +78,15 @@ test('Open WebUI updates retain user instructions and expose the selected API pr
   assert.ok(once.startsWith(prior)); assert.equal(twice, once);
   assert.equal((twice.match(/<dt-tools-instructions>/g) || []).length, 1);
   assert.equal(W.dtConnection('http://dt:4000/', 'key', { profile: 'api' }).path, 'openapi/api.json');
+  const questionPrompt=W.prompt('semantic-read');
+  assert.equal(questionPrompt,require('../lib/tool-profiles').instructions('semantic-read'));
+  assert.match(questionPrompt,/parameter,sink,argument,assumptions/);assert.match(questionPrompt,/pass where/);
+  assert.ok(!questionPrompt.includes('tools.NAME'),'question profile does not require an unavailable code tool');
+  const updated=W.modelPrompt(once,'semantic-read');assert.ok(updated.startsWith(prior));assert.equal((updated.match(/<dt-tools-instructions>/g)||[]).length,1);assert.ok(updated.includes(questionPrompt));
+  assert.equal(await (await fetch(`${base}/api/prompt?profile=semantic-read`)).text(),questionPrompt);
+  const questionSchema=await (await fetch(`${base}/openapi/semantic-read.json`)).json();
+  assert.equal(Object.keys(questionSchema.paths).length,4);assert.equal(questionSchema.info.description,questionPrompt);
+
   const all = W.dtConnection(base, '', { profile: 'all' });
   const allSchema = await (await fetch(`${all.url}/${all.path}`)).json();
   const directSchema = await (await fetch(`${base}/openapi/direct.json`)).json();

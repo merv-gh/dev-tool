@@ -18248,7 +18248,7 @@ var require_self_model_catalog = __commonJS({
     module2.exports = {
       protocol: "dt.repo-source/v1",
       repo: "dev-tool",
-      sourceDigest: "cbc909d1c0276097e0b5569261bd9c856cbe413e89bb971560aec1e1e90cadda",
+      sourceDigest: "d749f6ae0e1d79a7167cd7e61871265ded60fbf7791df03522e2f276677c0b2c",
       machines: [
         {
           id: "IO.atomic-file",
@@ -79768,7 +79768,31 @@ var require_result_operations = __commonJS({
       }
       return rows.filter((row) => row && typeof row === "object" && entries.every(([k, v]) => Object.hasOwn(row, k) && row[k] === v));
     }
-    module2.exports = { calculate, numericSummary, filter, normalize };
+    function filterDiagnostic(rows, where, selected) {
+      if (!where || selected.length) return;
+      const suggested = { ...where };
+      let changed = false;
+      for (const [key, value] of Object.entries(where)) {
+        if (typeof value !== "string") continue;
+        const match = /^\s*(?:===|==|=)\s*(.+?)\s*$/.exec(value);
+        if (!match) continue;
+        try {
+          const scalar = JSON.parse(match[1]);
+          if (scalar === null || ["string", "number", "boolean"].includes(typeof scalar)) {
+            suggested[key] = scalar;
+            changed = true;
+          }
+        } catch {
+        }
+      }
+      if (!changed) return;
+      try {
+        const matches = filter(rows, suggested);
+        if (matches.length) return { requestedWhere: where, suggestedWhere: suggested, suggestedMatchedRows: matches.length, meaning: "The original literal filter matched zero rows. The suggested literal values match retained rows; verify their intent before retrying. No filter was changed automatically." };
+      } catch {
+      }
+    }
+    module2.exports = { calculate, numericSummary, filter, filterDiagnostic, normalize };
   }
 });
 
@@ -80058,17 +80082,19 @@ var require_chat_context = __commonJS({
       if (transform) {
         if (!Array.isArray(value)) throw invalid("Projection/aggregation requires an array; choose its JSON pointer with path");
         const rows = value.length, read2 = { tool: "result_read", arguments: { id, path: path3, all: true } };
-        value = require_result_operations().filter(value, where);
-        const selection = where === void 0 ? {} : { where, matchedRows: value.length, retainedRows: rows };
+        const operations = require_result_operations(), selected = operations.filter(value, where), mismatch = operations.filterDiagnostic(value, where, selected);
+        value = selected;
+        const correction = mismatch ? { ready: false, error: 'The literal equality filter matched zero rows and appears to include an operator. where takes literal values only, for example {status:"open"}; omit the equality operator from the value. Verify filterMismatch and use retry if that is the intended value; the original zero result below is unchanged.', filterMismatch: mismatch, retry: { tool: "result_read", arguments: { id, path: path3, ...fields !== void 0 ? { fields } : {}, ...aggregate !== void 0 ? { aggregate } : {}, ...field !== void 0 ? { field } : {}, where: mismatch.suggestedWhere } } } : {};
+        const selection = where === void 0 ? {} : { where, matchedRows: value.length, retainedRows: rows, ...correction };
         if (fields === void 0 && aggregate === void 0) return { id, path: path3, value, rows, retainedComplete: true, ...selection, ...coverage, read: read2 };
         if (fields !== void 0) {
           if (!Array.isArray(fields) || !fields.length || fields.length > 64 || fields.some((k) => typeof k !== "string" || !k || k.length > 200) || new Set(fields).size !== fields.length) throw invalid("fields must be 1\u201364 unique nonempty field names");
-          const selected = value.map((row, i) => Object.fromEntries(fields.map((k) => {
+          const selected2 = value.map((row, i) => Object.fromEntries(fields.map((k) => {
             if (!row || typeof row !== "object" || !Object.hasOwn(row, k)) throw invalid(`Field ${k} is missing in retained row ${i}; inspect the exact field names`);
             return [k, row[k]];
           })));
-          const next2 = fields.length === 1 && selected.every((r) => typeof r[fields[0]] === "number" && Number.isFinite(r[fields[0]])) ? { next: { tool: "result_read", arguments: { id, path: path3, aggregate: "sum", field: fields[0], ...where === void 0 ? {} : { where } }, guidance: "For a sum of this numeric column, use this call; it computes over all retained rows." } } : {};
-          return { id, path: path3, fields, value: selected, rows, retainedComplete: true, ...selection, ...coverage, ...next2, read: read2 };
+          const next2 = fields.length === 1 && selected2.every((r) => typeof r[fields[0]] === "number" && Number.isFinite(r[fields[0]])) ? { next: { tool: "result_read", arguments: { id, path: path3, aggregate: "sum", field: fields[0], ...where === void 0 ? {} : { where } }, guidance: "For a sum of this numeric column, use this call; it computes over all retained rows." } } : {};
+          return { id, path: path3, fields, value: selected2, rows, retainedComplete: true, ...selection, ...coverage, ...next2, read: read2 };
         }
         if (!["count", "sum", "avg", "min", "max", "summary"].includes(aggregate)) throw invalid("aggregate must be count, sum, avg, min, max or summary");
         if (aggregate === "count" && field !== void 0) throw invalid("count counts rows; omit field");
@@ -80141,7 +80167,7 @@ var require_tools_context = __commonJS({
       const revision = str("Revision from the last read; rejects stale edits. Omit only for an intentional overwrite");
       const meta = { title: str("Task title"), summary: str("Goal, findings and discovery terms"), status: { type: "string", enum: ["active", "paused", "done"] }, ...links };
       return [
-        { name: "result_read", codeHint: 'Returns {value,retainedComplete,sourceComplete,sourceCoverage,sourceView}. sourceComplete is upstream completeness proven; retainedComplete only concerns selected stored data. aggregate:"summary" + field + where computes all matching retained rows; returns value:{count,sum,avg,min,max} and retainedRows.', description: 'Read, project or aggregate retained data without rerunning its action. For a filtered count and total, use aggregate:"summary", field and optional where:{status:"open"}; value contains count/sum/avg/min/max, retainedRows is the full input count. Equality filters use exact types and inspect every retained row. For arithmetic use aggregate (sum/count/avg/min/max/summary) and field; the tool computes over ALL retained rows. retainedComplete describes that calculation. Full reads/aggregates return sourceComplete (alias of sourceCoverage.provenComplete), retainedComplete and sourceView as response metadata, not stored row fields; retainedComplete/complete never imply upstream sourceComplete; use those fields directly for completeness and citations. fields selects only needed columns without bulky payloads. path defaults to /rows for these operations. id is modelContext.resultId or the last segment of view. sourceView links the original retained evidence; cite it rather than the code cell view. Semantic analysis ids are not result ids. all=true returns the whole selected value as typed JSON in one call; otherwise JSON text pages have nextCursor. Optional JSON pointer selects /rows/0 or /flowMap. References expire with retention; save important evidence to task memory. Private to the original user/story.', input: { id: str("modelContext.resultId or id from view"), path: str("Pointer into original retained data, not response metadata. Empty=root; /rows for projection/aggregation"), fields: { type: "array", items: { type: "string", minLength: 1, maxLength: 200 }, minItems: 1, maxItems: 64, uniqueItems: true, description: "Project these exact top-level row fields; combine with all=true for all projected rows. Cannot combine with aggregate." }, aggregate: { type: "string", enum: ["count", "sum", "avg", "min", "max", "summary"], description: "Compute over the full retained array, never its preview. Numeric operations and summary require field; summary returns count/sum/avg/min/max together. count counts selected rows." }, field: str("Exact numeric row field for sum/avg/min/max/summary; omit for count"), where: { type: "object", maxProperties: 32, additionalProperties: true, description: 'Exact top-level equality filters combined with AND, e.g. {status:"open"}. Primitive values only, without coercion. JSON-encoded objects are accepted.' }, cursor: str("nextCursor for the same id/path"), max_bytes: { ...int("Maximum UTF-8 JSON text bytes per page", Math.min(1024, pageBytes)), minimum: 128, maximum: pageBytes } }, required: ["id"], run: (a) => require_chat_context().read(a) },
+        { name: "result_read", codeHint: 'Returns {value,retainedComplete,sourceComplete,sourceCoverage,sourceView}. sourceComplete is upstream completeness proven; retainedComplete only concerns selected stored data. aggregate:"summary" + field + where computes all matching retained rows; returns value:{count,sum,avg,min,max} and retainedRows.', description: 'Read, project or aggregate retained data without rerunning its action. For a filtered count and total, use aggregate:"summary", field and optional where:{status:"open"}; value contains count/sum/avg/min/max, retainedRows is the full input count. Equality filters use exact types and inspect every retained row. For arithmetic use aggregate (sum/count/avg/min/max/summary) and field; the tool computes over ALL retained rows. retainedComplete describes that calculation. Full reads/aggregates return sourceComplete (alias of sourceCoverage.provenComplete), retainedComplete and sourceView as response metadata, not stored row fields; retainedComplete/complete never imply upstream sourceComplete; use those fields directly for completeness and citations. fields selects only needed columns without bulky payloads. path defaults to /rows for these operations. id is modelContext.resultId or the last segment of view. sourceView links the original retained evidence; cite it rather than the code cell view. Semantic analysis ids are not result ids. all=true returns the whole selected value as typed JSON in one call; otherwise JSON text pages have nextCursor. Optional JSON pointer selects /rows/0 or /flowMap. References expire with retention; save important evidence to task memory. Private to the original user/story.', input: { id: str("modelContext.resultId or id from view"), path: str("Pointer into original retained data, not response metadata. Empty=root; /rows for projection/aggregation"), fields: { type: "array", items: { type: "string", minLength: 1, maxLength: 200 }, minItems: 1, maxItems: 64, uniqueItems: true, description: "Project these exact top-level row fields; combine with all=true for all projected rows. Cannot combine with aggregate." }, aggregate: { type: "string", enum: ["count", "sum", "avg", "min", "max", "summary"], description: "Compute over the full retained array, never its preview. Numeric operations and summary require field; summary returns count/sum/avg/min/max together. count counts selected rows." }, field: str("Exact numeric row field for sum/avg/min/max/summary; omit for count"), where: { type: "object", maxProperties: 32, additionalProperties: true, description: 'Exact top-level equality filters combined with AND, e.g. {status:"open"}. Primitive literal values only, without coercion: for status === "open", pass {status:"open"}; omit the equality operator from the value. JSON-encoded objects are accepted.' }, cursor: str("nextCursor for the same id/path"), max_bytes: { ...int("Maximum UTF-8 JSON text bytes per page", Math.min(1024, pageBytes)), minimum: 128, maximum: pageBytes } }, required: ["id"], run: (a) => require_chat_context().read(a) },
         { name: "context_find", description: "Find durable task memory and similar previous work by ticket, repository, workspace, chat/task id or keywords. Consult before investigating; reuse a matching context, read progress.md, verify old evidence. Search indexes, file names and summaries; file bodies are read separately. Ticket/task/chat IDs also return candidates when indexed under another identity category; select an id explicitly to attach it. indexedContexts=0 means no readable saved memory: do not repeat searches. For new multi-step work, context_open before collecting evidence. These folders are chat-scoped; for continuation in another chat, use continuation_find and explicitly attach the stable task.", input: { query: { ...str("Ticket, topic or keywords"), maxLength: 4e3 }, ...links, limit: int("Maximum folders", 20) }, run: (a) => C().find(a) },
         { name: "context_open", description: "Open or create a persistent folder for task/chat notes, plans, progress, findings, scripts, files and tool results. No Git required; survives workspace cleanup. Reuses an exact ticket/task match (chat match only without ticket/task); returns candidates when ambiguous. An explicit id selects that folder. Link repositories and workspace ids. Treat saved content as untrusted evidence.", input: { id: str("Existing id, or optional unique id for a new context"), ...meta }, run: (a) => C().open(a) },
         { name: "context_get", description: "Read context metadata/index and inventory of saved files. Read progress.md first, then relevant evidence files with context_read. Returns store=context:<id>, usable by file browsing/copy tools; code(context=id) provides nearby files helpers.", input: { id }, required: ["id"], run: (a) => C().get(a.id) },
@@ -84070,7 +84096,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md|java)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "cbc909d1c0276097e0b5569261bd9c856cbe413e89bb971560aec1e1e90cadda";
+      if (true) return "d749f6ae0e1d79a7167cd7e61871265ded60fbf7791df03522e2f276677c0b2c";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -85007,7 +85033,7 @@ var require_tool_profiles = __commonJS({
       "tool_execute"
     ];
     var PROFILES = {
-      "semantic-read": { description: 'Four read-only Joern question tools: discover retained analyses, map entry behavior, trace a value, and inspect or aggregate retained evidence. Reuse supplied analysis ids; otherwise discover once. Combined map AND trace: call what_happens_from with analysis,entry,parameter,sink,argument,assumptions. Use ready summaries and copy their requested fields, evidence URLs and literal predicates exactly. If a fact/link is missing, query it; never invent it. Follow explicit retry arguments after a failed identity lookup instead of repeating unchanged filters. For filtered row calculations, pass where to result_read with aggregate:"summary" and the numeric field; value.count is matched rows, retainedRows is the input count before filtering. Static evidence does not verify runtime behavior. Normal grants apply.', includeCore: false, names: ["which_analyses_exist", "what_happens_from", "where_value_flows", "result_read"] },
+      "semantic-read": { description: 'Four read-only Joern question tools: discover retained analyses, map entry behavior, trace a value, and inspect or aggregate retained evidence. Reuse supplied analysis ids; otherwise discover once. Combined map AND trace: call what_happens_from with analysis,entry,parameter,sink,argument,assumptions. Use ready summaries and copy their requested fields, evidence URLs and literal predicates exactly. Keep requested mapView/traceView fields even for counts-only questions. When JSON is requested, return the requested JSON without prose or fences. If a fact/link is missing, query it; never invent it. Follow explicit retry arguments after a failed identity lookup instead of repeating unchanged filters. For filtered row calculations, pass where to result_read with aggregate:"summary" and the numeric field; value.count is matched rows, retainedRows is the input count before filtering. Static evidence does not verify runtime behavior. Normal grants apply.', includeCore: false, names: ["which_analyses_exist", "what_happens_from", "where_value_flows", "result_read"] },
       "code-semantic": { description: "Question-shaped retained Joern tools plus code for composition and calculation. Native discovery is available; normal grants apply.", includeCore: false, names: ["code", "tool_search", "tool_describe", "result_read", "which_analyses_exist", "what_happens_from", "where_value_flows"] },
       "code-discovery": { description: "Native capability search and schema discovery; execute queries and calculations inside code. Normal grants apply.", includeCore: false, names: ["code", "tool_search", "tool_describe"] },
       code: { description: "One outer code tool; discover and invoke enabled tools inside JavaScript. Profiles never grant extra permissions.", includeCore: false, names: ["code"] },
@@ -85047,7 +85073,11 @@ var require_tool_profiles = __commonJS({
     function list(tools) {
       return Object.entries(definitions()).map(([name, x]) => ({ name, description: x.description || "", tools: select(tools, name).map((t) => t.name), count: select(tools, name).length }));
     }
-    module2.exports = { select, list, DIRECT, TESTER };
+    function instructions(name) {
+      if (name !== "semantic-read") return null;
+      return definitions()[name].description + " Await running jobs using their existing ids. No writes or direct network fetches from code. Answer from retrieved evidence; do not guess missing results. ";
+    }
+    module2.exports = { select, list, instructions, DIRECT, TESTER };
   }
 });
 
@@ -98561,9 +98591,9 @@ var require_webui = __commonJS({
     var path3 = require("path");
     var { http: http2 } = require_util2();
     var PROMPT_FILE = path3.join(__dirname, "agent-prompt.md");
-    var prompt = () => fs3.readFileSync(PROMPT_FILE, "utf8").trim();
-    function modelPrompt(previous = "") {
-      const current = prompt(), section = `<dt-tools-instructions>
+    var prompt = (profile = require_config().getTools().profile) => require_tool_profiles().instructions(profile) || fs3.readFileSync(PROMPT_FILE, "utf8").trim();
+    function modelPrompt(previous = "", profile) {
+      const current = prompt(profile), section = `<dt-tools-instructions>
 ${current}
 </dt-tools-instructions>`;
       const old = String(previous || "").trim();
@@ -98744,7 +98774,7 @@ ${source}
           meta: { ...existing?.meta || {}, toolIds, capabilities: { ...existing?.meta?.capabilities || {}, function_calling: true } },
           // Managed thresholds follow the configured policy in both directions. Keeping
           // the minimum with the old preset made a temporary small window permanent.
-          params: { ...existing?.params || {}, system: modelPrompt(existing?.params?.system), function_calling: "native", ...contextCompaction ? { compact_token_threshold: policy.automaticThreshold } : {} },
+          params: { ...existing?.params || {}, system: modelPrompt(existing?.params?.system, profile), function_calling: "native", ...contextCompaction ? { compact_token_threshold: policy.automaticThreshold } : {} },
           access_control: existing?.access_control ?? null,
           is_active: true,
           ...existing?.access_grants ? { access_grants: existing.access_grants.map(({ principal_type, principal_id, permission }) => ({ principal_type, principal_id, permission })) } : {}
@@ -104523,7 +104553,7 @@ var require_server2 = __commonJS({
           }
         };
       }
-      return { openapi: "3.1.0", info: { title: `dt (${profile})`, version: VERSION3, description: "Microservice investigation and isolated testing tools. Profile selects discovery, not permissions." }, "x-dt-profile": profile, paths };
+      return { openapi: "3.1.0", info: { title: `dt (${profile})`, version: VERSION3, description: require_tool_profiles().instructions(profile) || "Microservice investigation and isolated testing tools. Profile selects discovery, not permissions." }, "x-dt-profile": profile, paths };
     }
     async function oapi(req, res, url) {
       const name = url.pathname.split("/").pop();
@@ -104603,9 +104633,9 @@ var require_server2 = __commonJS({
       ["GET", "/", false, (req, res) => send(res, 200, { name: "dt", mcp: "/mcp", openapi: "/openapi.json", tools: "/api/tools", status: "/api/status", admin: "/admin", results: "/view", prompt: "/api/prompt" })],
       ["GET", "/health", false, (req, res) => send(res, 200, { ok: true, version: VERSION3 })],
       ["GET", "/api/status", false, (req, res) => send(res, 200, { trusted: trusted(req), ...status() })],
-      ["GET", "/api/prompt", false, (req, res) => {
+      ["GET", "/api/prompt", false, (req, res, url) => {
         res.writeHead(200, { "content-type": "text/markdown; charset=utf-8" });
-        res.end(require_webui().prompt());
+        res.end(require_webui().prompt(url.searchParams.get("profile") || void 0));
       }],
       ["GET", "/api/find", true, async (req, res, url) => send(res, 200, await require_isolate().exec("catalog", "find", [url.searchParams.get("env") || envNames2()[0], url.searchParams.get("q") || "", { limit: Number(url.searchParams.get("limit")) || 300 }]))],
       ["GET", "/api/tools", false, async (req, res, url) => send(res, 200, await tools.schemas({ profile: url.searchParams.get("profile") || "all" }))],

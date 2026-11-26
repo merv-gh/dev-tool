@@ -122,7 +122,7 @@ async function openapi(profile = require('./lib/config').getTools().profile) {
       },
     };
   }
-  return { openapi: '3.1.0', info: { title: `dt (${profile})`, version: VERSION, description: 'Microservice investigation and isolated testing tools. Profile selects discovery, not permissions.' }, 'x-dt-profile': profile, paths };
+  return { openapi: '3.1.0', info: { title: `dt (${profile})`, version: VERSION, description: require('./lib/tool-profiles').instructions(profile) || 'Microservice investigation and isolated testing tools. Profile selects discovery, not permissions.' }, 'x-dt-profile': profile, paths };
 }
 
 async function oapi(req, res, url) {
@@ -174,7 +174,7 @@ const routes = [
   ['GET', '/', false, (req, res) => send(res, 200, { name: 'dt', mcp: '/mcp', openapi: '/openapi.json', tools: '/api/tools', status: '/api/status', admin: '/admin', results: '/view', prompt: '/api/prompt' })],
   ['GET', '/health', false, (req, res) => send(res, 200, { ok: true, version: VERSION })],
   ['GET', '/api/status', false, (req, res) => send(res, 200, { trusted: trusted(req), ...status() })],
-  ['GET', '/api/prompt', false, (req, res) => { res.writeHead(200, { 'content-type': 'text/markdown; charset=utf-8' }); res.end(require('./lib/webui').prompt()); }],
+  ['GET', '/api/prompt', false, (req, res, url) => { res.writeHead(200, { 'content-type': 'text/markdown; charset=utf-8' }); res.end(require('./lib/webui').prompt(url.searchParams.get('profile') || undefined)); }],
   ['GET', '/api/find', true, async (req, res, url) => send(res, 200, await require('./lib/isolate').exec('catalog','find',[url.searchParams.get('env') || envNames()[0], url.searchParams.get('q') || '', { limit: Number(url.searchParams.get('limit')) || 300 }]))],
   ['GET', '/api/tools', false, async (req, res, url) => send(res, 200, await tools.schemas({ profile: url.searchParams.get('profile') || 'all' }))],
   ['POST', '/api/tool/*', true, async (req, res, url) => {
